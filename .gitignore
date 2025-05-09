@@ -1,1 +1,64 @@
 **/.claude/settings.local.json
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+*.so
+*.manifest
+*.spec
+pip-log.txt
+pip-delete-this-directory.txt
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.log
+.hypothesis/
+.pytest_cache/
+.mypy_cache/
+env/
+venv/
+.venv/
+ENV/
+VENV/
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+.installed.cfg
+*.egg
+MANIFEST
+instance/
+local_settings.py
+
+# Supabase / PostgreSQL
+.supabase/
+# *.sql  # Uncomment if you want to ignore all SQL files
+# *.dump # Uncomment if you want to ignore all database dump files
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# IDE / Editor specific files
+.vscode/
+.idea/
+*.swp
+*~
