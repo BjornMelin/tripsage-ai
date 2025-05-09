@@ -62,28 +62,39 @@ For detailed schema information, see the [Database Setup Documentation](./docs/d
 
 2. Set up environment variables:
    ```bash
-   cp .env.example .env
-   # Edit .env with your API keys and configuration
+   # API server environment
+   cp src/api/.env.example src/api/.env
+   # Agent environment
+   cp src/agents/.env.example src/agents/.env
+   # Edit each .env file with your API keys and configuration
    ```
 
 3. Install dependencies:
    ```bash
-   # Backend dependencies
-   pip install -r requirements.txt
+   # API server dependencies
+   pip install -r src/api/requirements.txt
    
-   # Frontend dependencies
-   npm install
+   # Agent dependencies
+   pip install -r src/agents/requirements.txt
    ```
 
 4. Set up the database:
    ```bash
-   # Run migrations (this assumes you've set up your Supabase project)
-   # See docs/database_setup.md for instructions
+   # See docs/database_setup.md for detailed instructions
+   # Verify connection to your Supabase project
+   node scripts/verify_connection.js
    ```
 
-5. Start the development server:
+5. Start the API server:
    ```bash
-   npm run dev
+   cd src/api
+   uvicorn main:app --reload --host 0.0.0.0 --port 8000
+   ```
+
+6. Try the agent demo:
+   ```bash
+   cd src/agents
+   python demo.py
    ```
 
 ### Database Setup
@@ -123,8 +134,9 @@ For detailed database setup instructions, see the [Database Setup Documentation]
 ## Roadmap
 
 - [x] Initial database setup
-- [ ] Backend API implementation
-- [ ] Integration with flight and hotel APIs
+- [x] Backend API implementation (FastAPI)
+- [x] Initial OpenAI Agents integration
+- [ ] Flight and hotel API integrations
 - [ ] Streamlit frontend
 - [ ] Knowledge graph integration
 - [ ] User authentication and profiles
