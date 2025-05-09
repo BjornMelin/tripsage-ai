@@ -55,12 +55,14 @@ For detailed schema information, see the [Database Setup Documentation](./docs/d
 ### Installation
 
 1. Clone the repository:
+
    ```bash
    git clone https://github.com/BjornMelin/tripsage-ai.git
    cd tripsage-ai
    ```
 
 2. Set up environment variables:
+
    ```bash
    # API server environment
    cp src/api/.env.example src/api/.env
@@ -70,15 +72,17 @@ For detailed schema information, see the [Database Setup Documentation](./docs/d
    ```
 
 3. Install dependencies:
+
    ```bash
    # API server dependencies
    pip install -r src/api/requirements.txt
-   
+
    # Agent dependencies
    pip install -r src/agents/requirements.txt
    ```
 
 4. Set up the database:
+
    ```bash
    # See docs/database_setup.md for detailed instructions
    # Verify connection to your Supabase project
@@ -86,12 +90,14 @@ For detailed schema information, see the [Database Setup Documentation](./docs/d
    ```
 
 5. Start the API server:
+
    ```bash
    cd src/api
    uvicorn main:app --reload --host 0.0.0.0 --port 8000
    ```
 
 6. Try the agent demo:
+
    ```bash
    cd src/agents
    python demo.py
@@ -109,6 +115,7 @@ To connect to the database:
 
 1. Copy `.env.example` to `.env` and update with your Supabase keys
 2. Verify the database connection using the verification script:
+
    ```bash
    node scripts/verify_connection.js
    ```
@@ -118,11 +125,13 @@ For detailed database setup instructions, see the [Database Setup Documentation]
 ## Development Workflow
 
 1. Create a feature branch from `dev`:
+
    ```bash
    git checkout -b feature/your-feature-name
    ```
 
 2. Make your changes and commit using conventional commits:
+
    ```bash
    git commit -m "feat: add new feature"
    ```

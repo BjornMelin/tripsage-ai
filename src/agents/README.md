@@ -15,6 +15,7 @@ The agents module provides a set of AI-powered agents that help users plan their
 ## Setup
 
 1. Install dependencies:
+
    ```bash
    pip install -r requirements.txt
    ```
@@ -30,21 +31,25 @@ The agents module provides a set of AI-powered agents that help users plan their
 TripSage uses a primary Travel Agent that coordinates the overall planning process and delegates to specialized agents:
 
 1. **Travel Agent**: The primary agent that handles user interaction and coordinates the planning process.
+
    - Understands user preferences and constraints
    - Creates personalized travel itineraries
    - Makes high-level recommendations
 
 2. **Flight Agent** (to be implemented): Specialized agent for flight search and booking.
+
    - Searches for flight options based on user criteria
    - Compares prices and schedules
    - Tracks price history and suggests optimal booking times
 
 3. **Accommodation Agent** (to be implemented): Specialized agent for finding hotels and other accommodations.
+
    - Searches for accommodation options based on user preferences
    - Filters results by amenities, location, and price
    - Provides detailed information about properties
 
 4. **Activities Agent** (to be implemented): Specialized agent for finding activities and attractions.
+
    - Recommends activities based on user interests
    - Optimizes scheduling of activities
    - Provides details about attractions and tours

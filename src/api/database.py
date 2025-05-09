@@ -1,6 +1,7 @@
 import os
-from supabase import create_client
+
 from dotenv import load_dotenv
+from supabase import create_client
 
 # Load environment variables
 load_dotenv()
@@ -8,6 +9,7 @@ load_dotenv()
 # Supabase configuration
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_ANON_KEY")
+
 
 # Initialize Supabase client
 def get_supabase_client():
@@ -19,8 +21,9 @@ def get_supabase_client():
         raise ValueError(
             "SUPABASE_URL and SUPABASE_ANON_KEY must be set in the environment variables"
         )
-    
+
     return create_client(SUPABASE_URL, SUPABASE_KEY)
+
 
 # Default client instance
 try:

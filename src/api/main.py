@@ -1,8 +1,7 @@
-from fastapi import FastAPI, Depends, HTTPException, status
-from fastapi.middleware.cors import CORSMiddleware
-import os
 from dotenv import load_dotenv
-from routes import users, trips, flights, auth
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from routes import auth, flights, trips, users
 
 # Initialize environment variables
 load_dotenv()
@@ -11,7 +10,7 @@ load_dotenv()
 app = FastAPI(
     title="TripSage API",
     description="API for TripSage travel planning system",
-    version="0.1.0"
+    version="0.1.0",
 )
 
 # Configure CORS
@@ -23,10 +22,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 # Health check endpoint
 @app.get("/health")
 async def health_check():
     return {"status": "healthy", "version": "0.1.0"}
+
 
 # Include routers
 app.include_router(auth.router)
@@ -36,4 +37,5 @@ app.include_router(flights.router)
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
