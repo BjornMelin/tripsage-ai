@@ -1,118 +1,145 @@
 # Web Crawling Integration Guide
 
-This guide provides comprehensive instructions for integrating web crawling capabilities into TripSage using Firecrawl. This integration enhances travel planning by providing access to current travel information, destination details, and travel advisories.
+This document provides comprehensive instructions for integrating web crawling capabilities into TripSage using Crawl4AI. This integration enhances travel planning by providing access to current travel information, destination details, and travel advisories.
 
-## Table of Contents
+## Overview
 
-- [Selected Solution](#selected-solution)
-- [Setup and Configuration](#setup-and-configuration)
-- [Integration with TripSage](#integration-with-tripsage)
-- [Implementation Guide](#implementation-guide)
-- [Usage Patterns](#usage-patterns)
-- [Testing and Verification](#testing-and-verification)
-- [Cost Optimization](#cost-optimization)
+Crawl4AI is an open-source web crawling and scraping tool specifically optimized for Large Language Models (LLMs). Key features include:
+
+- Asynchronous web crawling for efficient data collection
+- Multiple output formats (Markdown, JSON, HTML)
+- Customizable extraction strategies
+- Self-hostable with no subscription fees or API key requirements
+- Apache 2.0 license
+- High community adoption and GitHub popularity
 
 ## Selected Solution
 
-After evaluating web crawling solutions, **Firecrawl** has been selected as the optimal solution for TripSage.
+After extensive research and evaluation, **Crawl4AI** has been selected as the optimal solution for TripSage's web crawling needs.
 
-### Why Firecrawl?
+### Why Crawl4AI?
 
-1. **Native MCP Integration**:
+1. **Cost-effectiveness**:
 
-   - Built-in Model Context Protocol support
-   - Seamless integration with OpenAI agents
-   - Consistent tool definition format
+   - Completely free and open-source
+   - No subscription fees for any usage level
+   - Self-hostable with no limitations
 
 2. **Feature Completeness**:
 
    - Full web crawling capabilities
-   - Targeted page scraping
-   - Structured data extraction
-   - Search functionality
+   - Multiple output formats (markdown, JSON, HTML)
+   - Asynchronous operations for better performance
+   - Support for browser automation and interaction
+   - Customizable extraction strategies
 
-3. **Developer Experience**:
+3. **Personal Usage Focus**:
 
-   - Excellent documentation
-   - Simple API structure
-   - Robust error handling
-   - Configurable crawl settings
+   - Aligns with TripSage's focus on personal usage scenarios
+   - Users can run locally without external dependencies
+   - No API key requirements or rate limits
+   - Complete control over crawling behavior
 
-4. **Cost Efficiency for Personal Use**:
-   - Free tier available for limited usage
-   - Pay-per-use pricing model
-   - Fine-grained control over crawl depth and scope
+4. **Active Development**:
+   - Trending GitHub repository with active community
+   - Regular updates and improvements
+   - Strong user community for support
 
 ### Compared to Alternatives
 
-Firecrawl outperforms alternatives like Crawl4AI for TripSage's specific needs:
+Crawl4AI outperforms alternatives like Firecrawl for TripSage's specific needs:
 
-| Feature                      | Firecrawl                 | Crawl4AI                |
-| ---------------------------- | ------------------------- | ----------------------- |
-| **MCP Integration**          | Native                    | Requires custom wrapper |
-| **Personal Usage Free Tier** | Limited credits           | Limited pages/month     |
-| **Customization**            | High                      | Medium                  |
-| **Travel-Specific Features** | Better content extraction | More limited            |
-| **Documentation**            | Excellent                 | Good                    |
-| **Ease of Implementation**   | Very high                 | Medium                  |
+| Feature                        | Crawl4AI                | Firecrawl                 |
+| ------------------------------ | ----------------------- | ------------------------- |
+| **Cost Structure**             | Free and open-source    | Freemium with paid tiers  |
+| **Personal Usage Suitability** | Excellent               | Limited by credits        |
+| **Python Integration**         | Native                  | Via SDK                   |
+| **Data Formatting**            | LLM-optimized           | General purpose           |
+| **Self-hosting**               | Fully self-hostable     | Self-hostable with limits |
+| **Community Support**          | Active GitHub community | Commercial support        |
 
-## Setup and Configuration
+## Setup Instructions
 
-Follow these steps to set up Firecrawl for personal use with TripSage:
+### Prerequisites
 
-### 1. Create a Firecrawl Account
+- Python 3.9 or higher
+- Access to install Python packages
+- Basic knowledge of async Python programming
 
-1. Visit [Firecrawl Sign Up](https://firecrawl.dev/signup)
-2. Create a free account using your email
-3. Verify your email address through the confirmation link
+### 1. Installation
 
-### 2. Generate API Key
+Install Crawl4AI using pip:
 
-1. Log in to your Firecrawl account
-2. Navigate to the "API Keys" section in dashboard
-3. Create a new API key with a descriptive name (e.g., "TripSage Personal")
-4. Copy your API key for configuration
-
-### 3. Configure TripSage
-
-1. Create or edit the `.env` file in your TripSage project root
-2. Add your Firecrawl API key:
-
-```
-FIRECRAWL_API_KEY=your_api_key_here
+```bash
+pip install "crawl4ai @ git+https://github.com/unclecode/crawl4ai.git"
 ```
 
-3. Save the file and restart your TripSage application
+For additional dependencies that may be needed:
 
-### 4. Test the Connection
+```bash
+pip install transformers torch nltk
+```
 
-Use the following code to verify your Firecrawl connection:
+### 2. Basic Configuration
 
-```javascript
-const axios = require("axios");
+Create a configuration module to manage crawler settings:
 
-async function testFirecrawlConnection() {
-  try {
-    const response = await axios.post(
-      "https://api.firecrawl.dev/health",
-      {},
-      {
-        headers: {
-          Authorization: `Bearer ${process.env.FIRECRAWL_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-      }
-    );
+```python
+# crawl_config.py
+from crawl4ai import CrawlerConfig, ExtractionConfig, BrowserConfig
+from crawl4ai.extraction_strategy import PyppeteerHTMLExtractionStrategy, PlaywrightHTMLExtractionStrategy
 
-    console.log("Firecrawl connection successful:", response.data);
-    return true;
-  } catch (error) {
-    console.error("Firecrawl connection failed:", error.message);
-    return false;
-  }
-}
+def get_crawler_config(headless=True, use_playwright=True, max_concurrent=5):
+    """
+    Create a crawler configuration for travel-related websites.
 
-testFirecrawlConnection();
+    Args:
+        headless: Whether to run browser in headless mode
+        use_playwright: Whether to use Playwright (True) or Pyppeteer (False)
+        max_concurrent: Maximum number of concurrent browser tasks
+
+    Returns:
+        CrawlerConfig object
+    """
+    # Browser configuration
+    browser_config = BrowserConfig(
+        headless=headless,
+        viewport_width=1280,
+        viewport_height=800,
+        user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+        block_images=False,  # Don't block images for travel sites where images are important
+        timeout=30000,  # 30 seconds timeout
+        wait_until="networkidle2",  # Wait until network is idle
+    )
+
+    # Extraction configuration
+    extraction_strategy = PlaywrightHTMLExtractionStrategy() if use_playwright else PyppeteerHTMLExtractionStrategy()
+    extraction_config = ExtractionConfig(
+        strategy=extraction_strategy,
+        extract_metadata=True,  # Extract title, description, etc.
+        extract_text=True,  # Extract text content
+        extract_links=True,  # Extract hyperlinks
+        skip_tags=["script", "style", "svg", "iframe", "noscript"],  # Skip these tags
+        force_async=True,  # Use async mode
+    )
+
+    # Crawler configuration
+    crawler_config = CrawlerConfig(
+        browser_config=browser_config,
+        extraction_config=extraction_config,
+        max_concurrent_tasks=max_concurrent,
+        retry_count=2,  # Number of retries on failure
+        retry_delay=2,  # Delay between retries (seconds)
+        cache_mode="memory",  # Use memory cache to avoid duplicate requests
+        domains_allowlist=None,  # Set to specific domains if needed
+        url_patterns_blocklist=[
+            r".*\.(jpg|jpeg|png|gif|svg|css|js)$",  # Block direct image/asset URLs
+            r".*/login.*",  # Avoid login pages
+            r".*/logout.*",  # Avoid logout pages
+        ]
+    )
+
+    return crawler_config
 ```
 
 ## Integration with TripSage
@@ -121,7 +148,7 @@ Web crawling enhances TripSage in several key areas:
 
 ### 1. Travel Advisories and Entry Requirements
 
-Use Firecrawl to gather current information about:
+Use Crawl4AI to gather current information about:
 
 - Government travel advisories for destinations
 - Visa and entry requirements
@@ -156,546 +183,487 @@ Enhance travel itineraries with:
 
 ## Implementation Guide
 
-This section provides a detailed guide for implementing web crawling with Firecrawl.
+### 1. Basic Crawler Service
 
-### 1. Create Firecrawl Service
+Create a crawler service for TripSage:
 
-Create a file `src/services/crawling/firecrawl-service.js`:
+```python
+# travel_crawler.py
+import asyncio
+from typing import Dict, List, Optional, Union, Any
+import logging
+from pathlib import Path
+import json
+import os
 
-```javascript
-const mcpClient = require("../../utils/mcp-client");
-const { cacheWithTTL } = require("../../utils/cache");
+from crawl4ai import WebCrawler, CrawlResult
+from crawl4ai.utils import get_domain
+from crawl_config import get_crawler_config
 
-class FirecrawlService {
-  /**
-   * Crawl a specific travel advisory
-   * @param {string} country Country code or name
-   * @returns {Promise<Object>} Travel advisory data
-   */
-  async crawlTravelAdvisory(country) {
-    // Create cache key
-    const cacheKey = `crawl:advisory:${country.toLowerCase()}`;
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger("TripSage-Crawler")
 
-    // Check cache first (longer TTL for advisories - 24 hours)
-    const cachedData = await cacheWithTTL.get(cacheKey);
-    if (cachedData) {
-      return JSON.parse(cachedData);
-    }
+class TravelCrawlerService:
+    """Service for crawling travel-related websites."""
 
-    try {
-      // Government travel advisory URLs by country
-      const advisoryUrls = {
-        us: (country) =>
-          `https://travel.state.gov/content/travel/en/traveladvisories/traveladvisories/${country.toLowerCase()}-travel-advisory.html`,
-        uk: (country) =>
-          `https://www.gov.uk/foreign-travel-advice/${country.toLowerCase()}`,
-        au: (country) =>
-          `https://www.smartraveller.gov.au/destinations/${country.toLowerCase()}`,
-        ca: (country) =>
-          `https://travel.gc.ca/destinations/${country.toLowerCase()}`,
-      };
+    def __init__(self, config=None, cache_dir=None):
+        """
+        Initialize the travel crawler service.
 
-      // Call Firecrawl MCP to crawl US travel advisory (default)
-      const result = await mcpClient.call("firecrawl", "firecrawl_scrape", {
-        url: advisoryUrls.us(country),
-        formats: ["markdown"],
-        onlyMainContent: true,
-      });
+        Args:
+            config: Optional crawler configuration
+            cache_dir: Directory to save crawl results (if None, results are not saved)
+        """
+        self.config = config or get_crawler_config()
+        self.cache_dir = cache_dir
+        if cache_dir:
+            os.makedirs(cache_dir, exist_ok=True)
+        self.crawler = WebCrawler(self.config)
 
-      // Extract relevant advisory information
-      const advisoryData = {
-        country,
-        source: "US Department of State",
-        content: result.markdown,
-        timestamp: new Date().toISOString(),
-        url: advisoryUrls.us(country),
-      };
+    async def warmup(self):
+        """Warm up the crawler (load necessary models)."""
+        await self.crawler.warmup()
+        logger.info("Crawler warmed up and ready")
 
-      // Add additional data from other sources when available
-      try {
-        const ukAdvisory = await mcpClient.call(
-          "firecrawl",
-          "firecrawl_scrape",
-          {
-            url: advisoryUrls.uk(country),
-            formats: ["markdown"],
-            onlyMainContent: true,
-          }
-        );
+    async def crawl_url(self, url: str) -> CrawlResult:
+        """
+        Crawl a single URL.
 
-        advisoryData.additional_sources = [
-          {
-            name: "UK Foreign Office",
-            content: ukAdvisory.markdown,
-            url: advisoryUrls.uk(country),
-          },
-        ];
-      } catch (err) {
-        // Non-critical error, just log and continue
-        console.log(
-          `Could not fetch UK advisory for ${country}: ${err.message}`
-        );
-      }
+        Args:
+            url: The URL to crawl
 
-      // Parse advisory level
-      advisoryData.advisory_level = this.parseAdvisoryLevel(result.markdown);
+        Returns:
+            CrawlResult object containing the crawled data
+        """
+        logger.info(f"Crawling URL: {url}")
+        result = await self.crawler.run(url=url)
 
-      // Extract key information
-      advisoryData.key_info = this.extractKeyAdvisoryInfo(result.markdown);
+        # Save result to cache if cache_dir is set
+        if self.cache_dir:
+            domain = get_domain(url)
+            filename = f"{domain}_{hash(url)}.json"
+            cache_path = Path(self.cache_dir) / filename
 
-      // Cache for 24 hours
-      await cacheWithTTL.set(cacheKey, JSON.stringify(advisoryData), 86400);
-
-      return advisoryData;
-    } catch (error) {
-      console.error(`Error crawling travel advisory for ${country}:`, error);
-      throw new Error(`Failed to crawl travel advisory: ${error.message}`);
-    }
-  }
-
-  /**
-   * Search and crawl destination information
-   * @param {string} destination Destination name
-   * @returns {Promise<Object>} Destination information
-   */
-  async searchDestinationInfo(destination) {
-    // Create cache key
-    const cacheKey = `crawl:destination:${destination
-      .toLowerCase()
-      .replace(/\s+/g, "_")}`;
-
-    // Check cache first (6 hours TTL)
-    const cachedData = await cacheWithTTL.get(cacheKey);
-    if (cachedData) {
-      return JSON.parse(cachedData);
-    }
-
-    try {
-      // Search for destination information
-      const searchResults = await mcpClient.call(
-        "firecrawl",
-        "firecrawl_search",
-        {
-          query: `${destination} travel guide`,
-          limit: 5,
-          scrapeOptions: {
-            formats: ["markdown"],
-            onlyMainContent: true,
-          },
-        }
-      );
-
-      // Process search results
-      const processedResults = [];
-
-      for (const result of searchResults) {
-        // Only process results that have been scraped
-        if (result.content && result.content.markdown) {
-          processedResults.push({
-            title: result.title,
-            url: result.url,
-            content: result.content.markdown,
-            source: new URL(result.url).hostname,
-          });
-        }
-      }
-
-      // Extract structured information if possible
-      let structuredInfo = {};
-
-      try {
-        // Try to extract structured destination information
-        const extractResult = await mcpClient.call(
-          "firecrawl",
-          "firecrawl_extract",
-          {
-            urls: [searchResults[0].url],
-            schema: {
-              destination: "string",
-              bestTimeToVisit: "string",
-              topAttractions: "array",
-              localCuisine: "array",
-              transportOptions: "array",
-              safetyTips: "array",
-            },
-            prompt: `Extract key travel information about ${destination}`,
-          }
-        );
-
-        if (extractResult && extractResult.length > 0) {
-          structuredInfo = extractResult[0];
-        }
-      } catch (extractError) {
-        console.log(
-          `Structured data extraction failed for ${destination}: ${extractError.message}`
-        );
-        // Non-critical error, continue without structured data
-      }
-
-      // Combine results
-      const destinationInfo = {
-        destination,
-        timestamp: new Date().toISOString(),
-        sources: processedResults,
-        structured_info: structuredInfo,
-      };
-
-      // Cache for 6 hours
-      await cacheWithTTL.set(cacheKey, JSON.stringify(destinationInfo), 21600);
-
-      return destinationInfo;
-    } catch (error) {
-      console.error(
-        `Error searching destination info for ${destination}:`,
-        error
-      );
-      throw new Error(`Failed to search destination info: ${error.message}`);
-    }
-  }
-
-  /**
-   * Crawl for attraction details
-   * @param {string} attraction Attraction name
-   * @param {string} location Location of the attraction
-   * @returns {Promise<Object>} Attraction details
-   */
-  async getAttractionDetails(attraction, location) {
-    // Create cache key
-    const cacheKey = `crawl:attraction:${attraction
-      .toLowerCase()
-      .replace(/\s+/g, "_")}:${location.toLowerCase().replace(/\s+/g, "_")}`;
-
-    // Check cache first (12 hours TTL)
-    const cachedData = await cacheWithTTL.get(cacheKey);
-    if (cachedData) {
-      return JSON.parse(cachedData);
-    }
-
-    try {
-      // Search for specific attraction
-      const searchResults = await mcpClient.call(
-        "firecrawl",
-        "firecrawl_search",
-        {
-          query: `${attraction} ${location} hours tickets information`,
-          limit: 3,
-          scrapeOptions: {
-            formats: ["markdown"],
-            onlyMainContent: true,
-          },
-        }
-      );
-
-      // Extract structured attraction information
-      const extractResult = await mcpClient.call(
-        "firecrawl",
-        "firecrawl_extract",
-        {
-          urls: searchResults.map((r) => r.url),
-          schema: {
-            attractionName: "string",
-            description: "string",
-            openingHours: "object",
-            ticketPrices: "object",
-            address: "string",
-            contactInfo: "object",
-            visitDuration: "string",
-            bestTimeToVisit: "string",
-            tips: "array",
-          },
-          prompt: `Extract detailed visitor information about "${attraction}" in ${location}`,
-        }
-      );
-
-      // Process and merge results
-      let attractionInfo = {};
-
-      if (extractResult && extractResult.length > 0) {
-        // Merge all extracted data
-        attractionInfo = extractResult.reduce((merged, current) => {
-          Object.entries(current).forEach(([key, value]) => {
-            // If the merged result doesn't have this property yet, add it
-            if (!merged[key] && value) {
-              merged[key] = value;
+            # Save basic metadata about the crawl
+            metadata = {
+                "url": url,
+                "title": result.title,
+                "timestamp": result.timestamp.isoformat(),
+                "num_links": len(result.links) if result.links else 0,
+                "content_length": len(result.markdown) if result.markdown else 0,
             }
-            // If the property exists but the new value is more complete, use it
-            else if (
-              (merged[key] &&
-                value &&
-                typeof value === "string" &&
-                value.length > merged[key].length) ||
-              (Array.isArray(value) && value.length > merged[key].length)
-            ) {
-              merged[key] = value;
-            }
-          });
-          return merged;
-        }, {});
-      }
 
-      // Add raw content
-      attractionInfo.sources = searchResults.map((r) => ({
-        title: r.title,
-        url: r.url,
-        snippet:
-          r.content?.markdown?.substring(0, 300) + "..." || r.snippet || "",
-      }));
+            with open(cache_path, 'w', encoding='utf-8') as f:
+                json.dump(metadata, f, ensure_ascii=False, indent=2)
 
-      attractionInfo.location = location;
-      attractionInfo.timestamp = new Date().toISOString();
+            logger.info(f"Saved crawl metadata to {cache_path}")
 
-      // Cache for 12 hours
-      await cacheWithTTL.set(cacheKey, JSON.stringify(attractionInfo), 43200);
+        return result
 
-      return attractionInfo;
-    } catch (error) {
-      console.error(
-        `Error getting attraction details for ${attraction} in ${location}:`,
-        error
-      );
-      throw new Error(`Failed to get attraction details: ${error.message}`);
-    }
-  }
+    async def crawl_multiple(self, urls: List[str]) -> Dict[str, CrawlResult]:
+        """
+        Crawl multiple URLs in parallel.
 
-  /**
-   * Deep research on a travel topic
-   * @param {string} topic Travel topic to research
-   * @returns {Promise<Object>} Research results
-   */
-  async conductTravelResearch(topic) {
-    // Create cache key
-    const cacheKey = `crawl:research:${topic
-      .toLowerCase()
-      .replace(/\s+/g, "_")}`;
+        Args:
+            urls: List of URLs to crawl
 
-    // Check cache first (3 days TTL for research topics)
-    const cachedData = await cacheWithTTL.get(cacheKey);
-    if (cachedData) {
-      return JSON.parse(cachedData);
-    }
+        Returns:
+            Dictionary mapping URLs to their CrawlResult objects
+        """
+        logger.info(f"Crawling {len(urls)} URLs")
+        tasks = [self.crawl_url(url) for url in urls]
+        results = await asyncio.gather(*tasks, return_exceptions=True)
 
-    try {
-      // Use deep research for comprehensive analysis
-      const researchResult = await mcpClient.call(
-        "firecrawl",
-        "firecrawl_deep_research",
-        {
-          query: topic,
-          maxUrls: 15, // Limit to 15 URLs to control costs
-          maxDepth: 3, // Moderate depth of analysis
-          timeLimit: 60, // 60 second time limit
+        # Filter out exceptions and create URL -> result mapping
+        url_to_result = {}
+        for url, result in zip(urls, results):
+            if isinstance(result, Exception):
+                logger.error(f"Error crawling {url}: {result}")
+            else:
+                url_to_result[url] = result
+
+        logger.info(f"Successfully crawled {len(url_to_result)}/{len(urls)} URLs")
+        return url_to_result
+
+    async def extract_travel_info(self, url: str) -> Dict[str, Any]:
+        """
+        Extract travel-specific information from a URL.
+
+        Args:
+            url: URL of travel content to analyze
+
+        Returns:
+            Dictionary of extracted travel information
+        """
+        # First crawl the URL
+        result = await self.crawl_url(url)
+
+        # Process the result to extract structured travel information
+        # This is a simplified example - you would use more sophisticated
+        # extraction or LLM processing in a real implementation
+        travel_info = {
+            "url": url,
+            "title": result.title,
+            "summary": result.markdown[:500] + "..." if result.markdown and len(result.markdown) > 500 else result.markdown,
+            "attractions": [],
+            "accommodation_mentions": [],
+            "transportation_info": [],
+            "travel_tips": []
         }
-      );
 
-      // Process research result
-      const researchData = {
-        topic,
-        timestamp: new Date().toISOString(),
-        summary: researchResult.summary,
-        key_points: researchResult.keyPoints || [],
-        sources: researchResult.sources || [],
-      };
+        # Add basic link categorization
+        if result.links:
+            for link in result.links:
+                link_text = link.get("text", "").lower()
+                link_url = link.get("href", "")
 
-      // Cache for 3 days (research topics change slowly)
-      await cacheWithTTL.set(cacheKey, JSON.stringify(researchData), 259200);
+                if any(term in link_text for term in ["hotel", "hostel", "apartment", "stay", "accommodation"]):
+                    travel_info["accommodation_mentions"].append({
+                        "text": link.get("text"),
+                        "url": link_url
+                    })
 
-      return researchData;
-    } catch (error) {
-      console.error(`Error conducting travel research on ${topic}:`, error);
-      throw new Error(`Failed to conduct travel research: ${error.message}`);
-    }
-  }
+                if any(term in link_text for term in ["attraction", "visit", "sight", "tour", "museum"]):
+                    travel_info["attractions"].append({
+                        "text": link.get("text"),
+                        "url": link_url
+                    })
 
-  /**
-   * Parse advisory level from advisory text
-   * @private
-   */
-  parseAdvisoryLevel(advisoryText) {
-    // Implementation depends on the format of the advisory
-    // This is a simplified example for US advisories
-    if (advisoryText.includes("Level 4: Do Not Travel")) {
-      return {
-        level: 4,
-        description: "Do Not Travel",
-      };
-    } else if (advisoryText.includes("Level 3: Reconsider Travel")) {
-      return {
-        level: 3,
-        description: "Reconsider Travel",
-      };
-    } else if (advisoryText.includes("Level 2: Exercise Increased Caution")) {
-      return {
-        level: 2,
-        description: "Exercise Increased Caution",
-      };
-    } else if (advisoryText.includes("Level 1: Exercise Normal Precautions")) {
-      return {
-        level: 1,
-        description: "Exercise Normal Precautions",
-      };
-    } else {
-      return {
-        level: null,
-        description: "Advisory level not found",
-      };
-    }
-  }
+                if any(term in link_text for term in ["transport", "bus", "train", "airport", "flight"]):
+                    travel_info["transportation_info"].append({
+                        "text": link.get("text"),
+                        "url": link_url
+                    })
 
-  /**
-   * Extract key information from advisory text
-   * @private
-   */
-  extractKeyAdvisoryInfo(advisoryText) {
-    // This is a simplified example
-    const keyInfo = {
-      safety: [],
-      health: [],
-      entry_requirements: [],
-    };
+        logger.info(f"Extracted travel info from {url} with {len(travel_info['attractions'])} attractions, "
+                   f"{len(travel_info['accommodation_mentions'])} accommodations, "
+                   f"{len(travel_info['transportation_info'])} transportation mentions")
 
-    // Extract safety information
-    if (advisoryText.includes("Crime:")) {
-      const crimeMatch = advisoryText.match(/Crime:([^.\n]+)/);
-      if (crimeMatch && crimeMatch[1]) {
-        keyInfo.safety.push("Crime: " + crimeMatch[1].trim());
-      }
-    }
-
-    if (advisoryText.includes("Terrorism:")) {
-      const terrorismMatch = advisoryText.match(/Terrorism:([^.\n]+)/);
-      if (terrorismMatch && terrorismMatch[1]) {
-        keyInfo.safety.push("Terrorism: " + terrorismMatch[1].trim());
-      }
-    }
-
-    // Extract health information
-    if (advisoryText.includes("Health:")) {
-      const healthMatch = advisoryText.match(/Health:([^.\n]+)/);
-      if (healthMatch && healthMatch[1]) {
-        keyInfo.health.push("Health: " + healthMatch[1].trim());
-      }
-    }
-
-    // Extract entry requirements
-    if (
-      advisoryText.includes("Entry requirements:") ||
-      advisoryText.includes("Visa requirements:")
-    ) {
-      const entryMatch = advisoryText.match(
-        /(?:Entry|Visa) requirements:([^.\n]+)/
-      );
-      if (entryMatch && entryMatch[1]) {
-        keyInfo.entry_requirements.push(entryMatch[1].trim());
-      }
-    }
-
-    return keyInfo;
-  }
-}
-
-module.exports = new FirecrawlService();
+        return travel_info
 ```
 
-### 2. Create API Endpoints
+### 2. Travel Information Extractor
 
-Create a file `src/api/routes/crawling.js`:
+Create a specialized extractor for travel information:
 
-```javascript
-const express = require("express");
-const router = express.Router();
-const firecrawlService = require("../../services/crawling/firecrawl-service");
-const { asyncHandler } = require("../../utils/error");
+```python
+# travel_extractor.py
+import re
+from typing import Dict, List, Any, Optional
+import logging
 
-/**
- * @route   GET /api/crawl/advisory/:country
- * @desc    Get travel advisory for a country
- * @access  Public
- */
-router.get(
-  "/advisory/:country",
-  asyncHandler(async (req, res) => {
-    const country = req.params.country;
-    const advisory = await firecrawlService.crawlTravelAdvisory(country);
-    res.json(advisory);
-  })
-);
+logger = logging.getLogger("TripSage-Extractor")
 
-/**
- * @route   GET /api/crawl/destination/:name
- * @desc    Get information about a destination
- * @access  Public
- */
-router.get(
-  "/destination/:name",
-  asyncHandler(async (req, res) => {
-    const destination = req.params.name;
-    const info = await firecrawlService.searchDestinationInfo(destination);
-    res.json(info);
-  })
-);
+class TravelInfoExtractor:
+    """Extract structured travel information from crawled content."""
 
-/**
- * @route   GET /api/crawl/attraction
- * @desc    Get details about a specific attraction
- * @access  Public
- */
-router.get(
-  "/attraction",
-  asyncHandler(async (req, res) => {
-    const { name, location } = req.query;
+    def __init__(self, use_markdown=True):
+        """
+        Initialize the travel information extractor.
 
-    if (!name || !location) {
-      return res.status(400).json({
-        error: "Missing required parameters: name, location",
-      });
+        Args:
+            use_markdown: Whether to extract from markdown (True) or HTML (False)
+        """
+        self.use_markdown = use_markdown
+
+    def extract_destination_info(self, crawl_result) -> Dict[str, Any]:
+        """
+        Extract destination information from a crawl result.
+
+        Args:
+            crawl_result: CrawlResult from Crawl4AI
+
+        Returns:
+            Dictionary containing structured destination information
+        """
+        # Use markdown or HTML content based on configuration
+        content = crawl_result.markdown if self.use_markdown else crawl_result.html
+
+        if not content:
+            logger.warning("No content available for extraction")
+            return {
+                "destination_name": crawl_result.title,
+                "extracted_content": {}
+            }
+
+        # Extract destination information
+        info = {
+            "destination_name": crawl_result.title,
+            "overview": self._extract_overview(content),
+            "attractions": self._extract_attractions(content),
+            "practical_info": {
+                "best_time_to_visit": self._extract_best_time_to_visit(content),
+                "safety_tips": self._extract_safety_tips(content),
+                "local_transportation": self._extract_local_transportation(content),
+                "currency": self._extract_currency(content),
+                "language": self._extract_language(content)
+            }
+        }
+
+        return info
+
+    def _extract_overview(self, content: str) -> str:
+        """Extract an overview/summary of the destination."""
+        # Simple heuristic: get the first substantial paragraph
+        paragraphs = re.split(r'\n\n+', content)
+
+        for paragraph in paragraphs:
+            # Clean up the paragraph
+            clean_paragraph = paragraph.strip()
+
+            # Skip short paragraphs, headers, and navigation elements
+            if (len(clean_paragraph) > 100 and
+                not clean_paragraph.startswith('#') and
+                not clean_paragraph.startswith('*') and
+                not re.search(r'copyright|cookie|privacy|terms', clean_paragraph, re.I)):
+
+                return clean_paragraph
+
+        # Fallback: return the first paragraph if no suitable one was found
+        return paragraphs[0] if paragraphs else ""
+
+    def _extract_attractions(self, content: str) -> List[Dict[str, str]]:
+        """Extract attractions from the content."""
+        attractions = []
+
+        # Extract sections that might contain attractions
+        attraction_sections = self._find_sections(content,
+                                                ["attraction", "sight", "place", "monument",
+                                                 "what to see", "what to do", "visit"])
+
+        for section in attraction_sections:
+            # Extract list items that might be attractions
+            items = re.findall(r'[*-] ([^\n]+)', section)
+
+            for item in items:
+                # Clean and validate the attraction
+                clean_item = item.strip()
+                if len(clean_item) > 3 and not re.search(r'copyright|cookie|privacy|terms', clean_item, re.I):
+                    attractions.append({
+                        "name": clean_item,
+                        "description": ""  # Description extraction would require more context
+                    })
+
+        # As a fallback, try to extract any bullet points if no attractions found
+        if not attractions:
+            items = re.findall(r'[*-] ([^\n]+)', content)
+            for item in items:
+                clean_item = item.strip()
+                if len(clean_item) > 3 and not re.search(r'copyright|cookie|privacy|terms', clean_item, re.I):
+                    attractions.append({
+                        "name": clean_item,
+                        "description": ""
+                    })
+
+        return attractions[:10]  # Limit to top 10 to avoid noise
+
+    # Additional extraction helper methods...
+    # (The rest of the methods as in the original file)
+```
+
+### 3. MCP Server Implementation
+
+Create an MCP server for AI agent integration:
+
+```python
+# crawl4ai_mcp_server.py
+from fastmcp import FastMCP
+import asyncio
+from travel_crawler import TravelCrawlerService
+from travel_extractor import TravelInfoExtractor
+
+# Initialize MCP server
+mcp = FastMCP()
+
+# Initialize crawler service
+crawler_service = TravelCrawlerService(cache_dir="crawl_cache")
+extractor = TravelInfoExtractor(use_markdown=True)
+
+# Register MCP tools
+@mcp.register_tool
+async def crawl_url(url: str, extract_info: bool = False):
+    """
+    Crawl a single URL and optionally extract travel information.
+
+    Args:
+        url: The URL to crawl
+        extract_info: Whether to extract structured travel information
+
+    Returns:
+        Raw crawl result or extracted travel information
+    """
+    await crawler_service.warmup()
+    result = await crawler_service.crawl_url(url)
+
+    if extract_info:
+        return extractor.extract_destination_info(result)
+    else:
+        return {
+            "title": result.title,
+            "content": result.markdown,
+            "links": result.links
+        }
+
+@mcp.register_tool
+async def search_and_crawl_destination(destination: str, country: str = None, max_results: int = 3):
+    """
+    Search for a destination and crawl the top results.
+
+    Args:
+        destination: Destination name to search for
+        country: Optional country to narrow search
+        max_results: Maximum number of results to crawl
+
+    Returns:
+        Aggregated information about the destination
+    """
+    # This would use a search API in a real implementation
+    # For now, we'll use a mock implementation
+    search_query = f"{destination} travel guide"
+    if country:
+        search_query += f" {country}"
+
+    # Mock search results
+    search_results = [
+        f"https://example.com/travel/{destination.lower().replace(' ', '-')}",
+        f"https://traveltips.com/{destination.lower().replace(' ', '-')}-guide",
+        f"https://wikitravel.org/en/{destination.replace(' ', '_')}"
+    ][:max_results]
+
+    # Crawl all results
+    results = await crawler_service.crawl_multiple(search_results)
+
+    # Extract and combine information
+    combined_info = {
+        "destination": destination,
+        "country": country,
+        "sources": list(results.keys()),
+        "overview": "",
+        "attractions": [],
+        "practical_info": {}
     }
 
-    const details = await firecrawlService.getAttractionDetails(name, location);
-    res.json(details);
-  })
-);
+    # Process each result to build combined information
+    for url, result in results.items():
+        dest_info = extractor.extract_destination_info(result)
 
-/**
- * @route   POST /api/crawl/research
- * @desc    Conduct deep research on a travel topic
- * @access  Public
- */
-router.post(
-  "/research",
-  asyncHandler(async (req, res) => {
-    const { topic } = req.body;
+        # Add overview if not already set
+        if not combined_info["overview"] and dest_info.get("overview"):
+            combined_info["overview"] = dest_info["overview"]
 
-    if (!topic) {
-      return res
-        .status(400)
-        .json({ error: "Missing required parameter: topic" });
-    }
+        # Add attractions
+        for attraction in dest_info.get("attractions", []):
+            if attraction not in combined_info["attractions"]:
+                combined_info["attractions"].append(attraction)
 
-    const research = await firecrawlService.conductTravelResearch(topic);
-    res.json(research);
-  })
-);
+        # Merge practical info
+        for key, value in dest_info.get("practical_info", {}).items():
+            if key not in combined_info["practical_info"] and value:
+                combined_info["practical_info"][key] = value
 
-module.exports = router;
+    return combined_info
+
+@mcp.register_tool
+async def get_travel_advisory(country: str):
+    """
+    Get travel advisory information for a country.
+
+    Args:
+        country: Country name or code
+
+    Returns:
+        Travel advisory information
+    """
+    # Convert country to lowercase for URL formatting
+    country_formatted = country.lower().replace(" ", "-")
+
+    # Try to crawl US travel advisory
+    url = f"https://travel.state.gov/content/travel/en/traveladvisories/traveladvisories/{country_formatted}-travel-advisory.html"
+
+    try:
+        result = await crawler_service.crawl_url(url)
+
+        # Extract advisory level and information
+        advisory = {
+            "country": country,
+            "source": "US Department of State",
+            "last_updated": result.timestamp.isoformat(),
+            "content": result.markdown,
+            "advisory_level": _extract_advisory_level(result.markdown),
+            "key_points": _extract_key_points(result.markdown)
+        }
+
+        return advisory
+    except Exception as e:
+        return {
+            "country": country,
+            "error": f"Could not retrieve travel advisory: {str(e)}"
+        }
+
+def _extract_advisory_level(content):
+    """Extract advisory level from content."""
+    if "Level 4: Do Not Travel" in content:
+        return {"level": 4, "description": "Do Not Travel"}
+    elif "Level 3: Reconsider Travel" in content:
+        return {"level": 3, "description": "Reconsider Travel"}
+    elif "Level 2: Exercise Increased Caution" in content:
+        return {"level": 2, "description": "Exercise Increased Caution"}
+    elif "Level 1: Exercise Normal Precautions" in content:
+        return {"level": 1, "description": "Exercise Normal Precautions"}
+    else:
+        return {"level": None, "description": "Unknown"}
+
+def _extract_key_points(content):
+    """Extract key advisory points."""
+    key_points = []
+
+    # Look for bullet points or key sections
+    matches = re.findall(r'[*•-] ([^*•\n][^\n]+)', content)
+
+    for match in matches:
+        point = match.strip()
+        if len(point) > 20 and not re.search(r'privacy|cookie|terms', point, re.I):
+            key_points.append(point)
+
+    return key_points[:5]  # Limit to top 5 points
+
+# Start MCP server
+if __name__ == "__main__":
+    port = 3000
+    print(f"Starting Crawl4AI MCP server on port {port}")
+    mcp.serve(port=port)
 ```
 
-### 3. Add to API Gateway
+## Usage Patterns
 
-Update `src/api/index.js` to include the crawling routes:
+To maximize the value of web crawling while controlling costs, follow these usage patterns:
 
-```javascript
-// Add this line with the other route imports
-const crawlingRoutes = require("./routes/crawling");
+### 1. Selective Crawling
 
-// Add this line with the other app.use statements
-app.use("/api/crawl", crawlingRoutes);
-```
+Only crawl when necessary, prioritizing:
 
-### 4. Agent Prompt Enhancement
+- High-value information (travel advisories, entry requirements)
+- Time-sensitive data (operating hours, current events)
+- User-requested details (specific attraction information)
 
-Update the travel agent prompt in `prompts/agent_development_prompt.md` to include web crawling capabilities:
+### 2. Comprehensive Caching
 
-```
+Implement aggressive caching based on data volatility:
+
+- Travel advisories: 24-hour cache
+- Destination information: 6-hour cache
+- Attraction details: 12-hour cache
+- Research topics: 3-day cache
+
+### 3. Agent Prompt Enhancement
+
+Update the travel agent prompt to include web crawling capabilities:
+
+```plaintext
 You are TripSage, an AI travel assistant specializing in comprehensive trip planning.
 
 CAPABILITIES:
@@ -732,310 +700,26 @@ Remember to use web crawling selectively and efficiently to control costs.
 IMPORTANT: Handle API errors gracefully. If data is unavailable, explain why and suggest alternatives.
 ```
 
-## Usage Patterns
-
-To maximize the value of web crawling while controlling costs, follow these usage patterns:
-
-### 1. Selective Crawling
-
-Only crawl when necessary, prioritizing:
-
-- High-value information (travel advisories, entry requirements)
-- Time-sensitive data (operating hours, current events)
-- User-requested details (specific attraction information)
-
-### 2. Comprehensive Caching
-
-Implement aggressive caching based on data volatility:
-
-- Travel advisories: 24-hour cache
-- Destination information: 6-hour cache
-- Attraction details: 12-hour cache
-- Research topics: 3-day cache
-
-### 3. Prioritized Information Sources
-
-Focus crawling on authoritative sources:
-
-- Government websites for travel advisories
-- Official tourism websites for destination information
-- Attraction official websites for details
-- Reputable travel publications for general information
-
-### 4. Depth Control
-
-Adjust crawl depth based on information needs:
-
-- Level 1: Basic advisory information
-- Level 2: Standard destination information
-- Level 3: Comprehensive research (use sparingly)
-
-## Testing and Verification
-
-### Unit Tests
-
-Create a file `src/tests/firecrawl-service.test.js`:
-
-```javascript
-const firecrawlService = require("../services/crawling/firecrawl-service");
-
-async function testFirecrawlService() {
-  try {
-    console.log("Testing travel advisory crawling...");
-    const advisory = await firecrawlService.crawlTravelAdvisory("france");
-    console.log("Travel advisory:", JSON.stringify(advisory, null, 2));
-    console.log("Test passed: Travel advisory retrieved");
-
-    console.log("\nTesting destination information search...");
-    const destinationInfo = await firecrawlService.searchDestinationInfo(
-      "Kyoto"
-    );
-    console.log("Destination info:", JSON.stringify(destinationInfo, null, 2));
-    console.log("Test passed: Destination information retrieved");
-
-    console.log("\nTesting attraction details...");
-    const attractionDetails = await firecrawlService.getAttractionDetails(
-      "Eiffel Tower",
-      "Paris"
-    );
-    console.log(
-      "Attraction details:",
-      JSON.stringify(attractionDetails, null, 2)
-    );
-    console.log("Test passed: Attraction details retrieved");
-
-    console.log("\nTesting travel research...");
-    const research = await firecrawlService.conductTravelResearch(
-      "Best time to visit Bali"
-    );
-    console.log("Research results:", JSON.stringify(research, null, 2));
-    console.log("Test passed: Travel research conducted");
-
-    return true;
-  } catch (error) {
-    console.error("Test failed:", error);
-    return false;
-  }
-}
-
-// Run test
-testFirecrawlService().then((success) => {
-  if (success) {
-    console.log("\nAll Firecrawl service tests passed!");
-  } else {
-    console.error("\nFirecrawl service tests failed");
-    process.exit(1);
-  }
-});
-```
-
-### Integration Testing
-
-Test the following scenarios:
-
-1. **Travel Advisory Retrieval**:
-
-   - Test with valid country codes and names
-   - Verify proper parsing of advisory levels
-   - Check extraction of key information
-   - Test error handling with invalid countries
-
-2. **Destination Information**:
-
-   - Test with popular and lesser-known destinations
-   - Verify structured information extraction
-   - Check source attribution
-   - Test information quality and relevance
-
-3. **Attraction Details**:
-
-   - Test with specific attractions in various cities
-   - Verify extraction of hours, prices, and recommendations
-   - Check for accurate contact information
-   - Test handling of non-existent attractions
-
-4. **Research Capabilities**:
-   - Test with specific travel research questions
-   - Verify depth and quality of research
-   - Check source attribution
-   - Test with complex multi-faceted topics
-
-## Cost Optimization
-
-To minimize costs when using Firecrawl in a personal deployment, implement these strategies:
-
-### 1. Request Throttling
-
-Create a request throttling mechanism in `src/utils/throttling.js`:
-
-```javascript
-class RequestThrottler {
-  constructor(options = {}) {
-    this.dailyLimit = options.dailyLimit || 100;
-    this.requestCounts = {};
-    this.resetTime = options.resetTime || "00:00:00"; // UTC time to reset counters
-
-    // Set up daily reset
-    this.setupDailyReset();
-  }
-
-  setupDailyReset() {
-    // Calculate time until next reset
-    const now = new Date();
-    const resetParts = this.resetTime.split(":").map(Number);
-    const nextReset = new Date(now);
-    nextReset.setUTCHours(resetParts[0], resetParts[1], resetParts[2], 0);
-
-    if (nextReset <= now) {
-      // If reset time has already passed today, schedule for tomorrow
-      nextReset.setUTCDate(nextReset.getUTCDate() + 1);
-    }
-
-    const timeUntilReset = nextReset - now;
-
-    // Schedule reset
-    setTimeout(() => {
-      this.resetCounts();
-      this.setupDailyReset(); // Set up next day's reset
-    }, timeUntilReset);
-  }
-
-  resetCounts() {
-    this.requestCounts = {};
-    console.log("Request counts reset at", new Date().toISOString());
-  }
-
-  async throttle(serviceName, callback) {
-    // Initialize count if not exists
-    if (!this.requestCounts[serviceName]) {
-      this.requestCounts[serviceName] = 0;
-    }
-
-    // Check if over limit
-    if (this.requestCounts[serviceName] >= this.dailyLimit) {
-      throw new Error(
-        `Daily limit of ${this.dailyLimit} requests exceeded for ${serviceName}`
-      );
-    }
-
-    // Increment counter
-    this.requestCounts[serviceName]++;
-
-    // Log usage
-    console.log(
-      `${serviceName} request: ${this.requestCounts[serviceName]}/${this.dailyLimit}`
-    );
-
-    // Execute callback
-    return callback();
-  }
-}
-
-// Create throttler instance
-const throttler = new RequestThrottler({
-  dailyLimit: process.env.FIRECRAWL_DAILY_LIMIT || 100,
-});
-
-module.exports = throttler;
-```
-
-### 2. Implement Usage in Service
-
-Update the Firecrawl service to use throttling:
-
-```javascript
-// Add this import to firecrawl-service.js
-const throttler = require('../../utils/throttling');
-
-// Then modify each method to use throttling
-async crawlTravelAdvisory(country) {
-  // Check cache first...
-
-  // Use throttling
-  return throttler.throttle('firecrawl', async () => {
-    // Original implementation goes here
-  });
-}
-```
-
-### 3. Usage Dashboard
-
-Create a simple dashboard to monitor Firecrawl usage:
-
-```javascript
-// src/api/routes/admin.js
-router.get(
-  "/crawl-usage",
-  asyncHandler(async (req, res) => {
-    res.json({
-      daily_limits: {
-        firecrawl: process.env.FIRECRAWL_DAILY_LIMIT || 100,
-      },
-      current_usage: req.app.get("throttler").requestCounts,
-      reset_time: req.app.get("throttler").resetTime,
-      recommendation: getUsageRecommendation(
-        req.app.get("throttler").requestCounts
-      ),
-    });
-  })
-);
-
-function getUsageRecommendation(requestCounts) {
-  const firecrawlCount = requestCounts.firecrawl || 0;
-  const limit = process.env.FIRECRAWL_DAILY_LIMIT || 100;
-  const usagePercentage = (firecrawlCount / limit) * 100;
-
-  if (usagePercentage > 90) {
-    return "Critical: Usage nearing limit. Disable non-essential crawling.";
-  } else if (usagePercentage > 75) {
-    return "Warning: High usage. Consider increasing cache TTLs.";
-  } else if (usagePercentage > 50) {
-    return "Moderate usage. Monitor for sharp increases.";
-  } else {
-    return "Low usage. Current settings are appropriate.";
-  }
-}
-```
-
-### 4. Automated Cost Control
-
-Implement automatic throttling adjustment based on usage patterns:
-
-```javascript
-// Add to throttler.js
-adjustThrottling() {
-  // Get current hour
-  const currentHour = new Date().getUTCHours();
-
-  // Calculate usage percentage
-  const firecrawlCount = this.requestCounts.firecrawl || 0;
-  const limit = this.dailyLimit;
-  const usagePercentage = (firecrawlCount / limit) * 100;
-
-  // Adjust based on time of day and usage
-  if (currentHour < 12) {
-    // Morning hours - keep standard limit
-    return;
-  } else if (currentHour < 18) {
-    // Afternoon - adjust if usage is high
-    if (usagePercentage > 60) {
-      // Temporarily reduce limits
-      console.log('Reducing firecrawl priority due to high usage');
-      return 'medium';
-    }
-  } else {
-    // Evening - be more conservative
-    if (usagePercentage > 80) {
-      console.log('Restricting firecrawl to essential requests only');
-      return 'low';
-    } else if (usagePercentage > 50) {
-      console.log('Reducing firecrawl priority due to day-end approaching');
-      return 'medium';
-    }
-  }
-
-  return 'high';
-}
-```
-
-By following this implementation guide, you'll have a fully functional web crawling integration for TripSage that enhances the travel planning experience with up-to-date information while carefully managing usage costs for personal deployment.
+## Implementation Checklist
+
+- [ ] Install Crawl4AI and dependencies
+- [ ] Set up TravelCrawlerService for basic web crawling
+- [ ] Implement TravelInfoExtractor for parsing travel content
+- [ ] Set up CrawlCacheManager for optimizing repeat crawls
+- [ ] Create MCP server for AI agent integration
+- [ ] Test with sample travel destinations
+- [ ] Implement error handling and logging
+- [ ] Document usage for other developers
+- [ ] Integrate with other TripSage components
+
+## Conclusion
+
+This integration guide provides a comprehensive setup for using Crawl4AI with TripSage. The implementation includes:
+
+- Basic web crawling with Crawl4AI
+- Travel-specific information extraction
+- MCP server for agent integration
+- Caching for performance optimization
+- Advanced destination research capabilities
+
+This approach leverages Crawl4AI's open-source nature to provide powerful web crawling capabilities without subscription fees or API key requirements, making it ideal for personal projects where users provide their own resources.
