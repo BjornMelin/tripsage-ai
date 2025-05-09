@@ -13,8 +13,9 @@ Browser-use is a powerful automation tool that allows TripSage to interact with 
 - Monitoring price changes for flights and accommodations
 
 The free tier offers:
+
 - 100 automation minutes per month
-- Full browser automation capabilities 
+- Full browser automation capabilities
 - Screenshot capture
 - Element selection
 - No setup fees or infrastructure requirements
@@ -74,12 +75,18 @@ class BrowserService {
   async checkFlightStatus(params) {
     const { airline, flightNumber, date } = params;
     const estimatedDuration = 1; // Estimated minutes
-    
+
     // Check if we should proceed with automation
-    if (!this.usageTracker.shouldProceedWithTask('flightStatus', estimatedDuration)) {
+    if (
+      !this.usageTracker.shouldProceedWithTask(
+        "flightStatus",
+        estimatedDuration
+      )
+    ) {
       return {
         success: false,
-        message: "Automation usage limit approaching. Using alternative data source."
+        message:
+          "Automation usage limit approaching. Using alternative data source.",
       };
     }
 
@@ -137,7 +144,7 @@ class BrowserService {
 
       // Record usage
       const duration = (Date.now() - startTime) / 60000; // Convert to minutes
-      this.usageTracker.recordTaskUsage('flightStatus', duration);
+      this.usageTracker.recordTaskUsage("flightStatus", duration);
 
       return {
         success: true,
@@ -149,7 +156,10 @@ class BrowserService {
         raw_content: content.substring(0, 1000), // Limit content size
       };
     } catch (error) {
-      logger.error(`Error checking flight status for ${airline} ${flightNumber}:`, error);
+      logger.error(
+        `Error checking flight status for ${airline} ${flightNumber}:`,
+        error
+      );
       return {
         success: false,
         message: `Failed to check flight status: ${error.message}`,
@@ -163,14 +173,18 @@ class BrowserService {
    * @returns {Promise<Object>} Check-in result
    */
   async checkInForFlight(params) {
-    const { airline, confirmationCode, lastName, firstName, flightDate } = params;
+    const { airline, confirmationCode, lastName, firstName, flightDate } =
+      params;
     const estimatedDuration = 2; // Estimated minutes
-    
+
     // Check if we should proceed with automation
-    if (!this.usageTracker.shouldProceedWithTask('checkIn', estimatedDuration)) {
+    if (
+      !this.usageTracker.shouldProceedWithTask("checkIn", estimatedDuration)
+    ) {
       return {
         success: false,
-        message: "Automation usage limit approaching. Please check in manually."
+        message:
+          "Automation usage limit approaching. Please check in manually.",
       };
     }
 
@@ -240,10 +254,10 @@ class BrowserService {
 
       // Check for common error messages
       const errorMessage = this.detectCheckInErrors(content);
-      
+
       // Record usage
       const duration = (Date.now() - startTime) / 60000; // Convert to minutes
-      this.usageTracker.recordTaskUsage('checkIn', duration);
+      this.usageTracker.recordTaskUsage("checkIn", duration);
 
       if (errorMessage) {
         return {
@@ -283,12 +297,18 @@ class BrowserService {
   async verifyBooking(params) {
     const { type, provider, confirmationCode, lastName, firstName } = params;
     const estimatedDuration = 1.5; // Estimated minutes
-    
+
     // Check if we should proceed with automation
-    if (!this.usageTracker.shouldProceedWithTask('verifyBooking', estimatedDuration)) {
+    if (
+      !this.usageTracker.shouldProceedWithTask(
+        "verifyBooking",
+        estimatedDuration
+      )
+    ) {
       return {
         success: false,
-        message: "Automation usage limit approaching. Please verify booking manually."
+        message:
+          "Automation usage limit approaching. Please verify booking manually.",
       };
     }
 
@@ -363,10 +383,10 @@ class BrowserService {
         type,
         provider
       );
-      
+
       // Record usage
       const duration = (Date.now() - startTime) / 60000; // Convert to minutes
-      this.usageTracker.recordTaskUsage('verifyBooking', duration);
+      this.usageTracker.recordTaskUsage("verifyBooking", duration);
 
       return {
         success: true,
@@ -391,14 +411,21 @@ class BrowserService {
    * @returns {Promise<Object>} Price monitoring result
    */
   async monitorPrice(params) {
-    const { type, provider, origin, destination, date, returnDate, travelers } = params;
+    const { type, provider, origin, destination, date, returnDate, travelers } =
+      params;
     const estimatedDuration = 1.5; // Estimated minutes
-    
+
     // Check if we should proceed with automation
-    if (!this.usageTracker.shouldProceedWithTask('monitorPrice', estimatedDuration)) {
+    if (
+      !this.usageTracker.shouldProceedWithTask(
+        "monitorPrice",
+        estimatedDuration
+      )
+    ) {
       return {
         success: false,
-        message: "Automation usage limit approaching. Using alternative price source."
+        message:
+          "Automation usage limit approaching. Using alternative price source.",
       };
     }
 
@@ -467,10 +494,10 @@ class BrowserService {
 
       // Extract price information
       const priceInfo = this.extractPriceInfo(content, type, provider);
-      
+
       // Record usage
       const duration = (Date.now() - startTime) / 60000; // Convert to minutes
-      this.usageTracker.recordTaskUsage('monitorPrice', duration);
+      this.usageTracker.recordTaskUsage("monitorPrice", duration);
 
       return {
         success: true,
@@ -529,24 +556,26 @@ class UsageTracker {
   resetUsage() {
     this.minutesUsed = 0;
     this.tasks = [];
-    
+
     // Set reset date to first day of next month
     const now = new Date();
     const resetDate = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-    
+
     this.saveUsage(resetDate);
   }
 
   saveUsage(resetDate) {
     try {
-      const resetDateToUse = resetDate || new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1);
-      
+      const resetDateToUse =
+        resetDate ||
+        new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1);
+
       localStorage.setItem(
         "browser_use_usage",
         JSON.stringify({
           minutesUsed: this.minutesUsed,
           tasks: this.tasks,
-          resetDate: resetDateToUse.toISOString()
+          resetDate: resetDateToUse.toISOString(),
         })
       );
     } catch (error) {
@@ -559,35 +588,35 @@ class UsageTracker {
     this.tasks.push({
       type: taskType,
       duration: durationMinutes,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     });
-    
+
     this.saveUsage();
-    
+
     return {
       minutesUsed: this.minutesUsed,
-      minutesRemaining: this.monthlyLimit - this.minutesUsed
+      minutesRemaining: this.monthlyLimit - this.minutesUsed,
     };
   }
 
   shouldProceedWithTask(taskType, estimatedDuration) {
     const remainingMinutes = this.monthlyLimit - this.minutesUsed;
-    
+
     // Always allow check-ins as they're time-sensitive
-    if (taskType === 'checkIn') {
+    if (taskType === "checkIn") {
       return remainingMinutes >= estimatedDuration;
     }
-    
+
     // For other tasks, be more conservative
     if (remainingMinutes < 15) {
       return false;
     }
-    
+
     if (remainingMinutes < 30) {
       // Only allow important task types when under 30 minutes
-      return ['checkIn', 'verifyBooking'].includes(taskType);
+      return ["checkIn", "verifyBooking"].includes(taskType);
     }
-    
+
     return true;
   }
 
@@ -601,7 +630,7 @@ class UsageTracker {
       counts[task.type] = (counts[task.type] || 0) + 1;
       return counts;
     }, {});
-    
+
     const taskTypeMinutes = this.tasks.reduce((minutes, task) => {
       minutes[task.type] = (minutes[task.type] || 0) + task.duration;
       return minutes;
@@ -613,7 +642,7 @@ class UsageTracker {
       percentageUsed: (this.minutesUsed / this.monthlyLimit) * 100,
       taskCounts: taskTypeCounts,
       taskMinutes: taskTypeMinutes,
-      recentTasks: this.tasks.slice(-5) // Last 5 tasks
+      recentTasks: this.tasks.slice(-5), // Last 5 tasks
     };
   }
 }
@@ -642,16 +671,16 @@ const browserUtils = {
       throw new Error(`Invalid date: ${date}`);
     }
 
-    const day = dateObj.getDate().toString().padStart(2, '0');
-    const month = (dateObj.getMonth() + 1).toString().padStart(2, '0');
+    const day = dateObj.getDate().toString().padStart(2, "0");
+    const month = (dateObj.getMonth() + 1).toString().padStart(2, "0");
     const year = dateObj.getFullYear();
 
     switch (format) {
-      case 'MM/DD/YYYY':
+      case "MM/DD/YYYY":
         return `${month}/${day}/${year}`;
-      case 'DD/MM/YYYY':
+      case "DD/MM/YYYY":
         return `${day}/${month}/${year}`;
-      case 'YYYY-MM-DD':
+      case "YYYY-MM-DD":
         return `${year}-${month}-${day}`;
       default:
         return date;
@@ -665,14 +694,17 @@ const browserUtils = {
    */
   getAirlineStatusUrl(airline) {
     const airlineUrls = {
-      AA: 'https://www.aa.com/travelInformation/flights/status',
-      DL: 'https://www.delta.com/flight-status-lookup',
-      UA: 'https://www.united.com/en/us/flightstatus',
-      WN: 'https://www.southwest.com/air/flight-status',
+      AA: "https://www.aa.com/travelInformation/flights/status",
+      DL: "https://www.delta.com/flight-status-lookup",
+      UA: "https://www.united.com/en/us/flightstatus",
+      WN: "https://www.southwest.com/air/flight-status",
       // Add more airlines as needed
     };
 
-    return airlineUrls[airline] || `https://www.google.com/search?q=${airline}+flight+status`;
+    return (
+      airlineUrls[airline] ||
+      `https://www.google.com/search?q=${airline}+flight+status`
+    );
   },
 
   /**
@@ -687,28 +719,36 @@ const browserUtils = {
       return null;
     }
 
-    const matchingElements = snapshot.nodes.filter(node => {
-      if (node.type !== 'element') return false;
+    const matchingElements = snapshot.nodes.filter((node) => {
+      if (node.type !== "element") return false;
 
       // Check if element type matches
-      const isMatchingType = elementType.includes('[') 
-        ? node.tagName.toLowerCase() === elementType.split('[')[0] &&
-          node.attributes.some(attr => attr.name === elementType.split('[')[1].split('=')[0].trim())
+      const isMatchingType = elementType.includes("[")
+        ? node.tagName.toLowerCase() === elementType.split("[")[0] &&
+          node.attributes.some(
+            (attr) =>
+              attr.name === elementType.split("[")[1].split("=")[0].trim()
+          )
         : node.tagName.toLowerCase() === elementType;
 
       if (!isMatchingType) return false;
 
       // Check if element has matching attributes
-      const hasMatchingAttr = node.attributes.some(attr => {
-        const attrValue = attr.value || '';
-        return (attr.name === 'name' || attr.name === 'id' || attr.name === 'placeholder') && 
-          attrValue.toLowerCase().includes(nameHint.toLowerCase());
+      const hasMatchingAttr = node.attributes.some((attr) => {
+        const attrValue = attr.value || "";
+        return (
+          (attr.name === "name" ||
+            attr.name === "id" ||
+            attr.name === "placeholder") &&
+          attrValue.toLowerCase().includes(nameHint.toLowerCase())
+        );
       });
 
       // Check for aria-label as well
-      const hasMatchingAriaLabel = node.attributes.some(attr => 
-        attr.name === 'aria-label' && 
-        attr.value.toLowerCase().includes(nameHint.toLowerCase())
+      const hasMatchingAriaLabel = node.attributes.some(
+        (attr) =>
+          attr.name === "aria-label" &&
+          attr.value.toLowerCase().includes(nameHint.toLowerCase())
       );
 
       return hasMatchingAttr || hasMatchingAriaLabel;
@@ -735,7 +775,7 @@ const browserUtils = {
     }
 
     return null;
-  }
+  },
 };
 
 module.exports = browserUtils;
@@ -758,26 +798,29 @@ const securityUtils = {
    */
   maskSensitiveInfo(text, patterns) {
     if (!text) return text;
-    
+
     let maskedText = text;
-    
+
     // Mask common patterns
     const defaultPatterns = [
-      { regex: /\b[A-Z0-9]{6}\b/g, replacement: '******' }, // Confirmation codes
-      { regex: /\b\d{4}[\s-]?\d{4}[\s-]?\d{4}[\s-]?\d{4}\b/g, replacement: '****************' }, // Credit cards
-      { regex: /\b[A-Z]{2}\d{6}\b/g, replacement: '********' }, // Passport numbers
+      { regex: /\b[A-Z0-9]{6}\b/g, replacement: "******" }, // Confirmation codes
+      {
+        regex: /\b\d{4}[\s-]?\d{4}[\s-]?\d{4}[\s-]?\d{4}\b/g,
+        replacement: "****************",
+      }, // Credit cards
+      { regex: /\b[A-Z]{2}\d{6}\b/g, replacement: "********" }, // Passport numbers
     ];
-    
+
     const allPatterns = [...defaultPatterns, ...(patterns || [])];
-    
+
     // Apply masking
-    allPatterns.forEach(pattern => {
+    allPatterns.forEach((pattern) => {
       maskedText = maskedText.replace(pattern.regex, pattern.replacement);
     });
-    
+
     return maskedText;
   },
-  
+
   /**
    * Validate user input for security concerns
    * @param {Object} params Input parameters
@@ -787,45 +830,50 @@ const securityUtils = {
   validateUserInput(params, validationRules) {
     const result = {
       valid: true,
-      errors: []
+      errors: [],
     };
-    
+
     if (!params || !validationRules) {
       result.valid = false;
-      result.errors.push('Invalid parameters or validation rules');
+      result.errors.push("Invalid parameters or validation rules");
       return result;
     }
-    
+
     for (const rule of validationRules) {
       const { field, type, pattern, message, required } = rule;
-      
+
       // Check required fields
-      if (required && (params[field] === undefined || params[field] === null || params[field] === '')) {
+      if (
+        required &&
+        (params[field] === undefined ||
+          params[field] === null ||
+          params[field] === "")
+      ) {
         result.valid = false;
         result.errors.push(message || `${field} is required`);
         continue;
       }
-      
+
       // Skip validation if field is not present and not required
       if (!params[field] && !required) {
         continue;
       }
-      
+
       // Validate by type
-      if (type === 'string' && typeof params[field] !== 'string') {
+      if (type === "string" && typeof params[field] !== "string") {
         result.valid = false;
         result.errors.push(message || `${field} must be a string`);
       }
-      
+
       // Validate by pattern
       if (pattern && !pattern.test(params[field])) {
         result.valid = false;
         result.errors.push(message || `${field} has invalid format`);
       }
     }
-    
+
     return result;
-  }
+  },
 };
 
 module.exports = securityUtils;
@@ -836,34 +884,70 @@ module.exports = securityUtils;
 Create a file `src/api/routes/automation.js`:
 
 ```javascript
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const browserService = require('../../services/automation/browser-service');
-const securityUtils = require('../../utils/security-utils');
-const { asyncHandler } = require('../../utils/error');
+const browserService = require("../../services/automation/browser-service");
+const securityUtils = require("../../utils/security-utils");
+const { asyncHandler } = require("../../utils/error");
 
 /**
  * Input validation rules
  */
 const validationRules = {
   flightStatus: [
-    { field: 'airline', type: 'string', pattern: /^[A-Z0-9]{2,3}$/, message: 'Airline code must be 2-3 characters', required: true },
-    { field: 'flightNumber', type: 'string', pattern: /^\d{1,4}[A-Z]?$/, message: 'Invalid flight number format', required: true },
-    { field: 'date', type: 'string', pattern: /^\d{4}-\d{2}-\d{2}$/, message: 'Date must be in YYYY-MM-DD format', required: true }
+    {
+      field: "airline",
+      type: "string",
+      pattern: /^[A-Z0-9]{2,3}$/,
+      message: "Airline code must be 2-3 characters",
+      required: true,
+    },
+    {
+      field: "flightNumber",
+      type: "string",
+      pattern: /^\d{1,4}[A-Z]?$/,
+      message: "Invalid flight number format",
+      required: true,
+    },
+    {
+      field: "date",
+      type: "string",
+      pattern: /^\d{4}-\d{2}-\d{2}$/,
+      message: "Date must be in YYYY-MM-DD format",
+      required: true,
+    },
   ],
-  
+
   checkIn: [
-    { field: 'airline', type: 'string', pattern: /^[A-Z0-9]{2,3}$/, message: 'Airline code must be 2-3 characters', required: true },
-    { field: 'confirmationCode', type: 'string', pattern: /^[A-Z0-9]{6}$/, message: 'Confirmation code must be 6 characters', required: true },
-    { field: 'lastName', type: 'string', required: true }
+    {
+      field: "airline",
+      type: "string",
+      pattern: /^[A-Z0-9]{2,3}$/,
+      message: "Airline code must be 2-3 characters",
+      required: true,
+    },
+    {
+      field: "confirmationCode",
+      type: "string",
+      pattern: /^[A-Z0-9]{6}$/,
+      message: "Confirmation code must be 6 characters",
+      required: true,
+    },
+    { field: "lastName", type: "string", required: true },
   ],
-  
+
   verifyBooking: [
-    { field: 'type', type: 'string', pattern: /^(flight|hotel|car)$/, message: 'Type must be flight, hotel, or car', required: true },
-    { field: 'provider', type: 'string', required: true },
-    { field: 'confirmationCode', type: 'string', required: true },
-    { field: 'lastName', type: 'string', required: true }
-  ]
+    {
+      field: "type",
+      type: "string",
+      pattern: /^(flight|hotel|car)$/,
+      message: "Type must be flight, hotel, or car",
+      required: true,
+    },
+    { field: "provider", type: "string", required: true },
+    { field: "confirmationCode", type: "string", required: true },
+    { field: "lastName", type: "string", required: true },
+  ],
 };
 
 /**
@@ -872,22 +956,25 @@ const validationRules = {
  * @access  Public
  */
 router.get(
-  '/flight-status',
+  "/flight-status",
   asyncHandler(async (req, res) => {
     // Validate input
-    const validation = securityUtils.validateUserInput(req.query, validationRules.flightStatus);
+    const validation = securityUtils.validateUserInput(
+      req.query,
+      validationRules.flightStatus
+    );
     if (!validation.valid) {
       return res.status(400).json({
-        error: validation.errors.join(', ')
+        error: validation.errors.join(", "),
       });
     }
 
     const { airline, flightNumber, date } = req.query;
-    
+
     const status = await browserService.checkFlightStatus({
       airline,
       flightNumber,
-      date
+      date,
     });
 
     res.json(status);
@@ -900,24 +987,28 @@ router.get(
  * @access  Public
  */
 router.post(
-  '/check-in',
+  "/check-in",
   asyncHandler(async (req, res) => {
     // Validate input
-    const validation = securityUtils.validateUserInput(req.body, validationRules.checkIn);
+    const validation = securityUtils.validateUserInput(
+      req.body,
+      validationRules.checkIn
+    );
     if (!validation.valid) {
       return res.status(400).json({
-        error: validation.errors.join(', ')
+        error: validation.errors.join(", "),
       });
     }
 
-    const { airline, confirmationCode, lastName, firstName, flightDate } = req.body;
-    
+    const { airline, confirmationCode, lastName, firstName, flightDate } =
+      req.body;
+
     const checkInResult = await browserService.checkInForFlight({
       airline,
       confirmationCode,
       lastName,
       firstName,
-      flightDate
+      flightDate,
     });
 
     res.json(checkInResult);
@@ -930,24 +1021,27 @@ router.post(
  * @access  Public
  */
 router.post(
-  '/verify-booking',
+  "/verify-booking",
   asyncHandler(async (req, res) => {
     // Validate input
-    const validation = securityUtils.validateUserInput(req.body, validationRules.verifyBooking);
+    const validation = securityUtils.validateUserInput(
+      req.body,
+      validationRules.verifyBooking
+    );
     if (!validation.valid) {
       return res.status(400).json({
-        error: validation.errors.join(', ')
+        error: validation.errors.join(", "),
       });
     }
 
     const { type, provider, confirmationCode, lastName, firstName } = req.body;
-    
+
     const verificationResult = await browserService.verifyBooking({
       type,
       provider,
       confirmationCode,
       lastName,
-      firstName
+      firstName,
     });
 
     res.json(verificationResult);
@@ -960,7 +1054,7 @@ router.post(
  * @access  Public
  */
 router.get(
-  '/usage',
+  "/usage",
   asyncHandler(async (req, res) => {
     const usageSummary = browserService.usageTracker.getUsageSummary();
     res.json(usageSummary);
@@ -977,16 +1071,19 @@ module.exports = router;
 The Browser-use free tier provides 100 automation minutes per month, which requires careful management for personal usage. Here are strategies to optimize usage:
 
 1. **Selective Automation**
+
    - Only automate tasks that add significant value (check-ins, complex verifications)
    - Use direct API calls when possible instead of browser automation
    - Prioritize time-sensitive operations (like flight check-ins)
 
 2. **Usage Tracking**
+
    - Implement the UsageTracker class to monitor minute consumption
    - Set alerts at 50% and 80% usage thresholds
    - Reset tracking on the first day of each month
 
 3. **Efficiency Optimization**
+
    - Pre-check for cached data before initiating automation
    - Use browser_snapshot instead of multiple screenshots
    - Implement early termination for failed actions
@@ -1011,28 +1108,37 @@ async function checkFlightStatus(airline, flightNumber, date) {
   if (apiResult.success) {
     return apiResult;
   }
-  
+
   // Check cache for recent results
-  const cachedResult = await checkCache('flightStatus', { airline, flightNumber, date });
+  const cachedResult = await checkCache("flightStatus", {
+    airline,
+    flightNumber,
+    date,
+  });
   if (cachedResult) {
     return {
       ...cachedResult,
-      source: 'cache'
+      source: "cache",
     };
   }
-  
+
   // Fall back to browser automation
   const browserResult = await browserService.checkFlightStatus({
     airline,
     flightNumber,
-    date
+    date,
   });
-  
+
   // Cache successful results
   if (browserResult.success) {
-    await cacheResult('flightStatus', { airline, flightNumber, date }, browserResult, 30); // 30 minute TTL
+    await cacheResult(
+      "flightStatus",
+      { airline, flightNumber, date },
+      browserResult,
+      30
+    ); // 30 minute TTL
   }
-  
+
   return browserResult;
 }
 ```
@@ -1043,44 +1149,49 @@ async function checkFlightStatus(airline, flightNumber, date) {
 // Example implementation in travel agent code
 async function verifyBooking(type, provider, confirmationCode, lastName) {
   // Check cache first (with short TTL)
-  const cachedResult = await checkCache('bookingVerification', { 
-    type, provider, confirmationCode, lastName 
+  const cachedResult = await checkCache("bookingVerification", {
+    type,
+    provider,
+    confirmationCode,
+    lastName,
   });
-  
+
   if (cachedResult) {
     return {
       ...cachedResult,
-      source: 'cache'
+      source: "cache",
     };
   }
-  
+
   // Check usage before proceeding
   const usageStats = browserService.usageTracker.getUsageSummary();
   if (usageStats.percentageUsed > 80) {
     return {
       success: false,
-      message: "Browser automation usage limit approaching. Please verify manually using the provider's website.",
-      verificationUrl: getProviderUrl(type, provider)
+      message:
+        "Browser automation usage limit approaching. Please verify manually using the provider's website.",
+      verificationUrl: getProviderUrl(type, provider),
     };
   }
-  
+
   // Proceed with browser automation
   const result = await browserService.verifyBooking({
     type,
     provider,
     confirmationCode,
-    lastName
+    lastName,
   });
-  
+
   // Cache successful results for a short period
   if (result.success) {
-    await cacheResult('bookingVerification', 
-      { type, provider, confirmationCode, lastName }, 
-      result, 
+    await cacheResult(
+      "bookingVerification",
+      { type, provider, confirmationCode, lastName },
+      result,
       60 // 60 minute TTL
     );
   }
-  
+
   return result;
 }
 ```
@@ -1091,12 +1202,14 @@ When implementing browser automation for travel tasks, follow these security bes
 
 ### Personal API Key Protection
 
-1. **Secure Storage**: 
+1. **Secure Storage**:
+
    - Never hard-code API keys in source code
    - Use environment variables or secure storage solutions
    - Limit access to your `.env` file
 
 2. **Key Rotation**:
+
    - Regularly rotate your Browser-use API key (every 3-6 months)
    - Immediately invalidate keys if accidentally exposed
 
@@ -1107,10 +1220,12 @@ When implementing browser automation for travel tasks, follow these security bes
 ### Sensitive Data Handling
 
 1. **Data Minimization**:
+
    - Only request essential personal information
    - Don't store sensitive data like confirmation codes longer than necessary
 
 2. **Data Masking**:
+
    - Mask confirmation codes and other sensitive data in logs
    - Use the securityUtils.maskSensitiveInfo() function
 
@@ -1121,6 +1236,7 @@ When implementing browser automation for travel tasks, follow these security bes
 ### Input Validation
 
 1. **Parameter Validation**:
+
    - Validate all input parameters before passing to automation
    - Use the securityUtils.validateUserInput() function
    - Reject malformed or suspicious inputs
@@ -1136,46 +1252,73 @@ When implementing browser automation for travel tasks, follow these security bes
 Create a test file `src/tests/browser-service.test.js`:
 
 ```javascript
-const browserService = require('../services/automation/browser-service');
-const browserUtils = require('../utils/browser-utils');
-const securityUtils = require('../utils/security-utils');
+const browserService = require("../services/automation/browser-service");
+const browserUtils = require("../utils/browser-utils");
+const securityUtils = require("../utils/security-utils");
 
-describe('Browser Service', () => {
+describe("Browser Service", () => {
   // Test date formatting utility
-  test('browserUtils.formatDate correctly formats dates', () => {
-    expect(browserUtils.formatDate('2023-05-15', 'MM/DD/YYYY')).toBe('05/15/2023');
-    expect(browserUtils.formatDate('2023-05-15', 'DD/MM/YYYY')).toBe('15/05/2023');
-    expect(browserUtils.formatDate('2023-05-15', 'YYYY-MM-DD')).toBe('2023-05-15');
+  test("browserUtils.formatDate correctly formats dates", () => {
+    expect(browserUtils.formatDate("2023-05-15", "MM/DD/YYYY")).toBe(
+      "05/15/2023"
+    );
+    expect(browserUtils.formatDate("2023-05-15", "DD/MM/YYYY")).toBe(
+      "15/05/2023"
+    );
+    expect(browserUtils.formatDate("2023-05-15", "YYYY-MM-DD")).toBe(
+      "2023-05-15"
+    );
   });
-  
+
   // Test security utility
-  test('securityUtils.maskSensitiveInfo masks confirmation codes', () => {
-    const text = 'Your confirmation code is ABC123';
-    expect(securityUtils.maskSensitiveInfo(text, [])).toBe('Your confirmation code is ******');
+  test("securityUtils.maskSensitiveInfo masks confirmation codes", () => {
+    const text = "Your confirmation code is ABC123";
+    expect(securityUtils.maskSensitiveInfo(text, [])).toBe(
+      "Your confirmation code is ******"
+    );
   });
-  
+
   // Test input validation
-  test('securityUtils.validateUserInput validates flight status inputs', () => {
+  test("securityUtils.validateUserInput validates flight status inputs", () => {
     const validInput = {
-      airline: 'AA',
-      flightNumber: '123',
-      date: '2023-05-15'
+      airline: "AA",
+      flightNumber: "123",
+      date: "2023-05-15",
     };
-    
+
     const invalidInput = {
-      airline: 'AAAA', // Too long
-      flightNumber: 'ABC', // No number
-      date: '05/15/2023' // Wrong format
+      airline: "AAAA", // Too long
+      flightNumber: "ABC", // No number
+      date: "05/15/2023", // Wrong format
     };
-    
+
     const validationRules = [
-      { field: 'airline', type: 'string', pattern: /^[A-Z0-9]{2,3}$/, required: true },
-      { field: 'flightNumber', type: 'string', pattern: /^\d{1,4}[A-Z]?$/, required: true },
-      { field: 'date', type: 'string', pattern: /^\d{4}-\d{2}-\d{2}$/, required: true }
+      {
+        field: "airline",
+        type: "string",
+        pattern: /^[A-Z0-9]{2,3}$/,
+        required: true,
+      },
+      {
+        field: "flightNumber",
+        type: "string",
+        pattern: /^\d{1,4}[A-Z]?$/,
+        required: true,
+      },
+      {
+        field: "date",
+        type: "string",
+        pattern: /^\d{4}-\d{2}-\d{2}$/,
+        required: true,
+      },
     ];
-    
-    expect(securityUtils.validateUserInput(validInput, validationRules).valid).toBe(true);
-    expect(securityUtils.validateUserInput(invalidInput, validationRules).valid).toBe(false);
+
+    expect(
+      securityUtils.validateUserInput(validInput, validationRules).valid
+    ).toBe(true);
+    expect(
+      securityUtils.validateUserInput(invalidInput, validationRules).valid
+    ).toBe(false);
   });
 });
 ```
@@ -1185,11 +1328,13 @@ describe('Browser Service', () => {
 Test automated workflows for the following scenarios:
 
 1. **Flight Status Checking**:
+
    - Test with known flights across major airlines
    - Verify status parsing accuracy
    - Validate screenshot captures
 
 2. **Check-in Automation**:
+
    - Test with mock confirmation codes
    - Verify error detection for invalid inputs
    - Confirm boarding pass detection
@@ -1205,50 +1350,47 @@ Create a verification script that tests the complete workflow:
 
 ```javascript
 // test/e2e/browser-automation-e2e.js
-const request = require('supertest');
-const app = require('../../src/app');
+const request = require("supertest");
+const app = require("../../src/app");
 
-describe('Browser Automation E2E Tests', () => {
+describe("Browser Automation E2E Tests", () => {
   // Test flight status API
-  test('GET /api/automation/flight-status returns correct status', async () => {
+  test("GET /api/automation/flight-status returns correct status", async () => {
     const response = await request(app)
-      .get('/api/automation/flight-status')
+      .get("/api/automation/flight-status")
       .query({
-        airline: 'AA',
-        flightNumber: '123',
-        date: '2023-05-15'
+        airline: "AA",
+        flightNumber: "123",
+        date: "2023-05-15",
       });
-    
+
     expect(response.status).toBe(200);
-    expect(response.body).toHaveProperty('success');
+    expect(response.body).toHaveProperty("success");
     // More assertions based on expected response
   });
-  
+
   // Test check-in API
-  test('POST /api/automation/check-in performs check-in', async () => {
-    const response = await request(app)
-      .post('/api/automation/check-in')
-      .send({
-        airline: 'AA',
-        confirmationCode: 'ABC123',
-        lastName: 'Smith',
-        firstName: 'John',
-        flightDate: '2023-05-15'
-      });
-    
+  test("POST /api/automation/check-in performs check-in", async () => {
+    const response = await request(app).post("/api/automation/check-in").send({
+      airline: "AA",
+      confirmationCode: "ABC123",
+      lastName: "Smith",
+      firstName: "John",
+      flightDate: "2023-05-15",
+    });
+
     expect(response.status).toBe(200);
-    expect(response.body).toHaveProperty('success');
+    expect(response.body).toHaveProperty("success");
     // More assertions based on expected response
   });
-  
+
   // Test usage API
-  test('GET /api/automation/usage returns usage statistics', async () => {
-    const response = await request(app)
-      .get('/api/automation/usage');
-    
+  test("GET /api/automation/usage returns usage statistics", async () => {
+    const response = await request(app).get("/api/automation/usage");
+
     expect(response.status).toBe(200);
-    expect(response.body).toHaveProperty('minutesUsed');
-    expect(response.body).toHaveProperty('minutesRemaining');
+    expect(response.body).toHaveProperty("minutesUsed");
+    expect(response.body).toHaveProperty("minutesRemaining");
     // More assertions based on expected response
   });
 });
@@ -1266,7 +1408,7 @@ class BrowserAutomationAgent {
   constructor(browserService) {
     this.browserService = browserService;
   }
-  
+
   /**
    * Generate complete travel itinerary with screenshots
    * @param {Array} bookings List of bookings to include
@@ -1274,40 +1416,43 @@ class BrowserAutomationAgent {
    */
   async generateTravelItinerary(bookings) {
     const itinerary = {
-      title: 'Your Travel Itinerary',
+      title: "Your Travel Itinerary",
       created: new Date().toISOString(),
       bookings: [],
-      screenshots: {}
+      screenshots: {},
     };
-    
+
     for (const booking of bookings) {
       // Verify the booking
-      const verificationResult = await this.browserService.verifyBooking(booking);
-      
+      const verificationResult = await this.browserService.verifyBooking(
+        booking
+      );
+
       if (verificationResult.success) {
         // Add to itinerary
         itinerary.bookings.push({
           type: booking.type,
           provider: booking.provider,
           confirmation: booking.confirmationCode,
-          details: verificationResult.details
+          details: verificationResult.details,
         });
-        
+
         // Store screenshot
-        itinerary.screenshots[booking.confirmationCode] = verificationResult.screenshot;
+        itinerary.screenshots[booking.confirmationCode] =
+          verificationResult.screenshot;
       }
     }
-    
+
     // Sort bookings by date
     itinerary.bookings.sort((a, b) => {
       const dateA = new Date(a.details.startDate || a.details.departureDate);
       const dateB = new Date(b.details.startDate || b.details.departureDate);
       return dateA - dateB;
     });
-    
+
     return itinerary;
   }
-  
+
   /**
    * Set up price monitoring for multiple travel items
    * @param {Array} items Travel items to monitor
@@ -1318,13 +1463,13 @@ class BrowserAutomationAgent {
     const monitoringResults = {
       setup: new Date().toISOString(),
       items: [],
-      threshold: threshold
+      threshold: threshold,
     };
-    
+
     for (const item of items) {
       // Check current price
       const priceResult = await this.browserService.monitorPrice(item);
-      
+
       if (priceResult.success) {
         // Store initial price info
         monitoringResults.items.push({
@@ -1334,14 +1479,14 @@ class BrowserAutomationAgent {
           destination: item.destination,
           initialPrice: this.extractLowestPrice(priceResult.prices),
           lastChecked: new Date().toISOString(),
-          screenshot: priceResult.screenshot
+          screenshot: priceResult.screenshot,
         });
       }
     }
-    
+
     return monitoringResults;
   }
-  
+
   /**
    * Extract lowest price from price information
    * @private
@@ -1350,11 +1495,11 @@ class BrowserAutomationAgent {
     if (!prices || !prices.length) {
       return null;
     }
-    
+
     const allPrices = prices
-      .map(p => parseFloat(p.amount.replace(/[^0-9.]/g, '')))
-      .filter(p => !isNaN(p));
-      
+      .map((p) => parseFloat(p.amount.replace(/[^0-9.]/g, "")))
+      .filter((p) => !isNaN(p));
+
     return allPrices.length > 0 ? Math.min(...allPrices) : null;
   }
 }
@@ -1367,15 +1512,18 @@ module.exports = BrowserAutomationAgent;
 ### Common Issues
 
 1. **Element Not Found Errors**:
+
    - The website structure may have changed, requiring updated selectors
    - The element may be in an iframe or dynamically loaded
    - Solution: Use more robust element finding strategies, increase timeouts
 
 2. **Authentication Challenges**:
+
    - Many travel sites use advanced bot detection
    - Solution: Use realistic user agent strings, enable cookies, handle captchas
 
 3. **Varying Website Layouts**:
+
    - Travel sites often have different layouts for different regions
    - Solution: Implement adaptive form detection and filling
 
@@ -1386,14 +1534,17 @@ module.exports = BrowserAutomationAgent;
 ### Troubleshooting Steps
 
 1. **Screenshot Analysis**:
+
    - Always capture screenshots at failure points
    - Compare with previous successful runs
 
 2. **Console Log Collection**:
+
    - Gather browser console logs for JavaScript errors
    - Use browser_get_console_logs to retrieve logs
 
 3. **Gradual Debugging**:
+
    - Break automation into smaller steps
    - Test each step individually
 
@@ -1406,6 +1557,7 @@ module.exports = BrowserAutomationAgent;
 The Browser-use integration enables TripSage to automate tedious travel tasks, enhancing the user experience significantly. By following the guidelines for cost optimization, security, and efficient implementation, you can provide a robust browser automation solution that works within the constraints of personal API key usage.
 
 The integration covers:
+
 - Flight status checking
 - Booking verification
 - Check-in automation
@@ -1418,7 +1570,7 @@ This implementation aligns with TripSage's overall integration strategy by provi
 
 - [ ] Set up Browser-use account and obtain API key
 - [ ] Configure environment variables
-- [ ] Implement BrowserService class 
+- [ ] Implement BrowserService class
 - [ ] Create utility functions for automation
 - [ ] Add security utilities
 - [ ] Implement API routes

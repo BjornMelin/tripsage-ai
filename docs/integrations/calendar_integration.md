@@ -16,6 +16,7 @@ Google Calendar API is a powerful tool that allows applications to interact with
 - High availability and reliability
 
 The free tier offers:
+
 - 1 million API requests per day
 - Generous quota limits for personal usage
 - No cost for individual users
@@ -1025,29 +1026,29 @@ const calendarUtils = {
    * @param {string} format Output format
    * @returns {string} Formatted date string
    */
-  formatDate(date, format = 'YYYY-MM-DD') {
-    const d = typeof date === 'string' ? new Date(date) : date;
-    
+  formatDate(date, format = "YYYY-MM-DD") {
+    const d = typeof date === "string" ? new Date(date) : date;
+
     // Handle invalid dates
     if (isNaN(d.getTime())) {
-      return 'Invalid date';
+      return "Invalid date";
     }
-    
+
     const year = d.getFullYear();
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    const hours = String(d.getHours()).padStart(2, '0');
-    const minutes = String(d.getMinutes()).padStart(2, '0');
-    
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    const hours = String(d.getHours()).padStart(2, "0");
+    const minutes = String(d.getMinutes()).padStart(2, "0");
+
     // Replace format tokens
     return format
-      .replace('YYYY', year)
-      .replace('MM', month)
-      .replace('DD', day)
-      .replace('HH', hours)
-      .replace('mm', minutes);
+      .replace("YYYY", year)
+      .replace("MM", month)
+      .replace("DD", day)
+      .replace("HH", hours)
+      .replace("mm", minutes);
   },
-  
+
   /**
    * Generate color coding for different event types
    * @param {string} eventType Type of event
@@ -1055,19 +1056,19 @@ const calendarUtils = {
    */
   getColorForEventType(eventType) {
     const colorMap = {
-      flight: '1',      // Blue
-      accommodation: '2', // Green
-      activity: '5',     // Yellow
-      transport: '7',    // Purple
-      meeting: '3',      // Purple
-      dining: '10',      // Red
-      sightseeing: '6',  // Orange
-      generic: '8'       // Gray
+      flight: "1", // Blue
+      accommodation: "2", // Green
+      activity: "5", // Yellow
+      transport: "7", // Purple
+      meeting: "3", // Purple
+      dining: "10", // Red
+      sightseeing: "6", // Orange
+      generic: "8", // Gray
     };
-    
+
     return colorMap[eventType] || colorMap.generic;
   },
-  
+
   /**
    * Calculate travel buffer times for transportation events
    * @param {Object} transportDetails Transportation details
@@ -1077,32 +1078,32 @@ const calendarUtils = {
     // Default buffers
     const buffers = {
       before: 0,
-      after: 0
+      after: 0,
     };
-    
+
     // For flights, add appropriate buffer times
-    if (transportDetails.type === 'flight') {
+    if (transportDetails.type === "flight") {
       if (transportDetails.international) {
         buffers.before = 180; // 3 hours before international flights
       } else {
         buffers.before = 120; // 2 hours before domestic flights
       }
       buffers.after = 60; // 1 hour after landing for baggage claim, etc.
-    } 
+    }
     // For trains
-    else if (transportDetails.type === 'train') {
+    else if (transportDetails.type === "train") {
       buffers.before = 45; // 45 minutes before train
       buffers.after = 30; // 30 minutes after arrival
     }
     // For buses
-    else if (transportDetails.type === 'bus') {
+    else if (transportDetails.type === "bus") {
       buffers.before = 30; // 30 minutes before bus
       buffers.after = 15; // 15 minutes after arrival
     }
-    
+
     return buffers;
   },
-  
+
   /**
    * Generate smart reminders for travel events
    * @param {Object} eventDetails Event details
@@ -1110,46 +1111,48 @@ const calendarUtils = {
    */
   generateSmartReminders(eventDetails) {
     const reminders = [];
-    
+
     // Standard reminder for all events
-    reminders.push({ method: 'popup', minutes: 60 }); // 1 hour before
-    
+    reminders.push({ method: "popup", minutes: 60 }); // 1 hour before
+
     // Event-specific reminders
     switch (eventDetails.type) {
-      case 'flight':
+      case "flight":
         // Check-in reminder (usually 24 hours before)
         if (eventDetails.checkInTime) {
           const checkInMinutes = Math.floor(
-            (new Date(eventDetails.startTime) - new Date(eventDetails.checkInTime)) / 60000
+            (new Date(eventDetails.startTime) -
+              new Date(eventDetails.checkInTime)) /
+              60000
           );
           if (checkInMinutes > 0) {
-            reminders.push({ method: 'email', minutes: checkInMinutes });
+            reminders.push({ method: "email", minutes: checkInMinutes });
           }
         } else {
           // Default check-in reminder (24 hours)
-          reminders.push({ method: 'email', minutes: 24 * 60 });
+          reminders.push({ method: "email", minutes: 24 * 60 });
         }
-        
+
         // Airport travel time reminder
-        reminders.push({ method: 'popup', minutes: 3 * 60 }); // 3 hours before
+        reminders.push({ method: "popup", minutes: 3 * 60 }); // 3 hours before
         break;
-        
-      case 'accommodation':
+
+      case "accommodation":
         // Check-in reminder
-        reminders.push({ method: 'email', minutes: 24 * 60 }); // 24 hours before
-        
+        reminders.push({ method: "email", minutes: 24 * 60 }); // 24 hours before
+
         // Day-of reminder
-        reminders.push({ method: 'popup', minutes: 3 * 60 }); // 3 hours before
+        reminders.push({ method: "popup", minutes: 3 * 60 }); // 3 hours before
         break;
-        
-      case 'activity':
+
+      case "activity":
         // Activity preparation reminder
-        reminders.push({ method: 'popup', minutes: 3 * 60 }); // 3 hours before
+        reminders.push({ method: "popup", minutes: 3 * 60 }); // 3 hours before
         break;
     }
-    
+
     return reminders;
-  }
+  },
 };
 
 module.exports = calendarUtils;
@@ -1192,20 +1195,24 @@ The Google Calendar integration uses OAuth 2.0 for secure authentication. Here's
 ### Personal API Key Security
 
 1. **Environment Variables**:
+
    - Store sensitive credentials in environment variables
    - Never commit .env files to source control
    - Use different credentials for development and production
 
 2. **Token Storage**:
+
    - Store OAuth tokens in a secure database
    - Never store tokens in client-side storage (localStorage, cookies)
    - Encrypt tokens at rest if possible
 
 3. **Scope Limitation**:
+
    - Request only the calendar permissions you need
    - Use read-only scopes when write access isn't necessary
 
 4. **CSRF Protection**:
+
    - Implement state parameter validation in OAuth flow
    - Generate and verify unique state tokens for each auth request
 
@@ -1218,15 +1225,18 @@ The Google Calendar integration uses OAuth 2.0 for secure authentication. Here's
 Google Calendar API is free for personal use, but implementing these best practices ensures efficient usage:
 
 1. **Caching**:
+
    - Cache calendar data when appropriate
    - Avoid redundant API calls for the same information
    - Implement a cache invalidation strategy
 
 2. **Batch Requests**:
+
    - Use the Google API batch request feature to combine multiple operations
    - Create complete itineraries in a single batch request
 
 3. **Rate Limiting**:
+
    - Implement client-side rate limiting to prevent quota exhaustion
    - Add exponential backoff for retries on API failures
 
@@ -1697,17 +1707,20 @@ ${dayForecast.travel_advice ? `Travel Advice: ${dayForecast.travel_advice.join('
 ### Common Issues
 
 1. **Authentication Errors**:
+
    - Verify that OAuth credentials are correct
    - Check that redirect URIs match exactly
    - Ensure scopes are properly configured
    - Verify that OAuth consent screen is properly set up
 
 2. **Token Expiration Issues**:
+
    - Implement token refresh logic
    - Store refresh tokens securely
    - Handle refresh token errors by prompting for re-authorization
 
 3. **Calendar Event Creation Failures**:
+
    - Validate all required fields
    - Check for formatting issues in dates and times
    - Ensure time zones are properly specified
