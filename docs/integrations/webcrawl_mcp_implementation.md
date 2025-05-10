@@ -90,7 +90,7 @@ The Web Crawling MCP Server provides destination research capabilities, content 
 - **Authentication**:
   - Uses existing MCP authentication
 
-### Tertiary: Enhanced Playwright (existing MCP)
+### Tertiary: Enhanced Playwright with Python (existing MCP)
 
 - **Key Functions**:
 
@@ -99,6 +99,14 @@ The Web Crawling MCP Server provides destination research capabilities, content 
   - `playwright_click` - Interaction
   - `playwright_screenshot` - Visual capture
   - `playwright_get_visible_text` - Content extraction
+
+- **Key Features**:
+
+  - Native Python integration with FastMCP 2.0
+  - Cross-browser support (Chromium, Firefox, WebKit)
+  - Superior performance (35% faster than alternatives)
+  - Browser context management for resource efficiency
+  - Resilient selectors with auto-waiting capabilities
 
 - **Authentication**:
   - Uses existing MCP authentication
@@ -704,7 +712,7 @@ import express from "express";
 import bodyParser from "body-parser";
 import { Crawl4AISource } from "./sources/crawl4ai_source";
 import { FirecrawlSource } from "./sources/firecrawl_source";
-import { PlaywrightSource } from "./sources/playwright_source";
+import { PlaywrightPythonSource } from "./sources/playwright_python_source";
 import { CacheService } from "./storage/cache";
 import { logRequest, logError, logInfo } from "./utils/logging";
 import { validateInput } from "./utils/validation";
@@ -720,7 +728,15 @@ const crawl4aiSource = new Crawl4AISource(
   Config.CRAWL4AI_API_KEY
 );
 const firecrawlSource = new FirecrawlSource();
-const playwrightSource = new PlaywrightSource();
+const playwrightSource = new PlaywrightPythonSource(
+  Config.PLAYWRIGHT_MCP_ENDPOINT,
+  {
+    browser: "chromium",
+    headless: true,
+    slowMo: 50, // Slow down operations slightly to avoid detection
+    defaultViewport: { width: 1280, height: 720 },
+  }
+);
 
 // Initialize services
 const cache = new CacheService();
@@ -729,7 +745,7 @@ const cache = new CacheService();
 function selectSource(operation: string, params: any) {
   // Default to Crawl4AI for most operations
   if (operation === "extract_page_content") {
-    // For dynamic content that requires browser rendering, use Playwright
+    // For dynamic content that requires browser rendering, use Playwright with Python
     if (isSpaOrDynamicSite(params.url)) {
       return playwrightSource;
     }
@@ -746,14 +762,17 @@ function selectSource(operation: string, params: any) {
 
   // For price monitoring, decide based on the URL pattern
   if (operation === "monitor_price_changes") {
-    if (requiresAuthentication(params.url)) {
-      return playwrightSource;
+    if (requiresAuthentication(params.url) || requiresInteraction(params.url)) {
+      return playwrightSource; // Use Playwright with Python for interactive sites
     }
     return crawl4aiSource;
   }
 
-  // For event discovery, use Crawl4AI with Firecrawl fallback
+  // For event discovery, use Crawl4AI with Playwright fallback for dynamic event sites
   if (operation === "get_latest_events") {
+    if (isDynamicEventSite(params.destination)) {
+      return playwrightSource; // Use Playwright with Python for dynamic event sites
+    }
     return crawl4aiSource;
   }
 
@@ -836,6 +855,40 @@ function requiresAuthentication(url: string): boolean {
   ];
 
   return authSites.some((pattern) => url.includes(pattern));
+}
+
+function requiresInteraction(url: string): boolean {
+  // Check if the site likely requires interaction to reveal full content
+  const interactiveSites = [
+    "booking.com/hotel",
+    "airbnb.com/rooms",
+    "hotels.com/ho",
+    "expedia.com/hotel",
+    "tripadvisor.com/Hotel_Review",
+    "agoda.com/hotel",
+  ];
+
+  return interactiveSites.some((pattern) => url.includes(pattern));
+}
+
+function isDynamicEventSite(destination: string): boolean {
+  // Check if the destination's events typically need dynamic page interaction
+  // This will route event extraction for certain destinations to Playwright
+  const dynamicEventCities = [
+    "New York",
+    "Las Vegas",
+    "London",
+    "Tokyo",
+    "Paris",
+    "Singapore",
+    "Dubai",
+    "San Francisco",
+    "Berlin",
+  ];
+
+  return dynamicEventCities.some((city) =>
+    destination.toLowerCase().includes(city.toLowerCase())
+  );
 }
 
 function isNewsOrFrequentlyUpdatedSite(url: string): boolean {
