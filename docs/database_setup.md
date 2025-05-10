@@ -80,163 +80,174 @@ SELECT indexname, tablename FROM pg_indexes WHERE schemaname = 'public' AND inde
 ### Core Tables
 
 #### `users`
+
 Stores information about users of the TripSage system.
 
-| Column | Type | Description |
-|--------|------|-------------|
-| id | BIGINT | Primary key |
-| name | TEXT | User's name |
-| email | TEXT | User's email |
-| preferences_json | JSONB | User preferences as JSON |
-| created_at | TIMESTAMP WITH TIME ZONE | Creation timestamp |
-| updated_at | TIMESTAMP WITH TIME ZONE | Update timestamp |
+| Column           | Type                     | Description              |
+| ---------------- | ------------------------ | ------------------------ |
+| id               | BIGINT                   | Primary key              |
+| name             | TEXT                     | User's name              |
+| email            | TEXT                     | User's email             |
+| preferences_json | JSONB                    | User preferences as JSON |
+| created_at       | TIMESTAMP WITH TIME ZONE | Creation timestamp       |
+| updated_at       | TIMESTAMP WITH TIME ZONE | Update timestamp         |
 
 #### `trips`
+
 The central table that stores trip information.
 
-| Column | Type | Description |
-|--------|------|-------------|
-| id | BIGINT | Primary key |
-| name | TEXT | Trip name/title |
-| start_date | DATE | Trip start date |
-| end_date | DATE | Trip end date |
-| destination | TEXT | Primary destination |
-| budget | NUMERIC | Total budget |
-| travelers | INTEGER | Number of travelers |
-| status | TEXT | Trip status (planning, booked, completed, canceled) |
-| trip_type | TEXT | Type of trip (leisure, business, family, solo, other) |
-| flexibility | JSONB | Flexibility parameters (e.g., date range, budget range) |
-| created_at | TIMESTAMP WITH TIME ZONE | Creation timestamp |
-| updated_at | TIMESTAMP WITH TIME ZONE | Update timestamp |
+| Column      | Type                     | Description                                             |
+| ----------- | ------------------------ | ------------------------------------------------------- |
+| id          | BIGINT                   | Primary key                                             |
+| name        | TEXT                     | Trip name/title                                         |
+| start_date  | DATE                     | Trip start date                                         |
+| end_date    | DATE                     | Trip end date                                           |
+| destination | TEXT                     | Primary destination                                     |
+| budget      | NUMERIC                  | Total budget                                            |
+| travelers   | INTEGER                  | Number of travelers                                     |
+| status      | TEXT                     | Trip status (planning, booked, completed, canceled)     |
+| trip_type   | TEXT                     | Type of trip (leisure, business, family, solo, other)   |
+| flexibility | JSONB                    | Flexibility parameters (e.g., date range, budget range) |
+| created_at  | TIMESTAMP WITH TIME ZONE | Creation timestamp                                      |
+| updated_at  | TIMESTAMP WITH TIME ZONE | Update timestamp                                        |
 
 ### Travel Options Tables
 
 #### `flights`
+
 Stores flight options for trips.
 
-| Column | Type | Description |
-|--------|------|-------------|
-| id | BIGINT | Primary key |
-| trip_id | BIGINT | Reference to trips table |
-| origin | TEXT | Origin airport/city |
-| destination | TEXT | Destination airport/city |
-| airline | TEXT | Airline name |
-| departure_time | TIMESTAMP WITH TIME ZONE | Departure time |
-| arrival_time | TIMESTAMP WITH TIME ZONE | Arrival time |
-| price | NUMERIC | Flight price |
-| booking_link | TEXT | Booking URL |
-| segment_number | INTEGER | Segment number for multi-leg flights |
-| search_timestamp | TIMESTAMP WITH TIME ZONE | When the flight was found |
-| booking_status | TEXT | Status (viewed, saved, booked, canceled) |
-| data_source | TEXT | Data source (API provider) |
+| Column           | Type                     | Description                              |
+| ---------------- | ------------------------ | ---------------------------------------- |
+| id               | BIGINT                   | Primary key                              |
+| trip_id          | BIGINT                   | Reference to trips table                 |
+| origin           | TEXT                     | Origin airport/city                      |
+| destination      | TEXT                     | Destination airport/city                 |
+| airline          | TEXT                     | Airline name                             |
+| departure_time   | TIMESTAMP WITH TIME ZONE | Departure time                           |
+| arrival_time     | TIMESTAMP WITH TIME ZONE | Arrival time                             |
+| price            | NUMERIC                  | Flight price                             |
+| booking_link     | TEXT                     | Booking URL                              |
+| segment_number   | INTEGER                  | Segment number for multi-leg flights     |
+| search_timestamp | TIMESTAMP WITH TIME ZONE | When the flight was found                |
+| booking_status   | TEXT                     | Status (viewed, saved, booked, canceled) |
+| data_source      | TEXT                     | Data source (API provider)               |
 
 #### `accommodations`
+
 Stores accommodation options for trips.
 
-| Column | Type | Description |
-|--------|------|-------------|
-| id | BIGINT | Primary key |
-| trip_id | BIGINT | Reference to trips table |
-| name | TEXT | Accommodation name |
-| type | TEXT | Type (hotel, apartment, hostel, etc.) |
-| check_in | DATE | Check-in date |
-| check_out | DATE | Check-out date |
-| price_per_night | NUMERIC | Price per night |
-| total_price | NUMERIC | Total price for the stay |
-| location | TEXT | Location |
-| rating | NUMERIC | Rating (0-5 scale) |
-| amenities | JSONB | Amenities as JSON |
-| booking_link | TEXT | Booking URL |
-| search_timestamp | TIMESTAMP WITH TIME ZONE | When the accommodation was found |
-| booking_status | TEXT | Status (viewed, saved, booked, canceled) |
-| cancellation_policy | TEXT | Cancellation policy |
-| distance_to_center | NUMERIC | Distance to center |
-| neighborhood | TEXT | Neighborhood |
+| Column              | Type                     | Description                              |
+| ------------------- | ------------------------ | ---------------------------------------- |
+| id                  | BIGINT                   | Primary key                              |
+| trip_id             | BIGINT                   | Reference to trips table                 |
+| name                | TEXT                     | Accommodation name                       |
+| type                | TEXT                     | Type (hotel, apartment, hostel, etc.)    |
+| check_in            | DATE                     | Check-in date                            |
+| check_out           | DATE                     | Check-out date                           |
+| price_per_night     | NUMERIC                  | Price per night                          |
+| total_price         | NUMERIC                  | Total price for the stay                 |
+| location            | TEXT                     | Location                                 |
+| rating              | NUMERIC                  | Rating (0-5 scale)                       |
+| amenities           | JSONB                    | Amenities as JSON                        |
+| booking_link        | TEXT                     | Booking URL                              |
+| search_timestamp    | TIMESTAMP WITH TIME ZONE | When the accommodation was found         |
+| booking_status      | TEXT                     | Status (viewed, saved, booked, canceled) |
+| cancellation_policy | TEXT                     | Cancellation policy                      |
+| distance_to_center  | NUMERIC                  | Distance to center                       |
+| neighborhood        | TEXT                     | Neighborhood                             |
 
 #### `transportation`
+
 Stores transportation options for trips.
 
-| Column | Type | Description |
-|--------|------|-------------|
-| id | BIGINT | Primary key |
-| trip_id | BIGINT | Reference to trips table |
-| type | TEXT | Type (car_rental, public_transit, taxi, etc.) |
-| provider | TEXT | Provider name |
-| pickup_date | TIMESTAMP WITH TIME ZONE | Pickup date/time |
-| dropoff_date | TIMESTAMP WITH TIME ZONE | Dropoff date/time |
-| price | NUMERIC | Price |
-| notes | TEXT | Additional notes |
-| booking_status | TEXT | Status (viewed, saved, booked, canceled) |
+| Column         | Type                     | Description                                   |
+| -------------- | ------------------------ | --------------------------------------------- |
+| id             | BIGINT                   | Primary key                                   |
+| trip_id        | BIGINT                   | Reference to trips table                      |
+| type           | TEXT                     | Type (car_rental, public_transit, taxi, etc.) |
+| provider       | TEXT                     | Provider name                                 |
+| pickup_date    | TIMESTAMP WITH TIME ZONE | Pickup date/time                              |
+| dropoff_date   | TIMESTAMP WITH TIME ZONE | Dropoff date/time                             |
+| price          | NUMERIC                  | Price                                         |
+| notes          | TEXT                     | Additional notes                              |
+| booking_status | TEXT                     | Status (viewed, saved, booked, canceled)      |
 
 ### Planning and Organization Tables
 
 #### `itinerary_items`
+
 Stores items in a trip itinerary.
 
-| Column | Type | Description |
-|--------|------|-------------|
-| id | BIGINT | Primary key |
-| trip_id | BIGINT | Reference to trips table |
-| type | TEXT | Type (activity, meal, transport, etc.) |
-| date | DATE | Date of the item |
-| time | TIME | Time of the item |
-| description | TEXT | Description |
-| cost | NUMERIC | Cost of the item |
-| notes | TEXT | Additional notes |
+| Column      | Type    | Description                            |
+| ----------- | ------- | -------------------------------------- |
+| id          | BIGINT  | Primary key                            |
+| trip_id     | BIGINT  | Reference to trips table               |
+| type        | TEXT    | Type (activity, meal, transport, etc.) |
+| date        | DATE    | Date of the item                       |
+| time        | TIME    | Time of the item                       |
+| description | TEXT    | Description                            |
+| cost        | NUMERIC | Cost of the item                       |
+| notes       | TEXT    | Additional notes                       |
 
 #### `search_parameters`
+
 Stores search parameters used for finding travel options.
 
-| Column | Type | Description |
-|--------|------|-------------|
-| id | BIGINT | Primary key |
-| trip_id | BIGINT | Reference to trips table |
-| timestamp | TIMESTAMP WITH TIME ZONE | Search timestamp |
-| parameter_json | JSONB | Search parameters as JSON |
+| Column         | Type                     | Description               |
+| -------------- | ------------------------ | ------------------------- |
+| id             | BIGINT                   | Primary key               |
+| trip_id        | BIGINT                   | Reference to trips table  |
+| timestamp      | TIMESTAMP WITH TIME ZONE | Search timestamp          |
+| parameter_json | JSONB                    | Search parameters as JSON |
 
 #### `trip_notes`
+
 Stores notes attached to trips.
 
-| Column | Type | Description |
-|--------|------|-------------|
-| id | BIGINT | Primary key |
-| trip_id | BIGINT | Reference to trips table |
-| timestamp | TIMESTAMP WITH TIME ZONE | Note timestamp |
-| content | TEXT | Note content |
+| Column    | Type                     | Description              |
+| --------- | ------------------------ | ------------------------ |
+| id        | BIGINT                   | Primary key              |
+| trip_id   | BIGINT                   | Reference to trips table |
+| timestamp | TIMESTAMP WITH TIME ZONE | Note timestamp           |
+| content   | TEXT                     | Note content             |
 
 ### Analysis and Tracking Tables
 
 #### `price_history`
+
 Stores historical price data for various entities.
 
-| Column | Type | Description |
-|--------|------|-------------|
-| id | BIGINT | Primary key |
-| entity_type | TEXT | Entity type (flight, accommodation, etc.) |
-| entity_id | BIGINT | Entity ID |
-| timestamp | TIMESTAMP WITH TIME ZONE | Price timestamp |
-| price | NUMERIC | Price amount |
+| Column      | Type                     | Description                               |
+| ----------- | ------------------------ | ----------------------------------------- |
+| id          | BIGINT                   | Primary key                               |
+| entity_type | TEXT                     | Entity type (flight, accommodation, etc.) |
+| entity_id   | BIGINT                   | Entity ID                                 |
+| timestamp   | TIMESTAMP WITH TIME ZONE | Price timestamp                           |
+| price       | NUMERIC                  | Price amount                              |
 
 #### `saved_options`
+
 Stores saved travel options for comparison.
 
-| Column | Type | Description |
-|--------|------|-------------|
-| id | BIGINT | Primary key |
-| trip_id | BIGINT | Reference to trips table |
-| option_type | TEXT | Option type (flight, accommodation, etc.) |
-| option_id | BIGINT | Option ID |
-| timestamp | TIMESTAMP WITH TIME ZONE | Saved timestamp |
-| notes | TEXT | Additional notes |
+| Column      | Type                     | Description                               |
+| ----------- | ------------------------ | ----------------------------------------- |
+| id          | BIGINT                   | Primary key                               |
+| trip_id     | BIGINT                   | Reference to trips table                  |
+| option_type | TEXT                     | Option type (flight, accommodation, etc.) |
+| option_id   | BIGINT                   | Option ID                                 |
+| timestamp   | TIMESTAMP WITH TIME ZONE | Saved timestamp                           |
+| notes       | TEXT                     | Additional notes                          |
 
 #### `trip_comparison`
+
 Stores comparison data between different trip options.
 
-| Column | Type | Description |
-|--------|------|-------------|
-| id | BIGINT | Primary key |
-| trip_id | BIGINT | Reference to trips table |
-| comparison_json | JSONB | Comparison data as JSON |
+| Column          | Type   | Description              |
+| --------------- | ------ | ------------------------ |
+| id              | BIGINT | Primary key              |
+| trip_id         | BIGINT | Reference to trips table |
+| comparison_json | JSONB  | Comparison data as JSON  |
 
 ## Common Usage Patterns
 
