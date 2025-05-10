@@ -62,3 +62,6 @@ Thumbs.db
 .idea/
 *.swp
 *~
+
+# repomix
+repomix-output.*
