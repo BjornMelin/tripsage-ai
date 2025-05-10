@@ -42,11 +42,13 @@ This document tracks the current implementation status of the TripSage travel pl
 ### Immediate Focus (1-2 Weeks)
 
 1. Initialize Python FastMCP 2.0 development environment
+
    - Install dependencies and setup tooling
    - Create project scaffolding for MCP servers
    - Set up testing framework
 
 2. Implement Weather MCP Server
+
    - Develop OpenWeatherMap API integration
    - Create MCP tools for current conditions, forecasts, and recommendations
    - Implement caching strategy with Redis
@@ -60,6 +62,7 @@ This document tracks the current implementation status of the TripSage travel pl
 ### Short-Term (3-4 Weeks)
 
 1. Implement Flight MCP Server
+
    - Integrate with Duffel API via OpenAPI specification
    - Develop flight search and booking capabilities
    - Set up price tracking and history
@@ -71,6 +74,7 @@ This document tracks the current implementation status of the TripSage travel pl
 ### Medium-Term (5-6 Weeks)
 
 1. Implement Calendar MCP Server
+
    - Set up Google Calendar API integration
    - Develop OAuth flow for user authorization
    - Create tools for travel itinerary management
@@ -83,6 +87,7 @@ This document tracks the current implementation status of the TripSage travel pl
 ### Long-Term (7-8 Weeks)
 
 1. Finalize MVP Implementation
+
    - Complete end-to-end testing
    - Optimize performance
    - Document API and usage patterns
@@ -94,13 +99,13 @@ This document tracks the current implementation status of the TripSage travel pl
 
 ## Risk Assessment
 
-| Risk | Impact | Likelihood | Mitigation |
-|------|--------|------------|------------|
-| Python FastMCP 2.0 is still evolving | Medium | Medium | Pin to stable version, monitor for changes |
-| External API rate limitations | High | High | Implement robust caching and rate limiting |
-| Integration complexity between MCP servers | Medium | Medium | Clear interfaces, comprehensive testing |
-| Neo4j knowledge graph scaling | Medium | Low | Design for scalability, monitor performance |
-| Environment variable management for APIs | Medium | Low | Implement secure credential storage |
+| Risk                                       | Impact | Likelihood | Mitigation                                  |
+| ------------------------------------------ | ------ | ---------- | ------------------------------------------- |
+| Python FastMCP 2.0 is still evolving       | Medium | Medium     | Pin to stable version, monitor for changes  |
+| External API rate limitations              | High   | High       | Implement robust caching and rate limiting  |
+| Integration complexity between MCP servers | Medium | Medium     | Clear interfaces, comprehensive testing     |
+| Neo4j knowledge graph scaling              | Medium | Low        | Design for scalability, monitor performance |
+| Environment variable management for APIs   | Medium | Low        | Implement secure credential storage         |
 
 ## Resource Requirements
 

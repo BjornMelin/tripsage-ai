@@ -20,7 +20,7 @@ TripSage implements a distributed architecture with the following key components
 
 ### Communication Flow
 
-```
+```plaintext
 ┌───────────────┐      ┌───────────────┐      ┌───────────────┐
 │               │      │               │      │               │
 │   Next.js     │◄────►│   FastAPI     │◄────►│   Supabase    │
@@ -85,20 +85,20 @@ app.include_router(flights.router)
 
 The TripSage API provides the following key endpoints:
 
-| Endpoint                | Method | Description                           |
-|-------------------------|--------|---------------------------------------|
-| `/auth/login`           | POST   | User authentication                   |
-| `/auth/register`        | POST   | User registration                     |
-| `/auth/refresh`         | POST   | Refresh JWT token                     |
-| `/users/me`             | GET    | Get current user profile              |
-| `/users/me`             | PATCH  | Update user profile                   |
-| `/trips`                | GET    | List user trips                       |
-| `/trips`                | POST   | Create a new trip                     |
-| `/trips/{trip_id}`      | GET    | Get trip details                      |
-| `/trips/{trip_id}`      | PATCH  | Update trip                           |
-| `/trips/{trip_id}`      | DELETE | Delete trip                           |
-| `/flights/search`       | POST   | Search for flights                    |
-| `/flights/{flight_id}`  | GET    | Get flight details                    |
+| Endpoint               | Method | Description              |
+| ---------------------- | ------ | ------------------------ |
+| `/auth/login`          | POST   | User authentication      |
+| `/auth/register`       | POST   | User registration        |
+| `/auth/refresh`        | POST   | Refresh JWT token        |
+| `/users/me`            | GET    | Get current user profile |
+| `/users/me`            | PATCH  | Update user profile      |
+| `/trips`               | GET    | List user trips          |
+| `/trips`               | POST   | Create a new trip        |
+| `/trips/{trip_id}`     | GET    | Get trip details         |
+| `/trips/{trip_id}`     | PATCH  | Update trip              |
+| `/trips/{trip_id}`     | DELETE | Delete trip              |
+| `/flights/search`      | POST   | Search for flights       |
+| `/flights/{flight_id}` | GET    | Get flight details       |
 
 ## 3. Authentication and Security
 
@@ -172,17 +172,17 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
 
 ```typescript
 // lib/auth.ts
-import { useEffect } from 'react';
-import { useRouter } from 'next/router';
-import { jwtDecode } from 'jwt-decode';
+import { useEffect } from "react";
+import { useRouter } from "next/router";
+import { jwtDecode } from "jwt-decode";
 
 export function useAuth() {
   const router = useRouter();
-  
+
   const isTokenValid = () => {
-    const token = localStorage.getItem('auth_token');
+    const token = localStorage.getItem("auth_token");
     if (!token) return false;
-    
+
     try {
       const decoded = jwtDecode(token);
       return decoded.exp * 1000 > Date.now();
@@ -190,24 +190,26 @@ export function useAuth() {
       return false;
     }
   };
-  
+
   const getAuthHeader = () => {
-    const token = localStorage.getItem('auth_token');
+    const token = localStorage.getItem("auth_token");
     return token ? { Authorization: `Bearer ${token}` } : {};
   };
-  
+
   useEffect(() => {
     // Redirect to login if not authenticated
-    if (!isTokenValid() && 
-        router.pathname !== '/login' && 
-        router.pathname !== '/register') {
-      router.push('/login');
+    if (
+      !isTokenValid() &&
+      router.pathname !== "/login" &&
+      router.pathname !== "/register"
+    ) {
+      router.push("/login");
     }
   }, [router.pathname]);
-  
+
   return {
     isTokenValid,
-    getAuthHeader
+    getAuthHeader,
   };
 }
 ```
@@ -220,20 +222,20 @@ The Next.js frontend uses a dedicated API client to communicate with the FastAPI
 
 ```typescript
 // lib/api-client.ts
-import axios from 'axios';
+import axios from "axios";
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 const apiClient = axios.create({
   baseURL: BASE_URL,
   headers: {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
   },
 });
 
 // Add auth interceptor
 apiClient.interceptors.request.use((config) => {
-  const token = localStorage.getItem('auth_token');
+  const token = localStorage.getItem("auth_token");
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -245,34 +247,34 @@ apiClient.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
-    
+
     // If error is 401 and not a retry, attempt token refresh
     if (error.response.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
-      
+
       try {
         // Attempt to refresh token
-        const refreshToken = localStorage.getItem('refresh_token');
-        const response = await apiClient.post('/auth/refresh', {
+        const refreshToken = localStorage.getItem("refresh_token");
+        const response = await apiClient.post("/auth/refresh", {
           refresh_token: refreshToken,
         });
-        
+
         // Store new tokens
-        localStorage.setItem('auth_token', response.data.access_token);
-        localStorage.setItem('refresh_token', response.data.refresh_token);
-        
+        localStorage.setItem("auth_token", response.data.access_token);
+        localStorage.setItem("refresh_token", response.data.refresh_token);
+
         // Retry original request
         originalRequest.headers.Authorization = `Bearer ${response.data.access_token}`;
         return apiClient(originalRequest);
       } catch (error) {
         // Refresh failed, redirect to login
-        localStorage.removeItem('auth_token');
-        localStorage.removeItem('refresh_token');
-        window.location.href = '/login';
+        localStorage.removeItem("auth_token");
+        localStorage.removeItem("refresh_token");
+        window.location.href = "/login";
         return Promise.reject(error);
       }
     }
-    
+
     return Promise.reject(error);
   }
 );
@@ -286,62 +288,65 @@ React hooks for API interaction:
 
 ```typescript
 // hooks/useTrips.ts
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import apiClient from '@/lib/api-client';
-import type { Trip, TripCreate, TripUpdate } from '@/types';
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import apiClient from "@/lib/api-client";
+import type { Trip, TripCreate, TripUpdate } from "@/types";
 
 export function useTrips() {
   const queryClient = useQueryClient();
-  
+
   const getTrips = async (): Promise<Trip[]> => {
-    const response = await apiClient.get('/trips');
+    const response = await apiClient.get("/trips");
     return response.data;
   };
-  
+
   const createTrip = async (trip: TripCreate): Promise<Trip> => {
-    const response = await apiClient.post('/trips', trip);
+    const response = await apiClient.post("/trips", trip);
     return response.data;
   };
-  
-  const updateTrip = async ({ id, ...data }: TripUpdate & { id: string }): Promise<Trip> => {
+
+  const updateTrip = async ({
+    id,
+    ...data
+  }: TripUpdate & { id: string }): Promise<Trip> => {
     const response = await apiClient.patch(`/trips/${id}`, data);
     return response.data;
   };
-  
+
   const deleteTrip = async (id: string): Promise<void> => {
     await apiClient.delete(`/trips/${id}`);
   };
-  
+
   // Query for fetching trips
   const tripsQuery = useQuery({
-    queryKey: ['trips'],
+    queryKey: ["trips"],
     queryFn: getTrips,
   });
-  
+
   // Mutation for creating trips
   const createTripMutation = useMutation({
     mutationFn: createTrip,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['trips'] });
+      queryClient.invalidateQueries({ queryKey: ["trips"] });
     },
   });
-  
+
   // Mutation for updating trips
   const updateTripMutation = useMutation({
     mutationFn: updateTrip,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['trips'] });
+      queryClient.invalidateQueries({ queryKey: ["trips"] });
     },
   });
-  
+
   // Mutation for deleting trips
   const deleteTripMutation = useMutation({
     mutationFn: deleteTrip,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['trips'] });
+      queryClient.invalidateQueries({ queryKey: ["trips"] });
     },
   });
-  
+
   return {
     trips: tripsQuery.data || [],
     isLoading: tripsQuery.isLoading,
@@ -388,27 +393,27 @@ class MCPClient:
         self.server_name = server_name
         self.server_config = server_config
         self.server_process = None
-        
+
         # Initialize transport based on config
         if server_config.get("transport") == "http":
             self.transport = "http"
             self.base_url = server_config["url"]
         else:
             self.transport = "stdio"
-            
+
     async def start_server(self) -> None:
         """Start the MCP server process if using stdio transport."""
         if self.transport != "stdio":
             return
-            
+
         if self.server_process:
             logger.warning(f"MCP server {self.server_name} already running")
             return
-            
+
         command = self.server_config["command"]
         args = self.server_config.get("args", [])
         env = {**os.environ, **(self.server_config.get("env") or {})}
-        
+
         try:
             self.server_process = subprocess.Popen(
                 [command, *args],
@@ -434,14 +439,14 @@ class MCPClient:
                 self.server_process.kill()
             self.server_process = None
             logger.info(f"Stopped MCP server {self.server_name}")
-    
+
     async def invoke_tool(self, tool_name: str, parameters: Dict[str, Any]) -> Dict[str, Any]:
         """Invoke an MCP tool."""
         if self.transport == "http":
             return await self._invoke_tool_http(tool_name, parameters)
         else:
             return await self._invoke_tool_stdio(tool_name, parameters)
-    
+
     async def _invoke_tool_http(self, tool_name: str, parameters: Dict[str, Any]) -> Dict[str, Any]:
         """Invoke a tool via HTTP transport."""
         async with httpx.AsyncClient() as client:
@@ -456,21 +461,21 @@ class MCPClient:
             )
             response.raise_for_status()
             return response.json()
-    
+
     async def _invoke_tool_stdio(self, tool_name: str, parameters: Dict[str, Any]) -> Dict[str, Any]:
         """Invoke a tool via stdio transport."""
         if not self.server_process:
             await self.start_server()
-        
+
         request_data = {
             "type": "tool_call",
             "tool": tool_name,
             "parameters": parameters
         }
-        
+
         self.server_process.stdin.write(json.dumps(request_data) + "\n")
         self.server_process.stdin.flush()
-        
+
         # Read response
         response_line = self.server_process.stdout.readline()
         return json.loads(response_line)
@@ -498,14 +503,14 @@ def get_mcp_client(server_name: str) -> MCPClient:
         config = get_mcp_config().get(server_name)
         if not config:
             raise ValueError(f"MCP server config not found: {server_name}")
-        
+
         _mcp_clients[server_name] = MCPClient(server_name, config)
-    
+
     return _mcp_clients[server_name]
 
 async def invoke_mcp_tool(
-    server_name: str, 
-    tool_name: str, 
+    server_name: str,
+    tool_name: str,
     parameters: Dict[str, Any]
 ) -> Dict[str, Any]:
     """Invoke an MCP tool on the specified server."""
@@ -571,16 +576,16 @@ async def search_flights(
             "adults": params.adults,
             "max_results": params.max_results,
         }
-        
+
         # Invoke MCP tool
         result = await invoke_mcp_tool("flights-mcp", "search_flights", mcp_params)
-        
+
         if not result.get("success"):
             raise HTTPException(
                 status_code=500,
                 detail=f"Flight search failed: {result.get('error')}"
             )
-        
+
         # Transform MCP results to API response format
         flights = []
         for flight_data in result.get("flights", []):
@@ -596,9 +601,9 @@ async def search_flights(
                 price=flight_data["price"],
                 booking_link=flight_data.get("booking_link")
             ))
-        
+
         return flights
-        
+
     except Exception as e:
         raise HTTPException(
             status_code=500,
@@ -619,24 +624,24 @@ from typing import Dict, Any
 def get_mcp_config() -> Dict[str, Dict[str, Any]]:
     """Load MCP server configuration."""
     config_path = os.getenv("MCP_CONFIG_PATH", "config/mcp_servers.yaml")
-    
+
     with open(config_path, "r") as f:
         config = yaml.safe_load(f)
-    
+
     # Override with environment variables
     for server_name, server_config in config.items():
         env_prefix = f"MCP_{server_name.upper().replace('-', '_')}_"
-        
+
         if env_url := os.getenv(f"{env_prefix}URL"):
             server_config["transport"] = "http"
             server_config["url"] = env_url
-        
+
         if env_command := os.getenv(f"{env_prefix}COMMAND"):
             server_config["command"] = env_command
-        
+
         if env_args := os.getenv(f"{env_prefix}ARGS"):
             server_config["args"] = env_args.split()
-    
+
     return config
 ```
 
@@ -697,7 +702,7 @@ When data flows through the system, it undergoes transformation at each layer:
 
 Example transformation flow for flight search:
 
-```
+```plaintext
 MCP Server (External API) → Backend API → Frontend
    Raw Flight Data       →  Flight DTO  → UI Flight Model
 ```
@@ -709,11 +714,9 @@ TripSage implements a multi-level caching strategy:
 1. **MCP Server Caching**: Each MCP server implements appropriate caching for its domain
    - Google Maps MCP caches geocoding results for 24 hours
    - Flight MCP caches search results for 10 minutes
-   
 2. **API Server Caching**: FastAPI implements in-memory caching for common queries
    - User profile data: 5 minutes TTL
    - Trip listings: 1 minute TTL
-   
 3. **Frontend Caching**: React Query with appropriate stale times
    - Trip data: 30 seconds stale time
    - Search results: No stale time (always fresh)
@@ -721,7 +724,7 @@ TripSage implements a multi-level caching strategy:
 ```typescript
 // Frontend caching example with React Query
 const { data: trips } = useQuery({
-  queryKey: ['trips'],
+  queryKey: ["trips"],
   queryFn: getTrips,
   staleTime: 30 * 1000, // 30 seconds
   cacheTime: 5 * 60 * 1000, // 5 minutes
@@ -783,14 +786,14 @@ TripSage implements structured logging across components:
 async def add_request_id(request: Request, call_next):
     request_id = request.headers.get("X-Request-ID") or str(uuid.uuid4())
     request.state.request_id = request_id
-    
+
     # Set up context for logging
     logging_context = contextvars.ContextVar("logging_context")
     logging_context.set({"request_id": request_id})
-    
+
     # Process request
     response = await call_next(request)
-    
+
     # Add request ID to response
     response.headers["X-Request-ID"] = request_id
     return response
@@ -806,58 +809,58 @@ The frontend subscribes to real-time updates from Supabase:
 
 ```typescript
 // hooks/useRealtimeTrip.ts
-import { useEffect, useState } from 'react';
-import { createClientSupabaseClient } from '@/lib/supabase/client';
-import type { Trip } from '@/types';
+import { useEffect, useState } from "react";
+import { createClientSupabaseClient } from "@/lib/supabase/client";
+import type { Trip } from "@/types";
 
 export function useRealtimeTrip(tripId: string) {
   const [trip, setTrip] = useState<Trip | null>(null);
   const [loading, setLoading] = useState(true);
   const supabase = createClientSupabaseClient();
-  
+
   useEffect(() => {
     // Fetch initial data
     const fetchTrip = async () => {
       setLoading(true);
       const { data, error } = await supabase
-        .from('trips')
-        .select('*')
-        .eq('id', tripId)
+        .from("trips")
+        .select("*")
+        .eq("id", tripId)
         .single();
-      
+
       if (error) {
-        console.error('Error fetching trip:', error);
+        console.error("Error fetching trip:", error);
       } else if (data) {
         setTrip(data);
       }
-      
+
       setLoading(false);
     };
-    
+
     fetchTrip();
-    
+
     // Subscribe to changes
     const subscription = supabase
       .channel(`trip-${tripId}`)
       .on(
-        'postgres_changes', 
+        "postgres_changes",
         {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'trips',
-          filter: `id=eq.${tripId}`
-        }, 
-        payload => {
+          event: "UPDATE",
+          schema: "public",
+          table: "trips",
+          filter: `id=eq.${tripId}`,
+        },
+        (payload) => {
           setTrip(payload.new as Trip);
         }
       )
       .subscribe();
-    
+
     return () => {
       supabase.removeChannel(subscription);
     };
   }, [tripId]);
-  
+
   return { trip, loading };
 }
 ```
@@ -868,37 +871,39 @@ For updates from MCP servers, TripSage uses Server-Sent Events:
 
 ```typescript
 // hooks/useFlightPriceAlerts.ts
-import { useEffect, useState } from 'react';
-import apiClient from '@/lib/api-client';
+import { useEffect, useState } from "react";
+import apiClient from "@/lib/api-client";
 
 export function useFlightPriceAlerts(flightIds: string[]) {
   const [alerts, setAlerts] = useState<FlightPriceAlert[]>([]);
-  
+
   useEffect(() => {
     if (!flightIds.length) return;
-    
+
     // Create SSE connection
     const eventSource = new EventSource(
-      `${apiClient.defaults.baseURL}/flights/price-alerts?ids=${flightIds.join(',')}`
+      `${apiClient.defaults.baseURL}/flights/price-alerts?ids=${flightIds.join(
+        ","
+      )}`
     );
-    
+
     // Handle incoming alerts
     eventSource.onmessage = (event) => {
       const alert = JSON.parse(event.data);
-      setAlerts(prev => [...prev, alert]);
+      setAlerts((prev) => [...prev, alert]);
     };
-    
+
     // Handle errors
     eventSource.onerror = (error) => {
-      console.error('SSE error:', error);
+      console.error("SSE error:", error);
       eventSource.close();
     };
-    
+
     return () => {
       eventSource.close();
     };
   }, [flightIds]);
-  
+
   return alerts;
 }
 ```
@@ -945,7 +950,7 @@ async def test_flight_search_api():
         assert tool == "search_flights"
         assert params["origin"] == "LAX"
         assert params["destination"] == "JFK"
-        
+
         return {
             "success": True,
             "flights": [
@@ -962,7 +967,7 @@ async def test_flight_search_api():
                 }
             ]
         }
-    
+
     # Patch the MCP service
     with patch("mcp_service.invoke_mcp_tool", mock_invoke_mcp_tool):
         # Make request to API
@@ -974,7 +979,7 @@ async def test_flight_search_api():
                 "departure_date": "2025-06-01"
             }
         )
-        
+
         assert response.status_code == 200
         data = response.json()
         assert len(data) == 1

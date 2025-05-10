@@ -135,10 +135,10 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [ main, develop ]
-    tags: [ 'v*' ]
+    branches: [main, develop]
+    tags: ["v*"]
   pull_request:
-    branches: [ main, develop ]
+    branches: [main, develop]
 
 jobs:
   test:
@@ -148,7 +148,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.11'
+          python-version: "3.11"
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
@@ -249,12 +249,8 @@ Frontend deployment leverages Vercel's Git integration:
 // vercel.json
 {
   "version": 2,
-  "builds": [
-    { "src": "package.json", "use": "@vercel/next" }
-  ],
-  "routes": [
-    { "src": "/(.*)", "dest": "/$1" }
-  ],
+  "builds": [{ "src": "package.json", "use": "@vercel/next" }],
+  "routes": [{ "src": "/(.*)", "dest": "/$1" }],
   "env": {
     "NEXT_PUBLIC_API_URL": "https://api.tripsage.example.com"
   },
@@ -289,10 +285,10 @@ metadata:
 spec:
   selector:
     app: tripsage-api
-    version: green  # Switch between blue/green
+    version: green # Switch between blue/green
   ports:
-  - port: 80
-    targetPort: 8000
+    - port: 80
+      targetPort: 8000
   type: ClusterIP
 ```
 
@@ -314,15 +310,15 @@ metadata:
   name: tripsage-api
 spec:
   hosts:
-  - api.tripsage.example.com
+    - api.tripsage.example.com
   http:
-  - route:
-    - destination:
-        host: tripsage-api-v1
-      weight: 90
-    - destination:
-        host: tripsage-api-v2
-      weight: 10
+    - route:
+        - destination:
+            host: tripsage-api-v1
+          weight: 90
+        - destination:
+            host: tripsage-api-v2
+          weight: 10
 ```
 
 ### 5.3 Feature Flags
@@ -372,29 +368,29 @@ spec:
         app: tripsage-api
     spec:
       containers:
-      - name: api
-        image: ghcr.io/organization/tripsage-api:v1.0.0
-        ports:
-        - containerPort: 8000
-        resources:
-          requests:
-            memory: "256Mi"
-            cpu: "250m"
-          limits:
-            memory: "512Mi"
-            cpu: "500m"
-        livenessProbe:
-          httpGet:
-            path: /health
-            port: 8000
-          initialDelaySeconds: 30
-          periodSeconds: 10
-        readinessProbe:
-          httpGet:
-            path: /health
-            port: 8000
-          initialDelaySeconds: 5
-          periodSeconds: 5
+        - name: api
+          image: ghcr.io/organization/tripsage-api:v1.0.0
+          ports:
+            - containerPort: 8000
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 5
 ```
 
 ### 6.2 Horizontal Pod Autoscaling
@@ -415,18 +411,18 @@ spec:
   minReplicas: 3
   maxReplicas: 10
   metrics:
-  - type: Resource
-    resource:
-      name: cpu
-      target:
-        type: Utilization
-        averageUtilization: 70
-  - type: Resource
-    resource:
-      name: memory
-      target:
-        type: Utilization
-        averageUtilization: 80
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
 ```
 
 ### 6.3 Config Maps and Secrets
@@ -524,7 +520,7 @@ class StructuredLogger:
     def __init__(self, service_name):
         self.service_name = service_name
         self.logger = logging.getLogger(service_name)
-    
+
     def _log(self, level, message, **kwargs):
         log_data = {
             "timestamp": datetime.utcnow().isoformat(),
@@ -534,19 +530,19 @@ class StructuredLogger:
             **kwargs
         }
         self.logger.log(
-            getattr(logging, level), 
+            getattr(logging, level),
             json.dumps(log_data)
         )
-    
+
     def info(self, message, **kwargs):
         self._log("INFO", message, **kwargs)
-    
+
     def error(self, message, **kwargs):
         self._log("ERROR", message, **kwargs)
-    
+
     def warning(self, message, **kwargs):
         self._log("WARNING", message, **kwargs)
-    
+
     def debug(self, message, **kwargs):
         self._log("DEBUG", message, **kwargs)
 ```
@@ -585,12 +581,12 @@ TripSage implements a comprehensive backup strategy:
 
 Recovery time objectives (RTO) and recovery point objectives (RPO):
 
-| Resource              | RPO        | RTO        |
-|-----------------------|------------|------------|
-| Supabase Database     | 24 hours   | 1 hour     |
-| Neo4j Knowledge Graph | 24 hours   | 2 hours    |
-| Application Services  | Immediate  | 10 minutes |
-| Static Content        | Immediate  | 5 minutes  |
+| Resource              | RPO       | RTO        |
+| --------------------- | --------- | ---------- |
+| Supabase Database     | 24 hours  | 1 hour     |
+| Neo4j Knowledge Graph | 24 hours  | 2 hours    |
+| Application Services  | Immediate | 10 minutes |
+| Static Content        | Immediate | 5 minutes  |
 
 ### 9.3 Failover Procedures
 

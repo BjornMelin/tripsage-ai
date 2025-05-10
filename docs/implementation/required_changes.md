@@ -42,15 +42,15 @@ class BaseAgent:
         self.tools = tools or []
         self.model = model or config.model_name
         self.metadata = metadata or {"agent_type": "tripsage"}
-        
+
         # Initialize MCP clients
         self.memory_client = MemoryClient(config.memory_endpoint)
         self.sequential_thinking = SequentialThinking()
         self.time_manager = TimeManager()
-        
+
         # Initialize dual storage
         self.supabase = create_client(config.supabase_url, config.supabase_key)
-        
+
         # Track conversation state
         self.messages_history = []
 ```
@@ -66,10 +66,10 @@ from typing import Any, Dict, List, Optional, Protocol, runtime_checkable
 @runtime_checkable
 class MCPTool(Protocol):
     """Protocol defining the standard interface for all MCP tools"""
-    
+
     name: str
     description: str
-    
+
     async def execute(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """Execute the tool with the given parameters"""
         ...
@@ -90,7 +90,7 @@ from typing import Any, Dict, List
 class GoogleMapsGeocoding(MCPTool):
     name = "google_maps_geocoding"
     description = "Convert addresses to geographic coordinates"
-    
+
     async def execute(self, params: Dict[str, Any]) -> Dict[str, Any]:
         # Implementation
         ...
@@ -98,7 +98,7 @@ class GoogleMapsGeocoding(MCPTool):
 class GoogleMapsPlaces(MCPTool):
     name = "google_maps_places"
     description = "Search for places and points of interest"
-    
+
     async def execute(self, params: Dict[str, Any]) -> Dict[str, Any]:
         # Implementation
         ...
@@ -106,7 +106,7 @@ class GoogleMapsPlaces(MCPTool):
 class GoogleMapsDirections(MCPTool):
     name = "google_maps_directions"
     description = "Get directions between locations"
-    
+
     async def execute(self, params: Dict[str, Any]) -> Dict[str, Any]:
         # Implementation
         ...
@@ -124,7 +124,7 @@ from typing import Any, Dict, List
 class AirbnbSearch(MCPTool):
     name = "airbnb_search"
     description = "Search for accommodations on Airbnb"
-    
+
     async def execute(self, params: Dict[str, Any]) -> Dict[str, Any]:
         # Implementation using Playwright for HTML parsing
         ...
@@ -132,7 +132,7 @@ class AirbnbSearch(MCPTool):
 class AirbnbGetListing(MCPTool):
     name = "airbnb_get_listing"
     description = "Get detailed information about an Airbnb listing"
-    
+
     async def execute(self, params: Dict[str, Any]) -> Dict[str, Any]:
         # Implementation
         ...
@@ -150,7 +150,7 @@ import pendulum
 class TimeConversion(MCPTool):
     name = "time_conversion"
     description = "Convert times between time zones"
-    
+
     async def execute(self, params: Dict[str, Any]) -> Dict[str, Any]:
         # Implementation using pendulum for timezone handling
         ...
@@ -158,7 +158,7 @@ class TimeConversion(MCPTool):
 class TimeCalculation(MCPTool):
     name = "time_calculation"
     description = "Calculate time differences, durations, etc."
-    
+
     async def execute(self, params: Dict[str, Any]) -> Dict[str, Any]:
         # Implementation
         ...
@@ -174,11 +174,11 @@ from config import config
 
 class MemoryClient:
     """Client for interacting with the Knowledge Graph MCP Server"""
-    
+
     def __init__(self, endpoint: str):
         self.endpoint = endpoint
         self.api_key = config.memory_api_key
-        
+
     async def create_entities(self, entities: List[Dict[str, Any]]) -> Dict[str, Any]:
         """Create new entities in the knowledge graph"""
         async with httpx.AsyncClient() as client:
@@ -188,7 +188,7 @@ class MemoryClient:
                 headers={"Authorization": f"Bearer {self.api_key}"}
             )
             return response.json()
-            
+
     async def create_relations(self, relations: List[Dict[str, Any]]) -> Dict[str, Any]:
         """Create relations between entities in the knowledge graph"""
         async with httpx.AsyncClient() as client:
@@ -198,7 +198,7 @@ class MemoryClient:
                 headers={"Authorization": f"Bearer {self.api_key}"}
             )
             return response.json()
-            
+
     async def search_nodes(self, query: str) -> Dict[str, Any]:
         """Search for nodes in the knowledge graph"""
         async with httpx.AsyncClient() as client:
@@ -220,11 +220,11 @@ from config import config
 
 class SequentialThinking:
     """Integration with Sequential Thinking MCP Server for complex planning"""
-    
+
     def __init__(self):
         self.endpoint = config.sequential_thinking_endpoint
         self.api_key = config.sequential_thinking_api_key
-        
+
     async def plan(self, problem: str, context: Dict[str, Any]) -> Dict[str, Any]:
         """Plan a solution to a complex problem using sequential thinking"""
         async with httpx.AsyncClient() as client:
@@ -373,117 +373,117 @@ export type Json =
   | boolean
   | null
   | { [key: string]: Json | undefined }
-  | Json[]
+  | Json[];
 
 export interface Database {
   public: {
     Tables: {
       users: {
         Row: {
-          id: number
-          name: string | null
-          email: string
-          preferences_json: Json | null
-          created_at: string
-          updated_at: string
-        }
+          id: number;
+          name: string | null;
+          email: string;
+          preferences_json: Json | null;
+          created_at: string;
+          updated_at: string;
+        };
         Insert: {
-          id?: number
-          name?: string | null
-          email: string
-          preferences_json?: Json | null
-          created_at?: string
-          updated_at?: string
-        }
+          id?: number;
+          name?: string | null;
+          email: string;
+          preferences_json?: Json | null;
+          created_at?: string;
+          updated_at?: string;
+        };
         Update: {
-          id?: number
-          name?: string | null
-          email?: string
-          preferences_json?: Json | null
-          created_at?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
+          id?: number;
+          name?: string | null;
+          email?: string;
+          preferences_json?: Json | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       trips: {
         Row: {
-          id: number
-          name: string
-          start_date: string
-          end_date: string
-          destination: string
-          budget: number
-          travelers: number
-          status: string
-          trip_type: string
-          flexibility: Json | null
-          created_at: string
-          updated_at: string
-        }
+          id: number;
+          name: string;
+          start_date: string;
+          end_date: string;
+          destination: string;
+          budget: number;
+          travelers: number;
+          status: string;
+          trip_type: string;
+          flexibility: Json | null;
+          created_at: string;
+          updated_at: string;
+        };
         Insert: {
-          id?: number
-          name: string
-          start_date: string
-          end_date: string
-          destination: string
-          budget: number
-          travelers: number
-          status: string
-          trip_type: string
-          flexibility?: Json | null
-          created_at?: string
-          updated_at?: string
-        }
+          id?: number;
+          name: string;
+          start_date: string;
+          end_date: string;
+          destination: string;
+          budget: number;
+          travelers: number;
+          status: string;
+          trip_type: string;
+          flexibility?: Json | null;
+          created_at?: string;
+          updated_at?: string;
+        };
         Update: {
-          id?: number
-          name?: string
-          start_date?: string
-          end_date?: string
-          destination?: string
-          budget?: number
-          travelers?: number
-          status?: string
-          trip_type?: string
-          flexibility?: Json | null
-          created_at?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
+          id?: number;
+          name?: string;
+          start_date?: string;
+          end_date?: string;
+          destination?: string;
+          budget?: number;
+          travelers?: number;
+          status?: string;
+          trip_type?: string;
+          flexibility?: Json | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       kg_entities: {
         Row: {
-          id: number
-          entity_id: string
-          entity_type: string
-          name: string
-          properties: Json | null
-          created_at: string
-          updated_at: string
-        }
+          id: number;
+          entity_id: string;
+          entity_type: string;
+          name: string;
+          properties: Json | null;
+          created_at: string;
+          updated_at: string;
+        };
         Insert: {
-          id?: number
-          entity_id: string
-          entity_type: string
-          name: string
-          properties?: Json | null
-          created_at?: string
-          updated_at?: string
-        }
+          id?: number;
+          entity_id: string;
+          entity_type: string;
+          name: string;
+          properties?: Json | null;
+          created_at?: string;
+          updated_at?: string;
+        };
         Update: {
-          id?: number
-          entity_id?: string
-          entity_type?: string
-          name?: string
-          properties?: Json | null
-          created_at?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
+          id?: number;
+          entity_id?: string;
+          entity_type?: string;
+          name?: string;
+          properties?: Json | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       // Additional tables omitted for brevity
-    }
+    };
     // Views, functions, etc. omitted for brevity
-  }
+  };
 }
 ```
 
@@ -519,7 +519,7 @@ class TravelAgent(BaseAgent):
             instructions=instructions,
             metadata={"agent_type": "travel_planner", "version": "2.0.0"},
         )
-        
+
         # Initialize MCP tools
         self.mcp_tools = {
             "google_maps_geocoding": GoogleMapsGeocoding(),
@@ -528,15 +528,15 @@ class TravelAgent(BaseAgent):
             "time_conversion": TimeConversion(),
             # Additional tools
         }
-        
+
     async def process_message(self, message: str, user_id: str) -> str:
         """Process a user message and return a response"""
         # Add message to history
         self.add_message(message)
-        
+
         # Create context from knowledge graph
         context = await self._build_context(user_id)
-        
+
         # Use sequential thinking for complex queries
         if self._is_complex_query(message):
             plan = await self.sequential_thinking.plan(message, context)
@@ -545,32 +545,32 @@ class TravelAgent(BaseAgent):
         else:
             # Simple query handling
             response = await self._handle_simple_query(message, context)
-            
+
         # Update knowledge graph with new information
         await self._update_knowledge(user_id, message, response)
-        
+
         return response
-        
+
     async def _build_context(self, user_id: str) -> Dict[str, Any]:
         """Build context from knowledge graph and Supabase"""
         # Get user data from Supabase
         user_data = await self._get_user_data(user_id)
-        
+
         # Get relevant knowledge from memory
         memory_client = MemoryClient(config.memory_endpoint)
         knowledge = await memory_client.search_nodes(f"user:{user_id}")
-        
+
         return {
             "user_data": user_data,
             "knowledge": knowledge,
             "travel_preferences": user_data.get("preferences_json", {})
         }
-        
+
     async def _handle_tool_call(self, tool_name: str, args: Dict[str, Any]) -> Dict[str, Any]:
         """Handle a tool call using the appropriate MCP server"""
         if tool_name in self.mcp_tools:
             return await self.mcp_tools[tool_name].execute(args)
-        
+
         # Fall back to standard tools for backward compatibility
         if tool_name == "search_flights":
             return await self._search_flights(args)
@@ -595,37 +595,37 @@ from pydantic import BaseSettings, Field
 
 class Settings(BaseSettings):
     """Application settings"""
-    
+
     # OpenAI settings (legacy)
     openai_api_key: str = Field(..., env="OPENAI_API_KEY")
     model_name: str = "gpt-4"
-    
+
     # Supabase settings
     supabase_url: str = Field(..., env="SUPABASE_URL")
     supabase_key: str = Field(..., env="SUPABASE_ANON_KEY")
-    
+
     # MCP server endpoints
     memory_endpoint: str = Field(..., env="MEMORY_MCP_ENDPOINT")
     memory_api_key: str = Field(..., env="MEMORY_MCP_API_KEY")
-    
-    google_maps_endpoint: str = Field(..., env="GOOGLE_MAPS_MCP_ENDPOINT") 
+
+    google_maps_endpoint: str = Field(..., env="GOOGLE_MAPS_MCP_ENDPOINT")
     google_maps_api_key: str = Field(..., env="GOOGLE_MAPS_MCP_API_KEY")
-    
+
     airbnb_endpoint: str = Field(..., env="AIRBNB_MCP_ENDPOINT")
     airbnb_api_key: str = Field(..., env="AIRBNB_MCP_API_KEY")
-    
+
     time_endpoint: str = Field(..., env="TIME_MCP_ENDPOINT")
     time_api_key: str = Field(..., env="TIME_MCP_API_KEY")
-    
+
     sequential_thinking_endpoint: str = Field(..., env="SEQ_THINKING_MCP_ENDPOINT")
     sequential_thinking_api_key: str = Field(..., env="SEQ_THINKING_MCP_API_KEY")
-    
+
     # Redis cache configuration
     redis_url: str = Field(..., env="REDIS_URL")
     cache_ttl_short: int = 300  # 5 minutes
     cache_ttl_medium: int = 3600  # 1 hour
     cache_ttl_long: int = 86400  # 24 hours
-    
+
     class Config:
         env_file = ".env"
 
@@ -639,63 +639,66 @@ Create a new API client in the frontend to interact with the updated backend:
 
 ```typescript
 // New file: src/frontend/api/tripSageApi.ts
-import { createClient } from '@supabase/supabase-js'
-import type { Database } from '../../types/supabase'
+import { createClient } from "@supabase/supabase-js";
+import type { Database } from "../../types/supabase";
 
 export class TripSageApiClient {
-  private supabase
-  private baseUrl: string
-  private token: string | null = null
-  
+  private supabase;
+  private baseUrl: string;
+  private token: string | null = null;
+
   constructor(baseUrl: string, supabaseUrl: string, supabaseKey: string) {
-    this.baseUrl = baseUrl
-    this.supabase = createClient<Database>(supabaseUrl, supabaseKey)
+    this.baseUrl = baseUrl;
+    this.supabase = createClient<Database>(supabaseUrl, supabaseKey);
   }
-  
+
   async login(email: string, password: string) {
     const { data, error } = await this.supabase.auth.signInWithPassword({
       email,
-      password
-    })
-    
-    if (error) throw error
-    
-    this.token = data.session?.access_token || null
-    return data.user
+      password,
+    });
+
+    if (error) throw error;
+
+    this.token = data.session?.access_token || null;
+    return data.user;
   }
-  
+
   async createTrip(tripData: any) {
     const response = await fetch(`${this.baseUrl}/trips`, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${this.token}`
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${this.token}`,
       },
-      body: JSON.stringify(tripData)
-    })
-    
+      body: JSON.stringify(tripData),
+    });
+
     if (!response.ok) {
-      throw new Error(`Failed to create trip: ${response.statusText}`)
+      throw new Error(`Failed to create trip: ${response.statusText}`);
     }
-    
-    return await response.json()
+
+    return await response.json();
   }
-  
+
   // Additional methods for interacting with the API
   // ...
-  
+
   async searchKnowledge(query: string) {
-    const response = await fetch(`${this.baseUrl}/knowledge/search?query=${encodeURIComponent(query)}`, {
-      headers: {
-        'Authorization': `Bearer ${this.token}`
+    const response = await fetch(
+      `${this.baseUrl}/knowledge/search?query=${encodeURIComponent(query)}`,
+      {
+        headers: {
+          Authorization: `Bearer ${this.token}`,
+        },
       }
-    })
-    
+    );
+
     if (!response.ok) {
-      throw new Error(`Knowledge search failed: ${response.statusText}`)
+      throw new Error(`Knowledge search failed: ${response.statusText}`);
     }
-    
-    return await response.json()
+
+    return await response.json();
   }
 }
 ```
@@ -713,25 +716,25 @@ from config import config
 
 class RedisCache:
     """Redis-based caching system for TripSage"""
-    
+
     def __init__(self):
         self.redis = redis.from_url(config.redis_url)
-        
+
     async def get(self, key: str) -> Optional[Dict[str, Any]]:
         """Get a value from the cache"""
         value = await self.redis.get(key)
         if value:
             return json.loads(value)
         return None
-        
+
     async def set(self, key: str, value: Dict[str, Any], ttl: int) -> bool:
         """Set a value in the cache with a TTL"""
         return await self.redis.set(key, json.dumps(value), ex=ttl)
-        
+
     async def delete(self, key: str) -> bool:
         """Delete a value from the cache"""
         return await self.redis.delete(key) > 0
-        
+
     async def invalidate_pattern(self, pattern: str) -> int:
         """Invalidate all keys matching the pattern"""
         keys = await self.redis.keys(pattern)
@@ -787,7 +790,7 @@ NODE_ENV=development
 
 Updated project structure to support the new architecture:
 
-```
+```plaintext
 src/
 ├── agents/
 │   ├── __init__.py
@@ -829,28 +832,33 @@ src/
 ## Implementation Timeline
 
 1. **Phase 1: Core Architecture (Week 1-2)**
+
    - Refactor BaseAgent class
    - Implement tool interface standardization
    - Set up knowledge graph integration
    - Update config system
 
 2. **Phase 2: MCP Server Implementation (Week 3-4)**
+
    - Implement Google Maps MCP server
    - Implement Airbnb MCP server
    - Implement Time MCP server
    - Implement Sequential Thinking integration
 
 3. **Phase 3: API Layer Updates (Week 5)**
+
    - Create new API routes
    - Update existing routes for MCP integration
    - Implement caching system
 
 4. **Phase 4: Database Updates (Week 6)**
+
    - Create new database migrations
    - Update TypeScript types
    - Implement dual storage architecture
 
 5. **Phase 5: Frontend Integration (Week 7-8)**
+
    - Create frontend API client
    - Update UI components for new capabilities
    - Implement real-time updates
