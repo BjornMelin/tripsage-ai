@@ -4,7 +4,7 @@ This document provides comprehensive instructions for integrating browser automa
 
 ## Overview
 
-Browser-use is a powerful automation tool that allows TripSage to interact with travel websites programmatically. The integration enables:
+Browser automation enables TripSage to interact with travel websites programmatically. The implementation uses Playwright with Python to provide:
 
 - Checking flight status on airline websites
 - Automating flight check-in procedures
@@ -12,1569 +12,698 @@ Browser-use is a powerful automation tool that allows TripSage to interact with 
 - Capturing screenshots for verification purposes
 - Monitoring price changes for flights and accommodations
 
-The free tier offers:
+## Architecture
 
-- 100 automation minutes per month
-- Full browser automation capabilities
-- Screenshot capture
-- Element selection
-- No setup fees or infrastructure requirements
+TripSage implements a robust browser automation solution using Playwright with Python, which offers:
 
-## Setup Instructions
+- Cross-browser support (Chromium, Firefox, WebKit)
+- Excellent Python integration with FastMCP 2.0
+- Strong performance (35% faster than alternatives)
+- Resilient auto-waiting mechanism for stable interactions
+- Rich API with comprehensive features for travel-specific automation
+- Advanced capabilities for authentication and form handling
 
-### 1. Create a Browser-use Account
+## Playwright MCP Server Implementation
 
-1. Visit [Browser-use Sign Up](https://browser-use.com/signup) and create a free account
-2. Verify your email address through the confirmation link
-3. Navigate to the dashboard to access your account details
+### Setup Instructions
 
-### 2. Generate API Key
+1. **Install Required Dependencies**
 
-1. From your Browser-use dashboard, navigate to "API Keys" section
-2. Click "Create API Key" and provide a name (e.g., "TripSage Personal")
-3. Copy the generated API key to a secure location
-4. Set usage alerts to monitor consumption (recommended at 50% and 80%)
+   ```bash
+   # Install Playwright and MCP dependencies
+   pip install playwright fastmcp
+   python -m playwright install
+   ```
 
-### 3. Configure Environment Variables
+2. **Configure Environment Variables**
 
 Create or update the `.env` file in your TripSage project root:
 
-```
-BROWSER_USE_API_KEY=your_api_key_here
-BROWSER_USE_TIMEOUT=30000
-BROWSER_USE_HEADLESS=true
-```
-
-### 4. Install Required Dependencies
-
-```bash
-npm install dotenv axios
+```plaintext
+PLAYWRIGHT_MCP_ENDPOINT=http://localhost:3001
+PLAYWRIGHT_HEADLESS=true
+PLAYWRIGHT_TIMEOUT=30000
 ```
 
-### Implementation
+### Core Implementation
 
-#### Basic Browser Service
+Create a file `src/mcp/browser/playwright_server.py`:
 
-Create a file `src/services/automation/browser-service.js`:
+```python
+import asyncio
+from fastmcp import FastMCP, ToolDefinition
+from playwright.async_api import async_playwright
+from pydantic import BaseModel
+from typing import Dict, List, Optional, Union
 
-```javascript
-const mcpClient = require("../../utils/mcp-client");
-const { cacheWithTTL } = require("../../utils/cache");
-const logger = require("../../utils/logger");
+app = FastMCP()
 
-class BrowserService {
-  constructor() {
-    this.usageTracker = new UsageTracker();
-  }
+# Pydantic models for tool parameters
+class FlightStatusParams(BaseModel):
+    airline: str
+    flight_number: str
+    date: str
 
-  /**
-   * Check flight status on airline website
-   * @param {Object} params Flight status parameters
-   * @returns {Promise<Object>} Flight status information
-   */
-  async checkFlightStatus(params) {
-    const { airline, flightNumber, date } = params;
-    const estimatedDuration = 1; // Estimated minutes
+class CheckInParams(BaseModel):
+    airline: str
+    confirmation_code: str
+    last_name: str
+    first_name: Optional[str] = None
+    flight_date: Optional[str] = None
 
-    // Check if we should proceed with automation
-    if (
-      !this.usageTracker.shouldProceedWithTask(
-        "flightStatus",
-        estimatedDuration
-      )
-    ) {
-      return {
-        success: false,
-        message:
-          "Automation usage limit approaching. Using alternative data source.",
-      };
-    }
+class BookingVerificationParams(BaseModel):
+    type: str  # "flight", "hotel", "car"
+    provider: str
+    confirmation_code: str
+    last_name: str
+    first_name: Optional[str] = None
 
-    try {
-      // Record start time for usage tracking
-      const startTime = Date.now();
+class PriceMonitorParams(BaseModel):
+    url: str
+    selector: str
+    check_frequency: str = "daily"  # "hourly", "daily", "weekly"
 
-      // Get airline website URL
-      const airlineUrl = this.getAirlineStatusUrl(airline);
+# Browser context manager
+class PlaywrightManager:
+    def __init__(self):
+        self.playwright = None
+        self.browser = None
+        self.contexts = {}
 
-      // Navigate to airline status page
-      await mcpClient.call("browser", "browser_navigate", {
-        url: airlineUrl,
-      });
+    async def initialize(self):
+        if not self.playwright:
+            self.playwright = await async_playwright().start()
+            self.browser = await self.playwright.chromium.launch(
+                headless=True
+            )
 
-      // Wait for page to load
-      await mcpClient.call("browser", "browser_wait", {
-        time: 3, // Wait 3 seconds
-      });
+    async def get_context(self, session_id="default"):
+        await self.initialize()
+        if session_id not in self.contexts:
+            self.contexts[session_id] = await self.browser.new_context(
+                viewport={"width": 1280, "height": 720},
+                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/98.0.4758.102 Safari/537.36"
+            )
+        return self.contexts[session_id]
 
-      // Get page snapshot for analysis
-      const snapshot = await mcpClient.call("browser", "browser_snapshot", {});
+    async def close_context(self, session_id="default"):
+        if session_id in self.contexts:
+            await self.contexts[session_id].close()
+            del self.contexts[session_id]
 
-      // Fill in flight details based on airline
-      if (airline === "AA") {
-        // American Airlines implementation
-        await this.fillAmericanAirlinesForm(snapshot, flightNumber, date);
-      } else if (airline === "DL") {
-        // Delta Airlines implementation
-        await this.fillDeltaAirlinesForm(snapshot, flightNumber, date);
-      } else {
-        // Generic approach for other airlines
-        await this.fillGenericFlightStatusForm(snapshot, flightNumber, date);
-      }
+    async def close(self):
+        for session_id in list(self.contexts.keys()):
+            await self.close_context(session_id)
+        if self.browser:
+            await self.browser.close()
+        if self.playwright:
+            await self.playwright.stop()
 
-      // Wait for results to load
-      await mcpClient.call("browser", "browser_wait", {
-        time: 5, // Wait 5 seconds
-      });
+# Create manager instance
+playwright_manager = PlaywrightManager()
 
-      // Take screenshot of results
-      const screenshot = await mcpClient.call("browser", "browser_screenshot", {
-        name: `flight_status_${airline}_${flightNumber}`,
-      });
+@app.tool
+async def check_flight_status(params: FlightStatusParams) -> Dict:
+    """Check flight status on airline website.
 
-      // Get visible text content
-      const content = await mcpClient.call(
-        "browser",
-        "browser_get_visible_text",
-        {}
-      );
+    Args:
+        params: Flight status parameters including airline, flight_number, and date
 
-      // Parse flight status information
-      const statusInfo = this.parseFlightStatusFromText(content, airline);
+    Returns:
+        Dict containing flight status information
+    """
+    context = await playwright_manager.get_context()
 
-      // Record usage
-      const duration = (Date.now() - startTime) / 60000; // Convert to minutes
-      this.usageTracker.recordTaskUsage("flightStatus", duration);
+    try:
+        # Get airline website URL
+        airline_url = get_airline_status_url(params.airline)
 
-      return {
-        success: true,
-        airline,
-        flightNumber,
-        date,
-        status: statusInfo,
-        screenshot,
-        raw_content: content.substring(0, 1000), // Limit content size
-      };
-    } catch (error) {
-      logger.error(
-        `Error checking flight status for ${airline} ${flightNumber}:`,
-        error
-      );
-      return {
-        success: false,
-        message: `Failed to check flight status: ${error.message}`,
-      };
-    }
-  }
+        # Create a new page
+        page = await context.new_page()
 
-  /**
-   * Perform flight check-in
-   * @param {Object} params Check-in parameters
-   * @returns {Promise<Object>} Check-in result
-   */
-  async checkInForFlight(params) {
-    const { airline, confirmationCode, lastName, firstName, flightDate } =
-      params;
-    const estimatedDuration = 2; // Estimated minutes
+        # Navigate to airline status page
+        await page.goto(airline_url)
 
-    // Check if we should proceed with automation
-    if (
-      !this.usageTracker.shouldProceedWithTask("checkIn", estimatedDuration)
-    ) {
-      return {
-        success: false,
-        message:
-          "Automation usage limit approaching. Please check in manually.",
-      };
-    }
+        # Wait for page to load
+        await page.wait_for_load_state("networkidle")
 
-    try {
-      // Record start time for usage tracking
-      const startTime = Date.now();
+        # Fill in flight details based on airline
+        if params.airline == "AA":
+            await fill_american_airlines_form(page, params.flight_number, params.date)
+        elif params.airline == "DL":
+            await fill_delta_airlines_form(page, params.flight_number, params.date)
+        else:
+            await fill_generic_flight_status_form(page, params.flight_number, params.date)
 
-      // Get airline check-in URL
-      const checkInUrl = this.getAirlineCheckInUrl(airline);
+        # Wait for results to load
+        await page.wait_for_load_state("networkidle")
 
-      // Navigate to check-in page
-      await mcpClient.call("browser", "browser_navigate", {
-        url: checkInUrl,
-      });
+        # Take screenshot of results
+        screenshot = await page.screenshot()
 
-      // Wait for page to load
-      await mcpClient.call("browser", "browser_wait", {
-        time: 3,
-      });
+        # Get visible text content
+        content = await page.content()
+        text_content = await page.evaluate("() => document.body.innerText")
 
-      // Get page snapshot
-      const snapshot = await mcpClient.call("browser", "browser_snapshot", {});
+        # Parse flight status information
+        status_info = parse_flight_status(text_content, params.airline)
 
-      // Fill in check-in details based on airline
-      if (airline === "AA") {
-        await this.fillAmericanAirlinesCheckIn(
-          snapshot,
-          confirmationCode,
-          lastName,
-          firstName
-        );
-      } else if (airline === "DL") {
-        await this.fillDeltaAirlinesCheckIn(
-          snapshot,
-          confirmationCode,
-          lastName
-        );
-      } else {
-        await this.fillGenericCheckInForm(
-          snapshot,
-          confirmationCode,
-          lastName,
-          firstName
-        );
-      }
+        # Close the page
+        await page.close()
 
-      // Wait for check-in page to load
-      await mcpClient.call("browser", "browser_wait", {
-        time: 5,
-      });
-
-      // Take screenshot of check-in page
-      const checkInScreenshot = await mcpClient.call(
-        "browser",
-        "browser_screenshot",
-        {
-          name: `check_in_${airline}_${confirmationCode}`,
-        }
-      );
-
-      // Get visible text
-      const content = await mcpClient.call(
-        "browser",
-        "browser_get_visible_text",
-        {}
-      );
-
-      // Check for common error messages
-      const errorMessage = this.detectCheckInErrors(content);
-
-      // Record usage
-      const duration = (Date.now() - startTime) / 60000; // Convert to minutes
-      this.usageTracker.recordTaskUsage("checkIn", duration);
-
-      if (errorMessage) {
         return {
-          success: false,
-          airline,
-          confirmationCode,
-          error: errorMessage,
-          screenshot: checkInScreenshot,
-        };
-      }
-
-      // Process successful check-in
-      return {
-        success: true,
-        airline,
-        confirmationCode,
-        message: "Check-in completed successfully",
-        boarding_pass_available:
-          content.includes("boarding pass") ||
-          content.includes("Boarding Pass"),
-        screenshot: checkInScreenshot,
-      };
-    } catch (error) {
-      logger.error(`Error checking in for ${airline} flight:`, error);
-      return {
-        success: false,
-        message: `Failed to check in: ${error.message}`,
-      };
-    }
-  }
-
-  /**
-   * Verify a booking
-   * @param {Object} params Booking verification parameters
-   * @returns {Promise<Object>} Verification result
-   */
-  async verifyBooking(params) {
-    const { type, provider, confirmationCode, lastName, firstName } = params;
-    const estimatedDuration = 1.5; // Estimated minutes
-
-    // Check if we should proceed with automation
-    if (
-      !this.usageTracker.shouldProceedWithTask(
-        "verifyBooking",
-        estimatedDuration
-      )
-    ) {
-      return {
-        success: false,
-        message:
-          "Automation usage limit approaching. Please verify booking manually.",
-      };
-    }
-
-    try {
-      // Record start time for usage tracking
-      const startTime = Date.now();
-
-      // Get verification URL based on booking type and provider
-      const verificationUrl = this.getBookingVerificationUrl(type, provider);
-
-      // Navigate to verification page
-      await mcpClient.call("browser", "browser_navigate", {
-        url: verificationUrl,
-      });
-
-      // Wait for page to load
-      await mcpClient.call("browser", "browser_wait", {
-        time: 3,
-      });
-
-      // Get page snapshot
-      const snapshot = await mcpClient.call("browser", "browser_snapshot", {});
-
-      // Fill verification form based on type and provider
-      if (type === "flight") {
-        await this.fillFlightVerificationForm(
-          snapshot,
-          provider,
-          confirmationCode,
-          lastName
-        );
-      } else if (type === "hotel") {
-        await this.fillHotelVerificationForm(
-          snapshot,
-          provider,
-          confirmationCode,
-          lastName
-        );
-      } else if (type === "car") {
-        await this.fillCarRentalVerificationForm(
-          snapshot,
-          provider,
-          confirmationCode,
-          lastName
-        );
-      }
-
-      // Wait for verification page to load
-      await mcpClient.call("browser", "browser_wait", {
-        time: 5,
-      });
-
-      // Take screenshot of verification page
-      const verificationScreenshot = await mcpClient.call(
-        "browser",
-        "browser_screenshot",
-        {
-          name: `verify_${type}_${provider}_${confirmationCode}`,
+            "success": True,
+            "airline": params.airline,
+            "flight_number": params.flight_number,
+            "date": params.date,
+            "status": status_info,
+            "screenshot": screenshot.decode("utf-8") if screenshot else None,
+            "raw_content": text_content[:1000] if text_content else None,
         }
-      );
-
-      // Get visible text
-      const content = await mcpClient.call(
-        "browser",
-        "browser_get_visible_text",
-        {}
-      );
-
-      // Extract booking details
-      const bookingDetails = this.extractBookingDetails(
-        content,
-        type,
-        provider
-      );
-
-      // Record usage
-      const duration = (Date.now() - startTime) / 60000; // Convert to minutes
-      this.usageTracker.recordTaskUsage("verifyBooking", duration);
-
-      return {
-        success: true,
-        type,
-        provider,
-        confirmationCode,
-        details: bookingDetails,
-        screenshot: verificationScreenshot,
-      };
-    } catch (error) {
-      logger.error(`Error verifying ${type} booking with ${provider}:`, error);
-      return {
-        success: false,
-        message: `Failed to verify booking: ${error.message}`,
-      };
-    }
-  }
-
-  /**
-   * Monitor price for a booking
-   * @param {Object} params Price monitoring parameters
-   * @returns {Promise<Object>} Price monitoring result
-   */
-  async monitorPrice(params) {
-    const { type, provider, origin, destination, date, returnDate, travelers } =
-      params;
-    const estimatedDuration = 1.5; // Estimated minutes
-
-    // Check if we should proceed with automation
-    if (
-      !this.usageTracker.shouldProceedWithTask(
-        "monitorPrice",
-        estimatedDuration
-      )
-    ) {
-      return {
-        success: false,
-        message:
-          "Automation usage limit approaching. Using alternative price source.",
-      };
-    }
-
-    try {
-      // Record start time for usage tracking
-      const startTime = Date.now();
-
-      // Get search URL based on booking type and provider
-      const searchUrl = this.getSearchUrl(type, provider);
-
-      // Navigate to search page
-      await mcpClient.call("browser", "browser_navigate", {
-        url: searchUrl,
-      });
-
-      // Wait for page to load
-      await mcpClient.call("browser", "browser_wait", {
-        time: 3,
-      });
-
-      // Get page snapshot
-      const snapshot = await mcpClient.call("browser", "browser_snapshot", {});
-
-      // Fill search form based on type and provider
-      if (type === "flight") {
-        await this.fillFlightSearchForm(
-          snapshot,
-          provider,
-          origin,
-          destination,
-          date,
-          returnDate,
-          travelers
-        );
-      } else if (type === "hotel") {
-        await this.fillHotelSearchForm(
-          snapshot,
-          provider,
-          destination,
-          date,
-          returnDate,
-          travelers
-        );
-      }
-
-      // Wait for search results to load
-      await mcpClient.call("browser", "browser_wait", {
-        time: 8, // Longer wait for search results
-      });
-
-      // Take screenshot of search results
-      const searchScreenshot = await mcpClient.call(
-        "browser",
-        "browser_screenshot",
-        {
-          name: `price_${type}_${provider}_${origin || ""}_${destination}`,
+    except Exception as e:
+        return {
+            "success": False,
+            "message": f"Failed to check flight status: {str(e)}",
         }
-      );
 
-      // Get visible text
-      const content = await mcpClient.call(
-        "browser",
-        "browser_get_visible_text",
-        {}
-      );
+@app.tool
+async def check_in_for_flight(params: CheckInParams) -> Dict:
+    """Perform flight check-in.
 
-      // Extract price information
-      const priceInfo = this.extractPriceInfo(content, type, provider);
+    Args:
+        params: Check-in parameters including airline, confirmation_code, and passenger information
 
-      // Record usage
-      const duration = (Date.now() - startTime) / 60000; // Convert to minutes
-      this.usageTracker.recordTaskUsage("monitorPrice", duration);
+    Returns:
+        Dict containing check-in result
+    """
+    context = await playwright_manager.get_context()
 
-      return {
-        success: true,
-        type,
-        provider,
-        search: {
-          origin: origin || null,
-          destination,
-          date,
-          returnDate: returnDate || null,
-          travelers,
-        },
-        prices: priceInfo,
-        screenshot: searchScreenshot,
-      };
-    } catch (error) {
-      logger.error(`Error monitoring ${type} prices with ${provider}:`, error);
-      return {
-        success: false,
-        message: `Failed to monitor prices: ${error.message}`,
-      };
+    try:
+        # Get airline check-in URL
+        check_in_url = get_airline_check_in_url(params.airline)
+
+        # Create a new page
+        page = await context.new_page()
+
+        # Navigate to check-in page
+        await page.goto(check_in_url)
+
+        # Wait for page to load
+        await page.wait_for_load_state("networkidle")
+
+        # Fill in check-in details based on airline
+        if params.airline == "AA":
+            await fill_american_airlines_check_in(page, params.confirmation_code, params.last_name, params.first_name)
+        elif params.airline == "DL":
+            await fill_delta_airlines_check_in(page, params.confirmation_code, params.last_name)
+        else:
+            await fill_generic_check_in_form(page, params.confirmation_code, params.last_name, params.first_name)
+
+        # Wait for check-in page to load
+        await page.wait_for_load_state("networkidle")
+
+        # Take screenshot of check-in page
+        screenshot = await page.screenshot()
+
+        # Get visible text
+        text_content = await page.evaluate("() => document.body.innerText")
+
+        # Check for common error messages
+        error_message = detect_check_in_errors(text_content)
+
+        # Close the page
+        await page.close()
+
+        if error_message:
+            return {
+                "success": False,
+                "airline": params.airline,
+                "confirmation_code": params.confirmation_code,
+                "error": error_message,
+                "screenshot": screenshot.decode("utf-8") if screenshot else None,
+            }
+
+        return {
+            "success": True,
+            "airline": params.airline,
+            "confirmation_code": params.confirmation_code,
+            "message": "Check-in completed successfully",
+            "boarding_pass_available": "boarding pass" in text_content.lower(),
+            "screenshot": screenshot.decode("utf-8") if screenshot else None,
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "message": f"Failed to check in: {str(e)}",
+        }
+
+@app.tool
+async def verify_booking(params: BookingVerificationParams) -> Dict:
+    """Verify a booking.
+
+    Args:
+        params: Booking verification parameters
+
+    Returns:
+        Dict containing verification result
+    """
+    context = await playwright_manager.get_context()
+
+    try:
+        # Get verification URL based on booking type and provider
+        verification_url = get_booking_verification_url(params.type, params.provider)
+
+        # Create a new page
+        page = await context.new_page()
+
+        # Navigate to verification page
+        await page.goto(verification_url)
+
+        # Wait for page to load
+        await page.wait_for_load_state("networkidle")
+
+        # Fill verification form based on type and provider
+        if params.type == "flight":
+            await fill_flight_verification_form(page, params.provider, params.confirmation_code, params.last_name)
+        elif params.type == "hotel":
+            await fill_hotel_verification_form(page, params.provider, params.confirmation_code, params.last_name)
+        elif params.type == "car":
+            await fill_car_rental_verification_form(page, params.provider, params.confirmation_code, params.last_name)
+
+        # Wait for verification page to load
+        await page.wait_for_load_state("networkidle")
+
+        # Take screenshot of verification page
+        screenshot = await page.screenshot()
+
+        # Get visible text
+        text_content = await page.evaluate("() => document.body.innerText")
+
+        # Extract booking details
+        booking_details = extract_booking_details(text_content, params.type, params.provider)
+
+        # Close the page
+        await page.close()
+
+        return {
+            "success": True,
+            "type": params.type,
+            "provider": params.provider,
+            "confirmation_code": params.confirmation_code,
+            "details": booking_details,
+            "screenshot": screenshot.decode("utf-8") if screenshot else None,
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "message": f"Failed to verify booking: {str(e)}",
+        }
+
+@app.tool
+async def monitor_price(params: PriceMonitorParams) -> Dict:
+    """Monitor price for a travel item.
+
+    Args:
+        params: Price monitoring parameters
+
+    Returns:
+        Dict containing price monitoring result
+    """
+    context = await playwright_manager.get_context()
+
+    try:
+        # Create a new page
+        page = await context.new_page()
+
+        # Navigate to the URL
+        await page.goto(params.url)
+
+        # Wait for page to load
+        await page.wait_for_load_state("networkidle")
+
+        # Find price element
+        price_element = await page.query_selector(params.selector)
+        if not price_element:
+            raise Exception(f"Price element not found with selector: {params.selector}")
+
+        # Extract price text
+        price_text = await price_element.text_content()
+
+        # Parse price (extract numeric value and currency)
+        price_info = parse_price(price_text)
+
+        # Take screenshot
+        screenshot = await page.screenshot()
+
+        # Close the page
+        await page.close()
+
+        return {
+            "success": True,
+            "url": params.url,
+            "initial_price": {
+                "amount": price_info["amount"],
+                "currency": price_info["currency"],
+                "extracted_text": price_text,
+                "timestamp": get_current_timestamp()
+            },
+            "check_frequency": params.check_frequency,
+            "next_check": calculate_next_check(params.check_frequency),
+            "screenshot": screenshot.decode("utf-8") if screenshot else None,
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "message": f"Failed to monitor price: {str(e)}",
+        }
+
+# Helper functions
+def get_airline_status_url(airline: str) -> str:
+    """Get URL for airline flight status page."""
+    airline_urls = {
+        "AA": "https://www.aa.com/travelInformation/flights/status",
+        "DL": "https://www.delta.com/flight-status-lookup",
+        "UA": "https://www.united.com/en/us/flightstatus",
+        "WN": "https://www.southwest.com/air/flight-status",
     }
-  }
+    return airline_urls.get(airline, f"https://www.google.com/search?q={airline}+flight+status")
 
-  // Helper methods and form-filling implementations
-  // (Implementation details omitted for brevity)
-}
-
-/**
- * Automation usage tracking for Browser-use
- */
-class UsageTracker {
-  constructor() {
-    this.monthlyLimit = 100; // Free tier (minutes)
-    this.minutesUsed = 0;
-    this.tasks = [];
-    this.loadSavedUsage();
-  }
-
-  loadSavedUsage() {
-    try {
-      const savedUsage = JSON.parse(localStorage.getItem("browser_use_usage"));
-      if (savedUsage && new Date(savedUsage.resetDate) > new Date()) {
-        this.minutesUsed = savedUsage.minutesUsed;
-        this.tasks = savedUsage.tasks;
-      } else {
-        // Reset for new month
-        this.resetUsage();
-      }
-    } catch (error) {
-      logger.error("Error loading automation usage:", error);
-      this.resetUsage();
+def get_airline_check_in_url(airline: str) -> str:
+    """Get URL for airline check-in page."""
+    checkin_urls = {
+        "AA": "https://www.aa.com/reservation/view/find-your-reservation",
+        "DL": "https://www.delta.com/checkin/search",
+        "UA": "https://www.united.com/en/us/checkin",
+        "WN": "https://www.southwest.com/air/check-in/index.html",
     }
-  }
+    return checkin_urls.get(airline, f"https://www.google.com/search?q={airline}+check+in")
 
-  resetUsage() {
-    this.minutesUsed = 0;
-    this.tasks = [];
+def get_booking_verification_url(type: str, provider: str) -> str:
+    """Get URL for booking verification."""
+    # Implementation details
+    return f"https://example.com/{type}/{provider}/verification"
 
-    // Set reset date to first day of next month
-    const now = new Date();
-    const resetDate = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+# Form filling implementations
+async def fill_american_airlines_form(page, flight_number, date):
+    """Fill American Airlines flight status form."""
+    # Implementation details
+    pass
 
-    this.saveUsage(resetDate);
-  }
+async def fill_delta_airlines_form(page, flight_number, date):
+    """Fill Delta Airlines flight status form."""
+    # Implementation details
+    pass
 
-  saveUsage(resetDate) {
-    try {
-      const resetDateToUse =
-        resetDate ||
-        new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1);
+async def fill_generic_flight_status_form(page, flight_number, date):
+    """Fill generic flight status form."""
+    # Implementation details
+    pass
 
-      localStorage.setItem(
-        "browser_use_usage",
-        JSON.stringify({
-          minutesUsed: this.minutesUsed,
-          tasks: this.tasks,
-          resetDate: resetDateToUse.toISOString(),
+# Additional helper functions
+def parse_flight_status(text_content, airline):
+    """Parse flight status from text content."""
+    # Implementation details
+    return {"status": "On Time"}
+
+def detect_check_in_errors(text_content):
+    """Detect common check-in error messages."""
+    # Implementation details
+    return None
+
+def extract_booking_details(text_content, type, provider):
+    """Extract booking details from text content."""
+    # Implementation details
+    return {"confirmation": "ABC123"}
+
+def parse_price(price_text):
+    """Parse price from text."""
+    # Implementation details
+    return {"amount": 100.0, "currency": "USD"}
+
+def get_current_timestamp():
+    """Get current timestamp."""
+    from datetime import datetime
+    return datetime.utcnow().isoformat()
+
+def calculate_next_check(frequency):
+    """Calculate next check timestamp based on frequency."""
+    from datetime import datetime, timedelta
+    now = datetime.utcnow()
+    if frequency == "hourly":
+        next_check = now + timedelta(hours=1)
+    elif frequency == "daily":
+        next_check = now + timedelta(days=1)
+    elif frequency == "weekly":
+        next_check = now + timedelta(weeks=1)
+    else:
+        next_check = now + timedelta(days=1)  # Default to daily
+    return next_check.isoformat()
+
+# Cleanup on shutdown
+@app.on_shutdown
+async def shutdown():
+    await playwright_manager.close()
+
+if __name__ == "__main__":
+    app.run()
+```
+
+## OpenAI Agents SDK Integration
+
+Integration with OpenAI Agents SDK allows browser automation to be used seamlessly within travel agent workflows:
+
+```python
+from agents import Agent, function_tool
+from pydantic import BaseModel
+from typing import Optional
+
+class FlightStatusParams(BaseModel):
+    airline: str
+    flight_number: str
+    date: str
+
+@function_tool
+async def check_flight_status(params: FlightStatusParams) -> str:
+    """Check flight status on airline website.
+
+    Args:
+        params: Flight status parameters including airline, flight_number, and date
+
+    Returns:
+        Formatted string with flight status information
+    """
+    try:
+        # Call Playwright MCP Server
+        result = await playwright_client.check_flight_status(
+            params.dict()
+        )
+
+        # Store in Supabase
+        await supabase.table("flight_status_checks").insert({
+            "airline": params.airline,
+            "flight_number": params.flight_number,
+            "date": params.date,
+            "status": result["status"],
+            "checked_at": "NOW()"
         })
-      );
-    } catch (error) {
-      logger.error("Error saving automation usage:", error);
-    }
-  }
 
-  recordTaskUsage(taskType, durationMinutes) {
-    this.minutesUsed += durationMinutes;
-    this.tasks.push({
-      type: taskType,
-      duration: durationMinutes,
-      timestamp: new Date().toISOString(),
-    });
-
-    this.saveUsage();
-
-    return {
-      minutesUsed: this.minutesUsed,
-      minutesRemaining: this.monthlyLimit - this.minutesUsed,
-    };
-  }
-
-  shouldProceedWithTask(taskType, estimatedDuration) {
-    const remainingMinutes = this.monthlyLimit - this.minutesUsed;
-
-    // Always allow check-ins as they're time-sensitive
-    if (taskType === "checkIn") {
-      return remainingMinutes >= estimatedDuration;
-    }
-
-    // For other tasks, be more conservative
-    if (remainingMinutes < 15) {
-      return false;
-    }
-
-    if (remainingMinutes < 30) {
-      // Only allow important task types when under 30 minutes
-      return ["checkIn", "verifyBooking"].includes(taskType);
-    }
-
-    return true;
-  }
-
-  getRemainingMinutes() {
-    return this.monthlyLimit - this.minutesUsed;
-  }
-
-  getUsageSummary() {
-    // Calculate usage metrics
-    const taskTypeCounts = this.tasks.reduce((counts, task) => {
-      counts[task.type] = (counts[task.type] || 0) + 1;
-      return counts;
-    }, {});
-
-    const taskTypeMinutes = this.tasks.reduce((minutes, task) => {
-      minutes[task.type] = (minutes[task.type] || 0) + task.duration;
-      return minutes;
-    }, {});
-
-    return {
-      minutesUsed: this.minutesUsed,
-      minutesRemaining: this.monthlyLimit - this.minutesUsed,
-      percentageUsed: (this.minutesUsed / this.monthlyLimit) * 100,
-      taskCounts: taskTypeCounts,
-      taskMinutes: taskTypeMinutes,
-      recentTasks: this.tasks.slice(-5), // Last 5 tasks
-    };
-  }
-}
-
-module.exports = new BrowserService();
-```
-
-#### Browser Utility Functions
-
-Create a file `src/utils/browser-utils.js`:
-
-```javascript
-/**
- * Utility functions for browser automation
- */
-const browserUtils = {
-  /**
-   * Format date for travel websites
-   * @param {string} date ISO date string (YYYY-MM-DD)
-   * @param {string} format Target format (MM/DD/YYYY, DD/MM/YYYY, etc.)
-   * @returns {string} Formatted date
-   */
-  formatDate(date, format) {
-    const dateObj = new Date(date);
-    if (isNaN(dateObj.getTime())) {
-      throw new Error(`Invalid date: ${date}`);
-    }
-
-    const day = dateObj.getDate().toString().padStart(2, "0");
-    const month = (dateObj.getMonth() + 1).toString().padStart(2, "0");
-    const year = dateObj.getFullYear();
-
-    switch (format) {
-      case "MM/DD/YYYY":
-        return `${month}/${day}/${year}`;
-      case "DD/MM/YYYY":
-        return `${day}/${month}/${year}`;
-      case "YYYY-MM-DD":
-        return `${year}-${month}-${day}`;
-      default:
-        return date;
-    }
-  },
-
-  /**
-   * Get URL for airline flight status page
-   * @param {string} airline Airline code
-   * @returns {string} URL
-   */
-  getAirlineStatusUrl(airline) {
-    const airlineUrls = {
-      AA: "https://www.aa.com/travelInformation/flights/status",
-      DL: "https://www.delta.com/flight-status-lookup",
-      UA: "https://www.united.com/en/us/flightstatus",
-      WN: "https://www.southwest.com/air/flight-status",
-      // Add more airlines as needed
-    };
-
-    return (
-      airlineUrls[airline] ||
-      `https://www.google.com/search?q=${airline}+flight+status`
-    );
-  },
-
-  /**
-   * Find an element in a page snapshot
-   * @param {Object} snapshot Page snapshot
-   * @param {string} elementType Element type (input, button, etc.)
-   * @param {string} nameHint Name hint to match against attributes
-   * @returns {Object|null} Matching element or null
-   */
-  findElement(snapshot, elementType, nameHint) {
-    if (!snapshot || !snapshot.nodes) {
-      return null;
-    }
-
-    const matchingElements = snapshot.nodes.filter((node) => {
-      if (node.type !== "element") return false;
-
-      // Check if element type matches
-      const isMatchingType = elementType.includes("[")
-        ? node.tagName.toLowerCase() === elementType.split("[")[0] &&
-          node.attributes.some(
-            (attr) =>
-              attr.name === elementType.split("[")[1].split("=")[0].trim()
-          )
-        : node.tagName.toLowerCase() === elementType;
-
-      if (!isMatchingType) return false;
-
-      // Check if element has matching attributes
-      const hasMatchingAttr = node.attributes.some((attr) => {
-        const attrValue = attr.value || "";
-        return (
-          (attr.name === "name" ||
-            attr.name === "id" ||
-            attr.name === "placeholder") &&
-          attrValue.toLowerCase().includes(nameHint.toLowerCase())
-        );
-      });
-
-      // Check for aria-label as well
-      const hasMatchingAriaLabel = node.attributes.some(
-        (attr) =>
-          attr.name === "aria-label" &&
-          attr.value.toLowerCase().includes(nameHint.toLowerCase())
-      );
-
-      return hasMatchingAttr || hasMatchingAriaLabel;
-    });
-
-    return matchingElements.length > 0 ? matchingElements[0] : null;
-  },
-
-  /**
-   * Detect error messages in text content
-   * @param {string} content Text content to analyze
-   * @param {Array} errorPatterns Patterns to search for
-   * @returns {string|null} Error message or null
-   */
-  detectErrors(content, errorPatterns) {
-    if (!content || !errorPatterns || !errorPatterns.length) {
-      return null;
-    }
-
-    for (const pattern of errorPatterns) {
-      if (pattern.regex.test(content)) {
-        return pattern.message;
-      }
-    }
-
-    return null;
-  },
-};
-
-module.exports = browserUtils;
-```
-
-#### Security Utility
-
-Create a file `src/utils/security-utils.js`:
-
-```javascript
-/**
- * Security utilities for browser automation
- */
-const securityUtils = {
-  /**
-   * Mask sensitive information in logs and responses
-   * @param {string} text Text containing sensitive information
-   * @param {Array} patterns Patterns to mask (e.g., confirmation numbers)
-   * @returns {string} Text with masked information
-   */
-  maskSensitiveInfo(text, patterns) {
-    if (!text) return text;
-
-    let maskedText = text;
-
-    // Mask common patterns
-    const defaultPatterns = [
-      { regex: /\b[A-Z0-9]{6}\b/g, replacement: "******" }, // Confirmation codes
-      {
-        regex: /\b\d{4}[\s-]?\d{4}[\s-]?\d{4}[\s-]?\d{4}\b/g,
-        replacement: "****************",
-      }, // Credit cards
-      { regex: /\b[A-Z]{2}\d{6}\b/g, replacement: "********" }, // Passport numbers
-    ];
-
-    const allPatterns = [...defaultPatterns, ...(patterns || [])];
-
-    // Apply masking
-    allPatterns.forEach((pattern) => {
-      maskedText = maskedText.replace(pattern.regex, pattern.replacement);
-    });
-
-    return maskedText;
-  },
-
-  /**
-   * Validate user input for security concerns
-   * @param {Object} params Input parameters
-   * @param {Array} validationRules Validation rules to apply
-   * @returns {Object} Validation result {valid: boolean, errors: Array}
-   */
-  validateUserInput(params, validationRules) {
-    const result = {
-      valid: true,
-      errors: [],
-    };
-
-    if (!params || !validationRules) {
-      result.valid = false;
-      result.errors.push("Invalid parameters or validation rules");
-      return result;
-    }
-
-    for (const rule of validationRules) {
-      const { field, type, pattern, message, required } = rule;
-
-      // Check required fields
-      if (
-        required &&
-        (params[field] === undefined ||
-          params[field] === null ||
-          params[field] === "")
-      ) {
-        result.valid = false;
-        result.errors.push(message || `${field} is required`);
-        continue;
-      }
-
-      // Skip validation if field is not present and not required
-      if (!params[field] && !required) {
-        continue;
-      }
-
-      // Validate by type
-      if (type === "string" && typeof params[field] !== "string") {
-        result.valid = false;
-        result.errors.push(message || `${field} must be a string`);
-      }
-
-      // Validate by pattern
-      if (pattern && !pattern.test(params[field])) {
-        result.valid = false;
-        result.errors.push(message || `${field} has invalid format`);
-      }
-    }
-
-    return result;
-  },
-};
-
-module.exports = securityUtils;
-```
-
-#### API Routes
-
-Create a file `src/api/routes/automation.js`:
-
-```javascript
-const express = require("express");
-const router = express.Router();
-const browserService = require("../../services/automation/browser-service");
-const securityUtils = require("../../utils/security-utils");
-const { asyncHandler } = require("../../utils/error");
-
-/**
- * Input validation rules
- */
-const validationRules = {
-  flightStatus: [
-    {
-      field: "airline",
-      type: "string",
-      pattern: /^[A-Z0-9]{2,3}$/,
-      message: "Airline code must be 2-3 characters",
-      required: true,
-    },
-    {
-      field: "flightNumber",
-      type: "string",
-      pattern: /^\d{1,4}[A-Z]?$/,
-      message: "Invalid flight number format",
-      required: true,
-    },
-    {
-      field: "date",
-      type: "string",
-      pattern: /^\d{4}-\d{2}-\d{2}$/,
-      message: "Date must be in YYYY-MM-DD format",
-      required: true,
-    },
-  ],
-
-  checkIn: [
-    {
-      field: "airline",
-      type: "string",
-      pattern: /^[A-Z0-9]{2,3}$/,
-      message: "Airline code must be 2-3 characters",
-      required: true,
-    },
-    {
-      field: "confirmationCode",
-      type: "string",
-      pattern: /^[A-Z0-9]{6}$/,
-      message: "Confirmation code must be 6 characters",
-      required: true,
-    },
-    { field: "lastName", type: "string", required: true },
-  ],
-
-  verifyBooking: [
-    {
-      field: "type",
-      type: "string",
-      pattern: /^(flight|hotel|car)$/,
-      message: "Type must be flight, hotel, or car",
-      required: true,
-    },
-    { field: "provider", type: "string", required: true },
-    { field: "confirmationCode", type: "string", required: true },
-    { field: "lastName", type: "string", required: true },
-  ],
-};
-
-/**
- * @route   GET /api/automation/flight-status
- * @desc    Check flight status
- * @access  Public
- */
-router.get(
-  "/flight-status",
-  asyncHandler(async (req, res) => {
-    // Validate input
-    const validation = securityUtils.validateUserInput(
-      req.query,
-      validationRules.flightStatus
-    );
-    if (!validation.valid) {
-      return res.status(400).json({
-        error: validation.errors.join(", "),
-      });
-    }
-
-    const { airline, flightNumber, date } = req.query;
-
-    const status = await browserService.checkFlightStatus({
-      airline,
-      flightNumber,
-      date,
-    });
-
-    res.json(status);
-  })
-);
-
-/**
- * @route   POST /api/automation/check-in
- * @desc    Perform flight check-in
- * @access  Public
- */
-router.post(
-  "/check-in",
-  asyncHandler(async (req, res) => {
-    // Validate input
-    const validation = securityUtils.validateUserInput(
-      req.body,
-      validationRules.checkIn
-    );
-    if (!validation.valid) {
-      return res.status(400).json({
-        error: validation.errors.join(", "),
-      });
-    }
-
-    const { airline, confirmationCode, lastName, firstName, flightDate } =
-      req.body;
-
-    const checkInResult = await browserService.checkInForFlight({
-      airline,
-      confirmationCode,
-      lastName,
-      firstName,
-      flightDate,
-    });
-
-    res.json(checkInResult);
-  })
-);
-
-/**
- * @route   POST /api/automation/verify-booking
- * @desc    Verify booking details
- * @access  Public
- */
-router.post(
-  "/verify-booking",
-  asyncHandler(async (req, res) => {
-    // Validate input
-    const validation = securityUtils.validateUserInput(
-      req.body,
-      validationRules.verifyBooking
-    );
-    if (!validation.valid) {
-      return res.status(400).json({
-        error: validation.errors.join(", "),
-      });
-    }
-
-    const { type, provider, confirmationCode, lastName, firstName } = req.body;
-
-    const verificationResult = await browserService.verifyBooking({
-      type,
-      provider,
-      confirmationCode,
-      lastName,
-      firstName,
-    });
-
-    res.json(verificationResult);
-  })
-);
-
-/**
- * @route   GET /api/automation/usage
- * @desc    Get automation usage statistics
- * @access  Public
- */
-router.get(
-  "/usage",
-  asyncHandler(async (req, res) => {
-    const usageSummary = browserService.usageTracker.getUsageSummary();
-    res.json(usageSummary);
-  })
-);
-
-module.exports = router;
+        # Format response for agent
+        if result["success"]:
+            return f"Flight {params.airline} {params.flight_number} on {params.date} is {result['status']['status']}."
+        else:
+            return f"Unable to check flight status: {result['message']}"
+    except Exception as e:
+        logger.error(f"Flight status error: {e}")
+        return f"Error checking flight status: {str(e)}"
 ```
 
 ## Usage Patterns and Optimization
 
-### Cost-Effective Usage Strategies
+### Performance Optimization
 
-The Browser-use free tier provides 100 automation minutes per month, which requires careful management for personal usage. Here are strategies to optimize usage:
+1. **Browser Context Management**
 
-1. **Selective Automation**
+   - Reuse browser contexts when possible to reduce startup time
+   - Implement session-based context pooling for resource efficiency
+   - Close contexts when not in use to free resources
 
-   - Only automate tasks that add significant value (check-ins, complex verifications)
-   - Use direct API calls when possible instead of browser automation
-   - Prioritize time-sensitive operations (like flight check-ins)
+2. **Parallel Processing**
 
-2. **Usage Tracking**
+   - Execute multiple browser tasks concurrently
+   - Implement task queuing for high-volume scenarios
+   - Use asyncio for efficient asynchronous execution
 
-   - Implement the UsageTracker class to monitor minute consumption
-   - Set alerts at 50% and 80% usage thresholds
-   - Reset tracking on the first day of each month
+3. **Caching Strategy**
 
-3. **Efficiency Optimization**
+   - Cache flight status results for 30 minutes
+   - Cache booking verification results for 60 minutes
+   - Implement invalidation based on time-to-live (TTL)
 
-   - Pre-check for cached data before initiating automation
-   - Use browser_snapshot instead of multiple screenshots
-   - Implement early termination for failed actions
-   - Select optimal waiting times based on actual load patterns
+4. **Resource Utilization**
 
-4. **Fallback Mechanisms**
-   - Create alternative data sources for when usage limits are approaching
-   - Gracefully degrade to non-automated options
-   - Cache results when appropriate to avoid redundant automations
+   - Use headless mode for production
+   - Optimize viewport size for specific tasks
+   - Close pages immediately after use
 
-### Example Automation Workflows
+### Anti-Detection Strategies
 
-These workflows demonstrate efficient usage of browser automation for common travel tasks:
+1. **User Agent Rotation**
 
-#### Flight Status Check Workflow
+   - Implement a pool of realistic user agents
+   - Rotate user agents between sessions
+   - Match user agent to browser type
 
-```javascript
-// Example implementation in travel agent code
-async function checkFlightStatus(airline, flightNumber, date) {
-  // First try airline API if available
-  const apiResult = await tryAirlineAPI(airline, flightNumber, date);
-  if (apiResult.success) {
-    return apiResult;
-  }
+2. **Timing Randomization**
 
-  // Check cache for recent results
-  const cachedResult = await checkCache("flightStatus", {
-    airline,
-    flightNumber,
-    date,
-  });
-  if (cachedResult) {
-    return {
-      ...cachedResult,
-      source: "cache",
-    };
-  }
+   - Add random delays between actions
+   - Simulate human-like interaction patterns
+   - Implement exponential backoff for retries
 
-  // Fall back to browser automation
-  const browserResult = await browserService.checkFlightStatus({
-    airline,
-    flightNumber,
-    date,
-  });
-
-  // Cache successful results
-  if (browserResult.success) {
-    await cacheResult(
-      "flightStatus",
-      { airline, flightNumber, date },
-      browserResult,
-      30
-    ); // 30 minute TTL
-  }
-
-  return browserResult;
-}
-```
-
-#### Booking Verification Workflow
-
-```javascript
-// Example implementation in travel agent code
-async function verifyBooking(type, provider, confirmationCode, lastName) {
-  // Check cache first (with short TTL)
-  const cachedResult = await checkCache("bookingVerification", {
-    type,
-    provider,
-    confirmationCode,
-    lastName,
-  });
-
-  if (cachedResult) {
-    return {
-      ...cachedResult,
-      source: "cache",
-    };
-  }
-
-  // Check usage before proceeding
-  const usageStats = browserService.usageTracker.getUsageSummary();
-  if (usageStats.percentageUsed > 80) {
-    return {
-      success: false,
-      message:
-        "Browser automation usage limit approaching. Please verify manually using the provider's website.",
-      verificationUrl: getProviderUrl(type, provider),
-    };
-  }
-
-  // Proceed with browser automation
-  const result = await browserService.verifyBooking({
-    type,
-    provider,
-    confirmationCode,
-    lastName,
-  });
-
-  // Cache successful results for a short period
-  if (result.success) {
-    await cacheResult(
-      "bookingVerification",
-      { type, provider, confirmationCode, lastName },
-      result,
-      60 // 60 minute TTL
-    );
-  }
-
-  return result;
-}
-```
-
-## Security Guidelines
-
-When implementing browser automation for travel tasks, follow these security best practices:
-
-### Personal API Key Protection
-
-1. **Secure Storage**:
-
-   - Never hard-code API keys in source code
-   - Use environment variables or secure storage solutions
-   - Limit access to your `.env` file
-
-2. **Key Rotation**:
-
-   - Regularly rotate your Browser-use API key (every 3-6 months)
-   - Immediately invalidate keys if accidentally exposed
-
-3. **Key Usage Scope**:
-   - Use different API keys for development and production
-   - Set usage alerts to detect unusual activity
-
-### Sensitive Data Handling
-
-1. **Data Minimization**:
-
-   - Only request essential personal information
-   - Don't store sensitive data like confirmation codes longer than necessary
-
-2. **Data Masking**:
-
-   - Mask confirmation codes and other sensitive data in logs
-   - Use the securityUtils.maskSensitiveInfo() function
-
-3. **Screenshot Security**:
-   - Review screenshots for sensitive information before storage
-   - Implement automatic redaction of sensitive data in screenshots
-
-### Input Validation
-
-1. **Parameter Validation**:
-
-   - Validate all input parameters before passing to automation
-   - Use the securityUtils.validateUserInput() function
-   - Reject malformed or suspicious inputs
-
-2. **Client-Side Protection**:
-   - Implement client-side validation for early detection
-   - Use server-side validation as the authoritative check
-
-## Testing and Verification
-
-### Unit Tests
-
-Create a test file `src/tests/browser-service.test.js`:
-
-```javascript
-const browserService = require("../services/automation/browser-service");
-const browserUtils = require("../utils/browser-utils");
-const securityUtils = require("../utils/security-utils");
-
-describe("Browser Service", () => {
-  // Test date formatting utility
-  test("browserUtils.formatDate correctly formats dates", () => {
-    expect(browserUtils.formatDate("2023-05-15", "MM/DD/YYYY")).toBe(
-      "05/15/2023"
-    );
-    expect(browserUtils.formatDate("2023-05-15", "DD/MM/YYYY")).toBe(
-      "15/05/2023"
-    );
-    expect(browserUtils.formatDate("2023-05-15", "YYYY-MM-DD")).toBe(
-      "2023-05-15"
-    );
-  });
-
-  // Test security utility
-  test("securityUtils.maskSensitiveInfo masks confirmation codes", () => {
-    const text = "Your confirmation code is ABC123";
-    expect(securityUtils.maskSensitiveInfo(text, [])).toBe(
-      "Your confirmation code is ******"
-    );
-  });
-
-  // Test input validation
-  test("securityUtils.validateUserInput validates flight status inputs", () => {
-    const validInput = {
-      airline: "AA",
-      flightNumber: "123",
-      date: "2023-05-15",
-    };
-
-    const invalidInput = {
-      airline: "AAAA", // Too long
-      flightNumber: "ABC", // No number
-      date: "05/15/2023", // Wrong format
-    };
-
-    const validationRules = [
-      {
-        field: "airline",
-        type: "string",
-        pattern: /^[A-Z0-9]{2,3}$/,
-        required: true,
-      },
-      {
-        field: "flightNumber",
-        type: "string",
-        pattern: /^\d{1,4}[A-Z]?$/,
-        required: true,
-      },
-      {
-        field: "date",
-        type: "string",
-        pattern: /^\d{4}-\d{2}-\d{2}$/,
-        required: true,
-      },
-    ];
-
-    expect(
-      securityUtils.validateUserInput(validInput, validationRules).valid
-    ).toBe(true);
-    expect(
-      securityUtils.validateUserInput(invalidInput, validationRules).valid
-    ).toBe(false);
-  });
-});
-```
-
-### Integration Tests
-
-Test automated workflows for the following scenarios:
-
-1. **Flight Status Checking**:
-
-   - Test with known flights across major airlines
-   - Verify status parsing accuracy
-   - Validate screenshot captures
-
-2. **Check-in Automation**:
-
-   - Test with mock confirmation codes
-   - Verify error detection for invalid inputs
-   - Confirm boarding pass detection
-
-3. **Booking Verification**:
-   - Test across flight, hotel, and car rental providers
-   - Verify detail extraction accuracy
-   - Confirm error handling
-
-### End-to-End Testing
-
-Create a verification script that tests the complete workflow:
-
-```javascript
-// test/e2e/browser-automation-e2e.js
-const request = require("supertest");
-const app = require("../../src/app");
-
-describe("Browser Automation E2E Tests", () => {
-  // Test flight status API
-  test("GET /api/automation/flight-status returns correct status", async () => {
-    const response = await request(app)
-      .get("/api/automation/flight-status")
-      .query({
-        airline: "AA",
-        flightNumber: "123",
-        date: "2023-05-15",
-      });
-
-    expect(response.status).toBe(200);
-    expect(response.body).toHaveProperty("success");
-    // More assertions based on expected response
-  });
-
-  // Test check-in API
-  test("POST /api/automation/check-in performs check-in", async () => {
-    const response = await request(app).post("/api/automation/check-in").send({
-      airline: "AA",
-      confirmationCode: "ABC123",
-      lastName: "Smith",
-      firstName: "John",
-      flightDate: "2023-05-15",
-    });
-
-    expect(response.status).toBe(200);
-    expect(response.body).toHaveProperty("success");
-    // More assertions based on expected response
-  });
-
-  // Test usage API
-  test("GET /api/automation/usage returns usage statistics", async () => {
-    const response = await request(app).get("/api/automation/usage");
-
-    expect(response.status).toBe(200);
-    expect(response.body).toHaveProperty("minutesUsed");
-    expect(response.body).toHaveProperty("minutesRemaining");
-    // More assertions based on expected response
-  });
-});
-```
-
-## Advanced Features
-
-### Browser Automation Agent
-
-For more complex travel tasks, implement a dedicated automation agent:
-
-```javascript
-// src/agents/browser-automation-agent.js
-class BrowserAutomationAgent {
-  constructor(browserService) {
-    this.browserService = browserService;
-  }
-
-  /**
-   * Generate complete travel itinerary with screenshots
-   * @param {Array} bookings List of bookings to include
-   * @returns {Promise<Object>} Compiled itinerary
-   */
-  async generateTravelItinerary(bookings) {
-    const itinerary = {
-      title: "Your Travel Itinerary",
-      created: new Date().toISOString(),
-      bookings: [],
-      screenshots: {},
-    };
-
-    for (const booking of bookings) {
-      // Verify the booking
-      const verificationResult = await this.browserService.verifyBooking(
-        booking
-      );
-
-      if (verificationResult.success) {
-        // Add to itinerary
-        itinerary.bookings.push({
-          type: booking.type,
-          provider: booking.provider,
-          confirmation: booking.confirmationCode,
-          details: verificationResult.details,
-        });
-
-        // Store screenshot
-        itinerary.screenshots[booking.confirmationCode] =
-          verificationResult.screenshot;
-      }
-    }
-
-    // Sort bookings by date
-    itinerary.bookings.sort((a, b) => {
-      const dateA = new Date(a.details.startDate || a.details.departureDate);
-      const dateB = new Date(b.details.startDate || b.details.departureDate);
-      return dateA - dateB;
-    });
-
-    return itinerary;
-  }
-
-  /**
-   * Set up price monitoring for multiple travel items
-   * @param {Array} items Travel items to monitor
-   * @param {number} threshold Price change threshold percentage
-   * @returns {Promise<Object>} Monitoring setup result
-   */
-  async setupPriceMonitoring(items, threshold = 5) {
-    const monitoringResults = {
-      setup: new Date().toISOString(),
-      items: [],
-      threshold: threshold,
-    };
-
-    for (const item of items) {
-      // Check current price
-      const priceResult = await this.browserService.monitorPrice(item);
-
-      if (priceResult.success) {
-        // Store initial price info
-        monitoringResults.items.push({
-          id: `${item.type}-${item.provider}-${item.destination}`,
-          type: item.type,
-          provider: item.provider,
-          destination: item.destination,
-          initialPrice: this.extractLowestPrice(priceResult.prices),
-          lastChecked: new Date().toISOString(),
-          screenshot: priceResult.screenshot,
-        });
-      }
-    }
-
-    return monitoringResults;
-  }
-
-  /**
-   * Extract lowest price from price information
-   * @private
-   */
-  extractLowestPrice(prices) {
-    if (!prices || !prices.length) {
-      return null;
-    }
-
-    const allPrices = prices
-      .map((p) => parseFloat(p.amount.replace(/[^0-9.]/g, "")))
-      .filter((p) => !isNaN(p));
-
-    return allPrices.length > 0 ? Math.min(...allPrices) : null;
-  }
-}
-
-module.exports = BrowserAutomationAgent;
-```
+3. **Fingerprint Management**
+   - Minimize JavaScript fingerprinting surface
+   - Use stealth plugins to reduce detectability
+   - Implement cookie management for consistent sessions
 
 ## Troubleshooting
 
 ### Common Issues
 
-1. **Element Not Found Errors**:
+1. **Element Not Found Errors**
 
-   - The website structure may have changed, requiring updated selectors
-   - The element may be in an iframe or dynamically loaded
-   - Solution: Use more robust element finding strategies, increase timeouts
+   - The website structure may have changed
+   - Implement more robust selectors (XPath + CSS)
+   - Use retry mechanisms with increasing timeouts
 
-2. **Authentication Challenges**:
+2. **Authentication Challenges**
 
-   - Many travel sites use advanced bot detection
-   - Solution: Use realistic user agent strings, enable cookies, handle captchas
+   - Implement proper cookie handling
+   - Add support for multi-factor authentication
+   - Handle CAPTCHA detection and resolution
 
-3. **Varying Website Layouts**:
+3. **Website Layout Changes**
 
-   - Travel sites often have different layouts for different regions
-   - Solution: Implement adaptive form detection and filling
+   - Use AI-enhanced selectors for resilience
+   - Implement multiple selector strategies
+   - Create airline-specific adapters for major carriers
 
-4. **Usage Limits Reached**:
-   - You've hit the 100 minute monthly limit
-   - Solution: Implement fallback strategies and strict prioritization
+4. **Resource Constraints**
 
-### Troubleshooting Steps
+   - Monitor memory and CPU usage
+   - Implement browser instance limits
+   - Use garbage collection for abandoned sessions
 
-1. **Screenshot Analysis**:
+### Debugging Steps
 
-   - Always capture screenshots at failure points
-   - Compare with previous successful runs
+1. **Visual Debugging**
 
-2. **Console Log Collection**:
+   - Use screenshots to analyze failure points
+   - Compare with previously successful runs
+   - Look for visual cues about website changes
 
-   - Gather browser console logs for JavaScript errors
-   - Use browser_get_console_logs to retrieve logs
+2. **Console Log Analysis**
 
-3. **Gradual Debugging**:
+   - Capture browser console logs
+   - Look for JavaScript errors and warnings
+   - Check for blocked resources
+
+3. **Network Analysis**
+
+   - Monitor network requests and responses
+   - Check for blocked or failed requests
+   - Verify proper resource loading
+
+4. **Step-by-Step Verification**
 
    - Break automation into smaller steps
    - Test each step individually
+   - Identify the exact point of failure
 
-4. **Adaptive Retry**:
-   - Implement exponential backoff for retries
-   - Use alternative selectors as fallbacks
+## Integration with FastMCP 2.0
+
+The Playwright browser automation integrates seamlessly with FastMCP 2.0 for Python:
+
+```python
+# Client for interacting with the Browser Automation MCP Server
+class PlaywrightClient:
+    def __init__(self, endpoint: str):
+        self.endpoint = endpoint
+
+    async def check_flight_status(self, params: dict) -> dict:
+        """Check flight status on airline website."""
+        return await self._call_mcp_tool("check_flight_status", params)
+
+    async def check_in_for_flight(self, params: dict) -> dict:
+        """Perform flight check-in."""
+        return await self._call_mcp_tool("check_in_for_flight", params)
+
+    async def verify_booking(self, params: dict) -> dict:
+        """Verify a booking."""
+        return await self._call_mcp_tool("verify_booking", params)
+
+    async def monitor_price(self, params: dict) -> dict:
+        """Monitor price for a travel item."""
+        return await self._call_mcp_tool("monitor_price", params)
+
+    async def _call_mcp_tool(self, tool_name: str, params: dict) -> dict:
+        """Call an MCP tool on the Playwright server."""
+        import httpx
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                f"{self.endpoint}/api/v1/tools/{tool_name}/call",
+                json={"params": params},
+                timeout=120.0
+            )
+            if response.status_code != 200:
+                raise Exception(f"MCP call failed: {response.text}")
+            return response.json()
+```
+
+## Security Best Practices
+
+1. **Input Validation**
+
+   - Validate all user inputs before processing
+   - Sanitize parameters to prevent injection attacks
+   - Implement strong typing for all parameters
+
+2. **Screenshot Security**
+
+   - Review screenshots for sensitive information
+   - Implement automatic redaction of sensitive data
+   - Securely store and handle screenshots
+
+3. **Session Management**
+
+   - Implement secure session expiration
+   - Use session-specific browser contexts
+   - Clean up resources after session completion
+
+4. **Error Handling**
+
+   - Provide minimal error details to end users
+   - Log detailed errors for debugging
+   - Implement circuit breaker pattern for unreliable sites
+
+## Future Enhancements
+
+1. **Stagehand Integration**
+
+   - Consider adding Stagehand for AI-driven resilience
+   - Leverage Stagehand's natural language capabilities
+   - Use for sites with frequent layout changes
+
+2. **BrowserBase Consideration**
+
+   - Evaluate BrowserBase for cloud scaling needs
+   - Leverage managed captcha solving and proxy rotation
+   - Consider for high-volume production scenarios
+
+3. **Extended Capabilities**
+
+   - Add support for receipt scanning and OCR
+   - Implement travel document verification
+   - Enhance visual verification capabilities
 
 ## Conclusion
 
-The Browser-use integration enables TripSage to automate tedious travel tasks, enhancing the user experience significantly. By following the guidelines for cost optimization, security, and efficient implementation, you can provide a robust browser automation solution that works within the constraints of personal API key usage.
-
-The integration covers:
-
-- Flight status checking
-- Booking verification
-- Check-in automation
-- Price monitoring
-- Usage tracking and optimization
-
-This implementation aligns with TripSage's overall integration strategy by providing value-added automation capabilities while respecting usage limitations and security best practices.
-
-## Implementation Checklist
-
-- [ ] Set up Browser-use account and obtain API key
-- [ ] Configure environment variables
-- [ ] Implement BrowserService class
-- [ ] Create utility functions for automation
-- [ ] Add security utilities
-- [ ] Implement API routes
-- [ ] Set up usage tracking
-- [ ] Write tests
-- [ ] Create documentation
-- [ ] Implement advanced features (optional)
+The Playwright with Python integration provides TripSage with a robust and scalable browser automation solution. With superior performance, excellent Python integration, and comprehensive features, it represents a significant upgrade over the Browser-use implementation. The integration with FastMCP 2.0 and OpenAI Agents SDK allows for seamless incorporation into the travel planning workflow, enhancing the overall user experience.
