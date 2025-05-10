@@ -63,7 +63,21 @@ The Web Crawling MCP Server provides destination research capabilities, content 
 
 ## API Integrations
 
-### Primary: Firecrawl API (existing MCP)
+### Primary: Crawl4AI (Self-hosted)
+
+- **Key Features**:
+
+  - Asynchronous processing with 10× throughput over sequential methods
+  - Batch extraction capabilities
+  - Travel-specific extraction templates
+  - Advanced caching with content-aware TTL
+  - Full control over crawling settings
+
+- **Authentication**:
+  - Self-hosted API key authentication
+  - Custom service account for TripSage systems
+
+### Secondary: Firecrawl API (existing MCP)
 
 - **Key Endpoints**:
 
@@ -76,7 +90,7 @@ The Web Crawling MCP Server provides destination research capabilities, content 
 - **Authentication**:
   - Uses existing MCP authentication
 
-### Secondary: Playwright (existing MCP)
+### Tertiary: Enhanced Playwright (existing MCP)
 
 - **Key Functions**:
 
@@ -88,18 +102,6 @@ The Web Crawling MCP Server provides destination research capabilities, content 
 
 - **Authentication**:
   - Uses existing MCP authentication
-
-### Tertiary: Puppeteer API
-
-- **Key Functions**:
-
-  - Page navigation
-  - DOM manipulation
-  - Content extraction
-  - Interaction simulation
-
-- **Authentication**:
-  - Custom API key for direct Puppeteer service
 
 ## Connection Points to Existing Architecture
 
@@ -146,9 +148,9 @@ src/
         blog_extractor.py          # Blog content extraction
       sources/
         __init__.py                # Module initialization
-        firecrawl_source.py        # Firecrawl API integration
-        playwright_source.py       # Playwright integration
-        puppeteer_source.py        # Puppeteer API integration
+        crawl4ai_source.py         # Crawl4AI integration (primary)
+        firecrawl_source.py        # Firecrawl API integration (secondary)
+        playwright_source.py       # Playwright integration (tertiary)
         source_interface.py        # Common interface for all sources
       processors/
         __init__.py                # Module initialization
@@ -325,10 +327,10 @@ interface BlogSource {
 }
 ```
 
-### Firecrawl Source Implementation
+### Crawl4AI Source Implementation
 
 ```typescript
-// firecrawl_source.ts
+// crawl4ai_source.ts
 import {
   CrawlSource,
   ExtractionOptions,
@@ -343,7 +345,15 @@ import { logError, logInfo } from "../utils/logging";
 import { validateUrl } from "../utils/url_validator";
 import { formatResponse } from "../utils/response_formatter";
 
-export class FirecrawlSource implements CrawlSource {
+export class Crawl4AISource implements CrawlSource {
+  private apiUrl: string;
+  private apiKey: string;
+
+  constructor(apiUrl: string, apiKey: string) {
+    this.apiUrl = apiUrl;
+    this.apiKey = apiKey;
+  }
+
   async extractPageContent(
     url: string,
     options: ExtractionOptions
@@ -352,40 +362,44 @@ export class FirecrawlSource implements CrawlSource {
       // Validate URL
       validateUrl(url);
 
-      // Prepare Firecrawl options
-      const scrapeOptions = {
+      // Prepare Crawl4AI extraction request
+      const extractionRequest = {
         url: url,
-        formats: [options.format === "html" ? "html" : "markdown"],
-        onlyMainContent: true,
-        waitFor: options.wait || 0,
+        output_format: options.format || "markdown",
+        selectors: options.selectors || [],
+        include_images: options.includeImages || false,
+        wait_time: options.wait || 0,
+        timeout: options.timeout || 30000,
       };
 
-      if (options.selectors && options.selectors.length > 0) {
-        scrapeOptions["includeTags"] = options.selectors;
+      // Call Crawl4AI API
+      const response = await fetch(`${this.apiUrl}/extract`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${this.apiKey}`,
+        },
+        body: JSON.stringify(extractionRequest),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Crawl4AI extraction failed: ${response.statusText}`);
       }
 
-      // Call Firecrawl MCP
-      const result = await callMCP(
-        "mcp__firecrawl__firecrawl_scrape",
-        scrapeOptions
-      );
+      const result = await response.json();
 
       // Process result
-      const content = options.format === "html" ? result.html : result.markdown;
-
-      // Extract title and metadata
-      const title = extractTitle(content);
-      const metadata = extractMetadata(content, result);
-
-      // Extract images if requested
-      const images = options.includeImages ? extractImages(content) : undefined;
-
       return {
         url: url,
-        title: title,
-        content: content,
-        images: images,
-        metadata: metadata,
+        title: result.title || extractTitleFromURL(url),
+        content: result.content,
+        images: options.includeImages ? result.images : undefined,
+        metadata: {
+          author: result.metadata?.author,
+          publishDate: result.metadata?.publish_date,
+          lastModified: result.metadata?.last_modified,
+          siteName: result.metadata?.site_name,
+        },
         format: options.format || "markdown",
       };
     } catch (error) {
@@ -400,7 +414,7 @@ export class FirecrawlSource implements CrawlSource {
     maxResults: number = 5
   ): Promise<DestinationInfo> {
     try {
-      // Prepare topics if not provided
+      // Prepare search topics if not provided
       const searchTopics =
         topics.length > 0
           ? topics
@@ -412,6 +426,29 @@ export class FirecrawlSource implements CrawlSource {
               "transportation",
             ];
 
+      // Prepare Crawl4AI batch search request
+      const searchRequests = searchTopics.map((topic) => ({
+        query: `${destination} ${topic}`,
+        max_results: maxResults,
+        extract_content: true,
+      }));
+
+      // Call Crawl4AI batch search API
+      const response = await fetch(`${this.apiUrl}/batch_search`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${this.apiKey}`,
+        },
+        body: JSON.stringify({ searches: searchRequests }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Crawl4AI batch search failed: ${response.statusText}`);
+      }
+
+      const batchResults = await response.json();
+
       // Initialize result structure
       const result: DestinationInfo = {
         destination: destination,
@@ -419,41 +456,31 @@ export class FirecrawlSource implements CrawlSource {
         sources: [],
       };
 
-      // Search for each topic
-      for (const topic of searchTopics) {
-        const query = `${destination} ${topic}`;
-
-        // Call Firecrawl search with scrape options
-        const searchResult = await callMCP("mcp__firecrawl__firecrawl_search", {
-          query: query,
-          limit: maxResults,
-          scrapeOptions: {
-            formats: ["markdown"],
-            onlyMainContent: true,
-          },
-        });
-
-        // Process search results
+      // Process batch search results
+      searchTopics.forEach((topic, index) => {
+        const searchResult = batchResults.results[index];
         result.topics[topic] = [];
 
-        for (const item of searchResult.results) {
-          // Extract relevant information
-          const topicResult = {
-            title: item.title,
-            content: item.content,
-            source: item.source || extractDomain(item.url),
-            url: item.url,
-            confidence: calculateConfidence(item, query),
-          };
+        if (searchResult && searchResult.items) {
+          for (const item of searchResult.items) {
+            // Extract relevant information
+            const topicResult = {
+              title: item.title,
+              content: item.content || item.snippet,
+              source: item.domain || extractDomain(item.url),
+              url: item.url,
+              confidence: item.relevance_score || 0.8,
+            };
 
-          result.topics[topic].push(topicResult);
+            result.topics[topic].push(topicResult);
 
-          // Add source to sources list if not already there
-          if (!result.sources.includes(topicResult.source)) {
-            result.sources.push(topicResult.source);
+            // Add source to sources list if not already there
+            if (!result.sources.includes(topicResult.source)) {
+              result.sources.push(topicResult.source);
+            }
           }
         }
-      }
+      });
 
       return result;
     } catch (error) {
@@ -475,69 +502,60 @@ export class FirecrawlSource implements CrawlSource {
       // Validate URL
       validateUrl(url);
 
-      // First, extract current price
-      const currentPrice = await this.extractPrice(url, selector);
+      // Set up price monitoring with Crawl4AI
+      const monitorRequest = {
+        url: url,
+        selector: selector,
+        frequency: options.frequency || "daily",
+        threshold_percent: options.notificationThreshold || 5,
+        start_date: options.startDate,
+        end_date: options.endDate,
+      };
 
-      // Create monitoring record in database
-      const monitoringId = await createPriceMonitor(
-        url,
-        selector,
-        currentPrice,
-        options
-      );
+      // Call Crawl4AI price monitoring API
+      const response = await fetch(`${this.apiUrl}/monitor_price`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${this.apiKey}`,
+        },
+        body: JSON.stringify(monitorRequest),
+      });
 
-      // Schedule monitoring job
-      await schedulePriceMonitoring(monitoringId, options.frequency);
+      if (!response.ok) {
+        throw new Error(
+          `Crawl4AI price monitoring failed: ${response.statusText}`
+        );
+      }
+
+      const result = await response.json();
 
       return {
         url: url,
-        initial_price: currentPrice
+        initial_price: result.initial_price
           ? {
-              amount: currentPrice.amount,
-              currency: currentPrice.currency,
-              timestamp: new Date().toISOString(),
+              amount: result.initial_price.amount,
+              currency: result.initial_price.currency,
+              timestamp: result.initial_price.timestamp,
             }
           : undefined,
-        current_price: currentPrice
+        current_price: result.current_price
           ? {
-              amount: currentPrice.amount,
-              currency: currentPrice.currency,
-              timestamp: new Date().toISOString(),
+              amount: result.current_price.amount,
+              currency: result.current_price.currency,
+              timestamp: result.current_price.timestamp,
             }
           : undefined,
-        monitoring_id: monitoringId,
-        status: "scheduled",
-        next_check: calculateNextCheck(options.frequency),
+        monitoring_id: result.monitoring_id,
+        status: result.status,
+        history: result.history,
+        next_check: result.next_check,
       };
     } catch (error) {
       logError(
         `Error setting up price monitoring for ${url}: ${error.message}`
       );
       throw new Error(`Failed to monitor price changes: ${error.message}`);
-    }
-  }
-
-  private async extractPrice(
-    url: string,
-    selector: string
-  ): Promise<{ amount: number; currency: string } | undefined> {
-    try {
-      // Extract price element using Firecrawl's scrape function
-      const result = await callMCP("mcp__firecrawl__firecrawl_scrape", {
-        url: url,
-        actions: [
-          { type: "wait", milliseconds: 2000 }, // Wait for dynamic content
-        ],
-        formats: ["html"],
-        includeTags: [selector],
-      });
-
-      // Process result to extract price
-      const priceText = extractTextFromHTML(result.html);
-      return parsePriceText(priceText);
-    } catch (error) {
-      logError(`Error extracting price from ${url}: ${error.message}`);
-      return undefined;
     }
   }
 
@@ -548,79 +566,54 @@ export class FirecrawlSource implements CrawlSource {
     categories: string[] = []
   ): Promise<EventList> {
     try {
-      // Build search queries based on destination and dates
-      const queries = [];
-      queries.push(
-        `${destination} events ${formatDateRange(startDate, endDate)}`
-      );
-
-      for (const category of categories) {
-        queries.push(
-          `${destination} ${category} events ${formatDateRange(
-            startDate,
-            endDate
-          )}`
-        );
-      }
-
-      // Initialize result
-      const result: EventList = {
+      // Prepare Crawl4AI event search request
+      const eventRequest = {
         destination: destination,
         date_range: {
           start_date: startDate,
           end_date: endDate,
         },
-        events: [],
-        sources: [],
+        categories: categories,
       };
 
-      // Search for each query
-      for (const query of queries) {
-        // Use Firecrawl's deep research for comprehensive results
-        const searchResult = await callMCP(
-          "mcp__firecrawl__firecrawl_deep_research",
-          {
-            query: query,
-            maxDepth: 3,
-            maxUrls: 10,
-          }
-        );
+      // Call Crawl4AI event search API
+      const response = await fetch(`${this.apiUrl}/events`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${this.apiKey}`,
+        },
+        body: JSON.stringify(eventRequest),
+      });
 
-        // Extract events from research results
-        const extractedEvents = extractEventsFromResearch(
-          searchResult,
-          startDate,
-          endDate,
-          categories
-        );
-
-        // Add to result
-        for (const event of extractedEvents) {
-          // Check if event already exists (deduplicate)
-          const exists = result.events.some(
-            (e) =>
-              e.name === event.name &&
-              e.date === event.date &&
-              (e.venue === event.venue || (!e.venue && !event.venue))
-          );
-
-          if (!exists) {
-            result.events.push(event);
-          }
-
-          // Add source if not already in sources
-          if (!result.sources.includes(event.source)) {
-            result.sources.push(event.source);
-          }
-        }
+      if (!response.ok) {
+        throw new Error(`Crawl4AI event search failed: ${response.statusText}`);
       }
 
-      // Sort events by date
-      result.events.sort(
-        (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
-      );
+      const result = await response.json();
 
-      return result;
+      // Map to our interface
+      return {
+        destination: destination,
+        date_range: {
+          start_date: startDate,
+          end_date: endDate,
+        },
+        events: result.events.map((event) => ({
+          name: event.name,
+          description: event.description,
+          category: event.category,
+          date: event.date,
+          time: event.time,
+          venue: event.venue,
+          address: event.address,
+          url: event.url,
+          price_range: event.price_range,
+          image_url: event.image_url,
+          source: event.source,
+        })),
+        sources: result.sources,
+      };
     } catch (error) {
       logError(`Error getting events for ${destination}: ${error.message}`);
       throw new Error(`Failed to get latest events: ${error.message}`);
@@ -634,62 +627,37 @@ export class FirecrawlSource implements CrawlSource {
     recentOnly: boolean = true
   ): Promise<BlogInsights> {
     try {
-      // First, search for relevant travel blogs
-      const query = `${destination} travel blog`;
-      const additionalQuery = topics.length > 0 ? ` ${topics.join(" ")}` : "";
-
-      const searchResult = await callMCP("mcp__firecrawl__firecrawl_search", {
-        query: query + additionalQuery,
-        limit: maxBlogs * 2, // Search for more than needed to filter later
-      });
-
-      // Filter to actual blog posts
-      const blogUrls = filterToBlogPosts(searchResult.results, recentOnly);
-
-      // Initialize result
-      const result: BlogInsights = {
+      // Prepare Crawl4AI blog crawl request
+      const blogRequest = {
         destination: destination,
-        topics: {},
-        sources: [],
-        extraction_date: new Date().toISOString(),
+        topics: topics,
+        max_blogs: maxBlogs,
+        recent_only: recentOnly,
       };
 
-      // Initialize topic structure
-      for (const topic of topics.length > 0 ? topics : ["general"]) {
-        result.topics[topic] = [];
+      // Call Crawl4AI blog crawl API
+      const response = await fetch(`${this.apiUrl}/crawl_blogs`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${this.apiKey}`,
+        },
+        body: JSON.stringify(blogRequest),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Crawl4AI blog crawl failed: ${response.statusText}`);
       }
 
-      // Process each blog
-      for (let i = 0; i < Math.min(blogUrls.length, maxBlogs); i++) {
-        const blogUrl = blogUrls[i];
+      const result = await response.json();
 
-        // Scrape the blog content
-        const blogContent = await this.extractPageContent(blogUrl, {
-          format: "markdown",
-          includeImages: false,
-        });
-
-        // Add to sources
-        result.sources.push({
-          url: blogUrl,
-          title: blogContent.title,
-          author: blogContent.metadata?.author,
-          publish_date: blogContent.metadata?.publishDate,
-          reputation_score: calculateBlogReputationScore(blogContent),
-        });
-
-        // Extract insights for each topic
-        for (const topic of topics.length > 0 ? topics : ["general"]) {
-          const insights = extractBlogInsights(blogContent, topic);
-
-          if (insights) {
-            insights.source_index = i;
-            result.topics[topic].push(insights);
-          }
-        }
-      }
-
-      return result;
+      // Map to our interface
+      return {
+        destination: destination,
+        topics: result.topics,
+        sources: result.sources,
+        extraction_date: result.extraction_date || new Date().toISOString(),
+      };
     } catch (error) {
       logError(
         `Error crawling travel blogs for ${destination}: ${error.message}`
@@ -700,79 +668,31 @@ export class FirecrawlSource implements CrawlSource {
 }
 
 // Helper functions
-function extractTitle(content: string): string {
-  // Implementation
-}
-
-function extractMetadata(content: string, result: any): any {
-  // Implementation
-}
-
-function extractImages(content: string): string[] {
-  // Implementation
+function extractTitleFromURL(url: string): string {
+  try {
+    const urlObj = new URL(url);
+    const pathSegments = urlObj.pathname.split("/").filter(Boolean);
+    if (pathSegments.length > 0) {
+      return pathSegments[pathSegments.length - 1]
+        .replace(/-/g, " ")
+        .replace(/\.(html|php|asp)$/, "")
+        .split(" ")
+        .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(" ");
+    }
+    return urlObj.hostname;
+  } catch (e) {
+    return url;
+  }
 }
 
 function extractDomain(url: string): string {
-  // Implementation
-}
-
-function calculateConfidence(item: any, query: string): number {
-  // Implementation
-}
-
-async function createPriceMonitor(
-  url: string,
-  selector: string,
-  currentPrice: any,
-  options: MonitorOptions
-): Promise<string> {
-  // Implementation
-}
-
-async function schedulePriceMonitoring(
-  monitoringId: string,
-  frequency: string
-): Promise<void> {
-  // Implementation
-}
-
-function calculateNextCheck(frequency: string): string {
-  // Implementation
-}
-
-function extractTextFromHTML(html: string): string {
-  // Implementation
-}
-
-function parsePriceText(
-  text: string
-): { amount: number; currency: string } | undefined {
-  // Implementation
-}
-
-function formatDateRange(startDate: string, endDate: string): string {
-  // Implementation
-}
-
-function extractEventsFromResearch(
-  research: any,
-  startDate: string,
-  endDate: string,
-  categories: string[]
-): any[] {
-  // Implementation
-}
-
-function filterToBlogPosts(results: any[], recentOnly: boolean): string[] {
-  // Implementation
-}
-
-function calculateBlogReputationScore(blog: ExtractedContent): number {
-  // Implementation
-}
-
-function extractBlogInsights(blog: ExtractedContent, topic: string): any {
-  // Implementation
+  try {
+    const urlObj = new URL(url);
+    return urlObj.hostname;
+  } catch (e) {
+    return url;
+  }
 }
 ```
 
@@ -782,9 +702,9 @@ function extractBlogInsights(blog: ExtractedContent, topic: string): any {
 // server.ts
 import express from "express";
 import bodyParser from "body-parser";
+import { Crawl4AISource } from "./sources/crawl4ai_source";
 import { FirecrawlSource } from "./sources/firecrawl_source";
 import { PlaywrightSource } from "./sources/playwright_source";
-import { PuppeteerSource } from "./sources/puppeteer_source";
 import { CacheService } from "./storage/cache";
 import { logRequest, logError, logInfo } from "./utils/logging";
 import { validateInput } from "./utils/validation";
@@ -795,37 +715,49 @@ const app = express();
 app.use(bodyParser.json());
 
 // Initialize sources
+const crawl4aiSource = new Crawl4AISource(
+  Config.CRAWL4AI_API_URL,
+  Config.CRAWL4AI_API_KEY
+);
 const firecrawlSource = new FirecrawlSource();
 const playwrightSource = new PlaywrightSource();
-const puppeteerSource = new PuppeteerSource();
 
 // Initialize services
 const cache = new CacheService();
 
 // Source selection logic
 function selectSource(operation: string, params: any) {
-  // Default to Firecrawl for most operations
-  if (operation.startsWith("search") || operation === "crawl_travel_blog") {
-    return firecrawlSource;
+  // Default to Crawl4AI for most operations
+  if (operation === "extract_page_content") {
+    // For dynamic content that requires browser rendering, use Playwright
+    if (isSpaOrDynamicSite(params.url)) {
+      return playwrightSource;
+    }
+    return crawl4aiSource;
+  }
+
+  // For destination research, use Crawl4AI
+  if (
+    operation === "search_destination_info" ||
+    operation === "crawl_travel_blog"
+  ) {
+    return crawl4aiSource;
   }
 
   // For price monitoring, decide based on the URL pattern
   if (operation === "monitor_price_changes") {
-    if (params.url.includes("booking.com")) {
-      return puppeteerSource;
-    }
-    return playwrightSource;
-  }
-
-  // For content extraction, decide based on site complexity
-  if (operation === "extract_page_content") {
-    if (isSpaOrDynamicSite(params.url)) {
+    if (requiresAuthentication(params.url)) {
       return playwrightSource;
     }
-    return firecrawlSource;
+    return crawl4aiSource;
   }
 
-  // Default fallback
+  // For event discovery, use Crawl4AI with Firecrawl fallback
+  if (operation === "get_latest_events") {
+    return crawl4aiSource;
+  }
+
+  // Fallback to Firecrawl for any unhandled operations
   return firecrawlSource;
 }
 
@@ -875,46 +807,6 @@ app.post("/api/mcp/webcrawl/extract_page_content", async (req, res) => {
   }
 });
 
-app.post("/api/mcp/webcrawl/search_destination_info", async (req, res) => {
-  try {
-    logRequest("search_destination_info", req.body);
-
-    // Validate input
-    const { destination, topics, max_results } = validateInput(req.body, [
-      "destination",
-    ]);
-
-    // Check cache
-    const topicsKey = topics ? topics.sort().join(",") : "default";
-    const cacheKey = `destination:${destination}:${topicsKey}:${
-      max_results || 5
-    }`;
-    const cachedData = await cache.get(cacheKey);
-    if (cachedData) {
-      return res.json(cachedData);
-    }
-
-    // Call source (always use Firecrawl for search)
-    const data = await firecrawlSource.searchDestinationInfo(
-      destination,
-      topics,
-      max_results || 5
-    );
-
-    // Cache result (expires in 1 week)
-    await cache.set(cacheKey, data, 7 * 24 * 60 * 60);
-
-    // Return formatted response
-    return res.json(formatResponse(data));
-  } catch (error) {
-    logError(`Error in search_destination_info: ${error.message}`);
-    return res.status(500).json({
-      error: true,
-      message: error.message,
-    });
-  }
-});
-
 // Additional endpoints for other MCP tools...
 
 // Utility functions
@@ -932,6 +824,18 @@ function isSpaOrDynamicSite(url: string): boolean {
   ];
 
   return dynamicSiteDomains.some((domain) => url.includes(domain));
+}
+
+function requiresAuthentication(url: string): boolean {
+  // Check if the site likely requires authentication
+  const authSites = [
+    "booking.com/reservations",
+    "airbnb.com/reservations",
+    "expedia.com/trips",
+    "hotels.com/account",
+  ];
+
+  return authSites.some((pattern) => url.includes(pattern));
 }
 
 function isNewsOrFrequentlyUpdatedSite(url: string): boolean {

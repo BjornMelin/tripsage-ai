@@ -93,7 +93,21 @@ def crawl_travel_blog(blog_url: str, max_posts: int = 10) -> dict:
 
 The Web Crawling MCP Server will integrate with established web scraping and processing services:
 
-### Primary API: Firecrawl API (Existing MCP)
+### Primary API: Crawl4AI (Self-hosted)
+
+- Key Features:
+
+  - Asynchronous processing with 10× throughput over sequential methods
+  - Batch extraction capabilities
+  - Travel-specific extraction templates
+  - Advanced caching with content-aware TTL
+  - Full control over crawling settings and resource allocation
+
+- Authentication:
+  - Self-hosted API key authentication
+  - Custom service account for TripSage systems
+
+### Secondary API: Firecrawl API (Existing MCP)
 
 - Endpoints:
   - Single page scraping: `firecrawl_scrape`
@@ -103,25 +117,15 @@ The Web Crawling MCP Server will integrate with established web scraping and pro
   - Deep research: `firecrawl_deep_research`
 - Documentation: Refer to existing Firecrawl MCP documentation
 
-### Secondary API: Playwright (Existing MCP)
+### Tertiary API: Enhanced Playwright (Existing MCP)
 
 - Features:
   - Browser automation for dynamic content
   - Form submission and interaction
   - Screenshot capture
   - Content extraction
+  - Custom travel-specific automation sequences
 - Documentation: Refer to existing Playwright MCP documentation
-
-### Tertiary API: Puppeteer API (Node.js based)
-
-- Endpoints:
-  - Page rendering: `/render`
-  - Full page screenshot: `/screenshot`
-  - PDF generation: `/pdf`
-  - DOM extraction: `/extract`
-- Authentication: API key
-- Rate limits: 100 requests per minute (configurable)
-- Documentation: <https://pptr.dev/api/>
 
 ## Connection Points to Existing Architecture
 
@@ -274,9 +278,9 @@ src/
         destination.py       # Destination-specific extraction
       sources/
         __init__.py
-        firecrawl.py         # Firecrawl API integration
-        playwright.py        # Playwright integration
-        puppeteer.py         # Puppeteer API integration
+        crawl4ai.py          # Crawl4AI integration (primary)
+        firecrawl.py         # Firecrawl API integration (secondary)
+        playwright.py        # Playwright integration (tertiary)
       processors/
         __init__.py
         text.py              # Text processing and analysis
@@ -461,7 +465,7 @@ end_date = "2025-06-20"
         ]
     },
     "crawl_timestamp": "2025-06-14T15:30:00Z",
-    "source": "firecrawl"
+    "source": "crawl4ai"
 }
 ```
 
@@ -569,9 +573,9 @@ end_date = "2025-06-20"
 
 1. **Source Selection Strategy**:
 
-   - Use Firecrawl for most standard extraction tasks
-   - Fall back to Playwright for dynamic content requiring interaction
-   - Use Puppeteer as a last resort for specialized rendering needs
+   - Use Crawl4AI for most standard extraction and batch processing tasks
+   - Use Firecrawl for specialized AI-optimized extractions
+   - Fall back to Enhanced Playwright for dynamic content requiring interaction
 
 2. **Rate Limiting and Politeness**:
 
@@ -613,4 +617,3 @@ end_date = "2025-06-20"
    - Build relationships between destinations and activities
    - Connect events to destinations with temporal attributes
    - Capture sentiment and ratings from extracted content
-     EOL < /dev/null

@@ -1,6 +1,6 @@
 # TripSage Optimization Strategy
 
-*Version: 1.0.0 - Last Updated: May 9, 2025*
+_Version: 1.0.1 - Last Updated: May 10, 2025_
 
 ## 1. Executive Summary
 
@@ -51,17 +51,20 @@ This optimization strategy provides a clear roadmap for implementing the TripSag
 TripSage's architecture consists of four main layers:
 
 1. **MCP Server Layer**:
+
    - Six specialized MCP servers built with Python FastMCP 2.0
    - Official MCP implementations for Time and Neo4j Memory
    - Custom implementations for travel-specific services
 
 2. **Integration & Abstraction Layer**:
+
    - Unified interfaces to all MCP servers
    - Authentication and authorization
    - Error handling and resilience
    - Caching and performance optimization
 
 3. **Agent Layer**:
+
    - OpenAI Agents SDK integration
    - Specialized agents for travel planning, budget optimization, and itinerary creation
    - Function tools mapping to MCP server capabilities
@@ -77,6 +80,7 @@ TripSage's architecture consists of four main layers:
 TripSage implements a dual-storage architecture:
 
 1. **Relational Database (Supabase/Neon)**:
+
    - Core travel data (flights, accommodations, itineraries)
    - User information and preferences
    - Transaction records and booking details
@@ -125,20 +129,20 @@ After thorough evaluation, we have selected **Python FastMCP 2.0** as the framew
 
 We will adopt official MCP implementations where available:
 
-| Component       | Current Plan               | Recommendation                  | Rationale                                              |
-| --------------- | -------------------------- | ------------------------------- | ------------------------------------------------------ |
-| Time MCP        | Custom TypeScript server   | Official Time MCP               | Standardized functionality, reduced development effort |
-| Neo4j Memory    | Custom Memory MCP with Neo4j | Official `mcp-neo4j-memory`     | Standard implementation, better maintained             |
+| Component    | Current Plan                 | Recommendation              | Rationale                                              |
+| ------------ | ---------------------------- | --------------------------- | ------------------------------------------------------ |
+| Time MCP     | Custom TypeScript server     | Official Time MCP           | Standardized functionality, reduced development effort |
+| Neo4j Memory | Custom Memory MCP with Neo4j | Official `mcp-neo4j-memory` | Standard implementation, better maintained             |
 
 ### 3.3 Database Technology Selection
 
-| Database     | Purpose                             | Environment          | Rationale                                                     |
-| ------------ | ----------------------------------- | -------------------- | ------------------------------------------------------------- |
-| Supabase     | Relational storage, authentication  | Production           | Better RLS tools, integrated services, cold start performance |
-| Neon         | Development database                | Development/Testing  | Superior branching capabilities, unlimited free projects      |
-| Neo4j        | Knowledge graph                     | All                  | Mature graph database with official MCP integration           |
-| Redis        | Caching, rate limiting              | All                  | High-performance, TTL support, widely adopted                 |
-| Qdrant       | Vector search (post-MVP)            | Production           | Production-ready, horizontal scaling, rich filtering          |
+| Database | Purpose                            | Environment         | Rationale                                                     |
+| -------- | ---------------------------------- | ------------------- | ------------------------------------------------------------- |
+| Supabase | Relational storage, authentication | Production          | Better RLS tools, integrated services, cold start performance |
+| Neon     | Development database               | Development/Testing | Superior branching capabilities, unlimited free projects      |
+| Neo4j    | Knowledge graph                    | All                 | Mature graph database with official MCP integration           |
+| Redis    | Caching, rate limiting             | All                 | High-performance, TTL support, widely adopted                 |
+| Qdrant   | Vector search (post-MVP)           | Production          | Production-ready, horizontal scaling, rich filtering          |
 
 **Hybrid database approach benefits**:
 
@@ -152,13 +156,14 @@ We will adopt official MCP implementations where available:
 ### 4.1 Weather MCP Server
 
 - **Purpose**: Provide weather data for travel destinations
-- **API Integration**: OpenWeatherMap (primary), Visual Crossing (secondary)
+- **API Integration**: OpenWeatherMap (primary), Visual Crossing (secondary), Weather.gov (US locations)
 - **Implementation**: Python FastMCP 2.0 with OpenAPI integration
 - **Tools**:
-  - `get_current_weather`: Current conditions for a location
-  - `get_weather_forecast`: Multi-day forecast with travel recommendations
-  - `get_historical_weather`: Historical weather patterns for planning
-  - `get_travel_recommendation`: Weather-based travel suggestions
+  - `mcp__weather__get_current_conditions`: Current weather for a location
+  - `mcp__weather__get_forecast`: Multi-day forecast with travel recommendations 
+  - `mcp__weather__get_historical_data`: Historical weather patterns for planning
+  - `mcp__weather__get_travel_recommendation`: Weather-based travel suggestions
+  - `mcp__weather__get_extreme_alerts`: Weather alerts for a location and date range
 
 **Implementation Example**:
 
@@ -187,7 +192,7 @@ class LocationWeather(BaseModel):
 app = FastMCP()
 
 @app.tool()
-async def get_current_weather(location: str, units: str = "metric") -> LocationWeather:
+async def get_current_conditions(location: str, units: str = "metric") -> LocationWeather:
     """Get current weather for a travel destination"""
     # Implementation using OpenWeatherMap API
     # ...
@@ -211,13 +216,84 @@ if __name__ == "__main__":
 ### 4.2 Web Crawling MCP Server
 
 - **Purpose**: Facilitate destination research and content extraction
-- **API Integration**: Firecrawl API (native MCP support)
-- **Implementation**: Direct integration with existing Firecrawl MCP
+- **API Integration**:
+  - Primary: Crawl4AI (self-hosted, high performance)
+  - Secondary: Firecrawl API (native MCP support)
+  - Tertiary: Enhanced Playwright for dynamic content and interactive tasks
+- **Implementation**: Python FastMCP 2.0 with extensive source abstractions
 - **Tools**:
-  - `firecrawl_scrape`: Extract content from travel websites
-  - `firecrawl_search`: Search for destination information
-  - `firecrawl_extract`: Extract structured travel data
-  - `firecrawl_deep_research`: Comprehensive destination research
+  - `mcp__webcrawl__extract_page_content`: Extract content from travel websites
+  - `mcp__webcrawl__search_destination_info`: Search for destination information
+  - `mcp__webcrawl__monitor_price_changes`: Monitor price changes on websites
+  - `mcp__webcrawl__get_latest_events`: Discover events at a destination
+  - `mcp__webcrawl__crawl_travel_blog`: Extract insights from travel blogs
+
+**Implementation Example**:
+
+```python
+# Example using Python FastMCP 2.0
+from fastmcp import FastMCP
+from typing import List, Optional, Dict
+from pydantic import BaseModel
+
+# Define data models
+class ExtractContentRequest(BaseModel):
+    url: str
+    selectors: Optional[Dict[str, str]] = None
+    include_images: bool = False
+    format: str = "markdown"
+
+class ExtractedContent(BaseModel):
+    url: str
+    title: str
+    content: str
+    images: Optional[List[str]] = None
+    metadata: Optional[Dict[str, str]] = None
+    format: str
+
+# Create MCP server
+app = FastMCP()
+
+@app.tool()
+async def extract_page_content(params: ExtractContentRequest) -> ExtractedContent:
+    """Extract content from a travel webpage"""
+    # Select appropriate source based on URL and content type
+    if is_dynamic_content_site(params.url):
+        # Use Enhanced Playwright for dynamic JavaScript-heavy sites
+        return await extract_with_playwright(params.url, params)
+    else:
+        # Use Crawl4AI as the primary extraction engine
+        try:
+            return await extract_with_crawl4ai(params.url, params)
+        except Exception as e:
+            # Fall back to Firecrawl if Crawl4AI fails
+            logger.warning(f"Crawl4AI extraction failed, falling back to Firecrawl: {str(e)}")
+            return await extract_with_firecrawl(params.url, params)
+
+@app.tool()
+async def search_destination_info(
+    destination: str,
+    topics: Optional[List[str]] = None,
+    max_results: int = 5
+) -> Dict:
+    """Search for specific information about a travel destination"""
+    # Implement batch processing with Crawl4AI for efficient parallel searches
+    search_topics = topics or ["attractions", "local cuisine", "transportation", "best time to visit"]
+
+    # Create batch search request
+    batch_results = await crawl4ai_client.batch_search(
+        destination=destination,
+        topics=search_topics,
+        max_results=max_results
+    )
+
+    # Process and normalize results
+    return format_destination_search_results(batch_results)
+
+# Start the server
+if __name__ == "__main__":
+    app.serve()
+```
 
 ### 4.3 Flights MCP Server
 
@@ -318,7 +394,7 @@ TripSage implements a hybrid database approach:
 - Instant database cloning for developer environments
 - Database branching tied to git workflow
 
-#### Key comparison factors:
+#### Key comparison factors
 
 | Feature             | Supabase                 | Neon                    | Best for        |
 | ------------------- | ------------------------ | ----------------------- | --------------- |
@@ -537,17 +613,20 @@ async function hybridSearch(query, searchType = "auto") {
 TripSage implements a Redis-based multi-tiered caching strategy:
 
 1. **CDN Cache (Edge)**:
+
    - Caches static assets and public content
    - Geographic distribution for reduced latency
    - Typical TTL: 24 hours for static content
 
 2. **Application Cache (Redis)**:
+
    - Caches search results, API responses, and computed data
    - Distributed across multiple regions
    - Configurable TTL based on data volatility
    - Supports complex data structures and query patterns
 
 3. **Database Query Cache**:
+
    - Caches frequent database queries
    - Uses Supabase's built-in caching capabilities
    - Automatically invalidated on data changes
@@ -579,15 +658,15 @@ export const redisClient = createClient({
 
 ### 7.3 Caching Strategy by Data Type
 
-| Data Type             | TTL Duration    | Caching Pattern           | Invalidation Strategy            |
-| --------------------- | --------------- | ------------------------- | -------------------------------- |
-| Flight search results | 10-15 minutes   | Query-based key           | TTL + price change events        |
-| Hotel search results  | 30-60 minutes   | Query-based key           | TTL + availability change events |
-| Location data         | 24+ hours       | Hierarchical keys         | TTL only                         |
-| Weather data          | 30 minutes      | Location-based key        | TTL only                         |
-| Travel advisories     | 6 hours         | Country-based key         | TTL + manual invalidation        |
-| User preferences      | Session/7 days  | User-based key            | User action events               |
-| Price history         | 30+ days        | Entity + time-based keys  | Append-only, no invalidation     |
+| Data Type             | TTL Duration   | Caching Pattern          | Invalidation Strategy            |
+| --------------------- | -------------- | ------------------------ | -------------------------------- |
+| Flight search results | 10-15 minutes  | Query-based key          | TTL + price change events        |
+| Hotel search results  | 30-60 minutes  | Query-based key          | TTL + availability change events |
+| Location data         | 24+ hours      | Hierarchical keys        | TTL only                         |
+| Weather data          | 30 minutes     | Location-based key       | TTL only                         |
+| Travel advisories     | 6 hours        | Country-based key        | TTL + manual invalidation        |
+| User preferences      | Session/7 days | User-based key           | User action events               |
+| Price history         | 30+ days       | Entity + time-based keys | Append-only, no invalidation     |
 
 ### 7.4 API Rate Limiting
 
@@ -705,11 +784,12 @@ export class ApiRateLimiter {
 
 #### Week 6: Web Crawling Integration
 
-- Integrate Firecrawl MCP Server
-- Configure Browser Use MCP for fallback scenarios
-- Implement Sequential Thinking MCP for planning
-- Create destination research capabilities
-- Develop content extraction for travel sites
+- Deploy self-hosted Crawl4AI environment
+- Implement Web Crawling MCP Server with Crawl4AI as primary engine
+- Configure Enhanced Playwright for dynamic content
+- Develop source selection strategy and fallback mechanisms
+- Create batch processing for efficient parallel extractions
+- Implement destination research and content extraction capabilities
 
 #### Week 7: Integration & Optimization
 
@@ -730,11 +810,13 @@ export class ApiRateLimiter {
 ### 8.3 Resource Requirements
 
 - **Development Resources**:
+
   - 2-3 developers with Python experience
   - 1 developer with Neo4j expertise
   - 1 developer familiar with OpenAI Assistants SDK
 
 - **Infrastructure**:
+
   - Neo4j instance (Aura or self-hosted)
   - Supabase production project
   - Neon development projects
@@ -747,14 +829,14 @@ export class ApiRateLimiter {
 
 ### 8.4 Risk Assessment
 
-| Risk                   | Probability | Impact | Mitigation                                                         |
-| ---------------------- | ----------- | ------ | ------------------------------------------------------------------ |
-| MCP server API changes | Medium      | High   | Version locking, abstraction layers, regular compatibility testing |
-| API rate limiting      | High        | Medium | Implement caching, rate limiting, and retry mechanisms             |
-| Integration complexity | Medium      | High   | Follow phased approach, create comprehensive tests                 |
-| Performance issues     | Medium      | High   | Monitor performance, optimize critical paths                       |
-| Security concerns      | Low         | High   | Follow security best practices, implement proper authentication    |
-| Data consistency       | Medium      | Medium | Implement validation and synchronization mechanisms                |
+| Risk                   | Probability | Impact | Mitigation                                                             |
+| ---------------------- | ----------- | ------ | ---------------------------------------------------------------------- |
+| MCP server API changes | Medium      | High   | Version locking, abstraction layers, regular compatibility testing     |
+| API rate limiting      | High        | Medium | Implement caching, rate limiting, and retry mechanisms                 |
+| Integration complexity | Medium      | High   | Follow phased approach, create comprehensive tests                     |
+| Performance issues     | Medium      | High   | Monitor performance, optimize critical paths                           |
+| Security concerns      | Low         | High   | Follow security best practices, implement proper authentication        |
+| Data consistency       | Medium      | Medium | Implement validation and synchronization mechanisms                    |
 | Neo4j licensing costs  | Medium      | Medium | Carefully plan usage tiers, consider community edition for development |
 
 ## 9. Testing and Monitoring
@@ -764,16 +846,19 @@ export class ApiRateLimiter {
 TripSage tracks these key performance metrics:
 
 1. **Response Times**:
+
    - API endpoint response times
    - End-to-end request processing times
    - MCP server response times
 
 2. **Cache Effectiveness**:
+
    - Cache hit/miss ratios
    - Cache invalidation frequency
    - Memory utilization
 
 3. **API Usage**:
+
    - Rate limit utilization
    - Request counts by endpoint
    - Error rates and types
@@ -788,12 +873,14 @@ TripSage tracks these key performance metrics:
 TripSage implements comprehensive monitoring:
 
 1. **Real-time Dashboards**:
+
    - API performance metrics
    - Cache health and utilization
    - MCP server status
    - Database performance
 
 2. **Alerting**:
+
    - Response time thresholds
    - Error rate spikes
    - API rate limit warnings
@@ -810,16 +897,19 @@ TripSage implements comprehensive monitoring:
 Testing is implemented at multiple levels:
 
 1. **Unit Tests**:
+
    - Core functionality of all MCP servers
    - Data model validation
    - Utility function verification
 
 2. **Integration Tests**:
+
    - MCP server communication
    - Data flow between components
    - Authentication and authorization
 
 3. **End-to-End Tests**:
+
    - Complete travel planning scenarios
    - Cross-component interactions
    - User flow simulations
@@ -835,16 +925,19 @@ Testing is implemented at multiple levels:
 TripSage implements a continuous improvement cycle:
 
 1. **Metrics Analysis**:
+
    - Regular review of performance metrics
    - Identification of bottlenecks
    - Trend analysis over time
 
 2. **User Feedback**:
+
    - Collection of user satisfaction data
    - Analysis of user behavior patterns
    - Identification of pain points
 
 3. **System Enhancements**:
+
    - Prioritized backlog of improvements
    - Regular enhancement sprints
    - A/B testing of optimizations
