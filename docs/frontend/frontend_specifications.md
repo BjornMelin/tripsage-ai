@@ -50,7 +50,7 @@ This document outlines the technical specifications, design patterns, and implem
 
 ### Directory Structure
 
-```
+```plaintext
 src/
 ├── components/         # Reusable UI components
 │   ├── ui/             # Base UI components (shadcn/ui)
@@ -75,11 +75,9 @@ src/
   - AppLayout: Main layout with navigation
   - DashboardLayout: Layout for authenticated user dashboard
   - TripPlannerLayout: Layout for trip planning interface
-  
 - **Common Components**: Reusable across the application
   - Button, Input, Card, Modal, etc.
   - Calendar, DatePicker, AutoComplete, etc.
-  
 - **Feature Components**: Specific to application features
   - TripCard: Displays trip summary
   - DestinationSearch: Search component for finding destinations
@@ -118,7 +116,7 @@ State will be organized by feature domains:
 - **Primary**: #4F46E5 (Indigo)
 - **Secondary**: #10B981 (Emerald)
 - **Accent**: #F59E0B (Amber)
-- **Neutral**: 
+- **Neutral**:
   - #1F2937 (Gray 800)
   - #4B5563 (Gray 600)
   - #9CA3AF (Gray 400)
@@ -131,7 +129,7 @@ State will be organized by feature domains:
 
 ### Typography
 
-- **Font Family**: 
+- **Font Family**:
   - Primary: Inter (UI)
   - Secondary: Playfair Display (headings for travel content)
 - **Font Sizes**:
@@ -188,9 +186,9 @@ TripSage will utilize a component library built on shadcn/ui, extending it with 
 
 ```typescript
 // hooks/useAuth.ts
-import { createContext, useContext, useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase';
-import type { User } from '@supabase/supabase-js';
+import { createContext, useContext, useEffect, useState } from "react";
+import { supabase } from "@/lib/supabase";
+import type { User } from "@supabase/supabase-js";
 
 type AuthContextType = {
   user: User | null;
@@ -209,20 +207,22 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     // Check active session
     const getUser = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       setUser(session?.user ?? null);
       setLoading(false);
     };
-    
+
     getUser();
 
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        setUser(session?.user ?? null);
-        setLoading(false);
-      }
-    );
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+      setLoading(false);
+    });
 
     return () => subscription.unsubscribe();
   }, []);
@@ -231,7 +231,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     user,
     loading,
     signIn: async (email: string, password: string) => {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
       if (error) throw error;
     },
     signUp: async (email: string, password: string) => {
@@ -241,20 +244,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     signOut: async () => {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
-    }
+    },
   };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 };
@@ -273,80 +272,80 @@ export const useAuth = () => {
 
 ```typescript
 // hooks/useTrips.ts
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/lib/supabase';
-import type { Trip } from '@/types';
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/lib/supabase";
+import type { Trip } from "@/types";
 
 export const useTrips = (userId: string) => {
   const queryClient = useQueryClient();
 
   const getTrips = async (): Promise<Trip[]> => {
     const { data, error } = await supabase
-      .from('trips')
-      .select('*')
-      .eq('user_id', userId);
-      
+      .from("trips")
+      .select("*")
+      .eq("user_id", userId);
+
     if (error) throw error;
     return data as Trip[];
   };
 
-  const createTrip = async (newTrip: Omit<Trip, 'id'>): Promise<Trip> => {
+  const createTrip = async (newTrip: Omit<Trip, "id">): Promise<Trip> => {
     const { data, error } = await supabase
-      .from('trips')
+      .from("trips")
       .insert([{ ...newTrip, user_id: userId }])
       .select()
       .single();
-      
+
     if (error) throw error;
     return data as Trip;
   };
 
   const updateTrip = async (updatedTrip: Trip): Promise<Trip> => {
     const { data, error } = await supabase
-      .from('trips')
+      .from("trips")
       .update(updatedTrip)
-      .eq('id', updatedTrip.id)
-      .eq('user_id', userId)
+      .eq("id", updatedTrip.id)
+      .eq("user_id", userId)
       .select()
       .single();
-      
+
     if (error) throw error;
     return data as Trip;
   };
 
   const deleteTrip = async (tripId: string): Promise<void> => {
     const { error } = await supabase
-      .from('trips')
+      .from("trips")
       .delete()
-      .eq('id', tripId)
-      .eq('user_id', userId);
-      
+      .eq("id", tripId)
+      .eq("user_id", userId);
+
     if (error) throw error;
   };
 
   const tripsQuery = useQuery({
-    queryKey: ['trips', userId],
+    queryKey: ["trips", userId],
     queryFn: getTrips,
   });
 
   const createTripMutation = useMutation({
     mutationFn: createTrip,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['trips', userId] });
+      queryClient.invalidateQueries({ queryKey: ["trips", userId] });
     },
   });
 
   const updateTripMutation = useMutation({
     mutationFn: updateTrip,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['trips', userId] });
+      queryClient.invalidateQueries({ queryKey: ["trips", userId] });
     },
   });
 
   const deleteTripMutation = useMutation({
     mutationFn: deleteTrip,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['trips', userId] });
+      queryClient.invalidateQueries({ queryKey: ["trips", userId] });
     },
   });
 
@@ -374,10 +373,10 @@ export const useTrips = (userId: string) => {
 
 ```typescript
 // components/features/TripMap.tsx
-import { useRef, useEffect, useState } from 'react';
-import mapboxgl from 'mapbox-gl';
-import 'mapbox-gl/dist/mapbox-gl.css';
-import type { PointOfInterest } from '@/types';
+import { useRef, useEffect, useState } from "react";
+import mapboxgl from "mapbox-gl";
+import "mapbox-gl/dist/mapbox-gl.css";
+import type { PointOfInterest } from "@/types";
 
 mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
 
@@ -395,15 +394,15 @@ export const TripMap = ({ center, zoom, pointsOfInterest }: TripMapProps) => {
   // Initialize map
   useEffect(() => {
     if (!mapContainer.current) return;
-    
+
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
-      style: 'mapbox://styles/mapbox/streets-v12',
+      style: "mapbox://styles/mapbox/streets-v12",
       center: center,
-      zoom: zoom
+      zoom: zoom,
     });
 
-    map.current.on('load', () => {
+    map.current.on("load", () => {
       setMapLoaded(true);
     });
 
@@ -417,19 +416,23 @@ export const TripMap = ({ center, zoom, pointsOfInterest }: TripMapProps) => {
     if (!mapLoaded || !map.current) return;
 
     // Remove existing markers
-    const markers = document.getElementsByClassName('mapboxgl-marker');
-    while(markers[0]) {
+    const markers = document.getElementsByClassName("mapboxgl-marker");
+    while (markers[0]) {
       markers[0].remove();
     }
 
     // Add new markers
-    pointsOfInterest.forEach(poi => {
-      const marker = new mapboxgl.Marker({ color: poi.category === 'accommodation' ? '#4F46E5' : '#10B981' })
+    pointsOfInterest.forEach((poi) => {
+      const marker = new mapboxgl.Marker({
+        color: poi.category === "accommodation" ? "#4F46E5" : "#10B981",
+      })
         .setLngLat([poi.longitude, poi.latitude])
-        .setPopup(new mapboxgl.Popup().setHTML(`
+        .setPopup(
+          new mapboxgl.Popup().setHTML(`
           <h3 class="font-medium">${poi.name}</h3>
           <p class="text-sm">${poi.description}</p>
-        `))
+        `)
+        )
         .addTo(map.current!);
     });
   }, [mapLoaded, pointsOfInterest]);
@@ -452,51 +455,51 @@ export const TripMap = ({ center, zoom, pointsOfInterest }: TripMapProps) => {
 
 ```typescript
 // hooks/useSearch.ts
-import { useState, useEffect, useCallback } from 'react';
-import { useDebounce } from '@/hooks/useDebounce';
-import { searchDestinations } from '@/lib/api/destinations';
-import type { Destination, SearchFilters } from '@/types';
+import { useState, useEffect, useCallback } from "react";
+import { useDebounce } from "@/hooks/useDebounce";
+import { searchDestinations } from "@/lib/api/destinations";
+import type { Destination, SearchFilters } from "@/types";
 
 export const useSearch = () => {
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState("");
   const [filters, setFilters] = useState<SearchFilters>({
     minBudget: 0,
     maxBudget: 10000,
     startDate: null,
     endDate: null,
-    amenities: []
+    amenities: [],
   });
   const [results, setResults] = useState<Destination[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
-  
+
   const debouncedQuery = useDebounce(query, 500);
   const debouncedFilters = useDebounce(filters, 500);
-  
+
   const fetchResults = useCallback(async () => {
     if (!debouncedQuery && !debouncedFilters.amenities.length) {
       setResults([]);
       return;
     }
-    
+
     setLoading(true);
     setError(null);
-    
+
     try {
       const data = await searchDestinations(debouncedQuery, debouncedFilters);
       setResults(data);
     } catch (err) {
-      setError(err instanceof Error ? err : new Error('An error occurred'));
+      setError(err instanceof Error ? err : new Error("An error occurred"));
       setResults([]);
     } finally {
       setLoading(false);
     }
   }, [debouncedQuery, debouncedFilters]);
-  
+
   useEffect(() => {
     fetchResults();
   }, [fetchResults]);
-  
+
   return {
     query,
     setQuery,
@@ -505,7 +508,7 @@ export const useSearch = () => {
     results,
     loading,
     error,
-    refetch: fetchResults
+    refetch: fetchResults,
   };
 };
 ```
@@ -523,10 +526,10 @@ export const useSearch = () => {
 
 ```typescript
 // components/features/ItineraryBuilder.tsx
-import { useState } from 'react';
-import { DndProvider, useDrag, useDrop } from 'react-dnd';
-import { HTML5Backend } from 'react-dnd-html5-backend';
-import type { Activity, Day } from '@/types';
+import { useState } from "react";
+import { DndProvider, useDrag, useDrop } from "react-dnd";
+import { HTML5Backend } from "react-dnd-html5-backend";
+import type { Activity, Day } from "@/types";
 
 interface ItineraryBuilderProps {
   days: Day[];
@@ -534,26 +537,25 @@ interface ItineraryBuilderProps {
   onUpdate: (days: Day[]) => void;
 }
 
-export const ItineraryBuilder = ({ days, activities, onUpdate }: ItineraryBuilderProps) => {
+export const ItineraryBuilder = ({
+  days,
+  activities,
+  onUpdate,
+}: ItineraryBuilderProps) => {
   return (
     <DndProvider backend={HTML5Backend}>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <div className="bg-gray-100 p-4 rounded-lg">
           <h3 className="text-lg font-medium mb-3">Available Activities</h3>
           <div className="space-y-2">
-            {activities.map(activity => (
+            {activities.map((activity) => (
               <ActivityItem key={activity.id} activity={activity} />
             ))}
           </div>
         </div>
-        
-        {days.map(day => (
-          <DayColumn 
-            key={day.id} 
-            day={day} 
-            days={days}
-            onUpdate={onUpdate} 
-          />
+
+        {days.map((day) => (
+          <DayColumn key={day.id} day={day} days={days} onUpdate={onUpdate} />
         ))}
       </div>
     </DndProvider>
@@ -566,18 +568,18 @@ interface ActivityItemProps {
 
 const ActivityItem = ({ activity }: ActivityItemProps) => {
   const [{ isDragging }, drag] = useDrag(() => ({
-    type: 'activity',
+    type: "activity",
     item: { id: activity.id, activity },
     collect: (monitor) => ({
       isDragging: monitor.isDragging(),
     }),
   }));
-  
+
   return (
-    <div 
+    <div
       ref={drag}
       className={`bg-white p-3 rounded shadow-sm cursor-grab ${
-        isDragging ? 'opacity-50' : 'opacity-100'
+        isDragging ? "opacity-50" : "opacity-100"
       }`}
     >
       <h4 className="font-medium">{activity.name}</h4>
@@ -594,13 +596,13 @@ interface DayColumnProps {
 
 const DayColumn = ({ day, days, onUpdate }: DayColumnProps) => {
   const [{ isOver }, drop] = useDrop(() => ({
-    accept: 'activity',
-    drop: (item: { id: string, activity: Activity }) => {
-      const newDays = days.map(d => {
+    accept: "activity",
+    drop: (item: { id: string; activity: Activity }) => {
+      const newDays = days.map((d) => {
         if (d.id === day.id) {
           return {
             ...d,
-            activities: [...d.activities, item.activity]
+            activities: [...d.activities, item.activity],
           };
         }
         return d;
@@ -611,26 +613,26 @@ const DayColumn = ({ day, days, onUpdate }: DayColumnProps) => {
       isOver: monitor.isOver(),
     }),
   }));
-  
+
   return (
-    <div 
+    <div
       ref={drop}
       className={`bg-gray-100 p-4 rounded-lg min-h-[300px] ${
-        isOver ? 'bg-gray-200' : ''
+        isOver ? "bg-gray-200" : ""
       }`}
     >
       <h3 className="text-lg font-medium mb-3">
         Day {day.dayNumber}: {day.date}
       </h3>
-      
+
       <div className="space-y-2">
-        {day.activities.map(activity => (
+        {day.activities.map((activity) => (
           <div key={activity.id} className="bg-white p-3 rounded shadow-sm">
             <h4 className="font-medium">{activity.name}</h4>
             <p className="text-sm text-gray-600">{activity.duration} mins</p>
           </div>
         ))}
-        
+
         {day.activities.length === 0 && (
           <div className="text-center py-8 text-gray-500">
             Drop activities here
@@ -655,17 +657,17 @@ const DayColumn = ({ day, days, onUpdate }: DayColumnProps) => {
 
 ```typescript
 // components/features/BudgetBreakdown.tsx
-import { useState } from 'react';
-import { Pie } from 'react-chartjs-2';
+import { useState } from "react";
+import { Pie } from "react-chartjs-2";
 import {
   Chart as ChartJS,
   ArcElement,
   Tooltip,
   Legend,
   ChartData,
-  ChartOptions
-} from 'chart.js';
-import type { Expense, ExpenseCategory } from '@/types';
+  ChartOptions,
+} from "chart.js";
+import type { Expense, ExpenseCategory } from "@/types";
 
 ChartJS.register(ArcElement, Tooltip, Legend);
 
@@ -674,9 +676,12 @@ interface BudgetBreakdownProps {
   totalBudget: number;
 }
 
-export const BudgetBreakdown = ({ expenses, totalBudget }: BudgetBreakdownProps) => {
-  const [activeCurrency, setActiveCurrency] = useState<string>('USD');
-  
+export const BudgetBreakdown = ({
+  expenses,
+  totalBudget,
+}: BudgetBreakdownProps) => {
+  const [activeCurrency, setActiveCurrency] = useState<string>("USD");
+
   // Group expenses by category
   const expensesByCategory = expenses.reduce((acc, expense) => {
     const category = expense.category as ExpenseCategory;
@@ -686,50 +691,59 @@ export const BudgetBreakdown = ({ expenses, totalBudget }: BudgetBreakdownProps)
     acc[category] += expense.amount;
     return acc;
   }, {} as Record<ExpenseCategory, number>);
-  
+
   // Calculate remaining budget
-  const totalSpent = Object.values(expensesByCategory).reduce((a, b) => a + b, 0);
+  const totalSpent = Object.values(expensesByCategory).reduce(
+    (a, b) => a + b,
+    0
+  );
   const remaining = totalBudget - totalSpent;
-  
-  const chartData: ChartData<'pie'> = {
-    labels: [...Object.keys(expensesByCategory), 'Remaining'],
+
+  const chartData: ChartData<"pie"> = {
+    labels: [...Object.keys(expensesByCategory), "Remaining"],
     datasets: [
       {
-        data: [...Object.values(expensesByCategory), remaining > 0 ? remaining : 0],
+        data: [
+          ...Object.values(expensesByCategory),
+          remaining > 0 ? remaining : 0,
+        ],
         backgroundColor: [
-          '#4F46E5', // Accommodation
-          '#10B981', // Transportation
-          '#F59E0B', // Food
-          '#EF4444', // Activities
-          '#3B82F6', // Shopping
-          '#8B5CF6', // Misc
-          '#E5E7EB', // Remaining
+          "#4F46E5", // Accommodation
+          "#10B981", // Transportation
+          "#F59E0B", // Food
+          "#EF4444", // Activities
+          "#3B82F6", // Shopping
+          "#8B5CF6", // Misc
+          "#E5E7EB", // Remaining
         ],
         borderWidth: 1,
       },
     ],
   };
-  
-  const options: ChartOptions<'pie'> = {
+
+  const options: ChartOptions<"pie"> = {
     responsive: true,
     plugins: {
       legend: {
-        position: 'bottom',
+        position: "bottom",
       },
       tooltip: {
         callbacks: {
           label: (context) => {
-            const label = context.label || '';
+            const label = context.label || "";
             const value = context.parsed || 0;
-            const total = context.dataset.data.reduce((a: number, b: number) => a + b, 0);
+            const total = context.dataset.data.reduce(
+              (a: number, b: number) => a + b,
+              0
+            );
             const percentage = Math.round((value / total) * 100);
             return `${label}: ${value} ${activeCurrency} (${percentage}%)`;
-          }
-        }
-      }
+          },
+        },
+      },
     },
   };
-  
+
   return (
     <div className="bg-white p-6 rounded-lg shadow-md">
       <div className="flex justify-between items-center mb-6">
@@ -745,19 +759,25 @@ export const BudgetBreakdown = ({ expenses, totalBudget }: BudgetBreakdownProps)
           <option value="JPY">JPY</option>
         </select>
       </div>
-      
+
       <div className="h-64">
         <Pie data={chartData} options={options} />
       </div>
-      
+
       <div className="mt-6 grid grid-cols-2 gap-4">
         <div className="bg-gray-100 p-4 rounded-lg">
           <h3 className="text-sm font-medium text-gray-500">Total Budget</h3>
-          <p className="text-2xl font-bold">{totalBudget} {activeCurrency}</p>
+          <p className="text-2xl font-bold">
+            {totalBudget} {activeCurrency}
+          </p>
         </div>
         <div className="bg-gray-100 p-4 rounded-lg">
           <h3 className="text-sm font-medium text-gray-500">Remaining</h3>
-          <p className={`text-2xl font-bold ${remaining < 0 ? 'text-red-500' : ''}`}>
+          <p
+            className={`text-2xl font-bold ${
+              remaining < 0 ? "text-red-500" : ""
+            }`}
+          >
             {remaining} {activeCurrency}
           </p>
         </div>
@@ -808,48 +828,57 @@ Example:
 
 ```typescript
 // pages/trips/[id].tsx
-import dynamic from 'next/dynamic';
-import { Suspense } from 'react';
-import { useRouter } from 'next/router';
-import { Spinner } from '@/components/ui/spinner';
-import { useTripDetails } from '@/hooks/useTripDetails';
+import dynamic from "next/dynamic";
+import { Suspense } from "react";
+import { useRouter } from "next/router";
+import { Spinner } from "@/components/ui/spinner";
+import { useTripDetails } from "@/hooks/useTripDetails";
 
 // Dynamically import heavy components
-const TripMap = dynamic(() => import('@/components/features/TripMap'), {
+const TripMap = dynamic(() => import("@/components/features/TripMap"), {
   ssr: false, // Disable server-side rendering for map component
-  loading: () => <div className="h-64 bg-gray-200 animate-pulse rounded-lg"></div>
+  loading: () => (
+    <div className="h-64 bg-gray-200 animate-pulse rounded-lg"></div>
+  ),
 });
 
-const ItineraryBuilder = dynamic(() => import('@/components/features/ItineraryBuilder'), {
-  loading: () => <Spinner />
-});
+const ItineraryBuilder = dynamic(
+  () => import("@/components/features/ItineraryBuilder"),
+  {
+    loading: () => <Spinner />,
+  }
+);
 
 export default function TripDetails() {
   const router = useRouter();
   const { id } = router.query;
   const { trip, isLoading, error } = useTripDetails(id as string);
-  
+
   if (isLoading) return <Spinner />;
   if (error) return <div>Error loading trip details</div>;
   if (!trip) return <div>Trip not found</div>;
-  
+
   return (
     <div className="container mx-auto py-8">
       <h1 className="text-3xl font-bold mb-8">{trip.name}</h1>
-      
+
       <div className="mb-8 h-64">
-        <Suspense fallback={<div className="h-64 bg-gray-200 animate-pulse rounded-lg"></div>}>
-          <TripMap 
-            center={[trip.longitude, trip.latitude]} 
-            zoom={12} 
-            pointsOfInterest={trip.pointsOfInterest} 
+        <Suspense
+          fallback={
+            <div className="h-64 bg-gray-200 animate-pulse rounded-lg"></div>
+          }
+        >
+          <TripMap
+            center={[trip.longitude, trip.latitude]}
+            zoom={12}
+            pointsOfInterest={trip.pointsOfInterest}
           />
         </Suspense>
       </div>
-      
+
       <Suspense fallback={<Spinner />}>
-        <ItineraryBuilder 
-          days={trip.days} 
+        <ItineraryBuilder
+          days={trip.days}
           activities={trip.availableActivities}
           onUpdate={/* Update handler */}
         />
@@ -880,6 +909,7 @@ To optimize API interactions:
 ### Unit Testing
 
 Unit tests will focus on:
+
 - Utility functions
 - Custom hooks
 - Individual components
@@ -888,68 +918,74 @@ Example:
 
 ```typescript
 // tests/hooks/useAuth.test.ts
-import { renderHook, act } from '@testing-library/react-hooks';
-import { useAuth, AuthProvider } from '@/hooks/useAuth';
-import { supabase } from '@/lib/supabase';
+import { renderHook, act } from "@testing-library/react-hooks";
+import { useAuth, AuthProvider } from "@/hooks/useAuth";
+import { supabase } from "@/lib/supabase";
 
 // Mock supabase
-jest.mock('@/lib/supabase', () => ({
+jest.mock("@/lib/supabase", () => ({
   supabase: {
     auth: {
       getSession: jest.fn(),
       onAuthStateChange: jest.fn(() => ({
-        data: { subscription: { unsubscribe: jest.fn() } }
+        data: { subscription: { unsubscribe: jest.fn() } },
       })),
       signInWithPassword: jest.fn(),
       signUp: jest.fn(),
-      signOut: jest.fn()
-    }
-  }
+      signOut: jest.fn(),
+    },
+  },
 }));
 
-describe('useAuth hook', () => {
+describe("useAuth hook", () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
-  
-  it('should return user null and loading true initially', async () => {
+
+  it("should return user null and loading true initially", async () => {
     const mockSession = { data: { session: null } };
     (supabase.auth.getSession as jest.Mock).mockResolvedValueOnce(mockSession);
-    
+
     const wrapper = ({ children }: { children: React.ReactNode }) => (
       <AuthProvider>{children}</AuthProvider>
     );
-    
-    const { result, waitForNextUpdate } = renderHook(() => useAuth(), { wrapper });
-    
+
+    const { result, waitForNextUpdate } = renderHook(() => useAuth(), {
+      wrapper,
+    });
+
     expect(result.current.user).toBeNull();
     expect(result.current.loading).toBe(true);
-    
+
     await waitForNextUpdate();
-    
+
     expect(result.current.loading).toBe(false);
   });
-  
-  it('should sign in user successfully', async () => {
+
+  it("should sign in user successfully", async () => {
     const mockSession = { data: { session: null } };
     (supabase.auth.getSession as jest.Mock).mockResolvedValueOnce(mockSession);
-    (supabase.auth.signInWithPassword as jest.Mock).mockResolvedValueOnce({ error: null });
-    
+    (supabase.auth.signInWithPassword as jest.Mock).mockResolvedValueOnce({
+      error: null,
+    });
+
     const wrapper = ({ children }: { children: React.ReactNode }) => (
       <AuthProvider>{children}</AuthProvider>
     );
-    
-    const { result, waitForNextUpdate } = renderHook(() => useAuth(), { wrapper });
-    
-    await waitForNextUpdate();
-    
-    await act(async () => {
-      await result.current.signIn('test@example.com', 'password');
+
+    const { result, waitForNextUpdate } = renderHook(() => useAuth(), {
+      wrapper,
     });
-    
+
+    await waitForNextUpdate();
+
+    await act(async () => {
+      await result.current.signIn("test@example.com", "password");
+    });
+
     expect(supabase.auth.signInWithPassword).toHaveBeenCalledWith({
-      email: 'test@example.com',
-      password: 'password'
+      email: "test@example.com",
+      password: "password",
     });
   });
 });
@@ -958,6 +994,7 @@ describe('useAuth hook', () => {
 ### Component Testing
 
 Component tests will validate:
+
 - Rendering states (loading, error, success)
 - User interactions
 - Accessibility requirements
@@ -966,52 +1003,75 @@ Example:
 
 ```typescript
 // tests/components/TripCard.test.tsx
-import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import { TripCard } from '@/components/features/TripCard';
+import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { TripCard } from "@/components/features/TripCard";
 
 const mockTrip = {
-  id: '1',
-  name: 'Tokyo Adventure',
-  startDate: '2025-06-15',
-  endDate: '2025-06-22',
-  destination: 'Tokyo, Japan',
-  image: '/images/tokyo.jpg',
-  totalBudget: 2500
+  id: "1",
+  name: "Tokyo Adventure",
+  startDate: "2025-06-15",
+  endDate: "2025-06-22",
+  destination: "Tokyo, Japan",
+  image: "/images/tokyo.jpg",
+  totalBudget: 2500,
 };
 
-describe('TripCard component', () => {
-  it('renders trip information correctly', () => {
-    render(<TripCard trip={mockTrip} onView={jest.fn()} onEdit={jest.fn()} onDelete={jest.fn()} />);
-    
-    expect(screen.getByText('Tokyo Adventure')).toBeInTheDocument();
-    expect(screen.getByText('Tokyo, Japan')).toBeInTheDocument();
-    expect(screen.getByText('Jun 15 - Jun 22, 2025')).toBeInTheDocument();
-    expect(screen.getByText('$2,500')).toBeInTheDocument();
+describe("TripCard component", () => {
+  it("renders trip information correctly", () => {
+    render(
+      <TripCard
+        trip={mockTrip}
+        onView={jest.fn()}
+        onEdit={jest.fn()}
+        onDelete={jest.fn()}
+      />
+    );
+
+    expect(screen.getByText("Tokyo Adventure")).toBeInTheDocument();
+    expect(screen.getByText("Tokyo, Japan")).toBeInTheDocument();
+    expect(screen.getByText("Jun 15 - Jun 22, 2025")).toBeInTheDocument();
+    expect(screen.getByText("$2,500")).toBeInTheDocument();
   });
-  
-  it('calls onView when view button is clicked', async () => {
+
+  it("calls onView when view button is clicked", async () => {
     const onView = jest.fn();
-    render(<TripCard trip={mockTrip} onView={onView} onEdit={jest.fn()} onDelete={jest.fn()} />);
-    
-    await userEvent.click(screen.getByText('View Trip'));
-    
-    expect(onView).toHaveBeenCalledWith('1');
+    render(
+      <TripCard
+        trip={mockTrip}
+        onView={onView}
+        onEdit={jest.fn()}
+        onDelete={jest.fn()}
+      />
+    );
+
+    await userEvent.click(screen.getByText("View Trip"));
+
+    expect(onView).toHaveBeenCalledWith("1");
   });
-  
-  it('asks for confirmation before deletion', async () => {
+
+  it("asks for confirmation before deletion", async () => {
     const onDelete = jest.fn();
-    render(<TripCard trip={mockTrip} onView={jest.fn()} onEdit={jest.fn()} onDelete={onDelete} />);
-    
-    await userEvent.click(screen.getByLabelText('Delete trip'));
-    
+    render(
+      <TripCard
+        trip={mockTrip}
+        onView={jest.fn()}
+        onEdit={jest.fn()}
+        onDelete={onDelete}
+      />
+    );
+
+    await userEvent.click(screen.getByLabelText("Delete trip"));
+
     // Confirmation dialog should appear
-    expect(screen.getByText('Are you sure you want to delete this trip?')).toBeInTheDocument();
-    
+    expect(
+      screen.getByText("Are you sure you want to delete this trip?")
+    ).toBeInTheDocument();
+
     // Confirm deletion
-    await userEvent.click(screen.getByText('Delete'));
-    
-    expect(onDelete).toHaveBeenCalledWith('1');
+    await userEvent.click(screen.getByText("Delete"));
+
+    expect(onDelete).toHaveBeenCalledWith("1");
   });
 });
 ```
@@ -1019,6 +1079,7 @@ describe('TripCard component', () => {
 ### End-to-End Testing
 
 End-to-end tests will validate:
+
 - User flows (authentication, trip creation, itinerary planning)
 - Integration with backend services
 - Cross-browser compatibility
@@ -1027,42 +1088,46 @@ Example:
 
 ```typescript
 // e2e/authentication.spec.ts
-import { test, expect } from '@playwright/test';
+import { test, expect } from "@playwright/test";
 
-test.describe('Authentication Flow', () => {
-  test('should allow user to sign up', async ({ page }) => {
-    await page.goto('/auth/signup');
-    
+test.describe("Authentication Flow", () => {
+  test("should allow user to sign up", async ({ page }) => {
+    await page.goto("/auth/signup");
+
     // Fill the signup form
-    await page.fill('[name="email"]', 'test@example.com');
-    await page.fill('[name="password"]', 'Password123!');
-    await page.fill('[name="confirmPassword"]', 'Password123!');
-    
+    await page.fill('[name="email"]', "test@example.com");
+    await page.fill('[name="password"]', "Password123!");
+    await page.fill('[name="confirmPassword"]', "Password123!");
+
     // Submit the form
     await page.click('button[type="submit"]');
-    
+
     // Verify success message
-    await expect(page.locator('.toast')).toContainText('Account created successfully');
-    
+    await expect(page.locator(".toast")).toContainText(
+      "Account created successfully"
+    );
+
     // Verify redirect to dashboard
-    await expect(page).toHaveURL('/dashboard');
+    await expect(page).toHaveURL("/dashboard");
   });
-  
-  test('should show error for invalid credentials', async ({ page }) => {
-    await page.goto('/auth/login');
-    
+
+  test("should show error for invalid credentials", async ({ page }) => {
+    await page.goto("/auth/login");
+
     // Fill the login form with invalid credentials
-    await page.fill('[name="email"]', 'test@example.com');
-    await page.fill('[name="password"]', 'wrongpassword');
-    
+    await page.fill('[name="email"]', "test@example.com");
+    await page.fill('[name="password"]', "wrongpassword");
+
     // Submit the form
     await page.click('button[type="submit"]');
-    
+
     // Verify error message
-    await expect(page.locator('.error-message')).toContainText('Invalid email or password');
-    
+    await expect(page.locator(".error-message")).toContainText(
+      "Invalid email or password"
+    );
+
     // Verify still on login page
-    await expect(page).toHaveURL('/auth/login');
+    await expect(page).toHaveURL("/auth/login");
   });
 });
 ```
@@ -1103,8 +1168,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '18'
-          cache: 'npm'
+          node-version: "18"
+          cache: "npm"
       - name: Install dependencies
         run: npm ci
       - name: Lint
@@ -1113,7 +1178,7 @@ jobs:
         run: npm run type-check
       - name: Run tests
         run: npm test
-  
+
   e2e-tests:
     needs: test
     runs-on: ubuntu-latest
@@ -1122,15 +1187,15 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '18'
-          cache: 'npm'
+          node-version: "18"
+          cache: "npm"
       - name: Install dependencies
         run: npm ci
       - name: Install Playwright browsers
         run: npx playwright install --with-deps
       - name: Run E2E tests
         run: npm run test:e2e
-  
+
   deploy:
     needs: [test, e2e-tests]
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/production')
@@ -1177,8 +1242,8 @@ Example pattern:
 
 ```tsx
 // components/ui/Dialog.tsx
-import { useRef, useEffect } from 'react';
-import { Dialog as HeadlessDialog } from '@headlessui/react';
+import { useRef, useEffect } from "react";
+import { Dialog as HeadlessDialog } from "@headlessui/react";
 
 interface DialogProps {
   isOpen: boolean;
@@ -1189,21 +1254,21 @@ interface DialogProps {
 
 export const Dialog = ({ isOpen, onClose, title, children }: DialogProps) => {
   const initialFocusRef = useRef<HTMLButtonElement>(null);
-  
+
   // Trap focus when dialog opens
   useEffect(() => {
     if (isOpen) {
       const handleKeyDown = (e: KeyboardEvent) => {
-        if (e.key === 'Escape') {
+        if (e.key === "Escape") {
           onClose();
         }
       };
-      
-      window.addEventListener('keydown', handleKeyDown);
-      return () => window.removeEventListener('keydown', handleKeyDown);
+
+      window.addEventListener("keydown", handleKeyDown);
+      return () => window.removeEventListener("keydown", handleKeyDown);
     }
   }, [isOpen, onClose]);
-  
+
   return (
     <HeadlessDialog
       open={isOpen}
@@ -1212,7 +1277,7 @@ export const Dialog = ({ isOpen, onClose, title, children }: DialogProps) => {
       className="relative z-50"
     >
       <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
-      
+
       <div className="fixed inset-0 flex items-center justify-center p-4">
         <HeadlessDialog.Panel className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
           <HeadlessDialog.Title
@@ -1221,11 +1286,9 @@ export const Dialog = ({ isOpen, onClose, title, children }: DialogProps) => {
           >
             {title}
           </HeadlessDialog.Title>
-          
-          <div className="mt-4">
-            {children}
-          </div>
-          
+
+          <div className="mt-4">{children}</div>
+
           <div className="mt-6 flex justify-end space-x-3">
             <button
               type="button"
@@ -1255,30 +1318,35 @@ export const Dialog = ({ isOpen, onClose, title, children }: DialogProps) => {
 The frontend implementation will follow this timeline:
 
 ### Phase 1: Foundation (2 weeks)
+
 - Project setup and configuration
 - Core components and styling
 - Authentication system
 - Basic navigation and routing
 
 ### Phase 2: Core Features (4 weeks)
+
 - Trip creation and management
 - Search and filtering
 - Map integration
 - Basic itinerary planning
 
 ### Phase 3: Advanced Features (4 weeks)
+
 - Budget planning and tracking
 - Drag-and-drop itinerary builder
 - Weather integration
 - Recommendation system
 
 ### Phase 4: Polish and Optimization (2 weeks)
+
 - Performance optimization
 - Accessibility improvements
 - Cross-browser testing
 - Final UI polishing
 
 ### Phase 5: Testing and Deployment (2 weeks)
+
 - Complete test suite
 - CI/CD setup
 - Documentation

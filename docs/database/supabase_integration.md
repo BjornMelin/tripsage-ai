@@ -22,7 +22,7 @@ TripSage uses Supabase as its primary database solution, providing a PostgreSQL 
 
 Essential environment variables for connecting to Supabase:
 
-```
+```plaintext
 NEXT_PUBLIC_SUPABASE_URL=https://your-project-id.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
@@ -208,43 +208,47 @@ The Next.js frontend uses two approaches for connecting to Supabase:
 
 1. **Server-Side Client**: For use in Server Components and API routes
 
-```typescript
-// lib/supabase/server.ts
-import { createServerClient } from '@supabase/ssr';
-import { cookies } from 'next/headers';
-import { Database } from '@/types/supabase';
+   ```typescript
+   // lib/supabase/server.ts
+   import { createServerClient } from "@supabase/ssr";
+   import { cookies } from "next/headers";
+   import { Database } from "@/types/supabase";
 
-export function createServerSupabaseClient() {
-  const cookieStore = cookies();
+   export function createServerSupabaseClient() {
+     const cookieStore = cookies();
 
-  return createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value;
-        },
-        set(name: string, value: string, options: { path: string; maxAge: number; sameSite: string; }) {
-          cookieStore.set({ name, value, ...options });
-        },
-        remove(name: string, options: { path: string; }) {
-          cookieStore.set({ name, value: '', ...options, maxAge: 0 });
-        },
-      },
-    }
-  );
-}
-```
+     return createServerClient<Database>(
+       process.env.NEXT_PUBLIC_SUPABASE_URL!,
+       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+       {
+         cookies: {
+           get(name: string) {
+             return cookieStore.get(name)?.value;
+           },
+           set(
+             name: string,
+             value: string,
+             options: { path: string; maxAge: number; sameSite: string }
+           ) {
+             cookieStore.set({ name, value, ...options });
+           },
+           remove(name: string, options: { path: string }) {
+             cookieStore.set({ name, value: "", ...options, maxAge: 0 });
+           },
+         },
+       }
+     );
+   }
+   ```
 
 2. **Client-Side Client**: For use in Client Components with hooks
 
 ```typescript
 // lib/supabase/client.ts
-'use client';
+"use client";
 
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
-import { Database } from '@/types/supabase';
+import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import { Database } from "@/types/supabase";
 
 export function createClientSupabaseClient() {
   return createClientComponentClient<Database>({
@@ -260,31 +264,30 @@ TripSage implements Supabase authentication with middleware for session manageme
 
 ```typescript
 // middleware.ts
-import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs';
-import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
-import type { Database } from '@/types/supabase';
+import { createMiddlewareClient } from "@supabase/auth-helpers-nextjs";
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+import type { Database } from "@/types/supabase";
 
 export async function middleware(req: NextRequest) {
   const res = NextResponse.next();
   const supabase = createMiddlewareClient<Database>({ req, res });
 
   // Refresh session if expired
-  const { data: { session } } = await supabase.auth.getSession();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
 
   // Redirect to login if accessing protected routes without session
-  if (!session && req.nextUrl.pathname.startsWith('/app')) {
-    return NextResponse.redirect(new URL('/auth/login', req.url));
+  if (!session && req.nextUrl.pathname.startsWith("/app")) {
+    return NextResponse.redirect(new URL("/auth/login", req.url));
   }
 
   return res;
 }
 
 export const config = {
-  matcher: [
-    '/app/:path*',
-    '/api/:path*',
-  ],
+  matcher: ["/app/:path*", "/api/:path*"],
 };
 ```
 
@@ -313,12 +316,12 @@ async function execute_sql(
       `https://${project_id}.supabase.co`,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
-    
+
     // Execute the SQL query
     const { data, error } = await supabase.rpc('exec_sql', { query });
-    
+
     if (error) throw error;
-    
+
     return {
       success: true,
       data: data
@@ -339,30 +342,32 @@ The Next.js API routes integrate with Supabase for data operations:
 
 ```typescript
 // app/api/trips/route.ts
-import { createServerSupabaseClient } from '@/lib/supabase/server';
-import { NextRequest, NextResponse } from 'next/server';
+import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(req: NextRequest) {
   try {
     const supabase = createServerSupabaseClient();
-    
+
     // Get the user from the session
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    
+
     // Fetch trips for the current user
     const { data: trips, error } = await supabase
-      .from('trips')
-      .select('*')
-      .order('created_at', { ascending: false });
-    
+      .from("trips")
+      .select("*")
+      .order("created_at", { ascending: false });
+
     if (error) throw error;
-    
+
     return NextResponse.json({ trips });
   } catch (error) {
-    console.error('Error fetching trips:', error);
+    console.error("Error fetching trips:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
@@ -422,52 +427,52 @@ TripSage leverages Supabase's real-time capabilities for collaborative trip plan
 
 ```typescript
 // Example of real-time subscription
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { createClientSupabaseClient } from '@/lib/supabase/client';
-import type { Trip } from '@/types/supabase';
+import { useEffect, useState } from "react";
+import { createClientSupabaseClient } from "@/lib/supabase/client";
+import type { Trip } from "@/types/supabase";
 
 export function useTripUpdates(tripId: number) {
   const [trip, setTrip] = useState<Trip | null>(null);
   const supabase = createClientSupabaseClient();
-  
+
   useEffect(() => {
     // Initial fetch
     const fetchTrip = async () => {
       const { data } = await supabase
-        .from('trips')
-        .select('*')
-        .eq('id', tripId)
+        .from("trips")
+        .select("*")
+        .eq("id", tripId)
         .single();
-      
+
       if (data) setTrip(data);
     };
-    
+
     fetchTrip();
-    
+
     // Set up real-time subscription
     const subscription = supabase
       .channel(`trip-${tripId}`)
       .on(
-        'postgres_changes',
+        "postgres_changes",
         {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'trips',
-          filter: `id=eq.${tripId}`
+          event: "UPDATE",
+          schema: "public",
+          table: "trips",
+          filter: `id=eq.${tripId}`,
         },
         (payload) => {
           setTrip(payload.new as Trip);
         }
       )
       .subscribe();
-    
+
     return () => {
       supabase.removeChannel(subscription);
     };
   }, [tripId, supabase]);
-  
+
   return trip;
 }
 ```
@@ -479,9 +484,9 @@ TripSage uses a structured approach to database migrations:
 1. **Migration Scripts**: SQL migration scripts in the `/migrations` directory follow a naming convention `YYYYMMDD_XX_description.sql`
 2. **Supabase Migrations**: Use the Supabase CLI to apply migrations:
 
-```bash
-supabase migration up
-```
+   ```bash
+   supabase migration up
+   ```
 
 3. **Seed Data**: Initial data is provided through seed scripts for testing and development:
 
@@ -516,21 +521,23 @@ Frontend and backend components follow these query optimization practices:
 2. **Use Pagination**: For listings with many results
 3. **Join Relations Efficiently**: Use the Supabase `.select()` with relationship expansion
 
-```typescript
-// Example of optimized query with relationship expansion
-const { data: trips } = await supabase
-  .from('trips')
-  .select(`
-    id,
-    name,
-    destination,
-    start_date,
-    end_date,
-    flights (id, airline, departure_time, arrival_time)
-  `)
-  .order('start_date', { ascending: true })
-  .range(0, 9); // Pagination for first 10 results
-```
+   ```typescript
+   // Example of optimized query with relationship expansion
+   const { data: trips } = await supabase
+     .from("trips")
+     .select(
+       `
+       id,
+       name,
+       destination,
+       start_date,
+       end_date,
+       flights (id, airline, departure_time, arrival_time)
+     `
+     )
+     .order("start_date", { ascending: true })
+     .range(0, 9); // Pagination for first 10 results
+   ```
 
 ### Caching Strategy
 
@@ -538,29 +545,29 @@ TripSage implements the following caching mechanisms:
 
 1. **Client-Side Caching**: Using React Query for client-side data caching:
 
-```typescript
-// Example of React Query usage with Supabase
-import { useQuery } from '@tanstack/react-query';
-import { createClientSupabaseClient } from '@/lib/supabase/client';
+   ```typescript
+   // Example of React Query usage with Supabase
+   import { useQuery } from "@tanstack/react-query";
+   import { createClientSupabaseClient } from "@/lib/supabase/client";
 
-export function useTrips() {
-  const supabase = createClientSupabaseClient();
-  
-  return useQuery({
-    queryKey: ['trips'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('trips')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
-      if (error) throw error;
-      return data;
-    },
-    staleTime: 60000, // 1 minute
-  });
-}
-```
+   export function useTrips() {
+     const supabase = createClientSupabaseClient();
+
+     return useQuery({
+       queryKey: ["trips"],
+       queryFn: async () => {
+         const { data, error } = await supabase
+           .from("trips")
+           .select("*")
+           .order("created_at", { ascending: false });
+
+         if (error) throw error;
+         return data;
+       },
+       staleTime: 60000, // 1 minute
+     });
+   }
+   ```
 
 2. **Edge Caching**: For public, non-personalized data like destination information
 
@@ -572,28 +579,28 @@ TripSage implements comprehensive monitoring for Supabase:
 2. **Performance Monitoring**: Track query performance and slow queries
 3. **Error Tracking**: Capture and report database errors with context
 
-```typescript
-// Example error tracking middleware
-async function withErrorTracking(req, res, next) {
-  try {
-    await next();
-  } catch (error) {
-    if (error.code === 'PGRST116') {
-      // Handle foreign key constraint errors
-      console.error('Database foreign key constraint error:', error);
-      Sentry.captureException(error, {
-        extra: {
-          endpoint: req.url,
-          userId: req.user?.id,
-          payload: req.body
-        }
-      });
-    }
-    
-    throw error;
-  }
-}
-```
+   ```typescript
+   // Example error tracking middleware
+   async function withErrorTracking(req, res, next) {
+     try {
+       await next();
+     } catch (error) {
+       if (error.code === "PGRST116") {
+         // Handle foreign key constraint errors
+         console.error("Database foreign key constraint error:", error);
+         Sentry.captureException(error, {
+           extra: {
+             endpoint: req.url,
+             userId: req.user?.id,
+             payload: req.body,
+           },
+         });
+       }
+
+       throw error;
+     }
+   }
+   ```
 
 ## 12. Testing Strategy
 
@@ -602,26 +609,26 @@ TripSage's Supabase integration includes these testing approaches:
 1. **Local Testing**: Use Supabase Local Development for unit and integration tests
 2. **Mock Supabase Client**: For component testing
 
-```typescript
-// Example of mocking Supabase for tests
-jest.mock('@/lib/supabase/client', () => ({
-  createClientSupabaseClient: () => ({
-    from: jest.fn().mockReturnThis(),
-    select: jest.fn().mockReturnThis(),
-    eq: jest.fn().mockReturnThis(),
-    single: jest.fn().mockResolvedValue({
-      data: {
-        id: 1,
-        name: 'Test Trip',
-        destination: 'Paris',
-        start_date: '2025-06-01',
-        end_date: '2025-06-07'
-      },
-      error: null
-    })
-  })
-}));
-```
+   ```typescript
+   // Example of mocking Supabase for tests
+   jest.mock("@/lib/supabase/client", () => ({
+     createClientSupabaseClient: () => ({
+       from: jest.fn().mockReturnThis(),
+       select: jest.fn().mockReturnThis(),
+       eq: jest.fn().mockReturnThis(),
+       single: jest.fn().mockResolvedValue({
+         data: {
+           id: 1,
+           name: "Test Trip",
+           destination: "Paris",
+           start_date: "2025-06-01",
+           end_date: "2025-06-07",
+         },
+         error: null,
+       }),
+     }),
+   }));
+   ```
 
 3. **E2E Testing**: Using Playwright with a test database
 

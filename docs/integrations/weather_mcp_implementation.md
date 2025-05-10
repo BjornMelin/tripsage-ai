@@ -63,6 +63,7 @@ The Weather MCP Server provides weather data for travel destinations, supporting
 ### Primary: OpenWeatherMap API
 
 - **Key Endpoints**:
+
   - `/data/2.5/weather` - Current weather data
   - `/data/2.5/forecast` - 5-day forecast
   - `/data/2.5/onecall` - Current, forecast, and historical weather
@@ -75,6 +76,7 @@ The Weather MCP Server provides weather data for travel destinations, supporting
 ### Secondary: Weather.gov API (US locations)
 
 - **Key Endpoints**:
+
   - `/gridpoints/{office}/{grid X},{grid Y}/forecast` - Forecast data
   - `/alerts/active?area={state}` - Weather alerts
 
@@ -85,6 +87,7 @@ The Weather MCP Server provides weather data for travel destinations, supporting
 ### Tertiary: Visual Crossing Weather API
 
 - **Key Endpoints**:
+
   - `/VisualCrossingWebServices/rest/services/timeline/{location}/{date}` - Historical, current, and forecast weather
 
 - **Authentication**:
@@ -96,11 +99,13 @@ The Weather MCP Server provides weather data for travel destinations, supporting
 ### Agent Integration
 
 - **Travel Agent**:
+
   - Weather forecast integration for destination recommendations
   - Weather condition checks during trip planning
   - Extreme weather alerts during booking process
 
 - **Budget Agent**:
+
   - Weather-related expense estimation (e.g., rainy season might require different gear)
   - Seasonal price adjustment recommendations based on weather patterns
 
@@ -111,7 +116,7 @@ The Weather MCP Server provides weather data for travel destinations, supporting
 
 ## File Structure
 
-```
+```plaintext
 src/
   mcp/
     weather/
@@ -156,10 +161,26 @@ src/
 ```typescript
 // provider_interface.ts
 interface WeatherProvider {
-  getCurrentConditions(location: string, units: string): Promise<CurrentWeatherData>;
-  getForecast(location: string, startDate: string, endDate: string, units: string): Promise<ForecastData>;
-  getHistoricalData(location: string, date: string, units: string): Promise<HistoricalData>;
-  getAlerts(location: string, startDate: string, endDate: string): Promise<AlertData[]>;
+  getCurrentConditions(
+    location: string,
+    units: string
+  ): Promise<CurrentWeatherData>;
+  getForecast(
+    location: string,
+    startDate: string,
+    endDate: string,
+    units: string
+  ): Promise<ForecastData>;
+  getHistoricalData(
+    location: string,
+    date: string,
+    units: string
+  ): Promise<HistoricalData>;
+  getAlerts(
+    location: string,
+    startDate: string,
+    endDate: string
+  ): Promise<AlertData[]>;
 }
 
 interface CurrentWeatherData {
@@ -257,78 +278,114 @@ interface AlertData {
 
 ```typescript
 // open_weather_map.ts
-import axios from 'axios';
-import { WeatherProvider, CurrentWeatherData, ForecastData, HistoricalData, AlertData } from './provider_interface';
-import { logError, logInfo } from '../utils/logging';
-import { convertUnits } from '../services/unit_conversion';
+import axios from "axios";
+import {
+  WeatherProvider,
+  CurrentWeatherData,
+  ForecastData,
+  HistoricalData,
+  AlertData,
+} from "./provider_interface";
+import { logError, logInfo } from "../utils/logging";
+import { convertUnits } from "../services/unit_conversion";
 
 export class OpenWeatherMapProvider implements WeatherProvider {
   private apiKey: string;
   private baseUrl: string;
-  
+
   constructor(apiKey: string) {
     this.apiKey = apiKey;
-    this.baseUrl = 'https://api.openweathermap.org/data/2.5';
+    this.baseUrl = "https://api.openweathermap.org/data/2.5";
   }
-  
-  async getCurrentConditions(location: string, units: string): Promise<CurrentWeatherData> {
+
+  async getCurrentConditions(
+    location: string,
+    units: string
+  ): Promise<CurrentWeatherData> {
     try {
       // Convert location to coordinates if needed
       const coordinates = await this.getCoordinates(location);
-      
+
       // Call OpenWeatherMap API
       const response = await axios.get(`${this.baseUrl}/weather`, {
         params: {
           lat: coordinates.lat,
           lon: coordinates.lon,
           appid: this.apiKey,
-          units: units === 'imperial' ? 'imperial' : 'metric'
-        }
+          units: units === "imperial" ? "imperial" : "metric",
+        },
       });
-      
+
       // Transform API response to our standard format
       return this.transformCurrentWeather(response.data, location, units);
     } catch (error) {
-      logError(`Error fetching current conditions from OpenWeatherMap: ${error.message}`);
-      throw new Error(`Failed to get current weather conditions: ${error.message}`);
+      logError(
+        `Error fetching current conditions from OpenWeatherMap: ${error.message}`
+      );
+      throw new Error(
+        `Failed to get current weather conditions: ${error.message}`
+      );
     }
   }
-  
-  async getForecast(location: string, startDate: string, endDate: string, units: string): Promise<ForecastData> {
+
+  async getForecast(
+    location: string,
+    startDate: string,
+    endDate: string,
+    units: string
+  ): Promise<ForecastData> {
     try {
       // Convert location to coordinates if needed
       const coordinates = await this.getCoordinates(location);
-      
+
       // Call OpenWeatherMap One Call API for forecast
       const response = await axios.get(`${this.baseUrl}/onecall`, {
         params: {
           lat: coordinates.lat,
           lon: coordinates.lon,
-          exclude: 'current,minutely,hourly,alerts',
+          exclude: "current,minutely,hourly,alerts",
           appid: this.apiKey,
-          units: units === 'imperial' ? 'imperial' : 'metric'
-        }
+          units: units === "imperial" ? "imperial" : "metric",
+        },
       });
-      
+
       // Transform API response to our standard format
-      return this.transformForecast(response.data, location, startDate, endDate, units);
+      return this.transformForecast(
+        response.data,
+        location,
+        startDate,
+        endDate,
+        units
+      );
     } catch (error) {
       logError(`Error fetching forecast from OpenWeatherMap: ${error.message}`);
       throw new Error(`Failed to get weather forecast: ${error.message}`);
     }
   }
-  
+
   // Additional methods for historical data and alerts...
-  
-  private async getCoordinates(location: string): Promise<{lat: number, lon: number}> {
+
+  private async getCoordinates(
+    location: string
+  ): Promise<{ lat: number; lon: number }> {
     // Implementation using OpenWeatherMap Geocoding API
   }
-  
-  private transformCurrentWeather(data: any, locationName: string, units: string): CurrentWeatherData {
+
+  private transformCurrentWeather(
+    data: any,
+    locationName: string,
+    units: string
+  ): CurrentWeatherData {
     // Transform OpenWeatherMap response to standard format
   }
-  
-  private transformForecast(data: any, locationName: string, startDate: string, endDate: string, units: string): ForecastData {
+
+  private transformForecast(
+    data: any,
+    locationName: string,
+    startDate: string,
+    endDate: string,
+    units: string
+  ): ForecastData {
     // Transform OpenWeatherMap response to standard format
   }
 }
@@ -338,131 +395,154 @@ export class OpenWeatherMapProvider implements WeatherProvider {
 
 ```typescript
 // server.ts
-import express from 'express';
-import bodyParser from 'body-parser';
-import { WeatherProvider } from './providers/provider_interface';
-import { OpenWeatherMapProvider } from './providers/open_weather_map';
-import { WeatherGovProvider } from './providers/weather_gov';
-import { VisualCrossingProvider } from './providers/visual_crossing';
-import { RecommendationEngine } from './services/recommendation_engine';
-import { CacheService } from './storage/cache';
-import { logRequest, logError, logInfo } from './utils/logging';
-import { validateInput } from './utils/validation';
-import { formatResponse } from './utils/formatting';
-import { Config } from './config';
+import express from "express";
+import bodyParser from "body-parser";
+import { WeatherProvider } from "./providers/provider_interface";
+import { OpenWeatherMapProvider } from "./providers/open_weather_map";
+import { WeatherGovProvider } from "./providers/weather_gov";
+import { VisualCrossingProvider } from "./providers/visual_crossing";
+import { RecommendationEngine } from "./services/recommendation_engine";
+import { CacheService } from "./storage/cache";
+import { logRequest, logError, logInfo } from "./utils/logging";
+import { validateInput } from "./utils/validation";
+import { formatResponse } from "./utils/formatting";
+import { Config } from "./config";
 
 const app = express();
 app.use(bodyParser.json());
 
 // Initialize providers
-const openWeatherMap = new OpenWeatherMapProvider(Config.OPENWEATHERMAP_API_KEY);
+const openWeatherMap = new OpenWeatherMapProvider(
+  Config.OPENWEATHERMAP_API_KEY
+);
 const weatherGov = new WeatherGovProvider();
-const visualCrossing = new VisualCrossingProvider(Config.VISUALCROSSING_API_KEY);
+const visualCrossing = new VisualCrossingProvider(
+  Config.VISUALCROSSING_API_KEY
+);
 
 // Initialize services
 const cache = new CacheService();
 const recommendationEngine = new RecommendationEngine();
 
 // Handle MCP tool requests
-app.post('/api/mcp/weather/get_current_conditions', async (req, res) => {
+app.post("/api/mcp/weather/get_current_conditions", async (req, res) => {
   try {
-    logRequest('get_current_conditions', req.body);
-    
+    logRequest("get_current_conditions", req.body);
+
     // Validate input
-    const { location, units = 'metric' } = validateInput(req.body, ['location']);
-    
+    const { location, units = "metric" } = validateInput(req.body, [
+      "location",
+    ]);
+
     // Check cache
     const cacheKey = `current:${location}:${units}`;
     const cachedData = await cache.get(cacheKey);
     if (cachedData) {
       return res.json(cachedData);
     }
-    
+
     // Call provider
     const data = await openWeatherMap.getCurrentConditions(location, units);
-    
+
     // Cache result (expires in 30 minutes)
     await cache.set(cacheKey, data, 30 * 60);
-    
+
     // Return formatted response
     return res.json(formatResponse(data));
   } catch (error) {
     logError(`Error in get_current_conditions: ${error.message}`);
     return res.status(500).json({
       error: true,
-      message: error.message
+      message: error.message,
     });
   }
 });
 
-app.post('/api/mcp/weather/get_forecast', async (req, res) => {
+app.post("/api/mcp/weather/get_forecast", async (req, res) => {
   try {
-    logRequest('get_forecast', req.body);
-    
+    logRequest("get_forecast", req.body);
+
     // Validate input
-    const { location, start_date, end_date, units = 'metric' } = validateInput(
-      req.body, 
-      ['location', 'start_date', 'end_date']
-    );
-    
+    const {
+      location,
+      start_date,
+      end_date,
+      units = "metric",
+    } = validateInput(req.body, ["location", "start_date", "end_date"]);
+
     // Check cache
     const cacheKey = `forecast:${location}:${start_date}:${end_date}:${units}`;
     const cachedData = await cache.get(cacheKey);
     if (cachedData) {
       return res.json(cachedData);
     }
-    
+
     // Call provider
-    const data = await openWeatherMap.getForecast(location, start_date, end_date, units);
-    
+    const data = await openWeatherMap.getForecast(
+      location,
+      start_date,
+      end_date,
+      units
+    );
+
     // Cache result (expires in 2 hours)
     await cache.set(cacheKey, data, 2 * 60 * 60);
-    
+
     // Return formatted response
     return res.json(formatResponse(data));
   } catch (error) {
     logError(`Error in get_forecast: ${error.message}`);
     return res.status(500).json({
       error: true,
-      message: error.message
+      message: error.message,
     });
   }
 });
 
-app.post('/api/mcp/weather/get_travel_recommendation', async (req, res) => {
+app.post("/api/mcp/weather/get_travel_recommendation", async (req, res) => {
   try {
-    logRequest('get_travel_recommendation', req.body);
-    
+    logRequest("get_travel_recommendation", req.body);
+
     // Validate input
-    const { location, start_date, end_date, activities = [] } = validateInput(
-      req.body, 
-      ['location', 'start_date', 'end_date']
-    );
-    
+    const {
+      location,
+      start_date,
+      end_date,
+      activities = [],
+    } = validateInput(req.body, ["location", "start_date", "end_date"]);
+
     // Check cache
-    const activitiesKey = activities.sort().join(',');
+    const activitiesKey = activities.sort().join(",");
     const cacheKey = `recommendation:${location}:${start_date}:${end_date}:${activitiesKey}`;
     const cachedData = await cache.get(cacheKey);
     if (cachedData) {
       return res.json(cachedData);
     }
-    
+
     // Get forecast
-    const forecast = await openWeatherMap.getForecast(location, start_date, end_date, 'metric');
-    
+    const forecast = await openWeatherMap.getForecast(
+      location,
+      start_date,
+      end_date,
+      "metric"
+    );
+
     // Generate recommendations
-    const recommendations = await recommendationEngine.generateRecommendations(forecast, activities);
-    
+    const recommendations = await recommendationEngine.generateRecommendations(
+      forecast,
+      activities
+    );
+
     // Cache result (expires in 6 hours)
     await cache.set(cacheKey, recommendations, 6 * 60 * 60);
-    
+
     // Return formatted response
     return res.json(formatResponse(recommendations));
   } catch (error) {
     logError(`Error in get_travel_recommendation: ${error.message}`);
     return res.status(500).json({
       error: true,
-      message: error.message
+      message: error.message,
     });
   }
 });
@@ -680,29 +760,29 @@ The Weather MCP Server will be exposed to the TripSage agents through a client l
 
 class WeatherMCPClient:
     """Client for interacting with the Weather MCP Server"""
-    
+
     def __init__(self, server_url):
         self.server_url = server_url
-        
+
     async def get_current_conditions(self, location, units='metric'):
         """Get current weather conditions for a location"""
         try:
             # Implement MCP call to weather server
             result = await call_mcp_tool(
-                "mcp__weather__get_current_conditions", 
+                "mcp__weather__get_current_conditions",
                 {"location": location, "units": units}
             )
             return result
         except Exception as e:
             logger.error(f"Error getting current conditions: {str(e)}")
             raise
-    
+
     async def get_forecast(self, location, start_date, end_date, units='metric'):
         """Get weather forecast for a location and date range"""
         try:
             # Implement MCP call to weather server
             result = await call_mcp_tool(
-                "mcp__weather__get_forecast", 
+                "mcp__weather__get_forecast",
                 {
                     "location": location,
                     "start_date": start_date,
@@ -714,14 +794,14 @@ class WeatherMCPClient:
         except Exception as e:
             logger.error(f"Error getting forecast: {str(e)}")
             raise
-            
+
     async def get_travel_recommendation(self, location, start_date, end_date, activities=None):
         """Get weather-based travel recommendations"""
         try:
             activities = activities or []
             # Implement MCP call to weather server
             result = await call_mcp_tool(
-                "mcp__weather__get_travel_recommendation", 
+                "mcp__weather__get_travel_recommendation",
                 {
                     "location": location,
                     "start_date": start_date,
