@@ -1,27 +1,27 @@
 """
 Redis-based caching implementation for TripSage.
 
-This module provides a Redis-based caching system with TTL support, 
-serialization/deserialization of complex data structures, and 
+This module provides a Redis-based caching system with TTL support,
+serialization/deserialization of complex data structures, and
 convenience decorators for caching function results.
 """
 
-import json
 import hashlib
+import json
 from functools import wraps
 from typing import Any, Callable, Dict, Optional, TypeVar, cast
 
 import redis.asyncio as redis
 
-from ..utils.logging import get_module_logger
 from ..utils.config import get_config
+from ..utils.logging import get_module_logger
 
 logger = get_module_logger(__name__)
 config = get_config()
 
 # Type variables for function decorator
-T = TypeVar('T')
-FuncT = TypeVar('FuncT', bound=Callable[..., Any])
+T = TypeVar("T")
+FuncT = TypeVar("FuncT", bound=Callable[..., Any])
 
 
 class RedisCache:
@@ -29,7 +29,7 @@ class RedisCache:
 
     def __init__(self, url: Optional[str] = None):
         """Initialize the Redis cache.
-        
+
         Args:
             url: Redis connection URL, defaults to config value if not provided
         """
@@ -39,10 +39,10 @@ class RedisCache:
 
     async def get(self, key: str) -> Optional[Any]:
         """Get a value from the cache.
-        
+
         Args:
             key: Cache key
-            
+
         Returns:
             The cached value or None if not found
         """
@@ -55,19 +55,14 @@ class RedisCache:
             logger.warning("Error retrieving from cache: %s", str(e))
             return None
 
-    async def set(
-        self, 
-        key: str, 
-        value: Any, 
-        ttl: Optional[int] = None
-    ) -> bool:
+    async def set(self, key: str, value: Any, ttl: Optional[int] = None) -> bool:
         """Set a value in the cache.
-        
+
         Args:
             key: Cache key
             value: Value to cache (must be JSON serializable)
             ttl: Time-to-live in seconds
-            
+
         Returns:
             True if successful, False otherwise
         """
@@ -80,10 +75,10 @@ class RedisCache:
 
     async def delete(self, key: str) -> bool:
         """Delete a value from the cache.
-        
+
         Args:
             key: Cache key
-            
+
         Returns:
             True if deleted, False if not found or error
         """
@@ -95,10 +90,10 @@ class RedisCache:
 
     async def invalidate_pattern(self, pattern: str) -> int:
         """Invalidate all keys matching the pattern.
-        
+
         Args:
             pattern: Redis key pattern (e.g., "user:*")
-            
+
         Returns:
             Number of keys deleted
         """
@@ -113,12 +108,12 @@ class RedisCache:
 
     def cache_key(self, prefix: str, *args: Any, **kwargs: Any) -> str:
         """Generate a cache key from function arguments.
-        
+
         Args:
             prefix: Key prefix
             *args: Positional arguments
             **kwargs: Keyword arguments
-            
+
         Returns:
             Generated cache key
         """
@@ -126,36 +121,35 @@ class RedisCache:
         args_str = str(args) if args else ""
         kwargs_str = str(sorted(kwargs.items())) if kwargs else ""
         combined = f"{args_str}{kwargs_str}"
-        
+
         # Create a hash of the arguments
         hash_obj = hashlib.md5(combined.encode())
         args_hash = hash_obj.hexdigest()
-        
+
         return f"{prefix}:{args_hash}"
 
     def cached(
-        self, 
-        prefix: str, 
-        ttl: Optional[int] = None
+        self, prefix: str, ttl: Optional[int] = None
     ) -> Callable[[FuncT], FuncT]:
         """Decorator for caching function results.
-        
+
         Args:
             prefix: Key prefix
             ttl: Cache TTL in seconds
-            
+
         Returns:
             Decorator function
         """
+
         def decorator(func: FuncT) -> FuncT:
             @wraps(func)
             async def wrapper(*args: Any, **kwargs: Any) -> Any:
                 # Skip cache if explicitly requested
-                skip_cache = kwargs.pop('skip_cache', False)
-                
+                skip_cache = kwargs.pop("skip_cache", False)
+
                 # Generate cache key
                 key = self.cache_key(prefix, *args, **kwargs)
-                
+
                 if not skip_cache:
                     # Try to get from cache
                     cached_value = await self.get(key)
@@ -166,15 +160,15 @@ class RedisCache:
                 # Execute the function
                 logger.debug("Cache miss for %s", key)
                 result = await func(*args, **kwargs)
-                
+
                 # Store in cache if result is not None
                 if result is not None:
                     await self.set(key, result, ttl)
-                
+
                 return result
-            
+
             return cast(FuncT, wrapper)
-        
+
         return decorator
 
 
@@ -184,7 +178,7 @@ redis_cache = RedisCache()
 
 def get_cache() -> RedisCache:
     """Get the global cache instance.
-    
+
     Returns:
         The global RedisCache instance
     """
