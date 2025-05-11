@@ -5,23 +5,17 @@ This module provides the base class for all MCP servers in the TripSage system,
 with common functionality for tool registration, request handling, and error reporting.
 """
 
-import asyncio
 import inspect
-import json
 from typing import (
     Any,
-    Callable,
     Dict,
-    List,
     Optional,
     Protocol,
-    Type,
-    Union,
     runtime_checkable,
 )
 
-from fastapi import FastAPI, HTTPException, Request, Response
-from pydantic import BaseModel, ValidationError, create_model
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
 
 from ..utils.error_handling import MCPError, log_exception
 from ..utils.logging import get_module_logger

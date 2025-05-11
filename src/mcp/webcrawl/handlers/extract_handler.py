@@ -112,7 +112,7 @@ async def _extract_with_fallback(
     Raises:
         Exception: If all extraction attempts fail
     """
-    # Define source for fallback - if primary was Crawl4AI, use Playwright 
+    # Define source for fallback - if primary was Crawl4AI, use Playwright
     # and vice versa
     primary_was_crawl4ai = isinstance(_select_source(url), Crawl4AISource)
 

@@ -1,36 +1,32 @@
 """Request models for the Browser MCP server."""
 
 from enum import Enum
-from typing import Any, Dict, List, Optional, Union, Literal
+from typing import Any, List, Literal, Optional, Union
 
 from pydantic import (
-    BaseModel, 
-    Field, 
-    field_validator, 
-    model_validator, 
+    BaseModel,
     ConfigDict,
-    AfterValidator,
-    BeforeValidator
+    Field,
+    field_validator,
+    model_validator,
 )
 
 from src.mcp.browser.utils.validators import (
-    URLValidator,
-    DateValidator,
     AirlineValidator,
-    FlightNumberValidator,
-    BookingTypeValidator,
-    ProviderValidator,
     BookingReferenceValidator,
-    EmailValidator,
-    CssSelectorValidator,
     CheckFrequencyValidator,
+    CssSelectorValidator,
+    DateValidator,
+    FlightNumberValidator,
+    ProviderValidator,
     SessionIdValidator,
+    URLValidator,
 )
 
 
 class BookingType(str, Enum):
     """Booking type enum."""
-    
+
     FLIGHT = "flight"
     HOTEL = "hotel"
     CAR = "car"
@@ -47,30 +43,30 @@ class FlightStatusParams(BaseModel):
     session_id: Optional[str] = Field(
         None, description="Optional session ID for browser context reuse"
     )
-    
+
     model_config = ConfigDict(extra="forbid")
-    
+
     @field_validator("airline")
     @classmethod
     def validate_airline(cls, v: str) -> str:
         """Validate airline code."""
         AirlineValidator(airline_code=v)
         return v
-    
+
     @field_validator("flight_number")
     @classmethod
     def validate_flight_number(cls, v: str) -> str:
         """Validate flight number."""
         FlightNumberValidator(flight_number=v)
         return v
-    
+
     @field_validator("date")
     @classmethod
     def validate_date(cls, v: str) -> str:
         """Validate date string."""
         DateValidator(date_str=v)
         return v
-    
+
     @field_validator("session_id")
     @classmethod
     def validate_session_id(cls, v: Optional[str]) -> Optional[str]:
@@ -95,23 +91,23 @@ class CheckInParams(BaseModel):
     session_id: Optional[str] = Field(
         None, description="Optional session ID for browser context reuse"
     )
-    
+
     model_config = ConfigDict(extra="forbid")
-    
+
     @field_validator("airline")
     @classmethod
     def validate_airline(cls, v: str) -> str:
         """Validate airline code."""
         AirlineValidator(airline_code=v)
         return v
-    
+
     @field_validator("confirmation_code")
     @classmethod
     def validate_confirmation_code(cls, v: str) -> str:
         """Validate confirmation code."""
         BookingReferenceValidator(booking_reference=v)
         return v
-    
+
     @field_validator("flight_date")
     @classmethod
     def validate_flight_date(cls, v: Optional[str]) -> Optional[str]:
@@ -119,7 +115,7 @@ class CheckInParams(BaseModel):
         if v is not None:
             DateValidator(date_str=v)
         return v
-    
+
     @field_validator("session_id")
     @classmethod
     def validate_session_id(cls, v: Optional[str]) -> Optional[str]:
@@ -132,7 +128,9 @@ class CheckInParams(BaseModel):
 class BookingVerificationParams(BaseModel):
     """Parameters for booking verification."""
 
-    type: BookingType = Field(..., description="Booking type: 'flight', 'hotel', or 'car'")
+    type: BookingType = Field(
+        ..., description="Booking type: 'flight', 'hotel', or 'car'"
+    )
     provider: str = Field(
         ...,
         description="Provider code (e.g., 'AA' for American Airlines, 'hilton' for Hilton Hotels)",
@@ -145,22 +143,22 @@ class BookingVerificationParams(BaseModel):
     session_id: Optional[str] = Field(
         None, description="Optional session ID for browser context reuse"
     )
-    
+
     model_config = ConfigDict(extra="forbid")
-    
+
     @field_validator("confirmation_code")
     @classmethod
     def validate_confirmation_code(cls, v: str) -> str:
         """Validate confirmation code."""
         BookingReferenceValidator(booking_reference=v)
         return v
-    
+
     @model_validator(mode="after")
     def validate_provider_for_booking_type(self) -> "BookingVerificationParams":
         """Validate provider for booking type."""
         ProviderValidator(booking_type=self.type.value, provider=self.provider)
         return self
-    
+
     @field_validator("session_id")
     @classmethod
     def validate_session_id(cls, v: Optional[str]) -> Optional[str]:
@@ -185,30 +183,30 @@ class PriceMonitorParams(BaseModel):
     session_id: Optional[str] = Field(
         None, description="Optional session ID for browser context reuse"
     )
-    
+
     model_config = ConfigDict(extra="forbid")
-    
+
     @field_validator("url")
     @classmethod
     def validate_url(cls, v: str) -> str:
         """Validate URL."""
         URLValidator(url=v)
         return v
-    
+
     @field_validator("selector")
     @classmethod
     def validate_selector(cls, v: str) -> str:
         """Validate CSS selector."""
         CssSelectorValidator(selector=v)
         return v
-    
+
     @field_validator("check_frequency")
     @classmethod
     def validate_check_frequency(cls, v: str) -> str:
         """Validate check frequency."""
         CheckFrequencyValidator(frequency=v)
         return v
-    
+
     @field_validator("notification_threshold")
     @classmethod
     def validate_notification_threshold(cls, v: float) -> float:
@@ -216,7 +214,7 @@ class PriceMonitorParams(BaseModel):
         if v <= 0:
             raise ValueError("Notification threshold must be greater than 0")
         return v
-    
+
     @field_validator("session_id")
     @classmethod
     def validate_session_id(cls, v: Optional[str]) -> Optional[str]:
@@ -240,16 +238,16 @@ class NavigateParams(BaseModel):
     session_id: Optional[str] = Field(
         None, description="Optional session ID for browser context reuse"
     )
-    
+
     model_config = ConfigDict(extra="forbid")
-    
+
     @field_validator("url")
     @classmethod
     def validate_url(cls, v: str) -> str:
         """Validate URL."""
         URLValidator(url=v)
         return v
-    
+
     @field_validator("timeout")
     @classmethod
     def validate_timeout(cls, v: Optional[int]) -> Optional[int]:
@@ -257,7 +255,7 @@ class NavigateParams(BaseModel):
         if v is not None and v <= 0:
             raise ValueError("Timeout must be greater than 0")
         return v
-    
+
     @field_validator("session_id")
     @classmethod
     def validate_session_id(cls, v: Optional[str]) -> Optional[str]:
@@ -275,16 +273,16 @@ class ClickParams(BaseModel):
     session_id: Optional[str] = Field(
         None, description="Optional session ID for browser context reuse"
     )
-    
+
     model_config = ConfigDict(extra="forbid")
-    
+
     @field_validator("selector")
     @classmethod
     def validate_selector(cls, v: str) -> str:
         """Validate CSS selector."""
         CssSelectorValidator(selector=v)
         return v
-    
+
     @field_validator("timeout")
     @classmethod
     def validate_timeout(cls, v: Optional[int]) -> Optional[int]:
@@ -292,7 +290,7 @@ class ClickParams(BaseModel):
         if v is not None and v <= 0:
             raise ValueError("Timeout must be greater than 0")
         return v
-    
+
     @field_validator("session_id")
     @classmethod
     def validate_session_id(cls, v: Optional[str]) -> Optional[str]:
@@ -311,16 +309,16 @@ class FillParams(BaseModel):
     session_id: Optional[str] = Field(
         None, description="Optional session ID for browser context reuse"
     )
-    
+
     model_config = ConfigDict(extra="forbid")
-    
+
     @field_validator("selector")
     @classmethod
     def validate_selector(cls, v: str) -> str:
         """Validate CSS selector."""
         CssSelectorValidator(selector=v)
         return v
-    
+
     @field_validator("timeout")
     @classmethod
     def validate_timeout(cls, v: Optional[int]) -> Optional[int]:
@@ -328,7 +326,7 @@ class FillParams(BaseModel):
         if v is not None and v <= 0:
             raise ValueError("Timeout must be greater than 0")
         return v
-    
+
     @field_validator("session_id")
     @classmethod
     def validate_session_id(cls, v: Optional[str]) -> Optional[str]:
@@ -347,16 +345,16 @@ class SelectParams(BaseModel):
     session_id: Optional[str] = Field(
         None, description="Optional session ID for browser context reuse"
     )
-    
+
     model_config = ConfigDict(extra="forbid")
-    
+
     @field_validator("selector")
     @classmethod
     def validate_selector(cls, v: str) -> str:
         """Validate CSS selector."""
         CssSelectorValidator(selector=v)
         return v
-    
+
     @field_validator("timeout")
     @classmethod
     def validate_timeout(cls, v: Optional[int]) -> Optional[int]:
@@ -364,7 +362,7 @@ class SelectParams(BaseModel):
         if v is not None and v <= 0:
             raise ValueError("Timeout must be greater than 0")
         return v
-    
+
     @field_validator("session_id")
     @classmethod
     def validate_session_id(cls, v: Optional[str]) -> Optional[str]:
@@ -387,9 +385,9 @@ class ScreenshotParams(BaseModel):
     session_id: Optional[str] = Field(
         None, description="Optional session ID for browser context reuse"
     )
-    
+
     model_config = ConfigDict(extra="forbid")
-    
+
     @field_validator("selector")
     @classmethod
     def validate_selector(cls, v: Optional[str]) -> Optional[str]:
@@ -397,7 +395,7 @@ class ScreenshotParams(BaseModel):
         if v is not None:
             CssSelectorValidator(selector=v)
         return v
-    
+
     @field_validator("session_id")
     @classmethod
     def validate_session_id(cls, v: Optional[str]) -> Optional[str]:
@@ -417,9 +415,9 @@ class GetTextParams(BaseModel):
     session_id: Optional[str] = Field(
         None, description="Optional session ID for browser context reuse"
     )
-    
+
     model_config = ConfigDict(extra="forbid")
-    
+
     @field_validator("selector")
     @classmethod
     def validate_selector(cls, v: Optional[str]) -> Optional[str]:
@@ -427,7 +425,7 @@ class GetTextParams(BaseModel):
         if v is not None:
             CssSelectorValidator(selector=v)
         return v
-    
+
     @field_validator("session_id")
     @classmethod
     def validate_session_id(cls, v: Optional[str]) -> Optional[str]:
@@ -449,16 +447,16 @@ class WaitForSelectorParams(BaseModel):
     session_id: Optional[str] = Field(
         None, description="Optional session ID for browser context reuse"
     )
-    
+
     model_config = ConfigDict(extra="forbid")
-    
+
     @field_validator("selector")
     @classmethod
     def validate_selector(cls, v: str) -> str:
         """Validate CSS selector."""
         CssSelectorValidator(selector=v)
         return v
-    
+
     @field_validator("timeout")
     @classmethod
     def validate_timeout(cls, v: Optional[int]) -> Optional[int]:
@@ -466,7 +464,7 @@ class WaitForSelectorParams(BaseModel):
         if v is not None and v <= 0:
             raise ValueError("Timeout must be greater than 0")
         return v
-    
+
     @field_validator("session_id")
     @classmethod
     def validate_session_id(cls, v: Optional[str]) -> Optional[str]:
@@ -488,9 +486,9 @@ class PressParams(BaseModel):
     session_id: Optional[str] = Field(
         None, description="Optional session ID for browser context reuse"
     )
-    
+
     model_config = ConfigDict(extra="forbid")
-    
+
     @field_validator("selector")
     @classmethod
     def validate_selector(cls, v: Optional[str]) -> Optional[str]:
@@ -498,7 +496,7 @@ class PressParams(BaseModel):
         if v is not None:
             CssSelectorValidator(selector=v)
         return v
-    
+
     @field_validator("session_id")
     @classmethod
     def validate_session_id(cls, v: Optional[str]) -> Optional[str]:
@@ -516,9 +514,9 @@ class EvaluateJSParams(BaseModel):
     session_id: Optional[str] = Field(
         None, description="Optional session ID for browser context reuse"
     )
-    
+
     model_config = ConfigDict(extra="forbid")
-    
+
     @field_validator("session_id")
     @classmethod
     def validate_session_id(cls, v: Optional[str]) -> Optional[str]:
@@ -534,9 +532,9 @@ class GetConsoleLogsParams(BaseModel):
     session_id: Optional[str] = Field(
         None, description="Optional session ID for browser context reuse"
     )
-    
+
     model_config = ConfigDict(extra="forbid")
-    
+
     @field_validator("session_id")
     @classmethod
     def validate_session_id(cls, v: Optional[str]) -> Optional[str]:
@@ -552,9 +550,9 @@ class CloseContextParams(BaseModel):
     session_id: str = Field(
         ..., description="Session ID of the browser context to close"
     )
-    
+
     model_config = ConfigDict(extra="forbid")
-    
+
     @field_validator("session_id")
     @classmethod
     def validate_session_id(cls, v: str) -> str:

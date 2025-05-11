@@ -8,10 +8,6 @@ for places, calculating routes, and retrieving map information.
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Union
 
-from pydantic import BaseModel, Field
-
-from agents import function_tool
-
 from ...cache.redis_cache import redis_cache
 from ...utils.config import get_config
 from ...utils.error_handling import MCPError, log_exception

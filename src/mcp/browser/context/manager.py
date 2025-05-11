@@ -1,12 +1,11 @@
 """Browser context manager for TripSage Playwright integration."""
 
 import asyncio
-import logging
 import random
 import time
-from typing import Any, Dict, Optional
+from typing import Dict
 
-from playwright.async_api import Browser, BrowserContext, async_playwright
+from playwright.async_api import BrowserContext, async_playwright
 
 from src.mcp.browser.config import Config
 from src.utils.logging import get_logger

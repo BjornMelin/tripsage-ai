@@ -1,7 +1,7 @@
 """Configuration settings for the Browser MCP server."""
 
 import os
-from typing import Any, Dict, List, Optional
+from typing import List
 
 from dotenv import load_dotenv
 

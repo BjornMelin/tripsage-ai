@@ -2,17 +2,16 @@
 
 import re
 import urllib.parse
-from datetime import date, datetime
-from typing import Any, Dict, List, Optional, Union
+from datetime import datetime
 
 from pydantic import (
-    ValidationError, 
-    field_validator, 
-    model_validator,
-    validate_call, 
-    Field, 
     BaseModel,
-    ConfigDict
+    ConfigDict,
+    Field,
+    ValidationError,
+    field_validator,
+    model_validator,
+    validate_call,
 )
 
 from src.mcp.browser.config import Config
@@ -23,14 +22,14 @@ logger = get_logger(__name__)
 
 class URLValidator(BaseModel):
     """Model for validating URLs."""
-    
+
     url: str = Field(..., description="URL to validate")
-    
+
     model_config = ConfigDict(
         extra="forbid",
         frozen=True,
     )
-    
+
     @field_validator("url")
     @classmethod
     def validate_url_format(cls, v: str) -> str:
@@ -51,7 +50,7 @@ class URLValidator(BaseModel):
 
         if not url_pattern.match(v):
             raise ValueError(f"Invalid URL format: {v}")
-        
+
         # Parse URL
         parsed_url = urllib.parse.urlparse(v)
 
@@ -72,14 +71,14 @@ class URLValidator(BaseModel):
 
 class DateValidator(BaseModel):
     """Model for validating date strings."""
-    
+
     date_str: str = Field(..., description="Date string in YYYY-MM-DD format")
-    
+
     model_config = ConfigDict(
         extra="forbid",
         frozen=True,
     )
-    
+
     @field_validator("date_str")
     @classmethod
     def validate_date_format(cls, v: str) -> str:
@@ -104,14 +103,14 @@ class DateValidator(BaseModel):
 
 class AirlineValidator(BaseModel):
     """Model for validating airline codes."""
-    
+
     airline_code: str = Field(..., description="Airline code (e.g., 'AA', 'DL')")
-    
+
     model_config = ConfigDict(
         extra="forbid",
         frozen=True,
     )
-    
+
     @field_validator("airline_code")
     @classmethod
     def validate_airline_format(cls, v: str) -> str:
@@ -128,23 +127,21 @@ class AirlineValidator(BaseModel):
         # Check if airline is supported
         if v not in Config.AIRLINE_STATUS_URLS:
             # We'll allow unknown airlines but log a warning
-            logger.warning(
-                f"Unknown airline code: {v}. Using generic status URL"
-            )
+            logger.warning(f"Unknown airline code: {v}. Using generic status URL")
 
         return v
 
 
 class FlightNumberValidator(BaseModel):
     """Model for validating flight numbers."""
-    
+
     flight_number: str = Field(..., description="Flight number (without airline code)")
-    
+
     model_config = ConfigDict(
         extra="forbid",
         frozen=True,
     )
-    
+
     @field_validator("flight_number")
     @classmethod
     def validate_flight_number_format(cls, v: str) -> str:
@@ -163,14 +160,16 @@ class FlightNumberValidator(BaseModel):
 
 class BookingTypeValidator(BaseModel):
     """Model for validating booking types."""
-    
-    booking_type: str = Field(..., description="Booking type ('flight', 'hotel', or 'car')")
-    
+
+    booking_type: str = Field(
+        ..., description="Booking type ('flight', 'hotel', or 'car')"
+    )
+
     model_config = ConfigDict(
         extra="forbid",
         frozen=True,
     )
-    
+
     @field_validator("booking_type")
     @classmethod
     def validate_booking_type_format(cls, v: str) -> str:
@@ -189,21 +188,23 @@ class BookingTypeValidator(BaseModel):
 
 class ProviderValidator(BaseModel):
     """Model for validating booking providers."""
-    
-    booking_type: str = Field(..., description="Booking type ('flight', 'hotel', or 'car')")
+
+    booking_type: str = Field(
+        ..., description="Booking type ('flight', 'hotel', or 'car')"
+    )
     provider: str = Field(..., description="Provider code")
-    
+
     model_config = ConfigDict(
         extra="forbid",
         frozen=True,
     )
-    
+
     @model_validator(mode="after")
     def validate_provider_for_booking_type(self) -> "ProviderValidator":
         """Validate if a provider for a booking type is supported."""
         booking_type = self.booking_type
         provider = self.provider
-        
+
         if not provider or not isinstance(provider, str):
             raise ValueError("Provider code is required and must be a string")
 
@@ -220,14 +221,16 @@ class ProviderValidator(BaseModel):
 
 class BookingReferenceValidator(BaseModel):
     """Model for validating booking references."""
-    
-    booking_reference: str = Field(..., description="Booking reference/confirmation code")
-    
+
+    booking_reference: str = Field(
+        ..., description="Booking reference/confirmation code"
+    )
+
     model_config = ConfigDict(
         extra="forbid",
         frozen=True,
     )
-    
+
     @field_validator("booking_reference")
     @classmethod
     def validate_booking_reference_format(cls, v: str) -> str:
@@ -246,14 +249,14 @@ class BookingReferenceValidator(BaseModel):
 
 class EmailValidator(BaseModel):
     """Model for validating email addresses."""
-    
+
     email: str = Field(..., description="Email address")
-    
+
     model_config = ConfigDict(
         extra="forbid",
         frozen=True,
     )
-    
+
     @field_validator("email")
     @classmethod
     def validate_email_format(cls, v: str) -> str:
@@ -271,14 +274,14 @@ class EmailValidator(BaseModel):
 
 class CssSelectorValidator(BaseModel):
     """Model for validating CSS selectors."""
-    
+
     selector: str = Field(..., description="CSS selector")
-    
+
     model_config = ConfigDict(
         extra="forbid",
         frozen=True,
     )
-    
+
     @field_validator("selector")
     @classmethod
     def validate_selector_format(cls, v: str) -> str:
@@ -303,14 +306,16 @@ class CssSelectorValidator(BaseModel):
 
 class CheckFrequencyValidator(BaseModel):
     """Model for validating check frequencies."""
-    
-    frequency: str = Field(..., description="Check frequency ('hourly', 'daily', or 'weekly')")
-    
+
+    frequency: str = Field(
+        ..., description="Check frequency ('hourly', 'daily', or 'weekly')"
+    )
+
     model_config = ConfigDict(
         extra="forbid",
         frozen=True,
     )
-    
+
     @field_validator("frequency")
     @classmethod
     def validate_frequency_format(cls, v: str) -> str:
@@ -329,14 +334,14 @@ class CheckFrequencyValidator(BaseModel):
 
 class SessionIdValidator(BaseModel):
     """Model for validating session IDs."""
-    
+
     session_id: str = Field(..., description="Session ID")
-    
+
     model_config = ConfigDict(
         extra="forbid",
         frozen=True,
     )
-    
+
     @field_validator("session_id")
     @classmethod
     def validate_session_id_format(cls, v: str) -> str:
@@ -354,6 +359,7 @@ class SessionIdValidator(BaseModel):
 
 
 # Function-based validators with @validate_call decorator for backward compatibility
+
 
 @validate_call
 def validate_url(url: str) -> bool:

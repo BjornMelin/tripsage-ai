@@ -4,7 +4,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, List, Optional, Union
 
-from pydantic import BaseModel, Field, ConfigDict, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class BookingStatus(str, Enum):
@@ -49,9 +49,9 @@ class FlightInfo(BaseModel):
     gate_departure: Optional[str] = Field(None, description="Departure gate")
     terminal_arrival: Optional[str] = Field(None, description="Arrival terminal")
     gate_arrival: Optional[str] = Field(None, description="Arrival gate")
-    
+
     model_config = ConfigDict(extra="ignore")
-    
+
     @field_validator("delay_minutes")
     @classmethod
     def validate_delay_minutes(cls, v: Optional[int]) -> Optional[int]:
@@ -72,7 +72,7 @@ class BaseResponse(BaseModel):
     timestamp: datetime = Field(
         default_factory=datetime.utcnow, description="Timestamp of the operation"
     )
-    
+
     model_config = ConfigDict(extra="ignore")
 
 
@@ -89,7 +89,7 @@ class FlightStatusResponse(BaseResponse):
     raw_content: Optional[str] = Field(
         None, description="Raw text content from the page (truncated)"
     )
-    
+
     model_config = ConfigDict(extra="ignore")
 
 
@@ -105,7 +105,7 @@ class CheckInResponse(BaseResponse):
         None, description="Passenger name (if available)"
     )
     screenshot: Optional[str] = Field(None, description="Base64-encoded screenshot")
-    
+
     model_config = ConfigDict(extra="ignore")
 
 
@@ -128,7 +128,7 @@ class BookingDetails(BaseModel):
     additional_info: Dict[str, Any] = Field(
         default_factory=dict, description="Additional booking information"
     )
-    
+
     model_config = ConfigDict(extra="ignore")
 
 
@@ -144,7 +144,7 @@ class BookingVerificationResponse(BaseResponse):
         None, description="Detailed booking information (if available)"
     )
     screenshot: Optional[str] = Field(None, description="Base64-encoded screenshot")
-    
+
     model_config = ConfigDict(extra="ignore")
 
 
@@ -155,12 +155,11 @@ class PriceInfo(BaseModel):
     currency: str = Field(..., description="Currency code")
     extracted_text: str = Field(..., description="Extracted price text")
     timestamp: datetime = Field(
-        default_factory=datetime.utcnow, 
-        description="Timestamp of the price extraction"
+        default_factory=datetime.utcnow, description="Timestamp of the price extraction"
     )
-    
+
     model_config = ConfigDict(extra="ignore")
-    
+
     @field_validator("amount")
     @classmethod
     def validate_amount(cls, v: float) -> float:
@@ -168,7 +167,7 @@ class PriceInfo(BaseModel):
         if v < 0:
             raise ValueError("Price amount must be non-negative")
         return v
-    
+
     @field_validator("currency")
     @classmethod
     def validate_currency(cls, v: str) -> str:
@@ -195,7 +194,7 @@ class PriceMonitorResponse(BaseResponse):
         ..., description="Unique ID for this price monitoring session"
     )
     screenshot: Optional[str] = Field(None, description="Base64-encoded screenshot")
-    
+
     model_config = ConfigDict(extra="ignore")
 
 
@@ -205,7 +204,7 @@ class NavigateResponse(BaseResponse):
     url: str = Field(..., description="URL navigated to")
     title: Optional[str] = Field(None, description="Page title")
     session_id: str = Field(..., description="Session ID for the browser context")
-    
+
     model_config = ConfigDict(extra="ignore")
 
 
@@ -214,7 +213,7 @@ class ClickResponse(BaseResponse):
 
     selector: str = Field(..., description="CSS selector for the clicked element")
     session_id: str = Field(..., description="Session ID for the browser context")
-    
+
     model_config = ConfigDict(extra="ignore")
 
 
@@ -224,7 +223,7 @@ class FillResponse(BaseResponse):
     selector: str = Field(..., description="CSS selector for the filled element")
     value: str = Field(..., description="Value filled in the input field")
     session_id: str = Field(..., description="Session ID for the browser context")
-    
+
     model_config = ConfigDict(extra="ignore")
 
 
@@ -234,7 +233,7 @@ class SelectResponse(BaseResponse):
     selector: str = Field(..., description="CSS selector for the select element")
     value: Union[str, List[str]] = Field(..., description="Value or values selected")
     session_id: str = Field(..., description="Session ID for the browser context")
-    
+
     model_config = ConfigDict(extra="ignore")
 
 
@@ -243,7 +242,7 @@ class ScreenshotResponse(BaseResponse):
 
     screenshot: Optional[str] = Field(None, description="Base64-encoded screenshot")
     session_id: str = Field(..., description="Session ID for the browser context")
-    
+
     model_config = ConfigDict(extra="ignore")
 
 
@@ -253,7 +252,7 @@ class GetTextResponse(BaseResponse):
     text: Optional[str] = Field(None, description="Text content of the element")
     selector: str = Field(..., description="CSS selector for the element")
     session_id: str = Field(..., description="Session ID for the browser context")
-    
+
     model_config = ConfigDict(extra="ignore")
 
 
@@ -263,7 +262,7 @@ class WaitForSelectorResponse(BaseResponse):
     selector: str = Field(..., description="CSS selector that was waited for")
     state: str = Field(..., description="State that was waited for")
     session_id: str = Field(..., description="Session ID for the browser context")
-    
+
     model_config = ConfigDict(extra="ignore")
 
 
@@ -275,7 +274,7 @@ class PressResponse(BaseResponse):
         None, description="CSS selector for element that was focused"
     )
     session_id: str = Field(..., description="Session ID for the browser context")
-    
+
     model_config = ConfigDict(extra="ignore")
 
 
@@ -286,7 +285,7 @@ class EvaluateJSResponse(BaseResponse):
         None, description="Result of the JavaScript execution"
     )
     session_id: str = Field(..., description="Session ID for the browser context")
-    
+
     model_config = ConfigDict(extra="ignore")
 
 
@@ -299,7 +298,7 @@ class ConsoleLogEntry(BaseModel):
     timestamp: datetime = Field(
         default_factory=datetime.utcnow, description="Timestamp of the log entry"
     )
-    
+
     model_config = ConfigDict(extra="ignore")
 
 
@@ -310,7 +309,7 @@ class GetConsoleLogsResponse(BaseResponse):
         default_factory=list, description="Console log entries"
     )
     session_id: str = Field(..., description="Session ID for the browser context")
-    
+
     model_config = ConfigDict(extra="ignore")
 
 
@@ -318,5 +317,5 @@ class CloseContextResponse(BaseResponse):
     """Response model for closing a browser context."""
 
     session_id: str = Field(..., description="Session ID of the closed browser context")
-    
+
     model_config = ConfigDict(extra="ignore")
