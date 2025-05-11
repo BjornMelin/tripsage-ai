@@ -519,3 +519,53 @@ class FastMCPClient(BaseMCPClient):
         """
         schemas = await self.list_tools_with_schema()
         return [self.tool_for_claude(schema) for schema in schemas]
+
+    def list_tools_sync(self) -> List[Dict[str, str]]:
+        """Synchronous version of list_tools.
+
+        This method provides a simple way to get available tools during
+        initialization without making async HTTP requests.
+
+        Returns:
+            List of tool names and descriptions
+        """
+        # For now, return a small set of common tool names for this MCP type
+        # This will be replaced by actual tool discovery in a production implementation
+        tool_names = [
+            {"name": f"{self.server_name.lower()}_status", "description": f"Get {self.server_name} MCP status"},
+            {"name": f"{self.server_name.lower()}_version", "description": f"Get {self.server_name} MCP version"}
+        ]
+
+        logger.debug(
+            "Using simplified list_tools_sync implementation for %s MCP",
+            self.server_name
+        )
+        return tool_names
+
+    def get_tool_metadata_sync(self, tool_name: str) -> Dict[str, Any]:
+        """Synchronous version of get_tool_metadata.
+
+        This method provides basic metadata for a tool during initialization
+        without making async HTTP requests.
+
+        Args:
+            tool_name: Tool name
+
+        Returns:
+            Tool metadata
+        """
+        # For now, return generic metadata
+        # This will be replaced by actual metadata in a production implementation
+        return {
+            "name": tool_name,
+            "description": f"Call the {tool_name} tool from {self.server_name} MCP.",
+            "parameters_schema": {
+                "type": "object",
+                "properties": {},
+                "required": []
+            },
+            "return_schema": {
+                "type": "object",
+                "properties": {}
+            }
+        }

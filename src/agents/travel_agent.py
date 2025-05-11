@@ -144,10 +144,10 @@ class TravelAgent(BaseTravelAgent):
         self._register_tool(self.get_weather_forecast)
         self._register_tool(self.get_travel_recommendation)
 
-        # Flight tools will be registered once implemented
+        # Flight tools
         self._register_tool(self.search_flights)
 
-        # Accommodation tools will be registered once implemented
+        # Accommodation tools
         self._register_tool(self.search_accommodations)
 
         # Time management tools
@@ -161,8 +161,62 @@ class TravelAgent(BaseTravelAgent):
         self._register_tool(self.search_destination_info)
         self._register_tool(self.compare_travel_options)
 
+        # Knowledge graph tools
+        self._register_tool(self.store_travel_knowledge)
+        self._register_tool(self.retrieve_travel_knowledge)
+
         # Note: WebSearchTool is added separately in __init__
         # since it doesn't use the function_tool decorator pattern
+
+        # Register MCP clients when available
+        self._register_mcp_clients()
+
+    def _register_mcp_clients(self) -> None:
+        """Register all available MCP clients with the agent."""
+        # Weather MCP Client
+        try:
+            from ..mcp.weather import get_client as get_weather_client
+            weather_client = get_weather_client()
+            self._register_mcp_client_tools(weather_client, prefix="weather_")
+            logger.info("Registered Weather MCP client tools")
+        except Exception as e:
+            logger.warning("Failed to register Weather MCP client: %s", str(e))
+
+        # Time MCP Client
+        try:
+            from ..mcp.time import get_client as get_time_client
+            time_client = get_time_client()
+            self._register_mcp_client_tools(time_client, prefix="time_")
+            logger.info("Registered Time MCP client tools")
+        except Exception as e:
+            logger.warning("Failed to register Time MCP client: %s", str(e))
+
+        # Google Maps MCP Client
+        try:
+            from ..mcp.googlemaps import get_client as get_maps_client
+            maps_client = get_maps_client()
+            self._register_mcp_client_tools(maps_client, prefix="maps_")
+            logger.info("Registered Google Maps MCP client tools")
+        except Exception as e:
+            logger.warning("Failed to register Google Maps MCP client: %s", str(e))
+
+        # Accommodations MCP Client
+        try:
+            from ..mcp.accommodations import get_client as get_accommodations_client
+            accommodations_client = get_accommodations_client()
+            self._register_mcp_client_tools(accommodations_client, prefix="accommodations_")
+            logger.info("Registered Accommodations MCP client tools")
+        except Exception as e:
+            logger.warning("Failed to register Accommodations MCP client: %s", str(e))
+
+        # Memory MCP Client (for knowledge graph)
+        try:
+            from ..mcp.memory import get_client as get_memory_client
+            memory_client = get_memory_client()
+            self._register_mcp_client_tools(memory_client, prefix="memory_")
+            logger.info("Registered Memory MCP client tools")
+        except Exception as e:
+            logger.warning("Failed to register Memory MCP client: %s", str(e))
 
     @function_tool
     async def get_weather_forecast(self, params: Dict[str, Any]) -> Dict[str, Any]:
@@ -795,7 +849,185 @@ class TravelAgent(BaseTravelAgent):
             logger.error("Error comparing travel options: %s", str(e))
             return {"error": f"Comparison error: {str(e)}"}
 
+    @function_tool
+    async def store_travel_knowledge(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        """Store travel-related knowledge in the knowledge graph.
+
+        This tool stores entities, relationships, and observations in the
+        dual-storage architecture knowledge graph for future reference.
+
+        Args:
+            params: Parameters for storing knowledge
+                entity_type: Type of entity (Destination, Accommodation, Transportation, etc.)
+                entity_name: Name of the entity
+                observations: List of facts or observations about the entity
+                relations: List of relations to other entities (optional)
+
+        Returns:
+            Dictionary with storage confirmation and status
+        """
+        try:
+            from ..mcp.memory import get_client
+
+            # Extract parameters
+            entity_type = params.get("entity_type")
+            entity_name = params.get("entity_name")
+            observations = params.get("observations", [])
+            relations = params.get("relations", [])
+
+            if not entity_type or not entity_name:
+                return {"error": "Entity type and name are required"}
+
+            if not observations and not relations:
+                return {"error": "At least one observation or relation is required"}
+
+            # Get memory client
+            memory_client = get_client()
+
+            # Create entity if observations are provided
+            if observations:
+                await memory_client.create_entities([{
+                    "name": entity_name,
+                    "entityType": entity_type,
+                    "observations": observations
+                }])
+
+            # Create relations if provided
+            if relations:
+                formatted_relations = []
+                for relation in relations:
+                    if "from" in relation and "type" in relation and "to" in relation:
+                        formatted_relations.append({
+                            "from": relation["from"],
+                            "relationType": relation["type"],
+                            "to": relation["to"]
+                        })
+
+                if formatted_relations:
+                    await memory_client.create_relations(formatted_relations)
+
+            # Cache this knowledge to improve future interactions
+            cache_key = f"knowledge:{entity_type}:{entity_name}"
+            await redis_cache.set(cache_key, {
+                "entity_type": entity_type,
+                "entity_name": entity_name,
+                "observations": observations,
+                "relations": relations
+            }, ttl=86400)  # 24 hours
+
+            return {
+                "success": True,
+                "entity_type": entity_type,
+                "entity_name": entity_name,
+                "observations_stored": len(observations),
+                "relations_stored": len(relations) if relations else 0,
+                "message": f"Successfully stored knowledge about {entity_name}"
+            }
+
+        except Exception as e:
+            logger.error("Error storing travel knowledge: %s", str(e))
+            if isinstance(e, MCPError):
+                return {"error": e.message}
+            return {"error": f"Knowledge storage error: {str(e)}"}
+
+    @function_tool
+    async def retrieve_travel_knowledge(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        """Retrieve travel-related knowledge from the knowledge graph.
+
+        This tool queries the knowledge graph to find relevant travel information
+        based on entity name or search query.
+
+        Args:
+            params: Parameters for retrieving knowledge
+                entity_name: Name of the entity to retrieve (optional)
+                query: Search query to find relevant entities (optional)
+                entity_type: Type of entity to filter by (optional)
+
+        Returns:
+            Dictionary with retrieved knowledge
+        """
+        try:
+            from ..mcp.memory import get_client
+
+            # Extract parameters
+            entity_name = params.get("entity_name")
+            query = params.get("query")
+            entity_type = params.get("entity_type")
+
+            if not entity_name and not query:
+                return {"error": "Either entity_name or query parameter is required"}
+
+            # Get memory client
+            memory_client = get_client()
+
+            # Try to get from cache first
+            if entity_name:
+                cache_key = f"knowledge:{entity_type or '*'}:{entity_name}"
+                cached_result = await redis_cache.get(cache_key)
+                if cached_result:
+                    cached_result["cache_hit"] = True
+                    return cached_result
+
+            # Retrieve by entity name
+            if entity_name:
+                nodes = await memory_client.open_nodes([entity_name])
+
+                # Extract relevant data
+                if nodes and len(nodes) > 0:
+                    result = {
+                        "found": True,
+                        "entity_name": entity_name,
+                        "entity_type": nodes[0].get("type"),
+                        "observations": nodes[0].get("observations", []),
+                        "relations": []
+                    }
+
+                    # Get related nodes
+                    graph = await memory_client.read_graph()
+
+                    # Find relations where this entity is involved
+                    for relation in graph.get("relations", []):
+                        if relation.get("from") == entity_name or relation.get("to") == entity_name:
+                            result["relations"].append(relation)
+
+                    return result
+                else:
+                    return {
+                        "found": False,
+                        "entity_name": entity_name,
+                        "message": f"No knowledge found for {entity_name}"
+                    }
+
+            # Search by query
+            if query:
+                search_results = await memory_client.search_nodes(query)
+
+                # Filter by entity_type if provided
+                if entity_type and search_results:
+                    search_results = [
+                        node for node in search_results
+                        if node.get("type") == entity_type
+                    ]
+
+                return {
+                    "found": len(search_results) > 0,
+                    "query": query,
+                    "entity_type": entity_type,
+                    "results_count": len(search_results),
+                    "results": search_results
+                }
+
+            return {"error": "Invalid parameters for knowledge retrieval"}
+
+        except Exception as e:
+            logger.error("Error retrieving travel knowledge: %s", str(e))
+            if isinstance(e, MCPError):
+                return {"error": e.message}
+            return {"error": f"Knowledge retrieval error: {str(e)}"}
+
 
 def create_agent() -> TravelAgent:
     """Create and return a TravelAgent instance."""
-    return TravelAgent()
+    agent = TravelAgent()
+    logger.info("Created TripSage Travel Agent instance")
+    return agent
