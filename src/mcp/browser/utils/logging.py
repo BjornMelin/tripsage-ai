@@ -86,7 +86,8 @@ def log_error(
     if params:
         sanitized_params = _sanitize_params(params)
         logger.error(
-            f"MCP Tool Error: {function_name} - {error_message} - Params: {json.dumps(sanitized_params)}"
+            f"MCP Tool Error: {function_name} - {error_message} - "
+            f"Params: {json.dumps(sanitized_params)}"
         )
     else:
         logger.error(f"MCP Tool Error: {function_name} - {error_message}")

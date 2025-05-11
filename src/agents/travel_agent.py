@@ -12,11 +12,11 @@ from pydantic import BaseModel
 
 from agents import WebSearchTool, function_tool
 from agents.extensions.allowed_domains import AllowedDomains
+from src.cache.redis_cache import redis_cache
+from src.utils.config import get_config
+from src.utils.error_handling import MCPError
+from src.utils.logging import get_module_logger
 
-from ..cache.redis_cache import redis_cache
-from ..utils.config import get_config
-from ..utils.error_handling import MCPError
-from ..utils.logging import get_module_logger
 from .base_agent import TravelAgent as BaseTravelAgent
 
 logger = get_module_logger(__name__)
@@ -133,7 +133,8 @@ class TravelAgent(BaseTravelAgent):
         )
         self.agent.tools.append(self.web_search_tool)
         logger.info(
-            "Added WebSearchTool to TravelAgent with travel-specific domain configuration"
+            "Added WebSearchTool to TravelAgent with travel-specific domain "
+            "configuration"
         )
 
     def _register_travel_tools(self) -> None:
@@ -263,7 +264,8 @@ class TravelAgent(BaseTravelAgent):
         """Search for available flights.
 
         Args:
-            params: Flight search parameters including origin, destination, dates, and preferences
+            params: Flight search parameters including origin,
+                destination, dates, and preferences
 
         Returns:
             Flight search results
@@ -328,7 +330,10 @@ class TravelAgent(BaseTravelAgent):
                 "flights": mock_flights,
                 "search_criteria": params,
                 "results_count": len(mock_flights),
-                "note": "This is mock data. Flight search functionality will be implemented with a real API.",
+                "note": (
+                    "This is mock data. Flight search functionality "
+                    "will be implemented with a real API."
+                ),
             }
 
         except Exception as e:
@@ -340,7 +345,8 @@ class TravelAgent(BaseTravelAgent):
         """Search for accommodations.
 
         Args:
-            params: Accommodation search parameters including location, dates, and preferences
+            params: Accommodation search parameters including
+                location, dates, and preferences
 
         Returns:
             Accommodation search results
@@ -431,7 +437,10 @@ class TravelAgent(BaseTravelAgent):
                 "accommodations": mock_accommodations,
                 "search_criteria": params,
                 "results_count": len(mock_accommodations),
-                "note": "This is mock data. Accommodation search functionality will be implemented with a real API.",
+                "note": (
+                    "This is mock data. Accommodation search functionality "
+                    "will be implemented with a real API."
+                ),
             }
 
         except Exception as e:
@@ -457,10 +466,14 @@ class TravelAgent(BaseTravelAgent):
             "source": {"timezone": source_timezone, "time": time_str},
             "target": {
                 "timezone": target_timezone,
-                "time": time_str,  # This would be converted with the actual implementation
+                # This would be converted with the actual implementation
+                "time": time_str,
             },
             "status": "not_implemented",
-            "note": "Timezone conversion functionality will be implemented with the Time MCP.",
+            "note": (
+                "Timezone conversion functionality will be "
+                "implemented with the Time MCP."
+            ),
         }
 
     @function_tool
@@ -468,7 +481,8 @@ class TravelAgent(BaseTravelAgent):
         """Create a new trip in the system.
 
         Args:
-            params: Trip parameters including user_id, title, destination, dates, and budget
+            params: Trip parameters including user_id, title,
+                destination, dates, and budget
 
         Returns:
             Created trip information
@@ -491,7 +505,10 @@ class TravelAgent(BaseTravelAgent):
                     "end_date": params.get("end_date"),
                     "budget": params.get("budget"),
                 },
-                "note": "This is a mock trip creation. Database integration will be implemented.",
+                "note": (
+                    "This is a mock trip creation. "
+                    "Database integration will be implemented."
+                ),
             }
 
         except Exception as e:
@@ -503,7 +520,8 @@ class TravelAgent(BaseTravelAgent):
         """Search for activities and attractions at a destination.
 
         Args:
-            params: Activity search parameters including location, category, and preferences
+            params: Activity search parameters including
+                location, category, and preferences
 
         Returns:
             Activity search results
@@ -524,7 +542,10 @@ class TravelAgent(BaseTravelAgent):
                     "price_per_person": 45.00,
                     "duration": "3 hours",
                     "rating": 4.6,
-                    "description": "Explore the city's main attractions with a knowledgeable guide.",
+                    "description": (
+                        "Explore the city's main attractions with a knowledgeable "
+                        "guide."
+                    ),
                     "available_slots": 10,
                     "images": ["https://example.com/activity1.jpg"],
                 },
@@ -536,7 +557,7 @@ class TravelAgent(BaseTravelAgent):
                     "price_per_person": 25.00,
                     "duration": "2 hours",
                     "rating": 4.3,
-                    "description": "Visit the city's renowned art museum.",
+                    "description": ("Visit the city's renowned art museum."),
                     "available_slots": 20,
                     "images": ["https://example.com/activity2.jpg"],
                 },
@@ -548,7 +569,9 @@ class TravelAgent(BaseTravelAgent):
                     "price_per_person": 65.00,
                     "duration": "4 hours",
                     "rating": 4.8,
-                    "description": "Sample local cuisine at various restaurants and food markets.",
+                    "description": (
+                        "Sample local cuisine at various restaurants and food markets."
+                    ),
                     "available_slots": 8,
                     "images": ["https://example.com/activity3.jpg"],
                 },
@@ -560,7 +583,9 @@ class TravelAgent(BaseTravelAgent):
                     "price_per_person": 35.00,
                     "duration": "half-day",
                     "rating": 4.2,
-                    "description": "Explore scenic trails around the city with a guide.",
+                    "description": (
+                        "Explore scenic trails around the city with a guide."
+                    ),
                     "available_slots": 12,
                     "images": ["https://example.com/activity4.jpg"],
                 },
@@ -588,7 +613,10 @@ class TravelAgent(BaseTravelAgent):
                 "activities": mock_activities,
                 "search_criteria": params,
                 "results_count": len(mock_activities),
-                "note": "This is mock data. Activity search functionality will be implemented with a real API.",
+                "note": (
+                    "This is mock data. Activity search functionality "
+                    "will be implemented with a real API."
+                ),
             }
 
         except Exception as e:
@@ -605,7 +633,8 @@ class TravelAgent(BaseTravelAgent):
         Args:
             params: Parameters including destination name and info types to search for
                 destination: Name of the destination (city, country, attraction)
-                info_types: List of info types (e.g., "attractions", "safety", "transportation", "best_time")
+                info_types: List of info types (e.g., "attractions", "safety",
+                    "transportation", "best_time")
 
         Returns:
             Dictionary containing structured information about the destination
@@ -639,7 +668,10 @@ class TravelAgent(BaseTravelAgent):
                     search_results[info_type] = {
                         "query": query,
                         "cache": "miss",
-                        "note": "Data will be provided by WebSearchTool and processed by the agent",
+                        "note": (
+                            "Data will be provided by WebSearchTool and "
+                            "processed by the agent"
+                        ),
                     }
 
             return {
@@ -682,7 +714,8 @@ class TravelAgent(BaseTravelAgent):
 
     @function_tool
     async def compare_travel_options(self, params: Dict[str, Any]) -> Dict[str, Any]:
-        """Compare travel options for a specific category using WebSearchTool and specialized APIs.
+        """Compare travel options for a specific category using WebSearchTool
+        and specialized APIs.
 
         Args:
             params: Parameters for the comparison
@@ -718,7 +751,10 @@ class TravelAgent(BaseTravelAgent):
                     "origin": origin,
                     "destination": destination,
                     "search_strategy": "hybrid",
-                    "note": "The agent will use WebSearchTool for general information and Flights MCP for specific data",
+                    "note": (
+                        "The agent will use WebSearchTool for general information "
+                        "and Flights MCP for specific data"
+                    ),
                 }
 
             elif category == "accommodations":
@@ -727,7 +763,10 @@ class TravelAgent(BaseTravelAgent):
                     "category": "accommodations",
                     "destination": destination,
                     "search_strategy": "hybrid",
-                    "note": "The agent will use WebSearchTool for reviews and Accommodations MCP for availability",
+                    "note": (
+                        "The agent will use WebSearchTool for reviews "
+                        "and Accommodations MCP for availability"
+                    ),
                 }
 
             elif category == "activities":
@@ -736,7 +775,10 @@ class TravelAgent(BaseTravelAgent):
                     "category": "activities",
                     "destination": destination,
                     "search_strategy": "hybrid",
-                    "note": "The agent will use WebSearchTool and Web Crawling MCP to find activities",
+                    "note": (
+                        "The agent will use WebSearchTool and Web Crawling MCP "
+                        "to find activities"
+                    ),
                 }
 
             else:
@@ -744,7 +786,9 @@ class TravelAgent(BaseTravelAgent):
                     "category": category,
                     "destination": destination,
                     "search_strategy": "web_search",
-                    "note": "The agent will use WebSearchTool to find general information",
+                    "note": (
+                        "The agent will use WebSearchTool to find general information"
+                    ),
                 }
 
         except Exception as e:

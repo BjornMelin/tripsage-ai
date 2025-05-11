@@ -63,7 +63,8 @@ class MCPServerManager:
                 [
                     "node",
                     "-e",
-                    f"const config = require('{self.config_path}'); console.log(JSON.stringify(config))",
+                    f"const config = require('{self.config_path}'); "
+                    f"console.log(JSON.stringify(config));",
                 ],
                 capture_output=True,
                 text=True,
@@ -72,7 +73,9 @@ class MCPServerManager:
             config = json.loads(process.stdout)
         except (subprocess.SubprocessError, json.JSONDecodeError) as e:
             logger.error("Failed to load MCP server configuration: %s", str(e))
-            raise ValueError(f"Failed to load MCP server configuration: {str(e)}")
+            raise ValueError(
+                f"Failed to load MCP server configuration: {str(e)}"
+            ) from e
 
         # Check if the server exists in the configuration
         if server_name not in config.get("mcpServers", {}):
@@ -230,21 +233,24 @@ if __name__ == "__main__":
             print(
                 f"Airbnb MCP tools: {', '.join(tool['name'] for tool in airbnb_tools)}"
             )
-            print(
-                f"Google Maps MCP tools: {', '.join(tool['name'] for tool in googlemaps_tools)}"
-            )
+
+            # List tool names
+            googlemaps_tool_names = ', '.join(tool['name'] for tool in googlemaps_tools)
+            print(f"Google Maps MCP tools: {googlemaps_tool_names}")
 
             # Create an agent with both servers
             agent = Agent(
                 name="TripSage Agent",
-                instructions="You are a travel planning assistant that helps users find accommodations and navigate to destinations.",
+                instructions="You are a travel planning assistant that helps "
+                "users find accommodations and navigate to destinations.",
                 mcp_servers=[airbnb_server, googlemaps_server],
             )
 
             # Run the agent
             result = await Runner.run(
                 agent,
-                "Find me a place to stay in Paris and how to get there from the airport.",
+                "Find me a place to stay in Paris and how to get there from the "
+                "airport.",
             )
             print(result.final_output)
 

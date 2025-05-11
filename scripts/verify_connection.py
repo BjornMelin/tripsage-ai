@@ -48,7 +48,7 @@ async def verify_connection() -> None:
         supabase = get_supabase_client()
 
         # Test a simple query to verify connection
-        response = supabase.table("trips").select("id").limit(1).execute()
+        _response = supabase.table("trips").select("id").limit(1).execute()
 
         print("✅ Successfully connected to Supabase!")
 
@@ -75,7 +75,7 @@ async def verify_connection() -> None:
             # Alternative method to check tables individually
             for table in REQUIRED_TABLES:
                 try:
-                    test_response = (
+                    _test_response = (
                         supabase.table(table).select("id").limit(1).execute()
                     )
                     print(f"✅ Table '{table}' exists")

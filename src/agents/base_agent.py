@@ -12,11 +12,10 @@ from pydantic import BaseModel
 
 from agents import Agent, RunContextWrapper, function_tool, handoff
 from agents.extensions.handoff_prompt import RECOMMENDED_PROMPT_PREFIX
-
-from ..mcp.base_mcp_client import BaseMCPClient
-from ..utils.config import get_config
-from ..utils.error_handling import MCPError, TripSageError, log_exception
-from ..utils.logging import get_module_logger
+from src.mcp.base_mcp_client import BaseMCPClient
+from src.utils.config import get_config
+from src.utils.error_handling import MCPError, TripSageError, log_exception
+from src.utils.logging import get_module_logger
 
 logger = get_module_logger(__name__)
 config = get_config()

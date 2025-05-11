@@ -133,7 +133,8 @@ class BookingVerificationParams(BaseModel):
     )
     provider: str = Field(
         ...,
-        description="Provider code (e.g., 'AA' for American Airlines, 'hilton' for Hilton Hotels)",
+        description="Provider code (e.g., 'AA' for American Airlines, "
+        "'hilton' for Hilton Hotels)",
     )
     confirmation_code: str = Field(..., description="Booking confirmation code")
     last_name: str = Field(..., description="Passenger/guest's last name")
@@ -175,7 +176,8 @@ class PriceMonitorParams(BaseModel):
     selector: str = Field(..., description="CSS selector for the price element")
     check_frequency: str = Field(
         "daily",
-        description="How often to check for price changes ('hourly', 'daily', 'weekly')",
+        description="How often to check for price changes "
+        "('hourly', 'daily', 'weekly')",
     )
     notification_threshold: float = Field(
         5.0, description="Percentage change to trigger a notification"
@@ -230,7 +232,8 @@ class NavigateParams(BaseModel):
     url: str = Field(..., description="URL to navigate to")
     wait_until: Optional[Literal["load", "domcontentloaded", "networkidle"]] = Field(
         "load",
-        description="When to consider navigation finished ('load', 'domcontentloaded', 'networkidle')",
+        description="When to consider navigation finished "
+        "('load', 'domcontentloaded', 'networkidle')",
     )
     timeout: Optional[int] = Field(
         None, description="Navigation timeout in milliseconds"
@@ -377,7 +380,8 @@ class ScreenshotParams(BaseModel):
 
     selector: Optional[str] = Field(
         None,
-        description="CSS selector for the element to screenshot (full page if not provided)",
+        description="CSS selector for the element to screenshot "
+        "(full page if not provided)",
     )
     full_page: Optional[bool] = Field(
         False, description="Whether to take a screenshot of the full page"
