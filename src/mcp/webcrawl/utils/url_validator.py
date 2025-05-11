@@ -1,7 +1,6 @@
 """URL validation and normalization utilities for WebCrawl MCP."""
 
 import re
-from typing import Optional
 from urllib.parse import ParseResult, urlparse, urlunparse
 
 from src.utils.logging import get_logger
@@ -12,7 +11,7 @@ logger = get_logger(__name__)
 # Regular expression for validating URLs
 URL_REGEX = re.compile(
     r"^(?:http|https)://"  # http:// or https://
-    r"(?:(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+(?:[A-Z]{2,6}\.?|[A-Z0-9-]{2,}\.?)|"  # domain
+    r"(?:(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+(?:[A-Z]{2,6}\.?|[A-Z0-9-]{2,}\.?)|"
     r"localhost|"  # localhost
     r"\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})"  # or IP
     r"(?::\d+)?"  # optional port
@@ -68,7 +67,7 @@ def validate_url(url: str) -> bool:
 
     except Exception as e:
         logger.error(f"URL validation error: {str(e)}")
-        raise ValueError(f"Invalid URL: {url}")
+        raise ValueError(f"Invalid URL: {url}") from e
 
     return True
 

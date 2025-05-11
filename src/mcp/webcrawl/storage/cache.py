@@ -1,9 +1,8 @@
 """Cache implementation for WebCrawl MCP."""
 
-import asyncio
 import json
 import time
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, Optional
 
 from src.mcp.webcrawl.config import Config
 from src.utils.logging import get_logger

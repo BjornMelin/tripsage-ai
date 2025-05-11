@@ -1,7 +1,7 @@
 """Interface for web crawling sources."""
 
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional, TypedDict, Union
+from typing import Any, Dict, List, Optional, TypedDict
 
 
 class ExtractionOptions(TypedDict, total=False):

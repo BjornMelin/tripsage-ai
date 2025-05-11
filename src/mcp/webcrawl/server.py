@@ -1,8 +1,6 @@
 """WebCrawl MCP server implementation."""
 
-import asyncio
-import logging
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Dict
 
 from src.mcp.base_mcp_server import BaseMCPServer
 from src.mcp.webcrawl.config import Config
@@ -56,12 +54,17 @@ class WebCrawlMCPServer(BaseMCPServer):
                 "selectors": {
                     "type": "array",
                     "items": {"type": "string"},
-                    "description": "Optional CSS selectors to target specific content (e.g., 'div.main-content')",
+                    "description": (
+                        "Optional CSS selectors to target specific content "
+                        "(e.g., 'div.main-content')"
+                    ),
                 },
                 "include_images": {
                     "type": "boolean",
                     "default": False,
-                    "description": "Whether to include image URLs in the extracted content",
+                    "description": (
+                        "Whether to include image URLs in the extracted content"
+                    ),
                 },
                 "format": {
                     "type": "string",
@@ -71,7 +74,10 @@ class WebCrawlMCPServer(BaseMCPServer):
                 },
             },
             required=["url"],
-            description="Extract specific content from a single webpage using optional CSS selectors.",
+            description=(
+                "Extract specific content from a single webpage using "
+                "optional CSS selectors."
+            ),
         )
 
         # Search destination info tool
@@ -86,7 +92,10 @@ class WebCrawlMCPServer(BaseMCPServer):
                 "topics": {
                     "type": "array",
                     "items": {"type": "string"},
-                    "description": "Specific topics to search for (e.g., ['attractions', 'local cuisine', 'transportation'])",
+                    "description": (
+                        "Specific topics to search for (e.g., "
+                        "['attractions', 'local cuisine', 'transportation'])"
+                    ),
                 },
                 "max_results": {
                     "type": "integer",
@@ -124,7 +133,9 @@ class WebCrawlMCPServer(BaseMCPServer):
                 },
             },
             required=["url", "price_selector"],
-            description="Set up monitoring for price changes on a specific travel webpage.",
+            description=(
+                "Set up monitoring for price changes on a specific travel webpage."
+            ),
         )
 
         # Get latest events tool
@@ -147,11 +158,15 @@ class WebCrawlMCPServer(BaseMCPServer):
                 "categories": {
                     "type": "array",
                     "items": {"type": "string"},
-                    "description": "Event categories (e.g., ['music', 'festivals', 'sports'])",
+                    "description": (
+                        "Event categories (e.g., ['music', 'festivals', 'sports'])"
+                    ),
                 },
             },
             required=["destination", "start_date", "end_date"],
-            description="Find upcoming events at a destination during a specific time period.",
+            description=(
+                "Find upcoming events at a destination during a specific time period."
+            ),
         )
 
         # Crawl travel blog tool
@@ -166,7 +181,10 @@ class WebCrawlMCPServer(BaseMCPServer):
                 "topics": {
                     "type": "array",
                     "items": {"type": "string"},
-                    "description": "Specific topics to extract (e.g., ['hidden gems', 'local tips', 'safety'])",
+                    "description": (
+                        "Specific topics to extract (e.g., "
+                        "['hidden gems', 'local tips', 'safety'])"
+                    ),
                 },
                 "max_blogs": {
                     "type": "integer",
@@ -180,7 +198,9 @@ class WebCrawlMCPServer(BaseMCPServer):
                 },
             },
             required=["destination"],
-            description="Extract travel insights and recommendations from travel blogs.",
+            description=(
+                "Extract travel insights and recommendations from travel blogs."
+            ),
         )
 
     async def _extract_page_content_handler(
@@ -253,7 +273,7 @@ class WebCrawlMCPServer(BaseMCPServer):
                 self.rate_limiter.report_success(domain)
 
                 return format_response(result)
-            except Exception as e:
+            except Exception:
                 # Report failed request for adaptive rate limiting
                 self.rate_limiter.report_failure(domain)
                 raise
@@ -280,7 +300,6 @@ class WebCrawlMCPServer(BaseMCPServer):
             max_results = params.get("max_results", 5)
 
             # Generate cache key
-            import hashlib
 
             topics_str = ",".join(sorted(topics)) if topics else "default"
             cache_key = f"search:{destination}:{topics_str}:{max_results}"
@@ -377,7 +396,7 @@ class WebCrawlMCPServer(BaseMCPServer):
                 self.rate_limiter.report_success(domain)
 
                 return format_response(result)
-            except Exception as e:
+            except Exception:
                 # Report failed request for adaptive rate limiting
                 self.rate_limiter.report_failure(domain)
                 raise
@@ -405,7 +424,6 @@ class WebCrawlMCPServer(BaseMCPServer):
             categories = params.get("categories")
 
             # Generate cache key
-            import hashlib
 
             categories_str = ",".join(sorted(categories)) if categories else "all"
             cache_key = f"events:{destination}:{start_date}:{end_date}:{categories_str}"
@@ -467,7 +485,6 @@ class WebCrawlMCPServer(BaseMCPServer):
             recent_only = params.get("recent_only", True)
 
             # Generate cache key
-            import hashlib
 
             topics_str = ",".join(sorted(topics)) if topics else "default"
             cache_key = f"blog:{destination}:{topics_str}:{max_blogs}:{recent_only}"

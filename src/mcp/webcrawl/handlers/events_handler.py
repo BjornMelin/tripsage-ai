@@ -1,7 +1,6 @@
 """Handler for the get_latest_events MCP tool."""
 
 import datetime
-import logging
 from typing import Any, Dict, List, Optional
 
 from src.mcp.webcrawl.config import Config
@@ -59,7 +58,7 @@ async def get_latest_events(
         if end > one_year_from_now:
             raise ValueError("End date cannot be more than 1 year in the future")
     except ValueError as e:
-        raise ValueError(f"Invalid date format: {str(e)}")
+        raise ValueError(f"Invalid date format: {str(e)}") from e
 
     # Select appropriate source based on destination
     source = _select_source(destination)
