@@ -36,7 +36,7 @@ class TestAirbnbClientFactory:
         mock_config.redis.ttl_medium = 3600
 
         # Create client
-        client = create_airbnb_client()
+        _client = create_airbnb_client()
 
         # Verify logging
         mock_logger.debug.assert_called_once_with(

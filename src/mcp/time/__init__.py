@@ -1,12 +1,8 @@
 """
-Time MCP module for TripSage.
+Time API for the TripSage travel planning system.
 
-This module provides timezone conversion and time management capabilities for the
-TripSage travel planning system.
+This module provides tools for handling time and timezone operations.
 """
-
-import datetime
-from typing import Any, Dict, List, Optional
 
 from ...utils.logging import get_module_logger
 from .client import TimeMCPClient, TimeService, get_client, get_service
@@ -23,7 +19,11 @@ GET_CURRENT_TIME_SCHEMA = {
         "properties": {
             "timezone": {
                 "type": "string",
-                "description": "IANA timezone name (e.g., 'America/New_York', 'Europe/London'). Use 'UTC' as local timezone if no timezone provided by the user.",
+                "description": (
+                    "IANA timezone name (e.g., 'America/New_York', "
+                    "'Europe/London'). Use 'UTC' as local timezone if no "
+                    "timezone provided by the user."
+                ),
             }
         },
         "required": ["timezone"],
@@ -42,11 +42,19 @@ CONVERT_TIME_SCHEMA = {
             },
             "source_timezone": {
                 "type": "string",
-                "description": "Source IANA timezone name (e.g., 'America/New_York', 'Europe/London'). Use 'UTC' as local timezone if no source timezone provided by the user.",
+                "description": (
+                    "Source IANA timezone name (e.g., 'America/New_York', "
+                    "'Europe/London'). Use 'UTC' as local timezone if no source "
+                    "timezone provided by the user."
+                ),
             },
             "target_timezone": {
                 "type": "string",
-                "description": "Target IANA timezone name (e.g., 'Asia/Tokyo', 'America/San_Francisco'). Use 'UTC' as local timezone if no target timezone provided by the user.",
+                "description": (
+                    "Target IANA timezone name (e.g., 'Asia/Tokyo', "
+                    "'America/San_Francisco'). Use 'UTC' as local timezone if "
+                    "no target timezone provided by the user."
+                ),
             },
         },
         "required": ["source_timezone", "time", "target_timezone"],
@@ -61,7 +69,11 @@ CALCULATE_TRAVEL_TIME_SCHEMA = {
         "properties": {
             "departure_timezone": {
                 "type": "string",
-                "description": "Departure IANA timezone name",
+                "description": (
+                    "Departure IANA timezone name (e.g., 'America/New_York', "
+                    "'Europe/London'). Use 'UTC' as local timezone if no "
+                    "departure timezone provided by the user."
+                ),
             },
             "departure_time": {
                 "type": "string",
@@ -69,7 +81,11 @@ CALCULATE_TRAVEL_TIME_SCHEMA = {
             },
             "arrival_timezone": {
                 "type": "string",
-                "description": "Arrival IANA timezone name",
+                "description": (
+                    "Arrival IANA timezone name (e.g., 'Asia/Tokyo', "
+                    "'America/San_Francisco'). Use 'UTC' as local timezone if "
+                    "no arrival timezone provided by the user."
+                ),
             },
             "arrival_time": {
                 "type": "string",
@@ -102,15 +118,24 @@ FORMAT_DATE_SCHEMA = {
         "properties": {
             "date": {
                 "type": "string",
-                "description": "Date string in ISO format (YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS)",
+                "description": (
+                    "Date string in ISO format (YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS) "
+                    "or YYYY-MM-DD"
+                ),
             },
             "timezone": {
                 "type": "string",
-                "description": "IANA timezone name (e.g., 'America/New_York', 'Europe/London')",
+                "description": (
+                    "IANA timezone name (e.g., 'America/New_York', 'Europe/London') "
+                    "Use 'UTC' as local timezone if no timezone provided by the user."
+                ),
             },
             "format": {
                 "type": "string",
-                "description": "Format type: 'full', 'short', 'date_only', 'time_only', or 'iso'",
+                "description": (
+                    "Format type: 'full', 'short', 'date_only', 'time_only', "
+                    "or 'iso'"
+                ),
                 "enum": ["full", "short", "date_only", "time_only", "iso"],
                 "default": "full",
             },

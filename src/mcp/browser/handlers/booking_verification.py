@@ -1,8 +1,9 @@
 """
 Booking verification handler for browser automation MCP.
 
-This module contains functions for verifying bookings across different travel providers
-using browser automation. It handles verification of flight, hotel, and rental car bookings.
+This module contains functions for verifying bookings across different
+travel providers using browser automation. It handles verification of
+flight, hotel, and rental car bookings.
 """
 
 import asyncio
@@ -84,7 +85,7 @@ def booking_verification_decorator(func: VerificationFunc) -> VerificationFunc:
                 screenshot = await page.screenshot(type="jpeg", quality=50)
                 screenshot_base64 = screenshot.decode("utf-8") if screenshot else None
                 return False, None, screenshot_base64
-            except:
+            except Exception:
                 return False, None, None
 
     return cast(VerificationFunc, wrapper)
@@ -135,7 +136,10 @@ def validate_verification_params(
 
         if provider_key not in PROVIDER_URLS.get(params.type, {}):
             logger.warning(
-                f"Provider '{provider_key}' not directly supported for '{params.type}'. Using generic handler."
+                (
+                    f"Provider '{provider_key}' not directly supported for "
+                    f"'{params.type}'. Using generic handler."
+                )
             )
 
         return None  # Validation passed
@@ -1360,7 +1364,7 @@ async def extract_text(page: Page, selector: str) -> Optional[str]:
         if element:
             return await element.text_content()
         return None
-    except:
+    except Exception:
         return None
 
 
@@ -1474,7 +1478,8 @@ async def extract_generic_flight_info(page: Page) -> Dict[str, Any]:
         "departure_date": None,
         "return_date": None,
         "flight_number": None,
-        "status": BookingStatus.CONFIRMED,  # Default to confirmed if we can find the booking
+        # Default to confirmed if we can find the booking
+        "status": BookingStatus.CONFIRMED,
     }
 
     # Search for common airport code patterns (3 uppercase letters)
@@ -1542,7 +1547,8 @@ async def extract_generic_hotel_info(page: Page) -> Dict[str, Any]:
         "property_name": None,
         "check_in_date": None,
         "check_out_date": None,
-        "status": BookingStatus.CONFIRMED,  # Default to confirmed if we can find the booking
+        # Default to confirmed if we can find the booking
+        "status": BookingStatus.CONFIRMED,
     }
 
     # Common selectors for property name
@@ -1570,10 +1576,6 @@ async def extract_generic_hotel_info(page: Page) -> Dict[str, Any]:
 
     if page_text:
         # Look for dates
-        # Look for check-in/check-out date indicators
-        check_in_indicators = ["check-in", "check in", "arrival", "arriving"]
-        check_out_indicators = ["check-out", "check out", "departure", "departing"]
-
         # Look for dates (MM/DD/YYYY, YYYY-MM-DD, etc.)
         date_patterns = [
             r"\b(\d{1,2})\s*(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s*(?:,\s*)?(\d{4})\b",
@@ -1619,17 +1621,14 @@ async def extract_generic_car_info(page: Page) -> Dict[str, Any]:
         "pickup_date": None,
         "dropoff_date": None,
         "vehicle_type": None,
-        "status": BookingStatus.CONFIRMED,  # Default to confirmed if we can find the booking
+        # Default to confirmed if we can find the booking
+        "status": BookingStatus.CONFIRMED,
     }
 
     # Get page text for information extraction
     page_text = await page.text_content("body")
 
     if page_text:
-        # Look for pickup/dropoff location indicators
-        pickup_indicators = ["pick-up", "pick up", "pickup", "collect"]
-        dropoff_indicators = ["drop-off", "drop off", "dropoff", "return"]
-
         # Look for vehicle type patterns
         vehicle_patterns = [
             r"(?:car|vehicle) type:?\s*([A-Za-z0-9\s\-]+)",
@@ -1660,7 +1659,7 @@ async def extract_generic_car_info(page: Page) -> Dict[str, Any]:
                 all_dates.extend([str(date) for date in dates])
 
         if len(all_dates) >= 2:
-            # If we found at least two dates, assume first is pickup and second is dropoff
+            # If we found at least two dates, assume first is pickup & second is dropoff
             result["pickup_date"] = all_dates[0]
             result["dropoff_date"] = all_dates[1]
 
