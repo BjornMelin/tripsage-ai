@@ -4,6 +4,8 @@ This directory contains documentation for integration with external APIs and ser
 
 ## Contents
 
+- `api/` - API integration documentation
+  - `api_integration.md` - Comprehensive API integration guide
 - `api_comparison.md` - Comparison of different API options
 - `api_implementation.md` - General API implementation details
 - `google_maps_integration.md` - Integration with Google Maps services
