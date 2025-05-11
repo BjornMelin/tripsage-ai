@@ -100,3 +100,68 @@ class UserRepository(BaseRepository[User]):
 
         # Save the updated user
         return await self.update(user)
+
+    async def set_admin_status(self, user_id: int, is_admin: bool) -> Optional[User]:
+        """
+        Set a user's admin status.
+
+        Args:
+            user_id: The ID of the user to update.
+            is_admin: Whether the user should be an admin.
+
+        Returns:
+            The updated user if found, None otherwise.
+        """
+        user = await self.get_by_id(user_id)
+        if not user:
+            return None
+
+        user.is_admin = is_admin
+        return await self.update(user)
+
+    async def set_disabled_status(
+        self, user_id: int, is_disabled: bool
+    ) -> Optional[User]:
+        """
+        Set a user's disabled status.
+
+        Args:
+            user_id: The ID of the user to update.
+            is_disabled: Whether the user should be disabled.
+
+        Returns:
+            The updated user if found, None otherwise.
+        """
+        user = await self.get_by_id(user_id)
+        if not user:
+            return None
+
+        user.is_disabled = is_disabled
+        return await self.update(user)
+
+    async def update_password(self, user_id: int, password_hash: str) -> Optional[User]:
+        """
+        Update a user's password hash.
+
+        Args:
+            user_id: The ID of the user to update.
+            password_hash: The new password hash.
+
+        Returns:
+            The updated user if found, None otherwise.
+        """
+        user = await self.get_by_id(user_id)
+        if not user:
+            return None
+
+        user.password_hash = password_hash
+        return await self.update(user)
+
+    async def get_admins(self) -> List[User]:
+        """
+        Get all admin users.
+
+        Returns:
+            List of admin users.
+        """
+        return await self.find_by(is_admin=True)

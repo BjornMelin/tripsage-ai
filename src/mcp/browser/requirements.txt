@@ -1,0 +1,7 @@
+fastmcp>=2.0.0
+playwright>=1.40.0
+pydantic>=2.5.0
+asyncio>=3.4.3
+httpx>=0.25.0
+python-dotenv>=1.0.0
+tenacity>=8.2.0
