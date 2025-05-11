@@ -1,0 +1,12 @@
+{
+  "name": "tripsage-mcp-servers",
+  "version": "1.0.0",
+  "description": "MCP server dependencies for TripSage",
+  "private": true,
+  "scripts": {
+    "start": "echo \"Error: no start script specified\" && exit 1"
+  },
+  "dependencies": {
+    "@openbnb/mcp-server-airbnb": "^0.1.1"
+  }
+}
