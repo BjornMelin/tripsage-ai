@@ -82,7 +82,7 @@ async def get_trips(
         current_user = await get_current_active_user()
     if trip_repo is None:
         trip_repo = get_repository(get_trip_repository)()
-        
+
     # Find trips where user_id matches current user
     trips = await trip_repo.find_by_user_id(int(current_user.id))
     return [db_trip_to_response(trip) for trip in trips]
@@ -103,7 +103,7 @@ async def get_trip(
         trip_repo = get_repository(get_trip_repository)()
     if user_repo is None:
         user_repo = get_repository(get_user_repository)()
-        
+
     # Get trip
     trip = await trip_repo.get_by_id(int(trip_id))
     if not trip:
@@ -135,7 +135,7 @@ async def create_trip(
         current_user = await get_current_active_user()
     if trip_repo is None:
         trip_repo = get_repository(get_trip_repository)()
-        
+
     # Create trip object
     new_trip = DBTrip(
         name=trip_data.name,
@@ -175,7 +175,7 @@ async def update_trip(
         trip_repo = get_repository(get_trip_repository)()
     if user_repo is None:
         user_repo = get_repository(get_user_repository)()
-        
+
     # Get existing trip
     trip = await trip_repo.get_by_id(int(trip_id))
     if not trip:
@@ -232,7 +232,7 @@ async def delete_trip(
         trip_repo = get_repository(get_trip_repository)()
     if user_repo is None:
         user_repo = get_repository(get_user_repository)()
-    
+
     # Get trip
     trip = await trip_repo.get_by_id(int(trip_id))
     if not trip:

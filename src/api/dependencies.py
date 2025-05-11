@@ -6,16 +6,12 @@ This module provides common dependencies for the FastAPI routes.
 
 from fastapi import Depends
 
-from src.api.auth import User, get_current_user
 from src.api.database import (
     get_flight_repository,
     get_repository,
     get_trip_repository,
     get_user_repository,
 )
-from src.db.repositories.flight import FlightRepository
-from src.db.repositories.trip import TripRepository
-from src.db.repositories.user import UserRepository
 
 
 # Create module-level dependencies
