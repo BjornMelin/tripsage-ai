@@ -1,11 +1,10 @@
 """Flight status handler for the Browser MCP server."""
 
-import asyncio
 import base64
 import re
 import uuid
-from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional, Tuple
+from datetime import datetime
+from typing import Any, Dict, Optional
 
 from tenacity import (
     retry,
@@ -730,7 +729,7 @@ async def fill_generic_flight_status_form(
             try:
                 await date_input.fill(alt_formatted_date)
             except:
-                logger.warning(f"Failed to fill date field with either format")
+                logger.warning("Failed to fill date field with either format")
 
     # Look for search/submit button
     submit_button = await page.query_selector(

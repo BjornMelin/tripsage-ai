@@ -1,9 +1,7 @@
 """Browser MCP server for TripSage."""
 
-import asyncio
-import logging
 import uuid
-from typing import Any, Callable, Dict, List, Optional, Union
+from typing import Any, Dict
 
 from fastmcp import FastMCP
 

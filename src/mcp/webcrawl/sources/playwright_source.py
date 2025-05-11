@@ -52,7 +52,7 @@ class PlaywrightSource(CrawlSource):
         """Initialize the Playwright source.
 
         Args:
-            mcp_endpoint: Optional MCP endpoint, 
+            mcp_endpoint: Optional MCP endpoint,
                 defaults to Config.PLAYWRIGHT_MCP_ENDPOINT
             browser_config: Optional browser configuration
         """
@@ -152,7 +152,7 @@ class PlaywrightSource(CrawlSource):
                         "mcp__playwright__playwright_screenshot",
                         {
                             "name": f"screenshot_{url.replace('://', '_')}"
-                                    f"{url.replace('/', '_')}",
+                            f"{url.replace('/', '_')}",
                             "fullPage": True,
                             "storeBase64": True,
                         },
@@ -994,7 +994,7 @@ class PlaywrightSource(CrawlSource):
                             blog_content = blog_details.get("content", "")
 
                             for topic in query_topics:
-                                # Simple sentiment analysis based on 
+                                # Simple sentiment analysis based on
                                 # topic-related content
                                 topic_content = self._extract_topic_content(
                                     blog_content, topic

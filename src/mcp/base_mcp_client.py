@@ -5,13 +5,12 @@ This module provides the base class for all MCP clients in the TripSage system,
 with common functionality for tool calling and error handling.
 """
 
-import asyncio
-from typing import Any, Dict, List, Optional, Type, Union
+from typing import Any, Dict, List, Optional
 
 import httpx
 
 from ..cache.redis_cache import redis_cache
-from ..utils.error_handling import APIError, MCPError, log_exception
+from ..utils.error_handling import MCPError
 from ..utils.logging import get_module_logger
 
 logger = get_module_logger(__name__)

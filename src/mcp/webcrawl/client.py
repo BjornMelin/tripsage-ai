@@ -75,7 +75,7 @@ class WebCrawlMCPClient(BaseMCPClient):
 
         Args:
             destination: Name of the destination (city, country, attraction)
-            topics: Type of information to search for (e.g., 
+            topics: Type of information to search for (e.g.,
                    "attractions", "local_customs")
             max_results: Maximum number of results to return per topic
 
