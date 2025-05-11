@@ -1,17 +1,24 @@
 #!/usr/bin/env python3
 """
 Demo script to test the TripSage Travel Agent.
+
+This module provides an interactive demo of the TripSage Travel Agent using
+the OpenAI Agents SDK implementation.
 """
 
+import asyncio
 import os
 import sys
+import argparse
+from typing import List, Dict, Any
 
 from dotenv import load_dotenv
 
-from .travel_agent import TravelAgent
+from .travel_agent import TravelAgent, create_agent
 
 
-def main():
+async def run_interactive_demo():
+    """Run an interactive demo of the TripSage Travel Agent."""
     # Load environment variables
     load_dotenv()
 
@@ -21,26 +28,18 @@ def main():
         print("Please set it in your .env file or environment.")
         sys.exit(1)
 
-    # Check for Supabase credentials
-    if not os.getenv("SUPABASE_URL") or not os.getenv("SUPABASE_ANON_KEY"):
-        print("Warning: Supabase credentials are not set.")
-        print(
-            "Database operations will not work without SUPABASE_URL "
-            "and SUPABASE_ANON_KEY."
-        )
-
-    print("Initializing TripSage Travel Agent...")
-    agent = TravelAgent()
-
-    print("Creating a new conversation thread...")
-    agent.create_thread()
-
     # Display demo options
     print("\nTripSage Agent Demo")
     print("-------------------")
     print("This demo allows you to interact with the TripSage Travel Agent.")
-    print("You can ask about trip planning, search for flights/accommodations, etc.\n")
+    print("You can ask about trip planning, search for flights/accommodations, etc.")
+    print("Type 'exit', 'quit', or 'bye' to end the conversation.\n")
 
+    # Create the agent
+    print("Initializing TripSage Travel Agent...")
+    agent = create_agent()
+
+    # Interactive session
     while True:
         # Get user input
         user_message = input("You: ")
@@ -50,23 +49,86 @@ def main():
             print("Ending conversation. Goodbye!")
             break
 
-        # Add message to thread
-        print("Sending message to agent...")
-        agent.add_message(user_message)
+        if not user_message.strip():
+            continue
 
         # Run the agent
-        print("Waiting for response...")
-        agent.run_thread()
+        try:
+            print("Processing your request...")
+            response = await agent.run(user_message)
 
-        # Get and display response
-        response = agent.get_last_response()
-        print("\nAgent:", response)
+            # Print the response
+            if response.get("status") == "success":
+                print("\nAgent:", response.get("content", "No response"))
+            else:
+                print("\nError:", response.get("error_message", "Unknown error"))
+
+        except Exception as e:
+            print(f"\nAn error occurred: {str(e)}")
+
         print()
 
-    # Clean up resources
-    print("Cleaning up resources...")
-    agent.delete_resources()
-    print("Demo completed successfully!")
+
+async def run_batch_queries(queries: List[str]) -> List[Dict[str, Any]]:
+    """Run a batch of queries through the TripSage Travel Agent.
+
+    Args:
+        queries: List of queries to process
+
+    Returns:
+        List of responses
+    """
+    print("TripSage Travel Agent Batch Demo")
+    print("===============================")
+
+    # Create the agent
+    agent = create_agent()
+
+    responses = []
+
+    # Process each query
+    for i, query in enumerate(queries, 1):
+        print(f"\nProcessing query {i}/{len(queries)}: {query}")
+
+        try:
+            # Run the agent
+            response = await agent.run(query)
+            responses.append(response)
+
+            # Print the response
+            if response.get("status") == "success":
+                print("\nAgent Response:")
+                print(response.get("content", "No response"))
+            else:
+                print("\nError:", response.get("error_message", "Unknown error"))
+
+        except Exception as e:
+            print(f"\nAn error occurred: {str(e)}")
+            responses.append({"status": "error", "error_message": str(e)})
+
+        # Small delay between queries
+        if i < len(queries):
+            await asyncio.sleep(1)
+
+    return responses
+
+
+def main():
+    """Main entry point for the demo script."""
+    # Load environment variables
+    load_dotenv()
+
+    parser = argparse.ArgumentParser(description="TripSage Travel Agent Demo")
+    parser.add_argument(
+        "--queries", "-q", nargs="+", help="Run with specific queries instead of interactive mode"
+    )
+
+    args = parser.parse_args()
+
+    if args.queries:
+        asyncio.run(run_batch_queries(args.queries))
+    else:
+        asyncio.run(run_interactive_demo())
 
 
 if __name__ == "__main__":
