@@ -6,9 +6,9 @@ implementing common functionality.
 """
 
 from datetime import datetime
-from typing import Any, ClassVar, Dict, Generic, List, Optional, Type, TypeVar
+from typing import Any, ClassVar, Dict, List, Optional, Type, TypeVar
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field
 
 # Define a type variable for the model
 T = TypeVar("T", bound="BaseDBModel")

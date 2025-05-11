@@ -4,7 +4,6 @@ Trip repository for TripSage.
 This module provides the Trip repository for interacting with the trips table.
 """
 
-import logging
 from typing import List, Optional
 
 from src.db.models.trip import Trip
@@ -50,7 +49,10 @@ class TripRepository(BaseRepository[Trip]):
         """
         try:
             response = (
-                self._get_table().select("*").ilike("destination", f"%{destination}%").execute()
+                self._get_table()
+                .select("*")
+                .ilike("destination", f"%{destination}%")
+                .execute()
             )
             if not response.data:
                 return []
@@ -79,10 +81,10 @@ class TripRepository(BaseRepository[Trip]):
             query = (
                 self._get_table()
                 .select("*")
-                .or(
-                    f"start_date >= '{start_date}' and start_date <= '{end_date}'",
-                    f"end_date >= '{start_date}' and end_date <= '{end_date}'",
-                    f"start_date <= '{start_date}' and end_date >= '{end_date}'",
+                .filter(
+                    f"(start_date >= '{start_date}' AND start_date <= '{end_date}') OR "
+                    f"(end_date >= '{start_date}' AND end_date <= '{end_date}') OR "
+                    f"(start_date <= '{start_date}' AND end_date >= '{end_date}')"
                 )
                 .execute()
             )

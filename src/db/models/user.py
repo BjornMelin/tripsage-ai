@@ -4,7 +4,6 @@ User model for TripSage.
 This module provides the User model for the TripSage database.
 """
 
-from datetime import datetime
 from typing import Any, ClassVar, Dict, Optional
 
 from pydantic import EmailStr, Field, field_validator

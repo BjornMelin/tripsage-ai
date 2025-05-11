@@ -12,7 +12,7 @@ from src.db.client import (
     get_supabase_client,
     reset_client,
 )
-from src.db.config import DatabaseProvider, config
+from src.db.config import DatabaseProvider
 from src.db.factory import create_provider, get_provider, reset_provider
 from src.db.providers import NeonProvider, SupabaseProvider
 

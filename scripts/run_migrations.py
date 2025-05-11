@@ -7,7 +7,6 @@ This script runs all pending migrations in the migrations directory.
 
 import argparse
 import asyncio
-import os
 import sys
 from pathlib import Path
 

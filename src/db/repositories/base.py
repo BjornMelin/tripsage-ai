@@ -5,8 +5,7 @@ This module provides a base repository class for interacting with the database.
 It implements common CRUD operations and serves as a base for entity-specific repositories.
 """
 
-import logging
-from typing import Any, Dict, Generic, List, Optional, Tuple, Type, TypeVar, Union
+from typing import Generic, List, Optional, Type, TypeVar, Union
 
 from src.db.client import get_supabase_client
 from src.db.models.base import BaseDBModel

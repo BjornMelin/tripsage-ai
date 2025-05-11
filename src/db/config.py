@@ -18,6 +18,7 @@ load_dotenv()
 
 class DatabaseProvider(str, Enum):
     """Enum representing supported database providers."""
+
     SUPABASE = "supabase"
     NEON = "neon"
 
@@ -34,6 +35,7 @@ class SupabaseConfig(BaseModel):
         auto_refresh_token: Whether to automatically refresh the token.
         persist_session: Whether to persist the session.
     """
+
     url: str = Field(env="SUPABASE_URL")
     anon_key: SecretStr = Field(env="SUPABASE_ANON_KEY")
     service_role_key: Optional[SecretStr] = Field(
@@ -55,6 +57,7 @@ class NeonConfig(BaseModel):
         max_inactive_connection_lifetime: How long an inactive connection
                                         remains in the pool before being closed.
     """
+
     connection_string: str = Field(env="NEON_CONNECTION_STRING")
     min_pool_size: int = Field(default=1, env="NEON_MIN_POOL_SIZE")
     max_pool_size: int = Field(default=10, env="NEON_MAX_POOL_SIZE")
@@ -72,9 +75,9 @@ class DatabaseConfig(BaseModel):
         supabase: Supabase configuration settings.
         neon: Neon configuration settings.
     """
+
     provider: DatabaseProvider = Field(
-        default=DatabaseProvider.SUPABASE,
-        env="DB_PROVIDER"
+        default=DatabaseProvider.SUPABASE, env="DB_PROVIDER"
     )
     supabase: Optional[SupabaseConfig] = None
     neon: Optional[NeonConfig] = None
@@ -87,12 +90,12 @@ class DatabaseConfig(BaseModel):
 def create_config() -> DatabaseConfig:
     """
     Create and return the database configuration based on environment variables.
-    
+
     Returns:
         A DatabaseConfig instance with the appropriate provider configuration.
     """
     provider = os.getenv("DB_PROVIDER", "supabase").lower()
-    
+
     if provider == DatabaseProvider.NEON and os.getenv("NEON_CONNECTION_STRING"):
         return DatabaseConfig(
             provider=DatabaseProvider.NEON,
@@ -102,8 +105,8 @@ def create_config() -> DatabaseConfig:
                 max_pool_size=int(os.getenv("NEON_MAX_POOL_SIZE", "10")),
                 max_inactive_connection_lifetime=float(
                     os.getenv("NEON_MAX_INACTIVE_CONNECTION_LIFETIME", "300.0")
-                )
-            )
+                ),
+            ),
         )
     else:
         # Default to Supabase if no valid Neon configuration found
@@ -114,9 +117,13 @@ def create_config() -> DatabaseConfig:
                 anon_key=os.getenv("SUPABASE_ANON_KEY", ""),
                 service_role_key=os.getenv("SUPABASE_SERVICE_ROLE_KEY", ""),
                 timeout=float(os.getenv("SUPABASE_TIMEOUT", "60.0")),
-                auto_refresh_token=os.getenv("SUPABASE_AUTO_REFRESH_TOKEN", "True").lower() == "true",
-                persist_session=os.getenv("SUPABASE_PERSIST_SESSION", "True").lower() == "true"
-            )
+                auto_refresh_token=os.getenv(
+                    "SUPABASE_AUTO_REFRESH_TOKEN", "True"
+                ).lower()
+                == "true",
+                persist_session=os.getenv("SUPABASE_PERSIST_SESSION", "True").lower()
+                == "true",
+            ),
         )
 
 

@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from src.db.exceptions import ConnectionError, NotConnectedError, QueryError
+from src.db.exceptions import ConnectionError, NotConnectedError
 from src.db.providers import NeonProvider, NeonQueryResult
 
 

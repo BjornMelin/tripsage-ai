@@ -133,7 +133,7 @@ class BaseMCPClient:
                 server=self.endpoint,
                 tool=path,
                 params={"method": method, "params": params},
-            )
+            ) from e
 
         except httpx.RequestError as e:
             raise MCPError(
@@ -141,7 +141,7 @@ class BaseMCPClient:
                 server=self.endpoint,
                 tool=path,
                 params={"method": method, "params": params},
-            )
+            ) from e
 
         except Exception as e:
             raise MCPError(
@@ -149,7 +149,7 @@ class BaseMCPClient:
                 server=self.endpoint,
                 tool=path,
                 params={"method": method, "params": params},
-            )
+            ) from e
 
     @redis_cache.cached("mcp_tools", 3600)  # Cache tool list for 1 hour
     async def list_tools(self, skip_cache: bool = False) -> List[Dict[str, str]]:

@@ -4,7 +4,6 @@ User repository for TripSage.
 This module provides the User repository for interacting with the users table.
 """
 
-import logging
 from typing import Any, Dict, List, Optional
 
 from src.db.models.user import User

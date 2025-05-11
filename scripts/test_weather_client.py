@@ -7,7 +7,6 @@ This script tests basic functionality of the Weather MCP Client implementation.
 
 import asyncio
 import json
-import os
 import sys
 from pathlib import Path
 

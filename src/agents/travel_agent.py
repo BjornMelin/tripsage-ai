@@ -6,17 +6,16 @@ travel-specific MCP tools and dual storage architecture with OpenAI's WebSearchT
 """
 
 import datetime
-import json
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 from agents import WebSearchTool, function_tool
 from agents.extensions.allowed_domains import AllowedDomains
 
 from ..cache.redis_cache import redis_cache
 from ..utils.config import get_config
-from ..utils.error_handling import MCPError, TripSageError, log_exception
+from ..utils.error_handling import MCPError
 from ..utils.logging import get_module_logger
 from .base_agent import TravelAgent as BaseTravelAgent
 
