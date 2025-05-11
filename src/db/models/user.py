@@ -20,6 +20,9 @@ class User(BaseDBModel):
         id: Unique identifier for the user
         name: User's display name
         email: User's email address
+        password_hash: Hashed password for the user
+        is_admin: Whether the user is an admin
+        is_disabled: Whether the user is disabled
         preferences_json: User preferences stored as a dictionary
         created_at: Timestamp when the user record was created
         updated_at: Timestamp when the user record was last updated
@@ -29,6 +32,11 @@ class User(BaseDBModel):
 
     name: Optional[str] = Field(None, description="User's display name")
     email: Optional[EmailStr] = Field(None, description="User's email address")
+    password_hash: Optional[str] = Field(
+        None, description="Hashed password for the user"
+    )
+    is_admin: bool = Field(False, description="Whether the user is an admin")
+    is_disabled: bool = Field(False, description="Whether the user is disabled")
     preferences_json: Optional[Dict[str, Any]] = Field(
         None, description="User preferences"
     )

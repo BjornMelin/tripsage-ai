@@ -76,13 +76,16 @@ def get_model_mapping() -> dict:
     Returns:
         A dictionary mapping table names to model classes.
     """
-    from src.db.models.user import User
+    from src.db.models.flight import Flight
     from src.db.models.trip import Trip
+    from src.db.models.user import User
+
     # Import other models here
 
     return {
         "users": User,
         "trips": Trip,
+        "flights": Flight,
         # Add other models here
     }
 
@@ -94,15 +97,19 @@ def get_repository_mapping() -> dict:
     Returns:
         A dictionary mapping model classes to repository classes.
     """
-    from src.db.models.user import User
-    from src.db.repositories.user import UserRepository
+    from src.db.models.flight import Flight
     from src.db.models.trip import Trip
+    from src.db.models.user import User
+    from src.db.repositories.flight import FlightRepository
     from src.db.repositories.trip import TripRepository
+    from src.db.repositories.user import UserRepository
+
     # Import other repositories here
 
     return {
         User: UserRepository,
         Trip: TripRepository,
+        Flight: FlightRepository,
         # Add other repositories here
     }
 
@@ -110,7 +117,7 @@ def get_repository_mapping() -> dict:
 if __name__ == "__main__":
     """
     Run database initialization when the script is executed directly.
-    
+
     Example usage:
         python -m src.db.initialize
     """
