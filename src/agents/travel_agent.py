@@ -5,10 +5,11 @@ This module provides the TravelAgent implementation which integrates various
 travel-specific MCP tools and dual storage architecture with OpenAI's WebSearchTool.
 """
 
+import asyncio
 import datetime
 from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, field_validator
 
 from agents import WebSearchTool, function_tool
 from agents.extensions.allowed_domains import AllowedDomains
@@ -18,6 +19,8 @@ from src.utils.error_handling import MCPError
 from src.utils.logging import get_module_logger
 
 from .base_agent import TravelAgent as BaseTravelAgent
+from .flight_booking import TripSageFlightBooking
+from .flight_search import TripSageFlightSearch
 
 logger = get_module_logger(__name__)
 config = get_config()
@@ -78,6 +81,10 @@ class TravelAgent(BaseTravelAgent):
             temperature: Temperature for model sampling
         """
         super().__init__(name=name, model=model, temperature=temperature)
+
+        # Initialize flight search and booking components
+        self.flight_search = TripSageFlightSearch()
+        self.flight_booking = TripSageFlightBooking()
 
         # Add WebSearchTool to the agent's tools with travel-specific domain focus
         # This is part of our hybrid search approach where OpenAI's built-in search
@@ -144,8 +151,19 @@ class TravelAgent(BaseTravelAgent):
         self._register_tool(self.get_weather_forecast)
         self._register_tool(self.get_travel_recommendation)
 
-        # Flight tools
+        # Basic flight tools (will be replaced with enhanced ones)
         self._register_tool(self.search_flights)
+
+        # Enhanced flight search tools
+        self._register_tool(self.enhanced_flight_search)
+        self._register_tool(self.search_multi_city_flights)
+        self._register_tool(self.get_flight_price_history)
+        self._register_tool(self.get_flexible_dates_search)
+
+        # Flight booking tools
+        self._register_tool(self.book_flight)
+        self._register_tool(self.get_booking_status)
+        self._register_tool(self.cancel_flight_booking)
 
         # Accommodation tools
         self._register_tool(self.search_accommodations)
@@ -176,6 +194,7 @@ class TravelAgent(BaseTravelAgent):
         # Weather MCP Client
         try:
             from ..mcp.weather import get_client as get_weather_client
+
             weather_client = get_weather_client()
             self._register_mcp_client_tools(weather_client, prefix="weather_")
             logger.info("Registered Weather MCP client tools")
@@ -185,15 +204,27 @@ class TravelAgent(BaseTravelAgent):
         # Time MCP Client
         try:
             from ..mcp.time import get_client as get_time_client
+
             time_client = get_time_client()
             self._register_mcp_client_tools(time_client, prefix="time_")
             logger.info("Registered Time MCP client tools")
         except Exception as e:
             logger.warning("Failed to register Time MCP client: %s", str(e))
 
+        # Flights MCP Client
+        try:
+            from ..mcp.flights import get_client as get_flights_client
+
+            flights_client = get_flights_client()
+            self._register_mcp_client_tools(flights_client, prefix="flights_")
+            logger.info("Registered Flights MCP client tools")
+        except Exception as e:
+            logger.warning("Failed to register Flights MCP client: %s", str(e))
+
         # Google Maps MCP Client
         try:
             from ..mcp.googlemaps import get_client as get_maps_client
+
             maps_client = get_maps_client()
             self._register_mcp_client_tools(maps_client, prefix="maps_")
             logger.info("Registered Google Maps MCP client tools")
@@ -203,8 +234,11 @@ class TravelAgent(BaseTravelAgent):
         # Accommodations MCP Client
         try:
             from ..mcp.accommodations import get_client as get_accommodations_client
+
             accommodations_client = get_accommodations_client()
-            self._register_mcp_client_tools(accommodations_client, prefix="accommodations_")
+            self._register_mcp_client_tools(
+                accommodations_client, prefix="accommodations_"
+            )
             logger.info("Registered Accommodations MCP client tools")
         except Exception as e:
             logger.warning("Failed to register Accommodations MCP client: %s", str(e))
@@ -212,6 +246,7 @@ class TravelAgent(BaseTravelAgent):
         # Memory MCP Client (for knowledge graph)
         try:
             from ..mcp.memory import get_client as get_memory_client
+
             memory_client = get_memory_client()
             self._register_mcp_client_tools(memory_client, prefix="memory_")
             logger.info("Registered Memory MCP client tools")
@@ -502,6 +537,204 @@ class TravelAgent(BaseTravelAgent):
             return {"error": f"Accommodation search error: {str(e)}"}
 
     @function_tool
+    async def enhanced_flight_search(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        """Enhanced search for flights with advanced filtering and recommendations.
+
+        Uses the TripSageFlightSearch component to provide comprehensive search
+        results with intelligent filtering, price analysis, and personalized
+        recommendations based on user preferences.
+
+        Args:
+            params: Enhanced flight search parameters including:
+                origin: Origin airport or city code
+                destination: Destination airport or city code
+                departure_date: Departure date (YYYY-MM-DD)
+                return_date: Return date for round trips (YYYY-MM-DD)
+                adults: Number of adult passengers
+                children: Number of child passengers
+                infants: Number of infant passengers
+                cabin_class: Desired cabin class
+                    (economy, premium_economy, business, first)
+                max_price: Maximum price willing to pay
+                preferred_airlines: List of preferred airline codes
+                max_stops: Maximum number of stops (0 for non-stop only)
+                sort_by: How to sort results (price, duration, best)
+                flexible_dates: Whether to include nearby dates in search
+
+        Returns:
+            Dictionary with enhanced flight search results
+        """
+        try:
+            # Delegate to flight search component
+            return await self.flight_search.search_flights(params)
+        except Exception as e:
+            logger.error("Error in enhanced flight search: %s", str(e))
+            return {"error": f"Enhanced flight search error: {str(e)}"}
+
+    @function_tool
+    async def search_multi_city_flights(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        """Search for multi-city flight itineraries.
+
+        Allows searching for complex itineraries with multiple segments between
+        different city pairs on different dates.
+
+        Args:
+            params: Multi-city flight search parameters including:
+                segments: List of flight segments, each containing:
+                    origin: Origin airport or city code
+                    destination: Destination airport or city code
+                    date: Departure date (YYYY-MM-DD)
+                adults: Number of adult passengers
+                children: Number of child passengers
+                infants: Number of infant passengers
+                cabin_class: Desired cabin class
+                max_price: Maximum total price for all segments
+
+        Returns:
+            Dictionary with multi-city flight search results
+        """
+        try:
+            # Validate that segments are provided
+            segments = params.get("segments", [])
+            if not segments or not isinstance(segments, list) or len(segments) < 2:
+                return {
+                    "error": (
+                        "At least two valid segments are required for multi-city search"
+                    )
+                }
+
+            # Delegate to flight search component
+            return await self.flight_search.search_multi_city(params)
+        except Exception as e:
+            logger.error("Error in multi-city flight search: %s", str(e))
+            return {"error": f"Multi-city flight search error: {str(e)}"}
+
+    @function_tool
+    async def get_flight_price_history(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        """Get price history for a specific flight route.
+
+        Retrieves historical pricing data for a given route to help users
+        determine if current prices are favorable and whether to book now or wait.
+
+        Args:
+            params: Flight route parameters:
+                origin: Origin airport or city code
+                destination: Destination airport or city code
+                cabin_class: Optional cabin class to filter by
+                days_back: How many days of history to include (default: 90)
+
+        Returns:
+            Dictionary with price history data and trend analysis
+        """
+        try:
+            # Delegate to flight search component
+            return await self.flight_search.get_price_history(params)
+        except Exception as e:
+            logger.error("Error getting flight price history: %s", str(e))
+            return {"error": f"Price history error: {str(e)}"}
+
+    @function_tool
+    async def get_flexible_dates_search(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        """Search for flights with flexible dates to find the best prices.
+
+        Searches for flights across a range of dates to help users find the
+        optimal travel dates with the best prices.
+
+        Args:
+            params: Flexible date search parameters:
+                origin: Origin airport or city code
+                destination: Destination airport or city code
+                date_range_start: Start of date range (YYYY-MM-DD)
+                date_range_end: End of date range (YYYY-MM-DD)
+                trip_length: Desired trip length in days for round trips
+                cabin_class: Desired cabin class
+                adults: Number of adult passengers
+
+        Returns:
+            Dictionary with flexible date search results
+        """
+        try:
+            # Delegate to flight search component
+            return await self.flight_search.search_flexible_dates(params)
+        except Exception as e:
+            logger.error("Error in flexible date flight search: %s", str(e))
+            return {"error": f"Flexible date search error: {str(e)}"}
+
+    @function_tool
+    async def book_flight(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        """Book a flight based on selected search results.
+
+        Creates a flight booking based on the selected flight offer from search results
+        and passenger information. Stores booking details in dual storage architecture.
+
+        Args:
+            params: Flight booking parameters:
+                flight_id: ID of selected flight from search results
+                passengers: List of passenger information including:
+                    first_name: Passenger's first name
+                    last_name: Passenger's last name
+                    dob: Date of birth (YYYY-MM-DD)
+                    email: Contact email
+                    phone: Contact phone number
+                payment: Payment information object
+                trip_id: Optional ID of associated trip
+
+        Returns:
+            Dictionary with booking confirmation details
+        """
+        try:
+            # Delegate to flight booking component
+            return await self.flight_booking.book_flight(params)
+        except Exception as e:
+            logger.error("Error booking flight: %s", str(e))
+            return {"error": f"Flight booking error: {str(e)}"}
+
+    @function_tool
+    async def get_booking_status(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        """Get the current status of a flight booking.
+
+        Retrieves the latest status of a flight booking, including any updates
+        to flight times, gate information, or booking status.
+
+        Args:
+            params: Booking status request parameters:
+                booking_id: ID of the booking to check
+                email: Email associated with the booking
+
+        Returns:
+            Dictionary with current booking status information
+        """
+        try:
+            # Delegate to flight booking component
+            return await self.flight_booking.get_booking_status(params)
+        except Exception as e:
+            logger.error("Error getting booking status: %s", str(e))
+            return {"error": f"Booking status error: {str(e)}"}
+
+    @function_tool
+    async def cancel_flight_booking(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        """Cancel an existing flight booking.
+
+        Attempts to cancel a flight booking and provides refund information
+        according to the airline's cancellation policy.
+
+        Args:
+            params: Cancellation request parameters:
+                booking_id: ID of the booking to cancel
+                email: Email associated with the booking
+                reason: Optional reason for cancellation
+
+        Returns:
+            Dictionary with cancellation confirmation and refund information
+        """
+        try:
+            # Delegate to flight booking component
+            return await self.flight_booking.cancel_booking(params)
+        except Exception as e:
+            logger.error("Error cancelling flight booking: %s", str(e))
+            return {"error": f"Cancellation error: {str(e)}"}
+
+    @function_tool
     async def convert_timezone(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """Convert time between timezones.
 
@@ -529,6 +762,43 @@ class TravelAgent(BaseTravelAgent):
                 "implemented with the Time MCP."
             ),
         }
+
+    @function_tool
+    async def get_weather(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        """Get current weather for a location.
+
+        Args:
+            params: Parameters with location information (city, lat/lon, country)
+
+        Returns:
+            Current weather data
+        """
+        from ..mcp.weather import get_client
+
+        try:
+            # Get weather client
+            weather_client = get_client()
+
+            # Extract parameters
+            location = params.get("location", {})
+
+            lat = location.get("lat")
+            lon = location.get("lon")
+            city = location.get("city")
+            country = location.get("country")
+
+            # Call weather MCP
+            weather_data = await weather_client.get_current_weather(
+                lat=lat, lon=lon, city=city, country=country
+            )
+
+            return weather_data
+
+        except Exception as e:
+            logger.error("Error getting current weather: %s", str(e))
+            if isinstance(e, MCPError):
+                return {"error": e.message}
+            return {"error": f"Weather service error: {str(e)}"}
 
     @function_tool
     async def create_trip(self, params: Dict[str, Any]) -> Dict[str, Any]:
@@ -858,7 +1128,8 @@ class TravelAgent(BaseTravelAgent):
 
         Args:
             params: Parameters for storing knowledge
-                entity_type: Type of entity (Destination, Accommodation, Transportation, etc.)
+                entity_type: Type of entity
+                    (Destination, Accommodation, Transportation, etc.)
                 entity_name: Name of the entity
                 observations: List of facts or observations about the entity
                 relations: List of relations to other entities (optional)
@@ -886,34 +1157,44 @@ class TravelAgent(BaseTravelAgent):
 
             # Create entity if observations are provided
             if observations:
-                await memory_client.create_entities([{
-                    "name": entity_name,
-                    "entityType": entity_type,
-                    "observations": observations
-                }])
+                await memory_client.create_entities(
+                    [
+                        {
+                            "name": entity_name,
+                            "entityType": entity_type,
+                            "observations": observations,
+                        }
+                    ]
+                )
 
             # Create relations if provided
             if relations:
                 formatted_relations = []
                 for relation in relations:
                     if "from" in relation and "type" in relation and "to" in relation:
-                        formatted_relations.append({
-                            "from": relation["from"],
-                            "relationType": relation["type"],
-                            "to": relation["to"]
-                        })
+                        formatted_relations.append(
+                            {
+                                "from": relation["from"],
+                                "relationType": relation["type"],
+                                "to": relation["to"],
+                            }
+                        )
 
                 if formatted_relations:
                     await memory_client.create_relations(formatted_relations)
 
             # Cache this knowledge to improve future interactions
             cache_key = f"knowledge:{entity_type}:{entity_name}"
-            await redis_cache.set(cache_key, {
-                "entity_type": entity_type,
-                "entity_name": entity_name,
-                "observations": observations,
-                "relations": relations
-            }, ttl=86400)  # 24 hours
+            await redis_cache.set(
+                cache_key,
+                {
+                    "entity_type": entity_type,
+                    "entity_name": entity_name,
+                    "observations": observations,
+                    "relations": relations,
+                },
+                ttl=86400,
+            )  # 24 hours
 
             return {
                 "success": True,
@@ -921,7 +1202,7 @@ class TravelAgent(BaseTravelAgent):
                 "entity_name": entity_name,
                 "observations_stored": len(observations),
                 "relations_stored": len(relations) if relations else 0,
-                "message": f"Successfully stored knowledge about {entity_name}"
+                "message": f"Successfully stored knowledge about {entity_name}",
             }
 
         except Exception as e:
@@ -979,7 +1260,7 @@ class TravelAgent(BaseTravelAgent):
                         "entity_name": entity_name,
                         "entity_type": nodes[0].get("type"),
                         "observations": nodes[0].get("observations", []),
-                        "relations": []
+                        "relations": [],
                     }
 
                     # Get related nodes
@@ -987,7 +1268,10 @@ class TravelAgent(BaseTravelAgent):
 
                     # Find relations where this entity is involved
                     for relation in graph.get("relations", []):
-                        if relation.get("from") == entity_name or relation.get("to") == entity_name:
+                        if (
+                            relation.get("from") == entity_name
+                            or relation.get("to") == entity_name
+                        ):
                             result["relations"].append(relation)
 
                     return result
@@ -995,7 +1279,7 @@ class TravelAgent(BaseTravelAgent):
                     return {
                         "found": False,
                         "entity_name": entity_name,
-                        "message": f"No knowledge found for {entity_name}"
+                        "message": f"No knowledge found for {entity_name}",
                     }
 
             # Search by query
@@ -1005,7 +1289,8 @@ class TravelAgent(BaseTravelAgent):
                 # Filter by entity_type if provided
                 if entity_type and search_results:
                     search_results = [
-                        node for node in search_results
+                        node
+                        for node in search_results
                         if node.get("type") == entity_type
                     ]
 
@@ -1014,7 +1299,7 @@ class TravelAgent(BaseTravelAgent):
                     "query": query,
                     "entity_type": entity_type,
                     "results_count": len(search_results),
-                    "results": search_results
+                    "results": search_results,
                 }
 
             return {"error": "Invalid parameters for knowledge retrieval"}
@@ -1027,7 +1312,14 @@ class TravelAgent(BaseTravelAgent):
 
 
 def create_agent() -> TravelAgent:
-    """Create and return a TravelAgent instance."""
+    """Create and return a fully initialized TravelAgent instance.
+
+    Creates a new TravelAgent with all tools registered and ready for use.
+    """
     agent = TravelAgent()
-    logger.info("Created TripSage Travel Agent instance")
+
+    # Register all travel-specific tools
+    agent._register_travel_tools()
+
+    logger.info("Created TripSage Travel Agent instance with all tools registered")
     return agent
