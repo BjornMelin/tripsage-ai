@@ -5,11 +5,8 @@ These tests verify that the Airbnb MCP client correctly interacts with
 the Airbnb MCP server to search for accommodations and retrieve listing details.
 """
 
-import asyncio
-import json
-import os
 from datetime import date, timedelta
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 

@@ -4,9 +4,9 @@ Trip model for TripSage.
 This module provides the Trip model for the TripSage database.
 """
 
-from datetime import date, datetime
+from datetime import date
 from enum import Enum
-from typing import Any, ClassVar, Dict, List, Optional
+from typing import Any, ClassVar, Dict, Optional
 
 from pydantic import Field, field_validator, model_validator
 

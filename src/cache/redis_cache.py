@@ -9,7 +9,7 @@ convenience decorators for caching function results.
 import hashlib
 import json
 from functools import wraps
-from typing import Any, Callable, Dict, Optional, TypeVar, cast
+from typing import Any, Callable, Optional, TypeVar, cast
 
 import redis.asyncio as redis
 

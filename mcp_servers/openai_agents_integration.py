@@ -7,11 +7,11 @@ OpenAI Agents SDK in the TripSage system.
 
 import asyncio
 import os
-from typing import Any, Dict, List, Optional
+from typing import Any, List, Optional
 
 import dotenv
 
-from agents import Agent, MCPServerStdio, Runner, function_tool
+from agents import Agent, MCPServerStdio, Runner
 from src.utils.logging import get_module_logger
 
 # Load environment variables

@@ -9,11 +9,9 @@ Usage: python test_db_connection.py
 """
 
 import asyncio
-import logging
 import os
 import sys
 from datetime import date, datetime
-from typing import Any, Dict, List
 
 # Add the project root to the Python path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -26,7 +24,6 @@ from src.db import (
     TripRepository,
     TripStatus,
     TripType,
-    User,
     UserRepository,
     close_database_connection,
     initialize_database,

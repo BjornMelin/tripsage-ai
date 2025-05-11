@@ -5,7 +5,6 @@ This module provides a unified interface for connecting to and interacting with
 the database, abstracting away the specific provider implementation details.
 """
 
-import logging
 from typing import Any, Dict, Optional
 
 from src.db.factory import get_provider, reset_provider
@@ -19,22 +18,22 @@ logger = configure_logging(__name__)
 async def create_db_client(use_service_key: bool = False) -> DatabaseProvider:
     """
     Create and connect to a database client.
-    
+
     Args:
         use_service_key: Whether to use the service role key for Supabase.
                         This parameter is ignored for Neon.
-    
+
     Returns:
         A connected database provider instance.
-        
+
     Raises:
         Exception: If the connection fails.
     """
     provider = get_provider(force_new=True)
-    
+
     try:
         await provider.connect()
-        logger.info(f"Connected to database successfully")
+        logger.info("Connected to database successfully")
         return provider
     except Exception as e:
         logger.error(f"Failed to connect to database: {e}")
@@ -44,32 +43,32 @@ async def create_db_client(use_service_key: bool = False) -> DatabaseProvider:
 async def get_db_client(use_service_key: bool = False) -> DatabaseProvider:
     """
     Get or create a database client.
-    
+
     Args:
         use_service_key: Whether to use the service role key for Supabase.
                         This parameter is ignored for Neon.
-    
+
     Returns:
         A connected database provider.
-        
+
     Raises:
         Exception: If the connection fails.
     """
     provider = get_provider()
-    
+
     if not provider.is_connected:
         await provider.connect()
-    
+
     return provider
 
 
 async def close_db_client() -> None:
     """Close the database client connection."""
     provider = get_provider()
-    
+
     if provider.is_connected:
         await provider.disconnect()
-    
+
     # Reset the provider to ensure it will be reinitialized on next use
     reset_provider()
     logger.info("Database client connection closed")
@@ -77,6 +76,7 @@ async def close_db_client() -> None:
 
 # Legacy compatibility functions for Supabase client
 # These will be deprecated in future versions but are maintained for backward compatibility
+
 
 def create_supabase_client(
     url: Optional[str] = None,
@@ -106,9 +106,7 @@ def create_supabase_client(
     Raises:
         ValueError: If the provider configuration is invalid.
     """
-    logger.warning(
-        "create_supabase_client is deprecated, use create_db_client instead"
-    )
+    logger.warning("create_supabase_client is deprecated, use create_db_client instead")
     provider = get_provider()
     return provider
 
@@ -133,9 +131,7 @@ def get_supabase_client(use_service_key: bool = False) -> Any:
     Raises:
         ValueError: If the provider configuration is invalid.
     """
-    logger.warning(
-        "get_supabase_client is deprecated, use get_db_client instead"
-    )
+    logger.warning("get_supabase_client is deprecated, use get_db_client instead")
     return get_provider()
 
 

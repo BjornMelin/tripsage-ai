@@ -142,7 +142,7 @@ class AirbnbMCPClient(BaseMCPClient):
                 server=self.endpoint,
                 tool="airbnb_search",
                 params=params,
-            )
+            ) from e
 
     async def get_listing_details(
         self,
@@ -220,4 +220,4 @@ class AirbnbMCPClient(BaseMCPClient):
                 server=self.endpoint,
                 tool="airbnb_listing_details",
                 params=params,
-            )
+            ) from e

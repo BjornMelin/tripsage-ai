@@ -11,7 +11,6 @@ import os
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
 
 # Define log levels
 DEFAULT_LOG_LEVEL = logging.INFO

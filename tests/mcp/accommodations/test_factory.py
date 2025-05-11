@@ -4,8 +4,6 @@ Tests for the Airbnb MCP client factory.
 
 from unittest.mock import patch
 
-import pytest
-
 from src.mcp.accommodations.client import AirbnbMCPClient
 from src.mcp.accommodations.factory import create_airbnb_client
 
