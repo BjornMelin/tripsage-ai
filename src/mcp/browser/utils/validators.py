@@ -5,12 +5,357 @@ import urllib.parse
 from datetime import date, datetime
 from typing import Any, Dict, List, Optional, Union
 
+from pydantic import (
+    ValidationError, 
+    field_validator, 
+    model_validator,
+    validate_call, 
+    Field, 
+    BaseModel,
+    ConfigDict
+)
+
 from src.mcp.browser.config import Config
 from src.mcp.browser.utils.logging import get_logger
 
 logger = get_logger(__name__)
 
 
+class URLValidator(BaseModel):
+    """Model for validating URLs."""
+    
+    url: str = Field(..., description="URL to validate")
+    
+    model_config = ConfigDict(
+        extra="forbid",
+        frozen=True,
+    )
+    
+    @field_validator("url")
+    @classmethod
+    def validate_url_format(cls, v: str) -> str:
+        """Validate if a URL is properly formatted."""
+        if not v or not isinstance(v, str):
+            raise ValueError("URL is required and must be a string")
+
+        # Basic URL format validation
+        url_pattern = re.compile(
+            r"^(?:http|https)://"  # http:// or https://
+            r"(?:(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+(?:[A-Z]{2,6}\.?|[A-Z0-9-]{2,}\.?)|"  # domain
+            r"localhost|"  # localhost
+            r"\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})"  # or IPv4
+            r"(?::\d+)?"  # optional port
+            r"(?:/?|[/?]\S+)$",
+            re.IGNORECASE,
+        )
+
+        if not url_pattern.match(v):
+            raise ValueError(f"Invalid URL format: {v}")
+        
+        # Parse URL
+        parsed_url = urllib.parse.urlparse(v)
+
+        # Check scheme
+        if parsed_url.scheme not in ["http", "https"]:
+            raise ValueError(f"URL must use http or https protocol: {v}")
+
+        # Check for internal IP addresses
+        if _is_internal_ip(parsed_url.netloc):
+            raise ValueError(f"URLs to internal IP addresses are not allowed: {v}")
+
+        # Check for localhost
+        if "localhost" in parsed_url.netloc.lower() or "127.0.0.1" in parsed_url.netloc:
+            raise ValueError(f"URLs to localhost are not allowed: {v}")
+
+        return v
+
+
+class DateValidator(BaseModel):
+    """Model for validating date strings."""
+    
+    date_str: str = Field(..., description="Date string in YYYY-MM-DD format")
+    
+    model_config = ConfigDict(
+        extra="forbid",
+        frozen=True,
+    )
+    
+    @field_validator("date_str")
+    @classmethod
+    def validate_date_format(cls, v: str) -> str:
+        """Validate if a date string is properly formatted."""
+        if not v or not isinstance(v, str):
+            raise ValueError("Date is required and must be a string")
+
+        # Check format
+        date_pattern = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+        if not date_pattern.match(v):
+            raise ValueError(f"Invalid date format: {v}. Expected YYYY-MM-DD")
+
+        # Check if it's a valid date
+        try:
+            year, month, day = map(int, v.split("-"))
+            datetime(year, month, day)
+        except ValueError as e:
+            raise ValueError(f"Invalid date: {v}. {str(e)}")
+
+        return v
+
+
+class AirlineValidator(BaseModel):
+    """Model for validating airline codes."""
+    
+    airline_code: str = Field(..., description="Airline code (e.g., 'AA', 'DL')")
+    
+    model_config = ConfigDict(
+        extra="forbid",
+        frozen=True,
+    )
+    
+    @field_validator("airline_code")
+    @classmethod
+    def validate_airline_format(cls, v: str) -> str:
+        """Validate if an airline code is properly formatted."""
+        if not v or not isinstance(v, str):
+            raise ValueError("Airline code is required and must be a string")
+
+        # Basic airline code format validation (IATA codes are typically 2 characters)
+        if not re.match(r"^[A-Z0-9]{2,3}$", v):
+            raise ValueError(
+                f"Invalid airline code format: {v}. Expected 2-3 uppercase letters/digits"
+            )
+
+        # Check if airline is supported
+        if v not in Config.AIRLINE_STATUS_URLS:
+            # We'll allow unknown airlines but log a warning
+            logger.warning(
+                f"Unknown airline code: {v}. Using generic status URL"
+            )
+
+        return v
+
+
+class FlightNumberValidator(BaseModel):
+    """Model for validating flight numbers."""
+    
+    flight_number: str = Field(..., description="Flight number (without airline code)")
+    
+    model_config = ConfigDict(
+        extra="forbid",
+        frozen=True,
+    )
+    
+    @field_validator("flight_number")
+    @classmethod
+    def validate_flight_number_format(cls, v: str) -> str:
+        """Validate if a flight number is properly formatted."""
+        if not v or not isinstance(v, str):
+            raise ValueError("Flight number is required and must be a string")
+
+        # Basic flight number format validation
+        if not re.match(r"^[0-9]{1,4}[A-Z]?$", v):
+            raise ValueError(
+                f"Invalid flight number format: {v}. Expected 1-4 digits, optionally followed by a letter"
+            )
+
+        return v
+
+
+class BookingTypeValidator(BaseModel):
+    """Model for validating booking types."""
+    
+    booking_type: str = Field(..., description="Booking type ('flight', 'hotel', or 'car')")
+    
+    model_config = ConfigDict(
+        extra="forbid",
+        frozen=True,
+    )
+    
+    @field_validator("booking_type")
+    @classmethod
+    def validate_booking_type_format(cls, v: str) -> str:
+        """Validate if a booking type is supported."""
+        if not v or not isinstance(v, str):
+            raise ValueError("Booking type is required and must be a string")
+
+        valid_types = ["flight", "hotel", "car"]
+        if v not in valid_types:
+            raise ValueError(
+                f"Invalid booking type: {v}. Must be one of: {', '.join(valid_types)}"
+            )
+
+        return v
+
+
+class ProviderValidator(BaseModel):
+    """Model for validating booking providers."""
+    
+    booking_type: str = Field(..., description="Booking type ('flight', 'hotel', or 'car')")
+    provider: str = Field(..., description="Provider code")
+    
+    model_config = ConfigDict(
+        extra="forbid",
+        frozen=True,
+    )
+    
+    @model_validator(mode="after")
+    def validate_provider_for_booking_type(self) -> "ProviderValidator":
+        """Validate if a provider for a booking type is supported."""
+        booking_type = self.booking_type
+        provider = self.provider
+        
+        if not provider or not isinstance(provider, str):
+            raise ValueError("Provider code is required and must be a string")
+
+        # Check if provider is supported for the booking type
+        supported_providers = Config.BOOKING_VERIFICATION_URLS.get(booking_type, {})
+        if provider not in supported_providers:
+            # We'll allow unknown providers but log a warning
+            logger.warning(
+                f"Unknown provider '{provider}' for booking type '{booking_type}'. Using generic verification URL"
+            )
+
+        return self
+
+
+class BookingReferenceValidator(BaseModel):
+    """Model for validating booking references."""
+    
+    booking_reference: str = Field(..., description="Booking reference/confirmation code")
+    
+    model_config = ConfigDict(
+        extra="forbid",
+        frozen=True,
+    )
+    
+    @field_validator("booking_reference")
+    @classmethod
+    def validate_booking_reference_format(cls, v: str) -> str:
+        """Validate if a booking reference is properly formatted."""
+        if not v or not isinstance(v, str):
+            raise ValueError("Booking reference is required and must be a string")
+
+        # Basic booking reference format validation (alphanumeric, typically 5-8 characters)
+        if not re.match(r"^[A-Z0-9]{4,10}$", v.upper()):
+            raise ValueError(
+                f"Invalid booking reference format: {v}. Expected 4-10 alphanumeric characters"
+            )
+
+        return v
+
+
+class EmailValidator(BaseModel):
+    """Model for validating email addresses."""
+    
+    email: str = Field(..., description="Email address")
+    
+    model_config = ConfigDict(
+        extra="forbid",
+        frozen=True,
+    )
+    
+    @field_validator("email")
+    @classmethod
+    def validate_email_format(cls, v: str) -> str:
+        """Validate if an email address is properly formatted."""
+        if not v or not isinstance(v, str):
+            raise ValueError("Email is required and must be a string")
+
+        # Basic email format validation
+        email_pattern = re.compile(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$")
+        if not email_pattern.match(v):
+            raise ValueError(f"Invalid email format: {v}")
+
+        return v
+
+
+class CssSelectorValidator(BaseModel):
+    """Model for validating CSS selectors."""
+    
+    selector: str = Field(..., description="CSS selector")
+    
+    model_config = ConfigDict(
+        extra="forbid",
+        frozen=True,
+    )
+    
+    @field_validator("selector")
+    @classmethod
+    def validate_selector_format(cls, v: str) -> str:
+        """Validate if a CSS selector is properly formatted."""
+        if not v or not isinstance(v, str):
+            raise ValueError("CSS selector is required and must be a string")
+
+        # Check for common issues in selectors
+        invalid_patterns = [
+            r"<\s*[a-z]",  # HTML tags
+            r"#\d",  # IDs that start with a digit
+            r"@import",  # CSS import statements
+            r"url\(",  # URL patterns
+        ]
+
+        for pattern in invalid_patterns:
+            if re.search(pattern, v):
+                raise ValueError(f"Invalid CSS selector: {v}")
+
+        return v
+
+
+class CheckFrequencyValidator(BaseModel):
+    """Model for validating check frequencies."""
+    
+    frequency: str = Field(..., description="Check frequency ('hourly', 'daily', or 'weekly')")
+    
+    model_config = ConfigDict(
+        extra="forbid",
+        frozen=True,
+    )
+    
+    @field_validator("frequency")
+    @classmethod
+    def validate_frequency_format(cls, v: str) -> str:
+        """Validate if a check frequency is valid."""
+        if not v or not isinstance(v, str):
+            raise ValueError("Check frequency is required and must be a string")
+
+        valid_frequencies = ["hourly", "daily", "weekly"]
+        if v not in valid_frequencies:
+            raise ValueError(
+                f"Invalid check frequency: {v}. Must be one of: {', '.join(valid_frequencies)}"
+            )
+
+        return v
+
+
+class SessionIdValidator(BaseModel):
+    """Model for validating session IDs."""
+    
+    session_id: str = Field(..., description="Session ID")
+    
+    model_config = ConfigDict(
+        extra="forbid",
+        frozen=True,
+    )
+    
+    @field_validator("session_id")
+    @classmethod
+    def validate_session_id_format(cls, v: str) -> str:
+        """Validate if a session ID is properly formatted."""
+        if not v or not isinstance(v, str):
+            raise ValueError("Session ID is required and must be a string")
+
+        # Basic session ID format validation (alphanumeric and dashes)
+        if not re.match(r"^[A-Za-z0-9_-]{1,64}$", v):
+            raise ValueError(
+                f"Invalid session ID format: {v}. Expected alphanumeric characters, underscores, or dashes"
+            )
+
+        return v
+
+
+# Function-based validators with @validate_call decorator for backward compatibility
+
+@validate_call
 def validate_url(url: str) -> bool:
     """Validate if a URL is properly formatted and allowed.
 
@@ -23,42 +368,14 @@ def validate_url(url: str) -> bool:
     Raises:
         ValueError: If URL is invalid or disallowed
     """
-    # Check if URL is properly formatted
-    if not url or not isinstance(url, str):
-        raise ValueError("URL is required and must be a string")
-
-    # Basic URL format validation
-    url_pattern = re.compile(
-        r"^(?:http|https)://"  # http:// or https://
-        r"(?:(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+(?:[A-Z]{2,6}\.?|[A-Z0-9-]{2,}\.?)|"  # domain
-        r"localhost|"  # localhost
-        r"\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})"  # or IPv4
-        r"(?::\d+)?"  # optional port
-        r"(?:/?|[/?]\S+)$",
-        re.IGNORECASE,
-    )
-
-    if not url_pattern.match(url):
-        raise ValueError(f"Invalid URL format: {url}")
-
-    # Parse URL
-    parsed_url = urllib.parse.urlparse(url)
-
-    # Check scheme
-    if parsed_url.scheme not in ["http", "https"]:
-        raise ValueError(f"URL must use http or https protocol: {url}")
-
-    # Check for internal IP addresses
-    if _is_internal_ip(parsed_url.netloc):
-        raise ValueError(f"URLs to internal IP addresses are not allowed: {url}")
-
-    # Check for localhost
-    if "localhost" in parsed_url.netloc.lower() or "127.0.0.1" in parsed_url.netloc:
-        raise ValueError(f"URLs to localhost are not allowed: {url}")
-
-    return True
+    try:
+        URLValidator(url=url)
+        return True
+    except ValidationError as e:
+        raise ValueError(str(e)) from e
 
 
+@validate_call
 def validate_date(date_str: str) -> bool:
     """Validate if a date string is properly formatted.
 
@@ -71,24 +388,14 @@ def validate_date(date_str: str) -> bool:
     Raises:
         ValueError: If date is invalid
     """
-    if not date_str or not isinstance(date_str, str):
-        raise ValueError("Date is required and must be a string")
-
-    # Check format
-    date_pattern = re.compile(r"^\d{4}-\d{2}-\d{2}$")
-    if not date_pattern.match(date_str):
-        raise ValueError(f"Invalid date format: {date_str}. Expected YYYY-MM-DD")
-
-    # Check if it's a valid date
     try:
-        year, month, day = map(int, date_str.split("-"))
-        datetime(year, month, day)
-    except ValueError as e:
-        raise ValueError(f"Invalid date: {date_str}. {str(e)}")
-
-    return True
+        DateValidator(date_str=date_str)
+        return True
+    except ValidationError as e:
+        raise ValueError(str(e)) from e
 
 
+@validate_call
 def validate_airline_code(airline_code: str) -> bool:
     """Validate if an airline code is properly formatted.
 
@@ -101,25 +408,14 @@ def validate_airline_code(airline_code: str) -> bool:
     Raises:
         ValueError: If airline code is invalid
     """
-    if not airline_code or not isinstance(airline_code, str):
-        raise ValueError("Airline code is required and must be a string")
-
-    # Basic airline code format validation (IATA codes are typically 2 characters)
-    if not re.match(r"^[A-Z0-9]{2,3}$", airline_code):
-        raise ValueError(
-            f"Invalid airline code format: {airline_code}. Expected 2-3 uppercase letters/digits"
-        )
-
-    # Check if airline is supported
-    if airline_code not in Config.AIRLINE_STATUS_URLS:
-        # We'll allow unknown airlines but log a warning
-        logger.warning(
-            f"Unknown airline code: {airline_code}. Using generic status URL"
-        )
-
-    return True
+    try:
+        AirlineValidator(airline_code=airline_code)
+        return True
+    except ValidationError as e:
+        raise ValueError(str(e)) from e
 
 
+@validate_call
 def validate_flight_number(flight_number: str) -> bool:
     """Validate if a flight number is properly formatted.
 
@@ -132,18 +428,14 @@ def validate_flight_number(flight_number: str) -> bool:
     Raises:
         ValueError: If flight number is invalid
     """
-    if not flight_number or not isinstance(flight_number, str):
-        raise ValueError("Flight number is required and must be a string")
-
-    # Basic flight number format validation
-    if not re.match(r"^[0-9]{1,4}[A-Z]?$", flight_number):
-        raise ValueError(
-            f"Invalid flight number format: {flight_number}. Expected 1-4 digits, optionally followed by a letter"
-        )
-
-    return True
+    try:
+        FlightNumberValidator(flight_number=flight_number)
+        return True
+    except ValidationError as e:
+        raise ValueError(str(e)) from e
 
 
+@validate_call
 def validate_booking_type(booking_type: str) -> bool:
     """Validate if a booking type is supported.
 
@@ -156,18 +448,14 @@ def validate_booking_type(booking_type: str) -> bool:
     Raises:
         ValueError: If booking type is invalid
     """
-    if not booking_type or not isinstance(booking_type, str):
-        raise ValueError("Booking type is required and must be a string")
-
-    valid_types = ["flight", "hotel", "car"]
-    if booking_type not in valid_types:
-        raise ValueError(
-            f"Invalid booking type: {booking_type}. Must be one of: {', '.join(valid_types)}"
-        )
-
-    return True
+    try:
+        BookingTypeValidator(booking_type=booking_type)
+        return True
+    except ValidationError as e:
+        raise ValueError(str(e)) from e
 
 
+@validate_call
 def validate_provider(booking_type: str, provider: str) -> bool:
     """Validate if a provider for a booking type is supported.
 
@@ -181,20 +469,14 @@ def validate_provider(booking_type: str, provider: str) -> bool:
     Raises:
         ValueError: If provider is invalid for the booking type
     """
-    if not provider or not isinstance(provider, str):
-        raise ValueError("Provider code is required and must be a string")
-
-    # Check if provider is supported for the booking type
-    supported_providers = Config.BOOKING_VERIFICATION_URLS.get(booking_type, {})
-    if provider not in supported_providers:
-        # We'll allow unknown providers but log a warning
-        logger.warning(
-            f"Unknown provider '{provider}' for booking type '{booking_type}'. Using generic verification URL"
-        )
-
-    return True
+    try:
+        ProviderValidator(booking_type=booking_type, provider=provider)
+        return True
+    except ValidationError as e:
+        raise ValueError(str(e)) from e
 
 
+@validate_call
 def validate_booking_reference(booking_reference: str) -> bool:
     """Validate if a booking reference is properly formatted.
 
@@ -207,18 +489,14 @@ def validate_booking_reference(booking_reference: str) -> bool:
     Raises:
         ValueError: If booking reference is invalid
     """
-    if not booking_reference or not isinstance(booking_reference, str):
-        raise ValueError("Booking reference is required and must be a string")
-
-    # Basic booking reference format validation (alphanumeric, typically 5-8 characters)
-    if not re.match(r"^[A-Z0-9]{4,10}$", booking_reference.upper()):
-        raise ValueError(
-            f"Invalid booking reference format: {booking_reference}. Expected 4-10 alphanumeric characters"
-        )
-
-    return True
+    try:
+        BookingReferenceValidator(booking_reference=booking_reference)
+        return True
+    except ValidationError as e:
+        raise ValueError(str(e)) from e
 
 
+@validate_call
 def validate_email(email: str) -> bool:
     """Validate if an email address is properly formatted.
 
@@ -231,17 +509,14 @@ def validate_email(email: str) -> bool:
     Raises:
         ValueError: If email is invalid
     """
-    if not email or not isinstance(email, str):
-        raise ValueError("Email is required and must be a string")
-
-    # Basic email format validation
-    email_pattern = re.compile(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$")
-    if not email_pattern.match(email):
-        raise ValueError(f"Invalid email format: {email}")
-
-    return True
+    try:
+        EmailValidator(email=email)
+        return True
+    except ValidationError as e:
+        raise ValueError(str(e)) from e
 
 
+@validate_call
 def validate_confirmation_code(confirmation_code: str) -> bool:
     """Validate if a confirmation code is properly formatted.
 
@@ -254,18 +529,11 @@ def validate_confirmation_code(confirmation_code: str) -> bool:
     Raises:
         ValueError: If confirmation code is invalid
     """
-    if not confirmation_code or not isinstance(confirmation_code, str):
-        raise ValueError("Confirmation code is required and must be a string")
-
-    # Basic confirmation code format validation (alphanumeric, typically 5-8 characters)
-    if not re.match(r"^[A-Z0-9]{4,10}$", confirmation_code.upper()):
-        raise ValueError(
-            f"Invalid confirmation code format: {confirmation_code}. Expected 4-10 alphanumeric characters"
-        )
-
-    return True
+    # Alias for validate_booking_reference
+    return validate_booking_reference(booking_reference=confirmation_code)
 
 
+@validate_call
 def validate_css_selector(selector: str) -> bool:
     """Validate if a CSS selector is properly formatted.
 
@@ -280,24 +548,14 @@ def validate_css_selector(selector: str) -> bool:
     Raises:
         ValueError: If selector is invalid
     """
-    if not selector or not isinstance(selector, str):
-        raise ValueError("CSS selector is required and must be a string")
-
-    # Check for common issues in selectors
-    invalid_patterns = [
-        r"<\s*[a-z]",  # HTML tags
-        r"#\d",  # IDs that start with a digit
-        r"@import",  # CSS import statements
-        r"url\(",  # URL patterns
-    ]
-
-    for pattern in invalid_patterns:
-        if re.search(pattern, selector):
-            raise ValueError(f"Invalid CSS selector: {selector}")
-
-    return True
+    try:
+        CssSelectorValidator(selector=selector)
+        return True
+    except ValidationError as e:
+        raise ValueError(str(e)) from e
 
 
+@validate_call
 def validate_check_frequency(frequency: str) -> bool:
     """Validate if a check frequency is valid.
 
@@ -310,18 +568,14 @@ def validate_check_frequency(frequency: str) -> bool:
     Raises:
         ValueError: If frequency is invalid
     """
-    if not frequency or not isinstance(frequency, str):
-        raise ValueError("Check frequency is required and must be a string")
-
-    valid_frequencies = ["hourly", "daily", "weekly"]
-    if frequency not in valid_frequencies:
-        raise ValueError(
-            f"Invalid check frequency: {frequency}. Must be one of: {', '.join(valid_frequencies)}"
-        )
-
-    return True
+    try:
+        CheckFrequencyValidator(frequency=frequency)
+        return True
+    except ValidationError as e:
+        raise ValueError(str(e)) from e
 
 
+@validate_call
 def validate_session_id(session_id: str) -> bool:
     """Validate if a session ID is properly formatted.
 
@@ -334,16 +588,11 @@ def validate_session_id(session_id: str) -> bool:
     Raises:
         ValueError: If session ID is invalid
     """
-    if not session_id or not isinstance(session_id, str):
-        raise ValueError("Session ID is required and must be a string")
-
-    # Basic session ID format validation (alphanumeric and dashes)
-    if not re.match(r"^[A-Za-z0-9_-]{1,64}$", session_id):
-        raise ValueError(
-            f"Invalid session ID format: {session_id}. Expected alphanumeric characters, underscores, or dashes"
-        )
-
-    return True
+    try:
+        SessionIdValidator(session_id=session_id)
+        return True
+    except ValidationError as e:
+        raise ValueError(str(e)) from e
 
 
 def _is_internal_ip(netloc: str) -> bool:
