@@ -1,7 +1,8 @@
 """
 Migration runner for TripSage database.
 
-This module provides functionality to apply SQL migrations to the Supabase database.
+This module provides functionality to apply SQL migrations to the database,
+supporting both Supabase and Neon providers.
 """
 
 import logging
@@ -10,7 +11,8 @@ import re
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
-from src.db.client import create_supabase_client
+from src.db.client import get_db_client
+from src.db.providers import DatabaseProvider
 from src.utils.logging import configure_logging
 
 # Configure logging
@@ -43,7 +45,7 @@ def get_migration_files() -> List[Path]:
     return migration_files
 
 
-def get_applied_migrations(service_key: bool = True) -> List[str]:
+async def get_applied_migrations(service_key: bool = True) -> List[str]:
     """
     Get list of migrations that have already been applied.
 
@@ -53,13 +55,14 @@ def get_applied_migrations(service_key: bool = True) -> List[str]:
     Returns:
         List of applied migration filenames.
     """
-    # Use service role key by default for admin operations
-    supabase = create_supabase_client(use_service_key=service_key)
+    # Get database client
+    db_client = await get_db_client(use_service_key=service_key)
 
     try:
         # Check if migrations table exists
-        result = supabase.table("migrations").select("id").limit(1).execute()
-        if result.data is None:
+        tables_exist = await db_client.tables_exist(["migrations"])
+        
+        if not tables_exist.get("migrations", False):
             # Create migrations table if it doesn't exist
             logger.info("Creating migrations table")
             query = """
@@ -69,15 +72,16 @@ def get_applied_migrations(service_key: bool = True) -> List[str]:
                 applied_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
             );
             """
-            supabase.rpc("exec_sql", {"query": query}).execute()
+            await db_client.execute_sql(query)
             return []
 
         # Get list of applied migrations
-        result = supabase.table("migrations").select("filename").execute()
-        if result.data is None:
+        result = db_client.table("migrations").select("filename").execute()
+        
+        if not result.get("data"):
             return []
 
-        return [m["filename"] for m in result.data]
+        return [m["filename"] for m in result.get("data", [])]
     except Exception as e:
         logger.error(f"Error checking applied migrations: {e}")
         # If the table doesn't exist, we'll assume no migrations have been applied
@@ -87,7 +91,7 @@ def get_applied_migrations(service_key: bool = True) -> List[str]:
         raise
 
 
-def apply_migration(filename: str, content: str, service_key: bool = True) -> bool:
+async def apply_migration(filename: str, content: str, service_key: bool = True) -> bool:
     """
     Apply a single migration to the database.
 
@@ -99,15 +103,15 @@ def apply_migration(filename: str, content: str, service_key: bool = True) -> bo
     Returns:
         True if the migration was successfully applied, False otherwise.
     """
-    supabase = create_supabase_client(use_service_key=service_key)
+    db_client = await get_db_client(use_service_key=service_key)
 
     try:
         # Execute the migration SQL
         logger.info(f"Applying migration: {filename}")
-        result = supabase.rpc("exec_sql", {"query": content}).execute()
+        await db_client.execute_sql(content)
 
         # Record the migration in the migrations table
-        supabase.table("migrations").insert(
+        db_client.table("migrations").insert(
             {"filename": filename, "applied_at": "now()"}
         ).execute()
 
@@ -118,7 +122,7 @@ def apply_migration(filename: str, content: str, service_key: bool = True) -> bo
         return False
 
 
-def run_migrations(
+async def run_migrations(
     service_key: bool = True, up_to: Optional[str] = None, dry_run: bool = False
 ) -> Tuple[int, int]:
     """
@@ -133,7 +137,7 @@ def run_migrations(
         Tuple of (number of successful migrations, number of failed migrations)
     """
     migration_files = get_migration_files()
-    applied_migrations = get_applied_migrations(service_key=service_key)
+    applied_migrations = await get_applied_migrations(service_key=service_key)
 
     logger.info(
         f"Found {len(migration_files)} migration files, {len(applied_migrations)} already applied"
@@ -161,7 +165,7 @@ def run_migrations(
             with open(migration_file, "r") as f:
                 content = f.read()
 
-            if apply_migration(migration_file.name, content, service_key=service_key):
+            if await apply_migration(migration_file.name, content, service_key=service_key):
                 succeeded += 1
             else:
                 failed += 1
@@ -181,6 +185,7 @@ if __name__ == "__main__":
         python -m src.db.migrations
     """
     import argparse
+    import asyncio
 
     parser = argparse.ArgumentParser(description="Apply database migrations")
     parser.add_argument(
@@ -191,6 +196,12 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    succeeded, failed = run_migrations(dry_run=args.dry_run, up_to=args.up_to)
+    async def main():
+        succeeded, failed = await run_migrations(dry_run=args.dry_run, up_to=args.up_to)
+        logger.info(f"Migration completed: {succeeded} succeeded, {failed} failed")
+        return succeeded, failed
 
-    logger.info(f"Migration completed: {succeeded} succeeded, {failed} failed")
+    result = asyncio.run(main())
+    
+    if result[1] > 0:  # If there were failures
+        exit(1)
