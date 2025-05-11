@@ -5,7 +5,10 @@
       "args": [
         "-y",
         "@openbnb/mcp-server-airbnb"
-      ]
+      ],
+      "env": {
+        "AIRBNB_API_KEY": "${AIRBNB_API_KEY}"
+      }
     },
     "google-maps": {
       "command": "npx",
