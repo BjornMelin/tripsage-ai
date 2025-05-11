@@ -10,19 +10,20 @@ The Time MCP Server provides essential time-related functionality for the TripSa
 
 After evaluating multiple time management libraries and implementation approaches, we selected the following technology stack:
 
-- **Node.js**: JavaScript runtime for the server implementation
-- **TypeScript**: Type-safe language for robust code quality
-- **Luxon**: Comprehensive datetime library for timezone handling and calculations
-- **FastMCP**: High-level framework for building MCP servers with minimal boilerplate
+- **Official MCP Time Server**: Standardized server from the Model Context Protocol (MCP) ecosystem
+- **Python**: Core language for the time server implementation
+- **ZoneInfo**: Standard library for timezone management and calculations
+- **DateTime**: Python's built-in datetime library for comprehensive time handling
+- **OpenAI Agents SDK**: For integration with our agent-based architecture
 - **Docker**: For containerized deployment
 
-Luxon was chosen over other datetime libraries (like Moment.js, date-fns, or Day.js) for the following reasons:
+The official MCP time server was chosen over custom implementations for the following reasons:
 
-- Immutable API that prevents unintended modifications
-- Comprehensive timezone support using the IANA timezone database
+- Standardized implementation following MCP best practices
+- Well-maintained as part of the ModelContextProtocol ecosystem
 - Proper handling of DST (Daylight Saving Time) transitions
-- Support for date/time arithmetic with units (e.g., adding days, hours)
-- Robust parsing and formatting capabilities
+- Support for timezone manipulation with IANA timezone names
+- Robust error handling and validation
 - Active maintenance and modern design
 
 ## MCP Tools
@@ -33,487 +34,266 @@ The Time MCP Server exposes the following key tools:
 
 Retrieves the current time in a specific timezone.
 
-```typescript
+```python
 @mcp.tool()
-async function get_current_time(
-  { timezone }: { timezone: string }
-): Promise<CurrentTimeResult> {
-  try {
-    // Validate timezone
-    if (!isValidTimezone(timezone)) {
-      throw new Error(`Invalid timezone: ${timezone}`);
-    }
+async def get_current_time(
+    timezone: str
+) -> dict:
+    """Get current time in a specific timezone.
 
-    // Get current time in the specified timezone
-    const now = DateTime.now().setZone(timezone);
+    Args:
+        timezone: IANA timezone name (e.g., 'America/New_York', 'Europe/London').
+                 Use 'UTC' as local timezone if no timezone provided by the user.
 
-    return {
-      timezone: timezone,
-      iso8601: now.toISO(),
-      utc_offset: now.offset / 60, // Convert minutes to hours
-      formatted: {
-        full: now.toFormat('EEEE, MMMM d, yyyy h:mm a'),
-        date: now.toFormat('yyyy-MM-dd'),
-        time: now.toFormat('HH:mm:ss'),
-        time_12h: now.toFormat('h:mm a'),
-        time_24h: now.toFormat('HH:mm'),
-        timezone_name: now.zoneName,
-        timezone_abbreviation: now.toFormat('ZZZZ')
-      },
-      timezone_info: {
-        name: now.zoneName,
-        country_code: getTimezoneCountryCode(timezone),
-        dst_active: now.isInDST
-      }
-    };
-  } catch (error) {
-    throw new Error(`Error getting current time: ${error.message}`);
-  }
-}
+    Returns:
+        A dictionary containing:
+        - timezone: The specified timezone
+        - datetime: Current datetime in ISO 8601 format
+        - is_dst: Whether DST is active in the specified timezone
+    """
+    try:
+        # Validate timezone
+        tz = ZoneInfo(timezone)
+
+        # Get current time in the specified timezone
+        now = datetime.now(tz)
+
+        return {
+            "timezone": timezone,
+            "datetime": now.isoformat(),
+            "is_dst": now.dst() != timedelta(0)
+        }
+    except Exception as e:
+        raise ValueError(f"Error getting current time: {str(e)}")
 ```
 
 ### convert_time
 
 Converts a time from one timezone to another.
 
-```typescript
+```python
 @mcp.tool()
-async function convert_time(
-  {
-    time,
-    source_timezone,
-    target_timezone,
-    format
-  }: {
-    time: string,
-    source_timezone: string,
-    target_timezone: string,
-    format?: string
-  }
-): Promise<TimeConversionResult> {
-  try {
-    // Validate timezones
-    if (!isValidTimezone(source_timezone)) {
-      throw new Error(`Invalid source timezone: ${source_timezone}`);
-    }
+async def convert_time(
+    source_timezone: str,
+    time: str,
+    target_timezone: str
+) -> dict:
+    """Convert time between timezones.
 
-    if (!isValidTimezone(target_timezone)) {
-      throw new Error(`Invalid target timezone: ${target_timezone}`);
-    }
+    Args:
+        source_timezone: Source IANA timezone name (e.g., 'America/New_York', 'Europe/London').
+                         Use 'UTC' as local timezone if no source timezone provided by the user.
+        time: Time to convert in 24-hour format (HH:MM)
+        target_timezone: Target IANA timezone name (e.g., 'Asia/Tokyo', 'America/San_Francisco').
+                         Use 'UTC' as local timezone if no target timezone provided by the user.
 
-    // Parse input time
-    let dateTime: DateTime;
-    if (time === 'now') {
-      dateTime = DateTime.now().setZone(source_timezone);
-    } else {
-      // Try different input formats
-      const formats = [
-        'yyyy-MM-dd HH:mm:ss',
-        'yyyy-MM-dd HH:mm',
-        'yyyy-MM-dd',
-        'HH:mm:ss',
-        'HH:mm',
-        'h:mm a'
-      ];
+    Returns:
+        A dictionary containing:
+        - source: Source timezone information (timezone, datetime, is_dst)
+        - target: Target timezone information (timezone, datetime, is_dst)
+        - time_difference: String representation of the time difference (e.g., '+9.0h')
+    """
+    try:
+        # Validate timezones
+        source_tz = ZoneInfo(source_timezone)
+        target_tz = ZoneInfo(target_timezone)
 
-      let parsed = false;
-      for (const fmt of formats) {
-        const attempt = DateTime.fromFormat(time, fmt, { zone: source_timezone });
-        if (attempt.isValid) {
-          dateTime = attempt;
-          parsed = true;
-          break;
+        # Parse time (assuming current day)
+        hour, minute = map(int, time.split(':'))
+        now = datetime.now()
+        source_dt = datetime(
+            now.year, now.month, now.day,
+            hour, minute, 0, 0,
+            tzinfo=source_tz
+        )
+
+        # Convert to target timezone
+        target_dt = source_dt.astimezone(target_tz)
+
+        # Calculate time difference in hours
+        time_diff_hours = (target_dt.utcoffset() - source_dt.utcoffset()).total_seconds() / 3600
+        time_diff_str = f"{'+' if time_diff_hours >= 0 else ''}{time_diff_hours}h"
+
+        return {
+            "source": {
+                "timezone": source_timezone,
+                "datetime": source_dt.isoformat(),
+                "is_dst": source_dt.dst() != timedelta(0)
+            },
+            "target": {
+                "timezone": target_timezone,
+                "datetime": target_dt.isoformat(),
+                "is_dst": target_dt.dst() != timedelta(0)
+            },
+            "time_difference": time_diff_str
         }
-      }
-
-      if (!parsed) {
-        // Try ISO format
-        dateTime = DateTime.fromISO(time, { zone: source_timezone });
-
-        if (!dateTime.isValid) {
-          throw new Error(`Could not parse time: ${time}`);
-        }
-      }
-    }
-
-    // Convert to target timezone
-    const convertedTime = dateTime.setZone(target_timezone);
-
-    // Format the output
-    const outputFormat = format || 'yyyy-MM-dd HH:mm:ss';
-
-    return {
-      original: {
-        time: dateTime.toFormat(outputFormat),
-        timezone: source_timezone,
-        utc_offset: dateTime.offset / 60
-      },
-      converted: {
-        time: convertedTime.toFormat(outputFormat),
-        timezone: target_timezone,
-        utc_offset: convertedTime.offset / 60
-      },
-      difference_hours: (convertedTime.offset - dateTime.offset) / 60,
-      iso8601: convertedTime.toISO()
-    };
-  } catch (error) {
-    throw new Error(`Error converting time: ${error.message}`);
-  }
-}
-```
-
-### calculate_travel_time
-
-Calculates arrival time and total duration for travel between timezones.
-
-```typescript
-@mcp.tool()
-async function calculate_travel_time(
-  {
-    departure_time,
-    departure_timezone,
-    duration_hours,
-    arrival_timezone
-  }: {
-    departure_time: string,
-    departure_timezone: string,
-    duration_hours: number,
-    arrival_timezone: string
-  }
-): Promise<TravelTimeResult> {
-  try {
-    // Validate timezones
-    if (!isValidTimezone(departure_timezone)) {
-      throw new Error(`Invalid departure timezone: ${departure_timezone}`);
-    }
-
-    if (!isValidTimezone(arrival_timezone)) {
-      throw new Error(`Invalid arrival timezone: ${arrival_timezone}`);
-    }
-
-    // Parse departure time
-    let departureDateTime: DateTime;
-    if (departure_time === 'now') {
-      departureDateTime = DateTime.now().setZone(departure_timezone);
-    } else {
-      // Try different input formats
-      const formats = [
-        'yyyy-MM-dd HH:mm:ss',
-        'yyyy-MM-dd HH:mm',
-        'yyyy-MM-dd',
-        'HH:mm:ss',
-        'HH:mm',
-        'h:mm a'
-      ];
-
-      let parsed = false;
-      for (const fmt of formats) {
-        const attempt = DateTime.fromFormat(departure_time, fmt, { zone: departure_timezone });
-        if (attempt.isValid) {
-          departureDateTime = attempt;
-          parsed = true;
-          break;
-        }
-      }
-
-      if (!parsed) {
-        // Try ISO format
-        departureDateTime = DateTime.fromISO(departure_time, { zone: departure_timezone });
-
-        if (!departureDateTime.isValid) {
-          throw new Error(`Could not parse departure time: ${departure_time}`);
-        }
-      }
-    }
-
-    // Calculate arrival time
-    const durationInMillis = duration_hours * 60 * 60 * 1000;
-    const arrivalDateTimeLocal = departureDateTime.plus({ milliseconds: durationInMillis });
-    const arrivalDateTimeDestination = arrivalDateTimeLocal.setZone(arrival_timezone);
-
-    // Calculate time difference between departure and arrival timezones
-    const departureTZ = DateTime.now().setZone(departure_timezone);
-    const arrivalTZ = DateTime.now().setZone(arrival_timezone);
-    const tzDifferenceHours = (arrivalTZ.offset - departureTZ.offset) / 60;
-
-    return {
-      departure: {
-        time: departureDateTime.toFormat('yyyy-MM-dd HH:mm'),
-        timezone: departure_timezone,
-        utc_offset: departureDateTime.offset / 60
-      },
-      arrival: {
-        time: arrivalDateTimeDestination.toFormat('yyyy-MM-dd HH:mm'),
-        timezone: arrival_timezone,
-        utc_offset: arrivalDateTimeDestination.offset / 60
-      },
-      flight_duration_hours: duration_hours,
-      timezone_difference_hours: tzDifferenceHours,
-      local_time_difference_hours: duration_hours + tzDifferenceHours,
-      next_day_arrival: arrivalDateTimeDestination.day > departureDateTime.day ||
-                          arrivalDateTimeDestination.month > departureDateTime.month ||
-                          arrivalDateTimeDestination.year > departureDateTime.year,
-      previous_day_arrival: arrivalDateTimeDestination.day < departureDateTime.day &&
-                            !(arrivalDateTimeDestination.month > departureDateTime.month ||
-                              arrivalDateTimeDestination.year > departureDateTime.year)
-    };
-  } catch (error) {
-    throw new Error(`Error calculating travel time: ${error.message}`);
-  }
-}
-```
-
-### list_timezones
-
-Retrieves a list of all valid IANA timezones, optionally filtered by region or query.
-
-```typescript
-@mcp.tool()
-async function list_timezones(
-  {
-    region,
-    query
-  }: {
-    region?: string,
-    query?: string
-  }
-): Promise<TimezoneListResult> {
-  try {
-    // Get all IANA timezones
-    const allTimezones = getIANATimezones();
-
-    // Filter by region if specified
-    let filteredTimezones = allTimezones;
-    if (region) {
-      const normalizedRegion = region.toLowerCase();
-      filteredTimezones = allTimezones.filter(tz =>
-        tz.toLowerCase().startsWith(normalizedRegion + '/') ||
-        tz.toLowerCase() === normalizedRegion
-      );
-    }
-
-    // Filter by query if specified
-    if (query) {
-      const normalizedQuery = query.toLowerCase();
-      filteredTimezones = filteredTimezones.filter(tz =>
-        tz.toLowerCase().includes(normalizedQuery)
-      );
-    }
-
-    // Get current time for each timezone
-    const timezones = filteredTimezones.map(tz => {
-      const now = DateTime.now().setZone(tz);
-      return {
-        name: tz,
-        utc_offset: now.offset / 60,
-        utc_offset_formatted: now.toFormat('Z'),
-        current_time: now.toFormat('HH:mm'),
-        region: tz.split('/')[0],
-        location: tz.includes('/') ? tz.split('/').slice(1).join('/') : tz,
-        dst_active: now.isInDST
-      };
-    });
-
-    // Sort by UTC offset
-    timezones.sort((a, b) => a.utc_offset - b.utc_offset);
-
-    return {
-      count: timezones.length,
-      timezones: timezones
-    };
-  } catch (error) {
-    throw new Error(`Error listing timezones: ${error.message}`);
-  }
-}
-```
-
-### format_date
-
-Formats a date according to specified format and locale.
-
-```typescript
-@mcp.tool()
-async function format_date(
-  {
-    date,
-    format,
-    timezone,
-    locale
-  }: {
-    date: string,
-    format: string,
-    timezone?: string,
-    locale?: string
-  }
-): Promise<DateFormatResult> {
-  try {
-    // Set timezone
-    const tz = timezone && isValidTimezone(timezone) ? timezone : 'UTC';
-
-    // Set locale
-    const loc = locale || 'en-US';
-
-    // Parse date
-    let dateTime: DateTime;
-    if (date === 'now') {
-      dateTime = DateTime.now().setZone(tz);
-    } else {
-      // Try different input formats
-      const formats = [
-        'yyyy-MM-dd HH:mm:ss',
-        'yyyy-MM-dd HH:mm',
-        'yyyy-MM-dd',
-        'MM/dd/yyyy',
-        'dd/MM/yyyy'
-      ];
-
-      let parsed = false;
-      for (const fmt of formats) {
-        const attempt = DateTime.fromFormat(date, fmt, { zone: tz });
-        if (attempt.isValid) {
-          dateTime = attempt;
-          parsed = true;
-          break;
-        }
-      }
-
-      if (!parsed) {
-        // Try ISO format
-        dateTime = DateTime.fromISO(date, { zone: tz });
-
-        if (!dateTime.isValid) {
-          throw new Error(`Could not parse date: ${date}`);
-        }
-      }
-    }
-
-    // Format date
-    return {
-      formatted: dateTime.setLocale(loc).toFormat(format),
-      timezone: tz,
-      locale: loc,
-      iso8601: dateTime.toISO()
-    };
-  } catch (error) {
-    throw new Error(`Error formatting date: ${error.message}`);
-  }
-}
+    except Exception as e:
+        raise ValueError(f"Error converting time: {str(e)}")
 ```
 
 ## Implementation Details
 
 ### Server Architecture
 
-The Time MCP Server follows a clean architecture with separation of concerns:
+The Time MCP Server follows the standard MCP server architecture:
 
-1. **Core**: MCP server setup and configuration
-2. **Utils**: Helper functions for timezone validation and manipulation
-3. **Models**: Type definitions and interfaces
-4. **Tools**: MCP tool implementations
+1. **Core**: MCP server definition and configuration
+2. **Tools**: MCP tool implementations for time-related functions
+3. **Utils**: Helper functions for timezone validation and management
 
-### Key Components
+### Client Integration
 
-#### Server Entry Point
+TripSage integrates with the Time MCP Server in two ways:
 
-```typescript
-// index.ts
-import { FastMCP } from "fastmcp";
-import {
-  get_current_time,
-  convert_time,
-  calculate_travel_time,
-  list_timezones,
-  format_date,
-} from "./tools";
+#### 1. Claude Desktop Configuration
 
-// Create MCP server
-const server = new FastMCP({
-  name: "time-mcp",
-  version: "1.0.0",
-  description: "Time MCP Server for TripSage",
-});
+For Claude desktop integration, the time server configuration is added to the client configuration:
 
-// Register tools
-server.registerTool(get_current_time);
-server.registerTool(convert_time);
-server.registerTool(calculate_travel_time);
-server.registerTool(list_timezones);
-server.registerTool(format_date);
-
-// Start the server
-const port = parseInt(process.env.PORT || "3000");
-server.start({
-  transportType: process.env.TRANSPORT_TYPE || "stdio",
-  http: {
-    port: port,
-  },
-});
-
-console.log(`Time MCP Server started`);
+```javascript
+// claude-settings.json
+{
+  "mcpServers": {
+    "time": {
+      "command": "uvx",
+      "args": ["mcp-server-time"]
+    }
+  }
+}
 ```
 
-#### Timezone Utilities
+The Claude desktop interface directly interacts with the time server following the MCP protocol.
 
-```typescript
-// utils/timezone.ts
-import { DateTime } from "luxon";
-import tzdata from "tzdata";
+#### 2. OpenAI Agents SDK Integration
 
-// Cache for timezone validity
-const validTimezoneCache = new Map<string, boolean>();
+For the OpenAI Agents SDK integration, we use the MCPServerManager class to interface with the time server:
 
-/**
- * Checks if a timezone is valid
- */
-export function isValidTimezone(timezone: string): boolean {
-  // Check cache first
-  if (validTimezoneCache.has(timezone)) {
-    return validTimezoneCache.get(timezone)!;
-  }
+```python
+# src/mcp/time/client.py
+import os
+from datetime import datetime
+from typing import Dict, Optional
 
-  // Validate timezone
-  try {
-    const dt = DateTime.now().setZone(timezone);
-    const isValid = dt.isValid;
+from agents import Agent, function_tool
+from src.mcp.base_mcp_client import BaseMCPClient
+from src.utils.logging import get_module_logger
 
-    // Cache result
-    validTimezoneCache.set(timezone, isValid);
+logger = get_module_logger(__name__)
 
-    return isValid;
-  } catch (error) {
-    validTimezoneCache.set(timezone, false);
-    return false;
-  }
-}
+class TimeMCPClient(BaseMCPClient):
+    """Client for the Time MCP Server."""
 
-/**
- * Returns the country code for a timezone
- */
-export function getTimezoneCountryCode(timezone: string): string | null {
-  const tzInfo = tzdata[timezone];
-  return tzInfo?.countries?.[0] || null;
-}
+    def __init__(self):
+        """Initialize the Time MCP client."""
+        super().__init__(server_name="time")
+        logger.info("Initialized Time MCP Client")
 
-/**
- * Returns all IANA timezones
- */
-export function getIANATimezones(): string[] {
-  return Object.keys(tzdata);
-}
+    @function_tool
+    async def get_current_time(self, timezone: str) -> Dict:
+        """Get current time in a specific timezone.
 
-/**
- * Get timezone abbreviation for a specific timezone and date
- */
-export function getTimezoneAbbreviation(
-  timezone: string,
-  date?: string
-): string {
-  const dt = date
-    ? DateTime.fromISO(date, { zone: timezone })
-    : DateTime.now().setZone(timezone);
+        Args:
+            timezone: IANA timezone name (e.g., 'America/New_York', 'Europe/London').
+                     Use 'UTC' as local timezone if no timezone provided by the user.
 
-  return dt.toFormat("ZZZZ");
-}
+        Returns:
+            Dict with timezone information including current time
+        """
+        try:
+            # Call the MCP server
+            server = await self.get_server()
+            result = await server.invoke_tool("get_current_time", {"timezone": timezone})
+            return result
+        except Exception as e:
+            logger.error(f"Error getting current time: {str(e)}")
+            # Fallback implementation if server fails
+            return {
+                "timezone": timezone,
+                "datetime": datetime.now().isoformat(),
+                "error": f"Server error: {str(e)}"
+            }
+
+    @function_tool
+    async def convert_time(
+        self,
+        source_timezone: str,
+        time: str,
+        target_timezone: str
+    ) -> Dict:
+        """Convert time between timezones.
+
+        Args:
+            source_timezone: Source IANA timezone name (e.g., 'America/New_York').
+                             Use 'UTC' as local timezone if no source timezone provided.
+            time: Time to convert in 24-hour format (HH:MM)
+            target_timezone: Target IANA timezone name (e.g., 'Asia/Tokyo').
+                             Use 'UTC' as local timezone if no target timezone provided.
+
+        Returns:
+            Dict with source and target timezone information and time difference
+        """
+        try:
+            # Call the MCP server
+            server = await self.get_server()
+            result = await server.invoke_tool(
+                "convert_time",
+                {
+                    "source_timezone": source_timezone,
+                    "time": time,
+                    "target_timezone": target_timezone
+                }
+            )
+            return result
+        except Exception as e:
+            logger.error(f"Error converting time: {str(e)}")
+            return {
+                "error": f"Failed to convert time: {str(e)}",
+                "source_timezone": source_timezone,
+                "target_timezone": target_timezone,
+                "time": time
+            }
+
+# Usage example:
+async def create_time_enabled_agent() -> Agent:
+    """Create an agent with time management capabilities.
+
+    Returns:
+        Agent configured with time management tools
+    """
+    from src.mcp.openai_agents_integration import create_agent_with_mcp_servers
+
+    # Create client instance for function tools
+    time_client = TimeMCPClient()
+
+    # Create agent with MCP server
+    agent = await create_agent_with_mcp_servers(
+        name="Travel Agent",
+        instructions="You are a travel planning assistant that helps plan itineraries across time zones.",
+        server_names=["time"],
+        tools=[
+            time_client.get_current_time,
+            time_client.convert_time
+        ]
+    )
+
+    return agent
+```
+
+The server configuration is defined in the OpenAI Agents SDK configuration file:
+
+```javascript
+// mcp_servers/openai_agents_config.js
+module.exports = {
+  mcpServers: {
+    time: {
+      command: "uvx",
+      args: ["mcp-server-time"],
+      env: {
+        PYTHONPATH: "${PYTHONPATH}",
+      },
+    },
+    // Other MCP servers...
+  },
+};
 ```
 
 ## Integration with TripSage
@@ -550,34 +330,53 @@ The Travel Agent uses the Time MCP Server for several key functions in the trave
 
 ### Environment Variables
 
-| Variable         | Description                                    | Default             |
-| ---------------- | ---------------------------------------------- | ------------------- |
-| PORT             | Port for the MCP server                        | 3000                |
-| TRANSPORT_TYPE   | MCP transport type (stdio or http)             | stdio               |
-| DEFAULT_TIMEZONE | Default timezone to use when none is specified | UTC                 |
-| DEFAULT_LOCALE   | Default locale for date formatting             | en-US               |
-| DEFAULT_FORMAT   | Default date format                            | yyyy-MM-dd HH:mm:ss |
+| Variable       | Description                                   | Default |
+| -------------- | --------------------------------------------- | ------- |
+| LOCAL_TIMEZONE | Override system timezone for local operations | System  |
 
 ### Deployment Options
 
-1. **Docker Container**: The recommended deployment method
+1. **With uvx (recommended)**:
 
    ```bash
-   docker build -t time-mcp .
-   docker run time-mcp
+   # Install if needed
+   pip install uvx
+
+   # Run directly
+   uvx mcp-server-time
    ```
 
-2. **NPM Package**: For direct integration with other Node.js services
+2. **With pip**:
 
    ```bash
-   npm install @tripsage/time-mcp-server
-   npx @tripsage/time-mcp-server
+   # Install the package
+   pip install mcp-server-time
+
+   # Run the server
+   python -m mcp_server_time
    ```
 
-3. **Local Development**: For testing and development
+3. **Docker Container**:
+
    ```bash
-   npm install
-   npm start
+   # Build container with official MCP time server
+   docker build -t time-mcp-server -f docker/timemcp/Dockerfile .
+
+   # Run container
+   docker run -p 3000:3000 time-mcp-server
+   ```
+
+4. **Local Development**:
+
+   ```bash
+   # Clone the repository
+   git clone https://github.com/modelcontextprotocol/servers.git
+
+   # Navigate to the time server directory
+   cd servers/src/time
+
+   # Run with MCP inspector for debugging
+   npx @modelcontextprotocol/inspector uv run mcp-server-time
    ```
 
 ## Best Practices
@@ -590,14 +389,75 @@ The Travel Agent uses the Time MCP Server for several key functions in the trave
 6. **Error Handling**: Provide clear error messages for invalid inputs
 7. **Caching**: Cache timezone data to improve performance
 
+## Testing
+
+For testing the time server integration, we utilize pytest and the MCP inspector:
+
+```python
+# src/mcp/time/tests/test_client.py
+import pytest
+from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
+
+from src.mcp.time.client import TimeMCPClient
+
+@pytest.fixture
+async def time_client():
+    """Create a time client for testing."""
+    client = TimeMCPClient()
+    return client
+
+@pytest.mark.asyncio
+async def test_get_current_time(time_client):
+    """Test getting current time."""
+    # Test with valid timezone
+    result = await time_client.get_current_time("America/New_York")
+    assert "timezone" in result
+    assert "datetime" in result
+    assert result["timezone"] == "America/New_York"
+
+    # Verify datetime is in the correct format
+    datetime.fromisoformat(result["datetime"])  # Should not raise an exception
+
+@pytest.mark.asyncio
+async def test_convert_time(time_client):
+    """Test converting time between timezones."""
+    # Test with valid timezones
+    result = await time_client.convert_time(
+        "America/New_York",
+        "14:30",
+        "Asia/Tokyo"
+    )
+
+    assert "source" in result
+    assert "target" in result
+    assert "time_difference" in result
+
+    assert result["source"]["timezone"] == "America/New_York"
+    assert result["target"]["timezone"] == "Asia/Tokyo"
+
+    # Verify expected time difference
+    tokyo = ZoneInfo("Asia/Tokyo")
+    ny = ZoneInfo("America/New_York")
+    now = datetime.now()
+    expected_diff_hours = (
+        datetime(now.year, now.month, now.day, tzinfo=tokyo).utcoffset() -
+        datetime(now.year, now.month, now.day, tzinfo=ny).utcoffset()
+    ).total_seconds() / 3600
+
+    diff_str = result["time_difference"].replace("h", "")
+    actual_diff = float(diff_str)
+    assert abs(actual_diff - expected_diff_hours) < 0.01  # Allow small precision differences
+```
+
 ## Limitations and Future Enhancements
 
 ### Current Limitations
 
-- No historical timezone data for dates before the IANA database
-- Limited support for non-standard time formats
+- Limited to basic timezone conversion and current time retrieval
 - No support for astronomical time calculations (sunrise/sunset)
 - Limited calendar functionality
+- No built-in travel time calculation (we must implement this ourselves)
 
 ### Planned Enhancements
 
@@ -610,6 +470,6 @@ The Travel Agent uses the Time MCP Server for several key functions in the trave
 
 ## Conclusion
 
-The Time MCP Server provides essential timezone and time management capabilities for the TripSage travel planning system. By offering robust tools for timezone conversion, travel time calculation, and date formatting, it enables TripSage to provide accurate, timezone-aware travel plans. The implementation uses modern libraries and follows best practices for timezone handling, ensuring that travelers receive reliable time information regardless of their destination.
+The Time MCP Server provides essential timezone and time management capabilities for the TripSage travel planning system using the official MCP implementation. By offering tools for timezone conversion and current time retrieval, it enables TripSage to provide accurate, timezone-aware travel plans. The implementation leverages the standardized Model Context Protocol, ensuring compatibility with modern AI agent frameworks including both Claude Desktop and OpenAI Agents SDK.
 
-This integration is particularly critical for international travel planning, where accurate timezone information can significantly impact the travel experience. The Time MCP Server's capabilities will continue to be expanded to support more advanced time-related functionality, improving TripSage's ability to create comprehensive, timezone-aware travel plans.
+This integration is particularly critical for international travel planning, where accurate timezone information can significantly impact the travel experience. Our implementation provides a flexible approach that works with different agent frameworks while maintaining consistent functionality.
