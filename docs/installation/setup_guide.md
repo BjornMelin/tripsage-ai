@@ -31,6 +31,8 @@ The main subprojects are:
 
 - `src/api/` - Backend API server
 - `src/agents/` - AI agents implementation
+- `src/mcp/` - MCP server implementations (browser, time, weather, etc.)
+- `src/db/` - Database access layer
 
 ## Installation
 
@@ -67,9 +69,27 @@ The simplest approach is to use the root `requirements.txt`, which includes all 
 uv pip install -r requirements.txt
 ```
 
-This installs everything you need for both API and Agents components in one step.
+This installs most common dependencies, but may not include all module-specific dependencies.
 
-#### Option 2: Modular Installation
+#### Option 2: Comprehensive Installation
+
+For a complete installation of all dependencies including subprojects:
+
+```bash
+# Install main project dependencies
+uv pip install -r requirements.txt
+
+# Install subproject dependencies
+uv pip install -r src/api/requirements.txt
+uv pip install -r src/agents/requirements.txt
+uv pip install -r src/mcp/browser/requirements.txt
+
+# Install any other module-specific dependencies as needed
+# For example:
+# uv pip install -r path/to/other/requirements.txt
+```
+
+#### Option 3: Modular Installation
 
 If you prefer a more granular approach:
 
@@ -79,7 +99,7 @@ If you prefer a more granular approach:
    uv pip install -e .
    ```
 
-2. Install component-specific dependencies:
+2. Install component-specific dependencies based on which parts you're working with:
 
 ```bash
 # For API component
@@ -87,9 +107,12 @@ uv pip install -r src/api/requirements.txt
 
 # For Agents component
 uv pip install -r src/agents/requirements.txt
+
+# For Browser MCP
+uv pip install -r src/mcp/browser/requirements.txt
 ```
 
-#### Option 3: Development Setup
+#### Option 4: Development Setup
 
 If you're focusing on development:
 
@@ -100,6 +123,7 @@ uv pip install -e ".[dev]"
 # Then add required component dependencies
 uv pip install -r src/api/requirements.txt
 uv pip install -r src/agents/requirements.txt
+uv pip install -r src/mcp/browser/requirements.txt
 ```
 
 ## Running the Project
@@ -198,9 +222,17 @@ pytest tests/test_file.py
 If you encounter "package not found" errors, ensure you've installed the dependencies for the specific component you're working with:
 
 ```bash
-cd src/component_name
-uv pip install -r requirements.txt
+# Verify which component's dependencies you need
+uv pip install -r src/component_name/requirements.txt
 ```
+
+Different modules have their own requirements.txt files:
+
+- Main project: `/requirements.txt`
+- API: `/src/api/requirements.txt`
+- Agents: `/src/agents/requirements.txt`
+- Browser MCP: `/src/mcp/browser/requirements.txt`
+- (Other MCP components may have their own requirements.txt files)
 
 #### Environment Variable Issues
 
