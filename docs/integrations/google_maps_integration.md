@@ -8,15 +8,19 @@ The Google Maps MCP Server acts as a bridge between AI agents and the Google Map
 
 ## Technology Selection
 
-After evaluating various mapping APIs and server implementation frameworks, we selected the following technology stack:
+After evaluating various mapping APIs and server implementation approaches, we have decided to use the official Model Context Protocol Google Maps server:
 
+- **@modelcontextprotocol/server-google-maps**: Official MCP server implementation for Google Maps (Node.js/TypeScript)
 - **Google Maps Platform API**: Comprehensive set of mapping services with global coverage
-- **Node.js**: JavaScript runtime for building the MCP server
-- **TypeScript**: Strongly-typed language for robust code
-- **FastMCP**: High-level framework for building MCP servers with minimal boilerplate
 - **Docker**: For containerized deployment
 
-The Google Maps Platform was chosen for its comprehensive API offerings, global data coverage, and reliability. The Node.js/TypeScript implementation provides a good balance of performance and developer productivity.
+The official Google Maps MCP server was chosen over a custom FastMCP implementation for the following reasons:
+
+1. **Production-Ready Stability**: Official implementation with regular updates and community support
+2. **Standardization**: Follows MCP best practices and conventions
+3. **Comprehensive Feature Set**: Includes all required Google Maps API functionality
+4. **Easy Integration**: Simple configuration with Claude Desktop and other MCP clients
+5. **Reduced Maintenance Burden**: No need to maintain custom code for standard use cases
 
 ## API Features
 
@@ -47,293 +51,230 @@ The Google Maps MCP Server exposes the following core API features:
 
 ## MCP Tools
 
-The Google Maps MCP Server implements the following tools:
+The Google Maps MCP Server provides the following tools:
 
-### Geocoding Tools
+### maps_geocode
 
-```typescript
-@mcp.tool()
-async function geocode_address(
-  { address }: { address: string }
-): Promise<GeocodingResult> {
-  try {
-    const response = await mapsClient.geocode({
-      address: address
-    });
-
-    return {
-      status: response.data.status,
-      results: response.data.results.map(result => ({
-        formatted_address: result.formatted_address,
-        place_id: result.place_id,
-        location: {
-          lat: result.geometry.location.lat,
-          lng: result.geometry.location.lng
-        }
-      }))
-    };
-  } catch (error) {
-    throw new Error(`Geocoding error: ${error.message}`);
-  }
-}
-
-@mcp.tool()
-async function reverse_geocode(
-  { lat, lng }: { lat: number, lng: number }
-): Promise<GeocodingResult> {
-  try {
-    const response = await mapsClient.geocode({
-      location: { lat, lng }
-    });
-
-    return {
-      status: response.data.status,
-      results: response.data.results.map(result => ({
-        formatted_address: result.formatted_address,
-        place_id: result.place_id,
-        location: {
-          lat: result.geometry.location.lat,
-          lng: result.geometry.location.lng
-        }
-      }))
-    };
-  } catch (error) {
-    throw new Error(`Reverse geocoding error: ${error.message}`);
-  }
-}
-```
-
-### Place Tools
+Converts an address to geographical coordinates.
 
 ```typescript
-@mcp.tool()
-async function search_places(
-  {
-    query,
-    location,
-    radius,
-    type
-  }: {
-    query?: string,
-    location?: { lat: number, lng: number },
-    radius?: number,
-    type?: string
-  }
-): Promise<PlaceSearchResult> {
-  try {
-    const response = await mapsClient.places({
-      query,
-      location: location ? `${location.lat},${location.lng}` : undefined,
-      radius,
-      type
-    });
-
-    return {
-      status: response.data.status,
-      results: response.data.results.map(result => ({
-        name: result.name,
-        place_id: result.place_id,
-        formatted_address: result.formatted_address,
-        location: {
-          lat: result.geometry.location.lat,
-          lng: result.geometry.location.lng
-        },
-        rating: result.rating,
-        types: result.types
-      }))
-    };
-  } catch (error) {
-    throw new Error(`Place search error: ${error.message}`);
-  }
+// Input
+{
+  "address": "1600 Amphitheatre Parkway, Mountain View, CA"
 }
 
-@mcp.tool()
-async function get_place_details(
-  { place_id }: { place_id: string }
-): Promise<PlaceDetailsResult> {
-  try {
-    const response = await mapsClient.place({
-      place_id: place_id,
-      fields: [
-        'name', 'formatted_address', 'formatted_phone_number',
-        'website', 'opening_hours', 'rating', 'reviews',
-        'price_level', 'photos', 'geometry'
-      ]
-    });
-
-    return {
-      status: response.data.status,
-      result: {
-        name: response.data.result.name,
-        formatted_address: response.data.result.formatted_address,
-        formatted_phone_number: response.data.result.formatted_phone_number,
-        website: response.data.result.website,
-        opening_hours: response.data.result.opening_hours,
-        rating: response.data.result.rating,
-        reviews: response.data.result.reviews,
-        price_level: response.data.result.price_level,
-        photos: response.data.result.photos,
-        location: {
-          lat: response.data.result.geometry.location.lat,
-          lng: response.data.result.geometry.location.lng
-        }
+// Output
+{
+  "results": [
+    {
+      "formatted_address": "1600 Amphitheatre Pkwy, Mountain View, CA 94043, USA",
+      "place_id": "ChIJ2eUgeAK6j4ARbn5u_wAGqWA",
+      "location": {
+        "lat": 37.422,
+        "lng": -122.084
       }
-    };
-  } catch (error) {
-    throw new Error(`Place details error: ${error.message}`);
+    }
+  ]
+}
+```
+
+### maps_reverse_geocode
+
+Converts coordinates to a human-readable address.
+
+```typescript
+// Input
+{
+  "latitude": 37.422,
+  "longitude": -122.084
+}
+
+// Output
+{
+  "results": [
+    {
+      "formatted_address": "1600 Amphitheatre Pkwy, Mountain View, CA 94043, USA",
+      "place_id": "ChIJ2eUgeAK6j4ARbn5u_wAGqWA",
+      "address_components": [
+        { "long_name": "1600", "short_name": "1600", "types": ["street_number"] },
+        // ...more address components
+      ]
+    }
+  ]
+}
+```
+
+### maps_search_places
+
+Searches for places based on a text query and optional location.
+
+```typescript
+// Input
+{
+  "query": "restaurants in San Francisco",
+  "location": {
+    "latitude": 37.7749,
+    "longitude": -122.4194
+  },
+  "radius": 5000
+}
+
+// Output
+{
+  "results": [
+    {
+      "name": "Restaurant Name",
+      "place_id": "ChIJxxxxxxxxxxxxxxxx",
+      "formatted_address": "123 Main St, San Francisco, CA 94105, USA",
+      "location": {
+        "lat": 37.789,
+        "lng": -122.401
+      },
+      "rating": 4.5,
+      "types": ["restaurant", "food", "point_of_interest", "establishment"]
+    },
+    // ...more results
+  ]
+}
+```
+
+### maps_place_details
+
+Retrieves detailed information about a specific place.
+
+```typescript
+// Input
+{
+  "place_id": "ChIJxxxxxxxxxxxxxxxx"
+}
+
+// Output
+{
+  "result": {
+    "name": "Place Name",
+    "formatted_address": "123 Main St, San Francisco, CA 94105, USA",
+    "formatted_phone_number": "(123) 456-7890",
+    "website": "https://www.example.com",
+    "opening_hours": {
+      "weekday_text": [
+        "Monday: 9:00 AM – 5:00 PM",
+        // ...more hours
+      ]
+    },
+    "rating": 4.5,
+    "reviews": [
+      // ...reviews
+    ],
+    "price_level": 2,
+    "photos": [
+      // ...photos
+    ],
+    "location": {
+      "lat": 37.789,
+      "lng": -122.401
+    }
   }
 }
 ```
 
-### Distance and Directions Tools
+### maps_distance_matrix
+
+Calculates distances and travel times between multiple origins and destinations.
 
 ```typescript
-@mcp.tool()
-async function calculate_distance(
-  {
-    origins,
-    destinations,
-    mode
-  }: {
-    origins: Array<{ lat: number, lng: number } | string>,
-    destinations: Array<{ lat: number, lng: number } | string>,
-    mode?: 'driving' | 'walking' | 'bicycling' | 'transit'
-  }
-): Promise<DistanceMatrixResult> {
-  try {
-    const originsStr = origins.map(o =>
-      typeof o === 'string' ? o : `${o.lat},${o.lng}`
-    );
-
-    const destinationsStr = destinations.map(d =>
-      typeof d === 'string' ? d : `${d.lat},${d.lng}`
-    );
-
-    const response = await mapsClient.distanceMatrix({
-      origins: originsStr,
-      destinations: destinationsStr,
-      mode: mode || 'driving'
-    });
-
-    return {
-      status: response.data.status,
-      origin_addresses: response.data.origin_addresses,
-      destination_addresses: response.data.destination_addresses,
-      rows: response.data.rows
-    };
-  } catch (error) {
-    throw new Error(`Distance calculation error: ${error.message}`);
-  }
+// Input
+{
+  "origins": ["San Francisco, CA", "Oakland, CA"],
+  "destinations": ["Los Angeles, CA", "San Diego, CA"],
+  "mode": "driving"
 }
 
-@mcp.tool()
-async function get_directions(
-  {
-    origin,
-    destination,
-    waypoints,
-    mode,
-    alternatives
-  }: {
-    origin: { lat: number, lng: number } | string,
-    destination: { lat: number, lng: number } | string,
-    waypoints?: Array<{ lat: number, lng: number } | string>,
-    mode?: 'driving' | 'walking' | 'bicycling' | 'transit',
-    alternatives?: boolean
-  }
-): Promise<DirectionsResult> {
-  try {
-    const originStr = typeof origin === 'string' ?
-      origin : `${origin.lat},${origin.lng}`;
-
-    const destinationStr = typeof destination === 'string' ?
-      destination : `${destination.lat},${destination.lng}`;
-
-    const waypointsStr = waypoints?.map(wp =>
-      typeof wp === 'string' ? wp : `${wp.lat},${wp.lng}`
-    );
-
-    const response = await mapsClient.directions({
-      origin: originStr,
-      destination: destinationStr,
-      waypoints: waypointsStr,
-      mode: mode || 'driving',
-      alternatives: alternatives || false
-    });
-
-    return {
-      status: response.data.status,
-      routes: response.data.routes.map(route => ({
-        summary: route.summary,
-        legs: route.legs.map(leg => ({
-          distance: leg.distance,
-          duration: leg.duration,
-          start_address: leg.start_address,
-          end_address: leg.end_address,
-          steps: leg.steps.map(step => ({
-            distance: step.distance,
-            duration: step.duration,
-            instructions: step.html_instructions,
-            travel_mode: step.travel_mode
-          }))
-        }))
-      }))
-    };
-  } catch (error) {
-    throw new Error(`Directions error: ${error.message}`);
-  }
+// Output
+{
+  "origin_addresses": ["San Francisco, CA, USA", "Oakland, CA, USA"],
+  "destination_addresses": ["Los Angeles, CA, USA", "San Diego, CA, USA"],
+  "rows": [
+    {
+      "elements": [
+        {
+          "distance": { "text": "381 mi", "value": 613246 },
+          "duration": { "text": "5 hours 53 mins", "value": 21180 },
+          "status": "OK"
+        },
+        // ...more elements
+      ]
+    },
+    // ...more rows
+  ]
 }
 ```
 
-### Maps Visualization Tools
+### maps_directions
+
+Retrieves directions between two points.
 
 ```typescript
-@mcp.tool()
-async function generate_static_map(
-  {
-    center,
-    zoom,
-    size,
-    markers
-  }: {
-    center?: { lat: number, lng: number } | string,
-    zoom?: number,
-    size?: { width: number, height: number },
-    markers?: Array<{
-      location: { lat: number, lng: number } | string,
-      label?: string,
-      color?: string
-    }>
-  }
-): Promise<StaticMapResult> {
-  try {
-    const centerStr = center ?
-      (typeof center === 'string' ? center : `${center.lat},${center.lng}`) :
-      undefined;
+// Input
+{
+  "origin": "San Francisco, CA",
+  "destination": "Los Angeles, CA",
+  "mode": "driving"
+}
 
-    const markersParams = markers?.map(marker => {
-      const locationStr = typeof marker.location === 'string' ?
-        marker.location : `${marker.location.lat},${marker.location.lng}`;
+// Output
+{
+  "routes": [
+    {
+      "summary": "US-101 S",
+      "legs": [
+        {
+          "distance": { "text": "381 mi", "value": 613246 },
+          "duration": { "text": "5 hours 53 mins", "value": 21180 },
+          "start_address": "San Francisco, CA, USA",
+          "end_address": "Los Angeles, CA, USA",
+          "steps": [
+            {
+              "distance": { "text": "0.3 mi", "value": 450 },
+              "duration": { "text": "2 mins", "value": 98 },
+              "instructions": "Head south on Market St",
+              "travel_mode": "DRIVING"
+            },
+            // ...more steps
+          ]
+        }
+      ]
+    }
+  ]
+}
+```
 
-      return `color:${marker.color || 'red'}|label:${marker.label || ''}|${locationStr}`;
-    });
+### maps_elevation
 
-    const params = {
-      center: centerStr,
-      zoom: zoom || 14,
-      size: `${size?.width || 600}x${size?.height || 400}`,
-      markers: markersParams,
-      key: GOOGLE_MAPS_API_KEY
-    };
+Gets elevation data for specified locations.
 
-    const url = `https://maps.googleapis.com/maps/api/staticmap?${new URLSearchParams(params)}`;
+```typescript
+// Input
+{
+  "locations": [
+    { "latitude": 37.7749, "longitude": -122.4194 },
+    { "latitude": 34.0522, "longitude": -118.2437 }
+  ]
+}
 
-    return {
-      map_url: url
-    };
-  } catch (error) {
-    throw new Error(`Static map generation error: ${error.message}`);
-  }
+// Output
+{
+  "results": [
+    {
+      "elevation": 60.12,
+      "location": { "lat": 37.7749, "lng": -122.4194 },
+      "resolution": 4.7
+    },
+    {
+      "elevation": 89.87,
+      "location": { "lat": 34.0522, "lng": -118.2437 },
+      "resolution": 4.7
+    }
+  ]
 }
 ```
 
@@ -344,105 +285,49 @@ async function generate_static_map(
 The Google Maps MCP Server follows a clean architecture with separation of concerns:
 
 1. **Core**: MCP server setup and configuration
-2. **Services**: Wrappers around Google Maps API client
-3. **Models**: Type definitions and interfaces
-4. **Tools**: MCP tool implementations
-5. **Resources**: MCP resource implementations
+2. **Services**: Google Maps API client and tool implementation
+3. **Transport**: Support for both stdio and HTTP communication
 
-### Key Components
+### Integration Setup
 
-#### Server Initialization
+To integrate the Google Maps MCP Server with TripSage, add the following configuration to your Claude Desktop or environment:
 
-```typescript
-// index.ts
-import { FastMCP } from "fastmcp";
-import { registerGoogleMapsTools } from "./tools";
-import { configureGoogleMapsClient } from "./services";
+#### Claude Desktop Configuration
 
-// Initialize Google Maps client
-const mapsClient = configureGoogleMapsClient({
-  apiKey: process.env.GOOGLE_MAPS_API_KEY,
-});
-
-// Create MCP server
-const server = new FastMCP({
-  name: "google-maps-mcp",
-  version: "1.0.0",
-  description: "Google Maps MCP Server for TripSage",
-});
-
-// Register tools with MCP server
-registerGoogleMapsTools(server, mapsClient);
-
-// Start the server
-const port = parseInt(process.env.PORT || "3000");
-server.start({
-  transportType: process.env.TRANSPORT_TYPE || "stdio",
-  http: {
-    port: port,
-  },
-});
-
-console.log(`Google Maps MCP Server started`);
+```json
+{
+  "mcpServers": {
+    "google-maps": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-google-maps"],
+      "env": {
+        "GOOGLE_MAPS_API_KEY": "<YOUR_GOOGLE_MAPS_API_KEY>"
+      }
+    }
+  }
+}
 ```
 
-#### Google Maps Client Configuration
+#### Docker Configuration
 
-```typescript
-// services/maps-client.ts
-import { Client } from "@googlemaps/google-maps-services-js";
-
-export interface GoogleMapsClientConfig {
-  apiKey: string;
-  timeout?: number;
-}
-
-export function configureGoogleMapsClient(config: GoogleMapsClientConfig) {
-  const client = new Client({
-    timeout: config.timeout || 10000,
-  });
-
-  return {
-    geocode: (params: any) =>
-      client.geocode({
-        params: {
-          ...params,
-          key: config.apiKey,
-        },
-      }),
-
-    places: (params: any) =>
-      client.placesNearby({
-        params: {
-          ...params,
-          key: config.apiKey,
-        },
-      }),
-
-    place: (params: any) =>
-      client.placeDetails({
-        params: {
-          ...params,
-          key: config.apiKey,
-        },
-      }),
-
-    distanceMatrix: (params: any) =>
-      client.distancematrix({
-        params: {
-          ...params,
-          key: config.apiKey,
-        },
-      }),
-
-    directions: (params: any) =>
-      client.directions({
-        params: {
-          ...params,
-          key: config.apiKey,
-        },
-      }),
-  };
+```json
+{
+  "mcpServers": {
+    "google-maps": {
+      "command": "docker",
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "-e",
+        "GOOGLE_MAPS_API_KEY",
+        "mcp/google-maps"
+      ],
+      "env": {
+        "GOOGLE_MAPS_API_KEY": "<YOUR_GOOGLE_MAPS_API_KEY>"
+      }
+    }
+  }
 }
 ```
 
@@ -482,33 +367,23 @@ A typical workflow for planning a multi-city trip might involve:
 
 ### Environment Variables
 
-| Variable            | Description                        | Default         |
-| ------------------- | ---------------------------------- | --------------- |
-| GOOGLE_MAPS_API_KEY | API key for Google Maps Platform   | None (Required) |
-| PORT                | Port for the MCP server            | 3000            |
-| TRANSPORT_TYPE      | MCP transport type (stdio or http) | stdio           |
-| TIMEOUT             | Timeout for API requests (ms)      | 10000           |
+| Variable            | Description                      | Default         |
+| ------------------- | -------------------------------- | --------------- |
+| GOOGLE_MAPS_API_KEY | API key for Google Maps Platform | None (Required) |
 
 ### Deployment Options
 
-1. **Docker Container**: The recommended deployment method
+1. **NPM Package**: For direct integration with Node.js services
 
    ```bash
-   docker build -t google-maps-mcp .
-   docker run -e GOOGLE_MAPS_API_KEY=your_api_key google-maps-mcp
+   npm install @modelcontextprotocol/server-google-maps
+   npx @modelcontextprotocol/server-google-maps
    ```
 
-2. **Serverless Functions**: For dynamic scaling based on demand
+2. **Docker Container**: For containerized deployment
 
    ```bash
-   serverless deploy
-   ```
-
-3. **Node.js Process**: For direct integration with other services
-
-   ```bash
-   npm install
-   npm start
+   docker run -i --rm -e GOOGLE_MAPS_API_KEY="your-api-key" mcp/google-maps
    ```
 
 ### Cost Management
@@ -527,7 +402,7 @@ To manage costs effectively:
 
 ## Best Practices
 
-1. **Error Handling**: Implement comprehensive error handling for API failures
+1. **Error Handling**: Implement robust error handling for API failures
 2. **Rate Limiting**: Respect Google Maps API usage limits
 3. **Caching**: Cache responses for frequently accessed locations
 4. **Query Optimization**: Use the most specific search parameters available
@@ -554,6 +429,6 @@ To manage costs effectively:
 
 ## Conclusion
 
-The Google Maps MCP Server provides essential geospatial and location-based capabilities for the TripSage travel planning system. By integrating with Google's comprehensive mapping platform, TripSage can offer accurate, detailed, and visually rich travel planning features. The implementation follows best practices for MCP server design with proper error handling, optimization, and security considerations.
+The Google Maps MCP Server provides essential geospatial and location-based capabilities for the TripSage travel planning system. By utilizing the official @modelcontextprotocol/server-google-maps package, we ensure a robust, well-maintained integration with Google's comprehensive mapping platform, allowing TripSage to offer accurate, detailed, and visually rich travel planning features.
 
-This integration forms a critical component of the TripSage ecosystem, enhancing the system's ability to provide intelligent, location-aware travel recommendations and visualizations.
+This standardized approach allows our development team to focus on building unique travel planning features rather than maintaining custom mapping integration code, while still delivering all the geospatial functionality our users need.
