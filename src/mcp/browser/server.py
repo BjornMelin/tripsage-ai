@@ -175,7 +175,7 @@ async def mcp__browser__browser_navigate(params: NavigateParams) -> Dict[str, An
             # Close the page to release resources
             try:
                 await page.close()
-            except:
+            except Exception:
                 pass
 
             log_error(logger, "browser_navigate", e, params.model_dump())
@@ -818,7 +818,8 @@ async def mcp__browser__browser_get_console_logs(
 
         try:
             # Execute JavaScript to retrieve console logs
-            # Note: This is a simplified approach as Playwright doesn't directly expose console logs API
+            # Note: This is a simplified approach as Playwright doesn't
+            # directly expose console logs API
             logs = await page.evaluate(
                 """() => {
                 return window.__console_logs || [];

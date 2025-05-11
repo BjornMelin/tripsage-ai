@@ -40,7 +40,8 @@ class URLValidator(BaseModel):
         # Basic URL format validation
         url_pattern = re.compile(
             r"^(?:http|https)://"  # http:// or https://
-            r"(?:(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+(?:[A-Z]{2,6}\.?|[A-Z0-9-]{2,}\.?)|"  # domain
+            r"(?:(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+(?:[A-Z]{2,6}\.?|"
+            r"[A-Z0-9-]{2,}\.?)|"  # domain
             r"localhost|"  # localhost
             r"\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})"  # or IPv4
             r"(?::\d+)?"  # optional port
@@ -96,7 +97,7 @@ class DateValidator(BaseModel):
             year, month, day = map(int, v.split("-"))
             datetime(year, month, day)
         except ValueError as e:
-            raise ValueError(f"Invalid date: {v}. {str(e)}")
+            raise ValueError(f"Invalid date: {v}. {str(e)}") from e
 
         return v
 
@@ -121,7 +122,8 @@ class AirlineValidator(BaseModel):
         # Basic airline code format validation (IATA codes are typically 2 characters)
         if not re.match(r"^[A-Z0-9]{2,3}$", v):
             raise ValueError(
-                f"Invalid airline code format: {v}. Expected 2-3 uppercase letters/digits"
+                f"Invalid airline code format: {v}. "
+                f"Expected 2-3 uppercase letters/digits"
             )
 
         # Check if airline is supported
@@ -152,7 +154,8 @@ class FlightNumberValidator(BaseModel):
         # Basic flight number format validation
         if not re.match(r"^[0-9]{1,4}[A-Z]?$", v):
             raise ValueError(
-                f"Invalid flight number format: {v}. Expected 1-4 digits, optionally followed by a letter"
+                f"Invalid flight number format: {v}. "
+                f"Expected 1-4 digits, optionally followed by a letter"
             )
 
         return v
@@ -213,7 +216,8 @@ class ProviderValidator(BaseModel):
         if provider not in supported_providers:
             # We'll allow unknown providers but log a warning
             logger.warning(
-                f"Unknown provider '{provider}' for booking type '{booking_type}'. Using generic verification URL"
+                f"Unknown provider '{provider}' for booking type '{booking_type}'. "
+                f"Using generic verification URL"
             )
 
         return self
@@ -238,10 +242,11 @@ class BookingReferenceValidator(BaseModel):
         if not v or not isinstance(v, str):
             raise ValueError("Booking reference is required and must be a string")
 
-        # Basic booking reference format validation (alphanumeric, typically 5-8 characters)
+        # Basic booking reference format validation (alphanumeric, typically 5-8 chars)
         if not re.match(r"^[A-Z0-9]{4,10}$", v.upper()):
             raise ValueError(
-                f"Invalid booking reference format: {v}. Expected 4-10 alphanumeric characters"
+                f"Invalid booking reference format: {v}. "
+                f"Expected 4-10 alphanumeric characters"
             )
 
         return v
@@ -326,7 +331,8 @@ class CheckFrequencyValidator(BaseModel):
         valid_frequencies = ["hourly", "daily", "weekly"]
         if v not in valid_frequencies:
             raise ValueError(
-                f"Invalid check frequency: {v}. Must be one of: {', '.join(valid_frequencies)}"
+                f"Invalid check frequency: {v}. "
+                f"Must be one of: {', '.join(valid_frequencies)}"
             )
 
         return v
@@ -352,7 +358,8 @@ class SessionIdValidator(BaseModel):
         # Basic session ID format validation (alphanumeric and dashes)
         if not re.match(r"^[A-Za-z0-9_-]{1,64}$", v):
             raise ValueError(
-                f"Invalid session ID format: {v}. Expected alphanumeric characters, underscores, or dashes"
+                f"Invalid session ID format: {v}. "
+                f"Expected alphanumeric characters, underscores, or dashes"
             )
 
         return v

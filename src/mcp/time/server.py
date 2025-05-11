@@ -58,7 +58,10 @@ class TimeMCPServer(FastMCPServer):
                     "properties": {
                         "timezone": {
                             "type": "string",
-                            "description": "IANA timezone name (e.g., 'America/New_York', 'Europe/London')",
+                            "description": (
+                                "IANA timezone name (e.g., 'America/New_York', "
+                                "'Europe/London')"
+                            ),
                         }
                     },
                     "required": ["timezone"],
@@ -148,7 +151,9 @@ class TimeMCPServer(FastMCPServer):
         self.register_fast_tool(
             create_tool(
                 name="calculate_travel_time",
-                description="Calculate travel time between departure and arrival points",
+                description=(
+                    "Calculate travel time between departure and arrival points"
+                ),
                 input_schema={
                     "type": "object",
                     "properties": {
@@ -244,7 +249,10 @@ class TimeMCPServer(FastMCPServer):
                     "properties": {
                         "date": {
                             "type": "string",
-                            "description": "Date string in ISO format (YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS)",
+                            "description": (
+                                "Date string in ISO format (YYYY-MM-DD or "
+                                "YYYY-MM-DDTHH:MM:SS)"
+                            ),
                         },
                         "timezone": {
                             "type": "string",
@@ -252,7 +260,10 @@ class TimeMCPServer(FastMCPServer):
                         },
                         "format": {
                             "type": "string",
-                            "description": "Format type: 'full', 'short', 'date_only', 'time_only', or 'iso'",
+                            "description": (
+                                "Format type: 'full', 'short', 'date_only', "
+                                "'time_only', or 'iso'"
+                            ),
                             "enum": ["full", "short", "date_only", "time_only", "iso"],
                             "default": "full",
                         },

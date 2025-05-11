@@ -29,6 +29,12 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 30
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/token")
 
 
+# Create a user repository dependency
+def get_user_repo_dependency():
+    """Get the user repository dependency."""
+    return get_repository(get_user_repository)
+
+
 # Token models
 class Token(BaseModel):
     access_token: str
@@ -72,7 +78,7 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
 # Get current user
 async def get_current_user(
     token: str = Depends(oauth2_scheme),
-    user_repo: UserRepository = Depends(get_repository(get_user_repository)),
+    user_repo: UserRepository = None,
 ):
     """
     Get the current user from the JWT token.
@@ -87,6 +93,9 @@ async def get_current_user(
     Raises:
         HTTPException: If the token is invalid or the user is not found
     """
+    if user_repo is None:
+        user_repo = get_user_repo_dependency()()
+
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -100,7 +109,7 @@ async def get_current_user(
             raise credentials_exception
         token_data = TokenData(user_id=user_id)
     except JWTError:
-        raise credentials_exception
+        raise credentials_exception from None
 
     # Get user from database
     user = await user_repo.get_by_id(int(token_data.user_id))
@@ -119,7 +128,9 @@ async def get_current_user(
 
 
 # Get active user
-async def get_current_active_user(current_user: User = Depends(get_current_user)):
+async def get_current_active_user(
+    current_user: User = None,
+):
     """
     Get the current active user.
 
@@ -132,6 +143,9 @@ async def get_current_active_user(current_user: User = Depends(get_current_user)
     Raises:
         HTTPException: If the user is disabled
     """
+    if current_user is None:
+        current_user = await get_current_user()
+
     if current_user.disabled:
         raise HTTPException(status_code=400, detail="Inactive user")
     return current_user

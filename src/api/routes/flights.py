@@ -118,10 +118,18 @@ async def verify_trip_access(
 @router.get("/trip/{trip_id}", response_model=List[FlightResponse])
 async def get_flights_for_trip(
     trip_id: str,
-    current_user: User = Depends(get_current_active_user),
-    flight_repo: FlightRepository = Depends(get_repository(get_flight_repository)),
-    trip_repo: TripRepository = Depends(get_repository(get_trip_repository)),
+    current_user: User = None,
+    flight_repo: FlightRepository = None,
+    trip_repo: TripRepository = None,
 ):
+    # Get dependencies if not provided
+    if current_user is None:
+        current_user = await get_current_active_user()
+    if flight_repo is None:
+        flight_repo = get_repository(get_flight_repository)()
+    if trip_repo is None:
+        trip_repo = get_repository(get_trip_repository)()
+
     # Verify access to trip
     await verify_trip_access(int(trip_id), int(current_user.id), trip_repo)
 
@@ -134,10 +142,18 @@ async def get_flights_for_trip(
 @router.get("/{flight_id}", response_model=FlightResponse)
 async def get_flight(
     flight_id: str,
-    current_user: User = Depends(get_current_active_user),
-    flight_repo: FlightRepository = Depends(get_repository(get_flight_repository)),
-    trip_repo: TripRepository = Depends(get_repository(get_trip_repository)),
+    current_user: User = None,
+    flight_repo: FlightRepository = None,
+    trip_repo: TripRepository = None,
 ):
+    # Get dependencies if not provided
+    if current_user is None:
+        current_user = await get_current_active_user()
+    if flight_repo is None:
+        flight_repo = get_repository(get_flight_repository)()
+    if trip_repo is None:
+        trip_repo = get_repository(get_trip_repository)()
+
     # Get flight
     flight = await flight_repo.get_by_id(int(flight_id))
     if not flight:
@@ -155,10 +171,18 @@ async def get_flight(
 @router.post("/", response_model=FlightResponse, status_code=status.HTTP_201_CREATED)
 async def create_flight(
     flight_data: FlightCreate,
-    current_user: User = Depends(get_current_active_user),
-    flight_repo: FlightRepository = Depends(get_repository(get_flight_repository)),
-    trip_repo: TripRepository = Depends(get_repository(get_trip_repository)),
+    current_user: User = None,
+    flight_repo: FlightRepository = None,
+    trip_repo: TripRepository = None,
 ):
+    # Get dependencies if not provided
+    if current_user is None:
+        current_user = await get_current_active_user()
+    if flight_repo is None:
+        flight_repo = get_repository(get_flight_repository)()
+    if trip_repo is None:
+        trip_repo = get_repository(get_trip_repository)()
+
     # Verify access to trip
     await verify_trip_access(int(flight_data.trip_id), int(current_user.id), trip_repo)
 
@@ -191,10 +215,18 @@ async def create_flight(
 async def update_flight(
     flight_id: str,
     flight_update: FlightUpdate,
-    current_user: User = Depends(get_current_active_user),
-    flight_repo: FlightRepository = Depends(get_repository(get_flight_repository)),
-    trip_repo: TripRepository = Depends(get_repository(get_trip_repository)),
+    current_user: User = None,
+    flight_repo: FlightRepository = None,
+    trip_repo: TripRepository = None,
 ):
+    # Get dependencies if not provided
+    if current_user is None:
+        current_user = await get_current_active_user()
+    if flight_repo is None:
+        flight_repo = get_repository(get_flight_repository)()
+    if trip_repo is None:
+        trip_repo = get_repository(get_trip_repository)()
+
     # Get flight
     flight = await flight_repo.get_by_id(int(flight_id))
     if not flight:
@@ -236,10 +268,18 @@ async def update_flight(
 @router.delete("/{flight_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_flight(
     flight_id: str,
-    current_user: User = Depends(get_current_active_user),
-    flight_repo: FlightRepository = Depends(get_repository(get_flight_repository)),
-    trip_repo: TripRepository = Depends(get_repository(get_trip_repository)),
+    current_user: User = None,
+    flight_repo: FlightRepository = None,
+    trip_repo: TripRepository = None,
 ):
+    # Get dependencies if not provided
+    if current_user is None:
+        current_user = await get_current_active_user()
+    if flight_repo is None:
+        flight_repo = get_repository(get_flight_repository)()
+    if trip_repo is None:
+        trip_repo = get_repository(get_trip_repository)()
+
     # Get flight
     flight = await flight_repo.get_by_id(int(flight_id))
     if not flight:

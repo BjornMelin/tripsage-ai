@@ -1,7 +1,8 @@
 """
 Time API client implementations for TripSage.
 
-This module provides API client implementations for time and timezone data providers.
+This module provides API client implementations for time and
+timezone data providers.
 """
 
 import datetime
@@ -103,10 +104,10 @@ class TimeZoneDatabase(BaseModel):
                 "utc_offset_seconds": offset_seconds,
                 "is_dst": is_dst,
             }
-        except pytz.exceptions.UnknownTimeZoneError:
-            raise ValueError(f"Unknown timezone: {timezone}")
+        except pytz.exceptions.UnknownTimeZoneError as e:
+            raise ValueError(f"Unknown timezone: {timezone}") from e
         except Exception as e:
-            raise ValueError(f"Error getting timezone info: {str(e)}")
+            raise ValueError(f"Error getting timezone info: {str(e)}") from e
 
     @redis_cache.cached("current_time", 60)  # Cache for 1 minute
     async def get_current_time(self, timezone: str) -> Dict[str, Any]:
@@ -141,10 +142,10 @@ class TimeZoneDatabase(BaseModel):
                 "abbreviation": tz_info["abbreviation"],
                 "unix_timestamp": int(time.time()),
             }
-        except pytz.exceptions.UnknownTimeZoneError:
-            raise ValueError(f"Unknown timezone: {timezone}")
+        except pytz.exceptions.UnknownTimeZoneError as e:
+            raise ValueError(f"Unknown timezone: {timezone}") from e
         except Exception as e:
-            raise ValueError(f"Error getting current time: {str(e)}")
+            raise ValueError(f"Error getting current time: {str(e)}") from e
 
     @redis_cache.cached("time_convert", 86400)  # Cache for 1 day
     async def convert_time(
@@ -167,12 +168,12 @@ class TimeZoneDatabase(BaseModel):
             # Parse time
             try:
                 hour, minute = map(int, time_str.split(":"))
-                if hour < 0 or hour > 23 or minute < 0 or minute > 59:
+                if not (0 <= hour < 24 and 0 <= minute < 60):
                     raise ValueError(
-                        "Time must be in format HH:MM with valid hours (0-23) and minutes (0-59)"
+                        f"Invalid time values: hours={hour}, minutes={minute}"
                     )
-            except Exception:
-                raise ValueError("Time must be in format HH:MM")
+            except Exception as e:
+                raise ValueError("Time must be in format HH:MM") from e
 
             # Get source and target timezone objects
             source_tz = pytz.timezone(source_timezone)
@@ -216,9 +217,9 @@ class TimeZoneDatabase(BaseModel):
                 "time_difference_seconds": time_diff_seconds,
             }
         except pytz.exceptions.UnknownTimeZoneError as e:
-            raise ValueError(f"Unknown timezone: {str(e)}")
+            raise ValueError(f"Unknown timezone: {str(e)}") from e
         except Exception as e:
-            raise ValueError(f"Error converting time: {str(e)}")
+            raise ValueError(f"Error converting time: {str(e)}") from e
 
     @redis_cache.cached("travel_time", 86400)  # Cache for 1 day
     async def calculate_travel_time(
@@ -246,22 +247,23 @@ class TimeZoneDatabase(BaseModel):
             # Parse departure time
             try:
                 dep_hour, dep_minute = map(int, departure_time.split(":"))
-                if dep_hour < 0 or dep_hour > 23 or dep_minute < 0 or dep_minute > 59:
+                if not (0 <= dep_hour < 24 and 0 <= dep_minute < 60):
                     raise ValueError(
-                        "Time must be in format HH:MM with valid hours (0-23) and minutes (0-59)"
+                        f"Invalid departure time: hours={dep_hour}, "
+                        f"minutes={dep_minute}"
                     )
-            except Exception:
-                raise ValueError("Departure time must be in format HH:MM")
+            except Exception as e:
+                raise ValueError("Departure time must be in format HH:MM") from e
 
             # Parse arrival time
             try:
                 arr_hour, arr_minute = map(int, arrival_time.split(":"))
-                if arr_hour < 0 or arr_hour > 23 or arr_minute < 0 or arr_minute > 59:
+                if not (0 <= arr_hour < 24 and 0 <= arr_minute < 60):
                     raise ValueError(
-                        "Time must be in format HH:MM with valid hours (0-23) and minutes (0-59)"
+                        f"Invalid arrival time: hours={arr_hour}, minutes={arr_minute}"
                     )
-            except Exception:
-                raise ValueError("Arrival time must be in format HH:MM")
+            except Exception as e:
+                raise ValueError("Arrival time must be in format HH:MM") from e
 
             # Get timezone objects
             dep_tz = pytz.timezone(departure_timezone)
@@ -278,7 +280,8 @@ class TimeZoneDatabase(BaseModel):
 
             # Create datetime for arrival
             # Assume arrival is on the same day in the arrival timezone
-            # If the flight crosses the International Date Line, this might be off by a day
+            # If the flight crosses the International Date Line,
+            # this might be off by a day
             arr_dt = arr_tz.localize(
                 datetime.datetime.combine(dep_date, datetime.time(arr_hour, arr_minute))
             )
@@ -311,9 +314,9 @@ class TimeZoneDatabase(BaseModel):
                 "next_day_arrival": arr_dt.date() > dep_dt.date(),
             }
         except pytz.exceptions.UnknownTimeZoneError as e:
-            raise ValueError(f"Unknown timezone: {str(e)}")
+            raise ValueError(f"Unknown timezone: {str(e)}") from e
         except Exception as e:
-            raise ValueError(f"Error calculating travel time: {str(e)}")
+            raise ValueError(f"Error calculating travel time: {str(e)}") from e
 
     @redis_cache.cached("date_format", 86400)  # Cache for 1 day
     async def format_date(
@@ -340,14 +343,20 @@ class TimeZoneDatabase(BaseModel):
         try:
             # Parse date
             try:
-                if "T" in date_str:
-                    dt = datetime.datetime.fromisoformat(date_str)
+                if not date_str:
+                    # Use current date if not provided
+                    dt = datetime.datetime.now()
                 else:
-                    dt = datetime.datetime.fromisoformat(f"{date_str}T00:00:00")
-            except Exception:
+                    # Try to parse the date
+                    try:
+                        dt = datetime.datetime.fromisoformat(date_str)
+                    except ValueError:
+                        # Try just the date part
+                        dt = datetime.datetime.fromisoformat(f"{date_str}T00:00:00")
+            except Exception as e:
                 raise ValueError(
                     "Date must be in ISO format (YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS)"
-                )
+                ) from e
 
             # Get timezone
             tz = pytz.timezone(timezone)
@@ -380,10 +389,10 @@ class TimeZoneDatabase(BaseModel):
                 "formatted_date": formatted,
                 "utc_date": dt.astimezone(pytz.UTC).isoformat(),
             }
-        except pytz.exceptions.UnknownTimeZoneError:
-            raise ValueError(f"Unknown timezone: {timezone}")
+        except pytz.exceptions.UnknownTimeZoneError as e:
+            raise ValueError(f"Unknown timezone: {timezone}") from e
         except Exception as e:
-            raise ValueError(f"Error formatting date: {str(e)}")
+            raise ValueError(f"Error formatting date: {str(e)}") from e
 
 
 def get_timezone_db() -> TimeZoneDatabase:

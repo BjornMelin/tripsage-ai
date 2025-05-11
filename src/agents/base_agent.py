@@ -5,17 +5,14 @@ This module provides the base agent class using the OpenAI Agents SDK
 with integration for MCP tools and dual storage architecture.
 """
 
-import asyncio
-import json
 import time
-from typing import Any, Callable, Dict, List, Optional, Type, Union
+from typing import Any, Callable, Dict, List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
-from agents import Agent, RunContextWrapper, WebSearchTool, function_tool, handoff
+from agents import Agent, RunContextWrapper, function_tool, handoff
 from agents.extensions.handoff_prompt import RECOMMENDED_PROMPT_PREFIX
 
-from ..cache.redis_cache import redis_cache
 from ..mcp.base_mcp_client import BaseMCPClient
 from ..utils.config import get_config
 from ..utils.error_handling import MCPError, TripSageError, log_exception
@@ -244,9 +241,9 @@ class TravelAgent(BaseAgent):
         """
         # Define comprehensive instructions
         instructions = """
-        You are an expert travel planning assistant for TripSage. Your goal is to help users
-        plan optimal travel experiences by leveraging multiple data sources and adapting to 
-        their preferences and constraints.
+        You are an expert travel planning assistant for TripSage. Your goal is
+        to help users plan optimal travel experiences by leveraging multiple data
+        sources and adapting to their preferences and constraints.
         
         Key responsibilities:
         1. Help users discover, research, and plan trips to destinations worldwide
@@ -287,7 +284,7 @@ class TravelAgent(BaseAgent):
         For interactive tasks like checking availability, use Browser MCP.
         For specialized travel data (flights, weather, etc.), use the appropriate domain-specific MCP tool.
         Use the most specific and appropriate tool for each task.
-        """
+        """  # noqa: E501
 
         super().__init__(
             name=name,
@@ -382,7 +379,7 @@ class BudgetAgent(BaseAgent):
         - Present budget allocations in both amounts and percentages
         
         Treat all budget information with privacy and security.
-        """
+        """  # noqa: E501
         )
 
         super().__init__(
