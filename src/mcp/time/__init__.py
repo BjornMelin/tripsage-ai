@@ -133,8 +133,7 @@ FORMAT_DATE_SCHEMA = {
             "format": {
                 "type": "string",
                 "description": (
-                    "Format type: 'full', 'short', 'date_only', 'time_only', "
-                    "or 'iso'"
+                    "Format type: 'full', 'short', 'date_only', 'time_only', or 'iso'"
                 ),
                 "enum": ["full", "short", "date_only", "time_only", "iso"],
                 "default": "full",
