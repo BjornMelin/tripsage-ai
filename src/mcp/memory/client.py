@@ -53,7 +53,7 @@ class MemoryClient(BaseMcpClient):
         for entity_data in entities:
             entity_type = entity_data.get("entityType")
             entity_name = entity_data.get("name")
-            
+
             if not entity_type or not entity_name:
                 logger.warning("Entity missing required fields: type and name")
                 continue
@@ -98,7 +98,7 @@ class MemoryClient(BaseMcpClient):
                         ),
                     }
                 )
-            
+
             elif entity_type == "Activity":
                 # Convert to activity format
                 activity_data = {
@@ -107,15 +107,15 @@ class MemoryClient(BaseMcpClient):
                     "type": entity_data.get("type", "attraction"),
                     "description": "\n".join(entity_data.get("observations", [])),
                 }
-                
+
                 # Add other properties
                 for key, value in entity_data.items():
                     if key not in ["name", "entityType", "observations"]:
                         activity_data[key] = value
-                
+
                 # Create activity
                 activity = await neo4j_client.add_activity(activity_data)
-                
+
                 # Convert back to entity format for response
                 created_entities.append(
                     {
@@ -127,19 +127,21 @@ class MemoryClient(BaseMcpClient):
                         ),
                     }
                 )
-                
+
                 # Create relationship with destination if specified
                 if "destination" in activity_data:
                     try:
-                        await neo4j_client.activity_repo.create_activity_destination_relationship(
+                        # Create relationship with destination
+                        await neo4j_client.activity_repo.create_activity_destination_relationship(  # noqa: E501
                             activity_name=activity.name,
-                            destination_name=activity_data["destination"]
+                            destination_name=activity_data["destination"],
                         )
                     except Exception as e:
                         logger.warning(
-                            f"Failed to create activity-destination relationship: {str(e)}"
+                            f"Failed to create activity-destination "
+                            f"relationship: {str(e)}"
                         )
-            
+
             elif entity_type == "Accommodation":
                 # Convert to accommodation format
                 accommodation_data = {
@@ -148,15 +150,15 @@ class MemoryClient(BaseMcpClient):
                     "type": entity_data.get("type", "hotel"),
                     "description": "\n".join(entity_data.get("observations", [])),
                 }
-                
+
                 # Add other properties
                 for key, value in entity_data.items():
                     if key not in ["name", "entityType", "observations"]:
                         accommodation_data[key] = value
-                
+
                 # Create accommodation
                 accommodation = await neo4j_client.add_accommodation(accommodation_data)
-                
+
                 # Convert back to entity format for response
                 created_entities.append(
                     {
@@ -164,23 +166,27 @@ class MemoryClient(BaseMcpClient):
                         "name": accommodation.name,
                         "entityType": "Accommodation",
                         "observations": (
-                            [accommodation.description] if accommodation.description else []
+                            [accommodation.description]
+                            if accommodation.description
+                            else []
                         ),
                     }
                 )
-                
+
                 # Create relationship with destination if specified
                 if "destination" in accommodation_data:
                     try:
-                        await neo4j_client.accommodation_repo.create_accommodation_destination_relationship(
+                        # Create relationship with destination
+                        await neo4j_client.accommodation_repo.create_accommodation_destination_relationship(  # noqa: E501
                             accommodation_name=accommodation.name,
-                            destination_name=accommodation_data["destination"]
+                            destination_name=accommodation_data["destination"],
                         )
                     except Exception as e:
                         logger.warning(
-                            f"Failed to create accommodation-destination relationship: {str(e)}"
+                            f"Failed to create accommodation-destination "
+                            f"relationship: {str(e)}"
                         )
-            
+
             elif entity_type == "Event":
                 # Convert to event format
                 event_data = {
@@ -189,15 +195,15 @@ class MemoryClient(BaseMcpClient):
                     "type": entity_data.get("type", "cultural"),
                     "description": "\n".join(entity_data.get("observations", [])),
                 }
-                
+
                 # Add other properties
                 for key, value in entity_data.items():
                     if key not in ["name", "entityType", "observations"]:
                         event_data[key] = value
-                
+
                 # Create event
                 event = await neo4j_client.add_event(event_data)
-                
+
                 # Convert back to entity format for response
                 created_entities.append(
                     {
@@ -209,44 +215,55 @@ class MemoryClient(BaseMcpClient):
                         ),
                     }
                 )
-                
+
                 # Create relationship with destination if specified
                 if "destination" in event_data:
                     try:
-                        await neo4j_client.event_repo.create_event_destination_relationship(
+                        # Create relationship with destination
+                        await neo4j_client.event_repo.create_event_destination_relationship(  # noqa: E501
                             event_name=event.name,
-                            destination_name=event_data["destination"]
+                            destination_name=event_data["destination"],
                         )
                     except Exception as e:
                         logger.warning(
                             f"Failed to create event-destination relationship: {str(e)}"
                         )
-            
+
             elif entity_type == "Transportation":
                 # Convert to transportation format
                 transportation_data = {
                     "name": entity_name,
                     "type": entity_data.get("type", "flight"),
                 }
-                
+
                 # Add origin and destination if available
                 if "origin" in entity_data:
                     transportation_data["origin"] = entity_data["origin"]
                 if "destination" in entity_data:
                     transportation_data["destination"] = entity_data["destination"]
-                
+
                 # Add description from observations
                 if entity_data.get("observations"):
-                    transportation_data["description"] = "\n".join(entity_data.get("observations", []))
-                
+                    transportation_data["description"] = "\n".join(
+                        entity_data.get("observations", [])
+                    )
+
                 # Add other properties
                 for key, value in entity_data.items():
-                    if key not in ["name", "entityType", "observations", "origin", "destination"]:
+                    if key not in [
+                        "name",
+                        "entityType",
+                        "observations",
+                        "origin",
+                        "destination",
+                    ]:
                         transportation_data[key] = value
-                
+
                 # Create transportation
-                transportation = await neo4j_client.add_transportation(transportation_data)
-                
+                transportation = await neo4j_client.add_transportation(
+                    transportation_data
+                )
+
                 # Convert back to entity format for response
                 created_entities.append(
                     {
@@ -254,22 +271,30 @@ class MemoryClient(BaseMcpClient):
                         "name": transportation.name,
                         "entityType": "Transportation",
                         "observations": (
-                            [transportation.description] if hasattr(transportation, "description") and transportation.description else []
+                            [transportation.description]
+                            if hasattr(transportation, "description")
+                            and transportation.description
+                            else []
                         ),
                     }
                 )
-                
+
                 # Create route relationships if origin and destination are specified
-                if "origin" in transportation_data and "destination" in transportation_data:
+                if (
+                    "origin" in transportation_data
+                    and "destination" in transportation_data
+                ):
                     try:
-                        await neo4j_client.transportation_repo.create_route_relationship(
+                        # Create relationship with origin and destination
+                        await neo4j_client.transportation_repo.create_route_relationship(  # noqa: E501
                             transportation_id=transportation.name,
                             origin_destination=transportation_data["origin"],
-                            target_destination=transportation_data["destination"]
+                            target_destination=transportation_data["destination"],
                         )
                     except Exception as e:
                         logger.warning(
-                            f"Failed to create transportation route relationships: {str(e)}"
+                            f"Failed to create transportation route "
+                            f"relationships: {str(e)}"
                         )
             else:
                 # For other entity types not fully implemented
@@ -408,6 +433,123 @@ class MemoryClient(BaseMcpClient):
                                 "observations": contents,
                             }
                         )
+
+            # Handle Activity entities
+            elif entity_type == "Activity":
+                # Get current entity
+                activity = await neo4j_client.get_activity(entity_name)
+
+                if activity:
+                    # Prepare update data
+                    update_data = activity.dict()
+
+                    # Append observations to description
+                    current_description = update_data.get("description", "")
+                    new_description = current_description + "\n" + "\n".join(contents)
+                    update_data["description"] = new_description.strip()
+
+                    # Update activity
+                    updated = await neo4j_client.update_activity(
+                        entity_name, update_data
+                    )
+
+                    if updated:
+                        updated_entities.append(
+                            {
+                                "name": entity_name,
+                                "entityType": "Activity",
+                                "observations": contents,
+                            }
+                        )
+
+            # Handle Accommodation entities
+            elif entity_type == "Accommodation":
+                # Get current entity
+                accommodation = await neo4j_client.get_accommodation(entity_name)
+
+                if accommodation:
+                    # Prepare update data
+                    update_data = accommodation.dict()
+
+                    # Append observations to description
+                    current_description = update_data.get("description", "")
+                    new_description = current_description + "\n" + "\n".join(contents)
+                    update_data["description"] = new_description.strip()
+
+                    # Update accommodation
+                    updated = await neo4j_client.update_accommodation(
+                        entity_name, update_data
+                    )
+
+                    if updated:
+                        updated_entities.append(
+                            {
+                                "name": entity_name,
+                                "entityType": "Accommodation",
+                                "observations": contents,
+                            }
+                        )
+
+            # Handle Event entities
+            elif entity_type == "Event":
+                # Get current entity
+                event = await neo4j_client.get_event(entity_name)
+
+                if event:
+                    # Prepare update data
+                    update_data = event.dict()
+
+                    # Append observations to description
+                    current_description = update_data.get("description", "")
+                    new_description = current_description + "\n" + "\n".join(contents)
+                    update_data["description"] = new_description.strip()
+
+                    # Update event
+                    updated = await neo4j_client.update_event(entity_name, update_data)
+
+                    if updated:
+                        updated_entities.append(
+                            {
+                                "name": entity_name,
+                                "entityType": "Event",
+                                "observations": contents,
+                            }
+                        )
+
+            # Handle Transportation entities
+            elif entity_type == "Transportation":
+                # Get current entity
+                transportation = await neo4j_client.get_transportation(entity_name)
+
+                if transportation:
+                    # Prepare update data
+                    update_data = transportation.dict()
+
+                    # Check if description field exists, create it if not
+                    if not hasattr(transportation, "description"):
+                        update_data["description"] = "\n".join(contents)
+                    else:
+                        # Append observations to description
+                        current_description = update_data.get("description", "")
+                        new_description = (
+                            current_description + "\n" + "\n".join(contents)
+                        )
+                        update_data["description"] = new_description.strip()
+
+                    # Update transportation
+                    updated = await neo4j_client.update_transportation(
+                        entity_name, update_data
+                    )
+
+                    if updated:
+                        updated_entities.append(
+                            {
+                                "name": entity_name,
+                                "entityType": "Transportation",
+                                "observations": contents,
+                            }
+                        )
+
             else:
                 # For other entity types, we use a generic approach
                 # Add observations as properties
@@ -452,26 +594,53 @@ class MemoryClient(BaseMcpClient):
         deleted_entities = []
 
         for name in entity_names:
-            # Check if it's a destination
+            # Check entity type and delete appropriately
             destination = await neo4j_client.get_destination(name)
-
             if destination:
-                # Delete destination
                 success = await neo4j_client.delete_destination(name)
                 if success:
                     deleted_entities.append(name)
-            else:
-                # For non-destination entities, use generic query
-                query = """
-                MATCH (e {name: $name})
-                DETACH DELETE e
-                RETURN count(*) as deleted
-                """
+                continue
 
-                result = await neo4j_client.execute_query(query, {"name": name})
-
-                if result and result[0]["deleted"] > 0:
+            activity = await neo4j_client.get_activity(name)
+            if activity:
+                success = await neo4j_client.delete_activity(name)
+                if success:
                     deleted_entities.append(name)
+                continue
+
+            accommodation = await neo4j_client.get_accommodation(name)
+            if accommodation:
+                success = await neo4j_client.delete_accommodation(name)
+                if success:
+                    deleted_entities.append(name)
+                continue
+
+            event = await neo4j_client.get_event(name)
+            if event:
+                success = await neo4j_client.delete_event(name)
+                if success:
+                    deleted_entities.append(name)
+                continue
+
+            transportation = await neo4j_client.get_transportation(name)
+            if transportation:
+                success = await neo4j_client.delete_transportation(name)
+                if success:
+                    deleted_entities.append(name)
+                continue
+
+            # For any other entity types, use generic query
+            query = """
+            MATCH (e {name: $name})
+            DETACH DELETE e
+            RETURN count(*) as deleted
+            """
+
+            result = await neo4j_client.execute_query(query, {"name": name})
+
+            if result and result[0]["deleted"] > 0:
+                deleted_entities.append(name)
 
         return deleted_entities
 
@@ -526,9 +695,6 @@ class MemoryClient(BaseMcpClient):
         Returns:
             List of updated entities
         """
-        # This is a bit tricky since observations are stored differently
-        # based on entity type. For simplicity, we'll handle Destination
-        # differently than other types.
         updated_entities = []
 
         for deletion in deletions:
@@ -538,66 +704,189 @@ class MemoryClient(BaseMcpClient):
             if not entity_name or not observations_to_delete:
                 continue
 
-            # Check if it's a destination
-            destination = await neo4j_client.get_destination(entity_name)
+            # First, find the entity and its type
+            query = """
+            MATCH (e {name: $name})
+            RETURN labels(e)[0] as entity_type
+            """
 
-            if destination and destination.description:
-                # For destinations, observations are in the description
-                lines = destination.description.split("\n")
+            result = await neo4j_client.execute_query(query, {"name": entity_name})
 
-                # Remove lines that match observations to delete
-                updated_lines = [
-                    line for line in lines if line not in observations_to_delete
-                ]
+            if not result:
+                logger.warning(f"Entity {entity_name} not found")
+                continue
 
-                # Update destination
-                update_data = destination.dict()
-                update_data["description"] = "\n".join(updated_lines)
+            entity_type = result[0]["entity_type"]
 
-                updated = await neo4j_client.update_destination(
-                    entity_name, update_data
-                )
+            # Handle specific entity types
+            if entity_type == "Destination":
+                destination = await neo4j_client.get_destination(entity_name)
 
-                if updated:
-                    updated_entities.append(
-                        {
-                            "name": entity_name,
-                            "entityType": "Destination",
-                            "deletedObservations": observations_to_delete,
-                        }
+                if destination and destination.description:
+                    # For destinations, observations are in the description
+                    lines = destination.description.split("\n")
+
+                    # Remove lines that match observations to delete
+                    updated_lines = [
+                        line for line in lines if line not in observations_to_delete
+                    ]
+
+                    # Update destination
+                    update_data = destination.dict()
+                    update_data["description"] = "\n".join(updated_lines)
+
+                    updated = await neo4j_client.update_destination(
+                        entity_name, update_data
                     )
+
+                    if updated:
+                        updated_entities.append(
+                            {
+                                "name": entity_name,
+                                "entityType": "Destination",
+                                "deletedObservations": observations_to_delete,
+                            }
+                        )
+
+            elif entity_type == "Activity":
+                activity = await neo4j_client.get_activity(entity_name)
+
+                if activity and activity.description:
+                    # For activities, observations are in the description
+                    lines = activity.description.split("\n")
+
+                    # Remove lines that match observations to delete
+                    updated_lines = [
+                        line for line in lines if line not in observations_to_delete
+                    ]
+
+                    # Update activity
+                    update_data = activity.dict()
+                    update_data["description"] = "\n".join(updated_lines)
+
+                    updated = await neo4j_client.update_activity(
+                        entity_name, update_data
+                    )
+
+                    if updated:
+                        updated_entities.append(
+                            {
+                                "name": entity_name,
+                                "entityType": "Activity",
+                                "deletedObservations": observations_to_delete,
+                            }
+                        )
+
+            elif entity_type == "Accommodation":
+                accommodation = await neo4j_client.get_accommodation(entity_name)
+
+                if accommodation and accommodation.description:
+                    # For accommodations, observations are in the description
+                    lines = accommodation.description.split("\n")
+
+                    # Remove lines that match observations to delete
+                    updated_lines = [
+                        line for line in lines if line not in observations_to_delete
+                    ]
+
+                    # Update accommodation
+                    update_data = accommodation.dict()
+                    update_data["description"] = "\n".join(updated_lines)
+
+                    updated = await neo4j_client.update_accommodation(
+                        entity_name, update_data
+                    )
+
+                    if updated:
+                        updated_entities.append(
+                            {
+                                "name": entity_name,
+                                "entityType": "Accommodation",
+                                "deletedObservations": observations_to_delete,
+                            }
+                        )
+
+            elif entity_type == "Event":
+                event = await neo4j_client.get_event(entity_name)
+
+                if event and event.description:
+                    # For events, observations are in the description
+                    lines = event.description.split("\n")
+
+                    # Remove lines that match observations to delete
+                    updated_lines = [
+                        line for line in lines if line not in observations_to_delete
+                    ]
+
+                    # Update event
+                    update_data = event.dict()
+                    update_data["description"] = "\n".join(updated_lines)
+
+                    updated = await neo4j_client.update_event(entity_name, update_data)
+
+                    if updated:
+                        updated_entities.append(
+                            {
+                                "name": entity_name,
+                                "entityType": "Event",
+                                "deletedObservations": observations_to_delete,
+                            }
+                        )
+
+            elif entity_type == "Transportation":
+                transportation = await neo4j_client.get_transportation(entity_name)
+
+                if (
+                    transportation
+                    and hasattr(transportation, "description")
+                    and transportation.description
+                ):
+                    # For transportation, observations are in the description
+                    lines = transportation.description.split("\n")
+
+                    # Remove lines that match observations to delete
+                    updated_lines = [
+                        line for line in lines if line not in observations_to_delete
+                    ]
+
+                    # Update transportation
+                    update_data = transportation.dict()
+                    update_data["description"] = "\n".join(updated_lines)
+
+                    updated = await neo4j_client.update_transportation(
+                        entity_name, update_data
+                    )
+
+                    if updated:
+                        updated_entities.append(
+                            {
+                                "name": entity_name,
+                                "entityType": "Transportation",
+                                "deletedObservations": observations_to_delete,
+                            }
+                        )
+
             else:
                 # For other entity types, it's more complex and depends on how
                 # observations were stored. This is a simplified approach.
-                query = """
-                MATCH (e {name: $name})
-                RETURN labels(e)[0] as entity_type
+                # Generic approach: set observation properties to null
+                query = f"""
+                MATCH (e:{entity_type} {{name: $name}})
+                SET e.updated_at = datetime()
                 """
 
-                result = await neo4j_client.execute_query(query, {"name": entity_name})
+                for i in range(len(observations_to_delete)):
+                    query += f", e.observation_{i+1} = NULL"
 
-                if result:
-                    entity_type = result[0]["entity_type"]
+                await neo4j_client.execute_query(query, {"name": entity_name})
 
-                    # Generic approach: set observation properties to null
-                    # This is a simplification and might not be ideal
-                    query = f"""
-                    MATCH (e:{entity_type} {{name: $name}})
-                    SET e.updated_at = datetime()
-                    """
-
-                    for i in range(len(observations_to_delete)):
-                        query += f", e.observation_{i+1} = NULL"
-
-                    await neo4j_client.execute_query(query, {"name": entity_name})
-
-                    updated_entities.append(
-                        {
-                            "name": entity_name,
-                            "entityType": entity_type,
-                            "deletedObservations": observations_to_delete,
-                        }
-                    )
+                updated_entities.append(
+                    {
+                        "name": entity_name,
+                        "entityType": entity_type,
+                        "deletedObservations": observations_to_delete,
+                    }
+                )
 
         return updated_entities
 
@@ -627,7 +916,15 @@ class MemoryClient(BaseMcpClient):
 
             # Extract observations based on entity type
             observations = []
-            if entity_type == "Destination" and entity.get("description"):
+
+            # For entity types with description field
+            if entity_type in [
+                "Destination",
+                "Activity",
+                "Accommodation",
+                "Event",
+                "Transportation",
+            ] and entity.get("description"):
                 observations = entity["description"].split("\n")
             else:
                 # For other types, look for observation properties
@@ -735,7 +1032,7 @@ class MemoryClient(BaseMcpClient):
             else:
                 # Check for other entity types
                 entity_found = False
-                
+
                 # Check if it's an activity
                 activity = await neo4j_client.get_activity(name)
                 if activity:
@@ -743,7 +1040,7 @@ class MemoryClient(BaseMcpClient):
                     observations = []
                     if activity.description:
                         observations = [activity.description]
-                    
+
                     nodes.append(
                         {
                             "name": activity.name,
@@ -758,7 +1055,7 @@ class MemoryClient(BaseMcpClient):
                             },
                         }
                     )
-                
+
                 # Check if it's an accommodation
                 if not entity_found:
                     accommodation = await neo4j_client.get_accommodation(name)
@@ -767,7 +1064,7 @@ class MemoryClient(BaseMcpClient):
                         observations = []
                         if accommodation.description:
                             observations = [accommodation.description]
-                        
+
                         nodes.append(
                             {
                                 "name": accommodation.name,
@@ -782,7 +1079,7 @@ class MemoryClient(BaseMcpClient):
                                 },
                             }
                         )
-                
+
                 # Check if it's an event
                 if not entity_found:
                     event = await neo4j_client.get_event(name)
@@ -791,7 +1088,7 @@ class MemoryClient(BaseMcpClient):
                         observations = []
                         if event.description:
                             observations = [event.description]
-                        
+
                         nodes.append(
                             {
                                 "name": event.name,
@@ -807,16 +1104,19 @@ class MemoryClient(BaseMcpClient):
                                 },
                             }
                         )
-                
+
                 # Check if it's a transportation
                 if not entity_found:
                     transportation = await neo4j_client.get_transportation(name)
                     if transportation:
                         entity_found = True
                         observations = []
-                        if hasattr(transportation, "description") and transportation.description:
+                        if (
+                            hasattr(transportation, "description")
+                            and transportation.description
+                        ):
                             observations = [transportation.description]
-                        
+
                         nodes.append(
                             {
                                 "name": transportation.name,
@@ -824,14 +1124,30 @@ class MemoryClient(BaseMcpClient):
                                 "observations": observations,
                                 "properties": {
                                     "type": transportation.type,
-                                    "origin": transportation.origin if hasattr(transportation, "origin") else None,
-                                    "destination": transportation.destination if hasattr(transportation, "destination") else None,
-                                    "price": transportation.price if hasattr(transportation, "price") else None,
-                                    "duration": transportation.duration if hasattr(transportation, "duration") else None,
+                                    "origin": (
+                                        transportation.origin
+                                        if hasattr(transportation, "origin")
+                                        else None
+                                    ),
+                                    "destination": (
+                                        transportation.destination
+                                        if hasattr(transportation, "destination")
+                                        else None
+                                    ),
+                                    "price": (
+                                        transportation.price
+                                        if hasattr(transportation, "price")
+                                        else None
+                                    ),
+                                    "duration": (
+                                        transportation.duration
+                                        if hasattr(transportation, "duration")
+                                        else None
+                                    ),
                                 },
                             }
                         )
-                
+
                 # Try generic entity lookup if not found
                 if not entity_found:
                     query = """

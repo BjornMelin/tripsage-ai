@@ -40,8 +40,7 @@ class WebSearchFallbackGuide:
             "events": "upcoming events festivals {destination} {date_range}",
             "weather": "{destination} weather forecast {month} climate",
             "accessibility": (
-                "{destination} accessibility information wheelchair "
-                "disabilities"
+                "{destination} accessibility information wheelchair " "disabilities"
             ),
             "nightlife": "{destination} nightlife bars clubs entertainment",
             "shopping": "shopping districts markets {destination} souvenirs",
@@ -238,8 +237,7 @@ class WebSearchFallbackGuide:
             search_plan["queries"].append(
                 {
                     "query": (
-                        f"hidden gems secret spots {destination} "
-                        "off the beaten path"
+                        f"hidden gems secret spots {destination} " "off the beaten path"
                     ),
                     "priority": "medium",
                 }
