@@ -1,11 +1,10 @@
 """
 Database module for the TripSage API.
 
-This module provides database connection and utilities for the TripSage API.
+This module provides database connection and repository instances for the TripSage API.
 """
 
 import logging
-import os
 from typing import Any, Dict, Optional, Type
 
 from fastapi import Depends
@@ -15,6 +14,9 @@ from src.db.client import get_supabase_client
 from src.db.initialize import close_database_connection, initialize_database
 from src.db.models.base import BaseDBModel
 from src.db.repositories.base import BaseRepository
+from src.db.repositories.flight import FlightRepository
+from src.db.repositories.trip import TripRepository
+from src.db.repositories.user import UserRepository
 from src.utils.logging import configure_logging
 
 # Configure logging
@@ -22,15 +24,23 @@ logger = configure_logging(__name__)
 
 
 # Repository factories
-def get_user_repository():
+def get_user_repository() -> UserRepository:
     """Get the user repository."""
-    from src.db.repositories.user import UserRepository
-
     return UserRepository()
 
 
+def get_trip_repository() -> TripRepository:
+    """Get the trip repository."""
+    return TripRepository()
+
+
+def get_flight_repository() -> FlightRepository:
+    """Get the flight repository."""
+    return FlightRepository()
+
+
 # Dependency for database access in API routes
-async def get_db():
+async def get_db() -> Client:
     """
     Get the database client as a FastAPI dependency.
 

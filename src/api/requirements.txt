@@ -1,3 +1,4 @@
+# API requirements
 fastapi>=0.115.12
 uvicorn>=0.34.2
 python-dotenv>=1.1.0
@@ -7,3 +8,10 @@ python-jose>=3.4.0
 passlib>=1.7.4
 python-multipart>=0.0.20
 httpx>=0.27.0
+bcrypt>=4.1.2
+email-validator>=2.1.2
+
+# Testing requirements
+pytest>=8.0.0
+pytest-asyncio>=0.23.5
+pytest-cov>=4.1.0
