@@ -89,7 +89,7 @@ The API interacts with the Supabase database using the repository pattern, which
 
 The API uses JWT-based authentication with bearer tokens. To access protected endpoints, include an `Authorization` header with a valid JWT token:
 
-```
+```plaintext
 Authorization: Bearer <token>
 ```
 
@@ -128,7 +128,7 @@ The API follows RESTful principles and uses JWT for authentication. All endpoint
 
 The API requires the following environment variables:
 
-```
+```plaintext
 SUPABASE_URL=your-supabase-url
 SUPABASE_ANON_KEY=your-supabase-anon-key
 SUPABASE_SERVICE_ROLE_KEY=your-supabase-service-role-key
