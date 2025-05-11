@@ -21,6 +21,7 @@ The agents module provides a set of AI-powered agents that help users plan their
    ```
 
 2. Configure environment variables:
+
    ```bash
    cp .env.example .env
    # Edit .env with your API keys and settings

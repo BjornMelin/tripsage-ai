@@ -2,7 +2,7 @@
 Travel Agent implementation for TripSage.
 
 This module provides the TravelAgent implementation which integrates various
-travel-specific MCP tools and dual storage architecture.
+travel-specific MCP tools and dual storage architecture with OpenAI's WebSearchTool.
 """
 
 import datetime
@@ -11,7 +11,8 @@ from typing import Any, Dict, List, Optional, Union
 
 from pydantic import BaseModel, Field
 
-from agents import function_tool
+from agents import WebSearchTool, function_tool
+from agents.extensions.allowed_domains import AllowedDomains
 
 from ..cache.redis_cache import redis_cache
 from ..utils.config import get_config
@@ -79,6 +80,63 @@ class TravelAgent(BaseTravelAgent):
         """
         super().__init__(name=name, model=model, temperature=temperature)
 
+        # Add WebSearchTool to the agent's tools with travel-specific domain focus
+        # This is part of our hybrid search approach where OpenAI's built-in search
+        # serves as the primary method for general queries, while specialized MCP tools
+        # (Firecrawl, Browser MCP) are used for deeper, more specific travel research
+        self.web_search_tool = WebSearchTool(
+            allowed_domains=AllowedDomains(
+                domains=[
+                    # Travel information and guides
+                    "tripadvisor.com",
+                    "lonelyplanet.com",
+                    "wikitravel.org",
+                    "travel.state.gov",
+                    "wikivoyage.org",
+                    "frommers.com",
+                    "roughguides.com",
+                    "fodors.com",
+                    # Flight and transportation
+                    "kayak.com",
+                    "skyscanner.com",
+                    "expedia.com",
+                    "booking.com",
+                    "hotels.com",
+                    "airbnb.com",
+                    "vrbo.com",
+                    "orbitz.com",
+                    # Airlines
+                    "united.com",
+                    "aa.com",
+                    "delta.com",
+                    "southwest.com",
+                    "britishairways.com",
+                    "lufthansa.com",
+                    "emirates.com",
+                    "cathaypacific.com",
+                    "qantas.com",
+                    # Weather and climate
+                    "weather.com",
+                    "accuweather.com",
+                    "weatherspark.com",
+                    "climate.gov",
+                    # Government travel advisories
+                    "travel.state.gov",
+                    "smartraveller.gov.au",
+                    "gov.uk/foreign-travel-advice",
+                    # Social and review sites
+                    "tripadvisor.com",
+                    "yelp.com",
+                ]
+            ),
+            # Block content farms and untrustworthy sources
+            blocked_domains=["pinterest.com", "quora.com"],
+        )
+        self.agent.tools.append(self.web_search_tool)
+        logger.info(
+            "Added WebSearchTool to TravelAgent with travel-specific domain configuration"
+        )
+
     def _register_travel_tools(self) -> None:
         """Register travel-specific tools."""
         # Register weather tools
@@ -98,6 +156,13 @@ class TravelAgent(BaseTravelAgent):
         # Trip management tools
         self._register_tool(self.create_trip)
         self._register_tool(self.search_activities)
+
+        # Search-related tools
+        self._register_tool(self.search_destination_info)
+        self._register_tool(self.compare_travel_options)
+
+        # Note: WebSearchTool is added separately in __init__
+        # since it doesn't use the function_tool decorator pattern
 
     @function_tool
     async def get_weather_forecast(self, params: Dict[str, Any]) -> Dict[str, Any]:
@@ -530,6 +595,162 @@ class TravelAgent(BaseTravelAgent):
         except Exception as e:
             logger.error("Error searching activities: %s", str(e))
             return {"error": f"Activity search error: {str(e)}"}
+
+    @function_tool
+    async def search_destination_info(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        """Search for comprehensive information about a travel destination.
+
+        Uses both the WebSearchTool and specialized travel resources to gather and
+        analyze detailed information about a destination.
+
+        Args:
+            params: Parameters including destination name and info types to search for
+                destination: Name of the destination (city, country, attraction)
+                info_types: List of info types (e.g., "attractions", "safety", "transportation", "best_time")
+
+        Returns:
+            Dictionary containing structured information about the destination
+        """
+        try:
+            # Extract parameters
+            destination = params.get("destination")
+            info_types = params.get("info_types", ["general"])
+
+            if not destination:
+                return {"error": "Destination parameter is required"}
+
+            # Build queries for each info type
+            search_results = {}
+
+            for info_type in info_types:
+                query = self._build_destination_query(destination, info_type)
+
+                # WebSearchTool is used automatically through the agent
+                # Results will be returned to the agent which will process them
+
+                # This would use our redis cache when implemented
+                cache_key = f"destination:{destination}:info_type:{info_type}"
+                cached_result = await redis_cache.get(cache_key)
+
+                if cached_result:
+                    search_results[info_type] = cached_result
+                else:
+                    # Note: We let the agent use the WebSearchTool
+                    # This function mainly provides structure and caching
+                    search_results[info_type] = {
+                        "query": query,
+                        "cache": "miss",
+                        "note": "Data will be provided by WebSearchTool and processed by the agent",
+                    }
+
+            return {
+                "destination": destination,
+                "info_types": info_types,
+                "search_results": search_results,
+            }
+
+        except Exception as e:
+            logger.error("Error searching destination info: %s", str(e))
+            return {"error": f"Destination search error: {str(e)}"}
+
+    def _build_destination_query(self, destination: str, info_type: str) -> str:
+        """Build an optimized search query for a destination and info type.
+
+        Args:
+            destination: Name of the destination
+            info_type: Type of information to search for
+
+        Returns:
+            A formatted search query string
+        """
+        query_templates = {
+            "general": "travel guide {destination} best things to do",
+            "attractions": "top attractions in {destination} must-see sights",
+            "safety": "{destination} travel safety information for tourists",
+            "transportation": "how to get around {destination} public transportation",
+            "best_time": "best time to visit {destination} weather seasons",
+            "budget": "{destination} travel cost budget accommodation food",
+            "food": "best restaurants in {destination} local cuisine food specialties",
+            "culture": "{destination} local customs culture etiquette tips",
+            "day_trips": "best day trips from {destination} nearby attractions",
+            "family": "things to do in {destination} with children family-friendly",
+        }
+
+        template = query_templates.get(
+            info_type, "travel information about {destination} {info_type}"
+        )
+        return template.format(destination=destination, info_type=info_type)
+
+    @function_tool
+    async def compare_travel_options(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        """Compare travel options for a specific category using WebSearchTool and specialized APIs.
+
+        Args:
+            params: Parameters for the comparison
+                category: Type of comparison ("flights", "accommodations", "activities")
+                origin: Origin location (for flights)
+                destination: Destination location
+                dates: Travel dates
+                preferences: Any specific preferences to consider
+
+        Returns:
+            Dictionary containing comparison results
+        """
+        try:
+            # Extract parameters
+            category = params.get("category")
+            destination = params.get("destination")
+
+            if not category or not destination:
+                return {"error": "Category and destination parameters are required"}
+
+            # Specialized handling based on category
+            if category == "flights":
+                origin = params.get("origin")
+                if not origin:
+                    return {
+                        "error": "Origin parameter is required for flight comparisons"
+                    }
+
+                # This would eventually call the Flights MCP
+                # For now, we just return structured data for the agent
+                return {
+                    "category": "flights",
+                    "origin": origin,
+                    "destination": destination,
+                    "search_strategy": "hybrid",
+                    "note": "The agent will use WebSearchTool for general information and Flights MCP for specific data",
+                }
+
+            elif category == "accommodations":
+                # This would eventually call the Accommodations MCP
+                return {
+                    "category": "accommodations",
+                    "destination": destination,
+                    "search_strategy": "hybrid",
+                    "note": "The agent will use WebSearchTool for reviews and Accommodations MCP for availability",
+                }
+
+            elif category == "activities":
+                # This would eventually call the Web Crawling MCP
+                return {
+                    "category": "activities",
+                    "destination": destination,
+                    "search_strategy": "hybrid",
+                    "note": "The agent will use WebSearchTool and Web Crawling MCP to find activities",
+                }
+
+            else:
+                return {
+                    "category": category,
+                    "destination": destination,
+                    "search_strategy": "web_search",
+                    "note": "The agent will use WebSearchTool to find general information",
+                }
+
+        except Exception as e:
+            logger.error("Error comparing travel options: %s", str(e))
+            return {"error": f"Comparison error: {str(e)}"}
 
 
 def create_agent() -> TravelAgent:
