@@ -1,6 +1,6 @@
 # Web Crawling MCP Server Implementation
 
-This document provides the detailed implementation specification for the Web Crawling MCP Server in TripSage.
+This document provides the detailed implementation specification for the Web Crawling MCP Server in TripSage. The implementation follows a Crawl4AI-focused approach with Playwright as a fallback for dynamic content, as determined by our evaluation.
 
 ## Overview
 
@@ -72,25 +72,13 @@ The Web Crawling MCP Server provides destination research capabilities, content 
   - Travel-specific extraction templates
   - Advanced caching with content-aware TTL
   - Full control over crawling settings
+  - Superior cost-efficiency for most use cases
 
 - **Authentication**:
   - Self-hosted API key authentication
   - Custom service account for TripSage systems
 
-### Secondary: Firecrawl API (existing MCP)
-
-- **Key Endpoints**:
-
-  - `firecrawl_scrape` - For single page extraction
-  - `firecrawl_search` - For targeted information search
-  - `firecrawl_map` - For discovering related content
-  - `firecrawl_extract` - For structured data extraction
-  - `firecrawl_deep_research` - For comprehensive topic research
-
-- **Authentication**:
-  - Uses existing MCP authentication
-
-### Tertiary: Enhanced Playwright with Python (existing MCP)
+### Secondary: Enhanced Playwright with Python (existing MCP) - Used as Fallback
 
 - **Key Functions**:
 
@@ -157,8 +145,7 @@ src/
       sources/
         __init__.py                # Module initialization
         crawl4ai_source.py         # Crawl4AI integration (primary)
-        firecrawl_source.py        # Firecrawl API integration (secondary)
-        playwright_source.py       # Playwright integration (tertiary)
+        playwright_source.py       # Playwright integration (secondary)
         source_interface.py        # Common interface for all sources
       processors/
         __init__.py                # Module initialization
@@ -337,23 +324,25 @@ interface BlogSource {
 
 ### Crawl4AI Source Implementation
 
-```typescript
-// crawl4ai_source.ts
-import {
-  CrawlSource,
-  ExtractionOptions,
-  ExtractedContent,
-  DestinationInfo,
-  MonitorOptions,
-  PriceMonitorResult,
-  EventList,
-  BlogInsights,
-} from "./source_interface";
-import { logError, logInfo } from "../utils/logging";
-import { validateUrl } from "../utils/url_validator";
-import { formatResponse } from "../utils/response_formatter";
+```python
+# src/mcp/webcrawl/sources/crawl4ai_source.py
 
-export class Crawl4AISource implements CrawlSource {
+import aiohttp
+import logging
+from typing import Dict, List, Optional, Any
+
+from src.mcp.webcrawl.config import Config
+from src.mcp.webcrawl.sources.source_interface import (
+    CrawlSource,
+    ExtractionOptions,
+    ExtractedContent,
+    MonitorOptions
+)
+from src.utils.logging import get_logger
+
+logger = get_logger(__name__)
+
+class Crawl4AISource(CrawlSource):
   private apiUrl: string;
   private apiKey: string;
 
@@ -707,17 +696,21 @@ function extractDomain(url: string): string {
 ### Main Server Implementation
 
 ```typescript
-// server.ts
-import express from "express";
-import bodyParser from "body-parser";
-import { Crawl4AISource } from "./sources/crawl4ai_source";
-import { FirecrawlSource } from "./sources/firecrawl_source";
-import { PlaywrightPythonSource } from "./sources/playwright_python_source";
-import { CacheService } from "./storage/cache";
-import { logRequest, logError, logInfo } from "./utils/logging";
-import { validateInput } from "./utils/validation";
-import { formatResponse } from "./utils/response_formatter";
-import { Config } from "./config";
+// server.py
+import asyncio
+import logging
+from typing import Dict, Any, Optional
+
+from fastapi import FastAPI, Request, Response, status
+from pydantic import BaseModel, Field
+
+from src.mcp.base_mcp_server import BaseMCPServer
+from src.mcp.webcrawl.config import Config
+from src.mcp.webcrawl.sources.crawl4ai_source import Crawl4AISource
+from src.mcp.webcrawl.sources.playwright_source import PlaywrightSource
+from src.mcp.webcrawl.storage.cache import CacheService
+from src.mcp.webcrawl.utils.logging import get_logger
+from src.mcp.webcrawl.utils.response_formatter import format_response
 
 const app = express();
 app.use(bodyParser.json());
@@ -727,7 +720,6 @@ const crawl4aiSource = new Crawl4AISource(
   Config.CRAWL4AI_API_URL,
   Config.CRAWL4AI_API_KEY
 );
-const firecrawlSource = new FirecrawlSource();
 const playwrightSource = new PlaywrightPythonSource(
   Config.PLAYWRIGHT_MCP_ENDPOINT,
   {
@@ -776,8 +768,8 @@ function selectSource(operation: string, params: any) {
     return crawl4aiSource;
   }
 
-  // Fallback to Firecrawl for any unhandled operations
-  return firecrawlSource;
+  // Default fallback to Crawl4AI for any unhandled operations
+  return crawl4aiSource;
 }
 
 // Handle MCP tool requests
@@ -1143,21 +1135,20 @@ The Web Crawling MCP Server will be containerized using Docker and deployed as a
 
 ```dockerfile
 # Dockerfile
-FROM node:18-alpine
+FROM python:3.11-slim
 
 WORKDIR /app
 
-COPY package*.json ./
-RUN npm ci --only=production
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-ENV NODE_ENV=production
 ENV PORT=3001
 
 EXPOSE 3001
 
-CMD ["node", "server.js"]
+CMD ["uvicorn", "src.mcp.webcrawl.server:app", "--host", "0.0.0.0", "--port", "3001"]
 ```
 
 ### Resource Requirements
