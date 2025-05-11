@@ -1,7 +1,6 @@
 """Knowledge graph storage implementation for WebCrawl MCP."""
 
-import logging
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional
 
 from src.utils.logging import get_logger
 
@@ -52,7 +51,7 @@ class KnowledgeGraphStorage:
             entity_name = f"webpage-{hash(url) & 0xFFFFFFFF}"
 
             # Create entity with observations
-            result = await call_mcp_tool(
+            await call_mcp_tool(
                 "mcp__memory__create_entities",
                 {
                     "entities": [
@@ -135,7 +134,9 @@ class KnowledgeGraphStorage:
 
                 for result in topic_results:
                     topic_observations.append(
-                        f"From {result.get('source', 'unknown')}: {result.get('title', '')} - {result.get('content', '')[:300]}..."
+                        f"From {result.get('source', 'unknown')}: "
+                        f"{result.get('title', '')} - "
+                        f"{result.get('content', '')[:300]}..."
                     )
 
                 # Create topic entity
@@ -212,11 +213,15 @@ class KnowledgeGraphStorage:
 
             # Add initial price if available
             if initial_price:
-                price_str = f"Initial price: {initial_price.get('amount')} {initial_price.get('currency')} at {initial_price.get('timestamp')}"
+                price_str = (
+                    f"Initial price: {initial_price.get('amount')} "
+                    f"{initial_price.get('currency')} at "
+                    f"{initial_price.get('timestamp')}"
+                )
                 observations.append(price_str)
 
             # Create entity
-            result = await call_mcp_tool(
+            await call_mcp_tool(
                 "mcp__memory__create_entities",
                 {
                     "entities": [
@@ -259,7 +264,10 @@ class KnowledgeGraphStorage:
             entity_name = f"price-monitor-{monitoring_id}"
 
             # Prepare observation
-            price_str = f"Price check: {price_data.get('amount')} {price_data.get('currency')} at {price_data.get('timestamp')}"
+            price_str = (
+                f"Price check: {price_data.get('amount')} "
+                f"{price_data.get('currency')} at {price_data.get('timestamp')}"
+            )
 
             if change_percent is not None:
                 price_str += f" (change: {change_percent:+.2f}%)"

@@ -1,8 +1,7 @@
 """Supabase storage implementation for WebCrawl MCP."""
 
 import json
-import logging
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional
 
 from src.utils.logging import get_logger
 
@@ -206,12 +205,17 @@ class SupabaseStorage:
             result = await self._client.table("price_checks").insert(data).execute()
 
             # Update the price monitor's last_checked timestamp
-            await self._client.table("price_monitors").update(
-                {
-                    "last_checked": "now()",
-                    "current_price": json.dumps(price_data) if price_data else None,
-                }
-            ).eq("monitoring_id", monitoring_id).execute()
+            await (
+                self._client.table("price_monitors")
+                .update(
+                    {
+                        "last_checked": "now()",
+                        "current_price": json.dumps(price_data) if price_data else None,
+                    }
+                )
+                .eq("monitoring_id", monitoring_id)
+                .execute()
+            )
 
             if "data" in result and len(result["data"]) > 0:
                 return result["data"][0].get("id")

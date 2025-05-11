@@ -1,6 +1,5 @@
 """Handler for the extract_page_content MCP tool."""
 
-import logging
 from typing import Any, Dict, List, Optional, Union
 
 from src.mcp.webcrawl.config import Config
@@ -113,7 +112,8 @@ async def _extract_with_fallback(
     Raises:
         Exception: If all extraction attempts fail
     """
-    # Define source for fallback - if primary was Crawl4AI, use Playwright and vice versa
+    # Define source for fallback - if primary was Crawl4AI, use Playwright 
+    # and vice versa
     primary_was_crawl4ai = isinstance(_select_source(url), Crawl4AISource)
 
     try:

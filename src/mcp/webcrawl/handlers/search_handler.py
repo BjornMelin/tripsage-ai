@@ -1,9 +1,7 @@
 """Handler for the search_destination_info MCP tool."""
 
-import logging
 from typing import Any, Dict, List, Optional
 
-from src.mcp.webcrawl.config import Config
 from src.mcp.webcrawl.sources.crawl4ai_source import Crawl4AISource
 from src.mcp.webcrawl.sources.playwright_source import PlaywrightSource
 from src.utils.logging import get_logger
@@ -66,7 +64,9 @@ async def search_destination_info(
             logger.error(
                 f"Fallback source search failed for {destination}: {str(fallback_e)}"
             )
-            raise Exception(f"All search attempts failed for {destination}")
+            raise Exception(
+                f"All search attempts failed for {destination}"
+            ) from fallback_e
 
 
 def _format_search_response(results: Dict[str, Any]) -> Dict[str, Any]:
@@ -79,8 +79,8 @@ def _format_search_response(results: Dict[str, Any]) -> Dict[str, Any]:
         Formatted MCP response
     """
     # Process and enrich content
-    for topic, topic_results in results.get("topics", {}).items():
-        for i, result in enumerate(topic_results):
+    for _topic, topic_results in results.get("topics", {}).items():
+        for _i, result in enumerate(topic_results):
             # Extract 1-2 sentence summary if content is very long
             if "content" in result and len(result["content"]) > 500:
                 sentences = result["content"].split(". ")

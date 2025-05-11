@@ -1,6 +1,5 @@
 """WebCrawl MCP client implementation."""
 
-import logging
 from typing import Any, Dict, List, Optional
 
 from src.mcp.base_mcp_client import BaseMCPClient
@@ -76,7 +75,8 @@ class WebCrawlMCPClient(BaseMCPClient):
 
         Args:
             destination: Name of the destination (city, country, attraction)
-            topics: Type of information to search for (e.g., "attractions", "local_customs")
+            topics: Type of information to search for (e.g., 
+                   "attractions", "local_customs")
             max_results: Maximum number of results to return per topic
 
         Returns:

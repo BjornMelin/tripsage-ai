@@ -1,7 +1,6 @@
 """Handler for the crawl_travel_blog MCP tool."""
 
 import datetime
-import logging
 from typing import Any, Dict, List, Optional
 
 from src.mcp.webcrawl.sources.crawl4ai_source import Crawl4AISource
@@ -72,9 +71,12 @@ async def crawl_travel_blog(
             return _format_blog_response(results)
         except Exception as fallback_e:
             logger.error(
-                f"Fallback source blog crawl failed for {destination}: {str(fallback_e)}"
+                "Fallback source blog crawl failed for "
+                f"{destination}: {str(fallback_e)}"
             )
-            raise Exception(f"All blog crawl attempts failed for {destination}")
+            raise Exception(
+                f"All blog crawl attempts failed for {destination}"
+            ) from fallback_e
 
 
 def _format_blog_response(results: Dict[str, Any]) -> Dict[str, Any]:
