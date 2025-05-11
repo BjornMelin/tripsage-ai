@@ -12,7 +12,7 @@ from typing import Any, Callable, Dict, List, Optional, Type, Union
 
 from pydantic import BaseModel, Field
 
-from agents import Agent, RunContextWrapper, function_tool, handoff
+from agents import Agent, RunContextWrapper, WebSearchTool, function_tool, handoff
 from agents.extensions.handoff_prompt import RECOMMENDED_PROMPT_PREFIX
 
 from ..cache.redis_cache import redis_cache
@@ -270,17 +270,22 @@ class TravelAgent(BaseAgent):
         1. Supabase database (for structured data like bookings, user preferences)
         2. Knowledge graph (for travel concepts, entities, and relationships)
         
-        MCP TOOLS:
-        You have access to specialized MCP tools that provide real-time information:
+        AVAILABLE TOOLS:
+        You have access to specialized tools that provide real-time information:
+        - Web Search: Search the internet for up-to-date travel information
         - Weather MCP: Get current and forecast weather data
         - Flights MCP: Search for flights with pricing
         - Accommodations MCP: Find hotels, Airbnb, and other accommodations
         - Google Maps MCP: Get location information and directions
-        - Web Crawling MCP: Research destinations and activities
-        - Browser MCP: Automated web browsing for information
+        - Web Crawling MCP: Research destinations and activities in depth
+        - Browser MCP: Automated web browsing for complex information gathering
         - Memory MCP: Store and retrieve knowledge graph information
         - Time MCP: Handle timezone conversions and scheduling
-        
+
+        For general travel information queries, use the built-in Web Search tool first.
+        For more in-depth research or specific data extraction, use Web Crawling MCP.
+        For interactive tasks like checking availability, use Browser MCP.
+        For specialized travel data (flights, weather, etc.), use the appropriate domain-specific MCP tool.
         Use the most specific and appropriate tool for each task.
         """
 
