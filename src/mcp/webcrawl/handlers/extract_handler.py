@@ -9,10 +9,14 @@ from src.mcp.webcrawl.sources.source_interface import (
     ExtractedContent,
     ExtractionOptions,
 )
+from src.mcp.webcrawl.utils.result_normalizer import get_result_normalizer
 from src.utils.logging import get_logger
 
 # Initialize logger
 logger = get_logger(__name__)
+
+# Get the result normalizer
+_normalizer = get_result_normalizer()
 
 
 async def extract_page_content(
@@ -20,6 +24,7 @@ async def extract_page_content(
     selectors: Optional[List[str]] = None,
     include_images: bool = False,
     format: str = "markdown",
+    source_type: str = "crawl4ai",
 ) -> Dict[str, Any]:
     """Extract content from a webpage.
 
@@ -28,6 +33,7 @@ async def extract_page_content(
         selectors: Optional CSS selectors to target specific content
         include_images: Whether to include image URLs in the extracted content
         format: Format of the extracted content (markdown, text, html)
+        source_type: Type of source to use ("crawl4ai" or "playwright")
 
     Returns:
         The extracted content
@@ -35,7 +41,7 @@ async def extract_page_content(
     Raises:
         Exception: If the extraction fails
     """
-    logger.info(f"Extracting content from {url}")
+    logger.info(f"Extracting content from {url} using {source_type}")
 
     # Validate input
     if not url:
@@ -46,6 +52,11 @@ async def extract_page_content(
             f"Invalid format: {format}. Must be one of: markdown, text, html"
         )
 
+    # Validate source_type
+    if source_type not in ["crawl4ai", "playwright"]:
+        logger.warning(f"Invalid source_type: {source_type}, defaulting to crawl4ai")
+        source_type = "crawl4ai"
+
     # Prepare extraction options
     options: ExtractionOptions = {
         "selectors": selectors,
@@ -53,19 +64,26 @@ async def extract_page_content(
         "format": format,
     }
 
-    # Select appropriate source based on URL
-    source = _select_source(url)
-
     try:
+        # Initialize the selected source
+        if source_type == "crawl4ai":
+            source = Crawl4AISource()
+            logger.info(f"Using Crawl4AI source for {url}")
+        else:  # playwright
+            source = PlaywrightSource()
+            logger.info(f"Using Playwright source for {url}")
+
         # Extract content using the selected source
         result = await source.extract_page_content(url, options)
 
         # Format response to MCP standard
         return _format_extract_response(result)
     except Exception as e:
-        logger.error(f"Error extracting content from {url}: {str(e)}")
-        # Try fallback to another source if primary fails
-        return await _extract_with_fallback(url, options)
+        logger.error(f"{source_type} extraction failed for {url}: {str(e)}")
+
+        # Try fallback to the other source
+        fallback_type = "playwright" if source_type == "crawl4ai" else "crawl4ai"
+        return await _extract_with_fallback(url, options, fallback_type)
 
 
 def _select_source(url: str) -> Union[Crawl4AISource, PlaywrightSource]:
@@ -98,13 +116,14 @@ def _select_source(url: str) -> Union[Crawl4AISource, PlaywrightSource]:
 
 
 async def _extract_with_fallback(
-    url: str, options: ExtractionOptions
+    url: str, options: ExtractionOptions, fallback_type: str = "playwright"
 ) -> Dict[str, Any]:
     """Extract content with fallback to alternative source if primary fails.
 
     Args:
         url: The URL to extract from
         options: Extraction options
+        fallback_type: Type of source to use for fallback ("crawl4ai" or "playwright")
 
     Returns:
         The extracted content
@@ -112,22 +131,19 @@ async def _extract_with_fallback(
     Raises:
         Exception: If all extraction attempts fail
     """
-    # Define source for fallback - if primary was Crawl4AI, use Playwright
-    # and vice versa
-    primary_was_crawl4ai = isinstance(_select_source(url), Crawl4AISource)
+    logger.info(f"Trying {fallback_type} fallback for {url}")
 
     try:
-        if primary_was_crawl4ai:
-            logger.info(f"Trying Playwright fallback for {url}")
-            source = PlaywrightSource()
-        else:
-            logger.info(f"Trying Crawl4AI fallback for {url}")
+        # Initialize the fallback source
+        if fallback_type == "crawl4ai":
             source = Crawl4AISource()
+        else:  # playwright
+            source = PlaywrightSource()
 
         result = await source.extract_page_content(url, options)
         return _format_extract_response(result)
     except Exception as e:
-        logger.warning(f"Fallback source failed: {str(e)}")
+        logger.warning(f"{fallback_type} fallback failed for {url}: {str(e)}")
 
     # If all sources fail, return an error response
     raise Exception(f"All extraction attempts failed for {url}")

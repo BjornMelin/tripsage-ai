@@ -317,11 +317,11 @@ This document provides a complete implementation to-do list for the TripSage AI 
   - Reference: [docs/implementation/travel_agent_implementation.md](../implementation/travel_agent_implementation.md)
   - Status: Implementation guide completed. Actual implementation pending.
 
-- [ ] **TRAVELAGENT-002**: Create flight search and booking capabilities
+- [x] **TRAVELAGENT-002**: Create flight search and booking capabilities
 
   - Dependencies: TRAVELAGENT-001, FLIGHTS-003
   - Reference: [docs/implementation/flight_search_booking_implementation.md](../implementation/flight_search_booking_implementation.md)
-  - Status: Implementation guide completed. Actual implementation pending.
+  - Status: Completed with comprehensive flight search and booking capabilities, including enhanced search, multi-city search, price history tracking, and booking management.
 
 - [x] **TRAVELAGENT-003**: Implement WebSearchTool with travel-specific domain configuration
 
@@ -347,10 +347,11 @@ This document provides a complete implementation to-do list for the TripSage AI 
   - Dependencies: TRAVELAGENT-001, ACCOM-004
   - Reference: [docs/optimization/agent_optimization.md](../optimization/agent_optimization.md)
 
-- [ ] **TRAVELAGENT-006**: Create destination research capabilities
+- [x] **TRAVELAGENT-006**: Create destination research capabilities
 
   - Dependencies: TRAVELAGENT-001, TRAVELAGENT-004, WEBCRAWL-005
   - Reference: [docs/optimization/agent_optimization.md](../optimization/agent_optimization.md)
+  - Status: Completed with comprehensive destination research capabilities including search, event tracking, and blog insights extraction, all with proper caching, knowledge graph integration, and fallbacks
 
 - [ ] **BUDGETAGENT-001**: Implement Budget Planning Agent
 
@@ -515,6 +516,40 @@ This document provides a complete implementation to-do list for the TripSage AI 
   - Dependencies: CI-001, TEST-002, TEST-003, TEST-004, TEST-005
   - Reference: [docs/deployment/deployment_strategy.md](../deployment/deployment_strategy.md)
 
+## WebCrawl MCP Enhancements
+
+### Medium Priority
+
+- [ ] **WEBCRAWL-006**: Implement intelligent source selection based on URL characteristics
+
+  - Dependencies: WEBCRAWL-003
+  - Reference: [docs/integrations/web_crawling_evaluation.md](../integrations/web_crawling_evaluation.md)
+  - Description: Enhance source selection to intelligently choose between Crawl4AI and Playwright based on URL characteristics, including domain-specific rules and dynamic content detection
+
+- [ ] **WEBCRAWL-007**: Enhance WebSearchTool fallback with structured guidance
+
+  - Dependencies: WEBCRAWL-005, TRAVELAGENT-003
+  - Reference: [docs/integrations/hybrid_search_strategy.md](../integrations/hybrid_search_strategy.md)
+  - Description: Provide more structured guidance when falling back to WebSearchTool, including specific query patterns and expected information structure
+
+- [ ] **MEM-005**: Expand knowledge graph with additional entity and relation types
+
+  - Dependencies: MEM-002, MEM-003
+  - Reference: [docs/integrations/memory_integration.md](../integrations/memory_integration.md)
+  - Description: Create more entity types beyond destinations (attractions, events, etc.) and implement more relation types between entities (located_in, offers, etc.)
+
+- [ ] **WEBCRAWL-008**: Implement result normalization across sources
+
+  - Dependencies: WEBCRAWL-003, WEBCRAWL-005
+  - Reference: [docs/integrations/webcrawl_mcp_implementation.md](../integrations/webcrawl_mcp_implementation.md)
+  - Description: Normalize data structures from different sources with consistent format, confidence scores, and source metadata
+
+- [ ] **CACHE-002**: Enhance caching with partial updates and cache warming
+
+  - Dependencies: CACHE-001, WEBCRAWL-003
+  - Reference: [docs/optimization/search_and_caching_strategy.md](../optimization/search_and_caching_strategy.md)
+  - Description: Implement partial cache updates for time-sensitive data, add cache warming for popular destinations, and implement cache statistics collection
+
 ## Post-MVP Enhancements
 
 ### Low Priority
@@ -583,11 +618,16 @@ This document provides a complete implementation to-do list for the TripSage AI 
 
 ### Next Priority Tasks
 
-| Priority | Task ID         | Description                                   |
-| -------- | --------------- | --------------------------------------------- |
-| 1        | TRAVELAGENT-006 | Create destination research capabilities      |
-| 2        | TRAVELAGENT-005 | Implement accommodation search and comparison |
-| 3        | BUDGETAGENT-001 | Implement Budget Planning Agent               |
+| Priority | Task ID         | Description                                              | Status        |
+| -------- | --------------- | -------------------------------------------------------- | ------------- |
+| 1        | WEBCRAWL-006    | Implement intelligent source selection for WebCrawl MCP  | Completed     |
+| 2        | WEBCRAWL-007    | Enhance WebSearchTool fallback with structured guidance  | Completed     |
+| 3        | WEBCRAWL-008    | Implement result normalization across sources            | Completed     |
+| 4        | MEM-005         | Expand knowledge graph with additional entity types      | Pending       |
+| 5        | CACHE-002       | Enhance caching with partial updates and cache warming   | Pending       |
+| 6        | TRAVELAGENT-005 | Implement accommodation search and comparison            |
+| 7        | BUDGETAGENT-001 | Implement Budget Planning Agent                          |
+| 8        | ITINAGENT-001   | Implement Itinerary Planning Agent                       |
 
 ### Post-MVP: Enhanced Capabilities
 

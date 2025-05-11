@@ -1,4 +1,14 @@
-# WebCrawl MCP module
+"""
+WebCrawl MCP module
+"""
 
-# This module will be populated with WebCrawlMCPServer and WebCrawlMCPClient
-# once they are implemented
+from .client import WebCrawlMCPClient
+
+
+def get_client() -> WebCrawlMCPClient:
+    """Get a configured WebCrawl MCP client.
+
+    Returns:
+        A configured WebCrawl MCP client
+    """
+    return WebCrawlMCPClient()

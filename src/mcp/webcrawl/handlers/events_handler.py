@@ -6,10 +6,14 @@ from typing import Any, Dict, List, Optional
 from src.mcp.webcrawl.config import Config
 from src.mcp.webcrawl.sources.crawl4ai_source import Crawl4AISource
 from src.mcp.webcrawl.sources.playwright_source import PlaywrightSource
+from src.mcp.webcrawl.utils.result_normalizer import get_result_normalizer
 from src.utils.logging import get_logger
 
 # Initialize logger
 logger = get_logger(__name__)
+
+# Get the result normalizer
+_normalizer = get_result_normalizer()
 
 
 async def get_latest_events(
@@ -17,6 +21,7 @@ async def get_latest_events(
     start_date: str,
     end_date: str,
     categories: Optional[List[str]] = None,
+    source_type: str = "crawl4ai",
 ) -> Dict[str, Any]:
     """Find upcoming events at a destination during a specific time period.
 
@@ -25,6 +30,7 @@ async def get_latest_events(
         start_date: Start date in ISO format (YYYY-MM-DD)
         end_date: End date in ISO format (YYYY-MM-DD)
         categories: Optional list of event categories to filter by
+        source_type: Type of source to use ("crawl4ai" or "playwright")
 
     Returns:
         Dict containing event listings with details
@@ -33,7 +39,8 @@ async def get_latest_events(
         Exception: If the event search fails
     """
     logger.info(
-        f"Searching for events in {destination} from {start_date} to {end_date}"
+        f"Searching for events in {destination} from {start_date} to {end_date} using "
+        f"{source_type}"
     )
 
     # Validate input
@@ -60,10 +67,20 @@ async def get_latest_events(
     except ValueError as e:
         raise ValueError(f"Invalid date format: {str(e)}") from e
 
-    # Select appropriate source based on destination
-    source = _select_source(destination)
+    # Validate source_type
+    if source_type not in ["crawl4ai", "playwright"]:
+        logger.warning(f"Invalid source_type: {source_type}, defaulting to crawl4ai")
+        source_type = "crawl4ai"
 
     try:
+        # Initialize the selected source
+        if source_type == "crawl4ai":
+            source = Crawl4AISource()
+            logger.info(f"Using Crawl4AI source for events in {destination}")
+        else:  # playwright
+            source = PlaywrightSource()
+            logger.info(f"Using Playwright source for events in {destination}")
+
         # Get events using the selected source
         result = await source.get_latest_events(
             destination=destination,
@@ -75,11 +92,44 @@ async def get_latest_events(
         # Store events in database or knowledge graph here
         # This would typically involve persisting the event data
 
-        # Format response to MCP standard
-        return _format_events_response(result)
+        # Normalize and format response to MCP standard
+        normalized_result = _normalizer.normalize_events_results(
+            results=result, source_type=source_type
+        )
+        return _format_events_response(normalized_result)
     except Exception as e:
-        logger.error(f"Error getting events for {destination}: {str(e)}")
-        raise
+        logger.error(f"{source_type} events search failed for {destination}: {str(e)}")
+
+        # Try fallback to the other source
+        fallback_type = "playwright" if source_type == "crawl4ai" else "crawl4ai"
+        try:
+            logger.info(f"Trying {fallback_type} fallback for events in {destination}")
+
+            if fallback_type == "crawl4ai":
+                fallback_source = Crawl4AISource()
+            else:
+                fallback_source = PlaywrightSource()
+
+            result = await fallback_source.get_latest_events(
+                destination=destination,
+                start_date=start_date,
+                end_date=end_date,
+                categories=categories,
+            )
+
+            # Normalize and format response from fallback
+            normalized_result = _normalizer.normalize_events_results(
+                results=result, source_type=fallback_type
+            )
+            return _format_events_response(normalized_result)
+        except Exception as fallback_e:
+            logger.error(
+                f"Fallback {fallback_type} events search failed for {destination}: "
+                f"{str(fallback_e)}"
+            )
+            raise Exception(
+                f"All events search attempts failed for {destination}"
+            ) from fallback_e
 
 
 def _select_source(destination: str) -> Any:

@@ -19,6 +19,7 @@ from src.utils.error_handling import MCPError
 from src.utils.logging import get_module_logger
 
 from .base_agent import TravelAgent as BaseTravelAgent
+from .destination_research import TripSageDestinationResearch
 from .flight_booking import TripSageFlightBooking
 from .flight_search import TripSageFlightSearch
 
@@ -82,9 +83,10 @@ class TravelAgent(BaseTravelAgent):
         """
         super().__init__(name=name, model=model, temperature=temperature)
 
-        # Initialize flight search and booking components
+        # Initialize components
         self.flight_search = TripSageFlightSearch()
         self.flight_booking = TripSageFlightBooking()
+        self.destination_research = TripSageDestinationResearch()
 
         # Add WebSearchTool to the agent's tools with travel-specific domain focus
         # This is part of our hybrid search approach where OpenAI's built-in search
@@ -175,8 +177,12 @@ class TravelAgent(BaseTravelAgent):
         self._register_tool(self.create_trip)
         self._register_tool(self.search_activities)
 
-        # Search-related tools
+        # Destination research tools
         self._register_tool(self.search_destination_info)
+        self._register_tool(self.get_destination_events)
+        self._register_tool(self.crawl_travel_blog)
+
+        # Comparison and recommendation tools
         self._register_tool(self.compare_travel_options)
 
         # Knowledge graph tools
@@ -252,6 +258,20 @@ class TravelAgent(BaseTravelAgent):
             logger.info("Registered Memory MCP client tools")
         except Exception as e:
             logger.warning("Failed to register Memory MCP client: %s", str(e))
+
+        # WebCrawl MCP Client
+        try:
+            from ..mcp.webcrawl import get_client as get_webcrawl_client
+
+            webcrawl_client = get_webcrawl_client()
+            self._register_mcp_client_tools(webcrawl_client, prefix="webcrawl_")
+            logger.info("Registered WebCrawl MCP client tools")
+
+            # Connect WebCrawl MCP client to destination research component
+            self.destination_research.webcrawl_client = webcrawl_client
+            logger.info("Connected WebCrawl MCP client to destination research component")
+        except Exception as e:
+            logger.warning("Failed to register WebCrawl MCP client: %s", str(e))
 
     @function_tool
     async def get_weather_forecast(self, params: Dict[str, Any]) -> Dict[str, Any]:
@@ -955,86 +975,76 @@ class TravelAgent(BaseTravelAgent):
         analyze detailed information about a destination.
 
         Args:
-            params: Parameters including destination name and info types to search for
+            params: Parameters including destination name and topics to search for
                 destination: Name of the destination (city, country, attraction)
-                info_types: List of info types (e.g., "attractions", "safety",
+                topics: List of topics (e.g., "attractions", "safety",
                     "transportation", "best_time")
+                max_results: Maximum number of results per topic (default: 5)
 
         Returns:
             Dictionary containing structured information about the destination
         """
         try:
-            # Extract parameters
-            destination = params.get("destination")
-            info_types = params.get("info_types", ["general"])
+            # Convert info_types to topics if present (for backward compatibility)
+            if "info_types" in params and "topics" not in params:
+                params["topics"] = params.pop("info_types")
 
-            if not destination:
-                return {"error": "Destination parameter is required"}
-
-            # Build queries for each info type
-            search_results = {}
-
-            for info_type in info_types:
-                query = self._build_destination_query(destination, info_type)
-
-                # WebSearchTool is used automatically through the agent
-                # Results will be returned to the agent which will process them
-
-                # This would use our redis cache when implemented
-                cache_key = f"destination:{destination}:info_type:{info_type}"
-                cached_result = await redis_cache.get(cache_key)
-
-                if cached_result:
-                    search_results[info_type] = cached_result
-                else:
-                    # Note: We let the agent use the WebSearchTool
-                    # This function mainly provides structure and caching
-                    search_results[info_type] = {
-                        "query": query,
-                        "cache": "miss",
-                        "note": (
-                            "Data will be provided by WebSearchTool and "
-                            "processed by the agent"
-                        ),
-                    }
-
-            return {
-                "destination": destination,
-                "info_types": info_types,
-                "search_results": search_results,
-            }
+            # Delegate to the destination research component
+            return await self.destination_research.search_destination_info(params)
 
         except Exception as e:
             logger.error("Error searching destination info: %s", str(e))
             return {"error": f"Destination search error: {str(e)}"}
 
-    def _build_destination_query(self, destination: str, info_type: str) -> str:
-        """Build an optimized search query for a destination and info type.
+    @function_tool
+    async def get_destination_events(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        """Get information about events happening at a destination.
+
+        Uses specialized web crawling to find upcoming events at a specific
+        destination during a given time period.
 
         Args:
-            destination: Name of the destination
-            info_type: Type of information to search for
+            params: Parameters for the event search:
+                destination: Destination name (e.g., "Paris, France")
+                start_date: Start date in YYYY-MM-DD format
+                end_date: End date in YYYY-MM-DD format
+                categories: List of event categories (optional)
 
         Returns:
-            A formatted search query string
+            Dictionary containing event information for the destination
         """
-        query_templates = {
-            "general": "travel guide {destination} best things to do",
-            "attractions": "top attractions in {destination} must-see sights",
-            "safety": "{destination} travel safety information for tourists",
-            "transportation": "how to get around {destination} public transportation",
-            "best_time": "best time to visit {destination} weather seasons",
-            "budget": "{destination} travel cost budget accommodation food",
-            "food": "best restaurants in {destination} local cuisine food specialties",
-            "culture": "{destination} local customs culture etiquette tips",
-            "day_trips": "best day trips from {destination} nearby attractions",
-            "family": "things to do in {destination} with children family-friendly",
-        }
+        try:
+            # Delegate to the destination research component
+            return await self.destination_research.get_destination_events(params)
 
-        template = query_templates.get(
-            info_type, "travel information about {destination} {info_type}"
-        )
-        return template.format(destination=destination, info_type=info_type)
+        except Exception as e:
+            logger.error("Error getting destination events: %s", str(e))
+            return {"error": f"Events search error: {str(e)}"}
+
+    @function_tool
+    async def crawl_travel_blog(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        """Extract insights from travel blogs about a destination.
+
+        Uses specialized blog crawling to extract valuable insights, recommendations,
+        and tips from travel blogs about a specific destination.
+
+        Args:
+            params: Parameters for blog crawling:
+                destination: Destination name (e.g., "Paris, France")
+                topics: List of topics to extract (e.g., "hidden gems")
+                max_blogs: Maximum number of blogs to crawl (default: 3)
+                recent_only: Whether to include only recent blogs (default: True)
+
+        Returns:
+            Dictionary containing blog insights about the destination
+        """
+        try:
+            # Delegate to the destination research component
+            return await self.destination_research.crawl_travel_blog(params)
+
+        except Exception as e:
+            logger.error("Error crawling travel blogs: %s", str(e))
+            return {"error": f"Blog crawling error: {str(e)}"}
 
     @function_tool
     async def compare_travel_options(self, params: Dict[str, Any]) -> Dict[str, Any]:
