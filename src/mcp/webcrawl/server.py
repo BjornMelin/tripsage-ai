@@ -11,6 +11,7 @@ from src.mcp.webcrawl.handlers import (
     monitor_price_changes,
     search_destination_info,
 )
+from src.mcp.webcrawl.sources.source_selector import get_source_selector
 from src.mcp.webcrawl.storage.cache import CacheService
 from src.mcp.webcrawl.storage.memory import KnowledgeGraphStorage
 from src.mcp.webcrawl.storage.supabase import SupabaseStorage
@@ -34,11 +35,12 @@ class WebCrawlMCPServer(BaseMCPServer):
         self.supabase = SupabaseStorage()
         self.knowledge_graph = KnowledgeGraphStorage()
         self.rate_limiter = AdaptiveRateLimiter()
+        self.source_selector = get_source_selector()
 
         # Register MCP tools
         self.register_tools()
 
-        logger.info("WebCrawl MCP server initialized")
+        logger.info("WebCrawl MCP server initialized with intelligent source selection")
 
     def register_tools(self) -> None:
         """Register all MCP tools with the server."""
@@ -101,6 +103,14 @@ class WebCrawlMCPServer(BaseMCPServer):
                     "type": "integer",
                     "default": 5,
                     "description": "Maximum number of results to return per topic",
+                },
+                "traveler_profile": {
+                    "type": "string",
+                    "description": (
+                        "Traveler profile for personalized results (e.g., "
+                        "'family_focused', 'budget_traveler', 'luxury_experience', "
+                        "'safety_first', 'cultural_immersion', 'adventure_seeker')"
+                    ),
                 },
             },
             required=["destination"],
@@ -241,12 +251,17 @@ class WebCrawlMCPServer(BaseMCPServer):
             await self.rate_limiter.acquire(domain)
 
             try:
+                # Use intelligent source selection
+                source_type = self.source_selector.select_source_for_url(url)
+                logger.info(f"Selected {source_type} source for URL: {url}")
+
                 # Extract content
                 result = await extract_page_content(
                     url=url,
                     selectors=selectors,
                     include_images=include_images,
                     format=format_type,
+                    source_type=source_type,  # Pass the selected source type
                 )
 
                 # Store in cache with appropriate TTL
@@ -269,13 +284,24 @@ class WebCrawlMCPServer(BaseMCPServer):
                     metadata=result.get("metadata"),
                 )
 
-                # Report successful request for adaptive rate limiting
+                # Report successful request for adaptive rate
+                # limiting and source selection
                 self.rate_limiter.report_success(domain)
+                self.source_selector.report_success(source_type, True)
 
                 return format_response(result)
-            except Exception:
-                # Report failed request for adaptive rate limiting
+            except Exception as e:
+                # Report failed request for adaptive rate limiting and source selection
                 self.rate_limiter.report_failure(domain)
+
+                # If we know which source was selected, report failure
+                if "source_type" in locals():
+                    self.source_selector.report_success(source_type, False)
+
+                logger.error(
+                    f"Error in extract_page_content with source "
+                    f"{locals().get('source_type', 'unknown')}: {str(e)}"
+                )
                 raise
 
         except Exception as e:
@@ -298,11 +324,12 @@ class WebCrawlMCPServer(BaseMCPServer):
             destination = params.get("destination")
             topics = params.get("topics")
             max_results = params.get("max_results", 5)
+            traveler_profile = params.get("traveler_profile")
 
             # Generate cache key
-
             topics_str = ",".join(sorted(topics)) if topics else "default"
-            cache_key = f"search:{destination}:{topics_str}:{max_results}"
+            profile_str = f":{traveler_profile}" if traveler_profile else ""
+            cache_key = f"search:{destination}:{topics_str}:{max_results}{profile_str}"
 
             # Check cache
             cached_result = await self.cache.get(cache_key)
@@ -310,10 +337,31 @@ class WebCrawlMCPServer(BaseMCPServer):
                 logger.info(f"Cache hit for destination search: {destination}")
                 return format_response(cached_result)
 
+            # Use intelligent source selection
+            source_type = self.source_selector.select_source_for_destination(
+                destination, "search"
+            )
+            logger.info(
+                f"Selected {source_type} source for destination search: {destination}"
+            )
+
             # Search for destination information
             result = await search_destination_info(
-                destination=destination, topics=topics, max_results=max_results
+                destination=destination,
+                topics=topics,
+                max_results=max_results,
+                source_type=source_type,  # Pass the selected source type
+                traveler_profile=traveler_profile,  # Pass traveler profile
             )
+
+            # Check if results indicate a fallback to WebSearchTool
+            if (
+                "fallback_type" in result
+                and result["fallback_type"] == "websearch_tool"
+            ):
+                # Return the results with guidance to the client w/o reporting failure
+                logger.info(f"Returning WebSearchTool guidance for {destination}")
+                return format_response(result)
 
             # Store in cache
             await self.cache.set(cache_key, result, Config.CACHE_TTL_DESTINATION_INFO)
@@ -332,10 +380,20 @@ class WebCrawlMCPServer(BaseMCPServer):
                 sources=result.get("sources", []),
             )
 
+            # Report success for source selection
+            self.source_selector.report_success(source_type, True)
+
             return format_response(result)
 
         except Exception as e:
-            logger.error(f"Error in search_destination_info handler: {str(e)}")
+            # Report failure for source selection if available
+            if "source_type" in locals():
+                self.source_selector.report_success(source_type, False)
+
+            logger.error(
+                f"Error in search_destination_info handler with source "
+                f"{locals().get('source_type', 'unknown')}: {str(e)}"
+            )
             return format_error(str(e))
 
     async def _monitor_price_changes_handler(
@@ -434,12 +492,19 @@ class WebCrawlMCPServer(BaseMCPServer):
                 logger.info(f"Cache hit for events: {destination}")
                 return format_response(cached_result)
 
+            # Use intelligent source selection
+            source_type = self.source_selector.select_source_for_destination(
+                destination, "events"
+            )
+            logger.info(f"Selected {source_type} source for events in {destination}")
+
             # Get events
             result = await get_latest_events(
                 destination=destination,
                 start_date=start_date,
                 end_date=end_date,
                 categories=categories,
+                source_type=source_type,  # Pass the selected source type
             )
 
             # Store in cache
@@ -460,10 +525,20 @@ class WebCrawlMCPServer(BaseMCPServer):
                 events=result.get("events", []),
             )
 
+            # Report success for source selection
+            self.source_selector.report_success(source_type, True)
+
             return format_response(result)
 
         except Exception as e:
-            logger.error(f"Error in get_latest_events handler: {str(e)}")
+            # Report failure for source selection if available
+            if "source_type" in locals():
+                self.source_selector.report_success(source_type, False)
+
+            logger.error(
+                f"Error in get_latest_events handler with source "
+                f"{locals().get('source_type', 'unknown')}: {str(e)}"
+            )
             return format_error(str(e))
 
     async def _crawl_travel_blog_handler(

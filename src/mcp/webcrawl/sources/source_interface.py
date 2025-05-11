@@ -1,7 +1,7 @@
 """Interface for web crawling sources."""
 
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional, TypedDict
+from typing import Any, Dict, List, Optional, Protocol, TypedDict
 
 
 class ExtractionOptions(TypedDict, total=False):
@@ -140,6 +140,33 @@ class BlogInsights(TypedDict):
     topics: Dict[str, List[BlogTopic]]
     sources: List[BlogSource]
     extraction_date: str
+
+
+class SourceSelector(Protocol):
+    """Protocol for source selection strategies."""
+
+    def select_source_for_url(self, url: str) -> str:
+        """Select the appropriate source for a URL.
+
+        Args:
+            url: The URL to select a source for
+
+        Returns:
+            The name of the selected source ("crawl4ai" or "playwright")
+        """
+        pass
+
+    def select_source_for_destination(self, destination: str, action: str) -> str:
+        """Select the appropriate source for a destination and action.
+
+        Args:
+            destination: The destination name
+            action: The action to perform (e.g., "search", "events", "blogs")
+
+        Returns:
+            The name of the selected source ("crawl4ai" or "playwright")
+        """
+        pass
 
 
 class CrawlSource(ABC):
