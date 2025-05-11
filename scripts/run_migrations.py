@@ -10,13 +10,14 @@ import asyncio
 import sys
 from pathlib import Path
 
+from src.db.migrations import run_migrations
+from src.utils.logging import configure_logging
+
 # Add project root to path
 script_dir = Path(__file__).resolve().parent
 project_root = script_dir.parent
 sys.path.insert(0, str(project_root))
 
-from src.db.migrations import run_migrations
-from src.utils.logging import configure_logging
 
 # Configure logging
 logger = configure_logging("run_migrations")

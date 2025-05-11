@@ -56,7 +56,8 @@ class QueryError(DatabaseError):
 
 
 class NotConnectedError(DatabaseError):
-    """Exception raised when attempting to use a database client that's not connected."""
+    """Exception raised when attempting to use a database client
+    that's not connected."""
 
     pass
 

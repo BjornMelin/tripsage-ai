@@ -139,7 +139,8 @@ async def run_migrations(
     applied_migrations = await get_applied_migrations(service_key=service_key)
 
     logger.info(
-        f"Found {len(migration_files)} migration files, {len(applied_migrations)} already applied"
+        f"Found {len(migration_files)} migration files, "
+        f"{len(applied_migrations)} already applied"
     )
 
     succeeded = 0

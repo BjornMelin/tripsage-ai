@@ -75,7 +75,8 @@ async def close_db_client() -> None:
 
 
 # Legacy compatibility functions for Supabase client
-# These will be deprecated in future versions but are maintained for backward compatibility
+# These will be deprecated in future versions but are maintained
+# for backward compatibility
 
 
 def create_supabase_client(
@@ -88,11 +89,11 @@ def create_supabase_client(
     Create a new database client.
 
     DEPRECATED: This synchronous function is maintained for backward compatibility
-    and delegates to the new provider system. It does NOT actually connect to the database.
-    Use async create_db_client() instead.
+    and delegates to the new provider system. It does NOT actually connect to
+    the database. Use async create_db_client() instead.
 
-    WARNING: This function only returns a provider instance without connecting to the database.
-    You must manually connect using await provider.connect().
+    WARNING: This function only returns a provider instance without connecting to the
+    database. You must manually connect using await provider.connect().
 
     Args:
         url: The database URL (ignored, use environment variables instead).
@@ -116,8 +117,8 @@ def get_supabase_client(use_service_key: bool = False) -> Any:
     Get or create a database client.
 
     DEPRECATED: This synchronous function is maintained for backward compatibility
-    and delegates to the new provider system. It does NOT ensure the provider is connected.
-    Use async get_db_client() instead.
+    and delegates to the new provider system. It does NOT ensure
+    the provider is connected. Use async get_db_client() instead.
 
     WARNING: This function only returns a provider instance without ensuring connection.
     You must manually connect using await provider.connect() if not already connected.
@@ -142,10 +143,11 @@ def reset_client() -> None:
     DEPRECATED: This synchronous function is maintained for backward compatibility
     and delegates to the new provider system.
 
-    WARNING: This function only resets the provider instance without properly closing connections.
-    Use async close_db_client() followed by reset_provider() instead.
+    WARNING: This function only resets the provider instance without properly closing
+    connections. Use async close_db_client() followed by reset_provider() instead.
     """
     logger.warning(
-        "reset_client is deprecated, use async close_db_client() followed by reset_provider() instead"
+        "reset_client is deprecated, use async close_db_client() followed by "
+        "reset_provider() instead"
     )
     reset_provider()

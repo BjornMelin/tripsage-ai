@@ -2,7 +2,8 @@
 Base repository for database operations.
 
 This module provides a base repository class for interacting with the database.
-It implements common CRUD operations and serves as a base for entity-specific repositories.
+It implements common CRUD operations and serves as a base for
+entity-specific repositories.
 """
 
 from typing import Generic, List, Optional, Type, TypeVar, Union
@@ -312,7 +313,8 @@ class BaseRepository(Generic[T]):
 
         Args:
             query_fn: Function that takes a query builder and returns a modified query.
-                      Example: lambda q: q.select("*").eq("status", "active").order("created_at")
+                Example:
+                    lambda q: q.select("*").eq("status", "active").order("created_at")
 
         Returns:
             List of entities matching the query.

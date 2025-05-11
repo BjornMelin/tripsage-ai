@@ -123,4 +123,5 @@ class BaseDBModel(BaseModel):
 
     def __repr__(self) -> str:
         """Detailed representation of the model."""
-        return f"{self.__class__.__name__}({', '.join([f'{k}={v}' for k, v in self.to_dict().items()])})"
+        items = ', '.join([f'{k}={v}' for k, v in self.to_dict().items()])
+        return f"{self.__class__.__name__}({items})"

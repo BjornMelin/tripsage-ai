@@ -7,7 +7,8 @@ import os
 import sys
 
 from dotenv import load_dotenv
-from travel_agent import TravelAgent
+
+from .travel_agent import TravelAgent
 
 
 def main():
@@ -24,7 +25,8 @@ def main():
     if not os.getenv("SUPABASE_URL") or not os.getenv("SUPABASE_ANON_KEY"):
         print("Warning: Supabase credentials are not set.")
         print(
-            "Database operations will not work without SUPABASE_URL and SUPABASE_ANON_KEY."
+            "Database operations will not work without SUPABASE_URL "
+            "and SUPABASE_ANON_KEY."
         )
 
     print("Initializing TripSage Travel Agent...")
