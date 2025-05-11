@@ -65,3 +65,7 @@ Thumbs.db
 
 # repomix
 repomix-output.*
+
+CLAUDE.md.old
+
+docs/*/archived

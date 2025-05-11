@@ -1,33 +1,89 @@
-import os
+"""
+Database module for the TripSage API.
 
-from dotenv import load_dotenv
-from supabase import create_client
+This module provides database connection and repository instances for the TripSage API.
+"""
 
-# Load environment variables
-load_dotenv()
+import logging
+from typing import Any, Dict, Optional, Type
 
-# Supabase configuration
-SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_KEY = os.getenv("SUPABASE_ANON_KEY")
+from fastapi import Depends
+from supabase import Client
+
+from src.db.client import get_supabase_client
+from src.db.initialize import close_database_connection, initialize_database
+from src.db.models.base import BaseDBModel
+from src.db.repositories.base import BaseRepository
+from src.db.repositories.flight import FlightRepository
+from src.db.repositories.trip import TripRepository
+from src.db.repositories.user import UserRepository
+from src.utils.logging import configure_logging
+
+# Configure logging
+logger = configure_logging(__name__)
 
 
-# Initialize Supabase client
-def get_supabase_client():
+# Repository factories
+def get_user_repository() -> UserRepository:
+    """Get the user repository."""
+    return UserRepository()
+
+
+def get_trip_repository() -> TripRepository:
+    """Get the trip repository."""
+    return TripRepository()
+
+
+def get_flight_repository() -> FlightRepository:
+    """Get the flight repository."""
+    return FlightRepository()
+
+
+# Dependency for database access in API routes
+async def get_db() -> Client:
     """
-    Create and return a Supabase client instance.
-    Raises an exception if environment variables are not properly set.
+    Get the database client as a FastAPI dependency.
+
+    Returns:
+        The Supabase client.
     """
-    if not SUPABASE_URL or not SUPABASE_KEY:
-        raise ValueError(
-            "SUPABASE_URL and SUPABASE_ANON_KEY must be set in the environment variables"
-        )
-
-    return create_client(SUPABASE_URL, SUPABASE_KEY)
+    client = get_supabase_client()
+    return client
 
 
-# Default client instance
-try:
-    supabase = get_supabase_client()
-except Exception as e:
-    print(f"Warning: Could not initialize Supabase client: {e}")
-    supabase = None
+# Dependency for repositories in API routes
+def get_repository(repo_factory):
+    """
+    Create a dependency for a specific repository.
+
+    Args:
+        repo_factory: Factory function that creates the repository.
+
+    Returns:
+        A dependency function that returns the repository.
+    """
+
+    def _get_repo():
+        return repo_factory()
+
+    return Depends(_get_repo)
+
+
+# Initialize database connection
+async def startup_db_client():
+    """Initialize the database client on application startup."""
+    logger.info("Initializing database client")
+    # Run database initialization without migrations (migrations should be run manually)
+    success = await initialize_database(run_migrations_on_startup=False)
+    if not success:
+        logger.error("Failed to initialize database client")
+        raise RuntimeError("Failed to initialize database client")
+    logger.info("Database client initialized successfully")
+
+
+# Close database connection
+async def shutdown_db_client():
+    """Close the database client on application shutdown."""
+    logger.info("Closing database client")
+    await close_database_connection()
+    logger.info("Database client closed")

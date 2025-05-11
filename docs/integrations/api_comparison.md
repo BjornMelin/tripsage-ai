@@ -92,48 +92,67 @@ This dual approach provides the best coverage of both private rentals and hotels
 
 ## Search API Comparison
 
-| Feature                   | Linkup Search | OpenAI Search        | Bing Search    | Google Custom Search |
-| ------------------------- | ------------- | -------------------- | -------------- | -------------------- |
-| **Results Quality**       | Good          | Very good            | Good           | Excellent            |
-| **Travel Relevance**      | Good          | Good                 | Good           | Good                 |
-| **Real-time Data**        | ✅            | ✅                   | ✅             | ✅                   |
-| **Customization**         | Limited       | Limited              | Good           | Excellent            |
-| **Node.js Integration**   | ✅ Via MCP    | ✅ Via SDK           | ✅ API         | ✅ API               |
-| **Pricing Model**         | Per query     | Included with OpenAI | Pay-per-search | Pay-per-search       |
-| **Free Tier**             | Limited       | Varies by plan       | Limited        | 100 queries/day      |
-| **Documentation Quality** | Good          | Good                 | Good           | Excellent            |
-| **AI Integration**        | Excellent     | Built-in             | Good           | Limited              |
+| Feature                   | OpenAI Search (Agents SDK) | Bing Search    | Google Custom Search |
+| ------------------------- | -------------------------- | -------------- | -------------------- |
+| **Results Quality**       | Excellent                  | Good           | Excellent            |
+| **Travel Relevance**      | Very good                  | Good           | Good                 |
+| **Real-time Data**        | ✅                         | ✅             | ✅                   |
+| **Customization**         | Built-in context handling  | Good           | Excellent            |
+| **SDK Integration**       | ✅ Native WebSearchTool    | ✅ API         | ✅ API               |
+| **Pricing Model**         | Included with OpenAI usage | Pay-per-search | Pay-per-search       |
+| **Free Tier**             | Varies by plan             | Limited        | 100 queries/day      |
+| **Documentation Quality** | Very good                  | Good           | Excellent            |
+| **AI Integration**        | Native                     | Good           | Limited              |
 
 ### Recommendation
 
-**Primary: Hybrid Approach**
+**Primary: Hybrid Search Approach with OpenAI WebSearchTool as Foundation**
 
-1. **OpenAI's built-in search for agents**
+1. **OpenAI's built-in search for general queries**
 
-   - Already included with our OpenAI usage
-   - Well-integrated with agent systems
-   - Good for general information retrieval
+   - **Native integration** with the OpenAI Agents SDK via WebSearchTool
+   - **Travel-optimized configuration** with allowed/blocked domains for quality results
+   - **Simplified implementation** without additional API keys or rate limiting
+   - **Autonomous search decisions** made by the agent based on user queries
+   - **Cost efficiency** as search is included with standard OpenAI API usage
+   - **Customizable domain targeting** to focus on high-quality travel sources
+   - **Personal deployment-friendly** with no additional costs for individual users
 
-2. **Linkup Search for specialized travel queries**
-   - Better for deep travel research when needed
-   - Can be called directly from our agents
-   - Pay-per-query model allows for cost control
+2. **Complementary specialized tools for depth when needed**
 
-This hybrid approach minimizes costs while providing the best search capabilities for different scenarios.
+   - **Firecrawl for detailed data extraction** from travel websites
+   - **Browser automation for interactive tasks** like checking availability
+   - **Web scraping for structured information** about destinations
+   - **Advanced search tool adapters** that provide structure around WebSearchTool
+
+3. **Implementation details**
+   - **Domain allowlists** targeting specific travel categories:
+     - Official airline and accommodation websites
+     - Trusted travel guides and information sources
+     - Government travel advisories
+     - Reliable review platforms
+   - **Domain blocklists** to filter out low-quality sources:
+     - Content farms and ad-heavy sites
+     - Sites with unreliable travel information
+   - **Search query templates** optimized for different travel information categories
+   - **Caching layer** to improve performance and reduce API costs
+   - **Structured tool integration** providing consistent interfaces around WebSearchTool
+
+This hybrid approach uses the OpenAI WebSearchTool for general information queries while maintaining specialized web crawling and browser automation capabilities for deeper research and complex interactions. The combination leverages WebSearchTool's simplicity and broad coverage while enhancing it with domain-specific configuration and structural adapters for travel-specific search patterns. This approach is particularly ideal for personal usage where the user brings their own OpenAI API key.
 
 ## Cost Analysis
 
-### Estimated Monthly Costs (Based on 10,000 users)
+### Estimated Monthly Costs (Personal Usage - Single User)
 
-| API Service           | Estimated Monthly Cost | Notes                                                  |
-| --------------------- | ---------------------- | ------------------------------------------------------ |
-| **Duffel API**        | $1,000 - $2,500        | Based on 5,000 bookings at $0.20-$0.50 per transaction |
-| **OpenBnB MCP**       | $0                     | Open-source with self-hosting costs only               |
-| **Apify Booking.com** | $300 - $500            | Based on 10,000 searches at $0.03-$0.05 per execution  |
-| **Google Maps**       | $300 - $800            | After $200 free credit, varies by usage                |
-| **Linkup Search**     | $200 - $400            | Based on selective usage for specialized queries       |
-| **Infrastructure**    | $500 - $1,000          | Servers, databases, and MCP hosting                    |
-| **Total Estimated**   | **$2,300 - $5,200**    | Scales with usage                                      |
+| API Service           | Estimated Monthly Cost | Notes                                                       |
+| --------------------- | ---------------------- | ----------------------------------------------------------- |
+| **Duffel API**        | $0 - $5                | Free tier or minimal cost for personal bookings (1-2 trips) |
+| **OpenBnB MCP**       | $0                     | Open-source with negligible self-hosting costs              |
+| **Apify Booking.com** | $0 - $3                | Free tier covers ~25 executions/month for personal use      |
+| **Google Maps**       | $0                     | Under $200 monthly free credit for personal usage           |
+| **OpenAI Search**     | $0 (Included)          | Included with OpenAI API usage for personal agent           |
+| **Infrastructure**    | $0 - $5                | Local hosting or minimal cloud resources                    |
+| **Total Estimated**   | **$0 - $13**           | Well within free tiers for typical personal usage           |
 
 ### Cost Optimization Strategies
 
