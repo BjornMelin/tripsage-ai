@@ -1,0 +1,16 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+<!-- file: .cursor/rules/simplicity-rule.mdc -->
+<rule id="simplicity-charter" stage="pre" appliesTo="code">
+  <description>Enforce KISS, YAGNI, DRY; no over-engineering.</description>
+  <pattern>.*</pattern>
+  <replacement>
+    <![CDATA[
+      Follow KISS, YAGNI, DRY. Ask before adding features. No extra layers,
+      configs, or premature optimisation. Explanations ≤2 lines.
+    ]]>
+  </replacement>
+</rule>

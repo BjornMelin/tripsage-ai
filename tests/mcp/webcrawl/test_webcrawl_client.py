@@ -10,7 +10,8 @@ from unittest.mock import patch
 import pytest
 from pydantic import ValidationError
 
-from src.mcp.webcrawl.client import MCPError, WebCrawlMCPClient
+from src.mcp.webcrawl.client import WebCrawlMCPClient
+from src.utils.error_handling import MCPError
 from src.mcp.webcrawl.models import (
     ScrapeParams,
     ScrapeResponse,
@@ -157,7 +158,7 @@ def mock_blog_response():
 class TestWebCrawlMCPClient:
     """Tests for the WebCrawlMCPClient class."""
 
-    @patch("src.mcp.webcrawl.client.BaseMCPClient.call_tool")
+    @patch("src.mcp.base_mcp_client.BaseMCPClient.call_tool")
     async def test_extract_page_content(
         self, mock_call_tool, client, mock_scrape_response
     ):
@@ -192,7 +193,7 @@ class TestWebCrawlMCPClient:
         assert "markdown" in result["formats"]
         assert "html" in result["formats"]
 
-    @patch("src.mcp.webcrawl.client.BaseMCPClient.call_tool")
+    @patch("src.mcp.base_mcp_client.BaseMCPClient.call_tool")
     async def test_extract_page_content_validation_error(self, mock_call_tool, client):
         """Test validation error handling for extract_page_content."""
         # Simulate validation error
@@ -207,7 +208,7 @@ class TestWebCrawlMCPClient:
 
         assert "Invalid parameters" in str(exc_info.value)
 
-    @patch("src.mcp.webcrawl.client.BaseMCPClient.call_tool")
+    @patch("src.mcp.base_mcp_client.BaseMCPClient.call_tool")
     async def test_extract_page_content_api_error(self, mock_call_tool, client):
         """Test API error handling for extract_page_content."""
         # Simulate API error
@@ -221,7 +222,7 @@ class TestWebCrawlMCPClient:
 
         assert "MCP error: Connection error" in str(exc_info.value)
 
-    @patch("src.mcp.webcrawl.client.BaseMCPClient.call_tool")
+    @patch("src.mcp.base_mcp_client.BaseMCPClient.call_tool")
     async def test_search_destination_info(
         self, mock_call_tool, client, mock_search_response
     ):
@@ -254,7 +255,7 @@ class TestWebCrawlMCPClient:
         assert "Eiffel Tower" in result["results"][0]["title"]
         assert "Louvre Museum" in result["results"][1]["title"]
 
-    @patch("src.mcp.webcrawl.client.BaseMCPClient.call_tool")
+    @patch("src.mcp.base_mcp_client.BaseMCPClient.call_tool")
     async def test_search_destination_info_validation_error(
         self, mock_call_tool, client
     ):
@@ -271,7 +272,7 @@ class TestWebCrawlMCPClient:
 
         assert "Invalid parameters" in str(exc_info.value)
 
-    @patch("src.mcp.webcrawl.client.BaseMCPClient.call_tool")
+    @patch("src.mcp.base_mcp_client.BaseMCPClient.call_tool")
     async def test_monitor_price_changes(
         self, mock_call_tool, client, mock_monitor_price_changes_response
     ):
@@ -305,7 +306,7 @@ class TestWebCrawlMCPClient:
         assert result["initial_price"] == 199.99
         assert result["frequency"] == "daily"
 
-    @patch("src.mcp.webcrawl.client.BaseMCPClient.call_tool")
+    @patch("src.mcp.base_mcp_client.BaseMCPClient.call_tool")
     async def test_get_latest_events(
         self, mock_call_tool, client, mock_events_response
     ):
@@ -340,7 +341,7 @@ class TestWebCrawlMCPClient:
         assert result["events"][0]["name"] == "Outdoor Jazz Concert"
         assert result["events"][1]["name"] == "Food Festival"
 
-    @patch("src.mcp.webcrawl.client.BaseMCPClient.call_tool")
+    @patch("src.mcp.base_mcp_client.BaseMCPClient.call_tool")
     async def test_crawl_travel_blog(self, mock_call_tool, client, mock_blog_response):
         """Test crawling travel blogs for insights."""
         mock_call_tool.return_value = mock_blog_response
@@ -374,7 +375,7 @@ class TestWebCrawlMCPClient:
         assert len(result["insights"]["hidden_gems"]) == 2
         assert len(result["insights"]["local_tips"]) == 2
 
-    @patch("src.mcp.webcrawl.client.BaseMCPClient.call_tool")
+    @patch("src.mcp.base_mcp_client.BaseMCPClient.call_tool")
     async def test_deep_research(
         self, mock_call_tool, client, mock_deep_research_response
     ):
@@ -406,7 +407,7 @@ class TestWebCrawlMCPClient:
         assert len(result["sources"]) >= 1
         assert len(result["insights"]) >= 4
 
-    @patch("src.mcp.webcrawl.client.BaseMCPClient.call_tool")
+    @patch("src.mcp.base_mcp_client.BaseMCPClient.call_tool")
     async def test_deep_research_validation_error(self, mock_call_tool, client):
         """Test validation error handling for deep_research."""
         # Simulate validation error
@@ -421,7 +422,7 @@ class TestWebCrawlMCPClient:
 
         assert "Invalid parameters" in str(exc_info.value)
 
-    @patch("src.mcp.webcrawl.client.BaseMCPClient.call_tool")
+    @patch("src.mcp.base_mcp_client.BaseMCPClient.call_tool")
     async def test_tool_error_handling(self, mock_call_tool, client):
         """Test handling of error responses from the MCP tool."""
         # Simulate tool error response
@@ -440,7 +441,7 @@ class TestWebCrawlMCPClient:
 
         assert "MCP error: Failed to crawl the requested URL" in str(exc_info.value)
 
-    @patch("src.mcp.webcrawl.client.BaseMCPClient.call_tool")
+    @patch("src.mcp.base_mcp_client.BaseMCPClient.call_tool")
     async def test_websearch_tool_guidance(self, mock_call_tool, client):
         """Test handling of websearch tool guidance responses."""
         # Simulate websearch guidance response
@@ -472,7 +473,7 @@ class TestWebCrawlMCPClient:
         )
         assert result["data"]["websearch_tool_guidance"]["tool"] == "search-web"
 
-    @patch("src.mcp.webcrawl.client.BaseMCPClient.call_tool")
+    @patch("src.mcp.base_mcp_client.BaseMCPClient.call_tool")
     async def test__call_validate_tool(
         self, mock_call_tool, client, mock_scrape_response
     ):
@@ -480,7 +481,7 @@ class TestWebCrawlMCPClient:
         mock_call_tool.return_value = mock_scrape_response
 
         # Create valid parameters
-        params = ScrapeParams(url="https://example.com", formats=["markdown", "html"])
+        params = ScrapeParams(url="https://example.com", options=None)
 
         # Test with valid parameters and response model
         result = await client._call_validate_tool(
@@ -489,10 +490,9 @@ class TestWebCrawlMCPClient:
 
         # Verify parameters were dumped correctly
         mock_call_tool.assert_called_once()
-        call_kwargs = mock_call_tool.call_args[1]
-        assert call_kwargs["skip_cache"] is False
-        assert call_kwargs["cache_key"] is None
-        assert call_kwargs["cache_ttl"] is None
+        call_args = mock_call_tool.call_args[0]
+        assert call_args[0] == "mcp__webcrawl__firecrawl_scrape"
+        assert call_args[1] == {"url": "https://example.com", "options": None}
 
         # Verify result was validated
         assert isinstance(result, dict)  # In practice, this would be a ScrapeResponse
