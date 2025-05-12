@@ -2,8 +2,8 @@
  * OpenAI Agents SDK MCP Server Configuration
  *
  * This file configures MCP servers for use with OpenAI Agents SDK in TripSage.
- * It defines the connection and initialization parameters for Airbnb and
- * Google Maps MCP servers.
+ * It defines the connection and initialization parameters for Airbnb, Google Maps,
+ * and Flights MCP servers.
  */
 
 require("dotenv").config();
@@ -25,6 +25,16 @@ const config = {
       args: ["-y", "@modelcontextprotocol/server-google-maps"],
       env: {
         GOOGLE_MAPS_API_KEY: "${GOOGLE_MAPS_API_KEY}",
+      },
+    },
+    // Flights MCP Server configuration
+    flights: {
+      command: "npx",
+      args: ["-y", "@ravinahp/flights-mcp"],
+      env: {
+        DUFFEL_API_KEY: "${DUFFEL_API_KEY}",
+        DUFFEL_API_VERSION: "2023-06-02",
+        REDIS_URL: "${REDIS_URL}",
       },
     },
   },

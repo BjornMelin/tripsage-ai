@@ -627,8 +627,9 @@ This document provides a complete implementation to-do list for the TripSage AI 
 | 4        | MEM-005         | Expand knowledge graph with additional entity types     | Completed |
 | 5        | CACHE-002       | Enhance caching with partial updates and cache warming  | Pending   |
 | 6        | TRAVELAGENT-005 | Implement accommodation search and comparison           | Pending   |
-| 7        | BUDGETAGENT-001 | Implement Budget Planning Agent                         | Pending   |
-| 8        | ITINAGENT-001   | Implement Itinerary Planning Agent                      | Pending   |
+| 7        | GOOGLEMAPS-001  | Implement Google Maps MCP server integration            | Completed |
+| 8        | BUDGETAGENT-001 | Implement Budget Planning Agent                         | Pending   |
+| 9        | ITINAGENT-001   | Implement Itinerary Planning Agent                      | Pending   |
 
 ### Post-MVP: Enhanced Capabilities
 

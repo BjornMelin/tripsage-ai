@@ -19,7 +19,7 @@ The intelligent source selection enhancement allows the WebCrawl MCP to dynamica
 - Created a `SourceSelector` protocol in `source_interface.py` to define the interface for source selection strategies
 - Implemented `IntelligentSourceSelector` in `source_selector.py` with the following features:
   - Domain-based selection rules for known dynamic/static sites
-  - URL pattern matching for content type detection 
+  - URL pattern matching for content type detection
   - Historical success rate tracking for continuous improvement
   - Singleton pattern to ensure consistent selection across requests
 
@@ -28,10 +28,12 @@ The intelligent source selection enhancement allows the WebCrawl MCP to dynamica
 The source selector uses the following criteria to select between Crawl4AI and Playwright:
 
 1. **URL Characteristics**:
+
    - URLs with known dynamic content patterns (client-side rendering, JS-heavy sites) use Playwright
    - Static content sites (documentation, government pages, informational sites) use Crawl4AI
 
 2. **Destination-specific rules**:
+
    - Certain destinations with known website characteristics have pre-configured source preferences
    - Different actions (search, events, blog crawling) have different optimal sources
 
@@ -42,6 +44,7 @@ The source selector uses the following criteria to select between Crawl4AI and P
 ### Integration Points
 
 The intelligent source selection has been integrated at multiple points:
+
 - In the WebCrawl MCP server initialization
 - In each handler method (extract_page_content, search_destination_info, etc.)
 - With failure reporting to improve selection over time
@@ -55,12 +58,14 @@ The structured WebSearchTool fallback enhancement provides detailed guidance whe
 ### Implementation Details
 
 - Created the `search_helpers.py` utility module with:
+
   - `WebSearchFallbackGuide` class for structured guidance generation
   - Topic-specific query templates and extraction patterns
   - Domain configurations for targeted search
   - Response format guides for consistent results
 
 - Enhanced handlers in `search_handler.py` to:
+
   - Provide structured guidance when both Crawl4AI and Playwright sources fail
   - Include traveler profile information for personalized results
   - Support additional contextual parameters for better guidance
@@ -75,12 +80,14 @@ The structured WebSearchTool fallback enhancement provides detailed guidance whe
 The structured WebSearchTool guidance includes:
 
 1. **Search Plan**:
+
    - Optimized search queries based on destination and topic
    - Domain configurations for allowed/blocked domains
    - Multiple query suggestions with priorities
    - Traveler profile-specific information priorities
 
 2. **Response Format Guide**:
+
    - Expected information structure by topic
    - Confidence scoring recommendations
    - Source verification guidance
@@ -94,6 +101,7 @@ The structured WebSearchTool guidance includes:
 ### Integration with Destination Research Agent
 
 The TripSage destination research agent now:
+
 - Receives and utilizes structured guidance when WebCrawl fails
 - Applies optimized search strategies based on guidance
 - Returns more consistent results regardless of the underlying data source
@@ -107,6 +115,7 @@ The result normalization enhancement ensures consistent data structures, field n
 ### Implementation Details
 
 - Created a `ResultNormalizer` class in `result_normalizer.py` with:
+
   - Specialized normalization methods for different data types (destinations, events, blogs)
   - Source-specific confidence scoring
   - Category detection based on content analysis
@@ -122,11 +131,13 @@ The result normalization enhancement ensures consistent data structures, field n
 ### Normalization Features
 
 1. **Data Structure Consistency**:
+
    - Standardized field names across all sources
    - Consistent nesting and object organization
    - Default values for missing fields
 
 2. **Content Enrichment**:
+
    - Automatic summarization of long text
    - Category detection using keyword analysis
    - Sentiment analysis for blog content
@@ -174,7 +185,7 @@ result = await research.search_destination_info({
 if "websearch_tool_guidance" in result:
     # Use the structured guidance to perform better web searches
     guidance = result["websearch_tool_guidance"]["attractions"]
-    
+
     # Example of using the search plan from guidance
     search_plan = guidance["search_plan"]
     for query_info in search_plan["queries"]:
@@ -183,7 +194,7 @@ if "websearch_tool_guidance" in result:
             primary_query = query_info["query"]
             # Configure domains based on guidance
             allowed_domains = search_plan["domain_configuration"]["allowed_domains"]
-            
+
     # Use the response format guide for consistent extraction
     response_format = guidance["response_format"]
     # Structure results according to the specified sections
