@@ -40,6 +40,16 @@ class GetCurrentTimeParams(BaseParams):
         return self
 
 
+class TimeResult(BaseModel):
+    """Time result model matching the official Time MCP response schema."""
+
+    timezone: str = Field(..., description="The timezone name")
+    datetime: str = Field(..., description="The date and time in ISO 8601 format")
+    is_dst: bool = Field(False, description="Whether daylight saving time is in effect")
+
+    model_config = ConfigDict(extra="allow")
+
+
 class TimeResponse(BaseResponse):
     """Response model for current time information."""
 
@@ -96,6 +106,18 @@ class TimeInfo(BaseModel):
     timezone: str = Field(..., description="The timezone name")
     datetime: str = Field(..., description="The date and time in ISO 8601 format")
     is_dst: bool = Field(False, description="Whether daylight saving time is in effect")
+
+    model_config = ConfigDict(extra="allow")
+
+
+class TimeConversionResult(BaseModel):
+    """Time conversion result model matching the official Time MCP response schema."""
+
+    source: TimeResult = Field(..., description="Source time information")
+    target: TimeResult = Field(..., description="Target time information")
+    time_difference: str = Field(
+        ..., description="Time difference between the two timezones"
+    )
 
     model_config = ConfigDict(extra="allow")
 
