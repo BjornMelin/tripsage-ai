@@ -164,9 +164,15 @@ class BrowserMCPConfig(BaseSettings):
 
 
 class FlightsMCPConfig(MCPConfig):
-    """Flights MCP server configuration."""
+    """Flights MCP server configuration for ravinahp/flights-mcp.
+
+    This configuration is used to connect to the ravinahp/flights-mcp server,
+    which provides flight search functionality through the Duffel API.
+    The server is read-only and does not support booking operations.
+    """
 
     duffel_api_key: SecretStr
+    server_type: str = Field(default="ravinahp/flights-mcp")
 
 
 class AirbnbMCPConfig(MCPConfig):

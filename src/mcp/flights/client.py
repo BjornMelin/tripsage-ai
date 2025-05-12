@@ -1,8 +1,8 @@
 """
 Flight MCP Client implementation for TripSage.
 
-This module provides a client for interacting with the Flight MCP Server,
-which offers flight search, comparison, booking, and price tracking.
+This module provides a client for interacting with the external Flight MCP Server (ravinahp/flights-mcp),
+which offers flight search, comparison, and price tracking tools using the Duffel API.
 """
 
 from typing import Any, Dict, Generic, List, Optional, TypeVar, cast
@@ -39,7 +39,12 @@ R = TypeVar("R")
 
 
 class FlightsMCPClient(FastMCPClient, Generic[P, R]):
-    """Client for the Flights MCP Server."""
+    """Client for the external ravinahp/flights-mcp Server.
+
+    This client interfaces with the ravinahp/flights-mcp server which provides
+    flight search capabilities through the Duffel API. The server is read-only
+    and does not support booking operations.
+    """
 
     def __init__(
         self,
@@ -52,7 +57,7 @@ class FlightsMCPClient(FastMCPClient, Generic[P, R]):
 
         Args:
             endpoint: MCP server endpoint URL (defaults to settings value)
-            api_key: API key for authentication (defaults to settings value)
+            api_key: Duffel API key for authentication (defaults to settings value)
             timeout: Request timeout in seconds
             use_cache: Whether to use caching
         """
@@ -850,9 +855,14 @@ class FlightsMCPClient(FastMCPClient, Generic[P, R]):
 class FlightService:
     """High-level service for flight-related operations in TripSage.
 
-    Note: When using ravinahp/flights-mcp as the backend, this service is limited to
-    search-only functionality. Booking operations are not supported as
-    ravinahp/flights-mcp is a read-only MCP server.
+    This service integrates with the ravinahp/flights-mcp server which provides
+    flight search functionality through the Duffel API. The server is read-only
+    and does not support booking operations.
+
+    The FlightService enhances the basic MCP functionality with additional features:
+    1. Dual storage in Supabase and Memory MCP for search results
+    2. Price insights and tracking
+    3. Best flight recommendations
     """
 
     def __init__(self, client: Optional[FlightsMCPClient] = None):
@@ -862,9 +872,9 @@ class FlightService:
             client: FlightsMCPClient instance. If not provided, uses the default client.
         """
         self.client = client or get_client()
-        logger.info("Initialized Flight Service")
+        logger.info("Initialized Flight Service with ravinahp/flights-mcp integration")
 
-        # Log a warning if we're using ravinahp/flights-mcp, which has limitations
+        # Log a warning about the read-only nature of the MCP
         logger.info(
             "Note: ravinahp/flights-mcp is read-only - booking operations "
             "are not supported"
@@ -880,6 +890,10 @@ class FlightService:
         max_price: Optional[float] = None,
     ) -> Dict[str, Any]:
         """Search for best flight options based on price and convenience.
+
+        This method searches for flights using the ravinahp/flights-mcp server,
+        then sorts and ranks the results, and finally stores them in both
+        Supabase database and Memory MCP for future reference.
 
         Args:
             origin: Origin airport IATA code or city name
@@ -957,7 +971,8 @@ class FlightService:
                     if "_value_score" in offer:
                         del offer["_value_score"]
 
-                return {
+                # Format response
+                search_response = {
                     "origin": {"code": origin_code, "input": origin},
                     "destination": {"code": destination_code, "input": destination},
                     "departure_date": departure_date,
@@ -965,10 +980,97 @@ class FlightService:
                     "adults": adults,
                     "max_price": max_price,
                     "results": results_dict,
+                    "search_id": results_dict.get(
+                        "search_id",
+                        f"{origin_code}-{destination_code}-{departure_date}",
+                    ),
+                    "search_timestamp": datetime.now().isoformat(),
                 }
+
+                # Store results in Supabase
+                try:
+                    from ...db.client import get_client as get_db_client
+                    from datetime import datetime
+
+                    db_client = get_db_client()
+                    await db_client.store_flight_search_results(
+                        search_id=search_response["search_id"],
+                        origin=origin_code,
+                        destination=destination_code,
+                        departure_date=departure_date,
+                        return_date=return_date,
+                        results=results_dict,
+                        timestamp=datetime.now().isoformat(),
+                    )
+                    logger.info(
+                        f"Stored flight search results in Supabase: {search_response['search_id']}"
+                    )
+                except Exception as db_error:
+                    logger.warning(
+                        f"Error storing flight results in database: {str(db_error)}"
+                    )
+
+                # Store results in Memory MCP
+                try:
+                    from ...mcp.memory.client import get_client as get_memory_client
+
+                    memory_client = get_memory_client()
+
+                    # Create entities for origin and destination if they don't exist
+                    await memory_client.create_entities(
+                        [
+                            {
+                                "name": f"Airport:{origin_code}",
+                                "entityType": "Airport",
+                                "observations": [f"IATA code: {origin_code}"],
+                            },
+                            {
+                                "name": f"Airport:{destination_code}",
+                                "entityType": "Airport",
+                                "observations": [f"IATA code: {destination_code}"],
+                            },
+                            {
+                                "name": f"FlightSearch:{search_response['search_id']}",
+                                "entityType": "FlightSearch",
+                                "observations": [
+                                    f"From {origin_code} to {destination_code}",
+                                    f"Departure date: {departure_date}",
+                                    f"Return date: {return_date or 'None (one-way)'}",
+                                    f"Found {len(results_dict['offers'])} offers",
+                                    f"Best price: {results_dict['offers'][0]['total_amount'] if results_dict['offers'] else 'N/A'} {results_dict['offers'][0]['total_currency'] if results_dict['offers'] else ''}",
+                                ],
+                            },
+                        ]
+                    )
+
+                    # Create relations between entities
+                    await memory_client.create_relations(
+                        [
+                            {
+                                "from": f"FlightSearch:{search_response['search_id']}",
+                                "relationType": "departs_from",
+                                "to": f"Airport:{origin_code}",
+                            },
+                            {
+                                "from": f"FlightSearch:{search_response['search_id']}",
+                                "relationType": "arrives_at",
+                                "to": f"Airport:{destination_code}",
+                            },
+                        ]
+                    )
+
+                    logger.info(
+                        f"Stored flight search results in Memory MCP: {search_response['search_id']}"
+                    )
+                except Exception as memory_error:
+                    logger.warning(
+                        f"Error storing flight results in Memory MCP: {str(memory_error)}"
+                    )
+
+                return search_response
             else:
                 # No offers found
-                return {
+                empty_response = {
                     "origin": {"code": origin_code, "input": origin},
                     "destination": {"code": destination_code, "input": destination},
                     "departure_date": departure_date,
@@ -976,15 +1078,60 @@ class FlightService:
                     "adults": adults,
                     "max_price": max_price,
                     "results": results.model_dump(),
+                    "search_id": f"{origin_code}-{destination_code}-{departure_date}",
+                    "search_timestamp": datetime.now().isoformat(),
                 }
+
+                # Store the empty results for analytics
+                try:
+                    from ...db.client import get_client as get_db_client
+                    from datetime import datetime
+
+                    db_client = get_db_client()
+                    await db_client.store_flight_search_results(
+                        search_id=empty_response["search_id"],
+                        origin=origin_code,
+                        destination=destination_code,
+                        departure_date=departure_date,
+                        return_date=return_date,
+                        results={"offers": [], "error": "No offers found"},
+                        timestamp=datetime.now().isoformat(),
+                    )
+                except Exception as db_error:
+                    logger.warning(
+                        f"Error storing empty flight results in database: {str(db_error)}"
+                    )
+
+                return empty_response
 
         except Exception as e:
             logger.error(f"Error searching best flights: {str(e)}")
-            return {
+            error_response = {
                 "error": f"Failed to search for best flights: {str(e)}",
                 "origin": origin,
                 "destination": destination,
+                "search_id": f"{origin}-{destination}-{datetime.now().isoformat()}",
             }
+
+            # Log the error for analysis
+            try:
+                from ...db.client import get_client as get_db_client
+                from datetime import datetime
+
+                db_client = get_db_client()
+                await db_client.store_flight_search_error(
+                    search_id=error_response["search_id"],
+                    origin=origin,
+                    destination=destination,
+                    error=str(e),
+                    timestamp=datetime.now().isoformat(),
+                )
+            except Exception as db_error:
+                logger.warning(
+                    f"Error storing flight search error in database: {str(db_error)}"
+                )
+
+            return error_response
 
     async def get_price_insights(
         self,
