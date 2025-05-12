@@ -36,8 +36,10 @@ class Transportation(BaseModel):
     name: str = Field(..., min_length=1)
     type: str = Field(
         ...,
-        regex=("^(flight|train|bus|ferry|taxi|rideshare|bike|" 
-               "subway|tram|car_rental|walking_tour)$"),
+        regex=(
+            "^(flight|train|bus|ferry|taxi|rideshare|bike|"
+            "subway|tram|car_rental|walking_tour)$"
+        ),
     )
     provider: Optional[str] = None
     description: Optional[str] = None
@@ -119,12 +121,15 @@ class Transportation(BaseModel):
             Transportation instance
         """
         import json
+
         properties = dict(node)
 
         # Handle complex objects
         if "route_points" in properties and isinstance(properties["route_points"], str):
             route_points_data = json.loads(properties.pop("route_points"))
-            properties["route_points"] = [RoutePoint(**point) for point in route_points_data]
+            properties["route_points"] = [
+                RoutePoint(**point) for point in route_points_data
+            ]
 
         if "schedule" in properties and isinstance(properties["schedule"], str):
             schedule_data = json.loads(properties.pop("schedule"))

@@ -29,7 +29,9 @@ def create_googlemaps_client(api_key: Optional[str] = None) -> GoogleMapsMCPClie
 
     # Use provided API key, or config.maps_api_key, or environment variable
     if api_key is None:
-        api_key = google_maps_config.maps_api_key or os.environ.get("GOOGLE_MAPS_API_KEY")
+        api_key = google_maps_config.maps_api_key or os.environ.get(
+            "GOOGLE_MAPS_API_KEY"
+        )
 
     # Get MCP endpoint
     endpoint = google_maps_config.endpoint

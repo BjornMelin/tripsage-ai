@@ -4,8 +4,6 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from src.db.neo4j.models.transportation import Transportation
-
 pytestmark = pytest.mark.asyncio
 
 

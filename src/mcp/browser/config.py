@@ -9,8 +9,16 @@ class Config:
     """Configuration settings for the Browser MCP server."""
 
     # Server configuration
-    SERVER_HOST = settings.browser_mcp.endpoint.split("://")[1].split(":")[0] if "://" in settings.browser_mcp.endpoint else "0.0.0.0"
-    SERVER_PORT = int(settings.browser_mcp.endpoint.split(":")[-1]) if ":" in settings.browser_mcp.endpoint else 3002
+    SERVER_HOST = (
+        settings.browser_mcp.endpoint.split("://")[1].split(":")[0]
+        if "://" in settings.browser_mcp.endpoint
+        else "0.0.0.0"
+    )
+    SERVER_PORT = (
+        int(settings.browser_mcp.endpoint.split(":")[-1])
+        if ":" in settings.browser_mcp.endpoint
+        else 3002
+    )
 
     # Playwright configuration
     PLAYWRIGHT_HEADLESS = settings.browser_mcp.headless

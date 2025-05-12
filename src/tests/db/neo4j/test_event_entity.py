@@ -4,8 +4,6 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from src.db.neo4j.models.event import Event
-
 pytestmark = pytest.mark.asyncio
 
 

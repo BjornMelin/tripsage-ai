@@ -29,8 +29,10 @@ class Event(BaseModel):
     destination: str  # Reference to destination name
     type: str = Field(
         ...,
-        regex=("^(concert|festival|exhibition|conference|" 
-               "sports|cultural|food|performance|workshop|market)$"),
+        regex=(
+            "^(concert|festival|exhibition|conference|"
+            "sports|cultural|food|performance|workshop|market)$"
+        ),
     )
     description: Optional[str] = None
     start_date: datetime
@@ -94,7 +96,7 @@ class Event(BaseModel):
         properties["start_date"] = self.start_date.isoformat()
         if self.end_date:
             properties["end_date"] = self.end_date.isoformat()
-        
+
         properties["created_at"] = self.created_at.isoformat()
         properties["updated_at"] = self.updated_at.isoformat()
 
@@ -109,7 +111,9 @@ class Event(BaseModel):
         if self.tickets:
             import json
 
-            properties["tickets"] = json.dumps([ticket.dict() for ticket in self.tickets])
+            properties["tickets"] = json.dumps(
+                [ticket.dict() for ticket in self.tickets]
+            )
 
         return properties
 

@@ -1,7 +1,6 @@
 import asyncio
-import os
 import sys
-from typing import Dict, Any
+from typing import Any, Dict
 
 from src.agents.travel_agent import create_agent
 from src.utils.logging import get_module_logger

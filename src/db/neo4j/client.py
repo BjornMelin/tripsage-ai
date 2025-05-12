@@ -431,9 +431,7 @@ class Neo4jClient:
         # Save to Neo4j
         return await self.event_repo.create(event_model)
 
-    async def update_event(
-        self, name: str, event: Dict[str, Any]
-    ) -> Optional[Event]:
+    async def update_event(self, name: str, event: Dict[str, Any]) -> Optional[Event]:
         """Update an existing event.
 
         Args:

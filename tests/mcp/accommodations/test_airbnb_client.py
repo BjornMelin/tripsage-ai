@@ -6,11 +6,12 @@ the Airbnb MCP server to search for accommodations and retrieve listing details.
 """
 
 from datetime import date, timedelta
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
 from src.mcp.accommodations.client import AirbnbMCPClient
+from src.mcp.accommodations.models import AirbnbListingDetails, AirbnbSearchResult
 from src.utils.error_handling import MCPError
 
 # Test data
@@ -120,6 +121,9 @@ class TestAirbnbMCPClient:
         """Test basic accommodation search with minimal parameters."""
         mock_call_tool.return_value = mock_search_response
 
+        # Mock storage methods to avoid actual DB/memory calls
+        client._store_search_results = AsyncMock()
+
         result = await client.search_accommodations(location=TEST_LOCATION)
 
         # Verify call_tool was called with correct parameters
@@ -127,12 +131,16 @@ class TestAirbnbMCPClient:
             "airbnb_search", {"location": TEST_LOCATION}, False
         )
 
-        # Check response
-        assert result["location"] == TEST_LOCATION
-        assert result["count"] == 2
-        assert len(result["listings"]) == 2
-        assert result["listings"][0]["name"] == "Cozy apartment in downtown"
-        assert result["listings"][1]["name"] == "Luxury condo with bay views"
+        # Check response is correct Pydantic model instance
+        assert isinstance(result, AirbnbSearchResult)
+        assert result.location == TEST_LOCATION
+        assert result.count == 2
+        assert len(result.listings) == 2
+        assert result.listings[0].name == "Cozy apartment in downtown"
+        assert result.listings[1].name == "Luxury condo with bay views"
+
+        # Verify storage method was called
+        client._store_search_results.assert_called_once()
 
     @patch("src.mcp.accommodations.client.BaseMCPClient.call_tool")
     async def test_search_accommodations_with_filters(
@@ -140,6 +148,9 @@ class TestAirbnbMCPClient:
     ):
         """Test accommodation search with filters."""
         mock_call_tool.return_value = mock_search_response
+
+        # Mock storage methods to avoid actual DB/memory calls
+        client._store_search_results = AsyncMock()
 
         result = await client.search_accommodations(
             location=TEST_LOCATION,
@@ -167,28 +178,68 @@ class TestAirbnbMCPClient:
         )
 
         # Check response
-        assert result["count"] == 2
-        assert len(result["listings"]) == 2
+        assert isinstance(result, AirbnbSearchResult)
+        assert result.count == 2
+        assert len(result.listings) == 2
+
+        # Verify storage method was called
+        client._store_search_results.assert_called_once()
 
     @patch("src.mcp.accommodations.client.BaseMCPClient.call_tool")
-    async def test_search_accommodations_error(self, mock_call_tool, client):
-        """Test error handling in accommodation search."""
-        mock_call_tool.side_effect = MCPError(
-            message="Failed to search accommodations",
-            server="http://test-endpoint",
-            tool="airbnb_search",
-            params={"location": TEST_LOCATION},
+    async def test_search_accommodations_with_store_results_false(
+        self, mock_call_tool, client, mock_search_response
+    ):
+        """Test accommodation search with store_results=False."""
+        mock_call_tool.return_value = mock_search_response
+
+        # Mock storage methods to avoid actual DB/memory calls
+        client._store_search_results = AsyncMock()
+
+        result = await client.search_accommodations(
+            location=TEST_LOCATION,
+            store_results=False,
         )
 
-        with pytest.raises(MCPError):
-            await client.search_accommodations(location=TEST_LOCATION)
+        # Verify call_tool was called with correct parameters
+        mock_call_tool.assert_called_once_with(
+            "airbnb_search", {"location": TEST_LOCATION}, False
+        )
+
+        # Check response
+        assert isinstance(result, AirbnbSearchResult)
+
+        # Verify storage method was NOT called
+        client._store_search_results.assert_not_called()
 
     @patch("src.mcp.accommodations.client.BaseMCPClient.call_tool")
-    async def test_get_listing_details_basic(
+    async def test_search_accommodations_error_handling(self, mock_call_tool, client):
+        """Test error handling in accommodation search."""
+        mock_call_tool.side_effect = Exception("API error")
+
+        # Mock storage methods to avoid actual DB/memory calls
+        client._store_search_results = AsyncMock()
+
+        result = await client.search_accommodations(location=TEST_LOCATION)
+
+        # Check error response
+        assert isinstance(result, AirbnbSearchResult)
+        assert result.count == 0
+        assert len(result.listings) == 0
+        assert result.error is not None
+        assert "API error" in result.error
+
+        # Verify storage method was NOT called
+        client._store_search_results.assert_not_called()
+
+    @patch("src.mcp.accommodations.client.BaseMCPClient.call_tool")
+    async def test_get_listing_details(
         self, mock_call_tool, client, mock_listing_details_response
     ):
         """Test basic listing details retrieval."""
         mock_call_tool.return_value = mock_listing_details_response
+
+        # Mock storage methods to avoid actual DB/memory calls
+        client._store_listing_details = AsyncMock()
 
         result = await client.get_listing_details(listing_id=TEST_LISTING_ID)
 
@@ -197,12 +248,16 @@ class TestAirbnbMCPClient:
             "airbnb_listing_details", {"id": TEST_LISTING_ID}, False
         )
 
-        # Check response
-        assert result["id"] == TEST_LISTING_ID
-        assert result["name"] == "Cozy apartment in downtown"
-        assert result["property_type"] == "Apartment"
-        assert len(result["amenities"]) == 5
-        assert result["price_per_night"] == 150
+        # Check response is correct Pydantic model instance
+        assert isinstance(result, AirbnbListingDetails)
+        assert result.id == TEST_LISTING_ID
+        assert result.name == "Cozy apartment in downtown"
+        assert result.property_type == "Apartment"
+        assert len(result.amenities) == 5
+        assert result.price_per_night == 150
+
+        # Verify storage method was called
+        client._store_listing_details.assert_called_once()
 
     @patch("src.mcp.accommodations.client.BaseMCPClient.call_tool")
     async def test_get_listing_details_with_params(
@@ -210,6 +265,9 @@ class TestAirbnbMCPClient:
     ):
         """Test listing details retrieval with date parameters."""
         mock_call_tool.return_value = mock_listing_details_response
+
+        # Mock storage methods to avoid actual DB/memory calls
+        client._store_listing_details = AsyncMock()
 
         result = await client.get_listing_details(
             listing_id=TEST_LISTING_ID, checkin=TOMORROW, checkout=DAYS_LATER, adults=2
@@ -228,8 +286,38 @@ class TestAirbnbMCPClient:
         )
 
         # Check response
-        assert result["id"] == TEST_LISTING_ID
-        assert result["price_total"] == 1050
+        assert isinstance(result, AirbnbListingDetails)
+        assert result.id == TEST_LISTING_ID
+        assert result.price_total == 1050
+
+        # Verify storage method was called
+        client._store_listing_details.assert_called_once()
+
+    @patch("src.mcp.accommodations.client.BaseMCPClient.call_tool")
+    async def test_get_listing_details_with_store_results_false(
+        self, mock_call_tool, client, mock_listing_details_response
+    ):
+        """Test listing details retrieval with store_results=False."""
+        mock_call_tool.return_value = mock_listing_details_response
+
+        # Mock storage methods to avoid actual DB/memory calls
+        client._store_listing_details = AsyncMock()
+
+        result = await client.get_listing_details(
+            listing_id=TEST_LISTING_ID,
+            store_results=False,
+        )
+
+        # Verify call_tool was called with correct parameters
+        mock_call_tool.assert_called_once_with(
+            "airbnb_listing_details", {"id": TEST_LISTING_ID}, False
+        )
+
+        # Check response
+        assert isinstance(result, AirbnbListingDetails)
+
+        # Verify storage method was NOT called
+        client._store_listing_details.assert_not_called()
 
     @patch("src.mcp.accommodations.client.BaseMCPClient.call_tool")
     async def test_get_listing_details_error(self, mock_call_tool, client):
@@ -249,7 +337,10 @@ class TestAirbnbMCPClient:
         with patch(
             "src.mcp.accommodations.client.BaseMCPClient.call_tool"
         ) as mock_call_tool:
-            mock_call_tool.return_value = {}
+            mock_call_tool.return_value = {"listings": []}
+
+            # Mock storage methods to avoid actual DB/memory calls
+            client._store_search_results = AsyncMock()
 
             today = date.today()
             next_week = today + timedelta(days=7)
@@ -262,3 +353,63 @@ class TestAirbnbMCPClient:
             call_args = mock_call_tool.call_args[0][1]
             assert call_args["checkin"] == today.isoformat()
             assert call_args["checkout"] == next_week.isoformat()
+
+    @patch("src.mcp.accommodations.client.get_db_client")
+    @patch("src.mcp.accommodations.client.memory_client")
+    async def test_store_search_results(
+        self, mock_memory_client, mock_db_client, client, mock_search_response
+    ):
+        """Test storing search results in database and memory."""
+        # Setup mock database client
+        mock_accommodations_repo = AsyncMock()
+        mock_db_client.return_value.accommodations = mock_accommodations_repo
+
+        # Setup mock memory client
+        mock_memory_client.create_entities = AsyncMock()
+
+        # Create a search result to store
+        search_result = AirbnbSearchResult(**mock_search_response)
+
+        # Call the method
+        await client._store_search_results(
+            search_result=search_result,
+            checkin=TOMORROW,
+            checkout=DAYS_LATER,
+        )
+
+        # Verify database calls
+        assert mock_accommodations_repo.create_or_update.call_count == 2
+
+        # Verify memory calls
+        mock_memory_client.create_entities.assert_called_once()
+
+    @patch("src.mcp.accommodations.client.get_db_client")
+    @patch("src.mcp.accommodations.client.memory_client")
+    async def test_store_listing_details(
+        self, mock_memory_client, mock_db_client, client, mock_listing_details_response
+    ):
+        """Test storing listing details in database and memory."""
+        # Setup mock database client
+        mock_accommodations_repo = AsyncMock()
+        mock_db_client.return_value.accommodations = mock_accommodations_repo
+
+        # Setup mock memory client
+        mock_memory_client.create_entities = AsyncMock()
+        mock_memory_client.create_relations = AsyncMock()
+
+        # Create a listing details to store
+        listing_details = AirbnbListingDetails(**mock_listing_details_response)
+
+        # Call the method
+        await client._store_listing_details(
+            listing_details=listing_details,
+            checkin=TOMORROW,
+            checkout=DAYS_LATER,
+        )
+
+        # Verify database calls
+        mock_accommodations_repo.create_or_update.assert_called_once()
+
+        # Verify memory calls
+        mock_memory_client.create_entities.assert_called_once()
+        mock_memory_client.create_relations.assert_called_once()

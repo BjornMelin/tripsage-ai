@@ -66,7 +66,7 @@ def get_initial_destinations() -> List[Dict[str, Any]]:
             "region": "New York",
             "city": "New York",
             "description": (
-                "Major commercial and cultural center known for " "iconic landmarks."
+                "Major commercial and cultural center known for iconic landmarks."
             ),
             "type": "city",
             "latitude": 40.7128,

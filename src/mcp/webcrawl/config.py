@@ -34,8 +34,16 @@ class Config:
     REQUEST_TIMEOUT = 30  # 30 seconds
 
     # Server settings
-    SERVER_HOST = settings.webcrawl_mcp.endpoint.split("://")[1].split(":")[0] if "://" in settings.webcrawl_mcp.endpoint else "0.0.0.0"
-    SERVER_PORT = int(settings.webcrawl_mcp.endpoint.split(":")[-1]) if ":" in settings.webcrawl_mcp.endpoint else 3001
+    SERVER_HOST = (
+        settings.webcrawl_mcp.endpoint.split("://")[1].split(":")[0]
+        if "://" in settings.webcrawl_mcp.endpoint
+        else "0.0.0.0"
+    )
+    SERVER_PORT = (
+        int(settings.webcrawl_mcp.endpoint.split(":")[-1])
+        if ":" in settings.webcrawl_mcp.endpoint
+        else 3001
+    )
 
     # Known dynamic sites that require browser rendering
     DYNAMIC_SITES = [

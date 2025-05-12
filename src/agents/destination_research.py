@@ -5,14 +5,12 @@ This module provides comprehensive functionality for researching travel destinat
 using web crawling, knowledge graph storage, and caching for optimal performance.
 """
 
-import asyncio
 from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field
 
 from src.cache.redis_cache import redis_cache
 from src.utils.config import get_config
-from src.utils.error_handling import MCPError
 from src.utils.logging import get_module_logger
 
 logger = get_module_logger(__name__)
@@ -197,7 +195,10 @@ class TripSageDestinationResearch:
                     )
 
                 # Fallback: Check if WebCrawl provided structured guidance
-                if "websearch_tool_guidance" in crawl_result and topic in crawl_result["websearch_tool_guidance"]:
+                if (
+                    "websearch_tool_guidance" in crawl_result
+                    and topic in crawl_result["websearch_tool_guidance"]
+                ):
                     # Extract the structured guidance for more effective WebSearchTool use
                     guidance = crawl_result["websearch_tool_guidance"][topic]
                     search_results[topic] = {
@@ -341,7 +342,9 @@ class TripSageDestinationResearch:
                 if events_result and not events_result.get("error"):
                     # Cache the result for 24 hours (events change frequently)
                     await redis_cache.set(
-                        cache_key, events_result, ttl=86400  # 24 hours
+                        cache_key,
+                        events_result,
+                        ttl=86400,  # 24 hours
                     )
 
                     return {**events_result, "cache": "miss"}

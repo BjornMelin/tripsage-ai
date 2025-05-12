@@ -13,7 +13,6 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from ..cache.redis_cache import redis_cache
 from ..db.client import get_client as get_db_client
 from ..mcp.flights import get_client as get_flights_client
-from ..utils.error_handling import MCPError
 from ..utils.logging import get_module_logger
 
 logger = get_module_logger(__name__)
@@ -136,7 +135,9 @@ class TripSageFlightSearch:
 
             # Cache raw results before filtering
             await redis_cache.set(
-                cache_key, flight_results, ttl=3600  # Cache for 1 hour
+                cache_key,
+                flight_results,
+                ttl=3600,  # Cache for 1 hour
             )
 
             # Apply post-search filtering

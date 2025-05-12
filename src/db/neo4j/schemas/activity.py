@@ -141,7 +141,9 @@ class Activity(BaseModel):
             )
 
         # Handle opening hours
-        if "opening_hours" in properties and isinstance(properties["opening_hours"], str):
+        if "opening_hours" in properties and isinstance(
+            properties["opening_hours"], str
+        ):
             import json
 
             properties["opening_hours"] = json.loads(properties["opening_hours"])

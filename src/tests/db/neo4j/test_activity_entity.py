@@ -1,10 +1,8 @@
 """Tests for Activity entity in Neo4j knowledge graph."""
 
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock
 
 import pytest
-
-from src.db.neo4j.models.activity import Activity
 
 pytestmark = pytest.mark.asyncio
 
