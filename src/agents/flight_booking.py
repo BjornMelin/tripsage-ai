@@ -150,11 +150,14 @@ class TripSageFlightBooking:
     async def book_flight(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """Book a flight based on a selected offer.
 
+        Note: When using ravinahp/flights-mcp, booking operations are not supported
+        as it is a read-only MCP server. This method will return an error in that case.
+
         Args:
             params: Booking parameters validated using FlightBookingParams
 
         Returns:
-            Booking confirmation and status
+            Booking confirmation and status, or error if using ravinahp/flights-mcp
         """
         try:
             # Validate parameters
@@ -461,11 +464,15 @@ class TripSageFlightBooking:
     async def cancel_booking(self, booking_id: str) -> Dict[str, Any]:
         """Cancel a flight booking.
 
+        Note: When using ravinahp/flights-mcp, booking operations (including cancellation)
+        are not supported as it is a read-only MCP server. This method will return an
+        error in that case.
+
         Args:
             booking_id: Booking ID or reference number
 
         Returns:
-            Cancellation confirmation
+            Cancellation confirmation, or error if using ravinahp/flights-mcp
         """
         try:
             # Call Flights MCP to cancel booking (if implemented)
