@@ -26,6 +26,7 @@ def client():
     """Create a test client instance."""
     return AirbnbMCPClient(
         endpoint="http://test-endpoint",
+        server_type="openbnb/mcp-server-airbnb",
         use_cache=False,
     )
 

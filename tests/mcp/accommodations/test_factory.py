@@ -25,6 +25,7 @@ class TestAirbnbClientFactory:
         """Test creating an Airbnb client with configuration."""
         # Configure mock
         mock_config.accommodations_mcp.airbnb.endpoint = "http://test-endpoint"
+        mock_config.accommodations_mcp.airbnb.server_type = "openbnb/mcp-server-airbnb"
         mock_config.redis.ttl_medium = 7200  # 2 hours
 
         # Create client
@@ -33,6 +34,7 @@ class TestAirbnbClientFactory:
         # Verify client configuration
         assert isinstance(client, AirbnbMCPClient)
         assert client.endpoint == "http://test-endpoint"
+        assert client.server_type == "openbnb/mcp-server-airbnb"
         assert client.use_cache is True
         assert client.cache_ttl == 7200
 
@@ -49,7 +51,7 @@ class TestAirbnbClientFactory:
 
         # Verify logging
         mock_logger.debug.assert_called_once_with(
-            "Creating Airbnb MCP client with endpoint: %s", "http://test-endpoint"
+            "Creating OpenBnB Airbnb MCP client with endpoint: %s", "http://test-endpoint"
         )
 
     @patch("src.mcp.accommodations.factory.config")

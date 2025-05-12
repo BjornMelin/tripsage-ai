@@ -24,10 +24,13 @@ def create_airbnb_client() -> AirbnbMCPClient:
     """
     client_config = config.accommodations_mcp.airbnb
 
-    logger.debug("Creating Airbnb MCP client with endpoint: %s", client_config.endpoint)
+    logger.debug(
+        "Creating OpenBnB Airbnb MCP client with endpoint: %s", client_config.endpoint
+    )
 
     client = AirbnbMCPClient(
         endpoint=client_config.endpoint,
+        server_type=client_config.server_type,
         use_cache=True,
         cache_ttl=config.redis.ttl_medium,  # 1 hour default
     )
