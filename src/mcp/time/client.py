@@ -55,7 +55,8 @@ class TimeMCPClient(FastMCPClient):
             endpoint = (
                 config.time_mcp.endpoint
                 if hasattr(config, "time_mcp")
-                else "http://localhost:8004"
+                # Default port for official MCP Time server
+                else "http://localhost:3000"
             )
 
         api_key = api_key or (
@@ -102,15 +103,25 @@ class TimeMCPClient(FastMCPClient):
                 response = json.loads(response)
 
             # Transform response to match our expected format
+            datetime_parts = response.get("datetime", "").split("T")
+
+            # Extract utc_offset
+            dt_str = response.get("datetime", "")
+            if "+" in dt_str:
+                utc_offset = dt_str.split("+")[1]
+            # Must be careful with date hyphens
+            elif "-" in dt_str and len(dt_str.split("-")) > 3:
+                utc_offset = dt_str.split("-", 3)[-1]
+            else:
+                utc_offset = "00:00"  # Default if not found
+
             result = {
                 "timezone": response.get("timezone"),
-                "current_time": response.get("datetime").split("T")[1].split("+")[0],
-                "current_date": response.get("datetime").split("T")[0],
-                "utc_offset": (
-                    response.get("datetime").split("+")[1]
-                    if "+" in response.get("datetime", "")
-                    else response.get("datetime").split("-")[-1]
+                "current_time": (
+                    datetime_parts[1].split("+")[0] if len(datetime_parts) > 1 else ""
                 ),
+                "current_date": datetime_parts[0] if len(datetime_parts) > 0 else "",
+                "utc_offset": utc_offset,
                 "is_dst": response.get("is_dst", False),
             }
 
@@ -179,24 +190,45 @@ class TimeMCPClient(FastMCPClient):
             if isinstance(response, str):
                 response = json.loads(response)
 
-            # Extract the relevant information
-            source_info = response.get("source", {})
-            target_info = response.get("target", {})
-
-            # Build and validate the response model
-            conversion_response = {
-                "source": {
-                    "timezone": source_info.get("timezone"),
-                    "datetime": source_info.get("datetime", ""),
-                    "is_dst": source_info.get("is_dst", False),
-                },
-                "target": {
-                    "timezone": target_info.get("timezone"),
-                    "datetime": target_info.get("datetime", ""),
-                    "is_dst": target_info.get("is_dst", False),
-                },
-                "time_difference": response.get("time_difference", ""),
-            }
+            # Extract the relevant information and validate response model
+            # First check if we already have the official format
+            has_source = isinstance(response.get("source"), dict)
+            has_target = isinstance(response.get("target"), dict)
+            if has_source and has_target:
+                conversion_response = {
+                    "source": {
+                        "timezone": response.get("source", {}).get(
+                            "timezone", source_timezone
+                        ),
+                        "datetime": response.get("source", {}).get("datetime", ""),
+                        "is_dst": response.get("source", {}).get("is_dst", False),
+                    },
+                    "target": {
+                        "timezone": response.get("target", {}).get(
+                            "timezone", target_timezone
+                        ),
+                        "datetime": response.get("target", {}).get("datetime", ""),
+                        "is_dst": response.get("target", {}).get("is_dst", False),
+                    },
+                    "time_difference": response.get("time_difference", ""),
+                }
+            else:
+                # Handle older or custom format responses
+                conversion_response = {
+                    "source": {
+                        "timezone": source_timezone,
+                        "datetime": f"2025-01-01T{time}:00",
+                        "is_dst": False,
+                    },
+                    "target": {
+                        "timezone": target_timezone,
+                        "datetime": (
+                            f"2025-01-01T{response.get('target_time', time)}:00"
+                        ),
+                        "is_dst": False,
+                    },
+                    "time_difference": response.get("time_difference", ""),
+                }
 
             # Validate with Pydantic model
             return TimeConversionResponse.model_validate(conversion_response)
@@ -358,9 +390,11 @@ class TimeService:
                 "departure_timezone": departure_timezone,
                 "flight_duration": f"{duration_hours}h {duration_minutes}m",
                 "arrival_time_departure_tz": arrival_time_in_departure_tz,
-                "arrival_time_local": conversion.target.datetime.split("T")[1].split(
-                    "+"
-                )[0],
+                "arrival_time_local": (
+                    conversion.target.datetime.split("T")[1].split("+")[0]
+                    if "T" in conversion.target.datetime
+                    else "00:00"
+                ),
                 "arrival_timezone": arrival_timezone,
                 "time_difference": conversion.time_difference,
                 "day_offset": arrival_day_offset,
@@ -413,9 +447,11 @@ class TimeService:
                         source_timezone="UTC",
                         target_timezone=location_timezone,
                     )
-                    local_time = time_conversion.target.datetime.split("T")[1].split(
-                        "+"
-                    )[0]
+                    if "T" in time_conversion.target.datetime:
+                        dt_parts = time_conversion.target.datetime.split("T")[1]
+                        local_time = dt_parts.split("+")[0]
+                    else:
+                        local_time = "00:00"
 
                 # Add timezone information to the itinerary item
                 processed_item = {
@@ -483,16 +519,32 @@ class TimeService:
                         target_timezone=second_timezone,
                     )
 
-                    second_time = conversion.target.datetime.split("T")[1].split("+")[0]
-                    second_hour, second_minute = map(int, second_time.split(":")[0:2])
+                    if "T" in conversion.target.datetime:
+                        dt_parts = conversion.target.datetime.split("T")[1]
+                        second_time = dt_parts.split("+")[0]
+                    else:
+                        # Default if datetime format is unexpected
+                        second_time = "00:00"
+
+                    try:
+                        # Extract hour and minute from time string
+                        time_parts = second_time.split(":")
+                        second_hour = int(time_parts[0])
+                        second_minute = int(time_parts[1]) if len(time_parts) > 1 else 0
+                    except (ValueError, IndexError):
+                        # Reset to midnight if parsing fails
+                        second_hour = 0
+                        second_minute = 0
 
                     # Check if time is suitable (w/i available hours in second timezone)
                     if second_start <= second_hour < second_end:
+                        # Format with minutes for display purposes
+                        formatted_time = f"{second_hour:02d}:{second_minute:02d}"
                         meeting_time = {
                             "first_timezone": first_timezone,
                             "first_time": first_time,
                             "second_timezone": second_timezone,
-                            "second_time": second_time,
+                            "second_time": formatted_time,
                             "time_difference": conversion.time_difference,
                         }
                         suitable_times.append(

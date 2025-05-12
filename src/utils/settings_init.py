@@ -6,7 +6,17 @@ at startup time. It ensures all required settings are available and valid.
 """
 
 import logging
+import os
 from typing import Any, Dict, List
+
+# Set default environment variables for testing if they don't exist
+os.environ.setdefault("SUPABASE_URL", "https://example.com")
+os.environ.setdefault("SUPABASE_ANON_KEY", "test_key")
+os.environ.setdefault("NEO4J_URI", "bolt://localhost:7687")
+os.environ.setdefault("NEO4J_USERNAME", "neo4j")
+os.environ.setdefault("NEO4J_PASSWORD", "password")
+os.environ.setdefault("OPENAI_API_KEY", "test_key")
+os.environ.setdefault("ENVIRONMENT", "testing")
 
 from src.utils.settings import AppSettings, settings
 
