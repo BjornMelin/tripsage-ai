@@ -1,62 +1,42 @@
 """Configuration settings for the Browser MCP server."""
 
-import os
 from typing import List
 
-from dotenv import load_dotenv
-
-# Load environment variables from .env file
-load_dotenv()
+from ...utils.settings import settings
 
 
 class Config:
     """Configuration settings for the Browser MCP server."""
 
     # Server configuration
-    SERVER_HOST = os.getenv("BROWSER_SERVER_HOST", "0.0.0.0")
-    SERVER_PORT = int(os.getenv("BROWSER_SERVER_PORT", "3002"))
+    SERVER_HOST = settings.browser_mcp.endpoint.split("://")[1].split(":")[0] if "://" in settings.browser_mcp.endpoint else "0.0.0.0"
+    SERVER_PORT = int(settings.browser_mcp.endpoint.split(":")[-1]) if ":" in settings.browser_mcp.endpoint else 3002
 
     # Playwright configuration
-    PLAYWRIGHT_HEADLESS = os.getenv("PLAYWRIGHT_HEADLESS", "true").lower() == "true"
-    PLAYWRIGHT_SLOW_MO = int(
-        os.getenv("PLAYWRIGHT_SLOW_MO", "50")
-    )  # Milliseconds between actions
-    VIEWPORT_WIDTH = int(os.getenv("PLAYWRIGHT_VIEWPORT_WIDTH", "1280"))
-    VIEWPORT_HEIGHT = int(os.getenv("PLAYWRIGHT_VIEWPORT_HEIGHT", "720"))
-    IGNORE_HTTPS_ERRORS = (
-        os.getenv("PLAYWRIGHT_IGNORE_HTTPS_ERRORS", "false").lower() == "true"
-    )
+    PLAYWRIGHT_HEADLESS = settings.browser_mcp.headless
+    PLAYWRIGHT_SLOW_MO = settings.browser_mcp.slow_mo  # Milliseconds between actions
+    VIEWPORT_WIDTH = settings.browser_mcp.viewport_width
+    VIEWPORT_HEIGHT = settings.browser_mcp.viewport_height
+    IGNORE_HTTPS_ERRORS = settings.browser_mcp.ignore_https_errors
 
     # Request timeouts
-    DEFAULT_TIMEOUT = int(
-        os.getenv("PLAYWRIGHT_DEFAULT_TIMEOUT", "30000")
-    )  # 30 seconds
-    NAVIGATION_TIMEOUT = int(
-        os.getenv("PLAYWRIGHT_NAVIGATION_TIMEOUT", "60000")
-    )  # 60 seconds
+    DEFAULT_TIMEOUT = settings.browser_mcp.default_timeout  # 30 seconds
+    NAVIGATION_TIMEOUT = settings.browser_mcp.navigation_timeout  # 60 seconds
 
     # Context management
-    CONTEXT_MAX_IDLE_TIME = int(os.getenv("CONTEXT_MAX_IDLE_TIME", "300"))  # 5 minutes
-    CONTEXT_CLEANUP_INTERVAL = int(
-        os.getenv("CONTEXT_CLEANUP_INTERVAL", "60")
-    )  # 1 minute
-    MAX_CONTEXTS = int(os.getenv("MAX_BROWSER_CONTEXTS", "10"))
+    CONTEXT_MAX_IDLE_TIME = settings.browser_mcp.context_max_idle_time  # 5 minutes
+    CONTEXT_CLEANUP_INTERVAL = settings.browser_mcp.context_cleanup_interval  # 1 minute
+    MAX_CONTEXTS = settings.browser_mcp.max_contexts
 
     # Geolocation (optional)
-    GEOLOCATION_ENABLED = os.getenv("GEOLOCATION_ENABLED", "false").lower() == "true"
-    GEOLOCATION_LATITUDE = float(
-        os.getenv("GEOLOCATION_LATITUDE", "40.7128")
-    )  # New York
-    GEOLOCATION_LONGITUDE = float(os.getenv("GEOLOCATION_LONGITUDE", "-74.0060"))
-    GEOLOCATION_ACCURACY = float(os.getenv("GEOLOCATION_ACCURACY", "100.0"))
+    GEOLOCATION_ENABLED = settings.browser_mcp.geolocation_enabled
+    GEOLOCATION_LATITUDE = 40.7128  # New York
+    GEOLOCATION_LONGITUDE = -74.0060
+    GEOLOCATION_ACCURACY = 100.0
 
     # HTTP authentication (optional)
-    HTTP_CREDENTIALS_ENABLED = (
-        os.getenv("HTTP_CREDENTIALS_ENABLED", "false").lower() == "true"
-    )
-    HTTP_CREDENTIALS = os.getenv(
-        "HTTP_CREDENTIALS", ""
-    )  # base64 encoded username:password
+    HTTP_CREDENTIALS_ENABLED = False
+    HTTP_CREDENTIALS = ""  # base64 encoded username:password
 
     # Browser permissions
     BROWSER_PERMISSIONS: List[str] = []  # e.g., ['geolocation', 'camera']

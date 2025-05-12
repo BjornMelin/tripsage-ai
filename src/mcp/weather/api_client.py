@@ -4,7 +4,6 @@ Weather API client implementations for TripSage.
 This module provides API client implementations for weather data providers.
 """
 
-import os
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
@@ -12,12 +11,11 @@ import httpx
 from pydantic import BaseModel, ConfigDict, model_validator
 
 from ...cache.redis_cache import redis_cache
-from ...utils.config import get_config
 from ...utils.error_handling import APIError
 from ...utils.logging import get_module_logger
+from ...utils.settings import settings
 
 logger = get_module_logger(__name__)
-config = get_config()
 
 
 class WeatherLocation(BaseModel):
@@ -116,7 +114,7 @@ class OpenWeatherMapClient:
         logger.info("Initialized OpenWeatherMap API client")
 
     def _get_api_key(self) -> str:
-        """Get API key from configuration or environment.
+        """Get API key from centralized settings.
 
         Returns:
             API key
@@ -124,21 +122,13 @@ class OpenWeatherMapClient:
         Raises:
             ValueError: If API key is not configured
         """
-        # Try to get from config object
-        if hasattr(config, "weather_mcp") and hasattr(
-            config.weather_mcp, "openweathermap_api_key"
-        ):
-            return config.weather_mcp.openweathermap_api_key
-
-        # Try to get from environment variable
-        api_key = os.environ.get("OPENWEATHERMAP_API_KEY")
-        if api_key:
-            return api_key
+        # Get API key from centralized settings
+        if settings.weather_mcp.openweathermap_api_key:
+            return settings.weather_mcp.openweathermap_api_key.get_secret_value()
 
         # If we get here, we don't have an API key
         raise ValueError(
-            "OpenWeatherMap API key not found. "
-            "Set it in the config or OPENWEATHERMAP_API_KEY environment variable."
+            "OpenWeatherMap API key not found in settings."
         )
 
     async def _make_request(

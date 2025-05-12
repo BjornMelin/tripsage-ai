@@ -2,14 +2,13 @@
 Configuration for Neo4j database connection.
 
 This module provides configuration for connecting to Neo4j database,
-with settings loaded from environment variables via the application's
-configuration system.
+using the centralized settings system.
 """
 
 from typing import Any, Dict
 
-from src.utils.config import get_config
 from src.utils.logging import get_module_logger
+from src.utils.settings import settings
 
 logger = get_module_logger(__name__)
 
@@ -18,29 +17,20 @@ class Neo4jConfig:
     """Configuration for Neo4j connection."""
 
     def __init__(self):
-        """Initialize the Neo4j configuration from environment variables."""
-        # Get base configuration
-        config = get_config()
-
+        """Initialize the Neo4j configuration from centralized settings."""
         # Neo4j connection settings
-        self.uri = config.get("NEO4J_URI", "bolt://localhost:7687")
-        self.user = config.get("NEO4J_USER", "neo4j")
-        self.password = config.get("NEO4J_PASSWORD", "")
-        self.database = config.get("NEO4J_DATABASE", "neo4j")
+        self.uri = settings.neo4j.uri
+        self.user = settings.neo4j.user
+        self.password = settings.neo4j.password.get_secret_value()
+        self.database = settings.neo4j.database
 
         # Connection pool settings
-        self.max_connection_lifetime = int(
-            config.get("NEO4J_MAX_CONNECTION_LIFETIME", 3600)
-        )
-        self.max_connection_pool_size = int(
-            config.get("NEO4J_MAX_CONNECTION_POOL_SIZE", 50)
-        )
-        self.connection_acquisition_timeout = int(
-            config.get("NEO4J_CONNECTION_ACQUISITION_TIMEOUT", 60)
-        )
+        self.max_connection_lifetime = settings.neo4j.max_connection_lifetime
+        self.max_connection_pool_size = settings.neo4j.max_connection_pool_size
+        self.connection_acquisition_timeout = settings.neo4j.connection_acquisition_timeout
 
         # Query settings
-        self.default_query_timeout = int(config.get("NEO4J_DEFAULT_QUERY_TIMEOUT", 60))
+        self.default_query_timeout = settings.neo4j.default_query_timeout
 
     def validate(self) -> None:
         """Validate the configuration.
@@ -49,13 +39,13 @@ class Neo4jConfig:
             ValueError: If required configuration is missing or invalid
         """
         if not self.uri:
-            raise ValueError("NEO4J_URI is required")
+            raise ValueError("Neo4j URI is required")
 
         if not self.user:
-            raise ValueError("NEO4J_USER is required")
+            raise ValueError("Neo4j user is required")
 
         if not self.password:
-            raise ValueError("NEO4J_PASSWORD is required")
+            raise ValueError("Neo4j password is required")
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert configuration to dictionary.

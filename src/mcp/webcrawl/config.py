@@ -1,22 +1,17 @@
 """Configuration settings for the WebCrawl MCP server."""
 
-import os
-
-from dotenv import load_dotenv
-
-# Load environment variables from .env file
-load_dotenv()
+from ...utils.settings import settings
 
 
 class Config:
     """Configuration settings for the WebCrawl MCP server."""
 
     # API Keys and endpoints
-    CRAWL4AI_API_URL = os.getenv("CRAWL4AI_API_URL", "http://localhost:8000/api")
-    CRAWL4AI_API_KEY = os.getenv("CRAWL4AI_API_KEY", "")
+    CRAWL4AI_API_URL = settings.webcrawl_mcp.crawl4ai_api_url
+    CRAWL4AI_API_KEY = settings.webcrawl_mcp.crawl4ai_api_key.get_secret_value()
 
     # Playwright configuration
-    PLAYWRIGHT_MCP_ENDPOINT = os.getenv("PLAYWRIGHT_MCP_ENDPOINT", "")
+    PLAYWRIGHT_MCP_ENDPOINT = settings.webcrawl_mcp.playwright_mcp_endpoint or ""
     PLAYWRIGHT_CONFIG = {
         "browser": "chromium",
         "headless": True,
@@ -39,8 +34,8 @@ class Config:
     REQUEST_TIMEOUT = 30  # 30 seconds
 
     # Server settings
-    SERVER_HOST = os.getenv("WEBCRAWL_SERVER_HOST", "0.0.0.0")
-    SERVER_PORT = int(os.getenv("WEBCRAWL_SERVER_PORT", "3001"))
+    SERVER_HOST = settings.webcrawl_mcp.endpoint.split("://")[1].split(":")[0] if "://" in settings.webcrawl_mcp.endpoint else "0.0.0.0"
+    SERVER_PORT = int(settings.webcrawl_mcp.endpoint.split(":")[-1]) if ":" in settings.webcrawl_mcp.endpoint else 3001
 
     # Known dynamic sites that require browser rendering
     DYNAMIC_SITES = [
