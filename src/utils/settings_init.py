@@ -124,6 +124,13 @@ def _validate_production_settings(settings: AppSettings) -> None:
         if hasattr(server_config, "api_key") and server_config.api_key is None:
             production_errors.append(f"{server_name.upper()} API key is missing")
 
+    # Validate Airbnb MCP configuration
+    if settings.accommodations_mcp.airbnb.endpoint == "http://localhost:3000":
+        production_errors.append(
+            "DEFAULT_AIRBNB_MCP_ENDPOINT is using localhost in production. "
+            "Should be set to deployed OpenBnB MCP server URL."
+        )
+
     # Validate Duffel API key for Flights MCP
     if not settings.flights_mcp.duffel_api_key.get_secret_value():
         production_errors.append("DUFFEL_API_KEY is missing for flights_mcp")

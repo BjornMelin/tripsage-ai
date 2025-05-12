@@ -176,11 +176,17 @@ class FlightsMCPConfig(MCPConfig):
 
 
 class AirbnbMCPConfig(MCPConfig):
-    """Airbnb MCP server configuration."""
+    """OpenBnB Airbnb MCP server configuration.
 
-    endpoint: str = Field(default="http://localhost:3000")
-    api_key: Optional[SecretStr] = None  # Airbnb MCP doesn't use API keys
-    ignore_robots_txt: bool = Field(default=False)
+    This configuration is used to connect to the OpenBnB (@openbnb/mcp-server-airbnb)
+    Airbnb MCP server, which provides search functionality and listing details
+    for Airbnb properties without requiring API keys.
+    """
+
+    endpoint: str = Field(default="http://localhost:3000", description="OpenBnB MCP server endpoint")
+    api_key: Optional[SecretStr] = None  # OpenBnB Airbnb MCP doesn't use API keys
+    ignore_robots_txt: bool = Field(default=False, description="Whether to ignore robots.txt restrictions")
+    server_type: str = Field(default="openbnb/mcp-server-airbnb", description="Server implementation type")
 
 
 class AccommodationsMCPConfig(BaseSettings):
