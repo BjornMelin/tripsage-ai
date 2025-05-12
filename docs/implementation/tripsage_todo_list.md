@@ -74,6 +74,14 @@ This document provides a complete implementation to-do list for the TripSage AI 
 
 ### High Priority
 
+### Core MCP Infrastructure
+
+- [x] **MCP-002**: Standardize MCP client implementations with Pydantic v2 validation
+
+  - Dependencies: MCP-001
+  - Reference: PR #53, [docs/status/implementation_status.md](../status/implementation_status.md)
+  - Status: Completed with standardized validation patterns, unified \_call_validate_tool method, and comprehensive tests for all MCP clients
+
 ### Weather MCP Server
 
 - [x] **WEATHER-001**: Create Weather MCP Server structure
@@ -527,9 +535,15 @@ This document provides a complete implementation to-do list for the TripSage AI 
   - Status: Completed with comprehensive tests for API clients and MCP servers
 
 - [x] **TEST-006**: Implement unit tests for database providers
+
   - Dependencies: TEST-001, DB-007, DB-008
   - Reference: [CLAUDE.md](../../CLAUDE.md)
   - Status: Completed with tests for both Supabase and Neon providers
+
+- [x] **TEST-007**: Standardize MCP client implementations and add comprehensive tests
+  - Dependencies: TEST-001, MCP-001
+  - Reference: [docs/status/implementation_status.md](../status/implementation_status.md)
+  - Status: Completed (PR #53) with standardized Pydantic v2 validation patterns and comprehensive tests for all MCP clients including WebCrawl, Google Maps, Flights, and Memory
 
 ### Medium Priority
 
@@ -656,12 +670,12 @@ This document provides a complete implementation to-do list for the TripSage AI 
 
 ### Weeks 5-6: Context and Personalization
 
-| Week | Day | Tasks                                                                                                                     |
-| ---- | --- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| Week | Day | Tasks                                                                                                           |
+| ---- | --- | --------------------------------------------------------------------------------------------------------------- |
 | 5    | 1-3 | ✅ TIME-001, ✅ TIME-002, ✅ TIME-003, ✅ TIME-004, ✅ TIME-005, ✅ CAL-001, ✅ CAL-002, ✅ CAL-003, ✅ CAL-004 |
-| 5    | 3-5 | ✅ MEM-001, ✅ MEM-002, ✅ MEM-003, ✅ MEM-004, ✅ MEM-005                                         |
-| 6    | 1-3 | BUDGETAGENT-001, BUDGETAGENT-002, BUDGETAGENT-003                                                  |
-| 6    | 3-5 | ITINAGENT-001, ITINAGENT-002, ITINAGENT-003                                                        |
+| 5    | 3-5 | ✅ MEM-001, ✅ MEM-002, ✅ MEM-003, ✅ MEM-004, ✅ MEM-005                                                      |
+| 6    | 1-3 | BUDGETAGENT-001, BUDGETAGENT-002, BUDGETAGENT-003                                                               |
+| 6    | 3-5 | ITINAGENT-001, ITINAGENT-002, ITINAGENT-003                                                                     |
 
 ### Weeks 7-8: Integration and Production
 
@@ -674,28 +688,28 @@ This document provides a complete implementation to-do list for the TripSage AI 
 
 ### Current Priority Tasks Based on Open Issues
 
-| Priority | Task ID         | Description                                                     | Issue | Status      |
-| -------- | --------------- | --------------------------------------------------------------- | ----- | ----------- |
-| 1        | AGENT-004       | Refactor Agent Orchestration using OpenAI Agents SDK            | #28   | In Progress |
-| 2        | CACHE-002       | Implement Advanced Redis-based Caching for Web Operations       | #38   | Pending     |
-| 3        | SEARCH-001      | Integrate OpenAI Agents SDK WebSearchTool for General Queries   | #37   | Pending     |
-| 4        | TEST-001        | Standardize and Expand Test Suite (Target 90%+ Coverage)        | #35   | Pending     |
-| 5        | CI-001          | Implement CI Pipeline with Linting, Type Checking, and Coverage | #36   | Pending     |
-| 6        | DB-PROD-001     | Integrate Supabase MCP Server for Production Database           | #23   | Pending     |
-| 7        | DB-DEV-001      | Integrate Neon DB MCP Server for Development Environments       | #22   | Pending     |
-| 8        | CAL-001         | Integrate Google Calendar MCP for Itinerary Scheduling          | #25   | Pending     |
-| 9        | WEBCRAWL-007    | Enhance WebSearchTool fallback with structured guidance         | #37   | Pending     |
-| 10       | WEBCRAWL-008    | Implement result normalization across sources                   | #38   | Pending     |
-| 11       | BUDGETAGENT-001 | Implement Budget Planning Agent                                 | #28   | Pending     |
-| 12       | ITINAGENT-001   | Implement Itinerary Planning Agent                              | #28   | Pending     |
-| 13       | VECTOR-001      | Integrate Qdrant for semantic search (Post-MVP)                 | #41, #2 | Post-MVP  |
+| Priority | Task ID         | Description                                                     | Issue   | Status                                    |
+| -------- | --------------- | --------------------------------------------------------------- | ------- | ----------------------------------------- |
+| 1        | AGENT-004       | Refactor Agent Orchestration using OpenAI Agents SDK            | #28     | In Progress                               |
+| 2        | CACHE-002       | Implement Advanced Redis-based Caching for Web Operations       | #38     | Pending                                   |
+| 3        | SEARCH-001      | Integrate OpenAI Agents SDK WebSearchTool for General Queries   | #37     | Pending                                   |
+| 4        | TEST-001        | Standardize and Expand Test Suite (Target 90%+ Coverage)        | #35     | Pending                                   |
+| 5        | CI-001          | Implement CI Pipeline with Linting, Type Checking, and Coverage | #36     | Pending                                   |
+| 6        | DB-PROD-001     | Integrate Supabase MCP Server for Production Database           | #23     | In Progress - Foundation laid with PR #53 |
+| 7        | DB-DEV-001      | Integrate Neon DB MCP Server for Development Environments       | #22     | In Progress - Foundation laid with PR #53 |
+| 8        | CAL-001         | Integrate Google Calendar MCP for Itinerary Scheduling          | #25     | Pending                                   |
+| 9        | WEBCRAWL-007    | Enhance WebSearchTool fallback with structured guidance         | #37     | Pending                                   |
+| 10       | WEBCRAWL-008    | Implement result normalization across sources                   | #38     | Pending                                   |
+| 11       | BUDGETAGENT-001 | Implement Budget Planning Agent                                 | #28     | Pending                                   |
+| 12       | ITINAGENT-001   | Implement Itinerary Planning Agent                              | #28     | Pending                                   |
+| 13       | VECTOR-001      | Integrate Qdrant for semantic search (Post-MVP)                 | #41, #2 | Post-MVP                                  |
 
 ### Post-MVP: Enhanced Capabilities
 
-| Priority | Task ID     | Description                                     | Issue | Status    |
-| -------- | ----------- | ----------------------------------------------- | ----- | --------- |
-| 1        | VECTOR-001  | Set up Qdrant integration for vector search     | #41, #2 | Planned |
-| 2        | VECTOR-002  | Implement embedding generation pipeline         | #41, #2 | Planned |
-| 3        | VECTOR-003  | Create semantic search capabilities            | #41, #2 | Planned |
-| 4        | AI-001      | Implement personalized recommendations          | -     | Planned |
-| 5        | AI-002      | Create trip optimization algorithms             | -     | Planned |
+| Priority | Task ID    | Description                                 | Issue   | Status  |
+| -------- | ---------- | ------------------------------------------- | ------- | ------- |
+| 1        | VECTOR-001 | Set up Qdrant integration for vector search | #41, #2 | Planned |
+| 2        | VECTOR-002 | Implement embedding generation pipeline     | #41, #2 | Planned |
+| 3        | VECTOR-003 | Create semantic search capabilities         | #41, #2 | Planned |
+| 4        | AI-001     | Implement personalized recommendations      | -       | Planned |
+| 5        | AI-002     | Create trip optimization algorithms         | -       | Planned |
