@@ -235,7 +235,7 @@ if __name__ == "__main__":
             )
 
             # List tool names
-            googlemaps_tool_names = ', '.join(tool['name'] for tool in googlemaps_tools)
+            googlemaps_tool_names = ", ".join(tool["name"] for tool in googlemaps_tools)
             print(f"Google Maps MCP tools: {googlemaps_tool_names}")
 
             # Create an agent with both servers

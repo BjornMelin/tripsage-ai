@@ -27,7 +27,9 @@ class Neo4jConfig:
         # Connection pool settings
         self.max_connection_lifetime = settings.neo4j.max_connection_lifetime
         self.max_connection_pool_size = settings.neo4j.max_connection_pool_size
-        self.connection_acquisition_timeout = settings.neo4j.connection_acquisition_timeout
+        self.connection_acquisition_timeout = (
+            settings.neo4j.connection_acquisition_timeout
+        )
 
         # Query settings
         self.default_query_timeout = settings.neo4j.default_query_timeout

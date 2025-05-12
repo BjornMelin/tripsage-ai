@@ -26,7 +26,11 @@ class AgentConfig(BaseModel):
     supabase_key: str = settings.database.supabase_anon_key.get_secret_value()
 
     # Travel API configuration
-    flight_api_key: Optional[str] = settings.flights_mcp.duffel_api_key.get_secret_value() if settings.flights_mcp.duffel_api_key else ""
+    flight_api_key: Optional[str] = (
+        settings.flights_mcp.duffel_api_key.get_secret_value()
+        if settings.flights_mcp.duffel_api_key
+        else ""
+    )
     hotel_api_key: Optional[str] = ""  # No specific hotel API in settings yet
 
     # Agent settings
@@ -35,9 +39,13 @@ class AgentConfig(BaseModel):
     agent_memory_size: int = settings.agent.agent_memory_size  # number of messages
 
     # Default agent parameters
-    default_flight_preferences: Dict[str, Any] = settings.agent.default_flight_preferences
+    default_flight_preferences: Dict[str, Any] = (
+        settings.agent.default_flight_preferences
+    )
 
-    default_accommodation_preferences: Dict[str, Any] = settings.agent.default_accommodation_preferences
+    default_accommodation_preferences: Dict[str, Any] = (
+        settings.agent.default_accommodation_preferences
+    )
 
     # Helper functions
     def validate_credentials(self) -> bool:

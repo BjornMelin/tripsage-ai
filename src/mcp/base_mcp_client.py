@@ -41,7 +41,9 @@ class BaseMCPClient:
         self.timeout = timeout
         self.use_cache = use_cache
         self.cache_ttl = cache_ttl
-        self.server_name = "MCP"  # Default server name, should be overridden by subclasses
+        self.server_name = (
+            "MCP"  # Default server name, should be overridden by subclasses
+        )
 
         logger.debug("Initialized MCP client for %s", endpoint)
 
@@ -250,5 +252,5 @@ class BaseMCPClient:
         return {
             "name": tool_name,
             "description": f"Call the {tool_name} tool.",
-            "parameters_schema": {"type": "object", "properties": {}}
+            "parameters_schema": {"type": "object", "properties": {}},
         }

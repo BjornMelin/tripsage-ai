@@ -6,7 +6,7 @@ with validation and conversion methods for Neo4j integration.
 """
 
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field, validator
 

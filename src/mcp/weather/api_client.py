@@ -127,9 +127,7 @@ class OpenWeatherMapClient:
             return settings.weather_mcp.openweathermap_api_key.get_secret_value()
 
         # If we get here, we don't have an API key
-        raise ValueError(
-            "OpenWeatherMap API key not found in settings."
-        )
+        raise ValueError("OpenWeatherMap API key not found in settings.")
 
     async def _make_request(
         self, endpoint: str, params: Dict[str, Any]

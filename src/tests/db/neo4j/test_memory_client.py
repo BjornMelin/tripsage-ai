@@ -1,10 +1,8 @@
 """Tests for Memory client integration with Neo4j knowledge graph."""
 
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock
 
 import pytest
-
-from src.mcp.memory.client import MemoryClient
 
 pytestmark = pytest.mark.asyncio
 
@@ -61,15 +59,9 @@ async def test_create_entities(
     assert mocked_client.neo4j_client.add_transportation.called
 
     # Verify relationship creation
-    assert (
-        mocked_client.neo4j_client.activity_repo.create_activity_destination_relationship.called
-    )
-    assert (
-        mocked_client.neo4j_client.accommodation_repo.create_accommodation_destination_relationship.called
-    )
-    assert (
-        mocked_client.neo4j_client.event_repo.create_event_destination_relationship.called
-    )
+    assert mocked_client.neo4j_client.activity_repo.create_activity_destination_relationship.called
+    assert mocked_client.neo4j_client.accommodation_repo.create_accommodation_destination_relationship.called
+    assert mocked_client.neo4j_client.event_repo.create_event_destination_relationship.called
     assert (
         mocked_client.neo4j_client.transportation_repo.create_route_relationship.called
     )

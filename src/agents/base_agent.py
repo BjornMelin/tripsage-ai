@@ -116,19 +116,25 @@ class BaseAgent:
             client_tools = mcp_client.list_tools_sync()
 
             if not client_tools:
-                logger.warning("No tools found in MCP client: %s", mcp_client.server_name)
+                logger.warning(
+                    "No tools found in MCP client: %s", mcp_client.server_name
+                )
                 return
 
             for tool_name in client_tools:
                 # Create a wrapper function for this tool that will call the client
                 @function_tool
-                async def mcp_tool_wrapper(params: Dict[str, Any], _tool_name=tool_name):
+                async def mcp_tool_wrapper(
+                    params: Dict[str, Any], _tool_name=tool_name
+                ):
                     """Wrapper for MCP client tool."""
                     try:
                         result = await mcp_client.call_tool(_tool_name, params)
                         return result
                     except Exception as e:
-                        logger.error("Error calling MCP tool %s: %s", _tool_name, str(e))
+                        logger.error(
+                            "Error calling MCP tool %s: %s", _tool_name, str(e)
+                        )
                         if isinstance(e, MCPError):
                             return {"error": e.message}
                         return {"error": f"MCP tool error: {str(e)}"}
@@ -141,18 +147,23 @@ class BaseAgent:
                 if tool_metadata and "description" in tool_metadata:
                     mcp_tool_wrapper.__doc__ = tool_metadata["description"]
                 else:
-                    mcp_tool_wrapper.__doc__ = f"Call the {tool_name} tool from {mcp_client.server_name} MCP."
+                    mcp_tool_wrapper.__doc__ = (
+                        f"Call the {tool_name} tool from {mcp_client.server_name} MCP."
+                    )
 
                 # Register the wrapper
                 self._register_tool(mcp_tool_wrapper)
                 logger.debug(
                     "Registered MCP tool %s as %s from %s",
-                    tool_name, wrapper_name, mcp_client.server_name
+                    tool_name,
+                    wrapper_name,
+                    mcp_client.server_name,
                 )
 
             logger.info(
                 "Registered %d tools from MCP client: %s",
-                len(client_tools), mcp_client.server_name
+                len(client_tools),
+                mcp_client.server_name,
             )
 
         except Exception as e:

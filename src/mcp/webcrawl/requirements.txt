@@ -1,0 +1,13 @@
+crawl4ai>=0.6.0
+fastmcp>=2.0.0
+fastapi>=0.95.0
+uvicorn>=0.21.1
+pydantic>=2.0.0
+redis>=4.5.1
+aiohttp>=3.8.4
+playwright>=1.30.0
+firecrawl-py>=0.1.0
+beautifulsoup4>=4.11.2
+lxml>=4.9.2
+python-dotenv>=1.0.0
+loguru>=0.6.0

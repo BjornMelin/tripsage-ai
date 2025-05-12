@@ -6,15 +6,15 @@ This module provides an interactive demo of the TripSage Travel Agent using
 the OpenAI Agents SDK implementation.
 """
 
+import argparse
 import asyncio
 import os
 import sys
-import argparse
-from typing import List, Dict, Any
+from typing import Any, Dict, List
 
 from dotenv import load_dotenv
 
-from .travel_agent import TravelAgent, create_agent
+from .travel_agent import create_agent
 
 
 async def run_interactive_demo():
@@ -120,7 +120,10 @@ def main():
 
     parser = argparse.ArgumentParser(description="TripSage Travel Agent Demo")
     parser.add_argument(
-        "--queries", "-q", nargs="+", help="Run with specific queries instead of interactive mode"
+        "--queries",
+        "-q",
+        nargs="+",
+        help="Run with specific queries instead of interactive mode",
     )
 
     args = parser.parse_args()

@@ -509,8 +509,12 @@ class WeatherMCPServer(FastMCPServer):
 
 
 def create_server(
-    host: str = settings.weather_mcp.endpoint.split("://")[1].split(":")[0] if "://" in settings.weather_mcp.endpoint else "0.0.0.0", 
-    port: int = int(settings.weather_mcp.endpoint.split(":")[-1]) if ":" in settings.weather_mcp.endpoint else 8003
+    host: str = settings.weather_mcp.endpoint.split("://")[1].split(":")[0]
+    if "://" in settings.weather_mcp.endpoint
+    else "0.0.0.0",
+    port: int = int(settings.weather_mcp.endpoint.split(":")[-1])
+    if ":" in settings.weather_mcp.endpoint
+    else 8003,
 ):
     """Create and return a Weather MCP Server instance.
 

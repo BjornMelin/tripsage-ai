@@ -51,9 +51,10 @@ async def sync_destinations_to_knowledge_graph() -> Dict[str, int]:
                 neo4j_dest = _convert_rel_to_neo4j_destination(rel_dest)
 
                 # Sync destination
-                destination, created = (
-                    await neo4j_client.sync_destination_from_relational(neo4j_dest)
-                )
+                (
+                    destination,
+                    created,
+                ) = await neo4j_client.sync_destination_from_relational(neo4j_dest)
 
                 if created:
                     stats["created"] += 1

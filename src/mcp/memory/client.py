@@ -286,10 +286,12 @@ class MemoryClient(BaseMcpClient):
                 ):
                     try:
                         # Create relationship with origin and destination
-                        await neo4j_client.transportation_repo.create_route_relationship(  # noqa: E501
-                            transportation_id=transportation.name,
-                            origin_destination=transportation_data["origin"],
-                            target_destination=transportation_data["destination"],
+                        await (
+                            neo4j_client.transportation_repo.create_route_relationship(  # noqa: E501
+                                transportation_id=transportation.name,
+                                origin_destination=transportation_data["origin"],
+                                target_destination=transportation_data["destination"],
+                            )
                         )
                     except Exception as e:
                         logger.warning(
@@ -555,7 +557,7 @@ class MemoryClient(BaseMcpClient):
                 # Add observations as properties
                 property_updates = []
                 for i, _content in enumerate(contents):
-                    property_updates.append(f"e.observation_{i+1} = ${i}")
+                    property_updates.append(f"e.observation_{i + 1} = ${i}")
 
                 property_params = {
                     str(i): content for i, content in enumerate(contents)
@@ -876,7 +878,7 @@ class MemoryClient(BaseMcpClient):
                 """
 
                 for i in range(len(observations_to_delete)):
-                    query += f", e.observation_{i+1} = NULL"
+                    query += f", e.observation_{i + 1} = NULL"
 
                 await neo4j_client.execute_query(query, {"name": entity_name})
 

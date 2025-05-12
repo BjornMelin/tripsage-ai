@@ -532,13 +532,19 @@ class FastMCPClient(BaseMCPClient):
         # For now, return a small set of common tool names for this MCP type
         # This will be replaced by actual tool discovery in a production implementation
         tool_names = [
-            {"name": f"{self.server_name.lower()}_status", "description": f"Get {self.server_name} MCP status"},
-            {"name": f"{self.server_name.lower()}_version", "description": f"Get {self.server_name} MCP version"}
+            {
+                "name": f"{self.server_name.lower()}_status",
+                "description": f"Get {self.server_name} MCP status",
+            },
+            {
+                "name": f"{self.server_name.lower()}_version",
+                "description": f"Get {self.server_name} MCP version",
+            },
         ]
 
         logger.debug(
             "Using simplified list_tools_sync implementation for %s MCP",
-            self.server_name
+            self.server_name,
         )
         return tool_names
 
@@ -559,13 +565,6 @@ class FastMCPClient(BaseMCPClient):
         return {
             "name": tool_name,
             "description": f"Call the {tool_name} tool from {self.server_name} MCP.",
-            "parameters_schema": {
-                "type": "object",
-                "properties": {},
-                "required": []
-            },
-            "return_schema": {
-                "type": "object",
-                "properties": {}
-            }
+            "parameters_schema": {"type": "object", "properties": {}, "required": []},
+            "return_schema": {"type": "object", "properties": {}},
         }

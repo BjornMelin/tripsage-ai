@@ -215,9 +215,7 @@ class AccommodationRepository(BaseNeo4jRepository[Accommodation]):
                     "AND a.destination = $destination"
                 )
             else:
-                where_clause = (
-                    "ALL(amenity IN $amenities WHERE amenity IN a.amenities)"
-                )
+                where_clause = "ALL(amenity IN $amenities WHERE amenity IN a.amenities)"
 
             # Build Cypher query
             query = f"""

@@ -12,11 +12,9 @@ from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from ..cache.redis_cache import redis_cache
 from ..db.client import get_client as get_db_client
 from ..mcp.flights import get_client as get_flights_client
 from ..mcp.memory import get_client as get_memory_client
-from ..utils.error_handling import MCPError
 from ..utils.logging import get_module_logger
 
 logger = get_module_logger(__name__)

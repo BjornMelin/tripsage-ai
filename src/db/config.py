@@ -9,7 +9,7 @@ settings system.
 from enum import Enum
 from typing import Optional
 
-from pydantic import BaseModel, Field, SecretStr
+from pydantic import BaseModel, SecretStr
 
 from src.utils.settings import settings
 
@@ -88,7 +88,10 @@ def create_config() -> DatabaseConfig:
     """
     provider = settings.database.db_provider.lower()
 
-    if provider == DatabaseProvider.NEON.value and settings.database.neon_connection_string:
+    if (
+        provider == DatabaseProvider.NEON.value
+        and settings.database.neon_connection_string
+    ):
         return DatabaseConfig(
             provider=DatabaseProvider.NEON,
             neon=NeonConfig(

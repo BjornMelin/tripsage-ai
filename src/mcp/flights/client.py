@@ -164,9 +164,7 @@ class FlightsMCPClient(FastMCPClient):
             # Check for rate limiting or API key issues
             error_message = str(e).lower()
             if "rate limit" in error_message or "too many requests" in error_message:
-                logger.error(
-                    f"Rate limit exceeded when searching flights: {str(e)}"
-                )
+                logger.error(f"Rate limit exceeded when searching flights: {str(e)}")
                 raise MCPError(
                     message=(
                         "Rate limit exceeded for Duffel API. Please try again later."

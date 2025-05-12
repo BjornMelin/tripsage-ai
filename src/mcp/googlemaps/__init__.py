@@ -12,5 +12,5 @@ __all__ = [
     "GoogleMapsMCPClient",
     "get_client",
     "store_location_in_knowledge_graph",
-    "create_googlemaps_client"
+    "create_googlemaps_client",
 ]
