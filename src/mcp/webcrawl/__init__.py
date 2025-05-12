@@ -24,6 +24,7 @@ def get_client() -> WebCrawlMCPClient:
         A configured WebCrawl MCP client
     """
     from .client import webcrawl_client
+
     return webcrawl_client
 
 

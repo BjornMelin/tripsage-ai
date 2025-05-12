@@ -6,7 +6,7 @@ using MCP clients, with support for Airbnb via the OpenBnB MCP server and additi
 accommodation services (hotels, etc.) through dedicated MCP servers or API integrations.
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 from ..cache.redis_cache import redis_cache
 from ..mcp.accommodations import (
@@ -49,7 +49,8 @@ class AccommodationSearchTool:
                    - location: Location to search in
                    - checkin/checkout: Travel dates
                    - adults/children: Traveler count
-                   - source: Provider to search ("airbnb", future: "booking", "hotels", etc.)
+                   - source: Provider to search
+                        ("airbnb", future: "booking", "hotels", etc.)
                    - property_type: Type of property to filter for
                    - min_price/max_price: Price range filters
                    - min_rating: Minimum rating filter
@@ -70,9 +71,14 @@ class AccommodationSearchTool:
             except ValueError:
                 return {
                     "error": f"Unsupported accommodation source: {source}",
-                    "available_sources": ["airbnb"],  # Update this list as more sources are added
-                    "message": "Currently, only Airbnb is supported for accommodations search. " +
-                              "Hotel search via Booking.com integration is planned for future releases."
+                    "available_sources": [
+                        "airbnb"
+                    ],  # Update this list as more sources are added
+                    "message": (
+                        "Currently, only Airbnb is supported for accommodations "
+                        "search. Hotel search via Booking.com integration is planned "
+                        "for future releases."
+                    ),
                 }
 
             # Extract search parameters
@@ -91,8 +97,8 @@ class AccommodationSearchTool:
 
             # Cache key for results - include more parameters for better cache precision
             cache_key = (
-                f"accommodation_search:{source}:{location}:{checkin}:{checkout}:{adults}:" +
-                f"{children}:{min_price}:{max_price}:{property_type}",
+                f"accommodation_search:{source}:{location}:{checkin}:{checkout}:{adults}:"
+                + f"{children}:{min_price}:{max_price}:{property_type}",
             )
             cached_result = await redis_cache.get(cache_key)
 
@@ -156,8 +162,11 @@ class AccommodationSearchTool:
                 return {
                     "error": f"Source {source} is configured but not implemented",
                     "available_sources": ["airbnb"],
-                    "message": "Currently, only Airbnb is supported for accommodations search. " +
-                              "Additional sources will be added in future releases."
+                    "message": (
+                        "Currently, only Airbnb is supported for accommodations "
+                        "search. Additional sources will be added in future "
+                        "releases."
+                    ),
                 }
 
         except Exception as e:
@@ -218,9 +227,12 @@ class AccommodationSearchTool:
             except ValueError:
                 return {
                     "error": f"Unsupported accommodation source: {source}",
-                    "available_sources": ["airbnb"],  # Update this list as more sources are added
-                    "message": "Currently, only Airbnb is supported for accommodation details. " +
-                              "Hotel details via Booking.com integration is planned for future releases."
+                    "available_sources": [
+                        "airbnb"
+                    ],  # Update this list as more sources are added
+                    "message": "Currently, only Airbnb is supported for accommodation "
+                    "details. Hotel details via Booking.com integration is planned "
+                    "for future releases.",
                 }
 
             # Get details based on source
@@ -274,8 +286,11 @@ class AccommodationSearchTool:
                 return {
                     "error": f"Source {source} is configured but not implemented",
                     "available_sources": ["airbnb"],
-                    "message": "Currently, only Airbnb is supported for accommodation details. " +
-                              "Additional sources will be added in future releases."
+                    "message": (
+                        "Currently, only Airbnb is supported for accommodation "
+                        "details. Additional sources will be added in future "
+                        "releases."
+                    ),
                 }
 
         except Exception as e:

@@ -6,14 +6,14 @@ web crawling capabilities through external MCPs (Crawl4AI and Firecrawl).
 """
 
 from enum import Enum
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel, Field, HttpUrl
+from pydantic import BaseModel, Field
 
 
 class WebAction(Enum):
     """Enumeration of web actions that can be performed."""
-    
+
     CLICK = "click"
     SCREENSHOT = "screenshot"
     WAIT = "wait"
@@ -24,13 +24,15 @@ class WebAction(Enum):
 
 class ScrapeOptions(BaseModel):
     """Options for scraping a URL."""
-    
+
     bypass_cache: bool = Field(False, description="Whether to bypass cache")
     full_page: bool = Field(False, description="Whether to scrape the full page")
     js_enabled: bool = Field(True, description="Whether JavaScript is enabled")
     process_iframes: bool = Field(False, description="Whether to process iframes")
     include_links: bool = Field(False, description="Whether to include links")
-    include_screenshots: bool = Field(False, description="Whether to include screenshots")
+    include_screenshots: bool = Field(
+        False, description="Whether to include screenshots"
+    )
     css_selector: Optional[str] = Field(
         None, description="CSS selector to extract specific content"
     )
@@ -41,16 +43,14 @@ class ScrapeOptions(BaseModel):
 
 class ScrapeParams(BaseModel):
     """Parameters for scraping a URL."""
-    
+
     url: str = Field(..., description="URL to scrape")
-    options: Optional[ScrapeOptions] = Field(
-        None, description="Scrape options"
-    )
+    options: Optional[ScrapeOptions] = Field(None, description="Scrape options")
 
 
 class ScrapeResponse(BaseModel):
     """Response for a scrape request."""
-    
+
     success: bool = Field(..., description="Whether the scrape was successful")
     content: str = Field(..., description="Scraped content")
     metadata: Dict[str, Any] = Field(
@@ -69,7 +69,7 @@ class ScrapeResponse(BaseModel):
 
 class SearchParams(BaseModel):
     """Parameters for searching the web."""
-    
+
     query: str = Field(..., description="Search query")
     limit: Optional[int] = Field(5, description="Maximum number of results")
     filter: Optional[str] = Field(None, description="Search filter")
@@ -79,7 +79,7 @@ class SearchParams(BaseModel):
 
 class SearchResult(BaseModel):
     """A single search result."""
-    
+
     title: str = Field(..., description="Result title")
     url: str = Field(..., description="Result URL")
     snippet: Optional[str] = Field(None, description="Result snippet")
@@ -90,7 +90,7 @@ class SearchResult(BaseModel):
 
 class SearchResponse(BaseModel):
     """Response for a search request."""
-    
+
     success: bool = Field(..., description="Whether the search was successful")
     query: Optional[str] = Field(None, description="Original search query")
     results: List[SearchResult] = Field(
@@ -102,14 +102,12 @@ class SearchResponse(BaseModel):
 
 class ExtractParams(BaseModel):
     """Parameters for extracting structured content from a URL."""
-    
+
     url: str = Field(..., description="URL to extract from")
     extract_type: str = Field(
         ..., description="Type of content to extract (article, product, etc.)"
     )
-    prompt: Optional[str] = Field(
-        None, description="Custom extraction prompt"
-    )
+    prompt: Optional[str] = Field(None, description="Custom extraction prompt")
     schema: Optional[Dict[str, Any]] = Field(
         None, description="Schema for structured extraction"
     )
@@ -117,7 +115,7 @@ class ExtractParams(BaseModel):
 
 class ExtractResponse(BaseModel):
     """Response for an extract request."""
-    
+
     success: bool = Field(..., description="Whether the extraction was successful")
     content: Dict[str, Any] = Field(
         default_factory=dict, description="Extracted structured content"
@@ -128,19 +126,17 @@ class ExtractResponse(BaseModel):
 
 class MapParams(BaseModel):
     """Parameters for mapping a website."""
-    
+
     url: str = Field(..., description="URL to map")
     include_subdomains: Optional[bool] = Field(
         False, description="Whether to include subdomains"
     )
-    limit: Optional[int] = Field(
-        100, description="Maximum number of URLs to map"
-    )
+    limit: Optional[int] = Field(100, description="Maximum number of URLs to map")
 
 
 class MapResponse(BaseModel):
     """Response for a map request."""
-    
+
     success: bool = Field(..., description="Whether the mapping was successful")
     urls: List[str] = Field(default_factory=list, description="Mapped URLs")
     error: Optional[str] = Field(None, description="Error message if unsuccessful")
@@ -148,14 +144,10 @@ class MapResponse(BaseModel):
 
 class CrawlParams(BaseModel):
     """Parameters for crawling a website."""
-    
+
     url: str = Field(..., description="URL to crawl")
-    limit: Optional[int] = Field(
-        10, description="Maximum number of pages to crawl"
-    )
-    max_depth: Optional[int] = Field(
-        2, description="Maximum link depth to crawl"
-    )
+    limit: Optional[int] = Field(10, description="Maximum number of pages to crawl")
+    max_depth: Optional[int] = Field(2, description="Maximum link depth to crawl")
     scrape_options: Optional[ScrapeOptions] = Field(
         None, description="Scrape options for each page"
     )
@@ -163,7 +155,7 @@ class CrawlParams(BaseModel):
 
 class CrawlResponse(BaseModel):
     """Response for a crawl request."""
-    
+
     success: bool = Field(..., description="Whether the crawl was successful")
     crawl_id: str = Field(..., description="ID of the crawl job")
     url: str = Field(..., description="Original crawl URL")
@@ -173,22 +165,18 @@ class CrawlResponse(BaseModel):
 
 class CrawlStatusParams(BaseModel):
     """Parameters for checking crawl status."""
-    
+
     crawl_id: str = Field(..., description="ID of the crawl job")
 
 
 class CrawlStatusResponse(BaseModel):
     """Response for a crawl status request."""
-    
+
     success: bool = Field(..., description="Whether the status check was successful")
     status: str = Field(..., description="Crawl job status")
     url: str = Field(..., description="Original crawl URL")
-    pages_crawled: int = Field(
-        0, description="Number of pages crawled so far"
-    )
-    total_pages: int = Field(
-        0, description="Total number of pages to crawl"
-    )
+    pages_crawled: int = Field(0, description="Number of pages crawled so far")
+    total_pages: int = Field(0, description="Total number of pages to crawl")
     results: List[Dict[str, Any]] = Field(
         default_factory=list, description="Crawl results if available"
     )
@@ -197,22 +185,16 @@ class CrawlStatusResponse(BaseModel):
 
 class DeepResearchParams(BaseModel):
     """Parameters for deep research on a topic."""
-    
+
     query: str = Field(..., description="Research query")
-    max_depth: Optional[int] = Field(
-        3, description="Maximum research depth"
-    )
-    max_urls: Optional[int] = Field(
-        5, description="Maximum number of URLs to analyze"
-    )
-    time_limit: Optional[int] = Field(
-        60, description="Time limit in seconds"
-    )
+    max_depth: Optional[int] = Field(3, description="Maximum research depth")
+    max_urls: Optional[int] = Field(5, description="Maximum number of URLs to analyze")
+    time_limit: Optional[int] = Field(60, description="Time limit in seconds")
 
 
 class DeepResearchResponse(BaseModel):
     """Response for a deep research request."""
-    
+
     success: bool = Field(..., description="Whether the research was successful")
     query: str = Field(..., description="Original research query")
     summary: str = Field(..., description="Research summary")
@@ -227,11 +209,9 @@ class DeepResearchResponse(BaseModel):
 
 class GenerateLLMsTxtParams(BaseModel):
     """Parameters for generating LLMs.txt for a website."""
-    
+
     url: str = Field(..., description="URL to generate LLMs.txt for")
-    max_urls: Optional[int] = Field(
-        10, description="Maximum number of URLs to process"
-    )
+    max_urls: Optional[int] = Field(10, description="Maximum number of URLs to process")
     show_full_text: Optional[bool] = Field(
         False, description="Whether to show the full text"
     )
@@ -239,7 +219,7 @@ class GenerateLLMsTxtParams(BaseModel):
 
 class GenerateLLMsTxtResponse(BaseModel):
     """Response for a generate LLMs.txt request."""
-    
+
     success: bool = Field(..., description="Whether the generation was successful")
     url: str = Field(..., description="Original URL")
     llms_txt: str = Field(..., description="Generated LLMs.txt content")
@@ -251,5 +231,5 @@ class GenerateLLMsTxtResponse(BaseModel):
 
 class CheckCrawlStatusParams(BaseModel):
     """Parameters for checking crawl status."""
-    
+
     id: str = Field(..., description="ID of the crawl job")
