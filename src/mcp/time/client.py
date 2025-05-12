@@ -5,17 +5,29 @@ This module provides a client for interacting with the Model Context Protocol's
 Time MCP Server, which offers timezone conversion and time management capabilities.
 """
 
+import json
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional
+
+from pydantic import ValidationError
 
 from agents import function_tool
-from pydantic import Field
 
 from ...cache.redis_cache import redis_cache
 from ...utils.config import get_config
 from ...utils.error_handling import MCPError
 from ...utils.logging import get_module_logger
 from ..fastmcp import FastMCPClient
+from .models import (
+    ConvertTimeParams,
+    FlightArrivalResponse,
+    GetCurrentTimeParams,
+    ItineraryItem,
+    MeetingTimeResponse,
+    TimeConversionResponse,
+    TimeResponse,
+    TimezoneAwareItineraryItem,
+)
 
 logger = get_module_logger(__name__)
 config = get_config()
@@ -63,7 +75,7 @@ class TimeMCPClient(FastMCPClient):
     @redis_cache.cached("time_current", 60)  # Cache for 1 minute since time changes
     async def get_current_time(
         self, timezone: str, skip_cache: bool = False
-    ) -> Dict[str, Any]:
+    ) -> TimeResponse:
         """Get the current time in the specified timezone.
 
         Args:
@@ -77,25 +89,41 @@ class TimeMCPClient(FastMCPClient):
             MCPError: If the request fails
         """
         try:
+            # Validate parameters with Pydantic model
+            params = GetCurrentTimeParams(timezone=timezone)
+
+            # Call the MCP tool with validated parameters
             response = await self.call_tool(
                 "get_current_time", {"timezone": timezone}, skip_cache=skip_cache
             )
-            
+
             # Parse the response string into a dictionary
             if isinstance(response, str):
-                import json
                 response = json.loads(response)
-            
+
             # Transform response to match our expected format
             result = {
                 "timezone": response.get("timezone"),
                 "current_time": response.get("datetime").split("T")[1].split("+")[0],
                 "current_date": response.get("datetime").split("T")[0],
-                "utc_offset": response.get("datetime").split("+")[1] if "+" in response.get("datetime", "") else response.get("datetime").split("-")[-1],
-                "is_dst": response.get("is_dst", False)
+                "utc_offset": (
+                    response.get("datetime").split("+")[1]
+                    if "+" in response.get("datetime", "")
+                    else response.get("datetime").split("-")[-1]
+                ),
+                "is_dst": response.get("is_dst", False),
             }
-            
-            return result
+
+            # Validate response with Pydantic model
+            return TimeResponse.model_validate(result)
+        except ValidationError as e:
+            logger.error(f"Validation error: {str(e)}")
+            raise MCPError(
+                message=f"Invalid parameters for get_current_time: {str(e)}",
+                server=self.server_name,
+                tool="get_current_time",
+                params={"timezone": timezone},
+            ) from e
         except Exception as e:
             logger.error(f"Error getting current time: {str(e)}")
             raise MCPError(
@@ -113,7 +141,7 @@ class TimeMCPClient(FastMCPClient):
         source_timezone: str,
         target_timezone: str,
         skip_cache: bool = False,
-    ) -> Dict[str, Any]:
+    ) -> TimeConversionResponse:
         """Convert time between different timezones.
 
         Args:
@@ -129,32 +157,61 @@ class TimeMCPClient(FastMCPClient):
             MCPError: If the request fails
         """
         try:
-            params = {
-                "source_timezone": source_timezone,
-                "time": time,
-                "target_timezone": target_timezone,
-            }
-            response = await self.call_tool("convert_time", params, skip_cache=skip_cache)
-            
+            # Validate parameters with Pydantic model
+            params = ConvertTimeParams(
+                time=time,
+                source_timezone=source_timezone,
+                target_timezone=target_timezone,
+            )
+
+            # Call the MCP tool with validated parameters
+            response = await self.call_tool(
+                "convert_time",
+                {
+                    "source_timezone": source_timezone,
+                    "time": time,
+                    "target_timezone": target_timezone,
+                },
+                skip_cache=skip_cache,
+            )
+
             # Parse the response string into a dictionary
             if isinstance(response, str):
-                import json
                 response = json.loads(response)
-            
+
             # Extract the relevant information
             source_info = response.get("source", {})
             target_info = response.get("target", {})
-            
-            # Transform to match expected format
-            result = {
-                "source_timezone": source_info.get("timezone"),
-                "source_time": time,
-                "target_timezone": target_info.get("timezone"),
-                "target_time": target_info.get("datetime").split("T")[1].split("+")[0] if target_info.get("datetime") else "",
+
+            # Build and validate the response model
+            conversion_response = {
+                "source": {
+                    "timezone": source_info.get("timezone"),
+                    "datetime": source_info.get("datetime", ""),
+                    "is_dst": source_info.get("is_dst", False),
+                },
+                "target": {
+                    "timezone": target_info.get("timezone"),
+                    "datetime": target_info.get("datetime", ""),
+                    "is_dst": target_info.get("is_dst", False),
+                },
                 "time_difference": response.get("time_difference", ""),
             }
-            
-            return result
+
+            # Validate with Pydantic model
+            return TimeConversionResponse.model_validate(conversion_response)
+        except ValidationError as e:
+            logger.error(f"Validation error: {str(e)}")
+            raise MCPError(
+                message=f"Invalid parameters for convert_time: {str(e)}",
+                server=self.server_name,
+                tool="convert_time",
+                params={
+                    "time": time,
+                    "source_timezone": source_timezone,
+                    "target_timezone": target_timezone,
+                },
+            ) from e
         except Exception as e:
             logger.error(f"Error converting time: {str(e)}")
             raise MCPError(
@@ -181,14 +238,14 @@ class TimeService:
         self.client = client or time_client
         logger.info("Initialized Time Service")
 
-    async def get_local_time(self, location: str) -> Dict[str, Any]:
+    async def get_local_time(self, location: str) -> TimeResponse:
         """Get the current local time for a travel destination.
 
         Args:
             location: Travel destination (will be mapped to appropriate timezone)
 
         Returns:
-            Dict containing current time information
+            Dictionary containing current time information
         """
         # Map location to timezone - this is a simplified example
         # A real implementation would use a location-to-timezone mapping service
@@ -213,7 +270,6 @@ class TimeService:
             "shanghai": "Asia/Shanghai",
             "toronto": "America/Toronto",
             "vancouver": "America/Vancouver",
-            "sydney": "Australia/Sydney",
             "melbourne": "Australia/Melbourne",
             "auckland": "Pacific/Auckland",
             "rio de janeiro": "America/Sao_Paulo",
@@ -243,7 +299,7 @@ class TimeService:
         departure_timezone: str,
         flight_duration_hours: float,
         arrival_timezone: str,
-    ) -> Dict[str, Any]:
+    ) -> FlightArrivalResponse:
         """Calculate the arrival time for a flight.
 
         Args:
@@ -258,34 +314,34 @@ class TimeService:
         try:
             # Get current date in departure timezone for context
             departure_date_info = await self.client.get_current_time(departure_timezone)
-            departure_date = departure_date_info["current_date"]
+            departure_date = departure_date_info.current_date
 
             # Parse departure time
             hours, minutes = map(int, departure_time.split(":"))
 
             # Create datetime object for departure
-            departure_dt = datetime.strptime(
+            _departure_dt = datetime.strptime(
                 f"{departure_date} {departure_time}", "%Y-%m-%d %H:%M"
             )
 
             # Add flight duration
             duration_hours = int(flight_duration_hours)
             duration_minutes = int((flight_duration_hours - duration_hours) * 60)
-            
+
             # Calculate arrival time in departure timezone
             arrival_hours = hours + duration_hours
             arrival_minutes = minutes + duration_minutes
-            
+
             # Adjust for overflow
             while arrival_minutes >= 60:
                 arrival_hours += 1
                 arrival_minutes -= 60
-                
+
             arrival_day_offset = 0
             while arrival_hours >= 24:
                 arrival_day_offset += 1
                 arrival_hours -= 24
-                
+
             # Format arrival time
             arrival_time_in_departure_tz = f"{arrival_hours:02d}:{arrival_minutes:02d}"
 
@@ -296,28 +352,39 @@ class TimeService:
                 target_timezone=arrival_timezone,
             )
 
-            return {
+            # Create and validate response
+            result = {
                 "departure_time": departure_time,
                 "departure_timezone": departure_timezone,
                 "flight_duration": f"{duration_hours}h {duration_minutes}m",
                 "arrival_time_departure_tz": arrival_time_in_departure_tz,
-                "arrival_time_local": conversion["target_time"],
+                "arrival_time_local": conversion.target.datetime.split("T")[1].split(
+                    "+"
+                )[0],
                 "arrival_timezone": arrival_timezone,
-                "time_difference": conversion["time_difference"],
-                "day_offset": arrival_day_offset
+                "time_difference": conversion.time_difference,
+                "day_offset": arrival_day_offset,
             }
+
+            return FlightArrivalResponse.model_validate(result)
         except Exception as e:
             logger.error(f"Error calculating flight arrival: {str(e)}")
-            return {
+            error_result = {
                 "error": f"Failed to calculate flight arrival: {str(e)}",
                 "departure_time": departure_time,
                 "departure_timezone": departure_timezone,
+                "flight_duration": "",
+                "arrival_time_departure_tz": "",
+                "arrival_time_local": "",
                 "arrival_timezone": arrival_timezone,
+                "time_difference": "",
+                "day_offset": 0,
             }
+            return FlightArrivalResponse.model_validate(error_result)
 
     async def create_timezone_aware_itinerary(
         self, itinerary_items: List[Dict[str, Any]]
-    ) -> List[Dict[str, Any]]:
+    ) -> List[TimezoneAwareItineraryItem]:
         """Create a timezone-aware itinerary for a multi-city trip.
 
         Args:
@@ -331,39 +398,52 @@ class TimeService:
             processed_itinerary = []
 
             for item in itinerary_items:
+                # Validate input item
+                item_model = ItineraryItem.model_validate(item)
+
                 # Get local timezone for the location
-                location_info = await self.get_local_time(item["location"])
-                location_timezone = location_info["timezone"]
+                location_info = await self.get_local_time(item_model.location)
+                location_timezone = location_info.timezone
 
                 # If time is in UTC, convert to local time
-                if "time" in item and item.get("time_format", "UTC") == "UTC":
+                local_time = item_model.time or ""
+                if item_model.time and item_model.time_format == "UTC":
                     time_conversion = await self.client.convert_time(
-                        time=item["time"],
+                        time=item_model.time,
                         source_timezone="UTC",
                         target_timezone=location_timezone,
                     )
-                    local_time = time_conversion["target_time"]
-                else:
-                    local_time = item.get("time", "")
+                    local_time = time_conversion.target.datetime.split("T")[1].split(
+                        "+"
+                    )[0]
 
                 # Add timezone information to the itinerary item
                 processed_item = {
-                    **item,
+                    "location": item_model.location,
+                    "activity": item_model.activity,
+                    "time": item_model.time,
+                    "time_format": item_model.time_format,
                     "timezone": location_timezone,
                     "local_time": local_time,
-                    "utc_offset": (
-                        location_info["utc_offset"]
-                        if "utc_offset" in location_info
-                        else ""
-                    ),
+                    "utc_offset": location_info.utc_offset,
                 }
 
-                processed_itinerary.append(processed_item)
+                # Add any extra fields from the original item
+                for key, value in item.items():
+                    if key not in processed_item:
+                        processed_item[key] = value
+
+                processed_itinerary.append(
+                    TimezoneAwareItineraryItem.model_validate(processed_item)
+                )
 
             return processed_itinerary
         except Exception as e:
             logger.error(f"Error creating timezone-aware itinerary: {str(e)}")
-            return itinerary_items  # Return original items on error
+            return [
+                TimezoneAwareItineraryItem.model_validate(item)
+                for item in itinerary_items
+            ]
 
     async def find_meeting_times(
         self,
@@ -371,7 +451,7 @@ class TimeService:
         second_timezone: str,
         first_available_hours: tuple = (9, 17),
         second_available_hours: tuple = (9, 17),
-    ) -> List[Dict[str, Any]]:
+    ) -> List[MeetingTimeResponse]:
         """Find suitable meeting times across different timezones.
 
         Args:
@@ -403,19 +483,20 @@ class TimeService:
                         target_timezone=second_timezone,
                     )
 
-                    second_time = conversion["target_time"]
-                    second_hour, second_minute = map(int, second_time.split(":"))
+                    second_time = conversion.target.datetime.split("T")[1].split("+")[0]
+                    second_hour, second_minute = map(int, second_time.split(":")[0:2])
 
                     # Check if time is suitable (w/i available hours in second timezone)
                     if second_start <= second_hour < second_end:
+                        meeting_time = {
+                            "first_timezone": first_timezone,
+                            "first_time": first_time,
+                            "second_timezone": second_timezone,
+                            "second_time": second_time,
+                            "time_difference": conversion.time_difference,
+                        }
                         suitable_times.append(
-                            {
-                                "first_timezone": first_timezone,
-                                "first_time": first_time,
-                                "second_timezone": second_timezone,
-                                "second_time": second_time,
-                                "time_difference": conversion["time_difference"],
-                            }
+                            MeetingTimeResponse.model_validate(meeting_time)
                         )
 
             return suitable_times
