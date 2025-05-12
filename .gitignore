@@ -1,5 +1,7 @@
 **/.claude/settings.local.json
 .env
+.env-*
+!scripts/templates/.env-*
 
 # Python
 __pycache__/
