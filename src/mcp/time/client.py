@@ -1,12 +1,15 @@
 """
 Time MCP Client implementation for TripSage.
 
-This module provides a client for interacting with the Time MCP Server,
-which offers timezone conversion and time management capabilities.
+This module provides a client for interacting with the Model Context Protocol's
+Time MCP Server, which offers timezone conversion and time management capabilities.
 """
 
-import datetime
-from typing import Any, Dict, List, Optional
+from datetime import datetime
+from typing import Any, Dict, List, Optional, Union
+
+from agents import function_tool
+from pydantic import Field
 
 from ...cache.redis_cache import redis_cache
 from ...utils.config import get_config
@@ -19,7 +22,7 @@ config = get_config()
 
 
 class TimeMCPClient(FastMCPClient):
-    """Client for the Time MCP Server."""
+    """Client for the official Time MCP Server."""
 
     def __init__(
         self,
@@ -56,7 +59,8 @@ class TimeMCPClient(FastMCPClient):
             cache_ttl=1800,  # 30 minutes default cache TTL for time data
         )
 
-    @redis_cache.cached("time_current", 300)  # 5 minutes (time changes!)
+    @function_tool
+    @redis_cache.cached("time_current", 60)  # Cache for 1 minute since time changes
     async def get_current_time(
         self, timezone: str, skip_cache: bool = False
     ) -> Dict[str, Any]:
@@ -70,12 +74,28 @@ class TimeMCPClient(FastMCPClient):
             Dictionary with current time information
 
         Raises:
-            MCPError: If the MCP request fails
+            MCPError: If the request fails
         """
         try:
-            return await self.call_tool(
+            response = await self.call_tool(
                 "get_current_time", {"timezone": timezone}, skip_cache=skip_cache
             )
+            
+            # Parse the response string into a dictionary
+            if isinstance(response, str):
+                import json
+                response = json.loads(response)
+            
+            # Transform response to match our expected format
+            result = {
+                "timezone": response.get("timezone"),
+                "current_time": response.get("datetime").split("T")[1].split("+")[0],
+                "current_date": response.get("datetime").split("T")[0],
+                "utc_offset": response.get("datetime").split("+")[1] if "+" in response.get("datetime", "") else response.get("datetime").split("-")[-1],
+                "is_dst": response.get("is_dst", False)
+            }
+            
+            return result
         except Exception as e:
             logger.error(f"Error getting current time: {str(e)}")
             raise MCPError(
@@ -85,6 +105,7 @@ class TimeMCPClient(FastMCPClient):
                 params={"timezone": timezone},
             ) from e
 
+    @function_tool
     @redis_cache.cached("time_convert", 3600)  # 1 hour (timezone offsets are stable)
     async def convert_time(
         self,
@@ -105,15 +126,35 @@ class TimeMCPClient(FastMCPClient):
             Dictionary with time conversion information
 
         Raises:
-            MCPError: If the MCP request fails
+            MCPError: If the request fails
         """
         try:
             params = {
-                "time": time,
                 "source_timezone": source_timezone,
+                "time": time,
                 "target_timezone": target_timezone,
             }
-            return await self.call_tool("convert_time", params, skip_cache=skip_cache)
+            response = await self.call_tool("convert_time", params, skip_cache=skip_cache)
+            
+            # Parse the response string into a dictionary
+            if isinstance(response, str):
+                import json
+                response = json.loads(response)
+            
+            # Extract the relevant information
+            source_info = response.get("source", {})
+            target_info = response.get("target", {})
+            
+            # Transform to match expected format
+            result = {
+                "source_timezone": source_info.get("timezone"),
+                "source_time": time,
+                "target_timezone": target_info.get("timezone"),
+                "target_time": target_info.get("datetime").split("T")[1].split("+")[0] if target_info.get("datetime") else "",
+                "time_difference": response.get("time_difference", ""),
+            }
+            
+            return result
         except Exception as e:
             logger.error(f"Error converting time: {str(e)}")
             raise MCPError(
@@ -127,116 +168,6 @@ class TimeMCPClient(FastMCPClient):
                 },
             ) from e
 
-    @redis_cache.cached("time_travel", 3600)  # 1 hour
-    async def calculate_travel_time(
-        self,
-        departure_timezone: str,
-        departure_time: str,
-        arrival_timezone: str,
-        arrival_time: str,
-        skip_cache: bool = False,
-    ) -> Dict[str, Any]:
-        """Calculate travel time between departure and arrival points.
-
-        Args:
-            departure_timezone: Departure IANA timezone name
-            departure_time: Departure time in 24-hour format (HH:MM)
-            arrival_timezone: Arrival IANA timezone name
-            arrival_time: Arrival time in 24-hour format (HH:MM)
-            skip_cache: Whether to skip the cache
-
-        Returns:
-            Dictionary with travel time information
-
-        Raises:
-            MCPError: If the MCP request fails
-        """
-        try:
-            params = {
-                "departure_timezone": departure_timezone,
-                "departure_time": departure_time,
-                "arrival_timezone": arrival_timezone,
-                "arrival_time": arrival_time,
-            }
-            return await self.call_tool(
-                "calculate_travel_time", params, skip_cache=skip_cache
-            )
-        except Exception as e:
-            logger.error(f"Error calculating travel time: {str(e)}")
-            raise MCPError(
-                message=f"Failed to calculate travel time: {str(e)}",
-                server=self.server_name,
-                tool="calculate_travel_time",
-                params=params,
-            ) from e
-
-    @redis_cache.cached(
-        "time_timezones", 86400
-    )  # 24 hours (timezones don't change often)
-    async def list_timezones(self, skip_cache: bool = False) -> Dict[str, Any]:
-        """List all available IANA timezones.
-
-        Args:
-            skip_cache: Whether to skip the cache
-
-        Returns:
-            Dictionary with list of timezones
-
-        Raises:
-            MCPError: If the MCP request fails
-        """
-        try:
-            return await self.call_tool("list_timezones", {}, skip_cache=skip_cache)
-        except Exception as e:
-            logger.error(f"Error listing timezones: {str(e)}")
-            raise MCPError(
-                message=f"Failed to list timezones: {str(e)}",
-                server=self.server_name,
-                tool="list_timezones",
-                params={},
-            ) from e
-
-    @redis_cache.cached("time_format", 3600)  # 1 hour
-    async def format_date(
-        self,
-        date: str,
-        timezone: str,
-        format: str = "full",
-        locale: str = "en-US",
-        skip_cache: bool = False,
-    ) -> Dict[str, Any]:
-        """Format a date according to locale and timezone.
-
-        Args:
-            date: Date string in ISO format (YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS)
-            timezone: IANA timezone name
-            format: Format type (full, short, date_only, time_only, iso)
-            locale: Locale code (e.g., 'en-US', 'fr-FR')
-            skip_cache: Whether to skip the cache
-
-        Returns:
-            Dictionary with formatted date information
-
-        Raises:
-            MCPError: If the MCP request fails
-        """
-        try:
-            params = {
-                "date": date,
-                "timezone": timezone,
-                "format": format,
-                "locale": locale,
-            }
-            return await self.call_tool("format_date", params, skip_cache=skip_cache)
-        except Exception as e:
-            logger.error(f"Error formatting date: {str(e)}")
-            raise MCPError(
-                message=f"Failed to format date: {str(e)}",
-                server=self.server_name,
-                tool="format_date",
-                params=params,
-            ) from e
-
 
 class TimeService:
     """High-level service for time-related operations in TripSage."""
@@ -247,7 +178,7 @@ class TimeService:
         Args:
             client: TimeMCPClient instance. If not provided, uses the default client.
         """
-        self.client = client or get_client()
+        self.client = client or time_client
         logger.info("Initialized Time Service")
 
     async def get_local_time(self, location: str) -> Dict[str, Any]:
@@ -282,6 +213,7 @@ class TimeService:
             "shanghai": "Asia/Shanghai",
             "toronto": "America/Toronto",
             "vancouver": "America/Vancouver",
+            "sydney": "Australia/Sydney",
             "melbourne": "Australia/Melbourne",
             "auckland": "Pacific/Auckland",
             "rio de janeiro": "America/Sao_Paulo",
@@ -326,25 +258,36 @@ class TimeService:
         try:
             # Get current date in departure timezone for context
             departure_date_info = await self.client.get_current_time(departure_timezone)
-            departure_date = departure_date_info["current_time"].split()[0]
+            departure_date = departure_date_info["current_date"]
 
             # Parse departure time
             hours, minutes = map(int, departure_time.split(":"))
 
             # Create datetime object for departure
-            departure_dt = datetime.datetime.strptime(
+            departure_dt = datetime.strptime(
                 f"{departure_date} {departure_time}", "%Y-%m-%d %H:%M"
             )
 
             # Add flight duration
             duration_hours = int(flight_duration_hours)
             duration_minutes = int((flight_duration_hours - duration_hours) * 60)
-            arrival_dt = departure_dt + datetime.timedelta(
-                hours=duration_hours, minutes=duration_minutes
-            )
-
-            # Format for time conversion
-            arrival_time_in_departure_tz = arrival_dt.strftime("%H:%M")
+            
+            # Calculate arrival time in departure timezone
+            arrival_hours = hours + duration_hours
+            arrival_minutes = minutes + duration_minutes
+            
+            # Adjust for overflow
+            while arrival_minutes >= 60:
+                arrival_hours += 1
+                arrival_minutes -= 60
+                
+            arrival_day_offset = 0
+            while arrival_hours >= 24:
+                arrival_day_offset += 1
+                arrival_hours -= 24
+                
+            # Format arrival time
+            arrival_time_in_departure_tz = f"{arrival_hours:02d}:{arrival_minutes:02d}"
 
             # Convert to arrival timezone
             conversion = await self.client.convert_time(
@@ -361,6 +304,7 @@ class TimeService:
                 "arrival_time_local": conversion["target_time"],
                 "arrival_timezone": arrival_timezone,
                 "time_difference": conversion["time_difference"],
+                "day_offset": arrival_day_offset
             }
         except Exception as e:
             logger.error(f"Error calculating flight arrival: {str(e)}")
@@ -480,13 +424,17 @@ class TimeService:
             return []
 
 
+# Initialize global client instance
+time_client = TimeMCPClient()
+
+
 def get_client() -> TimeMCPClient:
     """Get a Time MCP Client instance.
 
     Returns:
         TimeMCPClient instance
     """
-    return TimeMCPClient()
+    return time_client
 
 
 def get_service() -> TimeService:
@@ -495,4 +443,4 @@ def get_service() -> TimeService:
     Returns:
         TimeService instance
     """
-    return TimeService(get_client())
+    return TimeService(time_client)
