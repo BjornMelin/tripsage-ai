@@ -5,69 +5,40 @@ This module provides a client for interacting with the Flight MCP Server,
 which offers flight search, comparison, booking, and price tracking.
 """
 
-from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Generic, List, Optional, TypeVar, cast
 
-from pydantic import BaseModel, ConfigDict, field_validator, model_validator
+from pydantic import ValidationError
 
 from ...cache.redis_cache import redis_cache
 from ...utils.error_handling import MCPError
 from ...utils.logging import get_module_logger
 from ...utils.settings import settings
 from ..fastmcp import FastMCPClient
+from .models import (
+    AirportSearchParams,
+    AirportSearchResponse,
+    BookingResponse,
+    FlightPriceParams,
+    FlightPriceResponse,
+    FlightSearchParams,
+    FlightSearchResponse,
+    FlightSegment,
+    MultiCitySearchParams,
+    OfferDetailsParams,
+    OfferDetailsResponse,
+    OrderDetailsResponse,
+    PriceTrackingParams,
+    PriceTrackingResponse,
+)
 
 logger = get_module_logger(__name__)
 
-
-class FlightSearchParams(BaseModel):
-    """Parameters for flight search queries."""
-
-    origin: str
-    destination: str
-    departure_date: str
-    return_date: Optional[str] = None
-    adults: int = 1
-    children: int = 0
-    infants: int = 0
-    cabin_class: str = "economy"
-    max_stops: Optional[int] = None
-    max_price: Optional[float] = None
-    preferred_airlines: Optional[List[str]] = None
-
-    model_config = ConfigDict(extra="forbid")
-
-    @field_validator("departure_date", "return_date")
-    @classmethod
-    def validate_date_format(cls, v):
-        """Validate that dates are in YYYY-MM-DD format."""
-        if v:
-            try:
-                datetime.strptime(v, "%Y-%m-%d")
-            except ValueError as e:
-                raise ValueError("Date must be in YYYY-MM-DD format") from e
-        return v
-
-    @field_validator("origin", "destination")
-    @classmethod
-    def validate_airport_code(cls, v: str) -> str:
-        """Validate and standardize airport codes."""
-        if len(v) != 3:
-            raise ValueError("Airport code must be 3 characters (IATA code)")
-        return v.upper()
-
-    @model_validator(mode="after")
-    def validate_return_date_after_departure(self) -> "FlightSearchParams":
-        """Validate that return date is after departure date if provided."""
-        if (
-            self.return_date
-            and self.departure_date
-            and self.return_date < self.departure_date
-        ):
-            raise ValueError("Return date must be after departure date")
-        return self
+# Define generic types for parameter and response models
+P = TypeVar("P")
+R = TypeVar("R")
 
 
-class FlightsMCPClient(FastMCPClient):
+class FlightsMCPClient(FastMCPClient, Generic[P, R]):
     """Client for the Flights MCP Server."""
 
     def __init__(
@@ -100,6 +71,74 @@ class FlightsMCPClient(FastMCPClient):
             cache_ttl=1800,  # 30 minutes default cache TTL for flight data
         )
 
+    async def _call_validate_tool(
+        self,
+        tool_name: str,
+        params: P,
+        response_model: type[R],
+        skip_cache: bool = False,
+        cache_key: Optional[str] = None,
+        cache_ttl: Optional[int] = None,
+    ) -> R:
+        """Call a tool and validate both parameters and response.
+
+        Args:
+            tool_name: Name of the tool to call
+            params: Parameters for the tool (validated Pydantic model)
+            response_model: Response model to validate the response
+            skip_cache: Whether to skip the cache
+            cache_key: Custom cache key
+            cache_ttl: Custom cache TTL in seconds
+
+        Returns:
+            Validated response
+
+        Raises:
+            MCPError: If the request fails or validation fails
+        """
+        try:
+            # Convert parameters to dict using model_dump() for Pydantic v2
+            params_dict = (
+                params.model_dump(exclude_none=True)
+                if hasattr(params, "model_dump")
+                else params
+            )
+
+            # Call the tool
+            response = await self.call_tool(
+                tool_name,
+                params_dict,
+                skip_cache=skip_cache,
+                cache_key=cache_key,
+                cache_ttl=cache_ttl,
+            )
+
+            try:
+                # Validate response
+                validated_response = response_model.model_validate(response)
+                return validated_response
+            except ValidationError as e:
+                logger.warning(f"Response validation failed for {tool_name}: {str(e)}")
+                # Return the raw response if validation fails
+                # This is to ensure backward compatibility
+                return cast(R, response)
+        except ValidationError as e:
+            logger.error(f"Parameter validation failed for {tool_name}: {str(e)}")
+            raise MCPError(
+                message=f"Invalid parameters for {tool_name}: {str(e)}",
+                server=self.server_name,
+                tool=tool_name,
+                params=params,
+            ) from e
+        except Exception as e:
+            logger.error(f"Error calling {tool_name}: {str(e)}")
+            raise MCPError(
+                message=f"Failed to call {tool_name}: {str(e)}",
+                server=self.server_name,
+                tool=tool_name,
+                params=params,
+            ) from e
+
     @redis_cache.cached("flight_search", 1800)  # 30 minutes cache
     async def search_flights(
         self,
@@ -115,7 +154,7 @@ class FlightsMCPClient(FastMCPClient):
         max_price: Optional[float] = None,
         preferred_airlines: Optional[List[str]] = None,
         skip_cache: bool = False,
-    ) -> Dict[str, Any]:
+    ) -> FlightSearchResponse:
         """Search for flights matching the specified criteria.
 
         Args:
@@ -133,10 +172,10 @@ class FlightsMCPClient(FastMCPClient):
             skip_cache: Whether to skip the cache
 
         Returns:
-            Dictionary with flight search results
+            FlightSearchResponse with flight search results
 
         Raises:
-            MCPError: If the MCP request fails
+            MCPError: If the MCP request fails or validation fails
         """
         try:
             # Validate parameters
@@ -154,12 +193,26 @@ class FlightsMCPClient(FastMCPClient):
                 preferred_airlines=preferred_airlines,
             )
 
-            # Convert to API parameters
-            api_params = params.model_dump(exclude_none=True)
-
-            return await self.call_tool(
-                "search_flights", api_params, skip_cache=skip_cache
+            response = await self._call_validate_tool(
+                "search_flights",
+                params,
+                FlightSearchResponse,
+                skip_cache=skip_cache,
             )
+
+            return response
+        except ValidationError as e:
+            logger.error(f"Validation error in search_flights: {str(e)}")
+            raise MCPError(
+                message=f"Invalid parameters for flight search: {str(e)}",
+                server=self.server_name,
+                tool="search_flights",
+                params={
+                    "origin": origin,
+                    "destination": destination,
+                    "departure_date": departure_date,
+                },
+            ) from e
         except Exception as e:
             # Check for rate limiting or API key issues
             error_message = str(e).lower()
@@ -222,7 +275,7 @@ class FlightsMCPClient(FastMCPClient):
         infants: int = 0,
         cabin_class: str = "economy",
         skip_cache: bool = False,
-    ) -> Dict[str, Any]:
+    ) -> FlightSearchResponse:
         """Search for multi-city flight itineraries.
 
         Args:
@@ -234,41 +287,42 @@ class FlightsMCPClient(FastMCPClient):
             skip_cache: Whether to skip the cache
 
         Returns:
-            Dictionary with multi-city flight search results
+            FlightSearchResponse with multi-city flight search results
 
         Raises:
-            MCPError: If the MCP request fails
+            MCPError: If the MCP request fails or validation fails
         """
         try:
-            # Validate segments
-            if not segments or len(segments) < 2:
-                raise ValueError(
-                    "At least two segments are required for multi-city search"
-                )
-
+            # Convert segments to FlightSegment objects
+            flight_segments = []
             for segment in segments:
-                if (
-                    "origin" not in segment
-                    or "destination" not in segment
-                    or "departure_date" not in segment
-                ):
-                    raise ValueError(
-                        "Each segment must include origin, destination, "
-                        "and departure_date"
-                    )
+                flight_segments.append(FlightSegment.model_validate(segment))
 
-            # Create params
-            params = {
-                "segments": segments,
-                "adults": adults,
-                "children": children,
-                "infants": infants,
-                "cabin_class": cabin_class,
-            }
-
-            return await self.call_tool(
-                "search_multi_city", params, skip_cache=skip_cache
+            # Validate parameters
+            params = MultiCitySearchParams(
+                segments=flight_segments,
+                adults=adults,
+                children=children,
+                infants=infants,
+                cabin_class=cabin_class,
             )
+
+            response = await self._call_validate_tool(
+                "search_multi_city",
+                params,
+                FlightSearchResponse,
+                skip_cache=skip_cache,
+            )
+
+            return response
+        except ValidationError as e:
+            logger.error(f"Validation error in search_multi_city: {str(e)}")
+            raise MCPError(
+                message=f"Invalid parameters for multi-city search: {str(e)}",
+                server=self.server_name,
+                tool="search_multi_city",
+                params={"segments": segments},
+            ) from e
         except Exception as e:
             logger.error(f"Error searching multi-city flights: {str(e)}")
             raise MCPError(
@@ -280,7 +334,7 @@ class FlightsMCPClient(FastMCPClient):
 
     async def get_airports(
         self, code: Optional[str] = None, search_term: Optional[str] = None
-    ) -> Dict[str, Any]:
+    ) -> AirportSearchResponse:
         """Get airport information by IATA code or search term.
 
         Args:
@@ -288,22 +342,33 @@ class FlightsMCPClient(FastMCPClient):
             search_term: Airport name or city to search for
 
         Returns:
-            Dictionary with airport information
+            AirportSearchResponse with airport information
 
         Raises:
-            MCPError: If the MCP request fails
+            MCPError: If the MCP request fails or validation fails
         """
         try:
-            if not code and not search_term:
-                raise ValueError("Either code or search_term must be provided")
+            # Validate parameters
+            params = AirportSearchParams(
+                code=code,
+                search_term=search_term,
+            )
 
-            params = {}
-            if code:
-                params["code"] = code.upper()
-            if search_term:
-                params["search_term"] = search_term
+            response = await self._call_validate_tool(
+                "get_airports",
+                params,
+                AirportSearchResponse,
+            )
 
-            return await self.call_tool("get_airports", params)
+            return response
+        except ValidationError as e:
+            logger.error(f"Validation error in get_airports: {str(e)}")
+            raise MCPError(
+                message=f"Invalid parameters for airport search: {str(e)}",
+                server=self.server_name,
+                tool="get_airports",
+                params={"code": code, "search_term": search_term},
+            ) from e
         except Exception as e:
             logger.error(f"Error getting airport information: {str(e)}")
             raise MCPError(
@@ -313,20 +378,39 @@ class FlightsMCPClient(FastMCPClient):
                 params={"code": code, "search_term": search_term},
             ) from e
 
-    async def get_offer_details(self, offer_id: str) -> Dict[str, Any]:
+    async def get_offer_details(self, offer_id: str) -> OfferDetailsResponse:
         """Get detailed information for a specific flight offer.
 
         Args:
             offer_id: Flight offer ID
 
         Returns:
-            Dictionary with flight offer details
+            OfferDetailsResponse with flight offer details
 
         Raises:
-            MCPError: If the MCP request fails
+            MCPError: If the MCP request fails or validation fails
         """
         try:
-            return await self.call_tool("get_offer_details", {"offer_id": offer_id})
+            # Validate parameters
+            params = OfferDetailsParams(
+                offer_id=offer_id,
+            )
+
+            response = await self._call_validate_tool(
+                "get_offer_details",
+                params,
+                OfferDetailsResponse,
+            )
+
+            return response
+        except ValidationError as e:
+            logger.error(f"Validation error in get_offer_details: {str(e)}")
+            raise MCPError(
+                message=f"Invalid parameters for offer details: {str(e)}",
+                server=self.server_name,
+                tool="get_offer_details",
+                params={"offer_id": offer_id},
+            ) from e
         except Exception as e:
             logger.error(f"Error getting offer details: {str(e)}")
             raise MCPError(
@@ -344,7 +428,7 @@ class FlightsMCPClient(FastMCPClient):
         departure_date: str,
         return_date: Optional[str] = None,
         skip_cache: bool = False,
-    ) -> Dict[str, Any]:
+    ) -> FlightPriceResponse:
         """Get current and historical prices for a flight route.
 
         Args:
@@ -355,31 +439,51 @@ class FlightsMCPClient(FastMCPClient):
             skip_cache: Whether to skip the cache
 
         Returns:
-            Dictionary with price history information
+            FlightPriceResponse with price history information
 
         Raises:
-            MCPError: If the MCP request fails
+            MCPError: If the MCP request fails or validation fails
         """
         try:
-            params = {
-                "origin": origin.upper(),
-                "destination": destination.upper(),
-                "departure_date": departure_date,
-            }
-
-            if return_date:
-                params["return_date"] = return_date
-
-            return await self.call_tool(
-                "get_flight_prices", params, skip_cache=skip_cache
+            # Validate parameters
+            params = FlightPriceParams(
+                origin=origin,
+                destination=destination,
+                departure_date=departure_date,
+                return_date=return_date,
             )
+
+            response = await self._call_validate_tool(
+                "get_flight_prices",
+                params,
+                FlightPriceResponse,
+                skip_cache=skip_cache,
+            )
+
+            return response
+        except ValidationError as e:
+            logger.error(f"Validation error in get_flight_prices: {str(e)}")
+            raise MCPError(
+                message=f"Invalid parameters for flight prices: {str(e)}",
+                server=self.server_name,
+                tool="get_flight_prices",
+                params={
+                    "origin": origin,
+                    "destination": destination,
+                    "departure_date": departure_date,
+                },
+            ) from e
         except Exception as e:
             logger.error(f"Error getting flight prices: {str(e)}")
             raise MCPError(
                 message=f"Failed to get flight prices: {str(e)}",
                 server=self.server_name,
                 tool="get_flight_prices",
-                params=params,
+                params={
+                    "origin": origin,
+                    "destination": destination,
+                    "departure_date": departure_date,
+                },
             ) from e
 
     async def track_prices(
@@ -391,7 +495,7 @@ class FlightsMCPClient(FastMCPClient):
         notification_email: str = None,
         price_threshold: Optional[float] = None,
         frequency: str = "daily",
-    ) -> Dict[str, Any]:
+    ) -> PriceTrackingResponse:
         """Track price changes for a flight route.
 
         Args:
@@ -404,34 +508,53 @@ class FlightsMCPClient(FastMCPClient):
             frequency: How often to check for price changes (hourly, daily, weekly)
 
         Returns:
-            Dictionary with tracking confirmation
+            PriceTrackingResponse with tracking confirmation
 
         Raises:
-            MCPError: If the MCP request fails
+            MCPError: If the MCP request fails or validation fails
         """
         try:
-            params = {
-                "origin": origin.upper(),
-                "destination": destination.upper(),
-                "departure_date": departure_date,
-                "email": notification_email,
-                "frequency": frequency,
-            }
+            # Validate parameters
+            params = PriceTrackingParams(
+                origin=origin,
+                destination=destination,
+                departure_date=departure_date,
+                return_date=return_date,
+                email=notification_email,
+                threshold_percentage=price_threshold,
+                frequency=frequency,
+            )
 
-            if return_date:
-                params["return_date"] = return_date
+            response = await self._call_validate_tool(
+                "track_prices",
+                params,
+                PriceTrackingResponse,
+            )
 
-            if price_threshold:
-                params["threshold_percentage"] = price_threshold
-
-            return await self.call_tool("track_prices", params)
+            return response
+        except ValidationError as e:
+            logger.error(f"Validation error in track_prices: {str(e)}")
+            raise MCPError(
+                message=f"Invalid parameters for price tracking: {str(e)}",
+                server=self.server_name,
+                tool="track_prices",
+                params={
+                    "origin": origin,
+                    "destination": destination,
+                    "email": notification_email,
+                },
+            ) from e
         except Exception as e:
             logger.error(f"Error tracking flight prices: {str(e)}")
             raise MCPError(
                 message=f"Failed to track flight prices: {str(e)}",
                 server=self.server_name,
                 tool="track_prices",
-                params=params,
+                params={
+                    "origin": origin,
+                    "destination": destination,
+                    "email": notification_email,
+                },
             ) from e
 
     async def create_order(
@@ -440,7 +563,7 @@ class FlightsMCPClient(FastMCPClient):
         passengers: List[Dict[str, Any]],
         payment_details: Dict[str, Any],
         contact_details: Dict[str, Any],
-    ) -> Dict[str, Any]:
+    ) -> BookingResponse:
         """Create a flight booking order.
 
         Note: This operation is not supported by the ravinahp/flights-mcp server,
@@ -454,7 +577,7 @@ class FlightsMCPClient(FastMCPClient):
             contact_details: Contact information
 
         Returns:
-            Dictionary with error message (operation not supported)
+            BookingResponse with error message (operation not supported)
 
         Raises:
             MCPError: Always raised since operation is not supported
@@ -477,7 +600,7 @@ class FlightsMCPClient(FastMCPClient):
             status_code=501,  # Not Implemented
         )
 
-    async def get_order(self, order_id: str) -> Dict[str, Any]:
+    async def get_order(self, order_id: str) -> OrderDetailsResponse:
         """Get details of an existing flight booking order.
 
         Note: This operation is not supported by the ravinahp/flights-mcp server,
@@ -488,7 +611,7 @@ class FlightsMCPClient(FastMCPClient):
             order_id: Order ID to retrieve
 
         Returns:
-            Dictionary with error message (operation not supported)
+            OrderDetailsResponse with error message (operation not supported)
 
         Raises:
             MCPError: Always raised since operation is not supported
@@ -777,16 +900,16 @@ class FlightService:
             if len(origin) != 3:
                 # Search for origin airport
                 airports = await self.client.get_airports(search_term=origin)
-                if airports.get("airports") and len(airports["airports"]) > 0:
-                    origin_code = airports["airports"][0]["iata_code"]
+                if airports.airports and len(airports.airports) > 0:
+                    origin_code = airports.airports[0].iata_code
                 else:
                     raise ValueError(f"Could not find airport for {origin}")
 
             if len(destination) != 3:
                 # Search for destination airport
                 airports = await self.client.get_airports(search_term=destination)
-                if airports.get("airports") and len(airports["airports"]) > 0:
-                    destination_code = airports["airports"][0]["iata_code"]
+                if airports.airports and len(airports.airports) > 0:
+                    destination_code = airports.airports[0].iata_code
                 else:
                     raise ValueError(f"Could not find airport for {destination}")
 
@@ -801,8 +924,10 @@ class FlightService:
             )
 
             # Sort results by best value (combination of price and duration)
-            if "offers" in results and results["offers"]:
-                for offer in results["offers"]:
+            if results.offers:
+                # Convert to dict for easier manipulation
+                results_dict = results.model_dump()
+                for offer in results_dict["offers"]:
                     # Calculate a value score (lower is better)
                     price = offer.get("total_amount", 0)
                     durations = []
@@ -823,24 +948,35 @@ class FlightService:
                     offer["_value_score"] = price + (avg_duration * 0.5) + (stops * 100)
 
                 # Sort by value score
-                results["offers"].sort(
+                results_dict["offers"].sort(
                     key=lambda x: x.get("_value_score", float("inf"))
                 )
 
                 # Remove internal score
-                for offer in results["offers"]:
+                for offer in results_dict["offers"]:
                     if "_value_score" in offer:
                         del offer["_value_score"]
 
-            return {
-                "origin": {"code": origin_code, "input": origin},
-                "destination": {"code": destination_code, "input": destination},
-                "departure_date": departure_date,
-                "return_date": return_date,
-                "adults": adults,
-                "max_price": max_price,
-                "results": results,
-            }
+                return {
+                    "origin": {"code": origin_code, "input": origin},
+                    "destination": {"code": destination_code, "input": destination},
+                    "departure_date": departure_date,
+                    "return_date": return_date,
+                    "adults": adults,
+                    "max_price": max_price,
+                    "results": results_dict,
+                }
+            else:
+                # No offers found
+                return {
+                    "origin": {"code": origin_code, "input": origin},
+                    "destination": {"code": destination_code, "input": destination},
+                    "departure_date": departure_date,
+                    "return_date": return_date,
+                    "adults": adults,
+                    "max_price": max_price,
+                    "results": results.model_dump(),
+                }
 
         except Exception as e:
             logger.error(f"Error searching best flights: {str(e)}")
@@ -887,16 +1023,13 @@ class FlightService:
 
             # Extract lowest current price
             lowest_price = None
-            if "offers" in current_prices and current_prices["offers"]:
-                prices = [
-                    o.get("total_amount", float("inf"))
-                    for o in current_prices["offers"]
-                ]
+            if current_prices.offers:
+                prices = [o.total_amount for o in current_prices.offers]
                 lowest_price = min(prices) if prices else None
 
             # Calculate insights from history
-            if "prices" in price_history and price_history["prices"]:
-                prices = price_history["prices"]
+            if price_history.prices:
+                prices = price_history.prices
                 avg_price = sum(prices) / len(prices)
                 min_price = min(prices)
                 max_price = max(prices)
@@ -946,7 +1079,7 @@ class FlightService:
                         ),
                     },
                     "recommendation": recommendation,
-                    "price_history": price_history,
+                    "price_history": price_history.model_dump(),
                 }
             else:
                 return {

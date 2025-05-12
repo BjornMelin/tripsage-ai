@@ -42,6 +42,12 @@ This document provides a complete implementation to-do list for the TripSage AI 
   - Reference: [CLAUDE.md](../../CLAUDE.md)
   - Status: Completed with custom exception hierarchy and consistent error handling
 
+- [x] **UTIL-003**: Implement centralized configuration with Pydantic
+
+  - Dependencies: ENV-001
+  - Reference: [docs/reference/centralized_settings.md](../reference/centralized_settings.md)
+  - Status: Completed with AppSettings class using Pydantic, environment variable loading, and .env support (Issue #15)
+
 - [x] **CACHE-001**: Set up Redis caching infrastructure
   - Dependencies: ENV-001
   - Reference: [docs/optimization/search_and_caching_strategy.md](../optimization/search_and_caching_strategy.md)
@@ -99,7 +105,7 @@ This document provides a complete implementation to-do list for the TripSage AI 
 
   - Dependencies: MCP-001
   - Reference: [docs/integrations/web_crawling.md](../integrations/web_crawling.md), [docs/integrations/webcrawl_mcp_implementation.md](../integrations/webcrawl_mcp_implementation.md)
-  - Status: Completed with Crawl4AI source implementation and configuration for self-hosted deployment
+  - Status: Completed with Crawl4AI source implementation and configuration for self-hosted deployment (Issue #19)
 
 - [x] **WEBCRAWL-002**: Create Web Crawling MCP Server structure
 
@@ -111,7 +117,7 @@ This document provides a complete implementation to-do list for the TripSage AI 
 
   - Dependencies: WEBCRAWL-002
   - Reference: [docs/integrations/webcrawl_mcp_implementation.md](../integrations/webcrawl_mcp_implementation.md)
-  - Status: Completed with Crawl4AISource implementation and source interface definition
+  - Status: Completed with intelligent source selection between Crawl4AI, Firecrawl, and Playwright
 
 - [x] **WEBCRAWL-004**: Create page content extraction functionality
 
@@ -120,9 +126,15 @@ This document provides a complete implementation to-do list for the TripSage AI 
   - Status: Completed with extract_page_content handler in WebCrawlMCPServer
 
 - [x] **WEBCRAWL-005**: Implement destination research capabilities
+
   - Dependencies: WEBCRAWL-004
   - Reference: [docs/integrations/webcrawl_mcp_implementation.md](../integrations/webcrawl_mcp_implementation.md)
   - Status: Completed with search_destination_info and crawl_travel_blog handlers in WebCrawlMCPServer
+
+- [x] **WEBCRAWL-009**: Integrate Firecrawl API for advanced web crawling
+  - Dependencies: WEBCRAWL-002, WEBCRAWL-003
+  - Reference: [docs/integrations/webcrawl_mcp_implementation.md](../integrations/webcrawl_mcp_implementation.md)
+  - Status: Completed with Firecrawl API integration for advanced content extraction (Issue #19)
 
 ### Browser Automation MCP Server
 
@@ -163,17 +175,17 @@ This document provides a complete implementation to-do list for the TripSage AI 
 
 ### Flights MCP Server
 
-- [x] **FLIGHTS-001**: Create Flights MCP Server structure
+- [x] **FLIGHTS-001**: Integrate ravinahp/flights-mcp server for Duffel API access
 
   - Dependencies: MCP-001
   - Reference: [docs/integrations/flights_mcp_implementation.md](../integrations/flights_mcp_implementation.md)
-  - Status: Completed with FastMCP 2.0 integration, Duffel API integration, and caching implementation
+  - Status: Completed with successful integration with ravinahp/flights-mcp server (Issue #16)
 
-- [x] **FLIGHTS-002**: Implement Duffel API client
+- [x] **FLIGHTS-002**: Create client implementation for flights MCP
 
   - Dependencies: FLIGHTS-001
   - Reference: [docs/integrations/flights_mcp_implementation.md](../integrations/flights_mcp_implementation.md)
-  - Status: Completed with comprehensive API client implementation and error handling
+  - Status: Completed with comprehensive client implementation and proper error handling
 
 - [x] **FLIGHTS-003**: Create flight search functionality
 
@@ -188,31 +200,56 @@ This document provides a complete implementation to-do list for the TripSage AI 
 
 ### Medium Priority
 
-### Time MCP Server
+### Time MCP Integration
 
-- [x] **TIME-001**: Create Time MCP Server structure with FastMCP 2.0
+- [x] **TIME-001**: Integrate with official Time MCP server
 
   - Dependencies: MCP-001
   - Reference: [docs/integrations/time_integration.md](../integrations/time_integration.md)
-  - Status: Completed with FastMCP 2.0 integration and timezone manipulation tools
+  - Status: Completed with MCP client implementation for official Time MCP server
 
-- [x] **TIME-002**: Implement TimeZoneDatabase API client
+- [x] **TIME-002**: Create Time MCP client implementation
 
   - Dependencies: TIME-001
   - Reference: [docs/integrations/time_integration.md](../integrations/time_integration.md)
-  - Status: Completed with Pydantic models and comprehensive timezone tools
+  - Status: Completed with comprehensive client implementation for official Time MCP
 
-- [x] **TIME-003**: Create time conversion and calculation functionality
+- [x] **TIME-003**: Develop agent function tools for time operations
 
   - Dependencies: TIME-002
   - Reference: [docs/integrations/time_integration.md](../integrations/time_integration.md)
-  - Status: Completed with travel-specific time conversion and calculation tools
+  - Status: Completed with travel-specific time conversion, calculation, and timezone tools
 
-- [x] **TIME-004**: Implement travel-specific time utilities
+- [x] **TIME-004**: Create deployment script for Time MCP server
 
-  - Dependencies: TIME-003
+  - Dependencies: TIME-001
   - Reference: [docs/integrations/time_integration.md](../integrations/time_integration.md)
-  - Status: Completed with tools for calculating travel time and formatting dates
+  - Status: Completed with script for downloading and running the official Time MCP server
+
+- [x] **TIME-005**: Create comprehensive tests for Time MCP client
+
+  - Dependencies: TIME-002, TIME-003
+  - Reference: [docs/integrations/time_integration.md](../integrations/time_integration.md)
+  - Status: Completed with unit tests for Time MCP client functionality
+
+### Google Maps MCP Server
+
+- [x] **GOOGLEMAPS-001**: Integrate Google Maps MCP server
+
+  - Dependencies: MCP-001
+  - Reference: [docs/integrations/google_maps_integration.md](../integrations/google_maps_integration.md)
+  - Status: Completed with integration of official Google Maps MCP server (Issue #18)
+
+- [x] **GOOGLEMAPS-002**: Create client implementation for Google Maps MCP
+
+  - Dependencies: GOOGLEMAPS-001
+  - Reference: [googlemaps-integration-verification.md](../../googlemaps-integration-verification.md)
+  - Status: Completed with client implementation for geocoding, routing, and place details
+
+- [x] **GOOGLEMAPS-003**: Integrate Google Maps data with Memory MCP
+  - Dependencies: GOOGLEMAPS-002, MEM-001
+  - Reference: [docs/integrations/google_maps_integration.md](../integrations/google_maps_integration.md)
+  - Status: Completed with integration of location data into Neo4j knowledge graph
 
 ### Accommodation MCP Server
 
@@ -220,24 +257,24 @@ This document provides a complete implementation to-do list for the TripSage AI 
 
   - Dependencies: MCP-001
   - Reference: [docs/integrations/accommodations_mcp_implementation.md](../integrations/accommodations_mcp_implementation.md)
-  - Status: Completed with FastMCP 2.0 integration, Airbnb and Booking.com providers, and unified search interface
+  - Status: Completed with FastMCP 2.0 integration, Airbnb providers, and factory pattern (Issue #17)
 
-- [x] **ACCOM-002**: Implement AirBnB API integration
+- [x] **ACCOM-002**: Implement OpenBnB Airbnb MCP integration
 
   - Dependencies: ACCOM-001
   - Reference: [docs/integrations/airbnb_integration.md](../integrations/airbnb_integration.md)
-  - Status: Completed with OpenBnB MCP server integration and data transformation
+  - Status: Completed with OpenBnB Airbnb MCP server integration and data transformation
 
-- [x] **ACCOM-003**: Create Booking.com integration via Apify
+- [x] **ACCOM-003**: Implement dual storage for accommodation data
 
-  - Dependencies: ACCOM-001
+  - Dependencies: ACCOM-001, DB-001, MEM-001
   - Reference: [docs/integrations/accommodations_mcp_implementation.md](../integrations/accommodations_mcp_implementation.md)
-  - Status: Completed with Apify scraper integration and Booking.com provider implementation
+  - Status: Completed with dual storage in both Supabase and Neo4j Knowledge Graph
 
-- [x] **ACCOM-004**: Implement unified accommodation search
-  - Dependencies: ACCOM-002, ACCOM-003
+- [x] **ACCOM-004**: Implement factory pattern for accommodation sources
+  - Dependencies: ACCOM-002
   - Reference: [docs/integrations/accommodations_mcp_implementation.md](../integrations/accommodations_mcp_implementation.md)
-  - Status: Completed with unified search interface, provider selection strategy, and result normalization
+  - Status: Completed with factory pattern to support future accommodation sources
 
 ### Calendar MCP Server
 
@@ -266,11 +303,11 @@ This document provides a complete implementation to-do list for the TripSage AI 
 
 ### Memory MCP Server
 
-- [x] **MEM-001**: Create Memory MCP Server structure
+- [x] **MEM-001**: Integrate Neo4j Memory MCP and client implementation
 
   - Dependencies: MCP-001, DB-002
   - Reference: [docs/integrations/memory_integration.md](../integrations/memory_integration.md)
-  - Status: Completed with FastMCP 2.0 integration and Neo4j client implementation
+  - Status: Completed with integration of official Neo4j Memory MCP (Issue #20)
 
 - [x] **MEM-002**: Implement entity creation and management
 
@@ -285,9 +322,15 @@ This document provides a complete implementation to-do list for the TripSage AI 
   - Status: Completed with relationship creation, query, and deletion capabilities
 
 - [x] **MEM-004**: Implement cross-session memory persistence
+
   - Dependencies: MEM-002, MEM-003
   - Reference: [docs/integrations/memory_integration.md](../integrations/memory_integration.md)
   - Status: Completed with session start/end tracking and user preference persistence
+
+- [x] **MEM-006**: Implement dual storage strategy
+  - Dependencies: MEM-001, DB-001
+  - Reference: [docs/integrations/memory_integration.md](../integrations/memory_integration.md)
+  - Status: Completed with dual storage for Supabase (structured data) and Neo4j (relationships)
 
 ## Agent Development
 
@@ -311,11 +354,11 @@ This document provides a complete implementation to-do list for the TripSage AI 
   - Reference: [docs/optimization/agent_optimization.md](../optimization/agent_optimization.md)
   - Status: Completed with \_register_mcp_client_tools methods in BaseAgent and specific implementations
 
-- [ ] **TRAVELAGENT-001**: Implement Travel Planning Agent
+- [ ] **TRAVELAGENT-001**: Implement Travel Planning Agent using OpenAI Agents SDK
 
-  - Dependencies: AGENT-003, WEATHER-001, WEBCRAWL-002, FLIGHTS-001
+  - Dependencies: AGENT-003
   - Reference: [docs/implementation/travel_agent_implementation.md](../implementation/travel_agent_implementation.md)
-  - Status: Implementation guide completed. Actual implementation pending.
+  - Status: Pending - This task is now part of issue #28 (Refactor Agent Orchestration using OpenAI Agents SDK)
 
 - [x] **TRAVELAGENT-002**: Create flight search and booking capabilities
 
@@ -323,11 +366,11 @@ This document provides a complete implementation to-do list for the TripSage AI 
   - Reference: [docs/implementation/flight_search_booking_implementation.md](../implementation/flight_search_booking_implementation.md)
   - Status: Completed with comprehensive flight search and booking capabilities, including enhanced search, multi-city search, price history tracking, and booking management.
 
-- [x] **TRAVELAGENT-003**: Implement WebSearchTool with travel-specific domain configuration
+- [ ] **TRAVELAGENT-003**: Implement WebSearchTool with travel-specific domain configuration
 
   - Dependencies: TRAVELAGENT-001
   - Reference: [docs/integrations/hybrid_search_strategy.md](../integrations/hybrid_search_strategy.md)
-  - Status: Completed with travel-focused domain allowlists and blocklists
+  - Status: Pending - This task is now part of issue #37 (Integrate OpenAI Agents SDK WebSearchTool)
 
 - [x] **TRAVELAGENT-004**: Create specialized search tools adapters to enhance WebSearchTool
 
@@ -335,10 +378,10 @@ This document provides a complete implementation to-do list for the TripSage AI 
   - Reference: [docs/integrations/hybrid_search_strategy.md](../integrations/hybrid_search_strategy.md)
   - Status: Completed with destination search and travel option comparison tools
 
-- [x] **TRAVELAGENT-007**: Implement caching strategy for search results
+- [ ] **TRAVELAGENT-007**: Implement advanced caching strategy for search results
   - Dependencies: TRAVELAGENT-003, TRAVELAGENT-004, CACHE-001
   - Reference: [docs/integrations/hybrid_search_strategy.md](../integrations/hybrid_search_strategy.md)
-  - Status: Completed with TTL-based caching for WebSearchTool results using Redis with content-aware TTL values, query-based cache key generation, and performance monitoring
+  - Status: Pending - This task is now part of issue #38 (Implement Advanced Redis-based Caching)
 
 ### Medium Priority
 
@@ -353,34 +396,40 @@ This document provides a complete implementation to-do list for the TripSage AI 
   - Reference: [docs/optimization/agent_optimization.md](../optimization/agent_optimization.md)
   - Status: Completed with comprehensive destination research capabilities including search, event tracking, and blog insights extraction, all with proper caching, knowledge graph integration, and fallbacks
 
-- [ ] **BUDGETAGENT-001**: Implement Budget Planning Agent
+- [ ] **BUDGETAGENT-001**: Implement Budget Planning Agent using OpenAI Agents SDK
 
   - Dependencies: AGENT-003, FLIGHTS-003, ACCOM-004
   - Reference: [docs/optimization/agent_optimization.md](../optimization/agent_optimization.md)
+  - Status: Pending - This task is part of issue #28 (Refactor Agent Orchestration using OpenAI Agents SDK)
 
 - [ ] **BUDGETAGENT-002**: Create budget optimization capabilities
 
   - Dependencies: BUDGETAGENT-001
   - Reference: [docs/optimization/agent_optimization.md](../optimization/agent_optimization.md)
+  - Status: Pending - Dependent on BUDGETAGENT-001
 
 - [ ] **BUDGETAGENT-003**: Implement price tracking and comparison
 
   - Dependencies: BUDGETAGENT-001, FLIGHTS-004
   - Reference: [docs/optimization/agent_optimization.md](../optimization/agent_optimization.md)
+  - Status: Pending - Dependent on BUDGETAGENT-001
 
-- [ ] **ITINAGENT-001**: Implement Itinerary Planning Agent
+- [ ] **ITINAGENT-001**: Implement Itinerary Planning Agent using OpenAI Agents SDK
 
   - Dependencies: AGENT-003, CAL-001
   - Reference: [docs/optimization/agent_optimization.md](../optimization/agent_optimization.md)
+  - Status: Pending - This task is part of issue #28 (Refactor Agent Orchestration using OpenAI Agents SDK)
 
 - [ ] **ITINAGENT-002**: Create itinerary generation capabilities
 
   - Dependencies: ITINAGENT-001
   - Reference: [docs/optimization/agent_optimization.md](../optimization/agent_optimization.md)
+  - Status: Pending - Dependent on ITINAGENT-001
 
 - [ ] **ITINAGENT-003**: Implement calendar integration
   - Dependencies: ITINAGENT-001, CAL-004
   - Reference: [docs/optimization/agent_optimization.md](../optimization/agent_optimization.md)
+  - Status: Pending - Dependent on issue #25 (Integrate Google Calendar MCP)
 
 ## API Implementation
 
@@ -390,20 +439,24 @@ This document provides a complete implementation to-do list for the TripSage AI 
 
   - Dependencies: ENV-001
   - Reference: [docs/api/api_integration.md](../api/api_integration.md)
+  - Status: Pending - Dependent on issue #28 (OpenAI Agents SDK integration)
 
 - [ ] **API-002**: Create authentication routes and middleware
 
   - Dependencies: API-001, SEC-001
   - Reference: [docs/api/api_integration.md](../api/api_integration.md)
+  - Status: Pending - Dependent on API-001 and SEC-001
 
 - [ ] **API-003**: Implement trip management routes
 
   - Dependencies: API-001, DB-001
   - Reference: [docs/api/api_integration.md](../api/api_integration.md)
+  - Status: Pending - Dependent on issue #23 (Supabase MCP integration)
 
 - [ ] **API-004**: Create user management routes
   - Dependencies: API-001, API-002, DB-001
   - Reference: [docs/api/api_integration.md](../api/api_integration.md)
+  - Status: Pending - Dependent on API-002
 
 ### Medium Priority
 
@@ -411,10 +464,12 @@ This document provides a complete implementation to-do list for the TripSage AI 
 
   - Dependencies: API-001, TRAVELAGENT-001, BUDGETAGENT-001, ITINAGENT-001
   - Reference: [docs/api/api_integration.md](../api/api_integration.md)
+  - Status: Pending - Dependent on issue #28 (Agent orchestration)
 
 - [ ] **API-006**: Create data visualization endpoints
   - Dependencies: API-001, API-003
   - Reference: [docs/api/api_integration.md](../api/api_integration.md)
+  - Status: Pending - Dependent on API-003
 
 ## Database Implementation
 
@@ -601,9 +656,9 @@ This document provides a complete implementation to-do list for the TripSage AI 
 
 ### Weeks 5-6: Context and Personalization
 
-| Week | Day | Tasks                                                                                              |
-| ---- | --- | -------------------------------------------------------------------------------------------------- |
-| 5    | 1-3 | ✅ TIME-001, ✅ TIME-002, ✅ TIME-003, ✅ TIME-004, ✅ CAL-001, ✅ CAL-002, ✅ CAL-003, ✅ CAL-004 |
+| Week | Day | Tasks                                                                                                                     |
+| ---- | --- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| 5    | 1-3 | ✅ TIME-001, ✅ TIME-002, ✅ TIME-003, ✅ TIME-004, ✅ TIME-005, ✅ CAL-001, ✅ CAL-002, ✅ CAL-003, ✅ CAL-004 |
 | 5    | 3-5 | ✅ MEM-001, ✅ MEM-002, ✅ MEM-003, ✅ MEM-004, ✅ MEM-005                                         |
 | 6    | 1-3 | BUDGETAGENT-001, BUDGETAGENT-002, BUDGETAGENT-003                                                  |
 | 6    | 3-5 | ITINAGENT-001, ITINAGENT-002, ITINAGENT-003                                                        |
@@ -617,23 +672,30 @@ This document provides a complete implementation to-do list for the TripSage AI 
 | 8    | 1-3 | TEST-005, DEPLOY-001, DEPLOY-002                          |
 | 8    | 3-5 | DEPLOY-003, DEPLOY-004, Final Testing and Review          |
 
-### Next Priority Tasks
+### Current Priority Tasks Based on Open Issues
 
-| Priority | Task ID         | Description                                             | Status    |
-| -------- | --------------- | ------------------------------------------------------- | --------- |
-| 1        | WEBCRAWL-006    | Implement intelligent source selection for WebCrawl MCP | Pending   |
-| 2        | WEBCRAWL-007    | Enhance WebSearchTool fallback with structured guidance | Pending   |
-| 3        | WEBCRAWL-008    | Implement result normalization across sources           | Pending   |
-| 4        | MEM-005         | Expand knowledge graph with additional entity types     | Completed |
-| 5        | CACHE-002       | Enhance caching with partial updates and cache warming  | Pending   |
-| 6        | TRAVELAGENT-005 | Implement accommodation search and comparison           | Pending   |
-| 7        | GOOGLEMAPS-001  | Implement Google Maps MCP server integration            | Completed |
-| 8        | BUDGETAGENT-001 | Implement Budget Planning Agent                         | Pending   |
-| 9        | ITINAGENT-001   | Implement Itinerary Planning Agent                      | Pending   |
+| Priority | Task ID         | Description                                                     | Issue | Status      |
+| -------- | --------------- | --------------------------------------------------------------- | ----- | ----------- |
+| 1        | AGENT-004       | Refactor Agent Orchestration using OpenAI Agents SDK            | #28   | In Progress |
+| 2        | CACHE-002       | Implement Advanced Redis-based Caching for Web Operations       | #38   | Pending     |
+| 3        | SEARCH-001      | Integrate OpenAI Agents SDK WebSearchTool for General Queries   | #37   | Pending     |
+| 4        | TEST-001        | Standardize and Expand Test Suite (Target 90%+ Coverage)        | #35   | Pending     |
+| 5        | CI-001          | Implement CI Pipeline with Linting, Type Checking, and Coverage | #36   | Pending     |
+| 6        | DB-PROD-001     | Integrate Supabase MCP Server for Production Database           | #23   | Pending     |
+| 7        | DB-DEV-001      | Integrate Neon DB MCP Server for Development Environments       | #22   | Pending     |
+| 8        | CAL-001         | Integrate Google Calendar MCP for Itinerary Scheduling          | #25   | Pending     |
+| 9        | WEBCRAWL-007    | Enhance WebSearchTool fallback with structured guidance         | #37   | Pending     |
+| 10       | WEBCRAWL-008    | Implement result normalization across sources                   | #38   | Pending     |
+| 11       | BUDGETAGENT-001 | Implement Budget Planning Agent                                 | #28   | Pending     |
+| 12       | ITINAGENT-001   | Implement Itinerary Planning Agent                              | #28   | Pending     |
+| 13       | VECTOR-001      | Integrate Qdrant for semantic search (Post-MVP)                 | #41, #2 | Post-MVP  |
 
 ### Post-MVP: Enhanced Capabilities
 
-| Priority | Tasks                              |
-| -------- | ---------------------------------- |
-| 1        | VECTOR-001, VECTOR-002, VECTOR-003 |
-| 2        | AI-001, AI-002                     |
+| Priority | Task ID     | Description                                     | Issue | Status    |
+| -------- | ----------- | ----------------------------------------------- | ----- | --------- |
+| 1        | VECTOR-001  | Set up Qdrant integration for vector search     | #41, #2 | Planned |
+| 2        | VECTOR-002  | Implement embedding generation pipeline         | #41, #2 | Planned |
+| 3        | VECTOR-003  | Create semantic search capabilities            | #41, #2 | Planned |
+| 4        | AI-001      | Implement personalized recommendations          | -     | Planned |
+| 5        | AI-002      | Create trip optimization algorithms             | -     | Planned |

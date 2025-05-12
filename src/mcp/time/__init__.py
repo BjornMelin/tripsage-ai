@@ -6,6 +6,17 @@ This module provides tools for handling time and timezone operations.
 
 from ...utils.logging import get_module_logger
 from .client import TimeMCPClient, TimeService, get_client, get_service
+from .models import (
+    ConvertTimeParams,
+    FlightArrivalResponse,
+    GetCurrentTimeParams,
+    ItineraryItem,
+    MeetingTimeResponse,
+    TimeConversionResponse,
+    TimeInfo,
+    TimeResponse,
+    TimezoneAwareItineraryItem,
+)
 from .server import TimeMCPServer, create_server
 
 logger = get_module_logger(__name__)
@@ -159,11 +170,23 @@ TIME_TOOL_SCHEMAS = [
 
 # For direct import
 __all__ = [
+    # Client and service classes
     "TimeMCPClient",
     "TimeService",
     "TimeMCPServer",
     "get_client",
     "get_service",
     "create_server",
+    # Schemas
     "TIME_TOOL_SCHEMAS",
+    # Models
+    "GetCurrentTimeParams",
+    "TimeResponse",
+    "ConvertTimeParams",
+    "TimeConversionResponse",
+    "ItineraryItem",
+    "TimezoneAwareItineraryItem",
+    "FlightArrivalResponse",
+    "MeetingTimeResponse",
+    "TimeInfo",
 ]

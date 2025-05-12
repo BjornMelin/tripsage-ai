@@ -6,19 +6,40 @@ for places, calculating routes, and retrieving map information.
 """
 
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, Generic, List, Optional, TypeVar, Union, cast
+
+from pydantic import ValidationError
 
 from ...cache.redis_cache import redis_cache
 from ...utils.config import get_config
 from ...utils.error_handling import MCPError, log_exception
 from ...utils.logging import get_module_logger
 from ..base_mcp_client import BaseMCPClient
+from .models import (
+    DirectionsParams,
+    DirectionsResponse,
+    DistanceMatrixParams,
+    DistanceMatrixResponse,
+    ElevationParams,
+    ElevationResponse,
+    GeocodeParams,
+    GeocodeResponse,
+    PlaceDetailsParams,
+    PlaceDetailsResponse,
+    PlaceSearchParams,
+    PlaceSearchResponse,
+    ReverseGeocodeParams,
+)
 
 logger = get_module_logger(__name__)
 config = get_config()
 
+# Define generic types for parameter and response models
+P = TypeVar("P")
+R = TypeVar("R")
 
-class GoogleMapsMCPClient(BaseMCPClient):
+
+class GoogleMapsMCPClient(BaseMCPClient, Generic[P, R]):
     """Client for the Google Maps MCP server."""
 
     def __init__(
@@ -53,6 +74,74 @@ class GoogleMapsMCPClient(BaseMCPClient):
 
         logger.debug("Initialized Google Maps MCP client for %s", endpoint)
 
+    async def _call_validate_tool(
+        self,
+        tool_name: str,
+        params: P,
+        response_model: type[R],
+        skip_cache: bool = False,
+        cache_key: Optional[str] = None,
+        cache_ttl: Optional[int] = None,
+    ) -> R:
+        """Call a tool and validate both parameters and response.
+
+        Args:
+            tool_name: Name of the tool to call
+            params: Parameters for the tool (validated Pydantic model)
+            response_model: Response model to validate the response
+            skip_cache: Whether to skip the cache
+            cache_key: Custom cache key
+            cache_ttl: Custom cache TTL in seconds
+
+        Returns:
+            Validated response
+
+        Raises:
+            MCPError: If the request fails or validation fails
+        """
+        try:
+            # Convert parameters to dict using model_dump() for Pydantic v2
+            params_dict = (
+                params.model_dump(exclude_none=True)
+                if hasattr(params, "model_dump")
+                else params
+            )
+
+            # Call the tool
+            response = await self.call_tool(
+                tool_name,
+                params_dict,
+                skip_cache=skip_cache,
+                cache_key=cache_key,
+                cache_ttl=cache_ttl,
+            )
+
+            try:
+                # Validate response
+                validated_response = response_model.model_validate(response)
+                return validated_response
+            except ValidationError as e:
+                logger.warning(f"Response validation failed for {tool_name}: {str(e)}")
+                # Return the raw response if validation fails
+                # This is to ensure backward compatibility
+                return cast(R, response)
+        except ValidationError as e:
+            logger.error(f"Parameter validation failed for {tool_name}: {str(e)}")
+            raise MCPError(
+                message=f"Invalid parameters for {tool_name}: {str(e)}",
+                server=self.endpoint,
+                tool=tool_name,
+                params=params,
+            ) from e
+        except Exception as e:
+            logger.error(f"Error calling {tool_name}: {str(e)}")
+            raise MCPError(
+                message=f"Failed to call {tool_name}: {str(e)}",
+                server=self.endpoint,
+                tool=tool_name,
+                params=params,
+            ) from e
+
     @redis_cache.cached("geocode", 86400)  # Cache for 24 hours
     async def geocode(
         self,
@@ -60,7 +149,7 @@ class GoogleMapsMCPClient(BaseMCPClient):
         skip_cache: bool = False,
         store_in_knowledge_graph: bool = False,
         memory_client=None,
-    ) -> Dict[str, Any]:
+    ) -> GeocodeResponse:
         """Geocode an address to get coordinates.
 
         Args:
@@ -72,21 +161,34 @@ class GoogleMapsMCPClient(BaseMCPClient):
         Returns:
             Geocoded result with coordinates and address components
         """
-        params = {"address": address}
-
         try:
+            # Create and validate parameters
+            params = GeocodeParams(address=address)
+
             # Call the maps_geocode tool from official Google Maps MCP server
-            result = await self.call_tool("maps_geocode", params, skip_cache=skip_cache)
+            result = await self._call_validate_tool(
+                "maps_geocode", params, GeocodeResponse, skip_cache=skip_cache
+            )
 
             # Store in knowledge graph if requested
             if store_in_knowledge_graph:
                 await store_location_in_knowledge_graph(
                     location_name=address,
-                    geocode_result=result,
+                    geocode_result=(
+                        result.model_dump() if hasattr(result, "model_dump") else result
+                    ),
                     memory_client=memory_client,
                 )
 
             return result
+        except ValidationError as e:
+            logger.error("Validation error in geocoding: %s", str(e))
+            raise MCPError(
+                message=f"Invalid parameters for geocoding: {str(e)}",
+                server=self.endpoint,
+                tool="maps_geocode",
+                params={"address": address},
+            ) from e
         except Exception as e:
             logger.error("Error in geocoding: %s", str(e))
             log_exception(e)
@@ -98,7 +200,7 @@ class GoogleMapsMCPClient(BaseMCPClient):
                 message=f"Geocoding failed: {str(e)}",
                 server=self.endpoint,
                 tool="maps_geocode",
-                params=params,
+                params={"address": address},
             ) from e
 
     @redis_cache.cached("reverse_geocode", 86400)  # Cache for 24 hours
@@ -107,7 +209,7 @@ class GoogleMapsMCPClient(BaseMCPClient):
         lat: float,
         lng: float,
         skip_cache: bool = False,
-    ) -> Dict[str, Any]:
+    ) -> GeocodeResponse:
         """Reverse geocode coordinates to get an address.
 
         Args:
@@ -118,14 +220,24 @@ class GoogleMapsMCPClient(BaseMCPClient):
         Returns:
             Reverse geocoded result with address components
         """
-        params = {"lat": lat, "lng": lng}
-
         try:
+            # Create and validate parameters
+            params = ReverseGeocodeParams(lat=lat, lng=lng)
+
             # Call the maps_reverse_geocode tool
-            result = await self.call_tool(
-                "maps_reverse_geocode", params, skip_cache=skip_cache
+            result = await self._call_validate_tool(
+                "maps_reverse_geocode", params, GeocodeResponse, skip_cache=skip_cache
             )
+
             return result
+        except ValidationError as e:
+            logger.error("Validation error in reverse geocoding: %s", str(e))
+            raise MCPError(
+                message=f"Invalid parameters for reverse geocoding: {str(e)}",
+                server=self.endpoint,
+                tool="maps_reverse_geocode",
+                params={"lat": lat, "lng": lng},
+            ) from e
         except Exception as e:
             logger.error("Error in reverse geocoding: %s", str(e))
             log_exception(e)
@@ -137,7 +249,7 @@ class GoogleMapsMCPClient(BaseMCPClient):
                 message=f"Reverse geocoding failed: {str(e)}",
                 server=self.endpoint,
                 tool="maps_reverse_geocode",
-                params=params,
+                params={"lat": lat, "lng": lng},
             ) from e
 
     @redis_cache.cached("place_search", 3600)  # Cache for 1 hour
@@ -150,7 +262,7 @@ class GoogleMapsMCPClient(BaseMCPClient):
         radius: Optional[int] = None,
         type: Optional[str] = None,
         skip_cache: bool = False,
-    ) -> Dict[str, Any]:
+    ) -> PlaceSearchResponse:
         """Search for places based on a query.
 
         Args:
@@ -165,26 +277,38 @@ class GoogleMapsMCPClient(BaseMCPClient):
         Returns:
             Search results with places matching the query
         """
-        # Build parameters
-        params = {"query": query}
-
-        # Add optional parameters if provided
-        if location:
-            params["location"] = location
-        if lat is not None and lng is not None:
-            params["lat"] = lat
-            params["lng"] = lng
-        if radius is not None:
-            params["radius"] = radius
-        if type is not None:
-            params["type"] = type
-
         try:
+            # Build parameters
+            params_dict = {"query": query}
+
+            # Add optional parameters if provided
+            if location:
+                params_dict["location"] = location
+            if lat is not None and lng is not None:
+                params_dict["lat"] = lat
+                params_dict["lng"] = lng
+            if radius is not None:
+                params_dict["radius"] = radius
+            if type is not None:
+                params_dict["type"] = type
+
+            # Create and validate parameters
+            params = PlaceSearchParams(**params_dict)
+
             # Call the maps_search_places tool
-            result = await self.call_tool(
-                "maps_search_places", params, skip_cache=skip_cache
+            result = await self._call_validate_tool(
+                "maps_search_places", params, PlaceSearchResponse, skip_cache=skip_cache
             )
+
             return result
+        except ValidationError as e:
+            logger.error("Validation error in place search: %s", str(e))
+            raise MCPError(
+                message=f"Invalid parameters for place search: {str(e)}",
+                server=self.endpoint,
+                tool="maps_search_places",
+                params={"query": query},
+            ) from e
         except Exception as e:
             logger.error("Error in place search: %s", str(e))
             log_exception(e)
@@ -196,7 +320,7 @@ class GoogleMapsMCPClient(BaseMCPClient):
                 message=f"Place search failed: {str(e)}",
                 server=self.endpoint,
                 tool="maps_search_places",
-                params=params,
+                params={"query": query},
             ) from e
 
     @redis_cache.cached("place_details", 3600)  # Cache for 1 hour
@@ -204,7 +328,7 @@ class GoogleMapsMCPClient(BaseMCPClient):
         self,
         place_id: str,
         skip_cache: bool = False,
-    ) -> Dict[str, Any]:
+    ) -> PlaceDetailsResponse:
         """Get detailed information about a place.
 
         Args:
@@ -214,14 +338,27 @@ class GoogleMapsMCPClient(BaseMCPClient):
         Returns:
             Detailed place information
         """
-        params = {"place_id": place_id}
-
         try:
+            # Create and validate parameters
+            params = PlaceDetailsParams(place_id=place_id)
+
             # Call the maps_place_details tool
-            result = await self.call_tool(
-                "maps_place_details", params, skip_cache=skip_cache
+            result = await self._call_validate_tool(
+                "maps_place_details",
+                params,
+                PlaceDetailsResponse,
+                skip_cache=skip_cache,
             )
+
             return result
+        except ValidationError as e:
+            logger.error("Validation error in place details: %s", str(e))
+            raise MCPError(
+                message=f"Invalid parameters for place details: {str(e)}",
+                server=self.endpoint,
+                tool="maps_place_details",
+                params={"place_id": place_id},
+            ) from e
         except Exception as e:
             logger.error("Error getting place details: %s", str(e))
             log_exception(e)
@@ -233,7 +370,7 @@ class GoogleMapsMCPClient(BaseMCPClient):
                 message=f"Place details failed: {str(e)}",
                 server=self.endpoint,
                 tool="maps_place_details",
-                params=params,
+                params={"place_id": place_id},
             ) from e
 
     @redis_cache.cached("directions", 3600)  # Cache for 1 hour
@@ -246,7 +383,7 @@ class GoogleMapsMCPClient(BaseMCPClient):
         arrival_time: Optional[Union[str, datetime]] = None,
         waypoints: Optional[List[str]] = None,
         skip_cache: bool = False,
-    ) -> Dict[str, Any]:
+    ) -> DirectionsResponse:
         """Get directions between locations.
 
         Args:
@@ -261,33 +398,45 @@ class GoogleMapsMCPClient(BaseMCPClient):
         Returns:
             Directions including routes, steps, and travel information
         """
-        # Convert times to strings if needed
-        if isinstance(departure_time, datetime):
-            departure_time = departure_time.isoformat()
-        if isinstance(arrival_time, datetime):
-            arrival_time = arrival_time.isoformat()
-
-        # Build parameters
-        params = {
-            "origin": origin,
-            "destination": destination,
-            "mode": mode,
-        }
-
-        # Add optional parameters if provided
-        if departure_time:
-            params["departure_time"] = departure_time
-        if arrival_time:
-            params["arrival_time"] = arrival_time
-        if waypoints:
-            params["waypoints"] = waypoints
-
         try:
+            # Convert times to strings if needed
+            if isinstance(departure_time, datetime):
+                departure_time = departure_time.isoformat()
+            if isinstance(arrival_time, datetime):
+                arrival_time = arrival_time.isoformat()
+
+            # Build parameters dictionary
+            params_dict = {
+                "origin": origin,
+                "destination": destination,
+                "mode": mode,
+            }
+
+            # Add optional parameters if provided
+            if departure_time:
+                params_dict["departure_time"] = departure_time
+            if arrival_time:
+                params_dict["arrival_time"] = arrival_time
+            if waypoints:
+                params_dict["waypoints"] = waypoints
+
+            # Create and validate parameters
+            params = DirectionsParams(**params_dict)
+
             # Call the maps_directions tool
-            result = await self.call_tool(
-                "maps_directions", params, skip_cache=skip_cache
+            result = await self._call_validate_tool(
+                "maps_directions", params, DirectionsResponse, skip_cache=skip_cache
             )
+
             return result
+        except ValidationError as e:
+            logger.error("Validation error in directions: %s", str(e))
+            raise MCPError(
+                message=f"Invalid parameters for directions: {str(e)}",
+                server=self.endpoint,
+                tool="maps_directions",
+                params={"origin": origin, "destination": destination},
+            ) from e
         except Exception as e:
             logger.error("Error getting directions: %s", str(e))
             log_exception(e)
@@ -299,7 +448,7 @@ class GoogleMapsMCPClient(BaseMCPClient):
                 message=f"Directions failed: {str(e)}",
                 server=self.endpoint,
                 tool="maps_directions",
-                params=params,
+                params={"origin": origin, "destination": destination},
             ) from e
 
     @redis_cache.cached("distance_matrix", 3600)  # Cache for 1 hour
@@ -310,7 +459,7 @@ class GoogleMapsMCPClient(BaseMCPClient):
         mode: str = "driving",
         departure_time: Optional[Union[str, datetime]] = None,
         skip_cache: bool = False,
-    ) -> Dict[str, Any]:
+    ) -> DistanceMatrixResponse:
         """Get distance and duration information between
         multiple origins and destinations.
 
@@ -324,27 +473,42 @@ class GoogleMapsMCPClient(BaseMCPClient):
         Returns:
             Matrix of distances and durations
         """
-        # Convert time to string if needed
-        if isinstance(departure_time, datetime):
-            departure_time = departure_time.isoformat()
-
-        # Build parameters
-        params = {
-            "origins": origins,
-            "destinations": destinations,
-            "mode": mode,
-        }
-
-        # Add optional parameters if provided
-        if departure_time:
-            params["departure_time"] = departure_time
-
         try:
+            # Convert time to string if needed
+            if isinstance(departure_time, datetime):
+                departure_time = departure_time.isoformat()
+
+            # Build parameters dictionary
+            params_dict = {
+                "origins": origins,
+                "destinations": destinations,
+                "mode": mode,
+            }
+
+            # Add optional parameters if provided
+            if departure_time:
+                params_dict["departure_time"] = departure_time
+
+            # Create and validate parameters
+            params = DistanceMatrixParams(**params_dict)
+
             # Call the maps_distance_matrix tool
-            result = await self.call_tool(
-                "maps_distance_matrix", params, skip_cache=skip_cache
+            result = await self._call_validate_tool(
+                "maps_distance_matrix",
+                params,
+                DistanceMatrixResponse,
+                skip_cache=skip_cache,
             )
+
             return result
+        except ValidationError as e:
+            logger.error("Validation error in distance matrix: %s", str(e))
+            raise MCPError(
+                message=f"Invalid parameters for distance matrix: {str(e)}",
+                server=self.endpoint,
+                tool="maps_distance_matrix",
+                params={"origins": origins, "destinations": destinations},
+            ) from e
         except Exception as e:
             logger.error("Error getting distance matrix: %s", str(e))
             log_exception(e)
@@ -356,7 +520,7 @@ class GoogleMapsMCPClient(BaseMCPClient):
                 message=f"Distance matrix failed: {str(e)}",
                 server=self.endpoint,
                 tool="maps_distance_matrix",
-                params=params,
+                params={"origins": origins, "destinations": destinations},
             ) from e
 
     @redis_cache.cached("elevation", 86400)  # Cache for 24 hours
@@ -364,7 +528,7 @@ class GoogleMapsMCPClient(BaseMCPClient):
         self,
         locations: List[Dict[str, float]],
         skip_cache: bool = False,
-    ) -> Dict[str, Any]:
+    ) -> ElevationResponse:
         """Get elevation data for geographic coordinates.
 
         Args:
@@ -374,14 +538,27 @@ class GoogleMapsMCPClient(BaseMCPClient):
         Returns:
             Elevation data for the specified locations
         """
-        params = {"locations": locations}
-
         try:
+            # Convert location dictionaries to strings
+            location_strings = [f"{loc['lat']},{loc['lng']}" for loc in locations]
+
+            # Create and validate parameters
+            params = ElevationParams(locations=location_strings)
+
             # Call the maps_elevation tool
-            result = await self.call_tool(
-                "maps_elevation", params, skip_cache=skip_cache
+            result = await self._call_validate_tool(
+                "maps_elevation", params, ElevationResponse, skip_cache=skip_cache
             )
+
             return result
+        except ValidationError as e:
+            logger.error("Validation error in elevation: %s", str(e))
+            raise MCPError(
+                message=f"Invalid parameters for elevation: {str(e)}",
+                server=self.endpoint,
+                tool="maps_elevation",
+                params={"locations": locations},
+            ) from e
         except Exception as e:
             logger.error("Error getting elevation data: %s", str(e))
             log_exception(e)
@@ -393,7 +570,7 @@ class GoogleMapsMCPClient(BaseMCPClient):
                 message=f"Elevation data retrieval failed: {str(e)}",
                 server=self.endpoint,
                 tool="maps_elevation",
-                params=params,
+                params={"locations": locations},
             ) from e
 
 

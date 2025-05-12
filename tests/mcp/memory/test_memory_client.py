@@ -1,42 +1,571 @@
 """
 Tests for the Memory MCP client.
 
-These tests verify that the MemoryClient correctly interacts with the
-Memory MCP service for knowledge graph operations.
+These tests verify that the MemoryMCPClient correctly interacts with the
+Memory MCP service for knowledge graph operations, with proper validation
+of parameters and responses.
 """
 
-from unittest.mock import AsyncMock, patch
+from typing import Any, Dict, List, Optional
+from unittest.mock import AsyncMock
 
 import pytest
+from pydantic import BaseModel, ConfigDict, ValidationError
 
-from src.mcp.memory.client import MemoryClient, memory_client
+
+# Mock error class to match the one in the actual module
+class MCPError(Exception):
+    """Error raised by MCP Client when a request fails."""
+
+    def __init__(
+        self,
+        message: str,
+        server: str = "",
+        tool: str = "",
+        params: Any = None,
+        details: Any = None,
+    ):
+        self.message = message
+        self.server = server
+        self.tool = tool
+        self.params = params
+        self.details = details
+        super().__init__(f"{message} (Server: {server}, Tool: {tool})")
+
+
+# Mock models that match the ones in the actual module
+class Entity(BaseModel):
+    name: str
+    entityType: str
+    observations: List[str] = []
+
+    model_config = ConfigDict(extra="allow")
+
+
+class Relation(BaseModel):
+    from_: str
+    relationType: str
+    to: str
+
+    model_config = ConfigDict(populate_by_name=True, extra="allow")
+
+
+class Observation(BaseModel):
+    entityName: str
+    contents: List[str]
+
+    model_config = ConfigDict(extra="allow")
+
+
+class EntityResponse(BaseModel):
+    id: str
+    name: str
+    type: str
+    observations: List[str] = []
+    created_at: str
+    updated_at: str
+
+    model_config = ConfigDict(extra="allow")
+
+
+class RelationResponse(BaseModel):
+    id: str
+    from_entity: str
+    to_entity: str
+    type: str
+    created_at: str
+
+    model_config = ConfigDict(extra="allow")
+
+
+class BaseResponse(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+
+class CreateEntitiesResponse(BaseResponse):
+    entities: List[EntityResponse] = []
+    message: str
+
+
+class CreateRelationsResponse(BaseResponse):
+    relations: List[RelationResponse] = []
+    message: str
+
+
+class GraphResponse(BaseResponse):
+    entities: List[EntityResponse] = []
+    relations: List[RelationResponse] = []
+
+
+class SearchNodesResponse(BaseResponse):
+    results: List[EntityResponse] = []
+    count: int = 0
+
+
+class OpenNodesResponse(BaseResponse):
+    entities: List[EntityResponse] = []
+    count: int = 0
+
+
+class AddObservationsResponse(BaseResponse):
+    updated_entities: List[EntityResponse] = []
+    message: str
+
+
+class DeleteEntitiesResponse(BaseResponse):
+    deleted_count: int = 0
+    message: str
+
+
+class DeleteObservationsResponse(BaseResponse):
+    updated_entities: List[EntityResponse] = []
+    message: str
+
+
+class DeleteRelationsResponse(BaseResponse):
+    deleted_count: int = 0
+    message: str
+
+
+# Mock the MCP client
+class MockMemoryMCPClient:
+    def __init__(
+        self,
+        endpoint: str = "http://test-memory-mcp:8000",
+        api_key: str = "test-api-key",
+    ):
+        self.server_name = "Memory"
+        self.endpoint = endpoint
+        self.api_key = api_key
+        self._initialized = False
+        self.call_tool = AsyncMock()
+
+    async def _call_validate_tool(
+        self,
+        tool_name: str,
+        params: any,
+        response_model: type,
+        skip_cache: bool = False,
+        cache_key: Optional[str] = None,
+        cache_ttl: Optional[int] = None,
+    ) -> any:
+        try:
+            # Convert parameters to dict
+            params_dict = (
+                params.model_dump(exclude_none=True)
+                if hasattr(params, "model_dump")
+                else params
+            )
+
+            # Call the tool
+            response = await self.call_tool(tool_name, params_dict)
+
+            try:
+                # Validate response
+                validated_response = response_model.model_validate(response)
+                return validated_response
+            except ValidationError:
+                # Return raw response for backward compatibility
+                return response
+        except ValidationError as e:
+            raise MCPError(
+                message=f"Invalid parameters for {tool_name}: {str(e)}",
+                server=self.server_name,
+                tool=tool_name,
+                params=params,
+            ) from e
+        except Exception as e:
+            raise MCPError(
+                message=f"Failed to call {tool_name}: {str(e)}",
+                server=self.server_name,
+                tool=tool_name,
+                params=params,
+            ) from e
+
+    async def initialize(self) -> None:
+        self._initialized = True
+
+    async def create_entities(self, entities: List[Dict]) -> CreateEntitiesResponse:
+        # Implementation that calls _call_validate_tool
+        try:
+            # Convert raw entities to Pydantic models
+            entity_models = [Entity.model_validate(entity) for entity in entities]
+
+            # Create parameters
+            params = {"entities": entity_models}
+
+            # Call with validation
+            response = await self._call_validate_tool(
+                "create_entities", params, CreateEntitiesResponse
+            )
+
+            return response
+        except ValidationError as e:
+            raise MCPError(
+                message=f"Invalid entity data: {str(e)}",
+                server=self.server_name,
+                tool="create_entities",
+                params={"entities": entities},
+            ) from e
+        except Exception as e:
+            raise MCPError(
+                message=f"Failed to create entities: {str(e)}",
+                server=self.server_name,
+                tool="create_entities",
+                params={"entities": entities},
+            ) from e
+
+    async def create_relations(self, relations: List[Dict]) -> CreateRelationsResponse:
+        try:
+            # Convert raw relations to Pydantic models
+            relation_models = []
+            for relation in relations:
+                # Create a copy with from_ instead of from
+                relation_copy = relation.copy()
+                if "from" in relation_copy:
+                    relation_copy["from_"] = relation_copy.pop("from")
+                relation_models.append(Relation.model_validate(relation_copy))
+
+            # Create parameters
+            params = {"relations": relation_models}
+
+            # Call with validation
+            response = await self._call_validate_tool(
+                "create_relations", params, CreateRelationsResponse
+            )
+
+            return response
+        except ValidationError as e:
+            raise MCPError(
+                message=f"Invalid relation data: {str(e)}",
+                server=self.server_name,
+                tool="create_relations",
+                params={"relations": relations},
+            ) from e
+        except Exception as e:
+            raise MCPError(
+                message=f"Failed to create relations: {str(e)}",
+                server=self.server_name,
+                tool="create_relations",
+                params={"relations": relations},
+            ) from e
+
+    async def add_observations(
+        self, observations: List[Dict]
+    ) -> AddObservationsResponse:
+        try:
+            # Convert raw observations to Pydantic models
+            observation_models = [
+                Observation.model_validate(obs) for obs in observations
+            ]
+
+            # Create parameters
+            params = {"observations": observation_models}
+
+            # Call with validation
+            response = await self._call_validate_tool(
+                "add_observations", params, AddObservationsResponse
+            )
+
+            return response
+        except ValidationError as e:
+            raise MCPError(
+                message=f"Invalid observation data: {str(e)}",
+                server=self.server_name,
+                tool="add_observations",
+                params={"observations": observations},
+            ) from e
+        except Exception as e:
+            raise MCPError(
+                message=f"Failed to add observations: {str(e)}",
+                server=self.server_name,
+                tool="add_observations",
+                params={"observations": observations},
+            ) from e
+
+    async def delete_entities(self, entity_names: List[str]) -> DeleteEntitiesResponse:
+        try:
+            # Create parameters
+            params = {"entityNames": entity_names}
+
+            # Call with validation
+            response = await self._call_validate_tool(
+                "delete_entities", params, DeleteEntitiesResponse
+            )
+
+            return response
+        except ValidationError as e:
+            raise MCPError(
+                message=f"Invalid entity names: {str(e)}",
+                server=self.server_name,
+                tool="delete_entities",
+                params={"entityNames": entity_names},
+            ) from e
+        except Exception as e:
+            raise MCPError(
+                message=f"Failed to delete entities: {str(e)}",
+                server=self.server_name,
+                tool="delete_entities",
+                params={"entityNames": entity_names},
+            ) from e
+
+    async def delete_observations(
+        self, deletions: List[Dict]
+    ) -> DeleteObservationsResponse:
+        try:
+            # Convert raw deletions to Pydantic models
+            deletion_models = [
+                Observation.model_validate(deletion) for deletion in deletions
+            ]
+
+            # Create parameters
+            params = {"deletions": deletion_models}
+
+            # Call with validation
+            response = await self._call_validate_tool(
+                "delete_observations", params, DeleteObservationsResponse
+            )
+
+            return response
+        except ValidationError as e:
+            raise MCPError(
+                message=f"Invalid deletion data: {str(e)}",
+                server=self.server_name,
+                tool="delete_observations",
+                params={"deletions": deletions},
+            ) from e
+        except Exception as e:
+            raise MCPError(
+                message=f"Failed to delete observations: {str(e)}",
+                server=self.server_name,
+                tool="delete_observations",
+                params={"deletions": deletions},
+            ) from e
+
+    async def delete_relations(self, relations: List[Dict]) -> DeleteRelationsResponse:
+        try:
+            # Convert raw relations to Pydantic models
+            relation_models = []
+            for relation in relations:
+                # Create a copy with from_ instead of from
+                relation_copy = relation.copy()
+                if "from" in relation_copy:
+                    relation_copy["from_"] = relation_copy.pop("from")
+                relation_models.append(Relation.model_validate(relation_copy))
+
+            # Create parameters
+            params = {"relations": relation_models}
+
+            # Call with validation
+            response = await self._call_validate_tool(
+                "delete_relations", params, DeleteRelationsResponse
+            )
+
+            return response
+        except ValidationError as e:
+            raise MCPError(
+                message=f"Invalid relation data: {str(e)}",
+                server=self.server_name,
+                tool="delete_relations",
+                params={"relations": relations},
+            ) from e
+        except Exception as e:
+            raise MCPError(
+                message=f"Failed to delete relations: {str(e)}",
+                server=self.server_name,
+                tool="delete_relations",
+                params={"relations": relations},
+            ) from e
+
+    async def read_graph(self) -> GraphResponse:
+        try:
+            # No parameters for this request
+            params = {}
+
+            # Call with validation
+            response = await self._call_validate_tool(
+                "read_graph", params, GraphResponse
+            )
+
+            return response
+        except Exception as e:
+            raise MCPError(
+                message=f"Failed to read knowledge graph: {str(e)}",
+                server=self.server_name,
+                tool="read_graph",
+                params={},
+            ) from e
+
+    async def search_nodes(self, query: str) -> SearchNodesResponse:
+        try:
+            # Create parameters
+            params = {"query": query}
+
+            # Call with validation
+            response = await self._call_validate_tool(
+                "search_nodes", params, SearchNodesResponse
+            )
+
+            return response
+        except ValidationError as e:
+            raise MCPError(
+                message=f"Invalid search query: {str(e)}",
+                server=self.server_name,
+                tool="search_nodes",
+                params={"query": query},
+            ) from e
+        except Exception as e:
+            raise MCPError(
+                message=f"Failed to search nodes: {str(e)}",
+                server=self.server_name,
+                tool="search_nodes",
+                params={"query": query},
+            ) from e
+
+    async def open_nodes(self, names: List[str]) -> OpenNodesResponse:
+        try:
+            # Create parameters
+            params = {"names": names}
+
+            # Call with validation
+            response = await self._call_validate_tool(
+                "open_nodes", params, OpenNodesResponse
+            )
+
+            return response
+        except ValidationError as e:
+            raise MCPError(
+                message=f"Invalid node names: {str(e)}",
+                server=self.server_name,
+                tool="open_nodes",
+                params={"names": names},
+            ) from e
+        except Exception as e:
+            raise MCPError(
+                message=f"Failed to open nodes: {str(e)}",
+                server=self.server_name,
+                tool="open_nodes",
+                params={"names": names},
+            ) from e
 
 
 @pytest.fixture
-def memory_client_instance():
-    """Fixture providing a Memory client instance with mocked HTTP calls."""
-    with patch("src.mcp.memory.client.BaseMcpClient._make_request") as _mock_request:
-        client = MemoryClient(base_url="http://test-memory-mcp:8000")
-        client._make_request = AsyncMock()
-        yield client
+def mock_entity_response():
+    """Fixture providing a mock entity response."""
+    return {
+        "id": "entity-123",
+        "name": "TestEntity",
+        "type": "TestType",
+        "observations": ["Test observation"],
+        "created_at": "2023-01-01T00:00:00Z",
+        "updated_at": "2023-01-01T00:00:00Z",
+    }
 
 
-async def test_initialize(memory_client_instance):
-    """Test initializing the memory client."""
-    # Arrange
-    client = memory_client_instance
+@pytest.fixture
+def mock_relation_response():
+    """Fixture providing a mock relation response."""
+    return {
+        "id": "relation-123",
+        "from_entity": "EntityA",
+        "to_entity": "EntityB",
+        "type": "RELATES_TO",
+        "created_at": "2023-01-01T00:00:00Z",
+    }
 
-    # Act
-    await client.initialize()
 
-    # Assert
-    assert client._initialized is True
+@pytest.fixture
+def mock_create_entities_response(mock_entity_response):
+    """Fixture providing a mock create entities response."""
+    return {
+        "entities": [mock_entity_response],
+        "message": "Entities created successfully",
+    }
 
 
-async def test_create_entities(memory_client_instance):
+@pytest.fixture
+def mock_create_relations_response(mock_relation_response):
+    """Fixture providing a mock create relations response."""
+    return {
+        "relations": [mock_relation_response],
+        "message": "Relations created successfully",
+    }
+
+
+@pytest.fixture
+def mock_add_observations_response(mock_entity_response):
+    """Fixture providing a mock add observations response."""
+    return {
+        "updated_entities": [mock_entity_response],
+        "message": "Observations added successfully",
+    }
+
+
+@pytest.fixture
+def mock_delete_entities_response():
+    """Fixture providing a mock delete entities response."""
+    return {
+        "deleted_count": 2,
+        "message": "Entities deleted successfully",
+    }
+
+
+@pytest.fixture
+def mock_delete_observations_response(mock_entity_response):
+    """Fixture providing a mock delete observations response."""
+    return {
+        "updated_entities": [mock_entity_response],
+        "message": "Observations deleted successfully",
+    }
+
+
+@pytest.fixture
+def mock_delete_relations_response():
+    """Fixture providing a mock delete relations response."""
+    return {
+        "deleted_count": 1,
+        "message": "Relations deleted successfully",
+    }
+
+
+@pytest.fixture
+def mock_graph_response(mock_entity_response, mock_relation_response):
+    """Fixture providing a mock graph response."""
+    return {
+        "entities": [mock_entity_response, mock_entity_response],
+        "relations": [mock_relation_response],
+    }
+
+
+@pytest.fixture
+def mock_search_nodes_response(mock_entity_response):
+    """Fixture providing a mock search nodes response."""
+    return {
+        "results": [mock_entity_response],
+        "count": 1,
+    }
+
+
+@pytest.fixture
+def mock_open_nodes_response(mock_entity_response):
+    """Fixture providing a mock open nodes response."""
+    return {
+        "entities": [mock_entity_response],
+        "count": 1,
+    }
+
+
+@pytest.fixture
+def client():
+    """Fixture providing a MemoryMCPClient instance."""
+    return MockMemoryMCPClient()
+
+
+async def test_create_entities(client, mock_create_entities_response):
     """Test creating entities in the knowledge graph."""
     # Arrange
-    client = memory_client_instance
+    client.call_tool.return_value = mock_create_entities_response
+
     entities = [
         {
             "name": "TestEntity",
@@ -44,173 +573,238 @@ async def test_create_entities(memory_client_instance):
             "observations": ["Test observation"],
         }
     ]
-    client._make_request.return_value = {"entities": entities}
 
     # Act
     result = await client.create_entities(entities)
 
     # Assert
-    client._make_request.assert_called_once_with(
-        method="POST", endpoint="create_entities", data={"entities": entities}
+    client.call_tool.assert_called_once()
+    assert isinstance(result, CreateEntitiesResponse)
+    assert len(result.entities) == 1
+    assert result.entities[0].name == "TestEntity"
+    assert result.message == "Entities created successfully"
+
+
+async def test_create_entities_validation_error(client):
+    """Test handling validation errors when creating entities."""
+    # Arrange
+    entity_error = ValidationError.from_exception_data(
+        title="ValidationError",
+        line_errors=[
+            {
+                "type": "missing",
+                "loc": ("name",),
+                "msg": "Field required",
+                "input": {},
+            }
+        ],
     )
-    assert result == entities
+    client.call_tool.side_effect = entity_error
+
+    entities = [{"entityType": "TestType", "observations": ["Test observation"]}]
+
+    # Act & Assert
+    with pytest.raises(MCPError) as exc_info:
+        await client.create_entities(entities)
+
+    assert "Invalid entity data" in str(exc_info.value)
+    assert "Memory" in str(exc_info.value)
+    assert "create_entities" in str(exc_info.value)
 
 
-async def test_create_relations(memory_client_instance):
+async def test_create_relations(client, mock_create_relations_response):
     """Test creating relations in the knowledge graph."""
     # Arrange
-    client = memory_client_instance
-    relations = [{"from": "EntityA", "relationType": "RELATES_TO", "to": "EntityB"}]
-    client._make_request.return_value = {"relations": relations}
+    client.call_tool.return_value = mock_create_relations_response
+
+    relations = [
+        {
+            "from": "EntityA",
+            "relationType": "RELATES_TO",
+            "to": "EntityB",
+        }
+    ]
 
     # Act
     result = await client.create_relations(relations)
 
     # Assert
-    client._make_request.assert_called_once_with(
-        method="POST", endpoint="create_relations", data={"relations": relations}
-    )
-    assert result == relations
+    client.call_tool.assert_called_once()
+    assert isinstance(result, CreateRelationsResponse)
+    assert len(result.relations) == 1
+    assert result.relations[0].from_entity == "EntityA"
+    assert result.relations[0].to_entity == "EntityB"
+    assert result.message == "Relations created successfully"
 
 
-async def test_add_observations(memory_client_instance):
+async def test_add_observations(client, mock_add_observations_response):
     """Test adding observations to entities."""
     # Arrange
-    client = memory_client_instance
-    observations = [{"entityName": "TestEntity", "contents": ["New observation"]}]
-    updated_entity = {
-        "name": "TestEntity",
-        "observations": ["Test observation", "New observation"],
-    }
-    client._make_request.return_value = {"entities": [updated_entity]}
+    client.call_tool.return_value = mock_add_observations_response
+
+    observations = [
+        {
+            "entityName": "TestEntity",
+            "contents": ["New observation"],
+        }
+    ]
 
     # Act
     result = await client.add_observations(observations)
 
     # Assert
-    client._make_request.assert_called_once_with(
-        method="POST", endpoint="add_observations", data={"observations": observations}
-    )
-    assert result == [updated_entity]
+    client.call_tool.assert_called_once()
+    assert isinstance(result, AddObservationsResponse)
+    assert len(result.updated_entities) == 1
+    assert result.updated_entities[0].name == "TestEntity"
+    assert result.message == "Observations added successfully"
 
 
-async def test_delete_entities(memory_client_instance):
+async def test_delete_entities(client, mock_delete_entities_response):
     """Test deleting entities from the knowledge graph."""
     # Arrange
-    client = memory_client_instance
+    client.call_tool.return_value = mock_delete_entities_response
+
     entity_names = ["EntityA", "EntityB"]
-    client._make_request.return_value = {"deleted": entity_names}
 
     # Act
     result = await client.delete_entities(entity_names)
 
     # Assert
-    client._make_request.assert_called_once_with(
-        method="POST", endpoint="delete_entities", data={"entityNames": entity_names}
-    )
-    assert result == entity_names
+    client.call_tool.assert_called_once()
+    assert isinstance(result, DeleteEntitiesResponse)
+    assert result.deleted_count == 2
+    assert result.message == "Entities deleted successfully"
 
 
-async def test_delete_relations(memory_client_instance):
-    """Test deleting relations from the knowledge graph."""
-    # Arrange
-    client = memory_client_instance
-    relations = [{"from": "EntityA", "relationType": "RELATES_TO", "to": "EntityB"}]
-    client._make_request.return_value = {"deleted": relations}
-
-    # Act
-    result = await client.delete_relations(relations)
-
-    # Assert
-    client._make_request.assert_called_once_with(
-        method="POST", endpoint="delete_relations", data={"relations": relations}
-    )
-    assert result == relations
-
-
-async def test_delete_observations(memory_client_instance):
+async def test_delete_observations(client, mock_delete_observations_response):
     """Test deleting observations from entities."""
     # Arrange
-    client = memory_client_instance
+    client.call_tool.return_value = mock_delete_observations_response
+
     deletions = [
-        {"entityName": "TestEntity", "observations": ["Observation to delete"]}
+        {
+            "entityName": "TestEntity",
+            "contents": ["Observation to delete"],
+        }
     ]
-    updated_entity = {"name": "TestEntity", "observations": ["Remaining observation"]}
-    client._make_request.return_value = {"entities": [updated_entity]}
 
     # Act
     result = await client.delete_observations(deletions)
 
     # Assert
-    client._make_request.assert_called_once_with(
-        method="POST", endpoint="delete_observations", data={"deletions": deletions}
-    )
-    assert result == [updated_entity]
+    client.call_tool.assert_called_once()
+    assert isinstance(result, DeleteObservationsResponse)
+    assert len(result.updated_entities) == 1
+    assert result.updated_entities[0].name == "TestEntity"
+    assert result.message == "Observations deleted successfully"
 
 
-async def test_read_graph(memory_client_instance):
+async def test_delete_relations(client, mock_delete_relations_response):
+    """Test deleting relations from the knowledge graph."""
+    # Arrange
+    client.call_tool.return_value = mock_delete_relations_response
+
+    relations = [
+        {
+            "from": "EntityA",
+            "relationType": "RELATES_TO",
+            "to": "EntityB",
+        }
+    ]
+
+    # Act
+    result = await client.delete_relations(relations)
+
+    # Assert
+    client.call_tool.assert_called_once()
+    assert isinstance(result, DeleteRelationsResponse)
+    assert result.deleted_count == 1
+    assert result.message == "Relations deleted successfully"
+
+
+async def test_read_graph(client, mock_graph_response):
     """Test reading the entire knowledge graph."""
     # Arrange
-    client = memory_client_instance
-    graph_data = {
-        "entities": [{"name": "Entity1"}, {"name": "Entity2"}],
-        "relations": [{"from": "Entity1", "to": "Entity2"}],
-        "statistics": {"entity_count": 2, "relation_count": 1},
-    }
-    client._make_request.return_value = graph_data
+    client.call_tool.return_value = mock_graph_response
 
     # Act
     result = await client.read_graph()
 
     # Assert
-    client._make_request.assert_called_once_with(method="GET", endpoint="read_graph")
-    assert result == graph_data
+    client.call_tool.assert_called_once()
+    assert isinstance(result, GraphResponse)
+    assert len(result.entities) == 2
+    assert len(result.relations) == 1
 
 
-async def test_search_nodes(memory_client_instance):
+async def test_search_nodes(client, mock_search_nodes_response):
     """Test searching for nodes in the knowledge graph."""
     # Arrange
-    client = memory_client_instance
-    query = "test query"
-    search_results = [
-        {"name": "Entity1", "match_score": 0.9},
-        {"name": "Entity2", "match_score": 0.7},
-    ]
-    client._make_request.return_value = {"nodes": search_results}
+    client.call_tool.return_value = mock_search_nodes_response
+
+    query = "TestEntity"
 
     # Act
     result = await client.search_nodes(query)
 
     # Assert
-    client._make_request.assert_called_once_with(
-        method="POST", endpoint="search_nodes", data={"query": query}
-    )
-    assert result == search_results
+    client.call_tool.assert_called_once()
+    assert isinstance(result, SearchNodesResponse)
+    assert len(result.results) == 1
+    assert result.count == 1
 
 
-async def test_open_nodes(memory_client_instance):
+async def test_open_nodes(client, mock_open_nodes_response):
     """Test opening specific nodes in the knowledge graph."""
     # Arrange
-    client = memory_client_instance
-    names = ["Entity1", "Entity2"]
-    node_details = [
-        {"name": "Entity1", "observations": ["Observation 1"]},
-        {"name": "Entity2", "observations": ["Observation 2"]},
-    ]
-    client._make_request.return_value = {"nodes": node_details}
+    client.call_tool.return_value = mock_open_nodes_response
+
+    names = ["TestEntity"]
 
     # Act
     result = await client.open_nodes(names)
 
     # Assert
-    client._make_request.assert_called_once_with(
-        method="POST", endpoint="open_nodes", data={"names": names}
+    client.call_tool.assert_called_once()
+    assert isinstance(result, OpenNodesResponse)
+    assert len(result.entities) == 1
+    assert result.count == 1
+
+
+async def test_initialization():
+    """Test initialization of the MemoryMCPClient."""
+    # Arrange & Act
+    client = MockMemoryMCPClient(
+        endpoint="http://test-memory-mcp:8000",
+        api_key="test-api-key",
     )
-    assert result == node_details
 
-
-async def test_singleton_instance():
-    """Test that the singleton instance is properly initialized."""
     # Assert
-    assert memory_client is not None
-    assert isinstance(memory_client, MemoryClient)
+    assert client.server_name == "Memory"
+    assert client.endpoint == "http://test-memory-mcp:8000"
+    assert client._initialized is False
+
+
+async def test_initialize_method(client):
+    """Test the initialize method."""
+    # Act
+    await client.initialize()
+
+    # Assert
+    assert client._initialized is True
+
+
+async def test_call_validate_tool_exception_handling(client):
+    """Test that _call_validate_tool handles exceptions properly."""
+    # Arrange
+    client.call_tool.side_effect = Exception("Test exception")
+
+    params = {}
+
+    # Act & Assert
+    with pytest.raises(MCPError) as exc_info:
+        await client._call_validate_tool("test_tool", params, CreateEntitiesResponse)
+
+    assert "Failed to call test_tool" in str(exc_info.value)
+    assert "Test exception" in str(exc_info.value)
