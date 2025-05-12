@@ -5,9 +5,11 @@ This module provides the base class for all MCP clients in the TripSage system,
 with common functionality for tool calling and error handling.
 """
 
-from typing import Any, Dict, List, Optional
+import json
+from typing import Any, Dict, Generic, Optional, TypeVar
 
 import httpx
+from pydantic import BaseModel, ValidationError
 
 from ..cache.redis_cache import redis_cache
 from ..utils.error_handling import MCPError
@@ -15,8 +17,11 @@ from ..utils.logging import get_module_logger
 
 logger = get_module_logger(__name__)
 
+P = TypeVar("P", bound=BaseModel)
+R = TypeVar("R", bound=BaseModel)
 
-class BaseMCPClient:
+
+class BaseMCPClient(Generic[P, R]):
     """Base class for all MCP clients in TripSage."""
 
     def __init__(
@@ -48,10 +53,10 @@ class BaseMCPClient:
         logger.debug("Initialized MCP client for %s", endpoint)
 
     def _get_headers(self) -> Dict[str, str]:
-        """Get HTTP headers for requests.
+        """Get the HTTP headers for MCP API requests.
 
         Returns:
-            HTTP headers dictionary
+            Dictionary containing HTTP headers
         """
         headers = {
             "Content-Type": "application/json",
@@ -63,194 +68,185 @@ class BaseMCPClient:
 
         return headers
 
-    async def _make_request(
+    async def call_tool(
         self,
-        method: str,
-        path: str,
-        data: Optional[Dict[str, Any]] = None,
-        params: Optional[Dict[str, Any]] = None,
-    ) -> Dict[str, Any]:
-        """Make an HTTP request to the MCP server.
+        tool_name: str,
+        params: Dict[str, Any],
+        skip_cache: bool = False,
+        cache_key: Optional[str] = None,
+        cache_ttl: Optional[int] = None,
+    ) -> Any:
+        """Call an MCP tool with parameters.
 
         Args:
-            method: HTTP method (GET, POST, etc.)
-            path: URL path (will be appended to endpoint)
-            data: Request body data
-            params: Query parameters
+            tool_name: The name of the tool to call
+            params: Parameters to pass to the tool
+            skip_cache: Whether to skip the cache and force a fresh request
+            cache_key: Optional custom cache key
+            cache_ttl: Optional cache TTL that overrides the default
 
         Returns:
-            Response data as a dictionary
+            Response data from the MCP server
+
+        Raises:
+            MCPError: If the tool call fails
+        """
+        url = f"{self.endpoint}/tools/{tool_name}"
+        headers = self._get_headers()
+
+        # Generate cache key if needed
+        if cache_key is None and self.use_cache and not skip_cache:
+            cache_key = (
+                f"{self.server_name}:{tool_name}:{json.dumps(params, sort_keys=True)}"
+            )
+
+        # Check cache if enabled
+        if self.use_cache and not skip_cache:
+            cached_result = await redis_cache.get(cache_key)
+            if cached_result:
+                logger.debug("Cache hit for %s tool call", tool_name)
+                return cached_result
+
+        # Make the API request
+        try:
+            logger.debug("Calling %s tool with params: %s", tool_name, params)
+            async with httpx.AsyncClient(timeout=self.timeout) as client:
+                response = await client.post(url, json=params, headers=headers)
+                response.raise_for_status()
+                result = response.json()
+
+            # Cache the result if needed
+            if self.use_cache and not skip_cache:
+                ttl = cache_ttl or self.cache_ttl
+                await redis_cache.set(cache_key, result, ttl)
+
+            return result
+        except httpx.RequestError as e:
+            logger.error("Request error calling %s tool: %s", tool_name, str(e))
+            raise MCPError(
+                message=f"Request error: {str(e)}",
+                server=self.server_name,
+                tool=tool_name,
+                params=params,
+            ) from e
+        except httpx.HTTPStatusError as e:
+            logger.error(
+                "HTTP error calling %s tool: %s - %s",
+                tool_name,
+                e.response.status_code,
+                e.response.text,
+            )
+            raise MCPError(
+                message=f"HTTP error {e.response.status_code}: {e.response.text}",
+                server=self.server_name,
+                tool=tool_name,
+                params=params,
+            ) from e
+        except Exception as e:
+            logger.error("Error calling %s tool: %s", tool_name, str(e))
+            raise MCPError(
+                message=f"Error: {str(e)}",
+                server=self.server_name,
+                tool=tool_name,
+                params=params,
+            ) from e
+
+    async def _call_validate_tool(
+        self,
+        tool_name: str,
+        params: P,
+        response_model: type[R],
+        skip_cache: bool = False,
+        cache_key: Optional[str] = None,
+        cache_ttl: Optional[int] = None,
+    ) -> R:
+        """Call a tool and validate both parameters and response.
+
+        Args:
+            tool_name: Name of the tool to call
+            params: Parameters for the tool call (Pydantic model)
+            response_model: Pydantic model for validating the response
+            skip_cache: Whether to skip the cache
+            cache_key: Optional cache key
+            cache_ttl: Optional cache TTL
+
+        Returns:
+            Validated response
 
         Raises:
             MCPError: If the request fails
         """
-        url = f"{self.endpoint.rstrip('/')}/{path.lstrip('/')}"
-        headers = self._get_headers()
-
         try:
-            async with httpx.AsyncClient() as client:
-                if method == "GET":
-                    response = await client.get(
-                        url, headers=headers, params=params, timeout=self.timeout
-                    )
-                elif method == "POST":
-                    response = await client.post(
-                        url,
-                        headers=headers,
-                        json=data,
-                        params=params,
-                        timeout=self.timeout,
-                    )
-                elif method == "PUT":
-                    response = await client.put(
-                        url,
-                        headers=headers,
-                        json=data,
-                        params=params,
-                        timeout=self.timeout,
-                    )
-                elif method == "DELETE":
-                    response = await client.delete(
-                        url, headers=headers, params=params, timeout=self.timeout
-                    )
-                else:
-                    raise ValueError(f"Unsupported HTTP method: {method}")
+            # Convert parameters to dict
+            params_dict = (
+                params.model_dump(by_alias=True)
+                if hasattr(params, "model_dump")
+                else params.dict(by_alias=True)
+            )
 
-                response.raise_for_status()
-                return response.json()
+            # Call the tool
+            response = await self.call_tool(
+                tool_name,
+                {"params": params_dict},
+                skip_cache=skip_cache,
+                cache_key=cache_key,
+                cache_ttl=cache_ttl,
+            )
 
-        except httpx.HTTPStatusError as e:
-            # Try to parse error response
-            error_detail = "Unknown error"
+            # Parse response if it's a string
+            if isinstance(response, str):
+                response = json.loads(response)
+
             try:
-                error_data = e.response.json()
-                if isinstance(error_data, dict) and "detail" in error_data:
-                    error_detail = error_data["detail"]
-                elif isinstance(error_data, dict) and "message" in error_data:
-                    error_detail = error_data["message"]
-            except Exception:
-                error_detail = e.response.text or str(e)
+                # Attempt strict validation
+                if hasattr(response_model, "model_validate"):
+                    # Pydantic v2
+                    validated_response = response_model.model_validate(response)
+                else:
+                    # Pydantic v1
+                    validated_response = response_model.parse_obj(response)
+            except ValidationError:
+                # Fallback to non-strict validation if strict fails
+                try:
+                    if hasattr(response_model, "model_validate"):
+                        # Pydantic v2
+                        validated_response = response_model.model_validate(
+                            response, strict=False
+                        )
+                    else:
+                        # Pydantic v1
+                        validated_response = response_model.parse_obj(response)
 
-            raise MCPError(
-                message=f"MCP request failed: {error_detail}",
-                server=self.endpoint,
-                tool=path,
-                params={"method": method, "params": params},
-            ) from e
+                    logger.warning(
+                        f"Non-strict validation used for {tool_name} response"
+                    )
+                except ValidationError as e:
+                    logger.error(f"Validation error in {tool_name} response: {str(e)}")
+                    raise MCPError(
+                        message=f"Invalid response from {tool_name}: {str(e)}",
+                        server=self.server_name,
+                        tool=tool_name,
+                        params=params_dict,
+                    ) from e
 
-        except httpx.RequestError as e:
-            raise MCPError(
-                message=f"MCP request error: {str(e)}",
-                server=self.endpoint,
-                tool=path,
-                params={"method": method, "params": params},
-            ) from e
-
+            return validated_response
         except Exception as e:
-            raise MCPError(
-                message=f"Unexpected error in MCP request: {str(e)}",
-                server=self.endpoint,
-                tool=path,
-                params={"method": method, "params": params},
-            ) from e
+            if not isinstance(e, MCPError):
+                logger.error(f"Error calling {tool_name}: {str(e)}")
 
-    @redis_cache.cached("mcp_tools", 3600)  # Cache tool list for 1 hour
-    async def list_tools(self, skip_cache: bool = False) -> List[Dict[str, str]]:
-        """List all available tools.
+                # Handle both Pydantic v1 and v2
+                params_serialized = (
+                    params.model_dump()
+                    if hasattr(params, "model_dump")
+                    else params.dict()
+                    if hasattr(params, "dict")
+                    else params
+                )
 
-        Args:
-            skip_cache: Whether to skip the cache
-
-        Returns:
-            List of tool metadata
-        """
-        response = await self._make_request("GET", "/tools")
-        return response.get("tools", [])
-
-    @redis_cache.cached("mcp_tool_metadata", 3600)  # Cache tool metadata for 1 hour
-    async def get_tool_metadata(
-        self, tool_name: str, skip_cache: bool = False
-    ) -> Dict[str, Any]:
-        """Get metadata for a specific tool.
-
-        Args:
-            tool_name: Tool name
-            skip_cache: Whether to skip the cache
-
-        Returns:
-            Tool metadata
-        """
-        return await self._make_request("GET", f"/tools/{tool_name}")
-
-    async def call_tool(
-        self, tool_name: str, params: Dict[str, Any], skip_cache: bool = False
-    ) -> Dict[str, Any]:
-        """Call a tool on the MCP server.
-
-        Args:
-            tool_name: Tool name
-            params: Tool parameters
-            skip_cache: Whether to skip the cache
-
-        Returns:
-            Tool execution result
-        """
-        cache_key = f"mcp_tool_{tool_name}"
-
-        # Check if we should use the cache
-        if self.use_cache and not skip_cache:
-            # Generate a cache key based on tool name and parameters
-            cache_key = redis_cache.cache_key(cache_key, **params)
-            cached_result = await redis_cache.get(cache_key)
-            if cached_result is not None:
-                logger.debug("Cache hit for tool %s", tool_name)
-                return cached_result
-
-        # Call the tool
-        logger.debug("Calling tool %s with params %s", tool_name, params)
-        result = await self._make_request(
-            "POST", f"/api/v1/tools/{tool_name}/call", data={"params": params}
-        )
-
-        # Cache the result if appropriate
-        if self.use_cache and not skip_cache:
-            await redis_cache.set(cache_key, result, self.cache_ttl)
-
-        return result
-
-    def list_tools_sync(self) -> List[Dict[str, str]]:
-        """Synchronous version of list_tools for use in initialization.
-
-        This is a simplified version that doesn't use the cache or make
-        actual HTTP requests. It's meant to be overridden by subclasses
-        with specific tool lists.
-
-        Returns:
-            List of tool metadata with at least a name field
-        """
-        # By default, return an empty list
-        # Subclasses should override this with their specific tool lists
-        logger.warning("Using default empty list_tools_sync implementation")
-        return []
-
-    def get_tool_metadata_sync(self, tool_name: str) -> Dict[str, Any]:
-        """Synchronous version of get_tool_metadata for use in initialization.
-
-        This is a simplified version that doesn't use the cache or make
-        actual HTTP requests. It's meant to be overridden by subclasses
-        with specific tool metadata.
-
-        Args:
-            tool_name: Tool name
-
-        Returns:
-            Tool metadata with at least a description field
-        """
-        # By default, return a generic description
-        # Subclasses should override this with their specific tool metadata
-        logger.warning("Using default generic get_tool_metadata_sync implementation")
-        return {
-            "name": tool_name,
-            "description": f"Call the {tool_name} tool.",
-            "parameters_schema": {"type": "object", "properties": {}},
-        }
+                raise MCPError(
+                    message=f"Failed to call {tool_name}: {str(e)}",
+                    server=self.server_name,
+                    tool=tool_name,
+                    params=params_serialized,
+                ) from e
+            raise
