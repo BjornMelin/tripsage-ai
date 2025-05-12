@@ -1,0 +1,35 @@
+{
+  "mcpServers": {
+    "airbnb": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@openbnb/mcp-server-airbnb"
+      ],
+      "env": {
+        "AIRBNB_API_KEY": "${AIRBNB_API_KEY}"
+      }
+    },
+    "google-maps": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-google-maps"
+      ],
+      "env": {
+        "GOOGLE_MAPS_API_KEY": "${GOOGLE_MAPS_API_KEY}"
+      }
+    },
+    "flights": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@ravinahp/flights-mcp"
+      ],
+      "env": {
+        "DUFFEL_API_KEY": "${DUFFEL_API_KEY}",
+        "DUFFEL_API_VERSION": "2023-06-02"
+      }
+    }
+  }
+}

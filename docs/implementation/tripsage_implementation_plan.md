@@ -27,7 +27,7 @@ This document provides a comprehensive implementation plan for completing the Tr
   ```
 
 - [ ] Configure environment variables in `.env` file
-  
+
   ```plaintext
   OPENAI_API_KEY=sk-...
   SUPABASE_URL=https://your-project.supabase.co
@@ -289,7 +289,7 @@ This document provides a comprehensive implementation plan for completing the Tr
 ### 3.3 Browser Automation MCP Server
 
 - [ ] Install Playwright and dependencies
-  
+
   ```bash
   uv pip install playwright
   python -m playwright install

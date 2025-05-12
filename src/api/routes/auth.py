@@ -1,13 +1,15 @@
-import uuid
 from datetime import timedelta
 from typing import Optional
 
-from auth import Token, User, create_access_token, get_current_active_user
-from database import get_supabase_client
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from passlib.context import CryptContext
 from pydantic import BaseModel, EmailStr
+
+from src.api.auth import Token, User, create_access_token, get_current_active_user
+from src.api.database import get_repository, get_user_repository
+from src.db.models.user import User as DBUser
+from src.db.repositories.user import UserRepository
 
 router = APIRouter(
     prefix="/auth",
@@ -27,27 +29,28 @@ class UserRegister(BaseModel):
 
 # Login
 @router.post("/token", response_model=Token)
-async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
-    supabase = get_supabase_client()
+async def login_for_access_token(
+    form_data: OAuth2PasswordRequestForm = None,
+    user_repo: UserRepository = None,
+):
+    # Get dependencies if not provided
+    if form_data is None:
+        form_data = Depends(OAuth2PasswordRequestForm)()
+    if user_repo is None:
+        user_repo = get_repository(get_user_repository)()
 
     # Find user by email
-    response = (
-        supabase.from_("users").select("*").eq("email", form_data.username).execute()
-    )
+    user = await user_repo.get_by_email(form_data.username)
 
-    if not response.data or not pwd_context.verify(
-        form_data.password, response.data[0]["password_hash"]
-    ):
+    if not user or not pwd_context.verify(form_data.password, user.password_hash):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    user = response.data[0]
-
     # Check if user is disabled
-    if user.get("is_disabled", False):
+    if user.is_disabled:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Inactive user"
         )
@@ -55,7 +58,7 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
     # Create access token
     access_token_expires = timedelta(minutes=30)
     access_token = create_access_token(
-        data={"sub": user["id"]}, expires_delta=access_token_expires
+        data={"sub": str(user.id)}, expires_delta=access_token_expires
     )
 
     return {"access_token": access_token, "token_type": "bearer"}
@@ -63,42 +66,42 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
 
 # Register new user
 @router.post("/register", status_code=status.HTTP_201_CREATED)
-async def register_user(user_data: UserRegister):
-    supabase = get_supabase_client()
+async def register_user(
+    user_data: UserRegister,
+    user_repo: UserRepository = None,
+):
+    # Get dependencies if not provided
+    if user_repo is None:
+        user_repo = get_repository(get_user_repository)()
 
     # Check if email already exists
-    email_check = (
-        supabase.from_("users").select("id").eq("email", user_data.email).execute()
-    )
-    if email_check.data:
+    existing_user = await user_repo.get_by_email(user_data.email)
+    if existing_user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered"
         )
 
     # Create new user
-    user_id = str(uuid.uuid4())
     password_hash = pwd_context.hash(user_data.password)
 
-    new_user = {
-        "id": user_id,
-        "email": user_data.email,
-        "password_hash": password_hash,
-        "full_name": user_data.full_name,
-        "is_admin": False,
-        "is_disabled": False,
-    }
+    new_user = DBUser(
+        email=user_data.email,
+        name=user_data.full_name,
+        password_hash=password_hash,
+        is_admin=False,
+        is_disabled=False,
+    )
 
-    response = supabase.from_("users").insert(new_user).execute()
-
-    if not response.data:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Could not create user"
-        )
+    await user_repo.create(new_user)
 
     return {"detail": "User created successfully"}
 
 
 # Get current user profile
 @router.get("/me", response_model=User)
-async def read_users_me(current_user: User = Depends(get_current_active_user)):
+async def read_users_me(current_user: User = None):
+    # Get dependencies if not provided
+    if current_user is None:
+        current_user = await get_current_active_user()
+
     return current_user

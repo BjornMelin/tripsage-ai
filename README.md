@@ -71,7 +71,28 @@ For detailed schema information, see the [Database Setup Documentation](./docs/d
    # Edit each .env file with your API keys and configuration
    ```
 
-3. Install dependencies:
+3. Configure MCP Servers:
+
+   TripSage uses several MCP (Model Context Protocol) servers to enhance its functionality. The following environment variables are required:
+
+   ```bash
+   # OpenAI API Key
+   OPENAI_API_KEY=your_openai_api_key_here
+
+   # Flights MCP Server (ravinahp/flights-mcp)
+   DUFFEL_API_KEY=your_duffel_api_key_here  # Get from duffel.com
+   DUFFEL_API_VERSION=2023-06-02            # Use this specific version
+
+   # Google Maps MCP Server
+   GOOGLE_MAPS_API_KEY=your_google_maps_api_key_here
+
+   # Other MCP Servers
+   # Add other MCP server environment variables as needed
+   ```
+
+   Note that the `ravinahp/flights-mcp` server is read-only and can only search for flights, not book them. For Duffel API key setup, you can start with a test key (`duffel_test`) to try the functionality with simulated data.
+
+4. Install dependencies:
 
    ```bash
    # API server dependencies
@@ -81,7 +102,7 @@ For detailed schema information, see the [Database Setup Documentation](./docs/d
    pip install -r src/agents/requirements.txt
    ```
 
-4. Set up the database:
+5. Set up the database:
 
    ```bash
    # See docs/database_setup.md for detailed instructions
@@ -89,14 +110,14 @@ For detailed schema information, see the [Database Setup Documentation](./docs/d
    node scripts/verify_connection.js
    ```
 
-5. Start the API server:
+6. Start the API server:
 
    ```bash
    cd src/api
    uvicorn main:app --reload --host 0.0.0.0 --port 8000
    ```
 
-6. Try the agent demo:
+7. Try the agent demo:
 
    ```bash
    cd src/agents

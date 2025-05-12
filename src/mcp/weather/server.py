@@ -1,596 +1,458 @@
 """
 Weather MCP Server implementation for TripSage.
 
-This module provides a weather information service using OpenWeatherMap API
-with backup from Visual Crossing Weather API.
+This module provides weather information services for the
+TripSage travel planning system using the FastMCP 2.0 framework.
 """
 
-from typing import Any, Dict, List, Optional, Union
-import asyncio
-import datetime
-import httpx
-from pydantic import BaseModel, Field, model_validator
+from typing import Any, Dict, List, Optional
 
-from ..base_mcp_server import BaseMCPServer, MCPTool
+from ...utils.error_handling import APIError
 from ...utils.logging import get_module_logger
-from ...utils.error_handling import APIError, MCPError
-from ...utils.config import get_config
-from ...cache.redis_cache import redis_cache
+from ...utils.settings import settings
+from ..fastmcp import FastMCPServer, create_tool
+from .api_client import WeatherLocation, get_weather_api_client
 
 logger = get_module_logger(__name__)
-config = get_config()
 
 
-class LocationParams(BaseModel):
-    """Parameters for location-based weather queries."""
-    
-    lat: Optional[float] = None
-    lon: Optional[float] = None
-    city: Optional[str] = None
-    country: Optional[str] = None
-    
-    @model_validator(mode='after')
-    def validate_coordinates_or_city(self) -> 'LocationParams':
-        """Validate that either coordinates or city is provided."""
-        if (self.lat is None or self.lon is None) and not self.city:
-            raise ValueError("Either coordinates (lat, lon) or city must be provided")
-        return self
+# Location model now imported from api_client
 
 
-class ForecastParams(BaseModel):
-    """Parameters for weather forecast queries."""
-    
-    location: LocationParams
-    days: int = Field(default=5, ge=1, le=16)
+# API clients are now imported from api_client
 
 
-class TravelRecommendationParams(BaseModel):
-    """Parameters for travel recommendations based on weather."""
-    
-    location: LocationParams
-    start_date: Optional[datetime.date] = None
-    end_date: Optional[datetime.date] = None
-    activities: Optional[List[str]] = None
+class WeatherMCPServer(FastMCPServer):
+    """Weather MCP Server for TripSage using FastMCP 2.0."""
 
-
-class OpenWeatherMapAPI:
-    """Client for OpenWeatherMap API."""
-    
-    def __init__(self, api_key: str):
-        """Initialize the OpenWeatherMap API client.
-        
-        Args:
-            api_key: OpenWeatherMap API key
-        """
-        self.api_key = api_key
-        self.base_url = "https://api.openweathermap.org/data/2.5"
-    
-    async def _make_request(self, endpoint: str, params: Dict[str, Any]) -> Dict[str, Any]:
-        """Make a request to the OpenWeatherMap API.
-        
-        Args:
-            endpoint: API endpoint
-            params: Query parameters
-            
-        Returns:
-            Response data
-            
-        Raises:
-            APIError: If the API request fails
-        """
-        # Ensure API key is included
-        params["appid"] = self.api_key
-        # Use metric units
-        params["units"] = "metric"
-        
-        url = f"{self.base_url}/{endpoint}"
-        
-        try:
-            async with httpx.AsyncClient() as client:
-                response = await client.get(url, params=params, timeout=10.0)
-                response.raise_for_status()
-                return response.json()
-        
-        except httpx.HTTPStatusError as e:
-            raise APIError(
-                message=f"OpenWeatherMap API error: {e.response.status_code}",
-                service="OpenWeatherMap",
-                status_code=e.response.status_code,
-                response=e.response.text
-            )
-        
-        except Exception as e:
-            raise APIError(
-                message=f"OpenWeatherMap API request failed: {str(e)}",
-                service="OpenWeatherMap"
-            )
-    
-    @redis_cache.cached("weather_current", 1800)  # Cache for 30 minutes
-    async def get_current_weather(
-        self, 
-        lat: Optional[float] = None,
-        lon: Optional[float] = None,
-        city: Optional[str] = None,
-        country: Optional[str] = None
-    ) -> Dict[str, Any]:
-        """Get current weather conditions.
-        
-        Args:
-            lat: Latitude
-            lon: Longitude
-            city: City name
-            country: Country code
-            
-        Returns:
-            Weather data
-        """
-        params: Dict[str, Any] = {}
-        
-        if lat is not None and lon is not None:
-            params["lat"] = lat
-            params["lon"] = lon
-        elif city:
-            params["q"] = city if not country else f"{city},{country}"
-        else:
-            raise ValueError("Either coordinates (lat, lon) or city must be provided")
-        
-        data = await self._make_request("weather", params)
-        
-        # Transform the data to a more usable format
-        return {
-            "temperature": data["main"]["temp"],
-            "feels_like": data["main"]["feels_like"],
-            "temp_min": data["main"]["temp_min"],
-            "temp_max": data["main"]["temp_max"],
-            "humidity": data["main"]["humidity"],
-            "pressure": data["main"]["pressure"],
-            "wind_speed": data["wind"]["speed"],
-            "wind_direction": data["wind"]["deg"],
-            "clouds": data["clouds"]["all"],
-            "weather": {
-                "id": data["weather"][0]["id"],
-                "main": data["weather"][0]["main"],
-                "description": data["weather"][0]["description"],
-                "icon": data["weather"][0]["icon"]
-            },
-            "location": {
-                "name": data["name"],
-                "country": data["sys"]["country"],
-                "lat": data["coord"]["lat"],
-                "lon": data["coord"]["lon"],
-                "timezone": data["timezone"]
-            },
-            "timestamp": data["dt"],
-            "source": "OpenWeatherMap"
-        }
-    
-    @redis_cache.cached("weather_forecast", 3600)  # Cache for 1 hour
-    async def get_forecast(
-        self,
-        lat: Optional[float] = None,
-        lon: Optional[float] = None,
-        city: Optional[str] = None,
-        country: Optional[str] = None,
-        days: int = 5
-    ) -> Dict[str, Any]:
-        """Get weather forecast.
-        
-        Args:
-            lat: Latitude
-            lon: Longitude
-            city: City name
-            country: Country code
-            days: Number of forecast days
-            
-        Returns:
-            Forecast data
-        """
-        params: Dict[str, Any] = {}
-        
-        if lat is not None and lon is not None:
-            params["lat"] = lat
-            params["lon"] = lon
-        elif city:
-            params["q"] = city if not country else f"{city},{country}"
-        else:
-            raise ValueError("Either coordinates (lat, lon) or city must be provided")
-        
-        # Limit to the number of days requested (API returns in 3-hour intervals)
-        params["cnt"] = min(days * 8, 40)  # 8 intervals per day, max 40 (5 days)
-        
-        data = await self._make_request("forecast", params)
-        
-        # Group forecast by day
-        forecasts_by_day: Dict[str, List[Dict[str, Any]]] = {}
-        
-        for item in data["list"]:
-            # Convert timestamp to date string
-            date = datetime.datetime.fromtimestamp(item["dt"]).strftime("%Y-%m-%d")
-            
-            if date not in forecasts_by_day:
-                forecasts_by_day[date] = []
-            
-            forecasts_by_day[date].append({
-                "timestamp": item["dt"],
-                "time": datetime.datetime.fromtimestamp(item["dt"]).strftime("%H:%M"),
-                "temperature": item["main"]["temp"],
-                "feels_like": item["main"]["feels_like"],
-                "temp_min": item["main"]["temp_min"],
-                "temp_max": item["main"]["temp_max"],
-                "humidity": item["main"]["humidity"],
-                "pressure": item["main"]["pressure"],
-                "wind_speed": item["wind"]["speed"],
-                "wind_direction": item["wind"]["deg"],
-                "clouds": item["clouds"]["all"],
-                "weather": {
-                    "id": item["weather"][0]["id"],
-                    "main": item["weather"][0]["main"],
-                    "description": item["weather"][0]["description"],
-                    "icon": item["weather"][0]["icon"]
-                }
-            })
-        
-        # Calculate daily aggregates
-        daily_forecast = []
-        
-        for date, intervals in forecasts_by_day.items():
-            # Calculate min, max, and average values
-            temps = [interval["temperature"] for interval in intervals]
-            humidity = [interval["humidity"] for interval in intervals]
-            
-            # Most common weather condition
-            weather_conditions = [interval["weather"]["main"] for interval in intervals]
-            most_common_condition = max(set(weather_conditions), key=weather_conditions.count)
-            
-            # Find the interval with the most common condition
-            for interval in intervals:
-                if interval["weather"]["main"] == most_common_condition:
-                    representative_weather = interval["weather"]
-                    break
-            else:
-                representative_weather = intervals[0]["weather"]
-            
-            daily_forecast.append({
-                "date": date,
-                "temp_min": min(temps),
-                "temp_max": max(temps),
-                "temp_avg": sum(temps) / len(temps),
-                "humidity_avg": sum(humidity) / len(humidity),
-                "weather": representative_weather,
-                "intervals": intervals
-            })
-        
-        return {
-            "location": {
-                "name": data["city"]["name"],
-                "country": data["city"]["country"],
-                "lat": data["city"]["coord"]["lat"],
-                "lon": data["city"]["coord"]["lon"],
-                "timezone": data["city"]["timezone"]
-            },
-            "daily": daily_forecast,
-            "source": "OpenWeatherMap"
-        }
-
-
-class WeatherMCPServer(BaseMCPServer):
-    """Weather MCP Server for TripSage."""
-    
-    def __init__(
-        self,
-        host: str = "0.0.0.0",
-        port: int = 3000,
-        openweathermap_api_key: Optional[str] = None,
-        visual_crossing_api_key: Optional[str] = None
-    ):
+    def __init__(self, host: str = "0.0.0.0", port: int = 8003):
         """Initialize the Weather MCP Server.
-        
+
         Args:
             host: Host to bind to
             port: Port to listen on
-            openweathermap_api_key: OpenWeatherMap API key
-            visual_crossing_api_key: Visual Crossing API key
         """
         super().__init__(
             name="Weather",
-            description="Weather information service with OpenWeatherMap",
+            description="Weather information service for TripSage travel planning",
             version="1.0.0",
             host=host,
-            port=port
+            port=port,
         )
-        
+
         # Initialize API clients
-        self.openweathermap_api_key = openweathermap_api_key or config.weather_mcp.openweathermap_api_key
-        self.openweathermap = OpenWeatherMapAPI(self.openweathermap_api_key)
-        
+        self.weather_api = get_weather_api_client()
+
         # Register tools
-        self.register_tool(CurrentWeatherTool(self.openweathermap))
-        self.register_tool(ForecastTool(self.openweathermap))
-        self.register_tool(TravelRecommendationTool(self.openweathermap))
+        self._register_tools()
 
+        logger.info("Initialized Weather MCP Server")
 
-class CurrentWeatherTool:
-    """Tool for getting current weather conditions."""
-    
-    name = "get_current_weather"
-    description = "Get current weather conditions for a location"
-    
-    def __init__(self, openweathermap: OpenWeatherMapAPI):
-        """Initialize the tool.
-        
-        Args:
-            openweathermap: OpenWeatherMap API client
-        """
-        self.openweathermap = openweathermap
-    
-    async def execute(self, params: Dict[str, Any]) -> Dict[str, Any]:
-        """Execute the tool.
-        
+    def _register_tools(self) -> None:
+        """Register all weather-related tools."""
+        # Current weather tool
+        self.register_fast_tool(
+            create_tool(
+                name="get_current_weather",
+                description="Get current weather conditions for a location",
+                input_schema={
+                    "type": "object",
+                    "properties": {
+                        "lat": {"type": "number", "description": "Latitude coordinate"},
+                        "lon": {
+                            "type": "number",
+                            "description": "Longitude coordinate",
+                        },
+                        "city": {
+                            "type": "string",
+                            "description": "City name (e.g., 'Paris')",
+                        },
+                        "country": {
+                            "type": "string",
+                            "description": "Country code (e.g., 'FR' for France)",
+                        },
+                    },
+                    "anyOf": [{"required": ["lat", "lon"]}, {"required": ["city"]}],
+                },
+                handler=self._get_current_weather,
+                output_schema={
+                    "type": "object",
+                    "properties": {
+                        "temperature": {"type": "number"},
+                        "feels_like": {"type": "number"},
+                        "temp_min": {"type": "number"},
+                        "temp_max": {"type": "number"},
+                        "humidity": {"type": "number"},
+                        "pressure": {"type": "number"},
+                        "wind_speed": {"type": "number"},
+                        "wind_direction": {"type": "number"},
+                        "clouds": {"type": "number"},
+                        "weather": {"type": "object"},
+                        "location": {"type": "object"},
+                        "timestamp": {"type": "number"},
+                        "source": {"type": "string"},
+                    },
+                },
+                examples=[
+                    {
+                        "input": {"city": "Paris", "country": "FR"},
+                        "output": {
+                            "temperature": 22.5,
+                            "feels_like": 21.8,
+                            "temp_min": 20.1,
+                            "temp_max": 24.2,
+                            "humidity": 65,
+                            "pressure": 1013,
+                            "wind_speed": 3.5,
+                            "wind_direction": 270,
+                            "clouds": 20,
+                            "weather": {
+                                "id": 800,
+                                "main": "Clear",
+                                "description": "clear sky",
+                                "icon": "01d",
+                            },
+                            "location": {
+                                "name": "Paris",
+                                "country": "FR",
+                                "lat": 48.8566,
+                                "lon": 2.3522,
+                                "timezone": 7200,
+                            },
+                            "timestamp": 1686571200,
+                            "source": "OpenWeatherMap",
+                        },
+                    }
+                ],
+            )
+        )
+
+        # Forecast tool
+        self.register_fast_tool(
+            create_tool(
+                name="get_forecast",
+                description="Get weather forecast for a location",
+                input_schema={
+                    "type": "object",
+                    "properties": {
+                        "location": {
+                            "type": "object",
+                            "properties": {
+                                "lat": {"type": "number"},
+                                "lon": {"type": "number"},
+                                "city": {"type": "string"},
+                                "country": {"type": "string"},
+                            },
+                            "anyOf": [
+                                {"required": ["lat", "lon"]},
+                                {"required": ["city"]},
+                            ],
+                        },
+                        "days": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 16,
+                            "default": 5,
+                            "description": "Number of forecast days",
+                        },
+                    },
+                    "required": ["location"],
+                },
+                handler=self._get_forecast,
+                output_schema={
+                    "type": "object",
+                    "properties": {
+                        "location": {"type": "object"},
+                        "daily": {"type": "array"},
+                        "source": {"type": "string"},
+                    },
+                },
+            )
+        )
+
+        # Travel recommendation tool
+        self.register_fast_tool(
+            create_tool(
+                name="get_travel_recommendation",
+                description="Get travel recommendations based on weather conditions",
+                input_schema={
+                    "type": "object",
+                    "properties": {
+                        "location": {
+                            "type": "object",
+                            "properties": {
+                                "lat": {"type": "number"},
+                                "lon": {"type": "number"},
+                                "city": {"type": "string"},
+                                "country": {"type": "string"},
+                            },
+                            "anyOf": [
+                                {"required": ["lat", "lon"]},
+                                {"required": ["city"]},
+                            ],
+                        },
+                        "start_date": {
+                            "type": "string",
+                            "format": "date",
+                            "description": "Trip start date (YYYY-MM-DD)",
+                        },
+                        "end_date": {
+                            "type": "string",
+                            "format": "date",
+                            "description": "Trip end date (YYYY-MM-DD)",
+                        },
+                        "activities": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": (
+                                "Planned activities (e.g., ['hiking', 'sightseeing'])"
+                            ),
+                        },
+                    },
+                    "required": ["location"],
+                },
+                handler=self._get_travel_recommendation,
+                output_schema={
+                    "type": "object",
+                    "properties": {
+                        "current_weather": {"type": "object"},
+                        "forecast": {"type": "object"},
+                        "recommendations": {"type": "object"},
+                    },
+                },
+            )
+        )
+
+    async def _get_current_weather(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        """Get current weather conditions for a location.
+
         Args:
             params: Tool parameters
-            
+                - lat: Latitude coordinate (optional if city is provided)
+                - lon: Longitude coordinate (optional if city is provided)
+                - city: City name (optional if lat/lon are provided)
+                - country: Country code (optional)
+
         Returns:
-            Current weather data
+            Dictionary with current weather information
+
+        Raises:
+            ValueError: If neither coordinates nor city is provided
         """
-        # Validate parameters
         try:
-            location_params = LocationParams(**params)
+            # Validate parameters and create a location object
+            try:
+                location = WeatherLocation(**params)
+            except Exception as e:
+                raise ValueError(f"Invalid parameters: {str(e)}") from e
+
+            # Call OpenWeatherMap API
+            current_weather = await self.weather_api.get_current_weather(location)
+
+            # Convert to dictionary
+            return current_weather.model_dump()
+
         except Exception as e:
-            raise MCPError(
-                message=f"Invalid parameters: {str(e)}",
-                server="Weather",
-                tool=self.name,
-                params=params
-            )
-        
-        try:
-            return await self.openweathermap.get_current_weather(
-                lat=location_params.lat,
-                lon=location_params.lon,
-                city=location_params.city,
-                country=location_params.country
-            )
-        except Exception as e:
+            logger.error("Error in get_current_weather: %s", str(e))
             if isinstance(e, APIError):
-                raise MCPError(
-                    message=f"Weather API error: {e.message}",
-                    server="Weather",
-                    tool=self.name,
-                    params=params
-                )
+                raise ValueError(f"Weather API error: {e.message}") from e
             else:
-                raise MCPError(
-                    message=f"Error getting current weather: {str(e)}",
-                    server="Weather",
-                    tool=self.name,
-                    params=params
-                )
+                raise ValueError(f"Error getting current weather: {str(e)}") from e
 
+    async def _get_forecast(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        """Get weather forecast for a location.
 
-class ForecastTool:
-    """Tool for getting weather forecasts."""
-    
-    name = "get_forecast"
-    description = "Get weather forecast for a location"
-    
-    def __init__(self, openweathermap: OpenWeatherMapAPI):
-        """Initialize the tool.
-        
-        Args:
-            openweathermap: OpenWeatherMap API client
-        """
-        self.openweathermap = openweathermap
-    
-    async def execute(self, params: Dict[str, Any]) -> Dict[str, Any]:
-        """Execute the tool.
-        
         Args:
             params: Tool parameters
-            
+                - location: Location object with either lat/lon or city/country
+                - days: Number of forecast days (default: 5)
+
         Returns:
-            Forecast data
+            Dictionary with forecast information
+
+        Raises:
+            ValueError: If neither coordinates nor city is provided
         """
-        # Validate parameters
         try:
-            forecast_params = ForecastParams(**params)
+            # Extract location parameters
+            location_data = params.get("location", {})
+            days = params.get("days", 5)
+
+            # Validate location parameters
+            try:
+                location = WeatherLocation(**location_data)
+            except Exception as e:
+                raise ValueError(f"Invalid location parameters: {str(e)}") from e
+
+            # Call weather API
+            forecast = await self.weather_api.get_forecast(location, days=days)
+
+            # Convert to dictionary
+            return forecast.model_dump()
+
         except Exception as e:
-            raise MCPError(
-                message=f"Invalid parameters: {str(e)}",
-                server="Weather",
-                tool=self.name,
-                params=params
-            )
-        
-        try:
-            return await self.openweathermap.get_forecast(
-                lat=forecast_params.location.lat,
-                lon=forecast_params.location.lon,
-                city=forecast_params.location.city,
-                country=forecast_params.location.country,
-                days=forecast_params.days
-            )
-        except Exception as e:
+            logger.error("Error in get_forecast: %s", str(e))
             if isinstance(e, APIError):
-                raise MCPError(
-                    message=f"Weather API error: {e.message}",
-                    server="Weather",
-                    tool=self.name,
-                    params=params
-                )
+                raise ValueError(f"Weather API error: {e.message}") from e
             else:
-                raise MCPError(
-                    message=f"Error getting forecast: {str(e)}",
-                    server="Weather",
-                    tool=self.name,
-                    params=params
-                )
+                raise ValueError(f"Error getting forecast: {str(e)}") from e
 
+    async def _get_travel_recommendation(
+        self, params: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Get travel recommendations based on weather conditions.
 
-class TravelRecommendationTool:
-    """Tool for getting travel recommendations based on weather."""
-    
-    name = "get_travel_recommendation"
-    description = "Get travel recommendations based on weather conditions"
-    
-    def __init__(self, openweathermap: OpenWeatherMapAPI):
-        """Initialize the tool.
-        
-        Args:
-            openweathermap: OpenWeatherMap API client
-        """
-        self.openweathermap = openweathermap
-    
-    async def execute(self, params: Dict[str, Any]) -> Dict[str, Any]:
-        """Execute the tool.
-        
         Args:
             params: Tool parameters
-            
+                - location: Location object with either lat/lon or city/country
+                - start_date: Trip start date (optional)
+                - end_date: Trip end date (optional)
+                - activities: Planned activities (optional)
+
         Returns:
-            Travel recommendations
+            Dictionary with travel recommendations
+
+        Raises:
+            ValueError: If neither coordinates nor city is provided
         """
-        # Validate parameters
         try:
-            recommendation_params = TravelRecommendationParams(**params)
-        except Exception as e:
-            raise MCPError(
-                message=f"Invalid parameters: {str(e)}",
-                server="Weather",
-                tool=self.name,
-                params=params
-            )
-        
-        try:
+            # Extract parameters
+            location_data = params.get("location", {})
+            start_date = params.get("start_date")
+            end_date = params.get("end_date")
+            activities = params.get("activities", [])
+
+            # Validate location parameters
+            try:
+                location = WeatherLocation(**location_data)
+            except Exception as e:
+                raise ValueError(f"Invalid location parameters: {str(e)}") from e
+
             # Get current weather and forecast
-            current = await self.openweathermap.get_current_weather(
-                lat=recommendation_params.location.lat,
-                lon=recommendation_params.location.lon,
-                city=recommendation_params.location.city,
-                country=recommendation_params.location.country
-            )
-            
-            forecast = await self.openweathermap.get_forecast(
-                lat=recommendation_params.location.lat,
-                lon=recommendation_params.location.lon,
-                city=recommendation_params.location.city,
-                country=recommendation_params.location.country,
-                days=7  # Get a week of forecast data
-            )
-            
+            current = await self.weather_api.get_current_weather(location)
+            # Get a week of forecast data
+            forecast = await self.weather_api.get_forecast(location, days=7)
+
             # Generate recommendations based on weather
             recommendations = self._generate_recommendations(
-                current,
-                forecast,
-                recommendation_params.start_date,
-                recommendation_params.end_date,
-                recommendation_params.activities
+                current.model_dump(),
+                forecast.model_dump(),
+                start_date,
+                end_date,
+                activities,
             )
-            
+
             return {
-                "current_weather": current,
-                "forecast": forecast,
-                "recommendations": recommendations
+                "current_weather": current.model_dump(),
+                "forecast": forecast.model_dump(),
+                "recommendations": recommendations,
             }
-        
         except Exception as e:
+            logger.error("Error in get_travel_recommendation: %s", str(e))
             if isinstance(e, APIError):
-                raise MCPError(
-                    message=f"Weather API error: {e.message}",
-                    server="Weather",
-                    tool=self.name,
-                    params=params
-                )
+                raise ValueError(f"Weather API error: {e.message}") from e
             else:
-                raise MCPError(
-                    message=f"Error generating travel recommendations: {str(e)}",
-                    server="Weather",
-                    tool=self.name,
-                    params=params
-                )
-    
+                raise ValueError(
+                    f"Error generating travel recommendations: {str(e)}"
+                ) from e
+
     def _generate_recommendations(
         self,
         current: Dict[str, Any],
         forecast: Dict[str, Any],
-        start_date: Optional[datetime.date],
-        end_date: Optional[datetime.date],
-        activities: Optional[List[str]]
+        start_date: Optional[str],
+        end_date: Optional[str],
+        activities: Optional[List[str]],
     ) -> Dict[str, Any]:
         """Generate travel recommendations based on weather data.
-        
+
         Args:
             current: Current weather data
             forecast: Forecast data
             start_date: Trip start date
             end_date: Trip end date
             activities: Desired activities
-            
+
         Returns:
             Travel recommendations
         """
         # Get the weather condition and temperature
         weather_condition = current["weather"]["main"]
         temperature = current["temperature"]
-        
+
         # Define weather categories
         outdoor_friendly = ["Clear", "Clouds", "Few clouds", "Partly cloudy"]
         indoor_recommended = ["Rain", "Thunderstorm", "Drizzle", "Snow", "Mist", "Fog"]
-        
+
         # Define temperature categories
         cold = temperature < 10
         cool = 10 <= temperature < 20
         moderate = 20 <= temperature < 25
         warm = 25 <= temperature < 30
         hot = temperature >= 30
-        
+
         # Generate clothing recommendations
         clothing_recommendations = []
         if cold:
-            clothing_recommendations.extend([
-                "Pack heavy winter clothing, including a coat, gloves, and a hat.",
-                "Layer clothing for insulation and flexibility.",
-                "Bring thermal undergarments for extra warmth."
-            ])
+            clothing_recommendations.extend(
+                [
+                    "Pack heavy winter clothing, including a coat, gloves, and a hat.",
+                    "Layer clothing for insulation and flexibility.",
+                    "Bring thermal undergarments for extra warmth.",
+                ]
+            )
         elif cool:
-            clothing_recommendations.extend([
-                "Pack a light jacket or sweater for cooler periods.",
-                "Consider bringing long-sleeved shirts and pants.",
-                "A light scarf might be useful for windy conditions."
-            ])
+            clothing_recommendations.extend(
+                [
+                    "Pack a light jacket or sweater for cooler periods.",
+                    "Consider bringing long-sleeved shirts and pants.",
+                    "A light scarf might be useful for windy conditions.",
+                ]
+            )
         elif moderate:
-            clothing_recommendations.extend([
-                "Pack a mix of short and long-sleeved shirts.",
-                "Light sweaters or cardigans for evenings.",
-                "Comfortable walking shoes for exploration."
-            ])
+            clothing_recommendations.extend(
+                [
+                    "Pack a mix of short and long-sleeved shirts.",
+                    "Light sweaters or cardigans for evenings.",
+                    "Comfortable walking shoes for exploration.",
+                ]
+            )
         elif warm:
-            clothing_recommendations.extend([
-                "Pack lightweight, breathable clothing.",
-                "Bring a hat and sunglasses for sun protection.",
-                "Consider moisture-wicking fabrics for comfort."
-            ])
+            clothing_recommendations.extend(
+                [
+                    "Pack lightweight, breathable clothing.",
+                    "Bring a hat and sunglasses for sun protection.",
+                    "Consider moisture-wicking fabrics for comfort.",
+                ]
+            )
         elif hot:
-            clothing_recommendations.extend([
-                "Pack very lightweight, loose-fitting clothing.",
-                "Bring a hat, sunglasses, and sunscreen.",
-                "Consider UV-protective clothing for extended outdoor activities."
-            ])
-        
+            clothing_recommendations.extend(
+                [
+                    "Pack very lightweight, loose-fitting clothing.",
+                    "Bring a hat, sunglasses, and sunscreen.",
+                    "Consider UV-protective clothing for extended outdoor activities.",
+                ]
+            )
+
         # Generate activity recommendations
         activity_recommendations = []
         if weather_condition in outdoor_friendly:
-            activity_recommendations.extend([
-                "Weather is suitable for outdoor activities.",
-                "Consider parks, hiking, or sightseeing.",
-                "Open-air restaurants and cafes would be enjoyable."
-            ])
+            activity_recommendations.extend(
+                [
+                    "Weather is suitable for outdoor activities.",
+                    "Consider parks, hiking, or sightseeing.",
+                    "Open-air restaurants and cafes would be enjoyable.",
+                ]
+            )
         else:
-            activity_recommendations.extend([
-                "Weather may be challenging for outdoor activities.",
-                "Consider museums, galleries, or indoor attractions.",
-                "Have backup indoor plans available."
-            ])
-        
+            activity_recommendations.extend(
+                [
+                    "Weather may be challenging for outdoor activities.",
+                    "Consider museums, galleries, or indoor attractions.",
+                    "Have backup indoor plans available.",
+                ]
+            )
+
         # Add activity-specific recommendations if activities were specified
         if activities:
             activity_specific = []
@@ -599,50 +461,71 @@ class TravelRecommendationTool:
                     if weather_condition in outdoor_friendly and not hot:
                         activity_specific.append("Good conditions for hiking.")
                     else:
-                        activity_specific.append("Consider rescheduling hiking due to weather.")
-                
+                        activity_specific.append(
+                            "Consider rescheduling hiking due to weather."
+                        )
+
                 elif activity.lower() == "beach":
                     if weather_condition == "Clear" and (warm or hot):
                         activity_specific.append("Excellent beach weather.")
                     else:
                         activity_specific.append("Not ideal beach conditions.")
-                
+
                 elif activity.lower() in ["museum", "shopping", "indoor"]:
                     if weather_condition in indoor_recommended:
-                        activity_specific.append(f"Perfect weather for {activity.lower()} activities.")
+                        activity_specific.append(
+                            f"Perfect weather for {activity.lower()} activities."
+                        )
                     else:
-                        activity_specific.append(f"Good option, but consider outdoor activities given the nice weather.")
-            
+                        activity_specific.append(
+                            "Good option, but consider outdoor activities "
+                            "given the nice weather."
+                        )
+
             activity_recommendations.extend(activity_specific)
-        
+
         # Forecast-based recommendations
         forecast_recommendations = []
         for day in forecast["daily"][:5]:  # Look at the next 5 days
             date = day["date"]
             condition = day["weather"]["main"]
             max_temp = day["temp_max"]
-            
+
             if condition in outdoor_friendly and max_temp > 20:
-                forecast_recommendations.append(f"Good outdoor weather on {date}. Plan outdoor activities.")
+                forecast_recommendations.append(
+                    f"Good outdoor weather on {date}. Plan outdoor activities."
+                )
             elif condition in indoor_recommended:
-                forecast_recommendations.append(f"Possible {condition.lower()} on {date}. Plan indoor activities.")
-        
+                forecast_recommendations.append(
+                    f"Possible {condition.lower()} on {date}. Plan indoor activities."
+                )
+
         return {
             "summary": f"Current conditions: {temperature}°C, {weather_condition}",
             "clothing": clothing_recommendations,
             "activities": activity_recommendations,
-            "forecast_based": forecast_recommendations
+            "forecast_based": forecast_recommendations,
         }
 
 
-def create_server():
-    """Create and return a Weather MCP Server instance."""
-    return WeatherMCPServer(
-        host=config.weather_mcp.endpoint.split("://")[1].split(":")[0] if ":" in config.weather_mcp.endpoint else "0.0.0.0",
-        port=int(config.weather_mcp.endpoint.split(":")[-1]) if ":" in config.weather_mcp.endpoint else 3000,
-        openweathermap_api_key=config.weather_mcp.openweathermap_api_key,
-        visual_crossing_api_key=config.weather_mcp.visual_crossing_api_key
-    )
+def create_server(
+    host: str = settings.weather_mcp.endpoint.split("://")[1].split(":")[0]
+    if "://" in settings.weather_mcp.endpoint
+    else "0.0.0.0",
+    port: int = int(settings.weather_mcp.endpoint.split(":")[-1])
+    if ":" in settings.weather_mcp.endpoint
+    else 8003,
+):
+    """Create and return a Weather MCP Server instance.
+
+    Args:
+        host: Host to bind to
+        port: Port to listen on
+
+    Returns:
+        Weather MCP Server instance
+    """
+    return WeatherMCPServer(host=host, port=port)
 
 
 if __name__ == "__main__":
