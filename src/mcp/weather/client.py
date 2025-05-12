@@ -5,39 +5,35 @@ This module provides a client for interacting with the Weather MCP Server,
 which offers weather information and travel recommendations.
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, TypeVar
 
-from pydantic import BaseModel, ConfigDict, model_validator
+from agents import function_tool
 
 from ...cache.redis_cache import redis_cache
 from ...utils.config import get_config
 from ...utils.error_handling import MCPError
 from ...utils.logging import get_module_logger
-from ..fastmcp import FastMCPClient
+from ..base_mcp_client import BaseMCPClient
+from .models import (
+    BaseParams,
+    BaseResponse,
+    CurrentWeatherResponse,
+    DestinationWeatherComparison,
+    ForecastResponse,
+    LocationParams,
+    OptimalTravelTime,
+    RecommendationResponse,
+    TravelWeatherSummary,
+)
 
 logger = get_module_logger(__name__)
 config = get_config()
 
-
-class LocationParams(BaseModel):
-    """Parameters for location-based weather queries."""
-
-    lat: Optional[float] = None
-    lon: Optional[float] = None
-    city: Optional[str] = None
-    country: Optional[str] = None
-
-    model_config = ConfigDict(extra="forbid")
-
-    @model_validator(mode="after")
-    def validate_coordinates_or_city(self) -> "LocationParams":
-        """Validate that either coordinates or city is provided."""
-        if (self.lat is None or self.lon is None) and not self.city:
-            raise ValueError("Either coordinates (lat, lon) or city must be provided")
-        return self
+P = TypeVar("P", bound=BaseParams)
+R = TypeVar("R", bound=BaseResponse)
 
 
-class WeatherMCPClient(FastMCPClient):
+class WeatherMCPClient(BaseMCPClient[P, R]):
     """Client for the Weather MCP Server."""
 
     def __init__(
@@ -67,14 +63,15 @@ class WeatherMCPClient(FastMCPClient):
         )
 
         super().__init__(
-            server_name="Weather",
             endpoint=endpoint,
             api_key=api_key,
             timeout=timeout,
             use_cache=use_cache,
             cache_ttl=1800,  # 30 minutes default cache TTL for weather data
         )
+        self.server_name = "Weather"
 
+    @function_tool
     @redis_cache.cached("weather_current", 1800)  # 30 minutes
     async def get_current_weather(
         self,
@@ -83,7 +80,7 @@ class WeatherMCPClient(FastMCPClient):
         lat: Optional[float] = None,
         lon: Optional[float] = None,
         skip_cache: bool = False,
-    ) -> Dict[str, Any]:
+    ) -> CurrentWeatherResponse:
         """Get the current weather conditions for a location.
 
         Args:
@@ -94,7 +91,7 @@ class WeatherMCPClient(FastMCPClient):
             skip_cache: Whether to skip the cache
 
         Returns:
-            Dictionary with current weather information
+            CurrentWeatherResponse with current weather information
 
         Raises:
             MCPError: If the MCP request fails
@@ -114,9 +111,11 @@ class WeatherMCPClient(FastMCPClient):
                 if location_params.country:
                     params["country"] = location_params.country
 
-            return await self.call_tool(
+            response = await self.call_tool(
                 "get_current_weather", params, skip_cache=skip_cache
             )
+
+            return CurrentWeatherResponse.model_validate(response)
         except Exception as e:
             logger.error(f"Error getting current weather: {str(e)}")
             raise MCPError(
@@ -126,6 +125,7 @@ class WeatherMCPClient(FastMCPClient):
                 params={"city": city, "country": country, "lat": lat, "lon": lon},
             ) from e
 
+    @function_tool
     @redis_cache.cached("weather_forecast", 3600)  # 1 hour
     async def get_forecast(
         self,
@@ -135,7 +135,7 @@ class WeatherMCPClient(FastMCPClient):
         lon: Optional[float] = None,
         days: int = 5,
         skip_cache: bool = False,
-    ) -> Dict[str, Any]:
+    ) -> ForecastResponse:
         """Get weather forecast for a location.
 
         Args:
@@ -147,7 +147,7 @@ class WeatherMCPClient(FastMCPClient):
             skip_cache: Whether to skip the cache
 
         Returns:
-            Dictionary with forecast information
+            ForecastResponse with forecast information
 
         Raises:
             MCPError: If the MCP request fails
@@ -173,7 +173,11 @@ class WeatherMCPClient(FastMCPClient):
 
             params = {"location": location, "days": days}
 
-            return await self.call_tool("get_forecast", params, skip_cache=skip_cache)
+            response = await self.call_tool(
+                "get_forecast", params, skip_cache=skip_cache
+            )
+
+            return ForecastResponse.model_validate(response)
         except Exception as e:
             logger.error(f"Error getting weather forecast: {str(e)}")
             raise MCPError(
@@ -191,6 +195,7 @@ class WeatherMCPClient(FastMCPClient):
                 },
             ) from e
 
+    @function_tool
     @redis_cache.cached("weather_recommendation", 3600)  # 1 hour
     async def get_travel_recommendation(
         self,
@@ -202,7 +207,7 @@ class WeatherMCPClient(FastMCPClient):
         end_date: Optional[str] = None,
         activities: Optional[List[str]] = None,
         skip_cache: bool = False,
-    ) -> Dict[str, Any]:
+    ) -> RecommendationResponse:
         """Get travel recommendations based on weather conditions.
 
         Args:
@@ -216,7 +221,7 @@ class WeatherMCPClient(FastMCPClient):
             skip_cache: Whether to skip the cache
 
         Returns:
-            Dictionary with travel recommendations
+            RecommendationResponse with travel recommendations
 
         Raises:
             MCPError: If the MCP request fails
@@ -248,9 +253,11 @@ class WeatherMCPClient(FastMCPClient):
             if activities:
                 params["activities"] = activities
 
-            return await self.call_tool(
+            response = await self.call_tool(
                 "get_travel_recommendation", params, skip_cache=skip_cache
             )
+
+            return RecommendationResponse.model_validate(response)
         except Exception as e:
             logger.error(f"Error getting travel recommendations: {str(e)}")
             raise MCPError(
@@ -269,48 +276,6 @@ class WeatherMCPClient(FastMCPClient):
                     "activities": activities,
                 },
             ) from e
-
-
-class TravelWeatherSummary(BaseModel):
-    """Weather summary for a trip period."""
-
-    destination: str
-    start_date: str
-    end_date: str
-    temperature: Dict[str, Optional[float]]
-    conditions: Dict[str, Any]
-    days: List[Dict[str, Any]]
-    error: Optional[str] = None
-
-    model_config = ConfigDict(extra="forbid", validate_default=True)
-
-
-class DestinationWeatherComparison(BaseModel):
-    """Weather comparison across multiple destinations."""
-
-    destinations: List[str]
-    date: str
-    results: List[Dict[str, Any]]
-    ranking: Optional[List[str]] = None
-    error: Optional[str] = None
-
-    model_config = ConfigDict(extra="forbid", validate_default=True)
-
-
-class OptimalTravelTime(BaseModel):
-    """Recommendations for optimal travel time."""
-
-    destination: str
-    activity_type: str
-    current_weather: str
-    current_temp: float
-    activity_recommendation: str
-    good_weather_days: List[str]
-    forecast_recommendations: List[str]
-    clothing_recommendations: List[str]
-    error: Optional[str] = None
-
-    model_config = ConfigDict(extra="forbid", validate_default=True)
 
 
 class WeatherService:
@@ -340,7 +305,10 @@ class WeatherService:
             city = parts[0]
             country = parts[1] if len(parts) > 1 else None
 
-            return await self.client.get_current_weather(city=city, country=country)
+            weather_response = await self.client.get_current_weather(
+                city=city, country=country
+            )
+            return weather_response.model_dump()
         except Exception as e:
             logger.error(f"Error getting destination weather: {str(e)}")
             return {
@@ -374,10 +342,10 @@ class WeatherService:
 
             # Filter daily forecast to trip dates
             trip_days = []
-            for day in forecast["daily"]:
-                date = day["date"]
+            for day in forecast.daily:
+                date = day.date
                 if start_date <= date <= end_date:
-                    trip_days.append(day)
+                    trip_days.append(day.model_dump())
 
             # Calculate average temperatures for the trip
             avg_temps = [day["temp_avg"] for day in trip_days]
@@ -454,19 +422,19 @@ class WeatherService:
                         forecast = await self.client.get_forecast(
                             city=city, country=country
                         )
-                        for day in forecast["daily"]:
-                            if day["date"] == date:
+                        for day in forecast.daily:
+                            if day.date == date:
                                 results.append(
                                     {
                                         "destination": destination,
                                         "date": date,
                                         "temperature": {
-                                            "average": day["temp_avg"],
-                                            "min": day["temp_min"],
-                                            "max": day["temp_max"],
+                                            "average": day.temp_avg,
+                                            "min": day.temp_min,
+                                            "max": day.temp_max,
                                         },
-                                        "conditions": day["weather"]["main"],
-                                        "description": day["weather"]["description"],
+                                        "conditions": day.weather.main,
+                                        "description": day.weather.description,
                                     }
                                 )
                                 break
@@ -478,10 +446,10 @@ class WeatherService:
                         results.append(
                             {
                                 "destination": destination,
-                                "temperature": weather["temperature"],
-                                "feels_like": weather["feels_like"],
-                                "conditions": weather["weather"]["main"],
-                                "description": weather["weather"]["description"],
+                                "temperature": weather.temperature,
+                                "feels_like": weather.feels_like,
+                                "conditions": weather.weather.main,
+                                "description": weather.weather.description,
                             }
                         )
                 except Exception as e:
@@ -546,12 +514,12 @@ class WeatherService:
             # Extract the specific activity recommendation
             activity_recs = [
                 rec
-                for rec in recommendation["recommendations"]["activities"]
+                for rec in recommendation.recommendations["activities"]
                 if activity_type.lower() in rec.lower()
             ]
 
             # Analyze forecast-based recommendations
-            forecast_recs = recommendation["recommendations"]["forecast_based"]
+            forecast_recs = recommendation.recommendations["forecast_based"]
             good_days = [rec for rec in forecast_recs if "Good" in rec]
 
             # Create a simple recommendation
@@ -565,12 +533,12 @@ class WeatherService:
             return OptimalTravelTime(
                 destination=destination,
                 activity_type=activity_type,
-                current_weather=recommendation["current_weather"]["weather"]["main"],
-                current_temp=recommendation["current_weather"]["temperature"],
+                current_weather=recommendation.current_weather.weather.main,
+                current_temp=recommendation.current_weather.temperature,
                 activity_recommendation=activity_advice,
                 good_weather_days=good_days,
                 forecast_recommendations=forecast_recs,
-                clothing_recommendations=recommendation["recommendations"]["clothing"],
+                clothing_recommendations=recommendation.recommendations["clothing"],
             )
         except Exception as e:
             logger.error(f"Error getting optimal travel time: {str(e)}")
@@ -587,13 +555,17 @@ class WeatherService:
             )
 
 
+# Initialize default client instance
+weather_client = WeatherMCPClient()
+
+
 def get_client() -> WeatherMCPClient:
     """Get a Weather MCP Client instance.
 
     Returns:
         WeatherMCPClient instance
     """
-    return WeatherMCPClient()
+    return weather_client
 
 
 def get_service() -> WeatherService:
