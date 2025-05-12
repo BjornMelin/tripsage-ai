@@ -11,6 +11,7 @@ import pytest
 from pydantic import ValidationError
 
 from src.mcp.googlemaps.client import GoogleMapsMCPClient, MCPError
+from src.mcp.googlemaps.factory import create_googlemaps_client
 from src.mcp.googlemaps.models import (
     GeocodeParams,
     GeocodeResponse,
@@ -25,6 +26,16 @@ def config_mock():
             "mcp.googlemaps.endpoint": "http://test-endpoint",
             "mcp.googlemaps.api_key": "test-api-key",
         }
+        yield mock
+
+
+@pytest.fixture
+def settings_mock():
+    """Mock the settings."""
+    with patch("src.utils.settings.settings") as mock:
+        mock.google_maps_mcp.endpoint = "http://test-endpoint"
+        mock.google_maps_mcp.maps_api_key.get_secret_value.return_value = "test-api-key"
+        mock.redis.ttl_medium = 3600
         yield mock
 
 
@@ -223,6 +234,9 @@ class TestGoogleMapsMCPClient:
             "maps_geocode", {"address": "New York"}, False
         )
 
+        # Verify correct MCP tool is being called (from official Google Maps MCP server)
+        assert mock_call_tool.call_args[0][0] == "maps_geocode"
+
         # Verify result
         assert isinstance(result, dict)  # In practice, this would be a GeocodeResponse
         assert result["status"] == "OK"
@@ -256,6 +270,29 @@ class TestGoogleMapsMCPClient:
             await client.geocode("Invalid Address")
 
         assert "Geocoding failed" in str(exc_info.value)
+
+    @patch("src.mcp.googlemaps.client.BaseMCPClient.call_tool")
+    @patch("src.mcp.googlemaps.client.store_location_in_knowledge_graph")
+    async def test_geocode_with_store_in_knowledge_graph(
+        self, mock_store_location, mock_call_tool, client, mock_geocode_response
+    ):
+        """Test geocoding an address with storage in knowledge graph."""
+        mock_call_tool.return_value = mock_geocode_response
+        mock_store_location.return_value = True
+
+        # Test with store_in_knowledge_graph=True
+        result = await client.geocode("New York", store_in_knowledge_graph=True)
+
+        # Verify call_tool parameters
+        mock_call_tool.assert_called_once_with(
+            "maps_geocode", {"address": "New York"}, False
+        )
+
+        # Verify store_location_in_knowledge_graph is called
+        mock_store_location.assert_called_once()
+        args, _ = mock_store_location.call_args
+        assert args[0] == "New York"  # location_name
+        assert isinstance(args[1], dict)  # geocode_result
 
     @patch("src.mcp.googlemaps.client.BaseMCPClient.call_tool")
     async def test_reverse_geocode(self, mock_call_tool, client, mock_geocode_response):
@@ -492,3 +529,28 @@ class TestGoogleMapsMCPClient:
 
         # Should still return a result even though validation failed
         assert result == {"invalid": "response"}
+
+    @patch("src.mcp.googlemaps.factory.GoogleMapsMCPClient")
+    def test_create_googlemaps_client(self, mock_client_class, settings_mock):
+        """Test factory function for creating GoogleMapsMCPClient."""
+        # Mock client instantiation
+        mock_client = mock_client_class.return_value
+
+        # Call factory function
+        client = create_googlemaps_client()
+
+        # Verify client is created with correct parameters
+        mock_client_class.assert_called_once()
+
+        # Check the arguments passed to constructor
+        args, kwargs = mock_client_class.call_args
+        assert kwargs["endpoint"] == "http://test-endpoint"
+        assert kwargs["api_key"] == "test-api-key"
+        assert kwargs["use_cache"] is True
+        assert kwargs["cache_ttl"] == 3600  # redis.ttl_medium
+
+        # Test with custom API key
+        create_googlemaps_client(api_key="custom-api-key")
+        # Check the API key was correctly passed
+        args, kwargs = mock_client_class.call_args_list[1]
+        assert kwargs["api_key"] == "custom-api-key"
