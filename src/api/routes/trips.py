@@ -74,9 +74,15 @@ def db_trip_to_response(db_trip: DBTrip) -> TripResponse:
 # Get all trips for current user
 @router.get("/", response_model=List[TripResponse])
 async def get_trips(
-    current_user: User = Depends(get_current_active_user),
-    trip_repo: TripRepository = Depends(get_repository(get_trip_repository)),
+    current_user: User = None,
+    trip_repo: TripRepository = None,
 ):
+    # Get dependencies if not provided
+    if current_user is None:
+        current_user = await get_current_active_user()
+    if trip_repo is None:
+        trip_repo = get_repository(get_trip_repository)()
+
     # Find trips where user_id matches current user
     trips = await trip_repo.find_by_user_id(int(current_user.id))
     return [db_trip_to_response(trip) for trip in trips]
@@ -86,10 +92,18 @@ async def get_trips(
 @router.get("/{trip_id}", response_model=TripResponse)
 async def get_trip(
     trip_id: str,
-    current_user: User = Depends(get_current_active_user),
-    trip_repo: TripRepository = Depends(get_repository(get_trip_repository)),
-    user_repo: UserRepository = Depends(get_repository(get_user_repository)),
+    current_user: User = None,
+    trip_repo: TripRepository = None,
+    user_repo: UserRepository = None,
 ):
+    # Get dependencies if not provided
+    if current_user is None:
+        current_user = await get_current_active_user()
+    if trip_repo is None:
+        trip_repo = get_repository(get_trip_repository)()
+    if user_repo is None:
+        user_repo = get_repository(get_user_repository)()
+
     # Get trip
     trip = await trip_repo.get_by_id(int(trip_id))
     if not trip:
@@ -113,9 +127,15 @@ async def get_trip(
 @router.post("/", response_model=TripResponse, status_code=status.HTTP_201_CREATED)
 async def create_trip(
     trip_data: TripCreate,
-    current_user: User = Depends(get_current_active_user),
-    trip_repo: TripRepository = Depends(get_repository(get_trip_repository)),
+    current_user: User = None,
+    trip_repo: TripRepository = None,
 ):
+    # Get dependencies if not provided
+    if current_user is None:
+        current_user = await get_current_active_user()
+    if trip_repo is None:
+        trip_repo = get_repository(get_trip_repository)()
+
     # Create trip object
     new_trip = DBTrip(
         name=trip_data.name,
@@ -144,10 +164,18 @@ async def create_trip(
 async def update_trip(
     trip_id: str,
     trip_update: TripUpdate,
-    current_user: User = Depends(get_current_active_user),
-    trip_repo: TripRepository = Depends(get_repository(get_trip_repository)),
-    user_repo: UserRepository = Depends(get_repository(get_user_repository)),
+    current_user: User = None,
+    trip_repo: TripRepository = None,
+    user_repo: UserRepository = None,
 ):
+    # Get dependencies if not provided
+    if current_user is None:
+        current_user = await get_current_active_user()
+    if trip_repo is None:
+        trip_repo = get_repository(get_trip_repository)()
+    if user_repo is None:
+        user_repo = get_repository(get_user_repository)()
+
     # Get existing trip
     trip = await trip_repo.get_by_id(int(trip_id))
     if not trip:
@@ -193,10 +221,18 @@ async def update_trip(
 @router.delete("/{trip_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_trip(
     trip_id: str,
-    current_user: User = Depends(get_current_active_user),
-    trip_repo: TripRepository = Depends(get_repository(get_trip_repository)),
-    user_repo: UserRepository = Depends(get_repository(get_user_repository)),
+    current_user: User = None,
+    trip_repo: TripRepository = None,
+    user_repo: UserRepository = None,
 ):
+    # Get dependencies if not provided
+    if current_user is None:
+        current_user = await get_current_active_user()
+    if trip_repo is None:
+        trip_repo = get_repository(get_trip_repository)()
+    if user_repo is None:
+        user_repo = get_repository(get_user_repository)()
+
     # Get trip
     trip = await trip_repo.get_by_id(int(trip_id))
     if not trip:

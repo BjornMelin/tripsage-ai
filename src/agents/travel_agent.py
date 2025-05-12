@@ -5,20 +5,23 @@ This module provides the TravelAgent implementation which integrates various
 travel-specific MCP tools and dual storage architecture with OpenAI's WebSearchTool.
 """
 
+import asyncio
 import datetime
-import json
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from agents import WebSearchTool, function_tool
 from agents.extensions.allowed_domains import AllowedDomains
+from src.cache.redis_cache import redis_cache
+from src.utils.config import get_config
+from src.utils.error_handling import MCPError
+from src.utils.logging import get_module_logger
 
-from ..cache.redis_cache import redis_cache
-from ..utils.config import get_config
-from ..utils.error_handling import MCPError, TripSageError, log_exception
-from ..utils.logging import get_module_logger
 from .base_agent import TravelAgent as BaseTravelAgent
+from .destination_research import TripSageDestinationResearch
+from .flight_booking import TripSageFlightBooking
+from .flight_search import TripSageFlightSearch
 
 logger = get_module_logger(__name__)
 config = get_config()
@@ -80,6 +83,11 @@ class TravelAgent(BaseTravelAgent):
         """
         super().__init__(name=name, model=model, temperature=temperature)
 
+        # Initialize components
+        self.flight_search = TripSageFlightSearch()
+        self.flight_booking = TripSageFlightBooking()
+        self.destination_research = TripSageDestinationResearch()
+
         # Add WebSearchTool to the agent's tools with travel-specific domain focus
         # This is part of our hybrid search approach where OpenAI's built-in search
         # serves as the primary method for general queries, while specialized MCP tools
@@ -134,7 +142,8 @@ class TravelAgent(BaseTravelAgent):
         )
         self.agent.tools.append(self.web_search_tool)
         logger.info(
-            "Added WebSearchTool to TravelAgent with travel-specific domain configuration"
+            "Added WebSearchTool to TravelAgent with travel-specific domain "
+            "configuration"
         )
 
     def _register_travel_tools(self) -> None:
@@ -144,10 +153,21 @@ class TravelAgent(BaseTravelAgent):
         self._register_tool(self.get_weather_forecast)
         self._register_tool(self.get_travel_recommendation)
 
-        # Flight tools will be registered once implemented
+        # Basic flight tools (will be replaced with enhanced ones)
         self._register_tool(self.search_flights)
 
-        # Accommodation tools will be registered once implemented
+        # Enhanced flight search tools
+        self._register_tool(self.enhanced_flight_search)
+        self._register_tool(self.search_multi_city_flights)
+        self._register_tool(self.get_flight_price_history)
+        self._register_tool(self.get_flexible_dates_search)
+
+        # Flight booking tools
+        self._register_tool(self.book_flight)
+        self._register_tool(self.get_booking_status)
+        self._register_tool(self.cancel_flight_booking)
+
+        # Accommodation tools
         self._register_tool(self.search_accommodations)
 
         # Time management tools
@@ -157,12 +177,101 @@ class TravelAgent(BaseTravelAgent):
         self._register_tool(self.create_trip)
         self._register_tool(self.search_activities)
 
-        # Search-related tools
+        # Destination research tools
         self._register_tool(self.search_destination_info)
+        self._register_tool(self.get_destination_events)
+        self._register_tool(self.crawl_travel_blog)
+
+        # Comparison and recommendation tools
         self._register_tool(self.compare_travel_options)
+
+        # Knowledge graph tools
+        self._register_tool(self.store_travel_knowledge)
+        self._register_tool(self.retrieve_travel_knowledge)
 
         # Note: WebSearchTool is added separately in __init__
         # since it doesn't use the function_tool decorator pattern
+
+        # Register MCP clients when available
+        self._register_mcp_clients()
+
+    def _register_mcp_clients(self) -> None:
+        """Register all available MCP clients with the agent."""
+        # Weather MCP Client
+        try:
+            from ..mcp.weather import get_client as get_weather_client
+
+            weather_client = get_weather_client()
+            self._register_mcp_client_tools(weather_client, prefix="weather_")
+            logger.info("Registered Weather MCP client tools")
+        except Exception as e:
+            logger.warning("Failed to register Weather MCP client: %s", str(e))
+
+        # Time MCP Client
+        try:
+            from ..mcp.time import get_client as get_time_client
+
+            time_client = get_time_client()
+            self._register_mcp_client_tools(time_client, prefix="time_")
+            logger.info("Registered Time MCP client tools")
+        except Exception as e:
+            logger.warning("Failed to register Time MCP client: %s", str(e))
+
+        # Flights MCP Client
+        try:
+            from ..mcp.flights import get_client as get_flights_client
+
+            flights_client = get_flights_client()
+            self._register_mcp_client_tools(flights_client, prefix="flights_")
+            logger.info("Registered Flights MCP client tools")
+        except Exception as e:
+            logger.warning("Failed to register Flights MCP client: %s", str(e))
+
+        # Google Maps MCP Client
+        try:
+            from ..mcp.googlemaps import get_client as get_maps_client
+
+            maps_client = get_maps_client()
+            self._register_mcp_client_tools(maps_client, prefix="maps_")
+            logger.info("Registered Google Maps MCP client tools")
+        except Exception as e:
+            logger.warning("Failed to register Google Maps MCP client: %s", str(e))
+
+        # Accommodations MCP Client
+        try:
+            from ..mcp.accommodations import get_client as get_accommodations_client
+
+            accommodations_client = get_accommodations_client()
+            self._register_mcp_client_tools(
+                accommodations_client, prefix="accommodations_"
+            )
+            logger.info("Registered Accommodations MCP client tools")
+        except Exception as e:
+            logger.warning("Failed to register Accommodations MCP client: %s", str(e))
+
+        # Memory MCP Client (for knowledge graph)
+        try:
+            from ..mcp.memory import get_client as get_memory_client
+
+            memory_client = get_memory_client()
+            self._register_mcp_client_tools(memory_client, prefix="memory_")
+            logger.info("Registered Memory MCP client tools")
+        except Exception as e:
+            logger.warning("Failed to register Memory MCP client: %s", str(e))
+
+        # WebCrawl MCP Client
+        try:
+            from ..mcp.webcrawl import get_client as get_webcrawl_client
+
+            webcrawl_client = get_webcrawl_client()
+            self._register_mcp_client_tools(webcrawl_client, prefix="webcrawl_")
+            logger.info("Registered WebCrawl MCP client tools")
+
+            # Connect WebCrawl MCP client to destination research component
+            self.destination_research.webcrawl_client = webcrawl_client
+            logger.info("Connected WebCrawl MCP client to destination research component")
+        except Exception as e:
+            logger.warning("Failed to register WebCrawl MCP client: %s", str(e))
 
     @function_tool
     async def get_weather_forecast(self, params: Dict[str, Any]) -> Dict[str, Any]:
@@ -264,7 +373,8 @@ class TravelAgent(BaseTravelAgent):
         """Search for available flights.
 
         Args:
-            params: Flight search parameters including origin, destination, dates, and preferences
+            params: Flight search parameters including origin,
+                destination, dates, and preferences
 
         Returns:
             Flight search results
@@ -329,7 +439,10 @@ class TravelAgent(BaseTravelAgent):
                 "flights": mock_flights,
                 "search_criteria": params,
                 "results_count": len(mock_flights),
-                "note": "This is mock data. Flight search functionality will be implemented with a real API.",
+                "note": (
+                    "This is mock data. Flight search functionality "
+                    "will be implemented with a real API."
+                ),
             }
 
         except Exception as e:
@@ -341,7 +454,8 @@ class TravelAgent(BaseTravelAgent):
         """Search for accommodations.
 
         Args:
-            params: Accommodation search parameters including location, dates, and preferences
+            params: Accommodation search parameters including
+                location, dates, and preferences
 
         Returns:
             Accommodation search results
@@ -432,12 +546,213 @@ class TravelAgent(BaseTravelAgent):
                 "accommodations": mock_accommodations,
                 "search_criteria": params,
                 "results_count": len(mock_accommodations),
-                "note": "This is mock data. Accommodation search functionality will be implemented with a real API.",
+                "note": (
+                    "This is mock data. Accommodation search functionality "
+                    "will be implemented with a real API."
+                ),
             }
 
         except Exception as e:
             logger.error("Error searching accommodations: %s", str(e))
             return {"error": f"Accommodation search error: {str(e)}"}
+
+    @function_tool
+    async def enhanced_flight_search(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        """Enhanced search for flights with advanced filtering and recommendations.
+
+        Uses the TripSageFlightSearch component to provide comprehensive search
+        results with intelligent filtering, price analysis, and personalized
+        recommendations based on user preferences.
+
+        Args:
+            params: Enhanced flight search parameters including:
+                origin: Origin airport or city code
+                destination: Destination airport or city code
+                departure_date: Departure date (YYYY-MM-DD)
+                return_date: Return date for round trips (YYYY-MM-DD)
+                adults: Number of adult passengers
+                children: Number of child passengers
+                infants: Number of infant passengers
+                cabin_class: Desired cabin class
+                    (economy, premium_economy, business, first)
+                max_price: Maximum price willing to pay
+                preferred_airlines: List of preferred airline codes
+                max_stops: Maximum number of stops (0 for non-stop only)
+                sort_by: How to sort results (price, duration, best)
+                flexible_dates: Whether to include nearby dates in search
+
+        Returns:
+            Dictionary with enhanced flight search results
+        """
+        try:
+            # Delegate to flight search component
+            return await self.flight_search.search_flights(params)
+        except Exception as e:
+            logger.error("Error in enhanced flight search: %s", str(e))
+            return {"error": f"Enhanced flight search error: {str(e)}"}
+
+    @function_tool
+    async def search_multi_city_flights(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        """Search for multi-city flight itineraries.
+
+        Allows searching for complex itineraries with multiple segments between
+        different city pairs on different dates.
+
+        Args:
+            params: Multi-city flight search parameters including:
+                segments: List of flight segments, each containing:
+                    origin: Origin airport or city code
+                    destination: Destination airport or city code
+                    date: Departure date (YYYY-MM-DD)
+                adults: Number of adult passengers
+                children: Number of child passengers
+                infants: Number of infant passengers
+                cabin_class: Desired cabin class
+                max_price: Maximum total price for all segments
+
+        Returns:
+            Dictionary with multi-city flight search results
+        """
+        try:
+            # Validate that segments are provided
+            segments = params.get("segments", [])
+            if not segments or not isinstance(segments, list) or len(segments) < 2:
+                return {
+                    "error": (
+                        "At least two valid segments are required for multi-city search"
+                    )
+                }
+
+            # Delegate to flight search component
+            return await self.flight_search.search_multi_city(params)
+        except Exception as e:
+            logger.error("Error in multi-city flight search: %s", str(e))
+            return {"error": f"Multi-city flight search error: {str(e)}"}
+
+    @function_tool
+    async def get_flight_price_history(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        """Get price history for a specific flight route.
+
+        Retrieves historical pricing data for a given route to help users
+        determine if current prices are favorable and whether to book now or wait.
+
+        Args:
+            params: Flight route parameters:
+                origin: Origin airport or city code
+                destination: Destination airport or city code
+                cabin_class: Optional cabin class to filter by
+                days_back: How many days of history to include (default: 90)
+
+        Returns:
+            Dictionary with price history data and trend analysis
+        """
+        try:
+            # Delegate to flight search component
+            return await self.flight_search.get_price_history(params)
+        except Exception as e:
+            logger.error("Error getting flight price history: %s", str(e))
+            return {"error": f"Price history error: {str(e)}"}
+
+    @function_tool
+    async def get_flexible_dates_search(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        """Search for flights with flexible dates to find the best prices.
+
+        Searches for flights across a range of dates to help users find the
+        optimal travel dates with the best prices.
+
+        Args:
+            params: Flexible date search parameters:
+                origin: Origin airport or city code
+                destination: Destination airport or city code
+                date_range_start: Start of date range (YYYY-MM-DD)
+                date_range_end: End of date range (YYYY-MM-DD)
+                trip_length: Desired trip length in days for round trips
+                cabin_class: Desired cabin class
+                adults: Number of adult passengers
+
+        Returns:
+            Dictionary with flexible date search results
+        """
+        try:
+            # Delegate to flight search component
+            return await self.flight_search.search_flexible_dates(params)
+        except Exception as e:
+            logger.error("Error in flexible date flight search: %s", str(e))
+            return {"error": f"Flexible date search error: {str(e)}"}
+
+    @function_tool
+    async def book_flight(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        """Book a flight based on selected search results.
+
+        Creates a flight booking based on the selected flight offer from search results
+        and passenger information. Stores booking details in dual storage architecture.
+
+        Args:
+            params: Flight booking parameters:
+                flight_id: ID of selected flight from search results
+                passengers: List of passenger information including:
+                    first_name: Passenger's first name
+                    last_name: Passenger's last name
+                    dob: Date of birth (YYYY-MM-DD)
+                    email: Contact email
+                    phone: Contact phone number
+                payment: Payment information object
+                trip_id: Optional ID of associated trip
+
+        Returns:
+            Dictionary with booking confirmation details
+        """
+        try:
+            # Delegate to flight booking component
+            return await self.flight_booking.book_flight(params)
+        except Exception as e:
+            logger.error("Error booking flight: %s", str(e))
+            return {"error": f"Flight booking error: {str(e)}"}
+
+    @function_tool
+    async def get_booking_status(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        """Get the current status of a flight booking.
+
+        Retrieves the latest status of a flight booking, including any updates
+        to flight times, gate information, or booking status.
+
+        Args:
+            params: Booking status request parameters:
+                booking_id: ID of the booking to check
+                email: Email associated with the booking
+
+        Returns:
+            Dictionary with current booking status information
+        """
+        try:
+            # Delegate to flight booking component
+            return await self.flight_booking.get_booking_status(params)
+        except Exception as e:
+            logger.error("Error getting booking status: %s", str(e))
+            return {"error": f"Booking status error: {str(e)}"}
+
+    @function_tool
+    async def cancel_flight_booking(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        """Cancel an existing flight booking.
+
+        Attempts to cancel a flight booking and provides refund information
+        according to the airline's cancellation policy.
+
+        Args:
+            params: Cancellation request parameters:
+                booking_id: ID of the booking to cancel
+                email: Email associated with the booking
+                reason: Optional reason for cancellation
+
+        Returns:
+            Dictionary with cancellation confirmation and refund information
+        """
+        try:
+            # Delegate to flight booking component
+            return await self.flight_booking.cancel_booking(params)
+        except Exception as e:
+            logger.error("Error cancelling flight booking: %s", str(e))
+            return {"error": f"Cancellation error: {str(e)}"}
 
     @function_tool
     async def convert_timezone(self, params: Dict[str, Any]) -> Dict[str, Any]:
@@ -458,18 +773,60 @@ class TravelAgent(BaseTravelAgent):
             "source": {"timezone": source_timezone, "time": time_str},
             "target": {
                 "timezone": target_timezone,
-                "time": time_str,  # This would be converted with the actual implementation
+                # This would be converted with the actual implementation
+                "time": time_str,
             },
             "status": "not_implemented",
-            "note": "Timezone conversion functionality will be implemented with the Time MCP.",
+            "note": (
+                "Timezone conversion functionality will be "
+                "implemented with the Time MCP."
+            ),
         }
+
+    @function_tool
+    async def get_weather(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        """Get current weather for a location.
+
+        Args:
+            params: Parameters with location information (city, lat/lon, country)
+
+        Returns:
+            Current weather data
+        """
+        from ..mcp.weather import get_client
+
+        try:
+            # Get weather client
+            weather_client = get_client()
+
+            # Extract parameters
+            location = params.get("location", {})
+
+            lat = location.get("lat")
+            lon = location.get("lon")
+            city = location.get("city")
+            country = location.get("country")
+
+            # Call weather MCP
+            weather_data = await weather_client.get_current_weather(
+                lat=lat, lon=lon, city=city, country=country
+            )
+
+            return weather_data
+
+        except Exception as e:
+            logger.error("Error getting current weather: %s", str(e))
+            if isinstance(e, MCPError):
+                return {"error": e.message}
+            return {"error": f"Weather service error: {str(e)}"}
 
     @function_tool
     async def create_trip(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """Create a new trip in the system.
 
         Args:
-            params: Trip parameters including user_id, title, destination, dates, and budget
+            params: Trip parameters including user_id, title,
+                destination, dates, and budget
 
         Returns:
             Created trip information
@@ -492,7 +849,10 @@ class TravelAgent(BaseTravelAgent):
                     "end_date": params.get("end_date"),
                     "budget": params.get("budget"),
                 },
-                "note": "This is a mock trip creation. Database integration will be implemented.",
+                "note": (
+                    "This is a mock trip creation. "
+                    "Database integration will be implemented."
+                ),
             }
 
         except Exception as e:
@@ -504,7 +864,8 @@ class TravelAgent(BaseTravelAgent):
         """Search for activities and attractions at a destination.
 
         Args:
-            params: Activity search parameters including location, category, and preferences
+            params: Activity search parameters including
+                location, category, and preferences
 
         Returns:
             Activity search results
@@ -525,7 +886,10 @@ class TravelAgent(BaseTravelAgent):
                     "price_per_person": 45.00,
                     "duration": "3 hours",
                     "rating": 4.6,
-                    "description": "Explore the city's main attractions with a knowledgeable guide.",
+                    "description": (
+                        "Explore the city's main attractions with a knowledgeable "
+                        "guide."
+                    ),
                     "available_slots": 10,
                     "images": ["https://example.com/activity1.jpg"],
                 },
@@ -537,7 +901,7 @@ class TravelAgent(BaseTravelAgent):
                     "price_per_person": 25.00,
                     "duration": "2 hours",
                     "rating": 4.3,
-                    "description": "Visit the city's renowned art museum.",
+                    "description": ("Visit the city's renowned art museum."),
                     "available_slots": 20,
                     "images": ["https://example.com/activity2.jpg"],
                 },
@@ -549,7 +913,9 @@ class TravelAgent(BaseTravelAgent):
                     "price_per_person": 65.00,
                     "duration": "4 hours",
                     "rating": 4.8,
-                    "description": "Sample local cuisine at various restaurants and food markets.",
+                    "description": (
+                        "Sample local cuisine at various restaurants and food markets."
+                    ),
                     "available_slots": 8,
                     "images": ["https://example.com/activity3.jpg"],
                 },
@@ -561,7 +927,9 @@ class TravelAgent(BaseTravelAgent):
                     "price_per_person": 35.00,
                     "duration": "half-day",
                     "rating": 4.2,
-                    "description": "Explore scenic trails around the city with a guide.",
+                    "description": (
+                        "Explore scenic trails around the city with a guide."
+                    ),
                     "available_slots": 12,
                     "images": ["https://example.com/activity4.jpg"],
                 },
@@ -589,7 +957,10 @@ class TravelAgent(BaseTravelAgent):
                 "activities": mock_activities,
                 "search_criteria": params,
                 "results_count": len(mock_activities),
-                "note": "This is mock data. Activity search functionality will be implemented with a real API.",
+                "note": (
+                    "This is mock data. Activity search functionality "
+                    "will be implemented with a real API."
+                ),
             }
 
         except Exception as e:
@@ -604,86 +975,81 @@ class TravelAgent(BaseTravelAgent):
         analyze detailed information about a destination.
 
         Args:
-            params: Parameters including destination name and info types to search for
+            params: Parameters including destination name and topics to search for
                 destination: Name of the destination (city, country, attraction)
-                info_types: List of info types (e.g., "attractions", "safety", "transportation", "best_time")
+                topics: List of topics (e.g., "attractions", "safety",
+                    "transportation", "best_time")
+                max_results: Maximum number of results per topic (default: 5)
 
         Returns:
             Dictionary containing structured information about the destination
         """
         try:
-            # Extract parameters
-            destination = params.get("destination")
-            info_types = params.get("info_types", ["general"])
+            # Convert info_types to topics if present (for backward compatibility)
+            if "info_types" in params and "topics" not in params:
+                params["topics"] = params.pop("info_types")
 
-            if not destination:
-                return {"error": "Destination parameter is required"}
-
-            # Build queries for each info type
-            search_results = {}
-
-            for info_type in info_types:
-                query = self._build_destination_query(destination, info_type)
-
-                # WebSearchTool is used automatically through the agent
-                # Results will be returned to the agent which will process them
-
-                # This would use our redis cache when implemented
-                cache_key = f"destination:{destination}:info_type:{info_type}"
-                cached_result = await redis_cache.get(cache_key)
-
-                if cached_result:
-                    search_results[info_type] = cached_result
-                else:
-                    # Note: We let the agent use the WebSearchTool
-                    # This function mainly provides structure and caching
-                    search_results[info_type] = {
-                        "query": query,
-                        "cache": "miss",
-                        "note": "Data will be provided by WebSearchTool and processed by the agent",
-                    }
-
-            return {
-                "destination": destination,
-                "info_types": info_types,
-                "search_results": search_results,
-            }
+            # Delegate to the destination research component
+            return await self.destination_research.search_destination_info(params)
 
         except Exception as e:
             logger.error("Error searching destination info: %s", str(e))
             return {"error": f"Destination search error: {str(e)}"}
 
-    def _build_destination_query(self, destination: str, info_type: str) -> str:
-        """Build an optimized search query for a destination and info type.
+    @function_tool
+    async def get_destination_events(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        """Get information about events happening at a destination.
+
+        Uses specialized web crawling to find upcoming events at a specific
+        destination during a given time period.
 
         Args:
-            destination: Name of the destination
-            info_type: Type of information to search for
+            params: Parameters for the event search:
+                destination: Destination name (e.g., "Paris, France")
+                start_date: Start date in YYYY-MM-DD format
+                end_date: End date in YYYY-MM-DD format
+                categories: List of event categories (optional)
 
         Returns:
-            A formatted search query string
+            Dictionary containing event information for the destination
         """
-        query_templates = {
-            "general": "travel guide {destination} best things to do",
-            "attractions": "top attractions in {destination} must-see sights",
-            "safety": "{destination} travel safety information for tourists",
-            "transportation": "how to get around {destination} public transportation",
-            "best_time": "best time to visit {destination} weather seasons",
-            "budget": "{destination} travel cost budget accommodation food",
-            "food": "best restaurants in {destination} local cuisine food specialties",
-            "culture": "{destination} local customs culture etiquette tips",
-            "day_trips": "best day trips from {destination} nearby attractions",
-            "family": "things to do in {destination} with children family-friendly",
-        }
+        try:
+            # Delegate to the destination research component
+            return await self.destination_research.get_destination_events(params)
 
-        template = query_templates.get(
-            info_type, "travel information about {destination} {info_type}"
-        )
-        return template.format(destination=destination, info_type=info_type)
+        except Exception as e:
+            logger.error("Error getting destination events: %s", str(e))
+            return {"error": f"Events search error: {str(e)}"}
+
+    @function_tool
+    async def crawl_travel_blog(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        """Extract insights from travel blogs about a destination.
+
+        Uses specialized blog crawling to extract valuable insights, recommendations,
+        and tips from travel blogs about a specific destination.
+
+        Args:
+            params: Parameters for blog crawling:
+                destination: Destination name (e.g., "Paris, France")
+                topics: List of topics to extract (e.g., "hidden gems")
+                max_blogs: Maximum number of blogs to crawl (default: 3)
+                recent_only: Whether to include only recent blogs (default: True)
+
+        Returns:
+            Dictionary containing blog insights about the destination
+        """
+        try:
+            # Delegate to the destination research component
+            return await self.destination_research.crawl_travel_blog(params)
+
+        except Exception as e:
+            logger.error("Error crawling travel blogs: %s", str(e))
+            return {"error": f"Blog crawling error: {str(e)}"}
 
     @function_tool
     async def compare_travel_options(self, params: Dict[str, Any]) -> Dict[str, Any]:
-        """Compare travel options for a specific category using WebSearchTool and specialized APIs.
+        """Compare travel options for a specific category using WebSearchTool
+        and specialized APIs.
 
         Args:
             params: Parameters for the comparison
@@ -719,7 +1085,10 @@ class TravelAgent(BaseTravelAgent):
                     "origin": origin,
                     "destination": destination,
                     "search_strategy": "hybrid",
-                    "note": "The agent will use WebSearchTool for general information and Flights MCP for specific data",
+                    "note": (
+                        "The agent will use WebSearchTool for general information "
+                        "and Flights MCP for specific data"
+                    ),
                 }
 
             elif category == "accommodations":
@@ -728,7 +1097,10 @@ class TravelAgent(BaseTravelAgent):
                     "category": "accommodations",
                     "destination": destination,
                     "search_strategy": "hybrid",
-                    "note": "The agent will use WebSearchTool for reviews and Accommodations MCP for availability",
+                    "note": (
+                        "The agent will use WebSearchTool for reviews "
+                        "and Accommodations MCP for availability"
+                    ),
                 }
 
             elif category == "activities":
@@ -737,7 +1109,10 @@ class TravelAgent(BaseTravelAgent):
                     "category": "activities",
                     "destination": destination,
                     "search_strategy": "hybrid",
-                    "note": "The agent will use WebSearchTool and Web Crawling MCP to find activities",
+                    "note": (
+                        "The agent will use WebSearchTool and Web Crawling MCP "
+                        "to find activities"
+                    ),
                 }
 
             else:
@@ -745,14 +1120,216 @@ class TravelAgent(BaseTravelAgent):
                     "category": category,
                     "destination": destination,
                     "search_strategy": "web_search",
-                    "note": "The agent will use WebSearchTool to find general information",
+                    "note": (
+                        "The agent will use WebSearchTool to find general information"
+                    ),
                 }
 
         except Exception as e:
             logger.error("Error comparing travel options: %s", str(e))
             return {"error": f"Comparison error: {str(e)}"}
 
+    @function_tool
+    async def store_travel_knowledge(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        """Store travel-related knowledge in the knowledge graph.
+
+        This tool stores entities, relationships, and observations in the
+        dual-storage architecture knowledge graph for future reference.
+
+        Args:
+            params: Parameters for storing knowledge
+                entity_type: Type of entity
+                    (Destination, Accommodation, Transportation, etc.)
+                entity_name: Name of the entity
+                observations: List of facts or observations about the entity
+                relations: List of relations to other entities (optional)
+
+        Returns:
+            Dictionary with storage confirmation and status
+        """
+        try:
+            from ..mcp.memory import get_client
+
+            # Extract parameters
+            entity_type = params.get("entity_type")
+            entity_name = params.get("entity_name")
+            observations = params.get("observations", [])
+            relations = params.get("relations", [])
+
+            if not entity_type or not entity_name:
+                return {"error": "Entity type and name are required"}
+
+            if not observations and not relations:
+                return {"error": "At least one observation or relation is required"}
+
+            # Get memory client
+            memory_client = get_client()
+
+            # Create entity if observations are provided
+            if observations:
+                await memory_client.create_entities(
+                    [
+                        {
+                            "name": entity_name,
+                            "entityType": entity_type,
+                            "observations": observations,
+                        }
+                    ]
+                )
+
+            # Create relations if provided
+            if relations:
+                formatted_relations = []
+                for relation in relations:
+                    if "from" in relation and "type" in relation and "to" in relation:
+                        formatted_relations.append(
+                            {
+                                "from": relation["from"],
+                                "relationType": relation["type"],
+                                "to": relation["to"],
+                            }
+                        )
+
+                if formatted_relations:
+                    await memory_client.create_relations(formatted_relations)
+
+            # Cache this knowledge to improve future interactions
+            cache_key = f"knowledge:{entity_type}:{entity_name}"
+            await redis_cache.set(
+                cache_key,
+                {
+                    "entity_type": entity_type,
+                    "entity_name": entity_name,
+                    "observations": observations,
+                    "relations": relations,
+                },
+                ttl=86400,
+            )  # 24 hours
+
+            return {
+                "success": True,
+                "entity_type": entity_type,
+                "entity_name": entity_name,
+                "observations_stored": len(observations),
+                "relations_stored": len(relations) if relations else 0,
+                "message": f"Successfully stored knowledge about {entity_name}",
+            }
+
+        except Exception as e:
+            logger.error("Error storing travel knowledge: %s", str(e))
+            if isinstance(e, MCPError):
+                return {"error": e.message}
+            return {"error": f"Knowledge storage error: {str(e)}"}
+
+    @function_tool
+    async def retrieve_travel_knowledge(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        """Retrieve travel-related knowledge from the knowledge graph.
+
+        This tool queries the knowledge graph to find relevant travel information
+        based on entity name or search query.
+
+        Args:
+            params: Parameters for retrieving knowledge
+                entity_name: Name of the entity to retrieve (optional)
+                query: Search query to find relevant entities (optional)
+                entity_type: Type of entity to filter by (optional)
+
+        Returns:
+            Dictionary with retrieved knowledge
+        """
+        try:
+            from ..mcp.memory import get_client
+
+            # Extract parameters
+            entity_name = params.get("entity_name")
+            query = params.get("query")
+            entity_type = params.get("entity_type")
+
+            if not entity_name and not query:
+                return {"error": "Either entity_name or query parameter is required"}
+
+            # Get memory client
+            memory_client = get_client()
+
+            # Try to get from cache first
+            if entity_name:
+                cache_key = f"knowledge:{entity_type or '*'}:{entity_name}"
+                cached_result = await redis_cache.get(cache_key)
+                if cached_result:
+                    cached_result["cache_hit"] = True
+                    return cached_result
+
+            # Retrieve by entity name
+            if entity_name:
+                nodes = await memory_client.open_nodes([entity_name])
+
+                # Extract relevant data
+                if nodes and len(nodes) > 0:
+                    result = {
+                        "found": True,
+                        "entity_name": entity_name,
+                        "entity_type": nodes[0].get("type"),
+                        "observations": nodes[0].get("observations", []),
+                        "relations": [],
+                    }
+
+                    # Get related nodes
+                    graph = await memory_client.read_graph()
+
+                    # Find relations where this entity is involved
+                    for relation in graph.get("relations", []):
+                        if (
+                            relation.get("from") == entity_name
+                            or relation.get("to") == entity_name
+                        ):
+                            result["relations"].append(relation)
+
+                    return result
+                else:
+                    return {
+                        "found": False,
+                        "entity_name": entity_name,
+                        "message": f"No knowledge found for {entity_name}",
+                    }
+
+            # Search by query
+            if query:
+                search_results = await memory_client.search_nodes(query)
+
+                # Filter by entity_type if provided
+                if entity_type and search_results:
+                    search_results = [
+                        node
+                        for node in search_results
+                        if node.get("type") == entity_type
+                    ]
+
+                return {
+                    "found": len(search_results) > 0,
+                    "query": query,
+                    "entity_type": entity_type,
+                    "results_count": len(search_results),
+                    "results": search_results,
+                }
+
+            return {"error": "Invalid parameters for knowledge retrieval"}
+
+        except Exception as e:
+            logger.error("Error retrieving travel knowledge: %s", str(e))
+            if isinstance(e, MCPError):
+                return {"error": e.message}
+            return {"error": f"Knowledge retrieval error: {str(e)}"}
+
 
 def create_agent() -> TravelAgent:
-    """Create and return a TravelAgent instance."""
-    return TravelAgent()
+    """Create and return a fully initialized TravelAgent instance.
+
+    Creates a new TravelAgent with all tools registered and ready for use.
+    """
+    agent = TravelAgent()
+
+    # Register all travel-specific tools
+    agent._register_travel_tools()
+
+    logger.info("Created TripSage Travel Agent instance with all tools registered")
+    return agent

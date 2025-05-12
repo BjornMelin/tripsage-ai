@@ -4,9 +4,8 @@ Flight repository for TripSage.
 This module provides the Flight repository for interacting with the flights table.
 """
 
-import logging
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 from src.db.models.flight import BookingStatus, Flight
 from src.db.repositories.base import BaseRepository

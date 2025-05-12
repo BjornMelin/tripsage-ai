@@ -6,15 +6,10 @@ for accommodations and retrieving detailed listing information.
 """
 
 from datetime import date
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, Optional, Union
 
-from pydantic import BaseModel, Field
-
-from agents import function_tool
-
-from ...cache.redis_cache import redis_cache
 from ...utils.config import get_config
-from ...utils.error_handling import MCPError, log_exception
+from ...utils.error_handling import MCPError
 from ...utils.logging import get_module_logger
 from ..base_mcp_client import BaseMCPClient
 
@@ -147,7 +142,7 @@ class AirbnbMCPClient(BaseMCPClient):
                 server=self.endpoint,
                 tool="airbnb_search",
                 params=params,
-            )
+            ) from e
 
     async def get_listing_details(
         self,
@@ -225,4 +220,4 @@ class AirbnbMCPClient(BaseMCPClient):
                 server=self.endpoint,
                 tool="airbnb_listing_details",
                 params=params,
-            )
+            ) from e

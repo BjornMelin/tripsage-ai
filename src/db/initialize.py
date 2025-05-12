@@ -6,8 +6,6 @@ and ensure the database is properly set up.
 """
 
 import asyncio
-import logging
-from typing import Optional
 
 from src.db.client import get_supabase_client, reset_client
 from src.db.migrations import run_migrations
@@ -37,7 +35,8 @@ async def initialize_database(
         # Initialize and test the Supabase client
         if verify_connection:
             client = get_supabase_client()
-            response = client.table("users").select("id").limit(1).execute()
+            # Execute a simple query to verify connection
+            client.table("users").select("id").limit(1).execute()
             logger.info("Database connection verified")
 
         # Run migrations if requested

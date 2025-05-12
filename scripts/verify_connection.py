@@ -9,10 +9,8 @@ Usage: python verify_connection.py
 """
 
 import asyncio
-import logging
 import os
 import sys
-from typing import List, Tuple
 
 # Add the project root to the Python path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -50,7 +48,7 @@ async def verify_connection() -> None:
         supabase = get_supabase_client()
 
         # Test a simple query to verify connection
-        response = supabase.table("trips").select("id").limit(1).execute()
+        _response = supabase.table("trips").select("id").limit(1).execute()
 
         print("✅ Successfully connected to Supabase!")
 
@@ -77,7 +75,7 @@ async def verify_connection() -> None:
             # Alternative method to check tables individually
             for table in REQUIRED_TABLES:
                 try:
-                    test_response = (
+                    _test_response = (
                         supabase.table(table).select("id").limit(1).execute()
                     )
                     print(f"✅ Table '{table}' exists")

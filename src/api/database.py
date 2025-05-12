@@ -4,16 +4,11 @@ Database module for the TripSage API.
 This module provides database connection and repository instances for the TripSage API.
 """
 
-import logging
-from typing import Any, Dict, Optional, Type
-
 from fastapi import Depends
 from supabase import Client
 
 from src.db.client import get_supabase_client
 from src.db.initialize import close_database_connection, initialize_database
-from src.db.models.base import BaseDBModel
-from src.db.repositories.base import BaseRepository
 from src.db.repositories.flight import FlightRepository
 from src.db.repositories.trip import TripRepository
 from src.db.repositories.user import UserRepository

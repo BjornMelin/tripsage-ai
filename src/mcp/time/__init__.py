@@ -1,16 +1,12 @@
 """
-Time MCP module for TripSage.
+Time API for the TripSage travel planning system.
 
-This module provides timezone conversion and time management capabilities for the
-TripSage travel planning system.
+This module provides tools for handling time and timezone operations.
 """
 
-from typing import Dict, Any, List, Optional
-import datetime
-
+from ...utils.logging import get_module_logger
 from .client import TimeMCPClient, TimeService, get_client, get_service
 from .server import TimeMCPServer, create_server
-from ...utils.logging import get_module_logger
 
 logger = get_module_logger(__name__)
 
@@ -23,11 +19,15 @@ GET_CURRENT_TIME_SCHEMA = {
         "properties": {
             "timezone": {
                 "type": "string",
-                "description": "IANA timezone name (e.g., 'America/New_York', 'Europe/London'). Use 'UTC' as local timezone if no timezone provided by the user."
+                "description": (
+                    "IANA timezone name (e.g., 'America/New_York', "
+                    "'Europe/London'). Use 'UTC' as local timezone if no "
+                    "timezone provided by the user."
+                ),
             }
         },
         "required": ["timezone"],
-    }
+    },
 }
 
 CONVERT_TIME_SCHEMA = {
@@ -38,19 +38,27 @@ CONVERT_TIME_SCHEMA = {
         "properties": {
             "time": {
                 "type": "string",
-                "description": "Time to convert in 24-hour format (HH:MM)"
+                "description": "Time to convert in 24-hour format (HH:MM)",
             },
             "source_timezone": {
                 "type": "string",
-                "description": "Source IANA timezone name (e.g., 'America/New_York', 'Europe/London'). Use 'UTC' as local timezone if no source timezone provided by the user."
+                "description": (
+                    "Source IANA timezone name (e.g., 'America/New_York', "
+                    "'Europe/London'). Use 'UTC' as local timezone if no source "
+                    "timezone provided by the user."
+                ),
             },
             "target_timezone": {
                 "type": "string",
-                "description": "Target IANA timezone name (e.g., 'Asia/Tokyo', 'America/San_Francisco'). Use 'UTC' as local timezone if no target timezone provided by the user."
-            }
+                "description": (
+                    "Target IANA timezone name (e.g., 'Asia/Tokyo', "
+                    "'America/San_Francisco'). Use 'UTC' as local timezone if "
+                    "no target timezone provided by the user."
+                ),
+            },
         },
         "required": ["source_timezone", "time", "target_timezone"],
-    }
+    },
 }
 
 CALCULATE_TRAVEL_TIME_SCHEMA = {
@@ -61,23 +69,36 @@ CALCULATE_TRAVEL_TIME_SCHEMA = {
         "properties": {
             "departure_timezone": {
                 "type": "string",
-                "description": "Departure IANA timezone name"
+                "description": (
+                    "Departure IANA timezone name (e.g., 'America/New_York', "
+                    "'Europe/London'). Use 'UTC' as local timezone if no "
+                    "departure timezone provided by the user."
+                ),
             },
             "departure_time": {
                 "type": "string",
-                "description": "Departure time in 24-hour format (HH:MM)"
+                "description": "Departure time in 24-hour format (HH:MM)",
             },
             "arrival_timezone": {
                 "type": "string",
-                "description": "Arrival IANA timezone name"
+                "description": (
+                    "Arrival IANA timezone name (e.g., 'Asia/Tokyo', "
+                    "'America/San_Francisco'). Use 'UTC' as local timezone if "
+                    "no arrival timezone provided by the user."
+                ),
             },
             "arrival_time": {
                 "type": "string",
-                "description": "Arrival time in 24-hour format (HH:MM)"
-            }
+                "description": "Arrival time in 24-hour format (HH:MM)",
+            },
         },
-        "required": ["departure_timezone", "departure_time", "arrival_timezone", "arrival_time"],
-    }
+        "required": [
+            "departure_timezone",
+            "departure_time",
+            "arrival_timezone",
+            "arrival_time",
+        ],
+    },
 }
 
 LIST_TIMEZONES_SCHEMA = {
@@ -86,7 +107,7 @@ LIST_TIMEZONES_SCHEMA = {
     "parameters": {
         "type": "object",
         "properties": {},
-    }
+    },
 }
 
 FORMAT_DATE_SCHEMA = {
@@ -97,26 +118,34 @@ FORMAT_DATE_SCHEMA = {
         "properties": {
             "date": {
                 "type": "string",
-                "description": "Date string in ISO format (YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS)"
+                "description": (
+                    "Date string in ISO format (YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS) "
+                    "or YYYY-MM-DD"
+                ),
             },
             "timezone": {
                 "type": "string",
-                "description": "IANA timezone name (e.g., 'America/New_York', 'Europe/London')"
+                "description": (
+                    "IANA timezone name (e.g., 'America/New_York', 'Europe/London') "
+                    "Use 'UTC' as local timezone if no timezone provided by the user."
+                ),
             },
             "format": {
                 "type": "string",
-                "description": "Format type: 'full', 'short', 'date_only', 'time_only', or 'iso'",
+                "description": (
+                    "Format type: 'full', 'short', 'date_only', 'time_only', or 'iso'"
+                ),
                 "enum": ["full", "short", "date_only", "time_only", "iso"],
-                "default": "full"
+                "default": "full",
             },
             "locale": {
                 "type": "string",
                 "description": "Locale code (e.g., 'en-US', 'fr-FR')",
-                "default": "en-US"
-            }
+                "default": "en-US",
+            },
         },
         "required": ["date", "timezone"],
-    }
+    },
 }
 
 # Export tool schemas for OpenAI Agent SDK integration
@@ -125,16 +154,16 @@ TIME_TOOL_SCHEMAS = [
     CONVERT_TIME_SCHEMA,
     CALCULATE_TRAVEL_TIME_SCHEMA,
     LIST_TIMEZONES_SCHEMA,
-    FORMAT_DATE_SCHEMA
+    FORMAT_DATE_SCHEMA,
 ]
 
 # For direct import
 __all__ = [
-    'TimeMCPClient',
-    'TimeService',
-    'TimeMCPServer',
-    'get_client',
-    'get_service',
-    'create_server',
-    'TIME_TOOL_SCHEMAS'
+    "TimeMCPClient",
+    "TimeService",
+    "TimeMCPServer",
+    "get_client",
+    "get_service",
+    "create_server",
+    "TIME_TOOL_SCHEMAS",
 ]

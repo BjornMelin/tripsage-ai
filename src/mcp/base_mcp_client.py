@@ -5,13 +5,12 @@ This module provides the base class for all MCP clients in the TripSage system,
 with common functionality for tool calling and error handling.
 """
 
-import asyncio
-from typing import Any, Dict, List, Optional, Type, Union
+from typing import Any, Dict, List, Optional
 
 import httpx
 
 from ..cache.redis_cache import redis_cache
-from ..utils.error_handling import APIError, MCPError, log_exception
+from ..utils.error_handling import MCPError
 from ..utils.logging import get_module_logger
 
 logger = get_module_logger(__name__)
@@ -42,6 +41,7 @@ class BaseMCPClient:
         self.timeout = timeout
         self.use_cache = use_cache
         self.cache_ttl = cache_ttl
+        self.server_name = "MCP"  # Default server name, should be overridden by subclasses
 
         logger.debug("Initialized MCP client for %s", endpoint)
 
@@ -134,7 +134,7 @@ class BaseMCPClient:
                 server=self.endpoint,
                 tool=path,
                 params={"method": method, "params": params},
-            )
+            ) from e
 
         except httpx.RequestError as e:
             raise MCPError(
@@ -142,7 +142,7 @@ class BaseMCPClient:
                 server=self.endpoint,
                 tool=path,
                 params={"method": method, "params": params},
-            )
+            ) from e
 
         except Exception as e:
             raise MCPError(
@@ -150,7 +150,7 @@ class BaseMCPClient:
                 server=self.endpoint,
                 tool=path,
                 params={"method": method, "params": params},
-            )
+            ) from e
 
     @redis_cache.cached("mcp_tools", 3600)  # Cache tool list for 1 hour
     async def list_tools(self, skip_cache: bool = False) -> List[Dict[str, str]]:
@@ -215,3 +215,40 @@ class BaseMCPClient:
             await redis_cache.set(cache_key, result, self.cache_ttl)
 
         return result
+
+    def list_tools_sync(self) -> List[Dict[str, str]]:
+        """Synchronous version of list_tools for use in initialization.
+
+        This is a simplified version that doesn't use the cache or make
+        actual HTTP requests. It's meant to be overridden by subclasses
+        with specific tool lists.
+
+        Returns:
+            List of tool metadata with at least a name field
+        """
+        # By default, return an empty list
+        # Subclasses should override this with their specific tool lists
+        logger.warning("Using default empty list_tools_sync implementation")
+        return []
+
+    def get_tool_metadata_sync(self, tool_name: str) -> Dict[str, Any]:
+        """Synchronous version of get_tool_metadata for use in initialization.
+
+        This is a simplified version that doesn't use the cache or make
+        actual HTTP requests. It's meant to be overridden by subclasses
+        with specific tool metadata.
+
+        Args:
+            tool_name: Tool name
+
+        Returns:
+            Tool metadata with at least a description field
+        """
+        # By default, return a generic description
+        # Subclasses should override this with their specific tool metadata
+        logger.warning("Using default generic get_tool_metadata_sync implementation")
+        return {
+            "name": tool_name,
+            "description": f"Call the {tool_name} tool.",
+            "parameters_schema": {"type": "object", "properties": {}}
+        }

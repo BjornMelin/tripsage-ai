@@ -5,14 +5,11 @@ This module provides functionality to apply SQL migrations to the database,
 supporting both Supabase and Neon providers.
 """
 
-import logging
-import os
 import re
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import List, Optional, Tuple
 
 from src.db.client import get_db_client
-from src.db.providers import DatabaseProvider
 from src.utils.logging import configure_logging
 
 # Configure logging
@@ -61,7 +58,7 @@ async def get_applied_migrations(service_key: bool = True) -> List[str]:
     try:
         # Check if migrations table exists
         tables_exist = await db_client.tables_exist(["migrations"])
-        
+
         if not tables_exist.get("migrations", False):
             # Create migrations table if it doesn't exist
             logger.info("Creating migrations table")
@@ -77,7 +74,7 @@ async def get_applied_migrations(service_key: bool = True) -> List[str]:
 
         # Get list of applied migrations
         result = db_client.table("migrations").select("filename").execute()
-        
+
         if not result.get("data"):
             return []
 
@@ -91,7 +88,9 @@ async def get_applied_migrations(service_key: bool = True) -> List[str]:
         raise
 
 
-async def apply_migration(filename: str, content: str, service_key: bool = True) -> bool:
+async def apply_migration(
+    filename: str, content: str, service_key: bool = True
+) -> bool:
     """
     Apply a single migration to the database.
 
@@ -140,7 +139,8 @@ async def run_migrations(
     applied_migrations = await get_applied_migrations(service_key=service_key)
 
     logger.info(
-        f"Found {len(migration_files)} migration files, {len(applied_migrations)} already applied"
+        f"Found {len(migration_files)} migration files, "
+        f"{len(applied_migrations)} already applied"
     )
 
     succeeded = 0
@@ -165,7 +165,9 @@ async def run_migrations(
             with open(migration_file, "r") as f:
                 content = f.read()
 
-            if await apply_migration(migration_file.name, content, service_key=service_key):
+            if await apply_migration(
+                migration_file.name, content, service_key=service_key
+            ):
                 succeeded += 1
             else:
                 failed += 1
@@ -202,6 +204,6 @@ if __name__ == "__main__":
         return succeeded, failed
 
     result = asyncio.run(main())
-    
+
     if result[1] > 0:  # If there were failures
         exit(1)

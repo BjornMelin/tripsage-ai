@@ -1,7 +1,6 @@
 """Implementation of the Crawl4AI source for web crawling."""
 
 import json
-import logging
 from typing import Any, Dict, List, Optional
 from urllib.parse import urlparse
 
@@ -75,10 +74,10 @@ class Crawl4AISource(CrawlSource):
                     return await response.json()
         except aiohttp.ClientError as e:
             logger.error(f"Network error when calling Crawl4AI API: {str(e)}")
-            raise Exception(f"Failed to connect to Crawl4AI API: {str(e)}")
-        except json.JSONDecodeError:
+            raise Exception(f"Failed to connect to Crawl4AI API: {str(e)}") from e
+        except json.JSONDecodeError as e:
             logger.error("Failed to parse JSON response from Crawl4AI API")
-            raise Exception("Invalid response format from Crawl4AI API")
+            raise Exception("Invalid response format from Crawl4AI API") from e
         except Exception as e:
             logger.error(f"Unexpected error when calling Crawl4AI API: {str(e)}")
             raise
@@ -134,7 +133,7 @@ class Crawl4AISource(CrawlSource):
             }
         except Exception as e:
             logger.error(f"Error extracting content from {url}: {str(e)}")
-            raise Exception(f"Failed to extract page content: {str(e)}")
+            raise Exception(f"Failed to extract page content: {str(e)}") from e
 
     async def search_destination_info(
         self, destination: str, topics: Optional[List[str]] = None, max_results: int = 5
@@ -220,7 +219,9 @@ class Crawl4AISource(CrawlSource):
             logger.error(
                 f"Error searching destination info for {destination}: {str(e)}"
             )
-            raise Exception(f"Failed to search destination information: {str(e)}")
+            raise Exception(
+                f"Failed to search destination information: {str(e)}"
+            ) from e
 
     async def monitor_price_changes(
         self, url: str, price_selector: str, options: Optional[MonitorOptions] = None
@@ -285,7 +286,7 @@ class Crawl4AISource(CrawlSource):
             }
         except Exception as e:
             logger.error(f"Error setting up price monitoring for {url}: {str(e)}")
-            raise Exception(f"Failed to monitor price changes: {str(e)}")
+            raise Exception(f"Failed to monitor price changes: {str(e)}") from e
 
     async def get_latest_events(
         self,
@@ -343,7 +344,7 @@ class Crawl4AISource(CrawlSource):
             }
         except Exception as e:
             logger.error(f"Error getting events for {destination}: {str(e)}")
-            raise Exception(f"Failed to get latest events: {str(e)}")
+            raise Exception(f"Failed to get latest events: {str(e)}") from e
 
     async def crawl_travel_blog(
         self,
@@ -387,7 +388,7 @@ class Crawl4AISource(CrawlSource):
             }
         except Exception as e:
             logger.error(f"Error crawling travel blogs for {destination}: {str(e)}")
-            raise Exception(f"Failed to crawl travel blogs: {str(e)}")
+            raise Exception(f"Failed to crawl travel blogs: {str(e)}") from e
 
     def _extract_title_from_url(self, url: str) -> str:
         """Extract a title from a URL.

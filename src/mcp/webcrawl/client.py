@@ -1,6 +1,5 @@
 """WebCrawl MCP client implementation."""
 
-import logging
 from typing import Any, Dict, List, Optional
 
 from src.mcp.base_mcp_client import BaseMCPClient
@@ -70,14 +69,20 @@ class WebCrawlMCPClient(BaseMCPClient):
             raise
 
     async def search_destination_info(
-        self, destination: str, topics: Optional[List[str]] = None, max_results: int = 5
+        self,
+        destination: str,
+        topics: Optional[List[str]] = None,
+        max_results: int = 5,
+        traveler_profile: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Search for specific information about a travel destination.
 
         Args:
             destination: Name of the destination (city, country, attraction)
-            topics: Type of information to search for (e.g., "attractions", "local_customs")
+            topics: Type of information to search for (e.g.,
+                   "attractions", "local_customs")
             max_results: Maximum number of results to return per topic
+            traveler_profile: Optional traveler profile for personalized results
 
         Returns:
             Dict containing extracted and structured information about the destination
@@ -93,6 +98,7 @@ class WebCrawlMCPClient(BaseMCPClient):
                 "destination": destination,
                 "topics": topics,
                 "max_results": max_results,
+                "traveler_profile": traveler_profile,
             }
 
             # Call MCP tool
@@ -104,6 +110,16 @@ class WebCrawlMCPClient(BaseMCPClient):
             if "error" in result:
                 error = result["error"]
                 error_message = error.get("message", "Unknown error")
+
+                # If there's WebSearchTool guidance included, don't raise an exception
+                # but pass through the guidance for the agent to use
+                if "data" in result and "websearch_tool_guidance" in result["data"]:
+                    logger.info(
+                        f"WebCrawl extraction failed but structured guidance "
+                        f"provided for {destination}"
+                    )
+                    return result.get("data", {})
+
                 raise Exception(f"MCP error: {error_message}")
 
             # Return data

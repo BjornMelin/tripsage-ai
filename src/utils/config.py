@@ -5,9 +5,7 @@ This module provides functions to load and manage application configuration
 from environment variables and configuration files.
 """
 
-import os
-from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Optional
 
 from dotenv import load_dotenv
 from pydantic import BaseModel, Field

@@ -1,3 +1,9 @@
+"""
+Configuration settings for TripSage agents
+
+This module provides the configuration settings for the TripSage agents.
+"""
+
 import os
 from typing import Any, Dict, Optional
 
@@ -88,5 +94,6 @@ config = AgentConfig()
 # Verify configuration on import
 if not config.validate_credentials():
     print(
-        "Warning: Some required credentials are missing. Agents may not function correctly."
+        "Warning: Some required credentials are missing. "
+        "Agents may not function correctly."
     )
