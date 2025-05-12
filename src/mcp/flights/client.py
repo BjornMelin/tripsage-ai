@@ -1,15 +1,19 @@
 """
 Flight MCP Client implementation for TripSage.
 
-This module provides a client for interacting with the external Flight MCP Server (ravinahp/flights-mcp),
-which offers flight search, comparison, and price tracking tools using the Duffel API.
+This module provides a client for interacting with the external
+Flight MCP Server (ravinahp/flights-mcp), which offers flight search,
+comparison, and price tracking tools using the Duffel API.
 """
 
+from datetime import datetime
 from typing import Any, Dict, Generic, List, Optional, TypeVar, cast
 
 from pydantic import ValidationError
 
 from ...cache.redis_cache import redis_cache
+from ...db.client import get_client as get_db_client
+from ...mcp.memory.client import get_client as get_memory_client
 from ...utils.error_handling import MCPError
 from ...utils.logging import get_module_logger
 from ...utils.settings import settings
@@ -989,9 +993,6 @@ class FlightService:
 
                 # Store results in Supabase
                 try:
-                    from ...db.client import get_client as get_db_client
-                    from datetime import datetime
-
                     db_client = get_db_client()
                     await db_client.store_flight_search_results(
                         search_id=search_response["search_id"],
@@ -1003,7 +1004,8 @@ class FlightService:
                         timestamp=datetime.now().isoformat(),
                     )
                     logger.info(
-                        f"Stored flight search results in Supabase: {search_response['search_id']}"
+                        f"Stored flight search results in "
+                        f"Supabase: {search_response['search_id']}"
                     )
                 except Exception as db_error:
                     logger.warning(
@@ -1012,8 +1014,6 @@ class FlightService:
 
                 # Store results in Memory MCP
                 try:
-                    from ...mcp.memory.client import get_client as get_memory_client
-
                     memory_client = get_memory_client()
 
                     # Create entities for origin and destination if they don't exist
@@ -1037,7 +1037,12 @@ class FlightService:
                                     f"Departure date: {departure_date}",
                                     f"Return date: {return_date or 'None (one-way)'}",
                                     f"Found {len(results_dict['offers'])} offers",
-                                    f"Best price: {results_dict['offers'][0]['total_amount'] if results_dict['offers'] else 'N/A'} {results_dict['offers'][0]['total_currency'] if results_dict['offers'] else ''}",
+                                    (
+                                        f"{results_dict['offers'][0]['total_amount']} "
+                                        f"{results_dict['offers'][0]['total_currency']}"
+                                        if results_dict["offers"]
+                                        else "N/A"
+                                    ),
                                 ],
                             },
                         ]
@@ -1060,11 +1065,13 @@ class FlightService:
                     )
 
                     logger.info(
-                        f"Stored flight search results in Memory MCP: {search_response['search_id']}"
+                        f"Stored flight search results in "
+                        f"Memory MCP: {search_response['search_id']}"
                     )
                 except Exception as memory_error:
                     logger.warning(
-                        f"Error storing flight results in Memory MCP: {str(memory_error)}"
+                        f"Error storing flight results in "
+                        f"Memory MCP: {str(memory_error)}"
                     )
 
                 return search_response
@@ -1084,9 +1091,6 @@ class FlightService:
 
                 # Store the empty results for analytics
                 try:
-                    from ...db.client import get_client as get_db_client
-                    from datetime import datetime
-
                     db_client = get_db_client()
                     await db_client.store_flight_search_results(
                         search_id=empty_response["search_id"],
@@ -1099,7 +1103,8 @@ class FlightService:
                     )
                 except Exception as db_error:
                     logger.warning(
-                        f"Error storing empty flight results in database: {str(db_error)}"
+                        f"Error storing empty flight results in "
+                        f"database: {str(db_error)}"
                     )
 
                 return empty_response
@@ -1115,9 +1120,6 @@ class FlightService:
 
             # Log the error for analysis
             try:
-                from ...db.client import get_client as get_db_client
-                from datetime import datetime
-
                 db_client = get_db_client()
                 await db_client.store_flight_search_error(
                     search_id=error_response["search_id"],

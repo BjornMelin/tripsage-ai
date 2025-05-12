@@ -14,6 +14,8 @@ from ..cache.redis_cache import redis_cache
 from ..db.client import get_client as get_db_client
 from ..mcp.flights import (
     get_client as get_flights_client,
+)
+from ..mcp.flights import (
     get_service as get_flights_service,
 )
 from ..utils.logging import get_module_logger
@@ -86,7 +88,8 @@ class TripSageFlightSearch:
 
         Args:
             flights_client: Optional flights MCP client instance
-            flights_service: Optional flights service instance for enhanced functionality
+            flights_service: Optional flights service instance for
+                enhanced functionality
         """
         self.flights_client = flights_client or get_flights_client()
         self.flights_service = flights_service or get_flights_service()
@@ -137,7 +140,7 @@ class TripSageFlightSearch:
             )
 
             # If service call fails, fall back to direct client call
-            if "error" in flight_results and not "results" in flight_results:
+            if "error" in flight_results and "results" not in flight_results:
                 logger.warning("Falling back to direct client call after service error")
                 flight_results = await self.flights_client.search_flights(
                     origin=search_params.origin,
