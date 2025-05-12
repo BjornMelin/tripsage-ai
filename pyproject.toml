@@ -11,12 +11,12 @@ authors = [
 # Only include core shared dependencies here
 # Subprojects maintain their own requirements.txt files
 dependencies = [
-    "pydantic>=2.13.2",
+    "pydantic>=2.11.4",
 ]
 
 [project.optional-dependencies]
 dev = [
-    "ruff>=0.3.0",
+    "ruff>=0.11.9",
     "pytest>=8.3.5",
 ]
 
@@ -28,3 +28,6 @@ select = ["E", "F", "B", "I"]
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src"]

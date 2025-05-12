@@ -1,52 +1,51 @@
-import os
+"""
+Configuration settings for TripSage agents
+
+This module provides the configuration settings for the TripSage agents,
+now using the centralized settings system.
+"""
+
 from typing import Any, Dict, Optional
 
-from dotenv import load_dotenv
 from pydantic import BaseModel
 
-# Load environment variables
-load_dotenv()
+from src.utils.settings import settings
 
 
 class AgentConfig(BaseModel):
     """Configuration settings for TripSage agents"""
 
     # OpenAI configuration
-    openai_api_key: str = os.getenv("OPENAI_API_KEY", "")
-    model_name: str = os.getenv("OPENAI_MODEL", "gpt-4o")
-    max_tokens: int = int(os.getenv("MAX_TOKENS", "4096"))
-    temperature: float = float(os.getenv("TEMPERATURE", "0.7"))
+    openai_api_key: str = settings.openai_api_key.get_secret_value()
+    model_name: str = settings.agent.model_name
+    max_tokens: int = settings.agent.max_tokens
+    temperature: float = settings.agent.temperature
 
     # Supabase configuration
-    supabase_url: str = os.getenv("SUPABASE_URL", "")
-    supabase_key: str = os.getenv("SUPABASE_ANON_KEY", "")
+    supabase_url: str = settings.database.supabase_url
+    supabase_key: str = settings.database.supabase_anon_key.get_secret_value()
 
     # Travel API configuration
-    flight_api_key: Optional[str] = os.getenv("FLIGHT_API_KEY", "")
-    hotel_api_key: Optional[str] = os.getenv("HOTEL_API_KEY", "")
+    flight_api_key: Optional[str] = (
+        settings.flights_mcp.duffel_api_key.get_secret_value()
+        if settings.flights_mcp.duffel_api_key
+        else ""
+    )
+    hotel_api_key: Optional[str] = ""  # No specific hotel API in settings yet
 
     # Agent settings
-    agent_timeout: int = int(os.getenv("AGENT_TIMEOUT", "120"))  # seconds
-    max_retries: int = int(os.getenv("MAX_RETRIES", "3"))
-    agent_memory_size: int = int(
-        os.getenv("AGENT_MEMORY_SIZE", "10")
-    )  # number of messages
+    agent_timeout: int = settings.agent.agent_timeout  # seconds
+    max_retries: int = settings.agent.max_retries
+    agent_memory_size: int = settings.agent.agent_memory_size  # number of messages
 
     # Default agent parameters
-    default_flight_preferences: Dict[str, Any] = {
-        "seat_class": "economy",
-        "max_stops": 1,
-        "preferred_airlines": [],
-        "avoid_airlines": [],
-        "time_window": "flexible",
-    }
+    default_flight_preferences: Dict[str, Any] = (
+        settings.agent.default_flight_preferences
+    )
 
-    default_accommodation_preferences: Dict[str, Any] = {
-        "property_type": "hotel",
-        "min_rating": 3.5,
-        "amenities": ["wifi", "breakfast"],
-        "location_preference": "city_center",
-    }
+    default_accommodation_preferences: Dict[str, Any] = (
+        settings.agent.default_accommodation_preferences
+    )
 
     # Helper functions
     def validate_credentials(self) -> bool:
@@ -85,8 +84,9 @@ class AgentConfig(BaseModel):
 # Create a default config instance
 config = AgentConfig()
 
-# Verify configuration on import
+# Validate credentials
 if not config.validate_credentials():
     print(
-        "Warning: Some required credentials are missing. Agents may not function correctly."
+        "Warning: Some required credentials are missing. "
+        "Agents may not function correctly."
     )
