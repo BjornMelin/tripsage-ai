@@ -6,6 +6,7 @@ with integration for MCP tools and dual storage architecture.
 """
 
 import time
+import uuid
 from typing import Any, Callable, Dict, List, Optional
 
 from pydantic import BaseModel
@@ -13,9 +14,11 @@ from pydantic import BaseModel
 from agents import Agent, RunContextWrapper, function_tool, handoff
 from agents.extensions.handoff_prompt import RECOMMENDED_PROMPT_PREFIX
 from src.mcp.base_mcp_client import BaseMCPClient
+from src.mcp.memory.client import memory_client
 from src.utils.config import get_config
 from src.utils.error_handling import MCPError, TripSageError, log_exception
 from src.utils.logging import get_module_logger
+from src.utils.session_memory import initialize_session_memory, store_session_summary
 
 logger = get_module_logger(__name__)
 config = get_config()
@@ -85,13 +88,45 @@ class BaseAgent:
 
         # Store conversation history
         self.messages_history = []
+        self.session_id = str(uuid.uuid4())
+        self.session_data = {}
 
         logger.info("Initialized agent: %s", name)
 
     def _register_default_tools(self) -> None:
         """Register default tools for the agent."""
-        # Register local tool examples
-        pass
+        # Import memory tools
+        from .memory_tools import (
+            add_entity_observations,
+            create_knowledge_entities,
+            create_knowledge_relations,
+            delete_entity_observations,
+            delete_knowledge_entities,
+            delete_knowledge_relations,
+            get_entity_details,
+            get_knowledge_graph,
+            initialize_agent_memory,
+            save_session_summary,
+            search_knowledge_graph,
+            update_agent_memory,
+        )
+
+        # Register memory tools
+        self._register_tool(get_knowledge_graph)
+        self._register_tool(search_knowledge_graph)
+        self._register_tool(get_entity_details)
+        self._register_tool(create_knowledge_entities)
+        self._register_tool(create_knowledge_relations)
+        self._register_tool(add_entity_observations)
+        self._register_tool(delete_knowledge_entities)
+        self._register_tool(delete_knowledge_relations)
+        self._register_tool(delete_entity_observations)
+        self._register_tool(initialize_agent_memory)
+        self._register_tool(update_agent_memory)
+        self._register_tool(save_session_summary)
+
+        # Register echo tool
+        self._register_tool(self.echo)
 
     def _register_tool(self, tool: Callable) -> None:
         """Register a tool with the agent.
@@ -169,6 +204,39 @@ class BaseAgent:
         except Exception as e:
             logger.error("Error registering MCP client tools: %s", str(e))
             log_exception(e)
+    
+    async def _initialize_session(self, user_id: Optional[str] = None) -> Dict[str, Any]:
+        """Initialize a new session with knowledge graph data.
+        
+        Args:
+            user_id: Optional user ID
+            
+        Returns:
+            Session data
+        """
+        try:
+            # Initialize session memory
+            self.session_data = await initialize_session_memory(user_id)
+            logger.info("Session initialized with memory data")
+            return self.session_data
+        except Exception as e:
+            logger.error("Error initializing session: %s", str(e))
+            log_exception(e)
+            return {}
+    
+    async def _save_session_summary(self, user_id: str, summary: str) -> None:
+        """Save a summary of the current session.
+        
+        Args:
+            user_id: User ID
+            summary: Session summary
+        """
+        try:
+            await store_session_summary(user_id, summary, self.session_id)
+            logger.info("Session summary saved")
+        except Exception as e:
+            logger.error("Error saving session summary: %s", str(e))
+            log_exception(e)
 
     async def run(
         self, user_input: str, context: Optional[Dict[str, Any]] = None
@@ -191,6 +259,12 @@ class BaseAgent:
 
         # Set up context
         run_context = context or {}
+        
+        # Initialize session data if this is the first message
+        if not self.session_data and "user_id" in run_context:
+            await self._initialize_session(run_context.get("user_id"))
+            run_context["session_data"] = self.session_data
+            run_context["session_id"] = self.session_id
 
         try:
             # Run the agent
@@ -215,6 +289,12 @@ class BaseAgent:
                     "timestamp": time.time(),
                 }
             )
+            
+            # Save session summary if needed
+            if len(self.messages_history) >= 10 and "user_id" in run_context:
+                # Generate session summary
+                summary = f"Conversation with {self.messages_history[0]['content'][:50]}..."
+                await self._save_session_summary(run_context["user_id"], summary)
 
             return response
 
@@ -322,6 +402,13 @@ class TravelAgent(BaseAgent):
         1. Supabase database (for structured data like bookings, user preferences)
         2. Knowledge graph (for travel concepts, entities, and relationships)
         
+        KNOWLEDGE GRAPH USAGE:
+        - At the start of each session, retrieve relevant knowledge for the user
+        - During the session, create entities for new destinations, accommodations, etc.
+        - Create relationships between entities (e.g., hotel located in city)
+        - Add observations to entities as you learn more about them
+        - At the end of the session, save a summary to the knowledge graph
+        
         AVAILABLE TOOLS:
         You have access to specialized tools that provide real-time information:
         - Web Search: Search the internet for up-to-date travel information
@@ -339,6 +426,17 @@ class TravelAgent(BaseAgent):
         For interactive tasks like checking availability, use Browser MCP.
         For specialized travel data (flights, weather, etc.), use the appropriate domain-specific MCP tool.
         Use the most specific and appropriate tool for each task.
+        
+        MEMORY OPERATIONS:
+        - initialize_agent_memory: Retrieve user preferences and recent trips
+        - search_knowledge_graph: Find relevant entities like destinations
+        - get_entity_details: Get detailed information about specific entities
+        - create_knowledge_entities: Create new entities for destinations, hotels, etc.
+        - create_knowledge_relations: Create relationships between entities
+        - add_entity_observations: Add new information to existing entities
+        
+        Always use memory operations to provide personalized recommendations
+        and to learn from user interactions over time.
         """  # noqa: E501
 
         super().__init__(
@@ -432,6 +530,12 @@ class BudgetAgent(BaseAgent):
         - When appropriate, suggest alternatives that offer better value
         - Maintain transparency about all costs, including hidden fees
         - Present budget allocations in both amounts and percentages
+        
+        KNOWLEDGE GRAPH USAGE:
+        Use memory operations to retrieve and store budget-related knowledge:
+        - Retrieve user budget preferences using initialize_agent_memory
+        - Record budget allocations and price tracking information
+        - Create budget entities and relate them to trips and destinations
         
         Treat all budget information with privacy and security.
         """  # noqa: E501
