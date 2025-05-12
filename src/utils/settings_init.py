@@ -6,10 +6,7 @@ at startup time. It ensures all required settings are available and valid.
 """
 
 import logging
-import os
-from typing import Any, Dict, List, Optional, Set
-
-from pydantic import ValidationError
+from typing import Any, Dict, List
 
 from src.utils.settings import AppSettings, settings
 
@@ -122,6 +119,10 @@ def _validate_production_settings(settings: AppSettings) -> None:
         if hasattr(server_config, "api_key") and server_config.api_key is None:
             production_errors.append(f"{server_name.upper()} API key is missing")
 
+    # Validate Duffel API key for Flights MCP
+    if not settings.flights_mcp.duffel_api_key.get_secret_value():
+        production_errors.append("DUFFEL_API_KEY is missing for flights_mcp")
+
     # Additional production-specific validations
     if production_errors:
         warning_message = "Production settings validation warnings:\n- " + "\n- ".join(
@@ -141,10 +142,10 @@ def get_settings_dict() -> Dict[str, Any]:
         A dictionary representation of the settings.
     """
     settings_dict = settings.model_dump()
-    
+
     # Sanitize sensitive fields
     _sanitize_sensitive_data(settings_dict)
-    
+
     return settings_dict
 
 
@@ -156,16 +157,14 @@ def _sanitize_sensitive_data(data: Dict[str, Any], path: str = "") -> None:
         data: The dictionary to sanitize.
         path: The current path in the dictionary (for nested dicts).
     """
-    sensitive_keywords = {
-        "password", "api_key", "secret", "key", "token"
-    }
-    
+    sensitive_keywords = {"password", "api_key", "secret", "key", "token"}
+
     for key, value in list(data.items()):
         current_path = f"{path}.{key}" if path else key
-        
+
         # Check if this is a sensitive field
         is_sensitive = any(keyword in key.lower() for keyword in sensitive_keywords)
-        
+
         if isinstance(value, dict):
             _sanitize_sensitive_data(value, current_path)
         elif is_sensitive and value:
