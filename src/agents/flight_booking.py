@@ -462,9 +462,9 @@ class TripSageFlightBooking:
     async def cancel_booking(self, booking_id: str) -> Dict[str, Any]:
         """Cancel a flight booking.
 
-        Note: When using ravinahp/flights-mcp, booking operations (including cancellation)
-        are not supported as it is a read-only MCP server. This method will return an
-        error in that case.
+        Note: When using ravinahp/flights-mcp, booking operations
+        (including cancellation) are not supported as it is a read-only MCP server.
+        This method will return an error in that case.
 
         Args:
             booking_id: Booking ID or reference number

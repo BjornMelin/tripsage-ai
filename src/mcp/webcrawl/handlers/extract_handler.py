@@ -2,8 +2,8 @@
 
 from typing import Any, Dict, List, Optional, Union
 
-from src.mcp.webcrawl.config import Config
 from src.mcp.webcrawl.sources.crawl4ai_source import Crawl4AISource
+from src.mcp.webcrawl.sources.firecrawl_source import FirecrawlSource
 from src.mcp.webcrawl.sources.playwright_source import PlaywrightSource
 from src.mcp.webcrawl.sources.source_interface import (
     ExtractedContent,
@@ -53,7 +53,7 @@ async def extract_page_content(
         )
 
     # Validate source_type
-    if source_type not in ["crawl4ai", "playwright"]:
+    if source_type not in ["crawl4ai", "firecrawl", "playwright"]:
         logger.warning(f"Invalid source_type: {source_type}, defaulting to crawl4ai")
         source_type = "crawl4ai"
 
@@ -69,6 +69,9 @@ async def extract_page_content(
         if source_type == "crawl4ai":
             source = Crawl4AISource()
             logger.info(f"Using Crawl4AI source for {url}")
+        elif source_type == "firecrawl":
+            source = FirecrawlSource()
+            logger.info(f"Using Firecrawl source for {url}")
         else:  # playwright
             source = PlaywrightSource()
             logger.info(f"Using Playwright source for {url}")
@@ -81,12 +84,21 @@ async def extract_page_content(
     except Exception as e:
         logger.error(f"{source_type} extraction failed for {url}: {str(e)}")
 
-        # Try fallback to the other source
-        fallback_type = "playwright" if source_type == "crawl4ai" else "crawl4ai"
+        # Try fallback to an alternative source
+        if source_type == "crawl4ai":
+            fallback_type = (
+                "firecrawl"  # Try Firecrawl first, then Playwright if needed
+            )
+        elif source_type == "firecrawl":
+            fallback_type = "playwright"  # Try Playwright next
+        else:  # If Playwright failed, try Crawl4AI
+            fallback_type = "crawl4ai"
         return await _extract_with_fallback(url, options, fallback_type)
 
 
-def _select_source(url: str) -> Union[Crawl4AISource, PlaywrightSource]:
+def _select_source(
+    url: str,
+) -> Union[Crawl4AISource, FirecrawlSource, PlaywrightSource]:
     """Select the appropriate source based on URL patterns.
 
     Args:
@@ -95,24 +107,21 @@ def _select_source(url: str) -> Union[Crawl4AISource, PlaywrightSource]:
     Returns:
         The appropriate source
     """
-    # Check if it's a dynamic site that requires browser rendering
-    if any(dynamic_site in url for dynamic_site in Config.DYNAMIC_SITES):
-        logger.info(f"Using Playwright for dynamic site: {url}")
-        return PlaywrightSource()
+    # Use the source selector for intelligent source selection
+    from src.mcp.webcrawl.sources.source_selector import get_source_selector
 
-    # Check if it's a site that requires authentication
-    if any(auth_site in url for auth_site in Config.AUTH_SITES):
-        logger.info(f"Using Playwright for authenticated site: {url}")
-        return PlaywrightSource()
+    selector = get_source_selector()
+    source_type = selector.select_source_for_url(url)
 
-    # Check if it's an interactive site
-    if any(interactive_site in url for interactive_site in Config.INTERACTIVE_SITES):
-        logger.info(f"Using Playwright for interactive site: {url}")
-        return PlaywrightSource()
+    logger.info(f"Source selector chose {source_type} for {url}")
 
-    # Default to Crawl4AI for most URLs
-    logger.info(f"Using Crawl4AI for site: {url}")
-    return Crawl4AISource()
+    # Initialize the appropriate source
+    if source_type == "firecrawl":
+        return FirecrawlSource()
+    elif source_type == "playwright":
+        return PlaywrightSource()
+    else:  # Default to Crawl4AI
+        return Crawl4AISource()
 
 
 async def _extract_with_fallback(
@@ -123,7 +132,8 @@ async def _extract_with_fallback(
     Args:
         url: The URL to extract from
         options: Extraction options
-        fallback_type: Type of source to use for fallback ("crawl4ai" or "playwright")
+        fallback_type: Type of source to use for fallback ("crawl4ai",
+            "firecrawl", or "playwright")
 
     Returns:
         The extracted content
@@ -137,6 +147,8 @@ async def _extract_with_fallback(
         # Initialize the fallback source
         if fallback_type == "crawl4ai":
             source = Crawl4AISource()
+        elif fallback_type == "firecrawl":
+            source = FirecrawlSource()
         else:  # playwright
             source = PlaywrightSource()
 
@@ -144,6 +156,24 @@ async def _extract_with_fallback(
         return _format_extract_response(result)
     except Exception as e:
         logger.warning(f"{fallback_type} fallback failed for {url}: {str(e)}")
+
+        # Try second fallback if we haven't tried all sources yet
+        if fallback_type == "firecrawl":
+            logger.info(f"Trying second fallback with playwright for {url}")
+            try:
+                source = PlaywrightSource()
+                result = await source.extract_page_content(url, options)
+                return _format_extract_response(result)
+            except Exception as e2:
+                logger.warning(f"Second fallback failed for {url}: {str(e2)}")
+        elif fallback_type == "playwright" and "crawl4ai" not in str(e).lower():
+            logger.info(f"Trying second fallback with crawl4ai for {url}")
+            try:
+                source = Crawl4AISource()
+                result = await source.extract_page_content(url, options)
+                return _format_extract_response(result)
+            except Exception as e2:
+                logger.warning(f"Second fallback failed for {url}: {str(e2)}")
 
     # If all sources fail, return an error response
     raise Exception(f"All extraction attempts failed for {url}")

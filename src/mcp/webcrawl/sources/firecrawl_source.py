@@ -1,8 +1,8 @@
 """Implementation of the Firecrawl source for web crawling."""
 
 import json
-from typing import Any, Dict, List, Optional
 from datetime import datetime
+from typing import Any, Dict, List, Optional
 
 import aiohttp
 
@@ -19,6 +19,7 @@ from src.mcp.webcrawl.sources.source_interface import (
     TopicResult,
 )
 from src.utils.logging import get_logger
+from utils import settings
 
 # Initialize logger
 logger = get_logger(__name__)
@@ -33,7 +34,9 @@ class FirecrawlSource(CrawlSource):
         Args:
             api_key: Optional API key, defaults to Config.FIRECRAWL_API_KEY
         """
-        self.api_key = api_key or settings.webcrawl_mcp.firecrawl_api_key.get_secret_value()
+        self.api_key = (
+            api_key or settings.webcrawl_mcp.firecrawl_api_key.get_secret_value()
+        )
         self.api_url = "https://api.firecrawl.dev/v1"
 
     async def _make_request(
@@ -121,16 +124,18 @@ class FirecrawlSource(CrawlSource):
                 raise Exception(f"Firecrawl scraping failed: {result.get('error')}")
 
             data = result.get("data", {})
-            
+
             # Extract metadata from the result
             metadata = data.get("metadata", {})
-            
+
             # Process and return the result
             return {
                 "url": url,
                 "title": metadata.get("title", self._extract_title_from_url(url)),
                 "content": data.get(options.get("format", "markdown"), ""),
-                "images": data.get("screenshot") if options.get("include_images") else None,
+                "images": (
+                    data.get("screenshot") if options.get("include_images") else None
+                ),
                 "metadata": {
                     "author": metadata.get("author"),
                     "publish_date": metadata.get("publishDate"),
@@ -142,8 +147,12 @@ class FirecrawlSource(CrawlSource):
                 "format": options.get("format", "markdown"),
             }
         except Exception as e:
-            logger.error(f"Error extracting content from {url} with Firecrawl: {str(e)}")
-            raise Exception(f"Failed to extract page content with Firecrawl: {str(e)}") from e
+            logger.error(
+                f"Error extracting content from {url} with Firecrawl: {str(e)}"
+            )
+            raise Exception(
+                f"Failed to extract page content with Firecrawl: {str(e)}"
+            ) from e
 
     async def search_destination_info(
         self, destination: str, topics: Optional[List[str]] = None, max_results: int = 5
@@ -182,52 +191,58 @@ class FirecrawlSource(CrawlSource):
             for topic in search_topics:
                 # Build search query
                 query = f"{destination} {topic} travel guide"
-                
+
                 # Configure search request
                 search_request = {
                     "query": query,
                     "limit": max_results,
-                    "scrapeOptions": {
-                        "formats": ["markdown"],
-                        "onlyMainContent": True
-                    }
+                    "scrapeOptions": {"formats": ["markdown"], "onlyMainContent": True},
                 }
-                
+
                 # Call Firecrawl search API
                 search_result = await self._make_request("/search", search_request)
-                
+
                 if not search_result.get("success"):
-                    logger.warning(f"Firecrawl search failed for {query}: {search_result.get('error')}")
+                    logger.warning(
+                        f"Firecrawl search failed for {query}: "
+                        f"{search_result.get('error')}"
+                    )
                     continue
-                
+
                 # Initialize topic results
                 result["topics"][topic] = []
-                
+
                 # Process search results
                 for item in search_result.get("data", []):
                     # Extract domain from URL
                     source_url = item.get("url", "")
                     domain = self._extract_domain(source_url)
-                    
+
                     # Create topic result
                     topic_result: TopicResult = {
                         "title": item.get("title", ""),
                         "content": item.get("markdown", item.get("snippet", "")),
                         "source": domain,
                         "url": source_url,
-                        "confidence": 0.8,  # Firecrawl doesn't provide confidence scores
+                        # Firecrawl doesn't provide confidence scores
+                        "confidence": 0.8,
                     }
-                    
+
                     result["topics"][topic].append(topic_result)
-                    
+
                     # Add source to sources list if not already there
                     if domain and domain not in result["sources"]:
                         result["sources"].append(domain)
 
             return result
         except Exception as e:
-            logger.error(f"Error searching destination info with Firecrawl for {destination}: {str(e)}")
-            raise Exception(f"Failed to search destination information with Firecrawl: {str(e)}") from e
+            logger.error(
+                f"Error searching destination info with Firecrawl for "
+                f'"{destination}": {str(e)}'
+            )
+            raise Exception(
+                f"Failed to search destination information with Firecrawl: {str(e)}"
+            ) from e
 
     async def monitor_price_changes(
         self, url: str, price_selector: str, options: Optional[MonitorOptions] = None
@@ -251,36 +266,45 @@ class FirecrawlSource(CrawlSource):
             # First, extract the current price to establish a baseline
             current_price_request = {
                 "url": url,
-                "actions": [
-                    {"type": "wait", "milliseconds": 2000},
-                    {"type": "scrape"}
-                ],
+                "actions": [{"type": "wait", "milliseconds": 2000}, {"type": "scrape"}],
                 "formats": ["json"],
                 "jsonOptions": {
-                    "prompt": f"Extract the current price from the element matching selector '{price_selector}'. Return just the price as a number and the currency code.",
-                    "mode": "llm-extraction"
-                }
+                    "prompt": (
+                        f"Extract the current price from the element matching "
+                        f"selector '{price_selector}'. Return just the price as a "
+                        f"number and the currency code."
+                    ),
+                    "mode": "llm-extraction",
+                },
             }
-            
+
             # Call Firecrawl API to get current price
-            current_price_result = await self._make_request("/scrape", current_price_request)
-            
+            current_price_result = await self._make_request(
+                "/scrape", current_price_request
+            )
+
             if not current_price_result.get("success"):
-                raise Exception(f"Failed to extract current price: {current_price_result.get('error')}")
-            
+                raise Exception(
+                    f"Failed to extract current price: "
+                    f"{current_price_result.get('error')}"
+                )
+
             # Extract price information from the result
             price_data = current_price_result.get("data", {}).get("json", {})
-            
+
             # Generate a monitoring ID
-            monitoring_id = f"monitor_{url.split('/')[-1]}_{datetime.now().strftime('%Y%m%d%H%M%S')}"
-            
+            monitoring_id = (
+                f"monitor_{url.split('/')[-1]}_"
+                f"{datetime.now().strftime('%Y%m%d%H%M%S')}"
+            )
+
             # Create PriceInfo object
             price_info = {
                 "amount": float(price_data.get("price", 0)),
                 "currency": price_data.get("currency", "USD"),
-                "timestamp": datetime.now().isoformat()
+                "timestamp": datetime.now().isoformat(),
             }
-            
+
             # Build the result
             return {
                 "url": url,
@@ -293,14 +317,20 @@ class FirecrawlSource(CrawlSource):
                         "timestamp": price_info["timestamp"],
                         "amount": price_info["amount"],
                         "currency": price_info["currency"],
-                        "change_percent": 0.0
+                        "change_percent": 0.0,
                     }
                 ],
-                "next_check": self._calculate_next_check(options.get("frequency", "daily"))
+                "next_check": self._calculate_next_check(
+                    options.get("frequency", "daily")
+                ),
             }
         except Exception as e:
-            logger.error(f"Error setting up price monitoring with Firecrawl for {url}: {str(e)}")
-            raise Exception(f"Failed to monitor price changes with Firecrawl: {str(e)}") from e
+            logger.error(
+                f"Error setting up price monitoring with Firecrawl for {url}: {str(e)}"
+            )
+            raise Exception(
+                f"Failed to monitor price changes with Firecrawl: {str(e)}"
+            ) from e
 
     async def get_latest_events(
         self,
@@ -328,23 +358,29 @@ class FirecrawlSource(CrawlSource):
             category_str = ""
             if categories and len(categories) > 0:
                 category_str = " " + " ".join(categories)
-            
-            query = f"events in {destination}{category_str} from {start_date} to {end_date}"
-            
+
+            query = (
+                f"events in {destination}{category_str} from {start_date} to {end_date}"
+            )
+
             # Use deep research for comprehensive event information
             deep_research_request = {
                 "query": query,
                 "maxDepth": 3,
                 "timeLimit": 120,
-                "maxUrls": 20
+                "maxUrls": 20,
             }
-            
+
             # Call Firecrawl deep research API
-            research_result = await self._make_request("/deep-research", deep_research_request)
-            
+            research_result = await self._make_request(
+                "/deep-research", deep_research_request
+            )
+
             if not research_result.get("success"):
-                raise Exception(f"Firecrawl deep research failed: {research_result.get('error')}")
-            
+                raise Exception(
+                    f"Firecrawl deep research failed: {research_result.get('error')}"
+                )
+
             # Extract events data using structured extraction
             extract_request = {
                 "urls": research_result.get("data", {}).get("sources", [])[:5],
@@ -365,31 +401,37 @@ class FirecrawlSource(CrawlSource):
                                     "address": {"type": "string"},
                                     "url": {"type": "string"},
                                     "price_range": {"type": "string"},
-                                }
-                            }
+                                },
+                            },
                         }
-                    }
+                    },
                 },
-                "prompt": f"Extract event information for {destination} between {start_date} and {end_date}. Focus on extracting well-structured event data with accurate dates and details."
+                "prompt": (
+                    f"Extract event information for {destination} between {start_date} "
+                    f"and {end_date}. Focus on extracting well-structured event data "
+                    f"with accurate dates and details."
+                ),
             }
-            
+
             # Call Firecrawl extract API
             extract_result = await self._make_request("/extract", extract_request)
-            
+
             if not extract_result.get("success"):
-                raise Exception(f"Firecrawl extraction failed: {extract_result.get('error')}")
-            
+                raise Exception(
+                    f"Firecrawl extraction failed: {extract_result.get('error')}"
+                )
+
             # Process the extracted events
             extracted_data = extract_result.get("data", {})
             events_data = []
-            
+
             # Combine events from all URLs
             for url_data in extracted_data:
                 if "events" in url_data:
                     for event in url_data["events"]:
                         event["source"] = self._extract_domain(url_data.get("url", ""))
                         events_data.append(event)
-            
+
             # Map to our interface
             return {
                 "destination": destination,
@@ -413,8 +455,12 @@ class FirecrawlSource(CrawlSource):
                 "sources": list(set(event.get("source", "") for event in events_data)),
             }
         except Exception as e:
-            logger.error(f"Error getting events with Firecrawl for {destination}: {str(e)}")
-            raise Exception(f"Failed to get latest events with Firecrawl: {str(e)}") from e
+            logger.error(
+                f"Error getting events with Firecrawl for {destination}: {str(e)}"
+            )
+            raise Exception(
+                f"Failed to get latest events with Firecrawl: {str(e)}"
+            ) from e
 
     async def crawl_travel_blog(
         self,
@@ -442,32 +488,31 @@ class FirecrawlSource(CrawlSource):
             topic_str = ""
             if topics and len(topics) > 0:
                 topic_str = " " + " ".join(topics)
-            
+
             time_str = ""
             if recent_only:
                 time_str = " last year"
-            
+
             query = f"travel blog {destination}{topic_str}{time_str}"
-            
+
             # Search for travel blogs
             search_request = {
                 "query": query,
                 "limit": max_blogs,
-                "scrapeOptions": {
-                    "formats": ["markdown"],
-                    "onlyMainContent": True
-                }
+                "scrapeOptions": {"formats": ["markdown"], "onlyMainContent": True},
             }
-            
+
             # Call Firecrawl search API
             search_result = await self._make_request("/search", search_request)
-            
+
             if not search_result.get("success"):
-                raise Exception(f"Firecrawl search failed: {search_result.get('error')}")
-            
+                raise Exception(
+                    f"Firecrawl search failed: {search_result.get('error')}"
+                )
+
             # Extract blog URLs
             blog_urls = [item.get("url") for item in search_result.get("data", [])]
-            
+
             # Extract insights from blogs
             extract_request = {
                 "urls": blog_urls,
@@ -483,40 +528,59 @@ class FirecrawlSource(CrawlSource):
                                     "properties": {
                                         "title": {"type": "string"},
                                         "summary": {"type": "string"},
-                                        "key_points": {"type": "array", "items": {"type": "string"}},
-                                        "sentiment": {"type": "string", "enum": ["positive", "neutral", "negative"]},
-                                    }
-                                }
-                            }
+                                        "key_points": {
+                                            "type": "array",
+                                            "items": {"type": "string"},
+                                        },
+                                        "sentiment": {
+                                            "type": "string",
+                                            "enum": ["positive", "neutral", "negative"],
+                                        },
+                                    },
+                                },
+                            },
                         }
-                    }
+                    },
                 },
-                "prompt": f"Extract travel insights about {destination} from these blogs. Organize the insights by topic and include a summary and key points for each topic. Also analyze the sentiment of each topic (positive, neutral, or negative)."
+                "prompt": (
+                    f"Extract travel insights about {destination} from these blogs. "
+                    "Organize the insights by topic and include a summary and key "
+                    "points for each topic. Also analyze the sentiment of each topic "
+                    "(positive, neutral, or negative)."
+                ),
             }
-            
+
             # Call Firecrawl extract API
             extract_result = await self._make_request("/extract", extract_request)
-            
+
             if not extract_result.get("success"):
-                raise Exception(f"Firecrawl extraction failed: {extract_result.get('error')}")
-            
+                raise Exception(
+                    f"Firecrawl extraction failed: {extract_result.get('error')}"
+                )
+
             # Process the extracted insights
             extracted_data = extract_result.get("data", {})
-            
+
             # Build blog sources
             blog_sources = []
             for i, url in enumerate(blog_urls):
                 # Get blog metadata from search results
-                blog_meta = search_result.get("data", [])[i] if i < len(search_result.get("data", [])) else {}
-                
-                blog_sources.append({
-                    "url": url,
-                    "title": blog_meta.get("title", f"Blog {i+1}"),
-                    "author": blog_meta.get("author"),
-                    "publish_date": blog_meta.get("publishDate"),
-                    "reputation_score": 0.8  # Default score
-                })
-            
+                blog_meta = (
+                    search_result.get("data", [])[i]
+                    if i < len(search_result.get("data", []))
+                    else {}
+                )
+
+                blog_sources.append(
+                    {
+                        "url": url,
+                        "title": blog_meta.get("title", f"Blog {i + 1}"),
+                        "author": blog_meta.get("author"),
+                        "publish_date": blog_meta.get("publishDate"),
+                        "reputation_score": 0.8,  # Default score
+                    }
+                )
+
             # Process topics
             processed_topics = {}
             for url_data in extracted_data:
@@ -524,12 +588,16 @@ class FirecrawlSource(CrawlSource):
                     for topic_name, topic_items in url_data["topics"].items():
                         if topic_name not in processed_topics:
                             processed_topics[topic_name] = []
-                        
-                        for i, item in enumerate(topic_items):
+
+                        for item in topic_items:
                             # Add source index
-                            item["source_index"] = blog_urls.index(url_data.get("url")) if url_data.get("url") in blog_urls else 0
+                            item["source_index"] = (
+                                blog_urls.index(url_data.get("url"))
+                                if url_data.get("url") in blog_urls
+                                else 0
+                            )
                             processed_topics[topic_name].append(item)
-            
+
             # Return the blog insights
             return {
                 "destination": destination,
@@ -538,8 +606,13 @@ class FirecrawlSource(CrawlSource):
                 "extraction_date": datetime.now().isoformat(),
             }
         except Exception as e:
-            logger.error(f"Error crawling travel blogs with Firecrawl for {destination}: {str(e)}")
-            raise Exception(f"Failed to crawl travel blogs with Firecrawl: {str(e)}") from e
+            logger.error(
+                f"Error crawling travel blogs with Firecrawl for "
+                f'"{destination}": {str(e)}'
+            )
+            raise Exception(
+                f"Failed to crawl travel blogs with Firecrawl: {str(e)}"
+            ) from e
 
     def _extract_title_from_url(self, url: str) -> str:
         """Extract a title from a URL.
@@ -552,26 +625,26 @@ class FirecrawlSource(CrawlSource):
         """
         try:
             from urllib.parse import urlparse
-            
+
             parsed_url = urlparse(url)
             path_segments = parsed_url.path.split("/")
-            
+
             # Filter out empty segments
             path_segments = [segment for segment in path_segments if segment]
-            
+
             if path_segments:
                 # Get the last segment
                 last_segment = path_segments[-1]
-                
+
                 # Remove file extensions
                 last_segment = last_segment.split(".")[0]
-                
+
                 # Replace hyphens with spaces
                 last_segment = last_segment.replace("-", " ").replace("_", " ")
-                
+
                 # Capitalize words
                 return " ".join(word.capitalize() for word in last_segment.split())
-            
+
             return parsed_url.netloc
         except Exception:
             return url
@@ -587,12 +660,12 @@ class FirecrawlSource(CrawlSource):
         """
         try:
             from urllib.parse import urlparse
-            
+
             parsed_url = urlparse(url)
             return parsed_url.netloc
         except Exception:
             return url
-            
+
     def _calculate_next_check(self, frequency: str) -> str:
         """Calculate the next check time based on frequency.
 
@@ -603,9 +676,9 @@ class FirecrawlSource(CrawlSource):
             ISO formatted timestamp for next check
         """
         from datetime import datetime, timedelta
-        
+
         now = datetime.now()
-        
+
         if frequency == "hourly":
             next_time = now + timedelta(hours=1)
         elif frequency == "weekly":
@@ -613,5 +686,5 @@ class FirecrawlSource(CrawlSource):
         else:
             # Default to daily
             next_time = now + timedelta(days=1)
-            
+
         return next_time.isoformat()
