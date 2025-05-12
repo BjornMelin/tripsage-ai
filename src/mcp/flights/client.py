@@ -11,13 +11,12 @@ from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, ConfigDict, field_validator, model_validator
 
 from ...cache.redis_cache import redis_cache
-from ...utils.config import get_config
 from ...utils.error_handling import MCPError
 from ...utils.logging import get_module_logger
+from ...utils.settings import settings
 from ..fastmcp import FastMCPClient
 
 logger = get_module_logger(__name__)
-config = get_config()
 
 
 class FlightSearchParams(BaseModel):
@@ -81,21 +80,16 @@ class FlightsMCPClient(FastMCPClient):
         """Initialize the Flights MCP Client.
 
         Args:
-            endpoint: MCP server endpoint URL (defaults to config value)
-            api_key: API key for authentication (defaults to config value)
+            endpoint: MCP server endpoint URL (defaults to settings value)
+            api_key: API key for authentication (defaults to settings value)
             timeout: Request timeout in seconds
             use_cache: Whether to use caching
         """
         if endpoint is None:
-            endpoint = (
-                config.flights_mcp.endpoint
-                if hasattr(config, "flights_mcp")
-                else "http://localhost:8004"
-            )
+            endpoint = settings.flights_mcp.endpoint
 
-        api_key = api_key or (
-            config.flights_mcp.api_key if hasattr(config, "flights_mcp") else None
-        )
+        if api_key is None and settings.flights_mcp.api_key:
+            api_key = settings.flights_mcp.api_key.get_secret_value()
 
         super().__init__(
             server_name="Flights",
@@ -167,18 +161,59 @@ class FlightsMCPClient(FastMCPClient):
                 "search_flights", api_params, skip_cache=skip_cache
             )
         except Exception as e:
-            logger.error(f"Error searching flights: {str(e)}")
-            raise MCPError(
-                message=f"Failed to search flights: {str(e)}",
-                server=self.server_name,
-                tool="search_flights",
-                params={
-                    "origin": origin,
-                    "destination": destination,
-                    "departure_date": departure_date,
-                    "return_date": return_date,
-                },
-            ) from e
+            # Check for rate limiting or API key issues
+            error_message = str(e).lower()
+            if "rate limit" in error_message or "too many requests" in error_message:
+                logger.error(
+                    f"Rate limit exceeded when searching flights: {str(e)}"
+                )
+                raise MCPError(
+                    message=(
+                        "Rate limit exceeded for Duffel API. Please try again later."
+                    ),
+                    server=self.server_name,
+                    tool="search_flights",
+                    params={
+                        "origin": origin,
+                        "destination": destination,
+                        "departure_date": departure_date,
+                    },
+                    status_code=429,  # Too Many Requests
+                ) from e
+            elif (
+                "api key" in error_message
+                or "authentication" in error_message
+                or "unauthorized" in error_message
+            ):
+                logger.error(
+                    f"API authentication error when searching flights: {str(e)}"
+                )
+                raise MCPError(
+                    message=(
+                        "Duffel API authentication failed. Please check your API key."
+                    ),
+                    server=self.server_name,
+                    tool="search_flights",
+                    params={
+                        "origin": origin,
+                        "destination": destination,
+                    },
+                    status_code=401,  # Unauthorized
+                ) from e
+            else:
+                # General error
+                logger.error(f"Error searching flights: {str(e)}")
+                raise MCPError(
+                    message=f"Failed to search flights: {str(e)}",
+                    server=self.server_name,
+                    tool="search_flights",
+                    params={
+                        "origin": origin,
+                        "destination": destination,
+                        "departure_date": departure_date,
+                        "return_date": return_date,
+                    },
+                ) from e
 
     @redis_cache.cached("multi_city_flight_search", 1800)  # 30 minutes cache
     async def search_multi_city(
@@ -280,29 +315,27 @@ class FlightsMCPClient(FastMCPClient):
                 params={"code": code, "search_term": search_term},
             ) from e
 
-    async def check_flight_availability(self, flight_id: str) -> Dict[str, Any]:
-        """Check detailed availability for a specific flight.
+    async def get_offer_details(self, offer_id: str) -> Dict[str, Any]:
+        """Get detailed information for a specific flight offer.
 
         Args:
-            flight_id: Flight offer ID
+            offer_id: Flight offer ID
 
         Returns:
-            Dictionary with flight availability information
+            Dictionary with flight offer details
 
         Raises:
             MCPError: If the MCP request fails
         """
         try:
-            return await self.call_tool(
-                "check_flight_availability", {"flight_id": flight_id}
-            )
+            return await self.call_tool("get_offer_details", {"offer_id": offer_id})
         except Exception as e:
-            logger.error(f"Error checking flight availability: {str(e)}")
+            logger.error(f"Error getting offer details: {str(e)}")
             raise MCPError(
-                message=f"Failed to check flight availability: {str(e)}",
+                message=f"Failed to get offer details: {str(e)}",
                 server=self.server_name,
-                tool="check_flight_availability",
-                params={"flight_id": flight_id},
+                tool="get_offer_details",
+                params={"offer_id": offer_id},
             ) from e
 
     @redis_cache.cached("flight_price_history", 3600)  # 1 hour cache
@@ -351,7 +384,7 @@ class FlightsMCPClient(FastMCPClient):
                 params=params,
             ) from e
 
-    async def track_flight_price(
+    async def track_prices(
         self,
         origin: str,
         destination: str,
@@ -359,8 +392,9 @@ class FlightsMCPClient(FastMCPClient):
         return_date: Optional[str] = None,
         notification_email: str = None,
         price_threshold: Optional[float] = None,
+        frequency: str = "daily",
     ) -> Dict[str, Any]:
-        """Start price tracking for a specific flight route.
+        """Track price changes for a flight route.
 
         Args:
             origin: Origin airport IATA code
@@ -369,6 +403,7 @@ class FlightsMCPClient(FastMCPClient):
             return_date: Return date for round trips (YYYY-MM-DD)
             notification_email: Email to send notifications to
             price_threshold: Target price threshold for alerts
+            frequency: How often to check for price changes (hourly, daily, weekly)
 
         Returns:
             Dictionary with tracking confirmation
@@ -381,22 +416,23 @@ class FlightsMCPClient(FastMCPClient):
                 "origin": origin.upper(),
                 "destination": destination.upper(),
                 "departure_date": departure_date,
-                "notification_email": notification_email,
+                "email": notification_email,
+                "frequency": frequency,
             }
 
             if return_date:
                 params["return_date"] = return_date
 
             if price_threshold:
-                params["price_threshold"] = price_threshold
+                params["threshold_percentage"] = price_threshold
 
-            return await self.call_tool("track_flight_price", params)
+            return await self.call_tool("track_prices", params)
         except Exception as e:
-            logger.error(f"Error tracking flight price: {str(e)}")
+            logger.error(f"Error tracking flight prices: {str(e)}")
             raise MCPError(
-                message=f"Failed to track flight price: {str(e)}",
+                message=f"Failed to track flight prices: {str(e)}",
                 server=self.server_name,
-                tool="track_flight_price",
+                tool="track_prices",
                 params=params,
             ) from e
 
@@ -409,6 +445,10 @@ class FlightsMCPClient(FastMCPClient):
     ) -> Dict[str, Any]:
         """Create a flight booking order.
 
+        Note: This operation is not supported by the ravinahp/flights-mcp server,
+        which is read-only and cannot book flights. This method is implemented
+        for API compatibility but will return an error.
+
         Args:
             offer_id: Flight offer ID to book
             passengers: List of passenger information
@@ -416,49 +456,62 @@ class FlightsMCPClient(FastMCPClient):
             contact_details: Contact information
 
         Returns:
-            Dictionary with booking confirmation
+            Dictionary with error message (operation not supported)
 
         Raises:
-            MCPError: If the MCP request fails
+            MCPError: Always raised since operation is not supported
         """
-        try:
-            # Validate passenger information
-            for idx, passenger in enumerate(passengers):
-                required_fields = ["given_name", "family_name", "gender", "born_on"]
-                for field in required_fields:
-                    if field not in passenger:
-                        raise ValueError(
-                            f"Passenger {idx + 1} missing required field: {field}"
-                        )
+        logger.warning("Booking operations are not supported by ravinahp/flights-mcp")
 
-            # Validate payment details
-            required_payment_fields = ["type", "amount", "currency"]
-            for field in required_payment_fields:
-                if field not in payment_details:
-                    raise ValueError(f"Payment details missing required field: {field}")
+        # Return a standardized error response for unsupported operations
+        error_message = (
+            "Flight booking operations are not supported by the "
+            "ravinahp/flights-mcp server, which is read-only and cannot book flights. "
+            "Please use a different flight booking service if you need to "
+            "complete a booking."
+        )
 
-            # Validate contact details
-            required_contact_fields = ["email", "phone"]
-            for field in required_contact_fields:
-                if field not in contact_details:
-                    raise ValueError(f"Contact details missing required field: {field}")
+        raise MCPError(
+            message=error_message,
+            server=self.server_name,
+            tool="create_order",
+            params={"offer_id": offer_id},
+            status_code=501,  # Not Implemented
+        )
 
-            params = {
-                "offer_id": offer_id,
-                "passengers": passengers,
-                "payment_details": payment_details,
-                "contact_details": contact_details,
-            }
+    async def get_order(self, order_id: str) -> Dict[str, Any]:
+        """Get details of an existing flight booking order.
 
-            return await self.call_tool("create_order", params)
-        except Exception as e:
-            logger.error(f"Error creating flight order: {str(e)}")
-            raise MCPError(
-                message=f"Failed to create flight order: {str(e)}",
-                server=self.server_name,
-                tool="create_order",
-                params={"offer_id": offer_id},
-            ) from e
+        Note: This operation is not supported by the ravinahp/flights-mcp server,
+        which is read-only and cannot access booking information. This method is
+        implemented for API compatibility but will return an error.
+
+        Args:
+            order_id: Order ID to retrieve
+
+        Returns:
+            Dictionary with error message (operation not supported)
+
+        Raises:
+            MCPError: Always raised since operation is not supported
+        """
+        logger.warning("Order operations are not supported by ravinahp/flights-mcp")
+
+        # Return a standardized error response for unsupported operations
+        error_message = (
+            "Flight order operations are not supported by the "
+            "ravinahp/flights-mcp server, which is read-only and cannot access "
+            "booking information. Please use a different flight booking service "
+            "if you need to access order details."
+        )
+
+        raise MCPError(
+            message=error_message,
+            server=self.server_name,
+            tool="get_order",
+            params={"order_id": order_id},
+            status_code=501,  # Not Implemented
+        )
 
     def list_tools_sync(self) -> List[Dict[str, str]]:
         """Synchronous version of list_tools for use in initialization.
@@ -472,17 +525,32 @@ class FlightsMCPClient(FastMCPClient):
                 "name": "search_multi_city",
                 "description": "Search for multi-city flights",
             },
-            {"name": "get_airports", "description": "Get airport information"},
             {
-                "name": "check_flight_availability",
-                "description": "Check flight availability",
+                "name": "get_airports",
+                "description": "Get airport information by code or search term",
             },
-            {"name": "get_flight_prices", "description": "Get flight price history"},
             {
-                "name": "track_flight_price",
-                "description": "Start price tracking for a route",
+                "name": "get_offer_details",
+                "description": "Get detailed flight offer information",
             },
-            {"name": "create_order", "description": "Create a flight booking order"},
+            {
+                "name": "get_flight_prices",
+                "description": "Get current and historical prices for a flight route",
+            },
+            {
+                "name": "track_prices",
+                "description": "Track price changes for a flight route",
+            },
+            # Note: The following operations are included for API compatibility
+            # but are not supported by ravinahp/flights-mcp
+            {
+                "name": "create_order",
+                "description": "Create a flight booking order (not supported)",
+            },
+            {
+                "name": "get_order",
+                "description": "Get details of an existing order (not supported)",
+            },
         ]
 
     def get_tool_metadata_sync(self, tool_name: str) -> Dict[str, Any]:
@@ -563,12 +631,23 @@ class FlightsMCPClient(FastMCPClient):
                     },
                 },
             },
-            "check_flight_availability": {
-                "description": "Check detailed availability for a specific flight",
+            "get_offer_details": {
+                "description": "Get detailed information for a specific flight offer",
                 "parameters_schema": {
                     "type": "object",
-                    "properties": {"flight_id": {"type": "string"}},
-                    "required": ["flight_id"],
+                    "properties": {"offer_id": {"type": "string"}},
+                    "required": ["offer_id"],
+                },
+            },
+            "get_fare_rules": {
+                "description": (
+                    "Get fare rules for a flight offer (not supported by "
+                    "ravinahp/flights-mcp)"
+                ),
+                "parameters_schema": {
+                    "type": "object",
+                    "properties": {"offer_id": {"type": "string"}},
+                    "required": ["offer_id"],
                 },
             },
             "get_flight_prices": {
@@ -584,8 +663,8 @@ class FlightsMCPClient(FastMCPClient):
                     "required": ["origin", "destination", "departure_date"],
                 },
             },
-            "track_flight_price": {
-                "description": "Start price tracking for a specific flight route",
+            "track_prices": {
+                "description": "Track price changes for a flight route",
                 "parameters_schema": {
                     "type": "object",
                     "properties": {
@@ -593,19 +672,26 @@ class FlightsMCPClient(FastMCPClient):
                         "destination": {"type": "string"},
                         "departure_date": {"type": "string"},
                         "return_date": {"type": "string"},
-                        "notification_email": {"type": "string"},
-                        "price_threshold": {"type": "number"},
+                        "email": {"type": "string"},
+                        "threshold_percentage": {"type": "number"},
+                        "frequency": {
+                            "type": "string",
+                            "enum": ["hourly", "daily", "weekly"],
+                        },
                     },
                     "required": [
                         "origin",
                         "destination",
                         "departure_date",
-                        "notification_email",
+                        "email",
                     ],
                 },
             },
             "create_order": {
-                "description": "Create a flight booking order",
+                "description": (
+                    "Create a flight booking order (not supported by "
+                    "ravinahp/flights-mcp)"
+                ),
                 "parameters_schema": {
                     "type": "object",
                     "properties": {
@@ -641,7 +727,12 @@ class FlightsMCPClient(FastMCPClient):
 
 
 class FlightService:
-    """High-level service for flight-related operations in TripSage."""
+    """High-level service for flight-related operations in TripSage.
+
+    Note: When using ravinahp/flights-mcp as the backend, this service is limited to
+    search-only functionality. Booking operations are not supported as
+    ravinahp/flights-mcp is a read-only MCP server.
+    """
 
     def __init__(self, client: Optional[FlightsMCPClient] = None):
         """Initialize the Flight Service.
@@ -651,6 +742,12 @@ class FlightService:
         """
         self.client = client or get_client()
         logger.info("Initialized Flight Service")
+
+        # Log a warning if we're using ravinahp/flights-mcp, which has limitations
+        logger.info(
+            "Note: ravinahp/flights-mcp is read-only - booking operations "
+            "are not supported"
+        )
 
     async def search_best_flights(
         self,
