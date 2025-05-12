@@ -122,6 +122,19 @@ class TestAccommodationClientFactory:
         assert "Unsupported accommodation source" in log_args[0]
         assert "unsupported_source" in log_args[1]
 
+    @patch("src.mcp.accommodations.factory.logger")
+    def test_create_accommodation_client_booking_source_not_implemented_yet(self, mock_logger):
+        """Test that 'booking' source is recognized but not implemented yet."""
+        # Call with 'booking' source
+        with pytest.raises(ValueError) as exc_info:
+            create_accommodation_client(source="booking")
+
+        # Verify the correct error message
+        assert "Unsupported accommodation source: booking" in str(exc_info.value)
+
+        # This test will need to be updated when Booking source is implemented
+        # In the future implementation, this should not raise an error
+
 
 class TestAirbnbClientSingleton:
     """Tests for the airbnb_client singleton instance."""
