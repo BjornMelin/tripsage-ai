@@ -6,7 +6,9 @@ for accommodations and retrieving detailed listing information.
 """
 
 from datetime import date
-from typing import List, Optional, Union
+from typing import List, Optional, TypeVar, Union
+
+from pydantic import ValidationError
 
 from ...db.client import get_client as get_db_client
 from ...db.repositories.accommodation import AccommodationRepository
@@ -24,8 +26,12 @@ from .models import (
 logger = get_module_logger(__name__)
 config = get_config()
 
+# Define type variables for generic parameters and responses
+P = TypeVar("P", bound=AirbnbSearchParams)
+R = TypeVar("R", bound=AirbnbSearchResult)
 
-class AirbnbMCPClient(BaseMCPClient):
+
+class AirbnbMCPClient(BaseMCPClient[P, R]):
     """Client for the Airbnb MCP server."""
 
     def __init__(
@@ -108,53 +114,53 @@ class AirbnbMCPClient(BaseMCPClient):
         Raises:
             MCPError: If the search fails
         """
-        # Validate and prepare parameters using Pydantic model
-        search_params = AirbnbSearchParams(
-            location=location,
-            place_id=place_id,
-            checkin=checkin,
-            checkout=checkout,
-            adults=adults if adults is not None else 1,
-            children=children,
-            infants=infants,
-            pets=pets,
-            min_price=min_price,
-            max_price=max_price,
-            min_beds=min_beds,
-            min_bedrooms=min_bedrooms,
-            min_bathrooms=min_bathrooms,
-            property_type=property_type,
-            amenities=amenities,
-            room_type=room_type,
-            superhost=superhost,
-            cursor=cursor,
-            ignore_robots_txt=ignore_robots_txt,
-        )
-
-        # Convert to MCP parameters
-        params = search_params.model_dump(exclude_none=True)
-
-        # Map Pydantic parameter names to the ones expected by the MCP server
-        if "min_price" in params:
-            params["minPrice"] = params.pop("min_price")
-        if "max_price" in params:
-            params["maxPrice"] = params.pop("max_price")
-        if "place_id" in params:
-            params["placeId"] = params.pop("place_id")
-        if "ignore_robots_txt" in params:
-            params["ignoreRobotsText"] = params.pop("ignore_robots_txt")
-        if "min_beds" in params:
-            params["minBeds"] = params.pop("min_beds")
-        if "min_bedrooms" in params:
-            params["minBedrooms"] = params.pop("min_bedrooms")
-        if "min_bathrooms" in params:
-            params["minBathrooms"] = params.pop("min_bathrooms")
-        if "property_type" in params:
-            params["propertyType"] = params.pop("property_type")
-        if "room_type" in params:
-            params["roomType"] = params.pop("room_type")
-
         try:
+            # Validate and prepare parameters using Pydantic model
+            search_params = AirbnbSearchParams(
+                location=location,
+                place_id=place_id,
+                checkin=checkin,
+                checkout=checkout,
+                adults=adults if adults is not None else 1,
+                children=children,
+                infants=infants,
+                pets=pets,
+                min_price=min_price,
+                max_price=max_price,
+                min_beds=min_beds,
+                min_bedrooms=min_bedrooms,
+                min_bathrooms=min_bathrooms,
+                property_type=property_type,
+                amenities=amenities,
+                room_type=room_type,
+                superhost=superhost,
+                cursor=cursor,
+                ignore_robots_txt=ignore_robots_txt,
+            )
+
+            # Convert to MCP parameters
+            params = search_params.model_dump(exclude_none=True)
+
+            # Map Pydantic parameter names to the ones expected by the MCP server
+            if "min_price" in params:
+                params["minPrice"] = params.pop("min_price")
+            if "max_price" in params:
+                params["maxPrice"] = params.pop("max_price")
+            if "place_id" in params:
+                params["placeId"] = params.pop("place_id")
+            if "ignore_robots_txt" in params:
+                params["ignoreRobotsText"] = params.pop("ignore_robots_txt")
+            if "min_beds" in params:
+                params["minBeds"] = params.pop("min_beds")
+            if "min_bedrooms" in params:
+                params["minBedrooms"] = params.pop("min_bedrooms")
+            if "min_bathrooms" in params:
+                params["minBathrooms"] = params.pop("min_bathrooms")
+            if "property_type" in params:
+                params["propertyType"] = params.pop("property_type")
+            if "room_type" in params:
+                params["roomType"] = params.pop("room_type")
+
             logger.info(
                 "Searching Airbnb accommodations in %s with filters: %s",
                 location,
@@ -165,12 +171,14 @@ class AirbnbMCPClient(BaseMCPClient):
             result = await self.call_tool("airbnb_search", params, skip_cache)
 
             # Parse result using Pydantic model
-            search_result = AirbnbSearchResult(
-                location=location,
-                count=len(result.get("listings", [])),
-                listings=result.get("listings", []),
-                next_cursor=result.get("next_cursor"),
-                search_params=params,
+            search_result = AirbnbSearchResult.model_validate(
+                {
+                    "location": location,
+                    "count": len(result.get("listings", [])),
+                    "listings": result.get("listings", []),
+                    "next_cursor": result.get("next_cursor"),
+                    "search_params": params,
+                }
             )
 
             logger.info(
@@ -184,14 +192,24 @@ class AirbnbMCPClient(BaseMCPClient):
                 await self._store_search_results(search_result, checkin, checkout)
 
             return search_result
+        except ValidationError as e:
+            logger.error(f"Validation error: {str(e)}")
+            raise MCPError(
+                message=f"Invalid parameters for accommodation search: {str(e)}",
+                server=self.server_name,
+                tool="airbnb_search",
+                params={"location": location},
+            ) from e
         except Exception as e:
             logger.error("Airbnb accommodation search failed: %s", str(e))
-            return AirbnbSearchResult(
-                location=location,
-                count=0,
-                listings=[],
-                search_params=params,
-                error=str(e),
+            return AirbnbSearchResult.model_validate(
+                {
+                    "location": location,
+                    "count": 0,
+                    "listings": [],
+                    "search_params": params if "params" in locals() else {},
+                    "error": str(e),
+                }
             )
 
     async def get_listing_details(
@@ -261,7 +279,7 @@ class AirbnbMCPClient(BaseMCPClient):
             result = await self.call_tool("airbnb_listing_details", params, skip_cache)
 
             # Parse result using Pydantic model
-            listing_details = AirbnbListingDetails(**result)
+            listing_details = AirbnbListingDetails.model_validate(result)
 
             logger.info(
                 "Successfully retrieved details for Airbnb listing %s: %s",
@@ -274,6 +292,14 @@ class AirbnbMCPClient(BaseMCPClient):
                 await self._store_listing_details(listing_details, checkin, checkout)
 
             return listing_details
+        except ValidationError as e:
+            logger.error(f"Validation error: {str(e)}")
+            raise MCPError(
+                message=f"Invalid response from Airbnb listing details: {str(e)}",
+                server=self.server_name,
+                tool="airbnb_listing_details",
+                params=params,
+            ) from e
         except Exception as e:
             logger.error("Failed to get Airbnb listing details: %s", str(e))
             raise MCPError(
@@ -314,20 +340,9 @@ class AirbnbMCPClient(BaseMCPClient):
                     "location": listing.location_info,
                     "price": listing.price_total,
                     "status": "available",
-                    "metadata": {
-                        "url": listing.url,
-                        "image": listing.image,
-                        "superhost": listing.superhost,
-                        "price_string": listing.price_string,
-                        "price_total": listing.price_total,
-                        "price_per_night": listing.price_per_night,
-                        "rating": listing.rating,
-                        "reviews_count": listing.reviews_count,
-                        "property_type": listing.property_type,
-                        "beds": listing.beds,
-                        "bedrooms": listing.bedrooms,
-                        "bathrooms": listing.bathrooms,
-                    },
+                    "metadata": listing.model_dump(
+                        exclude={"id", "name", "location_info"}
+                    ),
                 }
 
                 if checkin:
@@ -418,28 +433,9 @@ class AirbnbMCPClient(BaseMCPClient):
                 "location": listing_details.location,
                 "price": listing_details.price_total or listing_details.price_per_night,
                 "status": "available",
-                "metadata": {
-                    "url": listing_details.url,
-                    "description": listing_details.description,
-                    "host": listing_details.host.model_dump(),
-                    "property_type": listing_details.property_type,
-                    "coordinates": listing_details.coordinates,
-                    "amenities": listing_details.amenities,
-                    "bedrooms": listing_details.bedrooms,
-                    "beds": listing_details.beds,
-                    "bathrooms": listing_details.bathrooms,
-                    "max_guests": listing_details.max_guests,
-                    "rating": listing_details.rating,
-                    "reviews_count": listing_details.reviews_count,
-                    "price_per_night": listing_details.price_per_night,
-                    "price_total": listing_details.price_total,
-                    "currency": listing_details.currency,
-                    "images": listing_details.images,
-                    "check_in_time": listing_details.check_in_time,
-                    "check_out_time": listing_details.check_out_time,
-                    "house_rules": listing_details.house_rules,
-                    "cancellation_policy": listing_details.cancellation_policy,
-                },
+                "metadata": listing_details.model_dump(
+                    exclude={"id", "name", "location"}
+                ),
             }
 
             if checkin:

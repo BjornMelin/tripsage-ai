@@ -1,6 +1,16 @@
 """Weather MCP server and client for TripSage."""
 
 from .client import WeatherMCPClient, WeatherService, get_client, get_service
+from .models import (
+    CurrentWeatherResponse,
+    DestinationWeatherComparison,
+    ForecastResponse,
+    LocationParams,
+    OptimalTravelTime,
+    RecommendationParams,
+    RecommendationResponse,
+    TravelWeatherSummary,
+)
 from .server import WeatherMCPServer, create_server
 
 # Tool schemas for AI agent integration
@@ -184,6 +194,14 @@ __all__ = [
     "WeatherService",
     "get_client",
     "get_service",
+    "CurrentWeatherResponse",
+    "DestinationWeatherComparison",
+    "ForecastResponse",
+    "LocationParams",
+    "OptimalTravelTime",
+    "RecommendationParams",
+    "RecommendationResponse",
+    "TravelWeatherSummary",
     "GET_CURRENT_WEATHER_SCHEMA",
     "GET_FORECAST_SCHEMA",
     "GET_TRAVEL_RECOMMENDATION_SCHEMA",
