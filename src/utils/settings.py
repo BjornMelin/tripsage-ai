@@ -98,12 +98,51 @@ class WeatherMCPConfig(MCPConfig):
 class WebCrawlMCPConfig(MCPConfig):
     """Web crawling MCP server configuration."""
 
+    # Crawl4AI configuration
     crawl4ai_api_url: str = Field(default="http://localhost:8000/api")
     crawl4ai_api_key: SecretStr
+    crawl4ai_auth_token: Optional[SecretStr] = None
+    crawl4ai_timeout: int = Field(default=30000)  # 30 seconds
+    crawl4ai_max_depth: int = Field(default=3)
+    crawl4ai_default_format: str = Field(default="markdown")
+
+    # FireCrawl configuration
     firecrawl_api_url: str = Field(default="https://api.firecrawl.dev/v1")
     firecrawl_api_key: SecretStr
+
+    # Legacy fields
     playwright_mcp_endpoint: Optional[str] = None
     redis_url: Optional[str] = None
+
+
+class PlaywrightMCPConfig(MCPConfig):
+    """Playwright MCP server configuration from ExecuteAutomation."""
+
+    headless: bool = Field(default=True)
+    browser_type: str = Field(default="chromium")  # chromium, firefox, webkit
+    slow_mo: int = Field(default=50)  # milliseconds
+    viewport_width: int = Field(default=1280)
+    viewport_height: int = Field(default=720)
+    ignore_https_errors: bool = Field(default=False)
+    timeout: int = Field(default=30000)  # 30 seconds
+    navigation_timeout: int = Field(default=60000)  # 60 seconds
+    record_video: bool = Field(default=False)
+    record_har: bool = Field(default=False)
+    trace: bool = Field(default=False)
+
+
+class StagehandMCPConfig(MCPConfig):
+    """Stagehand MCP server configuration from Browserbase."""
+
+    browserbase_api_key: SecretStr
+    browserbase_project_id: str
+    stagehand_openai_api_key: Optional[SecretStr] = None
+    headless: bool = Field(default=True)
+    recovery_enabled: bool = Field(default=True)
+    timeout: int = Field(default=30000)  # 30 seconds
+    viewport_width: int = Field(default=1280)
+    viewport_height: int = Field(default=720)
+    local_cdp_url: Optional[str] = None  # For local browser connection
 
 
 class BrowserMCPConfig(BaseSettings):
@@ -153,7 +192,9 @@ class GoogleMapsMCPConfig(MCPConfig):
 class TimeMCPConfig(MCPConfig):
     """Time MCP server configuration."""
 
-    pass
+    default_timezone: Optional[str] = None  # IANA timezone name (e.g., "America/LA")
+    use_system_timezone: bool = Field(default=True)
+    format_24_hour: bool = Field(default=False)
 
 
 class MemoryMCPConfig(MCPConfig):
@@ -166,6 +207,27 @@ class SequentialThinkingMCPConfig(MCPConfig):
     """Sequential thinking MCP server configuration."""
 
     pass
+
+
+class DockerMCPConfig(MCPConfig):
+    """Docker MCP server configuration."""
+
+    image_registry: Optional[str] = None
+    default_timeout: int = Field(default=60000)  # 60 seconds
+    socket_path: str = Field(default="/var/run/docker.sock")
+    max_container_count: int = Field(default=10)
+    privileged_mode: bool = Field(default=False)
+    network_mode: str = Field(default="bridge")
+
+
+class OpenAPIMCPConfig(MCPConfig):
+    """OpenAPI MCP server configuration."""
+
+    schema_url: Optional[str] = None
+    authentication_type: str = Field(default="bearer")
+    default_timeout: int = Field(default=30000)  # 30 seconds
+    retry_count: int = Field(default=3)
+    cache_schema: bool = Field(default=True)
 
 
 class CalendarMCPConfig(MCPConfig):
@@ -240,6 +302,8 @@ class AppSettings(BaseSettings):
     weather_mcp: WeatherMCPConfig = WeatherMCPConfig()
     webcrawl_mcp: WebCrawlMCPConfig = WebCrawlMCPConfig()
     browser_mcp: BrowserMCPConfig = BrowserMCPConfig()
+    playwright_mcp: PlaywrightMCPConfig = PlaywrightMCPConfig()
+    stagehand_mcp: StagehandMCPConfig = StagehandMCPConfig()
     flights_mcp: FlightsMCPConfig = FlightsMCPConfig()
     accommodations_mcp: AccommodationsMCPConfig = AccommodationsMCPConfig()
     google_maps_mcp: GoogleMapsMCPConfig = GoogleMapsMCPConfig()
@@ -247,6 +311,8 @@ class AppSettings(BaseSettings):
     memory_mcp: MemoryMCPConfig = MemoryMCPConfig()
     sequential_thinking_mcp: SequentialThinkingMCPConfig = SequentialThinkingMCPConfig()
     calendar_mcp: CalendarMCPConfig = CalendarMCPConfig()
+    docker_mcp: DockerMCPConfig = DockerMCPConfig()
+    openapi_mcp: OpenAPIMCPConfig = OpenAPIMCPConfig()
     neon_mcp: NeonMCPConfig = NeonMCPConfig()
     supabase_mcp: SupabaseMCPConfig = SupabaseMCPConfig()
 
