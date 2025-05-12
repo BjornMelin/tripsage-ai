@@ -80,7 +80,10 @@ class WebCrawlMCPConfig(MCPConfig):
 
     crawl4ai_api_url: str = Field(default="http://localhost:8000/api")
     crawl4ai_api_key: SecretStr
+    firecrawl_api_url: str = Field(default="https://api.firecrawl.dev/v1")
+    firecrawl_api_key: SecretStr
     playwright_mcp_endpoint: Optional[str] = None
+    redis_url: Optional[str] = None
 
 
 class BrowserMCPConfig(BaseSettings):

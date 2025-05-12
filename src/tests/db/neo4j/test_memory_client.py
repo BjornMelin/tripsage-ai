@@ -34,10 +34,10 @@ async def test_create_entities(
     )
 
     # Also mock relationship creation methods
-    mocked_client.neo4j_client.activity_repo.create_activity_destination_relationship = AsyncMock(
+    mocked_client.neo4j_client.activity_repo.create_activity_destination_relationship = AsyncMock(  # noqa: E501
         return_value=True
     )
-    mocked_client.neo4j_client.accommodation_repo.create_accommodation_destination_relationship = AsyncMock(
+    mocked_client.neo4j_client.accommodation_repo.create_accommodation_destination_relationship = AsyncMock(  # noqa: E501
         return_value=True
     )
     mocked_client.neo4j_client.event_repo.create_event_destination_relationship = (
@@ -59,9 +59,9 @@ async def test_create_entities(
     assert mocked_client.neo4j_client.add_transportation.called
 
     # Verify relationship creation
-    assert mocked_client.neo4j_client.activity_repo.create_activity_destination_relationship.called
-    assert mocked_client.neo4j_client.accommodation_repo.create_accommodation_destination_relationship.called
-    assert mocked_client.neo4j_client.event_repo.create_event_destination_relationship.called
+    assert mocked_client.neo4j_client.activity_repo.create_activity_destination_relationship.called  # noqa: E501
+    assert mocked_client.neo4j_client.accommodation_repo.create_accommodation_destination_relationship.called  # noqa: E501
+    assert mocked_client.neo4j_client.event_repo.create_event_destination_relationship.called  # noqa: E501
     assert (
         mocked_client.neo4j_client.transportation_repo.create_route_relationship.called
     )

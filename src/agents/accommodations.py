@@ -67,7 +67,9 @@ class AccommodationSearchTool:
             )
 
             # Cache key for results
-            cache_key = f"accommodation_search:{source}:{location}:{checkin}:{checkout}:{adults}"
+            cache_key = (
+                f"accommodation_search:{source}:{location}:{checkin}:{checkout}:{adults}",
+            )
             cached_result = await redis_cache.get(cache_key)
 
             if cached_result:
@@ -152,7 +154,9 @@ class AccommodationSearchTool:
             adults = params.get("adults")
 
             # Cache key
-            cache_key = f"accommodation_details:{source}:{accommodation_id}:{checkin}:{checkout}"
+            cache_key = (
+                f"accommodation_details:{source}:{accommodation_id}:{checkin}:{checkout}",
+            )
             cached_result = await redis_cache.get(cache_key)
 
             if cached_result:
@@ -319,7 +323,8 @@ async def search_accommodations(
     property_type: Optional[str] = None,
     min_rating: Optional[float] = None,
 ) -> Dict[str, Any]:
-    """Search for accommodations across different providers based on location and filters.
+    """Search for accommodations across different providers based
+    on location and filters.
 
     This tool searches for available accommodations from the specified source
     (currently supporting Airbnb), applying any provided filters.

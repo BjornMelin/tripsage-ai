@@ -471,7 +471,8 @@ class AirbnbMCPClient(BaseMCPClient):
 
             if listing_details.price_per_night:
                 observations.append(
-                    f"Price per night: {listing_details.price_per_night} {listing_details.currency}"
+                    f"Price per night: {listing_details.price_per_night} "
+                    f"{listing_details.currency}"
                 )
 
             if listing_details.bedrooms:
@@ -485,7 +486,8 @@ class AirbnbMCPClient(BaseMCPClient):
 
             if listing_details.rating:
                 observations.append(
-                    f"Rating: {listing_details.rating}/5 with {listing_details.reviews_count} reviews"
+                    f"Rating: {listing_details.rating}/5 with "
+                    f'"{listing_details.reviews_count}" reviews'
                 )
 
             if listing_details.amenities:

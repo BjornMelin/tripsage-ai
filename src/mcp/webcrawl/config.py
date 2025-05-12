@@ -10,6 +10,13 @@ class Config:
     CRAWL4AI_API_URL = settings.webcrawl_mcp.crawl4ai_api_url
     CRAWL4AI_API_KEY = settings.webcrawl_mcp.crawl4ai_api_key.get_secret_value()
 
+    # Firecrawl configuration
+    FIRECRAWL_API_URL = settings.webcrawl_mcp.firecrawl_api_url
+    FIRECRAWL_API_KEY = settings.webcrawl_mcp.firecrawl_api_key.get_secret_value()
+
+    # Redis cache configuration
+    REDIS_URL = settings.webcrawl_mcp.redis_url or "redis://localhost:6379/0"
+
     # Playwright configuration
     PLAYWRIGHT_MCP_ENDPOINT = settings.webcrawl_mcp.playwright_mcp_endpoint or ""
     PLAYWRIGHT_CONFIG = {

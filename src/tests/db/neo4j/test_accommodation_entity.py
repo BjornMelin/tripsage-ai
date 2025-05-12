@@ -37,18 +37,18 @@ async def test_accommodation_relationship_creation(
 ):
     """Test creating a relationship between an accommodation and destination."""
     # Setup
-    mock_neo4j_client.accommodation_repo.create_accommodation_destination_relationship = AsyncMock(
+    mock_neo4j_client.accommodation_repo.create_accommodation_destination_relationship = AsyncMock(  # noqa: E501
         return_value=True
     )
 
     # Execute
-    result = await mock_neo4j_client.accommodation_repo.create_accommodation_destination_relationship(
+    result = await mock_neo4j_client.accommodation_repo.create_accommodation_destination_relationship(  # noqa: E501
         accommodation_name="Grand Hotel Paris", destination_name="Paris"
     )
 
     # Assert
     assert result is True
-    mock_neo4j_client.accommodation_repo.create_accommodation_destination_relationship.assert_called_once_with(
+    mock_neo4j_client.accommodation_repo.create_accommodation_destination_relationship.assert_called_once_with(  # noqa: E501
         accommodation_name="Grand Hotel Paris", destination_name="Paris"
     )
 
