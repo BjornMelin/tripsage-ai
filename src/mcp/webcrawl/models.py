@@ -1,388 +1,255 @@
 """
-Pydantic models for Webcrawl MCP client.
+WebCrawl MCP models for the TripSage travel planning system.
 
-This module defines the parameter and response models for the Webcrawl MCP Client,
-providing proper validation and type safety.
+This module provides data models for the WebCrawl MCP client, which accesses
+web crawling capabilities through external MCPs (Crawl4AI and Firecrawl).
 """
 
+from enum import Enum
 from typing import Any, Dict, List, Optional, Union
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, Field, HttpUrl
 
 
-class BaseParams(BaseModel):
-    """Base model for all parameter models."""
-
-    model_config = ConfigDict(populate_by_name=True, extra="ignore")
-
-
-class BaseResponse(BaseModel):
-    """Base model for all response models."""
-
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
-
-
-class WebAction(BaseModel):
-    """Model for a web action to perform before scraping."""
-
-    type: str = Field(..., description="Type of action to perform (click, wait, etc.)")
-    selector: Optional[str] = Field(
-        None, description="CSS selector for the target element"
-    )
-    text: Optional[str] = Field(None, description="Text to input")
-    milliseconds: Optional[int] = Field(
-        None, ge=0, le=60000, description="Time to wait in milliseconds"
-    )
-    key: Optional[str] = Field(None, description="Key to press")
-    script: Optional[str] = Field(None, description="JavaScript code to execute")
-    direction: Optional[str] = Field(None, description="Scroll direction (up or down)")
-    fullPage: Optional[bool] = Field(
-        None, description="Whether to take full page screenshot"
-    )
-
-    model_config = ConfigDict(extra="allow")
-
-    @model_validator(mode="after")
-    def validate_action(self) -> "WebAction":
-        """Validate action parameters based on action type."""
-        if self.type == "click" and not self.selector:
-            raise ValueError("Selector is required for click action")
-        elif self.type == "wait" and not self.milliseconds:
-            raise ValueError("Milliseconds is required for wait action")
-        elif self.type == "write" and (not self.selector or self.text is None):
-            raise ValueError("Selector and text are required for write action")
-        elif self.type == "press" and not self.key:
-            raise ValueError("Key is required for press action")
-        elif self.type == "executeJavascript" and not self.script:
-            raise ValueError("Script is required for executeJavascript action")
-        elif self.type == "scroll" and not self.direction:
-            raise ValueError("Direction is required for scroll action")
-        return self
-
-
-class ScrapeParams(BaseParams):
-    """Parameters for scraping a webpage."""
-
-    url: str = Field(..., description="URL to scrape")
-    actions: Optional[List[WebAction]] = Field(
-        None, description="Actions to perform before scraping"
-    )
-    formats: Optional[List[str]] = Field(None, description="Content formats to extract")
-    onlyMainContent: Optional[bool] = Field(
-        None, description="Extract only main content"
-    )
-    waitFor: Optional[int] = Field(
-        None, ge=0, le=60000, description="Time to wait for dynamic content"
-    )
-    includeTags: Optional[List[str]] = Field(None, description="HTML tags to include")
-    excludeTags: Optional[List[str]] = Field(None, description="HTML tags to exclude")
-    removeBase64Images: Optional[bool] = Field(
-        None, description="Remove base64 encoded images"
-    )
-    mobile: Optional[bool] = Field(None, description="Use mobile viewport")
-    skipTlsVerification: Optional[bool] = Field(
-        None, description="Skip TLS verification"
-    )
-    extract: Optional[Dict[str, Any]] = Field(
-        None, description="Settings for structured extraction"
-    )
-
-    @field_validator("url")
-    @classmethod
-    def validate_url(cls, v: str) -> str:
-        """Validate URL format."""
-        if not v or not (v.startswith("http://") or v.startswith("https://")):
-            raise ValueError("URL must be a valid HTTP or HTTPS URL")
-        return v
-
-
-class MapParams(BaseParams):
-    """Parameters for discovering URLs from a starting point."""
-
-    url: str = Field(..., description="Starting URL for URL discovery")
-    sitemapOnly: Optional[bool] = Field(
-        None, description="Only use sitemap.xml for discovery"
-    )
-    ignoreSitemap: Optional[bool] = Field(
-        None, description="Skip sitemap.xml discovery"
-    )
-    limit: Optional[int] = Field(
-        None, ge=1, le=1000, description="Maximum number of URLs to return"
-    )
-    search: Optional[str] = Field(None, description="Search term to filter URLs")
-    includeSubdomains: Optional[bool] = Field(
-        None, description="Include URLs from subdomains"
-    )
-
-    @field_validator("url")
-    @classmethod
-    def validate_url(cls, v: str) -> str:
-        """Validate URL format."""
-        if not v or not (v.startswith("http://") or v.startswith("https://")):
-            raise ValueError("URL must be a valid HTTP or HTTPS URL")
-        return v
-
-
-class CrawlParams(BaseParams):
-    """Parameters for crawling multiple pages from a starting URL."""
-
-    url: str = Field(..., description="Starting URL for the crawl")
-    maxDepth: Optional[int] = Field(
-        None, ge=1, le=10, description="Maximum link depth to crawl"
-    )
-    limit: Optional[int] = Field(
-        None, ge=1, le=1000, description="Maximum number of pages to crawl"
-    )
-    includePaths: Optional[List[str]] = Field(
-        None, description="Only crawl these URL paths"
-    )
-    excludePaths: Optional[List[str]] = Field(
-        None, description="URL paths to exclude from crawling"
-    )
-    scrapeOptions: Optional[Dict[str, Any]] = Field(
-        None, description="Options for scraping each page"
-    )
-    webhook: Optional[Union[str, Dict[str, Any]]] = Field(
-        None, description="Webhook URL or config"
-    )
-    allowExternalLinks: Optional[bool] = Field(
-        None, description="Allow crawling links to external domains"
-    )
-    allowBackwardLinks: Optional[bool] = Field(
-        None, description="Allow links that point to parent directories"
-    )
-    deduplicateSimilarURLs: Optional[bool] = Field(
-        None, description="Remove similar URLs during crawl"
-    )
-    ignoreQueryParameters: Optional[bool] = Field(
-        None, description="Ignore query parameters when comparing URLs"
-    )
-    ignoreSitemap: Optional[bool] = Field(
-        None, description="Skip sitemap.xml discovery"
-    )
-
-    @field_validator("url")
-    @classmethod
-    def validate_url(cls, v: str) -> str:
-        """Validate URL format."""
-        if not v or not (v.startswith("http://") or v.startswith("https://")):
-            raise ValueError("URL must be a valid HTTP or HTTPS URL")
-        return v
-
-
-class CheckCrawlStatusParams(BaseParams):
-    """Parameters for checking crawl status."""
-
-    id: str = Field(..., description="Crawl job ID to check")
+class WebAction(Enum):
+    """Enumeration of web actions that can be performed."""
+    
+    CLICK = "click"
+    SCREENSHOT = "screenshot"
+    WAIT = "wait"
+    WRITE = "write"
+    PRESS = "press"
+    SCROLL = "scroll"
 
 
 class ScrapeOptions(BaseModel):
-    """Options for scraping search results."""
-
-    formats: List[str] = Field(["markdown"], description="Content formats to extract")
-    onlyMainContent: Optional[bool] = Field(
-        True, description="Extract only main content"
+    """Options for scraping a URL."""
+    
+    bypass_cache: bool = Field(False, description="Whether to bypass cache")
+    full_page: bool = Field(False, description="Whether to scrape the full page")
+    js_enabled: bool = Field(True, description="Whether JavaScript is enabled")
+    process_iframes: bool = Field(False, description="Whether to process iframes")
+    include_links: bool = Field(False, description="Whether to include links")
+    include_screenshots: bool = Field(False, description="Whether to include screenshots")
+    css_selector: Optional[str] = Field(
+        None, description="CSS selector to extract specific content"
     )
-    waitFor: Optional[int] = Field(
-        None, ge=0, le=60000, description="Wait time in milliseconds"
-    )
-
-    model_config = ConfigDict(extra="allow")
-
-
-class SearchParams(BaseParams):
-    """Parameters for web search."""
-
-    query: str = Field(..., description="Search query")
-    limit: Optional[int] = Field(
-        5, ge=1, le=100, description="Maximum number of results"
-    )
-    scrapeOptions: Optional[ScrapeOptions] = Field(
-        None, description="Options for scraping results"
-    )
-    tbs: Optional[str] = Field(None, description="Time-based search filter")
-    filter: Optional[str] = Field(None, description="Search filter")
-    lang: Optional[str] = Field("en", description="Language code")
-    country: Optional[str] = Field("us", description="Country code")
-
-    @field_validator("query")
-    @classmethod
-    def validate_query(cls, v: str) -> str:
-        """Validate search query."""
-        if not v or len(v.strip()) == 0:
-            raise ValueError("Search query cannot be empty")
-        return v
-
-
-class ExtractParams(BaseParams):
-    """Parameters for structured information extraction."""
-
-    urls: List[str] = Field(..., min_length=1, description="URLs to extract from")
-    prompt: Optional[str] = Field(None, description="Prompt for LLM extraction")
-    schema: Optional[Dict[str, Any]] = Field(
-        None, description="JSON schema for extraction"
-    )
-    systemPrompt: Optional[str] = Field(None, description="System prompt for LLM")
-    enableWebSearch: Optional[bool] = Field(
-        None, description="Enable web search for context"
-    )
-    allowExternalLinks: Optional[bool] = Field(
-        None, description="Allow extraction from external links"
-    )
-    includeSubdomains: Optional[bool] = Field(
-        None, description="Include subdomains in extraction"
+    wait_time: Optional[int] = Field(
+        None, description="Time to wait for dynamic content (ms)"
     )
 
-    @field_validator("urls")
-    @classmethod
-    def validate_urls(cls, v: List[str]) -> List[str]:
-        """Validate URL formats."""
-        for url in v:
-            if not url or not (url.startswith("http://") or url.startswith("https://")):
-                raise ValueError(f"URL '{url}' must be a valid HTTP or HTTPS URL")
-        return v
 
-
-class DeepResearchParams(BaseParams):
-    """Parameters for deep research on a query."""
-
-    query: str = Field(..., description="Research query")
-    maxDepth: Optional[int] = Field(
-        3, ge=1, le=10, description="Maximum research depth"
-    )
-    maxUrls: Optional[int] = Field(
-        20, ge=1, le=1000, description="Maximum URLs to analyze"
-    )
-    timeLimit: Optional[int] = Field(
-        120, ge=30, le=300, description="Time limit in seconds"
+class ScrapeParams(BaseModel):
+    """Parameters for scraping a URL."""
+    
+    url: str = Field(..., description="URL to scrape")
+    options: Optional[ScrapeOptions] = Field(
+        None, description="Scrape options"
     )
 
-    @field_validator("query")
-    @classmethod
-    def validate_query(cls, v: str) -> str:
-        """Validate research query."""
-        if not v or len(v.strip()) == 0:
-            raise ValueError("Research query cannot be empty")
-        return v
 
-
-class GenerateLLMsTxtParams(BaseParams):
-    """Parameters for generating LLMs.txt file."""
-
-    url: str = Field(..., description="URL to generate LLMs.txt from")
-    maxUrls: Optional[int] = Field(
-        10, ge=1, le=100, description="Maximum URLs to process"
+class ScrapeResponse(BaseModel):
+    """Response for a scrape request."""
+    
+    success: bool = Field(..., description="Whether the scrape was successful")
+    content: str = Field(..., description="Scraped content")
+    metadata: Dict[str, Any] = Field(
+        default_factory=dict, description="Metadata about the page"
     )
-    showFullText: Optional[bool] = Field(False, description="Show full LLMs-full.txt")
-
-    @field_validator("url")
-    @classmethod
-    def validate_url(cls, v: str) -> str:
-        """Validate URL format."""
-        if not v or not (v.startswith("http://") or v.startswith("https://")):
-            raise ValueError("URL must be a valid HTTP or HTTPS URL")
-        return v
-
-
-class ScrapeResponse(BaseResponse):
-    """Response for webpage scraping."""
-
-    url: str = Field(..., description="Scraped URL")
+    links: Dict[str, Any] = Field(
+        default_factory=dict, description="Links from the page"
+    )
+    error: Optional[str] = Field(None, description="Error message if unsuccessful")
+    url: Optional[str] = Field(None, description="URL that was scraped")
     title: Optional[str] = Field(None, description="Page title")
-    formats: Dict[str, Any] = Field(
-        {}, description="Formatted content in requested formats"
+    formats: Optional[Dict[str, str]] = Field(
+        None, description="Different content formats"
     )
-    error: Optional[str] = Field(None, description="Error message if scraping failed")
 
 
-class MapResponse(BaseResponse):
-    """Response for URL discovery."""
-
-    urls: List[str] = Field([], description="Discovered URLs")
-    count: int = Field(0, description="Number of URLs discovered")
-    source: str = Field(..., description="Source URL")
-    error: Optional[str] = Field(None, description="Error message if mapping failed")
-
-
-class CrawlResponse(BaseResponse):
-    """Response for web crawling."""
-
-    id: str = Field(..., description="Crawl job ID")
-    status: str = Field(..., description="Crawl status")
-    url: str = Field(..., description="Starting URL")
-    crawled_count: int = Field(0, description="Number of pages crawled so far")
-    total_count: Optional[int] = Field(None, description="Total pages to crawl")
-    progress: float = Field(0.0, description="Crawl progress (0-1)")
-    error: Optional[str] = Field(None, description="Error message if crawling failed")
-
-
-class CrawlStatusResponse(BaseResponse):
-    """Response for crawl status check."""
-
-    id: str = Field(..., description="Crawl job ID")
-    status: str = Field(..., description="Crawl status")
-    crawled_count: int = Field(0, description="Number of pages crawled so far")
-    total_count: Optional[int] = Field(None, description="Total pages to crawl")
-    progress: float = Field(0.0, description="Crawl progress (0-1)")
-    results: Optional[Dict[str, Any]] = Field(
-        None, description="Crawl results if completed"
-    )
-    error: Optional[str] = Field(
-        None, description="Error message if status check failed"
-    )
+class SearchParams(BaseModel):
+    """Parameters for searching the web."""
+    
+    query: str = Field(..., description="Search query")
+    limit: Optional[int] = Field(5, description="Maximum number of results")
+    filter: Optional[str] = Field(None, description="Search filter")
+    country: Optional[str] = Field(None, description="Country code for search")
+    tbs: Optional[str] = Field(None, description="Time-based search filter")
 
 
 class SearchResult(BaseModel):
-    """Model for a search result."""
-
-    url: str = Field(..., description="Result URL")
+    """A single search result."""
+    
     title: str = Field(..., description="Result title")
-    description: str = Field(..., description="Result description")
-    content: Optional[Dict[str, Any]] = Field(
-        None, description="Scraped content if requested"
+    url: str = Field(..., description="Result URL")
+    snippet: Optional[str] = Field(None, description="Result snippet")
+    content: Optional[str] = Field(None, description="Result full content")
+    source: Optional[str] = Field(None, description="Source of the result")
+    description: Optional[str] = Field(None, description="Result description")
+
+
+class SearchResponse(BaseModel):
+    """Response for a search request."""
+    
+    success: bool = Field(..., description="Whether the search was successful")
+    query: Optional[str] = Field(None, description="Original search query")
+    results: List[SearchResult] = Field(
+        default_factory=list, description="Search results"
     )
-
-    model_config = ConfigDict(extra="allow")
-
-
-class SearchResponse(BaseResponse):
-    """Response for web search."""
-
-    results: List[SearchResult] = Field([], description="Search results")
-    count: int = Field(0, description="Number of results")
-    query: str = Field(..., description="Search query")
-    error: Optional[str] = Field(None, description="Error message if search failed")
+    error: Optional[str] = Field(None, description="Error message if unsuccessful")
+    count: Optional[int] = Field(None, description="Number of results")
 
 
-class ExtractResponse(BaseResponse):
-    """Response for structured information extraction."""
-
-    extractions: List[Dict[str, Any]] = Field(
-        [], description="Extracted information from URLs"
+class ExtractParams(BaseModel):
+    """Parameters for extracting structured content from a URL."""
+    
+    url: str = Field(..., description="URL to extract from")
+    extract_type: str = Field(
+        ..., description="Type of content to extract (article, product, etc.)"
     )
-    count: int = Field(0, description="Number of extractions")
+    prompt: Optional[str] = Field(
+        None, description="Custom extraction prompt"
+    )
     schema: Optional[Dict[str, Any]] = Field(
-        None, description="Schema used for extraction"
+        None, description="Schema for structured extraction"
     )
-    error: Optional[str] = Field(None, description="Error message if extraction failed")
 
 
-class DeepResearchResponse(BaseResponse):
-    """Response for deep research."""
+class ExtractResponse(BaseModel):
+    """Response for an extract request."""
+    
+    success: bool = Field(..., description="Whether the extraction was successful")
+    content: Dict[str, Any] = Field(
+        default_factory=dict, description="Extracted structured content"
+    )
+    url: Optional[str] = Field(None, description="Source URL")
+    error: Optional[str] = Field(None, description="Error message if unsuccessful")
 
+
+class MapParams(BaseModel):
+    """Parameters for mapping a website."""
+    
+    url: str = Field(..., description="URL to map")
+    include_subdomains: Optional[bool] = Field(
+        False, description="Whether to include subdomains"
+    )
+    limit: Optional[int] = Field(
+        100, description="Maximum number of URLs to map"
+    )
+
+
+class MapResponse(BaseModel):
+    """Response for a map request."""
+    
+    success: bool = Field(..., description="Whether the mapping was successful")
+    urls: List[str] = Field(default_factory=list, description="Mapped URLs")
+    error: Optional[str] = Field(None, description="Error message if unsuccessful")
+
+
+class CrawlParams(BaseModel):
+    """Parameters for crawling a website."""
+    
+    url: str = Field(..., description="URL to crawl")
+    limit: Optional[int] = Field(
+        10, description="Maximum number of pages to crawl"
+    )
+    max_depth: Optional[int] = Field(
+        2, description="Maximum link depth to crawl"
+    )
+    scrape_options: Optional[ScrapeOptions] = Field(
+        None, description="Scrape options for each page"
+    )
+
+
+class CrawlResponse(BaseModel):
+    """Response for a crawl request."""
+    
+    success: bool = Field(..., description="Whether the crawl was successful")
+    crawl_id: str = Field(..., description="ID of the crawl job")
+    url: str = Field(..., description="Original crawl URL")
+    status: str = Field(..., description="Crawl job status")
+    error: Optional[str] = Field(None, description="Error message if unsuccessful")
+
+
+class CrawlStatusParams(BaseModel):
+    """Parameters for checking crawl status."""
+    
+    crawl_id: str = Field(..., description="ID of the crawl job")
+
+
+class CrawlStatusResponse(BaseModel):
+    """Response for a crawl status request."""
+    
+    success: bool = Field(..., description="Whether the status check was successful")
+    status: str = Field(..., description="Crawl job status")
+    url: str = Field(..., description="Original crawl URL")
+    pages_crawled: int = Field(
+        0, description="Number of pages crawled so far"
+    )
+    total_pages: int = Field(
+        0, description="Total number of pages to crawl"
+    )
+    results: List[Dict[str, Any]] = Field(
+        default_factory=list, description="Crawl results if available"
+    )
+    error: Optional[str] = Field(None, description="Error message if unsuccessful")
+
+
+class DeepResearchParams(BaseModel):
+    """Parameters for deep research on a topic."""
+    
     query: str = Field(..., description="Research query")
+    max_depth: Optional[int] = Field(
+        3, description="Maximum research depth"
+    )
+    max_urls: Optional[int] = Field(
+        5, description="Maximum number of URLs to analyze"
+    )
+    time_limit: Optional[int] = Field(
+        60, description="Time limit in seconds"
+    )
+
+
+class DeepResearchResponse(BaseModel):
+    """Response for a deep research request."""
+    
+    success: bool = Field(..., description="Whether the research was successful")
+    query: str = Field(..., description="Original research query")
     summary: str = Field(..., description="Research summary")
-    sources: List[Dict[str, Any]] = Field([], description="Sources used in research")
+    sources: List[Dict[str, Any]] = Field(
+        default_factory=list, description="Research sources"
+    )
     insights: Optional[List[str]] = Field(
         None, description="Key insights from research"
     )
-    error: Optional[str] = Field(None, description="Error message if research failed")
+    error: Optional[str] = Field(None, description="Error message if unsuccessful")
 
 
-class GenerateLLMsTxtResponse(BaseResponse):
-    """Response for LLMs.txt generation."""
+class GenerateLLMsTxtParams(BaseModel):
+    """Parameters for generating LLMs.txt for a website."""
+    
+    url: str = Field(..., description="URL to generate LLMs.txt for")
+    max_urls: Optional[int] = Field(
+        10, description="Maximum number of URLs to process"
+    )
+    show_full_text: Optional[bool] = Field(
+        False, description="Whether to show the full text"
+    )
 
+
+class GenerateLLMsTxtResponse(BaseModel):
+    """Response for a generate LLMs.txt request."""
+    
+    success: bool = Field(..., description="Whether the generation was successful")
+    url: str = Field(..., description="Original URL")
     llms_txt: str = Field(..., description="Generated LLMs.txt content")
-    llms_full_txt: Optional[str] = Field(None, description="Full LLMs.txt content")
-    url: str = Field(..., description="Base URL")
-    error: Optional[str] = Field(None, description="Error message if generation failed")
+    full_text: Optional[str] = Field(
+        None, description="Full LLMs-full.txt content if requested"
+    )
+    error: Optional[str] = Field(None, description="Error message if unsuccessful")
+
+
+class CheckCrawlStatusParams(BaseModel):
+    """Parameters for checking crawl status."""
+    
+    id: str = Field(..., description="ID of the crawl job")
