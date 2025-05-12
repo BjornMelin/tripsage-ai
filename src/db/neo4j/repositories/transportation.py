@@ -78,9 +78,7 @@ class TransportationRepository(BaseNeo4jRepository[Transportation]):
                     "t.type = $type"
                 )
             else:
-                where_clause = (
-                    "t.origin = $origin AND t.destination = $destination"
-                )
+                where_clause = "t.origin = $origin AND t.destination = $destination"
 
             # Build Cypher query
             query = f"""

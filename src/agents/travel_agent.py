@@ -5,11 +5,10 @@ This module provides the TravelAgent implementation which integrates various
 travel-specific MCP tools and dual storage architecture with OpenAI's WebSearchTool.
 """
 
-import asyncio
 import datetime
 from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel
 
 from agents import WebSearchTool, function_tool
 from agents.extensions.allowed_domains import AllowedDomains
@@ -269,7 +268,9 @@ class TravelAgent(BaseTravelAgent):
 
             # Connect WebCrawl MCP client to destination research component
             self.destination_research.webcrawl_client = webcrawl_client
-            logger.info("Connected WebCrawl MCP client to destination research component")
+            logger.info(
+                "Connected WebCrawl MCP client to destination research component"
+            )
         except Exception as e:
             logger.warning("Failed to register WebCrawl MCP client: %s", str(e))
 

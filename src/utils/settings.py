@@ -6,11 +6,9 @@ replacing scattered configuration files with a unified settings class based on P
 All application settings are loaded from environment variables or a .env file.
 """
 
-from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Union
+from typing import Any, Dict, Optional
 
 from pydantic import (
-    AmqpDsn,
     Field,
     PostgresDsn,
     RedisDsn,

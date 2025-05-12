@@ -122,7 +122,9 @@ class GoogleMapsMCPClient(BaseMCPClient):
 
         try:
             # Call the maps_reverse_geocode tool
-            result = await self.call_tool("maps_reverse_geocode", params, skip_cache=skip_cache)
+            result = await self.call_tool(
+                "maps_reverse_geocode", params, skip_cache=skip_cache
+            )
             return result
         except Exception as e:
             logger.error("Error in reverse geocoding: %s", str(e))
@@ -179,7 +181,9 @@ class GoogleMapsMCPClient(BaseMCPClient):
 
         try:
             # Call the maps_search_places tool
-            result = await self.call_tool("maps_search_places", params, skip_cache=skip_cache)
+            result = await self.call_tool(
+                "maps_search_places", params, skip_cache=skip_cache
+            )
             return result
         except Exception as e:
             logger.error("Error in place search: %s", str(e))
@@ -280,7 +284,9 @@ class GoogleMapsMCPClient(BaseMCPClient):
 
         try:
             # Call the maps_directions tool
-            result = await self.call_tool("maps_directions", params, skip_cache=skip_cache)
+            result = await self.call_tool(
+                "maps_directions", params, skip_cache=skip_cache
+            )
             return result
         except Exception as e:
             logger.error("Error getting directions: %s", str(e))
@@ -372,7 +378,9 @@ class GoogleMapsMCPClient(BaseMCPClient):
 
         try:
             # Call the maps_elevation tool
-            result = await self.call_tool("maps_elevation", params, skip_cache=skip_cache)
+            result = await self.call_tool(
+                "maps_elevation", params, skip_cache=skip_cache
+            )
             return result
         except Exception as e:
             logger.error("Error getting elevation data: %s", str(e))
@@ -413,13 +421,18 @@ async def store_location_in_knowledge_graph(
         if memory_client is None:
             try:
                 from ..memory import get_client as get_memory_client
+
                 memory_client = get_memory_client()
             except ImportError:
                 logger.warning("Memory MCP client not available")
                 return False
 
         # Extract relevant information from geocode result
-        if not geocode_result or "results" not in geocode_result or not geocode_result["results"]:
+        if (
+            not geocode_result
+            or "results" not in geocode_result
+            or not geocode_result["results"]
+        ):
             logger.warning("No geocode results to store in knowledge graph")
             return False
 
@@ -472,19 +485,32 @@ async def store_location_in_knowledge_graph(
 
         if destination_exists:
             # Update existing entity with new observations
-            await memory_client.add_observations([{
-                "entityName": location_name,
-                "contents": observations,
-            }])
-            logger.info("Updated existing destination entity in knowledge graph: %s", location_name)
+            await memory_client.add_observations(
+                [
+                    {
+                        "entityName": location_name,
+                        "contents": observations,
+                    }
+                ]
+            )
+            logger.info(
+                "Updated existing destination entity in knowledge graph: %s",
+                location_name,
+            )
         else:
             # Create new destination entity
-            await memory_client.create_entities([{
-                "name": location_name,
-                "entityType": "Destination",
-                "observations": observations,
-            }])
-            logger.info("Created new destination entity in knowledge graph: %s", location_name)
+            await memory_client.create_entities(
+                [
+                    {
+                        "name": location_name,
+                        "entityType": "Destination",
+                        "observations": observations,
+                    }
+                ]
+            )
+            logger.info(
+                "Created new destination entity in knowledge graph: %s", location_name
+            )
 
         # If country exists, create relationship between destination and country
         if country:
@@ -497,20 +523,32 @@ async def store_location_in_knowledge_graph(
 
             if not country_exists:
                 # Create country entity
-                await memory_client.create_entities([{
-                    "name": country,
-                    "entityType": "Country",
-                    "observations": [f"Country containing {location_name}"],
-                }])
-                logger.info("Created new country entity in knowledge graph: %s", country)
+                await memory_client.create_entities(
+                    [
+                        {
+                            "name": country,
+                            "entityType": "Country",
+                            "observations": [f"Country containing {location_name}"],
+                        }
+                    ]
+                )
+                logger.info(
+                    "Created new country entity in knowledge graph: %s", country
+                )
 
             # Create relationship between destination and country
-            await memory_client.create_relations([{
-                "from": location_name,
-                "relationType": "is_located_in",
-                "to": country,
-            }])
-            logger.info("Created relationship: %s is_located_in %s", location_name, country)
+            await memory_client.create_relations(
+                [
+                    {
+                        "from": location_name,
+                        "relationType": "is_located_in",
+                        "to": country,
+                    }
+                ]
+            )
+            logger.info(
+                "Created relationship: %s is_located_in %s", location_name, country
+            )
 
         return True
 

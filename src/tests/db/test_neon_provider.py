@@ -137,7 +137,7 @@ class TestNeonProvider:
         """Test checking if tables exist."""
         # Arrange
         tables = ["users", "posts"]
-        # The fetchrow method is already mocked in mock_asyncpg_pool 
+        # The fetchrow method is already mocked in mock_asyncpg_pool
         # to return {"exists": True}
 
         # Act
