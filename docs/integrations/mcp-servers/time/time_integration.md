@@ -25,6 +25,31 @@ TripSage integrates with the official Model Context Protocol Time Server to hand
 - System timezone auto-detection
 - High-quality timezone database with worldwide coverage
 
+### Installing the Official Time MCP Server
+
+The official Time MCP server can be installed and run in several ways:
+
+1. **Using NPX (Recommended)**:
+   ```bash
+   npx uvx mcp-server-time --port 3000
+   ```
+
+2. **Using NPM**:
+   ```bash
+   npm install -g @uvx/mcp-server-time
+   mcp-server-time --port 3000
+   ```
+
+3. **Using Docker**:
+   ```bash
+   docker run --rm -p 3000:3000 uvx/mcp-server-time
+   ```
+
+TripSage provides scripts in the repository to simplify starting and stopping the server:
+
+- `start_official_time_mcp.sh`: Starts the official Time MCP server
+- `stop_official_time_mcp.sh`: Stops the running Time MCP server
+
 ## Implementation Details
 
 The integration consists of several components:
@@ -41,7 +66,7 @@ The `TimeMCPClient` class in `src/mcp/time/client.py` provides a clean interface
 - `get_current_time(timezone)`: Get current time in a specific timezone
 - `convert_time(time, source_timezone, target_timezone)`: Convert time between timezones
 
-The client handles error handling, response parsing, and request caching for optimal performance.
+The client handles error handling, response parsing, and request caching for optimal performance. It's specifically designed to work with the official Time MCP server format for requests and responses.
 
 ### Time Service Implementation
 
@@ -69,18 +94,18 @@ These tools enable agents to handle complex time-related questions for travel pl
 
 TripSage provides deployment scripts for the Time MCP server in the `scripts` directory:
 
-- `start_time_mcp.sh`: Install and start the Time MCP server
-- `stop_time_mcp.sh`: Stop the running Time MCP server
+- `start_official_time_mcp.sh`: Install and start the official Time MCP server
+- `stop_official_time_mcp.sh`: Stop the running Time MCP server
 
-The server is automatically configured to use local system timezone and runs on port 8004 by default.
+The server is automatically configured to use local system timezone and runs on port 3000 by default.
 
 ### Configuration
 
 To configure the Time MCP client, set the following environment variables:
 
 ```
-TIME_MCP_SERVER_URL=http://localhost:8004
-TIME_MCP_PORT=8004 # Optional, defaults to 8004
+TIME_MCP_SERVER_URL=http://localhost:3000
+TIME_MCP_PORT=3000 # Optional, defaults to 3000
 ```
 
 ## Example Usage
@@ -92,7 +117,7 @@ from src.mcp.time.client import get_client
 
 time_client = get_client()
 tokyo_time = await time_client.get_current_time("Asia/Tokyo")
-print(f"Current time in Tokyo: {tokyo_time['current_time']}")
+print(f"Current time in Tokyo: {tokyo_time.current_time}")
 ```
 
 ### Converting Between Timezones
@@ -106,7 +131,7 @@ conversion = await time_client.convert_time(
     source_timezone="America/New_York",
     target_timezone="Europe/London"
 )
-print(f"14:30 in New York is {conversion['target_time']} in London")
+print(f"14:30 in New York is {conversion.target.datetime.split('T')[1].split('+')[0]} in London")
 ```
 
 ### Calculating Flight Arrival Time
@@ -121,7 +146,7 @@ arrival_info = await time_service.calculate_flight_arrival(
     flight_duration_hours=7.5,
     arrival_timezone="Europe/London"
 )
-print(f"Flight arrives at {arrival_info['arrival_time_local']} local time")
+print(f"Flight arrives at {arrival_info.arrival_time_local} local time")
 ```
 
 ### Using Agent Function Tools
@@ -150,7 +175,7 @@ time_agent = Agent(
 
 The Time MCP integration includes comprehensive tests:
 
-- `tests/mcp/time/test_time_client.py`: Tests for the Time MCP client and service
+- `tests/mcp/time/test_official_time_client.py`: Tests for the Time MCP client with official server
 - `tests/agents/test_time_tools.py`: Tests for the agent function tools
 
 Run the tests with:
@@ -162,3 +187,37 @@ python -m pytest tests/mcp/time tests/agents/test_time_tools.py -v
 ## Conclusion
 
 The Time MCP Server integration provides TripSage with robust time and timezone capabilities, ensuring accurate travel time calculations and timezone-aware itineraries. By leveraging the official Model Context Protocol Time Server, TripSage benefits from standardized, well-maintained time functionality that enhances the accuracy of travel planning.
+
+## Technical Notes
+
+### Response Format from Official Time MCP Server
+
+The official Time MCP server returns responses in ISO 8601 format:
+
+For `get_current_time`:
+```json
+{
+  "timezone": "America/New_York",
+  "datetime": "2025-05-10T14:30:45-04:00",
+  "is_dst": true
+}
+```
+
+For `convert_time`:
+```json
+{
+  "source": {
+    "timezone": "America/New_York",
+    "datetime": "2025-05-10T14:30:00-04:00",
+    "is_dst": true
+  },
+  "target": {
+    "timezone": "Europe/London",
+    "datetime": "2025-05-10T19:30:00+01:00",
+    "is_dst": true
+  },
+  "time_difference": "+5 hours"
+}
+```
+
+The client implementation in `src/mcp/time/client.py` handles parsing these responses and converting them to the format expected by the TripSage application.
