@@ -114,6 +114,11 @@ def _validate_production_settings(settings: AppSettings) -> None:
         "webcrawl_mcp",
         "flights_mcp",
         "google_maps_mcp",
+        "playwright_mcp",
+        "stagehand_mcp",
+        "time_mcp",
+        "docker_mcp",
+        "openapi_mcp",
     ]:
         server_config = getattr(settings, server_name)
         if hasattr(server_config, "api_key") and server_config.api_key is None:
@@ -122,6 +127,18 @@ def _validate_production_settings(settings: AppSettings) -> None:
     # Validate Duffel API key for Flights MCP
     if not settings.flights_mcp.duffel_api_key.get_secret_value():
         production_errors.append("DUFFEL_API_KEY is missing for flights_mcp")
+
+    # Validate Crawl4AI API key for WebCrawl MCP
+    if not settings.webcrawl_mcp.crawl4ai_api_key.get_secret_value():
+        production_errors.append("CRAWL4AI_API_KEY is missing for webcrawl_mcp")
+
+    # Validate Browserbase API key for Stagehand MCP
+    if not settings.stagehand_mcp.browserbase_api_key.get_secret_value():
+        production_errors.append("BROWSERBASE_API_KEY is missing for stagehand_mcp")
+
+    # Validate Browserbase Project ID for Stagehand MCP
+    if not settings.stagehand_mcp.browserbase_project_id:
+        production_errors.append("BROWSERBASE_PROJECT_ID is missing for stagehand_mcp")
 
     # Additional production-specific validations
     if production_errors:
