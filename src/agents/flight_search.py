@@ -12,7 +12,10 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from ..cache.redis_cache import redis_cache
 from ..db.client import get_client as get_db_client
-from ..mcp.flights import get_client as get_flights_client
+from ..mcp.flights import (
+    get_client as get_flights_client,
+    get_service as get_flights_service,
+)
 from ..utils.logging import get_module_logger
 
 logger = get_module_logger(__name__)
@@ -78,14 +81,18 @@ class FlightSearchResult(BaseModel):
 class TripSageFlightSearch:
     """Enhanced flight search functionality for the TripSage Travel Agent."""
 
-    def __init__(self, flights_client=None):
+    def __init__(self, flights_client=None, flights_service=None):
         """Initialize the flight search module.
 
         Args:
             flights_client: Optional flights MCP client instance
+            flights_service: Optional flights service instance for enhanced functionality
         """
         self.flights_client = flights_client or get_flights_client()
-        logger.info("Initialized TripSage Flight Search")
+        self.flights_service = flights_service or get_flights_service()
+        logger.info(
+            "Initialized TripSage Flight Search with ravinahp/flights-mcp integration"
+        )
 
     async def search_flights(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """Search for flights with enhanced features and filtering.
@@ -118,17 +125,30 @@ class TripSageFlightSearch:
                 )
                 return {**filtered_results, "cache": "hit"}
 
-            # Call Flights MCP client
-            flight_results = await self.flights_client.search_flights(
+            # Call the higher-level Flights service for enhanced functionality
+            # This ensures proper dual storage in Supabase and Memory MCP
+            flight_results = await self.flights_service.search_best_flights(
                 origin=search_params.origin,
                 destination=search_params.destination,
                 departure_date=search_params.departure_date,
                 return_date=search_params.return_date,
                 adults=search_params.adults,
-                children=search_params.children,
-                infants=search_params.infants,
-                cabin_class=search_params.cabin_class,
+                max_price=search_params.max_price,
             )
+
+            # If service call fails, fall back to direct client call
+            if "error" in flight_results and not "results" in flight_results:
+                logger.warning("Falling back to direct client call after service error")
+                flight_results = await self.flights_client.search_flights(
+                    origin=search_params.origin,
+                    destination=search_params.destination,
+                    departure_date=search_params.departure_date,
+                    return_date=search_params.return_date,
+                    adults=search_params.adults,
+                    children=search_params.children,
+                    infants=search_params.infants,
+                    cabin_class=search_params.cabin_class,
+                )
 
             if "error" in flight_results:
                 return flight_results
