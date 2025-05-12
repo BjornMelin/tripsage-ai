@@ -5,8 +5,9 @@ This module contains tests for the Supabase MCP client which is used
 in production environments to interact with Supabase PostgreSQL.
 """
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 from src.mcp.supabase.client import SupabaseMCPClient, SupabaseService, get_client
 
@@ -35,14 +36,14 @@ class TestSupabaseMCPClient:
         with patch("src.mcp.supabase.client.settings") as mock_settings:
             mock_settings.supabase_mcp.endpoint = "http://test-endpoint"
             mock_settings.supabase_mcp.api_key = "test-api-key"
-            
+
             # Initialize client
-            client = SupabaseMCPClient()
-            
+            _client = SupabaseMCPClient()
+
             # Check FastMCPClient initialization
             mock_init.assert_called_once()
             args, kwargs = mock_init.call_args
-            
+
             assert kwargs["server_name"] == "Supabase"
             assert kwargs["endpoint"] == "http://test-endpoint"
             assert kwargs["api_key"] == "test-api-key"
@@ -57,25 +58,23 @@ class TestSupabaseMCPClient:
         mock_response = {
             "organizations": [
                 {"id": "org1", "name": "Organization 1"},
-                {"id": "org2", "name": "Organization 2"}
+                {"id": "org2", "name": "Organization 2"},
             ]
         }
         mock_supabase_client.call_tool.return_value = mock_response
-        
+
         # Create client instance with the mock
         client = SupabaseMCPClient()
         client.call_tool = mock_supabase_client.call_tool
-        
+
         # Call method and check result
         result = await client.list_organizations()
-        
+
         # Verify call to MCP tool
         mock_supabase_client.call_tool.assert_called_once_with(
-            "list_organizations", 
-            {}, 
-            skip_cache=False
+            "list_organizations", {}, skip_cache=False
         )
-        
+
         # Verify result
         assert result == mock_response
         assert len(result["organizations"]) == 2
@@ -88,25 +87,23 @@ class TestSupabaseMCPClient:
         mock_response = {
             "projects": [
                 {"id": "project1", "name": "Project 1"},
-                {"id": "project2", "name": "Project 2"}
+                {"id": "project2", "name": "Project 2"},
             ]
         }
         mock_supabase_client.call_tool.return_value = mock_response
-        
+
         # Create client instance with the mock
         client = SupabaseMCPClient()
         client.call_tool = mock_supabase_client.call_tool
-        
+
         # Call method and check result
         result = await client.list_projects()
-        
+
         # Verify call to MCP tool
         mock_supabase_client.call_tool.assert_called_once_with(
-            "list_projects", 
-            {}, 
-            skip_cache=False
+            "list_projects", {}, skip_cache=False
         )
-        
+
         # Verify result
         assert result == mock_response
         assert len(result["projects"]) == 2
@@ -116,30 +113,24 @@ class TestSupabaseMCPClient:
     async def test_execute_sql(self, mock_supabase_client):
         """Test execute_sql method."""
         # Setup mock response
-        mock_response = {
-            "results": [{"column1": "value1"}, {"column1": "value2"}]
-        }
+        mock_response = {"results": [{"column1": "value1"}, {"column1": "value2"}]}
         mock_supabase_client.call_tool.return_value = mock_response
-        
+
         # Create client instance with the mock
         client = SupabaseMCPClient()
         client.call_tool = mock_supabase_client.call_tool
-        
+
         # Call method and check result
         result = await client.execute_sql(
-            project_id="test-project",
-            query="SELECT * FROM test_table"
+            project_id="test-project", query="SELECT * FROM test_table"
         )
-        
+
         # Verify call to MCP tool
         mock_supabase_client.call_tool.assert_called_once_with(
-            "execute_sql", 
-            {
-                "project_id": "test-project", 
-                "query": "SELECT * FROM test_table"
-            }
+            "execute_sql",
+            {"project_id": "test-project", "query": "SELECT * FROM test_table"},
         )
-        
+
         # Verify result
         assert result == mock_response
         assert len(result["results"]) == 2
@@ -152,32 +143,32 @@ class TestSupabaseMCPClient:
             "migration": {
                 "id": "migration1",
                 "name": "create_test_table",
-                "status": "applied"
+                "status": "applied",
             }
         }
         mock_supabase_client.call_tool.return_value = mock_response
-        
+
         # Create client instance with the mock
         client = SupabaseMCPClient()
         client.call_tool = mock_supabase_client.call_tool
-        
+
         # Call method and check result
         result = await client.apply_migration(
             project_id="test-project",
             name="create_test_table",
-            query="CREATE TABLE test (id SERIAL PRIMARY KEY);"
+            query="CREATE TABLE test (id SERIAL PRIMARY KEY);",
         )
-        
+
         # Verify call to MCP tool
         mock_supabase_client.call_tool.assert_called_once_with(
-            "apply_migration", 
+            "apply_migration",
             {
-                "project_id": "test-project", 
-                "name": "create_test_table", 
-                "query": "CREATE TABLE test (id SERIAL PRIMARY KEY);"
-            }
+                "project_id": "test-project",
+                "name": "create_test_table",
+                "query": "CREATE TABLE test (id SERIAL PRIMARY KEY);",
+            },
         )
-        
+
         # Verify result
         assert result == mock_response
         assert result["migration"]["id"] == "migration1"
@@ -188,32 +179,28 @@ class TestSupabaseMCPClient:
     async def test_create_branch(self, mock_supabase_client):
         """Test create_branch method."""
         # Setup mock response
-        mock_response = {
-            "branch": {"id": "branch1", "name": "develop"}
-        }
+        mock_response = {"branch": {"id": "branch1", "name": "develop"}}
         mock_supabase_client.call_tool.return_value = mock_response
-        
+
         # Create client instance with the mock
         client = SupabaseMCPClient()
         client.call_tool = mock_supabase_client.call_tool
-        
+
         # Call method and check result
         result = await client.create_branch(
-            project_id="test-project",
-            confirm_cost_id="cost1",
-            name="develop"
+            project_id="test-project", confirm_cost_id="cost1", name="develop"
         )
-        
+
         # Verify call to MCP tool
         mock_supabase_client.call_tool.assert_called_once_with(
-            "create_branch", 
+            "create_branch",
             {
-                "project_id": "test-project", 
+                "project_id": "test-project",
                 "confirm_cost_id": "cost1",
-                "name": "develop"
-            }
+                "name": "develop",
+            },
         )
-        
+
         # Verify result
         assert result == mock_response
         assert result["branch"]["id"] == "branch1"
@@ -229,39 +216,39 @@ class TestSupabaseService:
         # Setup mock response
         mock_project = {"id": "project1", "name": "Project 1"}
         mock_supabase_client.get_project.return_value = mock_project
-        
+
         # Mock settings
         with patch("src.mcp.supabase.client.settings") as mock_settings:
             mock_settings.supabase_mcp.default_project_id = "project1"
-            
+
             # Call method
             result = await supabase_service.get_default_project()
-            
+
             # Verify call to client methods
             mock_supabase_client.get_project.assert_called_once_with("project1")
-            
+
             # Verify result
             assert result == mock_project
 
     @pytest.mark.asyncio
-    async def test_get_default_project_no_config(self, supabase_service, mock_supabase_client):
+    async def test_get_default_project_no_config(
+        self, supabase_service, mock_supabase_client
+    ):
         """Test get_default_project method with no configured project ID."""
         # Setup mock responses
-        mock_projects = {
-            "projects": [{"id": "project1", "name": "Project 1"}]
-        }
+        mock_projects = {"projects": [{"id": "project1", "name": "Project 1"}]}
         mock_supabase_client.list_projects.return_value = mock_projects
-        
+
         # Mock settings
         with patch("src.mcp.supabase.client.settings") as mock_settings:
             mock_settings.supabase_mcp.default_project_id = None
-            
+
             # Call method
             result = await supabase_service.get_default_project()
-            
+
             # Verify call to client methods
             mock_supabase_client.list_projects.assert_called_once()
-            
+
             # Verify result
             assert result == mock_projects["projects"][0]
 
@@ -271,82 +258,81 @@ class TestSupabaseService:
         # Setup mock responses
         mock_results = [
             {"migration": {"id": "mig1", "status": "applied"}},
-            {"migration": {"id": "mig2", "status": "applied"}}
+            {"migration": {"id": "mig2", "status": "applied"}},
         ]
-        
+
         # Setup return values for sequential calls
         mock_supabase_client.apply_migration.side_effect = mock_results
-        
+
         # Call method
         migrations = [
             "CREATE TABLE test (id SERIAL PRIMARY KEY);",
-            "CREATE INDEX idx_test_id ON test (id);"
+            "CREATE INDEX idx_test_id ON test (id);",
         ]
-        
+
         migration_names = ["create_test_table", "create_test_index"]
-        
+
         result = await supabase_service.apply_migrations(
             project_id="project1",
             migrations=migrations,
-            migration_names=migration_names
+            migration_names=migration_names,
         )
-        
+
         # Verify calls to client method
         assert mock_supabase_client.apply_migration.call_count == 2
-        
+
         call_args_list = mock_supabase_client.apply_migration.call_args_list
         assert call_args_list[0][0] == ("project1", "create_test_table", migrations[0])
         assert call_args_list[1][0] == ("project1", "create_test_index", migrations[1])
-        
+
         # Verify result
         assert result["project_id"] == "project1"
         assert result["migrations_applied"] == 2
         assert result["results"] == mock_results
 
     @pytest.mark.asyncio
-    async def test_create_development_branch(self, supabase_service, mock_supabase_client):
+    async def test_create_development_branch(
+        self, supabase_service, mock_supabase_client
+    ):
         """Test create_development_branch method."""
         # Setup mock responses
         mock_supabase_client.list_organizations.return_value = {
             "organizations": [{"id": "org1", "name": "Org 1"}]
         }
-        
+
         mock_supabase_client.get_cost.return_value = {
             "amount": 10.0,
-            "recurrence": "hourly"
+            "recurrence": "hourly",
         }
-        
+
         mock_supabase_client.confirm_cost.return_value = {"id": "cost1"}
-        
+
         mock_supabase_client.create_branch.return_value = {
             "branch": {"id": "branch1", "name": "develop"}
         }
-        
+
         # Mock settings
         with patch("src.mcp.supabase.client.settings") as mock_settings:
             mock_settings.supabase_mcp.default_project_id = "project1"
-            
+
             # Call method
             result = await supabase_service.create_development_branch(
-                project_id="project1",
-                branch_name="develop"
+                project_id="project1", branch_name="develop"
             )
-            
+
             # Verify calls to client methods
             mock_supabase_client.list_organizations.assert_called_once()
-            
-            mock_supabase_client.get_cost.assert_called_once_with(
-                "branch", "org1"
-            )
-            
+
+            mock_supabase_client.get_cost.assert_called_once_with("branch", "org1")
+
             mock_supabase_client.confirm_cost.assert_called_once_with(
                 "branch", "hourly", 10.0
             )
-            
+
             mock_supabase_client.create_branch.assert_called_once_with(
                 "project1", "cost1", "develop"
             )
-            
+
             # Verify result
             assert result == {"branch": {"id": "branch1", "name": "develop"}}
 

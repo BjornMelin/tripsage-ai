@@ -6,8 +6,7 @@ that interfaces with the official MCP Time server.
 """
 
 import json
-from datetime import datetime
-from unittest.mock import AsyncMock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -27,36 +26,42 @@ def client():
 @pytest.fixture
 def mock_get_current_time_response():
     """Create a mock response for get_current_time."""
-    return json.dumps({
-        "timezone": "America/New_York",
-        "datetime": "2025-05-12T14:30:00-04:00",
-        "is_dst": True
-    })
+    return json.dumps(
+        {
+            "timezone": "America/New_York",
+            "datetime": "2025-05-12T14:30:00-04:00",
+            "is_dst": True,
+        }
+    )
 
 
 @pytest.fixture
 def mock_convert_time_response():
     """Create a mock response for convert_time."""
-    return json.dumps({
-        "source": {
-            "timezone": "America/New_York",
-            "datetime": "2025-05-12T14:30:00-04:00",
-            "is_dst": True
-        },
-        "target": {
-            "timezone": "Europe/London",
-            "datetime": "2025-05-12T19:30:00+01:00",
-            "is_dst": True
-        },
-        "time_difference": "+5h"
-    })
+    return json.dumps(
+        {
+            "source": {
+                "timezone": "America/New_York",
+                "datetime": "2025-05-12T14:30:00-04:00",
+                "is_dst": True,
+            },
+            "target": {
+                "timezone": "Europe/London",
+                "datetime": "2025-05-12T19:30:00+01:00",
+                "is_dst": True,
+            },
+            "time_difference": "+5h",
+        }
+    )
 
 
 class TestTimeMCPClient:
     """Tests for the TimeMCPClient class."""
 
     @patch("src.mcp.time.client.BaseMCPClient.call_tool")
-    async def test_get_current_time(self, mock_call_tool, client, mock_get_current_time_response):
+    async def test_get_current_time(
+        self, mock_call_tool, client, mock_get_current_time_response
+    ):
         """Test getting current time for a timezone."""
         mock_call_tool.return_value = mock_get_current_time_response
 
@@ -72,14 +77,16 @@ class TestTimeMCPClient:
         assert result["is_dst"] is True
 
     @patch("src.mcp.time.client.BaseMCPClient.call_tool")
-    async def test_convert_time(self, mock_call_tool, client, mock_convert_time_response):
+    async def test_convert_time(
+        self, mock_call_tool, client, mock_convert_time_response
+    ):
         """Test converting time between timezones."""
         mock_call_tool.return_value = mock_convert_time_response
 
         result = await client.convert_time(
             time="14:30",
             source_timezone="America/New_York",
-            target_timezone="Europe/London"
+            target_timezone="Europe/London",
         )
 
         mock_call_tool.assert_called_once_with(
@@ -87,9 +94,9 @@ class TestTimeMCPClient:
             {
                 "source_timezone": "America/New_York",
                 "time": "14:30",
-                "target_timezone": "Europe/London"
+                "target_timezone": "Europe/London",
             },
-            False
+            False,
         )
 
         assert result["source_timezone"] == "America/New_York"
@@ -115,7 +122,7 @@ class TestTimeMCPClient:
             await client.convert_time(
                 time="14:30",
                 source_timezone="America/New_York",
-                target_timezone="Invalid/Timezone"
+                target_timezone="Invalid/Timezone",
             )
 
 
@@ -130,7 +137,7 @@ class TestTimeService:
             "current_time": "14:30:00",
             "current_date": "2025-05-12",
             "utc_offset": "04:00",
-            "is_dst": True
+            "is_dst": True,
         }
         mock_get_current_time.return_value = mock_response
 
@@ -152,7 +159,9 @@ class TestTimeService:
 
     @patch("src.mcp.time.client.TimeMCPClient.get_current_time")
     @patch("src.mcp.time.client.TimeMCPClient.convert_time")
-    async def test_calculate_flight_arrival(self, mock_convert_time, mock_get_current_time):
+    async def test_calculate_flight_arrival(
+        self, mock_convert_time, mock_get_current_time
+    ):
         """Test calculating flight arrival time."""
         # Mock the get_current_time response
         mock_get_current_time.return_value = {
@@ -160,7 +169,7 @@ class TestTimeService:
             "current_time": "14:30:00",
             "current_date": "2025-05-12",
             "utc_offset": "04:00",
-            "is_dst": True
+            "is_dst": True,
         }
 
         # Mock the convert_time response
@@ -169,7 +178,7 @@ class TestTimeService:
             "source_time": "19:30",
             "target_timezone": "Europe/London",
             "target_time": "00:30",
-            "time_difference": "+5h"
+            "time_difference": "+5h",
         }
 
         # Create client and service
@@ -181,7 +190,7 @@ class TestTimeService:
             departure_time="14:30",
             departure_timezone="America/New_York",
             flight_duration_hours=5.0,
-            arrival_timezone="Europe/London"
+            arrival_timezone="Europe/London",
         )
 
         # Verify the result
@@ -196,7 +205,9 @@ class TestTimeService:
 
     @patch("src.mcp.time.client.TimeMCPClient.get_current_time")
     @patch("src.mcp.time.client.TimeMCPClient.convert_time")
-    async def test_calculate_flight_arrival_with_day_offset(self, mock_convert_time, mock_get_current_time):
+    async def test_calculate_flight_arrival_with_day_offset(
+        self, mock_convert_time, mock_get_current_time
+    ):
         """Test calculating flight arrival time with day offset."""
         # Mock the get_current_time response
         mock_get_current_time.return_value = {
@@ -204,7 +215,7 @@ class TestTimeService:
             "current_time": "14:30:00",
             "current_date": "2025-05-12",
             "utc_offset": "04:00",
-            "is_dst": True
+            "is_dst": True,
         }
 
         # Mock the convert_time response
@@ -213,7 +224,7 @@ class TestTimeService:
             "source_time": "02:30",
             "target_timezone": "Europe/London",
             "target_time": "07:30",
-            "time_difference": "+5h"
+            "time_difference": "+5h",
         }
 
         # Create client and service
@@ -225,7 +236,7 @@ class TestTimeService:
             departure_time="14:30",
             departure_timezone="America/New_York",
             flight_duration_hours=12.0,
-            arrival_timezone="Europe/London"
+            arrival_timezone="Europe/London",
         )
 
         # Verify the result
@@ -237,7 +248,9 @@ class TestTimeService:
 
     @patch("src.mcp.time.client.TimeService.get_local_time")
     @patch("src.mcp.time.client.TimeMCPClient.convert_time")
-    async def test_create_timezone_aware_itinerary(self, mock_convert_time, mock_get_local_time):
+    async def test_create_timezone_aware_itinerary(
+        self, mock_convert_time, mock_get_local_time
+    ):
         """Test creating timezone-aware itinerary."""
         # Mock the get_local_time responses
         tokyo_response = {
@@ -245,16 +258,16 @@ class TestTimeService:
             "current_time": "03:30:00",
             "current_date": "2025-05-13",
             "utc_offset": "09:00",
-            "is_dst": False
+            "is_dst": False,
         }
         nyc_response = {
             "timezone": "America/New_York",
             "current_time": "14:30:00",
             "current_date": "2025-05-12",
             "utc_offset": "04:00",
-            "is_dst": True
+            "is_dst": True,
         }
-        
+
         # Set up the mock to return different responses based on the location
         async def get_local_time_side_effect(location):
             if location.lower() == "tokyo":
@@ -267,18 +280,18 @@ class TestTimeService:
                     "current_time": "18:30:00",
                     "current_date": "2025-05-12",
                     "utc_offset": "00:00",
-                    "is_dst": False
+                    "is_dst": False,
                 }
-        
+
         mock_get_local_time.side_effect = get_local_time_side_effect
-        
+
         # Mock convert_time
         mock_convert_time.return_value = {
             "source_timezone": "UTC",
             "source_time": "12:00",
             "target_timezone": "Asia/Tokyo",
             "target_time": "21:00",
-            "time_difference": "+9h"
+            "time_difference": "+9h",
         }
 
         # Create client and service
@@ -292,15 +305,15 @@ class TestTimeService:
                 "location": "Tokyo",
                 "description": "Visit Tokyo Tower",
                 "time": "12:00",
-                "time_format": "UTC"
+                "time_format": "UTC",
             },
             {
                 "day": 2,
                 "location": "New York",
                 "description": "Visit Central Park",
                 "time": "14:00",
-                "time_format": "local"
-            }
+                "time_format": "local",
+            },
         ]
 
         # Test creating timezone-aware itinerary
@@ -312,7 +325,7 @@ class TestTimeService:
         assert result[0]["timezone"] == "Asia/Tokyo"
         assert result[0]["local_time"] == "21:00"
         assert result[0]["utc_offset"] == "09:00"
-        
+
         assert result[1]["location"] == "New York"
         assert result[1]["timezone"] == "America/New_York"
         assert result[1]["local_time"] == "14:00"  # Unchanged since it's already local
@@ -321,22 +334,31 @@ class TestTimeService:
     @patch("src.mcp.time.client.TimeMCPClient.convert_time")
     async def test_find_meeting_times(self, mock_convert_time):
         """Test finding suitable meeting times."""
+
         # Set up convert_time mock with variable responses
-        def convert_side_effect(time, source_timezone, target_timezone, skip_cache=False):
+        def convert_side_effect(
+            time, source_timezone, target_timezone, skip_cache=False
+        ):
             hour, minute = map(int, time.split(":"))
             # For simplicity, assume 5 hour difference between NYC and London
-            if source_timezone == "America/New_York" and target_timezone == "Europe/London":
+            if (
+                source_timezone == "America/New_York"
+                and target_timezone == "Europe/London"
+            ):
                 target_hour = (hour + 5) % 24
                 return {
                     "source_timezone": source_timezone,
                     "source_time": time,
                     "target_timezone": target_timezone,
                     "target_time": f"{target_hour:02d}:{minute:02d}",
-                    "time_difference": "+5h"
+                    "time_difference": "+5h",
                 }
             else:
-                raise ValueError(f"Unexpected timezone conversion: {source_timezone} to {target_timezone}")
-        
+                raise ValueError(
+                    f"Unexpected timezone conversion: {source_timezone} "
+                    f"to {target_timezone}"
+                )
+
         mock_convert_time.side_effect = convert_side_effect
 
         # Create client and service
@@ -348,7 +370,7 @@ class TestTimeService:
             first_timezone="America/New_York",
             second_timezone="Europe/London",
             first_available_hours=(9, 17),
-            second_available_hours=(9, 17)
+            second_available_hours=(9, 17),
         )
 
         # Verify the result
