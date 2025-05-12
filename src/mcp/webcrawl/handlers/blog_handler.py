@@ -1,15 +1,18 @@
 """Handler for the crawl_travel_blog MCP tool."""
 
 import datetime
-import logging
 from typing import Any, Dict, List, Optional
 
 from src.mcp.webcrawl.sources.crawl4ai_source import Crawl4AISource
 from src.mcp.webcrawl.sources.playwright_source import PlaywrightSource
+from src.mcp.webcrawl.utils.result_normalizer import get_result_normalizer
 from src.utils.logging import get_logger
 
 # Initialize logger
 logger = get_logger(__name__)
+
+# Get the result normalizer
+_normalizer = get_result_normalizer()
 
 
 async def crawl_travel_blog(
@@ -17,6 +20,8 @@ async def crawl_travel_blog(
     topics: Optional[List[str]] = None,
     max_blogs: int = 3,
     recent_only: bool = True,
+    # Default to playwright for blogs since it often handles dynamic blog content better
+    source_type: str = "playwright",
 ) -> Dict[str, Any]:
     """Extract travel insights and recommendations from travel blogs.
 
@@ -25,6 +30,7 @@ async def crawl_travel_blog(
         topics: Specific topics to extract (e.g., ['hidden gems', 'local tips'])
         max_blogs: Maximum number of blogs to crawl (default: 3)
         recent_only: Whether to only include blogs from the past year
+        source_type: Type of source to use ("crawl4ai" or "playwright")
 
     Returns:
         Dict containing extracted travel insights organized by topic
@@ -32,7 +38,7 @@ async def crawl_travel_blog(
     Raises:
         Exception: If the blog crawling fails
     """
-    logger.info(f"Crawling travel blogs for {destination}")
+    logger.info(f"Crawling travel blogs for {destination} using {source_type}")
 
     # Validate input
     if not destination:
@@ -41,27 +47,48 @@ async def crawl_travel_blog(
     if max_blogs < 1 or max_blogs > 10:
         raise ValueError(f"Invalid max_blogs: {max_blogs}. Must be between 1 and 10")
 
-    # Initialize Crawl4AI source (primary for blog crawling)
-    primary_source = Crawl4AISource()
+    # Validate source_type
+    if source_type not in ["crawl4ai", "playwright"]:
+        logger.warning(f"Invalid source_type: {source_type}, defaulting to playwright")
+        source_type = "playwright"  # Default to playwright for blogs
 
     try:
+        # Initialize the selected source
+        if source_type == "crawl4ai":
+            source = Crawl4AISource()
+            logger.info(f"Using Crawl4AI source for blogs about {destination}")
+        else:  # playwright
+            source = PlaywrightSource()
+            logger.info(f"Using Playwright source for blogs about {destination}")
+
         # Crawl travel blogs
-        results = await primary_source.crawl_travel_blog(
+        results = await source.crawl_travel_blog(
             destination=destination,
             topics=topics,
             max_blogs=max_blogs,
             recent_only=recent_only,
         )
 
-        # Return formatted results
-        return _format_blog_response(results)
+        # Normalize and format results
+        normalized_results = _normalizer.normalize_blog_results(
+            results=results, source_type=source_type
+        )
+        return _format_blog_response(normalized_results)
     except Exception as e:
-        logger.error(f"Primary source blog crawl failed for {destination}: {str(e)}")
+        logger.error(f"{source_type} blog crawl failed for {destination}: {str(e)}")
 
-        # Try fallback to Playwright
+        # Try fallback to the other source
+        fallback_type = "playwright" if source_type == "crawl4ai" else "crawl4ai"
         try:
-            logger.info(f"Trying Playwright fallback for {destination} blog crawl")
-            fallback_source = PlaywrightSource()
+            logger.info(
+                f"Trying {fallback_type} fallback for blogs about {destination}"
+            )
+
+            if fallback_type == "crawl4ai":
+                fallback_source = Crawl4AISource()
+            else:
+                fallback_source = PlaywrightSource()
+
             results = await fallback_source.crawl_travel_blog(
                 destination=destination,
                 topics=topics,
@@ -69,12 +96,19 @@ async def crawl_travel_blog(
                 recent_only=recent_only,
             )
 
-            return _format_blog_response(results)
+            # Normalize and format results from fallback
+            normalized_results = _normalizer.normalize_blog_results(
+                results=results, source_type=fallback_type
+            )
+            return _format_blog_response(normalized_results)
         except Exception as fallback_e:
             logger.error(
-                f"Fallback source blog crawl failed for {destination}: {str(fallback_e)}"
+                f"Fallback {fallback_type} blog crawl failed for {destination}: "
+                f"{str(fallback_e)}"
             )
-            raise Exception(f"All blog crawl attempts failed for {destination}")
+            raise Exception(
+                f"All blog crawl attempts failed for {destination}"
+            ) from fallback_e
 
 
 def _format_blog_response(results: Dict[str, Any]) -> Dict[str, Any]:

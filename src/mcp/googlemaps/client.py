@@ -8,10 +8,6 @@ for places, calculating routes, and retrieving map information.
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Union
 
-from pydantic import BaseModel, Field
-
-from agents import function_tool
-
 from ...cache.redis_cache import redis_cache
 from ...utils.config import get_config
 from ...utils.error_handling import MCPError, log_exception
@@ -90,7 +86,7 @@ class GoogleMapsMCPClient(BaseMCPClient):
                 server=self.endpoint,
                 tool="geocode",
                 params=params,
-            )
+            ) from e
 
     @redis_cache.cached("place_search", 3600)  # Cache for 1 hour
     async def place_search(
@@ -147,7 +143,7 @@ class GoogleMapsMCPClient(BaseMCPClient):
                 server=self.endpoint,
                 tool="place_search",
                 params=params,
-            )
+            ) from e
 
     @redis_cache.cached("place_details", 3600)  # Cache for 1 hour
     async def place_details(
@@ -184,7 +180,7 @@ class GoogleMapsMCPClient(BaseMCPClient):
                 server=self.endpoint,
                 tool="place_details",
                 params=params,
-            )
+            ) from e
 
     @redis_cache.cached("directions", 3600)  # Cache for 1 hour
     async def directions(
@@ -248,7 +244,7 @@ class GoogleMapsMCPClient(BaseMCPClient):
                 server=self.endpoint,
                 tool="directions",
                 params=params,
-            )
+            ) from e
 
     @redis_cache.cached("distance_matrix", 3600)  # Cache for 1 hour
     async def distance_matrix(
@@ -259,7 +255,8 @@ class GoogleMapsMCPClient(BaseMCPClient):
         departure_time: Optional[Union[str, datetime]] = None,
         skip_cache: bool = False,
     ) -> Dict[str, Any]:
-        """Get distance and duration information between multiple origins and destinations.
+        """Get distance and duration information between
+        multiple origins and destinations.
 
         Args:
             origins: List of origin locations
@@ -304,7 +301,7 @@ class GoogleMapsMCPClient(BaseMCPClient):
                 server=self.endpoint,
                 tool="distance_matrix",
                 params=params,
-            )
+            ) from e
 
 
 # Singleton instance getter

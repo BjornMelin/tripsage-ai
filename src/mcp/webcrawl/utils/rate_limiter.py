@@ -224,7 +224,8 @@ class AdaptiveRateLimiter(RateLimiter):
 
         if new_rate > current_rate:
             logger.info(
-                f"Increasing rate for {domain} from {current_rate:.2f} to {new_rate:.2f} req/s"
+                f"Increasing rate for {domain} from {current_rate:.2f} "
+                f"to {new_rate:.2f} req/s"
             )
             self._domain_rates[domain] = new_rate
             self.update_domain_rate(domain, new_rate)
@@ -244,7 +245,8 @@ class AdaptiveRateLimiter(RateLimiter):
         new_rate = max(current_rate / factor, self.min_rate)
 
         logger.info(
-            f"Decreasing rate for {domain} from {current_rate:.2f} to {new_rate:.2f} req/s"
+            f"Decreasing rate for {domain} from {current_rate:.2f} "
+            f"to {new_rate:.2f} req/s"
         )
         self._domain_rates[domain] = new_rate
         self.update_domain_rate(domain, new_rate)

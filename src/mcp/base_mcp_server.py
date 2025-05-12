@@ -5,23 +5,17 @@ This module provides the base class for all MCP servers in the TripSage system,
 with common functionality for tool registration, request handling, and error reporting.
 """
 
-import asyncio
 import inspect
-import json
 from typing import (
     Any,
-    Callable,
     Dict,
-    List,
     Optional,
     Protocol,
-    Type,
-    Union,
     runtime_checkable,
 )
 
-from fastapi import FastAPI, HTTPException, Request, Response
-from pydantic import BaseModel, ValidationError, create_model
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
 
 from ..utils.error_handling import MCPError, log_exception
 from ..utils.logging import get_module_logger
@@ -147,9 +141,11 @@ class BaseMCPServer:
             except Exception as e:
                 log_exception(e)
                 if isinstance(e, MCPError):
-                    raise HTTPException(status_code=400, detail=str(e))
+                    raise HTTPException(status_code=400, detail=str(e)) from e
                 else:
-                    raise HTTPException(status_code=500, detail="Internal server error")
+                    raise HTTPException(
+                        status_code=500, detail="Internal server error"
+                    ) from e
 
     def _get_tool_metadata(self, tool: MCPTool) -> ToolMetadata:
         """Get metadata for a tool.
@@ -161,16 +157,12 @@ class BaseMCPServer:
             Tool metadata
         """
         # Get parameter schema from tool's execute method signature
-        signature = inspect.signature(tool.execute)
-        params_param = signature.parameters.get("params")
+        _ = inspect.signature(tool.execute)
 
-        # Get return type annotation
-        return_type = signature.return_annotation
-
-        # Create parameter schema
+        # Create parameter schema - we're just using a simple generic schema for now
         parameters_schema = {"type": "object", "properties": {}}
 
-        # Create return schema
+        # Create return schema - also generic for now
         return_schema = {"type": "object"}
 
         return ToolMetadata(

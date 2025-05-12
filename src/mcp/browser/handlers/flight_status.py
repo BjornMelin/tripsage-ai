@@ -1,11 +1,10 @@
 """Flight status handler for the Browser MCP server."""
 
-import asyncio
 import base64
 import re
 import uuid
-from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional, Tuple
+from datetime import datetime
+from typing import Any, Dict, Optional
 
 from tenacity import (
     retry,
@@ -78,8 +77,8 @@ async def check_flight_status(params: FlightStatusParams) -> Dict[str, Any]:
             # Wait for page to load
             await page.wait_for_load_state("networkidle")
 
-            # Take screenshot of status page before filling
-            screenshot_before = await page.screenshot(full_page=False)
+            # Take screenshot of status page before filling - uncomment if needed
+            # screenshot_before = await page.screenshot(full_page=False)
 
             # Fill in flight details based on airline
             flight_info = await fill_airline_status_form(
@@ -335,7 +334,8 @@ async def extract_aa_flight_info(page: Any) -> Optional[FlightInfo]:
             await arrival_time_elem.text_content() if arrival_time_elem else ""
         )
 
-        # Parse times - this is simplified and might need adjustment based on actual format
+        # Parse times - this is simplified and might need adjustment
+        # based on actual format
         scheduled_departure = (
             datetime.now().replace(hour=12, minute=0)
             if not departure_time_text
@@ -475,7 +475,10 @@ async def fill_delta_airlines_form(
                 await page.wait_for_timeout(300)
 
             # Select day
-            day_selector = f'.ui-datepicker-calendar td a:text-is("{day}"), .calendar-day:text-is("{day}")'
+            day_selector = (
+                f'.ui-datepicker-calendar td a:text-is("{day}"),'
+                f' .calendar-day:text-is("{day}")'
+            )
             day_elem = await page.query_selector(day_selector)
             if day_elem:
                 await day_elem.click()
@@ -509,7 +512,8 @@ async def extract_dl_flight_info(page: Any) -> Optional[FlightInfo]:
         Flight information if available
     """
     # Implementation similar to AA extraction but adapted for Delta's page structure
-    # This is a simplified placeholder - real implementation would need adaptation to Delta's actual page structure
+    # This is a simplified placeholder - real implementation would need adaptation
+    # to Delta's actual page structure
     return None
 
 
@@ -572,7 +576,8 @@ async def extract_ua_flight_info(page: Any) -> Optional[FlightInfo]:
         Flight information if available
     """
     # Implementation similar to AA extraction but adapted for United's page structure
-    # This is a simplified placeholder - real implementation would need adaptation to United's actual page structure
+    # This is a simplified placeholder - real implementation would need adaptation
+    # to United's actual page structure
     return None
 
 
@@ -620,7 +625,8 @@ async def fill_southwest_airlines_form(
             await page.wait_for_timeout(500)
 
             # Navigate to date and select
-            # This is simplified and would need adaptation to Southwest's actual date picker
+            # This is simplified and would need adaptation to
+            # Southwest's actual date picker
             # ...
 
     # Submit form
@@ -647,7 +653,8 @@ async def extract_wn_flight_info(page: Any) -> Optional[FlightInfo]:
         Flight information if available
     """
     # Implementation similar to AA extraction but adapted for Southwest's page structure
-    # This is a simplified placeholder - real implementation would need adaptation to Southwest's actual page structure
+    # This is a simplified placeholder - real implementation would need
+    # adaptation to Southwest's actual page structure
     return None
 
 
@@ -726,15 +733,18 @@ async def fill_generic_flight_status_form(
         # Try both formats
         try:
             await date_input.fill(formatted_date)
-        except:
+        except Exception:
             try:
                 await date_input.fill(alt_formatted_date)
-            except:
-                logger.warning(f"Failed to fill date field with either format")
+            except Exception:
+                logger.warning("Failed to fill date field with either format")
 
     # Look for search/submit button
     submit_button = await page.query_selector(
-        'button[type="submit"], input[type="submit"], button:has-text("Search"), button:has-text("Find")'
+        (
+            'button[type="submit"], input[type="submit"],'
+            ' button:has-text("Search"), button:has-text("Find")'
+        )
     )
     if submit_button:
         await submit_button.click()
@@ -790,8 +800,8 @@ async def extract_google_flight_info(
     status = status_match.group(1) if status_match else "Unknown"
 
     # Extract times - this is simplified
-    time_pattern = re.compile(r"(\d{1,2}:\d{2} [AP]M)", re.IGNORECASE)
-    times = time_pattern.findall(text_content)
+    time_pattern = re.compile(r"(\d{1,2}:\d{2} [AP]M)", re.IGNORECASE)  # noqa: F841
+    # Uncomment if needed: times = time_pattern.findall(text_content)
 
     scheduled_departure = datetime.now().replace(hour=12, minute=0)
     scheduled_arrival = datetime.now().replace(hour=14, minute=0)

@@ -5,7 +5,6 @@ This module provides a factory for creating and managing database provider insta
 based on the application's configuration.
 """
 
-import logging
 from typing import Optional
 
 from src.db.config import DatabaseProvider as ProviderType
@@ -37,7 +36,7 @@ def create_provider() -> DatabaseProvider:
     if config.provider == ProviderType.SUPABASE:
         if not config.supabase:
             raise ValueError("Supabase configuration is missing")
-        
+
         return SupabaseProvider(
             url=config.supabase.url,
             key=(
@@ -48,18 +47,18 @@ def create_provider() -> DatabaseProvider:
             options={
                 "auto_refresh_token": config.supabase.auto_refresh_token,
                 "persist_session": config.supabase.persist_session,
-                "timeout": config.supabase.timeout
-            }
+                "timeout": config.supabase.timeout,
+            },
         )
     elif config.provider == ProviderType.NEON:
         if not config.neon:
             raise ValueError("Neon configuration is missing")
-        
+
         return NeonProvider(
             connection_string=config.neon.connection_string,
             min_size=config.neon.min_pool_size,
             max_size=config.neon.max_pool_size,
-            max_inactive_connection_lifetime=config.neon.max_inactive_connection_lifetime
+            max_inactive_connection_lifetime=config.neon.max_inactive_connection_lifetime,
         )
     else:
         raise ValueError(f"Unsupported database provider: {config.provider}")
@@ -83,11 +82,11 @@ def get_provider(force_new: bool = False) -> DatabaseProvider:
         ValueError: If the configured provider is not supported.
     """
     global _provider
-    
+
     if _provider is None or force_new:
         logger.info(f"Creating new {config.provider} database provider")
         _provider = create_provider()
-    
+
     return _provider
 
 

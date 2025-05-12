@@ -2,7 +2,8 @@
 """
 Test script for the TripSage API.
 
-This script starts the FastAPI server and performs basic tests to verify the API functionality.
+This script starts the FastAPI server and performs basic tests to
+verify the API functionality.
 """
 
 import asyncio
@@ -17,13 +18,13 @@ import uvicorn
 from dotenv import load_dotenv
 from pydantic import BaseModel
 
+from src.api.main import app
+from src.db.initialize import initialize_database
+
 # Add the project root to the path so we can import from src
 script_dir = os.path.dirname(os.path.abspath(__file__))
 project_root = os.path.dirname(script_dir)
 sys.path.insert(0, project_root)
-
-from src.api.main import app
-from src.db.initialize import initialize_database
 
 # Load environment variables
 load_dotenv()
@@ -183,7 +184,8 @@ async def create_flight(
         flight_data = response.json()
         flight.id = flight_data["id"]
         print(
-            f"Flight from {flight.origin} to {flight.destination} created successfully with ID {flight.id}"
+            f"Flight from {flight.origin} to {flight.destination} created "
+            f"successfully with ID {flight.id}"
         )
         return True
     else:

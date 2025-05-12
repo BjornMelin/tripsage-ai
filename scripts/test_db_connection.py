@@ -9,11 +9,9 @@ Usage: python test_db_connection.py
 """
 
 import asyncio
-import logging
 import os
 import sys
 from datetime import date, datetime
-from typing import Any, Dict, List
 
 # Add the project root to the Python path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -26,7 +24,6 @@ from src.db import (
     TripRepository,
     TripStatus,
     TripType,
-    User,
     UserRepository,
     close_database_connection,
     initialize_database,
@@ -66,7 +63,8 @@ async def test_connection() -> None:
         logger.info(f"Found {len(trips)} trips in the database")
         for trip in trips:
             logger.info(
-                f"Trip: {trip.id} - {trip.name} to {trip.destination} ({trip.start_date} to {trip.end_date})"
+                f"Trip: {trip.id} - {trip.name} to {trip.destination} "
+                f"({trip.start_date} to {trip.end_date})"
             )
 
         # Get user by email
@@ -91,7 +89,8 @@ async def test_connection() -> None:
                 logger.info(f"Found {len(flights)} flights for this trip")
                 for flight in flights:
                     logger.info(
-                        f"Flight: {flight.origin} to {flight.destination} on {flight.airline}"
+                        f"Flight: {flight.origin} to {flight.destination} on "
+                        f"{flight.airline}"
                     )
                     logger.info(f"Departure: {flight.departure_time}")
                     logger.info(f"Arrival: {flight.arrival_time}")
@@ -133,7 +132,8 @@ async def test_connection() -> None:
 
         created_flight = await flight_repo.create(new_flight)
         logger.info(
-            f"Created new flight: {created_flight.origin} to {created_flight.destination} on {created_flight.airline}"
+            f"Created new flight: {created_flight.origin} to"
+            f"{created_flight.destination} on {created_flight.airline}"
         )
 
         # Update the trip

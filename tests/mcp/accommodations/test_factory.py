@@ -4,8 +4,6 @@ Tests for the Airbnb MCP client factory.
 
 from unittest.mock import patch
 
-import pytest
-
 from src.mcp.accommodations.client import AirbnbMCPClient
 from src.mcp.accommodations.factory import create_airbnb_client
 
@@ -38,7 +36,7 @@ class TestAirbnbClientFactory:
         mock_config.redis.ttl_medium = 3600
 
         # Create client
-        client = create_airbnb_client()
+        _client = create_airbnb_client()
 
         # Verify logging
         mock_logger.debug.assert_called_once_with(

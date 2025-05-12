@@ -1,26 +1,29 @@
 """
 Booking verification handler for browser automation MCP.
 
-This module contains functions for verifying bookings across different travel providers
-using browser automation. It handles verification of flight, hotel, and rental car bookings.
+This module contains functions for verifying bookings across different
+travel providers using browser automation. It handles verification of
+flight, hotel, and rental car bookings.
 """
 
 import asyncio
 import functools
-import logging
 import re
-from datetime import datetime
-from enum import Enum
-from typing import Any, Callable, Dict, List, Optional, Tuple, TypeVar, Union, cast, Annotated
+from typing import (
+    Annotated,
+    Any,
+    Callable,
+    Dict,
+    List,
+    Optional,
+    Tuple,
+    TypeVar,
+    Union,
+    cast,
+)
 
 from playwright.async_api import ElementHandle, Page
-from pydantic import (
-    BaseModel,
-    Field,
-    ValidationError,
-    validate_call,
-    ConfigDict
-)
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, validate_call
 from tenacity import (
     retry,
     retry_if_exception_type,
@@ -30,7 +33,7 @@ from tenacity import (
 
 from src.mcp.browser.config import Config
 from src.mcp.browser.context.manager import get_playwright_manager
-from src.mcp.browser.models.request_models import BookingVerificationParams, BookingType
+from src.mcp.browser.models.request_models import BookingType, BookingVerificationParams
 from src.mcp.browser.models.response_models import (
     BookingDetails,
     BookingStatus,
@@ -38,10 +41,7 @@ from src.mcp.browser.models.response_models import (
 )
 from src.mcp.browser.utils.logging import get_logger, log_request
 from src.mcp.browser.utils.validators import (
-    validate_booking_reference,
-    validate_email,
     BookingReferenceValidator,
-    SessionIdValidator
 )
 
 logger = get_logger(__name__)
@@ -52,12 +52,12 @@ PROVIDER_URLS = Config.BOOKING_VERIFICATION_URLS
 # Type definitions
 VerificationResult = Optional[Tuple[bool, Optional[BookingDetails], Optional[str]]]
 VerificationFunc = Callable[..., VerificationResult]
-T = TypeVar('T')
+T = TypeVar("T")
 
 
 class VerificationError(Exception):
     """Exception raised for verification errors."""
-    
+
     def __init__(self, message: str, screenshot: Optional[str] = None):
         self.message = message
         self.screenshot = screenshot
@@ -67,13 +67,14 @@ class VerificationError(Exception):
 def booking_verification_decorator(func: VerificationFunc) -> VerificationFunc:
     """
     Decorator for handling common error patterns in booking verification functions.
-    
+
     Args:
         func: The verification function to decorate
-        
+
     Returns:
         The decorated function
     """
+
     @functools.wraps(func)
     async def wrapper(page: Page, *args, **kwargs) -> VerificationResult:
         try:
@@ -84,37 +85,39 @@ def booking_verification_decorator(func: VerificationFunc) -> VerificationFunc:
                 screenshot = await page.screenshot(type="jpeg", quality=50)
                 screenshot_base64 = screenshot.decode("utf-8") if screenshot else None
                 return False, None, screenshot_base64
-            except:
+            except Exception:
                 return False, None, None
-    
+
     return cast(VerificationFunc, wrapper)
 
 
 class ValidationParams(BaseModel):
     """Parameters for validation checking."""
-    
+
     confirmation_code: str = Field(..., description="Booking confirmation code")
     booking_type: str = Field(..., description="Type of booking (flight, hotel, car)")
     provider: str = Field(..., description="Travel provider")
-    
+
     model_config = ConfigDict(extra="forbid")
 
 
 @validate_call
-def validate_verification_params(params: BookingVerificationParams) -> Optional[Dict[str, Any]]:
+def validate_verification_params(
+    params: BookingVerificationParams,
+) -> Optional[Dict[str, Any]]:
     """
     Validate booking verification parameters.
-    
+
     Args:
         params: The booking verification parameters
-        
+
     Returns:
         Response dictionary with error if validation fails, None if validation passes
     """
     try:
         # Validate booking reference
         BookingReferenceValidator(booking_reference=params.confirmation_code)
-        
+
         if params.first_name and not params.first_name.strip():
             logger.warning("First name provided but empty")
 
@@ -133,9 +136,12 @@ def validate_verification_params(params: BookingVerificationParams) -> Optional[
 
         if provider_key not in PROVIDER_URLS.get(params.type, {}):
             logger.warning(
-                f"Provider '{provider_key}' not directly supported for '{params.type}'. Using generic handler."
+                (
+                    f"Provider '{provider_key}' not directly supported for "
+                    f"'{params.type}'. Using generic handler."
+                )
             )
-            
+
         return None  # Validation passed
 
     except ValidationError as e:
@@ -253,12 +259,12 @@ async def get_flight_verification_result(
 ) -> VerificationResult:
     """
     Get verification result for flight bookings based on provider.
-    
+
     Args:
         page: Playwright page instance
         params: Booking verification parameters
         provider_key: Normalized provider key
-        
+
     Returns:
         Verification result tuple
     """
@@ -295,12 +301,12 @@ async def get_hotel_verification_result(
 ) -> VerificationResult:
     """
     Get verification result for hotel bookings based on provider.
-    
+
     Args:
         page: Playwright page instance
         params: Booking verification parameters
         provider_key: Normalized provider key
-        
+
     Returns:
         Verification result tuple
     """
@@ -333,12 +339,12 @@ async def get_car_verification_result(
 ) -> VerificationResult:
     """
     Get verification result for car rental bookings based on provider.
-    
+
     Args:
         page: Playwright page instance
         params: Booking verification parameters
         provider_key: Normalized provider key
-        
+
     Returns:
         Verification result tuple
     """
@@ -373,9 +379,9 @@ async def get_car_verification_result(
 )
 @validate_call
 async def verify_american_airlines_booking(
-    page: Page, 
-    confirmation_code: Annotated[str, BookingReferenceValidator], 
-    last_name: str
+    page: Page,
+    confirmation_code: Annotated[str, BookingReferenceValidator],
+    last_name: str,
 ) -> VerificationResult:
     """
     Verify a booking with American Airlines.
@@ -427,9 +433,7 @@ async def verify_american_airlines_booking(
 
     # Create status based on cancellation indicators
     cancelled_element = await page.query_selector(".cancelled, .canceled")
-    status = (
-        BookingStatus.CANCELLED if cancelled_element else BookingStatus.CONFIRMED
-    )
+    status = BookingStatus.CANCELLED if cancelled_element else BookingStatus.CONFIRMED
 
     booking_details = BookingDetails(
         passenger_name=last_name,
@@ -453,9 +457,9 @@ async def verify_american_airlines_booking(
 )
 @validate_call
 async def verify_delta_booking(
-    page: Page, 
-    confirmation_code: Annotated[str, BookingReferenceValidator], 
-    last_name: str
+    page: Page,
+    confirmation_code: Annotated[str, BookingReferenceValidator],
+    last_name: str,
 ) -> VerificationResult:
     """
     Verify a booking with Delta Airlines.
@@ -507,9 +511,7 @@ async def verify_delta_booking(
 
     # Create status based on cancellation indicators
     cancelled_element = await page.query_selector(".cancelled, .canceled")
-    status = (
-        BookingStatus.CANCELLED if cancelled_element else BookingStatus.CONFIRMED
-    )
+    status = BookingStatus.CANCELLED if cancelled_element else BookingStatus.CONFIRMED
 
     booking_details = BookingDetails(
         passenger_name=last_name,
@@ -533,9 +535,9 @@ async def verify_delta_booking(
 )
 @validate_call
 async def verify_united_booking(
-    page: Page, 
-    confirmation_code: Annotated[str, BookingReferenceValidator], 
-    last_name: str
+    page: Page,
+    confirmation_code: Annotated[str, BookingReferenceValidator],
+    last_name: str,
 ) -> VerificationResult:
     """
     Verify a booking with United Airlines.
@@ -573,9 +575,7 @@ async def verify_united_booking(
         return False, None, screenshot_base64
 
     # Extract booking details from the page
-    await page.wait_for_selector(
-        ".itinerary-container", timeout=Config.DEFAULT_TIMEOUT
-    )
+    await page.wait_for_selector(".itinerary-container", timeout=Config.DEFAULT_TIMEOUT)
 
     # Take screenshot for verification
     screenshot = await page.screenshot(type="jpeg", quality=50)
@@ -588,12 +588,8 @@ async def verify_united_booking(
     flight_number = await extract_text(page, ".flight-number")
 
     # Create status based on cancellation indicators
-    cancelled_element = await page.query_selector(
-        ".cancellation-notice, .cancelled"
-    )
-    status = (
-        BookingStatus.CANCELLED if cancelled_element else BookingStatus.CONFIRMED
-    )
+    cancelled_element = await page.query_selector(".cancellation-notice, .cancelled")
+    status = BookingStatus.CANCELLED if cancelled_element else BookingStatus.CONFIRMED
 
     booking_details = BookingDetails(
         passenger_name=last_name,
@@ -617,10 +613,10 @@ async def verify_united_booking(
 )
 @validate_call
 async def verify_southwest_booking(
-    page: Page, 
-    confirmation_code: Annotated[str, BookingReferenceValidator], 
-    last_name: str, 
-    first_name: Optional[str] = None
+    page: Page,
+    confirmation_code: Annotated[str, BookingReferenceValidator],
+    last_name: str,
+    first_name: Optional[str] = None,
 ) -> VerificationResult:
     """
     Verify a booking with Southwest Airlines.
@@ -675,9 +671,7 @@ async def verify_southwest_booking(
 
     # Create status based on cancellation indicators
     cancelled_element = await page.query_selector(".cancellation, .cancelled")
-    status = (
-        BookingStatus.CANCELLED if cancelled_element else BookingStatus.CONFIRMED
-    )
+    status = BookingStatus.CANCELLED if cancelled_element else BookingStatus.CONFIRMED
 
     # Full name
     full_name = f"{first_name} {last_name}" if first_name else last_name
@@ -704,9 +698,9 @@ async def verify_southwest_booking(
 )
 @validate_call
 async def verify_marriott_booking(
-    page: Page, 
-    confirmation_code: Annotated[str, BookingReferenceValidator], 
-    last_name: str
+    page: Page,
+    confirmation_code: Annotated[str, BookingReferenceValidator],
+    last_name: str,
 ) -> VerificationResult:
     """
     Verify a hotel booking with Marriott.
@@ -744,9 +738,7 @@ async def verify_marriott_booking(
         return False, None, screenshot_base64
 
     # Extract booking details from the page
-    await page.wait_for_selector(
-        ".reservation-details", timeout=Config.DEFAULT_TIMEOUT
-    )
+    await page.wait_for_selector(".reservation-details", timeout=Config.DEFAULT_TIMEOUT)
 
     # Take screenshot for verification
     screenshot = await page.screenshot(type="jpeg", quality=50)
@@ -759,9 +751,7 @@ async def verify_marriott_booking(
 
     # Create status based on cancellation indicators
     cancelled_element = await page.query_selector(".cancelled, .canceled")
-    status = (
-        BookingStatus.CANCELLED if cancelled_element else BookingStatus.CONFIRMED
-    )
+    status = BookingStatus.CANCELLED if cancelled_element else BookingStatus.CONFIRMED
 
     booking_details = BookingDetails(
         passenger_name=last_name,
@@ -785,9 +775,9 @@ async def verify_marriott_booking(
 )
 @validate_call
 async def verify_hilton_booking(
-    page: Page, 
-    confirmation_code: Annotated[str, BookingReferenceValidator], 
-    last_name: str
+    page: Page,
+    confirmation_code: Annotated[str, BookingReferenceValidator],
+    last_name: str,
 ) -> VerificationResult:
     """
     Verify a hotel booking with Hilton.
@@ -825,9 +815,7 @@ async def verify_hilton_booking(
         return False, None, screenshot_base64
 
     # Extract booking details from the page
-    await page.wait_for_selector(
-        ".reservation-details", timeout=Config.DEFAULT_TIMEOUT
-    )
+    await page.wait_for_selector(".reservation-details", timeout=Config.DEFAULT_TIMEOUT)
 
     # Take screenshot for verification
     screenshot = await page.screenshot(type="jpeg", quality=50)
@@ -840,9 +828,7 @@ async def verify_hilton_booking(
 
     # Create status based on cancellation indicators
     cancelled_element = await page.query_selector(".cancelled, .canceled")
-    status = (
-        BookingStatus.CANCELLED if cancelled_element else BookingStatus.CONFIRMED
-    )
+    status = BookingStatus.CANCELLED if cancelled_element else BookingStatus.CONFIRMED
 
     booking_details = BookingDetails(
         passenger_name=last_name,
@@ -866,10 +852,10 @@ async def verify_hilton_booking(
 )
 @validate_call
 async def verify_hyatt_booking(
-    page: Page, 
-    confirmation_code: Annotated[str, BookingReferenceValidator], 
-    last_name: str, 
-    first_name: Optional[str] = None
+    page: Page,
+    confirmation_code: Annotated[str, BookingReferenceValidator],
+    last_name: str,
+    first_name: Optional[str] = None,
 ) -> VerificationResult:
     """
     Verify a hotel booking with Hyatt.
@@ -910,9 +896,7 @@ async def verify_hyatt_booking(
         return False, None, screenshot_base64
 
     # Extract booking details from the page
-    await page.wait_for_selector(
-        ".reservation-details", timeout=Config.DEFAULT_TIMEOUT
-    )
+    await page.wait_for_selector(".reservation-details", timeout=Config.DEFAULT_TIMEOUT)
 
     # Take screenshot for verification
     screenshot = await page.screenshot(type="jpeg", quality=50)
@@ -925,9 +909,7 @@ async def verify_hyatt_booking(
 
     # Create status based on cancellation indicators
     cancelled_element = await page.query_selector(".cancelled, .canceled")
-    status = (
-        BookingStatus.CANCELLED if cancelled_element else BookingStatus.CONFIRMED
-    )
+    status = BookingStatus.CANCELLED if cancelled_element else BookingStatus.CONFIRMED
 
     # Full name
     full_name = f"{first_name} {last_name}" if first_name else last_name
@@ -954,9 +936,9 @@ async def verify_hyatt_booking(
 )
 @validate_call
 async def verify_hertz_booking(
-    page: Page, 
-    confirmation_code: Annotated[str, BookingReferenceValidator], 
-    last_name: str
+    page: Page,
+    confirmation_code: Annotated[str, BookingReferenceValidator],
+    last_name: str,
 ) -> VerificationResult:
     """
     Verify a car rental booking with Hertz.
@@ -995,9 +977,7 @@ async def verify_hertz_booking(
         return False, None, screenshot_base64
 
     # Extract booking details from the page
-    await page.wait_for_selector(
-        ".reservation-details", timeout=Config.DEFAULT_TIMEOUT
-    )
+    await page.wait_for_selector(".reservation-details", timeout=Config.DEFAULT_TIMEOUT)
 
     # Take screenshot for verification
     screenshot = await page.screenshot(type="jpeg", quality=50)
@@ -1012,9 +992,7 @@ async def verify_hertz_booking(
 
     # Create status based on cancellation indicators
     cancelled_element = await page.query_selector(".cancelled, .canceled")
-    status = (
-        BookingStatus.CANCELLED if cancelled_element else BookingStatus.CONFIRMED
-    )
+    status = BookingStatus.CANCELLED if cancelled_element else BookingStatus.CONFIRMED
 
     booking_details = BookingDetails(
         passenger_name=last_name,
@@ -1038,10 +1016,10 @@ async def verify_hertz_booking(
 )
 @validate_call
 async def verify_enterprise_booking(
-    page: Page, 
-    confirmation_code: Annotated[str, BookingReferenceValidator], 
-    last_name: str, 
-    first_name: Optional[str] = None
+    page: Page,
+    confirmation_code: Annotated[str, BookingReferenceValidator],
+    last_name: str,
+    first_name: Optional[str] = None,
 ) -> VerificationResult:
     """
     Verify a car rental booking with Enterprise.
@@ -1082,9 +1060,7 @@ async def verify_enterprise_booking(
         return False, None, screenshot_base64
 
     # Extract booking details from the page
-    await page.wait_for_selector(
-        ".reservation-details", timeout=Config.DEFAULT_TIMEOUT
-    )
+    await page.wait_for_selector(".reservation-details", timeout=Config.DEFAULT_TIMEOUT)
 
     # Take screenshot for verification
     screenshot = await page.screenshot(type="jpeg", quality=50)
@@ -1099,9 +1075,7 @@ async def verify_enterprise_booking(
 
     # Create status based on cancellation indicators
     cancelled_element = await page.query_selector(".cancelled, .canceled")
-    status = (
-        BookingStatus.CANCELLED if cancelled_element else BookingStatus.CONFIRMED
-    )
+    status = BookingStatus.CANCELLED if cancelled_element else BookingStatus.CONFIRMED
 
     # Full name
     full_name = f"{first_name} {last_name}" if first_name else last_name
@@ -1128,9 +1102,9 @@ async def verify_enterprise_booking(
 )
 @validate_call
 async def verify_avis_booking(
-    page: Page, 
-    confirmation_code: Annotated[str, BookingReferenceValidator], 
-    last_name: str
+    page: Page,
+    confirmation_code: Annotated[str, BookingReferenceValidator],
+    last_name: str,
 ) -> VerificationResult:
     """
     Verify a car rental booking with Avis.
@@ -1168,9 +1142,7 @@ async def verify_avis_booking(
         return False, None, screenshot_base64
 
     # Extract booking details from the page
-    await page.wait_for_selector(
-        ".reservation-details", timeout=Config.DEFAULT_TIMEOUT
-    )
+    await page.wait_for_selector(".reservation-details", timeout=Config.DEFAULT_TIMEOUT)
 
     # Take screenshot for verification
     screenshot = await page.screenshot(type="jpeg", quality=50)
@@ -1185,9 +1157,7 @@ async def verify_avis_booking(
 
     # Create status based on cancellation indicators
     cancelled_element = await page.query_selector(".cancelled, .canceled")
-    status = (
-        BookingStatus.CANCELLED if cancelled_element else BookingStatus.CONFIRMED
-    )
+    status = BookingStatus.CANCELLED if cancelled_element else BookingStatus.CONFIRMED
 
     booking_details = BookingDetails(
         passenger_name=last_name,
@@ -1248,7 +1218,9 @@ async def generic_booking_verification(
     # Look for typical form fields
     reference_input = await find_form_field(page, reference_identifiers)
     last_name_input = await find_form_field(page, last_name_identifiers)
-    first_name_input = first_name and await find_form_field(page, first_name_identifiers)
+    first_name_input = first_name and await find_form_field(
+        page, first_name_identifiers
+    )
     submit_button = await find_submit_button(page)
 
     if not reference_input or not last_name_input or not submit_button:
@@ -1324,7 +1296,7 @@ async def generic_booking_verification(
                 status=booking_info.get("status", BookingStatus.CONFIRMED),
                 additional_info={"vehicle_type": booking_info.get("vehicle_type")},
             )
-        
+
         return True, booking_details, screenshot_base64
     else:
         # If we can't extract details but also don't find an error, assume success
@@ -1350,7 +1322,7 @@ def get_reference_field_identifiers(booking_type: BookingType) -> List[str]:
         "confirmation",
         "reference",
     ]
-    
+
     if booking_type == BookingType.FLIGHT:
         return common_identifiers + ["record", "recordLocator", "booking"]
     elif booking_type == BookingType.HOTEL:
@@ -1362,7 +1334,7 @@ def get_reference_field_identifiers(booking_type: BookingType) -> List[str]:
 def get_last_name_field_identifiers(booking_type: BookingType) -> List[str]:
     """Get last name field identifiers based on booking type."""
     common_identifiers = ["lastName", "last-name", "surname"]
-    
+
     if booking_type == BookingType.FLIGHT:
         return common_identifiers + ["passengerLastName"]
     elif booking_type == BookingType.HOTEL:
@@ -1374,7 +1346,7 @@ def get_last_name_field_identifiers(booking_type: BookingType) -> List[str]:
 def get_first_name_field_identifiers(booking_type: BookingType) -> List[str]:
     """Get first name field identifiers based on booking type."""
     common_identifiers = ["firstName", "first-name", "givenName"]
-    
+
     if booking_type == BookingType.FLIGHT:
         return common_identifiers + ["passengerFirstName"]
     elif booking_type == BookingType.HOTEL:
@@ -1392,12 +1364,14 @@ async def extract_text(page: Page, selector: str) -> Optional[str]:
         if element:
             return await element.text_content()
         return None
-    except:
+    except Exception:
         return None
 
 
 @validate_call
-async def find_form_field(page: Page, field_identifiers: list[str]) -> Optional[ElementHandle]:
+async def find_form_field(
+    page: Page, field_identifiers: list[str]
+) -> Optional[ElementHandle]:
     """Find a form field based on common identifiers."""
     for identifier in field_identifiers:
         # Try by ID
@@ -1457,7 +1431,9 @@ async def find_submit_button(page: Page) -> Optional[ElementHandle]:
 
 
 @validate_call
-async def find_error_message(page: Page, error_patterns: list[str]) -> Optional[Union[ElementHandle, bool]]:
+async def find_error_message(
+    page: Page, error_patterns: list[str]
+) -> Optional[Union[ElementHandle, bool]]:
     """Find error messages on the page based on common patterns."""
     # Look for elements with error classes
     error_selectors = [
@@ -1502,7 +1478,8 @@ async def extract_generic_flight_info(page: Page) -> Dict[str, Any]:
         "departure_date": None,
         "return_date": None,
         "flight_number": None,
-        "status": BookingStatus.CONFIRMED,  # Default to confirmed if we can find the booking
+        # Default to confirmed if we can find the booking
+        "status": BookingStatus.CONFIRMED,
     }
 
     # Search for common airport code patterns (3 uppercase letters)
@@ -1570,7 +1547,8 @@ async def extract_generic_hotel_info(page: Page) -> Dict[str, Any]:
         "property_name": None,
         "check_in_date": None,
         "check_out_date": None,
-        "status": BookingStatus.CONFIRMED,  # Default to confirmed if we can find the booking
+        # Default to confirmed if we can find the booking
+        "status": BookingStatus.CONFIRMED,
     }
 
     # Common selectors for property name
@@ -1598,10 +1576,6 @@ async def extract_generic_hotel_info(page: Page) -> Dict[str, Any]:
 
     if page_text:
         # Look for dates
-        # Look for check-in/check-out date indicators
-        check_in_indicators = ["check-in", "check in", "arrival", "arriving"]
-        check_out_indicators = ["check-out", "check out", "departure", "departing"]
-
         # Look for dates (MM/DD/YYYY, YYYY-MM-DD, etc.)
         date_patterns = [
             r"\b(\d{1,2})\s*(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s*(?:,\s*)?(\d{4})\b",
@@ -1647,17 +1621,14 @@ async def extract_generic_car_info(page: Page) -> Dict[str, Any]:
         "pickup_date": None,
         "dropoff_date": None,
         "vehicle_type": None,
-        "status": BookingStatus.CONFIRMED,  # Default to confirmed if we can find the booking
+        # Default to confirmed if we can find the booking
+        "status": BookingStatus.CONFIRMED,
     }
 
     # Get page text for information extraction
     page_text = await page.text_content("body")
 
     if page_text:
-        # Look for pickup/dropoff location indicators
-        pickup_indicators = ["pick-up", "pick up", "pickup", "collect"]
-        dropoff_indicators = ["drop-off", "drop off", "dropoff", "return"]
-
         # Look for vehicle type patterns
         vehicle_patterns = [
             r"(?:car|vehicle) type:?\s*([A-Za-z0-9\s\-]+)",
@@ -1688,7 +1659,7 @@ async def extract_generic_car_info(page: Page) -> Dict[str, Any]:
                 all_dates.extend([str(date) for date in dates])
 
         if len(all_dates) >= 2:
-            # If we found at least two dates, assume first is pickup and second is dropoff
+            # If we found at least two dates, assume first is pickup & second is dropoff
             result["pickup_date"] = all_dates[0]
             result["dropoff_date"] = all_dates[1]
 

@@ -4,7 +4,12 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from src.db.exceptions import ConnectionError, NotConnectedError, QueryError
+from src.db.exceptions import (
+    ConnectionError,
+    DatabaseError,
+    NotConnectedError,
+    QueryError,
+)
 from src.db.providers import SupabaseProvider
 
 
@@ -183,16 +188,42 @@ class TestSupabaseProvider:
         mock_supabase_provider.execute_sql = AsyncMock()
         mock_supabase_provider.execute_sql.side_effect = [
             None,  # BEGIN succeeds
-            Exception("Query failed"),  # Query fails
+            QueryError("Query failed"),  # Query fails
             None,  # ROLLBACK succeeds
         ]
 
         # Act and Assert
-        with pytest.raises(Exception):
+        with pytest.raises(QueryError):
             async with mock_supabase_provider.transaction():
                 await mock_supabase_provider.execute_sql(
                     "INSERT INTO users (name) VALUES ('test')"
                 )
+
+        # Assert
+        assert mock_supabase_provider._in_transaction is False
+        # Check that BEGIN and ROLLBACK were called
+        assert mock_supabase_provider.execute_sql.call_args_list[0][0][0] == "BEGIN"
+        assert mock_supabase_provider.execute_sql.call_args_list[2][0][0] == "ROLLBACK"
+
+    async def test_transaction_rollback(self, mock_supabase_provider):
+        """Test transaction rollback."""
+        # Arrange
+        mock_supabase_provider.execute_sql = AsyncMock()
+        mock_supabase_provider.execute_sql.side_effect = [
+            None,  # BEGIN succeeds
+            None,  # Query succeeds
+            None,  # ROLLBACK succeeds
+        ]
+
+        # Act and Assert
+        with pytest.raises(DatabaseError):
+            async with mock_supabase_provider.transaction():
+                await mock_supabase_provider.execute_sql(
+                    "INSERT INTO users (id, email) VALUES (:id, :email)",
+                    {"id": "123", "email": "test@example.com"},
+                )
+                # Raise an error to cause a rollback
+                raise ValueError("Test error")
 
         # Assert
         assert mock_supabase_provider._in_transaction is False

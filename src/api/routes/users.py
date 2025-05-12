@@ -35,9 +35,15 @@ class UserResponse(BaseModel):
 # Get all users (admin only)
 @router.get("/", response_model=List[UserResponse])
 async def get_users(
-    current_user: User = Depends(get_current_active_user),
-    user_repo: UserRepository = Depends(get_repository(get_user_repository)),
+    current_user: User = None,
+    user_repo: UserRepository = None,
 ):
+    # Get dependencies if not provided
+    if current_user is None:
+        current_user = await get_current_active_user()
+    if user_repo is None:
+        user_repo = get_repository(get_user_repository)()
+
     # Check if current user is admin
     current_user_db = await user_repo.get_by_id(current_user.id)
     if not current_user_db or not current_user_db.is_admin:
@@ -57,9 +63,15 @@ async def get_users(
 @router.get("/{user_id}", response_model=UserResponse)
 async def get_user(
     user_id: str,
-    current_user: User = Depends(get_current_active_user),
-    user_repo: UserRepository = Depends(get_repository(get_user_repository)),
+    current_user: User = None,
+    user_repo: UserRepository = None,
 ):
+    # Get dependencies if not provided
+    if current_user is None:
+        current_user = await get_current_active_user()
+    if user_repo is None:
+        user_repo = get_repository(get_user_repository)()
+
     # Users can only view themselves unless admin
     if current_user.id != user_id:
         # Check if admin
@@ -84,9 +96,15 @@ async def get_user(
 async def update_user(
     user_id: str,
     user_update: UserUpdate,
-    current_user: User = Depends(get_current_active_user),
-    user_repo: UserRepository = Depends(get_repository(get_user_repository)),
+    current_user: User = None,
+    user_repo: UserRepository = None,
 ):
+    # Get dependencies if not provided
+    if current_user is None:
+        current_user = await get_current_active_user()
+    if user_repo is None:
+        user_repo = get_repository(get_user_repository)()
+
     # Users can only update themselves unless admin
     if current_user.id != user_id:
         # Check if admin
@@ -120,9 +138,15 @@ async def update_user(
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_user(
     user_id: str,
-    current_user: User = Depends(get_current_active_user),
-    user_repo: UserRepository = Depends(get_repository(get_user_repository)),
+    current_user: User = None,
+    user_repo: UserRepository = None,
 ):
+    # Get dependencies if not provided
+    if current_user is None:
+        current_user = await get_current_active_user()
+    if user_repo is None:
+        user_repo = get_repository(get_user_repository)()
+
     # Users can only delete themselves unless admin
     if current_user.id != user_id:
         # Check if admin

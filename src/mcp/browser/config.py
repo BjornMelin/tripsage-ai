@@ -1,7 +1,7 @@
 """Configuration settings for the Browser MCP server."""
 
 import os
-from typing import Any, Dict, List, Optional
+from typing import List
 
 from dotenv import load_dotenv
 
@@ -64,20 +64,53 @@ class Config:
     # User agent pool for rotation
     USER_AGENT_POOL = [
         # Chrome on Windows
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/98.0.4758.102 Safari/537.36",
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/99.0.4844.51 Safari/537.36",
+        (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/98.0.4758.102 Safari/537.36"
+        ),
+        (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/99.0.4844.51 Safari/537.36"
+        ),
         # Chrome on macOS
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/98.0.4758.102 Safari/537.36",
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/99.0.4844.51 Safari/537.36",
+        (
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/98.0.4758.102 Safari/537.36"
+        ),
+        (
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/99.0.4844.51 Safari/537.36"
+        ),
         # Firefox on Windows
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:97.0) Gecko/20100101 Firefox/97.0",
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:98.0) Gecko/20100101 Firefox/98.0",
+        (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:97.0) "
+            "Gecko/20100101 Firefox/97.0"
+        ),
+        (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:98.0) "
+            "Gecko/20100101 Firefox/98.0"
+        ),
         # Firefox on macOS
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:97.0) Gecko/20100101 Firefox/97.0",
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:98.0) Gecko/20100101 Firefox/98.0",
+        (
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:97.0) "
+            "Gecko/20100101 Firefox/97.0"
+        ),
+        (
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:98.0) "
+            "Gecko/20100101 Firefox/98.0"
+        ),
         # Safari on macOS
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.3 Safari/605.1.15",
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.4 Safari/605.1.15",
+        (
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+            "AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.3 Safari/605.1.15"
+        ),
+        (
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+            "AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.4 Safari/605.1.15"
+        ),
     ]
 
     # Website specific configuration

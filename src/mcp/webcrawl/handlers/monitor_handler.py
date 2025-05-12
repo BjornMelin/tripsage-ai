@@ -1,7 +1,6 @@
 """Handler for the monitor_price_changes MCP tool."""
 
-import logging
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict
 
 from src.mcp.webcrawl.config import Config
 from src.mcp.webcrawl.sources.crawl4ai_source import Crawl4AISource
@@ -49,7 +48,8 @@ async def monitor_price_changes(
 
     if notification_threshold <= 0:
         raise ValueError(
-            f"Invalid notification threshold: {notification_threshold}. Must be greater than 0"
+            f"Invalid notification threshold: {notification_threshold}. "
+            f"Must be greater than 0"
         )
 
     # Prepare monitoring options
@@ -66,7 +66,8 @@ async def monitor_price_changes(
         result = await source.monitor_price_changes(url, price_selector, options)
 
         # Save monitoring configuration to database here
-        # This would typically involve storing the monitoring_id, URL, selector, and other details
+        # This would typically involve storing the monitoring_id, URL, selector,
+        # and other details
 
         # Format response to MCP standard
         return _format_monitor_response(result)

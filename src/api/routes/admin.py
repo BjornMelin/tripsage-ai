@@ -4,7 +4,7 @@ Admin routes for TripSage API.
 This module provides admin-only routes for database management and system configuration.
 """
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, HTTPException, status
 from pydantic import BaseModel
 
 from src.api.auth import User, get_current_active_user
@@ -34,8 +34,8 @@ class MigrationOptions(BaseModel):
 
 
 async def validate_admin(
-    current_user: User = Depends(get_current_active_user),
-    user_repo: UserRepository = Depends(get_repository(get_user_repository)),
+    current_user: User = None,
+    user_repo: UserRepository = None,
 ):
     """
     Validate that the current user is an admin.
@@ -50,6 +50,11 @@ async def validate_admin(
     Raises:
         HTTPException: If the user is not an admin
     """
+    if current_user is None:
+        current_user = await get_current_active_user()
+    if user_repo is None:
+        user_repo = get_repository(get_user_repository)()
+
     user = await user_repo.get_by_id(int(current_user.id))
     if not user or not user.is_admin:
         raise HTTPException(
@@ -99,7 +104,7 @@ async def run_migrations_task(options: MigrationOptions) -> MigrationResponse:
 async def run_migrations_route(
     options: MigrationOptions,
     background_tasks: BackgroundTasks,
-    _: User = Depends(validate_admin),
+    _: User = None,
 ):
     """
     Run database migrations.
@@ -112,6 +117,9 @@ async def run_migrations_route(
     Returns:
         Migration response
     """
+    if _ is None:
+        _ = await validate_admin()
+
     if options.dry_run:
         # For dry runs, run synchronously and return results
         succeeded, failed = run_migrations(
@@ -137,7 +145,7 @@ async def run_migrations_route(
 
 
 @router.get("/migrations/status", response_model=MigrationResponse)
-async def get_migrations_status(_: User = Depends(validate_admin)):
+async def get_migrations_status(_: User = None):
     """
     Get status of migrations.
 
@@ -147,6 +155,9 @@ async def get_migrations_status(_: User = Depends(validate_admin)):
     Returns:
         Migration status
     """
+    if _ is None:
+        _ = await validate_admin()
+
     # Get list of migrations that would be applied in a dry run
     succeeded, failed = run_migrations(
         service_key=True,

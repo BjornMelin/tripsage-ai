@@ -1,6 +1,6 @@
 """Tests for the NeonQueryBuilder class."""
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 

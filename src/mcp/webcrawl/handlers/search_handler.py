@@ -1,19 +1,27 @@
 """Handler for the search_destination_info MCP tool."""
 
-import logging
+import datetime
 from typing import Any, Dict, List, Optional
 
-from src.mcp.webcrawl.config import Config
 from src.mcp.webcrawl.sources.crawl4ai_source import Crawl4AISource
 from src.mcp.webcrawl.sources.playwright_source import PlaywrightSource
+from src.mcp.webcrawl.utils.result_normalizer import get_result_normalizer
+from src.mcp.webcrawl.utils.search_helpers import create_fallback_guidance
 from src.utils.logging import get_logger
 
 # Initialize logger
 logger = get_logger(__name__)
 
+# Get the result normalizer
+_normalizer = get_result_normalizer()
+
 
 async def search_destination_info(
-    destination: str, topics: Optional[List[str]] = None, max_results: int = 5
+    destination: str,
+    topics: Optional[List[str]] = None,
+    max_results: int = 5,
+    source_type: str = "crawl4ai",
+    traveler_profile: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Search for specific information about a travel destination.
 
@@ -21,6 +29,8 @@ async def search_destination_info(
         destination: Name of the destination (city, country, attraction)
         topics: Type of information to search for (e.g., "attractions", "local_customs")
         max_results: Maximum number of results to return per topic
+        source_type: Type of source to use ("crawl4ai" or "playwright")
+        traveler_profile: Optional traveler profile for personalized results
 
     Returns:
         Dict containing extracted and structured information about the destination
@@ -28,7 +38,7 @@ async def search_destination_info(
     Raises:
         Exception: If the search fails
     """
-    logger.info(f"Searching for information about {destination}")
+    logger.info(f"Searching for information about {destination} using {source_type}")
 
     # Validate input
     if not destination:
@@ -39,34 +49,84 @@ async def search_destination_info(
             f"Invalid max_results: {max_results}. Must be between 1 and 20"
         )
 
-    # Initialize Crawl4AI source (primary for destination research)
-    primary_source = Crawl4AISource()
+    # Validate source_type
+    if source_type not in ["crawl4ai", "playwright"]:
+        logger.warning(f"Invalid source_type: {source_type}, defaulting to crawl4ai")
+        source_type = "crawl4ai"
 
     try:
+        # Initialize the selected source
+        if source_type == "crawl4ai":
+            source = Crawl4AISource()
+            logger.info(f"Using Crawl4AI source for {destination}")
+        else:  # playwright
+            source = PlaywrightSource()
+            logger.info(f"Using Playwright source for {destination}")
+
         # Search for destination information
-        results = await primary_source.search_destination_info(
+        results = await source.search_destination_info(
             destination=destination, topics=topics, max_results=max_results
         )
 
-        # Return formatted results
-        return _format_search_response(results)
+        # Normalize and return formatted results
+        normalized_results = _normalizer.normalize_destination_results(
+            results=results, source_type=source_type
+        )
+        return _format_search_response(normalized_results)
     except Exception as e:
-        logger.error(f"Primary source search failed for {destination}: {str(e)}")
+        logger.error(f"{source_type} search failed for {destination}: {str(e)}")
 
-        # Try fallback to Playwright
+        # Try fallback to the other source
+        fallback_type = "playwright" if source_type == "crawl4ai" else "crawl4ai"
         try:
-            logger.info(f"Trying Playwright fallback for {destination}")
-            fallback_source = PlaywrightSource()
+            logger.info(f"Trying {fallback_type} fallback for {destination}")
+
+            if fallback_type == "crawl4ai":
+                fallback_source = Crawl4AISource()
+            else:
+                fallback_source = PlaywrightSource()
+
             results = await fallback_source.search_destination_info(
                 destination=destination, topics=topics, max_results=max_results
             )
 
-            return _format_search_response(results)
+            # Normalize and return formatted results from fallback
+            normalized_results = _normalizer.normalize_destination_results(
+                results=results, source_type=fallback_type
+            )
+            return _format_search_response(normalized_results)
         except Exception as fallback_e:
             logger.error(
-                f"Fallback source search failed for {destination}: {str(fallback_e)}"
+                f"Fallback {fallback_type} search failed for {destination}: "
+                f"{str(fallback_e)}"
             )
-            raise Exception(f"All search attempts failed for {destination}")
+
+            # Generate structured WebSearchTool fallback guidance
+            logger.info(f"Generating WebSearchTool fallback guidance for {destination}")
+
+            all_guidance = {}
+            for topic in topics or ["general"]:
+                # Create structured guidance for each topic
+                guidance = create_fallback_guidance(
+                    destination=destination,
+                    topic=topic,
+                    traveler_profile=traveler_profile,
+                )
+
+                # Add timestamp
+                guidance["fallback_timestamp"] = datetime.datetime.utcnow().isoformat()
+
+                all_guidance[topic] = guidance
+
+            # Create a structured error response with WebSearchTool guidance
+            return {
+                "destination": destination,
+                "error": "WebCrawl extraction failed",
+                "fallback_type": "websearch_tool",
+                "topics": {topic: [] for topic in topics or ["general"]},
+                "websearch_tool_guidance": all_guidance,
+                "search_timestamp": datetime.datetime.utcnow().isoformat(),
+            }
 
 
 def _format_search_response(results: Dict[str, Any]) -> Dict[str, Any]:
@@ -79,8 +139,8 @@ def _format_search_response(results: Dict[str, Any]) -> Dict[str, Any]:
         Formatted MCP response
     """
     # Process and enrich content
-    for topic, topic_results in results.get("topics", {}).items():
-        for i, result in enumerate(topic_results):
+    for _topic, topic_results in results.get("topics", {}).items():
+        for _i, result in enumerate(topic_results):
             # Extract 1-2 sentence summary if content is very long
             if "content" in result and len(result["content"]) > 500:
                 sentences = result["content"].split(". ")

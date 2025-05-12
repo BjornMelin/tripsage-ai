@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from src.db.exceptions import ConnectionError, NotConnectedError, QueryError
+from src.db.exceptions import ConnectionError, NotConnectedError
 from src.db.providers import NeonProvider, NeonQueryResult
 
 
@@ -137,7 +137,8 @@ class TestNeonProvider:
         """Test checking if tables exist."""
         # Arrange
         tables = ["users", "posts"]
-        # The fetchrow method is already mocked in mock_asyncpg_pool to return {"exists": True}
+        # The fetchrow method is already mocked in mock_asyncpg_pool 
+        # to return {"exists": True}
 
         # Act
         result = await mock_neon_provider.tables_exist(tables)

@@ -1,4 +1,3 @@
-import uuid
 from datetime import timedelta
 from typing import Optional
 
@@ -31,9 +30,15 @@ class UserRegister(BaseModel):
 # Login
 @router.post("/token", response_model=Token)
 async def login_for_access_token(
-    form_data: OAuth2PasswordRequestForm = Depends(),
-    user_repo: UserRepository = Depends(get_repository(get_user_repository)),
+    form_data: OAuth2PasswordRequestForm = None,
+    user_repo: UserRepository = None,
 ):
+    # Get dependencies if not provided
+    if form_data is None:
+        form_data = Depends(OAuth2PasswordRequestForm)()
+    if user_repo is None:
+        user_repo = get_repository(get_user_repository)()
+
     # Find user by email
     user = await user_repo.get_by_email(form_data.username)
 
@@ -63,8 +68,12 @@ async def login_for_access_token(
 @router.post("/register", status_code=status.HTTP_201_CREATED)
 async def register_user(
     user_data: UserRegister,
-    user_repo: UserRepository = Depends(get_repository(get_user_repository)),
+    user_repo: UserRepository = None,
 ):
+    # Get dependencies if not provided
+    if user_repo is None:
+        user_repo = get_repository(get_user_repository)()
+
     # Check if email already exists
     existing_user = await user_repo.get_by_email(user_data.email)
     if existing_user:
@@ -90,5 +99,9 @@ async def register_user(
 
 # Get current user profile
 @router.get("/me", response_model=User)
-async def read_users_me(current_user: User = Depends(get_current_active_user)):
+async def read_users_me(current_user: User = None):
+    # Get dependencies if not provided
+    if current_user is None:
+        current_user = await get_current_active_user()
+
     return current_user

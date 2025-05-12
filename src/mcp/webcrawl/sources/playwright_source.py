@@ -1,7 +1,6 @@
 """Implementation of the Playwright source for web crawling."""
 
-import json
-import logging
+from datetime import datetime
 from typing import Any, Dict, List, Optional, cast
 
 from src.mcp.webcrawl.config import Config
@@ -17,6 +16,8 @@ from src.mcp.webcrawl.sources.source_interface import (
     TopicResult,
 )
 from src.utils.logging import get_logger
+
+from ..sources.base import BlogSource
 
 # Initialize logger
 logger = get_logger(__name__)
@@ -51,7 +52,8 @@ class PlaywrightSource(CrawlSource):
         """Initialize the Playwright source.
 
         Args:
-            mcp_endpoint: Optional MCP endpoint, defaults to Config.PLAYWRIGHT_MCP_ENDPOINT
+            mcp_endpoint: Optional MCP endpoint,
+                defaults to Config.PLAYWRIGHT_MCP_ENDPOINT
             browser_config: Optional browser configuration
         """
         self.mcp_endpoint = mcp_endpoint or Config.PLAYWRIGHT_MCP_ENDPOINT
@@ -132,7 +134,8 @@ class PlaywrightSource(CrawlSource):
                             )
                     except Exception as selector_error:
                         logger.warning(
-                            f"Error extracting content from selector {selector}: {str(selector_error)}"
+                            f"Error extracting content from selector {selector}: "
+                            f"{str(selector_error)}"
                         )
             else:
                 # Extract all visible text if no selectors specified
@@ -148,7 +151,8 @@ class PlaywrightSource(CrawlSource):
                     screenshot = await call_mcp_tool(
                         "mcp__playwright__playwright_screenshot",
                         {
-                            "name": f"screenshot_{url.replace('://', '_').replace('/', '_')}",
+                            "name": f"screenshot_{url.replace('://', '_')}"
+                            f"{url.replace('/', '_')}",
                             "fullPage": True,
                             "storeBase64": True,
                         },
@@ -183,11 +187,16 @@ class PlaywrightSource(CrawlSource):
                 {
                     author: document.querySelector('meta[name="author"]')?.content || 
                             document.querySelector('meta[property="article:author"]')?.content,
-                    publishDate: document.querySelector('meta[name="published_time"]')?.content || 
-                               document.querySelector('meta[property="article:published_time"]')?.content,
-                    lastModified: document.querySelector('meta[name="modified_time"]')?.content || 
-                                document.querySelector('meta[property="article:modified_time"]')?.content,
-                    siteName: document.querySelector('meta[property="og:site_name"]')?.content
+                    publishDate: document.querySelector('meta[name="published_time"]')
+                               ?.content || 
+                               document.querySelector('meta[property="article:published_time"]')
+                               ?.content,
+                    lastModified: document.querySelector('meta[name="modified_time"]')
+                                ?.content || 
+                                document.querySelector('meta[property="article:modified_time"]')
+                                ?.content,
+                    siteName: document.querySelector('meta[property="og:site_name"]')
+                            ?.content
                 }
                 """
                 meta_result = await call_mcp_tool(
@@ -224,7 +233,9 @@ class PlaywrightSource(CrawlSource):
             logger.error(
                 f"Error extracting content from {url} with Playwright: {str(e)}"
             )
-            raise Exception(f"Failed to extract page content with Playwright: {str(e)}")
+            raise Exception(
+                f"Failed to extract page content with Playwright: {str(e)}"
+            ) from e
         finally:
             # Ensure the browser is closed
             try:
@@ -322,7 +333,8 @@ class PlaywrightSource(CrawlSource):
                         # Find relevant results
                         search_script = f"""
                         Array.from(document.querySelectorAll('a'))
-                            .filter(a => a.textContent && a.textContent.toLowerCase().includes('{topic.lower()}'))
+                            .filter(a => a.textContent && 
+                                   a.textContent.toLowerCase().includes('{topic.lower()}'))
                             .map(a => ({{
                                 title: a.textContent.trim(),
                                 url: a.href,
@@ -361,7 +373,8 @@ class PlaywrightSource(CrawlSource):
                                 break
                     except Exception as site_error:
                         logger.warning(
-                            f"Error searching {site['name']} for {topic}: {str(site_error)}"
+                            f"Error searching {site['name']} for {topic}: "
+                            f"{str(site_error)}"
                         )
 
             # Close the browser
@@ -370,11 +383,12 @@ class PlaywrightSource(CrawlSource):
             return result
         except Exception as e:
             logger.error(
-                f"Error searching destination info for {destination} with Playwright: {str(e)}"
+                f"Error searching destination info for {destination} "
+                f"with Playwright: {str(e)}"
             )
             raise Exception(
                 f"Failed to search destination information with Playwright: {str(e)}"
-            )
+            ) from e
         finally:
             # Ensure the browser is closed
             try:
@@ -459,7 +473,8 @@ class PlaywrightSource(CrawlSource):
                 const priceText = priceElement.textContent.trim();
                 
                 // Try to extract currency and amount
-                const currencySymbols = ['$', '€', '£', '¥', '₹', 'A$', 'C$', 'HK$', '₽', '₩'];
+                const currencySymbols = ['$', '€', '£', '¥', '₹', 'A$', 'C$', 
+                                       'HK$', '₽', '₩'];
                 let currency = '';
                 let amount = '';
                 
@@ -474,7 +489,8 @@ class PlaywrightSource(CrawlSource):
                 
                 // If no currency symbol found, try to look for currency code
                 if (!currency) {{
-                    const currencyCodes = ['USD', 'EUR', 'GBP', 'JPY', 'INR', 'AUD', 'CAD', 'HKD', 'RUB', 'KRW'];
+                    const currencyCodes = ['USD', 'EUR', 'GBP', 'JPY', 'INR', 
+                                         'AUD', 'CAD', 'HKD', 'RUB', 'KRW'];
                     for (const code of currencyCodes) {{
                         if (priceText.includes(code)) {{
                             currency = code;
@@ -548,7 +564,7 @@ class PlaywrightSource(CrawlSource):
             )
             raise Exception(
                 f"Failed to monitor price changes with Playwright: {str(e)}"
-            )
+            ) from e
         finally:
             # Ensure the browser is closed
             try:
@@ -644,18 +660,27 @@ class PlaywrightSource(CrawlSource):
                         extraction_script = """
                         Array.from(document.querySelectorAll('article.eds-event-card-content'))
                             .map(card => {
-                                const linkElement = card.querySelector('a.eds-event-card-content__action-link');
-                                const titleElement = card.querySelector('.eds-event-card__formatted-name--is-clamped');
-                                const dateElement = card.querySelector('.eds-event-card-content__sub-title');
-                                const venueElement = card.querySelector('.card-text--truncated__content');
-                                const priceElement = card.querySelector('.eds-event-card-content__price');
+                                const linkElement = card.querySelector(
+                                    'a.eds-event-card-content__action-link');
+                                const titleElement = card.querySelector(
+                                    '.eds-event-card__formatted-name--is-clamped');
+                                const dateElement = card.querySelector(
+                                    '.eds-event-card-content__sub-title');
+                                const venueElement = card.querySelector(
+                                    '.card-text--truncated__content');
+                                const priceElement = card.querySelector(
+                                    '.eds-event-card-content__price');
                                 const imageElement = card.querySelector('img');
                                 
                                 return {
-                                    name: titleElement ? titleElement.textContent.trim() : '',
-                                    date: dateElement ? dateElement.textContent.trim() : '',
-                                    venue: venueElement ? venueElement.textContent.trim() : '',
-                                    price_range: priceElement ? priceElement.textContent.trim() : '',
+                                    name: titleElement ? 
+                                        titleElement.textContent.trim() : '',
+                                    date: dateElement ? 
+                                        dateElement.textContent.trim() : '',
+                                    venue: venueElement ? 
+                                        venueElement.textContent.trim() : '',
+                                    price_range: priceElement ? 
+                                        priceElement.textContent.trim() : '',
                                     url: linkElement ? linkElement.href : '',
                                     image_url: imageElement ? imageElement.src : '',
                                     category: ''
@@ -666,16 +691,24 @@ class PlaywrightSource(CrawlSource):
                         extraction_script = """
                         Array.from(document.querySelectorAll('.attraction_element'))
                             .map(element => {
-                                const linkElement = element.querySelector('a._1QKQOve4');
-                                const titleElement = element.querySelector('._1QKQOve4');
-                                const reviewElement = element.querySelector('._11Zy7Yqw');
-                                const addressElement = element.querySelector('._2bVdZkNQ');
-                                const imageElement = element.querySelector('div.IhqAp2wb img');
+                                const linkElement = element.querySelector(
+                                    'a._1QKQOve4');
+                                const titleElement = element.querySelector(
+                                    '._1QKQOve4');
+                                const reviewElement = element.querySelector(
+                                    '._11Zy7Yqw');
+                                const addressElement = element.querySelector(
+                                    '._2bVdZkNQ');
+                                const imageElement = element.querySelector(
+                                    'div.IhqAp2wb img');
                                 
                                 return {
-                                    name: titleElement ? titleElement.textContent.trim() : '',
-                                    description: reviewElement ? reviewElement.textContent.trim() : '',
-                                    venue: addressElement ? addressElement.textContent.trim() : '',
+                                    name: titleElement ? 
+                                        titleElement.textContent.trim() : '',
+                                    description: reviewElement ? 
+                                        reviewElement.textContent.trim() : '',
+                                    venue: addressElement ? 
+                                        addressElement.textContent.trim() : '',
                                     url: linkElement ? linkElement.href : '',
                                     image_url: imageElement ? imageElement.src : '',
                                     category: 'Attraction'
@@ -723,7 +756,8 @@ class PlaywrightSource(CrawlSource):
                         )
                 except Exception as site_error:
                     logger.warning(
-                        f"Error extracting events from {site['name']}: {str(site_error)}"
+                        f"Error extracting events from {site['name']}: "
+                        f"{str(site_error)}"
                     )
 
             # Close the browser
@@ -739,7 +773,9 @@ class PlaywrightSource(CrawlSource):
             logger.error(
                 f"Error getting events for {destination} with Playwright: {str(e)}"
             )
-            raise Exception(f"Failed to get latest events with Playwright: {str(e)}")
+            raise Exception(
+                f"Failed to get latest events with Playwright: {str(e)}"
+            ) from e
         finally:
             # Ensure the browser is closed
             try:
@@ -892,14 +928,22 @@ class PlaywrightSource(CrawlSource):
                             blog_details_script = """
                             {
                                 title: document.title,
-                                author: document.querySelector('meta[name="author"]')?.content || 
-                                        document.querySelector('.author')?.textContent.trim() || 
+                                author: document.querySelector('meta[name="author"]')
+                                        ?.content || 
+                                        document.querySelector('.author')
+                                        ?.textContent.trim() || 
                                         'Unknown Author',
-                                publish_date: document.querySelector('meta[property="article:published_time"]')?.content || 
-                                             document.querySelector('.date, .post-date, time')?.textContent.trim() || 
-                                             'Unknown Date',
-                                content: document.querySelector('article, .post-content, .entry-content, .content')?.textContent.trim() || 
-                                        document.body.textContent.trim()
+                                publish_date: document.querySelector(
+                                    'meta[property="article:published_time"]')
+                                    ?.content || 
+                                    document.querySelector(
+                                        '.date, .post-date, time')
+                                    ?.textContent.trim() || 
+                                    'Unknown Date',
+                                content: document.querySelector(
+                                    'article, .post-content, .entry-content, .content'
+                                    )?.textContent.trim() || 
+                                    document.body.textContent.trim()
                             }
                             """
 
@@ -908,7 +952,7 @@ class PlaywrightSource(CrawlSource):
                                 {"script": blog_details_script},
                             )
 
-                            # Check if the blog is recent enough (if recent_only is True)
+                            # Check if the blog is recent enough
                             if recent_only:
                                 # Try to parse the publish date
                                 is_recent = (
@@ -950,7 +994,8 @@ class PlaywrightSource(CrawlSource):
                             blog_content = blog_details.get("content", "")
 
                             for topic in query_topics:
-                                # Simple sentiment analysis based on topic-related content
+                                # Simple sentiment analysis based on
+                                # topic-related content
                                 topic_content = self._extract_topic_content(
                                     blog_content, topic
                                 )
@@ -978,7 +1023,8 @@ class PlaywrightSource(CrawlSource):
                             blogs_processed += 1
                         except Exception as blog_error:
                             logger.warning(
-                                f"Error processing blog {blog_link['url']}: {str(blog_error)}"
+                                f"Error processing blog {blog_link['url']}: "
+                                f"{str(blog_error)}"
                             )
                 except Exception as search_error:
                     logger.warning(
@@ -991,9 +1037,12 @@ class PlaywrightSource(CrawlSource):
             return result
         except Exception as e:
             logger.error(
-                f"Error crawling travel blogs for {destination} with Playwright: {str(e)}"
+                f"Error crawling travel blogs for {destination} "
+                f"with Playwright: {str(e)}"
             )
-            raise Exception(f"Failed to crawl travel blogs with Playwright: {str(e)}")
+            raise Exception(
+                f"Failed to crawl travel blogs with Playwright: {str(e)}"
+            ) from e
         finally:
             # Ensure the browser is closed
             try:
