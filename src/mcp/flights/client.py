@@ -5,7 +5,7 @@ This module provides a client for interacting with the Flight MCP Server,
 which offers flight search, comparison, booking, and price tracking.
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, ConfigDict, field_validator, model_validator

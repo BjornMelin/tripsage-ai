@@ -1,7 +1,8 @@
 """Tests for Event entity in Neo4j knowledge graph."""
 
+from unittest.mock import AsyncMock
+
 import pytest
-from unittest.mock import AsyncMock, patch
 
 from src.db.neo4j.models.event import Event
 
@@ -12,7 +13,7 @@ async def test_event_creation(mock_neo4j_client, sample_event):
     """Test adding an event to the knowledge graph."""
     # Setup
     mock_neo4j_client.add_event = AsyncMock(return_value=sample_event)
-    
+
     # Execute
     event_data = {
         "name": "Paris Fashion Week",
@@ -20,10 +21,10 @@ async def test_event_creation(mock_neo4j_client, sample_event):
         "type": "cultural",
         "description": "Annual fashion event in Paris",
         "start_date": "2025-03-01",
-        "end_date": "2025-03-08"
+        "end_date": "2025-03-08",
     }
     event = await mock_neo4j_client.add_event(event_data)
-    
+
     # Assert
     assert event is not None
     assert event.name == "Paris Fashion Week"
@@ -41,18 +42,16 @@ async def test_event_relationship_creation(mock_neo4j_client, sample_event):
     mock_neo4j_client.event_repo.create_event_destination_relationship = AsyncMock(
         return_value=True
     )
-    
+
     # Execute
     result = await mock_neo4j_client.event_repo.create_event_destination_relationship(
-        event_name="Paris Fashion Week",
-        destination_name="Paris"
+        event_name="Paris Fashion Week", destination_name="Paris"
     )
-    
+
     # Assert
     assert result is True
     mock_neo4j_client.event_repo.create_event_destination_relationship.assert_called_once_with(
-        event_name="Paris Fashion Week",
-        destination_name="Paris"
+        event_name="Paris Fashion Week", destination_name="Paris"
     )
 
 
@@ -60,10 +59,10 @@ async def test_get_event(mock_neo4j_client, sample_event):
     """Test retrieving an event from the knowledge graph."""
     # Setup
     mock_neo4j_client.get_event = AsyncMock(return_value=sample_event)
-    
+
     # Execute
     event = await mock_neo4j_client.get_event("Paris Fashion Week")
-    
+
     # Assert
     assert event is not None
     assert event.name == "Paris Fashion Week"
@@ -79,14 +78,14 @@ async def test_update_event(mock_neo4j_client, sample_event):
     """Test updating an event in the knowledge graph."""
     # Setup
     mock_neo4j_client.update_event = AsyncMock(return_value=True)
-    
+
     # Execute
     updated_data = sample_event.dict()
     updated_data["ticket_price"] = 180.0  # Changed from 150.0
     updated_data["description"] = "Annual global fashion event in Paris"
-    
+
     result = await mock_neo4j_client.update_event("Paris Fashion Week", updated_data)
-    
+
     # Assert
     assert result is True
     mock_neo4j_client.update_event.assert_called_once_with(
@@ -98,10 +97,10 @@ async def test_delete_event(mock_neo4j_client):
     """Test deleting an event from the knowledge graph."""
     # Setup
     mock_neo4j_client.delete_event = AsyncMock(return_value=True)
-    
+
     # Execute
     result = await mock_neo4j_client.delete_event("Paris Fashion Week")
-    
+
     # Assert
     assert result is True
     mock_neo4j_client.delete_event.assert_called_once_with("Paris Fashion Week")
@@ -113,10 +112,10 @@ async def test_find_events_by_destination(mock_neo4j_client, sample_event):
     mock_neo4j_client.event_repo.find_by_destination = AsyncMock(
         return_value=[sample_event]
     )
-    
+
     # Execute
     events = await mock_neo4j_client.event_repo.find_by_destination("Paris")
-    
+
     # Assert
     assert len(events) == 1
     assert events[0].name == "Paris Fashion Week"
@@ -127,13 +126,11 @@ async def test_find_events_by_destination(mock_neo4j_client, sample_event):
 async def test_find_events_by_type(mock_neo4j_client, sample_event):
     """Test finding events by type."""
     # Setup
-    mock_neo4j_client.event_repo.find_by_type = AsyncMock(
-        return_value=[sample_event]
-    )
-    
+    mock_neo4j_client.event_repo.find_by_type = AsyncMock(return_value=[sample_event])
+
     # Execute
     events = await mock_neo4j_client.event_repo.find_by_type("cultural")
-    
+
     # Assert
     assert len(events) == 1
     assert events[0].name == "Paris Fashion Week"
@@ -147,12 +144,12 @@ async def test_find_events_by_date_range(mock_neo4j_client, sample_event):
     mock_neo4j_client.event_repo.find_by_date_range = AsyncMock(
         return_value=[sample_event]
     )
-    
+
     # Execute
     events = await mock_neo4j_client.event_repo.find_by_date_range(
         start_date="2025-03-01", end_date="2025-03-15"
     )
-    
+
     # Assert
     assert len(events) == 1
     assert events[0].name == "Paris Fashion Week"
@@ -169,10 +166,10 @@ async def test_find_upcoming_events(mock_neo4j_client, sample_event):
     mock_neo4j_client.event_repo.find_upcoming_events = AsyncMock(
         return_value=[sample_event]
     )
-    
+
     # Execute
     events = await mock_neo4j_client.event_repo.find_upcoming_events(days=30)
-    
+
     # Assert
     assert len(events) == 1
     assert events[0].name == "Paris Fashion Week"

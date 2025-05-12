@@ -532,11 +532,12 @@ This document provides a complete implementation to-do list for the TripSage AI 
   - Reference: [docs/integrations/hybrid_search_strategy.md](../integrations/hybrid_search_strategy.md)
   - Description: Provide more structured guidance when falling back to WebSearchTool, including specific query patterns and expected information structure
 
-- [ ] **MEM-005**: Expand knowledge graph with additional entity and relation types
+- [x] **MEM-005**: Expand knowledge graph with additional entity and relation types
 
   - Dependencies: MEM-002, MEM-003
   - Reference: [docs/integrations/memory_integration.md](../integrations/memory_integration.md)
   - Description: Create more entity types beyond destinations (attractions, events, etc.) and implement more relation types between entities (located_in, offers, etc.)
+  - Status: Completed with full implementation of Activity, Accommodation, Event, and Transportation entity types with repositories, relationship tracking, and comprehensive integration tests
 
 - [ ] **WEBCRAWL-008**: Implement result normalization across sources
 
@@ -603,7 +604,7 @@ This document provides a complete implementation to-do list for the TripSage AI 
 | Week | Day | Tasks                                                                                              |
 | ---- | --- | -------------------------------------------------------------------------------------------------- |
 | 5    | 1-3 | ✅ TIME-001, ✅ TIME-002, ✅ TIME-003, ✅ TIME-004, ✅ CAL-001, ✅ CAL-002, ✅ CAL-003, ✅ CAL-004 |
-| 5    | 3-5 | ✅ MEM-001, ✅ MEM-002, ✅ MEM-003, ✅ MEM-004                                                     |
+| 5    | 3-5 | ✅ MEM-001, ✅ MEM-002, ✅ MEM-003, ✅ MEM-004, ✅ MEM-005                                         |
 | 6    | 1-3 | BUDGETAGENT-001, BUDGETAGENT-002, BUDGETAGENT-003                                                  |
 | 6    | 3-5 | ITINAGENT-001, ITINAGENT-002, ITINAGENT-003                                                        |
 
@@ -618,16 +619,16 @@ This document provides a complete implementation to-do list for the TripSage AI 
 
 ### Next Priority Tasks
 
-| Priority | Task ID         | Description                                              | Status        |
-| -------- | --------------- | -------------------------------------------------------- | ------------- |
-| 1        | WEBCRAWL-006    | Implement intelligent source selection for WebCrawl MCP  | Completed     |
-| 2        | WEBCRAWL-007    | Enhance WebSearchTool fallback with structured guidance  | Completed     |
-| 3        | WEBCRAWL-008    | Implement result normalization across sources            | Completed     |
-| 4        | MEM-005         | Expand knowledge graph with additional entity types      | Pending       |
-| 5        | CACHE-002       | Enhance caching with partial updates and cache warming   | Pending       |
-| 6        | TRAVELAGENT-005 | Implement accommodation search and comparison            |
-| 7        | BUDGETAGENT-001 | Implement Budget Planning Agent                          |
-| 8        | ITINAGENT-001   | Implement Itinerary Planning Agent                       |
+| Priority | Task ID         | Description                                             | Status    |
+| -------- | --------------- | ------------------------------------------------------- | --------- |
+| 1        | WEBCRAWL-006    | Implement intelligent source selection for WebCrawl MCP | Pending   |
+| 2        | WEBCRAWL-007    | Enhance WebSearchTool fallback with structured guidance | Pending   |
+| 3        | WEBCRAWL-008    | Implement result normalization across sources           | Pending   |
+| 4        | MEM-005         | Expand knowledge graph with additional entity types     | Completed |
+| 5        | CACHE-002       | Enhance caching with partial updates and cache warming  | Pending   |
+| 6        | TRAVELAGENT-005 | Implement accommodation search and comparison           | Pending   |
+| 7        | BUDGETAGENT-001 | Implement Budget Planning Agent                         | Pending   |
+| 8        | ITINAGENT-001   | Implement Itinerary Planning Agent                      | Pending   |
 
 ### Post-MVP: Enhanced Capabilities
 
