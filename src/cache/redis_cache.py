@@ -13,11 +13,10 @@ from typing import Any, Callable, Optional, TypeVar, cast
 
 import redis.asyncio as redis
 
-from ..utils.config import get_config
 from ..utils.logging import get_module_logger
+from ..utils.settings import settings
 
 logger = get_module_logger(__name__)
-config = get_config()
 
 # Type variables for function decorator
 T = TypeVar("T")
@@ -33,7 +32,7 @@ class RedisCache:
         Args:
             url: Redis connection URL, defaults to config value if not provided
         """
-        self.url = url or config.redis.url
+        self.url = url or str(settings.redis.url)
         self.redis = redis.from_url(self.url)
         logger.info("Initialized Redis cache at %s", self.url)
 

@@ -7,14 +7,13 @@ TripSage travel planning system using the FastMCP 2.0 framework.
 
 from typing import Any, Dict, List, Optional
 
-from ...utils.config import get_config
 from ...utils.error_handling import APIError
 from ...utils.logging import get_module_logger
+from ...utils.settings import settings
 from ..fastmcp import FastMCPServer, create_tool
 from .api_client import WeatherLocation, get_weather_api_client
 
 logger = get_module_logger(__name__)
-config = get_config()
 
 
 # Location model now imported from api_client
@@ -509,7 +508,10 @@ class WeatherMCPServer(FastMCPServer):
         }
 
 
-def create_server(host: str = "0.0.0.0", port: int = 8003):
+def create_server(
+    host: str = settings.weather_mcp.endpoint.split("://")[1].split(":")[0] if "://" in settings.weather_mcp.endpoint else "0.0.0.0", 
+    port: int = int(settings.weather_mcp.endpoint.split(":")[-1]) if ":" in settings.weather_mcp.endpoint else 8003
+):
     """Create and return a Weather MCP Server instance.
 
     Args:
