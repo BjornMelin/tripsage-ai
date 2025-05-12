@@ -354,6 +354,124 @@ class TestAirbnbMCPClient:
             assert call_args["checkin"] == today.isoformat()
             assert call_args["checkout"] == next_week.isoformat()
 
+    # Parametrized tests for search parameters
+    @pytest.mark.parametrize(
+        "param_name,param_value,expected_key",
+        [
+            ("min_price", 100, "minPrice"),
+            ("max_price", 300, "maxPrice"),
+            ("min_beds", 2, "minBeds"),
+            ("min_bedrooms", 2, "minBedrooms"),
+            ("min_bathrooms", 2, "minBathrooms"),
+            ("property_type", "apartment", "propertyType"),
+            ("room_type", "entire_home", "roomType"),
+            ("place_id", "ChIJIQBpAG2ahYAR_6128GcTUEo", "placeId"),
+            ("ignore_robots_txt", True, "ignoreRobotsText"),
+        ],
+    )
+    @patch("src.mcp.accommodations.client.BaseMCPClient.call_tool")
+    async def test_parameter_mapping(
+        self, mock_call_tool, client, param_name, param_value, expected_key
+    ):
+        """Test parameter mapping for various search parameters."""
+        mock_call_tool.return_value = {"listings": []}
+        client._store_search_results = AsyncMock()
+
+        # Build dynamic parameters
+        params = {"location": TEST_LOCATION, param_name: param_value}
+        await client.search_accommodations(**params)
+
+        # Get parameters passed to call_tool
+        call_args = mock_call_tool.call_args[0][1]
+
+        # Verify the parameter was mapped correctly
+        assert expected_key in call_args
+        assert call_args[expected_key] == param_value
+        assert param_name not in call_args
+
+    # Parametrized tests for validation errors
+    @pytest.mark.parametrize(
+        "param_name,invalid_value,error_substring",
+        [
+            # These tests would pass with the updated client.py that
+            # handles ValidationError
+            ("adults", 0, "Input should be greater than or equal to 1"),
+            ("adults", 20, "Input should be less than or equal to 16"),
+            ("children", -1, "Input should be greater than or equal to 0"),
+            ("location", "", "Input should have at least 1 character"),
+        ],
+    )
+    @patch("src.mcp.accommodations.client.BaseMCPClient.call_tool")
+    async def test_validation_errors(
+        self, mock_call_tool, client, param_name, invalid_value, error_substring
+    ):
+        """Test parameter validation errors."""
+        # Build dynamic parameters with an invalid value
+        params = {"location": TEST_LOCATION}
+        params[param_name] = invalid_value
+
+        # If testing the location parameter, update default
+        if param_name == "location":
+            params["location"] = invalid_value
+
+        # With the updated client.py that has the ValidationError handler
+        with pytest.raises(MCPError) as exc_info:
+            await client.search_accommodations(**params)
+
+        # Verify the error message contains the expected text
+        assert error_substring in str(exc_info.value)
+
+        # Ensure the call_tool was never called
+        mock_call_tool.assert_not_called()
+
+    # Edge cases for search parameters
+    @pytest.mark.parametrize(
+        "search_kwargs",
+        [
+            # Empty search parameters
+            {},
+            # Maximum allowed values
+            {"adults": 16, "children": 10, "infants": 5, "pets": 3},
+            # All parameters provided
+            {
+                "location": TEST_LOCATION,
+                "place_id": "ChIJIQBpAG2ahYAR_6128GcTUEo",
+                "checkin": TOMORROW,
+                "checkout": DAYS_LATER,
+                "adults": 2,
+                "children": 1,
+                "infants": 1,
+                "pets": 1,
+                "min_price": 100,
+                "max_price": 500,
+                "min_beds": 2,
+                "min_bedrooms": 1,
+                "min_bathrooms": 1,
+                "property_type": "apartment",
+                "amenities": ["wifi", "pool"],
+                "room_type": "entire_home",
+                "superhost": True,
+                "cursor": "abc123",
+                "ignore_robots_txt": True,
+            },
+        ],
+    )
+    @patch("src.mcp.accommodations.client.BaseMCPClient.call_tool")
+    async def test_search_edge_cases(self, mock_call_tool, client, search_kwargs):
+        """Test search with various parameter combinations."""
+        # Ensure location is always present
+        if "location" not in search_kwargs:
+            search_kwargs["location"] = TEST_LOCATION
+
+        mock_call_tool.return_value = {"listings": []}
+        client._store_search_results = AsyncMock()
+
+        # Should not raise any exception
+        await client.search_accommodations(**search_kwargs)
+
+        # Verify call_tool was called
+        mock_call_tool.assert_called_once()
+
     @patch("src.mcp.accommodations.client.get_db_client")
     @patch("src.mcp.accommodations.client.memory_client")
     async def test_store_search_results(
@@ -368,7 +486,7 @@ class TestAirbnbMCPClient:
         mock_memory_client.create_entities = AsyncMock()
 
         # Create a search result to store
-        search_result = AirbnbSearchResult(**mock_search_response)
+        search_result = AirbnbSearchResult.model_validate(mock_search_response)
 
         # Call the method
         await client._store_search_results(
@@ -398,7 +516,9 @@ class TestAirbnbMCPClient:
         mock_memory_client.create_relations = AsyncMock()
 
         # Create a listing details to store
-        listing_details = AirbnbListingDetails(**mock_listing_details_response)
+        listing_details = AirbnbListingDetails.model_validate(
+            mock_listing_details_response
+        )
 
         # Call the method
         await client._store_listing_details(

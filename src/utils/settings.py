@@ -68,6 +68,26 @@ class MCPConfig(BaseSettings):
     api_key: Optional[SecretStr] = None
 
 
+class NeonMCPConfig(MCPConfig):
+    """Neon MCP server configuration."""
+
+    # Whether to use this MCP in development environment only
+    dev_only: bool = Field(default=True)
+    # Default project ID for operations (optional)
+    default_project_id: Optional[str] = None
+
+
+class SupabaseMCPConfig(MCPConfig):
+    """Supabase MCP server configuration."""
+
+    # Whether to use this MCP in production environment only
+    prod_only: bool = Field(default=True)
+    # Default project ID for operations (optional)
+    default_project_id: Optional[str] = None
+    # Default organization ID (optional)
+    default_organization_id: Optional[str] = None
+
+
 class WeatherMCPConfig(MCPConfig):
     """Weather MCP server configuration."""
 
@@ -227,6 +247,8 @@ class AppSettings(BaseSettings):
     memory_mcp: MemoryMCPConfig = MemoryMCPConfig()
     sequential_thinking_mcp: SequentialThinkingMCPConfig = SequentialThinkingMCPConfig()
     calendar_mcp: CalendarMCPConfig = CalendarMCPConfig()
+    neon_mcp: NeonMCPConfig = NeonMCPConfig()
+    supabase_mcp: SupabaseMCPConfig = SupabaseMCPConfig()
 
     # Agent configuration
     agent: AgentConfig = AgentConfig()
