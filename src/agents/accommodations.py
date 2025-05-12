@@ -2,10 +2,11 @@
 Accommodation search for the TripSage travel planning system.
 
 This module provides tools for searching for accommodations across different providers
-using MCP clients, with support for Airbnb via the OpenBnB MCP server.
+using MCP clients, with support for Airbnb via the OpenBnB MCP server and additional
+accommodation services (hotels, etc.) through dedicated MCP servers or API integrations.
 """
 
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 from ..cache.redis_cache import redis_cache
 from ..mcp.accommodations import (
@@ -18,7 +19,17 @@ logger = get_module_logger(__name__)
 
 
 class AccommodationSearchTool:
-    """Tool for searching accommodations across different providers."""
+    """
+    Tool for searching accommodations across different providers.
+
+    This tool provides a unified interface for searching accommodations from
+    multiple providers, including:
+    - Airbnb (via OpenBnB MCP server)
+    - Other hotel/accommodation sources (via specific API integrations)
+
+    It handles parameter validation, provider selection, result normalization,
+    and caching for efficient repeated searches.
+    """
 
     def __init__(self):
         """Initialize the accommodation search tool."""
@@ -28,10 +39,20 @@ class AccommodationSearchTool:
         """Search for accommodations based on location and filters.
 
         This tool uses the integrated accommodation MCP clients to search
-        for available accommodations, prioritizing Airbnb via OpenBnB.
+        for available accommodations from multiple providers. Currently supports:
+        - Airbnb (via OpenBnB MCP server)
+        - Other accommodation sources can be added as they become available
 
         Args:
             params: Search parameters including location and filters
+                   Key parameters:
+                   - location: Location to search in
+                   - checkin/checkout: Travel dates
+                   - adults/children: Traveler count
+                   - source: Provider to search ("airbnb", future: "booking", "hotels", etc.)
+                   - property_type: Type of property to filter for
+                   - min_price/max_price: Price range filters
+                   - min_rating: Minimum rating filter
 
         Returns:
             Search results with accommodation options
@@ -49,7 +70,9 @@ class AccommodationSearchTool:
             except ValueError:
                 return {
                     "error": f"Unsupported accommodation source: {source}",
-                    "available_sources": ["airbnb"],
+                    "available_sources": ["airbnb"],  # Update this list as more sources are added
+                    "message": "Currently, only Airbnb is supported for accommodations search. " +
+                              "Hotel search via Booking.com integration is planned for future releases."
                 }
 
             # Extract search parameters
@@ -66,9 +89,10 @@ class AccommodationSearchTool:
                 else None
             )
 
-            # Cache key for results
+            # Cache key for results - include more parameters for better cache precision
             cache_key = (
-                f"accommodation_search:{source}:{location}:{checkin}:{checkout}:{adults}",
+                f"accommodation_search:{source}:{location}:{checkin}:{checkout}:{adults}:" +
+                f"{children}:{min_price}:{max_price}:{property_type}",
             )
             cached_result = await redis_cache.get(cache_key)
 
@@ -113,15 +137,27 @@ class AccommodationSearchTool:
                         "checkout": checkout,
                         "adults": adults,
                         "children": children,
+                        "min_price": min_price,
+                        "max_price": max_price,
+                        "property_type": property_type,
                     },
                     "error": results.error,
                     "cache_hit": False,
                 }
+            # Future implementation for other sources
+            # elif source == "booking":
+            #     # Add Booking.com API integration
+            #     pass
+            # elif source == "hotels":
+            #     # Add Hotels integration
+            #     pass
             else:
                 # This should not happen, but just in case
                 return {
                     "error": f"Source {source} is configured but not implemented",
                     "available_sources": ["airbnb"],
+                    "message": "Currently, only Airbnb is supported for accommodations search. " +
+                              "Additional sources will be added in future releases."
                 }
 
         except Exception as e:
@@ -134,8 +170,18 @@ class AccommodationSearchTool:
     async def get_accommodation_details(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """Get detailed information about a specific accommodation.
 
+        Retrieves detailed information for a specific accommodation listing,
+        including amenities, pricing, host details, and more. Currently supports:
+        - Airbnb listings (via OpenBnB MCP)
+        - Additional accommodation sources can be added as they become available
+
         Args:
             params: Parameters including accommodation ID and source
+                   Key parameters:
+                   - id: Unique ID of the accommodation
+                   - source: Provider ("airbnb", future: "booking", "hotels", etc.)
+                   - checkin/checkout: Travel dates (optional)
+                   - adults: Number of adult guests (optional)
 
         Returns:
             Detailed accommodation information
@@ -155,7 +201,7 @@ class AccommodationSearchTool:
 
             # Cache key
             cache_key = (
-                f"accommodation_details:{source}:{accommodation_id}:{checkin}:{checkout}",
+                f"accommodation_details:{source}:{accommodation_id}:{checkin}:{checkout}:{adults}",
             )
             cached_result = await redis_cache.get(cache_key)
 
@@ -172,7 +218,9 @@ class AccommodationSearchTool:
             except ValueError:
                 return {
                     "error": f"Unsupported accommodation source: {source}",
-                    "available_sources": ["airbnb"],
+                    "available_sources": ["airbnb"],  # Update this list as more sources are added
+                    "message": "Currently, only Airbnb is supported for accommodation details. " +
+                              "Hotel details via Booking.com integration is planned for future releases."
                 }
 
             # Get details based on source
@@ -214,11 +262,20 @@ class AccommodationSearchTool:
                     "max_guests": details.max_guests,
                     "cache_hit": False,
                 }
+            # Future implementation for other sources
+            # elif source == "booking":
+            #     # Add Booking.com API integration
+            #     pass
+            # elif source == "hotels":
+            #     # Add Hotels integration
+            #     pass
             else:
                 # This should not happen, but just in case
                 return {
                     "error": f"Source {source} is configured but not implemented",
                     "available_sources": ["airbnb"],
+                    "message": "Currently, only Airbnb is supported for accommodation details. " +
+                              "Additional sources will be added in future releases."
                 }
 
         except Exception as e:
@@ -249,6 +306,7 @@ async def search_airbnb_rentals(
 
     This tool searches for available Airbnb rentals in the specified location,
     applying any provided filters such as dates, price range, and property type.
+    Results include pricing, ratings, and basic amenity information.
 
     Args:
         location: Location to search for accommodations
@@ -290,6 +348,8 @@ async def get_airbnb_listing_details(
 
     This tool retrieves comprehensive details about an Airbnb listing,
     including description, amenities, host information, and pricing.
+    Use this for getting complete information about a specific property
+    identified from search results.
 
     Args:
         listing_id: Airbnb listing ID
@@ -326,12 +386,22 @@ async def search_accommodations(
     """Search for accommodations across different providers based
     on location and filters.
 
-    This tool searches for available accommodations from the specified source
-    (currently supporting Airbnb), applying any provided filters.
+    This tool searches for available accommodations from the specified source,
+    applying any provided filters. It provides a unified interface for accessing
+    multiple accommodation providers.
+
+    Currently supported providers:
+    - "airbnb": Airbnb rentals via OpenBnB MCP
+
+    Future planned integrations:
+    - "booking": Hotels and accommodations via Booking.com
+    - "hotels": Additional hotel search providers
+
+    Use the 'source' parameter to select which provider to search.
 
     Args:
         location: Location to search for accommodations
-        source: Accommodation source (airbnb, etc.)
+        source: Accommodation source (currently only "airbnb")
         checkin: Check-in date in YYYY-MM-DD format
         checkout: Check-out date in YYYY-MM-DD format
         adults: Number of adults (default: 1)
