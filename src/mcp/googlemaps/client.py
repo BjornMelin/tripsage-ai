@@ -58,12 +58,16 @@ class GoogleMapsMCPClient(BaseMCPClient):
         self,
         address: str,
         skip_cache: bool = False,
+        store_in_knowledge_graph: bool = False,
+        memory_client=None,
     ) -> Dict[str, Any]:
         """Geocode an address to get coordinates.
 
         Args:
             address: Address to geocode
             skip_cache: Whether to skip the cache
+            store_in_knowledge_graph: Whether to store the result in the knowledge graph
+            memory_client: Optional memory client instance
 
         Returns:
             Geocoded result with coordinates and address components
@@ -71,8 +75,17 @@ class GoogleMapsMCPClient(BaseMCPClient):
         params = {"address": address}
 
         try:
-            # Call the geocode tool
-            result = await self.call_tool("geocode", params, skip_cache=skip_cache)
+            # Call the maps_geocode tool from official Google Maps MCP server
+            result = await self.call_tool("maps_geocode", params, skip_cache=skip_cache)
+
+            # Store in knowledge graph if requested
+            if store_in_knowledge_graph:
+                await store_location_in_knowledge_graph(
+                    location_name=address,
+                    geocode_result=result,
+                    memory_client=memory_client,
+                )
+
             return result
         except Exception as e:
             logger.error("Error in geocoding: %s", str(e))
@@ -84,7 +97,44 @@ class GoogleMapsMCPClient(BaseMCPClient):
             raise MCPError(
                 message=f"Geocoding failed: {str(e)}",
                 server=self.endpoint,
-                tool="geocode",
+                tool="maps_geocode",
+                params=params,
+            ) from e
+
+    @redis_cache.cached("reverse_geocode", 86400)  # Cache for 24 hours
+    async def reverse_geocode(
+        self,
+        lat: float,
+        lng: float,
+        skip_cache: bool = False,
+    ) -> Dict[str, Any]:
+        """Reverse geocode coordinates to get an address.
+
+        Args:
+            lat: Latitude
+            lng: Longitude
+            skip_cache: Whether to skip the cache
+
+        Returns:
+            Reverse geocoded result with address components
+        """
+        params = {"lat": lat, "lng": lng}
+
+        try:
+            # Call the maps_reverse_geocode tool
+            result = await self.call_tool("maps_reverse_geocode", params, skip_cache=skip_cache)
+            return result
+        except Exception as e:
+            logger.error("Error in reverse geocoding: %s", str(e))
+            log_exception(e)
+
+            if isinstance(e, MCPError):
+                raise
+
+            raise MCPError(
+                message=f"Reverse geocoding failed: {str(e)}",
+                server=self.endpoint,
+                tool="maps_reverse_geocode",
                 params=params,
             ) from e
 
@@ -128,8 +178,8 @@ class GoogleMapsMCPClient(BaseMCPClient):
             params["type"] = type
 
         try:
-            # Call the place_search tool
-            result = await self.call_tool("place_search", params, skip_cache=skip_cache)
+            # Call the maps_search_places tool
+            result = await self.call_tool("maps_search_places", params, skip_cache=skip_cache)
             return result
         except Exception as e:
             logger.error("Error in place search: %s", str(e))
@@ -141,7 +191,7 @@ class GoogleMapsMCPClient(BaseMCPClient):
             raise MCPError(
                 message=f"Place search failed: {str(e)}",
                 server=self.endpoint,
-                tool="place_search",
+                tool="maps_search_places",
                 params=params,
             ) from e
 
@@ -163,9 +213,9 @@ class GoogleMapsMCPClient(BaseMCPClient):
         params = {"place_id": place_id}
 
         try:
-            # Call the place_details tool
+            # Call the maps_place_details tool
             result = await self.call_tool(
-                "place_details", params, skip_cache=skip_cache
+                "maps_place_details", params, skip_cache=skip_cache
             )
             return result
         except Exception as e:
@@ -178,7 +228,7 @@ class GoogleMapsMCPClient(BaseMCPClient):
             raise MCPError(
                 message=f"Place details failed: {str(e)}",
                 server=self.endpoint,
-                tool="place_details",
+                tool="maps_place_details",
                 params=params,
             ) from e
 
@@ -229,8 +279,8 @@ class GoogleMapsMCPClient(BaseMCPClient):
             params["waypoints"] = waypoints
 
         try:
-            # Call the directions tool
-            result = await self.call_tool("directions", params, skip_cache=skip_cache)
+            # Call the maps_directions tool
+            result = await self.call_tool("maps_directions", params, skip_cache=skip_cache)
             return result
         except Exception as e:
             logger.error("Error getting directions: %s", str(e))
@@ -242,7 +292,7 @@ class GoogleMapsMCPClient(BaseMCPClient):
             raise MCPError(
                 message=f"Directions failed: {str(e)}",
                 server=self.endpoint,
-                tool="directions",
+                tool="maps_directions",
                 params=params,
             ) from e
 
@@ -284,9 +334,9 @@ class GoogleMapsMCPClient(BaseMCPClient):
             params["departure_time"] = departure_time
 
         try:
-            # Call the distance_matrix tool
+            # Call the maps_distance_matrix tool
             result = await self.call_tool(
-                "distance_matrix", params, skip_cache=skip_cache
+                "maps_distance_matrix", params, skip_cache=skip_cache
             )
             return result
         except Exception as e:
@@ -299,9 +349,174 @@ class GoogleMapsMCPClient(BaseMCPClient):
             raise MCPError(
                 message=f"Distance matrix failed: {str(e)}",
                 server=self.endpoint,
-                tool="distance_matrix",
+                tool="maps_distance_matrix",
                 params=params,
             ) from e
+
+    @redis_cache.cached("elevation", 86400)  # Cache for 24 hours
+    async def elevation(
+        self,
+        locations: List[Dict[str, float]],
+        skip_cache: bool = False,
+    ) -> Dict[str, Any]:
+        """Get elevation data for geographic coordinates.
+
+        Args:
+            locations: List of locations, each containing lat and lng keys
+            skip_cache: Whether to skip the cache
+
+        Returns:
+            Elevation data for the specified locations
+        """
+        params = {"locations": locations}
+
+        try:
+            # Call the maps_elevation tool
+            result = await self.call_tool("maps_elevation", params, skip_cache=skip_cache)
+            return result
+        except Exception as e:
+            logger.error("Error getting elevation data: %s", str(e))
+            log_exception(e)
+
+            if isinstance(e, MCPError):
+                raise
+
+            raise MCPError(
+                message=f"Elevation data retrieval failed: {str(e)}",
+                server=self.endpoint,
+                tool="maps_elevation",
+                params=params,
+            ) from e
+
+
+# Integration with Memory MCP (Knowledge Graph)
+async def store_location_in_knowledge_graph(
+    location_name: str,
+    geocode_result: Dict[str, Any],
+    memory_client=None,
+) -> bool:
+    """Store a geocoded location in the knowledge graph.
+
+    This function creates or updates a Destination entity in the knowledge graph
+    with information from the Google Maps MCP geocode result.
+
+    Args:
+        location_name: Name of the location (destination)
+        geocode_result: Geocode result from Google Maps MCP
+        memory_client: Optional memory client (if None, will try to get one)
+
+    Returns:
+        True if the location was successfully stored, False otherwise
+    """
+    try:
+        # Try to get memory client if not provided
+        if memory_client is None:
+            try:
+                from ..memory import get_client as get_memory_client
+                memory_client = get_memory_client()
+            except ImportError:
+                logger.warning("Memory MCP client not available")
+                return False
+
+        # Extract relevant information from geocode result
+        if not geocode_result or "results" not in geocode_result or not geocode_result["results"]:
+            logger.warning("No geocode results to store in knowledge graph")
+            return False
+
+        result = geocode_result["results"][0]
+
+        # Get formatted address and location coordinates
+        formatted_address = result.get("formatted_address", "")
+        location = result.get("geometry", {}).get("location", {})
+        lat = location.get("lat")
+        lng = location.get("lng")
+
+        if not lat or not lng:
+            logger.warning("No coordinates in geocode result")
+            return False
+
+        # Extract address components
+        address_components = result.get("address_components", [])
+        country = ""
+        administrative_area = ""
+        locality = ""
+
+        for component in address_components:
+            types = component.get("types", [])
+            if "country" in types:
+                country = component.get("long_name", "")
+            elif "administrative_area_level_1" in types:
+                administrative_area = component.get("long_name", "")
+            elif "locality" in types:
+                locality = component.get("long_name", "")
+
+        # Create observations
+        observations = [
+            f"Formatted address: {formatted_address}",
+            f"Coordinates: {lat}, {lng}",
+        ]
+
+        if country:
+            observations.append(f"Country: {country}")
+        if administrative_area:
+            observations.append(f"Administrative area: {administrative_area}")
+        if locality:
+            observations.append(f"Locality: {locality}")
+
+        # Check if destination entity exists
+        destination_nodes = await memory_client.search_nodes(location_name)
+        destination_exists = any(
+            node["name"] == location_name and node["type"] == "Destination"
+            for node in destination_nodes
+        )
+
+        if destination_exists:
+            # Update existing entity with new observations
+            await memory_client.add_observations([{
+                "entityName": location_name,
+                "contents": observations,
+            }])
+            logger.info("Updated existing destination entity in knowledge graph: %s", location_name)
+        else:
+            # Create new destination entity
+            await memory_client.create_entities([{
+                "name": location_name,
+                "entityType": "Destination",
+                "observations": observations,
+            }])
+            logger.info("Created new destination entity in knowledge graph: %s", location_name)
+
+        # If country exists, create relationship between destination and country
+        if country:
+            # Check if country entity exists
+            country_nodes = await memory_client.search_nodes(country)
+            country_exists = any(
+                node["name"] == country and node["type"] == "Country"
+                for node in country_nodes
+            )
+
+            if not country_exists:
+                # Create country entity
+                await memory_client.create_entities([{
+                    "name": country,
+                    "entityType": "Country",
+                    "observations": [f"Country containing {location_name}"],
+                }])
+                logger.info("Created new country entity in knowledge graph: %s", country)
+
+            # Create relationship between destination and country
+            await memory_client.create_relations([{
+                "from": location_name,
+                "relationType": "is_located_in",
+                "to": country,
+            }])
+            logger.info("Created relationship: %s is_located_in %s", location_name, country)
+
+        return True
+
+    except Exception as e:
+        logger.error("Error storing location in knowledge graph: %s", str(e))
+        return False
 
 
 # Singleton instance getter

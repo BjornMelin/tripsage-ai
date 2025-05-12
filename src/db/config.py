@@ -2,18 +2,16 @@
 Database configuration for TripSage.
 
 This module contains the configuration settings for database connections,
-supporting both Supabase and Neon database providers.
+supporting both Supabase and Neon database providers, now using the centralized
+settings system.
 """
 
-import os
 from enum import Enum
 from typing import Optional
 
-from dotenv import load_dotenv
 from pydantic import BaseModel, Field, SecretStr
 
-# Load environment variables
-load_dotenv()
+from src.utils.settings import settings
 
 
 class DatabaseProvider(str, Enum):
@@ -36,14 +34,12 @@ class SupabaseConfig(BaseModel):
         persist_session: Whether to persist the session.
     """
 
-    url: str = Field(env="SUPABASE_URL")
-    anon_key: SecretStr = Field(env="SUPABASE_ANON_KEY")
-    service_role_key: Optional[SecretStr] = Field(
-        env="SUPABASE_SERVICE_ROLE_KEY", default=None
-    )
-    timeout: float = Field(default=60.0, env="SUPABASE_TIMEOUT")
-    auto_refresh_token: bool = Field(default=True, env="SUPABASE_AUTO_REFRESH_TOKEN")
-    persist_session: bool = Field(default=True, env="SUPABASE_PERSIST_SESSION")
+    url: str
+    anon_key: SecretStr
+    service_role_key: Optional[SecretStr] = None
+    timeout: float = 60.0
+    auto_refresh_token: bool = True
+    persist_session: bool = True
 
 
 class NeonConfig(BaseModel):
@@ -58,12 +54,10 @@ class NeonConfig(BaseModel):
                                         remains in the pool before being closed.
     """
 
-    connection_string: str = Field(env="NEON_CONNECTION_STRING")
-    min_pool_size: int = Field(default=1, env="NEON_MIN_POOL_SIZE")
-    max_pool_size: int = Field(default=10, env="NEON_MAX_POOL_SIZE")
-    max_inactive_connection_lifetime: float = Field(
-        default=300.0, env="NEON_MAX_INACTIVE_CONNECTION_LIFETIME"
-    )
+    connection_string: str
+    min_pool_size: int = 1
+    max_pool_size: int = 10
+    max_inactive_connection_lifetime: float = 300.0
 
 
 class DatabaseConfig(BaseModel):
@@ -76,9 +70,7 @@ class DatabaseConfig(BaseModel):
         neon: Neon configuration settings.
     """
 
-    provider: DatabaseProvider = Field(
-        default=DatabaseProvider.SUPABASE, env="DB_PROVIDER"
-    )
+    provider: DatabaseProvider
     supabase: Optional[SupabaseConfig] = None
     neon: Optional[NeonConfig] = None
 
@@ -89,23 +81,21 @@ class DatabaseConfig(BaseModel):
 # Create the configuration instance
 def create_config() -> DatabaseConfig:
     """
-    Create and return the database configuration based on environment variables.
+    Create and return the database configuration from centralized settings.
 
     Returns:
         A DatabaseConfig instance with the appropriate provider configuration.
     """
-    provider = os.getenv("DB_PROVIDER", "supabase").lower()
+    provider = settings.database.db_provider.lower()
 
-    if provider == DatabaseProvider.NEON and os.getenv("NEON_CONNECTION_STRING"):
+    if provider == DatabaseProvider.NEON.value and settings.database.neon_connection_string:
         return DatabaseConfig(
             provider=DatabaseProvider.NEON,
             neon=NeonConfig(
-                connection_string=os.getenv("NEON_CONNECTION_STRING", ""),
-                min_pool_size=int(os.getenv("NEON_MIN_POOL_SIZE", "1")),
-                max_pool_size=int(os.getenv("NEON_MAX_POOL_SIZE", "10")),
-                max_inactive_connection_lifetime=float(
-                    os.getenv("NEON_MAX_INACTIVE_CONNECTION_LIFETIME", "300.0")
-                ),
+                connection_string=str(settings.database.neon_connection_string),
+                min_pool_size=settings.database.neon_min_pool_size,
+                max_pool_size=settings.database.neon_max_pool_size,
+                max_inactive_connection_lifetime=settings.database.neon_max_inactive_connection_lifetime,
             ),
         )
     else:
@@ -113,16 +103,12 @@ def create_config() -> DatabaseConfig:
         return DatabaseConfig(
             provider=DatabaseProvider.SUPABASE,
             supabase=SupabaseConfig(
-                url=os.getenv("SUPABASE_URL", ""),
-                anon_key=os.getenv("SUPABASE_ANON_KEY", ""),
-                service_role_key=os.getenv("SUPABASE_SERVICE_ROLE_KEY", ""),
-                timeout=float(os.getenv("SUPABASE_TIMEOUT", "60.0")),
-                auto_refresh_token=os.getenv(
-                    "SUPABASE_AUTO_REFRESH_TOKEN", "True"
-                ).lower()
-                == "true",
-                persist_session=os.getenv("SUPABASE_PERSIST_SESSION", "True").lower()
-                == "true",
+                url=settings.database.supabase_url,
+                anon_key=settings.database.supabase_anon_key,
+                service_role_key=settings.database.supabase_service_role_key,
+                timeout=settings.database.supabase_timeout,
+                auto_refresh_token=settings.database.supabase_auto_refresh_token,
+                persist_session=settings.database.supabase_persist_session,
             ),
         )
 

@@ -5,6 +5,7 @@ from typing import Dict, Any
 
 from src.agents.travel_agent import create_agent
 from src.utils.logging import get_module_logger
+from src.utils.settings_init import init_settings
 
 logger = get_module_logger(__name__)
 
@@ -32,6 +33,11 @@ def main():
     try:
         print("TripSage Travel Agent")
         print("====================")
+
+        # Initialize settings
+        logger.info("Initializing TripSage application")
+        settings = init_settings()
+        logger.info(f"TripSage initialized in {settings.environment} environment")
 
         # Get query from command line arguments or prompt
         if len(sys.argv) > 1:
