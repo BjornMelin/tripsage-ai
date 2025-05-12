@@ -6,10 +6,9 @@ which offers PostgreSQL database management focused on development environments.
 """
 
 import json
-import uuid
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, Generic, List, Optional, TypeVar
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import ValidationError
 
 from agents import function_tool
 
@@ -18,11 +17,43 @@ from ...utils.error_handling import MCPError
 from ...utils.logging import get_module_logger
 from ...utils.settings import settings
 from ..fastmcp import FastMCPClient
+from .models import (
+    # Base models
+    BaseParams,
+    BaseResponse,
+    # Branch models
+    BranchResponse,
+    # Connection string models
+    ConnectionStringParams,
+    ConnectionStringResponse,
+    CreateBranchParams,
+    # Project models
+    CreateProjectParams,
+    DeleteBranchParams,
+    DeleteProjectParams,
+    DescribeBranchParams,
+    DescribeProjectParams,
+    # Table models
+    DescribeTableSchemaParams,
+    DescribeTableSchemaResponse,
+    GetDatabaseTablesParams,
+    GetDatabaseTablesResponse,
+    ListProjectsParams,
+    ProjectListResponse,
+    ProjectResponse,
+    # SQL models
+    RunSQLParams,
+    RunSQLTransactionParams,
+    SQLResponse,
+)
 
 logger = get_module_logger(__name__)
 
+P = TypeVar("P", bound=BaseParams)
+R = TypeVar("R", bound=BaseResponse)
 
-class NeonMCPClient(FastMCPClient):
+
+class NeonMCPClient(FastMCPClient, Generic[P, R]):
     """Client for the Neon MCP Server focused on development environments."""
 
     def __init__(
@@ -60,30 +91,104 @@ class NeonMCPClient(FastMCPClient):
             cache_ttl=300,  # 5 minutes
         )
 
-    @function_tool
-    @redis_cache.cached("neon_projects", 600)  # Cache for 10 minutes
-    async def list_projects(self, skip_cache: bool = False) -> Dict[str, Any]:
-        """List all Neon projects in your account.
+    async def _call_validate_tool(
+        self,
+        tool_name: str,
+        params: P,
+        response_model: type[R],
+        skip_cache: bool = False,
+        cache_key: Optional[str] = None,
+        cache_ttl: Optional[int] = None,
+    ) -> R:
+        """Call a tool and validate both parameters and response.
 
         Args:
-            skip_cache: Whether to skip the cache and fetch fresh data
+            tool_name: Name of the tool to call
+            params: Parameters for the tool call (Pydantic model)
+            response_model: Pydantic model for validating the response
+            skip_cache: Whether to skip the cache
+            cache_key: Optional cache key
+            cache_ttl: Optional cache TTL
 
         Returns:
-            Dictionary with project information
+            Validated response
 
         Raises:
             MCPError: If the request fails
         """
         try:
+            # Convert parameters to dict
+            params_dict = params.model_dump(by_alias=True)
+
+            # Call the tool
             response = await self.call_tool(
-                "list_projects", {"params": {}}, skip_cache=skip_cache
+                tool_name,
+                {"params": params_dict},
+                skip_cache=skip_cache,
+                cache_key=cache_key,
+                cache_ttl=cache_ttl,
             )
 
             # Parse response if it's a string
             if isinstance(response, str):
                 response = json.loads(response)
 
-            return response
+            try:
+                # Attempt strict validation
+                validated_response = response_model.model_validate(response)
+            except ValidationError:
+                # Fallback to non-strict validation if strict fails
+                try:
+                    validated_response = response_model.model_validate(
+                        response, strict=False
+                    )
+                    logger.warning(
+                        f"Non-strict validation used for {tool_name} response"
+                    )
+                except ValidationError as e:
+                    logger.error(f"Validation error in {tool_name} response: {str(e)}")
+                    raise MCPError(
+                        message=f"Invalid response from {tool_name}: {str(e)}",
+                        server=self.server_name,
+                        tool=tool_name,
+                        params=params_dict,
+                    ) from e
+
+            return validated_response
+        except Exception as e:
+            if not isinstance(e, MCPError):
+                logger.error(f"Error calling {tool_name}: {str(e)}")
+                raise MCPError(
+                    message=f"Failed to call {tool_name}: {str(e)}",
+                    server=self.server_name,
+                    tool=tool_name,
+                    params=params.model_dump()
+                    if hasattr(params, "model_dump")
+                    else params,
+                ) from e
+            raise
+
+    # Project Operations
+
+    @function_tool
+    @redis_cache.cached("neon_projects", 600)  # Cache for 10 minutes
+    async def list_projects(self, skip_cache: bool = False) -> ProjectListResponse:
+        """List all Neon projects in your account.
+
+        Args:
+            skip_cache: Whether to skip the cache and fetch fresh data
+
+        Returns:
+            ProjectListResponse with project information
+
+        Raises:
+            MCPError: If the request fails
+        """
+        try:
+            params = ListProjectsParams()
+            return await self._call_validate_tool(
+                "list_projects", params, ProjectListResponse, skip_cache=skip_cache
+            )
         except Exception as e:
             logger.error(f"Error listing Neon projects: {str(e)}")
             raise MCPError(
@@ -94,28 +199,24 @@ class NeonMCPClient(FastMCPClient):
             ) from e
 
     @function_tool
-    async def create_project(self, name: Optional[str] = None) -> Dict[str, Any]:
+    async def create_project(self, name: Optional[str] = None) -> ProjectResponse:
         """Create a new Neon project.
 
         Args:
             name: Optional name for the project
 
         Returns:
-            Dictionary with project information
+            ProjectResponse with newly created project information
 
         Raises:
             MCPError: If the request fails
         """
         try:
-            params = {"params": {}}
-            if name:
-                params["params"]["name"] = name
+            params = CreateProjectParams(name=name)
 
-            response = await self.call_tool("create_project", params)
-
-            # Parse response if it's a string
-            if isinstance(response, str):
-                response = json.loads(response)
+            response = await self._call_validate_tool(
+                "create_project", params, ProjectResponse
+            )
 
             # Invalidate the projects cache
             await redis_cache.invalidate_pattern("neon_projects*")
@@ -131,28 +232,23 @@ class NeonMCPClient(FastMCPClient):
             ) from e
 
     @function_tool
-    async def describe_project(self, project_id: str) -> Dict[str, Any]:
+    async def describe_project(self, project_id: str) -> ProjectResponse:
         """Get details for a specific Neon project.
 
         Args:
             project_id: The ID of the project to describe
 
         Returns:
-            Dictionary with project details
+            ProjectResponse with project details
 
         Raises:
             MCPError: If the request fails
         """
         try:
-            response = await self.call_tool(
-                "describe_project", {"params": {"projectId": project_id}}
+            params = DescribeProjectParams(project_id=project_id)
+            return await self._call_validate_tool(
+                "describe_project", params, ProjectResponse
             )
-
-            # Parse response if it's a string
-            if isinstance(response, str):
-                response = json.loads(response)
-
-            return response
         except Exception as e:
             logger.error(f"Error describing Neon project: {str(e)}")
             raise MCPError(
@@ -176,6 +272,8 @@ class NeonMCPClient(FastMCPClient):
             MCPError: If the request fails
         """
         try:
+            _params = DeleteProjectParams(project_id=project_id)
+
             response = await self.call_tool(
                 "delete_project", {"params": {"projectId": project_id}}
             )
@@ -197,6 +295,8 @@ class NeonMCPClient(FastMCPClient):
                 params={"project_id": project_id},
             ) from e
 
+    # SQL Operations
+
     @function_tool
     async def run_sql(
         self,
@@ -204,7 +304,7 @@ class NeonMCPClient(FastMCPClient):
         sql: str,
         database_name: Optional[str] = None,
         branch_id: Optional[str] = None,
-    ) -> Dict[str, Any]:
+    ) -> SQLResponse:
         """Execute a SQL statement against a Neon database.
 
         Args:
@@ -214,32 +314,35 @@ class NeonMCPClient(FastMCPClient):
             branch_id: Optional branch ID (defaults to main branch)
 
         Returns:
-            Dictionary with query results
+            SQLResponse with query results
 
         Raises:
             MCPError: If the request fails
         """
         try:
-            params = {
-                "params": {
-                    "projectId": project_id,
+            # Validate parameters with Pydantic model
+            params = RunSQLParams(
+                project_id=project_id,
+                sql=sql,
+                database_name=database_name,
+                branch_id=branch_id,
+            )
+
+            return await self._call_validate_tool("run_sql", params, SQLResponse)
+        except ValueError as e:
+            # Handle validation errors specifically
+            logger.error(f"Validation error in run_sql parameters: {str(e)}")
+            raise MCPError(
+                message=f"Invalid parameters for SQL execution: {str(e)}",
+                server=self.server_name,
+                tool="run_sql",
+                params={
+                    "project_id": project_id,
                     "sql": sql,
-                }
-            }
-
-            if database_name:
-                params["params"]["databaseName"] = database_name
-
-            if branch_id:
-                params["params"]["branchId"] = branch_id
-
-            response = await self.call_tool("run_sql", params)
-
-            # Parse response if it's a string
-            if isinstance(response, str):
-                response = json.loads(response)
-
-            return response
+                    "database_name": database_name,
+                    "branch_id": branch_id,
+                },
+            ) from e
         except Exception as e:
             logger.error(f"Error executing SQL on Neon: {str(e)}")
             raise MCPError(
@@ -261,7 +364,7 @@ class NeonMCPClient(FastMCPClient):
         sql_statements: List[str],
         database_name: Optional[str] = None,
         branch_id: Optional[str] = None,
-    ) -> Dict[str, Any]:
+    ) -> SQLResponse:
         """Execute a SQL transaction against a Neon database.
 
         Args:
@@ -271,32 +374,39 @@ class NeonMCPClient(FastMCPClient):
             branch_id: Optional branch ID (defaults to main branch)
 
         Returns:
-            Dictionary with transaction results
+            SQLResponse with transaction results
 
         Raises:
             MCPError: If the request fails
         """
         try:
-            params = {
-                "params": {
-                    "projectId": project_id,
-                    "sqlStatements": sql_statements,
-                }
-            }
+            # Validate parameters with Pydantic model
+            params = RunSQLTransactionParams(
+                project_id=project_id,
+                sql_statements=sql_statements,
+                database_name=database_name,
+                branch_id=branch_id,
+            )
 
-            if database_name:
-                params["params"]["databaseName"] = database_name
-
-            if branch_id:
-                params["params"]["branchId"] = branch_id
-
-            response = await self.call_tool("run_sql_transaction", params)
-
-            # Parse response if it's a string
-            if isinstance(response, str):
-                response = json.loads(response)
-
-            return response
+            return await self._call_validate_tool(
+                "run_sql_transaction", params, SQLResponse
+            )
+        except ValueError as e:
+            # Handle validation errors specifically
+            logger.error(
+                f"Validation error in run_sql_transaction parameters: {str(e)}"
+            )
+            raise MCPError(
+                message=f"Invalid parameters for SQL transaction: {str(e)}",
+                server=self.server_name,
+                tool="run_sql_transaction",
+                params={
+                    "project_id": project_id,
+                    "sql_statements": sql_statements,
+                    "database_name": database_name,
+                    "branch_id": branch_id,
+                },
+            ) from e
         except Exception as e:
             logger.error(f"Error executing SQL transaction on Neon: {str(e)}")
             raise MCPError(
@@ -311,10 +421,12 @@ class NeonMCPClient(FastMCPClient):
                 },
             ) from e
 
+    # Branch Operations
+
     @function_tool
     async def create_branch(
         self, project_id: str, branch_name: Optional[str] = None
-    ) -> Dict[str, Any]:
+    ) -> BranchResponse:
         """Create a new branch in a Neon project.
 
         Args:
@@ -322,28 +434,27 @@ class NeonMCPClient(FastMCPClient):
             branch_name: Optional name for the branch
 
         Returns:
-            Dictionary with branch information
+            BranchResponse with branch information
 
         Raises:
             MCPError: If the request fails
         """
         try:
-            params = {
-                "params": {
-                    "projectId": project_id,
-                }
-            }
+            # Validate parameters with Pydantic model
+            params = CreateBranchParams(project_id=project_id, branch_name=branch_name)
 
-            if branch_name:
-                params["params"]["branchName"] = branch_name
-
-            response = await self.call_tool("create_branch", params)
-
-            # Parse response if it's a string
-            if isinstance(response, str):
-                response = json.loads(response)
-
-            return response
+            return await self._call_validate_tool(
+                "create_branch", params, BranchResponse
+            )
+        except ValueError as e:
+            # Handle validation errors specifically
+            logger.error(f"Validation error in create_branch parameters: {str(e)}")
+            raise MCPError(
+                message=f"Invalid parameters for branch creation: {str(e)}",
+                server=self.server_name,
+                tool="create_branch",
+                params={"project_id": project_id, "branch_name": branch_name},
+            ) from e
         except Exception as e:
             logger.error(f"Error creating branch in Neon: {str(e)}")
             raise MCPError(
@@ -371,17 +482,13 @@ class NeonMCPClient(FastMCPClient):
             MCPError: If the request fails
         """
         try:
-            params = {
-                "params": {
-                    "projectId": project_id,
-                    "branchId": branch_id,
-                }
-            }
+            params = DescribeBranchParams(
+                project_id=project_id, branch_id=branch_id, database_name=database_name
+            )
 
-            if database_name:
-                params["params"]["databaseName"] = database_name
-
-            response = await self.call_tool("describe_branch", params)
+            response = await self.call_tool(
+                "describe_branch", {"params": params.model_dump(by_alias=True)}
+            )
 
             # Parse response if it's a string
             if isinstance(response, str):
@@ -416,9 +523,11 @@ class NeonMCPClient(FastMCPClient):
             MCPError: If the request fails
         """
         try:
+            params = DeleteBranchParams(project_id=project_id, branch_id=branch_id)
+
             response = await self.call_tool(
                 "delete_branch",
-                {"params": {"projectId": project_id, "branchId": branch_id}},
+                {"params": params.model_dump(by_alias=True)},
             )
 
             # Parse response if it's a string
@@ -435,6 +544,8 @@ class NeonMCPClient(FastMCPClient):
                 params={"project_id": project_id, "branch_id": branch_id},
             ) from e
 
+    # Connection Operations
+
     @function_tool
     async def get_connection_string(
         self,
@@ -443,7 +554,7 @@ class NeonMCPClient(FastMCPClient):
         database_name: Optional[str] = None,
         role_name: Optional[str] = None,
         compute_id: Optional[str] = None,
-    ) -> Dict[str, Any]:
+    ) -> ConnectionStringResponse:
         """Get a PostgreSQL connection string for a Neon database.
 
         Args:
@@ -454,37 +565,41 @@ class NeonMCPClient(FastMCPClient):
             compute_id: Optional compute ID
 
         Returns:
-            Dictionary with connection string
+            ConnectionStringResponse with connection string
 
         Raises:
             MCPError: If the request fails
         """
         try:
-            params = {
-                "params": {
-                    "projectId": project_id,
-                }
-            }
+            # Validate parameters with Pydantic model
+            params = ConnectionStringParams(
+                project_id=project_id,
+                branch_id=branch_id,
+                database_name=database_name,
+                role_name=role_name,
+                compute_id=compute_id,
+            )
 
-            if branch_id:
-                params["params"]["branchId"] = branch_id
-
-            if database_name:
-                params["params"]["databaseName"] = database_name
-
-            if role_name:
-                params["params"]["roleName"] = role_name
-
-            if compute_id:
-                params["params"]["computeId"] = compute_id
-
-            response = await self.call_tool("get_connection_string", params)
-
-            # Parse response if it's a string
-            if isinstance(response, str):
-                response = json.loads(response)
-
-            return response
+            return await self._call_validate_tool(
+                "get_connection_string", params, ConnectionStringResponse
+            )
+        except ValueError as e:
+            # Handle validation errors specifically
+            logger.error(
+                f"Validation error in get_connection_string parameters: {str(e)}"
+            )
+            raise MCPError(
+                message=f"Invalid parameters for connection string retrieval: {str(e)}",
+                server=self.server_name,
+                tool="get_connection_string",
+                params={
+                    "project_id": project_id,
+                    "branch_id": branch_id,
+                    "database_name": database_name,
+                    "role_name": role_name,
+                    "compute_id": compute_id,
+                },
+            ) from e
         except Exception as e:
             logger.error(f"Error getting connection string from Neon: {str(e)}")
             raise MCPError(
@@ -500,13 +615,15 @@ class NeonMCPClient(FastMCPClient):
                 },
             ) from e
 
+    # Database Schema Operations
+
     @function_tool
     async def get_database_tables(
         self,
         project_id: str,
         branch_id: Optional[str] = None,
         database_name: Optional[str] = None,
-    ) -> Dict[str, Any]:
+    ) -> GetDatabaseTablesResponse:
         """Get all tables in a Neon database.
 
         Args:
@@ -515,31 +632,19 @@ class NeonMCPClient(FastMCPClient):
             database_name: Optional database name
 
         Returns:
-            Dictionary with table information
+            GetDatabaseTablesResponse with table information
 
         Raises:
             MCPError: If the request fails
         """
         try:
-            params = {
-                "params": {
-                    "projectId": project_id,
-                }
-            }
+            params = GetDatabaseTablesParams(
+                project_id=project_id, branch_id=branch_id, database_name=database_name
+            )
 
-            if branch_id:
-                params["params"]["branchId"] = branch_id
-
-            if database_name:
-                params["params"]["databaseName"] = database_name
-
-            response = await self.call_tool("get_database_tables", params)
-
-            # Parse response if it's a string
-            if isinstance(response, str):
-                response = json.loads(response)
-
-            return response
+            return await self._call_validate_tool(
+                "get_database_tables", params, GetDatabaseTablesResponse
+            )
         except Exception as e:
             logger.error(f"Error getting database tables from Neon: {str(e)}")
             raise MCPError(
@@ -560,7 +665,7 @@ class NeonMCPClient(FastMCPClient):
         table_name: str,
         branch_id: Optional[str] = None,
         database_name: Optional[str] = None,
-    ) -> Dict[str, Any]:
+    ) -> DescribeTableSchemaResponse:
         """Describe the schema of a table in a Neon database.
 
         Args:
@@ -570,32 +675,22 @@ class NeonMCPClient(FastMCPClient):
             database_name: Optional database name
 
         Returns:
-            Dictionary with table schema
+            DescribeTableSchemaResponse with table schema
 
         Raises:
             MCPError: If the request fails
         """
         try:
-            params = {
-                "params": {
-                    "projectId": project_id,
-                    "tableName": table_name,
-                }
-            }
+            params = DescribeTableSchemaParams(
+                project_id=project_id,
+                table_name=table_name,
+                branch_id=branch_id,
+                database_name=database_name,
+            )
 
-            if branch_id:
-                params["params"]["branchId"] = branch_id
-
-            if database_name:
-                params["params"]["databaseName"] = database_name
-
-            response = await self.call_tool("describe_table_schema", params)
-
-            # Parse response if it's a string
-            if isinstance(response, str):
-                response = json.loads(response)
-
-            return response
+            return await self._call_validate_tool(
+                "describe_table_schema", params, DescribeTableSchemaResponse
+            )
         except Exception as e:
             logger.error(f"Error describing table schema in Neon: {str(e)}")
             raise MCPError(
@@ -611,109 +706,6 @@ class NeonMCPClient(FastMCPClient):
             ) from e
 
 
-class NeonService:
-    """High-level service for Neon database operations in TripSage."""
-
-    def __init__(self, client: Optional[NeonMCPClient] = None):
-        """Initialize the Neon Service.
-
-        Args:
-            client: NeonMCPClient instance. If not provided, uses the default client.
-        """
-        self.client = client or neon_client
-        logger.info("Initialized Neon Service")
-
-    async def create_development_branch(
-        self, project_id: Optional[str] = None, branch_name: Optional[str] = None
-    ) -> Dict[str, Any]:
-        """Create a development branch for isolating database changes.
-
-        Args:
-            project_id: The project ID (uses default if not provided)
-            branch_name: Optional branch name (will generate one if not provided)
-
-        Returns:
-            Dictionary with branch information
-        """
-        try:
-            # Use the configured default project ID if not provided
-            if not project_id:
-                project_id = settings.neon_mcp.default_project_id
-                if not project_id:
-                    projects = await self.client.list_projects()
-                    if projects.get("projects") and len(projects["projects"]) > 0:
-                        project_id = projects["projects"][0].get("id")
-                    else:
-                        # No projects found, create one
-                        project = await self.client.create_project(
-                            "tripsage-development"
-                        )
-                        project_id = project.get("project", {}).get("id")
-
-            # Generate a branch name if not provided
-            if not branch_name:
-                branch_name = f"dev-{uuid.uuid4().hex[:8]}"
-
-            # Create the branch
-            branch = await self.client.create_branch(project_id, branch_name)
-
-            # Get connection string for the branch
-            conn_info = await self.client.get_connection_string(
-                project_id, branch.get("branch", {}).get("id")
-            )
-
-            return {
-                "project_id": project_id,
-                "branch": branch.get("branch", {}),
-                "connection_string": conn_info.get("connectionString"),
-            }
-        except Exception as e:
-            logger.error(f"Error creating development branch: {str(e)}")
-            return {
-                "error": f"Failed to create development branch: {str(e)}",
-                "project_id": project_id,
-                "branch_name": branch_name,
-            }
-
-    async def apply_migrations(
-        self,
-        project_id: str,
-        branch_id: str,
-        migrations: List[str],
-        database_name: Optional[str] = None,
-    ) -> Dict[str, Any]:
-        """Apply database migrations to a specific branch.
-
-        Args:
-            project_id: The project ID
-            branch_id: The branch ID
-            migrations: List of SQL migration statements
-            database_name: Optional database name
-
-        Returns:
-            Dictionary with migration results
-        """
-        try:
-            # Execute the migrations as a transaction
-            result = await self.client.run_sql_transaction(
-                project_id, migrations, database_name, branch_id
-            )
-
-            return {
-                "project_id": project_id,
-                "branch_id": branch_id,
-                "migrations_applied": len(migrations),
-                "result": result,
-            }
-        except Exception as e:
-            logger.error(f"Error applying migrations: {str(e)}")
-            return {
-                "error": f"Failed to apply migrations: {str(e)}",
-                "project_id": project_id,
-                "branch_id": branch_id,
-            }
-
-
 # Initialize global client instance
 neon_client = NeonMCPClient()
 
@@ -725,12 +717,3 @@ def get_client() -> NeonMCPClient:
         NeonMCPClient instance
     """
     return neon_client
-
-
-def get_service() -> NeonService:
-    """Get a Neon Service instance.
-
-    Returns:
-        NeonService instance
-    """
-    return NeonService(neon_client)

@@ -5,23 +5,88 @@ This module provides a client for interacting with the Supabase MCP Server,
 which offers PostgreSQL database management focused on production environments.
 """
 
-from typing import Any, Dict, List, Optional, Union
 import json
-import uuid
+from typing import Generic, List, Optional, TypeVar
+
+from pydantic import ValidationError
 
 from agents import function_tool
-from pydantic import Field, BaseModel, ConfigDict
 
 from ...cache.redis_cache import redis_cache
-from ...utils.settings import settings
 from ...utils.error_handling import MCPError
 from ...utils.logging import get_module_logger
+from ...utils.settings import settings
 from ..fastmcp import FastMCPClient
+from .models import (
+    ApplyMigrationParams,
+    ApplyMigrationResponse,
+    # Base models
+    BaseParams,
+    BaseResponse,
+    ConfirmCostParams,
+    ConfirmCostResponse,
+    # Branch models
+    CreateBranchParams,
+    CreateBranchResponse,
+    CreateProjectParams,
+    CreateProjectResponse,
+    DeleteBranchParams,
+    DeleteBranchResponse,
+    DeployEdgeFunctionParams,
+    DeployEdgeFunctionResponse,
+    ExecuteSQLParams,
+    ExecuteSQLResponse,
+    FileObject,
+    GenerateTypescriptTypesParams,
+    GenerateTypescriptTypesResponse,
+    GetAnonKeyParams,
+    GetAnonKeyResponse,
+    GetCostParams,
+    GetCostResponse,
+    GetLogsParams,
+    GetLogsResponse,
+    GetOrganizationParams,
+    GetOrganizationResponse,
+    GetProjectParams,
+    GetProjectResponse,
+    GetProjectUrlParams,
+    GetProjectUrlResponse,
+    ListBranchesParams,
+    ListBranchesResponse,
+    ListEdgeFunctionsParams,
+    ListEdgeFunctionsResponse,
+    ListExtensionsParams,
+    ListExtensionsResponse,
+    ListMigrationsParams,
+    ListMigrationsResponse,
+    # Organization models
+    ListOrganizationsParams,
+    ListOrganizationsResponse,
+    # Project models
+    ListProjectsParams,
+    ListProjectsResponse,
+    # Database models
+    ListTablesParams,
+    ListTablesResponse,
+    MergeBranchParams,
+    MergeBranchResponse,
+    PauseProjectParams,
+    PauseProjectResponse,
+    RebaseBranchParams,
+    RebaseBranchResponse,
+    ResetBranchParams,
+    ResetBranchResponse,
+    RestoreProjectParams,
+    RestoreProjectResponse,
+)
 
 logger = get_module_logger(__name__)
 
+P = TypeVar("P", bound=BaseParams)
+R = TypeVar("R", bound=BaseResponse)
 
-class SupabaseMCPClient(FastMCPClient):
+
+class SupabaseMCPClient(FastMCPClient, Generic[P, R]):
     """Client for the Supabase MCP Server focused on production environments."""
 
     def __init__(
@@ -59,9 +124,83 @@ class SupabaseMCPClient(FastMCPClient):
             cache_ttl=300,  # 5 minutes
         )
 
+    async def _call_validate_tool(
+        self,
+        tool_name: str,
+        params: P,
+        response_model: type[R],
+        skip_cache: bool = False,
+        cache_key: Optional[str] = None,
+        cache_ttl: Optional[int] = None,
+    ) -> R:
+        """Call a tool and validate both parameters and response.
+
+        Args:
+            tool_name: Name of the tool to call
+            params: Validated parameters model
+            response_model: Response model class for validation
+            skip_cache: Whether to skip the cache
+            cache_key: Optional cache key
+            cache_ttl: Optional cache TTL in seconds
+
+        Returns:
+            Validated response model
+
+        Raises:
+            MCPError: If request fails
+            ValidationError: If response validation fails
+        """
+        try:
+            # Convert params to dict for the tool call
+            params_dict = params.model_dump(exclude_none=True)
+
+            response = await self.call_tool(
+                tool_name,
+                params_dict,
+                skip_cache=skip_cache,
+                cache_key=cache_key,
+                cache_ttl=cache_ttl,
+            )
+
+            # Parse response if it's a string
+            if isinstance(response, str):
+                response = json.loads(response)
+
+            # Validate response with the provided model
+            try:
+                validated_response = response_model.model_validate(response)
+                return validated_response
+            except ValidationError as e:
+                logger.warning(f"Response validation error for {tool_name}: {str(e)}")
+                # If validation fails, return original response as fallback
+                return response_model.model_validate(response, strict=False)
+
+        except ValidationError as e:
+            logger.error(f"Validation error in {tool_name}: {str(e)}")
+            raise MCPError(
+                message=f"Validation error in {tool_name}: {str(e)}",
+                server=self.server_name,
+                tool=tool_name,
+                params=params.model_dump() if params else {},
+            ) from e
+        except Exception as e:
+            logger.error(f"Error in {tool_name}: {str(e)}")
+            raise MCPError(
+                message=f"Failed to execute {tool_name}: {str(e)}",
+                server=self.server_name,
+                tool=tool_name,
+                params=params.model_dump() if params else {},
+            ) from e
+
+    # =====================
+    # Organization Methods
+    # =====================
+
     @function_tool
     @redis_cache.cached("supabase_organizations", 1800)  # Cache for 30 minutes
-    async def list_organizations(self, skip_cache: bool = False) -> Dict[str, Any]:
+    async def list_organizations(
+        self, skip_cache: bool = False
+    ) -> ListOrganizationsResponse:
         """Lists all organizations that the user is a member of.
 
         Args:
@@ -73,29 +212,16 @@ class SupabaseMCPClient(FastMCPClient):
         Raises:
             MCPError: If the request fails
         """
-        try:
-            response = await self.call_tool(
-                "list_organizations", 
-                {}, 
-                skip_cache=skip_cache
-            )
-            
-            # Parse response if it's a string
-            if isinstance(response, str):
-                response = json.loads(response)
-                
-            return response
-        except Exception as e:
-            logger.error(f"Error listing Supabase organizations: {str(e)}")
-            raise MCPError(
-                message=f"Failed to list Supabase organizations: {str(e)}",
-                server=self.server_name,
-                tool="list_organizations",
-                params={},
-            ) from e
+        params = ListOrganizationsParams()
+        return await self._call_validate_tool(
+            "list_organizations",
+            params,
+            ListOrganizationsResponse,
+            skip_cache=skip_cache,
+        )
 
     @function_tool
-    async def get_organization(self, id: str) -> Dict[str, Any]:
+    async def get_organization(self, id: str) -> GetOrganizationResponse:
         """Gets details for an organization. Includes subscription plan.
 
         Args:
@@ -107,94 +233,15 @@ class SupabaseMCPClient(FastMCPClient):
         Raises:
             MCPError: If the request fails
         """
-        try:
-            response = await self.call_tool("get_organization", {"id": id})
-            
-            # Parse response if it's a string
-            if isinstance(response, str):
-                response = json.loads(response)
-                
-            return response
-        except Exception as e:
-            logger.error(f"Error getting Supabase organization: {str(e)}")
-            raise MCPError(
-                message=f"Failed to get Supabase organization: {str(e)}",
-                server=self.server_name,
-                tool="get_organization",
-                params={"id": id},
-            ) from e
+        params = GetOrganizationParams(id=id)
+        return await self._call_validate_tool(
+            "get_organization",
+            params,
+            GetOrganizationResponse,
+        )
 
     @function_tool
-    @redis_cache.cached("supabase_projects", 600)  # Cache for 10 minutes
-    async def list_projects(self, skip_cache: bool = False) -> Dict[str, Any]:
-        """Lists all Supabase projects for the user.
-
-        Args:
-            skip_cache: Whether to skip the cache and fetch fresh data
-
-        Returns:
-            Dictionary with project information
-
-        Raises:
-            MCPError: If the request fails
-        """
-        try:
-            response = await self.call_tool(
-                "list_projects", 
-                {}, 
-                skip_cache=skip_cache
-            )
-            
-            # Parse response if it's a string
-            if isinstance(response, str):
-                response = json.loads(response)
-                
-            return response
-        except Exception as e:
-            logger.error(f"Error listing Supabase projects: {str(e)}")
-            raise MCPError(
-                message=f"Failed to list Supabase projects: {str(e)}",
-                server=self.server_name,
-                tool="list_projects",
-                params={},
-            ) from e
-
-    @function_tool
-    async def get_project(self, id: str) -> Dict[str, Any]:
-        """Gets details for a Supabase project.
-
-        Args:
-            id: The project ID
-
-        Returns:
-            Dictionary with project details
-
-        Raises:
-            MCPError: If the request fails
-        """
-        try:
-            response = await self.call_tool("get_project", {"id": id})
-            
-            # Parse response if it's a string
-            if isinstance(response, str):
-                response = json.loads(response)
-                
-            return response
-        except Exception as e:
-            logger.error(f"Error getting Supabase project: {str(e)}")
-            raise MCPError(
-                message=f"Failed to get Supabase project: {str(e)}",
-                server=self.server_name,
-                tool="get_project",
-                params={"id": id},
-            ) from e
-
-    @function_tool
-    async def get_cost(
-        self, 
-        type: str, 
-        organization_id: str
-    ) -> Dict[str, Any]:
+    async def get_cost(self, type: str, organization_id: str) -> GetCostResponse:
         """Gets the cost of creating a new project or branch.
 
         Args:
@@ -207,34 +254,19 @@ class SupabaseMCPClient(FastMCPClient):
         Raises:
             MCPError: If the request fails
         """
-        try:
-            response = await self.call_tool(
-                "get_cost", 
-                {"type": type, "organization_id": organization_id}
-            )
-            
-            # Parse response if it's a string
-            if isinstance(response, str):
-                response = json.loads(response)
-                
-            return response
-        except Exception as e:
-            logger.error(f"Error getting Supabase cost: {str(e)}")
-            raise MCPError(
-                message=f"Failed to get Supabase cost: {str(e)}",
-                server=self.server_name,
-                tool="get_cost",
-                params={"type": type, "organization_id": organization_id},
-            ) from e
+        params = GetCostParams(type=type, organization_id=organization_id)
+        return await self._call_validate_tool(
+            "get_cost",
+            params,
+            GetCostResponse,
+        )
 
     @function_tool
     async def confirm_cost(
-        self, 
-        type: str, 
-        recurrence: str, 
-        amount: float
-    ) -> Dict[str, Any]:
-        """Ask the user to confirm their understanding of the cost of creating a new project or branch.
+        self, type: str, recurrence: str, amount: float
+    ) -> ConfirmCostResponse:
+        """Ask the user to confirm their understanding of the cost of
+        creating a new project or branch.
 
         Args:
             type: The type of resource ('project' or 'branch')
@@ -247,42 +279,71 @@ class SupabaseMCPClient(FastMCPClient):
         Raises:
             MCPError: If the request fails
         """
-        try:
-            response = await self.call_tool(
-                "confirm_cost", 
-                {
-                    "type": type, 
-                    "recurrence": recurrence, 
-                    "amount": amount
-                }
-            )
-            
-            # Parse response if it's a string
-            if isinstance(response, str):
-                response = json.loads(response)
-                
-            return response
-        except Exception as e:
-            logger.error(f"Error confirming Supabase cost: {str(e)}")
-            raise MCPError(
-                message=f"Failed to confirm Supabase cost: {str(e)}",
-                server=self.server_name,
-                tool="confirm_cost",
-                params={
-                    "type": type, 
-                    "recurrence": recurrence, 
-                    "amount": amount
-                },
-            ) from e
+        params = ConfirmCostParams(
+            type=type,
+            recurrence=recurrence,
+            amount=amount,
+        )
+        return await self._call_validate_tool(
+            "confirm_cost",
+            params,
+            ConfirmCostResponse,
+        )
+
+    # =====================
+    # Project Methods
+    # =====================
+
+    @function_tool
+    @redis_cache.cached("supabase_projects", 600)  # Cache for 10 minutes
+    async def list_projects(self, skip_cache: bool = False) -> ListProjectsResponse:
+        """Lists all Supabase projects for the user.
+
+        Args:
+            skip_cache: Whether to skip the cache and fetch fresh data
+
+        Returns:
+            Dictionary with project information
+
+        Raises:
+            MCPError: If the request fails
+        """
+        params = ListProjectsParams()
+        return await self._call_validate_tool(
+            "list_projects",
+            params,
+            ListProjectsResponse,
+            skip_cache=skip_cache,
+        )
+
+    @function_tool
+    async def get_project(self, id: str) -> GetProjectResponse:
+        """Gets details for a Supabase project.
+
+        Args:
+            id: The project ID
+
+        Returns:
+            Dictionary with project details
+
+        Raises:
+            MCPError: If the request fails
+        """
+        params = GetProjectParams(id=id)
+        return await self._call_validate_tool(
+            "get_project",
+            params,
+            GetProjectResponse,
+        )
 
     @function_tool
     async def create_project(
-        self, 
-        name: str, 
-        organization_id: str, 
+        self,
+        name: str,
+        organization_id: str,
         confirm_cost_id: str,
-        region: Optional[str] = None
-    ) -> Dict[str, Any]:
+        region: Optional[str] = None,
+    ) -> CreateProjectResponse:
         """Creates a new Supabase project.
 
         Args:
@@ -297,42 +358,26 @@ class SupabaseMCPClient(FastMCPClient):
         Raises:
             MCPError: If the request fails
         """
-        try:
-            params = {
-                "name": name, 
-                "organization_id": organization_id, 
-                "confirm_cost_id": confirm_cost_id
-            }
-            
-            if region:
-                params["region"] = region
-                
-            response = await self.call_tool("create_project", params)
-            
-            # Parse response if it's a string
-            if isinstance(response, str):
-                response = json.loads(response)
-            
-            # Invalidate projects cache
-            await redis_cache.invalidate_pattern("supabase_projects*")
-                
-            return response
-        except Exception as e:
-            logger.error(f"Error creating Supabase project: {str(e)}")
-            raise MCPError(
-                message=f"Failed to create Supabase project: {str(e)}",
-                server=self.server_name,
-                tool="create_project",
-                params={
-                    "name": name, 
-                    "organization_id": organization_id, 
-                    "confirm_cost_id": confirm_cost_id,
-                    "region": region
-                },
-            ) from e
+        params = CreateProjectParams(
+            name=name,
+            organization_id=organization_id,
+            confirm_cost_id=confirm_cost_id,
+            region=region,
+        )
+
+        result = await self._call_validate_tool(
+            "create_project",
+            params,
+            CreateProjectResponse,
+        )
+
+        # Invalidate projects cache
+        await redis_cache.invalidate_pattern("supabase_projects*")
+
+        return result
 
     @function_tool
-    async def pause_project(self, project_id: str) -> Dict[str, Any]:
+    async def pause_project(self, project_id: str) -> PauseProjectResponse:
         """Pauses a Supabase project.
 
         Args:
@@ -344,28 +389,15 @@ class SupabaseMCPClient(FastMCPClient):
         Raises:
             MCPError: If the request fails
         """
-        try:
-            response = await self.call_tool(
-                "pause_project", 
-                {"project_id": project_id}
-            )
-            
-            # Parse response if it's a string
-            if isinstance(response, str):
-                response = json.loads(response)
-                
-            return response
-        except Exception as e:
-            logger.error(f"Error pausing Supabase project: {str(e)}")
-            raise MCPError(
-                message=f"Failed to pause Supabase project: {str(e)}",
-                server=self.server_name,
-                tool="pause_project",
-                params={"project_id": project_id},
-            ) from e
+        params = PauseProjectParams(project_id=project_id)
+        return await self._call_validate_tool(
+            "pause_project",
+            params,
+            PauseProjectResponse,
+        )
 
     @function_tool
-    async def restore_project(self, project_id: str) -> Dict[str, Any]:
+    async def restore_project(self, project_id: str) -> RestoreProjectResponse:
         """Restores a Supabase project.
 
         Args:
@@ -377,32 +409,83 @@ class SupabaseMCPClient(FastMCPClient):
         Raises:
             MCPError: If the request fails
         """
-        try:
-            response = await self.call_tool(
-                "restore_project", 
-                {"project_id": project_id}
-            )
-            
-            # Parse response if it's a string
-            if isinstance(response, str):
-                response = json.loads(response)
-                
-            return response
-        except Exception as e:
-            logger.error(f"Error restoring Supabase project: {str(e)}")
-            raise MCPError(
-                message=f"Failed to restore Supabase project: {str(e)}",
-                server=self.server_name,
-                tool="restore_project",
-                params={"project_id": project_id},
-            ) from e
+        params = RestoreProjectParams(project_id=project_id)
+        return await self._call_validate_tool(
+            "restore_project",
+            params,
+            RestoreProjectResponse,
+        )
+
+    @function_tool
+    async def get_project_url(self, project_id: str) -> GetProjectUrlResponse:
+        """Gets the API URL for a project.
+
+        Args:
+            project_id: The ID of the project
+
+        Returns:
+            Dictionary with project URL
+
+        Raises:
+            MCPError: If the request fails
+        """
+        params = GetProjectUrlParams(project_id=project_id)
+        return await self._call_validate_tool(
+            "get_project_url",
+            params,
+            GetProjectUrlResponse,
+        )
+
+    @function_tool
+    async def get_anon_key(self, project_id: str) -> GetAnonKeyResponse:
+        """Gets the anonymous API key for a project.
+
+        Args:
+            project_id: The ID of the project
+
+        Returns:
+            Dictionary with anonymous key
+
+        Raises:
+            MCPError: If the request fails
+        """
+        params = GetAnonKeyParams(project_id=project_id)
+        return await self._call_validate_tool(
+            "get_anon_key",
+            params,
+            GetAnonKeyResponse,
+        )
+
+    @function_tool
+    async def generate_typescript_types(
+        self, project_id: str
+    ) -> GenerateTypescriptTypesResponse:
+        """Generates TypeScript types for a project.
+
+        Args:
+            project_id: The ID of the project
+
+        Returns:
+            Dictionary with TypeScript types
+
+        Raises:
+            MCPError: If the request fails
+        """
+        params = GenerateTypescriptTypesParams(project_id=project_id)
+        return await self._call_validate_tool(
+            "generate_typescript_types",
+            params,
+            GenerateTypescriptTypesResponse,
+        )
+
+    # =====================
+    # Database Methods
+    # =====================
 
     @function_tool
     async def list_tables(
-        self, 
-        project_id: str, 
-        schemas: Optional[List[str]] = None
-    ) -> Dict[str, Any]:
+        self, project_id: str, schemas: Optional[List[str]] = None
+    ) -> ListTablesResponse:
         """Lists all tables in one or more schemas.
 
         Args:
@@ -415,33 +498,15 @@ class SupabaseMCPClient(FastMCPClient):
         Raises:
             MCPError: If the request fails
         """
-        try:
-            params = {"project_id": project_id}
-            
-            if schemas:
-                params["schemas"] = schemas
-                
-            response = await self.call_tool("list_tables", params)
-            
-            # Parse response if it's a string
-            if isinstance(response, str):
-                response = json.loads(response)
-                
-            return response
-        except Exception as e:
-            logger.error(f"Error listing Supabase tables: {str(e)}")
-            raise MCPError(
-                message=f"Failed to list Supabase tables: {str(e)}",
-                server=self.server_name,
-                tool="list_tables",
-                params={
-                    "project_id": project_id,
-                    "schemas": schemas
-                },
-            ) from e
+        params = ListTablesParams(project_id=project_id, schemas=schemas)
+        return await self._call_validate_tool(
+            "list_tables",
+            params,
+            ListTablesResponse,
+        )
 
     @function_tool
-    async def list_extensions(self, project_id: str) -> Dict[str, Any]:
+    async def list_extensions(self, project_id: str) -> ListExtensionsResponse:
         """Lists all extensions in the database.
 
         Args:
@@ -453,28 +518,15 @@ class SupabaseMCPClient(FastMCPClient):
         Raises:
             MCPError: If the request fails
         """
-        try:
-            response = await self.call_tool(
-                "list_extensions", 
-                {"project_id": project_id}
-            )
-            
-            # Parse response if it's a string
-            if isinstance(response, str):
-                response = json.loads(response)
-                
-            return response
-        except Exception as e:
-            logger.error(f"Error listing Supabase extensions: {str(e)}")
-            raise MCPError(
-                message=f"Failed to list Supabase extensions: {str(e)}",
-                server=self.server_name,
-                tool="list_extensions",
-                params={"project_id": project_id},
-            ) from e
+        params = ListExtensionsParams(project_id=project_id)
+        return await self._call_validate_tool(
+            "list_extensions",
+            params,
+            ListExtensionsResponse,
+        )
 
     @function_tool
-    async def list_migrations(self, project_id: str) -> Dict[str, Any]:
+    async def list_migrations(self, project_id: str) -> ListMigrationsResponse:
         """Lists all migrations in the database.
 
         Args:
@@ -486,33 +538,17 @@ class SupabaseMCPClient(FastMCPClient):
         Raises:
             MCPError: If the request fails
         """
-        try:
-            response = await self.call_tool(
-                "list_migrations", 
-                {"project_id": project_id}
-            )
-            
-            # Parse response if it's a string
-            if isinstance(response, str):
-                response = json.loads(response)
-                
-            return response
-        except Exception as e:
-            logger.error(f"Error listing Supabase migrations: {str(e)}")
-            raise MCPError(
-                message=f"Failed to list Supabase migrations: {str(e)}",
-                server=self.server_name,
-                tool="list_migrations",
-                params={"project_id": project_id},
-            ) from e
+        params = ListMigrationsParams(project_id=project_id)
+        return await self._call_validate_tool(
+            "list_migrations",
+            params,
+            ListMigrationsResponse,
+        )
 
     @function_tool
     async def apply_migration(
-        self, 
-        project_id: str, 
-        name: str, 
-        query: str
-    ) -> Dict[str, Any]:
+        self, project_id: str, name: str, query: str
+    ) -> ApplyMigrationResponse:
         """Applies a migration to the database.
 
         Args:
@@ -526,36 +562,19 @@ class SupabaseMCPClient(FastMCPClient):
         Raises:
             MCPError: If the request fails
         """
-        try:
-            response = await self.call_tool(
-                "apply_migration", 
-                {
-                    "project_id": project_id, 
-                    "name": name, 
-                    "query": query
-                }
-            )
-            
-            # Parse response if it's a string
-            if isinstance(response, str):
-                response = json.loads(response)
-                
-            return response
-        except Exception as e:
-            logger.error(f"Error applying Supabase migration: {str(e)}")
-            raise MCPError(
-                message=f"Failed to apply Supabase migration: {str(e)}",
-                server=self.server_name,
-                tool="apply_migration",
-                params={
-                    "project_id": project_id, 
-                    "name": name, 
-                    "query": query
-                },
-            ) from e
+        params = ApplyMigrationParams(
+            project_id=project_id,
+            name=name,
+            query=query,
+        )
+        return await self._call_validate_tool(
+            "apply_migration",
+            params,
+            ApplyMigrationResponse,
+        )
 
     @function_tool
-    async def execute_sql(self, project_id: str, query: str) -> Dict[str, Any]:
+    async def execute_sql(self, project_id: str, query: str) -> ExecuteSQLResponse:
         """Executes raw SQL in the Postgres database.
 
         Args:
@@ -568,28 +587,15 @@ class SupabaseMCPClient(FastMCPClient):
         Raises:
             MCPError: If the request fails
         """
-        try:
-            response = await self.call_tool(
-                "execute_sql", 
-                {"project_id": project_id, "query": query}
-            )
-            
-            # Parse response if it's a string
-            if isinstance(response, str):
-                response = json.loads(response)
-                
-            return response
-        except Exception as e:
-            logger.error(f"Error executing SQL on Supabase: {str(e)}")
-            raise MCPError(
-                message=f"Failed to execute SQL on Supabase: {str(e)}",
-                server=self.server_name,
-                tool="execute_sql",
-                params={"project_id": project_id, "query": query},
-            ) from e
+        params = ExecuteSQLParams(project_id=project_id, query=query)
+        return await self._call_validate_tool(
+            "execute_sql",
+            params,
+            ExecuteSQLResponse,
+        )
 
     @function_tool
-    async def list_edge_functions(self, project_id: str) -> Dict[str, Any]:
+    async def list_edge_functions(self, project_id: str) -> ListEdgeFunctionsResponse:
         """Lists all Edge Functions in a Supabase project.
 
         Args:
@@ -601,35 +607,22 @@ class SupabaseMCPClient(FastMCPClient):
         Raises:
             MCPError: If the request fails
         """
-        try:
-            response = await self.call_tool(
-                "list_edge_functions", 
-                {"project_id": project_id}
-            )
-            
-            # Parse response if it's a string
-            if isinstance(response, str):
-                response = json.loads(response)
-                
-            return response
-        except Exception as e:
-            logger.error(f"Error listing Supabase edge functions: {str(e)}")
-            raise MCPError(
-                message=f"Failed to list Supabase edge functions: {str(e)}",
-                server=self.server_name,
-                tool="list_edge_functions",
-                params={"project_id": project_id},
-            ) from e
+        params = ListEdgeFunctionsParams(project_id=project_id)
+        return await self._call_validate_tool(
+            "list_edge_functions",
+            params,
+            ListEdgeFunctionsResponse,
+        )
 
     @function_tool
     async def deploy_edge_function(
-        self, 
-        project_id: str, 
-        name: str, 
-        files: List[Dict[str, str]],
+        self,
+        project_id: str,
+        name: str,
+        files: List[dict],
         entrypoint_path: str = "index.ts",
-        import_map_path: Optional[str] = None
-    ) -> Dict[str, Any]:
+        import_map_path: Optional[str] = None,
+    ) -> DeployEdgeFunctionResponse:
         """Deploys an Edge Function to a Supabase project.
 
         Args:
@@ -645,41 +638,24 @@ class SupabaseMCPClient(FastMCPClient):
         Raises:
             MCPError: If the request fails
         """
-        try:
-            params = {
-                "project_id": project_id, 
-                "name": name, 
-                "files": files,
-                "entrypoint_path": entrypoint_path
-            }
-            
-            if import_map_path:
-                params["import_map_path"] = import_map_path
-                
-            response = await self.call_tool("deploy_edge_function", params)
-            
-            # Parse response if it's a string
-            if isinstance(response, str):
-                response = json.loads(response)
-                
-            return response
-        except Exception as e:
-            logger.error(f"Error deploying Supabase edge function: {str(e)}")
-            raise MCPError(
-                message=f"Failed to deploy Supabase edge function: {str(e)}",
-                server=self.server_name,
-                tool="deploy_edge_function",
-                params={
-                    "project_id": project_id, 
-                    "name": name, 
-                    "files": [{"name": f["name"], "content_length": len(f["content"])} for f in files],
-                    "entrypoint_path": entrypoint_path,
-                    "import_map_path": import_map_path
-                },
-            ) from e
+        # Convert dict files to FileObject models
+        file_objects = [FileObject(**file) for file in files]
+
+        params = DeployEdgeFunctionParams(
+            project_id=project_id,
+            name=name,
+            files=file_objects,
+            entrypoint_path=entrypoint_path,
+            import_map_path=import_map_path,
+        )
+        return await self._call_validate_tool(
+            "deploy_edge_function",
+            params,
+            DeployEdgeFunctionResponse,
+        )
 
     @function_tool
-    async def get_logs(self, project_id: str, service: str) -> Dict[str, Any]:
+    async def get_logs(self, project_id: str, service: str) -> GetLogsResponse:
         """Gets logs for a Supabase project by service type.
 
         Args:
@@ -692,99 +668,21 @@ class SupabaseMCPClient(FastMCPClient):
         Raises:
             MCPError: If the request fails
         """
-        try:
-            response = await self.call_tool(
-                "get_logs", 
-                {"project_id": project_id, "service": service}
-            )
-            
-            # Parse response if it's a string
-            if isinstance(response, str):
-                response = json.loads(response)
-                
-            return response
-        except Exception as e:
-            logger.error(f"Error getting Supabase logs: {str(e)}")
-            raise MCPError(
-                message=f"Failed to get Supabase logs: {str(e)}",
-                server=self.server_name,
-                tool="get_logs",
-                params={"project_id": project_id, "service": service},
-            ) from e
+        params = GetLogsParams(project_id=project_id, service=service)
+        return await self._call_validate_tool(
+            "get_logs",
+            params,
+            GetLogsResponse,
+        )
 
-    @function_tool
-    async def get_project_url(self, project_id: str) -> Dict[str, Any]:
-        """Gets the API URL for a project.
-
-        Args:
-            project_id: The ID of the project
-
-        Returns:
-            Dictionary with project URL
-
-        Raises:
-            MCPError: If the request fails
-        """
-        try:
-            response = await self.call_tool(
-                "get_project_url", 
-                {"project_id": project_id}
-            )
-            
-            # Parse response if it's a string
-            if isinstance(response, str):
-                response = json.loads(response)
-                
-            return response
-        except Exception as e:
-            logger.error(f"Error getting Supabase project URL: {str(e)}")
-            raise MCPError(
-                message=f"Failed to get Supabase project URL: {str(e)}",
-                server=self.server_name,
-                tool="get_project_url",
-                params={"project_id": project_id},
-            ) from e
-
-    @function_tool
-    async def get_anon_key(self, project_id: str) -> Dict[str, Any]:
-        """Gets the anonymous API key for a project.
-
-        Args:
-            project_id: The ID of the project
-
-        Returns:
-            Dictionary with anonymous key
-
-        Raises:
-            MCPError: If the request fails
-        """
-        try:
-            response = await self.call_tool(
-                "get_anon_key", 
-                {"project_id": project_id}
-            )
-            
-            # Parse response if it's a string
-            if isinstance(response, str):
-                response = json.loads(response)
-                
-            return response
-        except Exception as e:
-            logger.error(f"Error getting Supabase anonymous key: {str(e)}")
-            raise MCPError(
-                message=f"Failed to get Supabase anonymous key: {str(e)}",
-                server=self.server_name,
-                tool="get_anon_key",
-                params={"project_id": project_id},
-            ) from e
+    # =====================
+    # Branch Methods
+    # =====================
 
     @function_tool
     async def create_branch(
-        self,
-        project_id: str,
-        confirm_cost_id: str,
-        name: str = "develop"
-    ) -> Dict[str, Any]:
+        self, project_id: str, confirm_cost_id: str, name: str = "develop"
+    ) -> CreateBranchResponse:
         """Creates a development branch on a Supabase project.
 
         Args:
@@ -798,36 +696,19 @@ class SupabaseMCPClient(FastMCPClient):
         Raises:
             MCPError: If the request fails
         """
-        try:
-            response = await self.call_tool(
-                "create_branch", 
-                {
-                    "project_id": project_id, 
-                    "confirm_cost_id": confirm_cost_id,
-                    "name": name
-                }
-            )
-            
-            # Parse response if it's a string
-            if isinstance(response, str):
-                response = json.loads(response)
-                
-            return response
-        except Exception as e:
-            logger.error(f"Error creating Supabase branch: {str(e)}")
-            raise MCPError(
-                message=f"Failed to create Supabase branch: {str(e)}",
-                server=self.server_name,
-                tool="create_branch",
-                params={
-                    "project_id": project_id, 
-                    "confirm_cost_id": confirm_cost_id,
-                    "name": name
-                },
-            ) from e
+        params = CreateBranchParams(
+            project_id=project_id,
+            confirm_cost_id=confirm_cost_id,
+            name=name,
+        )
+        return await self._call_validate_tool(
+            "create_branch",
+            params,
+            CreateBranchResponse,
+        )
 
     @function_tool
-    async def list_branches(self, project_id: str) -> Dict[str, Any]:
+    async def list_branches(self, project_id: str) -> ListBranchesResponse:
         """Lists all development branches of a Supabase project.
 
         Args:
@@ -839,28 +720,15 @@ class SupabaseMCPClient(FastMCPClient):
         Raises:
             MCPError: If the request fails
         """
-        try:
-            response = await self.call_tool(
-                "list_branches", 
-                {"project_id": project_id}
-            )
-            
-            # Parse response if it's a string
-            if isinstance(response, str):
-                response = json.loads(response)
-                
-            return response
-        except Exception as e:
-            logger.error(f"Error listing Supabase branches: {str(e)}")
-            raise MCPError(
-                message=f"Failed to list Supabase branches: {str(e)}",
-                server=self.server_name,
-                tool="list_branches",
-                params={"project_id": project_id},
-            ) from e
+        params = ListBranchesParams(project_id=project_id)
+        return await self._call_validate_tool(
+            "list_branches",
+            params,
+            ListBranchesResponse,
+        )
 
     @function_tool
-    async def delete_branch(self, branch_id: str) -> Dict[str, Any]:
+    async def delete_branch(self, branch_id: str) -> DeleteBranchResponse:
         """Deletes a development branch.
 
         Args:
@@ -872,28 +740,15 @@ class SupabaseMCPClient(FastMCPClient):
         Raises:
             MCPError: If the request fails
         """
-        try:
-            response = await self.call_tool(
-                "delete_branch", 
-                {"branch_id": branch_id}
-            )
-            
-            # Parse response if it's a string
-            if isinstance(response, str):
-                response = json.loads(response)
-                
-            return response
-        except Exception as e:
-            logger.error(f"Error deleting Supabase branch: {str(e)}")
-            raise MCPError(
-                message=f"Failed to delete Supabase branch: {str(e)}",
-                server=self.server_name,
-                tool="delete_branch",
-                params={"branch_id": branch_id},
-            ) from e
+        params = DeleteBranchParams(branch_id=branch_id)
+        return await self._call_validate_tool(
+            "delete_branch",
+            params,
+            DeleteBranchResponse,
+        )
 
     @function_tool
-    async def merge_branch(self, branch_id: str) -> Dict[str, Any]:
+    async def merge_branch(self, branch_id: str) -> MergeBranchResponse:
         """Merges a development branch to the main branch.
 
         Args:
@@ -905,32 +760,17 @@ class SupabaseMCPClient(FastMCPClient):
         Raises:
             MCPError: If the request fails
         """
-        try:
-            response = await self.call_tool(
-                "merge_branch", 
-                {"branch_id": branch_id}
-            )
-            
-            # Parse response if it's a string
-            if isinstance(response, str):
-                response = json.loads(response)
-                
-            return response
-        except Exception as e:
-            logger.error(f"Error merging Supabase branch: {str(e)}")
-            raise MCPError(
-                message=f"Failed to merge Supabase branch: {str(e)}",
-                server=self.server_name,
-                tool="merge_branch",
-                params={"branch_id": branch_id},
-            ) from e
+        params = MergeBranchParams(branch_id=branch_id)
+        return await self._call_validate_tool(
+            "merge_branch",
+            params,
+            MergeBranchResponse,
+        )
 
     @function_tool
     async def reset_branch(
-        self, 
-        branch_id: str,
-        migration_version: Optional[str] = None
-    ) -> Dict[str, Any]:
+        self, branch_id: str, migration_version: Optional[str] = None
+    ) -> ResetBranchResponse:
         """Resets migrations of a development branch.
 
         Args:
@@ -943,33 +783,18 @@ class SupabaseMCPClient(FastMCPClient):
         Raises:
             MCPError: If the request fails
         """
-        try:
-            params = {"branch_id": branch_id}
-            
-            if migration_version:
-                params["migration_version"] = migration_version
-                
-            response = await self.call_tool("reset_branch", params)
-            
-            # Parse response if it's a string
-            if isinstance(response, str):
-                response = json.loads(response)
-                
-            return response
-        except Exception as e:
-            logger.error(f"Error resetting Supabase branch: {str(e)}")
-            raise MCPError(
-                message=f"Failed to reset Supabase branch: {str(e)}",
-                server=self.server_name,
-                tool="reset_branch",
-                params={
-                    "branch_id": branch_id,
-                    "migration_version": migration_version
-                },
-            ) from e
+        params = ResetBranchParams(
+            branch_id=branch_id,
+            migration_version=migration_version,
+        )
+        return await self._call_validate_tool(
+            "reset_branch",
+            params,
+            ResetBranchResponse,
+        )
 
     @function_tool
-    async def rebase_branch(self, branch_id: str) -> Dict[str, Any]:
+    async def rebase_branch(self, branch_id: str) -> RebaseBranchResponse:
         """Rebases a development branch on the main branch.
 
         Args:
@@ -981,223 +806,12 @@ class SupabaseMCPClient(FastMCPClient):
         Raises:
             MCPError: If the request fails
         """
-        try:
-            response = await self.call_tool(
-                "rebase_branch", 
-                {"branch_id": branch_id}
-            )
-            
-            # Parse response if it's a string
-            if isinstance(response, str):
-                response = json.loads(response)
-                
-            return response
-        except Exception as e:
-            logger.error(f"Error rebasing Supabase branch: {str(e)}")
-            raise MCPError(
-                message=f"Failed to rebase Supabase branch: {str(e)}",
-                server=self.server_name,
-                tool="rebase_branch",
-                params={"branch_id": branch_id},
-            ) from e
-
-    @function_tool
-    async def generate_typescript_types(self, project_id: str) -> Dict[str, Any]:
-        """Generates TypeScript types for a project.
-
-        Args:
-            project_id: The ID of the project
-
-        Returns:
-            Dictionary with TypeScript types
-
-        Raises:
-            MCPError: If the request fails
-        """
-        try:
-            response = await self.call_tool(
-                "generate_typescript_types", 
-                {"project_id": project_id}
-            )
-            
-            # Parse response if it's a string
-            if isinstance(response, str):
-                response = json.loads(response)
-                
-            return response
-        except Exception as e:
-            logger.error(f"Error generating TypeScript types: {str(e)}")
-            raise MCPError(
-                message=f"Failed to generate TypeScript types: {str(e)}",
-                server=self.server_name,
-                tool="generate_typescript_types",
-                params={"project_id": project_id},
-            ) from e
-
-
-class SupabaseService:
-    """High-level service for Supabase database operations in TripSage."""
-
-    def __init__(self, client: Optional[SupabaseMCPClient] = None):
-        """Initialize the Supabase Service.
-
-        Args:
-            client: SupabaseMCPClient instance. If not provided, uses the default client.
-        """
-        self.client = client or supabase_client
-        logger.info("Initialized Supabase Service")
-
-    async def get_default_project(self) -> Dict[str, Any]:
-        """Get the default Supabase project ID, creating one if needed.
-
-        Returns:
-            Dictionary with project information
-        """
-        try:
-            # Check for default project ID in settings
-            if settings.supabase_mcp.default_project_id:
-                project_id = settings.supabase_mcp.default_project_id
-                project = await self.client.get_project(project_id)
-                return project
-            
-            # List projects and use the first one
-            projects = await self.client.list_projects()
-            if projects.get("projects") and len(projects["projects"]) > 0:
-                return projects["projects"][0]
-            
-            # No projects found, need to create one
-            # First, list organizations
-            orgs = await self.client.list_organizations()
-            if not orgs.get("organizations") or len(orgs["organizations"]) == 0:
-                return {"error": "No organizations found to create project"}
-            
-            org_id = orgs["organizations"][0]["id"]
-            
-            # Get cost information
-            cost_info = await self.client.get_cost("project", org_id)
-            
-            # Confirm cost
-            confirmation = await self.client.confirm_cost(
-                "project", 
-                cost_info.get("recurrence", "monthly"), 
-                cost_info.get("amount", 0)
-            )
-            
-            # Create project
-            project = await self.client.create_project(
-                "tripsage-production",
-                org_id,
-                confirmation.get("id")
-            )
-            
-            return project
-        except Exception as e:
-            logger.error(f"Error getting default project: {str(e)}")
-            return {"error": f"Failed to get default project: {str(e)}"}
-
-    async def apply_migrations(
-        self, 
-        project_id: str,
-        migrations: List[str],
-        migration_names: Optional[List[str]] = None
-    ) -> Dict[str, Any]:
-        """Apply migrations to a Supabase project.
-
-        Args:
-            project_id: The ID of the project
-            migrations: List of SQL migration statements
-            migration_names: Optional list of migration names (generated if not provided)
-
-        Returns:
-            Dictionary with migration results
-        """
-        try:
-            results = []
-            
-            # If no names provided, generate them
-            if not migration_names:
-                migration_names = [
-                    f"migration_{i:03d}_{uuid.uuid4().hex[:8]}" 
-                    for i in range(len(migrations))
-                ]
-            
-            # Apply each migration
-            for i, (migration, name) in enumerate(zip(migrations, migration_names)):
-                result = await self.client.apply_migration(
-                    project_id, 
-                    name, 
-                    migration
-                )
-                results.append(result)
-            
-            return {
-                "project_id": project_id,
-                "migrations_applied": len(results),
-                "results": results,
-            }
-        except Exception as e:
-            logger.error(f"Error applying migrations: {str(e)}")
-            return {
-                "error": f"Failed to apply migrations: {str(e)}",
-                "project_id": project_id,
-            }
-
-    async def create_development_branch(
-        self, 
-        project_id: Optional[str] = None, 
-        branch_name: str = "develop"
-    ) -> Dict[str, Any]:
-        """Create a development branch for a Supabase project.
-
-        Args:
-            project_id: The ID of the project (uses default if not provided)
-            branch_name: Name for the branch (defaults to "develop")
-
-        Returns:
-            Dictionary with branch information
-        """
-        try:
-            # Get project ID if not provided
-            if not project_id:
-                if settings.supabase_mcp.default_project_id:
-                    project_id = settings.supabase_mcp.default_project_id
-                else:
-                    default_project = await self.get_default_project()
-                    if "error" in default_project:
-                        return default_project
-                    project_id = default_project.get("id")
-            
-            # Get cost information
-            orgs = await self.client.list_organizations()
-            if not orgs.get("organizations") or len(orgs["organizations"]) == 0:
-                return {"error": "No organizations found to get cost information"}
-            
-            org_id = orgs["organizations"][0]["id"]
-            
-            cost_info = await self.client.get_cost("branch", org_id)
-            
-            # Confirm cost
-            confirmation = await self.client.confirm_cost(
-                "branch", 
-                cost_info.get("recurrence", "hourly"), 
-                cost_info.get("amount", 0)
-            )
-            
-            # Create branch
-            branch = await self.client.create_branch(
-                project_id,
-                confirmation.get("id"),
-                branch_name
-            )
-            
-            return branch
-        except Exception as e:
-            logger.error(f"Error creating development branch: {str(e)}")
-            return {
-                "error": f"Failed to create development branch: {str(e)}",
-                "project_id": project_id,
-                "branch_name": branch_name,
-            }
+        params = RebaseBranchParams(branch_id=branch_id)
+        return await self._call_validate_tool(
+            "rebase_branch",
+            params,
+            RebaseBranchResponse,
+        )
 
 
 # Initialize global client instance
@@ -1211,12 +825,3 @@ def get_client() -> SupabaseMCPClient:
         SupabaseMCPClient instance
     """
     return supabase_client
-
-
-def get_service() -> SupabaseService:
-    """Get a Supabase Service instance.
-
-    Returns:
-        SupabaseService instance
-    """
-    return SupabaseService(supabase_client)
