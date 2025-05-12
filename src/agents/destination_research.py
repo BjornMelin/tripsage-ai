@@ -199,7 +199,8 @@ class TripSageDestinationResearch:
                     "websearch_tool_guidance" in crawl_result
                     and topic in crawl_result["websearch_tool_guidance"]
                 ):
-                    # Extract the structured guidance for more effective WebSearchTool use
+                    # Extract the structured guidance for more effective
+                    # WebSearchTool use
                     guidance = crawl_result["websearch_tool_guidance"][topic]
                     search_results[topic] = {
                         "query": query,
@@ -207,8 +208,9 @@ class TripSageDestinationResearch:
                         "source": "web_search",
                         "guidance": guidance,
                         "note": (
-                            "Data will be provided by WebSearchTool using structured guidance patterns "
-                            "to improve search quality and consistency"
+                            "Data will be provided by WebSearchTool using "
+                            "structured guidance patterns to improve search "
+                            "quality and consistency"
                         ),
                     }
                 else:

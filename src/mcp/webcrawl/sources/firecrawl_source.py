@@ -19,6 +19,7 @@ from src.mcp.webcrawl.sources.source_interface import (
     TopicResult,
 )
 from src.utils.logging import get_logger
+from utils import settings
 
 # Initialize logger
 logger = get_logger(__name__)
@@ -132,9 +133,9 @@ class FirecrawlSource(CrawlSource):
                 "url": url,
                 "title": metadata.get("title", self._extract_title_from_url(url)),
                 "content": data.get(options.get("format", "markdown"), ""),
-                "images": data.get("screenshot")
-                if options.get("include_images")
-                else None,
+                "images": (
+                    data.get("screenshot") if options.get("include_images") else None
+                ),
                 "metadata": {
                     "author": metadata.get("author"),
                     "publish_date": metadata.get("publishDate"),
@@ -203,7 +204,8 @@ class FirecrawlSource(CrawlSource):
 
                 if not search_result.get("success"):
                     logger.warning(
-                        f"Firecrawl search failed for {query}: {search_result.get('error')}"
+                        f"Firecrawl search failed for {query}: "
+                        f"{search_result.get('error')}"
                     )
                     continue
 
@@ -222,7 +224,8 @@ class FirecrawlSource(CrawlSource):
                         "content": item.get("markdown", item.get("snippet", "")),
                         "source": domain,
                         "url": source_url,
-                        "confidence": 0.8,  # Firecrawl doesn't provide confidence scores
+                        # Firecrawl doesn't provide confidence scores
+                        "confidence": 0.8,
                     }
 
                     result["topics"][topic].append(topic_result)
@@ -234,7 +237,8 @@ class FirecrawlSource(CrawlSource):
             return result
         except Exception as e:
             logger.error(
-                f"Error searching destination info with Firecrawl for {destination}: {str(e)}"
+                f"Error searching destination info with Firecrawl for "
+                f'"{destination}": {str(e)}'
             )
             raise Exception(
                 f"Failed to search destination information with Firecrawl: {str(e)}"
@@ -265,7 +269,11 @@ class FirecrawlSource(CrawlSource):
                 "actions": [{"type": "wait", "milliseconds": 2000}, {"type": "scrape"}],
                 "formats": ["json"],
                 "jsonOptions": {
-                    "prompt": f"Extract the current price from the element matching selector '{price_selector}'. Return just the price as a number and the currency code.",
+                    "prompt": (
+                        f"Extract the current price from the element matching "
+                        f"selector '{price_selector}'. Return just the price as a "
+                        f"number and the currency code."
+                    ),
                     "mode": "llm-extraction",
                 },
             }
@@ -277,14 +285,18 @@ class FirecrawlSource(CrawlSource):
 
             if not current_price_result.get("success"):
                 raise Exception(
-                    f"Failed to extract current price: {current_price_result.get('error')}"
+                    f"Failed to extract current price: "
+                    f"{current_price_result.get('error')}"
                 )
 
             # Extract price information from the result
             price_data = current_price_result.get("data", {}).get("json", {})
 
             # Generate a monitoring ID
-            monitoring_id = f"monitor_{url.split('/')[-1]}_{datetime.now().strftime('%Y%m%d%H%M%S')}"
+            monitoring_id = (
+                f"monitor_{url.split('/')[-1]}_"
+                f"{datetime.now().strftime('%Y%m%d%H%M%S')}"
+            )
 
             # Create PriceInfo object
             price_info = {
@@ -394,7 +406,11 @@ class FirecrawlSource(CrawlSource):
                         }
                     },
                 },
-                "prompt": f"Extract event information for {destination} between {start_date} and {end_date}. Focus on extracting well-structured event data with accurate dates and details.",
+                "prompt": (
+                    f"Extract event information for {destination} between {start_date} "
+                    f"and {end_date}. Focus on extracting well-structured event data "
+                    f"with accurate dates and details."
+                ),
             }
 
             # Call Firecrawl extract API
@@ -526,7 +542,12 @@ class FirecrawlSource(CrawlSource):
                         }
                     },
                 },
-                "prompt": f"Extract travel insights about {destination} from these blogs. Organize the insights by topic and include a summary and key points for each topic. Also analyze the sentiment of each topic (positive, neutral, or negative).",
+                "prompt": (
+                    f"Extract travel insights about {destination} from these blogs. "
+                    "Organize the insights by topic and include a summary and key "
+                    "points for each topic. Also analyze the sentiment of each topic "
+                    "(positive, neutral, or negative)."
+                ),
             }
 
             # Call Firecrawl extract API
@@ -568,7 +589,7 @@ class FirecrawlSource(CrawlSource):
                         if topic_name not in processed_topics:
                             processed_topics[topic_name] = []
 
-                        for i, item in enumerate(topic_items):
+                        for item in topic_items:
                             # Add source index
                             item["source_index"] = (
                                 blog_urls.index(url_data.get("url"))
@@ -586,7 +607,8 @@ class FirecrawlSource(CrawlSource):
             }
         except Exception as e:
             logger.error(
-                f"Error crawling travel blogs with Firecrawl for {destination}: {str(e)}"
+                f"Error crawling travel blogs with Firecrawl for "
+                f'"{destination}": {str(e)}'
             )
             raise Exception(
                 f"Failed to crawl travel blogs with Firecrawl: {str(e)}"

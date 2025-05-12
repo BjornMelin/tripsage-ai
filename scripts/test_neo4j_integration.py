@@ -83,7 +83,8 @@ async def search_knowledge_graph(query: str, limit: int = 10):
         print(f"🔍 Search results for '{query}':")
         for i, result in enumerate(results, 1):
             print(
-                f"{i}. {result['name']} ({result.get('type', 'Unknown')}) - Score: {result.get('score', 0):.2f}"
+                f"{i}. {result['name']} ({result.get('type', 'Unknown')}) - "
+                f"Score: {result.get('score', 0):.2f}"
             )
             if result.get("description"):
                 print(f"   {result['description'][:100]}...")
@@ -109,7 +110,8 @@ async def find_travel_route(from_dest: str, to_dest: str, max_stops: int = 2):
 
         if not routes:
             print(
-                f"❌ No routes found from {from_dest} to {to_dest} with {max_stops} max stops"
+                f"❌ No routes found from {from_dest} to {to_dest} with "
+                f"{max_stops} max stops"
             )
             return False
 
@@ -271,7 +273,7 @@ async def main():
     subparsers = parser.add_subparsers(dest="command", help="Command to execute")
 
     # Test connection
-    test_parser = subparsers.add_parser("test", help="Test connection to Neo4j")
+    _test_parser = subparsers.add_parser("test", help="Test connection to Neo4j")
 
     # List destinations
     list_parser = subparsers.add_parser(
@@ -305,10 +307,10 @@ async def main():
     )
 
     # Sync from relational
-    sync_parser = subparsers.add_parser("sync", help="Sync from relational database")
+    _sync_parser = subparsers.add_parser("sync", help="Sync from relational database")
 
     # Test Memory MCP
-    memory_parser = subparsers.add_parser("memory", help="Test Memory MCP integration")
+    _memory_parser = subparsers.add_parser("memory", help="Test Memory MCP integration")
 
     args = parser.parse_args()
 

@@ -48,7 +48,8 @@ class TravelInsightsAgent:
         # Use WebCrawl MCP to search for destination information
         search_results = await self.webcrawl_client.search_destination_info(
             destination=destination,
-            topics=topics or [
+            topics=topics
+            or [
                 "attractions",
                 "best time to visit",
                 "local cuisine",
@@ -197,11 +198,11 @@ class TravelInsightsAgent:
 async def main():
     """Run a simple demo of the travel insights agent."""
     agent = TravelInsightsAgent()
-    
+
     # Get insights for Tokyo
     insights = await agent.get_destination_insights("Tokyo, Japan")
     print(f"Found {len(insights['general_info'].get('topics', {}))} topics for Tokyo")
-    
+
     # Extract from a travel site
     content = await agent.extract_from_travel_site(
         "https://www.japan-guide.com/e/e2164.html"
