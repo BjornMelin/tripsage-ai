@@ -4,6 +4,7 @@ import datetime
 from typing import Any, Dict, List, Optional
 
 from src.mcp.webcrawl.sources.crawl4ai_source import Crawl4AISource
+from src.mcp.webcrawl.sources.firecrawl_source import FirecrawlSource
 from src.mcp.webcrawl.sources.playwright_source import PlaywrightSource
 from src.mcp.webcrawl.utils.result_normalizer import get_result_normalizer
 from src.mcp.webcrawl.utils.search_helpers import create_fallback_guidance
@@ -50,7 +51,7 @@ async def search_destination_info(
         )
 
     # Validate source_type
-    if source_type not in ["crawl4ai", "playwright"]:
+    if source_type not in ["crawl4ai", "firecrawl", "playwright"]:
         logger.warning(f"Invalid source_type: {source_type}, defaulting to crawl4ai")
         source_type = "crawl4ai"
 
@@ -59,6 +60,9 @@ async def search_destination_info(
         if source_type == "crawl4ai":
             source = Crawl4AISource()
             logger.info(f"Using Crawl4AI source for {destination}")
+        elif source_type == "firecrawl":
+            source = FirecrawlSource()
+            logger.info(f"Using Firecrawl source for {destination}")
         else:  # playwright
             source = PlaywrightSource()
             logger.info(f"Using Playwright source for {destination}")
@@ -76,13 +80,21 @@ async def search_destination_info(
     except Exception as e:
         logger.error(f"{source_type} search failed for {destination}: {str(e)}")
 
-        # Try fallback to the other source
-        fallback_type = "playwright" if source_type == "crawl4ai" else "crawl4ai"
+        # Try fallback to an alternative source
+        if source_type == "crawl4ai":
+            fallback_type = "firecrawl"  # Try Firecrawl first
+        elif source_type == "firecrawl":
+            fallback_type = "playwright"  # Try Playwright next
+        else:  # Playwright failed, try Crawl4AI
+            fallback_type = "crawl4ai"
+
         try:
             logger.info(f"Trying {fallback_type} fallback for {destination}")
 
             if fallback_type == "crawl4ai":
                 fallback_source = Crawl4AISource()
+            elif fallback_type == "firecrawl":
+                fallback_source = FirecrawlSource()
             else:
                 fallback_source = PlaywrightSource()
 
