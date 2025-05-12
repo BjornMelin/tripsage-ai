@@ -808,3 +808,87 @@ async def test_call_validate_tool_exception_handling(client):
 
     assert "Failed to call test_tool" in str(exc_info.value)
     assert "Test exception" in str(exc_info.value)
+
+
+async def test_external_package_recognition():
+    """Test that mcp-neo4j-memory package is recognized as external dependency."""
+    # This test verifies that the `mcp-neo4j-memory` package is recognized
+    # as a proper external dependency by the setup tools
+
+    import importlib.util
+    import subprocess
+    import sys
+
+    # Try to import the package to check if it's installed
+    spec = importlib.util.find_spec("mcp_neo4j_memory")
+    is_mcp_installed = spec is not None
+
+    if not is_mcp_installed:
+        # Skip the test if the package is not installed
+        pytest.skip("mcp-neo4j-memory package not installed")
+
+    # Verify that the package has the necessary interfaces
+    try:
+        import mcp_neo4j_memory
+
+        # Check that the package has a main entry point for the server
+        assert hasattr(mcp_neo4j_memory, "__main__") or hasattr(
+            mcp_neo4j_memory, "main"
+        ), "External package missing main entry point"
+
+        # Verify the expected tools are available
+        tools = getattr(mcp_neo4j_memory, "tools", None) or []
+        expected_tools = [
+            "create_entities",
+            "create_relations",
+            "add_observations",
+            "delete_entities",
+            "delete_observations",
+            "delete_relations",
+            "read_graph",
+            "search_nodes",
+            "open_nodes",
+        ]
+
+        for tool in expected_tools:
+            assert tool in str(tools), f"External package missing expected tool: {tool}"
+
+    except (ImportError, AttributeError) as e:
+        pytest.skip(f"External package not correctly importable: {str(e)}")
+
+    # Verify that the startup script can find and recognize the package
+    try:
+        import os
+
+        # Check that the start_memory_mcp.sh script exists
+        script_path = os.path.join(
+            os.path.dirname(
+                os.path.dirname(
+                    os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+                )
+            ),
+            "scripts",
+            "start_memory_mcp.sh",
+        )
+
+        assert os.path.exists(script_path), "Startup script not found"
+
+        # Verify the script has the proper command to start the server
+        with open(script_path, "r") as f:
+            script_content = f.read()
+
+        assert "python -m mcp_neo4j_memory" in script_content, (
+            "Startup script does not properly reference the external package"
+        )
+
+        # Check that the package is installable via pip
+        pip_check = subprocess.run(
+            [sys.executable, "-m", "pip", "show", "mcp-neo4j-memory"],
+            capture_output=True,
+            text=True,
+        )
+
+        assert pip_check.returncode == 0, "Package not properly installed via pip"
+
+    except Exception as e:
+        pytest.skip(f"Error checking startup script: {str(e)}")

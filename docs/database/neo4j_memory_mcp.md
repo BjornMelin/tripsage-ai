@@ -55,21 +55,52 @@ NEO4J_USERNAME=neo4j
 NEO4J_PASSWORD=password
 
 # Neo4j Memory MCP
-MEMORY_MCP_ENDPOINT=http://localhost:8000
+MEMORY_MCP_ENDPOINT=http://localhost:3008
 ```
+
+### Memory MCP Server - External Dependency
+
+TripSage uses the official `mcp-neo4j-memory` package as an external dependency for the Memory MCP server, rather than implementing a custom server. This approach:
+
+1. Ensures standard compliance with the MCP protocol
+2. Reduces maintenance overhead
+3. Leverages community-maintained code
+4. Provides consistent behavior across implementations
+
+The external package is automatically installed by the startup script if not already present.
 
 ### Starting the Memory MCP
 
-A startup script is provided in `scripts/start_memory_mcp.sh` to configure and start the Neo4j Memory MCP:
+A startup script is provided in `scripts/start_memory_mcp.sh` to install the dependency (if needed), configure, and start the Neo4j Memory MCP:
 
 ```bash
 #!/bin/bash
 
-# Load environment variables from .env file
-export $(grep -v '^#' .env | xargs)
+# Check if mcp-neo4j-memory is installed
+if ! pip show mcp-neo4j-memory > /dev/null 2>&1; then
+    echo "Installing mcp-neo4j-memory..."
+    pip install mcp-neo4j-memory
+fi
 
-# Start the Memory MCP server
-python -m mcp_servers.run_memory_mcp
+# Load environment variables
+if [ -f .env ]; then
+    # Extract Neo4j configuration from .env
+    NEO4J_URI=$(grep -o '^NEO4J_URI=.*' .env | cut -d '=' -f2)
+    NEO4J_USER=$(grep -o '^NEO4J_USER=.*' .env | cut -d '=' -f2)
+    NEO4J_PASSWORD=$(grep -o '^NEO4J_PASSWORD=.*' .env | cut -d '=' -f2)
+    NEO4J_DATABASE=$(grep -o '^NEO4J_DATABASE=.*' .env | cut -d '=' -f2)
+    MEMORY_MCP_PORT=$(grep -o '^MEMORY_MCP_ENDPOINT=.*' .env | cut -d ':' -f3)
+else
+    # Default configuration
+    NEO4J_URI="bolt://localhost:7687"
+    NEO4J_USER="neo4j"
+    NEO4J_PASSWORD="tripsage_password"
+    NEO4J_DATABASE="neo4j"
+    MEMORY_MCP_PORT="3008"
+fi
+
+# Start the MCP server with Neo4j configuration
+python -m mcp_neo4j_memory --port $MEMORY_MCP_PORT
 ```
 
 ## Using the Memory MCP Client
