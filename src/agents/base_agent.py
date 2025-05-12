@@ -14,7 +14,6 @@ from pydantic import BaseModel
 from agents import Agent, RunContextWrapper, function_tool, handoff
 from agents.extensions.handoff_prompt import RECOMMENDED_PROMPT_PREFIX
 from src.mcp.base_mcp_client import BaseMCPClient
-from src.mcp.memory.client import memory_client
 from src.utils.config import get_config
 from src.utils.error_handling import MCPError, TripSageError, log_exception
 from src.utils.logging import get_module_logger
@@ -204,13 +203,15 @@ class BaseAgent:
         except Exception as e:
             logger.error("Error registering MCP client tools: %s", str(e))
             log_exception(e)
-    
-    async def _initialize_session(self, user_id: Optional[str] = None) -> Dict[str, Any]:
+
+    async def _initialize_session(
+        self, user_id: Optional[str] = None
+    ) -> Dict[str, Any]:
         """Initialize a new session with knowledge graph data.
-        
+
         Args:
             user_id: Optional user ID
-            
+
         Returns:
             Session data
         """
@@ -223,10 +224,10 @@ class BaseAgent:
             logger.error("Error initializing session: %s", str(e))
             log_exception(e)
             return {}
-    
+
     async def _save_session_summary(self, user_id: str, summary: str) -> None:
         """Save a summary of the current session.
-        
+
         Args:
             user_id: User ID
             summary: Session summary
@@ -259,7 +260,7 @@ class BaseAgent:
 
         # Set up context
         run_context = context or {}
-        
+
         # Initialize session data if this is the first message
         if not self.session_data and "user_id" in run_context:
             await self._initialize_session(run_context.get("user_id"))
@@ -289,11 +290,13 @@ class BaseAgent:
                     "timestamp": time.time(),
                 }
             )
-            
+
             # Save session summary if needed
             if len(self.messages_history) >= 10 and "user_id" in run_context:
                 # Generate session summary
-                summary = f"Conversation with {self.messages_history[0]['content'][:50]}..."
+                summary = (
+                    f"Conversation with {self.messages_history[0]['content'][:50]}..."
+                )
                 await self._save_session_summary(run_context["user_id"], summary)
 
             return response

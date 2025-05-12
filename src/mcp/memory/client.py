@@ -47,13 +47,13 @@ class MemoryClient(BaseMcpClient):
             List of created entities with their IDs
         """
         logger.info(f"Creating {len(entities)} entities via Memory MCP")
-        
+
         response = await self._make_request(
             method="POST",
             endpoint="create_entities",
             data={"entities": entities},
         )
-        
+
         return response.get("entities", [])
 
     async def create_relations(
@@ -69,13 +69,13 @@ class MemoryClient(BaseMcpClient):
             List of created relations
         """
         logger.info(f"Creating {len(relations)} relations via Memory MCP")
-        
+
         response = await self._make_request(
             method="POST",
             endpoint="create_relations",
             data={"relations": relations},
         )
-        
+
         return response.get("relations", [])
 
     async def add_observations(
@@ -90,14 +90,16 @@ class MemoryClient(BaseMcpClient):
         Returns:
             List of updated entities
         """
-        logger.info(f"Adding observations to {len(observations)} entities via Memory MCP")
-        
+        logger.info(
+            f"Adding observations to {len(observations)} entities via Memory MCP"
+        )
+
         response = await self._make_request(
             method="POST",
             endpoint="add_observations",
             data={"observations": observations},
         )
-        
+
         return response.get("entities", [])
 
     async def delete_entities(self, entity_names: List[str]) -> List[str]:
@@ -110,13 +112,13 @@ class MemoryClient(BaseMcpClient):
             List of deleted entity names
         """
         logger.info(f"Deleting {len(entity_names)} entities via Memory MCP")
-        
+
         response = await self._make_request(
             method="POST",
             endpoint="delete_entities",
             data={"entityNames": entity_names},
         )
-        
+
         return response.get("deleted", [])
 
     async def delete_relations(
@@ -132,13 +134,13 @@ class MemoryClient(BaseMcpClient):
             List of deleted relations
         """
         logger.info(f"Deleting {len(relations)} relations via Memory MCP")
-        
+
         response = await self._make_request(
             method="POST",
             endpoint="delete_relations",
             data={"relations": relations},
         )
-        
+
         return response.get("deleted", [])
 
     async def delete_observations(
@@ -153,14 +155,16 @@ class MemoryClient(BaseMcpClient):
         Returns:
             List of updated entities
         """
-        logger.info(f"Deleting observations from {len(deletions)} entities via Memory MCP")
-        
+        logger.info(
+            f"Deleting observations from {len(deletions)} entities via Memory MCP"
+        )
+
         response = await self._make_request(
             method="POST",
             endpoint="delete_observations",
             data={"deletions": deletions},
         )
-        
+
         return response.get("entities", [])
 
     async def read_graph(self) -> Dict[str, Any]:
@@ -170,16 +174,16 @@ class MemoryClient(BaseMcpClient):
             Dictionary containing entities and relations
         """
         logger.info("Reading entire knowledge graph via Memory MCP")
-        
+
         response = await self._make_request(
             method="GET",
             endpoint="read_graph",
         )
-        
+
         return {
             "entities": response.get("entities", []),
             "relations": response.get("relations", []),
-            "statistics": response.get("statistics", {})
+            "statistics": response.get("statistics", {}),
         }
 
     async def search_nodes(self, query: str) -> List[Dict[str, Any]]:
@@ -192,13 +196,13 @@ class MemoryClient(BaseMcpClient):
             List of matching nodes
         """
         logger.info(f"Searching for nodes with query: {query} via Memory MCP")
-        
+
         response = await self._make_request(
             method="POST",
             endpoint="search_nodes",
             data={"query": query},
         )
-        
+
         return response.get("nodes", [])
 
     async def open_nodes(self, names: List[str]) -> List[Dict[str, Any]]:
@@ -211,13 +215,13 @@ class MemoryClient(BaseMcpClient):
             List of node details
         """
         logger.info(f"Opening {len(names)} nodes via Memory MCP")
-        
+
         response = await self._make_request(
             method="POST",
             endpoint="open_nodes",
             data={"names": names},
         )
-        
+
         return response.get("nodes", [])
 
 

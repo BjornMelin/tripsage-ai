@@ -5,7 +5,7 @@ This module provides utilities for initializing and updating session memory
 using the Neo4j Memory MCP.
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 from src.mcp.memory.client import memory_client
 from src.utils.logging import get_module_logger
@@ -27,20 +27,20 @@ async def initialize_session_memory(user_id: Optional[str] = None) -> Dict[str, 
     """
     logger.info("Initializing session memory")
     await memory_client.initialize()
-    
+
     session_data = {
         "user": None,
         "preferences": {},
         "recent_trips": [],
         "popular_destinations": [],
     }
-    
+
     # Retrieve user information if available
     if user_id:
         user_nodes = await memory_client.open_nodes([f"User:{user_id}"])
         if user_nodes:
             session_data["user"] = user_nodes[0]
-            
+
             # Extract user preferences from observations
             preferences = {}
             for observation in user_nodes[0].get("observations", []):
@@ -49,23 +49,24 @@ async def initialize_session_memory(user_id: Optional[str] = None) -> Dict[str, 
                     if len(parts) == 2:
                         preference_value, category = parts
                         preferences[category] = preference_value
-            
+
             session_data["preferences"] = preferences
-            
+
             # Find user's recent trips
             trip_search = await memory_client.search_nodes(f"User:{user_id} PLANS")
             if trip_search:
                 # Get trip IDs
                 trip_names = [
-                    node.get("name") for node in trip_search 
+                    node.get("name")
+                    for node in trip_search
                     if node.get("name", "").startswith("Trip:")
                 ]
-                
+
                 # Get trip details
                 if trip_names:
                     trips = await memory_client.open_nodes(trip_names)
                     session_data["recent_trips"] = trips
-    
+
     # Get popular destinations
     try:
         stats = await memory_client._make_request(
@@ -75,13 +76,12 @@ async def initialize_session_memory(user_id: Optional[str] = None) -> Dict[str, 
         session_data["popular_destinations"] = stats
     except Exception as e:
         logger.warning(f"Failed to retrieve popular destinations: {str(e)}")
-    
+
     return session_data
 
 
 async def update_session_memory(
-    user_id: str, 
-    updates: Dict[str, Any]
+    user_id: str, updates: Dict[str, Any]
 ) -> Dict[str, Any]:
     """Update session memory with new knowledge.
 
@@ -97,43 +97,47 @@ async def update_session_memory(
     """
     logger.info(f"Updating session memory for user {user_id}")
     await memory_client.initialize()
-    
+
     result = {
         "entities_created": 0,
         "relations_created": 0,
         "observations_added": 0,
     }
-    
+
     # Update user preferences
     if "preferences" in updates:
         # Get or create user entity
         user_nodes = await memory_client.open_nodes([f"User:{user_id}"])
-        
+
         if not user_nodes:
             # Create user entity
-            await memory_client.create_entities([
-                {
-                    "name": f"User:{user_id}",
-                    "entityType": "User",
-                    "observations": ["TripSage user"],
-                }
-            ])
+            await memory_client.create_entities(
+                [
+                    {
+                        "name": f"User:{user_id}",
+                        "entityType": "User",
+                        "observations": ["TripSage user"],
+                    }
+                ]
+            )
             result["entities_created"] += 1
-        
+
         # Add preference observations
         preference_observations = []
         for category, preference in updates["preferences"].items():
             preference_observations.append(f"Prefers {preference} for {category}")
-        
+
         if preference_observations:
-            await memory_client.add_observations([
-                {
-                    "entityName": f"User:{user_id}",
-                    "contents": preference_observations,
-                }
-            ])
+            await memory_client.add_observations(
+                [
+                    {
+                        "entityName": f"User:{user_id}",
+                        "contents": preference_observations,
+                    }
+                ]
+            )
             result["observations_added"] += len(preference_observations)
-    
+
     # Create relationships for new information
     if "learned_facts" in updates:
         for fact in updates["learned_facts"]:
@@ -145,26 +149,36 @@ async def update_session_memory(
                         existing = await memory_client.open_nodes([entity_name])
                         if not existing:
                             # Create entity with a generic type
-                            entity_type = fact.get("fromType" if entity_name == fact["from"] else "toType", "Entity")
-                            await memory_client.create_entities([
-                                {
-                                    "name": entity_name,
-                                    "entityType": entity_type,
-                                    "observations": [f"Learned during session with user {user_id}"],
-                                }
-                            ])
+                            entity_type = fact.get(
+                                "fromType" if entity_name == fact["from"] else "toType",
+                                "Entity",
+                            )
+                            await memory_client.create_entities(
+                                [
+                                    {
+                                        "name": entity_name,
+                                        "entityType": entity_type,
+                                        "observations": [
+                                            f"Learned during session with "
+                                            f"user {user_id}"
+                                        ],
+                                    }
+                                ]
+                            )
                             result["entities_created"] += 1
-                
+
                 # Create relationship
-                await memory_client.create_relations([
-                    {
-                        "from": fact["from"],
-                        "relationType": fact["relationType"],
-                        "to": fact["to"],
-                    }
-                ])
+                await memory_client.create_relations(
+                    [
+                        {
+                            "from": fact["from"],
+                            "relationType": fact["relationType"],
+                            "to": fact["to"],
+                        }
+                    ]
+                )
                 result["relations_created"] += 1
-    
+
     return result
 
 
@@ -187,25 +201,29 @@ async def store_session_summary(
     """
     logger.info(f"Storing session summary for user {user_id}")
     await memory_client.initialize()
-    
+
     # Create session entity
-    session_entity = await memory_client.create_entities([
-        {
-            "name": f"Session:{session_id}",
-            "entityType": "Session",
-            "observations": [summary],
-        }
-    ])
-    
+    session_entity = await memory_client.create_entities(
+        [
+            {
+                "name": f"Session:{session_id}",
+                "entityType": "Session",
+                "observations": [summary],
+            }
+        ]
+    )
+
     # Create relationship between user and session
-    session_relation = await memory_client.create_relations([
-        {
-            "from": f"User:{user_id}",
-            "relationType": "PARTICIPATED_IN",
-            "to": f"Session:{session_id}",
-        }
-    ])
-    
+    session_relation = await memory_client.create_relations(
+        [
+            {
+                "from": f"User:{user_id}",
+                "relationType": "PARTICIPATED_IN",
+                "to": f"Session:{session_id}",
+            }
+        ]
+    )
+
     return {
         "session_entity": session_entity[0] if session_entity else None,
         "session_relation": session_relation[0] if session_relation else None,

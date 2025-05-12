@@ -5,16 +5,17 @@ These tests verify that the dual storage strategy correctly stores and retrieves
 data from both Supabase and Neo4j via the Memory MCP.
 """
 
-import pytest
-from uuid import uuid4
-from unittest.mock import AsyncMock, patch, MagicMock
 from datetime import date
+from unittest.mock import AsyncMock, MagicMock, patch
+from uuid import uuid4
+
+import pytest
 
 from src.utils.dual_storage import (
-    store_trip_with_dual_storage,
-    retrieve_trip_with_dual_storage,
-    update_trip_with_dual_storage,
     delete_trip_with_dual_storage,
+    retrieve_trip_with_dual_storage,
+    store_trip_with_dual_storage,
+    update_trip_with_dual_storage,
 )
 
 
@@ -58,7 +59,7 @@ def sample_trip_data():
                 "name": "Miami",
                 "country": "USA",
                 "type": "city",
-                "description": "Beautiful beaches and vibrant nightlife"
+                "description": "Beautiful beaches and vibrant nightlife",
             }
         ],
         "accommodations": [
@@ -66,7 +67,7 @@ def sample_trip_data():
                 "name": "Beachfront Resort",
                 "type": "hotel",
                 "destination": "Miami",
-                "description": "Luxury resort with ocean views"
+                "description": "Luxury resort with ocean views",
             }
         ],
         "activities": [
@@ -74,24 +75,28 @@ def sample_trip_data():
                 "name": "Snorkeling Tour",
                 "destination": "Miami",
                 "type": "water",
-                "description": "Exploring coral reefs"
+                "description": "Exploring coral reefs",
             }
-        ]
+        ],
     }
 
 
-async def test_store_trip_with_dual_storage(mock_db_client, mock_memory_client, sample_trip_data):
+async def test_store_trip_with_dual_storage(
+    mock_db_client, mock_memory_client, sample_trip_data
+):
     """Test storing trip data using the dual storage strategy."""
     # Arrange
     user_id = str(uuid4())
     trip_id = str(uuid4())
     mock_db_client.trips.create.return_value = {"id": trip_id, **sample_trip_data}
     mock_memory_client.create_entities.return_value = [{"name": f"Trip:{trip_id}"}]
-    mock_memory_client.create_relations.return_value = [{"from": f"User:{user_id}", "to": f"Trip:{trip_id}"}]
-    
+    mock_memory_client.create_relations.return_value = [
+        {"from": f"User:{user_id}", "to": f"Trip:{trip_id}"}
+    ]
+
     # Act
     result = await store_trip_with_dual_storage(sample_trip_data, user_id)
-    
+
     # Assert
     mock_db_client.trips.create.assert_called_once()
     mock_memory_client.initialize.assert_called_once()
@@ -118,14 +123,14 @@ async def test_retrieve_trip_with_dual_storage(mock_db_client, mock_memory_clien
     trip_node = {
         "name": f"Trip:{trip_id}",
         "type": "Trip",
-        "observations": ["Trip from 2025-06-15 to 2025-06-30", "Budget: $5000"]
+        "observations": ["Trip from 2025-06-15 to 2025-06-30", "Budget: $5000"],
     }
     mock_db_client.trips.get.return_value = db_trip
     mock_memory_client.open_nodes.return_value = [trip_node]
-    
+
     # Act
     result = await retrieve_trip_with_dual_storage(trip_id)
-    
+
     # Assert
     mock_db_client.trips.get.assert_called_once_with(trip_id)
     mock_memory_client.initialize.assert_called_once()
@@ -152,20 +157,20 @@ async def test_retrieve_trip_with_graph(mock_db_client, mock_memory_client):
     trip_node = {
         "name": f"Trip:{trip_id}",
         "type": "Trip",
-        "observations": ["Trip from 2025-06-15 to 2025-06-30", "Budget: $5000"]
+        "observations": ["Trip from 2025-06-15 to 2025-06-30", "Budget: $5000"],
     }
     mock_db_client.trips.get.return_value = db_trip
     mock_memory_client.open_nodes.return_value = [trip_node]
     search_results = [
         {"name": f"Trip:{trip_id}"},
         {"name": "Miami"},
-        {"name": "Beachfront Resort"}
+        {"name": "Beachfront Resort"},
     ]
     mock_memory_client.search_nodes.return_value = search_results
-    
+
     # Act
     result = await retrieve_trip_with_dual_storage(trip_id, include_graph=True)
-    
+
     # Assert
     mock_db_client.trips.get.assert_called_once_with(trip_id)
     mock_memory_client.initialize.assert_called_once()
@@ -195,25 +200,25 @@ async def test_update_trip_with_dual_storage(mock_db_client, mock_memory_client)
         "status": "planning",
     }
     mock_db_client.trips.update.return_value = db_trip
-    mock_memory_client.open_nodes.return_value = [{
-        "name": f"Trip:{trip_id}",
-        "type": "Trip",
-        "observations": ["Old observation"]
-    }]
-    mock_memory_client.add_observations.return_value = [{
-        "name": f"Trip:{trip_id}",
-        "observations": ["New observation"]
-    }]
-    
+    mock_memory_client.open_nodes.return_value = [
+        {"name": f"Trip:{trip_id}", "type": "Trip", "observations": ["Old observation"]}
+    ]
+    mock_memory_client.add_observations.return_value = [
+        {"name": f"Trip:{trip_id}", "observations": ["New observation"]}
+    ]
+
     # Act
     result = await update_trip_with_dual_storage(trip_id, update_data)
-    
+
     # Assert
-    mock_db_client.trips.update.assert_called_once_with(trip_id, {
-        "title": "Updated Vacation",
-        "description": "New description",
-        "budget": 6000,
-    })
+    mock_db_client.trips.update.assert_called_once_with(
+        trip_id,
+        {
+            "title": "Updated Vacation",
+            "description": "New description",
+            "budget": 6000,
+        },
+    )
     mock_memory_client.initialize.assert_called_once()
     mock_memory_client.open_nodes.assert_called_once_with([f"Trip:{trip_id}"])
     mock_memory_client.add_observations.assert_called_once()
@@ -227,10 +232,10 @@ async def test_delete_trip_with_dual_storage(mock_db_client, mock_memory_client)
     trip_id = str(uuid4())
     mock_db_client.trips.delete.return_value = True
     mock_memory_client.delete_entities.return_value = [f"Trip:{trip_id}"]
-    
+
     # Act
     result = await delete_trip_with_dual_storage(trip_id)
-    
+
     # Assert
     mock_db_client.trips.delete.assert_called_once_with(trip_id)
     mock_memory_client.initialize.assert_called_once()

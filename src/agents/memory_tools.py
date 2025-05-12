@@ -7,9 +7,9 @@ client for use with the OpenAI Agents SDK.
 
 from typing import Any, Dict, List, Optional
 
-from agents import function_tool
 from pydantic import BaseModel, Field
 
+from agents import function_tool
 from src.mcp.memory.client import memory_client
 from src.utils.error_handling import log_exception
 from src.utils.logging import get_module_logger
@@ -314,9 +314,7 @@ async def initialize_agent_memory(
 
 
 @function_tool
-async def update_agent_memory(
-    user_id: str, updates: Dict[str, Any]
-) -> Dict[str, Any]:
+async def update_agent_memory(user_id: str, updates: Dict[str, Any]) -> Dict[str, Any]:
     """Update agent memory with new knowledge.
 
     Args:
