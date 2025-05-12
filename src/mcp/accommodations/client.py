@@ -37,6 +37,7 @@ class AirbnbMCPClient(BaseMCPClient[P, R]):
     def __init__(
         self,
         endpoint: str = "http://localhost:3000",
+        server_type: str = "openbnb/mcp-server-airbnb",
         timeout: float = 60.0,
         use_cache: bool = True,
         cache_ttl: int = 3600,  # 1 hour default
@@ -45,19 +46,24 @@ class AirbnbMCPClient(BaseMCPClient[P, R]):
 
         Args:
             endpoint: MCP server endpoint URL
+            server_type: Type of server implementation
+                (e.g., "openbnb/mcp-server-airbnb")
             timeout: Request timeout in seconds
             use_cache: Whether to use caching
             cache_ttl: Cache TTL in seconds
         """
         super().__init__(
             endpoint=endpoint,
-            api_key=None,  # Airbnb MCP doesn't use API keys
+            api_key=None,  # OpenBnB Airbnb MCP doesn't use API keys
             timeout=timeout,
             use_cache=use_cache,
             cache_ttl=cache_ttl,
         )
-        self.server_name = "Airbnb MCP"
-        logger.debug("Initialized Airbnb MCP client with endpoint: %s", endpoint)
+        self.server_name = "OpenBnB Airbnb MCP"
+        self.server_type = server_type
+        logger.debug(
+            "Initialized %s client with endpoint: %s", self.server_name, endpoint
+        )
 
     async def search_accommodations(
         self,
@@ -201,14 +207,18 @@ class AirbnbMCPClient(BaseMCPClient[P, R]):
                 params={"location": location},
             ) from e
         except Exception as e:
-            logger.error("Airbnb accommodation search failed: %s", str(e))
+            error_msg = (
+                f"{self.server_name} ({self.server_type}) accommodation search failed: "
+                f"{str(e)}"
+            )
+            logger.error(error_msg)
             return AirbnbSearchResult.model_validate(
                 {
                     "location": location,
                     "count": 0,
                     "listings": [],
                     "search_params": params if "params" in locals() else {},
-                    "error": str(e),
+                    "error": error_msg,
                 }
             )
 
@@ -295,15 +305,22 @@ class AirbnbMCPClient(BaseMCPClient[P, R]):
         except ValidationError as e:
             logger.error(f"Validation error: {str(e)}")
             raise MCPError(
-                message=f"Invalid response from Airbnb listing details: {str(e)}",
+                message=(
+                    f"Invalid response from {self.server_name} listing details: "
+                    f"{str(e)}"
+                ),
                 server=self.server_name,
                 tool="airbnb_listing_details",
                 params=params,
             ) from e
         except Exception as e:
-            logger.error("Failed to get Airbnb listing details: %s", str(e))
+            error_msg = (
+                f"Failed to get {self.server_name} ({self.server_type}) "
+                f"listing details: {str(e)}"
+            )
+            logger.error(error_msg)
             raise MCPError(
-                message=f"Failed to get Airbnb listing details: {str(e)}",
+                message=error_msg,
                 server=self.endpoint,
                 tool="airbnb_listing_details",
                 params=params,
