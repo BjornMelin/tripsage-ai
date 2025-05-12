@@ -39,7 +39,10 @@ async def get_current_time_tool(timezone: str) -> Dict[str, Any]:
             "timezone": result.get("timezone", timezone),
             "utc_offset": result.get("utc_offset", ""),
             "is_dst": result.get("is_dst", False),
-            "formatted": f"{result.get('current_date', '')} {result.get('current_time', '')} ({timezone})",
+            "formatted": (
+                f"{result.get('current_date', '')} {result.get('current_time', '')} "
+                f"({timezone})"
+            ),
         }
     except Exception as e:
         logger.error(f"Error in get_current_time_tool: {str(e)}")
@@ -69,7 +72,10 @@ async def convert_timezone_tool(time: str, from_tz: str, to_tz: str) -> Dict[str
             "target_time": result.get("target_time", ""),
             "target_timezone": result.get("target_timezone", to_tz),
             "time_difference": result.get("time_difference", ""),
-            "formatted": f"{time} {from_tz} = {result.get('target_time', '')} {to_tz} (difference: {result.get('time_difference', '')})",
+            "formatted": (
+                f"{time} {from_tz} = {result.get('target_time', '')} {to_tz} "
+                f"(difference: {result.get('time_difference', '')})"
+            ),
         }
     except Exception as e:
         logger.error(f"Error in convert_timezone_tool: {str(e)}")
@@ -101,7 +107,10 @@ async def get_local_time_tool(location: str) -> Dict[str, Any]:
             "timezone": result.get("timezone", ""),
             "utc_offset": result.get("utc_offset", ""),
             "is_dst": result.get("is_dst", False),
-            "formatted": f"Current time in {location}: {result.get('current_date', '')} {result.get('current_time', '')} ({result.get('timezone', '')})",
+            "formatted": (
+                f"Current time in {location}: {result.get('current_date', '')} "
+                f"{result.get('current_time', '')} ({result.get('timezone', '')})"
+            ),
         }
     except Exception as e:
         logger.error(f"Error in get_local_time_tool: {str(e)}")
@@ -168,8 +177,9 @@ async def calculate_flight_arrival_tool(
             "day_offset": day_offset,
             "time_difference": result.get("time_difference", ""),
             "formatted": (
-                f"Flight from {departure_location} ({departure_time}) to {arrival_location}\n"
-                f"Duration: {result.get('flight_duration', f'{flight_duration_hours}h')}\n"
+                f"Flight from {departure_location} ({departure_time}) "
+                f"to {arrival_location}\nDuration: "
+                f"{result.get('flight_duration', f'{flight_duration_hours}h')}\n"
                 f"Local arrival time: {result.get('arrival_time_local', '')}{day_text} "
                 f"({arrival_timezone})\n"
                 f"Time zone difference: {result.get('time_difference', '')}"
@@ -240,7 +250,10 @@ async def find_meeting_times_tool(
                 "suitable_times": [],
                 "time_difference": "",
                 "count": 0,
-                "formatted": f"No suitable meeting times found between {first_location} and {second_location} during specified hours.",
+                "formatted": (
+                    f"No suitable meeting times found between {first_location} and "
+                    f"{second_location} during specified hours."
+                ),
             }
 
         # Get time difference from any suitable time

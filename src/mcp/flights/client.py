@@ -5,7 +5,8 @@ This module provides a client for interacting with the Flight MCP Server,
 which offers flight search, comparison, booking, and price tracking.
 """
 
-from typing import Any, Dict, List, Optional, TypeVar, Generic, cast
+from typing import Any, Dict, Generic, List, Optional, TypeVar, cast
+
 from pydantic import ValidationError
 
 from ...cache.redis_cache import redis_cache
@@ -14,29 +15,27 @@ from ...utils.logging import get_module_logger
 from ...utils.settings import settings
 from ..fastmcp import FastMCPClient
 from .models import (
-    FlightSearchParams,
-    FlightSearchResponse,
-    MultiCitySearchParams,
-    FlightSegment,
     AirportSearchParams,
     AirportSearchResponse,
-    OfferDetailsParams,
-    OfferDetailsResponse,
+    BookingResponse,
     FlightPriceParams,
     FlightPriceResponse,
+    FlightSearchParams,
+    FlightSearchResponse,
+    FlightSegment,
+    MultiCitySearchParams,
+    OfferDetailsParams,
+    OfferDetailsResponse,
+    OrderDetailsResponse,
     PriceTrackingParams,
     PriceTrackingResponse,
-    BookingParams,
-    BookingResponse,
-    OrderDetailsParams,
-    OrderDetailsResponse,
 )
 
 logger = get_module_logger(__name__)
 
 # Define generic types for parameter and response models
-P = TypeVar('P')
-R = TypeVar('R')
+P = TypeVar("P")
+R = TypeVar("R")
 
 
 class FlightsMCPClient(FastMCPClient, Generic[P, R]):
@@ -73,16 +72,16 @@ class FlightsMCPClient(FastMCPClient, Generic[P, R]):
         )
 
     async def _call_validate_tool(
-        self, 
-        tool_name: str, 
-        params: P, 
+        self,
+        tool_name: str,
+        params: P,
         response_model: type[R],
         skip_cache: bool = False,
         cache_key: Optional[str] = None,
         cache_ttl: Optional[int] = None,
     ) -> R:
         """Call a tool and validate both parameters and response.
-        
+
         Args:
             tool_name: Name of the tool to call
             params: Parameters for the tool (validated Pydantic model)
@@ -90,16 +89,20 @@ class FlightsMCPClient(FastMCPClient, Generic[P, R]):
             skip_cache: Whether to skip the cache
             cache_key: Custom cache key
             cache_ttl: Custom cache TTL in seconds
-            
+
         Returns:
             Validated response
-            
+
         Raises:
             MCPError: If the request fails or validation fails
         """
         try:
             # Convert parameters to dict using model_dump() for Pydantic v2
-            params_dict = params.model_dump(exclude_none=True) if hasattr(params, "model_dump") else params
+            params_dict = (
+                params.model_dump(exclude_none=True)
+                if hasattr(params, "model_dump")
+                else params
+            )
 
             # Call the tool
             response = await self.call_tool(
@@ -196,7 +199,7 @@ class FlightsMCPClient(FastMCPClient, Generic[P, R]):
                 FlightSearchResponse,
                 skip_cache=skip_cache,
             )
-            
+
             return response
         except ValidationError as e:
             logger.error(f"Validation error in search_flights: {str(e)}")
@@ -294,7 +297,7 @@ class FlightsMCPClient(FastMCPClient, Generic[P, R]):
             flight_segments = []
             for segment in segments:
                 flight_segments.append(FlightSegment.model_validate(segment))
-            
+
             # Validate parameters
             params = MultiCitySearchParams(
                 segments=flight_segments,
@@ -310,7 +313,7 @@ class FlightsMCPClient(FastMCPClient, Generic[P, R]):
                 FlightSearchResponse,
                 skip_cache=skip_cache,
             )
-            
+
             return response
         except ValidationError as e:
             logger.error(f"Validation error in search_multi_city: {str(e)}")
@@ -356,7 +359,7 @@ class FlightsMCPClient(FastMCPClient, Generic[P, R]):
                 params,
                 AirportSearchResponse,
             )
-            
+
             return response
         except ValidationError as e:
             logger.error(f"Validation error in get_airports: {str(e)}")
@@ -398,7 +401,7 @@ class FlightsMCPClient(FastMCPClient, Generic[P, R]):
                 params,
                 OfferDetailsResponse,
             )
-            
+
             return response
         except ValidationError as e:
             logger.error(f"Validation error in get_offer_details: {str(e)}")
@@ -456,7 +459,7 @@ class FlightsMCPClient(FastMCPClient, Generic[P, R]):
                 FlightPriceResponse,
                 skip_cache=skip_cache,
             )
-            
+
             return response
         except ValidationError as e:
             logger.error(f"Validation error in get_flight_prices: {str(e)}")
@@ -527,7 +530,7 @@ class FlightsMCPClient(FastMCPClient, Generic[P, R]):
                 params,
                 PriceTrackingResponse,
             )
-            
+
             return response
         except ValidationError as e:
             logger.error(f"Validation error in track_prices: {str(e)}")
@@ -1021,10 +1024,7 @@ class FlightService:
             # Extract lowest current price
             lowest_price = None
             if current_prices.offers:
-                prices = [
-                    o.total_amount
-                    for o in current_prices.offers
-                ]
+                prices = [o.total_amount for o in current_prices.offers]
                 lowest_price = min(prices) if prices else None
 
             # Calculate insights from history

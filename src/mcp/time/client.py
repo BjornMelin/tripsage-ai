@@ -90,7 +90,7 @@ class TimeMCPClient(FastMCPClient):
         """
         try:
             # Validate parameters with Pydantic model
-            params = GetCurrentTimeParams(timezone=timezone)
+            _params = GetCurrentTimeParams(timezone=timezone)
 
             # Call the MCP tool with validated parameters
             response = await self.call_tool(
@@ -158,7 +158,7 @@ class TimeMCPClient(FastMCPClient):
         """
         try:
             # Validate parameters with Pydantic model
-            params = ConvertTimeParams(
+            _params = ConvertTimeParams(
                 time=time,
                 source_timezone=source_timezone,
                 target_timezone=target_timezone,

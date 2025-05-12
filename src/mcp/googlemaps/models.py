@@ -242,10 +242,11 @@ class TimeZoneParams(BaseParams):
             lat, lng = float(parts[0]), float(parts[1])
             if not (-90 <= lat <= 90) or not (-180 <= lng <= 180):
                 raise ValueError(
-                    "Invalid coordinates: latitude must be between -90 and 90, longitude between -180 and 180"
+                    "Invalid coordinates: latitude must be between -90 and 90, "
+                    "longitude between -180 and 180"
                 )
-        except ValueError:
-            raise ValueError("Location coordinates must be valid numbers")
+        except ValueError as e:
+            raise ValueError("Location coordinates must be valid numbers") from e
 
         return v
 
@@ -273,12 +274,13 @@ class ElevationParams(BaseParams):
                 lat, lng = float(parts[0]), float(parts[1])
                 if not (-90 <= lat <= 90) or not (-180 <= lng <= 180):
                     raise ValueError(
-                        f"Invalid coordinates in '{loc}': latitude must be between -90 and 90, longitude between -180 and 180"
+                        f"Invalid coordinates in '{loc}': latitude must be between "
+                        f"-90 and 90, longitude between -180 and 180"
                     )
-            except ValueError:
+            except ValueError as e:
                 raise ValueError(
                     f"Location coordinates in '{loc}' must be valid numbers"
-                )
+                ) from e
 
         return v
 

@@ -39,8 +39,10 @@ class DatabaseConfig(BaseModel):
     """Database configuration parameters."""
 
     environment: str = Field(
-        default="development",
-        description="The environment to use (development, testing, staging, production)",
+        default=Environment.DEVELOPMENT,
+        description=(
+            "The environment to use (development, testing, staging, production)"
+        ),
     )
 
 

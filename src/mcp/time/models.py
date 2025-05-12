@@ -70,8 +70,8 @@ class ConvertTimeParams(BaseParams):
             hours, minutes = map(int, self.time.split(":"))
             if hours < 0 or hours > 23 or minutes < 0 or minutes > 59:
                 raise ValueError("Invalid hours or minutes")
-        except ValueError:
-            raise ValueError("Time must be in 24-hour format (HH:MM)")
+        except ValueError as e:
+            raise ValueError("Time must be in 24-hour format (HH:MM)") from e
         return self
 
     @model_validator(mode="after")
@@ -79,11 +79,13 @@ class ConvertTimeParams(BaseParams):
         """Validate timezone formats."""
         if not self.source_timezone or "/" not in self.source_timezone:
             raise ValueError(
-                "Source timezone must be a valid IANA timezone name (e.g., 'America/New_York')"
+                "Source timezone must be a valid IANA timezone name (e.g., "
+                "'America/New_York')"
             )
         if not self.target_timezone or "/" not in self.target_timezone:
             raise ValueError(
-                "Target timezone must be a valid IANA timezone name (e.g., 'Europe/London')"
+                "Target timezone must be a valid IANA timezone name (e.g., "
+                "'Europe/London')"
             )
         return self
 
