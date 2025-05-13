@@ -60,7 +60,8 @@ class ItineraryAgent(BaseAgent):
         ITINERARY PLANNING APPROACH:
         - Start with major attractions and must-see sights
         - Group activities by geographical proximity
-        - Consider the nature of activities (e.g., museums in morning, relaxation in afternoon)
+        - Consider the nature of activities (e.g., museums in morning,
+          relaxation in afternoon)
         - Build in flexibility for weather changes or unexpected events
         - Include recommended meal locations or options
         - Consider local transportation options and travel times
@@ -276,7 +277,8 @@ class ItineraryAgent(BaseAgent):
             params: Travel time calculation parameters including:
                 origin: Origin location
                 destination: Destination location
-                transportation_mode: Transportation mode (walking, driving, transit, etc.)
+                transportation_mode: Transportation mode
+                (walking, driving, transit, etc.)
                 departure_time: Optional departure time
 
         Returns:
