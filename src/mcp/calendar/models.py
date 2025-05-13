@@ -47,7 +47,9 @@ class EventAttendee(BaseModel):
     )
     response_status: Optional[str] = Field(
         None,
-        description="Attendee's response status (accepted, declined, needsAction, tentative)",
+        description=(
+            "Attendee's response status (accepted, declined, needsAction, tentative)"
+        ),
     )
     optional: Optional[bool] = Field(None, description="Whether attendee is optional")
 

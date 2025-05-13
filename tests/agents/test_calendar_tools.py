@@ -16,7 +16,6 @@ from src.agents.calendar_tools import (
     list_calendars_tool,
     list_events_tool,
     search_events_tool,
-    update_event_tool,
 )
 from src.mcp.calendar.models import (
     Calendar,
@@ -341,7 +340,6 @@ class TestCalendarTools(unittest.TestCase):
         self.assertIn("Created 1 events for trip: Summer Vacation", result["formatted"])
         self.assertIn("Flight to New York", result["formatted"])
 
-
     @pytest.mark.asyncio
     async def test_error_handling_decorator_in_list_calendars(self):
         """Test that error handling decorator works properly."""
@@ -383,7 +381,7 @@ class TestCalendarTools(unittest.TestCase):
         # Verify error handling worked properly
         self.assertIn("error", result)
         self.assertEqual(result["error"], "Invalid time format")
-        
+
     @pytest.mark.asyncio
     async def test_error_handling_decorator_in_delete_event(self):
         """Test that error handling decorator works properly in delete_event_tool."""

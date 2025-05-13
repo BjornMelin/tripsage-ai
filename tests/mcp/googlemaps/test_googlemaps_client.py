@@ -281,7 +281,7 @@ class TestGoogleMapsMCPClient:
         mock_store_location.return_value = True
 
         # Test with store_in_knowledge_graph=True
-        result = await client.geocode("New York", store_in_knowledge_graph=True)
+        _result = await client.geocode("New York", store_in_knowledge_graph=True)
 
         # Verify call_tool parameters
         mock_call_tool.assert_called_once_with(
@@ -534,10 +534,10 @@ class TestGoogleMapsMCPClient:
     def test_create_googlemaps_client(self, mock_client_class, settings_mock):
         """Test factory function for creating GoogleMapsMCPClient."""
         # Mock client instantiation
-        mock_client = mock_client_class.return_value
+        _mock_client = mock_client_class.return_value
 
         # Call factory function
-        client = create_googlemaps_client()
+        _client = create_googlemaps_client()
 
         # Verify client is created with correct parameters
         mock_client_class.assert_called_once()

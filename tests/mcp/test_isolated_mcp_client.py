@@ -6,10 +6,8 @@ without external dependencies or environment variables. It includes
 mock implementations, fixtures, and comprehensive test cases.
 """
 
-import asyncio
-import json
 import sys
-from typing import Any, Dict, Generic, List, Optional, TypeVar, Union
+from typing import Any, Dict, List, Optional
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
@@ -30,8 +28,8 @@ mock_redis_module.RedisCache = MagicMock()
 sys.modules["src.cache.redis_cache"] = mock_redis_module
 
 # Now import from MCP client
-from src.mcp.base_mcp_client import BaseMCPClient, ErrorCategory
-from src.utils.error_handling import MCPError
+from src.mcp.base_mcp_client import BaseMCPClient, ErrorCategory  # noqa: E402
+from src.utils.error_handling import MCPError  # noqa: E402
 
 
 # Define test models
@@ -370,7 +368,7 @@ class TestIsolatedMCPClient:
     @pytest.mark.asyncio
     async def test_response_validation_error(self, test_client, mock_invalid_response):
         """Test that response validation errors are properly handled."""
-        async with MCPTestContext(response_data=mock_invalid_response) as context:
+        async with MCPTestContext(response_data=mock_invalid_response) as _:
             with pytest.raises(MCPError) as excinfo:
                 await test_client.perform_operation(query="test query")
 
@@ -386,7 +384,7 @@ class TestIsolatedMCPClient:
         """Test handling of network errors."""
         async with MCPTestContext(
             raise_error=httpx.ConnectError("Connection failed")
-        ) as context:
+        ) as _:
             with pytest.raises(MCPError) as excinfo:
                 await test_client.perform_operation(query="test query")
 
@@ -402,7 +400,7 @@ class TestIsolatedMCPClient:
         """Test handling of timeout errors."""
         async with MCPTestContext(
             raise_error=httpx.TimeoutException("Request timed out")
-        ) as context:
+        ) as _:
             with pytest.raises(MCPError) as excinfo:
                 await test_client.perform_operation(query="test query")
 
@@ -425,7 +423,7 @@ class TestIsolatedMCPClient:
             "Server error", request=MagicMock(), response=mock_response
         )
 
-        async with MCPTestContext(raise_error=http_error, status_code=500) as context:
+        async with MCPTestContext(raise_error=http_error, status_code=500) as _:
             with pytest.raises(MCPError) as excinfo:
                 await test_client.perform_operation(query="test query")
 

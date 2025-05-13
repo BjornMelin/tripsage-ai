@@ -834,15 +834,15 @@ class TravelAgent(BaseTravelAgent):
         """
         try:
             from src.utils.dual_storage import trip_service
-            
+
             # Make sure we have a user_id
             user_id = params.get("user_id")
             if not user_id:
                 return {"success": False, "error": "User ID is required"}
-            
+
             # Create trip using the TripStorageService
             result = await trip_service.create(params)
-            
+
             # Return a simplified response
             return {
                 "success": True,
@@ -858,7 +858,7 @@ class TravelAgent(BaseTravelAgent):
                     "start_date": params.get("start_date"),
                     "end_date": params.get("end_date"),
                     "budget": params.get("budget"),
-                }
+                },
             }
         except Exception as e:
             logger.error("Error creating trip: %s", str(e))

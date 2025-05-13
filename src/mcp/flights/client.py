@@ -13,8 +13,8 @@ from pydantic import BaseModel, ValidationError
 from ...cache.redis_cache import redis_cache
 from ...utils.error_handling import MCPError
 from ...utils.logging import get_module_logger
-from ...utils.settings import settings
 from ..fastmcp import FastMCPClient
+from .factory import get_client
 from .models import (
     AirportSearchParams,
     AirportSearchResponse,
@@ -748,9 +748,6 @@ class FlightsMCPClient(FastMCPClient, Generic[P, R]):
             },
         )
 
-
-# Import the factory function for client creation
-from .factory import get_client
 
 # For backward compatibility, create a default client instance
 flights_client = get_client()

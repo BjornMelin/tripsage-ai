@@ -5,8 +5,9 @@ This module tests the decorators in src/utils/decorators.py, ensuring they work
 correctly with both synchronous and asynchronous functions.
 """
 
+from unittest.mock import AsyncMock, patch
+
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
 
 from src.utils.decorators import ensure_memory_client_initialized, with_error_handling
 
@@ -130,6 +131,7 @@ class TestEnsureMemoryClientInitialized:
         """Test that decorator raises error when used with sync function."""
 
         with pytest.raises(TypeError, match="can only be used with async functions"):
+
             @ensure_memory_client_initialized
             def test_func() -> dict:
                 return {"success": True}

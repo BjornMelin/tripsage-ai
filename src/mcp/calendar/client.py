@@ -545,7 +545,8 @@ class CalendarService:
         """Initialize the Calendar Service.
 
         Args:
-            client: CalendarMCPClient instance. If not provided, uses the default client.
+            client: CalendarMCPClient instance. If not provided, uses the default
+                client.
         """
         self.client = client or calendar_client
         logger.info("Initialized Calendar Service")
@@ -637,7 +638,8 @@ class CalendarService:
                 end_dt = start_dt + timedelta(minutes=item.duration_minutes)
                 end_time = end_dt.isoformat()
             else:  # All-day event
-                # For all-day events, we'll keep it as a date string but need to handle duration differently
+                # For all-day events, we'll keep it as a date string
+                # but need to handle duration differently
                 # For multi-day events, we need to add days and not just minutes
                 days = item.duration_minutes // (24 * 60)
                 start_date = datetime.strptime(start_time, "%Y-%m-%d")
@@ -665,8 +667,8 @@ class CalendarService:
                 f"\n\nConfirmation/Booking #: {item.confirmation_number}"
             )
 
-        # Set start and end time format based on whether it's a date-only (all-day) event
-        # or a datetime event
+        # Set start and end time format based on whether it's a date-only
+        # (all-day) event or a datetime event
         if "T" in start_time:  # ISO format with time
             event_data["start"] = {"date_time": start_time, "time_zone": time_zone}
             event_data["end"] = {"date_time": end_time, "time_zone": time_zone}

@@ -34,6 +34,7 @@ from .models import (
 # Import server conditionally to avoid errors in testing
 try:
     from .server import create_memory_server  # noqa: F401
+
     __has_server = True
 except ImportError:
     __has_server = False

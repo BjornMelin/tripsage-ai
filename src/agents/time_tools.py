@@ -146,18 +146,14 @@ async def calculate_flight_arrival_tool(
 
     day_offset = result.get("day_offset", 0)
     day_text = (
-        f" (+{day_offset} day{'s' if day_offset > 1 else ''})"
-        if day_offset > 0
-        else ""
+        f" (+{day_offset} day{'s' if day_offset > 1 else ''})" if day_offset > 0 else ""
     )
 
     return {
         "departure_location": departure_location,
         "departure_timezone": departure_timezone,
         "departure_time": departure_time,
-        "flight_duration": result.get(
-            "flight_duration", f"{flight_duration_hours}h"
-        ),
+        "flight_duration": result.get("flight_duration", f"{flight_duration_hours}h"),
         "arrival_location": arrival_location,
         "arrival_timezone": arrival_timezone,
         "arrival_time_local": result.get("arrival_time_local", ""),
@@ -276,9 +272,7 @@ async def create_timezone_aware_itinerary_tool(
     Returns:
         Dictionary with timezone-aware itinerary items
     """
-    logger.info(
-        f"Creating timezone-aware itinerary with {len(itinerary_items)} items"
-    )
+    logger.info(f"Creating timezone-aware itinerary with {len(itinerary_items)} items")
     processed_itinerary = await time_service.create_timezone_aware_itinerary(
         itinerary_items
     )

@@ -4,8 +4,7 @@ Tests for memory tool decorators.
 This module tests the decorators used in memory tools without dependencies.
 """
 
-import asyncio
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
