@@ -38,38 +38,30 @@ class TimeMCPClient(FastMCPClient):
 
     def __init__(
         self,
-        endpoint: Optional[str] = None,
+        endpoint: str,
         api_key: Optional[str] = None,
         timeout: float = 30.0,
         use_cache: bool = True,
+        cache_ttl: int = 1800,
+        server_name: str = "Time",
     ):
         """Initialize the Time MCP Client.
 
         Args:
-            endpoint: MCP server endpoint URL (defaults to config value)
-            api_key: API key for authentication (defaults to config value)
+            endpoint: MCP server endpoint URL
+            api_key: API key for authentication (if required)
             timeout: Request timeout in seconds
             use_cache: Whether to use caching
+            cache_ttl: Cache TTL in seconds
+            server_name: Server name for logging and caching
         """
-        if endpoint is None:
-            endpoint = (
-                config.time_mcp.endpoint
-                if hasattr(config, "time_mcp")
-                # Default port for official MCP Time server
-                else "http://localhost:3000"
-            )
-
-        api_key = api_key or (
-            config.time_mcp.api_key if hasattr(config, "time_mcp") else None
-        )
-
         super().__init__(
-            server_name="Time",
+            server_name=server_name,
             endpoint=endpoint,
             api_key=api_key,
             timeout=timeout,
             use_cache=use_cache,
-            cache_ttl=1800,  # 30 minutes default cache TTL for time data
+            cache_ttl=cache_ttl,
         )
 
     @function_tool
@@ -557,23 +549,9 @@ class TimeService:
             return []
 
 
-# Initialize global client instance
-time_client = TimeMCPClient()
+# Import factory functions for client and service creation
+# The actual client instance will be created by the factory
+from .factory import get_client, get_service
 
-
-def get_client() -> TimeMCPClient:
-    """Get a Time MCP Client instance.
-
-    Returns:
-        TimeMCPClient instance
-    """
-    return time_client
-
-
-def get_service() -> TimeService:
-    """Get a Time Service instance.
-
-    Returns:
-        TimeService instance
-    """
-    return TimeService(time_client)
+# For backward compatibility
+time_client = get_client()

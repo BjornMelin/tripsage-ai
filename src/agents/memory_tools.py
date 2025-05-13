@@ -20,7 +20,8 @@ from src.mcp.memory.models import (
 from src.mcp.memory.models import (
     Relation as MemoryRelation,
 )
-from src.utils.decorators import ensure_memory_client_initialized, with_error_handling
+from src.utils.decorators import ensure_memory_client_initialized
+from src.utils.error_decorators import with_error_handling
 from src.utils.session_memory import (
     initialize_session_memory,
     store_session_summary,

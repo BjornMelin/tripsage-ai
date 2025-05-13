@@ -72,12 +72,12 @@ class MemoryMCPClient(BaseMCPClient, Generic[P, R]):
             api_key = settings.memory_mcp.api_key.get_secret_value()
 
         super().__init__(
-            server_name="Memory",
             endpoint=endpoint,
             api_key=api_key,
             timeout=timeout,
             use_cache=use_cache,
         )
+        self.server_name = "Memory"
 
         logger.debug("Initialized Memory MCP client for %s", endpoint)
         self._initialized = False

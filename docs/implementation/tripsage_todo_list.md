@@ -82,6 +82,12 @@ This document provides a complete implementation to-do list for the TripSage AI 
   - Reference: PR #53, [docs/status/implementation_status.md](../status/implementation_status.md)
   - Status: Completed with standardized validation patterns, unified \_call_validate_tool method, and comprehensive tests for all MCP clients
 
+- [x] **MCP-003**: Implement isolated testing pattern for MCP clients
+
+  - Dependencies: MCP-002
+  - Reference: [docs/optimization/isolated_mcp_testing.md](../optimization/isolated_mcp_testing.md)
+  - Status: Completed with self-contained test modules, comprehensive fixtures, and no environment dependencies
+
 ### Weather MCP Server
 
 - [x] **WEATHER-001**: Create Weather MCP Server structure
@@ -342,9 +348,22 @@ This document provides a complete implementation to-do list for the TripSage AI 
   - Status: Completed with session start/end tracking and user preference persistence
 
 - [x] **MEM-006**: Implement dual storage strategy
+
   - Dependencies: MEM-001, DB-001
   - Reference: [docs/integrations/memory_integration.md](../integrations/memory_integration.md)
   - Status: Completed with dual storage for Supabase (structured data) and Neo4j (relationships)
+  
+- [x] **MEM-007**: Refactor dual storage pattern to service-based architecture
+
+  - Dependencies: MEM-006
+  - Reference: [docs/implementation/dual_storage_refactoring.md](../implementation/dual_storage_refactoring.md)
+  - Status: Completed with DualStorageService base class, TripStorageService implementation, and backwards compatibility
+
+- [x] **MEM-008**: Create isolated testing pattern for dual storage services
+
+  - Dependencies: MEM-007
+  - Reference: [docs/optimization/isolated_testing.md](../optimization/isolated_testing.md)
+  - Status: Completed with self-contained test modules, mock clients, and environment independence
 
 ## Agent Development
 
@@ -547,9 +566,21 @@ This document provides a complete implementation to-do list for the TripSage AI 
   - Status: Completed with tests for both Supabase and Neon providers
 
 - [x] **TEST-007**: Standardize MCP client implementations and add comprehensive tests
+
   - Dependencies: TEST-001, MCP-001
   - Reference: [docs/status/implementation_status.md](../status/implementation_status.md)
   - Status: Completed (PR #53) with standardized Pydantic v2 validation patterns and comprehensive tests for all MCP clients including WebCrawl, Google Maps, Flights, and Memory
+
+- [x] **TEST-008**: Create isolated testing pattern for MCP clients
+
+  - Dependencies: TEST-001, MCP-002
+  - Reference: [docs/optimization/isolated_mcp_testing.md](../optimization/isolated_mcp_testing.md)
+  - Status: Completed with self-contained test modules, mock HTTP clients, and no external dependencies
+
+- [x] **TEST-009**: Enhance testing coverage with isolated test approach
+  - Dependencies: TEST-001, TEST-008
+  - Reference: [docs/optimization/isolated_mcp_testing.md](../optimization/isolated_mcp_testing.md), [docs/optimization/isolated_testing.md](../optimization/isolated_testing.md)
+  - Status: Completed with implementation of both isolated MCP client testing and isolated dual storage service testing patterns
 
 ### Medium Priority
 
@@ -685,12 +716,12 @@ This document provides a complete implementation to-do list for the TripSage AI 
 
 ### Weeks 7-8: Integration and Production
 
-| Week | Day | Tasks                                                     |
-| ---- | --- | --------------------------------------------------------- |
-| 7    | 1-3 | API-001, API-002, API-003, API-004, API-005               |
-| 7    | 3-5 | ✅ TEST-001, ✅ TEST-002, ✅ TEST-006, TEST-003, TEST-004 |
-| 8    | 1-3 | TEST-005, DEPLOY-001, DEPLOY-002                          |
-| 8    | 3-5 | DEPLOY-003, DEPLOY-004, Final Testing and Review          |
+| Week | Day | Tasks                                                                                                 |
+| ---- | --- | ----------------------------------------------------------------------------------------------------- |
+| 7    | 1-3 | API-001, API-002, API-003, API-004, API-005                                                           |
+| 7    | 3-5 | ✅ TEST-001, ✅ TEST-002, ✅ TEST-006, ✅ TEST-007, ✅ TEST-008, ✅ TEST-009, TEST-003, TEST-004       |
+| 8    | 1-3 | TEST-005, DEPLOY-001, DEPLOY-002                                                                      |
+| 8    | 3-5 | DEPLOY-003, DEPLOY-004, Final Testing and Review                                                      |
 
 ### Current Priority Tasks Based on Open Issues
 
@@ -699,7 +730,7 @@ This document provides a complete implementation to-do list for the TripSage AI 
 | 1        | AGENT-004       | Refactor Agent Orchestration using OpenAI Agents SDK            | #28     | In Progress                               |
 | 2        | CACHE-002       | Implement Advanced Redis-based Caching for Web Operations       | #38     | Pending                                   |
 | 3        | SEARCH-001      | Integrate OpenAI Agents SDK WebSearchTool for General Queries   | #37     | Pending                                   |
-| 4        | TEST-001        | Standardize and Expand Test Suite (Target 90%+ Coverage)        | #35     | Pending                                   |
+| 4        | TEST-001        | Standardize and Expand Test Suite (Target 90%+ Coverage)        | #35     | In Progress - MCP-003 and MEM-008 completed |
 | 5        | CI-001          | Implement CI Pipeline with Linting, Type Checking, and Coverage | #36     | Pending                                   |
 | 6        | DB-PROD-001     | Integrate Supabase MCP Server for Production Database           | #23     | In Progress - Foundation laid with PR #53 |
 | 7        | DB-DEV-001      | Integrate Neon DB MCP Server for Development Environments       | #22     | In Progress - Foundation laid with PR #53 |

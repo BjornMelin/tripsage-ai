@@ -30,13 +30,19 @@ from .models import (
     SearchNodesParams,
     SearchNodesResponse,
 )
-from .server import create_memory_server
 
+# Import server conditionally to avoid errors in testing
+try:
+    from .server import create_memory_server  # noqa: F401
+    __has_server = True
+except ImportError:
+    __has_server = False
+
+# Define __all__ based on available modules
 __all__ = [
-    # Client and server
+    # Client
     "MemoryMCPClient",
     "memory_client",
-    "create_memory_server",
     # Basic models
     "Entity",
     "Relation",
@@ -63,3 +69,7 @@ __all__ = [
     "SearchNodesResponse",
     "OpenNodesResponse",
 ]
+
+# Add server if available
+if __has_server:
+    __all__.append("create_memory_server")

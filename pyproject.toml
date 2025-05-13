@@ -23,7 +23,7 @@ dev = [
 [tool.ruff]
 line-length = 88
 target-version = "py310"
-select = ["E", "F", "B", "I"]
+lint.select = ["E", "F", "B", "I"]
 
 [build-system]
 requires = ["hatchling"]

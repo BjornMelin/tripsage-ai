@@ -1,5 +1,7 @@
 """
 Unit tests for agent calendar tools.
+
+This module tests the refactored calendar tools that use the error handling decorator.
 """
 
 import unittest
@@ -10,9 +12,11 @@ import pytest
 from src.agents.calendar_tools import (
     create_event_tool,
     create_itinerary_events_tool,
+    delete_event_tool,
     list_calendars_tool,
     list_events_tool,
     search_events_tool,
+    update_event_tool,
 )
 from src.mcp.calendar.models import (
     Calendar,
@@ -336,6 +340,71 @@ class TestCalendarTools(unittest.TestCase):
         # Verify formatted output
         self.assertIn("Created 1 events for trip: Summer Vacation", result["formatted"])
         self.assertIn("Flight to New York", result["formatted"])
+
+
+    @pytest.mark.asyncio
+    async def test_error_handling_decorator_in_list_calendars(self):
+        """Test that error handling decorator works properly."""
+        # Mock client to raise an exception
+        self.mock_calendar_client.get_calendars = AsyncMock(
+            side_effect=Exception("API rate limit exceeded")
+        )
+
+        # Call the tool
+        result = await list_calendars_tool()
+
+        # Verify call was attempted
+        self.mock_calendar_client.get_calendars.assert_called_once()
+
+        # Verify error handling worked properly
+        self.assertIn("error", result)
+        self.assertEqual(result["error"], "API rate limit exceeded")
+        self.assertNotIn("calendars", result)
+
+    @pytest.mark.asyncio
+    async def test_error_handling_decorator_in_create_event(self):
+        """Test that error handling decorator works properly in create_event_tool."""
+        # Mock client to raise an exception with specific error messages
+        self.mock_calendar_client.create_event = AsyncMock(
+            side_effect=ValueError("Invalid time format")
+        )
+
+        # Call the tool
+        result = await create_event_tool(
+            calendar_id="calendar1",
+            summary="Test Event",
+            start_time="invalid-time",  # This would normally cause an error
+            end_time="invalid-time",
+        )
+
+        # Verify call was attempted
+        self.mock_calendar_client.create_event.assert_called_once()
+
+        # Verify error handling worked properly
+        self.assertIn("error", result)
+        self.assertEqual(result["error"], "Invalid time format")
+        
+    @pytest.mark.asyncio
+    async def test_error_handling_decorator_in_delete_event(self):
+        """Test that error handling decorator works properly in delete_event_tool."""
+        # Mock client to raise an exception
+        self.mock_calendar_client.delete_event = AsyncMock(
+            side_effect=Exception("Event not found")
+        )
+
+        # Call the tool
+        result = await delete_event_tool(
+            calendar_id="calendar1",
+            event_id="nonexistent-event",
+        )
+
+        # Verify call was attempted
+        self.mock_calendar_client.delete_event.assert_called_once()
+
+        # Verify error handling worked properly
+        self.assertIn("error", result)
+        self.assertEqual(result["error"], "Event not found")
+        self.assertNotIn("success", result)
 
 
 if __name__ == "__main__":
