@@ -244,36 +244,40 @@ This architecture represents an upgrade from the previous Firecrawl-first approa
 
 ## Browser Automation Architecture
 
-The Browser Automation MCP Server is implemented using Playwright with Python, selected for its superior performance, Python integration, and compatibility with FastMCP 2.0:
+The Browser Automation is now implemented using external MCP servers (Playwright MCP and Stagehand MCP) via agent tools, replacing the custom Browser MCP implementation:
 
-1. **Playwright with Python (Primary)**: Modern browser automation framework
+1. **External MCP Integration**: Two specialized MCP servers
 
-   - 35% faster than alternatives
-   - Cross-browser support (Chrome, Firefox, WebKit)
-   - Excellent Python integration
-   - Full compatibility with OpenAI Agents SDK
+   - **Playwright MCP**: For precise browser automation
+     - 35% faster than alternatives
+     - Cross-browser support (Chrome, Firefox, WebKit)
+     - Fine-grained control over browser behavior
+   
+   - **Stagehand MCP**: For AI-driven automation
+     - Natural language instructions for browser operations
+     - Fallback capabilities when precise selectors aren't available
+     - Self-healing automation workflows
 
-2. **Browser Context Management**: Efficient resource utilization
+2. **Browser Tools Architecture**: Clean separation of concerns
 
-   - Session-based browser contexts
-   - Pooled resources to reduce startup time
-   - Automatic cleanup to prevent memory leaks
+   - **Tool Interface**: Function tools compatible with OpenAI Agents SDK
+   - **MCP Clients**: Dedicated clients for Playwright MCP and Stagehand MCP
+   - **BrowserService**: Service layer handling business logic and caching
+   - **Redis Caching**: Results caching for improved performance
 
-3. **Travel-Specific Functions**: Purpose-built for travel needs
+3. **Travel-Specific Function Tools**: Purpose-built for travel needs
 
-   - Flight status checking
-   - Booking verification (✅ Complete with Pydantic v2 validation)
-   - Check-in automation
-   - Price monitoring
+   - **check_flight_status**: Flight status checking with airline websites
+   - **verify_booking**: Booking verification across various providers
+   - **monitor_price**: Price monitoring for flights, hotels, and activities
 
 4. **Data Validation**: Comprehensive Pydantic v2 implementation
    - Field validators with @field_validator
    - Model validators with @model_validator
-   - Request/response validation with ConfigDict
-   - Function validation with @validate_call
+   - Request/response validation
    - Strong typing with Annotated and custom validators
 
-This architecture represents a significant upgrade from the previously planned Browser-use implementation, eliminating the 100-minute monthly limitation and providing better integration with the Python-based backend.
+This architecture represents a significant upgrade from the custom Browser MCP implementation, leveraging specialized external MCPs for improved reliability, maintainability, and performance. The new approach also eliminates any usage limitations and provides better integration with the Python-based agent tools.
 
 ## Recent Completions (May 12, 2025)
 
@@ -288,6 +292,7 @@ The following issues and PRs have been completed in the latest development cycle
 | #19   | Integrate Crawl4AI MCP and Firecrawl for Advanced Web Crawling | #45 | ✅ Completed |
 | #20   | Integrate Neo4j Memory MCP and Remove Custom Memory Logic      | #49 | ✅ Completed |
 | #24   | Integrate Official Airbnb MCP (OpenBnB) for Vacation Rentals   | -   | ✅ Completed |
+| #26   | Replace Custom Browser MCP with External Playwright & Stagehand MCPs | -   | ✅ Completed |
 | -     | Integrate Official Time MCP for Timezone and Clock Operations  | #51 | ✅ Completed |
 | -     | Implement MCP client tests and update Pydantic v2 validation   | #53 | ✅ Completed |
 
@@ -311,7 +316,7 @@ The following key issues remain open and are the focus of upcoming work:
 
 ## Conclusion
 
-The TripSage implementation has made significant progress with all key MCP server components now complete. We've successfully integrated with multiple official MCP servers (Time MCP, Neo4j Memory MCP, Google Maps MCP, Airbnb MCP) and created robust client implementations with proper error handling and caching strategies.
+The TripSage implementation has made significant progress with all key MCP server components now complete. We've successfully integrated with multiple official MCP servers (Time MCP, Neo4j Memory MCP, Google Maps MCP, Airbnb MCP, Playwright MCP, Stagehand MCP) and created robust client implementations with proper error handling and caching strategies.
 
 Recent completions include:
 
@@ -326,11 +331,14 @@ Recent completions include:
 9. Standardizing all MCP clients with Pydantic v2 validation patterns
 10. Implementing comprehensive test suite for all MCP clients
 11. Creating MockMCPClient pattern for reliable testing without external dependencies
+12. Replacing custom Browser MCP with external Playwright MCP and Stagehand MCP integration
 
 The system follows a hybrid database approach with Supabase for production and Neon for development, complemented by Neo4j for knowledge graph capabilities. Vector search functionality via Qdrant is scheduled for post-MVP implementation.
 
 The immediate focus is now on implementing the OpenAI Agents SDK integration (#28), improving the caching strategy (#38), and enhancing web search capabilities (#37). These will be followed by database operations via MCP servers (#22, #23) and calendar integration (#25).
 
 The MCP client refactoring and test implementation (PR #53) adds significant reliability and maintainability to the codebase with standardized Pydantic v2 validation patterns across all MCP clients. This work has established a unified pattern for implementing future MCP clients (like Neon and Supabase) with proper validation and error handling.
+
+The Browser MCP refactoring (Issue #26) represents another significant architectural improvement, replacing the custom Browser MCP implementation with integration of specialized external MCPs (Playwright MCP and Stagehand MCP). This approach provides both precise browser control and AI-driven automation capabilities, while following modern best practices with clean separation of concerns, Pydantic v2 validation, and Redis caching.
 
 Progress continues to be tracked in GitHub issues, with detailed implementation plans and timelines as outlined in the optimization strategy document.
