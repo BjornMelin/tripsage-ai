@@ -144,42 +144,48 @@ This document provides a complete implementation to-do list for the TripSage AI 
   - Reference: [docs/integrations/webcrawl_mcp_implementation.md](../integrations/webcrawl_mcp_implementation.md)
   - Status: Completed with Firecrawl API integration for advanced content extraction (Issue #19)
 
-### Browser Automation MCP Server
+### Browser Automation
 
 - [x] **BROWSER-001**: Set up Playwright with Python infrastructure
 
   - Dependencies: MCP-001
   - Reference: [docs/integrations/browser_automation.md](../integrations/browser_automation.md)
-  - Status: Completed with PlaywrightManager implementation and context management
+  - Status: Completed with external Playwright MCP integration
 
-- [x] **BROWSER-002**: Create Browser Automation MCP Server structure
+- [x] **BROWSER-002**: Create Browser Automation Tools structure
 
   - Dependencies: BROWSER-001
   - Reference: [docs/integrations/browser_automation.md](../integrations/browser_automation.md)
-  - Status: Completed with FastMCP app implementation and browser automation tools
+  - Status: Completed with browser_tools.py implementation (Issue #26)
 
-- [x] **BROWSER-003**: Implement browser context management
+- [x] **BROWSER-003**: Implement browser MCP client integration
 
   - Dependencies: BROWSER-002
   - Reference: [docs/integrations/browser_automation.md](../integrations/browser_automation.md)
-  - Status: Completed with PlaywrightManager context creation, maintenance, and cleanup
+  - Status: Completed with PlaywrightClient and StagehandClient implementations
 
 - [x] **BROWSER-004**: Create flight status checking functionality
 
   - Dependencies: BROWSER-003
   - Reference: [docs/integrations/browser_automation.md](../integrations/browser_automation.md)
-  - Status: Completed with check_flight_status tool implementation in Browser MCP server
+  - Status: Completed with check_flight_status tool implementation in browser_tools.py
 
 - [x] **BROWSER-005**: Implement booking verification capabilities with Pydantic v2
 
   - Dependencies: BROWSER-003
   - Reference: [docs/integrations/browser_automation.md](../integrations/browser_automation.md)
-  - Status: Completed with Pydantic v2 validation, model validators, and decorator patterns
+  - Status: Completed with Pydantic v2 validation, model validators, and Redis caching
 
 - [x] **BROWSER-006**: Create price monitoring functionality
+
   - Dependencies: BROWSER-003
   - Reference: [docs/integrations/browser_automation.md](../integrations/browser_automation.md)
-  - Status: Completed with monitor_price tool implementation in Browser MCP server
+  - Status: Completed with monitor_price tool implementation in browser_tools.py
+
+- [x] **BROWSER-007**: Replace custom Browser MCP with external MCPs
+  - Dependencies: BROWSER-002, BROWSER-003, BROWSER-004, BROWSER-005, BROWSER-006
+  - Reference: [docs/integrations/browser_automation.md](../integrations/browser_automation.md)
+  - Status: Completed with Playwright MCP and Stagehand MCP integration (Issue #26)
 
 ### Flights MCP Server
 
