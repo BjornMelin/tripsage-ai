@@ -1,10 +1,16 @@
+"""
+Main entry point for the TripSage application.
+
+This script initializes and runs the TripSage travel planning agent.
+"""
+
 import asyncio
 import sys
 from typing import Any, Dict
 
-from src.agents.travel_planning_agent import create_agent
-from src.utils.logging import get_module_logger
-from src.utils.settings_init import init_settings
+from tripsage.agents import TravelAgent
+from tripsage.utils.logging import get_module_logger
+from tripsage.utils.settings import get_settings
 
 logger = get_module_logger(__name__)
 
@@ -19,7 +25,7 @@ async def run_agent(query: str) -> Dict[str, Any]:
         Agent response
     """
     # Create the agent
-    agent = create_agent()
+    agent = TravelAgent()
 
     # Run the agent with the query
     response = await agent.run(query)
@@ -35,7 +41,7 @@ def main():
 
         # Initialize settings
         logger.info("Initializing TripSage application")
-        settings = init_settings()
+        settings = get_settings()
         logger.info(f"TripSage initialized in {settings.environment} environment")
 
         # Get query from command line arguments or prompt

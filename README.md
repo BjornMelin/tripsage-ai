@@ -64,11 +64,9 @@ For detailed schema information, see the [Database Setup Documentation](./docs/d
 2. Set up environment variables:
 
    ```bash
-   # API server environment
-   cp src/api/.env.example src/api/.env
-   # Agent environment
-   cp src/agents/.env.example src/agents/.env
-   # Edit each .env file with your API keys and configuration
+   # Copy the example environment file
+   cp .env.example .env
+   # Edit .env file with your API keys and configuration
    ```
 
 3. Configure MCP Servers:
@@ -95,11 +93,8 @@ For detailed schema information, see the [Database Setup Documentation](./docs/d
 4. Install dependencies:
 
    ```bash
-   # API server dependencies
-   pip install -r src/api/requirements.txt
-
-   # Agent dependencies
-   pip install -r src/agents/requirements.txt
+   # Install all dependencies
+   uv pip install -r requirements.txt
    ```
 
 5. Set up the database:
@@ -113,15 +108,13 @@ For detailed schema information, see the [Database Setup Documentation](./docs/d
 6. Start the API server:
 
    ```bash
-   cd src/api
-   uvicorn main:app --reload --host 0.0.0.0 --port 8000
+   uv run uvicorn tripsage.api.main:app --reload --host 0.0.0.0 --port 8000
    ```
 
 7. Try the agent demo:
 
    ```bash
-   cd src/agents
-   python demo.py
+   uv run python -m tripsage.agents.demo
    ```
 
 ### Database Setup
