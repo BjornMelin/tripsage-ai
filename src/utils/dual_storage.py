@@ -6,15 +6,17 @@ where structured data is stored in Supabase and relationships/unstructured
 data is stored in Neo4j via the Memory MCP.
 """
 
-from typing import Any, Dict
+from typing import Any, Dict, List, Optional
 
 from src.db.client import db_client
 from src.mcp.memory.client import memory_client
+from src.utils.decorators import ensure_memory_client_initialized
 from src.utils.logging import get_module_logger
 
 logger = get_module_logger(__name__)
 
 
+@ensure_memory_client_initialized
 async def store_trip_with_dual_storage(
     trip_data: Dict[str, Any], user_id: str
 ) -> Dict[str, Any]:
@@ -32,7 +34,46 @@ async def store_trip_with_dual_storage(
     """
     # Step 1: Store structured data in Supabase
     logger.info("Storing structured trip data in Supabase")
+    trip_id = await _store_trip_in_supabase(trip_data, user_id)
 
+    # Step 2: Store unstructured data and relationships in Neo4j via Memory MCP
+    logger.info("Storing unstructured trip data in Neo4j via Memory MCP")
+    
+    # Create core trip entities
+    created_entities = await _create_trip_entities(trip_data, trip_id, user_id)
+    
+    # Create related entities and relationships
+    created_relations = await _create_trip_relations(
+        trip_data, trip_id, created_entities
+    )
+
+    return {
+        "trip_id": trip_id,
+        "entities_created": len(created_entities),
+        "relations_created": len(created_relations),
+        "supabase": {"id": trip_id},
+        "neo4j": {
+            "entities": created_entities,
+            "relations": created_relations,
+        },
+    }
+
+
+async def _store_trip_in_supabase(
+    trip_data: Dict[str, Any], user_id: str
+) -> str:
+    """Store structured trip data in Supabase.
+
+    Args:
+        trip_data: Trip data dictionary
+        user_id: User ID
+
+    Returns:
+        Trip ID
+    
+    Raises:
+        ValueError: If trip creation fails
+    """
     # Extract structured data for Supabase
     structured_data = {
         "user_id": user_id,
@@ -51,20 +92,26 @@ async def store_trip_with_dual_storage(
     if not trip_id:
         logger.error("Failed to create trip in Supabase")
         raise ValueError("Failed to create trip in database")
+    
+    return trip_id
 
-    # Step 2: Store unstructured data and relationships in Neo4j via Memory MCP
-    logger.info("Storing unstructured trip data in Neo4j via Memory MCP")
-    await memory_client.initialize()
 
-    # Extract destinations, accommodations, activities, etc.
-    destinations = trip_data.get("destinations", [])
-    accommodations = trip_data.get("accommodations", [])
-    activities = trip_data.get("activities", [])
-    events = trip_data.get("events", [])
-    transportation = trip_data.get("transportation", [])
+@ensure_memory_client_initialized
+async def _create_trip_entities(
+    trip_data: Dict[str, Any], trip_id: str, user_id: str
+) -> List[Dict[str, Any]]:
+    """Create entities for the trip in Neo4j.
 
-    # Prepare entities for Neo4j
+    Args:
+        trip_data: Trip data dictionary
+        trip_id: Trip ID
+        user_id: User ID
+
+    Returns:
+        List of created entities
+    """
     entities = []
+    entities_to_create = []
 
     # Add trip entity
     trip_observations = [
@@ -74,7 +121,7 @@ async def store_trip_with_dual_storage(
     if trip_data.get("description"):
         trip_observations.append(trip_data.get("description"))
 
-    entities.append(
+    entities_to_create.append(
         {
             "name": f"Trip:{trip_id}",
             "entityType": "Trip",
@@ -83,7 +130,7 @@ async def store_trip_with_dual_storage(
     )
 
     # Add user entity if not exists
-    entities.append(
+    entities_to_create.append(
         {
             "name": f"User:{user_id}",
             "entityType": "User",
@@ -92,428 +139,382 @@ async def store_trip_with_dual_storage(
     )
 
     # Add destinations
-    destination_names = []
+    destinations = trip_data.get("destinations", [])
     for destination in destinations:
-        dest_name = destination.get("name")
-        if not dest_name:
-            continue
-
-        destination_names.append(dest_name)
-
-        # Prepare observations
-        observations = []
-        if destination.get("description"):
-            observations.append(destination.get("description"))
-        if destination.get("country"):
-            observations.append(f"Located in {destination.get('country')}")
-
-        entities.append(
-            {
-                "name": dest_name,
-                "entityType": "Destination",
-                "observations": observations,
-                "country": destination.get("country", "Unknown"),
-                "type": destination.get("type", "city"),
-            }
-        )
+        entity = _create_destination_entity(destination)
+        if entity:
+            entities_to_create.append(entity)
 
     # Add accommodations
-    accommodation_names = []
+    accommodations = trip_data.get("accommodations", [])
     for accommodation in accommodations:
-        acc_name = accommodation.get("name")
-        if not acc_name:
-            continue
-
-        accommodation_names.append(acc_name)
-
-        # Prepare observations
-        observations = []
-        if accommodation.get("description"):
-            observations.append(accommodation.get("description"))
-
-        entities.append(
-            {
-                "name": acc_name,
-                "entityType": "Accommodation",
-                "observations": observations,
-                "destination": accommodation.get("destination"),
-                "type": accommodation.get("type", "hotel"),
-            }
-        )
+        entity = _create_accommodation_entity(accommodation)
+        if entity:
+            entities_to_create.append(entity)
 
     # Add activities
-    activity_names = []
+    activities = trip_data.get("activities", [])
     for activity in activities:
-        act_name = activity.get("name")
-        if not act_name:
-            continue
-
-        activity_names.append(act_name)
-
-        # Prepare observations
-        observations = []
-        if activity.get("description"):
-            observations.append(activity.get("description"))
-
-        entities.append(
-            {
-                "name": act_name,
-                "entityType": "Activity",
-                "observations": observations,
-                "destination": activity.get("destination"),
-                "type": activity.get("type", "attraction"),
-            }
-        )
-
+        entity = _create_activity_entity(activity)
+        if entity:
+            entities_to_create.append(entity)
+    
     # Add events
-    event_names = []
+    events = trip_data.get("events", [])
     for event in events:
-        event_name = event.get("name")
-        if not event_name:
-            continue
-
-        event_names.append(event_name)
-
-        # Prepare observations
-        observations = []
-        if event.get("description"):
-            observations.append(event.get("description"))
-
-        entities.append(
-            {
-                "name": event_name,
-                "entityType": "Event",
-                "observations": observations,
-                "destination": event.get("destination"),
-                "type": event.get("type", "cultural"),
-            }
-        )
-
+        entity = _create_event_entity(event)
+        if entity:
+            entities_to_create.append(entity)
+    
     # Add transportation
-    transportation_names = []
-    for trans in transportation:
-        trans_name = trans.get("name")
-        if not trans_name:
-            continue
+    transportation = trip_data.get("transportation", [])
+    for transport in transportation:
+        entity = _create_transportation_entity(transport)
+        if entity:
+            entities_to_create.append(entity)
 
-        transportation_names.append(trans_name)
+    # Create all entities in Neo4j
+    if entities_to_create:
+        entities = await memory_client.create_entities(entities_to_create)
+    
+    return entities
 
-        # Prepare observations
-        observations = []
-        if trans.get("description"):
-            observations.append(trans.get("description"))
 
-        entities.append(
+def _create_destination_entity(destination: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """Create a destination entity.
+
+    Args:
+        destination: Destination data
+
+    Returns:
+        Destination entity or None if invalid
+    """
+    dest_name = destination.get("name")
+    if not dest_name:
+        return None
+
+    # Prepare observations
+    observations = []
+    if destination.get("description"):
+        observations.append(destination.get("description"))
+    if destination.get("country"):
+        observations.append(f"Located in {destination.get('country')}")
+
+    return {
+        "name": dest_name,
+        "entityType": "Destination",
+        "observations": observations,
+        "country": destination.get("country", "Unknown"),
+        "type": destination.get("type", "city"),
+    }
+
+
+def _create_accommodation_entity(accommodation: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """Create an accommodation entity.
+
+    Args:
+        accommodation: Accommodation data
+
+    Returns:
+        Accommodation entity or None if invalid
+    """
+    acc_name = accommodation.get("name")
+    if not acc_name:
+        return None
+
+    # Prepare observations
+    observations = []
+    if accommodation.get("description"):
+        observations.append(accommodation.get("description"))
+    if accommodation.get("address"):
+        observations.append(f"Located at {accommodation.get('address')}")
+    if accommodation.get("price"):
+        observations.append(f"Price: ${accommodation.get('price')} per night")
+
+    return {
+        "name": acc_name,
+        "entityType": "Accommodation",
+        "observations": observations,
+        "destination": accommodation.get("destination"),
+        "type": accommodation.get("type", "hotel"),
+    }
+
+
+def _create_activity_entity(activity: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """Create an activity entity.
+
+    Args:
+        activity: Activity data
+
+    Returns:
+        Activity entity or None if invalid
+    """
+    act_name = activity.get("name")
+    if not act_name:
+        return None
+
+    # Prepare observations
+    observations = []
+    if activity.get("description"):
+        observations.append(activity.get("description"))
+    if activity.get("duration"):
+        observations.append(f"Duration: {activity.get('duration')}")
+    if activity.get("price"):
+        observations.append(f"Price: ${activity.get('price')}")
+
+    return {
+        "name": act_name,
+        "entityType": "Activity",
+        "observations": observations,
+        "destination": activity.get("destination"),
+        "type": activity.get("type", "attraction"),
+    }
+
+
+def _create_event_entity(event: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """Create an event entity.
+
+    Args:
+        event: Event data
+
+    Returns:
+        Event entity or None if invalid
+    """
+    event_name = event.get("name")
+    if not event_name:
+        return None
+
+    # Prepare observations
+    observations = []
+    if event.get("description"):
+        observations.append(event.get("description"))
+    if event.get("start_time") and event.get("end_time"):
+        observations.append(
+            f"From {event.get('start_time')} to {event.get('end_time')}"
+        )
+    if event.get("location"):
+        observations.append(f"Located at {event.get('location')}")
+
+    return {
+        "name": event_name,
+        "entityType": "Event",
+        "observations": observations,
+        "destination": event.get("destination"),
+        "type": event.get("type", "event"),
+    }
+
+
+def _create_transportation_entity(transport: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """Create a transportation entity.
+
+    Args:
+        transport: Transportation data
+
+    Returns:
+        Transportation entity or None if invalid
+    """
+    transport_name = transport.get("name")
+    if not transport_name:
+        return None
+
+    # Prepare observations
+    observations = []
+    if transport.get("description"):
+        observations.append(transport.get("description"))
+    if transport.get("departure_time") and transport.get("arrival_time"):
+        observations.append(
+            f"Departure: {transport.get('departure_time')}, "
+            f"Arrival: {transport.get('arrival_time')}"
+        )
+    if transport.get("price"):
+        observations.append(f"Price: ${transport.get('price')}")
+
+    return {
+        "name": transport_name,
+        "entityType": "Transportation",
+        "observations": observations,
+        "from_destination": transport.get("from_destination"),
+        "to_destination": transport.get("to_destination"),
+        "type": transport.get("type", "flight"),
+    }
+
+
+@ensure_memory_client_initialized
+async def _create_trip_relations(
+    trip_data: Dict[str, Any], trip_id: str, created_entities: List[Dict[str, Any]]
+) -> List[Dict[str, Any]]:
+    """Create relationships for the trip in Neo4j.
+
+    Args:
+        trip_data: Trip data dictionary
+        trip_id: Trip ID
+        created_entities: List of created entities
+
+    Returns:
+        List of created relations
+    """
+    relations_to_create = []
+    
+    # User-Trip relation
+    user_id = trip_data.get("user_id")
+    if user_id:
+        relations_to_create.append(
             {
-                "name": trans_name,
-                "entityType": "Transportation",
-                "observations": observations,
-                "origin": trans.get("origin"),
-                "destination": trans.get("destination"),
-                "type": trans.get("type", "flight"),
+                "from": f"User:{user_id}",
+                "relationType": "PLANS",
+                "to": f"Trip:{trip_id}",
             }
         )
-
-    # Store entities in Neo4j via Memory MCP
-    created_entities = await memory_client.create_entities(entities)
-
-    # Create relationships
-    relations = []
-
-    # User plans Trip
-    relations.append(
-        {
-            "from": f"User:{user_id}",
-            "relationType": "PLANS",
-            "to": f"Trip:{trip_id}",
-        }
-    )
-
-    # Trip includes Destinations
-    for dest_name in destination_names:
-        relations.append(
+    
+    # Extract entity names by type for convenience
+    destinations = [
+        entity["name"] for entity in created_entities 
+        if entity.get("entityType") == "Destination"
+    ]
+    accommodations = [
+        entity["name"] for entity in created_entities 
+        if entity.get("entityType") == "Accommodation"
+    ]
+    activities = [
+        entity["name"] for entity in created_entities 
+        if entity.get("entityType") == "Activity"
+    ]
+    events = [
+        entity["name"] for entity in created_entities 
+        if entity.get("entityType") == "Event"
+    ]
+    transportation = [
+        entity["name"] for entity in created_entities 
+        if entity.get("entityType") == "Transportation"
+    ]
+    
+    # Trip-Destination relations
+    for dest_name in destinations:
+        relations_to_create.append(
             {
                 "from": f"Trip:{trip_id}",
                 "relationType": "INCLUDES",
                 "to": dest_name,
             }
         )
-
-    # Trip includes Accommodations
-    for acc_name in accommodation_names:
-        relations.append(
+    
+    # Trip-Accommodation relations
+    for acc_name in accommodations:
+        relations_to_create.append(
             {
                 "from": f"Trip:{trip_id}",
                 "relationType": "INCLUDES",
                 "to": acc_name,
             }
         )
-
-        # Find destination for this accommodation
-        for accommodation in accommodations:
-            if accommodation.get("name") == acc_name and accommodation.get(
-                "destination"
-            ):
-                relations.append(
-                    {
-                        "from": acc_name,
-                        "relationType": "LOCATED_IN",
-                        "to": accommodation.get("destination"),
-                    }
-                )
-
-    # Trip includes Activities
-    for act_name in activity_names:
-        relations.append(
+    
+    # Trip-Activity relations
+    for act_name in activities:
+        relations_to_create.append(
             {
                 "from": f"Trip:{trip_id}",
                 "relationType": "INCLUDES",
                 "to": act_name,
             }
         )
-
-        # Find destination for this activity
-        for activity in activities:
-            if activity.get("name") == act_name and activity.get("destination"):
-                relations.append(
-                    {
-                        "from": act_name,
-                        "relationType": "TAKES_PLACE_IN",
-                        "to": activity.get("destination"),
-                    }
-                )
-
-    # Trip includes Events
-    for event_name in event_names:
-        relations.append(
+    
+    # Trip-Event relations
+    for event_name in events:
+        relations_to_create.append(
             {
                 "from": f"Trip:{trip_id}",
                 "relationType": "INCLUDES",
                 "to": event_name,
             }
         )
-
-        # Find destination for this event
-        for event in events:
-            if event.get("name") == event_name and event.get("destination"):
-                relations.append(
-                    {
-                        "from": event_name,
-                        "relationType": "TAKES_PLACE_IN",
-                        "to": event.get("destination"),
-                    }
-                )
-
-    # Trip includes Transportation
-    for trans_name in transportation_names:
-        relations.append(
+    
+    # Trip-Transportation relations
+    for transport_name in transportation:
+        relations_to_create.append(
             {
                 "from": f"Trip:{trip_id}",
                 "relationType": "INCLUDES",
-                "to": trans_name,
+                "to": transport_name,
             }
         )
-
-        # Find origin and destination for this transportation
-        for trans in transportation:
-            if trans.get("name") == trans_name:
-                if trans.get("origin"):
-                    relations.append(
-                        {
-                            "from": trans_name,
-                            "relationType": "DEPARTS_FROM",
-                            "to": trans.get("origin"),
-                        }
-                    )
-                if trans.get("destination"):
-                    relations.append(
-                        {
-                            "from": trans_name,
-                            "relationType": "ARRIVES_AT",
-                            "to": trans.get("destination"),
-                        }
-                    )
-
-    # Store relationships in Neo4j via Memory MCP
-    created_relations = await memory_client.create_relations(relations)
-
-    return {
-        "supabase_id": trip_id,
-        "neo4j_entities": len(created_entities),
-        "neo4j_relations": len(created_relations),
-    }
-
-
-async def retrieve_trip_with_dual_storage(
-    trip_id: str, include_graph: bool = False
-) -> Dict[str, Any]:
-    """Retrieve trip data using the dual storage strategy.
-
-    This function retrieves structured trip data from Supabase and
-    relationships/unstructured data from Neo4j via the Memory MCP.
-
-    Args:
-        trip_id: Trip ID
-        include_graph: Whether to include the knowledge graph
-
-    Returns:
-        Dictionary with trip data from both storage systems
-    """
-    # Step 1: Retrieve structured data from Supabase
-    logger.info(f"Retrieving structured trip data from Supabase for trip {trip_id}")
-
-    db_trip = await db_client.trips.get(trip_id)
-    if not db_trip:
-        logger.error(f"Trip {trip_id} not found in Supabase")
-        raise ValueError(f"Trip {trip_id} not found")
-
-    # Step 2: Retrieve related entities from Neo4j via Memory MCP
-    logger.info(
-        f"Retrieving unstructured trip data from Neo4j via Memory MCP for "
-        f"trip {trip_id}"
-    )
-    await memory_client.initialize()
-
-    # Get trip entity
-    trip_nodes = await memory_client.open_nodes([f"Trip:{trip_id}"])
-    if not trip_nodes:
-        logger.warning(f"Trip {trip_id} not found in Neo4j")
-        trip_node = None
-    else:
-        trip_node = trip_nodes[0]
-
-    # Combine data
-    result = {
-        **db_trip,
-        "knowledge_graph": {
-            "trip_node": trip_node,
-        },
-    }
-
-    # Include full graph if requested
-    if include_graph:
-        logger.info(f"Retrieving full knowledge graph for trip {trip_id}")
-        # Search for all nodes connected to this trip
-        search_result = await memory_client.search_nodes(f"Trip:{trip_id}")
-
-        # Get detailed information for each node
-        if search_result:
-            node_names = [
-                node.get("name") for node in search_result if node.get("name")
-            ]
-            detailed_nodes = await memory_client.open_nodes(node_names)
-            result["knowledge_graph"]["nodes"] = detailed_nodes
-
-    return result
-
-
-async def update_trip_with_dual_storage(
-    trip_id: str, trip_data: Dict[str, Any]
-) -> Dict[str, Any]:
-    """Update trip data using the dual storage strategy.
-
-    This function updates structured trip data in Supabase and
-    relationships/unstructured data in Neo4j via the Memory MCP.
-
-    Args:
-        trip_id: Trip ID
-        trip_data: Updated trip data
-
-    Returns:
-        Dictionary with update status
-    """
-    # Step 1: Update structured data in Supabase
-    logger.info(f"Updating structured trip data in Supabase for trip {trip_id}")
-
-    # Extract structured data for Supabase
-    structured_data = {}
-    if "title" in trip_data:
-        structured_data["title"] = trip_data["title"]
-    if "description" in trip_data:
-        structured_data["description"] = trip_data["description"]
-    if "start_date" in trip_data:
-        structured_data["start_date"] = trip_data["start_date"]
-    if "end_date" in trip_data:
-        structured_data["end_date"] = trip_data["end_date"]
-    if "budget" in trip_data:
-        structured_data["budget"] = trip_data["budget"]
-    if "status" in trip_data:
-        structured_data["status"] = trip_data["status"]
-
-    # Update in Supabase
-    if structured_data:
-        db_trip = await db_client.trips.update(trip_id, structured_data)
-        if not db_trip:
-            logger.error(f"Trip {trip_id} not found in Supabase")
-            raise ValueError(f"Trip {trip_id} not found")
-
-    # Step 2: Update unstructured data in Neo4j via Memory MCP
-    logger.info(
-        f"Updating unstructured trip data in Neo4j via Memory MCP for trip {trip_id}"
-    )
-    await memory_client.initialize()
-
-    # Get trip entity
-    trip_nodes = await memory_client.open_nodes([f"Trip:{trip_id}"])
-    if not trip_nodes:
-        logger.warning(f"Trip {trip_id} not found in Neo4j")
-    else:
-        # Update trip observations if description changed
-        if "description" in trip_data:
-            # Create new observations
-            observations = [
-                f"Trip from {trip_data.get('start_date', db_trip.get('start_date'))} "
-                f"to {trip_data.get('end_date', db_trip.get('end_date'))}",
-                f"Budget: ${trip_data.get('budget', db_trip.get('budget'))}",
-                trip_data["description"],
-            ]
-
-            # Add observations to trip entity
-            await memory_client.add_observations(
-                [
+    
+    # Create additional entity relationships based on their connections
+    # (e.g., Activity-Destination, Accommodation-Destination)
+    for acc_data in trip_data.get("accommodations", []):
+        if acc_data.get("name") and acc_data.get("destination"):
+            if acc_data["name"] in accommodations and acc_data["destination"] in destinations:
+                relations_to_create.append(
                     {
-                        "entityName": f"Trip:{trip_id}",
-                        "contents": observations,
+                        "from": acc_data["name"],
+                        "relationType": "LOCATED_IN",
+                        "to": acc_data["destination"],
                     }
-                ]
-            )
-
-    return {
-        "supabase_updated": bool(structured_data),
-        "neo4j_updated": "description" in trip_data,
-    }
-
-
-async def delete_trip_with_dual_storage(trip_id: str) -> Dict[str, Any]:
-    """Delete trip data using the dual storage strategy.
-
-    This function deletes structured trip data from Supabase and
-    relationships/unstructured data from Neo4j via the Memory MCP.
-
-    Args:
-        trip_id: Trip ID
-
-    Returns:
-        Dictionary with deletion status
-    """
-    # Step 1: Delete structured data from Supabase
-    logger.info(f"Deleting structured trip data from Supabase for trip {trip_id}")
-
-    deleted = await db_client.trips.delete(trip_id)
-    if not deleted:
-        logger.error(f"Trip {trip_id} not found in Supabase")
-        raise ValueError(f"Trip {trip_id} not found")
-
-    # Step 2: Delete unstructured data from Neo4j via Memory MCP
-    logger.info(
-        f"Deleting unstructured trip data from Neo4j via Memory MCP for trip {trip_id}"
-    )
-    await memory_client.initialize()
-
-    # Delete trip entity
-    deleted_entities = await memory_client.delete_entities([f"Trip:{trip_id}"])
-
-    return {
-        "supabase_deleted": True,
-        "neo4j_deleted": bool(deleted_entities),
-    }
+                )
+    
+    for act_data in trip_data.get("activities", []):
+        if act_data.get("name") and act_data.get("destination"):
+            if act_data["name"] in activities and act_data["destination"] in destinations:
+                relations_to_create.append(
+                    {
+                        "from": act_data["name"],
+                        "relationType": "LOCATED_IN",
+                        "to": act_data["destination"],
+                    }
+                )
+    
+    for event_data in trip_data.get("events", []):
+        if event_data.get("name") and event_data.get("destination"):
+            if event_data["name"] in events and event_data["destination"] in destinations:
+                relations_to_create.append(
+                    {
+                        "from": event_data["name"],
+                        "relationType": "LOCATED_IN",
+                        "to": event_data["destination"],
+                    }
+                )
+    
+    # Transportation connections
+    for transport_data in trip_data.get("transportation", []):
+        if (transport_data.get("name") and 
+            transport_data.get("from_destination") and 
+            transport_data.get("to_destination")):
+            
+            transport_name = transport_data["name"]
+            from_dest = transport_data["from_destination"]
+            to_dest = transport_data["to_destination"]
+            
+            if (transport_name in transportation and 
+                from_dest in destinations and 
+                to_dest in destinations):
+                
+                relations_to_create.append(
+                    {
+                        "from": transport_name,
+                        "relationType": "DEPARTS_FROM",
+                        "to": from_dest,
+                    }
+                )
+                
+                relations_to_create.append(
+                    {
+                        "from": transport_name,
+                        "relationType": "ARRIVES_AT",
+                        "to": to_dest,
+                    }
+                )
+                
+                # Also add direct connection between destinations
+                relations_to_create.append(
+                    {
+                        "from": from_dest,
+                        "relationType": "CONNECTED_TO",
+                        "to": to_dest,
+                    }
+                )
+    
+    # Create all relations in Neo4j
+    relations = []
+    if relations_to_create:
+        relations = await memory_client.create_relations(relations_to_create)
+    
+    return relations
