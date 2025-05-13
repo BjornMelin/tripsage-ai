@@ -3,22 +3,16 @@ Unit tests for Google Calendar MCP models.
 """
 
 import unittest
-from datetime import datetime
 
-import pytest
 from pydantic import ValidationError
 
 from src.mcp.calendar.models import (
     Calendar,
-    CalendarListResponse,
     CreateEventParams,
     CreateItineraryEventsParams,
-    CreateItineraryEventsResponse,
     DeleteEventParams,
     Event,
     EventAttendee,
-    EventListResponse,
-    EventSearchResponse,
     EventStatus,
     EventTime,
     EventVisibility,
@@ -26,7 +20,6 @@ from src.mcp.calendar.models import (
     ItineraryItemType,
     ListCalendarsParams,
     ListEventsParams,
-    SearchEventsParams,
     UpdateEventParams,
 )
 
@@ -40,15 +33,15 @@ class TestCalendarModels(unittest.TestCase):
         event_time = EventTime(date_time="2025-05-15T10:00:00Z", time_zone="UTC")
         self.assertEqual(event_time.date_time, "2025-05-15T10:00:00Z")
         self.assertEqual(event_time.time_zone, "UTC")
-        
+
         # Valid with date
         event_time = EventTime(date="2025-05-15")
         self.assertEqual(event_time.date, "2025-05-15")
-        
+
         # Invalid with neither
         with self.assertRaises(ValidationError):
             EventTime()
-            
+
         # Invalid with both
         with self.assertRaises(ValidationError):
             EventTime(date_time="2025-05-15T10:00:00Z", date="2025-05-15")
@@ -63,14 +56,14 @@ class TestCalendarModels(unittest.TestCase):
             time_zone="America/New_York",
             primary=True,
         )
-        
+
         # Verify properties
         self.assertEqual(calendar.id, "calendar1")
         self.assertEqual(calendar.summary, "Primary Calendar")
         self.assertEqual(calendar.description, "My main calendar")
         self.assertEqual(calendar.time_zone, "America/New_York")
         self.assertTrue(calendar.primary)
-        
+
         # Test serialization
         calendar_dict = calendar.model_dump()
         self.assertEqual(calendar_dict["id"], "calendar1")
@@ -100,7 +93,7 @@ class TestCalendarModels(unittest.TestCase):
             ],
             visibility=EventVisibility.DEFAULT,
         )
-        
+
         # Verify properties
         self.assertEqual(event.id, "event1")
         self.assertEqual(event.calendar_id, "calendar1")
@@ -113,7 +106,7 @@ class TestCalendarModels(unittest.TestCase):
         self.assertEqual(len(event.attendees), 1)
         self.assertEqual(event.attendees[0].email, "user1@example.com")
         self.assertEqual(event.visibility, EventVisibility.DEFAULT)
-        
+
         # Test serialization
         event_dict = event.model_dump()
         self.assertEqual(event_dict["id"], "event1")
@@ -126,7 +119,7 @@ class TestCalendarModels(unittest.TestCase):
         # Default parameters
         params = ListCalendarsParams()
         self.assertIsNone(params.max_results)
-        
+
         # With max_results
         params = ListCalendarsParams(max_results=10)
         self.assertEqual(params.max_results, 10)
@@ -138,7 +131,7 @@ class TestCalendarModels(unittest.TestCase):
         self.assertEqual(params.calendar_id, "calendar1")
         self.assertIsNone(params.time_min)
         self.assertIsNone(params.time_max)
-        
+
         # All parameters
         params = ListEventsParams(
             calendar_id="calendar1",
@@ -168,7 +161,7 @@ class TestCalendarModels(unittest.TestCase):
         self.assertEqual(params.summary, "New Event")
         self.assertEqual(params.start.date_time, "2025-05-15T10:00:00Z")
         self.assertEqual(params.end.date_time, "2025-05-15T11:00:00Z")
-        
+
         # With optional parameters
         params = CreateEventParams(
             calendar_id="calendar1",
@@ -198,7 +191,7 @@ class TestCalendarModels(unittest.TestCase):
         )
         self.assertEqual(params.calendar_id, "calendar1")
         self.assertEqual(params.event_id, "event1")
-        
+
         # With updates
         params = UpdateEventParams(
             calendar_id="calendar1",
@@ -243,7 +236,7 @@ class TestCalendarModels(unittest.TestCase):
         self.assertEqual(item.location, "JFK Airport")
         self.assertEqual(item.start_time, "2025-06-15T10:00:00Z")
         self.assertEqual(item.end_time, "2025-06-15T14:00:00Z")
-        
+
         # With duration instead of end_time
         item = ItineraryItem(
             type=ItineraryItemType.ACTIVITY,
@@ -257,7 +250,7 @@ class TestCalendarModels(unittest.TestCase):
         self.assertEqual(item.type, ItineraryItemType.ACTIVITY)
         self.assertEqual(item.title, "Museum Visit")
         self.assertEqual(item.duration_minutes, 180)
-        
+
         # Invalid without end_time or duration
         with self.assertRaises(ValidationError):
             ItineraryItem(
@@ -286,14 +279,14 @@ class TestCalendarModels(unittest.TestCase):
                 time_zone="America/New_York",
             ),
         ]
-        
+
         # Create parameters
         params = CreateItineraryEventsParams(
             calendar_id="calendar1",
             itinerary_items=items,
             trip_name="Summer Vacation",
         )
-        
+
         # Verify properties
         self.assertEqual(params.calendar_id, "calendar1")
         self.assertEqual(len(params.itinerary_items), 2)
