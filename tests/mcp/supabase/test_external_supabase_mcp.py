@@ -36,9 +36,11 @@ class TestExternalSupabaseMCP:
 
     def test_supabase_mcp_configured(self):
         """Test that Supabase MCP is configured in AppSettings."""
-        assert hasattr(settings, "supabase_mcp"), "Supabase MCP not configured in settings"
+        assert hasattr(settings, "supabase_mcp"), (
+            "Supabase MCP not configured in settings"
+        )
         assert settings.supabase_mcp.endpoint, "Supabase MCP endpoint not configured"
-        
+
         # Check that if Supabase MCP is configured to be production-only
         assert settings.supabase_mcp.prod_only, "Supabase MCP should be prod-only"
 
@@ -46,21 +48,29 @@ class TestExternalSupabaseMCP:
         """Test that db_factory provides SupabaseMCPClient for production."""
         # Test with explicit production environment
         client = get_mcp_client(Environment.PRODUCTION)
-        assert isinstance(client, SupabaseMCPClient), "Factory should return SupabaseMCPClient for production"
+        assert isinstance(client, SupabaseMCPClient), (
+            "Factory should return SupabaseMCPClient for production"
+        )
 
         # Test with explicit staging environment (should also use Supabase)
         client = get_mcp_client(Environment.STAGING)
-        assert isinstance(client, SupabaseMCPClient), "Factory should return SupabaseMCPClient for staging"
+        assert isinstance(client, SupabaseMCPClient), (
+            "Factory should return SupabaseMCPClient for staging"
+        )
 
     def test_db_factory_production_service(self):
         """Test that db_factory provides SupabaseService for production."""
         # Test with explicit production environment
         service = get_mcp_service(Environment.PRODUCTION)
-        assert isinstance(service, SupabaseService), "Factory should return SupabaseService for production"
+        assert isinstance(service, SupabaseService), (
+            "Factory should return SupabaseService for production"
+        )
 
         # Test with explicit staging environment (should also use Supabase)
         service = get_mcp_service(Environment.STAGING)
-        assert isinstance(service, SupabaseService), "Factory should return SupabaseService for staging"
+        assert isinstance(service, SupabaseService), (
+            "Factory should return SupabaseService for staging"
+        )
 
 
 @pytest.mark.asyncio
@@ -72,7 +82,9 @@ class TestExternalSupabaseMCPMock:
         """Test that SupabaseMCPClient initializes correctly from settings."""
         # Setup mock
         mock_settings.supabase_mcp.endpoint = "https://test-endpoint"
-        mock_settings.supabase_mcp.api_key.get_secret_value.return_value = "test-api-key"
+        mock_settings.supabase_mcp.api_key.get_secret_value.return_value = (
+            "test-api-key"
+        )
         mock_settings.supabase_mcp.prod_only = True
         mock_settings.supabase_mcp.default_project_id = "test-project-id"
 
@@ -96,7 +108,9 @@ class TestExternalSupabaseMCPMock:
         mock_call_tool.return_value = mock_response
 
         # Create client
-        client = SupabaseMCPClient(endpoint="https://test-endpoint", api_key="test-api-key")
+        client = SupabaseMCPClient(
+            endpoint="https://test-endpoint", api_key="test-api-key"
+        )
 
         # Call method
         result = await client.list_organizations()
@@ -136,7 +150,9 @@ class TestExternalSupabaseMCPMock:
         mock_call_tool.return_value = mock_response
 
         # Create client
-        client = SupabaseMCPClient(endpoint="https://test-endpoint", api_key="test-api-key")
+        client = SupabaseMCPClient(
+            endpoint="https://test-endpoint", api_key="test-api-key"
+        )
 
         # Call method
         result = await client.list_projects()
@@ -161,9 +177,9 @@ class TestExternalSupabaseMCPMock:
 class TestExternalSupabaseMCPLive:
     """
     Integration tests for the external Supabase MCP server.
-    
+
     These tests require a running Supabase MCP server and valid credentials.
-    They are skipped by default and can be enabled by setting the 
+    They are skipped by default and can be enabled by setting the
     SUPABASE_MCP_TEST environment variable.
     """
 
@@ -171,7 +187,7 @@ class TestExternalSupabaseMCPLive:
         """Test the list_organizations method with a live server."""
         client = SupabaseMCPClient()
         result = await client.list_organizations()
-        
+
         # Basic validation that the response is correct
         assert isinstance(result, ListOrganizationsResponse)
         assert hasattr(result, "organizations")
@@ -180,7 +196,7 @@ class TestExternalSupabaseMCPLive:
         """Test the list_projects method with a live server."""
         client = SupabaseMCPClient()
         result = await client.list_projects()
-        
+
         # Basic validation that the response is correct
         assert isinstance(result, ListProjectsResponse)
         assert hasattr(result, "projects")
@@ -189,7 +205,7 @@ class TestExternalSupabaseMCPLive:
         """Test the get_default_project method with a live server."""
         service = SupabaseService()
         result = await service.get_default_project()
-        
+
         # Basic validation that the response is correct
         assert "id" in result
         assert "name" in result
