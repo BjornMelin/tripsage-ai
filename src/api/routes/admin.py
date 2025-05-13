@@ -4,7 +4,7 @@ Admin routes for TripSage API.
 This module provides admin-only routes for database management and system configuration.
 """
 
-from fastapi import APIRouter, BackgroundTasks, HTTPException, status
+from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel
 
 from src.api.auth import User, get_current_active_user
@@ -64,18 +64,26 @@ async def validate_admin(
     return current_user
 
 
-async def run_migrations_task(options: MigrationOptions) -> MigrationResponse:
+@router.post("/migrations/run", response_model=MigrationResponse)
+async def run_migrations_route(
+    options: MigrationOptions,
+    _: User = None,
+):
     """
-    Run migrations in a background task.
+    Run database migrations.
 
     Args:
         options: Migration options
+        _: Current admin user (from dependency)
 
     Returns:
-        Migration response with results
+        Migration response with migration results
     """
+    if _ is None:
+        _ = await validate_admin()
+
     # Run migrations with service role key
-    succeeded, failed = run_migrations(
+    succeeded, failed = await run_migrations(
         service_key=True,
         up_to=options.up_to,
         dry_run=options.dry_run,
@@ -85,9 +93,7 @@ async def run_migrations_task(options: MigrationOptions) -> MigrationResponse:
     if options.dry_run:
         message = f"Dry run: would apply {succeeded} migrations"
     elif failed > 0:
-        message = (
-            f"Migrations completed with errors: {failed} failed, {succeeded} succeeded"
-        )
+        message = f"Migrations completed with errors: {failed} failed, {succeeded} succeeded"
     elif succeeded == 0:
         message = "No migrations were applied"
     else:
@@ -98,50 +104,6 @@ async def run_migrations_task(options: MigrationOptions) -> MigrationResponse:
         succeeded=succeeded,
         failed=failed,
     )
-
-
-@router.post("/migrations/run", response_model=MigrationResponse)
-async def run_migrations_route(
-    options: MigrationOptions,
-    background_tasks: BackgroundTasks,
-    _: User = None,
-):
-    """
-    Run database migrations.
-
-    Args:
-        options: Migration options
-        background_tasks: FastAPI background tasks
-        _: Current admin user (from dependency)
-
-    Returns:
-        Migration response
-    """
-    if _ is None:
-        _ = await validate_admin()
-
-    if options.dry_run:
-        # For dry runs, run synchronously and return results
-        succeeded, failed = run_migrations(
-            service_key=True,
-            up_to=options.up_to,
-            dry_run=True,
-        )
-
-        return MigrationResponse(
-            message=f"Dry run: would apply {succeeded} migrations",
-            succeeded=succeeded,
-            failed=failed,
-        )
-    else:
-        # For actual migrations, run in background
-        background_tasks.add_task(run_migrations_task, options)
-
-        return MigrationResponse(
-            message="Migration started in background",
-            succeeded=0,
-            failed=0,
-        )
 
 
 @router.get("/migrations/status", response_model=MigrationResponse)
@@ -159,7 +121,7 @@ async def get_migrations_status(_: User = None):
         _ = await validate_admin()
 
     # Get list of migrations that would be applied in a dry run
-    succeeded, failed = run_migrations(
+    succeeded, failed = await run_migrations(
         service_key=True,
         dry_run=True,
     )
