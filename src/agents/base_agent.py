@@ -11,7 +11,7 @@ from typing import Any, Callable, Dict, List, Optional
 
 from pydantic import BaseModel
 
-from agents import Agent, RunContextWrapper, function_tool, handoff
+from agents import Agent, RunContext, Runner, function_tool
 from agents.extensions.handoff_prompt import RECOMMENDED_PROMPT_PREFIX
 from src.mcp.base_mcp_client import BaseMCPClient
 from src.utils.config import get_config
@@ -47,7 +47,7 @@ class BaseAgent:
         instructions: str,
         model: str = "gpt-4",
         temperature: float = 0.2,
-        tools: Optional[List[Dict[str, Any]]] = None,
+        tools: Optional[List[Any]] = None,
         handoffs: Optional[List[Any]] = None,
         metadata: Optional[Dict[str, str]] = None,
     ):
@@ -89,6 +89,9 @@ class BaseAgent:
         self.messages_history = []
         self.session_id = str(uuid.uuid4())
         self.session_data = {}
+
+        # Create the Runner for this agent
+        self.runner = Runner()
 
         logger.info("Initialized agent: %s", name)
 
@@ -242,7 +245,7 @@ class BaseAgent:
     async def run(
         self, user_input: str, context: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
-        """Run the agent with user input.
+        """Run the agent with user input using the OpenAI Agents SDK Runner.
 
         Args:
             user_input: User input text
@@ -251,34 +254,34 @@ class BaseAgent:
         Returns:
             Dictionary with the agent's response and other information
         """
-        from agents import Runner
-
         # Add to message history
         self.messages_history.append(
             {"role": "user", "content": user_input, "timestamp": time.time()}
         )
 
-        # Set up context
-        run_context = context or {}
+        # Set up run context
+        run_context = RunContext(**(context or {}))
 
         # Initialize session data if this is the first message
-        if not self.session_data and "user_id" in run_context:
-            await self._initialize_session(run_context.get("user_id"))
-            run_context["session_data"] = self.session_data
-            run_context["session_id"] = self.session_id
+        if not self.session_data and context and "user_id" in context:
+            await self._initialize_session(context.get("user_id"))
+            run_context.session_data = self.session_data
+            run_context.session_id = self.session_id
 
         try:
-            # Run the agent
+            # Run the agent using the OpenAI Agents SDK Runner
             logger.info("Running agent: %s", self.name)
-            result = await Runner.run(self.agent, user_input, context=run_context)
+            result = await self.runner.run(
+                agent=self.agent,
+                input=user_input,
+                context=run_context,
+            )
 
             # Extract response
             response = {
-                "content": result.final_output,
-                "tool_calls": (
-                    result.tool_calls if hasattr(result, "tool_calls") else []
-                ),
-                "handoffs": result.handoffs if hasattr(result, "handoffs") else [],
+                "content": result.output,
+                "tool_calls": result.tool_calls,
+                "handoffs": result.handoffs,
                 "status": "success",
             }
 
@@ -292,12 +295,12 @@ class BaseAgent:
             )
 
             # Save session summary if needed
-            if len(self.messages_history) >= 10 and "user_id" in run_context:
+            if len(self.messages_history) >= 10 and context and "user_id" in context:
                 # Generate session summary
                 summary = (
                     f"Conversation with {self.messages_history[0]['content'][:50]}..."
                 )
-                await self._save_session_summary(run_context["user_id"], summary)
+                await self._save_session_summary(context["user_id"], summary)
 
             return response
 
@@ -458,13 +461,13 @@ class TravelAgent(BaseAgent):
         # Import calendar tools
         try:
             from .calendar_tools import (
+                create_event_tool,
+                create_itinerary_events_tool,
+                delete_event_tool,
                 list_calendars_tool,
                 list_events_tool,
                 search_events_tool,
-                create_event_tool,
                 update_event_tool,
-                delete_event_tool,
-                create_itinerary_events_tool,
             )
 
             # Register calendar tools
@@ -483,12 +486,12 @@ class TravelAgent(BaseAgent):
         # Import time tools
         try:
             from .time_tools import (
-                get_current_time_tool,
-                convert_timezone_tool,
-                get_local_time_tool,
                 calculate_flight_arrival_tool,
-                find_meeting_times_tool,
+                convert_timezone_tool,
                 create_timezone_aware_itinerary_tool,
+                find_meeting_times_tool,
+                get_current_time_tool,
+                get_local_time_tool,
             )
 
             # Register time tools
@@ -604,21 +607,3 @@ class BudgetAgent(BaseAgent):
         """Register budget-specific tools."""
         # This will be implemented to register budget optimization tools
         pass
-
-
-# Function to create a handoff to the Budget Agent
-def budget_agent_handoff():
-    """Create a handoff to the Budget Agent."""
-    budget_agent = BudgetAgent()
-
-    async def on_budget_handoff(ctx: RunContextWrapper[None], input_data: str):
-        """Handle budget agent handoff.
-
-        Args:
-            ctx: Context wrapper
-            input_data: Input data
-        """
-        logger.info("Handing off to Budget Agent")
-        # Additional handoff logic could be implemented here
-
-    return handoff(agent=budget_agent, on_handoff=on_budget_handoff)

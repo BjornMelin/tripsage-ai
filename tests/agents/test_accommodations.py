@@ -6,15 +6,16 @@ and their interaction with MCP clients.
 """
 
 from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
 
 from src.agents.accommodations import (
     AccommodationSearchTool,
-    search_airbnb_rentals,
     get_airbnb_listing_details,
     search_accommodations,
+    search_airbnb_rentals,
 )
-from src.mcp.accommodations.models import AirbnbSearchResult, AirbnbListingDetails
+from src.mcp.accommodations.models import AirbnbListingDetails, AirbnbSearchResult
 
 # Test data
 TEST_LOCATION = "San Francisco, CA"
@@ -134,7 +135,9 @@ class TestAccommodationTool:
         mock_cache_get.return_value = None
         mock_client = MagicMock()
         mock_client.get_listing_details = AsyncMock(
-            return_value=AirbnbListingDetails.model_validate(mock_airbnb_listing_details)
+            return_value=AirbnbListingDetails.model_validate(
+                mock_airbnb_listing_details
+            )
         )
         mock_create_client.return_value = mock_client
 
@@ -172,7 +175,9 @@ class TestAccommodationTool:
         """Test searching with an unsupported accommodation source."""
         # Setup mocks
         mock_cache_get.return_value = None
-        mock_create_client.side_effect = ValueError("Unsupported accommodation source: invalid")
+        mock_create_client.side_effect = ValueError(
+            "Unsupported accommodation source: invalid"
+        )
 
         # Create the tool and call search_accommodations
         tool = AccommodationSearchTool()
