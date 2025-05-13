@@ -38,8 +38,8 @@ class FlightAgent(BaseAgent):
         # Define specialized instructions
         instructions = """
         You are a specialized flight search and booking agent for TripSage. Your goal is
-        to help users find and book the optimal flights for their travel needs, taking into
-        account their preferences, constraints, and budget.
+        to help users find and book the optimal flights for their travel needs,
+        taking into account their preferences, constraints, and budget.
 
         Key responsibilities:
         1. Search for flights using detailed criteria
@@ -214,7 +214,9 @@ class FlightAgent(BaseAgent):
             segments = params.get("segments", [])
             if not segments or not isinstance(segments, list) or len(segments) < 2:
                 return {
-                    "error": "At least two valid segments are required for multi-city search"
+                    "error": (
+                        "At least two valid segments are required for multi-city search"
+                    )
                 }
 
             # Delegate to flight search component

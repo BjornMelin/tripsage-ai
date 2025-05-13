@@ -1,8 +1,9 @@
 """
 Accommodation Agent implementation for TripSage.
 
-This module provides a specialized AccommodationAgent for accommodation search and booking,
-leveraging accommodation MCP tools and integrating with the OpenAI Agents SDK.
+This module provides a specialized AccommodationAgent for accommodation
+search and booking, leveraging accommodation MCP tools and integrating with
+the OpenAI Agents SDK.
 """
 
 from agents import RunContextWrapper, handoff
@@ -33,9 +34,10 @@ class AccommodationAgent(BaseAgent):
         """
         # Define specialized instructions
         instructions = """
-        You are a specialized accommodation search and booking agent for TripSage. Your goal is
-        to help users find and book the optimal accommodations for their travel needs, taking into
-        account their preferences, constraints, and budget.
+        You are a specialized accommodation search and booking agent for TripSage.
+        Your goal is to help users find and book the optimal accommodations for
+        their travel needs, taking into account their preferences, constraints,
+        and budget.
 
         Key responsibilities:
         1. Search for accommodations using detailed criteria
@@ -52,7 +54,8 @@ class AccommodationAgent(BaseAgent):
         - Explain why certain accommodations are recommended
         - When presenting prices, include all taxes and fees for transparency
         - Consider location proximity to attractions or transportation
-        - Save selected accommodation details in the knowledge graph for future reference
+        - Save selected accommodation details in the knowledge graph for future
+          reference
 
         ACCOMMODATION DATA ANALYSIS:
         - Explain price differences between similar accommodations
