@@ -455,8 +455,53 @@ class TravelAgent(BaseAgent):
 
     def _register_travel_tools(self) -> None:
         """Register travel-specific tools."""
-        # This will be implemented to register tools from various MCP clients
-        pass
+        # Import calendar tools
+        try:
+            from .calendar_tools import (
+                list_calendars_tool,
+                list_events_tool,
+                search_events_tool,
+                create_event_tool,
+                update_event_tool,
+                delete_event_tool,
+                create_itinerary_events_tool,
+            )
+
+            # Register calendar tools
+            self._register_tool(list_calendars_tool)
+            self._register_tool(list_events_tool)
+            self._register_tool(search_events_tool)
+            self._register_tool(create_event_tool)
+            self._register_tool(update_event_tool)
+            self._register_tool(delete_event_tool)
+            self._register_tool(create_itinerary_events_tool)
+
+            logger.info("Registered Google Calendar tools")
+        except ImportError as e:
+            logger.warning(f"Could not register calendar tools: {str(e)}")
+
+        # Import time tools
+        try:
+            from .time_tools import (
+                get_current_time_tool,
+                convert_timezone_tool,
+                get_local_time_tool,
+                calculate_flight_arrival_tool,
+                find_meeting_times_tool,
+                create_timezone_aware_itinerary_tool,
+            )
+
+            # Register time tools
+            self._register_tool(get_current_time_tool)
+            self._register_tool(convert_timezone_tool)
+            self._register_tool(get_local_time_tool)
+            self._register_tool(calculate_flight_arrival_tool)
+            self._register_tool(find_meeting_times_tool)
+            self._register_tool(create_timezone_aware_itinerary_tool)
+
+            logger.info("Registered Time tools")
+        except ImportError as e:
+            logger.warning(f"Could not register time tools: {str(e)}")
 
     @function_tool
     async def get_weather(self, params: Dict[str, Any]) -> Dict[str, Any]:
