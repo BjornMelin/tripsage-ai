@@ -1,8 +1,9 @@
 """
 Destination Research Agent implementation for TripSage.
 
-This module provides a specialized DestinationResearchAgent for researching travel destinations,
-leveraging webcrawl and maps MCP tools and integrating with the OpenAI Agents SDK.
+This module provides a specialized DestinationResearchAgent for researching travel
+destinations, leveraging webcrawl and maps MCP tools and integrating with the
+OpenAI Agents SDK.
 """
 
 from agents import RunContextWrapper, WebSearchTool, handoff
@@ -39,7 +40,8 @@ class DestinationResearchAgent(BaseAgent):
 
         Key responsibilities:
         1. Research destinations in depth using web search and specialized tools
-        2. Provide information on attractions, culture, local customs, and practical details
+        2. Provide information on attractions, culture, local customs,
+            and practical details
         3. Find destination-specific events and seasonal information
         4. Research safety, health, and entry requirements for destinations
         5. Save destination information in the knowledge graph for future reference

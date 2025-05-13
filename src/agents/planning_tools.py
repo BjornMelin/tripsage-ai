@@ -341,7 +341,8 @@ async def combine_search_results(params: Dict[str, Any]) -> Dict[str, Any]:
                 combined_results["recommendations"]["accommodations"] = (
                     sorted_accommodations[:3]
                 )
-                # Add to total cost estimate (using first accommodation's nightly rate * 3 nights)
+                # Add to total cost estimate (using first accommodation's
+                # nightly rate * 3 nights)
                 if sorted_accommodations:
                     combined_results["total_estimated_cost"] += (
                         sorted_accommodations[0].get("price_per_night", 0) * 3
@@ -362,7 +363,7 @@ async def combine_search_results(params: Dict[str, Any]) -> Dict[str, Any]:
                     :5
                 ]
                 # Add to total cost estimate (using top 3 activities)
-                for i, activity in enumerate(sorted_activities[:3]):
+                for _, activity in enumerate(sorted_activities[:3]):
                     combined_results["total_estimated_cost"] += activity.get(
                         "price_per_person", 0
                     )
@@ -502,7 +503,10 @@ def _generate_markdown_summary(travel_plan: Dict[str, Any]) -> str:
             summary += (
                 f"* **Check-out**: {accommodation.get('check_out_date', 'N/A')}\n"
             )
-            summary += f"* **Price**: ${accommodation.get('price_per_night', 'N/A')} per night\n\n"
+            summary += (
+                f"* **Price**: ${accommodation.get('price_per_night', 'N/A')} "
+                f"per night\n\n"
+            )
 
     # Add activities if available
     activities = components.get("activities", [])
@@ -512,7 +516,10 @@ def _generate_markdown_summary(travel_plan: Dict[str, Any]) -> str:
             summary += f"### {activity.get('name', f'Activity {i}')}\n\n"
             summary += f"* **Location**: {activity.get('location', 'N/A')}\n"
             summary += f"* **Date**: {activity.get('date', 'N/A')}\n"
-            summary += f"* **Price**: ${activity.get('price_per_person', 'N/A')} per person\n\n"
+            summary += (
+                f"* **Price**: ${activity.get('price_per_person', 'N/A')} "
+                f"per person\n\n"
+            )
 
     # Add notes if available
     notes = components.get("notes", [])
@@ -661,7 +668,10 @@ async def save_travel_plan(params: Dict[str, Any]) -> Dict[str, Any]:
         return {
             "success": True,
             "plan_id": plan_id,
-            "message": f"Travel plan {'' if not finalize else 'finalized and '}saved successfully",
+            "message": (
+                f"Travel plan "
+                f"{'' if not finalize else 'finalized and '}saved successfully"
+            ),
             "status": travel_plan.get("status", "draft"),
         }
 

@@ -10,14 +10,12 @@ from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from src.mcp.flights.client import get_client as get_flights_client
+from src.mcp.flights.service import get_service as get_flights_service
+from src.utils.decorators import with_error_handling
+
 from ..cache.redis_cache import redis_cache
 from ..db.client import get_client as get_db_client
-from ..mcp.flights import (
-    get_client as get_flights_client,
-)
-from ..mcp.flights import (
-    get_service as get_flights_service,
-)
 from ..utils.logging import get_module_logger
 
 logger = get_module_logger(__name__)
@@ -97,6 +95,7 @@ class TripSageFlightSearch:
             "Initialized TripSage Flight Search with ravinahp/flights-mcp integration"
         )
 
+    @with_error_handling
     async def search_flights(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """Search for flights with enhanced features and filtering.
 
@@ -106,79 +105,74 @@ class TripSageFlightSearch:
         Returns:
             Enhanced flight search results with filtering and price insights
         """
-        try:
-            # Validate parameters
-            search_params = FlightSearchParams(**params)
+        # Validate parameters
+        search_params = FlightSearchParams(**params)
 
-            # Check cache first
-            cache_key = (
-                f"flight_search:{search_params.origin}:{search_params.destination}:"
-                f"{search_params.departure_date}:{search_params.return_date}:"
-                f"{search_params.adults}:{search_params.cabin_class}"
+        # Check cache first
+        cache_key = (
+            f"flight_search:{search_params.origin}:{search_params.destination}:"
+            f"{search_params.departure_date}:{search_params.return_date}:"
+            f"{search_params.adults}:{search_params.cabin_class}"
+        )
+
+        cached_result = await redis_cache.get(cache_key)
+        if cached_result:
+            # Apply post-search filtering to cached results
+            filtered_results = self._filter_flights(
+                cached_result,
+                max_price=search_params.max_price,
+                max_stops=search_params.max_stops,
+                preferred_airlines=search_params.preferred_airlines,
             )
+            return {**filtered_results, "cache": "hit"}
 
-            cached_result = await redis_cache.get(cache_key)
-            if cached_result:
-                # Apply post-search filtering to cached results
-                filtered_results = self._filter_flights(
-                    cached_result,
-                    max_price=search_params.max_price,
-                    max_stops=search_params.max_stops,
-                    preferred_airlines=search_params.preferred_airlines,
-                )
-                return {**filtered_results, "cache": "hit"}
+        # Call the higher-level Flights service for enhanced functionality
+        # This ensures proper dual storage in Supabase and Memory MCP
+        flight_results = await self.flights_service.search_best_flights(
+            origin=search_params.origin,
+            destination=search_params.destination,
+            departure_date=search_params.departure_date,
+            return_date=search_params.return_date,
+            adults=search_params.adults,
+            max_price=search_params.max_price,
+        )
 
-            # Call the higher-level Flights service for enhanced functionality
-            # This ensures proper dual storage in Supabase and Memory MCP
-            flight_results = await self.flights_service.search_best_flights(
+        # If service call fails, fall back to direct client call
+        if "error" in flight_results and "results" not in flight_results:
+            logger.warning("Falling back to direct client call after service error")
+            flight_results = await self.flights_client.search_flights(
                 origin=search_params.origin,
                 destination=search_params.destination,
                 departure_date=search_params.departure_date,
                 return_date=search_params.return_date,
                 adults=search_params.adults,
-                max_price=search_params.max_price,
+                children=search_params.children,
+                infants=search_params.infants,
+                cabin_class=search_params.cabin_class,
             )
 
-            # If service call fails, fall back to direct client call
-            if "error" in flight_results and "results" not in flight_results:
-                logger.warning("Falling back to direct client call after service error")
-                flight_results = await self.flights_client.search_flights(
-                    origin=search_params.origin,
-                    destination=search_params.destination,
-                    departure_date=search_params.departure_date,
-                    return_date=search_params.return_date,
-                    adults=search_params.adults,
-                    children=search_params.children,
-                    infants=search_params.infants,
-                    cabin_class=search_params.cabin_class,
-                )
+        if "error" in flight_results:
+            return flight_results
 
-            if "error" in flight_results:
-                return flight_results
+        # Cache raw results before filtering
+        await redis_cache.set(
+            cache_key,
+            flight_results,
+            ttl=3600,  # Cache for 1 hour
+        )
 
-            # Cache raw results before filtering
-            await redis_cache.set(
-                cache_key,
-                flight_results,
-                ttl=3600,  # Cache for 1 hour
-            )
+        # Apply post-search filtering
+        filtered_results = self._filter_flights(
+            flight_results,
+            max_price=search_params.max_price,
+            max_stops=search_params.max_stops,
+            preferred_airlines=search_params.preferred_airlines,
+        )
 
-            # Apply post-search filtering
-            filtered_results = self._filter_flights(
-                flight_results,
-                max_price=search_params.max_price,
-                max_stops=search_params.max_stops,
-                preferred_airlines=search_params.preferred_airlines,
-            )
+        # Add price history data
+        enhanced_results = await self._add_price_history(filtered_results)
 
-            # Add price history data
-            enhanced_results = await self._add_price_history(filtered_results)
-
-            return {**enhanced_results, "cache": "miss"}
-
-        except Exception as e:
-            logger.error(f"Flight search error: {str(e)}")
-            return {"error": f"Flight search error: {str(e)}"}
+        return {**enhanced_results, "cache": "miss"}
 
     def _filter_flights(
         self,
@@ -258,6 +252,7 @@ class TripSageFlightSearch:
             "original_count": len(results.get("offers", [])),
         }
 
+    @with_error_handling
     async def _add_price_history(self, results: Dict[str, Any]) -> Dict[str, Any]:
         """Add price history data to flight search results.
 
@@ -270,75 +265,65 @@ class TripSageFlightSearch:
         if "origin" not in results or "destination" not in results:
             return results
 
-        try:
-            # Get price history data
-            origin = results["origin"]
-            destination = results["destination"]
-            departure_date = results.get("departure_date")
+        # Get price history data
+        origin = results["origin"]
+        destination = results["destination"]
+        departure_date = results.get("departure_date")
 
-            price_history = await self._get_price_history(
-                origin, destination, departure_date
+        price_history = await self._get_price_history(
+            origin, destination, departure_date
+        )
+
+        # Add pricing insights
+        if price_history and "prices" in price_history and price_history["prices"]:
+            current_price = (
+                min(
+                    offer.get("total_amount", float("inf"))
+                    for offer in results.get("offers", [])
+                )
+                if results.get("offers")
+                else None
             )
 
-            # Add pricing insights
-            if price_history and "prices" in price_history and price_history["prices"]:
-                current_price = (
-                    min(
-                        offer.get("total_amount", float("inf"))
-                        for offer in results.get("offers", [])
-                    )
-                    if results.get("offers")
-                    else None
-                )
+            if current_price:
+                # Calculate pricing insights
+                prices = price_history["prices"]
+                avg_price = sum(prices) / len(prices)
+                min_price = min(prices)
+                max_price = max(prices)
 
-                if current_price:
-                    # Calculate pricing insights
-                    prices = price_history["prices"]
-                    avg_price = sum(prices) / len(prices)
-                    min_price = min(prices)
-                    max_price = max(prices)
+                # Determine trend
+                trend = "stable"
+                if len(prices) > 3:
+                    recent_avg = sum(prices[-3:]) / 3
+                    earlier_avg = sum(prices[:-3]) / (len(prices) - 3)
+                    if recent_avg < earlier_avg * 0.95:
+                        trend = "decreasing"
+                    elif recent_avg > earlier_avg * 1.05:
+                        trend = "increasing"
 
-                    # Determine trend
-                    trend = "stable"
-                    if len(prices) > 3:
-                        recent_avg = sum(prices[-3:]) / 3
-                        earlier_avg = sum(prices[:-3]) / (len(prices) - 3)
-                        if recent_avg < earlier_avg * 0.95:
-                            trend = "decreasing"
-                        elif recent_avg > earlier_avg * 1.05:
-                            trend = "increasing"
+                price_insights = {
+                    "current_vs_avg": round((current_price / avg_price - 1) * 100, 1),
+                    "current_vs_min": round((current_price / min_price - 1) * 100, 1),
+                    "current_vs_max": round((current_price / max_price - 1) * 100, 1),
+                    "avg_price": avg_price,
+                    "min_price": min_price,
+                    "max_price": max_price,
+                    "trend": trend,
+                    "recommendation": self._generate_price_recommendation(
+                        current_price, avg_price, min_price, price_history
+                    ),
+                }
 
-                    price_insights = {
-                        "current_vs_avg": round(
-                            (current_price / avg_price - 1) * 100, 1
-                        ),
-                        "current_vs_min": round(
-                            (current_price / min_price - 1) * 100, 1
-                        ),
-                        "current_vs_max": round(
-                            (current_price / max_price - 1) * 100, 1
-                        ),
-                        "avg_price": avg_price,
-                        "min_price": min_price,
-                        "max_price": max_price,
-                        "trend": trend,
-                        "recommendation": self._generate_price_recommendation(
-                            current_price, avg_price, min_price, price_history
-                        ),
-                    }
+                return {
+                    **results,
+                    "price_history": price_history,
+                    "price_insights": price_insights,
+                }
 
-                    return {
-                        **results,
-                        "price_history": price_history,
-                        "price_insights": price_insights,
-                    }
+        return results
 
-            return results
-
-        except Exception as e:
-            logger.warning(f"Error adding price history: {str(e)}")
-            return results
-
+    @with_error_handling
     async def _get_price_history(
         self, origin: str, destination: str, departure_date: Optional[str]
     ) -> Dict[str, Any]:
@@ -352,45 +337,38 @@ class TripSageFlightSearch:
         Returns:
             Price history data
         """
+        # Try to get data from Flights MCP
         try:
-            # Get data from Flights MCP
-            try:
-                return await self.flights_client.get_flight_prices(
-                    origin=origin,
-                    destination=destination,
-                    departure_date=departure_date,
-                )
-            except Exception as e:
-                logger.warning(f"Failed to get price history from MCP: {str(e)}")
-
-            # Fallback to database
-            try:
-                db_client = get_db_client()
-                history = await db_client.get_flight_price_history(
-                    origin=origin,
-                    destination=destination,
-                    date_from=(datetime.now() - timedelta(days=90)).strftime(
-                        "%Y-%m-%d"
-                    ),
-                    date_to=datetime.now().strftime("%Y-%m-%d"),
-                )
-
-                # Format history data
-                if history:
-                    return {
-                        "prices": [item["price"] for item in history],
-                        "dates": [item["date"] for item in history],
-                        "count": len(history),
-                    }
-            except Exception as e:
-                logger.warning(f"Failed to get price history from database: {str(e)}")
-
-            # Return empty history if all methods fail
-            return {"prices": [], "dates": [], "count": 0}
-
+            return await self.flights_client.get_flight_prices(
+                origin=origin,
+                destination=destination,
+                departure_date=departure_date,
+            )
         except Exception as e:
-            logger.error(f"Error retrieving price history: {str(e)}")
-            return {}
+            logger.warning(f"Failed to get price history from MCP: {str(e)}")
+
+        # Fallback to database
+        try:
+            db_client = get_db_client()
+            history = await db_client.get_flight_price_history(
+                origin=origin,
+                destination=destination,
+                date_from=(datetime.now() - timedelta(days=90)).strftime("%Y-%m-%d"),
+                date_to=datetime.now().strftime("%Y-%m-%d"),
+            )
+
+            # Format history data
+            if history:
+                return {
+                    "prices": [item["price"] for item in history],
+                    "dates": [item["date"] for item in history],
+                    "count": len(history),
+                }
+        except Exception as e:
+            logger.warning(f"Failed to get price history from database: {str(e)}")
+
+        # Return empty history if all methods fail
+        return {"prices": [], "dates": [], "count": 0}
 
     def _generate_price_recommendation(
         self,
@@ -426,6 +404,7 @@ class TripSageFlightSearch:
             # Price higher than average - consider monitoring for better deals
             return "monitor"
 
+    @with_error_handling
     async def search_flexible_dates(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """Search for flight options with flexible dates to find the best deals.
 
@@ -435,96 +414,89 @@ class TripSageFlightSearch:
         Returns:
             Best flight options across the date range
         """
-        try:
-            # Validate required parameters
-            required = ["origin", "destination", "date_from", "date_to"]
-            for param in required:
-                if param not in params:
-                    return {"error": f"Missing required parameter: {param}"}
+        # Validate required parameters
+        required = ["origin", "destination", "date_from", "date_to"]
+        for param in required:
+            if param not in params:
+                return {"error": f"Missing required parameter: {param}"}
 
-            origin = params["origin"]
-            destination = params["destination"]
-            date_from = datetime.strptime(params["date_from"], "%Y-%m-%d")
-            date_to = datetime.strptime(params["date_to"], "%Y-%m-%d")
-            trip_length = params.get("trip_length")
-            adults = params.get("adults", 1)
-            cabin_class = params.get("cabin_class", "economy")
+        origin = params["origin"]
+        destination = params["destination"]
+        date_from = datetime.strptime(params["date_from"], "%Y-%m-%d")
+        date_to = datetime.strptime(params["date_to"], "%Y-%m-%d")
+        trip_length = params.get("trip_length")
+        adults = params.get("adults", 1)
+        cabin_class = params.get("cabin_class", "economy")
 
-            # Generate dates to search
-            if (date_to - date_from).days > 30:
-                # Limit search to 30 days to avoid too many API calls
-                date_to = date_from + timedelta(days=30)
+        # Generate dates to search
+        if (date_to - date_from).days > 30:
+            # Limit search to 30 days to avoid too many API calls
+            date_to = date_from + timedelta(days=30)
 
-            dates_to_search = []
-            current_date = date_from
-            while current_date <= date_to:
-                dates_to_search.append(current_date.strftime("%Y-%m-%d"))
-                current_date += timedelta(
-                    days=3
-                )  # Search every 3 days to limit API calls
+        dates_to_search = []
+        current_date = date_from
+        while current_date <= date_to:
+            dates_to_search.append(current_date.strftime("%Y-%m-%d"))
+            current_date += timedelta(days=3)  # Search every 3 days to limit API calls
 
-            # Search flights for each date combination
-            results = []
+        # Search flights for each date combination
+        results = []
 
-            for dep_date in dates_to_search:
-                search_params = {
-                    "origin": origin,
-                    "destination": destination,
-                    "departure_date": dep_date,
-                    "adults": adults,
-                    "cabin_class": cabin_class,
-                }
-
-                # Add return date if trip length specified
-                if trip_length:
-                    ret_date = (
-                        datetime.strptime(dep_date, "%Y-%m-%d")
-                        + timedelta(days=trip_length)
-                    ).strftime("%Y-%m-%d")
-                    search_params["return_date"] = ret_date
-
-                # Search flights
-                try:
-                    result = await self.search_flights(search_params)
-
-                    # Extract best price for this date
-                    if "offers" in result and result["offers"]:
-                        best_price = min(
-                            offer.get("total_amount", float("inf"))
-                            for offer in result["offers"]
-                        )
-
-                        results.append(
-                            {
-                                "departure_date": dep_date,
-                                "return_date": search_params.get("return_date"),
-                                "best_price": best_price,
-                                "currency": result["offers"][0].get("currency", "USD"),
-                                "offer_count": len(result["offers"]),
-                            }
-                        )
-                except Exception as e:
-                    logger.warning(f"Error searching flights for {dep_date}: {str(e)}")
-
-            # Sort by price
-            results.sort(key=lambda x: x.get("best_price", float("inf")))
-
-            return {
+        for dep_date in dates_to_search:
+            search_params = {
                 "origin": origin,
                 "destination": destination,
-                "date_range": {"from": params["date_from"], "to": params["date_to"]},
-                "trip_length": trip_length,
-                "best_date": results[0] if results else None,
-                "all_dates": results,
-                "total_options": len(results),
-                "recommendation": (
-                    self._generate_date_recommendation(results) if results else None
-                ),
+                "departure_date": dep_date,
+                "adults": adults,
+                "cabin_class": cabin_class,
             }
 
-        except Exception as e:
-            logger.error(f"Error searching flexible dates: {str(e)}")
-            return {"error": f"Flexible date search error: {str(e)}"}
+            # Add return date if trip length specified
+            if trip_length:
+                ret_date = (
+                    datetime.strptime(dep_date, "%Y-%m-%d")
+                    + timedelta(days=trip_length)
+                ).strftime("%Y-%m-%d")
+                search_params["return_date"] = ret_date
+
+            # Search flights
+            try:
+                result = await self.search_flights(search_params)
+
+                # Extract best price for this date
+                if "offers" in result and result["offers"]:
+                    best_price = min(
+                        offer.get("total_amount", float("inf"))
+                        for offer in result["offers"]
+                    )
+
+                    results.append(
+                        {
+                            "departure_date": dep_date,
+                            "return_date": search_params.get("return_date"),
+                            "best_price": best_price,
+                            "currency": result["offers"][0].get("currency", "USD"),
+                            "offer_count": len(result["offers"]),
+                        }
+                    )
+            except Exception as e:
+                logger.warning(f"Error searching flights for {dep_date}: {str(e)}")
+
+        # Sort by price
+        results.sort(key=lambda x: x.get("best_price", float("inf")))
+
+        return {
+            "origin": origin,
+            "destination": destination,
+            "date_range": {"from": params["date_from"], "to": params["date_to"]},
+            "trip_length": trip_length,
+            "best_date": results[0] if results else None,
+            "all_dates": results,
+            "total_options": len(results),
+            "recommendation": (
+                self._generate_date_recommendation(results) if results else None
+            ),
+        }
 
     def _generate_date_recommendation(
         self, date_results: List[Dict[str, Any]]

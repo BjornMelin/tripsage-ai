@@ -5,15 +5,13 @@ This module provides the base agent class using the OpenAI Agents SDK
 with integration for MCP tools and dual storage architecture.
 """
 
-import asyncio
+import importlib
+import inspect
 import time
 import uuid
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Set
 
-from pydantic import BaseModel
-
-from agents import Agent, RunContext, Runner, function_tool
-from agents.extensions.handoff_prompt import RECOMMENDED_PROMPT_PREFIX
+from agents import Agent, function_tool
 from src.mcp.base_mcp_client import BaseMCPClient
 from src.utils.config import get_config
 from src.utils.error_handling import MCPError, TripSageError, log_exception
@@ -22,21 +20,6 @@ from src.utils.session_memory import initialize_session_memory, store_session_su
 
 logger = get_module_logger(__name__)
 config = get_config()
-
-
-class ToolCallInput(BaseModel):
-    """Input for a tool call."""
-
-    tool_name: str
-    params: Dict[str, Any]
-
-
-class ToolCallOutput(BaseModel):
-    """Output from a tool call."""
-
-    tool_name: str
-    result: Dict[str, Any]
-    error: Optional[str] = None
 
 
 class BaseAgent:
@@ -48,8 +31,7 @@ class BaseAgent:
         instructions: str,
         model: str = "gpt-4",
         temperature: float = 0.2,
-        tools: Optional[List[Any]] = None,
-        handoffs: Optional[List[Any]] = None,
+        tools: Optional[List[Callable]] = None,
         metadata: Optional[Dict[str, str]] = None,
     ):
         """Initialize the agent.
@@ -60,7 +42,6 @@ class BaseAgent:
             model: Model name to use
             temperature: Temperature for model sampling
             tools: List of tools to register
-            handoffs: List of agents to hand off to
             metadata: Additional metadata
         """
         self.name = name
@@ -69,9 +50,9 @@ class BaseAgent:
         self.temperature = temperature
         self.metadata = metadata or {"agent_type": "tripsage"}
 
-        # Initialize tools and handoffs
+        # Initialize tools
         self._tools = tools or []
-        self._handoffs = handoffs or []
+        self._registered_tools: Set[str] = set()
 
         # Register default tools
         self._register_default_tools()
@@ -83,7 +64,6 @@ class BaseAgent:
             model=model,
             temperature=temperature,
             tools=self._tools,
-            handoffs=self._handoffs,
         )
 
         # Store conversation history
@@ -91,57 +71,82 @@ class BaseAgent:
         self.session_id = str(uuid.uuid4())
         self.session_data = {}
 
-        # Create the Runner for this agent
-        self.runner = Runner()
+        logger.info("Initialized agent: %s", name)
 
     def _register_default_tools(self) -> None:
         """Register default tools for the agent."""
-        # Import memory tools
-        from .memory_tools import (
-            add_entity_observations,
-            create_knowledge_entities,
-            create_knowledge_relations,
-            delete_entity_observations,
-            delete_knowledge_entities,
-            delete_knowledge_relations,
-            get_entity_details,
-            get_knowledge_graph,
-            initialize_agent_memory,
-            save_session_summary,
-            search_knowledge_graph,
-            update_agent_memory,
-        )
-
         # Register memory tools
-        self._register_tool(get_knowledge_graph)
-        self._register_tool(search_knowledge_graph)
-        self._register_tool(get_entity_details)
-        self._register_tool(create_knowledge_entities)
-        self._register_tool(create_knowledge_relations)
-        self._register_tool(add_entity_observations)
-        self._register_tool(delete_knowledge_entities)
-        self._register_tool(delete_knowledge_relations)
-        self._register_tool(delete_entity_observations)
-        self._register_tool(initialize_agent_memory)
-        self._register_tool(update_agent_memory)
-        self._register_tool(save_session_summary)
+        self.register_tool_group("memory_tools")
 
         # Register echo tool
         self._register_tool(self.echo)
 
     def _register_tool(self, tool: Callable) -> None:
-        """Register a tool with the agent.
+        """Register a tool with the agent if it hasn't been registered already.
 
         Args:
             tool: Tool function to register
         """
-        self._tools.append(tool)
-        logger.debug("Registered tool: %s", tool.__name__)
+        tool_name = tool.__name__
 
-    def _register_mcp_client_tools(
+        # Skip if already registered
+        if tool_name in self._registered_tools:
+            logger.debug("Tool already registered: %s", tool_name)
+            return
+
+        self._tools.append(tool)
+        self._registered_tools.add(tool_name)
+        logger.debug("Registered tool: %s", tool_name)
+
+    def register_tool_group(
+        self, module_name: str, package: Optional[str] = None
+    ) -> int:
+        """Register all tools from a module.
+
+        This method automatically discovers and registers all functions
+        decorated with @function_tool in the specified module.
+
+        Args:
+            module_name: Name of the module containing tools
+            package: Optional package name for relative imports
+
+        Returns:
+            Number of tools registered
+        """
+        try:
+            # Import the module
+            if not module_name.startswith("src.") and not package:
+                # Try relative import from agents package
+                module = importlib.import_module(f".{module_name}", "src.agents")
+            else:
+                module = importlib.import_module(module_name, package)
+
+            # Find all function tools in the module
+            tool_count = 0
+            for name, obj in inspect.getmembers(module):
+                # Skip private members and non-callables
+                if name.startswith("_") or not callable(obj):
+                    continue
+
+                # Check if it's a function_tool
+                if hasattr(obj, "__is_function_tool__"):
+                    self._register_tool(obj)
+                    tool_count += 1
+
+            logger.info("Registered %d tools from module: %s", tool_count, module_name)
+            return tool_count
+
+        except (ImportError, AttributeError) as e:
+            logger.warning("Could not register tools from %s: %s", module_name, str(e))
+            return 0
+
+    def register_mcp_client_tools(
         self, mcp_client: BaseMCPClient, prefix: str = ""
     ) -> None:
         """Register tools from an MCP client.
+
+        This method is a public interface for registering MCP client tools
+        with the agent.
 
         Args:
             mcp_client: MCP client to register tools from
@@ -157,48 +162,15 @@ class BaseAgent:
                 )
                 return
 
+            # Register each tool
+            registered_count = 0
             for tool_name in client_tools:
-                # Create a wrapper function for this tool that will call the client
-                @function_tool
-                async def mcp_tool_wrapper(
-                    params: Dict[str, Any], _tool_name=tool_name
-                ):
-                    """Wrapper for MCP client tool."""
-                    try:
-                        result = await mcp_client.call_tool(_tool_name, params)
-                        return result
-                    except Exception as e:
-                        logger.error(
-                            "Error calling MCP tool %s: %s", _tool_name, str(e)
-                        )
-                        if isinstance(e, MCPError):
-                            return {"error": e.message}
-                        return {"error": f"MCP tool error: {str(e)}"}
-
-                # Set proper name and docstring for the wrapper
-                tool_metadata = mcp_client.get_tool_metadata_sync(tool_name)
-                wrapper_name = f"{prefix}{tool_name}"
-                mcp_tool_wrapper.__name__ = wrapper_name
-
-                if tool_metadata and "description" in tool_metadata:
-                    mcp_tool_wrapper.__doc__ = tool_metadata["description"]
-                else:
-                    mcp_tool_wrapper.__doc__ = (
-                        f"Call the {tool_name} tool from {mcp_client.server_name} MCP."
-                    )
-
-                # Register the wrapper
-                self._register_tool(mcp_tool_wrapper)
-                logger.debug(
-                    "Registered MCP tool %s as %s from %s",
-                    tool_name,
-                    wrapper_name,
-                    mcp_client.server_name,
-                )
+                if self._register_mcp_tool(mcp_client, tool_name, prefix):
+                    registered_count += 1
 
             logger.info(
                 "Registered %d tools from MCP client: %s",
-                len(client_tools),
+                registered_count,
                 mcp_client.server_name,
             )
 
@@ -206,57 +178,60 @@ class BaseAgent:
             logger.error("Error registering MCP client tools: %s", str(e))
             log_exception(e)
 
-    async def _execute_tool_calls_concurrently(
-        self, tool_calls: List[ToolCallInput]
-    ) -> List[ToolCallOutput]:
-        """Execute multiple tool calls concurrently using asyncio.gather.
-        
-        This is a more efficient way to execute multiple independent tool calls
-        compared to executing them sequentially.
-        
+    def _register_mcp_tool(
+        self, mcp_client: BaseMCPClient, tool_name: str, prefix: str = ""
+    ) -> bool:
+        """Register a single MCP tool.
+
         Args:
-            tool_calls: List of tool call inputs
-            
+            mcp_client: MCP client to register tool from
+            tool_name: Name of the tool to register
+            prefix: Prefix to add to tool name
+
         Returns:
-            List of tool call outputs
+            Boolean indicating if the tool was registered
         """
-        async def execute_single_tool_call(tool_call: ToolCallInput) -> ToolCallOutput:
-            """Execute a single tool call and handle errors."""
+        # Set proper name with prefix
+        wrapper_name = f"{prefix}{tool_name}"
+
+        # Skip if already registered
+        if wrapper_name in self._registered_tools:
+            logger.debug("MCP tool already registered: %s", wrapper_name)
+            return False
+
+        # Create a wrapper function for this tool
+        @function_tool
+        async def mcp_tool_wrapper(params: Dict[str, Any]):
+            """Wrapper for MCP client tool."""
             try:
-                # Find the tool function
-                tool_func = next(
-                    (tool for tool in self._tools if tool.__name__ == tool_call.tool_name),
-                    None,
-                )
-                
-                if not tool_func:
-                    return ToolCallOutput(
-                        tool_name=tool_call.tool_name,
-                        result={},
-                        error=f"Tool {tool_call.tool_name} not found",
-                    )
-                
-                # Execute the tool
-                result = await tool_func(**tool_call.params)
-                
-                return ToolCallOutput(
-                    tool_name=tool_call.tool_name,
-                    result=result,
-                )
+                result = await mcp_client.call_tool(tool_name, params)
+                return result
             except Exception as e:
-                logger.error(
-                    "Error executing tool %s: %s", tool_call.tool_name, str(e)
-                )
-                return ToolCallOutput(
-                    tool_name=tool_call.tool_name,
-                    result={},
-                    error=str(e),
-                )
-        
-        # Execute all tool calls concurrently
-        return await asyncio.gather(
-            *(execute_single_tool_call(tool_call) for tool_call in tool_calls)
+                logger.error("Error calling MCP tool %s: %s", tool_name, str(e))
+                if isinstance(e, MCPError):
+                    return {"error": e.message}
+                return {"error": f"MCP tool error: {str(e)}"}
+
+        # Set proper name and docstring for the wrapper
+        tool_metadata = mcp_client.get_tool_metadata_sync(tool_name)
+        mcp_tool_wrapper.__name__ = wrapper_name
+
+        if tool_metadata and "description" in tool_metadata:
+            mcp_tool_wrapper.__doc__ = tool_metadata["description"]
+        else:
+            mcp_tool_wrapper.__doc__ = (
+                f"Call the {tool_name} tool from {mcp_client.server_name} MCP."
+            )
+
+        # Register the wrapper
+        self._register_tool(mcp_tool_wrapper)
+        logger.debug(
+            "Registered MCP tool %s as %s from %s",
+            tool_name,
+            wrapper_name,
+            mcp_client.server_name,
         )
+        return True
 
     async def _initialize_session(
         self, user_id: Optional[str] = None
@@ -296,7 +271,7 @@ class BaseAgent:
     async def run(
         self, user_input: str, context: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
-        """Run the agent with user input using the OpenAI Agents SDK Runner.
+        """Run the agent with user input.
 
         Args:
             user_input: User input text
@@ -305,34 +280,33 @@ class BaseAgent:
         Returns:
             Dictionary with the agent's response and other information
         """
+        from agents import Runner
+
         # Add to message history
         self.messages_history.append(
             {"role": "user", "content": user_input, "timestamp": time.time()}
         )
 
-        # Set up run context
-        run_context = RunContext(**(context or {}))
+        # Set up context
+        run_context = context or {}
 
         # Initialize session data if this is the first message
-        if not self.session_data and context and "user_id" in context:
-            await self._initialize_session(context.get("user_id"))
-            run_context.session_data = self.session_data
-            run_context.session_id = self.session_id
+        if not self.session_data and "user_id" in run_context:
+            await self._initialize_session(run_context.get("user_id"))
+            run_context["session_data"] = self.session_data
+            run_context["session_id"] = self.session_id
 
         try:
-            # Run the agent using the OpenAI Agents SDK Runner
+            # Run the agent
             logger.info("Running agent: %s", self.name)
-            result = await self.runner.run(
-                agent=self.agent,
-                input=user_input,
-                context=run_context,
-            )
+            result = await Runner.run(self.agent, user_input, context=run_context)
 
             # Extract response
             response = {
-                "content": result.output,
-                "tool_calls": result.tool_calls,
-                "handoffs": result.handoffs,
+                "content": result.final_output,
+                "tool_calls": (
+                    result.tool_calls if hasattr(result, "tool_calls") else []
+                ),
                 "status": "success",
             }
 
@@ -345,13 +319,13 @@ class BaseAgent:
                 }
             )
 
-            # Save session summary if needed
-            if len(self.messages_history) >= 10 and context and "user_id" in context:
+            # Save session summary if needed and we have enough messages
+            if len(self.messages_history) >= 10 and "user_id" in run_context:
                 # Generate session summary
                 summary = (
                     f"Conversation with {self.messages_history[0]['content'][:50]}..."
                 )
-                await self._save_session_summary(context["user_id"], summary)
+                await self._save_session_summary(run_context["user_id"], summary)
 
             return response
 
@@ -380,19 +354,6 @@ class BaseAgent:
                 "error_message": str(e),
             }
 
-    def get_last_response(self) -> Optional[str]:
-        """Get the last response from the agent.
-
-        Returns:
-            The last response text or None if no responses
-        """
-        assistant_messages = [
-            msg for msg in self.messages_history if msg["role"] == "assistant"
-        ]
-        if not assistant_messages:
-            return None
-        return assistant_messages[-1]["content"]
-
     def get_conversation_history(self) -> List[Dict[str, Any]]:
         """Get the conversation history.
 
@@ -402,16 +363,15 @@ class BaseAgent:
         return self.messages_history
 
     @function_tool
-    async def echo(self, params: Dict[str, Any]) -> Dict[str, Any]:
+    async def echo(self, text: str) -> Dict[str, str]:
         """Echo the input back to the user.
 
         Args:
-            params: Parameters including the text to echo
+            text: Text to echo
 
         Returns:
             Dictionary with the echoed text
         """
-        text = params.get("text", "")
         return {"text": text}
 
 
@@ -509,152 +469,12 @@ class TravelAgent(BaseAgent):
 
     def _register_travel_tools(self) -> None:
         """Register travel-specific tools."""
-        # Import calendar tools
-        try:
-            from .calendar_tools import (
-                create_event_tool,
-                create_itinerary_events_tool,
-                delete_event_tool,
-                list_calendars_tool,
-                list_events_tool,
-                search_events_tool,
-                update_event_tool,
-            )
+        # Register all travel tool groups
+        tool_modules = [
+            "calendar_tools",
+            "time_tools",
+            "webcrawl_tools",
+        ]
 
-            # Register calendar tools
-            self._register_tool(list_calendars_tool)
-            self._register_tool(list_events_tool)
-            self._register_tool(search_events_tool)
-            self._register_tool(create_event_tool)
-            self._register_tool(update_event_tool)
-            self._register_tool(delete_event_tool)
-            self._register_tool(create_itinerary_events_tool)
-
-            logger.info("Registered Google Calendar tools")
-        except ImportError as e:
-            logger.warning(f"Could not register calendar tools: {str(e)}")
-
-        # Import time tools
-        try:
-            from .time_tools import (
-                calculate_flight_arrival_tool,
-                convert_timezone_tool,
-                create_timezone_aware_itinerary_tool,
-                find_meeting_times_tool,
-                get_current_time_tool,
-                get_local_time_tool,
-            )
-
-            # Register time tools
-            self._register_tool(get_current_time_tool)
-            self._register_tool(convert_timezone_tool)
-            self._register_tool(get_local_time_tool)
-            self._register_tool(calculate_flight_arrival_tool)
-            self._register_tool(find_meeting_times_tool)
-            self._register_tool(create_timezone_aware_itinerary_tool)
-
-            logger.info("Registered Time tools")
-        except ImportError as e:
-            logger.warning(f"Could not register time tools: {str(e)}")
-
-    @function_tool
-    async def get_weather(self, params: Dict[str, Any]) -> Dict[str, Any]:
-        """Get current weather for a location.
-
-        Args:
-            params: Parameters with location information
-
-        Returns:
-            Current weather data
-        """
-        from ..mcp.weather import get_client
-
-        try:
-            # Get weather client
-            weather_client = get_client()
-
-            # Extract parameters
-            lat = params.get("lat")
-            lon = params.get("lon")
-            city = params.get("city")
-            country = params.get("country")
-
-            # Call weather MCP
-            weather_data = await weather_client.get_current_weather(
-                lat=lat, lon=lon, city=city, country=country
-            )
-
-            return weather_data
-
-        except Exception as e:
-            logger.error("Error getting weather: %s", str(e))
-            if isinstance(e, MCPError):
-                return {"error": e.message}
-            return {"error": f"Weather service error: {str(e)}"}
-
-
-class BudgetAgent(BaseAgent):
-    """Budget optimization agent for travel planning."""
-
-    def __init__(
-        self,
-        name: str = "TripSage Budget Optimizer",
-        model: str = "gpt-4",
-        temperature: float = 0.2,
-    ):
-        """Initialize the budget agent.
-
-        Args:
-            name: Agent name
-            model: Model name to use
-            temperature: Temperature for model sampling
-        """
-        # Define specialized instructions
-        instructions = (
-            f"{RECOMMENDED_PROMPT_PREFIX}\n\n"
-            + """
-        You are a specialized travel budget optimization agent. Your goal is to help
-        users allocate their travel budget efficiently across different aspects of their
-        trip to maximize value.
-        
-        Key responsibilities:
-        1. Analyze budget constraints and trip requirements
-        2. Recommend optimal allocation of funds between transportation, accommodation, food, activities
-        3. Find cost-saving opportunities without compromising quality
-        4. Compare options based on price-to-value ratio
-        5. Track price changes for flights and accommodations
-        
-        IMPORTANT GUIDELINES:
-        
-        - Prioritize the user's stated preferences when making trade-offs
-        - Provide specific, actionable advice rather than general tips
-        - Support all recommendations with clear rationales and data
-        - When appropriate, suggest alternatives that offer better value
-        - Maintain transparency about all costs, including hidden fees
-        - Present budget allocations in both amounts and percentages
-        
-        KNOWLEDGE GRAPH USAGE:
-        Use memory operations to retrieve and store budget-related knowledge:
-        - Retrieve user budget preferences using initialize_agent_memory
-        - Record budget allocations and price tracking information
-        - Create budget entities and relate them to trips and destinations
-        
-        Treat all budget information with privacy and security.
-        """  # noqa: E501
-        )
-
-        super().__init__(
-            name=name,
-            instructions=instructions,
-            model=model,
-            temperature=temperature,
-            metadata={"agent_type": "budget_optimizer", "version": "1.0.0"},
-        )
-
-        # Register budget-specific tools
-        self._register_budget_tools()
-
-    def _register_budget_tools(self) -> None:
-        """Register budget-specific tools."""
-        # This will be implemented to register budget optimization tools
-        pass
+        for module in tool_modules:
+            self.register_tool_group(module)

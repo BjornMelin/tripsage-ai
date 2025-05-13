@@ -5,14 +5,16 @@ This module provides utilities for initializing and updating session memory
 using the Neo4j Memory MCP.
 """
 
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 from src.mcp.memory.client import memory_client
+from src.utils.decorators import ensure_memory_client_initialized
 from src.utils.logging import get_module_logger
 
 logger = get_module_logger(__name__)
 
 
+@ensure_memory_client_initialized
 async def initialize_session_memory(user_id: Optional[str] = None) -> Dict[str, Any]:
     """Initialize session memory by retrieving relevant knowledge.
 
@@ -26,7 +28,6 @@ async def initialize_session_memory(user_id: Optional[str] = None) -> Dict[str, 
         Dictionary with session memory data
     """
     logger.info("Initializing session memory")
-    await memory_client.initialize()
 
     session_data = {
         "user": None,
@@ -80,6 +81,7 @@ async def initialize_session_memory(user_id: Optional[str] = None) -> Dict[str, 
     return session_data
 
 
+@ensure_memory_client_initialized
 async def update_session_memory(
     user_id: str, updates: Dict[str, Any]
 ) -> Dict[str, Any]:
@@ -96,7 +98,6 @@ async def update_session_memory(
         Dictionary with update status
     """
     logger.info(f"Updating session memory for user {user_id}")
-    await memory_client.initialize()
 
     result = {
         "entities_created": 0,
@@ -104,84 +105,110 @@ async def update_session_memory(
         "observations_added": 0,
     }
 
-    # Update user preferences
+    # Process user preferences
     if "preferences" in updates:
-        # Get or create user entity
-        user_nodes = await memory_client.open_nodes([f"User:{user_id}"])
+        await _update_user_preferences(user_id, updates["preferences"], result)
 
-        if not user_nodes:
-            # Create user entity
-            await memory_client.create_entities(
-                [
-                    {
-                        "name": f"User:{user_id}",
-                        "entityType": "User",
-                        "observations": ["TripSage user"],
-                    }
-                ]
-            )
-            result["entities_created"] += 1
-
-        # Add preference observations
-        preference_observations = []
-        for category, preference in updates["preferences"].items():
-            preference_observations.append(f"Prefers {preference} for {category}")
-
-        if preference_observations:
-            await memory_client.add_observations(
-                [
-                    {
-                        "entityName": f"User:{user_id}",
-                        "contents": preference_observations,
-                    }
-                ]
-            )
-            result["observations_added"] += len(preference_observations)
-
-    # Create relationships for new information
+    # Process learned facts
     if "learned_facts" in updates:
-        for fact in updates["learned_facts"]:
-            if "from" in fact and "to" in fact and "relationType" in fact:
-                # Create entities if they don't exist
-                for entity_name in [fact["from"], fact["to"]]:
-                    if ":" not in entity_name:  # Not a prefixed entity like User:123
-                        # Check if entity exists
-                        existing = await memory_client.open_nodes([entity_name])
-                        if not existing:
-                            # Create entity with a generic type
-                            entity_type = fact.get(
-                                "fromType" if entity_name == fact["from"] else "toType",
-                                "Entity",
-                            )
-                            await memory_client.create_entities(
-                                [
-                                    {
-                                        "name": entity_name,
-                                        "entityType": entity_type,
-                                        "observations": [
-                                            f"Learned during session with "
-                                            f"user {user_id}"
-                                        ],
-                                    }
-                                ]
-                            )
-                            result["entities_created"] += 1
-
-                # Create relationship
-                await memory_client.create_relations(
-                    [
-                        {
-                            "from": fact["from"],
-                            "relationType": fact["relationType"],
-                            "to": fact["to"],
-                        }
-                    ]
-                )
-                result["relations_created"] += 1
+        await _create_fact_relationships(user_id, updates["learned_facts"], result)
 
     return result
 
 
+async def _update_user_preferences(
+    user_id: str, preferences: Dict[str, str], result: Dict[str, int]
+) -> None:
+    """Update user preferences in the knowledge graph.
+
+    Args:
+        user_id: User ID
+        preferences: Dictionary of preferences
+        result: Result dictionary to update
+    """
+    # Get or create user entity
+    user_nodes = await memory_client.open_nodes([f"User:{user_id}"])
+
+    if not user_nodes:
+        # Create user entity
+        await memory_client.create_entities(
+            [
+                {
+                    "name": f"User:{user_id}",
+                    "entityType": "User",
+                    "observations": ["TripSage user"],
+                }
+            ]
+        )
+        result["entities_created"] += 1
+
+    # Add preference observations
+    preference_observations = []
+    for category, preference in preferences.items():
+        preference_observations.append(f"Prefers {preference} for {category}")
+
+    if preference_observations:
+        await memory_client.add_observations(
+            [
+                {
+                    "entityName": f"User:{user_id}",
+                    "contents": preference_observations,
+                }
+            ]
+        )
+        result["observations_added"] += len(preference_observations)
+
+
+async def _create_fact_relationships(
+    user_id: str, facts: List[Dict[str, str]], result: Dict[str, int]
+) -> None:
+    """Create relationships for new facts in the knowledge graph.
+
+    Args:
+        user_id: User ID
+        facts: List of fact dictionaries
+        result: Result dictionary to update
+    """
+    for fact in facts:
+        if "from" in fact and "to" in fact and "relationType" in fact:
+            # Create entities if they don't exist
+            for entity_name in [fact["from"], fact["to"]]:
+                if ":" not in entity_name:  # Not a prefixed entity like User:123
+                    # Check if entity exists
+                    existing = await memory_client.open_nodes([entity_name])
+                    if not existing:
+                        # Create entity with a generic type
+                        entity_type = fact.get(
+                            "fromType" if entity_name == fact["from"] else "toType",
+                            "Entity",
+                        )
+                        await memory_client.create_entities(
+                            [
+                                {
+                                    "name": entity_name,
+                                    "entityType": entity_type,
+                                    "observations": [
+                                        f"Learned during session with user {user_id}"
+                                    ],
+                                }
+                            ]
+                        )
+                        result["entities_created"] += 1
+
+            # Create relationship
+            await memory_client.create_relations(
+                [
+                    {
+                        "from": fact["from"],
+                        "relationType": fact["relationType"],
+                        "to": fact["to"],
+                    }
+                ]
+            )
+            result["relations_created"] += 1
+
+
+@ensure_memory_client_initialized
 async def store_session_summary(
     user_id: str,
     summary: str,
@@ -200,7 +227,6 @@ async def store_session_summary(
         Dictionary with status
     """
     logger.info(f"Storing session summary for user {user_id}")
-    await memory_client.initialize()
 
     # Create session entity
     session_entity = await memory_client.create_entities(

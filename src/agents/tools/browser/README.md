@@ -16,10 +16,12 @@ The browser tools module replaces the custom Browser MCP implementation with ext
 The module provides the following tools for agent use:
 
 1. **check_flight_status** - Checks the status of a flight using airline website
+
    - Parameters: airline, flight_number, date
    - Returns: FlightStatusResponse with status, departure info, arrival info, and notes
 
 2. **verify_booking** - Verifies booking details across various travel providers
+
    - Parameters: booking_type, confirmation_number, provider, email
    - Returns: BookingVerificationResponse with verification status and details
 
@@ -40,8 +42,8 @@ from src.agents.tools.browser.browser_tools import (
 
 # Check flight status
 status = check_flight_status(
-    airline="Delta", 
-    flight_number="DL123", 
+    airline="Delta",
+    flight_number="DL123",
     date="2025-05-15"
 )
 

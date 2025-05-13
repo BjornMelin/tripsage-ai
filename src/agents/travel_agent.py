@@ -833,14 +833,23 @@ class TravelAgent(BaseTravelAgent):
             Created trip information
         """
         try:
-            # In a real implementation, we would connect to Supabase
-            # This is a placeholder
-            trip_id = "trip_" + datetime.datetime.now().strftime("%Y%m%d%H%M%S")
+            from src.utils.dual_storage import trip_service
 
+            # Make sure we have a user_id
+            user_id = params.get("user_id")
+            if not user_id:
+                return {"success": False, "error": "User ID is required"}
+
+            # Create trip using the TripStorageService
+            result = await trip_service.create(params)
+
+            # Return a simplified response
             return {
                 "success": True,
-                "trip_id": trip_id,
+                "trip_id": result["trip_id"],
                 "message": "Trip created successfully",
+                "entities_created": result["entities_created"],
+                "relations_created": result["relations_created"],
                 "trip_details": {
                     "user_id": params.get("user_id"),
                     "title": params.get("title"),
@@ -850,12 +859,7 @@ class TravelAgent(BaseTravelAgent):
                     "end_date": params.get("end_date"),
                     "budget": params.get("budget"),
                 },
-                "note": (
-                    "This is a mock trip creation. "
-                    "Database integration will be implemented."
-                ),
             }
-
         except Exception as e:
             logger.error("Error creating trip: %s", str(e))
             return {"success": False, "error": f"Trip creation error: {str(e)}"}

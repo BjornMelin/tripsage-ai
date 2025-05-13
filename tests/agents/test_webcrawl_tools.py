@@ -37,7 +37,9 @@ def mock_webcrawl_client():
                 "title": "Example Page",
                 "content": "This is example content",
                 "formats": {
-                    "markdown": "# Example Website\n\nThis is an example website content."
+                    "markdown": (
+                        "# Example Website\n\nThis is an example website content."
+                    )
                 },
             }
         )

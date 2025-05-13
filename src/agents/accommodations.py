@@ -13,6 +13,7 @@ from ..mcp.accommodations import (
     AccommodationSearchParams,
     create_accommodation_client,
 )
+from ..utils.decorators import with_error_handling
 from ..utils.logging import get_module_logger
 
 logger = get_module_logger(__name__)
@@ -35,6 +36,7 @@ class AccommodationSearchTool:
         """Initialize the accommodation search tool."""
         logger.info("Initialized Accommodation Search Tool")
 
+    @with_error_handling
     async def search_accommodations(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """Search for accommodations based on location and filters.
 
@@ -58,124 +60,115 @@ class AccommodationSearchTool:
         Returns:
             Search results with accommodation options
         """
+        # Validate parameters
+        search_params = AccommodationSearchParams(**params)
+
+        # Select source
+        source = search_params.source.lower()
+
+        # Get client for the selected source
         try:
-            # Validate parameters
-            search_params = AccommodationSearchParams(**params)
-
-            # Select source
-            source = search_params.source.lower()
-
-            # Get client for the selected source
-            try:
-                client = create_accommodation_client(source)
-            except ValueError:
-                return {
-                    "error": f"Unsupported accommodation source: {source}",
-                    "available_sources": [
-                        "airbnb"
-                    ],  # Update this list as more sources are added
-                    "message": (
-                        "Currently, only Airbnb is supported for accommodations "
-                        "search. Hotel search via Booking.com integration is planned "
-                        "for future releases."
-                    ),
-                }
-
-            # Extract search parameters
-            location = search_params.location
-            checkin = search_params.checkin
-            checkout = search_params.checkout
-            adults = search_params.adults
-            children = search_params.children
-            min_price = search_params.min_price
-            max_price = search_params.max_price
-            property_type = (
-                search_params.property_type.value
-                if search_params.property_type
-                else None
-            )
-
-            # Cache key for results - include more parameters for better cache precision
-            cache_key = (
-                f"accommodation_search:{source}:{location}:{checkin}:{checkout}:{adults}:"
-                + f"{children}:{min_price}:{max_price}:{property_type}",
-            )
-            cached_result = await redis_cache.get(cache_key)
-
-            if cached_result:
-                logger.info("Using cached accommodation search results")
-                return {
-                    **cached_result,
-                    "cache_hit": True,
-                }
-
-            # Perform search based on source
-            if source == "airbnb":
-                # Use Airbnb MCP client
-                results = await client.search_accommodations(
-                    location=location,
-                    checkin=checkin,
-                    checkout=checkout,
-                    adults=adults,
-                    children=children,
-                    min_price=min_price,
-                    max_price=max_price,
-                    property_type=property_type,
-                    store_results=True,
-                )
-
-                # Cache results
-                await redis_cache.set(
-                    cache_key,
-                    results.model_dump(),
-                    ttl=3600,  # 1 hour
-                )
-
-                # Return formatted results
-                return {
-                    "source": "airbnb",
-                    "location": location,
-                    "count": results.count,
-                    "listings": results.listings,
-                    "search_params": {
-                        "location": location,
-                        "checkin": checkin,
-                        "checkout": checkout,
-                        "adults": adults,
-                        "children": children,
-                        "min_price": min_price,
-                        "max_price": max_price,
-                        "property_type": property_type,
-                    },
-                    "error": results.error,
-                    "cache_hit": False,
-                }
-            # Future implementation for other sources
-            # elif source == "booking":
-            #     # Add Booking.com API integration
-            #     pass
-            # elif source == "hotels":
-            #     # Add Hotels integration
-            #     pass
-            else:
-                # This should not happen, but just in case
-                return {
-                    "error": f"Source {source} is configured but not implemented",
-                    "available_sources": ["airbnb"],
-                    "message": (
-                        "Currently, only Airbnb is supported for accommodations "
-                        "search. Additional sources will be added in future "
-                        "releases."
-                    ),
-                }
-
-        except Exception as e:
-            logger.error("Accommodation search error: %s", str(e))
+            client = create_accommodation_client(source)
+        except ValueError:
             return {
-                "error": f"Accommodation search error: {str(e)}",
-                "search_params": params,
+                "error": f"Unsupported accommodation source: {source}",
+                "available_sources": [
+                    "airbnb"
+                ],  # Update this list as more sources are added
+                "message": (
+                    "Currently, only Airbnb is supported for accommodations "
+                    "search. Hotel search via Booking.com integration is planned "
+                    "for future releases."
+                ),
             }
 
+        # Extract search parameters
+        location = search_params.location
+        checkin = search_params.checkin
+        checkout = search_params.checkout
+        adults = search_params.adults
+        children = search_params.children
+        min_price = search_params.min_price
+        max_price = search_params.max_price
+        property_type = (
+            search_params.property_type.value if search_params.property_type else None
+        )
+
+        # Cache key for results - include more parameters for better cache precision
+        cache_key = (
+            f"accommodation_search:{source}:{location}:{checkin}:{checkout}:{adults}:"
+            + f"{children}:{min_price}:{max_price}:{property_type}",
+        )
+        cached_result = await redis_cache.get(cache_key)
+
+        if cached_result:
+            logger.info("Using cached accommodation search results")
+            return {
+                **cached_result,
+                "cache_hit": True,
+            }
+
+        # Perform search based on source
+        if source == "airbnb":
+            # Use Airbnb MCP client
+            results = await client.search_accommodations(
+                location=location,
+                checkin=checkin,
+                checkout=checkout,
+                adults=adults,
+                children=children,
+                min_price=min_price,
+                max_price=max_price,
+                property_type=property_type,
+                store_results=True,
+            )
+
+            # Cache results
+            await redis_cache.set(
+                cache_key,
+                results.model_dump(),
+                ttl=3600,  # 1 hour
+            )
+
+            # Return formatted results
+            return {
+                "source": "airbnb",
+                "location": location,
+                "count": results.count,
+                "listings": results.listings,
+                "search_params": {
+                    "location": location,
+                    "checkin": checkin,
+                    "checkout": checkout,
+                    "adults": adults,
+                    "children": children,
+                    "min_price": min_price,
+                    "max_price": max_price,
+                    "property_type": property_type,
+                },
+                "error": results.error,
+                "cache_hit": False,
+            }
+        # Future implementation for other sources
+        # elif source == "booking":
+        #     # Add Booking.com API integration
+        #     pass
+        # elif source == "hotels":
+        #     # Add Hotels integration
+        #     pass
+        else:
+            # This should not happen, but just in case
+            return {
+                "error": f"Source {source} is configured but not implemented",
+                "available_sources": ["airbnb"],
+                "message": (
+                    "Currently, only Airbnb is supported for accommodations "
+                    "search. Additional sources will be added in future "
+                    "releases."
+                ),
+            }
+
+    @with_error_handling
     async def get_accommodation_details(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """Get detailed information about a specific accommodation.
 
@@ -195,109 +188,101 @@ class AccommodationSearchTool:
         Returns:
             Detailed accommodation information
         """
-        try:
-            # Required parameters
-            if "id" not in params:
-                return {"error": "Missing required parameter: id"}
+        # Required parameters
+        if "id" not in params:
+            return {"error": "Missing required parameter: id"}
 
-            accommodation_id = params["id"]
-            source = params.get("source", "airbnb").lower()
+        accommodation_id = params["id"]
+        source = params.get("source", "airbnb").lower()
 
-            # Optional parameters
-            checkin = params.get("checkin")
-            checkout = params.get("checkout")
-            adults = params.get("adults")
+        # Optional parameters
+        checkin = params.get("checkin")
+        checkout = params.get("checkout")
+        adults = params.get("adults")
 
-            # Cache key
-            cache_key = (
-                f"accommodation_details:{source}:{accommodation_id}:{checkin}:{checkout}:{adults}",
-            )
-            cached_result = await redis_cache.get(cache_key)
+        # Cache key
+        cache_key = (
+            f"accommodation_details:{source}:{accommodation_id}:{checkin}:{checkout}:{adults}",
+        )
+        cached_result = await redis_cache.get(cache_key)
 
-            if cached_result:
-                logger.info("Using cached accommodation details")
-                return {
-                    **cached_result,
-                    "cache_hit": True,
-                }
-
-            # Get client for the selected source
-            try:
-                client = create_accommodation_client(source)
-            except ValueError:
-                return {
-                    "error": f"Unsupported accommodation source: {source}",
-                    "available_sources": [
-                        "airbnb"
-                    ],  # Update this list as more sources are added
-                    "message": "Currently, only Airbnb is supported for accommodation "
-                    "details. Hotel details via Booking.com integration is planned "
-                    "for future releases.",
-                }
-
-            # Get details based on source
-            if source == "airbnb":
-                # Use Airbnb MCP client
-                details = await client.get_listing_details(
-                    listing_id=accommodation_id,
-                    checkin=checkin,
-                    checkout=checkout,
-                    adults=adults,
-                    store_results=True,
-                )
-
-                # Cache results
-                await redis_cache.set(
-                    cache_key,
-                    details.model_dump(),
-                    ttl=3600 * 24,  # 24 hours
-                )
-
-                return {
-                    "source": "airbnb",
-                    "id": details.id,
-                    "name": details.name,
-                    "description": details.description,
-                    "url": details.url,
-                    "location": details.location,
-                    "property_type": details.property_type,
-                    "host": details.host.model_dump(),
-                    "price_per_night": details.price_per_night,
-                    "price_total": details.price_total,
-                    "rating": details.rating,
-                    "reviews_count": details.reviews_count,
-                    "amenities": details.amenities,
-                    "images": details.images,
-                    "beds": details.beds,
-                    "bedrooms": details.bedrooms,
-                    "bathrooms": details.bathrooms,
-                    "max_guests": details.max_guests,
-                    "cache_hit": False,
-                }
-            # Future implementation for other sources
-            # elif source == "booking":
-            #     # Add Booking.com API integration
-            #     pass
-            # elif source == "hotels":
-            #     # Add Hotels integration
-            #     pass
-            else:
-                # This should not happen, but just in case
-                return {
-                    "error": f"Source {source} is configured but not implemented",
-                    "available_sources": ["airbnb"],
-                    "message": (
-                        "Currently, only Airbnb is supported for accommodation "
-                        "details. Additional sources will be added in future "
-                        "releases."
-                    ),
-                }
-
-        except Exception as e:
-            logger.error("Accommodation details error: %s", str(e))
+        if cached_result:
+            logger.info("Using cached accommodation details")
             return {
-                "error": f"Accommodation details error: {str(e)}",
-                "params": params,
+                **cached_result,
+                "cache_hit": True,
+            }
+
+        # Get client for the selected source
+        try:
+            client = create_accommodation_client(source)
+        except ValueError:
+            return {
+                "error": f"Unsupported accommodation source: {source}",
+                "available_sources": [
+                    "airbnb"
+                ],  # Update this list as more sources are added
+                "message": "Currently, only Airbnb is supported for accommodation "
+                "details. Hotel details via Booking.com integration is planned "
+                "for future releases.",
+            }
+
+        # Get details based on source
+        if source == "airbnb":
+            # Use Airbnb MCP client
+            details = await client.get_listing_details(
+                listing_id=accommodation_id,
+                checkin=checkin,
+                checkout=checkout,
+                adults=adults,
+                store_results=True,
+            )
+
+            # Cache results
+            await redis_cache.set(
+                cache_key,
+                details.model_dump(),
+                ttl=3600 * 24,  # 24 hours
+            )
+
+            return {
+                "source": "airbnb",
+                "id": details.id,
+                "name": details.name,
+                "description": details.description,
+                "url": details.url,
+                "location": details.location,
+                "property_type": details.property_type,
+                "host": details.host.model_dump(),
+                "price_per_night": details.price_per_night,
+                "price_total": details.price_total,
+                "rating": details.rating,
+                "reviews_count": details.reviews_count,
+                "amenities": details.amenities,
+                "images": details.images,
+                "beds": details.beds,
+                "bedrooms": details.bedrooms,
+                "bathrooms": details.bathrooms,
+                "max_guests": details.max_guests,
+                "cache_hit": False,
+            }
+        # Future implementation for other sources
+        # elif source == "booking":
+        #     # Add Booking.com API integration
+        #     pass
+        # elif source == "hotels":
+        #     # Add Hotels integration
+        #     pass
+        else:
+            # This should not happen, but just in case
+            return {
+                "error": f"Source {source} is configured but not implemented",
+                "available_sources": ["airbnb"],
+                "message": (
+                    "Currently, only Airbnb is supported for accommodation "
+                    "details. Additional sources will be added in future "
+                    "releases."
+                ),
             }
 
 
