@@ -5,9 +5,12 @@ This module provides the base agent class using the OpenAI Agents SDK
 with integration for MCP tools and dual storage architecture.
 """
 
+import inspect
+import importlib
+import sys
 import time
 import uuid
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Set, Type, Union
 
 from agents import Agent, function_tool
 from src.mcp.base_mcp_client import BaseMCPClient
@@ -50,6 +53,7 @@ class BaseAgent:
 
         # Initialize tools
         self._tools = tools or []
+        self._registered_tools: Set[str] = set()
 
         # Register default tools
         self._register_default_tools()
@@ -72,52 +76,68 @@ class BaseAgent:
 
     def _register_default_tools(self) -> None:
         """Register default tools for the agent."""
-        # Import memory tools
-        from .memory_tools import (
-            add_entity_observations,
-            create_knowledge_entities,
-            create_knowledge_relations,
-            delete_entity_observations,
-            delete_knowledge_entities,
-            delete_knowledge_relations,
-            get_entity_details,
-            get_knowledge_graph,
-            initialize_agent_memory,
-            save_session_summary,
-            search_knowledge_graph,
-            update_agent_memory,
-        )
-
         # Register memory tools
-        memory_tools = [
-            get_knowledge_graph,
-            search_knowledge_graph,
-            get_entity_details,
-            create_knowledge_entities,
-            create_knowledge_relations,
-            add_entity_observations,
-            delete_knowledge_entities,
-            delete_knowledge_relations,
-            delete_entity_observations,
-            initialize_agent_memory,
-            update_agent_memory,
-            save_session_summary,
-        ]
-
-        for tool in memory_tools:
-            self._register_tool(tool)
+        self.register_tool_group("memory_tools")
 
         # Register echo tool
         self._register_tool(self.echo)
 
     def _register_tool(self, tool: Callable) -> None:
-        """Register a tool with the agent.
+        """Register a tool with the agent if it hasn't been registered already.
 
         Args:
             tool: Tool function to register
         """
+        tool_name = tool.__name__
+        
+        # Skip if already registered
+        if tool_name in self._registered_tools:
+            logger.debug("Tool already registered: %s", tool_name)
+            return
+            
         self._tools.append(tool)
-        logger.debug("Registered tool: %s", tool.__name__)
+        self._registered_tools.add(tool_name)
+        logger.debug("Registered tool: %s", tool_name)
+
+    def register_tool_group(self, module_name: str, package: Optional[str] = None) -> int:
+        """Register all tools from a module.
+
+        This method automatically discovers and registers all functions
+        decorated with @function_tool in the specified module.
+
+        Args:
+            module_name: Name of the module containing tools
+            package: Optional package name for relative imports
+
+        Returns:
+            Number of tools registered
+        """
+        try:
+            # Import the module
+            if not module_name.startswith("src.") and not package:
+                # Try relative import from agents package
+                module = importlib.import_module(f".{module_name}", "src.agents")
+            else:
+                module = importlib.import_module(module_name, package)
+
+            # Find all function tools in the module
+            tool_count = 0
+            for name, obj in inspect.getmembers(module):
+                # Skip private members and non-callables
+                if name.startswith("_") or not callable(obj):
+                    continue
+
+                # Check if it's a function_tool
+                if hasattr(obj, "__is_function_tool__"):
+                    self._register_tool(obj)
+                    tool_count += 1
+
+            logger.info("Registered %d tools from module: %s", tool_count, module_name)
+            return tool_count
+
+        except (ImportError, AttributeError) as e:
+            logger.warning("Could not register tools from %s: %s", module_name, str(e))
+            return 0
 
     def register_mcp_client_tools(
         self, mcp_client: BaseMCPClient, prefix: str = ""
@@ -142,12 +162,14 @@ class BaseAgent:
                 return
 
             # Register each tool
+            registered_count = 0
             for tool_name in client_tools:
-                self._register_mcp_tool(mcp_client, tool_name, prefix)
+                if self._register_mcp_tool(mcp_client, tool_name, prefix):
+                    registered_count += 1
 
             logger.info(
                 "Registered %d tools from MCP client: %s",
-                len(client_tools),
+                registered_count,
                 mcp_client.server_name,
             )
 
@@ -157,14 +179,24 @@ class BaseAgent:
 
     def _register_mcp_tool(
         self, mcp_client: BaseMCPClient, tool_name: str, prefix: str = ""
-    ) -> None:
+    ) -> bool:
         """Register a single MCP tool.
 
         Args:
             mcp_client: MCP client to register tool from
             tool_name: Name of the tool to register
             prefix: Prefix to add to tool name
+
+        Returns:
+            Boolean indicating if the tool was registered
         """
+        # Set proper name with prefix
+        wrapper_name = f"{prefix}{tool_name}"
+        
+        # Skip if already registered
+        if wrapper_name in self._registered_tools:
+            logger.debug("MCP tool already registered: %s", wrapper_name)
+            return False
 
         # Create a wrapper function for this tool
         @function_tool
@@ -181,7 +213,6 @@ class BaseAgent:
 
         # Set proper name and docstring for the wrapper
         tool_metadata = mcp_client.get_tool_metadata_sync(tool_name)
-        wrapper_name = f"{prefix}{tool_name}"
         mcp_tool_wrapper.__name__ = wrapper_name
 
         if tool_metadata and "description" in tool_metadata:
@@ -199,6 +230,7 @@ class BaseAgent:
             wrapper_name,
             mcp_client.server_name,
         )
+        return True
 
     async def _initialize_session(
         self, user_id: Optional[str] = None
@@ -436,96 +468,12 @@ class TravelAgent(BaseAgent):
 
     def _register_travel_tools(self) -> None:
         """Register travel-specific tools."""
-        # Register calendar tools if available
-        self._register_calendar_tools()
-
-        # Register time tools if available
-        self._register_time_tools()
-
-        # Register web crawl tools if available
-        self._register_webcrawl_tools()
-
-    def _register_calendar_tools(self) -> None:
-        """Register calendar tools if available."""
-        try:
-            from .calendar_tools import (
-                create_event_tool,
-                create_itinerary_events_tool,
-                delete_event_tool,
-                list_calendars_tool,
-                list_events_tool,
-                search_events_tool,
-                update_event_tool,
-            )
-
-            # Register all calendar tools
-            calendar_tools = [
-                list_calendars_tool,
-                list_events_tool,
-                search_events_tool,
-                create_event_tool,
-                update_event_tool,
-                delete_event_tool,
-                create_itinerary_events_tool,
-            ]
-
-            for tool in calendar_tools:
-                self._register_tool(tool)
-
-            logger.info("Registered Google Calendar tools")
-        except ImportError as e:
-            logger.warning(f"Could not register calendar tools: {str(e)}")
-
-    def _register_time_tools(self) -> None:
-        """Register time tools if available."""
-        try:
-            from .time_tools import (
-                calculate_flight_arrival_tool,
-                convert_timezone_tool,
-                create_timezone_aware_itinerary_tool,
-                find_meeting_times_tool,
-                get_current_time_tool,
-                get_local_time_tool,
-            )
-
-            # Register all time tools
-            time_tools = [
-                get_current_time_tool,
-                convert_timezone_tool,
-                get_local_time_tool,
-                calculate_flight_arrival_tool,
-                find_meeting_times_tool,
-                create_timezone_aware_itinerary_tool,
-            ]
-
-            for tool in time_tools:
-                self._register_tool(tool)
-
-            logger.info("Registered Time tools")
-        except ImportError as e:
-            logger.warning(f"Could not register time tools: {str(e)}")
-
-    def _register_webcrawl_tools(self) -> None:
-        """Register web crawl tools if available."""
-        try:
-            from .webcrawl_tools import (
-                crawl_url_tool,
-                extract_info_tool,
-                scrape_page_tool,
-                search_web_tool,
-            )
-
-            # Register all webcrawl tools
-            webcrawl_tools = [
-                search_web_tool,
-                crawl_url_tool,
-                extract_info_tool,
-                scrape_page_tool,
-            ]
-
-            for tool in webcrawl_tools:
-                self._register_tool(tool)
-
-            logger.info("Registered Web Crawl tools")
-        except ImportError as e:
-            logger.warning(f"Could not register web crawl tools: {str(e)}")
+        # Register all travel tool groups
+        tool_modules = [
+            "calendar_tools",
+            "time_tools", 
+            "webcrawl_tools",
+        ]
+        
+        for module in tool_modules:
+            self.register_tool_group(module)
