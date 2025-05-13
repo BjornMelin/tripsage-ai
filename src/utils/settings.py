@@ -183,10 +183,16 @@ class AirbnbMCPConfig(MCPConfig):
     for Airbnb properties without requiring API keys.
     """
 
-    endpoint: str = Field(default="http://localhost:3000", description="OpenBnB MCP server endpoint")
+    endpoint: str = Field(
+        default="http://localhost:3000", description="OpenBnB MCP server endpoint"
+    )
     api_key: Optional[SecretStr] = None  # OpenBnB Airbnb MCP doesn't use API keys
-    ignore_robots_txt: bool = Field(default=False, description="Whether to ignore robots.txt restrictions")
-    server_type: str = Field(default="openbnb/mcp-server-airbnb", description="Server implementation type")
+    ignore_robots_txt: bool = Field(
+        default=False, description="Whether to ignore robots.txt restrictions"
+    )
+    server_type: str = Field(
+        default="openbnb/mcp-server-airbnb", description="Server implementation type"
+    )
 
 
 class AccommodationsMCPConfig(BaseSettings):

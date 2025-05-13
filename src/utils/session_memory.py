@@ -188,8 +188,7 @@ async def _create_fact_relationships(
                                     "name": entity_name,
                                     "entityType": entity_type,
                                     "observations": [
-                                        f"Learned during session with "
-                                        f"user {user_id}"
+                                        f"Learned during session with user {user_id}"
                                     ],
                                 }
                             ]

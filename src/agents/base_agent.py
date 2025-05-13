@@ -7,11 +7,9 @@ with integration for MCP tools and dual storage architecture.
 
 import time
 import uuid
-from typing import Any, Callable, Dict, List, Optional, Union
+from typing import Any, Callable, Dict, List, Optional
 
-from pydantic import BaseModel, Field
-
-from agents import Agent, RunContextWrapper, function_tool
+from agents import Agent, function_tool
 from src.mcp.base_mcp_client import BaseMCPClient
 from src.utils.config import get_config
 from src.utils.error_handling import MCPError, TripSageError, log_exception
@@ -105,7 +103,7 @@ class BaseAgent:
             update_agent_memory,
             save_session_summary,
         ]
-        
+
         for tool in memory_tools:
             self._register_tool(tool)
 
@@ -167,6 +165,7 @@ class BaseAgent:
             tool_name: Name of the tool to register
             prefix: Prefix to add to tool name
         """
+
         # Create a wrapper function for this tool
         @function_tool
         async def mcp_tool_wrapper(params: Dict[str, Any]):
@@ -175,9 +174,7 @@ class BaseAgent:
                 result = await mcp_client.call_tool(tool_name, params)
                 return result
             except Exception as e:
-                logger.error(
-                    "Error calling MCP tool %s: %s", tool_name, str(e)
-                )
+                logger.error("Error calling MCP tool %s: %s", tool_name, str(e))
                 if isinstance(e, MCPError):
                     return {"error": e.message}
                 return {"error": f"MCP tool error: {str(e)}"}
@@ -274,7 +271,9 @@ class BaseAgent:
             # Extract response
             response = {
                 "content": result.final_output,
-                "tool_calls": result.tool_calls if hasattr(result, "tool_calls") else [],
+                "tool_calls": (
+                    result.tool_calls if hasattr(result, "tool_calls") else []
+                ),
                 "status": "success",
             }
 
@@ -290,7 +289,9 @@ class BaseAgent:
             # Save session summary if needed and we have enough messages
             if len(self.messages_history) >= 10 and "user_id" in run_context:
                 # Generate session summary
-                summary = f"Conversation with {self.messages_history[0]['content'][:50]}..."
+                summary = (
+                    f"Conversation with {self.messages_history[0]['content'][:50]}..."
+                )
                 await self._save_session_summary(run_context["user_id"], summary)
 
             return response
@@ -443,18 +444,18 @@ class TravelAgent(BaseAgent):
 
         # Register web crawl tools if available
         self._register_webcrawl_tools()
-    
+
     def _register_calendar_tools(self) -> None:
         """Register calendar tools if available."""
         try:
             from .calendar_tools import (
+                create_event_tool,
+                create_itinerary_events_tool,
+                delete_event_tool,
                 list_calendars_tool,
                 list_events_tool,
                 search_events_tool,
-                create_event_tool,
                 update_event_tool,
-                delete_event_tool,
-                create_itinerary_events_tool,
             )
 
             # Register all calendar tools
@@ -467,7 +468,7 @@ class TravelAgent(BaseAgent):
                 delete_event_tool,
                 create_itinerary_events_tool,
             ]
-            
+
             for tool in calendar_tools:
                 self._register_tool(tool)
 
@@ -479,12 +480,12 @@ class TravelAgent(BaseAgent):
         """Register time tools if available."""
         try:
             from .time_tools import (
-                get_current_time_tool,
-                convert_timezone_tool,
-                get_local_time_tool,
                 calculate_flight_arrival_tool,
-                find_meeting_times_tool,
+                convert_timezone_tool,
                 create_timezone_aware_itinerary_tool,
+                find_meeting_times_tool,
+                get_current_time_tool,
+                get_local_time_tool,
             )
 
             # Register all time tools
@@ -496,22 +497,22 @@ class TravelAgent(BaseAgent):
                 find_meeting_times_tool,
                 create_timezone_aware_itinerary_tool,
             ]
-            
+
             for tool in time_tools:
                 self._register_tool(tool)
 
             logger.info("Registered Time tools")
         except ImportError as e:
             logger.warning(f"Could not register time tools: {str(e)}")
-    
+
     def _register_webcrawl_tools(self) -> None:
         """Register web crawl tools if available."""
         try:
             from .webcrawl_tools import (
-                search_web_tool,
                 crawl_url_tool,
                 extract_info_tool,
                 scrape_page_tool,
+                search_web_tool,
             )
 
             # Register all webcrawl tools
@@ -521,7 +522,7 @@ class TravelAgent(BaseAgent):
                 extract_info_tool,
                 scrape_page_tool,
             ]
-            
+
             for tool in webcrawl_tools:
                 self._register_tool(tool)
 

@@ -7,7 +7,7 @@ Google Calendar MCP Server, which offers Google Calendar integration capabilitie
 
 import json
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional
 
 from pydantic import ValidationError
 
@@ -19,7 +19,6 @@ from ...utils.error_handling import MCPError
 from ...utils.logging import get_module_logger
 from ..fastmcp import FastMCPClient
 from .models import (
-    Calendar,
     CalendarListResponse,
     CreateEventParams,
     CreateItineraryEventsParams,
@@ -165,9 +164,7 @@ class CalendarMCPClient(FastMCPClient):
             if not time_min:
                 time_min = datetime.utcnow().isoformat() + "Z"
             if not time_max:
-                time_max = (
-                    datetime.utcnow() + timedelta(days=7)
-                ).isoformat() + "Z"
+                time_max = (datetime.utcnow() + timedelta(days=7)).isoformat() + "Z"
 
             # Validate parameters
             params = ListEventsParams(
@@ -255,9 +252,7 @@ class CalendarMCPClient(FastMCPClient):
             if not time_min:
                 time_min = datetime.utcnow().isoformat() + "Z"
             if not time_max:
-                time_max = (
-                    datetime.utcnow() + timedelta(days=30)
-                ).isoformat() + "Z"
+                time_max = (datetime.utcnow() + timedelta(days=30)).isoformat() + "Z"
 
             # Validate parameters
             params = SearchEventsParams(
@@ -700,7 +695,9 @@ class CalendarService:
         if item_type == "flight":
             # Add flight details like flight number to title if available
             if item.details and "flight_number" in item.details:
-                event_data["summary"] = f"Flight {item.details['flight_number']}: {item_title}"
+                event_data["summary"] = (
+                    f"Flight {item.details['flight_number']}: {item_title}"
+                )
 
             # Add detailed flight information if available
             if item.details:
@@ -721,9 +718,13 @@ class CalendarService:
                 if "property_name" in item.details:
                     accomm_info.append(f"Property: {item.details['property_name']}")
                 if "check_in_time" in item.details:
-                    accomm_info.append(f"Check-in time: {item.details['check_in_time']}")
+                    accomm_info.append(
+                        f"Check-in time: {item.details['check_in_time']}"
+                    )
                 if "check_out_time" in item.details:
-                    accomm_info.append(f"Check-out time: {item.details['check_out_time']}")
+                    accomm_info.append(
+                        f"Check-out time: {item.details['check_out_time']}"
+                    )
                 if accomm_info:
                     event_data["description"] += "\n\n" + "\n".join(accomm_info)
 

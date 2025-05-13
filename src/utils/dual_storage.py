@@ -38,10 +38,10 @@ async def store_trip_with_dual_storage(
 
     # Step 2: Store unstructured data and relationships in Neo4j via Memory MCP
     logger.info("Storing unstructured trip data in Neo4j via Memory MCP")
-    
+
     # Create core trip entities
     created_entities = await _create_trip_entities(trip_data, trip_id, user_id)
-    
+
     # Create related entities and relationships
     created_relations = await _create_trip_relations(
         trip_data, trip_id, created_entities
@@ -59,9 +59,7 @@ async def store_trip_with_dual_storage(
     }
 
 
-async def _store_trip_in_supabase(
-    trip_data: Dict[str, Any], user_id: str
-) -> str:
+async def _store_trip_in_supabase(trip_data: Dict[str, Any], user_id: str) -> str:
     """Store structured trip data in Supabase.
 
     Args:
@@ -70,7 +68,7 @@ async def _store_trip_in_supabase(
 
     Returns:
         Trip ID
-    
+
     Raises:
         ValueError: If trip creation fails
     """
@@ -92,7 +90,7 @@ async def _store_trip_in_supabase(
     if not trip_id:
         logger.error("Failed to create trip in Supabase")
         raise ValueError("Failed to create trip in database")
-    
+
     return trip_id
 
 
@@ -158,14 +156,14 @@ async def _create_trip_entities(
         entity = _create_activity_entity(activity)
         if entity:
             entities_to_create.append(entity)
-    
+
     # Add events
     events = trip_data.get("events", [])
     for event in events:
         entity = _create_event_entity(event)
         if entity:
             entities_to_create.append(entity)
-    
+
     # Add transportation
     transportation = trip_data.get("transportation", [])
     for transport in transportation:
@@ -176,7 +174,7 @@ async def _create_trip_entities(
     # Create all entities in Neo4j
     if entities_to_create:
         entities = await memory_client.create_entities(entities_to_create)
-    
+
     return entities
 
 
@@ -209,7 +207,9 @@ def _create_destination_entity(destination: Dict[str, Any]) -> Optional[Dict[str
     }
 
 
-def _create_accommodation_entity(accommodation: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+def _create_accommodation_entity(
+    accommodation: Dict[str, Any],
+) -> Optional[Dict[str, Any]]:
     """Create an accommodation entity.
 
     Args:
@@ -304,7 +304,9 @@ def _create_event_entity(event: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     }
 
 
-def _create_transportation_entity(transport: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+def _create_transportation_entity(
+    transport: Dict[str, Any],
+) -> Optional[Dict[str, Any]]:
     """Create a transportation entity.
 
     Args:
@@ -354,7 +356,7 @@ async def _create_trip_relations(
         List of created relations
     """
     relations_to_create = []
-    
+
     # User-Trip relation
     user_id = trip_data.get("user_id")
     if user_id:
@@ -365,29 +367,34 @@ async def _create_trip_relations(
                 "to": f"Trip:{trip_id}",
             }
         )
-    
+
     # Extract entity names by type for convenience
     destinations = [
-        entity["name"] for entity in created_entities 
+        entity["name"]
+        for entity in created_entities
         if entity.get("entityType") == "Destination"
     ]
     accommodations = [
-        entity["name"] for entity in created_entities 
+        entity["name"]
+        for entity in created_entities
         if entity.get("entityType") == "Accommodation"
     ]
     activities = [
-        entity["name"] for entity in created_entities 
+        entity["name"]
+        for entity in created_entities
         if entity.get("entityType") == "Activity"
     ]
     events = [
-        entity["name"] for entity in created_entities 
+        entity["name"]
+        for entity in created_entities
         if entity.get("entityType") == "Event"
     ]
     transportation = [
-        entity["name"] for entity in created_entities 
+        entity["name"]
+        for entity in created_entities
         if entity.get("entityType") == "Transportation"
     ]
-    
+
     # Trip-Destination relations
     for dest_name in destinations:
         relations_to_create.append(
@@ -397,7 +404,7 @@ async def _create_trip_relations(
                 "to": dest_name,
             }
         )
-    
+
     # Trip-Accommodation relations
     for acc_name in accommodations:
         relations_to_create.append(
@@ -407,7 +414,7 @@ async def _create_trip_relations(
                 "to": acc_name,
             }
         )
-    
+
     # Trip-Activity relations
     for act_name in activities:
         relations_to_create.append(
@@ -417,7 +424,7 @@ async def _create_trip_relations(
                 "to": act_name,
             }
         )
-    
+
     # Trip-Event relations
     for event_name in events:
         relations_to_create.append(
@@ -427,7 +434,7 @@ async def _create_trip_relations(
                 "to": event_name,
             }
         )
-    
+
     # Trip-Transportation relations
     for transport_name in transportation:
         relations_to_create.append(
@@ -437,12 +444,15 @@ async def _create_trip_relations(
                 "to": transport_name,
             }
         )
-    
+
     # Create additional entity relationships based on their connections
     # (e.g., Activity-Destination, Accommodation-Destination)
     for acc_data in trip_data.get("accommodations", []):
         if acc_data.get("name") and acc_data.get("destination"):
-            if acc_data["name"] in accommodations and acc_data["destination"] in destinations:
+            if (
+                acc_data["name"] in accommodations
+                and acc_data["destination"] in destinations
+            ):
                 relations_to_create.append(
                     {
                         "from": acc_data["name"],
@@ -450,10 +460,13 @@ async def _create_trip_relations(
                         "to": acc_data["destination"],
                     }
                 )
-    
+
     for act_data in trip_data.get("activities", []):
         if act_data.get("name") and act_data.get("destination"):
-            if act_data["name"] in activities and act_data["destination"] in destinations:
+            if (
+                act_data["name"] in activities
+                and act_data["destination"] in destinations
+            ):
                 relations_to_create.append(
                     {
                         "from": act_data["name"],
@@ -461,10 +474,13 @@ async def _create_trip_relations(
                         "to": act_data["destination"],
                     }
                 )
-    
+
     for event_data in trip_data.get("events", []):
         if event_data.get("name") and event_data.get("destination"):
-            if event_data["name"] in events and event_data["destination"] in destinations:
+            if (
+                event_data["name"] in events
+                and event_data["destination"] in destinations
+            ):
                 relations_to_create.append(
                     {
                         "from": event_data["name"],
@@ -472,21 +488,23 @@ async def _create_trip_relations(
                         "to": event_data["destination"],
                     }
                 )
-    
+
     # Transportation connections
     for transport_data in trip_data.get("transportation", []):
-        if (transport_data.get("name") and 
-            transport_data.get("from_destination") and 
-            transport_data.get("to_destination")):
-            
+        if (
+            transport_data.get("name")
+            and transport_data.get("from_destination")
+            and transport_data.get("to_destination")
+        ):
             transport_name = transport_data["name"]
             from_dest = transport_data["from_destination"]
             to_dest = transport_data["to_destination"]
-            
-            if (transport_name in transportation and 
-                from_dest in destinations and 
-                to_dest in destinations):
-                
+
+            if (
+                transport_name in transportation
+                and from_dest in destinations
+                and to_dest in destinations
+            ):
                 relations_to_create.append(
                     {
                         "from": transport_name,
@@ -494,7 +512,7 @@ async def _create_trip_relations(
                         "to": from_dest,
                     }
                 )
-                
+
                 relations_to_create.append(
                     {
                         "from": transport_name,
@@ -502,7 +520,7 @@ async def _create_trip_relations(
                         "to": to_dest,
                     }
                 )
-                
+
                 # Also add direct connection between destinations
                 relations_to_create.append(
                     {
@@ -511,10 +529,10 @@ async def _create_trip_relations(
                         "to": to_dest,
                     }
                 )
-    
+
     # Create all relations in Neo4j
     relations = []
     if relations_to_create:
         relations = await memory_client.create_relations(relations_to_create)
-    
+
     return relations

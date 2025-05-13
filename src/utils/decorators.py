@@ -45,7 +45,7 @@ def ensure_memory_client_initialized(func: F) -> F:
             func_name = func.__name__
             logger.error(f"Error in {func_name}: {str(e)}")
             log_exception(e)
-            
+
             # Return error response in the expected format for agent tools
             # Only do this if the function returns a dict (for agent tools)
             if inspect.iscoroutinefunction(func):
@@ -82,7 +82,7 @@ def with_error_handling(func: F) -> F:
             func_name = func.__name__
             logger.error(f"Error in {func_name}: {str(e)}")
             log_exception(e)
-            
+
             # Return error response in the expected format for agent tools
             return {"error": str(e)}
 

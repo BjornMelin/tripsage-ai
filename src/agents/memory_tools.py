@@ -13,7 +13,11 @@ from agents import function_tool
 from src.mcp.memory.client import memory_client
 from src.mcp.memory.models import (
     Entity as MemoryEntity,
+)
+from src.mcp.memory.models import (
     Observation as MemoryObservation,
+)
+from src.mcp.memory.models import (
     Relation as MemoryRelation,
 )
 from src.utils.decorators import ensure_memory_client_initialized, with_error_handling
@@ -22,7 +26,6 @@ from src.utils.session_memory import (
     store_session_summary,
     update_session_memory,
 )
-
 
 # Use MCP models directly to avoid duplication
 Entity = MemoryEntity

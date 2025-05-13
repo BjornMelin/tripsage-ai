@@ -11,11 +11,11 @@ import pytest
 from pydantic import ValidationError
 
 from src.mcp.webcrawl.client import WebCrawlMCPClient
-from src.utils.error_handling import MCPError
 from src.mcp.webcrawl.models import (
     ScrapeParams,
     ScrapeResponse,
 )
+from src.utils.error_handling import MCPError
 
 
 @pytest.fixture
