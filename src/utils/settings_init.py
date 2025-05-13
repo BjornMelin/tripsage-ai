@@ -141,6 +141,23 @@ def _validate_production_settings(settings: AppSettings) -> None:
             "Should be set to deployed OpenBnB MCP server URL."
         )
 
+    # Validate Calendar MCP configuration
+    if settings.calendar_mcp.endpoint == "http://localhost:3003":
+        production_errors.append(
+            "DEFAULT_CALENDAR_MCP_ENDPOINT is using localhost in production. "
+            "Should be set to deployed Google Calendar MCP server URL."
+        )
+
+    # Validate Google Calendar credentials
+    if not settings.calendar_mcp.google_client_id.get_secret_value():
+        production_errors.append("GOOGLE_CLIENT_ID is missing for calendar_mcp")
+
+    if not settings.calendar_mcp.google_client_secret.get_secret_value():
+        production_errors.append("GOOGLE_CLIENT_SECRET is missing for calendar_mcp")
+
+    if not settings.calendar_mcp.google_redirect_uri:
+        production_errors.append("GOOGLE_REDIRECT_URI is missing for calendar_mcp")
+
     # Validate Duffel API key for Flights MCP
     if not settings.flights_mcp.duffel_api_key.get_secret_value():
         production_errors.append("DUFFEL_API_KEY is missing for flights_mcp")
