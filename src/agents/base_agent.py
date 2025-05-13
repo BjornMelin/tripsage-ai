@@ -5,12 +5,11 @@ This module provides the base agent class using the OpenAI Agents SDK
 with integration for MCP tools and dual storage architecture.
 """
 
-import inspect
 import importlib
-import sys
+import inspect
 import time
 import uuid
-from typing import Any, Callable, Dict, List, Optional, Set, Type, Union
+from typing import Any, Callable, Dict, List, Optional, Set
 
 from agents import Agent, function_tool
 from src.mcp.base_mcp_client import BaseMCPClient
@@ -89,17 +88,19 @@ class BaseAgent:
             tool: Tool function to register
         """
         tool_name = tool.__name__
-        
+
         # Skip if already registered
         if tool_name in self._registered_tools:
             logger.debug("Tool already registered: %s", tool_name)
             return
-            
+
         self._tools.append(tool)
         self._registered_tools.add(tool_name)
         logger.debug("Registered tool: %s", tool_name)
 
-    def register_tool_group(self, module_name: str, package: Optional[str] = None) -> int:
+    def register_tool_group(
+        self, module_name: str, package: Optional[str] = None
+    ) -> int:
         """Register all tools from a module.
 
         This method automatically discovers and registers all functions
@@ -192,7 +193,7 @@ class BaseAgent:
         """
         # Set proper name with prefix
         wrapper_name = f"{prefix}{tool_name}"
-        
+
         # Skip if already registered
         if wrapper_name in self._registered_tools:
             logger.debug("MCP tool already registered: %s", wrapper_name)
@@ -471,9 +472,9 @@ class TravelAgent(BaseAgent):
         # Register all travel tool groups
         tool_modules = [
             "calendar_tools",
-            "time_tools", 
+            "time_tools",
             "webcrawl_tools",
         ]
-        
+
         for module in tool_modules:
             self.register_tool_group(module)
