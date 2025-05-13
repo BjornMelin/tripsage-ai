@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-Demo script to test the TripSage Travel Agent.
+Demo script to test the TripSage Travel Planning Agent.
 
-This module provides an interactive demo of the TripSage Travel Agent using
-the OpenAI Agents SDK implementation.
+This module provides an interactive demo of the TripSage Travel Planning Agent
+using the hierarchical agent structure implemented with the OpenAI Agents SDK.
 """
 
 import argparse
@@ -14,11 +14,11 @@ from typing import Any, Dict, List
 
 from dotenv import load_dotenv
 
-from .travel_agent import create_agent
+from .travel_planning_agent import create_agent
 
 
 async def run_interactive_demo():
-    """Run an interactive demo of the TripSage Travel Agent."""
+    """Run an interactive demo of the TripSage Travel Planning Agent."""
     # Load environment variables
     load_dotenv()
 
@@ -29,14 +29,20 @@ async def run_interactive_demo():
         sys.exit(1)
 
     # Display demo options
-    print("\nTripSage Agent Demo")
-    print("-------------------")
-    print("This demo allows you to interact with the TripSage Travel Agent.")
-    print("You can ask about trip planning, search for flights/accommodations, etc.")
+    print("\nTripSage Travel Planning Agent Demo")
+    print("-----------------------------------")
+    print("This demo allows you to interact with the TripSage Travel Planning Agent.")
+    print("The agent coordinates specialized sub-agents for different travel domains:")
+    print("- Flight search and booking")
+    print("- Accommodation search and booking")
+    print("- Destination research")
+    print("- Budget optimization")
+    print("- Detailed itinerary planning")
+    print("\nYou can ask about trip planning, search for flights/accommodations, etc.")
     print("Type 'exit', 'quit', or 'bye' to end the conversation.\n")
 
     # Create the agent
-    print("Initializing TripSage Travel Agent...")
+    print("Initializing TripSage Travel Planning Agent...")
     agent = create_agent()
 
     # Interactive session
@@ -52,10 +58,15 @@ async def run_interactive_demo():
         if not user_message.strip():
             continue
 
+        # Create context for the agent run (would include user_id in a real app)
+        context = {
+            "session_id": agent.session_id,
+        }
+
         # Run the agent
         try:
             print("Processing your request...")
-            response = await agent.run(user_message)
+            response = await agent.run(user_message, context=context)
 
             # Print the response
             if response.get("status") == "success":
@@ -70,7 +81,7 @@ async def run_interactive_demo():
 
 
 async def run_batch_queries(queries: List[str]) -> List[Dict[str, Any]]:
-    """Run a batch of queries through the TripSage Travel Agent.
+    """Run a batch of queries through the TripSage Travel Planning Agent.
 
     Args:
         queries: List of queries to process
@@ -78,13 +89,16 @@ async def run_batch_queries(queries: List[str]) -> List[Dict[str, Any]]:
     Returns:
         List of responses
     """
-    print("TripSage Travel Agent Batch Demo")
-    print("===============================")
+    print("TripSage Travel Planning Agent Batch Demo")
+    print("=======================================")
 
     # Create the agent
     agent = create_agent()
 
     responses = []
+    context = {
+        "session_id": agent.session_id,
+    }
 
     # Process each query
     for i, query in enumerate(queries, 1):
@@ -92,7 +106,7 @@ async def run_batch_queries(queries: List[str]) -> List[Dict[str, Any]]:
 
         try:
             # Run the agent
-            response = await agent.run(query)
+            response = await agent.run(query, context=context)
             responses.append(response)
 
             # Print the response
@@ -118,7 +132,7 @@ def main():
     # Load environment variables
     load_dotenv()
 
-    parser = argparse.ArgumentParser(description="TripSage Travel Agent Demo")
+    parser = argparse.ArgumentParser(description="TripSage Travel Planning Agent Demo")
     parser.add_argument(
         "--queries",
         "-q",
