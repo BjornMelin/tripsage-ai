@@ -42,7 +42,9 @@ async def list_calendars_tool() -> Dict[str, Any]:
                 "name": calendar.summary,
                 "is_primary": calendar.primary,
                 "time_zone": calendar.time_zone,
-                "formatted": f"{calendar.summary}{primary_indicator} (ID: {calendar.id})",
+                "formatted": (
+                    f"{calendar.summary}{primary_indicator} (ID: {calendar.id})"
+                ),
             }
         )
 
@@ -498,12 +500,18 @@ async def create_itinerary_events_tool(
                 "title": item.get("title", "Unknown"),
                 "type": item.get("type", "Unknown"),
                 "error": error,
-                "formatted": f"Failed to create event for {item.get('title', 'Unknown')}: {error}",
+                "formatted": (
+                    f"Failed to create event for {item.get('title', 'Unknown')}: "
+                    f"{error}"
+                ),
             }
         )
 
     # Format overall summary
-    summary = f"Created {len(created_events_info)} events for trip: {trip_name or 'Untitled Trip'}"
+    summary = (
+        f"Created {len(created_events_info)} events for trip: "
+        f"{trip_name or 'Untitled Trip'}"
+    )
     if failed_items_info:
         summary += f"\n{len(failed_items_info)} items failed to create."
 

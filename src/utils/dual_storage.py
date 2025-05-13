@@ -1,8 +1,8 @@
 """
 Dual storage strategy for TripSage.
 
-This module provides direct access to the TripStorageService, which implements 
-the dual storage strategy where structured data is stored in Supabase and 
+This module provides direct access to the TripStorageService, which implements
+the dual storage strategy where structured data is stored in Supabase and
 relationships/unstructured data are stored in Neo4j via the Memory MCP.
 """
 

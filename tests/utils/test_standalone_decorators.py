@@ -5,7 +5,6 @@ These tests validate the decorator logic without depending on
 application configuration.
 """
 
-import asyncio
 import functools
 import inspect
 from typing import Any, Callable, Dict, TypeVar, cast
@@ -20,6 +19,7 @@ def with_error_handling_standalone(func: F) -> F:
     """Simplified version of with_error_handling for testing."""
     # Check if the function is a coroutine function (async)
     if inspect.iscoroutinefunction(func):
+
         @functools.wraps(func)
         async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
             """Async wrapper function with try-except block."""
@@ -35,11 +35,12 @@ def with_error_handling_standalone(func: F) -> F:
                     return {"error": str(e)}
                 # Re-raise for non-dict returning functions
                 raise
-        
+
         return cast(F, async_wrapper)
-    
+
     # For synchronous functions
     else:
+
         @functools.wraps(func)
         def sync_wrapper(*args: Any, **kwargs: Any) -> Any:
             """Sync wrapper function with try-except block."""
@@ -55,7 +56,7 @@ def with_error_handling_standalone(func: F) -> F:
                     return {"error": str(e)}
                 # Re-raise for non-dict returning functions
                 raise
-        
+
         return cast(F, sync_wrapper)
 
 

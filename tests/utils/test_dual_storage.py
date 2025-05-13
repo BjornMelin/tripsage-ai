@@ -80,13 +80,15 @@ def sample_trip_data():
 
 
 @pytest.mark.asyncio
-async def test_trip_service_create(mock_db_client, mock_memory_client, sample_trip_data):
+async def test_trip_service_create(
+    mock_db_client, mock_memory_client, sample_trip_data
+):
     """Test creating a trip using the TripStorageService."""
     # Arrange
     user_id = str(uuid4())
     sample_trip_data["user_id"] = user_id
     trip_id = str(uuid4())
-    
+
     mock_db_client.trips.create.return_value = {"id": trip_id, **sample_trip_data}
     mock_memory_client.create_entities.return_value = [{"name": f"Trip:{trip_id}"}]
     mock_memory_client.create_relations.return_value = [
@@ -100,7 +102,7 @@ async def test_trip_service_create(mock_db_client, mock_memory_client, sample_tr
     mock_db_client.trips.create.assert_called_once()
     mock_memory_client.create_entities.assert_called_once()
     mock_memory_client.create_relations.assert_called_once()
-    
+
     assert result["trip_id"] == trip_id
     assert result["entities_created"] == 1
     assert result["relations_created"] == 1
@@ -125,7 +127,7 @@ async def test_trip_service_retrieve(mock_db_client, mock_memory_client):
         "type": "Trip",
         "observations": ["Trip from 2025-06-15 to 2025-06-30", "Budget: $5000"],
     }
-    
+
     mock_db_client.trips.get.return_value = db_trip
     mock_memory_client.open_nodes.return_value = [trip_node]
 
@@ -135,7 +137,7 @@ async def test_trip_service_retrieve(mock_db_client, mock_memory_client):
     # Assert
     mock_db_client.trips.get.assert_called_once_with(trip_id)
     mock_memory_client.open_nodes.assert_called_once()
-    
+
     assert result["knowledge_graph"]["trip_node"] == trip_node
 
 
@@ -149,7 +151,7 @@ async def test_trip_service_update(mock_db_client, mock_memory_client):
         "description": "New description",
         "budget": 6000,
     }
-    
+
     mock_db_client.trips.update.return_value = True
     mock_memory_client.open_nodes.return_value = [
         {"name": f"Trip:{trip_id}", "type": "Trip", "observations": ["Old observation"]}
@@ -164,7 +166,7 @@ async def test_trip_service_update(mock_db_client, mock_memory_client):
     # Assert
     mock_db_client.trips.update.assert_called_once()
     mock_memory_client.add_observations.assert_called_once()
-    
+
     assert result["trip_id"] == trip_id
     assert result["primary_db_updated"] is True
     assert result["graph_db_updated"] is True
@@ -175,7 +177,7 @@ async def test_trip_service_delete(mock_db_client, mock_memory_client):
     """Test deleting a trip using the TripStorageService."""
     # Arrange
     trip_id = str(uuid4())
-    
+
     mock_db_client.trips.delete.return_value = True
     mock_memory_client.delete_entities.return_value = [f"Trip:{trip_id}"]
 
@@ -185,7 +187,7 @@ async def test_trip_service_delete(mock_db_client, mock_memory_client):
     # Assert
     mock_db_client.trips.delete.assert_called_once_with(trip_id)
     mock_memory_client.delete_entities.assert_called_once_with([f"Trip:{trip_id}"])
-    
+
     assert result["trip_id"] == trip_id
     assert result["primary_db_deleted"] is True
     assert result["graph_db_deleted"] is True

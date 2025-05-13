@@ -18,6 +18,10 @@ from ...utils.config import get_config
 from ...utils.error_handling import MCPError
 from ...utils.logging import get_module_logger
 from ..fastmcp import FastMCPClient
+
+# Import factory functions for client and service creation
+# The actual client instance will be created by the factory
+from .factory import get_client
 from .models import (
     ConvertTimeParams,
     FlightArrivalResponse,
@@ -548,10 +552,6 @@ class TimeService:
             logger.error(f"Error finding meeting times: {str(e)}")
             return []
 
-
-# Import factory functions for client and service creation
-# The actual client instance will be created by the factory
-from .factory import get_client, get_service
 
 # For backward compatibility
 time_client = get_client()

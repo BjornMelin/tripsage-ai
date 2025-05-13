@@ -194,10 +194,10 @@ class CRUDServiceBase(MCPServiceBase, Generic[T_Entity, T_Request, T_Response]):
         self.entity_type = entity_type
         self.request_type = request_type
         self.response_type = response_type
-        
+
     async def initialize(self) -> None:
         """Initialize the CRUD service.
-        
+
         This implementation is a placeholder. Subclasses should override
         this method to perform any necessary initialization.
         """
@@ -396,10 +396,10 @@ class SearchServiceBase(MCPServiceBase):
     This class provides a standard pattern for implementing
     search operations.
     """
-    
+
     async def initialize(self) -> None:
         """Initialize the search service.
-        
+
         This implementation is a placeholder. Subclasses should override
         this method to perform any necessary initialization.
         """

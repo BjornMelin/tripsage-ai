@@ -6,9 +6,30 @@ This module contains tests for the memory tools used by TripSage agents.
 
 import os
 import sys
-from unittest.mock import AsyncMock, MagicMock, patch
+
+# Mock memory models
+from dataclasses import dataclass
+from typing import List
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+
+from src.agents.memory_tools import (
+    Entity,
+    Observation,
+    Relation,
+    add_entity_observations,
+    create_knowledge_entities,
+    create_knowledge_relations,
+    delete_knowledge_entities,
+    get_entity_details,
+    get_knowledge_graph,
+    initialize_agent_memory,
+    save_session_summary,
+    search_knowledge_graph,
+    update_agent_memory,
+)
+from src.utils.decorators import ensure_memory_client_initialized
 
 # Add parent directory to path for imports
 sys.path.insert(0, ".")
@@ -37,10 +58,6 @@ settings_mock.db.neo4j_user = "neo4j"
 settings_mock.db.neo4j_password = "password"
 settings_mock.memory.mcp_url = "http://localhost:3002"
 sys.modules["src.utils.settings"].settings = settings_mock
-
-# Mock memory models
-from dataclasses import dataclass
-from typing import List, Optional
 
 
 @dataclass
@@ -90,13 +107,13 @@ sys.modules["src.utils.session_memory"].update_session_memory = AsyncMock()
 sys.modules["src.utils.session_memory"].store_session_summary = AsyncMock()
 
 # Mock decorators module with our own implementation
-import functools
-from typing import Any, Callable, TypeVar, cast
+import functools  # noqa: E402
+from typing import Any, Callable, TypeVar, cast  # noqa: E402
 
 F = TypeVar("F", bound=Callable[..., Any])
 
 
-def ensure_memory_client_initialized(func: F) -> F:
+def ensure_memory_client_initialized(func: F) -> F:  # noqa: F811
     """Mock decorator that simulates memory client initialization."""
 
     @functools.wraps(func)
@@ -127,25 +144,6 @@ sys.modules[
     "src.utils.decorators"
 ].ensure_memory_client_initialized = ensure_memory_client_initialized
 sys.modules["src.utils.decorators"].with_error_handling = with_error_handling
-
-from src.agents.memory_tools import (
-    Entity,
-    Observation,
-    Relation,
-    add_entity_observations,
-    create_knowledge_entities,
-    create_knowledge_relations,
-    delete_entity_observations,
-    delete_knowledge_entities,
-    delete_knowledge_relations,
-    get_entity_details,
-    get_knowledge_graph,
-    initialize_agent_memory,
-    save_session_summary,
-    search_knowledge_graph,
-    update_agent_memory,
-)
-from src.utils.decorators import ensure_memory_client_initialized
 
 
 @pytest.mark.asyncio

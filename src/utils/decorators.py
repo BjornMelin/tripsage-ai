@@ -57,7 +57,7 @@ def ensure_memory_client_initialized(func: F) -> F:
         try:
             # Import here to avoid circular imports
             from src.mcp.memory.client import memory_client
-            
+
             # Initialize the memory client once
             await memory_client.initialize()
 

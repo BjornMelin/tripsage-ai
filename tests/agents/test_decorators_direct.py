@@ -4,7 +4,6 @@ Direct tests for decorators functionality.
 This module directly tests the decorator patterns used in memory tools.
 """
 
-import asyncio
 import functools
 from typing import Any, Callable, Dict, TypeVar, cast
 from unittest.mock import AsyncMock, MagicMock

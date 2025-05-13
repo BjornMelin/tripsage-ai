@@ -25,7 +25,7 @@ R = TypeVar("R", bound=BaseModel)
 
 class ErrorCategory(enum.Enum):
     """Standardized error categories for MCP clients."""
-    
+
     CONFIGURATION = "configuration"
     VALIDATION = "validation"
     NETWORK = "network"
@@ -69,7 +69,7 @@ class BaseMCPClient(Generic[P, R]):
         )
 
         logger.debug("Initialized MCP client for %s", endpoint)
-        
+
     def _get_headers(self) -> Dict[str, str]:
         """Get the HTTP headers for MCP API requests.
 
@@ -85,20 +85,22 @@ class BaseMCPClient(Generic[P, R]):
             headers["Authorization"] = f"Bearer {self.api_key}"
 
         return headers
-    
+
     @staticmethod
-    def _categorize_error(error: Exception, status_code: Optional[int] = None) -> ErrorCategory:
+    def _categorize_error(
+        error: Exception, status_code: Optional[int] = None
+    ) -> ErrorCategory:
         """Categorize an error based on type and status code.
-        
+
         Args:
             error: The exception that occurred
             status_code: HTTP status code if available
-            
+
         Returns:
             ErrorCategory enum value
         """
         error_message = str(error).lower()
-        
+
         # Check error type first
         if isinstance(error, ValidationError):
             return ErrorCategory.VALIDATION
@@ -109,7 +111,7 @@ class BaseMCPClient(Generic[P, R]):
         elif isinstance(error, httpx.HTTPStatusError):
             # Use status code from the HTTPStatusError
             status_code = error.response.status_code
-        
+
         # Check status code if available
         if status_code is not None:
             if status_code == 400:
@@ -124,36 +126,53 @@ class BaseMCPClient(Generic[P, R]):
                 return ErrorCategory.RATE_LIMIT
             elif 500 <= status_code < 600:
                 return ErrorCategory.SERVER
-            
+
         # Check error message for keywords
-        if any(keyword in error_message for keyword in 
-               ["timeout", "timed out", "deadline exceeded"]):
+        if any(
+            keyword in error_message
+            for keyword in ["timeout", "timed out", "deadline exceeded"]
+        ):
             return ErrorCategory.TIMEOUT
-        elif any(keyword in error_message for keyword in 
-                 ["network", "connection", "connect", "dns", "socket"]):
+        elif any(
+            keyword in error_message
+            for keyword in ["network", "connection", "connect", "dns", "socket"]
+        ):
             return ErrorCategory.NETWORK
-        elif any(keyword in error_message for keyword in 
-                 ["auth", "token", "credential", "password", "login"]):
+        elif any(
+            keyword in error_message
+            for keyword in ["auth", "token", "credential", "password", "login"]
+        ):
             return ErrorCategory.AUTHENTICATION
-        elif any(keyword in error_message for keyword in 
-                 ["permission", "access", "forbidden", "denied"]):
+        elif any(
+            keyword in error_message
+            for keyword in ["permission", "access", "forbidden", "denied"]
+        ):
             return ErrorCategory.AUTHORIZATION
-        elif any(keyword in error_message for keyword in 
-                 ["rate limit", "too many requests", "throttle"]):
+        elif any(
+            keyword in error_message
+            for keyword in ["rate limit", "too many requests", "throttle"]
+        ):
             return ErrorCategory.RATE_LIMIT
-        elif any(keyword in error_message for keyword in 
-                 ["not found", "missing", "does not exist"]):
+        elif any(
+            keyword in error_message
+            for keyword in ["not found", "missing", "does not exist"]
+        ):
             return ErrorCategory.NOT_FOUND
-        elif any(keyword in error_message for keyword in 
-                 ["server", "internal", "service"]):
+        elif any(
+            keyword in error_message for keyword in ["server", "internal", "service"]
+        ):
             return ErrorCategory.SERVER
-        elif any(keyword in error_message for keyword in 
-                 ["invalid", "schema", "format", "validate"]):
+        elif any(
+            keyword in error_message
+            for keyword in ["invalid", "schema", "format", "validate"]
+        ):
             return ErrorCategory.VALIDATION
-        elif any(keyword in error_message for keyword in 
-                 ["config", "endpoint", "parameter", "setting"]):
+        elif any(
+            keyword in error_message
+            for keyword in ["config", "endpoint", "parameter", "setting"]
+        ):
             return ErrorCategory.CONFIGURATION
-            
+
         # Default to client error if none of the above
         return ErrorCategory.CLIENT
 
@@ -213,10 +232,7 @@ class BaseMCPClient(Generic[P, R]):
         except httpx.RequestError as e:
             error_category = self._categorize_error(e)
             logger.error(
-                "%s error calling %s tool: %s", 
-                error_category.value, 
-                tool_name, 
-                str(e)
+                "%s error calling %s tool: %s", error_category.value, tool_name, str(e)
             )
             raise MCPError(
                 message=f"{error_category.value.capitalize()} error: {str(e)}",
@@ -235,7 +251,10 @@ class BaseMCPClient(Generic[P, R]):
                 e.response.text,
             )
             raise MCPError(
-                message=f"{error_category.value.capitalize()} error ({e.response.status_code}): {e.response.text}",
+                message=(
+                    f"{error_category.value.capitalize()} error "
+                    f"({e.response.status_code}): {e.response.text}"
+                ),
                 server=self.server_name,
                 tool=tool_name,
                 params=params,
@@ -245,10 +264,7 @@ class BaseMCPClient(Generic[P, R]):
         except Exception as e:
             error_category = self._categorize_error(e)
             logger.error(
-                "%s error calling %s tool: %s", 
-                error_category.value, 
-                tool_name, 
-                str(e)
+                "%s error calling %s tool: %s", error_category.value, tool_name, str(e)
             )
             raise MCPError(
                 message=f"{error_category.value.capitalize()} error: {str(e)}",
@@ -288,7 +304,7 @@ class BaseMCPClient(Generic[P, R]):
         """
         validated_params = None
         params_dict = None
-        
+
         try:
             # 1. Validate parameters first
             try:
@@ -358,7 +374,7 @@ class BaseMCPClient(Generic[P, R]):
             # Handle any other unexpected errors
             error_category = self._categorize_error(e)
             logger.error(f"Error calling {tool_name}: {str(e)}")
-            
+
             # Handle both Pydantic v1 and v2
             params_serialized = raw_params
             if validated_params is not None:
