@@ -5,6 +5,7 @@ This module provides the base agent class using the OpenAI Agents SDK
 with integration for MCP tools and dual storage architecture.
 """
 
+import asyncio
 import time
 import uuid
 from typing import Any, Callable, Dict, List, Optional
@@ -92,8 +93,6 @@ class BaseAgent:
 
         # Create the Runner for this agent
         self.runner = Runner()
-
-        logger.info("Initialized agent: %s", name)
 
     def _register_default_tools(self) -> None:
         """Register default tools for the agent."""
@@ -206,6 +205,58 @@ class BaseAgent:
         except Exception as e:
             logger.error("Error registering MCP client tools: %s", str(e))
             log_exception(e)
+
+    async def _execute_tool_calls_concurrently(
+        self, tool_calls: List[ToolCallInput]
+    ) -> List[ToolCallOutput]:
+        """Execute multiple tool calls concurrently using asyncio.gather.
+        
+        This is a more efficient way to execute multiple independent tool calls
+        compared to executing them sequentially.
+        
+        Args:
+            tool_calls: List of tool call inputs
+            
+        Returns:
+            List of tool call outputs
+        """
+        async def execute_single_tool_call(tool_call: ToolCallInput) -> ToolCallOutput:
+            """Execute a single tool call and handle errors."""
+            try:
+                # Find the tool function
+                tool_func = next(
+                    (tool for tool in self._tools if tool.__name__ == tool_call.tool_name),
+                    None,
+                )
+                
+                if not tool_func:
+                    return ToolCallOutput(
+                        tool_name=tool_call.tool_name,
+                        result={},
+                        error=f"Tool {tool_call.tool_name} not found",
+                    )
+                
+                # Execute the tool
+                result = await tool_func(**tool_call.params)
+                
+                return ToolCallOutput(
+                    tool_name=tool_call.tool_name,
+                    result=result,
+                )
+            except Exception as e:
+                logger.error(
+                    "Error executing tool %s: %s", tool_call.tool_name, str(e)
+                )
+                return ToolCallOutput(
+                    tool_name=tool_call.tool_name,
+                    result={},
+                    error=str(e),
+                )
+        
+        # Execute all tool calls concurrently
+        return await asyncio.gather(
+            *(execute_single_tool_call(tool_call) for tool_call in tool_calls)
+        )
 
     async def _initialize_session(
         self, user_id: Optional[str] = None
