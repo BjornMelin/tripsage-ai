@@ -13,7 +13,7 @@ from pydantic import SecretStr
 
 from src.mcp.flights.client import FlightService, FlightsMCPClient
 from src.mcp.flights.models import FlightSearchResponse
-from src.utils.settings import FlightsMCPConfig, MCPConfig
+from src.utils.settings import FlightsMCPConfig
 
 
 @pytest.fixture

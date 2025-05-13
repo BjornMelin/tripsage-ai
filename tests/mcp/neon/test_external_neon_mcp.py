@@ -33,11 +33,15 @@ async def test_external_mcp_server_config():
     assert hasattr(settings, "neon_mcp"), "Settings should have neon_mcp configuration"
 
     # Check essential configuration fields
-    assert hasattr(settings.neon_mcp, "endpoint"), "Neon MCP endpoint setting is required"
+    assert hasattr(settings.neon_mcp, "endpoint"), (
+        "Neon MCP endpoint setting is required"
+    )
     assert hasattr(settings.neon_mcp, "dev_only"), "Neon MCP dev_only flag is required"
 
     # Verify that dev_only is set to True for development environment
-    assert settings.neon_mcp.dev_only is True, "Neon MCP should be configured for dev only"
+    assert settings.neon_mcp.dev_only is True, (
+        "Neon MCP should be configured for dev only"
+    )
 
 
 def test_db_factory_provides_neon_in_development():
