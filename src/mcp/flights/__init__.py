@@ -4,7 +4,7 @@ Flight MCP Initialization module.
 This module provides initialization functions for the Flight MCP module.
 """
 
-from .client import FlightService, FlightsMCPClient, get_client, get_service
+from .client import FlightsMCPClient, get_client
 from .models import (
     Airport,
     AirportSearchParams,
@@ -27,12 +27,13 @@ from .models import (
     PriceTrackingParams,
     PriceTrackingResponse,
 )
+from .service import FlightService, get_service
 
 __all__ = [
     # Clients and services
     "get_client",
-    "get_service",
     "FlightsMCPClient",
+    "get_service",
     "FlightService",
     # Parameter models
     "FlightSearchParams",

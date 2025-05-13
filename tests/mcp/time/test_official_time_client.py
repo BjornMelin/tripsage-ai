@@ -193,7 +193,8 @@ async def test_find_meeting_times(time_service, mock_time_client):
 
 @pytest.mark.asyncio
 async def test_create_timezone_aware_itinerary(time_service, mock_time_client):
-    """Test that create_timezone_aware_itinerary correctly adds timezone info to items."""
+    """Test that create_timezone_aware_itinerary correctly
+    adds timezone info to items."""
 
     # Mock get_local_time which uses get_current_time
     async def mock_get_local_time(location):

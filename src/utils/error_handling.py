@@ -103,6 +103,8 @@ class MCPError(TripSageError):
         server: str,
         tool: Optional[str] = None,
         params: Optional[Dict[str, Any]] = None,
+        category: str = "unknown",
+        status_code: Optional[int] = None,
     ):
         """Initialize the MCPError.
 
@@ -111,9 +113,22 @@ class MCPError(TripSageError):
             server: Name of the MCP server that failed
             tool: Name of the tool that failed, if applicable
             params: Tool parameters, if applicable
+            category: Error category for better classification
+            status_code: HTTP status code, if applicable
         """
-        details = {"server": server, "tool": tool, "params": params}
+        details = {
+            "server": server,
+            "tool": tool,
+            "params": params,
+            "category": category,
+            "status_code": status_code,
+        }
         super().__init__(message, details)
+        self.server = server
+        self.tool = tool
+        self.params = params
+        self.category = category
+        self.status_code = status_code
 
 
 def format_exception(exc: Exception) -> Dict[str, Any]:

@@ -11,8 +11,9 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from pydantic import SecretStr
 
-from src.mcp.flights.client import FlightService, FlightsMCPClient
+from src.mcp.flights.client import FlightsMCPClient
 from src.mcp.flights.models import FlightSearchResponse
+from src.mcp.flights.service import FlightService
 from src.utils.settings import FlightsMCPConfig
 
 
@@ -134,7 +135,7 @@ class TestExternalFlightsMCPIntegration:
         mock_memory_client.return_value = mock_memory
 
         # Perform the search
-        result = await service.search_best_flights(
+        _result = await service.search_best_flights(
             origin="JFK", destination="LAX", departure_date="2025-06-15"
         )
 
@@ -175,7 +176,8 @@ class TestExternalFlightsMCPIntegration:
     async def test_error_handling_in_data_persistence(
         self, mock_db_client, mock_search_flights, service
     ):
-        """Test that errors in data persistence don't affect the main search functionality."""
+        """Test that errors in data persistence don't affect
+        the main search functionality."""
         # Mock the search_flights response
         mock_search_flights.return_value = FlightSearchResponse.model_validate(
             {

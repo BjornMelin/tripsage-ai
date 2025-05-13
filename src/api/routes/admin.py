@@ -93,7 +93,9 @@ async def run_migrations_route(
     if options.dry_run:
         message = f"Dry run: would apply {succeeded} migrations"
     elif failed > 0:
-        message = f"Migrations completed with errors: {failed} failed, {succeeded} succeeded"
+        message = (
+            f"Migrations completed with errors: {failed} failed, {succeeded} succeeded"
+        )
     elif succeeded == 0:
         message = "No migrations were applied"
     else:
