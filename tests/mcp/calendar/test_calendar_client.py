@@ -2,20 +2,17 @@
 Unit tests for Google Calendar MCP client.
 """
 
-import json
 import unittest
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock
 
 import pytest
 
 from src.mcp.calendar.client import CalendarMCPClient
 from src.mcp.calendar.models import (
-    Calendar,
     CalendarListResponse,
     Event,
     EventListResponse,
     EventSearchResponse,
-    EventTime,
 )
 
 
@@ -46,17 +43,17 @@ class TestCalendarMCPClient(unittest.TestCase):
             },
         ]
         mock_response = {"calendars": mock_calendars}
-        
+
         self.client.call_tool.return_value = mock_response
-        
+
         # Call the method
         result = await self.client.get_calendars()
-        
+
         # Verify call
         self.client.call_tool.assert_called_once_with(
             "list-calendars", {}, skip_cache=False
         )
-        
+
         # Verify result
         self.assertIsInstance(result, CalendarListResponse)
         self.assertEqual(len(result.calendars), 2)
@@ -90,23 +87,23 @@ class TestCalendarMCPClient(unittest.TestCase):
             },
         ]
         mock_response = {"events": mock_events}
-        
+
         self.client.call_tool.return_value = mock_response
-        
+
         # Call the method
         result = await self.client.get_events(
             calendar_id="calendar1",
             time_min="2025-05-20T00:00:00Z",
             time_max="2025-05-20T23:59:59Z",
         )
-        
+
         # Verify call
         self.client.call_tool.assert_called_once()
         call_args = self.client.call_tool.call_args[0][1]
         self.assertEqual(call_args["calendar_id"], "calendar1")
         self.assertEqual(call_args["time_min"], "2025-05-20T00:00:00Z")
         self.assertEqual(call_args["time_max"], "2025-05-20T23:59:59Z")
-        
+
         # Verify result
         self.assertIsInstance(result, EventListResponse)
         self.assertEqual(len(result.events), 2)
@@ -132,21 +129,21 @@ class TestCalendarMCPClient(unittest.TestCase):
             },
         ]
         mock_response = {"events": mock_events}
-        
+
         self.client.call_tool.return_value = mock_response
-        
+
         # Call the method
         result = await self.client.search_events(
             calendar_id="calendar1",
             query="team",
         )
-        
+
         # Verify call
         self.client.call_tool.assert_called_once()
         call_args = self.client.call_tool.call_args[0][1]
         self.assertEqual(call_args["calendar_id"], "calendar1")
         self.assertEqual(call_args["query"], "team")
-        
+
         # Verify result
         self.assertIsInstance(result, EventSearchResponse)
         self.assertEqual(len(result.events), 1)
@@ -166,9 +163,9 @@ class TestCalendarMCPClient(unittest.TestCase):
             "start": {"date_time": "2025-05-25T14:00:00Z"},
             "end": {"date_time": "2025-05-25T15:00:00Z"},
         }
-        
+
         self.client.call_tool.return_value = mock_event
-        
+
         # Call the method
         result = await self.client.create_event(
             calendar_id="calendar1",
@@ -178,7 +175,7 @@ class TestCalendarMCPClient(unittest.TestCase):
             start={"date_time": "2025-05-25T14:00:00Z"},
             end={"date_time": "2025-05-25T15:00:00Z"},
         )
-        
+
         # Verify call
         self.client.call_tool.assert_called_once()
         call_args = self.client.call_tool.call_args[0][1]
@@ -186,7 +183,7 @@ class TestCalendarMCPClient(unittest.TestCase):
         self.assertEqual(call_args["summary"], "New Meeting")
         self.assertEqual(call_args["description"], "Project kickoff")
         self.assertEqual(call_args["location"], "Conference Room B")
-        
+
         # Verify result
         self.assertIsInstance(result, Event)
         self.assertEqual(result.id, "new_event")
@@ -207,9 +204,9 @@ class TestCalendarMCPClient(unittest.TestCase):
             "start": {"date_time": "2025-05-25T16:00:00Z"},
             "end": {"date_time": "2025-05-25T17:00:00Z"},
         }
-        
+
         self.client.call_tool.return_value = mock_event
-        
+
         # Call the method
         result = await self.client.update_event(
             calendar_id="calendar1",
@@ -220,7 +217,7 @@ class TestCalendarMCPClient(unittest.TestCase):
             start={"date_time": "2025-05-25T16:00:00Z"},
             end={"date_time": "2025-05-25T17:00:00Z"},
         )
-        
+
         # Verify call
         self.client.call_tool.assert_called_once()
         call_args = self.client.call_tool.call_args[0][1]
@@ -229,7 +226,7 @@ class TestCalendarMCPClient(unittest.TestCase):
         self.assertEqual(call_args["summary"], "Updated Meeting")
         self.assertEqual(call_args["description"], "Updated description")
         self.assertEqual(call_args["location"], "Conference Room C")
-        
+
         # Verify result
         self.assertIsInstance(result, Event)
         self.assertEqual(result.id, "event1")
@@ -242,21 +239,21 @@ class TestCalendarMCPClient(unittest.TestCase):
         """Test the delete_event method."""
         # Mock response
         mock_response = {"success": True, "deleted": True}
-        
+
         self.client.call_tool.return_value = mock_response
-        
+
         # Call the method
         result = await self.client.delete_event(
             calendar_id="calendar1",
             event_id="event1",
         )
-        
+
         # Verify call
         self.client.call_tool.assert_called_once()
         call_args = self.client.call_tool.call_args[0][1]
         self.assertEqual(call_args["calendar_id"], "calendar1")
         self.assertEqual(call_args["event_id"], "event1")
-        
+
         # Verify result
         self.assertTrue(result["success"])
         self.assertTrue(result["deleted"])

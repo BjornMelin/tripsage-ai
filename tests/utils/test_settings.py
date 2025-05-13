@@ -4,10 +4,8 @@ import os
 from unittest.mock import patch
 
 import pytest
-from pydantic import SecretStr
 
 from src.utils.settings import get_settings
-from src.utils.settings_init import init_settings
 
 
 @pytest.fixture(autouse=True)
@@ -17,7 +15,6 @@ def settings_env_patch(monkeypatch):
     # It makes sure the settings objects don't try to validate during import
     # which would cause test failures due to missing environment variables
 
-    import sys
     from unittest.mock import MagicMock
 
     # Create a mock for pydantic settings that won't validate

@@ -51,7 +51,8 @@ class TestAirbnbClientFactory:
 
         # Verify logging
         mock_logger.debug.assert_called_once_with(
-            "Creating OpenBnB Airbnb MCP client with endpoint: %s", "http://test-endpoint"
+            "Creating OpenBnB Airbnb MCP client with endpoint: %s",
+            "http://test-endpoint",
         )
 
     @patch("src.mcp.accommodations.factory.config")
@@ -125,7 +126,9 @@ class TestAccommodationClientFactory:
         assert "unsupported_source" in log_args[1]
 
     @patch("src.mcp.accommodations.factory.logger")
-    def test_create_accommodation_client_booking_source_not_implemented_yet(self, mock_logger):
+    def test_create_accommodation_client_booking_source_not_implemented_yet(
+        self, mock_logger
+    ):
         """Test that 'booking' source is recognized but not implemented yet."""
         # Call with 'booking' source
         with pytest.raises(ValueError) as exc_info:
