@@ -12,7 +12,6 @@ import pytest
 from src.agents.calendar_tools import (
     create_event_tool,
     create_itinerary_events_tool,
-    delete_event_tool,
     list_calendars_tool,
     list_events_tool,
     search_events_tool,
