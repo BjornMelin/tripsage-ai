@@ -195,6 +195,32 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
       - Create caching tools in `tripsage/tools/cache_tools.py`
       - Implement distributed caching functionality
       - Add tests for cache-related operations
+    - [ ] WebSearchTool Integration with Caching (Issue #37):
+      - **Target:** Implement caching for OpenAI Agents SDK WebSearchTool
+      - **Goal:** Optimize performance and reduce API usage for web searches
+      - **Status:** Research completed - integration plan ready for implementation
+      - **Research Findings:**
+        - WebSearchTool already implemented in TravelPlanningAgent and DestinationResearchAgent
+        - Domain configurations differ appropriately between agents
+        - Redis caching infrastructure exists but needs web-specific extensions
+      - **Tasks:**
+        - Create WebOperationsCache class in `tripsage/utils/cache.py`:
+          - Extend existing Redis caching with content-type awareness
+          - Implement TTL management based on content volatility (shorter for news, longer for destinations)
+          - Add metrics collection for cache performance analysis
+        - Create CachedWebSearchTool wrapper in `tripsage/tools/web_tools.py`:
+          - Wrap WebSearchTool with identical interface for transparent integration
+          - Implement cache checking before API calls
+          - Store results with appropriate TTL based on content type
+        - Update agent implementations:
+          - Update TravelPlanningAgent and DestinationResearchAgent to use wrapper
+          - Preserve existing domain allowlists/blocklists
+        - Add configuration settings:
+          - Configure TTL settings in centralized configuration
+          - Enable runtime TTL adjustments without code changes
+        - Add comprehensive tests:
+          - Create mocks for WebSearchTool testing
+          - Verify cache behavior with different content types
 
 - [ ] **MCP Implementation Roadmap**
 
@@ -206,6 +232,7 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
       - Integrate Playwright MCP and Google Maps MCP as highest priorities
       - Integrate Weather MCP for essential trip planning data
       - Begin hybrid web crawling implementation with Crawl4AI and Firecrawl
+      - Implement WebSearchTool caching with WebOperationsCache (Issue #37)
       - Develop proof-of-concept for unified abstraction layer
       - Implement error handling and monitoring infrastructure
     - [ ] Short-Term Actions (Weeks 3-6):
@@ -234,9 +261,8 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
     - [ ] Audit `src/mcp/` to identify functionality covered by external MCPs:
       - Map current clients to Supabase, Neo4j Memory, Duffel Flights, Airbnb MCPs
       - Map webcrawl functionality to hybrid Crawl4AI/Firecrawl implementation with domain-based routing
-      - Map browser automation needs to Playwright MCP 
+      - Map browser automation needs to Playwright MCP
       - Map Google Maps, Time, Weather, Google Calendar, and Redis MCPs
-      - Document any functionality requiring custom implementations
       - Document any functionality requiring custom implementations
       - Map specific correspondences:
         - `src/mcp/weather/` → Weather MCP
