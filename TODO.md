@@ -58,6 +58,7 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
     - ✓ Improve unit test infrastructure for MCP client testing
 
 - [x] **Consolidate Dual Storage Pattern**
+
   - **Target:** `/src/utils/dual_storage.py`
   - **Goal:** Extract common persistence logic to avoid duplication
   - **Tasks:**
@@ -71,6 +72,7 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
   - **Added:** Created comprehensive documentation in dual_storage_refactoring.md
 
 - [ ] **Complete Codebase Restructuring (Issue #31)**
+
   - **Target:** Throughout codebase
   - **Goal:** Consolidate application logic into the `tripsage/` directory
   - **Tasks:**
@@ -106,12 +108,124 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
       - Add directory structure documentation
       - Create migration guide for developers
 
-- [ ] **MCP Client Cleanup**
-  - **Target:** `/src/mcp/` directory
-  - **Goal:** Remove redundant MCP client implementations
+- [ ] **Integrate External MCP Servers**
+
+  - **Target:** MCP server architecture and implementation
+  - **Goal:** Adopt a hybrid approach favoring external MCPs when possible
+  - **Strategy:**
+    - Prioritize existing external MCPs when available
+    - Only build custom MCPs for core business logic, direct database integration, or when privacy/security requirements can't be met externally
   - **Tasks:**
-    - [ ] Audit `src/mcp/` to identify what can be removed
-    - [ ] Update documentation to reflect the use of external MCP services
+    - [ ] Supabase MCP Integration:
+      - Set up Supabase MCP server configuration
+      - Create wrapper functions in `tripsage/tools/supabase_tools.py`
+      - Implement database operation tools with proper validation
+      - Add comprehensive tests for Supabase tool integration
+    - [ ] Neo4j Memory MCP Integration:
+      - Configure Neo4j Memory MCP server
+      - Create memory graph tools in `tripsage/tools/memory_tools.py`
+      - Implement entity/relationship management functions
+      - Add tests for knowledge graph operations
+    - [ ] Duffel Flights MCP Integration:
+      - Set up Duffel Flights MCP configuration
+      - Create flight search tools in `tripsage/tools/flight_tools.py`
+      - Implement offer and search functionality
+      - Add tests for flight search operations
+    - [ ] Airbnb MCP Integration:
+      - Configure Airbnb MCP server
+      - Create accommodation tools in `tripsage/tools/accommodation_tools.py`
+      - Implement listing search and details functionality
+      - Add tests for accommodation search operations
+    - [ ] Playwright MCP Integration:
+      - Set up Playwright MCP server configuration
+      - Create browser automation tools in `tripsage/tools/browser_tools.py`
+      - Implement web scraping fallback functionality
+      - Add tests for browser automation operations
+    - [ ] Firecrawl MCP Integration:
+      - Configure Firecrawl MCP server
+      - Create web crawling tools in `tripsage/tools/webcrawl_tools.py`
+      - Implement structured data extraction functionality
+      - Add tests for destination research operations
+    - [ ] Google Maps MCP Integration:
+      - Set up Google Maps MCP configuration
+      - Create maps and location tools in `tripsage/tools/googlemaps_tools.py`
+      - Implement geocoding, directions, and place search functionality
+      - Add tests for location-based operations
+    - [ ] Time MCP Integration:
+      - Configure Time MCP server
+      - Create time tools in `tripsage/tools/time_tools.py`
+      - Implement timezone conversion and current time functionality
+      - Add tests for time-related operations
+    - [ ] Weather MCP Integration:
+      - Configure Weather MCP server
+      - Create weather tools in `tripsage/tools/weather_tools.py`
+      - Implement forecast and current conditions functionality
+      - Add tests for weather-related operations
+    - [ ] Google Calendar MCP Integration:
+      - Configure Google Calendar MCP server
+      - Create calendar tools in `tripsage/tools/calendar_tools.py`
+      - Implement event creation and scheduling functionality
+      - Add tests for calendar-related operations
+    - [ ] Redis MCP Integration:
+      - Configure Redis MCP server
+      - Create caching tools in `tripsage/tools/cache_tools.py`
+      - Implement distributed caching functionality
+      - Add tests for cache-related operations
+
+- [ ] **MCP Implementation Roadmap**
+
+  - **Target:** Phased MCP integration
+  - **Goal:** Implement MCP integration in structured phases
+  - **Tasks:**
+    - [ ] Immediate Actions (Next 2 Weeks):
+      - Set up MCP configuration management system
+      - Integrate Playwright MCP and Google Maps MCP as highest priorities
+      - Integrate Weather MCP for essential trip planning data
+      - Develop proof-of-concept for unified abstraction layer
+      - Implement error handling and monitoring infrastructure
+    - [ ] Short-Term Actions (Weeks 3-6):
+      - Integrate Firecrawl MCP and Time MCP
+      - Integrate Google Calendar MCP for scheduling functionality
+      - Develop and test the Unified Travel Search Wrapper
+      - Implement Redis MCP for response caching
+      - Complete comprehensive error handling for all integrated MCPs
+    - [ ] Medium-Term Actions (Weeks 7-12):
+      - Develop Trip Planning Coordinator and Content Aggregator wrappers
+      - Implement OpenTelemetry-based monitoring for all MCP interactions
+      - Complete thorough integration testing across all MCPs
+      - Optimize performance through Redis MCP caching and parallel execution
+
+- [ ] **MCP Client Cleanup**
+
+  - **Target:** `/src/mcp/` directory
+  - **Goal:** Replace redundant MCP client implementations with external MCP servers
+  - **Strategy:** Follow hybrid approach - prioritize external MCPs, build custom only when necessary
+  - **Tasks:**
+    - [ ] Implement unified abstraction layer for all MCP interactions:
+      - Create consistent interface patterns for all MCP clients
+      - Implement standardized error handling across all MCP calls
+      - Develop dependency injection pattern for MCP clients
+    - [ ] Audit `src/mcp/` to identify functionality covered by external MCPs:
+      - Map current clients to Supabase, Neo4j Memory, Duffel Flights, Airbnb, Playwright, Firecrawl, Google Maps, Time, Weather, Google Calendar, and Redis MCPs
+      - Document any functionality requiring custom implementations
+      - Map specific correspondences:
+        - `src/mcp/weather/` → Weather MCP
+        - `src/mcp/calendar/` → Google Calendar MCP
+        - `src/mcp/time/` → Time MCP
+        - `src/mcp/webcrawl/` → Firecrawl MCP
+        - `src/cache/redis_cache.py` → Redis MCP
+    - [ ] Implement Redis-based caching layer for MCP responses:
+      - Create cache key generation that respects parameters
+      - Implement TTL management based on data type
+      - Add cache invalidation patterns when data changes
+    - [ ] Create client wrappers for external MCP servers:
+      - Implement thin client interfaces for consistent access patterns
+      - Ensure proper error handling and request validation
+    - [ ] Implement monitoring and observability:
+      - Add OpenTelemetry instrumentation for MCP interactions
+      - Create performance metrics for MCP operations
+      - Implement structured logging for all MCP interactions
+    - [ ] Remove redundant implementations after external MCP integration
     - [ ] Ensure proper use of Pydantic V2 patterns in remaining MCP clients
     - [ ] Create proper factory patterns for all MCP clients
     - [ ] Standardize configuration across all clients
@@ -119,6 +233,7 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
     - [ ] Implement comprehensive test suite for each client
 
 - [ ] **Ensure Proper Pydantic V2 Implementation**
+
   - **Target:** Throughout codebase
   - **Goal:** Ensure all models use Pydantic V2 patterns
   - **Tasks:**
@@ -145,6 +260,7 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
     - [ ] Add type checking with mypy and Pydantic plugin
 
 - [ ] **Ensure Proper OpenAI Agents SDK Implementation**
+
   - **Target:** Agent implementations
   - **Goal:** Ensure agents use the latest SDK patterns
   - **Tasks:**
@@ -169,17 +285,18 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
       - Create efficient context retrieval methods
       - Ensure consistent memory integration
 
-- [ ] **Implement Neo4j Knowledge Graph Integration**
+- [ ] **Implement Neo4j Knowledge Graph Integration (using Neo4j Memory MCP)**
   - **Target:** Throughout codebase
-  - **Goal:** Standardize Neo4j integration
+  - **Goal:** Standardize Neo4j integration using Neo4j Memory MCP server
   - **Tasks:**
-    - [ ] Define standard entity models
-    - [ ] Create reusable CRUD operations
-    - [ ] Implement graph query patterns
-    - [ ] Define relationship type constants
-    - [ ] Create standard validation for graph operations
-    - [ ] Implement caching for graph operations
-    - [ ] Add comprehensive test suite
+    - [ ] Set up Neo4j Memory MCP server configuration
+    - [ ] Define standard entity models compatible with MCP schema
+    - [ ] Create reusable CRUD operations using MCP tools
+    - [ ] Implement graph query patterns via MCP integration
+    - [ ] Define relationship type constants in knowledge graph schema
+    - [ ] Create standard validation for MCP-based graph operations
+    - [ ] Implement caching for Neo4j Memory MCP operations
+    - [ ] Add comprehensive test suite for Neo4j MCP integration
 
 ## Medium Priority
 
@@ -248,6 +365,7 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
     - [N/A] Implement proper connection pooling and timeouts (Not applicable)
 
 - [ ] **Library Modernization**
+
   - **Target:** Throughout codebase
   - **Goal:** Adopt high-performance libraries
   - **Tasks:**
@@ -257,6 +375,57 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
     - [ ] Add structured logging with structlog
     - [ ] Implement typed API clients for external services
     - [ ] Use proper dependency injection patterns
+
+- [ ] **Consider Additional MCP Servers**
+
+  - **Target:** Potential new MCP integrations
+  - **Goal:** Evaluate additional MCP servers for integration
+  - **Tasks:**
+    - [ ] Evaluate Sequential Thinking MCP:
+      - Assess benefits for complex travel planning logic
+      - Create prototype integration with planning agents
+      - Test effectiveness vs. traditional approaches
+      - Document integration patterns if adopted
+    - [ ] Evaluate LinkUp MCP:
+      - Assess benefits for destination research
+      - Compare results quality with Firecrawl
+      - Create integration plan if beneficial
+      - Document content sourcing strategy
+    - [ ] Evaluate Exa MCP:
+      - Compare web search capabilities with other MCPs
+      - Test integration for destination research
+      - Determine optimal search provider mix
+      - Create integration plan if adopted
+
+- [ ] **Custom MCP Wrapper Development**
+
+  - **Target:** TripSage-specific MCP functionality
+  - **Goal:** Create thin custom MCP wrappers only for core functionality
+  - **Tasks:**
+    - [ ] Unified Travel Search Wrapper:
+      - Design integrated search API that leverages multiple MCPs
+      - Implement result aggregation and normalization
+      - Create unified schema for travel options
+      - Add comprehensive tests for combined search
+    - [ ] Trip Planning Coordinator:
+      - Develop coordinator for complex planning operations
+      - Implement orchestration across multiple underlying MCPs
+      - Create optimization algorithms for itinerary planning
+      - Add tests for coordinator functionality
+    - [ ] Content Aggregator:
+      - Implement wrapper around content sources (Crawl4AI, etc.)
+      - Create content normalization functionality
+      - Develop destination content enrichment features
+      - Add tests for content aggregation
+    - [ ] Development Guidelines:
+      - Use FastMCP 2.0 for all custom MCP development
+      - Implement Pydantic v2 models for all schemas
+      - Use function tool pattern for all MCP tools
+      - Implement decorator-based error handling
+      - Document when to build vs. use existing MCPs
+      - Create templates for custom MCP development
+      - Implement standard validation patterns
+      - Define testing requirements for custom MCPs
 
 - [ ] **API and Database Migrations**
   - **Target:** `/src/api/` and `/src/db/` directories
@@ -399,6 +568,7 @@ For each completed task, ensure:
 - **Implementation Phases:**
 
 1. **Phase 1: Core Components** (In Progress)
+
    - [x] Migrate base agent and tool implementations
    - [x] Update import patterns to use the `agents` module
    - [x] Implement consistent agent class naming (remove redundant "Agent" suffixes)
@@ -407,6 +577,7 @@ For each completed task, ensure:
    - [ ] Create `__init__.py` files with proper exports
 
 2. **Phase 2: Agent Implementation**
+
    - [ ] Create agent factory for standardized initialization
    - [ ] Implement triage pattern for agent selection
    - [ ] Create consistent handoff mechanisms
@@ -414,6 +585,7 @@ For each completed task, ensure:
    - [ ] Standardize agent metadata structure
 
 3. **Phase 3: MCP Integration**
+
    - [ ] Migrate MCP clients to `tripsage/clients/` directory
    - [ ] Implement consistent client factory pattern
    - [ ] Create standardized error handling for MCP operations
@@ -421,6 +593,7 @@ For each completed task, ensure:
    - [ ] Implement proper async context management
 
 4. **Phase 4: Database Integration**
+
    - [ ] Move database models to `tripsage/models/` directory
    - [ ] Update repositories with proper dependency injection
    - [ ] Create consistent error handling for database operations
@@ -441,6 +614,7 @@ For each completed task, ensure:
 - **Implementation Tasks:**
 
 1. **SDK Setup and Configuration**
+
    - [ ] Create standardized SDK configuration
    - [ ] Implement proper initialization patterns
    - [ ] Add environment variable validation
@@ -448,6 +622,7 @@ For each completed task, ensure:
    - [ ] Implement centralized settings management
 
 2. **Agent Architecture**
+
    - [ ] Implement hierarchical agent structure
    - [ ] Create triage agent for request routing
    - [ ] Implement specialized agents with defined responsibilities
@@ -455,6 +630,7 @@ For each completed task, ensure:
    - [ ] Implement context preservation during handoffs
 
 3. **Function Tool Implementation**
+
    - [ ] Create standardized tool parameter models
    - [ ] Implement consistent error handling for all tools
    - [ ] Add comprehensive validation for tool inputs
@@ -462,6 +638,7 @@ For each completed task, ensure:
    - [ ] Implement typed return values for all tools
 
 4. **MCP Server Integration**
+
    - [ ] Implement `MCPServerManager` class
    - [ ] Create async context management for server connections
    - [ ] Add proper error handling for server failures
@@ -482,6 +659,7 @@ For each completed task, ensure:
 - **Implementation Tasks:**
 
 1. **Core Models Update**
+
    - [ ] Replace `BaseSettings` with `ConfigDict` approach
    - [ ] Update field validators with `@field_validator`
    - [ ] Replace `validator` with `field_validator` and add `@classmethod`
@@ -489,6 +667,7 @@ For each completed task, ensure:
    - [ ] Implement model validators with `@model_validator`
 
 2. **MCP Client Models**
+
    - [ ] Update request/response models
    - [ ] Implement proper field validation
    - [ ] Create standardized error messages
@@ -504,28 +683,36 @@ For each completed task, ensure:
 
 ## Progress Tracking
 
-| Task                          | Status | PR  | Notes                                                                   |
-| ----------------------------- | ------ | --- | ----------------------------------------------------------------------- |
-| Calendar Tools Refactoring    | ✅     | #87 | Applied error handling decorator pattern                                |
-| Flight Search Refactoring     | ✅     | #88 | Applied error handling decorator to four methods                        |
-| Error Handling Tests          | ✅     | #88 | Created standalone tests for decorator functionality                    |
-| Accommodations Refactoring    | ✅     | #89 | Applied error handling decorator to two methods                         |
-| MCP Client Standardization    | ✅     | #90 | Implemented client factory pattern, improved error handling             |
-| MCP Factory Pattern           | ✅     | #90 | Created standard factory interface + implementations for Time & Flights |
-| MCP Error Classification      | ✅     | #90 | Added error categorization system for better error handling             |
-| MCP Documentation             | ✅     | #90 | Added comprehensive README for MCP architecture                         |
-| Dual Storage Service          | ✅     | #91 | Created DualStorageService base class with standard CRUD operations     |
-| Trip Storage Service          | ✅     | #91 | Implemented TripStorageService with Pydantic validation                 |
-| Fix Circular Imports          | ✅     | #92 | Fixed circular imports in base_mcp_client.py and decorators.py          |
-| Isolated Test Patterns        | ✅     | #93 | Created environment-independent test suite for dual storage services    |
-| Comprehensive Test Coverage   | ✅     | #93 | Added tests for abstract interfaces and error handling                  |
-| MCP Isolated Testing          | ✅     | #94 | Implemented isolated testing pattern for MCP clients                    |
-| MCP Testing Documentation     | ✅     | #94 | Created documentation for isolated MCP testing pattern                  |
-| Tool Registration Logic       | ✅     | #95 | Simplified tool registration with automatic discovery                   |
-| Parameter Validation          | ✅     | #95 | Centralized parameter validation with Pydantic base models              |
-| Service Pattern Extraction    | ✅     | #95 | Extracted common service patterns for MCP implementations               |
-| Codebase Restructuring - Part 1 | ✅   | -   | Updated tool imports, migrated all agent files and tools              |
-| Browser Tools Migration         | ✅   | -   | Updated browser tools with correct imports and tools registration        |
-| Codebase Restructuring - Part 2 | 🔄   | -   | Remaining import updates and test updates in progress                    |
-| OpenAI Agents SDK Integration   | 🔄   | -   | Research completed, implementation planning in progress                  |
-| Pydantic V2 Migration           | 📅   | -   | Scheduled to start after Codebase Restructuring is complete              |
+| Task                            | Status | PR  | Notes                                                                   |
+| ------------------------------- | ------ | --- | ----------------------------------------------------------------------- |
+| Calendar Tools Refactoring      | ✅     | #87 | Applied error handling decorator pattern                                |
+| Flight Search Refactoring       | ✅     | #88 | Applied error handling decorator to four methods                        |
+| Error Handling Tests            | ✅     | #88 | Created standalone tests for decorator functionality                    |
+| Accommodations Refactoring      | ✅     | #89 | Applied error handling decorator to two methods                         |
+| MCP Client Standardization      | ✅     | #90 | Implemented client factory pattern, improved error handling             |
+| MCP Factory Pattern             | ✅     | #90 | Created standard factory interface + implementations for Time & Flights |
+| MCP Error Classification        | ✅     | #90 | Added error categorization system for better error handling             |
+| MCP Documentation               | ✅     | #90 | Added comprehensive README for MCP architecture                         |
+| Dual Storage Service            | ✅     | #91 | Created DualStorageService base class with standard CRUD operations     |
+| Trip Storage Service            | ✅     | #91 | Implemented TripStorageService with Pydantic validation                 |
+| Fix Circular Imports            | ✅     | #92 | Fixed circular imports in base_mcp_client.py and decorators.py          |
+| Isolated Test Patterns          | ✅     | #93 | Created environment-independent test suite for dual storage services    |
+| Comprehensive Test Coverage     | ✅     | #93 | Added tests for abstract interfaces and error handling                  |
+| MCP Isolated Testing            | ✅     | #94 | Implemented isolated testing pattern for MCP clients                    |
+| MCP Testing Documentation       | ✅     | #94 | Created documentation for isolated MCP testing pattern                  |
+| Tool Registration Logic         | ✅     | #95 | Simplified tool registration with automatic discovery                   |
+| Parameter Validation            | ✅     | #95 | Centralized parameter validation with Pydantic base models              |
+| Service Pattern Extraction      | ✅     | #95 | Extracted common service patterns for MCP implementations               |
+| Codebase Restructuring - Part 1 | ✅     | -   | Updated tool imports, migrated all agent files and tools                |
+| Browser Tools Migration         | ✅     | -   | Updated browser tools with correct imports and tools registration       |
+| Codebase Restructuring - Part 2 | 🔄     | -   | Remaining import updates and test updates in progress                   |
+| OpenAI Agents SDK Integration   | 🔄     | -   | Research completed, implementation planning in progress                 |
+| Pydantic V2 Migration           | 📅     | -   | Scheduled to start after Codebase Restructuring is complete             |
+| External MCP Server Strategy    | ✅     | -   | Completed evaluation of MCP servers and established hybrid approach     |
+| Supabase MCP Integration        | 📅     | -   | Scheduled to start after Codebase Restructuring is complete             |
+| Neo4j Memory MCP Integration    | 📅     | -   | Prioritized for knowledge graph implementation                          |
+| Travel Data MCP Integration     | 📅     | -   | Duffel Flights MCP and Airbnb MCP identified for travel data access     |
+| Playwright MCP Integration      | 📅     | -   | Prioritized for browser automation and fallback scraping                |
+| Crawl4AI MCP Integration        | 📅     | -   | Scheduled for destination research and content extraction               |
+| Google Maps MCP Integration     | 📅     | -   | Prioritized for location-based functionality                            |
+| Time MCP Integration            | 📅     | -   | Scheduled for timezone support in travel planning                       |
