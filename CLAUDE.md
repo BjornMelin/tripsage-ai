@@ -1,5 +1,5 @@
 > **Inheritance**
-> This repo inherits the global Simplicity Charter (`~/.config/claude/CLAUDE.md`),  
+> This repo inherits the global Simplicity Charter (`~/.claude/CLAUDE.md`),  
 > which defines all coding, linting, testing, security and library choices  
 > (uv, ruff, FastMCP 2.0, Pydantic v2, ≥ 90 % pytest-cov, secrets in .env, etc.).  
 > TripSage-specific implementation context is maintained in two living docs:  

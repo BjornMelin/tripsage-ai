@@ -8,8 +8,9 @@ Flights MCP client.
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
 
-from openai_agents_sdk import function_tool
+from agents import function_tool
 
+# from openai_agents_sdk import function_tool
 from tripsage.tools.schemas.flights import (
     AirportSearchParams,
     AirportSearchResponse,
@@ -219,9 +220,11 @@ async def search_flights_tool(
             "return_date": return_date,
             "offers": formatted_offers,
             "offer_count": len(filtered_offers),
-            "cheapest_price": min([offer.total_amount for offer in filtered_offers])
-            if filtered_offers
-            else None,
+            "cheapest_price": (
+                min([offer.total_amount for offer in filtered_offers])
+                if filtered_offers
+                else None
+            ),
             "currency": result.currency,
         }
 
@@ -273,12 +276,14 @@ async def search_airports_tool(
                 "name": airport.name,
                 "city": airport.city,
                 "country": airport.country,
-                "location": {
-                    "latitude": airport.latitude,
-                    "longitude": airport.longitude,
-                }
-                if airport.latitude and airport.longitude
-                else None,
+                "location": (
+                    {
+                        "latitude": airport.latitude,
+                        "longitude": airport.longitude,
+                    }
+                    if airport.latitude and airport.longitude
+                    else None
+                ),
                 "timezone": airport.timezone,
             }
             formatted_airports.append(formatted_airport)
@@ -347,9 +352,9 @@ async def get_flight_prices_tool(
             "prices": result.prices,
             "dates": result.dates,
             "trend": result.trend,
-            "average_price": sum(result.prices) / len(result.prices)
-            if result.prices
-            else None,
+            "average_price": (
+                sum(result.prices) / len(result.prices) if result.prices else None
+            ),
             "min_price": min(result.prices) if result.prices else None,
             "max_price": max(result.prices) if result.prices else None,
         }
@@ -452,7 +457,8 @@ async def track_flight_prices_tool(
     """
     try:
         logger.info(
-            f"Setting up price tracking for {origin} to {destination} on {departure_date}"
+            f"Setting up price tracking for {origin} to {destination} "
+            f"on {departure_date}"
         )
 
         # Create validated model
@@ -487,7 +493,9 @@ async def track_flight_prices_tool(
             "current_price": result.current_price,
             "currency": result.currency,
             "threshold_price": result.threshold_price,
-            "message": f"Price alerts will be sent to {result.email} {result.frequency}",
+            "message": (
+                f"Price alerts will be sent to {result.email} {result.frequency}"
+            ),
         }
 
         return tracking_info
@@ -524,7 +532,8 @@ async def search_flexible_dates_tool(
     """
     try:
         logger.info(
-            f"Searching flexible dates from {origin} to {destination} ({date_from} to {date_to})"
+            f"Searching flexible dates from {origin} to {destination} "
+            f"({date_from} to {date_to})"
         )
 
         # Validate dates
@@ -634,12 +643,14 @@ async def search_flexible_dates_tool(
             "all_dates": results,
             "total_options": len(results),
             "recommendation": recommendation,
-            "savings": {
-                "amount": round(avg_price - results[0].get("best_price", 0), 2),
-                "percent": round(savings_percent, 1),
-            }
-            if results
-            else None,
+            "savings": (
+                {
+                    "amount": round(avg_price - results[0].get("best_price", 0), 2),
+                    "percent": round(savings_percent, 1),
+                }
+                if results
+                else None
+            ),
         }
 
     except Exception as e:
@@ -659,7 +670,8 @@ async def search_multi_city_flights_tool(
     """Search for multi-city flights.
 
     Args:
-        segments: List of flight segments (each with origin, destination, departure_date)
+        segments: List of flight segments
+            (each with origin, destination, departure_date)
         adults: Number of adult passengers
         children: Number of child passengers
         infants: Number of infant passengers
@@ -765,9 +777,11 @@ async def search_multi_city_flights_tool(
             ],
             "offers": formatted_offers,
             "offer_count": len(result.offers),
-            "cheapest_price": min([offer.total_amount for offer in result.offers])
-            if result.offers
-            else None,
+            "cheapest_price": (
+                min([offer.total_amount for offer in result.offers])
+                if result.offers
+                else None
+            ),
             "currency": result.currency,
         }
 

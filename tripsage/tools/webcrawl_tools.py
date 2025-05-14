@@ -7,8 +7,7 @@ using external MCP servers (Crawl4AI and Firecrawl).
 
 from typing import Any, Dict
 
-from openai_agents_sdk import function_tool
-
+from agents import function_tool
 from tripsage.tools.schemas.webcrawl import (
     BlogCrawlParams,
     EventSearchParams,
@@ -217,7 +216,7 @@ async def monitor_price_changes_tool(params: PriceMonitorParams) -> Dict[str, An
         logger.info(f"Monitoring price changes for {params.product_type}: {params.url}")
 
         # Extract price selector
-        price_selector = (
+        _price_selector = (
             next(iter(params.target_selectors.values()))
             if params.target_selectors
             else ".price, .Price, [data-testid='price'], .current-price"
@@ -239,8 +238,13 @@ async def monitor_price_changes_tool(params: PriceMonitorParams) -> Dict[str, An
                     },
                     "required": ["price"],
                 },
-                "prompt": f"Extract the current price for this {params.product_type} listing.",
-                "systemPrompt": "Extract pricing information accurately. Return currency as a 3-letter code (USD, EUR, etc.)",
+                "prompt": (
+                    f"Extract the current price for this {params.product_type} listing."
+                ),
+                "systemPrompt": (
+                    "Extract pricing information accurately. Return currency as a "
+                    "3-letter code (USD, EUR, etc.)"
+                ),
             },
             response_model=firecrawl_client.ExtractResponse,
             timeout=60.0,
@@ -468,7 +472,10 @@ async def crawl_travel_blog_tool(params: BlogCrawlParams) -> Dict[str, Any]:
                         },
                         "required": ["title", "destinations"],
                     },
-                    "prompt": f"Extract {params.extract_type} from this travel blog about {destination}.",
+                    "prompt": (
+                        f"Extract {params.extract_type} from this travel blog about "
+                        f"{destination}."
+                    ),
                 },
                 response_model=firecrawl_client.ExtractResponse,
                 timeout=60.0,

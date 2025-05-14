@@ -10,7 +10,6 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 from agents import function_tool
-
 from tripsage.config.app_settings import settings
 from tripsage.tools.schemas.calendar import (
     CalendarListResponse,

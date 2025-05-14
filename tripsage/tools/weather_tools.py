@@ -9,7 +9,6 @@ travel recommendations using the Weather MCP.
 from typing import Any, Dict, List, Optional
 
 from agents import function_tool
-
 from tripsage.config.app_settings import settings
 from tripsage.tools.schemas.weather import (
     CurrentWeather,
@@ -341,7 +340,8 @@ async def get_trip_weather_summary_tool(
         Dictionary containing weather summary for the trip period
     """
     logger.info(
-        f"Getting trip weather summary for {destination} from {start_date} to {end_date}"
+        f"Getting trip weather summary for {destination} from "
+        f"{start_date} to {end_date}"
     )
 
     # Parse city and country from destination string
@@ -579,7 +579,8 @@ async def compare_destinations_weather_tool(
             if date:
                 formatted_result += (
                     f"{result['temperature']['average']}°C "
-                    f"({result['temperature']['min']}°C to {result['temperature']['max']}°C), "
+                    f"({result['temperature']['min']}°C to "
+                    f"{result['temperature']['max']}°C), "
                     f"{result['description']}\n"
                 )
             else:
@@ -670,7 +671,8 @@ async def get_optimal_travel_time_tool(
         # Create formatted output
         formatted_result = (
             f"Optimal travel recommendations for {activity_type} in {destination}:\n\n"
-            f"Current weather: {result['current_weather']}, {result['current_temp']}°C\n\n"
+            f"Current weather: {result['current_weather']}, "
+            f"{result['current_temp']}°C\n\n"
             f"Activity recommendation: {activity_advice}\n\n"
             f"Upcoming good weather days:\n"
         )

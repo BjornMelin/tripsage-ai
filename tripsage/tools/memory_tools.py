@@ -7,9 +7,9 @@ client for use with the OpenAI Agents SDK.
 
 from typing import Any, Dict, List, Optional
 
-from openai_agents_sdk import function_tool
 from pydantic import BaseModel, Field
 
+from agents import function_tool
 from tripsage.tools.schemas.memory import (
     AddObservationsResponse,
     CreateEntitiesResponse,
@@ -470,7 +470,7 @@ async def _update_user_preferences(
 
     if not user_nodes:
         # Create user entity
-        create_result = await create_knowledge_entities(
+        await create_knowledge_entities(
             [
                 Entity(
                     name=f"User:{user_id}",
@@ -487,7 +487,7 @@ async def _update_user_preferences(
         preference_observations.append(f"Prefers {preference} for {category}")
 
     if preference_observations:
-        add_result = await add_entity_observations(
+        await add_entity_observations(
             [
                 Observation(
                     entityName=f"User:{user_id}",
@@ -523,7 +523,7 @@ async def _create_fact_relationships(
                             "fromType" if entity_name == fact["from"] else "toType",
                             "Entity",
                         )
-                        create_result = await create_knowledge_entities(
+                        await create_knowledge_entities(
                             [
                                 Entity(
                                     name=entity_name,
@@ -537,7 +537,7 @@ async def _create_fact_relationships(
                         result["entities_created"] += 1
 
             # Create relationship
-            relation_result = await create_knowledge_relations(
+            await create_knowledge_relations(
                 [
                     Relation(
                         from_=fact["from"],

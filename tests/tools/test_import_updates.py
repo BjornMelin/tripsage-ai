@@ -6,12 +6,8 @@ the OpenAI Agents SDK components consistently.
 """
 
 import importlib.util
-import inspect
 import os
 import sys
-
-import pytest
-from agents import function_tool
 
 
 # Import the modules directly using importlib to avoid dependency issues
@@ -28,6 +24,12 @@ base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 calendar_tools_path = os.path.join(base_dir, "tripsage/tools/calendar_tools.py")
 googlemaps_tools_path = os.path.join(base_dir, "tripsage/tools/googlemaps_tools.py")
 weather_tools_path = os.path.join(base_dir, "tripsage/tools/weather_tools.py")
+accommodations_tools_path = os.path.join(
+    base_dir, "tripsage/tools/accommodations_tools.py"
+)
+time_tools_path = os.path.join(base_dir, "tripsage/tools/time_tools.py")
+memory_tools_path = os.path.join(base_dir, "tripsage/tools/memory_tools.py")
+webcrawl_tools_path = os.path.join(base_dir, "tripsage/tools/webcrawl_tools.py")
 base_path = os.path.join(base_dir, "tripsage/agents/base.py")
 
 # Import the module source code as text for inspection
@@ -40,8 +42,17 @@ with open(googlemaps_tools_path, "r") as f:
 with open(weather_tools_path, "r") as f:
     weather_tools_source = f.read()
 
+with open(accommodations_tools_path, "r") as f:
+    accommodations_tools_source = f.read()
+
 with open(base_path, "r") as f:
     base_source = f.read()
+
+# Import tool modules that need to be tested for imports
+for path in [time_tools_path, memory_tools_path, webcrawl_tools_path]:
+    if os.path.exists(path):
+        with open(path, "r") as f:
+            globals()[os.path.basename(path).replace(".py", "_source")] = f.read()
 
 
 def test_calendar_tools_import():
@@ -60,6 +71,47 @@ def test_weather_tools_import():
     """Test that weather_tools is using the agents import."""
     assert "from agents import function_tool" in weather_tools_source
     assert "from openai_agents_sdk import function_tool" not in weather_tools_source
+
+
+def test_accommodations_tools_import():
+    """Test that accommodations_tools is using the agents import."""
+    assert "from agents import function_tool" in accommodations_tools_source
+    assert (
+        "from openai_agents_sdk import function_tool" not in accommodations_tools_source
+    )
+
+
+def test_time_tools_import():
+    """Test that time_tools is using the agents import."""
+    time_tools_var = "time_tools_source"
+    if time_tools_var in globals():
+        assert "from agents import function_tool" in globals()[time_tools_var]
+        assert (
+            "from openai_agents_sdk import function_tool"
+            not in globals()[time_tools_var]
+        )
+
+
+def test_memory_tools_import():
+    """Test that memory_tools is using the agents import."""
+    memory_tools_var = "memory_tools_source"
+    if memory_tools_var in globals():
+        assert "from agents import function_tool" in globals()[memory_tools_var]
+        assert (
+            "from openai_agents_sdk import function_tool"
+            not in globals()[memory_tools_var]
+        )
+
+
+def test_webcrawl_tools_import():
+    """Test that webcrawl_tools is using the agents import."""
+    webcrawl_tools_var = "webcrawl_tools_source"
+    if webcrawl_tools_var in globals():
+        assert "from agents import function_tool" in globals()[webcrawl_tools_var]
+        assert (
+            "from openai_agents_sdk import function_tool"
+            not in globals()[webcrawl_tools_var]
+        )
 
 
 def test_base_agent_import():

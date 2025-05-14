@@ -8,8 +8,7 @@ time between timezones, and perform other time-related operations.
 
 from typing import Any, Dict, List
 
-from openai_agents_sdk import function_tool
-
+from agents import function_tool
 from tripsage.config.app_settings import settings
 from tripsage.tools.schemas.time import (
     ConvertTimeParams,
@@ -39,7 +38,7 @@ async def get_current_time_tool(timezone: str) -> Dict[str, Any]:
     logger.info(f"Getting current time for timezone: {timezone}")
 
     # Validate parameters
-    params = GetCurrentTimeParams(timezone=timezone)
+    _params = GetCurrentTimeParams(timezone=timezone)
 
     # Call the Time MCP
     result = await validate_and_call_mcp_tool(
@@ -87,11 +86,7 @@ async def convert_timezone_tool(time: str, from_tz: str, to_tz: str) -> Dict[str
     result = await validate_and_call_mcp_tool(
         endpoint=settings.time_mcp_endpoint,
         tool_name="convert_time",
-        params={
-            "time": time,
-            "source_timezone": from_tz,
-            "target_timezone": to_tz,
-        },
+        params=params,
         response_model=TimeConversionResponse,
         timeout=30.0,
         server_name="Time MCP",
@@ -222,7 +217,7 @@ async def calculate_flight_arrival_tool(
 
     # Calculate flight arrival time
     departure_date_info = await get_current_time_tool(departure_timezone)
-    departure_date = departure_date_info.get("current_date", "")
+    _departure_date = departure_date_info.get("current_date", "")
 
     # Parse departure time
     try:
@@ -318,7 +313,10 @@ async def find_meeting_times_tool(
         second_start, second_end = map(int, second_available_hours.split("-"))
     except ValueError:
         return {
-            "error": "Invalid hours format. Please use the format 'start-end' (e.g., '9-17')."
+            "error": (
+                "Invalid hours format. Please use the format 'start-end' "
+                "(e.g., '9-17')."
+            )
         }
 
     # Get timezone for first location

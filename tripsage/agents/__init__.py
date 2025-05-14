@@ -5,7 +5,7 @@ This module provides factory functions for creating various specialized agents
 for the TripSage application.
 """
 
-from typing import Dict, Optional, Union
+from typing import Optional
 
 from tripsage.agents.accommodation import AccommodationAgent
 from tripsage.agents.base import BaseAgent

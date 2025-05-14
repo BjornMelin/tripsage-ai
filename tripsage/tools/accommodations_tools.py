@@ -7,8 +7,7 @@ different providers using MCP clients.
 
 from typing import Any, Dict, List, Optional
 
-from openai_agents_sdk import function_tool
-
+from agents import function_tool
 from tripsage.tools.schemas.accommodations import (
     AccommodationSearchParams,
     AccommodationType,
@@ -292,7 +291,8 @@ async def search_accommodations_tool(
     min_rating: Optional[float] = None,
     amenities: Optional[List[str]] = None,
 ) -> Dict[str, Any]:
-    """Search for accommodations across different providers based on location and filters.
+    """Search for accommodations across different providers
+       based on location and filters.
 
     Args:
         location: Location to search for accommodations
@@ -361,7 +361,7 @@ async def search_accommodations_tool(
             search_params["amenities"] = amenities
 
         # Create validated model
-        validated_params = AccommodationSearchParams(**search_params)
+        _validated_params = AccommodationSearchParams(**search_params)
 
         # Call the MCP
         # If source is "airbnb", use the direct tool

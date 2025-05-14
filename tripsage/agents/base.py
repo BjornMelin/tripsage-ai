@@ -12,7 +12,6 @@ import uuid
 from typing import Any, Callable, Dict, List, Optional, Set
 
 from agents import Agent, function_tool
-
 from tripsage.config.app_settings import settings
 from tripsage.utils.error_handling import TripSageError, log_exception
 from tripsage.utils.logging import get_module_logger

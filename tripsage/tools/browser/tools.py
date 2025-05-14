@@ -5,8 +5,7 @@ Function tools for browser automation, suitable for OpenAI Agents SDK.
 import logging
 from typing import Any, Dict, Literal, Optional
 
-from openai_agents_sdk import function_tool
-
+from agents import function_tool
 from tripsage.tools.browser.service import BrowserService
 from tripsage.tools.schemas.browser import (
     BookingVerificationParams,

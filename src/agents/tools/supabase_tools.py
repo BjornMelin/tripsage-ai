@@ -7,27 +7,23 @@ using the OpenAI Agents SDK, following the direct MCP call pattern.
 
 from typing import Any, Dict, List, Optional
 
-from agents import function_tool
 from pydantic import BaseModel, Field
 
+from agents import function_tool
 from src.mcp.supabase.models import (
     ApplyMigrationResponse,
-    BranchResponse,
     ConfirmCostResponse,
     CreateBranchResponse,
     CreateProjectResponse,
     DeleteBranchResponse,
     ExecuteSQLResponse,
-    ExtensionResponse,
     GetAnonKeyResponse,
     GetCostResponse,
     GetOrganizationResponse,
     GetProjectResponse,
     GetProjectUrlResponse,
     ListBranchesResponse,
-    ListEdgeFunctionsResponse,
     ListExtensionsResponse,
-    ListMigrationsResponse,
     ListOrganizationsResponse,
     ListProjectsResponse,
     ListTablesResponse,
@@ -36,7 +32,6 @@ from src.mcp.supabase.models import (
     RebaseBranchResponse,
     ResetBranchResponse,
     RestoreProjectResponse,
-    TableResponse,
 )
 from src.utils.error_decorators import with_error_handling
 from src.utils.error_handling import MCPError
@@ -68,9 +63,9 @@ async def validate_and_call_mcp_tool(
     Raises:
         MCPError: If the MCP call fails or validation fails
     """
-    import json
     from httpx import AsyncClient
     from pydantic import ValidationError
+
     from src.utils.settings import settings
 
     # Get endpoint from settings with fallback
@@ -141,21 +136,20 @@ async def list_organizations() -> Dict[str, Any]:
     result = await validate_and_call_mcp_tool(
         "list_organizations", {}, ListOrganizationsResponse
     )
-    
+
     # Format the response for agent consumption
     organizations = []
     for org in result.organizations:
-        organizations.append({
-            "id": org.id,
-            "name": org.name,
-            "created_at": org.created_at,
-            "billing_email": org.billing_email
-        })
-    
-    return {
-        "organizations": organizations,
-        "count": len(organizations)
-    }
+        organizations.append(
+            {
+                "id": org.id,
+                "name": org.name,
+                "created_at": org.created_at,
+                "billing_email": org.billing_email,
+            }
+        )
+
+    return {"organizations": organizations, "count": len(organizations)}
 
 
 @function_tool
@@ -176,13 +170,13 @@ async def get_organization(id: str) -> Dict[str, Any]:
     result = await validate_and_call_mcp_tool(
         "get_organization", {"id": id}, GetOrganizationResponse
     )
-    
+
     return {
         "id": result.id,
         "name": result.name,
         "created_at": result.created_at,
         "billing_email": result.billing_email,
-        "subscription": result.subscription
+        "subscription": result.subscription,
     }
 
 
@@ -198,25 +192,22 @@ async def list_projects() -> Dict[str, Any]:
         MCPError: If the request fails
     """
     logger.info("Listing Supabase projects")
-    result = await validate_and_call_mcp_tool(
-        "list_projects", {}, ListProjectsResponse
-    )
-    
+    result = await validate_and_call_mcp_tool("list_projects", {}, ListProjectsResponse)
+
     # Format the response for agent consumption
     projects = []
     for project in result.projects:
-        projects.append({
-            "id": project.id,
-            "name": project.name,
-            "organization_id": project.organization_id,
-            "created_at": project.created_at,
-            "status": project.status
-        })
-    
-    return {
-        "projects": projects,
-        "count": len(projects)
-    }
+        projects.append(
+            {
+                "id": project.id,
+                "name": project.name,
+                "organization_id": project.organization_id,
+                "created_at": project.created_at,
+                "status": project.status,
+            }
+        )
+
+    return {"projects": projects, "count": len(projects)}
 
 
 @function_tool
@@ -237,7 +228,7 @@ async def get_project(id: str) -> Dict[str, Any]:
     result = await validate_and_call_mcp_tool(
         "get_project", {"id": id}, GetProjectResponse
     )
-    
+
     return {
         "id": result.id,
         "name": result.name,
@@ -248,7 +239,7 @@ async def get_project(id: str) -> Dict[str, Any]:
         "db_port": result.db_port,
         "db_name": result.db_name,
         "db_user": result.db_user,
-        "region": result.region
+        "region": result.region,
     }
 
 
@@ -269,22 +260,15 @@ async def get_cost(type: str, organization_id: str) -> Dict[str, Any]:
     """
     logger.info(f"Getting cost for {type} in organization: {organization_id}")
     result = await validate_and_call_mcp_tool(
-        "get_cost", 
-        {"type": type, "organization_id": organization_id}, 
-        GetCostResponse
+        "get_cost", {"type": type, "organization_id": organization_id}, GetCostResponse
     )
-    
-    return {
-        "amount": result.amount,
-        "recurrence": result.recurrence
-    }
+
+    return {"amount": result.amount, "recurrence": result.recurrence}
 
 
 @function_tool
 @with_error_handling
-async def confirm_cost(
-    type: str, recurrence: str, amount: float
-) -> Dict[str, Any]:
+async def confirm_cost(type: str, recurrence: str, amount: float) -> Dict[str, Any]:
     """Ask the user to confirm their understanding of the cost of
     creating a new project or branch.
 
@@ -301,14 +285,12 @@ async def confirm_cost(
     """
     logger.info(f"Confirming {recurrence} cost of {amount} for {type}")
     result = await validate_and_call_mcp_tool(
-        "confirm_cost", 
-        {"type": type, "recurrence": recurrence, "amount": amount}, 
-        ConfirmCostResponse
+        "confirm_cost",
+        {"type": type, "recurrence": recurrence, "amount": amount},
+        ConfirmCostResponse,
     )
-    
-    return {
-        "id": result.id
-    }
+
+    return {"id": result.id}
 
 
 @function_tool
@@ -334,29 +316,27 @@ async def create_project(
         MCPError: If the request fails
     """
     logger.info(f"Creating project '{name}' in organization: {organization_id}")
-    
+
     params = {
         "name": name,
         "organization_id": organization_id,
-        "confirm_cost_id": confirm_cost_id
+        "confirm_cost_id": confirm_cost_id,
     }
-    
+
     if region:
         params["region"] = region
-    
+
     result = await validate_and_call_mcp_tool(
-        "create_project", 
-        params, 
-        CreateProjectResponse
+        "create_project", params, CreateProjectResponse
     )
-    
+
     return {
         "id": result.id,
         "name": result.name,
         "organization_id": result.organization_id,
         "created_at": result.created_at,
         "status": result.status,
-        "region": result.region
+        "region": result.region,
     }
 
 
@@ -378,30 +358,21 @@ async def list_tables(
         MCPError: If the request fails
     """
     logger.info(f"Listing tables for project: {project_id}")
-    
+
     params = {"project_id": project_id}
     if schemas:
         params["schemas"] = schemas
-    
-    result = await validate_and_call_mcp_tool(
-        "list_tables", 
-        params, 
-        ListTablesResponse
-    )
-    
+
+    result = await validate_and_call_mcp_tool("list_tables", params, ListTablesResponse)
+
     # Format the response for agent consumption
     tables = []
     for table in result.tables:
-        tables.append({
-            "name": table.name,
-            "schema": table.schema,
-            "comment": table.comment
-        })
-    
-    return {
-        "tables": tables,
-        "count": len(tables)
-    }
+        tables.append(
+            {"name": table.name, "schema": table.schema, "comment": table.comment}
+        )
+
+    return {"tables": tables, "count": len(tables)}
 
 
 @function_tool
@@ -420,25 +391,22 @@ async def list_extensions(project_id: str) -> Dict[str, Any]:
     """
     logger.info(f"Listing extensions for project: {project_id}")
     result = await validate_and_call_mcp_tool(
-        "list_extensions", 
-        {"project_id": project_id}, 
-        ListExtensionsResponse
+        "list_extensions", {"project_id": project_id}, ListExtensionsResponse
     )
-    
+
     # Format the response for agent consumption
     extensions = []
     for ext in result.extensions:
-        extensions.append({
-            "name": ext.name,
-            "schema": ext.schema,
-            "version": ext.version,
-            "enabled": ext.enabled
-        })
-    
-    return {
-        "extensions": extensions,
-        "count": len(extensions)
-    }
+        extensions.append(
+            {
+                "name": ext.name,
+                "schema": ext.schema,
+                "version": ext.version,
+                "enabled": ext.enabled,
+            }
+        )
+
+    return {"extensions": extensions, "count": len(extensions)}
 
 
 @function_tool
@@ -458,29 +426,21 @@ async def execute_sql(project_id: str, query: str) -> Dict[str, Any]:
     """
     logger.info(f"Executing SQL query on project: {project_id}")
     result = await validate_and_call_mcp_tool(
-        "execute_sql", 
-        {"project_id": project_id, "query": query}, 
-        ExecuteSQLResponse
+        "execute_sql", {"project_id": project_id, "query": query}, ExecuteSQLResponse
     )
-    
+
     # Format the column data
     columns = [{"name": col.name, "type": col.type} for col in result.columns]
-    
+
     # Format the row data
     rows = [row.model_dump() for row in result.rows]
-    
-    return {
-        "columns": columns,
-        "rows": rows,
-        "count": len(rows)
-    }
+
+    return {"columns": columns, "rows": rows, "count": len(rows)}
 
 
 @function_tool
 @with_error_handling
-async def apply_migration(
-    project_id: str, name: str, query: str
-) -> Dict[str, Any]:
+async def apply_migration(project_id: str, name: str, query: str) -> Dict[str, Any]:
     """Applies a migration to the database.
 
     Args:
@@ -496,16 +456,16 @@ async def apply_migration(
     """
     logger.info(f"Applying migration '{name}' to project: {project_id}")
     result = await validate_and_call_mcp_tool(
-        "apply_migration", 
-        {"project_id": project_id, "name": name, "query": query}, 
-        ApplyMigrationResponse
+        "apply_migration",
+        {"project_id": project_id, "name": name, "query": query},
+        ApplyMigrationResponse,
     )
-    
+
     return {
         "id": result.id,
         "name": result.name,
         "version": result.version,
-        "applied_at": result.applied_at
+        "applied_at": result.applied_at,
     }
 
 
@@ -525,14 +485,10 @@ async def get_project_url(project_id: str) -> Dict[str, Any]:
     """
     logger.info(f"Getting API URL for project: {project_id}")
     result = await validate_and_call_mcp_tool(
-        "get_project_url", 
-        {"project_id": project_id}, 
-        GetProjectUrlResponse
+        "get_project_url", {"project_id": project_id}, GetProjectUrlResponse
     )
-    
-    return {
-        "url": result.url
-    }
+
+    return {"url": result.url}
 
 
 @function_tool
@@ -551,14 +507,10 @@ async def get_anon_key(project_id: str) -> Dict[str, Any]:
     """
     logger.info(f"Getting anonymous API key for project: {project_id}")
     result = await validate_and_call_mcp_tool(
-        "get_anon_key", 
-        {"project_id": project_id}, 
-        GetAnonKeyResponse
+        "get_anon_key", {"project_id": project_id}, GetAnonKeyResponse
     )
-    
-    return {
-        "key": result.key
-    }
+
+    return {"key": result.key}
 
 
 @function_tool
@@ -581,21 +533,17 @@ async def create_branch(
     """
     logger.info(f"Creating branch '{name}' for project: {project_id}")
     result = await validate_and_call_mcp_tool(
-        "create_branch", 
-        {
-            "project_id": project_id,
-            "confirm_cost_id": confirm_cost_id,
-            "name": name
-        }, 
-        CreateBranchResponse
+        "create_branch",
+        {"project_id": project_id, "confirm_cost_id": confirm_cost_id, "name": name},
+        CreateBranchResponse,
     )
-    
+
     return {
         "id": result.id,
         "name": result.name,
         "project_id": result.project_id,
         "created_at": result.created_at,
-        "status": result.status
+        "status": result.status,
     }
 
 
@@ -615,26 +563,23 @@ async def list_branches(project_id: str) -> Dict[str, Any]:
     """
     logger.info(f"Listing branches for project: {project_id}")
     result = await validate_and_call_mcp_tool(
-        "list_branches", 
-        {"project_id": project_id}, 
-        ListBranchesResponse
+        "list_branches", {"project_id": project_id}, ListBranchesResponse
     )
-    
+
     # Format the response for agent consumption
     branches = []
     for branch in result.branches:
-        branches.append({
-            "id": branch.id,
-            "name": branch.name,
-            "project_id": branch.project_id,
-            "created_at": branch.created_at,
-            "status": branch.status
-        })
-    
-    return {
-        "branches": branches,
-        "count": len(branches)
-    }
+        branches.append(
+            {
+                "id": branch.id,
+                "name": branch.name,
+                "project_id": branch.project_id,
+                "created_at": branch.created_at,
+                "status": branch.status,
+            }
+        )
+
+    return {"branches": branches, "count": len(branches)}
 
 
 @function_tool
@@ -653,15 +598,10 @@ async def merge_branch(branch_id: str) -> Dict[str, Any]:
     """
     logger.info(f"Merging branch: {branch_id}")
     result = await validate_and_call_mcp_tool(
-        "merge_branch", 
-        {"branch_id": branch_id}, 
-        MergeBranchResponse
+        "merge_branch", {"branch_id": branch_id}, MergeBranchResponse
     )
-    
-    return {
-        "id": result.id,
-        "status": result.status
-    }
+
+    return {"id": result.id, "status": result.status}
 
 
 @function_tool
@@ -680,15 +620,10 @@ async def delete_branch(branch_id: str) -> Dict[str, Any]:
     """
     logger.info(f"Deleting branch: {branch_id}")
     result = await validate_and_call_mcp_tool(
-        "delete_branch", 
-        {"branch_id": branch_id}, 
-        DeleteBranchResponse
+        "delete_branch", {"branch_id": branch_id}, DeleteBranchResponse
     )
-    
-    return {
-        "id": result.id,
-        "status": result.status
-    }
+
+    return {"id": result.id, "status": result.status}
 
 
 @function_tool
@@ -709,21 +644,16 @@ async def reset_branch(
         MCPError: If the request fails
     """
     logger.info(f"Resetting branch: {branch_id}")
-    
+
     params = {"branch_id": branch_id}
     if migration_version:
         params["migration_version"] = migration_version
-    
+
     result = await validate_and_call_mcp_tool(
-        "reset_branch", 
-        params, 
-        ResetBranchResponse
+        "reset_branch", params, ResetBranchResponse
     )
-    
-    return {
-        "id": result.id,
-        "status": result.status
-    }
+
+    return {"id": result.id, "status": result.status}
 
 
 @function_tool
@@ -742,15 +672,10 @@ async def rebase_branch(branch_id: str) -> Dict[str, Any]:
     """
     logger.info(f"Rebasing branch: {branch_id}")
     result = await validate_and_call_mcp_tool(
-        "rebase_branch", 
-        {"branch_id": branch_id}, 
-        RebaseBranchResponse
+        "rebase_branch", {"branch_id": branch_id}, RebaseBranchResponse
     )
-    
-    return {
-        "id": result.id,
-        "status": result.status
-    }
+
+    return {"id": result.id, "status": result.status}
 
 
 @function_tool
@@ -769,15 +694,10 @@ async def pause_project(project_id: str) -> Dict[str, Any]:
     """
     logger.info(f"Pausing project: {project_id}")
     result = await validate_and_call_mcp_tool(
-        "pause_project", 
-        {"project_id": project_id}, 
-        PauseProjectResponse
+        "pause_project", {"project_id": project_id}, PauseProjectResponse
     )
-    
-    return {
-        "id": result.id,
-        "status": result.status
-    }
+
+    return {"id": result.id, "status": result.status}
 
 
 @function_tool
@@ -796,12 +716,7 @@ async def restore_project(project_id: str) -> Dict[str, Any]:
     """
     logger.info(f"Restoring project: {project_id}")
     result = await validate_and_call_mcp_tool(
-        "restore_project", 
-        {"project_id": project_id}, 
-        RestoreProjectResponse
+        "restore_project", {"project_id": project_id}, RestoreProjectResponse
     )
-    
-    return {
-        "id": result.id,
-        "status": result.status
-    }
+
+    return {"id": result.id, "status": result.status}

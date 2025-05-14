@@ -9,7 +9,6 @@ calculate distances, and other location-based services.
 from typing import Any, Dict, List, Optional
 
 from agents import function_tool
-
 from tripsage.config.app_settings import settings
 from tripsage.tools.schemas.googlemaps import (
     DirectionsParams,
@@ -47,7 +46,8 @@ async def geocode_tool(
     """Convert an address to geographic coordinates.
 
     Args:
-        address: Address to geocode (e.g., "1600 Amphitheatre Parkway, Mountain View, CA")
+        address: Address to geocode
+            (e.g., "1600 Amphitheatre Parkway, Mountain View, CA")
         place_id: Google Maps place ID to geocode (alternative to address)
         components: Component filters (e.g., {"country": "US"})
 
@@ -287,9 +287,9 @@ async def place_search_tool(
                 rating_info = (
                     f" - Rating: {place['rating']}" if place.get("rating") else ""
                 )
+                address = place.get("formatted_address") or place.get("vicinity", "N/A")
                 formatted_result += (
-                    f"{i + 1}. {place['name']}{rating_info}\n"
-                    f"   Address: {place.get('formatted_address') or place.get('vicinity', 'N/A')}\n"
+                    f"{i + 1}. {place['name']}{rating_info}\n   Address: {address}\n"
                 )
         else:
             formatted_result = "No places found for the given criteria."
@@ -367,7 +367,10 @@ async def place_details_tool(
                 formatted_result += f"Website: {details['website']}\n"
 
             if details.get("rating"):
-                formatted_result += f"Rating: {details['rating']} ({details.get('user_ratings_total', 0)} reviews)\n"
+                formatted_result += (
+                    f"Rating: {details['rating']} "
+                    f"({details.get('user_ratings_total', 0)} reviews)\n"
+                )
 
             if details.get("opening_hours", {}).get("weekday_text"):
                 formatted_result += "Hours:\n"
@@ -512,11 +515,17 @@ async def directions_tool(
 
             for i, route in enumerate(routes):
                 formatted_result += f"Route {i + 1}: {route['summary']}\n"
-                formatted_result += f"Distance: {route['total_distance_text']}, Duration: {route['total_duration_text']}\n"
+                formatted_result += (
+                    f"Distance: {route['total_distance_text']}, "
+                    f"Duration: {route['total_duration_text']}\n"
+                )
 
                 for j, leg in enumerate(route["legs"]):
                     if len(route["legs"]) > 1:
-                        formatted_result += f"\nLeg {j + 1}: {leg['start_address']} to {leg['end_address']}\n"
+                        formatted_result += (
+                            f"\nLeg {j + 1}: {leg['start_address']} to "
+                            f"{leg['end_address']}\n"
+                        )
 
                     for k, step in enumerate(leg["steps"]):
                         formatted_result += (
@@ -604,12 +613,16 @@ async def distance_matrix_tool(
             for j, element in enumerate(row.get("elements", [])):
                 matrix_row.append(
                     {
-                        "origin": result.origin_addresses[i]
-                        if i < len(result.origin_addresses)
-                        else f"Origin {i + 1}",
-                        "destination": result.destination_addresses[j]
-                        if j < len(result.destination_addresses)
-                        else f"Destination {j + 1}",
+                        "origin": (
+                            result.origin_addresses[i]
+                            if i < len(result.origin_addresses)
+                            else f"Origin {i + 1}"
+                        ),
+                        "destination": (
+                            result.destination_addresses[j]
+                            if j < len(result.destination_addresses)
+                            else f"Destination {j + 1}"
+                        ),
                         "status": element.get("status", ""),
                         "distance": element.get("distance", {}).get("text", ""),
                         "distance_meters": element.get("distance", {}).get("value", 0),
@@ -631,7 +644,10 @@ async def distance_matrix_tool(
 
             for element in row:
                 if element["status"] == "OK":
-                    formatted_result += f"  To {element['destination']}: {element['distance']} ({element['duration']})\n"
+                    formatted_result += (
+                        f"  To {element['destination']}: {element['distance']} "
+                        f"({element['duration']})\n"
+                    )
                 else:
                     formatted_result += (
                         f"  To {element['destination']}: {element['status']}\n"

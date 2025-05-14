@@ -7,8 +7,7 @@ using the OpenAI Agents SDK, following the direct MCP call pattern.
 
 from typing import Any, Dict, List, Optional
 
-from openai_agents_sdk import function_tool
-
+from agents import function_tool
 from tripsage.tools.schemas.neon import (
     BranchResponse,
     ConnectionStringResponse,
@@ -161,7 +160,7 @@ async def delete_project(project_id: str) -> Dict[str, Any]:
     """
     logger.info(f"Deleting Neon project: {project_id}")
 
-    result = await validate_and_call_mcp_tool(
+    await validate_and_call_mcp_tool(
         endpoint=settings.neon_mcp.endpoint,
         tool_name="delete_project",
         params={"params": {"projectId": project_id}},
@@ -414,7 +413,7 @@ async def delete_branch(project_id: str, branch_id: str) -> Dict[str, Any]:
     """
     logger.info(f"Deleting branch {branch_id} from Neon project: {project_id}")
 
-    result = await validate_and_call_mcp_tool(
+    await validate_and_call_mcp_tool(
         endpoint=settings.neon_mcp.endpoint,
         tool_name="delete_branch",
         params={"params": {"projectId": project_id, "branchId": branch_id}},

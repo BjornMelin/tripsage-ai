@@ -7,8 +7,7 @@ like checking flight status, verifying bookings, and monitoring prices.
 
 from typing import Any, Dict, Literal, Optional
 
-from openai_agents_sdk import function_tool
-
+from agents import function_tool
 from tripsage.tools.browser.tools import (
     check_flight_status as browser_check_flight_status,
 )
