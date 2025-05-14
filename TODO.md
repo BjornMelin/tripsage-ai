@@ -137,15 +137,39 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
       - Implement listing search and details functionality
       - Add tests for accommodation search operations
     - [ ] Playwright MCP Integration:
-      - Set up Playwright MCP server configuration
-      - Create browser automation tools in `tripsage/tools/browser_tools.py`
-      - Implement web scraping fallback functionality
-      - Add tests for browser automation operations
-    - [ ] Firecrawl MCP Integration:
-      - Configure Firecrawl MCP server
-      - Create web crawling tools in `tripsage/tools/webcrawl_tools.py`
-      - Implement structured data extraction functionality
-      - Add tests for destination research operations
+      - **Target:** Browser automation for complex travel workflows
+      - **Goal:** Provide fallback mechanism for sites that block scrapers
+      - **Tasks:**
+        - Configure Playwright MCP server with Python integration
+        - Create browser automation toolkit in `tripsage/tools/browser/tools.py`
+        - Implement session persistence for authenticated workflows
+        - Develop travel-specific browser operations (booking verification, check-ins)
+        - Create escalation logic from crawler to browser automation
+        - Add anti-detection capabilities for travel websites
+        - Implement comprehensive testing with mock travel websites
+    - [ ] Hybrid Web Crawling Integration:
+      - **Target:** Implement domain-optimized web crawling strategy
+      - **Goal:** Maximize extraction performance and reliability for travel sites
+      - **Tasks:**
+        - [ ] Crawl4AI MCP Integration:
+          - Configure Crawl4AI MCP server with RAG capabilities
+          - Implement in `tripsage/tools/webcrawl/crawl4ai_client.py`
+          - Optimize for informational sites (TripAdvisor, WikiTravel, etc.)
+          - Create comprehensive tests for information extraction
+        - [ ] Firecrawl MCP Integration:
+          - Configure official Firecrawl MCP server from MendableAI
+          - Implement in `tripsage/tools/webcrawl/firecrawl_client.py`
+          - Optimize for booking sites (Airbnb, Booking.com, etc.)
+          - Create comprehensive tests for structured data extraction
+        - [ ] Source Selection Logic:
+          - Implement domain-based routing in `tripsage/tools/webcrawl/source_selector.py`
+          - Create unified abstraction layer in `tripsage/tools/webcrawl_tools.py`
+          - Develop empirical performance testing framework
+          - Document domain-specific optimization strategy
+        - [ ] Result Normalization:
+          - Create consistent output schema in `tripsage/tools/webcrawl/models.py`
+          - Implement normalization logic in `tripsage/tools/webcrawl/result_normalizer.py`
+          - Ensure unified interface regardless of underlying crawler
     - [ ] Google Maps MCP Integration:
       - Set up Google Maps MCP configuration
       - Create maps and location tools in `tripsage/tools/googlemaps_tools.py`
@@ -181,13 +205,15 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
       - Set up MCP configuration management system
       - Integrate Playwright MCP and Google Maps MCP as highest priorities
       - Integrate Weather MCP for essential trip planning data
+      - Begin hybrid web crawling implementation with Crawl4AI and Firecrawl
       - Develop proof-of-concept for unified abstraction layer
       - Implement error handling and monitoring infrastructure
     - [ ] Short-Term Actions (Weeks 3-6):
-      - Integrate Firecrawl MCP and Time MCP
-      - Integrate Google Calendar MCP for scheduling functionality
+      - Complete hybrid Crawl4AI/Firecrawl implementation with domain routing
+      - Integrate Time MCP and Google Calendar MCP
       - Develop and test the Unified Travel Search Wrapper
-      - Implement Redis MCP for response caching
+      - Implement Redis MCP for standardized response caching
+      - Create domain-specific performance testing framework
       - Complete comprehensive error handling for all integrated MCPs
     - [ ] Medium-Term Actions (Weeks 7-12):
       - Develop Trip Planning Coordinator and Content Aggregator wrappers
@@ -206,7 +232,11 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
       - Implement standardized error handling across all MCP calls
       - Develop dependency injection pattern for MCP clients
     - [ ] Audit `src/mcp/` to identify functionality covered by external MCPs:
-      - Map current clients to Supabase, Neo4j Memory, Duffel Flights, Airbnb, Playwright, Firecrawl, Google Maps, Time, Weather, Google Calendar, and Redis MCPs
+      - Map current clients to Supabase, Neo4j Memory, Duffel Flights, Airbnb MCPs
+      - Map webcrawl functionality to hybrid Crawl4AI/Firecrawl implementation with domain-based routing
+      - Map browser automation needs to Playwright MCP 
+      - Map Google Maps, Time, Weather, Google Calendar, and Redis MCPs
+      - Document any functionality requiring custom implementations
       - Document any functionality requiring custom implementations
       - Map specific correspondences:
         - `src/mcp/weather/` → Weather MCP
@@ -214,10 +244,12 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
         - `src/mcp/time/` → Time MCP
         - `src/mcp/webcrawl/` → Firecrawl MCP
         - `src/cache/redis_cache.py` → Redis MCP
-    - [ ] Implement Redis-based caching layer for MCP responses:
+    - [ ] Implement Redis MCP for standardized caching:
+      - Configure Redis MCP server with appropriate connection parameters
       - Create cache key generation that respects parameters
-      - Implement TTL management based on data type
-      - Add cache invalidation patterns when data changes
+      - Implement TTL management based on data type (shorter for prices, longer for destination info)
+      - Add cache invalidation patterns based on travel dates and data changes
+      - Develop comprehensive monitoring for cache hit/miss rates
     - [ ] Create client wrappers for external MCP servers:
       - Implement thin client interfaces for consistent access patterns
       - Ensure proper error handling and request validation
@@ -413,10 +445,13 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
       - Create optimization algorithms for itinerary planning
       - Add tests for coordinator functionality
     - [ ] Content Aggregator:
-      - Implement wrapper around content sources (Crawl4AI, etc.)
-      - Create content normalization functionality
+      - Implement wrapper around hybrid Crawl4AI/Firecrawl solution
+      - Create content normalization for unified schema
+      - Implement domain-based source selection logic
       - Develop destination content enrichment features
-      - Add tests for content aggregation
+      - Add comprehensive caching with Redis MCP
+      - Implement error handling and fallback mechanisms
+      - Add tests for multi-source content aggregation
     - [ ] Development Guidelines:
       - Use FastMCP 2.0 for all custom MCP development
       - Implement Pydantic v2 models for all schemas
