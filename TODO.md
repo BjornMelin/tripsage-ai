@@ -116,29 +116,55 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
     - Prioritize existing external MCPs when available
     - Only build custom MCPs for core business logic, direct database integration, or when privacy/security requirements can't be met externally
   - **Tasks:**
-    - [ ] Supabase MCP Integration:
+
+    - [ ] Supabase MCP Integration: (Short-Term Phase)
+      - **Success Metrics:**
+        - 99.9% uptime for database operations
+        - <100ms average query response time
+        - 100% schema validation coverage
+        - 95%+ test coverage with integration tests
       - Set up Supabase MCP server configuration
       - Create wrapper functions in `tripsage/tools/supabase_tools.py`
       - Implement database operation tools with proper validation
       - Add comprehensive tests for Supabase tool integration
-    - [ ] Neo4j Memory MCP Integration:
+    - [ ] Neo4j Memory MCP Integration: (Immediate Phase)
+      - **Success Metrics:**
+        - 95%+ successful graph operations
+        - <200ms average query response time
+        - Complete coverage of entity/relationship models
+        - 90%+ test coverage for graph operations
       - Configure Neo4j Memory MCP server
       - Create memory graph tools in `tripsage/tools/memory_tools.py`
       - Implement entity/relationship management functions
       - Add tests for knowledge graph operations
-    - [ ] Duffel Flights MCP Integration:
+    - [ ] Duffel Flights MCP Integration: (Short-Term Phase)
+      - **Success Metrics:**
+        - 95%+ successful flight searches
+        - <3 second average response time
+        - Complete coverage of major global airlines
+        - 90%+ test coverage with realistic flight scenarios
       - Set up Duffel Flights MCP configuration
       - Create flight search tools in `tripsage/tools/flight_tools.py`
       - Implement offer and search functionality
       - Add tests for flight search operations
-    - [ ] Airbnb MCP Integration:
+    - [ ] Airbnb MCP Integration: (Short-Term Phase)
+      - **Success Metrics:**
+        - 90%+ successful accommodation searches
+        - <5 second average response time
+        - Accurate pricing and availability data
+        - 90%+ test coverage for accommodation operations
       - Configure Airbnb MCP server
       - Create accommodation tools in `tripsage/tools/accommodation_tools.py`
       - Implement listing search and details functionality
       - Add tests for accommodation search operations
-    - [ ] Playwright MCP Integration:
+    - [ ] Playwright MCP Integration: (Immediate Phase)
       - **Target:** Browser automation for complex travel workflows
       - **Goal:** Provide fallback mechanism for sites that block scrapers
+      - **Success Metrics:**
+        - 95%+ successful completion rate for authenticated workflows
+        - <5 second average response time for cached operations
+        - 90%+ test coverage with integration tests
+        - Successful fallback handling for at least 5 major travel sites
       - **Tasks:**
         - Configure Playwright MCP server with Python integration
         - Create browser automation toolkit in `tripsage/tools/browser/tools.py`
@@ -147,9 +173,14 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
         - Create escalation logic from crawler to browser automation
         - Add anti-detection capabilities for travel websites
         - Implement comprehensive testing with mock travel websites
-    - [ ] Hybrid Web Crawling Integration:
+    - [ ] Hybrid Web Crawling Integration: (Immediate-to-Short-Term Phase)
       - **Target:** Implement domain-optimized web crawling strategy
       - **Goal:** Maximize extraction performance and reliability for travel sites
+      - **Success Metrics:**
+        - 90%+ extraction success rate across all targeted travel sites
+        - <4 seconds average response time for optimized domains
+        - 95% accuracy in content extraction compared to manual collection
+        - <15% fallback rate to browser automation
       - **Tasks:**
         - [ ] Crawl4AI MCP Integration:
           - Configure Crawl4AI MCP server with RAG capabilities
@@ -170,32 +201,72 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
           - Create consistent output schema in `tripsage/tools/webcrawl/models.py`
           - Implement normalization logic in `tripsage/tools/webcrawl/result_normalizer.py`
           - Ensure unified interface regardless of underlying crawler
-    - [ ] Google Maps MCP Integration:
+        - [ ] Production Scenario Testing Strategy:
+          - Create test suite with real-world travel planning scenarios
+            - Develop 10+ realistic multi-site test cases covering booking flows and research patterns
+            - Implement automated performance comparison between single-crawler and hybrid approach
+            - Create a/b testing framework to empirically verify domain routing effectiveness
+          - Implement monitoring for crawler selection decisions
+            - Add telemetry for source selection logic
+            - Create dashboard for crawler performance by domain
+            - Set up alerting for fallback escalation patterns
+          - Establish quantitative success metrics
+            - 95%+ successful extractions across tracked domains
+            - <3 second average response time for cached results
+            - <8 second average for uncached results
+            - <5% fallback rate to Playwright for optimized domains
+    - [ ] Google Maps MCP Integration: (Immediate Phase)
+      - **Success Metrics:**
+        - 99% geocoding success rate
+        - <300ms average response time
+        - Complete coverage of required location services
+        - 90%+ test coverage for all implemented functions
       - Set up Google Maps MCP configuration
       - Create maps and location tools in `tripsage/tools/googlemaps_tools.py`
       - Implement geocoding, directions, and place search functionality
       - Add tests for location-based operations
-    - [ ] Time MCP Integration:
+    - [ ] Time MCP Integration: (Short-Term Phase)
+      - **Success Metrics:**
+        - 100% accuracy for timezone conversions
+        - <100ms average response time
+        - Support for all global timezones
+        - 95%+ test coverage
       - Configure Time MCP server
       - Create time tools in `tripsage/tools/time_tools.py`
       - Implement timezone conversion and current time functionality
       - Add tests for time-related operations
-    - [ ] Weather MCP Integration:
+    - [ ] Weather MCP Integration: (Immediate Phase)
+      - **Success Metrics:**
+        - 95%+ availability for global weather data
+        - <1 second average response time
+        - Accurate forecasting for 7+ day window
+        - 90%+ test coverage for API functions
       - Configure Weather MCP server
       - Create weather tools in `tripsage/tools/weather_tools.py`
       - Implement forecast and current conditions functionality
       - Add tests for weather-related operations
-    - [ ] Google Calendar MCP Integration:
+    - [ ] Google Calendar MCP Integration: (Short-Term Phase)
+      - **Success Metrics:**
+        - 98%+ successful event creation/modification
+        - <1 second average operation time
+        - Complete support for all required calendar operations
+        - 95%+ test coverage
       - Configure Google Calendar MCP server
       - Create calendar tools in `tripsage/tools/calendar_tools.py`
       - Implement event creation and scheduling functionality
       - Add tests for calendar-related operations
-    - [ ] Redis MCP Integration:
+    - [ ] Redis MCP Integration: (Short-Term Phase)
+      - **Success Metrics:**
+        - 99.9% cache operation reliability
+        - <50ms average cache operation time
+        - 90%+ cache hit rate for common operations
+        - Proper TTL management across content types
       - Configure Redis MCP server
       - Create caching tools in `tripsage/tools/cache_tools.py`
       - Implement distributed caching functionality
       - Add tests for cache-related operations
     - [ ] WebSearchTool Integration with Caching (Issue #37):
+
       - **Target:** Implement caching for OpenAI Agents SDK WebSearchTool
       - **Goal:** Optimize performance and reduce API usage for web searches
       - **Status:** Research completed - integration plan ready for implementation
@@ -222,24 +293,93 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
           - Create mocks for WebSearchTool testing
           - Verify cache behavior with different content types
 
+    - [x] Implement WebOperationsCache for Web Operations (Issue #38):
+      - **Target:** Advanced caching system for TripSage web operations
+      - **Goal:** Create a centralized, content-aware caching system for all web operation tools
+      - **Status:** Implemented core functionality, requires integration testing
+      - **Tasks:**
+        - [x] Implement WebOperationsCache Class in `tripsage/utils/cache.py`:
+          - [x] Create `ContentType` enum with categories (REALTIME, TIME_SENSITIVE, DAILY, SEMI_STATIC, STATIC)
+          - [x] Implement Redis integration using `redis.asyncio` for async compatibility
+          - [x] Define configurable TTL settings for each content type
+          - [x] Implement core cache methods (get, set, delete, invalidate_pattern)
+          - [x] Create content-aware TTL logic that analyzes query and result patterns
+          - [x] Implement `generate_cache_key` method for deterministic key generation
+          - [x] Create singleton instance for application-wide use
+        - [x] Implement Metrics Collection:
+          - [x] Create metrics storage structure in Redis
+          - [x] Add hit/miss counters with time windows (1h, 24h, 7d)
+          - [x] Implement performance measurement for cache operations
+          - [x] Create `get_stats` method for metrics retrieval
+          - [x] Implement sampling for detailed metrics to reduce overhead
+        - [x] Implement CachedWebSearchTool in `tripsage/tools/web_tools.py`:
+          - [x] Create wrapper around OpenAI Agents SDK WebSearchTool
+          - [x] Maintain identical interface for seamless integration
+          - [x] Add caching with domain-aware cache keys
+          - [x] Implement content type detection from search queries and results
+        - [x] Create Web Caching Decorator:
+          - [x] Implement `web_cached` decorator for other web operation functions
+          - [x] Support async functions
+          - [x] Add flexible content type detection
+        - [x] Update Configuration Settings:
+          - [x] Add TTL configuration to `app_settings.py`
+          - [x] Create defaults for each content type (REALTIME: 100s, TIME_SENSITIVE: 5m, etc.)
+          - [x] Make cache namespaces configurable
+        - [x] Add Comprehensive Tests:
+          - [x] Create unit tests for WebOperationsCache
+          - [x] Add tests for CachedWebSearchTool
+          - [x] Test metrics collection and retrieval
+          - [x] Verify TTL logic with different content types
+        - [ ] Update Agent Implementations: (Partially Complete)
+          - [ ] Replace WebSearchTool with CachedWebSearchTool in TravelPlanningAgent
+            - Implementation complete, pending integration testing
+          - [ ] Replace WebSearchTool with CachedWebSearchTool in DestinationResearchAgent
+            - Implementation complete, pending integration testing
+          - [ ] Apply web_cached decorator to appropriate web operation functions
+            - Add to existing webcrawl operations in both agents
+            - Add performance monitoring hooks for cache hit rate analysis
+      - [x] Implementation Timeline: (Completed)
+        - [x] Phase 1: Core WebOperationsCache implementation
+        - [x] Phase 2: Metrics and tool integration
+        - [x] Phase 3: Testing and implementation
+        - [ ] Phase 4: Agent integration (Pending)
+      - [x] Additional Considerations: (Implemented)
+        - [x] Performance impact: Implemented sampling to minimize Redis overhead
+        - [x] Fallback mechanism: Added robust error handling for Redis operations
+        - [x] Cache size management: Implemented cache size estimation
+        - [x] Analytics: Created WebCacheStats with hit/miss ratio tracking
+      - **Note:** Need to review and integrate with TravelPlanningAgent and DestinationResearchAgent
+
 - [ ] **MCP Implementation Roadmap**
 
   - **Target:** Phased MCP integration
   - **Goal:** Implement MCP integration in structured phases
   - **Tasks:**
     - [ ] Immediate Actions (Next 2 Weeks):
-      - Set up MCP configuration management system
-      - Integrate Playwright MCP and Google Maps MCP as highest priorities
-      - Integrate Weather MCP for essential trip planning data
-      - Begin hybrid web crawling implementation with Crawl4AI and Firecrawl
-      - Implement WebSearchTool caching with WebOperationsCache (Issue #37)
+      - [x] Set up MCP configuration management system (foundational for all MCP integrations)
+        - ✓ Created hierarchical Pydantic model structure for all MCP configurations
+        - ✓ Implemented environment variable loading with nested delimiter support
+        - ✓ Created dedicated configuration classes for each MCP type
+        - ✓ Implemented singleton pattern for global settings access
+        - ✓ Added comprehensive validation with Pydantic v2
+        - ✓ Created example usage and client initialization patterns
+        - ✓ Implemented in `tripsage/config/mcp_settings.py`
+      - Integrate Playwright MCP (see Playwright MCP Integration)
+      - Integrate Google Maps MCP (see Google Maps MCP Integration)
+      - Integrate Weather MCP for essential trip planning data (see Weather MCP Integration)
+      - Begin hybrid web crawling implementation (see Crawl4AI & Firecrawl Integration)
+      - Implement WebSearchTool caching with WebOperationsCache (Issue #37, partially completed)
       - Develop proof-of-concept for unified abstraction layer
       - Implement error handling and monitoring infrastructure
     - [ ] Short-Term Actions (Weeks 3-6):
+      - Complete Neo4j Memory MCP Integration (see Neo4j Memory MCP Integration)
       - Complete hybrid Crawl4AI/Firecrawl implementation with domain routing
-      - Integrate Time MCP and Google Calendar MCP
+      - Integrate Time MCP (see Time MCP Integration)
+      - Integrate Google Calendar MCP (see Google Calendar MCP Integration)
       - Develop and test the Unified Travel Search Wrapper
-      - Implement Redis MCP for standardized response caching
+      - Implement Redis MCP for standardized response caching (see Redis MCP Integration)
+      - Integrate Supabase MCP (see Supabase MCP Integration)
+      - Integrate Duffel Flights MCP and Airbnb MCP (see respective integration sections)
       - Create domain-specific performance testing framework
       - Complete comprehensive error handling for all integrated MCPs
     - [ ] Medium-Term Actions (Weeks 7-12):
@@ -247,6 +387,7 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
       - Implement OpenTelemetry-based monitoring for all MCP interactions
       - Complete thorough integration testing across all MCPs
       - Optimize performance through Redis MCP caching and parallel execution
+      - Complete production scenario testing for all integrations
 
 - [ ] **MCP Client Cleanup**
 
@@ -523,6 +664,24 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
     - ✓ Define base service interfaces
     - ✓ Create standard patterns for service methods
     - ✓ Extract common logic to base classes
+
+- [x] **Neo4j AuraDB API MCP Evaluation (Issue #39)**
+
+  - **Target:** Neo4j operational management
+  - **Goal:** Evaluate the need for programmatic management of Neo4j AuraDB instances
+  - **Status:** Evaluated and recommended against implementation at this time
+  - **Tasks:**
+    - ✓ Evaluate the mcp-neo4j-cloud-aura-api server's capabilities
+    - ✓ Analyze TripSage's operational needs for Neo4j management
+    - ✓ Conduct security and complexity assessment
+    - ✓ Provide recommendation for Issue #39
+  - **Findings:**
+    - TripSage uses Neo4j as a persistent knowledge graph with stable connections
+    - The Neo4j Memory MCP already provides all needed application-level interactions
+    - Administrative operations are better handled through Neo4j Aura's web interface
+    - Dynamic instance management would add unnecessary complexity and security concerns
+    - KISS/YAGNI principles suggest avoiding this integration until specific operational needs arise
+  - **Recommendation:** Maintain as Post-MVP / Low Priority. Do not implement until clear operational needs emerge.
 
 - [ ] **Refactor Function Tool Signatures**
 

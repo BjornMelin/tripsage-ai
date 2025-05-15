@@ -141,6 +141,18 @@ class CalendarMCPConfig(MCPConfig):
 
 
 # Database Configuration Classes
+class WebCacheTTLConfig(BaseSettings):
+    """TTL configuration for different content types in the web cache."""
+
+    realtime: int = Field(default=100, description="TTL for real-time data (100s)")
+    time_sensitive: int = Field(
+        default=300, description="TTL for time-sensitive data (5m)"
+    )
+    daily: int = Field(default=3600, description="TTL for daily-changing data (1h)")
+    semi_static: int = Field(default=28800, description="TTL for semi-static data (8h)")
+    static: int = Field(default=86400, description="TTL for static data (24h)")
+
+
 class RedisConfig(BaseSettings):
     """Redis configuration settings."""
 
@@ -148,6 +160,7 @@ class RedisConfig(BaseSettings):
     ttl_short: int = Field(default=300)  # 5 minutes
     ttl_medium: int = Field(default=3600)  # 1 hour
     ttl_long: int = Field(default=86400)  # 24 hours
+    web_cache: WebCacheTTLConfig = WebCacheTTLConfig()
 
 
 class DatabaseConfig(BaseSettings):
