@@ -4,13 +4,16 @@ This module provides FastAPI dependencies for injecting
 MCP services and other components.
 """
 
-from fastapi import Depends
+from fastapi import APIRouter, Depends
 
-from tripsage.mcp_abstraction import MCPManager, get_mcp_manager
+from tripsage.mcp_abstraction import get_mcp_manager
+
+# Router for API endpoints
+router = APIRouter()
 
 
-# Dependency for MCP manager
-async def get_mcp_manager_dep() -> MCPManager:
+# Create dependency functions
+def get_mcp_manager_dep():
     """Get the MCP manager instance as a dependency.
 
     Returns:
@@ -19,16 +22,27 @@ async def get_mcp_manager_dep() -> MCPManager:
     return get_mcp_manager()
 
 
+# Create singleton dependencies
+mcp_manager_dependency = Depends(get_mcp_manager_dep)
+
+
+# Weather MCP dependency
+def get_weather_mcp_dep():
+    """Get the weather MCP wrapper as a dependency."""
+
+    async def _get_weather_mcp(mcp_manager=mcp_manager_dependency):
+        return await mcp_manager.initialize_mcp("weather")
+
+    return _get_weather_mcp
+
+
+# Create weather dependency singleton
+weather_mcp_dependency = Depends(get_weather_mcp_dep())
+
+
 # Example of using the MCP manager in an endpoint
-from fastapi import APIRouter
-
-router = APIRouter()
-
-
 @router.get("/weather/{city}")
-async def get_weather(
-    city: str, mcp_manager: MCPManager = Depends(get_mcp_manager_dep)
-):
+async def get_weather(city: str, mcp_manager=mcp_manager_dependency):
     """Get weather for a city using dependency injection.
 
     Args:
@@ -50,22 +64,9 @@ async def get_weather(
     }
 
 
-# Example of specific MCP client dependency
-async def get_weather_mcp(mcp_manager: MCPManager = Depends(get_mcp_manager_dep)):
-    """Get the weather MCP wrapper as a dependency.
-
-    Args:
-        mcp_manager: Injected MCP manager instance
-
-    Returns:
-        The weather MCP wrapper
-    """
-    return await mcp_manager.initialize_mcp("weather")
-
-
 # Using specific MCP in endpoint
 @router.get("/weather/{city}/detailed")
-async def get_detailed_weather(city: str, weather_mcp=Depends(get_weather_mcp)):
+async def get_detailed_weather(city: str, weather_mcp=weather_mcp_dependency):
     """Get detailed weather using specific MCP wrapper.
 
     Args:
@@ -88,12 +89,9 @@ async def get_detailed_weather(city: str, weather_mcp=Depends(get_weather_mcp)):
 
 
 # Example of initialization on startup
-async def startup_event(mcp_manager: MCPManager = Depends(get_mcp_manager_dep)):
-    """Initialize all enabled MCPs on startup.
-
-    Args:
-        mcp_manager: Injected MCP manager instance
-    """
+async def startup_event():
+    """Initialize all enabled MCPs on startup."""
+    mcp_manager = get_mcp_manager_dep()
     await mcp_manager.initialize_all_enabled()
 
     # Log available MCPs
@@ -105,10 +103,7 @@ async def startup_event(mcp_manager: MCPManager = Depends(get_mcp_manager_dep)):
 
 
 # Example of cleanup on shutdown
-async def shutdown_event(mcp_manager: MCPManager = Depends(get_mcp_manager_dep)):
-    """Cleanup MCP connections on shutdown.
-
-    Args:
-        mcp_manager: Injected MCP manager instance
-    """
+async def shutdown_event():
+    """Cleanup MCP connections on shutdown."""
+    mcp_manager = get_mcp_manager_dep()
     await mcp_manager.shutdown()

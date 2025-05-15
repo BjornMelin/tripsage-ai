@@ -11,7 +11,7 @@ The MCP abstraction layer consists of four main components:
 3. **Base Wrapper (BaseMCPWrapper)**: Abstract interface that all wrappers implement
 4. **Specific Wrappers**: Concrete implementations for each MCP type
 
-```
+```plaintext
 ┌─────────────────────────────────────────┐
 │           Agent/Tool/Service            │
 └─────────────────┬───────────────────────┘
@@ -123,36 +123,36 @@ async def get_weather(
 
 1. Create a new wrapper class inheriting from `BaseMCPWrapper`:
 
-```python
-from tripsage.mcp_abstraction.base_wrapper import BaseMCPWrapper
+   ```python
+   from tripsage.mcp_abstraction.base_wrapper import BaseMCPWrapper
 
-class NewMCPWrapper(BaseMCPWrapper[NewMCPClient]):
-    def __init__(self, client=None, mcp_name="new_mcp"):
-        if client is None:
-            # Create client from configuration
-            config = mcp_settings.new_mcp
-            client = NewMCPClient(config)
-        super().__init__(client, mcp_name)
+   class NewMCPWrapper(BaseMCPWrapper[NewMCPClient]):
+       def __init__(self, client=None, mcp_name="new_mcp"):
+           if client is None:
+               # Create client from configuration
+               config = mcp_settings.new_mcp
+               client = NewMCPClient(config)
+           super().__init__(client, mcp_name)
 
-    def _build_method_map(self) -> Dict[str, str]:
-        return {
-            "standard_method": "client_specific_method",
-            # Map all methods
-        }
+       def _build_method_map(self) -> Dict[str, str]:
+           return {
+               "standard_method": "client_specific_method",
+               # Map all methods
+           }
 
-    def get_available_methods(self) -> List[str]:
-        return list(self._method_map.keys())
-```
+       def get_available_methods(self) -> List[str]:
+           return list(self._method_map.keys())
+   ```
 
 2. Register the wrapper in `registration.py`:
 
-```python
-mcp_registry.register(
-    mcp_name="new_mcp",
-    wrapper_class=NewMCPWrapper,
-    replace=True
-)
-```
+   ```python
+   mcp_registry.register(
+       mcp_name="new_mcp",
+       wrapper_class=NewMCPWrapper,
+       replace=True
+   )
+   ```
 
 ### Using the Abstraction Layer in Tools
 
