@@ -40,6 +40,14 @@ class ContentType(str, Enum):
     SEMI_STATIC = "semi_static"
     # Information that rarely changes (historical data, documentation)
     STATIC = "static"
+    # Structured data (JSON, XML)
+    JSON = "json"
+    # Markdown formatted text
+    MARKDOWN = "markdown"
+    # HTML formatted text
+    HTML = "html"
+    # Binary data (images, PDFs, etc.)
+    BINARY = "binary"
 
 
 class CacheMetrics(BaseModel):

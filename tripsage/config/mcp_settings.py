@@ -182,6 +182,10 @@ class RedisMCPConfig(CacheMCPConfig):
 class Crawl4AIMCPConfig(WebCrawlMCPConfig):
     """Configuration for Crawl4AI MCP server."""
 
+    url: AnyHttpUrl = Field(
+        default="ws://localhost:11235/mcp/ws",
+        description="URL of the Crawl4AI MCP server (WebSocket or SSE endpoint)"
+    )
     rag_enabled: bool = True
     max_pages: int = Field(default=10, ge=1, le=100)
     extract_images: bool = False
@@ -192,6 +196,10 @@ class Crawl4AIMCPConfig(WebCrawlMCPConfig):
 class FirecrawlMCPConfig(WebCrawlMCPConfig):
     """Configuration for Firecrawl MCP server."""
 
+    mcp_server_url: AnyHttpUrl = Field(
+        default="http://localhost:4000",
+        description="URL of the Firecrawl MCP server"
+    )
     js_rendering: bool = True
     wait_for_selectors: List[str] = Field(default_factory=list)
     extract_structured_data: bool = True
