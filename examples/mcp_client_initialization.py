@@ -88,7 +88,8 @@ class PlaywrightMCPClient(RestMCPClient):
         self.screenshot_dir = getattr(self.mcp_config, "screenshot_dir", None)
 
         self.logger.info(
-            f"Configured Playwright with browser: {self.browser_type}, headless: {self.headless}"
+            f"Configured Playwright with browser: {self.browser_type}, "
+            f"headless: {self.headless}"
         )
 
     async def navigate(self, url: str, wait_until: Optional[str] = None) -> dict:

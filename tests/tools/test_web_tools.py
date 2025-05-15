@@ -221,5 +221,6 @@ class TestWebToolsUtilities:
                 return f"{arg1} {arg2}"
 
             # Execute
-            # Just verify it's callable, the actual caching behavior is tested in the WebOperationsCache tests
+            # Just verify it's callable, the actual caching behavior is
+            # tested in the WebOperationsCache tests
             assert callable(test_func)

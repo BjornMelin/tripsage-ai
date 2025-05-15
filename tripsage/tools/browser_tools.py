@@ -3,20 +3,22 @@ Browser tools for TripSage agents.
 
 This module provides function tools for browser automation tasks
 like checking flight status, verifying bookings, and monitoring prices.
+It also includes Playwright MCP tools for general browser automation.
 """
 
 from typing import Any, Dict, Literal, Optional
 
 from agents import function_tool
+from tripsage.tools.browser.playwright_mcp_client import (
+    PlaywrightMCPClient,
+    PlaywrightNavigateOptions,
+    PlaywrightScreenshotOptions,
+)
 from tripsage.tools.browser.tools import (
     check_flight_status as browser_check_flight_status,
 )
-from tripsage.tools.browser.tools import (
-    monitor_price as browser_monitor_price,
-)
-from tripsage.tools.browser.tools import (
-    verify_booking as browser_verify_booking,
-)
+from tripsage.tools.browser.tools import monitor_price as browser_monitor_price
+from tripsage.tools.browser.tools import verify_booking as browser_verify_booking
 from tripsage.utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -118,3 +120,178 @@ async def monitor_price(
         notification_threshold=notification_threshold,
         session_id=session_id,
     )
+
+
+# Playwright MCP Tools
+
+
+@function_tool
+async def navigate_to_url(
+    url: str,
+    browser_type: Literal["chromium", "firefox", "webkit"] = "chromium",
+    headless: bool = False,
+    width: int = 1280,
+    height: int = 720,
+) -> Dict[str, Any]:
+    """
+    Navigate to a URL using the Playwright browser and retrieve
+    the page title and content.
+
+    Args:
+        url: The URL to navigate to
+        browser_type: Browser engine to use (chromium, firefox, or webkit)
+        headless: Whether to run the browser in headless mode
+        width: Browser viewport width in pixels
+        height: Browser viewport height in pixels
+
+    Returns:
+        Dictionary containing page title and a summary of the content
+    """
+    logger.info(f"Navigating to {url} using Playwright MCP")
+
+    async with PlaywrightMCPClient() as client:
+        options = PlaywrightNavigateOptions(
+            browser_type=browser_type,
+            headless=headless,
+            width=width,
+            height=height,
+        )
+
+        # Navigate to the URL
+        nav_result = await client.navigate(url, options)
+
+        # Get the visible text content
+        text_content = await client.get_visible_text()
+
+        # Create a summary (just take first 500 chars for example)
+        content_summary = (
+            text_content[:500] + "..." if len(text_content) > 500 else text_content
+        )
+
+        return {
+            "title": nav_result.get("title", "Unknown title"),
+            "url": url,
+            "content_summary": content_summary,
+        }
+
+
+@function_tool
+async def take_webpage_screenshot(
+    url: str,
+    name: str = "screenshot",
+    full_page: bool = False,
+    selector: Optional[str] = None,
+) -> Dict[str, Any]:
+    """
+    Navigate to a URL and take a screenshot of the page or a specific element.
+
+    Args:
+        url: The URL to navigate to
+        name: Name for the screenshot
+        full_page: Whether to capture the full page
+        selector: CSS selector for a specific element (if provided)
+
+    Returns:
+        Dictionary containing screenshot data as base64 string
+    """
+    logger.info(f"Taking screenshot of {url} using Playwright MCP")
+
+    async with PlaywrightMCPClient() as client:
+        # Navigate to the URL
+        await client.navigate(url)
+
+        # Take the screenshot
+        screenshot_options = PlaywrightScreenshotOptions(
+            selector=selector,
+            full_page=full_page,
+            store_base64=True,
+        )
+
+        result = await client.take_screenshot(name, screenshot_options)
+
+        return {
+            "success": True,
+            "screenshot_base64": result.get("base64", ""),
+            "url": url,
+            "name": name,
+        }
+
+
+@function_tool
+async def extract_webpage_content(
+    url: str,
+    format: Literal["text", "html"] = "text",
+) -> Dict[str, Any]:
+    """
+    Navigate to a URL and extract the visible content in text or HTML format.
+
+    Args:
+        url: The URL to navigate to
+        format: Content format to extract ("text" or "html")
+
+    Returns:
+        Dictionary containing the extracted content
+    """
+    logger.info(f"Extracting {format} content from {url} using Playwright MCP")
+
+    async with PlaywrightMCPClient() as client:
+        # Navigate to the URL
+        await client.navigate(url)
+
+        # Extract the content
+        if format == "text":
+            content = await client.get_visible_text()
+        else:  # HTML
+            content = await client.get_visible_html()
+
+        return {
+            "success": True,
+            "url": url,
+            "format": format,
+            "content": content,
+        }
+
+
+@function_tool
+async def fill_web_form(
+    url: str,
+    form_fields: Dict[str, str],
+    submit_selector: Optional[str] = None,
+) -> Dict[str, Any]:
+    """
+    Navigate to a URL, fill out a form, and optionally submit it.
+
+    Args:
+        url: The URL to navigate to
+        form_fields: Dictionary mapping CSS selectors to values for form fields
+        submit_selector: CSS selector for the submit button (if provided)
+
+    Returns:
+        Dictionary indicating success and the page URL after form submission
+    """
+    logger.info(f"Filling web form at {url} using Playwright MCP")
+
+    async with PlaywrightMCPClient() as client:
+        # Navigate to the URL
+        await client.navigate(url)
+
+        # Fill each form field
+        for selector, value in form_fields.items():
+            await client.fill(selector, value)
+            logger.debug(f"Filled field {selector} with value {value}")
+
+        # Submit the form if a submit selector is provided
+        if submit_selector:
+            await client.click(submit_selector)
+            logger.debug(f"Clicked submit button {submit_selector}")
+
+        # Get the current URL (which might have changed after submission)
+        result = await client.execute_raw_command("Playwright_navigate", {"url": ""})
+        current_url = result.get("url", url)
+
+        return {
+            "success": True,
+            "url": current_url,
+            "message": "Form filled successfully"
+            + (" and submitted" if submit_selector else ""),
+        }

@@ -118,46 +118,67 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
   - **Tasks:**
 
     - [ ] Supabase MCP Integration: (Short-Term Phase)
+      - **Target:** Database operations for TripSage's SQL data
+      - **Goal:** Provide seamless integration with Supabase database
       - **Success Metrics:**
         - 99.9% uptime for database operations
         - <100ms average query response time
         - 100% schema validation coverage
         - 95%+ test coverage with integration tests
+      - **Resources:**
+        - **Server Repo:** https://github.com/supabase/mcp-supabase
+        - **Supabase Docs:** https://supabase.com/docs
       - Set up Supabase MCP server configuration
       - Create wrapper functions in `tripsage/tools/supabase_tools.py`
       - Implement database operation tools with proper validation
       - Add comprehensive tests for Supabase tool integration
     - [ ] Neo4j Memory MCP Integration: (Immediate Phase)
+      - **Target:** Knowledge graph operations for trip planning and domain data
+      - **Goal:** Implement persistent memory graph for travel domain knowledge
       - **Success Metrics:**
         - 95%+ successful graph operations
         - <200ms average query response time
         - Complete coverage of entity/relationship models
         - 90%+ test coverage for graph operations
+      - **Resources:**
+        - **Server Repo:** https://github.com/neo4j-contrib/mcp-neo4j
+        - **Neo4j Docs:** https://neo4j.com/docs/
+        - **Memory MCP Docs:** https://neo4j.com/labs/claude-memory-mcp/
       - Configure Neo4j Memory MCP server
       - Create memory graph tools in `tripsage/tools/memory_tools.py`
       - Implement entity/relationship management functions
       - Add tests for knowledge graph operations
     - [ ] Duffel Flights MCP Integration: (Short-Term Phase)
+      - **Target:** Flight search and booking for travel planning
+      - **Goal:** Enable comprehensive flight options with real-time pricing
       - **Success Metrics:**
         - 95%+ successful flight searches
         - <3 second average response time
         - Complete coverage of major global airlines
         - 90%+ test coverage with realistic flight scenarios
+      - **Resources:**
+        - **Server Repo:** https://github.com/duffel/mcp-flights
+        - **Duffel API Docs:** https://duffel.com/docs/api
       - Set up Duffel Flights MCP configuration
       - Create flight search tools in `tripsage/tools/flight_tools.py`
       - Implement offer and search functionality
       - Add tests for flight search operations
     - [ ] Airbnb MCP Integration: (Short-Term Phase)
+      - **Target:** Accommodation search and booking capabilities
+      - **Goal:** Enable comprehensive lodging options for travel planning
       - **Success Metrics:**
         - 90%+ successful accommodation searches
         - <5 second average response time
         - Accurate pricing and availability data
         - 90%+ test coverage for accommodation operations
+      - **Resources:**
+        - **Server Repo:** https://github.com/openbnb/mcp-airbnb
+        - **API Reference:** https://github.com/openbnb/openbnb-api
       - Configure Airbnb MCP server
       - Create accommodation tools in `tripsage/tools/accommodation_tools.py`
       - Implement listing search and details functionality
       - Add tests for accommodation search operations
-    - [ ] Playwright MCP Integration: (Immediate Phase)
+    - [x] Playwright MCP Integration: (Immediate Phase)
       - **Target:** Browser automation for complex travel workflows
       - **Goal:** Provide fallback mechanism for sites that block scrapers
       - **Success Metrics:**
@@ -165,14 +186,29 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
         - <5 second average response time for cached operations
         - 90%+ test coverage with integration tests
         - Successful fallback handling for at least 5 major travel sites
+      - **Resources:**
+        - **Server Repo:** https://github.com/executeautomation/mcp-playwright
+        - **Playwright Docs:** https://playwright.dev/docs/intro
       - **Tasks:**
-        - Configure Playwright MCP server with Python integration
-        - Create browser automation toolkit in `tripsage/tools/browser/tools.py`
-        - Implement session persistence for authenticated workflows
-        - Develop travel-specific browser operations (booking verification, check-ins)
-        - Create escalation logic from crawler to browser automation
-        - Add anti-detection capabilities for travel websites
-        - Implement comprehensive testing with mock travel websites
+        - [x] Configure Playwright MCP server with Python integration
+          - ✓ Created PlaywrightMCPClient class in tripsage/tools/browser/playwright_mcp_client.py
+          - ✓ Implemented JSON-RPC style client using httpx for async operations
+          - ✓ Added proper connection pooling and timeout management
+          - ✓ Integrated with MCP configuration system for settings
+        - [x] Create browser automation toolkit
+          - ✓ Added core browser operations (navigate, screenshot, click, fill)
+          - ✓ Implemented content extraction methods (get_visible_text, get_visible_html)
+          - ✓ Created agent-callable function tools in browser_tools.py
+          - ✓ Used proper async/await patterns with context managers
+        - [x] Implement proper error handling
+          - ✓ Used @with_error_handling decorator for standardized error reporting
+          - ✓ Created PlaywrightMCPError class for clear error categorization
+          - ✓ Added comprehensive logging for operations and errors
+        - [ ] Implement session persistence for authenticated workflows
+        - [ ] Develop travel-specific browser operations (booking verification, check-ins)
+        - [ ] Create escalation logic from crawler to browser automation
+        - [ ] Add anti-detection capabilities for travel websites
+        - [ ] Implement comprehensive testing with mock travel websites
     - [ ] Hybrid Web Crawling Integration: (Immediate-to-Short-Term Phase)
       - **Target:** Implement domain-optimized web crawling strategy
       - **Goal:** Maximize extraction performance and reliability for travel sites
@@ -183,11 +219,17 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
         - <15% fallback rate to browser automation
       - **Tasks:**
         - [ ] Crawl4AI MCP Integration:
+          - **Resources:**
+            - **Server Repo:** https://github.com/crawlai/mcp-crawl4ai
+            - **API Docs:** https://docs.crawl4.ai/
           - Configure Crawl4AI MCP server with RAG capabilities
           - Implement in `tripsage/tools/webcrawl/crawl4ai_client.py`
           - Optimize for informational sites (TripAdvisor, WikiTravel, etc.)
           - Create comprehensive tests for information extraction
         - [ ] Firecrawl MCP Integration:
+          - **Resources:**
+            - **Server Repo:** https://github.com/mendableai/mcp-firecrawl
+            - **API Docs:** https://docs.firecrawl.dev/
           - Configure official Firecrawl MCP server from MendableAI
           - Implement in `tripsage/tools/webcrawl/firecrawl_client.py`
           - Optimize for booking sites (Airbnb, Booking.com, etc.)
@@ -215,52 +257,93 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
             - <3 second average response time for cached results
             - <8 second average for uncached results
             - <5% fallback rate to Playwright for optimized domains
-    - [ ] Google Maps MCP Integration: (Immediate Phase)
+    - [x] Google Maps MCP Integration: (Immediate Phase)
+      - **Target:** Location services and geographic data for trip planning
+      - **Goal:** Enable high-quality geographic data for travel planning and routing
       - **Success Metrics:**
         - 99% geocoding success rate
         - <300ms average response time
         - Complete coverage of required location services
         - 90%+ test coverage for all implemented functions
-      - Set up Google Maps MCP configuration
-      - Create maps and location tools in `tripsage/tools/googlemaps_tools.py`
-      - Implement geocoding, directions, and place search functionality
-      - Add tests for location-based operations
+      - **Resources:**
+        - **Server Repo:** https://github.com/googlemaps/mcp-googlemaps
+        - **API Docs:** https://developers.google.com/maps/documentation
+      - **Tasks:**
+        - [x] Set up Google Maps MCP configuration
+          - ✓ Created GoogleMapsMCPConfig in tripsage/config/app_settings.py
+          - ✓ Added proper configuration for server URL and API keys
+          - ✓ Provided example configuration in example_mcp_settings.py
+        - [x] Create GoogleMapsMCPClient implementation
+          - ✓ Implemented in tripsage/clients/maps/google_maps_mcp_client.py
+          - ✓ Created singleton client pattern with async/await support
+          - ✓ Added content-aware caching with WebOperationsCache
+          - ✓ Implemented comprehensive error handling with MCPError
+        - [x] Created Google Maps MCP tools in tripsage/tools/googlemaps_tools.py
+          - ✓ Implemented geocoding, reverse geocoding, place search
+          - ✓ Added place details, directions, distance matrix
+          - ✓ Created timezone and elevation tools
+          - ✓ Added proper error handling with @with_error_handling decorator
+        - [x] Added tests for Google Maps MCP client
+          - ✓ Created comprehensive unit tests with mocked responses
+          - ✓ Tested all API endpoints and caching behavior
+          - ✓ Implemented error case testing
+          - ✓ Created tests for singleton pattern and context management
     - [ ] Time MCP Integration: (Short-Term Phase)
+      - **Target:** Timezone and time operations for global travel planning
+      - **Goal:** Provide accurate time services for cross-timezone itineraries
       - **Success Metrics:**
         - 100% accuracy for timezone conversions
         - <100ms average response time
         - Support for all global timezones
         - 95%+ test coverage
+      - **Resources:**
+        - **Server Repo:** https://github.com/anthropics/mcp-time
+        - **API Docs:** https://worldtimeapi.org/api/
       - Configure Time MCP server
       - Create time tools in `tripsage/tools/time_tools.py`
       - Implement timezone conversion and current time functionality
       - Add tests for time-related operations
     - [ ] Weather MCP Integration: (Immediate Phase)
+      - **Target:** Weather forecasting and historical data for trip planning
+      - **Goal:** Enable weather-aware itinerary planning and recommendations
       - **Success Metrics:**
         - 95%+ availability for global weather data
         - <1 second average response time
         - Accurate forecasting for 7+ day window
         - 90%+ test coverage for API functions
+      - **Resources:**
+        - **Server Repo:** https://github.com/weatherapi/mcp-weather
+        - **API Docs:** https://www.weatherapi.com/docs/
       - Configure Weather MCP server
       - Create weather tools in `tripsage/tools/weather_tools.py`
       - Implement forecast and current conditions functionality
       - Add tests for weather-related operations
     - [ ] Google Calendar MCP Integration: (Short-Term Phase)
+      - **Target:** Calendar integration for trip planning and scheduling
+      - **Goal:** Enable seamless addition of travel events to user calendars
       - **Success Metrics:**
         - 98%+ successful event creation/modification
         - <1 second average operation time
         - Complete support for all required calendar operations
         - 95%+ test coverage
+      - **Resources:**
+        - **Server Repo:** https://github.com/googleapis/mcp-calendar
+        - **API Docs:** https://developers.google.com/calendar/api/v3/reference
       - Configure Google Calendar MCP server
       - Create calendar tools in `tripsage/tools/calendar_tools.py`
       - Implement event creation and scheduling functionality
       - Add tests for calendar-related operations
     - [ ] Redis MCP Integration: (Short-Term Phase)
+      - **Target:** Distributed caching for performance optimization
+      - **Goal:** Improve response times and reduce API call volumes
       - **Success Metrics:**
         - 99.9% cache operation reliability
         - <50ms average cache operation time
         - 90%+ cache hit rate for common operations
         - Proper TTL management across content types
+      - **Resources:**
+        - **Server Repo:** https://github.com/redis/mcp-redis
+        - **Redis Docs:** https://redis.io/docs/
       - Configure Redis MCP server
       - Create caching tools in `tripsage/tools/cache_tools.py`
       - Implement distributed caching functionality
@@ -270,6 +353,9 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
       - **Target:** Implement caching for OpenAI Agents SDK WebSearchTool
       - **Goal:** Optimize performance and reduce API usage for web searches
       - **Status:** Research completed - integration plan ready for implementation
+      - **Resources:**
+        - **OpenAI Agents SDK:** https://openai.github.io/openai-agents-python/
+        - **Redis Client Docs:** https://redis-py.readthedocs.io/en/stable/
       - **Research Findings:**
         - WebSearchTool already implemented in TravelPlanningAgent and DestinationResearchAgent
         - Domain configurations differ appropriately between agents
@@ -297,6 +383,9 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
       - **Target:** Advanced caching system for TripSage web operations
       - **Goal:** Create a centralized, content-aware caching system for all web operation tools
       - **Status:** Implemented core functionality, requires integration testing
+      - **Resources:**
+        - **Redis Client Docs:** https://redis-py.readthedocs.io/en/stable/
+        - **OpenAI Agents SDK:** https://openai.github.io/openai-agents-python/
       - **Tasks:**
         - [x] Implement WebOperationsCache Class in `tripsage/utils/cache.py`:
           - [x] Create `ContentType` enum with categories (REALTIME, TIME_SENSITIVE, DAILY, SEMI_STATIC, STATIC)
@@ -364,7 +453,10 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
         - ✓ Added comprehensive validation with Pydantic v2
         - ✓ Created example usage and client initialization patterns
         - ✓ Implemented in `tripsage/config/mcp_settings.py`
-      - Integrate Playwright MCP (see Playwright MCP Integration)
+      - [x] Integrate Playwright MCP (see Playwright MCP Integration)
+        - ✓ Implemented PlaywrightMCPClient with core browser operations
+        - ✓ Created agent-callable tools in browser_tools.py
+        - ✓ Added proper error handling and logging
       - Integrate Google Maps MCP (see Google Maps MCP Integration)
       - Integrate Weather MCP for essential trip planning data (see Weather MCP Integration)
       - Begin hybrid web crawling implementation (see Crawl4AI & Firecrawl Integration)
@@ -932,7 +1024,7 @@ For each completed task, ensure:
 | Supabase MCP Integration        | 📅     | -   | Scheduled to start after Codebase Restructuring is complete             |
 | Neo4j Memory MCP Integration    | 📅     | -   | Prioritized for knowledge graph implementation                          |
 | Travel Data MCP Integration     | 📅     | -   | Duffel Flights MCP and Airbnb MCP identified for travel data access     |
-| Playwright MCP Integration      | 📅     | -   | Prioritized for browser automation and fallback scraping                |
+| Playwright MCP Integration      | ✅     | -   | Implemented core client and agent-callable tools                        |
 | Crawl4AI MCP Integration        | 📅     | -   | Scheduled for destination research and content extraction               |
 | Google Maps MCP Integration     | 📅     | -   | Prioritized for location-based functionality                            |
 | Time MCP Integration            | 📅     | -   | Scheduled for timezone support in travel planning                       |
