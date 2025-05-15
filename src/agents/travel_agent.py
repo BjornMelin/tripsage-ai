@@ -10,11 +10,12 @@ from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel
 
-from agents import WebSearchTool, function_tool
+from agents import function_tool
 from src.cache.redis_cache import redis_cache
 from src.utils.config import get_config
 from src.utils.error_handling import MCPError
 from src.utils.logging import get_module_logger
+from tripsage.tools.web_tools import CachedWebSearchTool
 
 from .base_agent import TravelAgent as BaseTravelAgent
 from .destination_research import TripSageDestinationResearch
@@ -90,9 +91,9 @@ class TravelAgent(BaseTravelAgent):
         # This is part of our hybrid search approach where OpenAI's built-in search
         # serves as the primary method for general queries, while specialized MCP tools
         # (Firecrawl, Browser MCP) are used for deeper, more specific travel research
-        self.web_search_tool = WebSearchTool()
+        self.web_search_tool = CachedWebSearchTool()
         self.agent.tools.append(self.web_search_tool)
-        logger.info("Added WebSearchTool to TravelAgent")
+        logger.info("Added CachedWebSearchTool to TravelAgent")
 
     def _register_travel_tools(self) -> None:
         """Register travel-specific tools."""

@@ -427,6 +427,7 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
           - ✓ Store results with appropriate TTL based on content type
         - [x] Update agent implementations:
           - ✓ Updated TravelPlanningAgent and DestinationResearchAgent to use wrapper
+          - ✓ Updated TravelAgent to use CachedWebSearchTool instead of WebSearchTool
           - ✓ Removed domain configurations (not supported by OpenAI SDK)
         - [x] Add configuration settings:
           - ✓ Configured TTL settings in centralized configuration
@@ -475,11 +476,13 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
           - [x] Add tests for CachedWebSearchTool
           - [x] Test metrics collection and retrieval
           - [x] Verify TTL logic with different content types
-        - [ ] Update Agent Implementations: (Partially Complete)
-          - [ ] Replace WebSearchTool with CachedWebSearchTool in TravelPlanningAgent
-            - Implementation complete, pending integration testing
-          - [ ] Replace WebSearchTool with CachedWebSearchTool in DestinationResearchAgent
-            - Implementation complete, pending integration testing
+        - [x] Update Agent Implementations: (Completed)
+          - [x] Replace WebSearchTool with CachedWebSearchTool in TravelPlanningAgent
+            - Implementation complete using src/agents/travel_planning_agent.py
+          - [x] Replace WebSearchTool with CachedWebSearchTool in DestinationResearchAgent
+            - Implementation complete using src/agents/destination_research_agent.py
+          - [x] Replace WebSearchTool with CachedWebSearchTool in TravelAgent
+            - Updated src/agents/travel_agent.py to use cached version
           - [ ] Apply web_cached decorator to appropriate web operation functions
             - Add to existing webcrawl operations in both agents
             - Add performance monitoring hooks for cache hit rate analysis
@@ -487,7 +490,7 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
         - [x] Phase 1: Core WebOperationsCache implementation
         - [x] Phase 2: Metrics and tool integration
         - [x] Phase 3: Testing and implementation
-        - [ ] Phase 4: Agent integration (Pending)
+        - [x] Phase 4: Agent integration (Completed)
       - [x] Additional Considerations: (Implemented)
         - [x] Performance impact: Implemented sampling to minimize Redis overhead
         - [x] Fallback mechanism: Added robust error handling for Redis operations
@@ -543,10 +546,26 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
   - **Goal:** Replace redundant MCP client implementations with external MCP servers
   - **Strategy:** Follow hybrid approach - prioritize external MCPs, build custom only when necessary
   - **Tasks:**
-    - [ ] Implement unified abstraction layer for all MCP interactions:
-      - Create consistent interface patterns for all MCP clients
-      - Implement standardized error handling across all MCP calls
-      - Develop dependency injection pattern for MCP clients
+    - [x] Implement unified abstraction layer for all MCP interactions:
+      - ✓ Created Manager/Registry pattern with type-safe wrappers
+      - ✓ Implemented standardized error handling with custom exceptions
+      - ✓ Developed dependency injection support for FastAPI and similar frameworks
+      - ✓ Created BaseMCPWrapper abstract class for consistent interface
+      - ✓ Implemented MCPManager for centralized lifecycle management
+      - ✓ Created MCPClientRegistry for dynamic wrapper registration
+      - ✓ Added automatic registration of default wrappers on import
+      - ✓ Provided examples for PlaywrightMCP, GoogleMapsMCP, and WeatherMCP
+      - ✓ Core components reimplemented (2025-01-16):
+        - ✓ BaseMCPWrapper with updated method signatures
+        - ✓ MCPClientRegistry singleton implementation
+        - ✓ MCPManager with configuration loading
+        - ✓ Custom exception hierarchy under TripSageMCPError
+      - ✓ Specific wrapper implementations (2025-01-16):
+        - ✓ PlaywrightMCPWrapper with standardized method mapping
+        - ✓ GoogleMapsMCPWrapper with comprehensive mapping for maps APIs
+        - ✓ WeatherMCPWrapper with weather service method mapping
+        - ✓ Automatic registration in registration.py
+        - ✓ Example refactored tool (weather_tools_abstraction.py)
     - [ ] Audit `src/mcp/` to identify functionality covered by external MCPs:
       - Map current clients to Supabase, Neo4j Memory, Duffel Flights, Airbnb MCPs
       - Map webcrawl functionality to hybrid Crawl4AI/Firecrawl implementation with domain-based routing
@@ -565,9 +584,28 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
       - Implement TTL management based on data type (shorter for prices, longer for destination info)
       - Add cache invalidation patterns based on travel dates and data changes
       - Develop comprehensive monitoring for cache hit/miss rates
-    - [ ] Create client wrappers for external MCP servers:
-      - Implement thin client interfaces for consistent access patterns
-      - Ensure proper error handling and request validation
+    - [ ] Create additional MCP wrappers for remaining clients:
+      - [ ] SupabaseMCPWrapper for database operations
+      - [ ] Neo4jMemoryMCPWrapper for knowledge graph operations  
+      - [ ] DuffelFlightsMCPWrapper for flight search and booking
+      - [ ] AirbnbMCPWrapper for accommodation search
+      - [ ] FirecrawlMCPWrapper for web crawling
+      - [ ] Crawl4AIMCPWrapper for AI-powered web crawling
+      - [ ] TimeMCPWrapper for timezone operations
+      - [ ] GoogleCalendarMCPWrapper for calendar integration
+      - [ ] RedisMCPWrapper for caching operations
+      - [ ] CachedWebSearchToolWrapper for web search with caching
+    - [ ] Refactor all agent tools to use MCPManager.invoke:
+      - [ ] Update browser_tools.py to use PlaywrightMCPWrapper
+      - [ ] Update googlemaps_tools.py to use GoogleMapsMCPWrapper
+      - [ ] Update weather_tools.py to use WeatherMCPWrapper
+      - [ ] Update flight_tools.py to use DuffelFlightsMCPWrapper
+      - [ ] Update accommodation_tools.py to use AirbnbMCPWrapper
+      - [ ] Update webcrawl_tools.py to use Firecrawl/Crawl4AI wrappers
+      - [ ] Update time_tools.py to use TimeMCPWrapper
+      - [ ] Update calendar_tools.py to use GoogleCalendarMCPWrapper
+      - [ ] Update database tools to use SupabaseMCPWrapper
+      - [ ] Update knowledge graph tools to use Neo4jMemoryMCPWrapper
     - [ ] Implement monitoring and observability:
       - Add OpenTelemetry instrumentation for MCP interactions
       - Create performance metrics for MCP operations
@@ -1093,3 +1131,4 @@ For each completed task, ensure:
 | Google Maps MCP Integration     | 📅     | -   | Prioritized for location-based functionality                            |
 | Time MCP Integration            | 📅     | -   | Scheduled for timezone support in travel planning                       |
 | WebSearchTool Caching           | ✅     | -   | Implemented CachedWebSearchTool wrapper with content-aware caching      |
+| MCP Abstraction Layer           | ✅     | -   | Implemented Manager/Registry pattern with type-safe wrappers            |
