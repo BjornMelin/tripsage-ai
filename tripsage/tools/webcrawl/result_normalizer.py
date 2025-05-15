@@ -176,6 +176,66 @@ class ResultNormalizer:
 
         return normalized_results
 
+    async def normalize_playwright_mcp_output(
+        self, raw_output: Dict[str, Any], original_url: str
+    ) -> UnifiedCrawlResult:
+        """Normalize Playwright MCP output to UnifiedCrawlResult.
+
+        Args:
+            raw_output: The raw output from PlaywrightMCPClient
+            original_url: The URL that was crawled
+
+        Returns:
+            UnifiedCrawlResult instance
+        """
+        # Check if there was an error
+        if raw_output.get("error") or raw_output.get("status") == "error":
+            return UnifiedCrawlResult(
+                url=original_url,
+                status="error",
+                error_message=raw_output.get("error")
+                or raw_output.get("error_message"),
+                metadata={
+                    "source_crawler": "playwright_mcp",
+                    "crawl_timestamp": datetime.utcnow().isoformat(),
+                },
+            )
+
+        # Extract content based on what's available in the output
+        # Playwright typically returns visible text and HTML
+        text_content = raw_output.get("text") or raw_output.get("visible_text")
+        html_content = raw_output.get("html") or raw_output.get("visible_html")
+        title = raw_output.get("title")
+
+        # Extract any metadata from the response
+        metadata = {
+            "source_crawler": "playwright_mcp",
+            "crawl_timestamp": datetime.utcnow().isoformat(),
+            "content_length": len(text_content or ""),
+            "browser_type": raw_output.get("browser_type", "chromium"),
+        }
+
+        # Add screenshot data if available
+        if raw_output.get("screenshot"):
+            metadata["has_screenshot"] = True
+            if raw_output.get("screenshot_base64"):
+                metadata["screenshot_base64"] = raw_output["screenshot_base64"]
+            elif raw_output.get("screenshot_path"):
+                metadata["screenshot_path"] = raw_output["screenshot_path"]
+
+        # Add any custom metadata from the result
+        if "metadata" in raw_output:
+            metadata["browser_metadata"] = raw_output["metadata"]
+
+        return UnifiedCrawlResult(
+            url=original_url,
+            title=title,
+            main_content_text=text_content,
+            html_content=html_content,
+            metadata=metadata,
+            status="success",
+        )
+
 
 # Singleton instance
 result_normalizer = ResultNormalizer()

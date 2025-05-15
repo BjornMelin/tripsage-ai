@@ -16,6 +16,7 @@ from tripsage.utils.logging import get_logger
 if TYPE_CHECKING:
     from tripsage.clients.webcrawl.crawl4ai_mcp_client import Crawl4AIMCPClient
     from tripsage.clients.webcrawl.firecrawl_mcp_client import FirecrawlMCPClient
+    from tripsage.tools.browser.playwright_mcp_client import PlaywrightMCPClient
 
 logger = get_logger(__name__)
 
@@ -25,16 +26,19 @@ class CrawlerType(str, Enum):
 
     CRAWL4AI = "crawl4ai"
     FIRECRAWL = "firecrawl"
+    PLAYWRIGHT = "playwright"  # For direct Playwright usage
 
 
 class WebCrawlSourceSelector:
     """Intelligent source selector for web crawling operations.
 
-    This class selects the appropriate crawler (Crawl4AI or Firecrawl) based on:
+    This class selects the appropriate crawler (Crawl4AI, Firecrawl, or
+    Playwright) based on:
     1. Domain-based routing configuration
     2. Content type requirements
     3. Dynamic content needs
     4. Extraction complexity
+    5. Known problematic domains that require Playwright
     """
 
     # Default domain patterns that perform better with specific sources
@@ -67,6 +71,20 @@ class WebCrawlSourceSelector:
         "viator.com",
     }
 
+    # Domains that require Playwright due to heavy JS or anti-scraping measures
+    DEFAULT_PLAYWRIGHT_ONLY_DOMAINS: Set[str] = {
+        "zillow.com",
+        "netflix.com",
+        "linkedin.com",
+        "facebook.com",
+        "instagram.com",
+        "twitter.com",
+        "x.com",
+        "google.com/travel",
+        "google.com/flights",
+        "maps.google.com",
+    }
+
     # Content type to crawler mapping
     CONTENT_TYPE_MAPPING: Dict[str, CrawlerType] = {
         "price_monitor": CrawlerType.FIRECRAWL,  # Better at dynamic price data
@@ -84,6 +102,7 @@ class WebCrawlSourceSelector:
         # Get configured domain mappings or use defaults
         self.crawl4ai_domains = set(self.DEFAULT_CRAWL4AI_DOMAINS)
         self.firecrawl_domains = set(self.DEFAULT_FIRECRAWL_DOMAINS)
+        self.playwright_only_domains = set(self.DEFAULT_PLAYWRIGHT_ONLY_DOMAINS)
 
         # Add any custom domain mappings from Crawl4AI config
         if self.settings.crawl4ai.domain_routing:
@@ -97,6 +116,18 @@ class WebCrawlSourceSelector:
                 self.settings.firecrawl.domain_routing.firecrawl_domains
             )
 
+        # Add any custom Playwright-only domains from config if available
+        # This assumes playwright config might have domain_routing in the future
+        if hasattr(self.settings, "playwright") and hasattr(
+            self.settings.playwright, "domain_routing"
+        ):
+            if hasattr(
+                self.settings.playwright.domain_routing, "playwright_only_domains"
+            ):
+                self.playwright_only_domains.update(
+                    self.settings.playwright.domain_routing.playwright_only_domains
+                )
+
     def select_crawler(
         self,
         url: str,
@@ -104,6 +135,7 @@ class WebCrawlSourceSelector:
         prefer_structured_data: bool = False,
         requires_javascript: bool = False,
         extraction_complexity: str = "simple",
+        force_playwright: bool = False,
     ) -> CrawlerType:
         """Select the appropriate crawler for web crawling.
 
@@ -113,10 +145,25 @@ class WebCrawlSourceSelector:
             prefer_structured_data: Whether structured data extraction is needed
             requires_javascript: Whether the page requires JavaScript execution
             extraction_complexity: Complexity level ("simple", "moderate", "complex")
+            force_playwright: Force Playwright selection regardless of other factors
 
         Returns:
             The selected crawler type
         """
+        # Force Playwright if requested
+        if force_playwright:
+            return CrawlerType.PLAYWRIGHT
+
+        # Extract domain for checking
+        domain = self._extract_domain(url)
+
+        # Check if domain requires Playwright
+        if domain and any(domain.endswith(pd) for pd in self.playwright_only_domains):
+            logger.debug(
+                f"Selected Playwright for domain {domain} (Playwright-only domain)"
+            )
+            return CrawlerType.PLAYWRIGHT
+
         # Default to Crawl4AI for general content
         selected_crawler = CrawlerType.CRAWL4AI
 
@@ -185,7 +232,7 @@ class WebCrawlSourceSelector:
 
     def get_client_for_url(
         self, url: str, **kwargs
-    ) -> Union["FirecrawlMCPClient", "Crawl4AIMCPClient"]:
+    ) -> Union["FirecrawlMCPClient", "Crawl4AIMCPClient", "PlaywrightMCPClient"]:
         """Get the appropriate client instance for a given URL.
 
         Args:
@@ -193,7 +240,7 @@ class WebCrawlSourceSelector:
             **kwargs: Additional arguments for crawler selection
 
         Returns:
-            Either FirecrawlMCPClient or Crawl4AIMCPClient instance
+            Either FirecrawlMCPClient, Crawl4AIMCPClient or PlaywrightMCPClient instance
         """
         crawler_type = self.select_crawler(url, **kwargs)
 
@@ -203,6 +250,12 @@ class WebCrawlSourceSelector:
             )
 
             return FirecrawlMCPClient()
+        elif crawler_type == CrawlerType.PLAYWRIGHT:
+            from tripsage.tools.browser.playwright_mcp_client import (
+                PlaywrightMCPClient,
+            )
+
+            return PlaywrightMCPClient()
         else:
             from tripsage.clients.webcrawl.crawl4ai_mcp_client import Crawl4AIMCPClient
 

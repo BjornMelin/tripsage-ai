@@ -1,7 +1,8 @@
 """Unified web crawling tools for TripSage agents.
 
 Provides a unified interface for web crawling operations using either
-Crawl4AI or Firecrawl MCP clients based on intelligent source selection.
+Crawl4AI or Firecrawl MCP clients based on intelligent source selection,
+with Playwright MCP as a fallback for JavaScript-heavy sites.
 """
 
 from typing import Optional
@@ -24,11 +25,14 @@ async def crawl_website_content(
     content_type: Optional[str] = None,
     requires_javascript: bool = False,
     use_cache: bool = True,
+    enable_playwright_fallback: bool = True,
 ) -> UnifiedCrawlResult:
-    """Crawl a website using the most appropriate MCP client.
+    """Crawl a website using the most appropriate MCP client with Playwright fallback.
 
     This unified tool automatically selects between Crawl4AI and Firecrawl
     based on the URL domain, content type, and extraction requirements.
+    If the primary crawler fails, it falls back to Playwright MCP for
+    JavaScript-heavy content.
 
     Args:
         url: The URL to crawl
@@ -36,6 +40,7 @@ async def crawl_website_content(
         content_type: Type of content being extracted (e.g., "booking", "travel_blog")
         requires_javascript: Whether the page requires JavaScript execution
         use_cache: Whether to use cached results if available
+        enable_playwright_fallback: Whether to use Playwright as fallback on failure
 
     Returns:
         UnifiedCrawlResult with normalized content from the appropriate crawler
@@ -62,6 +67,42 @@ async def crawl_website_content(
     # Get the normalizer
     normalizer = get_normalizer()
 
+    # Helper function to check if a result needs fallback
+    def needs_fallback(result: UnifiedCrawlResult) -> bool:
+        """Check if a crawl result requires fallback to Playwright."""
+        # Failed result
+        if result.status == "error":
+            return True
+
+        # Empty or insufficient content
+        if not result.has_content():
+            return True
+
+        # Check for common JS-required indicators
+        error_patterns = [
+            "JavaScript is required",
+            "Enable JavaScript",
+            "This site requires JavaScript",
+            "Please enable JavaScript",
+        ]
+
+        if result.error_message:
+            for pattern in error_patterns:
+                if pattern.lower() in result.error_message.lower():
+                    return True
+
+        if result.main_content_text:
+            for pattern in error_patterns:
+                if pattern.lower() in result.main_content_text.lower():
+                    return True
+
+        # Check if content is suspiciously short (might indicate loading error)
+        if result.main_content_text and len(result.main_content_text) < 100:
+            return True
+
+        return False
+
+    primary_result = None
     try:
         # Determine which client we're using
         client_name = client.__class__.__name__
@@ -84,7 +125,48 @@ async def crawl_website_content(
             raw_result = await client.scrape_url(
                 url, params=params, use_cache=use_cache
             )
-            return await normalizer.normalize_firecrawl_output(raw_result, url)
+            primary_result = await normalizer.normalize_firecrawl_output(
+                raw_result, url
+            )
+
+        elif client_name == "PlaywrightMCPClient":
+            # Use Playwright directly (selected by source selector)
+            from tripsage.tools.browser.playwright_mcp_client import (
+                PlaywrightNavigateOptions,
+            )
+
+            # Navigate to the URL
+            navigate_options = PlaywrightNavigateOptions(
+                browser_type="chromium",
+                headless=True,
+                width=1280,
+                height=720,
+                timeout=30000,
+                wait_until="networkidle",
+            )
+
+            navigation_result = await client.navigate(url, navigate_options)
+
+            # Get the page content
+            visible_text = await client.get_visible_text()
+            visible_html = await client.get_visible_html()
+
+            # Close the browser
+            await client.close()
+
+            # Create the raw output for normalizer
+            playwright_output = {
+                "visible_text": visible_text,
+                "visible_html": visible_html,
+                "title": navigation_result.get("title"),
+                "browser_type": navigate_options.browser_type,
+                "status": "success",
+            }
+
+            # Normalize the Playwright output
+            primary_result = await normalizer.normalize_playwright_mcp_output(
+                playwright_output, url
+            )
 
         else:
             # Use Crawl4AI client
@@ -100,11 +182,11 @@ async def crawl_website_content(
             )
 
             raw_result = await client.crawl_url(url, params=params, use_cache=use_cache)
-            return await normalizer.normalize_crawl4ai_output(raw_result, url)
+            primary_result = await normalizer.normalize_crawl4ai_output(raw_result, url)
 
     except Exception as e:
-        logger.error(f"Error crawling {url}: {str(e)}")
-        return UnifiedCrawlResult(
+        logger.error(f"Primary crawl failed for {url}: {str(e)}")
+        primary_result = UnifiedCrawlResult(
             url=url,
             status="error",
             error_message=str(e),
@@ -115,6 +197,73 @@ async def crawl_website_content(
                 "error_type": type(e).__name__,
             },
         )
+
+    # Check if we need fallback to Playwright
+    if enable_playwright_fallback and needs_fallback(primary_result):
+        logger.info(
+            f"Primary crawler failed/insufficient, falling back to Playwright "
+            f"MCP for {url}"
+        )
+
+        try:
+            from tripsage.tools.browser.playwright_mcp_client import (
+                PlaywrightMCPClient,
+                PlaywrightNavigateOptions,
+            )
+
+            # Create Playwright client
+            playwright_client = PlaywrightMCPClient()
+
+            # Navigate to the URL
+            navigate_options = PlaywrightNavigateOptions(
+                browser_type="chromium",
+                headless=True,
+                width=1280,
+                height=720,
+                timeout=30000,  # 30 seconds
+                wait_until="networkidle",
+            )
+
+            navigation_result = await playwright_client.navigate(url, navigate_options)
+
+            # Get the page content
+            visible_text = await playwright_client.get_visible_text()
+            visible_html = await playwright_client.get_visible_html()
+
+            # Close the browser
+            await playwright_client.close()
+
+            # Create the raw output for normalizer
+            playwright_output = {
+                "visible_text": visible_text,
+                "visible_html": visible_html,
+                "title": navigation_result.get("title"),
+                "browser_type": navigate_options.browser_type,
+                "status": "success",
+            }
+
+            # Normalize the Playwright output
+            playwright_result = await normalizer.normalize_playwright_mcp_output(
+                playwright_output, url
+            )
+
+            # Add metadata about fallback
+            playwright_result.metadata["fallback_from"] = primary_result.source_crawler
+            playwright_result.metadata["fallback_reason"] = (
+                primary_result.error_message or "insufficient_content"
+            )
+
+            return playwright_result
+
+        except Exception as e:
+            logger.error(f"Playwright fallback also failed for {url}: {str(e)}")
+            # Return the original primary result with fallback error info
+            primary_result.metadata["fallback_attempted"] = True
+            primary_result.metadata["fallback_error"] = str(e)
+            return primary_result
+
+    # Return the primary result if no fallback needed or disabled
+    return primary_result
 
 
 @function_tool

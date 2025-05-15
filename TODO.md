@@ -209,7 +209,7 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
         - [ ] Create escalation logic from crawler to browser automation
         - [ ] Add anti-detection capabilities for travel websites
         - [ ] Implement comprehensive testing with mock travel websites
-    - [ ] Hybrid Web Crawling Integration: (Immediate-to-Short-Term Phase)
+    - [x] Hybrid Web Crawling Integration: (Immediate-to-Short-Term Phase)
       - **Target:** Implement domain-optimized web crawling strategy
       - **Goal:** Maximize extraction performance and reliability for travel sites
       - **Success Metrics:**
@@ -266,6 +266,22 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
             - Created normalize_crawl4ai_output method
             - Handled error cases and edge conditions
           - ✓ Ensured unified interface regardless of underlying crawler
+        - [x] Playwright MCP Fallback Integration:
+          - ✓ Extended result normalizer with `normalize_playwright_mcp_output` method
+            - Created normalization for Playwright MCP output
+            - Handled browser-specific metadata (browser type, screenshots)
+            - Integrated with UnifiedCrawlResult schema
+          - ✓ Enhanced unified web crawl tool with fallback logic
+            - Added Playwright MCP as fallback when primary crawlers fail
+            - Implemented intelligent failure detection (error status, empty content, JS requirements)
+            - Added `enable_playwright_fallback` parameter for control
+            - Integrated proper error handling for both primary and fallback attempts
+          - ✓ Refined WebCrawlSourceSelector for Playwright-only domains
+            - Added CrawlerType.PLAYWRIGHT enum value
+            - Defined default Playwright-only domains (social media, Google services)
+            - Enhanced `select_crawler` method with `force_playwright` parameter
+            - Added support for direct Playwright selection as primary crawler
+          - Implemented graceful degradation with proper error tracking
         - [ ] Production Scenario Testing Strategy:
           - Create test suite with real-world travel planning scenarios
             - Develop 10+ realistic multi-site test cases covering booking flows and research patterns
@@ -1071,6 +1087,9 @@ For each completed task, ensure:
 | Result Normalizer               | ✅     | -   | Implemented normalize methods for both Firecrawl and Crawl4AI outputs |
 | Source Selection Logic          | ✅     | -   | Implemented domain routing and content-type based crawler selection |
 | Unified Crawl Interface         | ✅     | -   | Created crawl_website_content with automatic crawler selection |
+| Playwright MCP Fallback         | ✅     | -   | Enhanced hybrid crawling with Playwright fallback and direct selection |
+| Playwright Result Normalizer    | ✅     | -   | Added normalize_playwright_mcp_output for browser-based crawling |
+| Playwright-only Domains         | ✅     | -   | Added support for direct Playwright selection for specific domains |
 | Google Maps MCP Integration     | 📅     | -   | Prioritized for location-based functionality                            |
 | Time MCP Integration            | 📅     | -   | Scheduled for timezone support in travel planning                       |
 | WebSearchTool Caching           | ✅     | -   | Implemented CachedWebSearchTool wrapper with content-aware caching      |
