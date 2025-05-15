@@ -6,9 +6,10 @@ destinations, leveraging webcrawl and maps MCP tools and integrating with the
 OpenAI Agents SDK.
 """
 
-from agents import RunContextWrapper, WebSearchTool, handoff
+from agents import RunContextWrapper, handoff
 from src.utils.config import get_config
 from src.utils.logging import get_module_logger
+from tripsage.tools.web_tools import CachedWebSearchTool
 
 from .base_agent import BaseAgent
 
@@ -64,7 +65,7 @@ class DestinationResearchAgent(BaseAgent):
         - Focus on recent information for time-sensitive details
 
         TOOL USAGE:
-        - Use WebSearchTool for general destination information
+        - Use CachedWebSearchTool for general destination information
         - Use WebCrawl MCP for deep research on specific topics
         - Use Google Maps MCP for location analysis and spatial information
         - Use Memory MCP to store destination information for future reference
@@ -97,43 +98,12 @@ class DestinationResearchAgent(BaseAgent):
         self._register_research_mcp_clients()
 
     def _add_websearch_tool(self) -> None:
-        """Add WebSearchTool with destination research focus."""
-        # Configure WebSearchTool with travel guide domains
-        self.web_search_tool = WebSearchTool(
-            allowed_domains=[
-                # Travel guides
-                "lonelyplanet.com",
-                "wikitravel.org",
-                "wikivoyage.org",
-                "frommers.com",
-                "roughguides.com",
-                "fodors.com",
-                "tripadvisor.com",
-                # Government travel sites
-                "travel.state.gov",
-                "gov.uk/foreign-travel-advice",
-                "smartraveller.gov.au",
-                # Weather and climate
-                "weatherspark.com",
-                "accuweather.com",
-                "weather.com",
-                # Local tourism boards
-                "visitcalifornia.com",
-                "visitlondon.com",
-                "australia.com",
-                "france.fr",
-                "germany.travel",
-                "visitjapan.jp",
-                # Travel blogs
-                "nomadicmatt.com",
-                "thepointsguy.com",
-                "worldnomads.com",
-            ],
-            # Block unhelpful content
-            blocked_domains=["pinterest.com", "quora.com"],
-        )
+        """Add CachedWebSearchTool for destination research."""
+        # The OpenAI WebSearchTool doesn't support domain filtering,
+        # but agent instructions guide it to focus on travel-related sources
+        self.web_search_tool = CachedWebSearchTool()
         self.agent.tools.append(self.web_search_tool)
-        logger.info("Added WebSearchTool to DestinationResearchAgent")
+        logger.info("Added CachedWebSearchTool to DestinationResearchAgent")
 
     def _register_research_tools(self) -> None:
         """Register destination research-specific tools."""

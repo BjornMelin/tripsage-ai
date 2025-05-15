@@ -6,10 +6,9 @@ orchestrator for specialized travel agents, integrating various travel-specific
 MCP tools and coordinating with specialized sub-agents.
 """
 
-from agents import WebSearchTool
-from agents.extensions.allowed_domains import AllowedDomains
 from src.utils.config import get_config
 from src.utils.logging import get_module_logger
+from tripsage.tools.web_tools import CachedWebSearchTool
 
 from .base_agent import BaseAgent
 
@@ -69,7 +68,7 @@ class TravelPlanningAgent(BaseAgent):
         - Follow-up questions about previous recommendations
 
         TOOL SELECTION GUIDELINES:
-        - Use WebSearchTool for general travel information
+        - Use CachedWebSearchTool for general travel information
         - Use specialized MCP tools for specific data (flights, weather, etc.)
         - Use memory operations to maintain context between planning sessions
 
@@ -132,61 +131,12 @@ class TravelPlanningAgent(BaseAgent):
         logger.info("Registered specialized agent handoffs")
 
     def _add_websearch_tool(self) -> None:
-        """Add WebSearchTool with travel-specific domain focus."""
-        # Configure WebSearchTool with travel-focused domains
-        self.web_search_tool = WebSearchTool(
-            allowed_domains=AllowedDomains(
-                domains=[
-                    # Travel information and guides
-                    "tripadvisor.com",
-                    "lonelyplanet.com",
-                    "wikitravel.org",
-                    "travel.state.gov",
-                    "wikivoyage.org",
-                    "frommers.com",
-                    "roughguides.com",
-                    "fodors.com",
-                    # Flight and transportation
-                    "kayak.com",
-                    "skyscanner.com",
-                    "expedia.com",
-                    "booking.com",
-                    "hotels.com",
-                    "airbnb.com",
-                    "vrbo.com",
-                    "orbitz.com",
-                    # Airlines
-                    "united.com",
-                    "aa.com",
-                    "delta.com",
-                    "southwest.com",
-                    "britishairways.com",
-                    "lufthansa.com",
-                    "emirates.com",
-                    "cathaypacific.com",
-                    "qantas.com",
-                    # Weather and climate
-                    "weather.com",
-                    "accuweather.com",
-                    "weatherspark.com",
-                    "climate.gov",
-                    # Government travel advisories
-                    "travel.state.gov",
-                    "smartraveller.gov.au",
-                    "gov.uk/foreign-travel-advice",
-                    # Social and review sites
-                    "tripadvisor.com",
-                    "yelp.com",
-                ]
-            ),
-            # Block content farms and untrustworthy sources
-            blocked_domains=["pinterest.com", "quora.com"],
-        )
+        """Add CachedWebSearchTool for general web searches."""
+        # The OpenAI WebSearchTool doesn't support domain filtering,
+        # but we can still provide search context instructions in the agent prompt
+        self.web_search_tool = CachedWebSearchTool()
         self.agent.tools.append(self.web_search_tool)
-        logger.info(
-            "Added WebSearchTool to TravelPlanningAgent with travel-specific "
-            "domain configuration"
-        )
+        logger.info("Added CachedWebSearchTool to TravelPlanningAgent")
 
     def _register_planning_tools(self) -> None:
         """Register travel planning specific tools."""

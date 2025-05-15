@@ -11,7 +11,6 @@ from typing import Any, Dict, List, Optional
 from pydantic import BaseModel
 
 from agents import WebSearchTool, function_tool
-from agents.extensions.allowed_domains import AllowedDomains
 from src.cache.redis_cache import redis_cache
 from src.utils.config import get_config
 from src.utils.error_handling import MCPError
@@ -91,59 +90,9 @@ class TravelAgent(BaseTravelAgent):
         # This is part of our hybrid search approach where OpenAI's built-in search
         # serves as the primary method for general queries, while specialized MCP tools
         # (Firecrawl, Browser MCP) are used for deeper, more specific travel research
-        self.web_search_tool = WebSearchTool(
-            allowed_domains=AllowedDomains(
-                domains=[
-                    # Travel information and guides
-                    "tripadvisor.com",
-                    "lonelyplanet.com",
-                    "wikitravel.org",
-                    "travel.state.gov",
-                    "wikivoyage.org",
-                    "frommers.com",
-                    "roughguides.com",
-                    "fodors.com",
-                    # Flight and transportation
-                    "kayak.com",
-                    "skyscanner.com",
-                    "expedia.com",
-                    "booking.com",
-                    "hotels.com",
-                    "airbnb.com",
-                    "vrbo.com",
-                    "orbitz.com",
-                    # Airlines
-                    "united.com",
-                    "aa.com",
-                    "delta.com",
-                    "southwest.com",
-                    "britishairways.com",
-                    "lufthansa.com",
-                    "emirates.com",
-                    "cathaypacific.com",
-                    "qantas.com",
-                    # Weather and climate
-                    "weather.com",
-                    "accuweather.com",
-                    "weatherspark.com",
-                    "climate.gov",
-                    # Government travel advisories
-                    "travel.state.gov",
-                    "smartraveller.gov.au",
-                    "gov.uk/foreign-travel-advice",
-                    # Social and review sites
-                    "tripadvisor.com",
-                    "yelp.com",
-                ]
-            ),
-            # Block content farms and untrustworthy sources
-            blocked_domains=["pinterest.com", "quora.com"],
-        )
+        self.web_search_tool = WebSearchTool()
         self.agent.tools.append(self.web_search_tool)
-        logger.info(
-            "Added WebSearchTool to TravelAgent with travel-specific domain "
-            "configuration"
-        )
+        logger.info("Added WebSearchTool to TravelAgent")
 
     def _register_travel_tools(self) -> None:
         """Register travel-specific tools."""
