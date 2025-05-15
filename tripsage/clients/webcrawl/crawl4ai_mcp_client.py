@@ -3,10 +3,10 @@ Crawl4AI MCP Client for TripSage web crawling integration.
 
 This client integrates with the Crawl4AI MCP server (https://github.com/unclecode/crawl4ai)
 to provide web crawling, content extraction, and question-answering capabilities.
-The server exposes both WebSocket and Server-Sent Events (SSE) endpoints for MCP communication.
+The server exposes both WebSocket and Server-Sent Events (SSE)
+endpoints for MCP communication.
 """
 
-import asyncio
 import json
 import logging
 from datetime import datetime
@@ -14,7 +14,7 @@ from typing import Any, Dict, List, Optional
 
 import httpx
 import websockets
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field
 
 from tripsage.config.mcp_settings import Crawl4AIMCPConfig, get_mcp_settings
 from tripsage.utils.cache import ContentType, WebOperationsCache, web_cache
@@ -39,7 +39,7 @@ class Crawl4AICrawlParams(BaseModel):
     max_pages: Optional[int] = Field(default=None, alias="maxPages")
     allowed_domains: Optional[List[str]] = Field(default=None, alias="allowedDomains")
     exclude_patterns: Optional[List[str]] = Field(default=None, alias="excludePatterns")
-    
+
     model_config = {"populate_by_name": True}
 
 
@@ -50,7 +50,7 @@ class Crawl4AIExecuteJsParams(BaseModel):
     js_code: str = Field(alias="jsCode")
     session_id: Optional[str] = Field(default=None, alias="sessionId")
     wait_for: str = Field(default="", alias="waitFor")
-    
+
     model_config = {"populate_by_name": True}
 
 
@@ -61,7 +61,7 @@ class Crawl4AIAskParams(BaseModel):
     question: str
     markdown: bool = Field(default=True)
     session_id: Optional[str] = Field(default=None, alias="sessionId")
-    
+
     model_config = {"populate_by_name": True}
 
 
@@ -98,7 +98,7 @@ class Crawl4AIMCPClient:
 
         self._config: Crawl4AIMCPConfig = config
         self._cache: WebOperationsCache = web_cache
-        
+
         # Parse the URL to determine protocol
         url_str = str(self._config.url)
         if url_str.startswith("ws://") or url_str.startswith("wss://"):
@@ -109,7 +109,7 @@ class Crawl4AIMCPClient:
             # Default to SSE endpoint
             base_url = url_str.rstrip("/")
             self._sse_url = f"{base_url}/mcp/sse"
-            
+
             # Initialize HTTP client for SSE
             self._client = httpx.AsyncClient(
                 base_url=base_url,
@@ -152,22 +152,22 @@ class Crawl4AIMCPClient:
     ) -> Dict[str, Any]:
         """Send a request via WebSocket."""
         request = self._build_mcp_request(tool_name, arguments)
-        
+
         try:
             async with websockets.connect(self._ws_url) as websocket:
                 # Send the request
                 await websocket.send(json.dumps(request.model_dump()))
-                
+
                 # Receive the response
                 response_data = await websocket.recv()
                 response = json.loads(response_data)
-                
+
                 # Extract the result
                 if "result" in response:
                     return response["result"]
                 else:
                     return response
-                    
+
         except Exception as e:
             logger.error(f"WebSocket error calling {tool_name}: {e}")
             raise
@@ -177,7 +177,7 @@ class Crawl4AIMCPClient:
     ) -> Dict[str, Any]:
         """Send a request via Server-Sent Events."""
         request = self._build_mcp_request(tool_name, arguments)
-        
+
         try:
             # Send the request as a POST with event-stream response
             response = await self._client.post(
@@ -186,11 +186,11 @@ class Crawl4AIMCPClient:
                 headers={"Accept": "text/event-stream"},
             )
             response.raise_for_status()
-            
+
             # Parse SSE response
             result_data = None
-            for line in response.text.split('\n'):
-                if line.startswith('data: '):
+            for line in response.text.split("\n"):
+                if line.startswith("data: "):
                     data_str = line[6:]  # Remove 'data: ' prefix
                     if data_str.strip():
                         data = json.loads(data_str)
@@ -199,12 +199,12 @@ class Crawl4AIMCPClient:
                         else:
                             result_data = data
                         break
-            
+
             if result_data is None:
                 raise ValueError("No result data received from SSE stream")
-                
+
             return result_data
-            
+
         except httpx.HTTPError as e:
             logger.error(f"HTTP error calling {tool_name}: {e}")
             raise
@@ -542,7 +542,8 @@ class Crawl4AIMCPClient:
             cache_key = f"crawl4ai:ask:{urls_key}:{question[:50]}"
 
         logger.info(
-            f"Asking question about {len(urls)} URLs with Crawl4AI MCP: {question[:50]}..."
+            f"Asking question about {len(urls)} URLs with Crawl4AI MCP: "
+            f"{question[:50]}..."
         )
 
         arguments = params.model_dump(by_alias=True, exclude_none=True)

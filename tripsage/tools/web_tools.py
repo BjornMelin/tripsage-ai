@@ -6,14 +6,11 @@ including caching for WebSearchTool from the OpenAI Agents SDK.
 """
 
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
-from openai.types.beta.assistant_tools_function_execution_tool import (
-    ActualExecutionResult,
-)
-from openai.types.beta.assistant_tools_web_search import WebSearchTool
 from pydantic import BaseModel, Field
 
+from agents import WebSearchTool
 from tripsage.utils.cache import ContentType, WebOperationsCache
 from tripsage.utils.error_handling import log_exception
 from tripsage.utils.logging import get_logger
@@ -33,30 +30,25 @@ class CachedWebSearchTool(WebSearchTool):
 
     def __init__(
         self,
-        allowed_domains: Optional[List[str]] = None,
-        blocked_domains: Optional[List[str]] = None,
         cache: Optional[WebOperationsCache] = None,
+        user_location: Optional[Any] = None,
+        search_context_size: str = "medium",
     ):
         """Initialize the CachedWebSearchTool.
 
         Args:
-            allowed_domains: List of domains to allow in search results
-            blocked_domains: List of domains to block from search results
             cache: Cache instance to use (defaults to global web_cache)
+            user_location: Optional user location for geographic context
+            search_context_size: Context size ('low', 'medium', 'high')
         """
         super().__init__(
-            allowed_domains=allowed_domains,
-            blocked_domains=blocked_domains,
+            user_location=user_location,
+            search_context_size=search_context_size,
         )
         self.cache = cache or web_cache
-        logger.info(
-            f"Initialized CachedWebSearchTool with "
-            f"allowed_domains={allowed_domains}, blocked_domains={blocked_domains}"
-        )
+        logger.info("Initialized CachedWebSearchTool with caching")
 
-    async def _run(
-        self, query: str, *, skip_cache: bool = False, **kwargs: Any
-    ) -> ActualExecutionResult:
+    async def _run(self, query: str, *, skip_cache: bool = False, **kwargs: Any) -> Any:
         """Execute the web search with caching.
 
         Args:
@@ -79,8 +71,8 @@ class CachedWebSearchTool(WebSearchTool):
             cache_key = self.cache.generate_cache_key(
                 "websearch",
                 query,
-                allowed_domains=self.allowed_domains,
-                blocked_domains=self.blocked_domains,
+                user_location=self.user_location,
+                search_context_size=self.search_context_size,
                 **kwargs,
             )
 

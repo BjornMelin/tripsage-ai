@@ -5,8 +5,8 @@ Tests for web_tools.py - CachedWebSearchTool and related utilities.
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from openai.types.beta.assistant_tools_web_search import WebSearchTool
 
+from agents import WebSearchTool
 from tripsage.tools.web_tools import (
     CachedWebSearchTool,
     get_web_cache_stats,
