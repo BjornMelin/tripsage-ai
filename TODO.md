@@ -244,15 +244,28 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
             - ✓ Optimized for booking sites with shorter cache TTLs (1 hour for dynamic pricing)
             - ✓ Created comprehensive tests for client functionality
             - ✓ Added proper error handling with @with_error_handling decorator
-        - [ ] Source Selection Logic:
-          - Implement domain-based routing in `tripsage/tools/webcrawl/source_selector.py`
-          - Create unified abstraction layer in `tripsage/tools/webcrawl_tools.py`
-          - Develop empirical performance testing framework
-          - Document domain-specific optimization strategy
-        - [ ] Result Normalization:
-          - Create consistent output schema in `tripsage/tools/webcrawl/models.py`
-          - Implement normalization logic in `tripsage/tools/webcrawl/result_normalizer.py`
-          - Ensure unified interface regardless of underlying crawler
+        - [x] Source Selection Logic:
+          - ✓ Implemented domain-based routing in `tripsage/tools/webcrawl/source_selector.py`
+            - Created WebCrawlSourceSelector class with configurable domain mappings
+            - Added content-type based routing for optimal crawler selection
+            - Implemented domain routing configuration in `mcp_settings.py`
+            - Created example configuration documentation
+          - ✓ Created unified abstraction layer in `tripsage/tools/webcrawl_tools.py`
+            - Implemented `crawl_website_content` as the main unified interface
+            - Added convenience functions for specific content types
+            - Integrated with source selector and result normalizer
+          - [ ] Develop empirical performance testing framework
+          - ✓ Documented domain-specific optimization strategy
+        - [x] Result Normalization:
+          - ✓ Created consistent output schema in `tripsage/tools/webcrawl/models.py`
+            - Defined UnifiedCrawlResult Pydantic V2 model
+            - Included all common fields across both crawlers
+            - Added helper methods for timestamp and source checking
+          - ✓ Implemented normalization logic in `tripsage/tools/webcrawl/result_normalizer.py`
+            - Created normalize_firecrawl_output method
+            - Created normalize_crawl4ai_output method
+            - Handled error cases and edge conditions
+          - ✓ Ensured unified interface regardless of underlying crawler
         - [ ] Production Scenario Testing Strategy:
           - Create test suite with real-world travel planning scenarios
             - Develop 10+ realistic multi-site test cases covering booking flows and research patterns
@@ -1054,6 +1067,10 @@ For each completed task, ensure:
 | Playwright MCP Integration      | ✅     | -   | Implemented core client and agent-callable tools                        |
 | Crawl4AI MCP Integration        | ✅     | -   | Implemented client with WebSocket/SSE support, caching, and comprehensive tests |
 | Firecrawl MCP Integration       | ✅     | -   | Implemented client with specialized booking site optimization and caching |
+| Hybrid Web Crawl Schema         | ✅     | -   | Created UnifiedCrawlResult model for consistent output across crawlers |
+| Result Normalizer               | ✅     | -   | Implemented normalize methods for both Firecrawl and Crawl4AI outputs |
+| Source Selection Logic          | ✅     | -   | Implemented domain routing and content-type based crawler selection |
+| Unified Crawl Interface         | ✅     | -   | Created crawl_website_content with automatic crawler selection |
 | Google Maps MCP Integration     | 📅     | -   | Prioritized for location-based functionality                            |
 | Time MCP Integration            | 📅     | -   | Scheduled for timezone support in travel planning                       |
 | WebSearchTool Caching           | ✅     | -   | Implemented CachedWebSearchTool wrapper with content-aware caching      |

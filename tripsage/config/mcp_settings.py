@@ -106,6 +106,21 @@ class LocalMCPConfig(BaseMCPConfig):
     path: Optional[str] = None
 
 
+class DomainRoutingConfig(BaseModel):
+    """Configuration for domain-based routing of web crawl requests."""
+
+    crawl4ai_domains: List[str] = Field(
+        default_factory=lambda: [],
+        description="Domains optimized for Crawl4AI (added to defaults)",
+    )
+    firecrawl_domains: List[str] = Field(
+        default_factory=lambda: [],
+        description="Domains optimized for Firecrawl (added to defaults)",
+    )
+
+    model_config = ConfigDict(extra="ignore")
+
+
 class WebCrawlMCPConfig(RestMCPConfig):
     """Configuration for web crawling MCP servers."""
 
@@ -113,6 +128,7 @@ class WebCrawlMCPConfig(RestMCPConfig):
     allowed_domains: List[str] = Field(default_factory=list)
     blocked_domains: List[str] = Field(default_factory=list)
     cache_ttl: int = Field(default=3600, ge=0, description="Cache TTL in seconds")
+    domain_routing: DomainRoutingConfig = Field(default_factory=DomainRoutingConfig)
 
 
 class BrowserMCPConfig(RestMCPConfig):

@@ -7,128 +7,166 @@ This module provides functionality to select the appropriate web crawling source
 
 import re
 from enum import Enum
-from typing import Dict, Optional, Set
+from typing import TYPE_CHECKING, Dict, Optional, Set, Union
 
+from tripsage.config.mcp_settings import get_mcp_settings
 from tripsage.utils.logging import get_logger
+
+# Import client types for type checking only
+if TYPE_CHECKING:
+    from tripsage.clients.webcrawl.crawl4ai_mcp_client import Crawl4AIMCPClient
+    from tripsage.clients.webcrawl.firecrawl_mcp_client import FirecrawlMCPClient
 
 logger = get_logger(__name__)
 
 
-class SourceType(str, Enum):
-    """Enumeration of available external web crawling sources."""
+class CrawlerType(str, Enum):
+    """Enumeration of available web crawling sources."""
 
     CRAWL4AI = "crawl4ai"
     FIRECRAWL = "firecrawl"
 
 
-class SourceSelector:
+class WebCrawlSourceSelector:
     """Intelligent source selector for web crawling operations.
 
-    This class selects the appropriate source (Crawl4AI or Firecrawl) based on:
-    1. Content type (travel blog, events, pricing, etc.)
-    2. URL patterns and domain specific optimizations
-    3. Historical performance
+    This class selects the appropriate crawler (Crawl4AI or Firecrawl) based on:
+    1. Domain-based routing configuration
+    2. Content type requirements
+    3. Dynamic content needs
+    4. Extraction complexity
     """
 
-    # Domain patterns that perform better with specific sources
-    CRAWL4AI_OPTIMIZED_DOMAINS: Set[str] = {
+    # Default domain patterns that perform better with specific sources
+    DEFAULT_CRAWL4AI_DOMAINS: Set[str] = {
         "tripadvisor.com",
         "wikitravel.org",
         "wikipedia.org",
         "lonelyplanet.com",
+        "nomadlist.com",
         "travel.state.gov",
         "flyertalk.com",
+        "github.io",  # Travel blogs often hosted here
+        "blogspot.com",
+        "wordpress.com",
+        "medium.com",
     }
 
-    FIRECRAWL_OPTIMIZED_DOMAINS: Set[str] = {
+    DEFAULT_FIRECRAWL_DOMAINS: Set[str] = {
         "airbnb.com",
         "booking.com",
         "expedia.com",
         "hotels.com",
         "kayak.com",
         "trip.com",
+        "agoda.com",
+        "skyscanner.com",
         "eventbrite.com",
         "timeout.com",
+        "ticketmaster.com",
+        "viator.com",
     }
 
-    # Content type to source mapping
-    CONTENT_TYPE_MAPPING: Dict[str, SourceType] = {
-        "price_monitor": SourceType.FIRECRAWL,  # Firecrawl better at dynamic price data
-        "travel_blog": SourceType.CRAWL4AI,  # Crawl4AI better at blog content
-        "events": SourceType.FIRECRAWL,  # Firecrawl better at event listings
-        # Crawl4AI better at general travel info
-        "destination_info": SourceType.CRAWL4AI,
+    # Content type to crawler mapping
+    CONTENT_TYPE_MAPPING: Dict[str, CrawlerType] = {
+        "price_monitor": CrawlerType.FIRECRAWL,  # Better at dynamic price data
+        "travel_blog": CrawlerType.CRAWL4AI,  # Better at blog content extraction
+        "events": CrawlerType.FIRECRAWL,  # Better at event listings
+        "destination_info": CrawlerType.CRAWL4AI,  # Better at general travel info
+        "booking": CrawlerType.FIRECRAWL,  # Better at booking site data
+        "reviews": CrawlerType.CRAWL4AI,  # Better at review content
     }
 
     def __init__(self):
-        """Initialize the source selector."""
-        # Could be extended to load historical performance data
-        pass
+        """Initialize the source selector with configurable domain mappings."""
+        self.settings = get_mcp_settings()
 
-    def select_source(
+        # Get configured domain mappings or use defaults
+        self.crawl4ai_domains = set(self.DEFAULT_CRAWL4AI_DOMAINS)
+        self.firecrawl_domains = set(self.DEFAULT_FIRECRAWL_DOMAINS)
+
+        # Add any custom domain mappings from Crawl4AI config
+        if self.settings.crawl4ai.domain_routing:
+            self.crawl4ai_domains.update(
+                self.settings.crawl4ai.domain_routing.crawl4ai_domains
+            )
+
+        # Add any custom domain mappings from Firecrawl config
+        if self.settings.firecrawl.domain_routing:
+            self.firecrawl_domains.update(
+                self.settings.firecrawl.domain_routing.firecrawl_domains
+            )
+
+    def select_crawler(
         self,
         url: str,
         content_type: Optional[str] = None,
-        full_page: bool = False,
-        dynamic_content: bool = False,
+        prefer_structured_data: bool = False,
+        requires_javascript: bool = False,
         extraction_complexity: str = "simple",
-    ) -> SourceType:
-        """Select the appropriate source for web crawling.
+    ) -> CrawlerType:
+        """Select the appropriate crawler for web crawling.
 
         Args:
             url: The URL to crawl
-            content_type: Type of content to extract (price_monitor, travel_blog, etc.)
-            full_page: Whether the full page needs to be crawled
-            dynamic_content: Whether the page has dynamic JavaScript content
-            extraction_complexity: Complexity of extraction
-                ("simple", "moderate", "complex")
+            content_type: Type of content to extract
+            prefer_structured_data: Whether structured data extraction is needed
+            requires_javascript: Whether the page requires JavaScript execution
+            extraction_complexity: Complexity level ("simple", "moderate", "complex")
 
         Returns:
-            The selected source type (CRAWL4AI or FIRECRAWL)
+            The selected crawler type
         """
-        # Default to Crawl4AI as the more general-purpose option
-        selected_source = SourceType.CRAWL4AI
+        # Default to Crawl4AI for general content
+        selected_crawler = CrawlerType.CRAWL4AI
 
         # 1. Check content type mapping
         if content_type and content_type in self.CONTENT_TYPE_MAPPING:
-            selected_source = self.CONTENT_TYPE_MAPPING[content_type]
+            selected_crawler = self.CONTENT_TYPE_MAPPING[content_type]
             logger.debug(
-                f"Selected {selected_source} based on content type: {content_type}"
+                f"Selected {selected_crawler} based on content type: {content_type}"
             )
-            return selected_source
+            return selected_crawler
 
         # 2. Check domain-specific optimizations
         domain = self._extract_domain(url)
         if domain:
-            if domain in self.FIRECRAWL_OPTIMIZED_DOMAINS:
-                selected_source = SourceType.FIRECRAWL
+            if any(domain.endswith(fd) for fd in self.firecrawl_domains):
+                selected_crawler = CrawlerType.FIRECRAWL
                 logger.debug(
-                    f"Selected {selected_source} based on optimized domain: {domain}"
+                    f"Selected {selected_crawler} based on optimized domain: {domain}"
                 )
-                return selected_source
-            elif domain in self.CRAWL4AI_OPTIMIZED_DOMAINS:
-                selected_source = SourceType.CRAWL4AI
+                return selected_crawler
+            elif any(domain.endswith(cd) for cd in self.crawl4ai_domains):
+                selected_crawler = CrawlerType.CRAWL4AI
                 logger.debug(
-                    f"Selected {selected_source} based on optimized domain: {domain}"
+                    f"Selected {selected_crawler} based on optimized domain: {domain}"
                 )
-                return selected_source
+                return selected_crawler
 
-        # 3. Consider dynamic content needs
-        if dynamic_content:
-            selected_source = SourceType.FIRECRAWL  # Firecrawl handles JS better
-            logger.debug(f"Selected {selected_source} for dynamic content")
-            return selected_source
+        # 3. Consider JavaScript requirements
+        if requires_javascript:
+            selected_crawler = CrawlerType.FIRECRAWL  # Better at JS execution
+            logger.debug(f"Selected {selected_crawler} for JavaScript content")
+            return selected_crawler
 
-        # 4. Consider extraction complexity
-        if extraction_complexity == "complex":
-            selected_source = (
-                SourceType.FIRECRAWL
-            )  # Firecrawl's structured extraction is better
-            logger.debug(f"Selected {selected_source} for complex extraction")
-            return selected_source
+        # 4. Consider structured data needs
+        if prefer_structured_data:
+            selected_crawler = CrawlerType.FIRECRAWL  # Better at structured extraction
+            logger.debug(f"Selected {selected_crawler} for structured data")
+            return selected_crawler
 
-        logger.debug(f"Selected {selected_source} as default for {url}")
-        return selected_source
+        # 5. Consider extraction complexity
+        if extraction_complexity in ["moderate", "complex"]:
+            selected_crawler = CrawlerType.FIRECRAWL  # More robust extraction
+            logger.debug(
+                f"Selected {selected_crawler} for {extraction_complexity} extraction"
+            )
+            return selected_crawler
+
+        # 6. Use default for general content
+        logger.debug(f"Selected {selected_crawler} as default for {url}")
+        return selected_crawler
 
     def _extract_domain(self, url: str) -> Optional[str]:
         """Extract the domain from a URL.
@@ -142,15 +180,40 @@ class SourceSelector:
         pattern = r"https?://(?:www\.)?([a-zA-Z0-9.-]+)(?:/|$)"
         match = re.search(pattern, url)
         if match:
-            return match.group(1)
+            return match.group(1).lower()
         return None
+
+    def get_client_for_url(
+        self, url: str, **kwargs
+    ) -> Union["FirecrawlMCPClient", "Crawl4AIMCPClient"]:
+        """Get the appropriate client instance for a given URL.
+
+        Args:
+            url: The URL to crawl
+            **kwargs: Additional arguments for crawler selection
+
+        Returns:
+            Either FirecrawlMCPClient or Crawl4AIMCPClient instance
+        """
+        crawler_type = self.select_crawler(url, **kwargs)
+
+        if crawler_type == CrawlerType.FIRECRAWL:
+            from tripsage.clients.webcrawl.firecrawl_mcp_client import (
+                FirecrawlMCPClient,
+            )
+
+            return FirecrawlMCPClient()
+        else:
+            from tripsage.clients.webcrawl.crawl4ai_mcp_client import Crawl4AIMCPClient
+
+            return Crawl4AIMCPClient()
 
 
 # Create singleton instance
-source_selector = SourceSelector()
+source_selector = WebCrawlSourceSelector()
 
 
-def get_source_selector() -> SourceSelector:
+def get_source_selector() -> WebCrawlSourceSelector:
     """Get the singleton instance of the source selector.
 
     Returns:

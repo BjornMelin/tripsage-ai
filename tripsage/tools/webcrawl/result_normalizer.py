@@ -2,308 +2,179 @@
 Result normalizer for web crawling tools.
 
 This module provides functionality to normalize results from different web crawling
-sources (Crawl4AI and Firecrawl) into a consistent format.
+sources (Crawl4AI and Firecrawl) into a consistent UnifiedCrawlResult format.
 """
 
 from datetime import datetime
-from typing import Any, Dict
+from typing import Any, Dict, List
 
+from tripsage.tools.webcrawl.models import UnifiedCrawlResult
 from tripsage.utils.logging import get_logger
 
 logger = get_logger(__name__)
 
 
 class ResultNormalizer:
-    """Normalizes results from different web crawling sources."""
+    """
+    Normalizes results from different web crawling sources into UnifiedCrawlResult.
+    """
 
-    def normalize_crawl_result(
-        self, result: Dict[str, Any], source: str
-    ) -> Dict[str, Any]:
-        """Normalize a crawl result from any source into a standardized format.
-
-        Args:
-            result: The result to normalize
-            source: The source of the result (crawl4ai or firecrawl)
-
-        Returns:
-            A normalized result dictionary
-        """
-        # If result already indicates an error, pass it through
-        if not result.get("success", False):
-            return result
-
-        # Ensure result has core fields
-        normalized = {
-            "success": True,
-            "url": result.get("url", ""),
-            "items": [],
-            "timestamp": datetime.utcnow().isoformat(),
-            "source": source,
-        }
-
-        # Normalize items
-        items = result.get("items", [])
-        normalized_items = []
-
-        for item in items:
-            normalized_item = {
-                "title": item.get("title", ""),
-                "content": item.get("content", ""),
-                "url": item.get("url", normalized["url"]),
-                "image_url": item.get("image_url", None),
-                "timestamp": item.get("timestamp", normalized["timestamp"]),
-                "metadata": item.get("metadata", {}),
-            }
-            normalized_items.append(normalized_item)
-
-        normalized["items"] = normalized_items
-
-        # Generate or pass through formatted summary
-        if "formatted" in result:
-            normalized["formatted"] = result["formatted"]
-        else:
-            normalized["formatted"] = self._generate_formatted_summary(normalized)
-
-        return normalized
-
-    def normalize_search_result(
-        self, result: Dict[str, Any], source: str
-    ) -> Dict[str, Any]:
-        """Normalize a search result from any source into a standardized format.
+    async def normalize_firecrawl_output(
+        self, raw_output: Dict[str, Any], original_url: str
+    ) -> UnifiedCrawlResult:
+        """Normalize Firecrawl MCP output to UnifiedCrawlResult.
 
         Args:
-            result: The result to normalize
-            source: The source of the result (crawl4ai or firecrawl)
+            raw_output: The raw output from FirecrawlMCPClient
+            original_url: The URL that was crawled
 
         Returns:
-            A normalized result dictionary
+            UnifiedCrawlResult instance
         """
-        # If result already indicates an error, pass it through
-        if not result.get("success", False):
-            return result
-
-        # Ensure result has core fields
-        normalized = {
-            "success": True,
-            "query": result.get("query", ""),
-            "items": [],
-            "timestamp": datetime.utcnow().isoformat(),
-            "source": source,
-        }
-
-        # Normalize items
-        items = result.get("items", [])
-        normalized_items = []
-
-        for item in items:
-            normalized_item = {
-                "title": item.get("title", ""),
-                "content": item.get("content", ""),
-                "url": item.get("url", ""),
-                "image_url": item.get("image_url", None),
-                "timestamp": item.get("timestamp", normalized["timestamp"]),
-                "metadata": item.get("metadata", {}),
-            }
-            normalized_items.append(normalized_item)
-
-        normalized["items"] = normalized_items
-
-        # Generate or pass through formatted summary
-        if "formatted" in result:
-            normalized["formatted"] = result["formatted"]
-        else:
-            normalized["formatted"] = self._generate_search_summary(normalized)
-
-        return normalized
-
-    def normalize_blog_result(
-        self, result: Dict[str, Any], source: str, extract_type: str
-    ) -> Dict[str, Any]:
-        """Normalize a blog crawl result from any source into a standardized format.
-
-        Args:
-            result: The result to normalize
-            source: The source of the result (crawl4ai or firecrawl)
-            extract_type: Type of extraction (insights, itinerary, tips, places)
-
-        Returns:
-            A normalized result dictionary
-        """
-        # If result already indicates an error, pass it through
-        if not result.get("success", False):
-            return result
-
-        # Start with standard normalization
-        normalized = self.normalize_crawl_result(result, source)
-
-        # Add blog-specific fields
-        normalized["extract_type"] = extract_type
-
-        # Process extracted data based on extract_type
-        for item in normalized["items"]:
-            extracted_data = item.get("extracted_data", {})
-
-            if extract_type == "insights":
-                item["insights"] = extracted_data.get("insights", [])
-            elif extract_type == "itinerary":
-                item["itinerary"] = extracted_data.get("itinerary", [])
-            elif extract_type == "tips":
-                item["tips"] = extracted_data.get("tips", [])
-            elif extract_type == "places":
-                item["places"] = extracted_data.get("places", [])
-
-        return normalized
-
-    def normalize_price_result(
-        self, result: Dict[str, Any], source: str
-    ) -> Dict[str, Any]:
-        """Normalize a price monitoring result from any source
-        into a standardized format.
-
-        Args:
-            result: The result to normalize
-            source: The source of the result (crawl4ai or firecrawl)
-
-        Returns:
-            A normalized result dictionary
-        """
-        # If result already indicates an error, pass it through
-        if not result.get("success", False):
-            return result
-
-        # Start with standard normalization
-        normalized = self.normalize_crawl_result(result, source)
-
-        # Add price-specific fields for each item
-        for i, item in enumerate(normalized["items"]):
-            # Get original item
-            original_item = (
-                result.get("items", [])[i] if i < len(result.get("items", [])) else {}
+        # Check if the crawl was successful
+        if raw_output.get("error"):
+            return UnifiedCrawlResult(
+                url=original_url,
+                status="error",
+                error_message=raw_output.get("error"),
+                metadata={
+                    "source_crawler": "firecrawl",
+                    "crawl_timestamp": datetime.utcnow().isoformat(),
+                },
             )
 
-            # Add price fields
-            item["price"] = original_item.get("price", 0)
-            item["currency"] = original_item.get("currency", "USD")
-            item["availability"] = original_item.get("availability", "")
+        # Extract main content from different formats
+        markdown_content = raw_output.get("markdown")
+        html_content = raw_output.get("html")
 
-            # Add timestamp for price tracking
-            item["price_timestamp"] = datetime.utcnow().isoformat()
+        # Extract structured data
+        structured_data = {}
+        if "metadata" in raw_output:
+            metadata = raw_output["metadata"]
+            # Extract OpenGraph data
+            if "ogMetadata" in metadata:
+                structured_data["openGraph"] = metadata["ogMetadata"]
+            # Extract JSON-LD data
+            if "jsonLd" in metadata:
+                structured_data["jsonLd"] = metadata["jsonLd"]
 
-        return normalized
+        # Extract links if available
+        if "links" in raw_output:
+            structured_data["links"] = raw_output["links"]
 
-    def normalize_events_result(
-        self, result: Dict[str, Any], source: str
-    ) -> Dict[str, Any]:
-        """Normalize an events result from any source into a standardized format.
-
-        Args:
-            result: The result to normalize
-            source: The source of the result (crawl4ai or firecrawl)
-
-        Returns:
-            A normalized result dictionary
-        """
-        # If result already indicates an error, pass it through
-        if not result.get("success", False):
-            return result
-
-        # Ensure result has core fields
-        normalized = {
-            "success": True,
-            "destination": result.get("destination", ""),
-            "items": [],
-            "timestamp": datetime.utcnow().isoformat(),
-            "source": source,
-            "research_summary": result.get("research_summary", ""),
-        }
-
-        # Normalize event items
-        items = result.get("items", [])
-        normalized_items = []
-
-        for item in items:
-            normalized_item = {
-                "title": item.get("title", ""),
-                "description": item.get("content", ""),
-                "url": item.get("url", ""),
-                "image_url": item.get("image_url", None),
-                "start_date": item.get("start_date", None),
-                "end_date": item.get("end_date", None),
-                "location": item.get("location", ""),
-                "venue": item.get("venue", ""),
-                "event_type": item.get("event_type", ""),
-                "timestamp": item.get("timestamp", normalized["timestamp"]),
-                "metadata": item.get("metadata", {}),
-            }
-            normalized_items.append(normalized_item)
-
-        normalized["items"] = normalized_items
-
-        # Generate or pass through formatted summary
-        if "formatted" in result:
-            normalized["formatted"] = result["formatted"]
-        else:
-            normalized["formatted"] = self._generate_events_summary(normalized)
-
-        return normalized
-
-    def _generate_formatted_summary(self, result: Dict[str, Any]) -> str:
-        """Generate a formatted summary for a crawl result.
-
-        Args:
-            result: The normalized result
-
-        Returns:
-            A human-readable summary
-        """
-        url = result.get("url", "")
-        items = result.get("items", [])
-
-        if not items:
-            return f"Successfully crawled {url}, but no content was found."
-
-        total_content_length = sum(len(item.get("content", "")) for item in items)
-
-        return (
-            f"Successfully crawled {url} and found {len(items)} content blocks "
-            f"with a total of {total_content_length} characters."
+        return UnifiedCrawlResult(
+            url=original_url,
+            title=raw_output.get("title"),
+            main_content_markdown=markdown_content,
+            main_content_text=raw_output.get("text"),
+            html_content=html_content,
+            structured_data=structured_data if structured_data else None,
+            metadata={
+                "source_crawler": "firecrawl",
+                "crawl_timestamp": datetime.utcnow().isoformat(),
+                "content_length": len(markdown_content or ""),
+                "has_screenshot": raw_output.get("screenshot") is not None,
+                "original_metadata": raw_output.get("metadata", {}),
+            },
+            status="success",
         )
 
-    def _generate_search_summary(self, result: Dict[str, Any]) -> str:
-        """Generate a formatted summary for a search result.
+    async def normalize_crawl4ai_output(
+        self, raw_output: Dict[str, Any], original_url: str
+    ) -> UnifiedCrawlResult:
+        """Normalize Crawl4AI MCP output to UnifiedCrawlResult.
 
         Args:
-            result: The normalized result
+            raw_output: The raw output from Crawl4AIMCPClient
+            original_url: The URL that was crawled
 
         Returns:
-            A human-readable summary
+            UnifiedCrawlResult instance
         """
-        query = result.get("query", "")
-        items = result.get("items", [])
+        # Check if the crawl was successful
+        if raw_output.get("error"):
+            return UnifiedCrawlResult(
+                url=original_url,
+                status="error",
+                error_message=raw_output.get("error"),
+                metadata={
+                    "source_crawler": "crawl4ai",
+                    "crawl_timestamp": datetime.utcnow().isoformat(),
+                },
+            )
 
-        if not items:
-            return f"Search for '{query}' returned no results."
+        # Extract main content - Crawl4AI typically returns in result key
+        result_data = raw_output.get("result", {})
 
-        return f"Search for '{query}' returned {len(items)} results."
+        # Determine which content format is available
+        markdown_content = result_data.get("markdown")
+        html_content = result_data.get("html")
+        text_content = result_data.get("cleaned_text") or result_data.get("text")
 
-    def _generate_events_summary(self, result: Dict[str, Any]) -> str:
-        """Generate a formatted summary for an events result.
+        # Extract structured data
+        structured_data = {}
+        if "extracted_content" in result_data:
+            structured_data["extracted_content"] = result_data["extracted_content"]
+        if "metadata" in result_data:
+            structured_data["page_metadata"] = result_data["metadata"]
+
+        # Extract additional fields if available
+        metadata = {
+            "source_crawler": "crawl4ai",
+            "crawl_timestamp": datetime.utcnow().isoformat(),
+            "content_length": len(markdown_content or text_content or ""),
+            "has_screenshot": result_data.get("screenshot") is not None,
+            "extraction_method": result_data.get("extraction_method", "default"),
+            "js_execution": result_data.get("js_executed", False),
+        }
+
+        # Add any custom metadata from the result
+        if "crawl_metadata" in result_data:
+            metadata["crawl_metadata"] = result_data["crawl_metadata"]
+
+        return UnifiedCrawlResult(
+            url=original_url,
+            title=result_data.get("title"),
+            main_content_markdown=markdown_content,
+            main_content_text=text_content,
+            html_content=html_content,
+            structured_data=structured_data if structured_data else None,
+            metadata=metadata,
+            status="success",
+        )
+
+    async def normalize_search_results(
+        self, raw_results: List[Dict[str, Any]], source: str, query: str
+    ) -> List[UnifiedCrawlResult]:
+        """Normalize search results from either crawler into UnifiedCrawlResult list.
 
         Args:
-            result: The normalized result
+            raw_results: List of raw search results
+            source: The source crawler ("firecrawl" or "crawl4ai")
+            query: The original search query
 
         Returns:
-            A human-readable summary
+            List of UnifiedCrawlResult instances
         """
-        destination = result.get("destination", "")
-        items = result.get("items", [])
+        normalized_results = []
 
-        if not items:
-            if result.get("research_summary"):
-                return f"Found information about events in {destination}."
-            return f"No events found in {destination}."
+        for idx, result in enumerate(raw_results):
+            # Create a basic unified result for each search result
+            unified_result = UnifiedCrawlResult(
+                url=result.get("url", f"search-result-{idx}"),
+                title=result.get("title"),
+                main_content_text=result.get("snippet") or result.get("description"),
+                metadata={
+                    "source_crawler": source,
+                    "search_query": query,
+                    "result_position": idx + 1,
+                    "crawl_timestamp": datetime.utcnow().isoformat(),
+                },
+                status="success",
+            )
+            normalized_results.append(unified_result)
 
-        return f"Found {len(items)} events in {destination}."
+        return normalized_results
 
 
 # Singleton instance
