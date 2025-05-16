@@ -50,7 +50,7 @@ The primary goal of this cleanup was to remove obsolete code related to direct d
    - **Impact**:
      - These tests were removed. New tests have been created for the MCP-based approach, focusing on isolated client testing and integration testing with mocked MCPs.
 
-#### Files Preserved from Original `src/` (Example):
+#### Files Preserved from Original `src/` (Example)
 
 - **`src/types/supabase.ts`**: TypeScript type definitions for the Supabase schema.
   - **Reason for Preservation**: These type definitions remain useful for any TypeScript frontend or Node.js components interacting with the Supabase database, even if the backend Python access is via MCP. They were not part of the Python backend migration.
@@ -69,4 +69,4 @@ The primary goal of this cleanup was to remove obsolete code related to direct d
 
 ---
 
-_(Future cleanup reports can be appended to this document as major refactoring efforts are completed.)_
+Future cleanup reports can be appended to this document as major refactoring efforts are completed.

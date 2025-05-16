@@ -38,7 +38,7 @@ Essential environment variables for connecting to the databases and their respec
 
 **For Direct Supabase Connection (primarily for migrations, initial setup, or specific admin tasks):**
 
-```plaintext
+```env
 # .env example for Supabase direct access
 SUPABASE_URL=https://your-project-id.supabase.co
 SUPABASE_ANON_KEY=your-public-anon-key
@@ -47,7 +47,7 @@ SUPABASE_SERVICE_ROLE_KEY=your-service-role-key # Keep this highly secure, serve
 
 **For Supabase MCP (Production/Staging Environment MCP Interaction):**
 
-```plaintext
+```env
 # .env example for Supabase MCP
 TRIPSAGE_MCP_SUPABASE_ENDPOINT=http://localhost:8098 # Or your deployed Supabase MCP endpoint
 TRIPSAGE_MCP_SUPABASE_API_KEY=your_supabase_mcp_api_key
@@ -58,7 +58,7 @@ TRIPSAGE_MCP_SUPABASE_DEFAULT_ORGANIZATION_ID=your_supabase_organization_id
 
 **For Neon MCP (Development Environment MCP Interaction):**
 
-```plaintext
+```env
 # .env example for Neon MCP
 TRIPSAGE_MCP_NEON_ENDPOINT=http://localhost:8099 # Or your deployed Neon MCP endpoint
 TRIPSAGE_MCP_NEON_API_KEY=your_neon_mcp_api_key
@@ -267,20 +267,20 @@ The factory pattern determines which client to use:
 # From src/mcp/db_factory.py (Conceptual)
 # Actual implementation might vary based on final structure
 
-from src.utils.settings import settings, Environment
-from src.mcp.neon.client import NeonMCPClient, get_neon_client # Assuming these exist
-from src.mcp.supabase.client import SupabaseMCPClient, get_supabase_client # Assuming these exist
+# from src.utils.settings import settings, Environment
+# from src.mcp.neon.client import NeonMCPClient, get_neon_client # Assuming these exist
+# from src.mcp.supabase.client import SupabaseMCPClient, get_supabase_client # Assuming these exist
 
-def get_database_mcp_client(environment: Optional[str] = None) -> Union[NeonMCPClient, SupabaseMCPClient]:
-    """Get the appropriate database MCP client based on the environment."""
-    active_environment = environment or settings.ENVIRONMENT
+# def get_database_mcp_client(environment: Optional[str] = None) -> Union[NeonMCPClient, SupabaseMCPClient]:
+#     """Get the appropriate database MCP client based on the environment."""
+#     active_environment = environment or settings.ENVIRONMENT
 
-    if active_environment.lower() in [Environment.DEVELOPMENT.value, Environment.TESTING.value]:
-        logger.info(f"Using NeonMCPClient for {active_environment} environment")
-        return get_neon_client() # Factory function for Neon client
-    else: # Production, Staging, etc.
-        logger.info(f"Using SupabaseMCPClient for {active_environment} environment")
-        return get_supabase_client() # Factory function for Supabase client
+#     if active_environment.lower() in [Environment.DEVELOPMENT.value, Environment.TESTING.value]:
+#         logger.info(f"Using NeonMCPClient for {active_environment} environment")
+#         return get_neon_client() # Factory function for Neon client
+#     else: # Production, Staging, etc.
+#         logger.info(f"Using SupabaseMCPClient for {active_environment} environment")
+#         return get_supabase_client() # Factory function for Supabase client
 ```
 
 ### 5.3 Configuration for Database MCPs
@@ -290,20 +290,20 @@ Configuration for these MCPs is managed via the centralized `AppSettings` and en
 **`NeonMCPConfig` (Example from `settings.py`):**
 
 ```python
-class NeonMCPConfig(MCPConfig): # Assuming MCPConfig is a base Pydantic model
-    dev_only: bool = Field(default=True)
-    default_project_id: Optional[str] = None
-    # ... other Neon specific settings
+# class NeonMCPConfig(MCPConfig): # Assuming MCPConfig is a base Pydantic model
+#     dev_only: bool = Field(default=True)
+#     default_project_id: Optional[str] = None
+#     # ... other Neon specific settings
 ```
 
 **`SupabaseMCPConfig` (Example from `settings.py`):**
 
 ```python
-class SupabaseMCPConfig(MCPConfig):
-    prod_only: bool = Field(default=True)
-    default_project_id: Optional[str] = None
-    default_organization_id: Optional[str] = None
-    # ... other Supabase specific settings
+# class SupabaseMCPConfig(MCPConfig):
+#     prod_only: bool = Field(default=True)
+#     default_project_id: Optional[str] = None
+#     default_organization_id: Optional[str] = None
+#     # ... other Supabase specific settings
 ```
 
 ### 5.4 Common Operations via MCP
@@ -312,32 +312,27 @@ class SupabaseMCPConfig(MCPConfig):
   The `NeonService` (built on `NeonMCPClient`) can create isolated database branches for feature development.
 
   ```python
-
+  # Conceptual usage
+  # neon_service = DatabaseMCPFactory.get_development_service()
+  # branch_info = await neon_service.create_development_branch(branch_name=f"db-{git_branch_name}")
+  # connection_string = branch_info["connection_string"]
+  # # Update .env.local or similar with this connection string for the feature branch
   ```
 
-# Conceptual usage
-
-neon_service = DatabaseMCPFactory.get_development_service()
-branch_info = await neon_service.create_development_branch(branch_name=f"db-{git_branch_name}")
-connection_string = branch_info["connection_string"]
-
-# Update .env.local or similar with this connection string for the feature branch
-
-````
-
 - **Applying Migrations (Supabase/Neon)**:
-Both `SupabaseService` and `NeonService` provide methods to apply SQL migration files.
-```python
-# Conceptual usage for production
-# supabase_service = DatabaseMCPFactory.get_production_service()
-# migration_files_content = [...] # Read from /migrations
-# migration_names = [...]
-# result = await supabase_service.apply_migrations(
-#     project_id=settings.supabase_mcp.default_project_id,
-#     migrations=migration_files_content,
-#     migration_names=migration_names
-# )
-````
+  Both `SupabaseService` and `NeonService` provide methods to apply SQL migration files.
+
+  ```python
+  # Conceptual usage for production
+  # supabase_service = DatabaseMCPFactory.get_production_service()
+  # migration_files_content = [...] # Read from /migrations
+  # migration_names = [...]
+  # result = await supabase_service.apply_migrations(
+  #     project_id=settings.supabase_mcp.default_project_id,
+  #     migrations=migration_files_content,
+  #     migration_names=migration_names
+  # )
+  ```
 
 - **Executing SQL**:
   Both clients offer an `execute_sql` tool for running arbitrary SQL queries, which is useful for custom data retrieval or modifications not covered by standard ORM-like methods.
@@ -358,51 +353,51 @@ The Next.js frontend interacts with Supabase primarily for authentication and re
 
 Two types of Supabase clients are used in the frontend:
 
-1.  **Server-Side Client (`lib/supabase/server.ts`)**: For use in Server Components, API routes, and server-side data fetching functions. It uses `@supabase/ssr`.
+1. **Server-Side Client (`lib/supabase/server.ts`)**: For use in Server Components, API routes, and server-side data fetching functions. It uses `@supabase/ssr`.
 
-    ```typescript
-    // lib/supabase/server.ts
-    import { createServerClient, type CookieOptions } from "@supabase/ssr";
-    import { cookies } from "next/headers";
-    import { Database } from "@/types_db"; // Assuming types_db.ts from supabase gen types
+   ```typescript
+   // lib/supabase/server.ts
+   import { createServerClient, type CookieOptions } from "@supabase/ssr";
+   import { cookies } from "next/headers";
+   import { Database } from "@/types_db"; // Assuming types_db.ts from supabase gen types
 
-    export function createSupabaseServerClient() {
-      const cookieStore = cookies();
-      return createServerClient<Database>(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-        {
-          cookies: {
-            get(name: string) {
-              return cookieStore.get(name)?.value;
-            },
-            set(name: string, value: string, options: CookieOptions) {
-              cookieStore.set({ name, value, ...options });
-            },
-            remove(name: string, options: CookieOptions) {
-              cookieStore.set({ name, value: "", ...options });
-            },
-          },
-        }
-      );
-    }
-    ```
+   export function createSupabaseServerClient() {
+     const cookieStore = cookies();
+     return createServerClient<Database>(
+       process.env.NEXT_PUBLIC_SUPABASE_URL!,
+       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+       {
+         cookies: {
+           get(name: string) {
+             return cookieStore.get(name)?.value;
+           },
+           set(name: string, value: string, options: CookieOptions) {
+             cookieStore.set({ name, value, ...options });
+           },
+           remove(name: string, options: CookieOptions) {
+             cookieStore.set({ name, value: "", ...options });
+           },
+         },
+       }
+     );
+   }
+   ```
 
-2.  **Client-Side Client (`lib/supabase/client.ts`)**: For use in Client Components (hooks, event handlers). It uses `@supabase/auth-helpers-nextjs`.
+2. **Client-Side Client (`lib/supabase/client.ts`)**: For use in Client Components (hooks, event handlers). It uses `@supabase/auth-helpers-nextjs`.
 
-    ```typescript
-    // lib/supabase/client.ts
-    "use client";
-    import { createBrowserClient } from "@supabase/ssr";
-    import { Database } from "@/types_db"; // Assuming types_db.ts
+   ```typescript
+   // lib/supabase/client.ts
+   "use client";
+   import { createBrowserClient } from "@supabase/ssr";
+   import { Database } from "@/types_db"; // Assuming types_db.ts
 
-    export function createSupabaseBrowserClient() {
-      return createBrowserClient<Database>(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-      );
-    }
-    ```
+   export function createSupabaseBrowserClient() {
+     return createBrowserClient<Database>(
+       process.env.NEXT_PUBLIC_SUPABASE_URL!,
+       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+     );
+   }
+   ```
 
 ### 6.2 Authentication Integration
 
@@ -583,6 +578,7 @@ CREATE INDEX IF NOT EXISTS idx_flights_departure_time ON flights (departure_time
 - **Select Specific Columns**: Avoid `SELECT *` where possible; fetch only the columns needed.
 - **Use Pagination**: Implement `LIMIT` and `OFFSET` for queries that might return many results.
 - **Efficient Joins**: Utilize Supabase's relationship expansion features in client libraries or write efficient SQL JOINs.
+
   ```typescript
   // Example of optimized query with relationship expansion in Supabase JS client
   // const { data: tripsWithFlights } = await supabase
@@ -633,8 +629,10 @@ CREATE INDEX IF NOT EXISTS idx_flights_departure_time ON flights (departure_time
 
 - **Local Development (Neon)**: Use Neon's branching to create isolated databases for testing new features or migrations without affecting other developers or a shared dev database.
 - **Mocking (Unit Tests)**:
+
   - For unit tests of services that interact with the database (via MCP clients or direct clients), mock the database client methods.
   - Example using `pytest` and `unittest.mock`:
+
     ```python
     # from unittest.mock import AsyncMock, patch
     # @patch('your_project.db_client_module.supabase_mcp_client.execute_sql', new_callable=AsyncMock)
@@ -644,6 +642,7 @@ CREATE INDEX IF NOT EXISTS idx_flights_departure_time ON flights (departure_time
     #     # ... assert results ...
     #     mock_execute_sql.assert_called_once_with(...)
     ```
+
 - **Integration Tests**:
   - Run integration tests against a dedicated test database (a Neon branch or a separate Supabase project).
   - These tests verify actual database interactions, RLS policies, and data integrity.
