@@ -56,70 +56,80 @@ This document tracks the migration progress from the old `src/` directory to the
 
 | File           | Status | Notes                                                                     |
 | -------------- | ------ | ------------------------------------------------------------------------- |
-| **init**.py    | ✅     | Can be deleted - functionality covered by web_cache and future Redis MCP |
+| **init**.py    | ✅     | Can be deleted - functionality covered by web_cache and future Redis MCP  |
 | redis_cache.py | ✅     | Can be deleted - web ops in web_cache, generic caching will use Redis MCP |
 
 ### db/
 
-| File                     | Status | Notes                                                                |
-| ------------------------ | ------ | -------------------------------------------------------------------- |
-| **init**.py              | ✅     | Can be deleted - functionality covered by MCP abstraction            |
-| client.py                | ✅     | Can be deleted - replaced by MCP client factories                    |
-| config.py                | ✅     | Can be deleted - replaced by MCP settings                            |
-| exceptions.py            | ✅     | Can be deleted - replaced by MCP exception hierarchy                 |
-| factory.py               | ✅     | Can be deleted - replaced by MCP client factories                    |
-| initialize.py            | ✅     | Can be deleted - migrated to tripsage/db/initialize.py with MCP      |
-| migrations.py            | ✅     | Can be deleted - migrated to tripsage/db/migrations/runner.py        |
-| providers.py             | ✅     | Can be deleted - replaced by MCP wrappers                            |
-| query_builder.py         | ✅     | Can be deleted - SQL handled through MCP execute_sql                 |
-| models/\*                | ✅     | Can be deleted - core models migrated to tripsage/models/db/         |
-| repositories/\*          | ✅     | Can be deleted - replaced by MCP tools                               |
-| neo4j/client.py          | ✅     | Can be deleted - replaced by Memory MCP client                       |
-| neo4j/config.py          | ✅     | Can be deleted - replaced by Memory MCP settings                     |
-| neo4j/connection.py      | ✅     | Can be deleted - handled by Memory MCP                               |
-| neo4j/exceptions.py      | ✅     | Can be deleted - replaced by MCP exceptions                          |
-| neo4j/repositories/\*    | ✅     | Can be deleted - replaced by Memory MCP tools                        |
-| neo4j/schemas/\*         | ✅     | Can be deleted - domain schemas migrated to MCP tools                |
-| neo4j/migrations/\*      | ✅     | Can be deleted - migrated to tripsage/db/migrations/neo4j/           |
-| neo4j/sync.py            | ✅     | Can be deleted - sync handled through dual storage pattern           |
+| File                  | Status | Notes                                                           |
+| --------------------- | ------ | --------------------------------------------------------------- |
+| **init**.py           | ✅     | Can be deleted - functionality covered by MCP abstraction       |
+| client.py             | ✅     | Can be deleted - replaced by MCP client factories               |
+| config.py             | ✅     | Can be deleted - replaced by MCP settings                       |
+| exceptions.py         | ✅     | Can be deleted - replaced by MCP exception hierarchy            |
+| factory.py            | ✅     | Can be deleted - replaced by MCP client factories               |
+| initialize.py         | ✅     | Can be deleted - migrated to tripsage/db/initialize.py with MCP |
+| migrations.py         | ✅     | Can be deleted - migrated to tripsage/db/migrations/runner.py   |
+| providers.py          | ✅     | Can be deleted - replaced by MCP wrappers                       |
+| query_builder.py      | ✅     | Can be deleted - SQL handled through MCP execute_sql            |
+| models/\*             | ✅     | Can be deleted - core models migrated to tripsage/models/db/    |
+| repositories/\*       | ✅     | Can be deleted - replaced by MCP tools                          |
+| neo4j/client.py       | ✅     | Can be deleted - replaced by Memory MCP client                  |
+| neo4j/config.py       | ✅     | Can be deleted - replaced by Memory MCP settings                |
+| neo4j/connection.py   | ✅     | Can be deleted - handled by Memory MCP                          |
+| neo4j/exceptions.py   | ✅     | Can be deleted - replaced by MCP exceptions                     |
+| neo4j/repositories/\* | ✅     | Can be deleted - replaced by Memory MCP tools                   |
+| neo4j/schemas/\*      | ✅     | Can be deleted - domain schemas migrated to MCP tools           |
+| neo4j/migrations/\*   | ✅     | Can be deleted - migrated to tripsage/db/migrations/neo4j/      |
+| neo4j/sync.py         | ✅     | Can be deleted - sync handled through dual storage pattern      |
 
 ### mcp/
 
-| File      | Status | Notes                                                           |
-| --------- | ------ | --------------------------------------------------------------- |
-| All files | ❌     | Refactored into tripsage/mcp_abstraction/ and tripsage/clients/ |
+| File      | Status     | Notes                                                           |
+| --------- | ---------- | --------------------------------------------------------------- |
+| All files | ✅ DELETED | Refactored into tripsage/mcp_abstraction/ and tripsage/clients/ |
 
 ### utils/
 
-| File                    | Status | Notes                                                                |
-| ----------------------- | ------ | -------------------------------------------------------------------- |
-| **init**.py             | ✅     | Exists in tripsage/utils/                                            |
-| cache.py                | ⚠️     | Appears to be new implementation in tripsage/utils/                  |
-| client_utils.py         | ❌     | Only in tripsage/utils/                                              |
+| File                    | Status     | Notes                                                             |
+| ----------------------- | ---------- | ----------------------------------------------------------------- |
+| **init**.py             | ✅         | Exists in tripsage/utils/                                         |
+| cache.py                | ⚠️         | Appears to be new implementation in tripsage/utils/               |
+| client_utils.py         | ❌         | Only in tripsage/utils/                                           |
 | config.py               | 🗑️ DELETED | Superseded by tripsage/config/app_settings.py and mcp_settings.py |
-| db_utils.py             | ❌     | Only in tripsage/utils/                                              |
+| db_utils.py             | ❌         | Only in tripsage/utils/                                           |
 | decorators.py           | 🗑️ DELETED | Migrated to tripsage/utils/decorators.py with both decorators     |
-| dual_storage.py         | 🔍     | Different abstraction - tripsage is generic storage class            |
-| dual_storage_service.py | ⚠️     | Check if functionality in tripsage/storage/                          |
+| dual_storage.py         | 🔍         | Different abstraction - tripsage is generic storage class         |
+| dual_storage_service.py | ⚠️         | Check if functionality in tripsage/storage/                       |
 | error_decorators.py     | 🗑️ DELETED | Merged into tripsage/utils/decorators.py                          |
 | error_handling.py       | 🗑️ DELETED | Functionality covered by tripsage/utils/error_handling.py         |
-| logging.py              | ⚠️     | Check differences between versions                                   |
-| session_memory.py       | ⚠️     | Check differences between versions                                   |
-| settings.py             | ⚠️     | Check differences between versions                                   |
-| settings_init.py        | ❌     | Not found in tripsage/                                               |
-| trip_storage_service.py | ⚠️     | Check if functionality in tripsage/storage/                          |
+| logging.py              | ⚠️         | Check differences between versions                                |
+| session_memory.py       | ⚠️         | Check differences between versions                                |
+| settings.py             | ⚠️         | Check differences between versions                                |
+| settings_init.py        | ❌         | Not found in tripsage/                                            |
+| trip_storage_service.py | ⚠️         | Check if functionality in tripsage/storage/                       |
 
 ### tests/
 
-| File      | Status | Notes                                                 |
-| --------- | ------ | ----------------------------------------------------- |
-| All files | ❌     | Separate test structure in src/ - needs investigation |
+| File/Directory         | Status     | Notes                                                   |
+| ---------------------- | ---------- | ------------------------------------------------------- |
+| src/tests/agents/      | 📋 PENDING | Migrate to tests/agents/ and tests/tools/               |
+| src/tests/mcp/         | 📋 PENDING | Split between tests/clients/ and tests/mcp_abstraction/ |
+| src/tests/utils/       | 📋 PENDING | Migrate to tests/utils/                                 |
+| src/tests/database/    | 📋 PENDING | Migrate to tests/db/                                    |
+| src/tests/tools/       | 📋 PENDING | Migrate to tests/tools/                                 |
+| src/tests/clients/     | 📋 PENDING | Migrate to tests/clients/                               |
+| src/tests/config/      | 📋 PENDING | Migrate to tests/config/                                |
+| src/tests/models/      | 📋 PENDING | Migrate to tests/models/                                |
+| src/tests/storage/     | 📋 PENDING | Migrate to tests/storage/                               |
+| src/tests/monitoring/  | 📋 PENDING | Migrate to tests/monitoring/                            |
+| src/tests/integration/ | 📋 PENDING | Migrate to tests/integration/                           |
 
 ### types/
 
-| File        | Status | Notes                                      |
-| ----------- | ------ | ------------------------------------------ |
-| supabase.ts | ❌     | TypeScript type definitions - not migrated |
+| File        | Status | Notes                                                                      |
+| ----------- | ------ | -------------------------------------------------------------------------- |
+| supabase.ts | ⚠️     | TypeScript type definitions - Consider deletion or moving to docs/schemas/ |
 
 ## Files to Investigate Further
 
@@ -201,9 +211,11 @@ Before deleting these files, we need to:
 ## Final Status
 
 The migration and cleanup is now complete. The only remaining item in `src/` is:
+
 - `src/types/supabase.ts` - TypeScript type definitions (preserved as still useful)
 
 ### Next Steps
+
 1. Decide on API implementation - whether to migrate `src/api/` or create new in `tripsage/api/`
 2. Update import statements in any remaining code that references old `src/` paths
 3. Consider moving TypeScript types to a more appropriate location if needed
