@@ -133,6 +133,7 @@ class Trip(TripSageModel):
         if self.status not in [TripStatus.PLANNING, TripStatus.BOOKED]:
             return False
         from datetime import date as date_type
+
         return date_type.today() < self.start_date
 
     def update_status(self, new_status: TripStatus) -> bool:

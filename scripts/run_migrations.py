@@ -66,28 +66,32 @@ async def main():
     # Run Neo4j migrations if requested
     if args.db_type in ["neo4j", "both"]:
         logger.info("Running Neo4j migrations...")
-        
+
         # Initialize schema if requested
         if args.init_neo4j:
+            from tripsage.config.mcp_settings import mcp_settings
             from tripsage.db.migrations.neo4j_runner import initialize_neo4j_schema
             from tripsage.mcp_abstraction.manager import MCPManager
-            from tripsage.config.mcp_settings import mcp_settings
-            
+
             mcp_manager = await MCPManager.get_instance(mcp_settings.dict())
             try:
                 await initialize_neo4j_schema(mcp_manager)
                 logger.info("Neo4j schema initialized")
             finally:
                 await mcp_manager.cleanup()
-        
+
         succeeded, failed = await run_neo4j_migrations(
             up_to=args.up_to, dry_run=args.dry_run
         )
-        logger.info(f"Neo4j migrations completed: {succeeded} succeeded, {failed} failed")
+        logger.info(
+            f"Neo4j migrations completed: {succeeded} succeeded, {failed} failed"
+        )
         total_succeeded += succeeded
         total_failed += failed
 
-    logger.info(f"All migrations completed: {total_succeeded} succeeded, {total_failed} failed")
+    logger.info(
+        f"All migrations completed: {total_succeeded} succeeded, {total_failed} failed"
+    )
 
     if total_failed > 0:
         logger.error("Some migrations failed")

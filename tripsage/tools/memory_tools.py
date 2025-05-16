@@ -7,9 +7,9 @@ client for use with the OpenAI Agents SDK through the MCPManager abstraction lay
 
 from typing import Any, Dict, List, Optional
 
+from agents import function_tool
 from pydantic import BaseModel, Field
 
-from agents import function_tool
 from tripsage.mcp_abstraction.exceptions import TripSageMCPError
 from tripsage.mcp_abstraction.manager import mcp_manager
 from tripsage.tools.schemas.memory import (
@@ -637,24 +637,25 @@ async def save_session_summary(
 
 # Domain-specific operations for TripSage
 
+
 @function_tool
 @with_error_handling
 async def find_destinations_by_country(country: str) -> Dict[str, Any]:
     """Find destinations in a specific country using the knowledge graph.
-    
+
     Args:
         country: The country to search for
-        
+
     Returns:
         Dictionary with list of destinations in the country
     """
     logger.info(f"Finding destinations in country: {country}")
-    
+
     # Search for destinations with country in their observations
     # The Memory MCP uses simple search, so we need to construct appropriate queries
     search_result = await search_knowledge_graph(f"Destination {country}")
     destinations = search_result.get("nodes", [])
-    
+
     # Filter to ensure they are actual destination entities
     filtered_destinations = []
     for node in destinations:
@@ -665,11 +666,8 @@ async def find_destinations_by_country(country: str) -> Dict[str, Any]:
                 if country.lower() in obs.lower():
                     filtered_destinations.append(node)
                     break
-    
-    return {
-        "destinations": filtered_destinations,
-        "count": len(filtered_destinations)
-    }
+
+    return {"destinations": filtered_destinations, "count": len(filtered_destinations)}
 
 
 @function_tool
@@ -678,23 +676,25 @@ async def find_nearby_destinations(
     latitude: float, longitude: float, radius_km: float = 50
 ) -> Dict[str, Any]:
     """Find destinations near a geographic location.
-    
+
     Args:
         latitude: Latitude of the location
-        longitude: Longitude of the location  
+        longitude: Longitude of the location
         radius_km: Search radius in kilometers (default 50)
-        
+
     Returns:
         Dictionary with list of nearby destinations
     """
-    logger.info(f"Finding destinations near ({latitude}, {longitude}) within {radius_km}km")
-    
+    logger.info(
+        f"Finding destinations near ({latitude}, {longitude}) within {radius_km}km"
+    )
+
     # Get all destinations
     graph_result = await get_knowledge_graph()
     all_entities = graph_result.get("entities", [])
-    
+
     nearby_destinations = []
-    
+
     for entity in all_entities:
         if entity.get("entityType") == "Destination":
             # Look for coordinates in observations
@@ -706,52 +706,47 @@ async def find_nearby_destinations(
                         # This is a simplified approach - in production, we'd have
                         # structured coordinate data in the graph
                         import re
-                        coord_pattern = r'[-+]?\d*\.\d+|[-+]?\d+'
+
+                        coord_pattern = r"[-+]?\d*\.\d+|[-+]?\d+"
                         coords = re.findall(coord_pattern, obs)
                         if len(coords) >= 2:
                             dest_lat, dest_lon = float(coords[0]), float(coords[1])
-                            
+
                             # Calculate distance using Haversine formula
                             distance = calculate_distance(
                                 latitude, longitude, dest_lat, dest_lon
                             )
-                            
+
                             if distance <= radius_km:
-                                nearby_destinations.append({
-                                    **entity,
-                                    "distance_km": distance
-                                })
+                                nearby_destinations.append(
+                                    {**entity, "distance_km": distance}
+                                )
                     except (ValueError, IndexError):
                         continue
-    
+
     # Sort by distance
-    nearby_destinations.sort(key=lambda x: x.get("distance_km", float('inf')))
-    
-    return {
-        "destinations": nearby_destinations,
-        "count": len(nearby_destinations)
-    }
+    nearby_destinations.sort(key=lambda x: x.get("distance_km", float("inf")))
+
+    return {"destinations": nearby_destinations, "count": len(nearby_destinations)}
 
 
 @function_tool
 @with_error_handling
-async def find_accommodations_in_destination(
-    destination_name: str
-) -> Dict[str, Any]:
+async def find_accommodations_in_destination(destination_name: str) -> Dict[str, Any]:
     """Find accommodations in a specific destination.
-    
+
     Args:
         destination_name: Name of the destination
-        
+
     Returns:
         Dictionary with list of accommodations
     """
     logger.info(f"Finding accommodations in destination: {destination_name}")
-    
+
     # Search for accommodations related to the destination
     search_result = await search_knowledge_graph(f"Accommodation {destination_name}")
     accommodations = search_result.get("nodes", [])
-    
+
     # Filter for actual accommodation entities
     filtered_accommodations = []
     for node in accommodations:
@@ -762,10 +757,10 @@ async def find_accommodations_in_destination(
                 if destination_name.lower() in obs.lower():
                     filtered_accommodations.append(node)
                     break
-    
+
     return {
         "accommodations": filtered_accommodations,
-        "count": len(filtered_accommodations)
+        "count": len(filtered_accommodations),
     }
 
 
@@ -777,10 +772,10 @@ async def create_trip_entities(
     destination: str,
     start_date: str,
     end_date: str,
-    details: Dict[str, Any]
+    details: Dict[str, Any],
 ) -> Dict[str, Any]:
     """Create trip entities and relationships in the knowledge graph.
-    
+
     Args:
         trip_id: Unique trip identifier
         user_id: User identifier
@@ -788,12 +783,12 @@ async def create_trip_entities(
         start_date: Trip start date
         end_date: Trip end date
         details: Additional trip details
-        
+
     Returns:
         Dictionary with created entities and relationships
     """
     logger.info(f"Creating trip entities for trip {trip_id}")
-    
+
     # Create trip entity
     trip_observations = [
         f"Trip to {destination}",
@@ -801,118 +796,110 @@ async def create_trip_entities(
         f"Budget: {details.get('budget', 'Not specified')}",
         f"Travelers: {details.get('travelers', 1)}",
         f"Status: {details.get('status', 'planning')}",
-        f"Type: {details.get('trip_type', 'leisure')}"
+        f"Type: {details.get('trip_type', 'leisure')}",
     ]
-    
-    entities_result = await create_knowledge_entities([
-        Entity(
-            name=f"Trip:{trip_id}",
-            entityType="Trip",
-            observations=trip_observations
-        )
-    ])
-    
+
+    entities_result = await create_knowledge_entities(
+        [
+            Entity(
+                name=f"Trip:{trip_id}",
+                entityType="Trip",
+                observations=trip_observations,
+            )
+        ]
+    )
+
     # Create user-trip relationship
-    user_trip_relation = await create_knowledge_relations([
-        Relation(
-            from_=f"User:{user_id}",
-            relationType="PLANS",
-            to=f"Trip:{trip_id}"
-        )
-    ])
-    
+    user_trip_relation = await create_knowledge_relations(
+        [Relation(from_=f"User:{user_id}", relationType="PLANS", to=f"Trip:{trip_id}")]
+    )
+
     # Create trip-destination relationship
-    trip_dest_relation = await create_knowledge_relations([
-        Relation(
-            from_=f"Trip:{trip_id}",
-            relationType="TO",
-            to=f"Destination:{destination}"
-        )
-    ])
-    
+    trip_dest_relation = await create_knowledge_relations(
+        [
+            Relation(
+                from_=f"Trip:{trip_id}",
+                relationType="TO",
+                to=f"Destination:{destination}",
+            )
+        ]
+    )
+
     return {
         "trip_entity": entities_result.get("entities", [None])[0],
         "user_trip_relation": user_trip_relation.get("relations", [None])[0],
-        "trip_destination_relation": trip_dest_relation.get("relations", [None])[0]
+        "trip_destination_relation": trip_dest_relation.get("relations", [None])[0],
     }
 
 
 @function_tool
 @with_error_handling
-async def find_popular_destinations(
-    limit: int = 10
-) -> Dict[str, Any]:
+async def find_popular_destinations(limit: int = 10) -> Dict[str, Any]:
     """Find the most popular destinations based on trip relationships.
-    
+
     Args:
         limit: Maximum number of destinations to return
-        
+
     Returns:
         Dictionary with popular destinations
     """
     logger.info(f"Finding top {limit} popular destinations")
-    
+
     # Get the full graph to analyze relationships
     graph_result = await get_knowledge_graph()
     all_entities = graph_result.get("entities", [])
     all_relations = graph_result.get("relations", [])
-    
+
     # Count trips to each destination
     destination_counts = {}
-    
+
     for relation in all_relations:
         if relation.get("relationType") == "TO" and "Trip:" in relation.get("from", ""):
             destination = relation.get("to")
             if destination and destination.startswith("Destination:"):
-                destination_counts[destination] = destination_counts.get(destination, 0) + 1
-    
+                destination_counts[destination] = (
+                    destination_counts.get(destination, 0) + 1
+                )
+
     # Sort destinations by popularity
     popular_destinations = []
     for dest_name, count in sorted(
-        destination_counts.items(),
-        key=lambda x: x[1],
-        reverse=True
+        destination_counts.items(), key=lambda x: x[1], reverse=True
     )[:limit]:
         # Find the actual destination entity
         for entity in all_entities:
             if entity.get("name") == dest_name:
-                popular_destinations.append({
-                    **entity,
-                    "trip_count": count
-                })
+                popular_destinations.append({**entity, "trip_count": count})
                 break
-    
-    return {
-        "destinations": popular_destinations,
-        "count": len(popular_destinations)
-    }
+
+    return {"destinations": popular_destinations, "count": len(popular_destinations)}
 
 
 # Helper function for distance calculation
 def calculate_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     """Calculate distance between two coordinates using Haversine formula.
-    
+
     Args:
         lat1: Latitude of first point
         lon1: Longitude of first point
         lat2: Latitude of second point
         lon2: Longitude of second point
-        
+
     Returns:
         Distance in kilometers
     """
     import math
-    
+
     R = 6371  # Earth's radius in kilometers
-    
+
     dlat = math.radians(lat2 - lat1)
     dlon = math.radians(lon2 - lon1)
     lat1_rad = math.radians(lat1)
     lat2_rad = math.radians(lat2)
-    
-    a = (math.sin(dlat/2) * math.sin(dlat/2) +
-         math.cos(lat1_rad) * math.cos(lat2_rad) *
-         math.sin(dlon/2) * math.sin(dlon/2))
-    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
-    
+
+    a = math.sin(dlat / 2) * math.sin(dlat / 2) + math.cos(lat1_rad) * math.cos(
+        lat2_rad
+    ) * math.sin(dlon / 2) * math.sin(dlon / 2)
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+
     return R * c

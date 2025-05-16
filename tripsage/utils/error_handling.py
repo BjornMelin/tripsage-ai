@@ -5,7 +5,6 @@ This module provides standardized error handling functionality for the TripSage
 application, including custom exception classes and error processing functions.
 """
 
-import functools
 import traceback
 from typing import Any, Callable, Dict, Optional, TypeVar, cast
 
@@ -257,4 +256,3 @@ def safe_execute(
     except Exception as e:
         log_exception(e)
         return cast(T, fallback)
-

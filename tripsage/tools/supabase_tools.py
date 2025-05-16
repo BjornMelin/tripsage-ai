@@ -757,26 +757,27 @@ async def restore_project(project_id: str) -> Dict[str, Any]:
 
 # Domain-specific operations for TripSage
 
+
 @function_tool
 @with_error_handling
 async def find_user_by_email(project_id: str, email: str) -> Dict[str, Any]:
     """Find a user by email address (case-insensitive).
-    
+
     Args:
         project_id: The ID of the project
         email: The email address to search for
-        
+
     Returns:
         Dictionary with user information or empty if not found
-        
+
     Raises:
         TripSageMCPError: If the request fails
     """
     logger.info(f"Finding user by email: {email} in project: {project_id}")
-    
+
     # Email should be case-insensitive
     email_lower = email.lower()
-    
+
     # SQL query to find user by email
     query = """
         SELECT id, name, email, preferences_json, is_admin, is_disabled, 
@@ -785,23 +786,20 @@ async def find_user_by_email(project_id: str, email: str) -> Dict[str, Any]:
         WHERE LOWER(email) = $1
         LIMIT 1
     """.replace("$1", f"'{email_lower}'")
-    
+
     result = await mcp_manager.invoke(
         mcp_name="supabase",
         method_name="execute_sql",
         params={"project_id": project_id, "query": query},
     )
-    
+
     # Convert the result to the expected response model
     result = ExecuteSQLResponse.model_validate(result)
-    
+
     if result.rows:
         user_data = result.rows[0].model_dump()
-        return {
-            "found": True,
-            "user": user_data
-        }
-    
+        return {"found": True, "user": user_data}
+
     return {"found": False, "user": None}
 
 
@@ -811,19 +809,21 @@ async def find_users_by_name_pattern(
     project_id: str, name_pattern: str
 ) -> Dict[str, Any]:
     """Find users by name pattern (case-insensitive).
-    
+
     Args:
         project_id: The ID of the project
         name_pattern: The name pattern to search for (supports SQL LIKE syntax)
-        
+
     Returns:
         Dictionary with list of matching users
-        
+
     Raises:
         TripSageMCPError: If the request fails
     """
-    logger.info(f"Finding users by name pattern: {name_pattern} in project: {project_id}")
-    
+    logger.info(
+        f"Finding users by name pattern: {name_pattern} in project: {project_id}"
+    )
+
     # SQL query to find users by name pattern
     query = f"""
         SELECT id, name, email, preferences_json, is_admin, is_disabled, 
@@ -832,22 +832,19 @@ async def find_users_by_name_pattern(
         WHERE name ILIKE '{name_pattern}'
         ORDER BY name
     """
-    
+
     result = await mcp_manager.invoke(
         mcp_name="supabase",
         method_name="execute_sql",
         params={"project_id": project_id, "query": query},
     )
-    
+
     # Convert the result to the expected response model
     result = ExecuteSQLResponse.model_validate(result)
-    
+
     users = [row.model_dump() for row in result.rows]
-    
-    return {
-        "users": users,
-        "count": len(users)
-    }
+
+    return {"users": users, "count": len(users)}
 
 
 @function_tool
@@ -856,44 +853,45 @@ async def update_user_preferences(
     project_id: str, user_id: int, preferences: Dict[str, Any]
 ) -> Dict[str, Any]:
     """Update a user's preferences by merging with existing preferences.
-    
+
     Args:
         project_id: The ID of the project
         user_id: The ID of the user to update
         preferences: The new preferences to merge with existing ones
-        
+
     Returns:
         Dictionary with updated user information
-        
+
     Raises:
         TripSageMCPError: If the request fails
     """
     logger.info(f"Updating preferences for user {user_id} in project: {project_id}")
-    
+
     # First, get the current preferences
     get_query = f"""
         SELECT preferences_json 
         FROM users 
         WHERE id = {user_id}
     """
-    
+
     current_result = await mcp_manager.invoke(
         mcp_name="supabase",
         method_name="execute_sql",
         params={"project_id": project_id, "query": get_query},
     )
-    
+
     current_result = ExecuteSQLResponse.model_validate(current_result)
-    
+
     if not current_result.rows:
         return {"success": False, "error": "User not found"}
-    
+
     current_prefs = current_result.rows[0].model_dump().get("preferences_json", {})
-    
+
     # Deep merge preferences
     import json
+
     merged_prefs = deep_merge_preferences(current_prefs, preferences)
-    
+
     # Update the user's preferences
     update_query = f"""
         UPDATE users 
@@ -903,23 +901,20 @@ async def update_user_preferences(
         RETURNING id, name, email, preferences_json, is_admin, is_disabled, 
                   created_at, updated_at
     """
-    
+
     result = await mcp_manager.invoke(
         mcp_name="supabase",
         method_name="execute_sql",
         params={"project_id": project_id, "query": update_query},
     )
-    
+
     # Convert the result to the expected response model
     result = ExecuteSQLResponse.model_validate(result)
-    
+
     if result.rows:
         user_data = result.rows[0].model_dump()
-        return {
-            "success": True,
-            "user": user_data
-        }
-    
+        return {"success": True, "user": user_data}
+
     return {"success": False, "error": "Failed to update preferences"}
 
 
@@ -929,25 +924,25 @@ async def find_trips_by_user(
     project_id: str, user_id: int, status: Optional[str] = None
 ) -> Dict[str, Any]:
     """Find trips for a specific user, optionally filtered by status.
-    
+
     Args:
         project_id: The ID of the project
         user_id: The ID of the user
         status: Optional status filter (planning, booked, completed, canceled)
-        
+
     Returns:
         Dictionary with list of trips
-        
+
     Raises:
         TripSageMCPError: If the request fails
     """
     logger.info(f"Finding trips for user {user_id} in project: {project_id}")
-    
+
     # SQL query to find trips
     where_clause = f"WHERE ut.user_id = {user_id}"
     if status:
         where_clause += f" AND t.status = '{status}'"
-    
+
     query = f"""
         SELECT t.id, t.name, t.start_date, t.end_date, t.destination, 
                t.budget, t.travelers, t.status, t.trip_type, t.flexibility,
@@ -957,22 +952,19 @@ async def find_trips_by_user(
         {where_clause}
         ORDER BY t.start_date DESC
     """
-    
+
     result = await mcp_manager.invoke(
         mcp_name="supabase",
         method_name="execute_sql",
         params={"project_id": project_id, "query": query},
     )
-    
+
     # Convert the result to the expected response model
     result = ExecuteSQLResponse.model_validate(result)
-    
+
     trips = [row.model_dump() for row in result.rows]
-    
-    return {
-        "trips": trips,
-        "count": len(trips)
-    }
+
+    return {"trips": trips, "count": len(trips)}
 
 
 @function_tool
@@ -981,19 +973,21 @@ async def find_trips_by_destination(
     project_id: str, destination_pattern: str
 ) -> Dict[str, Any]:
     """Find trips by destination pattern.
-    
+
     Args:
         project_id: The ID of the project
         destination_pattern: The destination pattern to search for (supports SQL LIKE)
-        
+
     Returns:
         Dictionary with list of matching trips
-        
+
     Raises:
         TripSageMCPError: If the request fails
     """
-    logger.info(f"Finding trips by destination: {destination_pattern} in project: {project_id}")
-    
+    logger.info(
+        f"Finding trips by destination: {destination_pattern} in project: {project_id}"
+    )
+
     # SQL query to find trips by destination
     query = f"""
         SELECT id, name, start_date, end_date, destination, 
@@ -1003,22 +997,19 @@ async def find_trips_by_destination(
         WHERE destination ILIKE '{destination_pattern}'
         ORDER BY start_date DESC
     """
-    
+
     result = await mcp_manager.invoke(
         mcp_name="supabase",
         method_name="execute_sql",
         params={"project_id": project_id, "query": query},
     )
-    
+
     # Convert the result to the expected response model
     result = ExecuteSQLResponse.model_validate(result)
-    
+
     trips = [row.model_dump() for row in result.rows]
-    
-    return {
-        "trips": trips,
-        "count": len(trips)
-    }
+
+    return {"trips": trips, "count": len(trips)}
 
 
 @function_tool
@@ -1027,20 +1018,23 @@ async def find_active_trips_by_date_range(
     project_id: str, start_date: str, end_date: str
 ) -> Dict[str, Any]:
     """Find active trips within a date range.
-    
+
     Args:
         project_id: The ID of the project
         start_date: Start date (YYYY-MM-DD format)
         end_date: End date (YYYY-MM-DD format)
-        
+
     Returns:
         Dictionary with list of active trips in the date range
-        
+
     Raises:
         TripSageMCPError: If the request fails
     """
-    logger.info(f"Finding active trips between {start_date} and {end_date} in project: {project_id}")
-    
+    logger.info(
+        f"Finding active trips between {start_date} and {end_date} in project: "
+        f"{project_id}"
+    )
+
     # SQL query to find active trips overlapping with date range
     query = f"""
         SELECT id, name, start_date, end_date, destination, 
@@ -1052,39 +1046,34 @@ async def find_active_trips_by_date_range(
           AND end_date >= '{start_date}'
         ORDER BY start_date
     """
-    
+
     result = await mcp_manager.invoke(
         mcp_name="supabase",
         method_name="execute_sql",
         params={"project_id": project_id, "query": query},
     )
-    
+
     # Convert the result to the expected response model
     result = ExecuteSQLResponse.model_validate(result)
-    
+
     trips = [row.model_dump() for row in result.rows]
-    
-    return {
-        "trips": trips,
-        "count": len(trips)
-    }
+
+    return {"trips": trips, "count": len(trips)}
 
 
 # Helper function for deep merging preferences
-def deep_merge_preferences(current: Dict[str, Any], updates: Dict[str, Any]) -> Dict[str, Any]:
+def deep_merge_preferences(
+    current: Dict[str, Any], updates: Dict[str, Any]
+) -> Dict[str, Any]:
     """Deep merge two preference dictionaries."""
     result = current.copy()
-    
+
     for key, value in updates.items():
-        if (
-            isinstance(value, dict)
-            and key in result
-            and isinstance(result[key], dict)
-        ):
+        if isinstance(value, dict) and key in result and isinstance(result[key], dict):
             # Merge nested dictionaries
             result[key] = deep_merge_preferences(result[key], value)
         else:
             # Override at top level
             result[key] = value
-    
+
     return result

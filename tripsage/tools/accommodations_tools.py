@@ -8,6 +8,7 @@ different providers using the TripSage MCP Abstraction Layer.
 from typing import Any, Dict, List, Optional
 
 from agents import function_tool
+
 from tripsage.mcp_abstraction.exceptions import TripSageMCPError
 from tripsage.mcp_abstraction.manager import mcp_manager
 from tripsage.tools.schemas.accommodations import (

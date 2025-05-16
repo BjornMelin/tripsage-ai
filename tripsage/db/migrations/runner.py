@@ -1,15 +1,14 @@
 """SQL database migration runner using Supabase MCP."""
 
+import asyncio
 import re
 from pathlib import Path
-from typing import List, Optional, Tuple, Dict, Any
-import asyncio
-import yaml
+from typing import List, Optional, Tuple
 
-from tripsage.mcp_abstraction.manager import MCPManager
-from tripsage.mcp_abstraction.exceptions import MCPIntegrationError
-from tripsage.utils.logging import configure_logging
 from tripsage.config.mcp_settings import mcp_settings
+from tripsage.mcp_abstraction.exceptions import MCPIntegrationError
+from tripsage.mcp_abstraction.manager import MCPManager
+from tripsage.utils.logging import configure_logging
 
 logger = configure_logging(__name__)
 
@@ -58,13 +57,13 @@ async def get_applied_migrations(mcp_manager: MCPManager, project_id: str) -> Li
         FROM pg_tables 
         WHERE schemaname = 'public' AND tablename = 'migrations';
         """
-        
+
         result = await mcp_manager.call_tool(
             integration_name="supabase",
             tool_name="execute_sql",
-            tool_args={"project_id": project_id, "sql": tables_query}
+            tool_args={"project_id": project_id, "sql": tables_query},
         )
-        
+
         if not result.result.get("rows"):
             # Create migrations table if it doesn't exist
             logger.info("Creating migrations table")
@@ -78,24 +77,24 @@ async def get_applied_migrations(mcp_manager: MCPManager, project_id: str) -> Li
             await mcp_manager.call_tool(
                 integration_name="supabase",
                 tool_name="execute_sql",
-                tool_args={"project_id": project_id, "sql": create_table_query}
+                tool_args={"project_id": project_id, "sql": create_table_query},
             )
             return []
 
         # Get list of applied migrations
         get_migrations_query = "SELECT filename FROM migrations ORDER BY applied_at;"
-        
+
         result = await mcp_manager.call_tool(
             integration_name="supabase",
             tool_name="execute_sql",
-            tool_args={"project_id": project_id, "sql": get_migrations_query}
+            tool_args={"project_id": project_id, "sql": get_migrations_query},
         )
-        
+
         if not result.result.get("rows"):
             return []
 
         return [row["filename"] for row in result.result["rows"]]
-        
+
     except MCPIntegrationError as e:
         logger.error(f"Error checking applied migrations: {e}")
         raise
@@ -119,18 +118,18 @@ async def apply_migration(
     try:
         # Apply the migration using Supabase MCP's apply_migration method
         logger.info(f"Applying migration: {filename}")
-        
+
         # Split content into individual queries if necessary
         # Simple approach - could be enhanced for more complex queries
-        queries = [q.strip() for q in content.split(';') if q.strip()]
-        
+        queries = [q.strip() for q in content.split(";") if q.strip()]
+
         for query in queries:
             result = await mcp_manager.call_tool(
                 integration_name="supabase",
                 tool_name="execute_sql",
-                tool_args={"project_id": project_id, "sql": query}
+                tool_args={"project_id": project_id, "sql": query},
             )
-            
+
             if result.error:
                 logger.error(f"Error applying query in {filename}: {result.error}")
                 return False
@@ -140,25 +139,23 @@ async def apply_migration(
         INSERT INTO migrations (filename, applied_at)
         VALUES ('{filename}', NOW());
         """
-        
+
         await mcp_manager.call_tool(
             integration_name="supabase",
             tool_name="execute_sql",
-            tool_args={"project_id": project_id, "sql": record_query}
+            tool_args={"project_id": project_id, "sql": record_query},
         )
 
         logger.info(f"Migration {filename} applied successfully")
         return True
-        
+
     except MCPIntegrationError as e:
         logger.error(f"Error applying migration {filename}: {e}")
         return False
 
 
 async def run_migrations(
-    project_id: Optional[str] = None, 
-    up_to: Optional[str] = None, 
-    dry_run: bool = False
+    project_id: Optional[str] = None, up_to: Optional[str] = None, dry_run: bool = False
 ) -> Tuple[int, int]:
     """
     Run all pending migrations in order.
@@ -176,11 +173,13 @@ async def run_migrations(
         if mcp_settings.SUPABASE_PROJECT_ID:
             project_id = mcp_settings.SUPABASE_PROJECT_ID
         else:
-            raise ValueError("Supabase project ID not provided and not found in settings")
-    
+            raise ValueError(
+                "Supabase project ID not provided and not found in settings"
+            )
+
     # Initialize MCP manager
     mcp_manager = await MCPManager.get_instance(mcp_settings.dict())
-    
+
     try:
         migration_files = get_migration_files()
         applied_migrations = await get_applied_migrations(mcp_manager, project_id)
@@ -195,7 +194,9 @@ async def run_migrations(
 
         for migration_file in migration_files:
             if migration_file.name in applied_migrations:
-                logger.debug(f"Skipping already applied migration: {migration_file.name}")
+                logger.debug(
+                    f"Skipping already applied migration: {migration_file.name}"
+                )
                 continue
 
             if up_to and migration_file.name > up_to:
@@ -224,7 +225,7 @@ async def run_migrations(
                 logger.error(f"Error processing migration {migration_file.name}: {e}")
 
         return succeeded, failed
-        
+
     finally:
         # Cleanup MCP manager
         await mcp_manager.cleanup()
@@ -240,9 +241,7 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(description="Apply database migrations")
-    parser.add_argument(
-        "--project-id", help="Supabase project ID"
-    )
+    parser.add_argument("--project-id", help="Supabase project ID")
     parser.add_argument(
         "--dry-run", action="store_true", help="Don't actually apply migrations"
     )
@@ -253,9 +252,7 @@ if __name__ == "__main__":
 
     async def main():
         succeeded, failed = await run_migrations(
-            project_id=args.project_id,
-            dry_run=args.dry_run, 
-            up_to=args.up_to
+            project_id=args.project_id, dry_run=args.dry_run, up_to=args.up_to
         )
         logger.info(f"Migration completed: {succeeded} succeeded, {failed} failed")
         return succeeded, failed
