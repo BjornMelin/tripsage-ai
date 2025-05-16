@@ -141,14 +141,10 @@ async def apply_cypher_migration(mcp_manager: MCPManager, migration_file: Path) 
         # Execute each statement
         for statement in statements:
             # Parse statement to determine operation type
-            operation = "query"  # default
-            if "CREATE" in statement.upper():
-                if "CONSTRAINT" in statement.upper():
-                    operation = "constraint"
-                elif "INDEX" in statement.upper():
-                    operation = "index"
-                else:
-                    operation = "create"
+            if statement.startswith("CREATE INDEX"):
+                _operation_type = "index"
+            else:
+                _operation_type = "create"
 
             # For now, we'll use the Memory MCP's entity creation for simple cases
             # More complex Cypher might need custom handling

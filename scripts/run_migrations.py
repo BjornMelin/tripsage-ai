@@ -15,8 +15,9 @@ script_dir = Path(__file__).resolve().parent
 project_root = script_dir.parent
 sys.path.insert(0, str(project_root))
 
-from tripsage.db.migrations import run_migrations, run_neo4j_migrations
-from tripsage.utils.logging import configure_logging
+# These imports rely on the path adjustments above
+from tripsage.db.migrations import run_migrations, run_neo4j_migrations  # noqa: E402
+from tripsage.utils.logging import configure_logging  # noqa: E402
 
 # Configure logging
 logger = configure_logging("run_migrations")

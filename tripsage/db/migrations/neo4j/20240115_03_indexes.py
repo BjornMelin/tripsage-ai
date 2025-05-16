@@ -24,7 +24,8 @@ async def apply(mcp_manager: MCPManager) -> None:
                 "node_label:Destination",
                 "property:country",
                 "purpose:exact_lookups",
-                "cypher:CREATE INDEX destination_country_index IF NOT EXISTS FOR (d:Destination) ON (d.country)",
+                "cypher:CREATE INDEX destination_country_index IF NOT EXISTS "
+                "FOR (d:Destination) ON (d.country)",
             ],
         },
         {
@@ -35,7 +36,8 @@ async def apply(mcp_manager: MCPManager) -> None:
                 "node_label:Destination",
                 "property:type",
                 "purpose:exact_lookups",
-                "cypher:CREATE INDEX destination_type_index IF NOT EXISTS FOR (d:Destination) ON (d.type)",
+                "cypher:CREATE INDEX destination_type_index IF NOT EXISTS "
+                "FOR (d:Destination) ON (d.type)",
             ],
         },
         {
@@ -46,7 +48,8 @@ async def apply(mcp_manager: MCPManager) -> None:
                 "node_label:Trip",
                 "property:user_id",
                 "purpose:user_trips_lookup",
-                "cypher:CREATE INDEX trip_user_id_index IF NOT EXISTS FOR (t:Trip) ON (t.user_id)",
+                "cypher:CREATE INDEX trip_user_id_index IF NOT EXISTS "
+                "FOR (t:Trip) ON (t.user_id)",
             ],
         },
         {
@@ -57,7 +60,8 @@ async def apply(mcp_manager: MCPManager) -> None:
                 "node_label:Destination",
                 "property:description",
                 "purpose:text_search",
-                "cypher:CREATE TEXT INDEX destination_description_index IF NOT EXISTS FOR (d:Destination) ON (d.description)",
+                "cypher:CREATE TEXT INDEX destination_description_index IF NOT EXISTS "
+                "FOR (d:Destination) ON (d.description)",
             ],
         },
         {
@@ -68,7 +72,8 @@ async def apply(mcp_manager: MCPManager) -> None:
                 "node_label:Destination",
                 "properties:latitude,longitude",
                 "purpose:geospatial_lookups",
-                "cypher:CREATE INDEX destination_location_index IF NOT EXISTS FOR (d:Destination) ON (d.latitude, d.longitude)",
+                "cypher:CREATE INDEX destination_location_index IF NOT EXISTS "
+                "FOR (d:Destination) ON (d.latitude, d.longitude)",
             ],
         },
     ]

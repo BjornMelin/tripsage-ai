@@ -23,9 +23,10 @@ def test_missing_operations():
     supabase_tools_path = (
         "/home/bjorn/repos/agents/openai/tripsage-ai/tripsage/tools/supabase_tools.py"
     )
-    memory_tools_path = (
-        "/home/bjorn/repos/agents/openai/tripsage-ai/tripsage/tools/memory_tools.py"
-    )
+    # Variable not used, commenting out to avoid Ruff F841 error
+    # memory_tools_path = (
+    #     "/home/bjorn/repos/agents/openai/tripsage-ai/tripsage/tools/memory_tools.py"
+    # )
 
     # Missing user operations
     missing_user_ops = [

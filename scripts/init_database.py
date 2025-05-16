@@ -18,9 +18,10 @@ script_dir = Path(__file__).resolve().parent
 project_root = script_dir.parent
 sys.path.insert(0, str(project_root))
 
-from tripsage.config.mcp_settings import mcp_settings
-from tripsage.mcp_abstraction.manager import MCPManager
-from tripsage.utils.logging import configure_logging
+# These imports rely on the path adjustments above
+from tripsage.config.mcp_settings import mcp_settings  # noqa: E402
+from tripsage.mcp_abstraction.manager import MCPManager  # noqa: E402
+from tripsage.utils.logging import configure_logging  # noqa: E402
 
 # Configure logging
 logger = configure_logging("init_database")
@@ -175,7 +176,8 @@ async def load_sample_data(mcp_manager: MCPManager, project_id: str) -> bool:
         # Add sample user to SQL
         sample_user_sql = """
         INSERT INTO users (email, username, full_name, preferences)
-        VALUES ('demo@tripsage.ai', 'demo_user', 'Demo User', '{"currency": "USD", "language": "en"}')
+        VALUES ('demo@tripsage.ai', 'demo_user', 'Demo User', 
+                '{"currency": "USD", "language": "en"}')
         ON CONFLICT (email) DO NOTHING
         RETURNING id;
         """
@@ -201,7 +203,8 @@ async def load_sample_data(mcp_manager: MCPManager, project_id: str) -> bool:
                     "timezone:Asia/Tokyo",
                     "currency:JPY",
                     "language:Japanese",
-                    "description:Japan's capital, blending traditional and modern culture",
+                    "description:Japan's capital, blending traditional and "
+                    "modern culture",
                 ],
             },
             {

@@ -109,11 +109,13 @@ class TestDatabaseIntegration:
         assert neo4j_result["status"] == "success"
 
         # Query destinations by country
-        france_destinations = await memory_tools.find_destinations_by_country("France")
+        # We ignore the result since this is just testing connectivity
+        await memory_tools.find_destinations_by_country("France")
         # Paris should be in the results (if it exists in the graph)
 
         # Find trips by destination
-        trips_to_paris = await supabase_tools.find_trips_by_destination(
+        # We ignore the result since this is just testing connectivity
+        await supabase_tools.find_trips_by_destination(
             project_id=project_id, destination="Paris"
         )
 

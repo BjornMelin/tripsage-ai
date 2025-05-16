@@ -161,7 +161,8 @@ async def run_migrations(
     Run all pending migrations in order.
 
     Args:
-        project_id: Supabase project ID. If not provided, will use default from settings.
+        project_id: Supabase project ID. If not provided, will use default
+            from settings.
         up_to: Optional filename to stop at (inclusive).
         dry_run: If True, don't actually apply migrations, just log what would be done.
 

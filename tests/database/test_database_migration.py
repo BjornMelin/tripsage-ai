@@ -15,7 +15,8 @@ with patch("tripsage.config.app_settings.settings"):
 
 
 class TestDatabaseMigrationCompleteness:
-    """Test to ensure all database operations are properly migrated to MCP-based approach."""
+    """Test to ensure all database operations are properly migrated to
+    MCP-based approach."""
 
     @pytest.fixture
     def mock_mcp_manager(self):
@@ -221,7 +222,7 @@ class TestNeo4jOperations(TestDatabaseMigrationCompleteness):
             {"status": "success"}
         )
 
-        trip_data = {
+        _trip_data = {
             "id": 1,
             "user_id": 1,
             "destinations": ["Paris", "Rome"],

@@ -98,7 +98,8 @@ async def apply(mcp_manager: MCPManager) -> None:
                 "timezone:Europe/Paris",
                 "currency:EUR",
                 "language:French",
-                "description:The capital of France, known for its art, fashion, and culture",
+                "description:The capital of France, known for its art, "
+                "fashion, and culture",
             ],
         },
         {

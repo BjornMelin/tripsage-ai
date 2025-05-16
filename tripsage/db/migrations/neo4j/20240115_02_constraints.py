@@ -23,7 +23,8 @@ async def apply(mcp_manager: MCPManager) -> None:
                 "type:uniqueness",
                 "node_label:Destination",
                 "property:name",
-                "cypher:CREATE CONSTRAINT destination_name_unique IF NOT EXISTS FOR (d:Destination) REQUIRE d.name IS UNIQUE",
+                "cypher:CREATE CONSTRAINT destination_name_unique IF NOT EXISTS "
+                "FOR (d:Destination) REQUIRE d.name IS UNIQUE",
             ],
         },
         {
@@ -33,7 +34,8 @@ async def apply(mcp_manager: MCPManager) -> None:
                 "type:uniqueness",
                 "node_label:User",
                 "property:email",
-                "cypher:CREATE CONSTRAINT user_email_unique IF NOT EXISTS FOR (u:User) REQUIRE u.email IS UNIQUE",
+                "cypher:CREATE CONSTRAINT user_email_unique IF NOT EXISTS "
+                "FOR (u:User) REQUIRE u.email IS UNIQUE",
             ],
         },
         {
@@ -43,7 +45,8 @@ async def apply(mcp_manager: MCPManager) -> None:
                 "type:uniqueness",
                 "node_label:Trip",
                 "property:id",
-                "cypher:CREATE CONSTRAINT trip_id_unique IF NOT EXISTS FOR (t:Trip) REQUIRE t.id IS UNIQUE",
+                "cypher:CREATE CONSTRAINT trip_id_unique IF NOT EXISTS "
+                "FOR (t:Trip) REQUIRE t.id IS UNIQUE",
             ],
         },
         {
@@ -53,7 +56,8 @@ async def apply(mcp_manager: MCPManager) -> None:
                 "type:existence",
                 "node_label:Destination",
                 "property:country",
-                "cypher:CREATE CONSTRAINT destination_country_exists IF NOT EXISTS FOR (d:Destination) REQUIRE d.country IS NOT NULL",
+                "cypher:CREATE CONSTRAINT destination_country_exists IF NOT EXISTS "
+                "FOR (d:Destination) REQUIRE d.country IS NOT NULL",
             ],
         },
         {
@@ -63,7 +67,8 @@ async def apply(mcp_manager: MCPManager) -> None:
                 "type:existence",
                 "node_label:User",
                 "property:name",
-                "cypher:CREATE CONSTRAINT user_name_exists IF NOT EXISTS FOR (u:User) REQUIRE u.name IS NOT NULL",
+                "cypher:CREATE CONSTRAINT user_name_exists IF NOT EXISTS "
+                "FOR (u:User) REQUIRE u.name IS NOT NULL",
             ],
         },
     ]

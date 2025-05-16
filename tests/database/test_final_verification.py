@@ -25,7 +25,7 @@ def check_function_in_file(file_path: str, function_name: str) -> bool:
                 and node.name == function_name
             ):
                 return True
-    except:
+    except Exception:
         return False
     return False
 
@@ -89,10 +89,12 @@ def verify_migration():
         f"   - SQL migration runner: {'✅' if check_file_exists(sql_runner) else '❌'}"
     )
     print(
-        f"   - Neo4j migration runner: {'✅' if check_file_exists(neo4j_runner) else '❌'}"
+        f"   - Neo4j migration runner: "
+        f"{'✅' if check_file_exists(neo4j_runner) else '❌'}"
     )
     print(
-        f"   - Migration script: {'✅' if check_file_exists(migration_script) else '❌'}"
+        f"   - Migration script: "
+        f"{'✅' if check_file_exists(migration_script) else '❌'}"
     )
 
     # 5. Check initialization
@@ -119,7 +121,8 @@ def verify_migration():
     for old_file in old_files:
         exists = check_file_exists(old_file)
         print(
-            f"   - {os.path.basename(old_file)}: {'❌ (needs deletion)' if exists else '✅ (already deleted)'}"
+            f"   - {os.path.basename(old_file)}: "
+            f"{'❌ (needs deletion)' if exists else '✅ (already deleted)'}"
         )
 
     print("\n=== Migration Status Summary ===")

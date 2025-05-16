@@ -41,9 +41,9 @@ class TestMissingDatabaseOperations:
 
         # Verify these operations don't exist
         for op in missing_operations:
-            assert not hasattr(
-                supabase_tools, op["operation"]
-            ), f"{op['operation']} unexpectedly exists in supabase_tools"
+            assert not hasattr(supabase_tools, op["operation"]), (
+                f"{op['operation']} unexpectedly exists in supabase_tools"
+            )
 
         return missing_operations
 
@@ -61,9 +61,9 @@ class TestMissingDatabaseOperations:
 
         # Verify these operations don't exist
         for op in missing_operations:
-            assert not hasattr(
-                supabase_tools, op["operation"]
-            ), f"{op['operation']} unexpectedly exists in supabase_tools"
+            assert not hasattr(supabase_tools, op["operation"]), (
+                f"{op['operation']} unexpectedly exists in supabase_tools"
+            )
 
         return missing_operations
 
@@ -109,9 +109,9 @@ class TestMissingDatabaseOperations:
 
         # Verify these operations don't exist
         for op in missing_operations:
-            assert not hasattr(
-                supabase_tools, op["operation"]
-            ), f"{op['operation']} unexpectedly exists in supabase_tools"
+            assert not hasattr(supabase_tools, op["operation"]), (
+                f"{op['operation']} unexpectedly exists in supabase_tools"
+            )
 
         return missing_operations
 
@@ -151,9 +151,11 @@ class TestMissingModelOperations:
     def test_missing_flight_model(self):
         """Document that Flight model is missing from database models."""
         try:
-            from tripsage.models.db.flight import Flight
+            import importlib.util
 
-            assert False, "Flight model unexpectedly exists"
+            spec = importlib.util.find_spec("tripsage.models.db.flight")
+            if spec is not None:
+                raise AssertionError("Flight model unexpectedly exists")
         except ImportError:
             # This is expected
             pass
@@ -199,5 +201,6 @@ if __name__ == "__main__":
     flight_model = missing_models_test.test_missing_flight_model()
     print("\n=== Missing Models ===")
     print(
-        f"- {flight_model['model']}: {flight_model['description']} (Priority: {flight_model['priority']})"
+        f"- {flight_model['model']}: {flight_model['description']} "
+        f"(Priority: {flight_model['priority']})"
     )
