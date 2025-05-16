@@ -113,6 +113,17 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
       - Update README.md to reflect new structure
       - Add directory structure documentation
       - Create migration guide for developers
+    - [x] Database layer migration:
+      - ✓ Created tripsage/models/db/ directory for essential business models
+      - ✓ Migrated core entity models (User, Trip) with business validation
+      - ✓ Implemented domain-specific Supabase tools in supabase_tools.py
+      - ✓ Enhanced SupabaseMCPWrapper for database operations
+      - ✓ Created tripsage/db/migrations/sql/ directory (exists as root migrations/)
+      - ✓ Adapted run_migrations.py to use Supabase MCP's execute_sql
+      - ✓ Created tripsage/db/migrations/neo4j/ for graph schema scripts
+      - ✓ Implemented Neo4j initialization logic using Memory MCP
+      - ✓ Added domain-specific tools in memory_tools.py for complex queries
+      - [ ] Delete old src/db/ directory after migration completion
 
 - [ ] **Integrate External MCP Servers**
 
@@ -869,21 +880,28 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
       - Implement proper dependency injection
       - Add comprehensive request/response models
     - [ ] Implement database migration:
-      - Move database models to tripsage/models/db
-      - Update repositories with proper typing
-      - Ensure consistent error handling
-      - Implement proper connection pooling
+      - Create tripsage/models/db/ for essential business models (User, Trip)
+      - Port validation logic from src/db/models/ to new Pydantic models
+      - Replace repository patterns with MCP tool implementations
+      - Adapt SQL migrations to use Supabase MCP apply_migration
+      - Create Neo4j schema initialization scripts
+      - Ensure consistent error handling through MCP abstraction
+      - Remove direct database connection pooling (handled by MCPs)
     - [ ] API Improvements:
       - Add OpenAPI documentation
       - Implement API versioning
       - Add proper rate limiting
       - Implement comprehensive logging
       - Add request validation with Pydantic
-    - [ ] Neo4j Database Improvements:
-      - Standardize Neo4j query patterns
-      - Implement proper transaction handling
-      - Add efficient indexing strategies
-      - Implement proper error handling for Neo4j operations
+    - [x] Neo4j Database Improvements:
+      - ✓ Standardized Neo4j query patterns through Memory MCP tools
+      - ✓ Implemented proper transaction handling via MCP abstraction
+      - ✓ Created Neo4j schema management system in tripsage/db/migrations/neo4j/
+      - ✓ Ported constraint and index definitions from src/db/neo4j/migrations/
+      - ✓ Implemented initialization logic using Memory MCP operations
+      - ✓ Added domain-specific memory tools for complex entity relationships
+      - ✓ Migrated domain schemas to appropriate tool schemas
+      - ✓ Implemented proper error handling for Neo4j operations
 
 ## Low Priority
 

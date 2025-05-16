@@ -61,9 +61,27 @@ This document tracks the migration progress from the old `src/` directory to the
 
 ### db/
 
-| File      | Status | Notes                                                 |
-| --------- | ------ | ----------------------------------------------------- |
-| All files | ❌     | No direct equivalent in tripsage/ - may be refactored |
+| File                     | Status | Notes                                                                |
+| ------------------------ | ------ | -------------------------------------------------------------------- |
+| **init**.py              | ✅     | Can be deleted - functionality covered by MCP abstraction            |
+| client.py                | ✅     | Can be deleted - replaced by MCP client factories                    |
+| config.py                | ✅     | Can be deleted - replaced by MCP settings                            |
+| exceptions.py            | ✅     | Can be deleted - replaced by MCP exception hierarchy                 |
+| factory.py               | ✅     | Can be deleted - replaced by MCP client factories                    |
+| initialize.py            | ✅     | Can be deleted - migrated to tripsage/db/initialize.py with MCP      |
+| migrations.py            | ✅     | Can be deleted - migrated to tripsage/db/migrations/runner.py        |
+| providers.py             | ✅     | Can be deleted - replaced by MCP wrappers                            |
+| query_builder.py         | ✅     | Can be deleted - SQL handled through MCP execute_sql                 |
+| models/\*                | ✅     | Can be deleted - core models migrated to tripsage/models/db/         |
+| repositories/\*          | ✅     | Can be deleted - replaced by MCP tools                               |
+| neo4j/client.py          | ✅     | Can be deleted - replaced by Memory MCP client                       |
+| neo4j/config.py          | ✅     | Can be deleted - replaced by Memory MCP settings                     |
+| neo4j/connection.py      | ✅     | Can be deleted - handled by Memory MCP                               |
+| neo4j/exceptions.py      | ✅     | Can be deleted - replaced by MCP exceptions                          |
+| neo4j/repositories/\*    | ✅     | Can be deleted - replaced by Memory MCP tools                        |
+| neo4j/schemas/\*         | ✅     | Can be deleted - domain schemas migrated to MCP tools                |
+| neo4j/migrations/\*      | ✅     | Can be deleted - migrated to tripsage/db/migrations/neo4j/           |
+| neo4j/sync.py            | ✅     | Can be deleted - sync handled through dual storage pattern           |
 
 ### mcp/
 
@@ -167,7 +185,7 @@ Before deleting these files, we need to:
 - [x] Agents directory (complete - all files migrated or deleted)
 - [ ] API directory
 - [x] Cache directory (complete - functionality migrated to web_cache and Redis MCP)
-- [ ] Database directory
+- [x] Database directory (complete - all functionality migrated to MCP-based approach)
 - [ ] MCP directory
 - [ ] Utils directory
 - [ ] Tests directory
