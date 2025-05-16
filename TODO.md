@@ -760,19 +760,24 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
     - ✓ Create base model classes for common parameter groups
     - ✓ Implement consistent validation messages
 
-- [ ] **Optimize Cache Implementation**
+- [ ] **Optimize Cache Implementation via Redis MCP**
 
-  - **Target:** `/src/cache/redis_cache.py`
-  - **Goal:** Standardize caching across clients
+  - **Target:** Redis MCP integration
+  - **Goal:** Standardize caching across clients using Redis MCP
+  - **Context:** Old generic caching in `/src/cache/redis_cache.py` deprecated in favor of:
+    - WebOperationsCache for web-specific caching (already implemented)
+    - Redis MCP for generic caching (to be implemented)
   - **Tasks:**
-    - [ ] Create a standard cache key generation utility
+    - [ ] Complete Redis MCP client implementation in RedisMCPWrapper
+    - [ ] Create generic `cached()` decorator using Redis MCP
+    - [ ] Implement standard cache key generation utility via MCP
     - [ ] Implement TTL management based on data type
     - [ ] Add cache invalidation patterns
-    - [ ] Add cache hit/miss statistics tracking
+    - [ ] Migrate cache hit/miss statistics to Redis MCP
     - [ ] Implement cache prefetching for common queries
     - [ ] Create cache warming strategies
-    - [ ] Add distributed cache locking
-    - [ ] Implement typed cache interface
+    - [ ] Add distributed cache locking via Redis MCP
+    - [ ] Implement typed cache interface using MCP patterns
 
 - [x] **Improve HTTP Client Usage**
 

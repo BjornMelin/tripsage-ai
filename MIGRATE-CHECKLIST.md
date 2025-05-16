@@ -54,10 +54,10 @@ This document tracks the migration progress from the old `src/` directory to the
 
 ### cache/
 
-| File           | Status | Notes                                                 |
-| -------------- | ------ | ----------------------------------------------------- |
-| **init**.py    | ⚠️     | Different - imports RedisCache from redis_cache.py    |
-| redis_cache.py | ⚠️     | Different implementation than tripsage/utils/cache.py |
+| File           | Status | Notes                                                                     |
+| -------------- | ------ | ------------------------------------------------------------------------- |
+| **init**.py    | ✅     | Can be deleted - functionality covered by web_cache and future Redis MCP |
+| redis_cache.py | ✅     | Can be deleted - web ops in web_cache, generic caching will use Redis MCP |
 
 ### db/
 
@@ -166,7 +166,7 @@ Before deleting these files, we need to:
 
 - [x] Agents directory (complete - all files migrated or deleted)
 - [ ] API directory
-- [ ] Cache directory
+- [x] Cache directory (complete - functionality migrated to web_cache and Redis MCP)
 - [ ] Database directory
 - [ ] MCP directory
 - [ ] Utils directory
