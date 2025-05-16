@@ -2,12 +2,14 @@
 Accommodation search tools for TripSage agents.
 
 This module provides function tools for searching accommodations across
-different providers using MCP clients.
+different providers using the TripSage MCP Abstraction Layer.
 """
 
 from typing import Any, Dict, List, Optional
 
 from agents import function_tool
+from tripsage.mcp_abstraction.exceptions import TripSageMCPError
+from tripsage.mcp_abstraction.manager import mcp_manager
 from tripsage.tools.schemas.accommodations import (
     AccommodationSearchParams,
     AccommodationType,
@@ -15,10 +17,9 @@ from tripsage.tools.schemas.accommodations import (
     AirbnbSearchParams,
     AirbnbSearchResult,
 )
-from tripsage.utils.client_utils import validate_and_call_mcp_tool
+from tripsage.utils.cache import web_cache
 from tripsage.utils.error_handling import with_error_handling
 from tripsage.utils.logging import get_logger
-from tripsage.utils.settings import settings
 
 # Set up logger
 logger = get_logger(__name__)
@@ -110,15 +111,32 @@ async def search_airbnb_rentals_tool(
         # Create validated model
         validated_params = AirbnbSearchParams(**search_params)
 
-        # Call the MCP
-        result = await validate_and_call_mcp_tool(
-            endpoint=settings.accommodations_mcp.endpoint,
-            tool_name="search_airbnb",
-            params=validated_params.model_dump(by_alias=True),
-            response_model=AirbnbSearchResult,
-            timeout=settings.accommodations_mcp.timeout,
-            server_name="Accommodations MCP",
+        # Generate cache key for results
+        cache_key = (
+            f"accommodation_search:airbnb:{location}:{checkin}:{checkout}:{adults}:"
+            f"{children}:{min_price}:{max_price}:{property_type}"
         )
+
+        # Check cache first
+        cached_result = await web_cache.get(cache_key)
+        if cached_result:
+            logger.info("Using cached Airbnb search results")
+            result = AirbnbSearchResult.model_validate(cached_result)
+            cache_hit = True
+        else:
+            # Call the MCP via MCPManager
+            result = await mcp_manager.invoke(
+                mcp_name="airbnb",
+                method_name="search_accommodations",
+                params=validated_params.model_dump(by_alias=True),
+            )
+
+            # Convert the result to the expected response model
+            result = AirbnbSearchResult.model_validate(result)
+
+            # Cache the result for 1 hour
+            await web_cache.set(cache_key, result.model_dump(), ttl=3600)
+            cache_hit = False
 
         # Apply post-search filtering for min_rating (if provided)
         filtered_listings = result.listings
@@ -177,8 +195,12 @@ async def search_airbnb_rentals_tool(
                 "min_rating": min_rating,
             },
             "error": result.error,
+            "cache_hit": cache_hit,
         }
 
+    except TripSageMCPError as e:
+        logger.error(f"MCP error searching Airbnb rentals: {str(e)}")
+        raise
     except Exception as e:
         logger.error(f"Error searching Airbnb rentals: {str(e)}")
         raise
@@ -219,15 +241,31 @@ async def get_airbnb_listing_details_tool(
         if adults:
             params["adults"] = adults
 
-        # Call the MCP
-        result = await validate_and_call_mcp_tool(
-            endpoint=settings.accommodations_mcp.endpoint,
-            tool_name="get_airbnb_details",
-            params=params,
-            response_model=AirbnbListingDetails,
-            timeout=settings.accommodations_mcp.timeout,
-            server_name="Accommodations MCP",
+        # Generate cache key for results
+        cache_key = (
+            f"accommodation_details:airbnb:{listing_id}:{checkin}:{checkout}:{adults}"
         )
+
+        # Check cache first
+        cached_result = await web_cache.get(cache_key)
+        if cached_result:
+            logger.info("Using cached Airbnb listing details")
+            result = AirbnbListingDetails.model_validate(cached_result)
+            cache_hit = True
+        else:
+            # Call the MCP via MCPManager
+            result = await mcp_manager.invoke(
+                mcp_name="airbnb",
+                method_name="get_listing_details",
+                params=params,
+            )
+
+            # Convert the result to the expected response model
+            result = AirbnbListingDetails.model_validate(result)
+
+            # Cache the result for 24 hours
+            await web_cache.set(cache_key, result.model_dump(), ttl=3600 * 24)
+            cache_hit = False
 
         # Format results for agent consumption
         formatted_details = {
@@ -267,10 +305,14 @@ async def get_airbnb_listing_details_tool(
             "check_out_time": result.check_out_time,
             "house_rules": result.house_rules if result.house_rules else [],
             "cancellation_policy": result.cancellation_policy,
+            "cache_hit": cache_hit,
         }
 
         return formatted_details
 
+    except TripSageMCPError as e:
+        logger.error(f"MCP error getting Airbnb listing details: {str(e)}")
+        raise
     except Exception as e:
         logger.error(f"Error getting Airbnb listing details: {str(e)}")
         raise
@@ -363,8 +405,7 @@ async def search_accommodations_tool(
         # Create validated model
         _validated_params = AccommodationSearchParams(**search_params)
 
-        # Call the MCP
-        # If source is "airbnb", use the direct tool
+        # Call the appropriate specialized tool based on source
         if source.lower() == "airbnb":
             return await search_airbnb_rentals_tool(
                 location=location,
@@ -380,7 +421,11 @@ async def search_accommodations_tool(
             )
 
         # For future sources, implement specific logic here
+        return {"error": "Unsupported source"}
 
+    except TripSageMCPError as e:
+        logger.error(f"MCP error searching accommodations: {str(e)}")
+        raise
     except Exception as e:
         logger.error(f"Error searching accommodations: {str(e)}")
         raise
