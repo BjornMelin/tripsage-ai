@@ -5,10 +5,10 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from tripsage.mcp_abstraction.exceptions import (
-    MCPConnectionError,
-    MCPError,
+    MCPClientError,
     MCPInvocationError,
     MCPTimeoutError,
+    TripSageMCPError,
 )
 from tripsage.mcp_abstraction.wrappers.googlemaps_wrapper import GoogleMapsMCPWrapper
 
@@ -153,7 +153,7 @@ class TestGoogleMapsMCPWrapper:
         """Test connection error handling."""
         wrapper.client.geocode.side_effect = ConnectionError("Network error")
 
-        with pytest.raises(MCPConnectionError):
+        with pytest.raises(MCPClientError):
             await wrapper.invoke_method("geocode", address="123 Main St")
 
     @pytest.mark.asyncio
@@ -169,7 +169,7 @@ class TestGoogleMapsMCPWrapper:
         """Test generic error handling."""
         wrapper.client.geocode.side_effect = Exception("Something went wrong")
 
-        with pytest.raises(MCPError):
+        with pytest.raises(TripSageMCPError):
             await wrapper.invoke_method("geocode", address="123 Main St")
 
     @pytest.mark.asyncio

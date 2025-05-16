@@ -5,10 +5,10 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from tripsage.mcp_abstraction.exceptions import (
-    MCPConnectionError,
-    MCPError,
+    MCPClientError,
     MCPInvocationError,
     MCPTimeoutError,
+    TripSageMCPError,
 )
 from tripsage.mcp_abstraction.wrappers.weather_wrapper import WeatherMCPWrapper
 
@@ -107,7 +107,7 @@ class TestWeatherMCPWrapper:
             "Network error"
         )
 
-        with pytest.raises(MCPConnectionError):
+        with pytest.raises(MCPClientError):
             await wrapper.invoke_method("get_current_weather", location="Chicago")
 
     @pytest.mark.asyncio
@@ -127,7 +127,7 @@ class TestWeatherMCPWrapper:
             "Something went wrong"
         )
 
-        with pytest.raises(MCPError):
+        with pytest.raises(TripSageMCPError):
             await wrapper.invoke_method("get_current_weather", location="Chicago")
 
     def test_context_manager(self, wrapper):

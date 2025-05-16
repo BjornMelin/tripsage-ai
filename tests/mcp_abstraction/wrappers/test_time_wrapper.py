@@ -5,10 +5,10 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from tripsage.mcp_abstraction.exceptions import (
-    MCPConnectionError,
-    MCPError,
+    MCPClientError,
     MCPInvocationError,
     MCPTimeoutError,
+    TripSageMCPError,
 )
 from tripsage.mcp_abstraction.wrappers.time_wrapper import TimeMCPWrapper
 
@@ -192,7 +192,7 @@ class TestTimeMCPWrapper:
         """Test connection error handling."""
         wrapper.client.get_current_time.side_effect = ConnectionError("Network error")
 
-        with pytest.raises(MCPConnectionError):
+        with pytest.raises(MCPClientError):
             await wrapper.invoke_method("now", timezone="UTC")
 
     @pytest.mark.asyncio
@@ -208,7 +208,7 @@ class TestTimeMCPWrapper:
         """Test generic error handling."""
         wrapper.client.get_current_time.side_effect = Exception("Something went wrong")
 
-        with pytest.raises(MCPError):
+        with pytest.raises(TripSageMCPError):
             await wrapper.invoke_method("now", timezone="UTC")
 
     def test_context_manager(self, wrapper):

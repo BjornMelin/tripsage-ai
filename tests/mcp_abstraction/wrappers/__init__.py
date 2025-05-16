@@ -1,1 +1,1 @@
-"""Test package for MCP wrappers."""
+"""Test modules for MCP abstraction wrappers."""

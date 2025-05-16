@@ -5,10 +5,10 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from tripsage.mcp_abstraction.exceptions import (
-    MCPConnectionError,
-    MCPError,
+    MCPClientError,
     MCPInvocationError,
     MCPTimeoutError,
+    TripSageMCPError,
 )
 from tripsage.mcp_abstraction.wrappers.supabase_wrapper import SupabaseMCPWrapper
 
@@ -193,7 +193,7 @@ class TestSupabaseMCPWrapper:
         """Test connection error handling."""
         wrapper.client.list_projects.side_effect = ConnectionError("Network error")
 
-        with pytest.raises(MCPConnectionError):
+        with pytest.raises(MCPClientError):
             await wrapper.invoke_method("list_projects")
 
     @pytest.mark.asyncio
@@ -209,7 +209,7 @@ class TestSupabaseMCPWrapper:
         """Test generic error handling."""
         wrapper.client.list_projects.side_effect = Exception("Something went wrong")
 
-        with pytest.raises(MCPError):
+        with pytest.raises(TripSageMCPError):
             await wrapper.invoke_method("list_projects")
 
     @pytest.mark.asyncio

@@ -1,1 +1,1 @@
-# MCP abstraction layer tests
+"""Tests for MCP abstraction layer."""

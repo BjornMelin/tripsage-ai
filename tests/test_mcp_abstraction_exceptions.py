@@ -4,9 +4,8 @@ Standalone tests for MCP exception hierarchy.
 This test is in the parent test directory to avoid import issues.
 """
 
-import pytest
-import sys
 import os
+import sys
 
 # Add the tripsage directory to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))

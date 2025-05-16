@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from agents import WebSearchTool
+from tripsage.agents import WebSearchTool
 from tripsage.tools.web_tools import (
     CachedWebSearchTool,
     get_web_cache_stats,

@@ -4,22 +4,21 @@ Direct tests for MCP exception hierarchy.
 This module directly imports only the exceptions module without going through init.
 """
 
-import pytest
 
 # Import exceptions directly
 from tripsage.mcp_abstraction.exceptions import (
-    TripSageMCPError,
+    MCPAuthenticationError,
+    MCPCommunicationProtocolError,
     MCPConfigurationError,
     MCPConnectionError,
-    MCPTimeoutError,
-    MCPAuthenticationError,
-    MCPRateLimitError,
+    MCPInternalError,
     MCPInvocationError,
-    MCPNotFoundError,
     MCPManagerError,
     MCPMethodNotFoundError,
-    MCPCommunicationProtocolError,
-    MCPInternalError
+    MCPNotFoundError,
+    MCPRateLimitError,
+    MCPTimeoutError,
+    TripSageMCPError,
 )
 
 
