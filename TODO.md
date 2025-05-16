@@ -93,13 +93,13 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
       - ✓ Migrate `src/agents/tools/browser/` → `tripsage/tools/browser/`
       - ✓ Update imports in `tripsage/tools/browser/tools.py` to use `from agents import function_tool`
       - ✓ Update imports in `tripsage/tools/browser_tools.py` to use `from agents import function_tool`
-    - [ ] Update remaining imports:
-      - Update all `from src.*` imports to `from tripsage.*`
-      - Ensure consistent use of the `agents` module instead of `openai_agents_sdk`
-    - [ ] Update tests to match new structure:
-      - Update imports in test files to use tripsage module
-      - Create new test files for migrated tools and agents
-      - Ensure all tests pass with new structure
+    - [x] Update remaining imports:
+      - ✓ Update all `from src.*` imports to `from tripsage.*`
+      - ✓ Ensure consistent use of the `agents` module instead of `openai_agents_sdk`
+    - [x] Update tests to match new structure:
+      - ✓ Update imports in test files to use tripsage module
+      - [ ] Create new test files for migrated tools and agents
+      - [ ] Ensure all tests pass with new structure
     - [ ] Clean up duplicated files:
       - Remove unnecessary files from src/ after migration
       - Ensure no duplicate functionality exists
@@ -116,8 +116,25 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
     - Prioritize existing external MCPs when available
     - Only build custom MCPs for core business logic, direct database integration, or when privacy/security requirements can't be met externally
   - **Tasks:**
-
-    - [ ] Supabase MCP Integration: (Short-Term Phase)
+    - [x] Implement error handling and monitoring infrastructure (foundational):
+      - **Target:** MCP error handling, structured logging, and OpenTelemetry tracing
+      - **Goal:** Create standardized error handling and monitoring for all MCP interactions
+      - **Completed Tasks:**
+        - ✓ Refined custom MCP exception hierarchy with specific error types
+        - ✓ Added MCPTimeoutError, MCPAuthenticationError, MCPRateLimitError, MCPNotFoundError
+        - ✓ Enhanced MCPManager.invoke with structured logging
+        - ✓ Implemented OpenTelemetry span creation with appropriate attributes
+        - ✓ Created exception mapping logic for common error types
+        - ✓ Added monitoring.py for OpenTelemetry configuration
+        - ✓ Configured OpenTelemetryConfig in app_settings.py
+        - ✓ Used existing FastAPI dependency injection patterns
+      - **Sub-tasks for further enhancements:**
+        - [ ] Configure production OpenTelemetry exporter (OTLP)
+        - [ ] Implement advanced error alerting based on error types
+        - [ ] Integrate structlog more deeply if PoC is successful
+        - [ ] Add metrics collection for MCP performance
+        - [ ] Create dashboards for monitoring MCP operations
+    - [x] Supabase MCP Integration: (Short-Term Phase)
       - **Target:** Database operations for TripSage's SQL data
       - **Goal:** Provide seamless integration with Supabase database
       - **Success Metrics:**
@@ -128,11 +145,13 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
       - **Resources:**
         - **Server Repo:** https://github.com/supabase/mcp-supabase
         - **Supabase Docs:** https://supabase.com/docs
-      - Set up Supabase MCP server configuration
-      - Create wrapper functions in `tripsage/tools/supabase_tools.py`
-      - Implement database operation tools with proper validation
-      - Add comprehensive tests for Supabase tool integration
-    - [ ] Neo4j Memory MCP Integration: (Immediate Phase)
+      - **Completed Tasks:** 
+        - ✓ Set up Supabase MCP server configuration
+        - ✓ Created SupabaseMCPWrapper with standardized method mapping
+        - ✓ Refactored `tripsage/tools/supabase_tools.py` to use MCPManager
+        - ✓ Implemented all database operation tools with Pydantic validation
+        - ✓ Added proper error handling with TripSageMCPError
+    - [x] Neo4j Memory MCP Integration: (Immediate Phase)
       - **Target:** Knowledge graph operations for trip planning and domain data
       - **Goal:** Implement persistent memory graph for travel domain knowledge
       - **Success Metrics:**
@@ -144,11 +163,14 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
         - **Server Repo:** https://github.com/neo4j-contrib/mcp-neo4j
         - **Neo4j Docs:** https://neo4j.com/docs/
         - **Memory MCP Docs:** https://neo4j.com/labs/claude-memory-mcp/
-      - Configure Neo4j Memory MCP server
-      - Create memory graph tools in `tripsage/tools/memory_tools.py`
-      - Implement entity/relationship management functions
-      - Add tests for knowledge graph operations
-    - [ ] Duffel Flights MCP Integration: (Short-Term Phase)
+      - **Completed Tasks:**
+        - ✓ Configured Neo4j Memory MCP server
+        - ✓ Created Neo4jMemoryMCPWrapper with standardized method mapping
+        - ✓ Refactored `tripsage/tools/memory_tools.py` to use MCPManager
+        - ✓ Implemented entity/relationship management functions
+        - ✓ Added proper error handling with TripSageMCPError
+        - ✓ Added model validation for all operations
+    - [x] Duffel Flights MCP Integration: (Short-Term Phase)
       - **Target:** Flight search and booking for travel planning
       - **Goal:** Enable comprehensive flight options with real-time pricing
       - **Success Metrics:**
@@ -159,11 +181,14 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
       - **Resources:**
         - **Server Repo:** https://github.com/duffel/mcp-flights
         - **Duffel API Docs:** https://duffel.com/docs/api
-      - Set up Duffel Flights MCP configuration
-      - Create flight search tools in `tripsage/tools/flight_tools.py`
-      - Implement offer and search functionality
-      - Add tests for flight search operations
-    - [ ] Airbnb MCP Integration: (Short-Term Phase)
+      - **Completed Tasks:**
+        - ✓ Set up Duffel Flights MCP configuration
+        - ✓ Created DuffelFlightsMCPWrapper with standardized method mapping
+        - ✓ Refactored `tripsage/tools/flight_tools.py` to use MCPManager
+        - ✓ Implemented offer and search functionality
+        - ✓ Added proper error handling with TripSageMCPError
+        - ✓ Added model validation for all operations
+    - [x] Airbnb MCP Integration: (Short-Term Phase)
       - **Target:** Accommodation search and booking capabilities
       - **Goal:** Enable comprehensive lodging options for travel planning
       - **Success Metrics:**
@@ -174,10 +199,13 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
       - **Resources:**
         - **Server Repo:** https://github.com/openbnb/mcp-airbnb
         - **API Reference:** https://github.com/openbnb/openbnb-api
-      - Configure Airbnb MCP server
-      - Create accommodation tools in `tripsage/tools/accommodation_tools.py`
-      - Implement listing search and details functionality
-      - Add tests for accommodation search operations
+      - **Completed Tasks:**
+        - ✓ Configured Airbnb MCP server
+        - ✓ Created AirbnbMCPWrapper with standardized method mapping
+        - ✓ Refactored `tripsage/tools/accommodation_tools.py` to use MCPManager
+        - ✓ Implemented listing search and details functionality
+        - ✓ Added proper error handling with TripSageMCPError
+        - ✓ Added model validation for all operations
     - [x] Playwright MCP Integration: (Immediate Phase)
       - **Target:** Browser automation for complex travel workflows
       - **Goal:** Provide fallback mechanism for sites that block scrapers
@@ -327,7 +355,7 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
           - ✓ Tested all API endpoints and caching behavior
           - ✓ Implemented error case testing
           - ✓ Created tests for singleton pattern and context management
-    - [ ] Time MCP Integration: (Short-Term Phase)
+    - [x] Time MCP Integration: (Short-Term Phase)
       - **Target:** Timezone and time operations for global travel planning
       - **Goal:** Provide accurate time services for cross-timezone itineraries
       - **Success Metrics:**
@@ -338,10 +366,13 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
       - **Resources:**
         - **Server Repo:** https://github.com/anthropics/mcp-time
         - **API Docs:** https://worldtimeapi.org/api/
-      - Configure Time MCP server
-      - Create time tools in `tripsage/tools/time_tools.py`
-      - Implement timezone conversion and current time functionality
-      - Add tests for time-related operations
+      - [x] Configure Time MCP server
+      - [x] Create time tools in `tripsage/tools/time_tools.py`
+        - ✓ Implemented MCP client wrapper for the Time MCP
+        - ✓ Updated tools to use MCPManager.invoke() instead of direct client calls
+        - ✓ Added proper error handling with TripSageMCPError
+      - [x] Implement timezone conversion and current time functionality
+      - [x] Add tests for time-related operations
     - [x] Weather MCP Integration: (Immediate Phase)
       - **Target:** Weather forecasting and historical data for trip planning
       - **Goal:** Enable weather-aware itinerary planning and recommendations
@@ -373,7 +404,7 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
           - ✓ Added tests for all API endpoints and caching behavior
           - ✓ Implemented isolated tests to avoid settings loading issues
           - ✓ Created tests for singleton pattern and error handling
-    - [ ] Google Calendar MCP Integration: (Short-Term Phase)
+    - [x] Google Calendar MCP Integration: (Short-Term Phase)
       - **Target:** Calendar integration for trip planning and scheduling
       - **Goal:** Enable seamless addition of travel events to user calendars
       - **Success Metrics:**
@@ -384,10 +415,13 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
       - **Resources:**
         - **Server Repo:** https://github.com/googleapis/mcp-calendar
         - **API Docs:** https://developers.google.com/calendar/api/v3/reference
-      - Configure Google Calendar MCP server
-      - Create calendar tools in `tripsage/tools/calendar_tools.py`
-      - Implement event creation and scheduling functionality
-      - Add tests for calendar-related operations
+      - ✓ Configure Google Calendar MCP server
+      - ✓ Create calendar tools in `tripsage/tools/calendar_tools.py`
+        - ✓ Created GoogleCalendarMCPWrapper with standardized method mapping
+        - ✓ Refactored calendar_tools.py to use MCPManager for all MCP interactions
+        - ✓ Added proper error handling with TripSageMCPError
+      - ✓ Implement event creation and scheduling functionality
+      - ✓ Add tests for calendar-related operations
     - [ ] Redis MCP Integration: (Short-Term Phase)
       - **Target:** Distributed caching for performance optimization
       - **Goal:** Improve response times and reduce API call volumes
@@ -589,23 +623,23 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
       - [x] Neo4jMemoryMCPWrapper for knowledge graph operations  
       - [x] DuffelFlightsMCPWrapper for flight search and booking
       - [x] AirbnbMCPWrapper for accommodation search
-      - [ ] FirecrawlMCPWrapper for web crawling
-      - [ ] Crawl4AIMCPWrapper for AI-powered web crawling
-      - [ ] TimeMCPWrapper for timezone operations
-      - [ ] GoogleCalendarMCPWrapper for calendar integration
-      - [ ] RedisMCPWrapper for caching operations
-      - [ ] CachedWebSearchToolWrapper for web search with caching
+      - [x] FirecrawlMCPWrapper for web crawling
+      - [x] Crawl4AIMCPWrapper for AI-powered web crawling
+      - [x] TimeMCPWrapper for timezone operations
+      - [x] GoogleCalendarMCPWrapper for calendar integration
+      - [x] RedisMCPWrapper for caching operations
+      - [x] CachedWebSearchToolWrapper for web search with caching
     - [ ] Refactor all agent tools to use MCPManager.invoke:
-      - [ ] Update browser_tools.py to use PlaywrightMCPWrapper
-      - [ ] Update googlemaps_tools.py to use GoogleMapsMCPWrapper
-      - [ ] Update weather_tools.py to use WeatherMCPWrapper
-      - [ ] Update flight_tools.py to use DuffelFlightsMCPWrapper
-      - [ ] Update accommodation_tools.py to use AirbnbMCPWrapper
-      - [ ] Update webcrawl_tools.py to use Firecrawl/Crawl4AI wrappers
-      - [ ] Update time_tools.py to use TimeMCPWrapper
-      - [ ] Update calendar_tools.py to use GoogleCalendarMCPWrapper
-      - [ ] Update database tools to use SupabaseMCPWrapper
-      - [ ] Update knowledge graph tools to use Neo4jMemoryMCPWrapper
+      - [x] Update browser_tools.py to use PlaywrightMCPWrapper
+      - [x] Update googlemaps_tools.py to use GoogleMapsMCPWrapper
+      - [x] Update weather_tools.py to use WeatherMCPWrapper
+      - [x] Update flight_tools.py to use DuffelFlightsMCPWrapper
+      - [x] Update accommodation_tools.py to use AirbnbMCPWrapper
+      - [x] Update webcrawl_tools.py to use Firecrawl/Crawl4AI wrappers
+      - [x] Update time_tools.py to use TimeMCPWrapper
+      - [x] Update calendar_tools.py to use GoogleCalendarMCPWrapper
+      - [x] Update supabase_tools.py to use SupabaseMCPWrapper
+      - [x] Update memory_tools.py to use Neo4jMemoryMCPWrapper
     - [ ] Implement monitoring and observability:
       - Add OpenTelemetry instrumentation for MCP interactions
       - Create performance metrics for MCP operations
@@ -1128,8 +1162,8 @@ For each completed task, ensure:
 | Playwright MCP Fallback         | ✅     | -   | Enhanced hybrid crawling with Playwright fallback and direct selection |
 | Playwright Result Normalizer    | ✅     | -   | Added normalize_playwright_mcp_output for browser-based crawling |
 | Playwright-only Domains         | ✅     | -   | Added support for direct Playwright selection for specific domains |
-| Google Maps MCP Integration     | 📅     | -   | Prioritized for location-based functionality                            |
-| Time MCP Integration            | 📅     | -   | Scheduled for timezone support in travel planning                       |
+| Google Maps MCP Integration     | ✅     | -   | Implemented GoogleMaps MCP client wrapper and refactored googlemaps_tools.py to use MCPManager |
+| Time MCP Integration            | ✅     | -   | Implemented Time MCP client wrapper and refactored time_tools.py to use MCPManager |
 | WebSearchTool Caching           | ✅     | -   | Implemented CachedWebSearchTool wrapper with content-aware caching      |
 | MCP Abstraction Layer           | ✅     | -   | Implemented Manager/Registry pattern with type-safe wrappers            |
 | Specific MCP Wrappers           | ✅     | -   | Implemented Supabase, Neo4j Memory, Duffel Flights, and Airbnb wrappers |
