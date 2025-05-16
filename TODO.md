@@ -13,6 +13,29 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
 
 ## High Priority
 
+- [ ] **Frontend-Backend BYOK Integration**
+
+  - **Target:** Full-stack secure API key management
+  - **Goal:** Create seamless, secure API key management across frontend and backend
+  - **Status:** Architecture and specifications completed
+  - **Key Documents:**
+    - Backend implementation details: TODO.md (Backend BYOK section)
+    - Frontend implementation details: TODO-FRONTEND.md (API Key Management section)
+    - Architecture documentation: docs/frontend/ARCHITECTURE.md
+  - **Integration Points:**
+    - API endpoints: `/api/user/keys` (CREATE, LIST, DELETE, VALIDATE, ROTATE)
+    - Envelope encryption: PBKDF2 + Fernet (AES-128 CBC + HMAC-SHA256)
+    - Key validation: Service-specific patterns on frontend, comprehensive checks on backend
+    - Status display: Comprehensive UI without revealing actual keys
+    - Security features: Auto-clearing forms, session timeouts, CSP headers
+  - **Next Steps:**
+    - [ ] Implement backend encryption service with envelope pattern
+    - [ ] Create FastAPI endpoints with proper authentication
+    - [ ] Build React components for secure key input and management
+    - [ ] Implement Redis caching for decrypted keys
+    - [ ] Add monitoring and alerting for key operations
+    - [ ] Create comprehensive test suite for security features
+
 - [x] **Error Handling Decorator Enhancement**
 
   - **Target:** `/src/utils/decorators.py`
@@ -75,9 +98,10 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
 
   - **Target:** Backend API and database layer
   - **Goal:** Implement secure API key storage and usage for user-provided keys
+  - **Status:** Database schema and encryption design completed
   - **Tasks:**
     - [ ] Create API key models and database schema:
-      - [ ] Design UserApiKey table in Supabase with encryption fields:
+      - [x] Design UserApiKey table in Supabase with encryption fields:
         ```sql
         CREATE TABLE user_api_keys (
           id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -95,7 +119,7 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
           UNIQUE(user_id, service)
         );
         ```
-      - [ ] Create Pydantic models for API key management:
+      - [x] Create Pydantic models for API key management:
         ```python
         from pydantic import BaseModel, Field
         from typing import Optional
@@ -116,7 +140,7 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
             is_active: bool
         ```
     - [ ] Create key encryption service using envelope encryption:
-      - [ ] Implement master key derivation with PBKDF2:
+      - [x] Implement master key derivation with PBKDF2:
         ```python
         from cryptography.fernet import Fernet
         from cryptography.hazmat.primitives import hashes
@@ -135,7 +159,7 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
             key = base64.urlsafe_b64encode(kdf.derive(user_secret.encode()))
             return key, salt
         ```
-      - [ ] Implement envelope encryption pattern:
+      - [x] Implement envelope encryption pattern:
         ```python
         def encrypt_api_key(api_key: str, user_secret: str):
             """Encrypt API key using envelope encryption"""
@@ -155,7 +179,7 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
             
             return encrypted_dek, encrypted_key, salt
         ```
-      - [ ] Implement secure decryption:
+      - [x] Implement secure decryption:
         ```python
         def decrypt_api_key(encrypted_dek: bytes, encrypted_key: bytes, 
                           salt: bytes, user_secret: str) -> str:
@@ -180,7 +204,7 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
       - [ ] Add key rotation support with rotation schedule
       - [ ] Implement secure key validation before storage
     - [ ] Implement API endpoints:
-      - [ ] POST `/api/user/keys` - Store encrypted API keys:
+      - [x] POST `/api/user/keys` - Store encrypted API keys (specification completed):
         ```python
         @router.post("/api/user/keys")
         async def create_api_key(
@@ -225,7 +249,7 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
       - [ ] POST `/api/user/keys/validate` - Validate a key with service
       - [ ] POST `/api/user/keys/{id}/rotate` - Rotate an existing key
     - [ ] Update MCPManager for user keys:
-      - [ ] Create UserKeyProvider class:
+      - [x] Create UserKeyProvider class (specification completed):
         ```python
         class UserKeyProvider:
             def __init__(self, redis_client: Redis):
@@ -260,7 +284,7 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
                 
                 return api_key
         ```
-      - [ ] Modify MCPManager.invoke to accept user context:
+      - [x] Modify MCPManager.invoke to accept user context (specification completed):
         ```python
         async def invoke(self, server_type: str, method: str, 
                         params: Dict[str, Any], user_id: Optional[str] = None):
@@ -303,6 +327,12 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
       - [ ] Add audit trail for all key operations
       - [ ] Use constant-time comparison for key validation
       - [ ] Implement proper error handling without information leakage
+    - [ ] Frontend Integration:
+      - [ ] Coordinate with frontend BYOK implementation in TODO-FRONTEND.md
+      - [ ] Ensure API endpoints match frontend expectations
+      - [ ] Implement CORS configuration for secure key submission
+      - [ ] Add rate limiting middleware for key endpoints
+      - [ ] Document API integration for frontend developers
 
 - [ ] **Complete Codebase Restructuring (Issue #31)**
 
@@ -445,6 +475,7 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
       - ✓ Defined architecture patterns for AI-native interface
       - ✓ Established backend-only MCP interaction pattern
       - ✓ Designed secure BYOK (Bring Your Own Key) architecture
+      - ✓ Updated TODO-FRONTEND.md with enhanced BYOK implementation
     - [ ] Phase 1: Foundation & Core Setup
       - [ ] Initialize Next.js 15 with App Router
       - [ ] Configure TypeScript 5.0+ with strict mode
@@ -456,15 +487,15 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
       - [ ] Configure Vercel AI SDK v5
       - [ ] Create base UI components library
       - [ ] Set up development environment with Turbopack
-    - [ ] Phase 2: Authentication & Security
+    - [ ] Phase 2: Authentication & Security (BYOK)
       - [ ] Build secure API key management interface (BYOK)
-      - [ ] Create key submission endpoint `/api/user/keys`
-      - [ ] Implement server-side key encryption with Fernet
-      - [ ] Create key validation endpoint
-      - [ ] Add usage tracking and limits visualization
-      - [ ] Implement secure key rotation support
-      - [ ] Create key health check UI
-      - [ ] Build key status display components
+      - [ ] Create key submission component with auto-clear functionality
+      - [ ] Implement client-side key validation patterns
+      - [ ] Create comprehensive key status display (without revealing keys)
+      - [ ] Add key rotation dialogs with expiration warnings
+      - [ ] Implement secure session management with shorter timeouts
+      - [ ] Create CSP headers for sensitive pages
+      - [ ] Build audit log visualization components
     - [ ] Phase 3: AI Chat Interface
       - [ ] Implement chat UI with Vercel AI SDK
       - [ ] Add streaming responses with typing indicators
@@ -1330,7 +1361,7 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
       - ✓ Migrated domain schemas to appropriate tool schemas
       - ✓ Implemented proper error handling for Neo4j operations
 
-- [x] **Frontend Application Development**
+- [ ] **Frontend Application Development**
   - [x] Frontend Architecture & Planning:
     - ✓ Created comprehensive technology stack recommendations
     - ✓ Designed complete frontend architecture (docs/frontend/ARCHITECTURE.md)
@@ -1339,12 +1370,18 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
     - ✓ Designed SSE-based real-time communication with Vercel AI SDK v5
     - ✓ Created phased implementation plan in TODO-FRONTEND.md
     - ✓ Defined secure API key management strategy (backend proxy pattern)
+    - ✓ Updated frontend BYOK implementation to align with backend design
   - [ ] Phase 1: Foundation & Core Setup (see TODO-FRONTEND.md)
     - [ ] Project initialization with Next.js 15.3
     - [ ] Development environment setup
     - [ ] Core dependencies installation
     - [ ] Tailwind CSS v4 configuration
     - [ ] shadcn/ui v3 setup
+  - [ ] Phase 2: Authentication & Security (see TODO-FRONTEND.md)
+    - [ ] Integrate with backend BYOK implementation
+    - [ ] Create secure key management components
+    - [ ] Implement service-specific validation
+    - [ ] Build comprehensive status displays
 
 ## Low Priority
 
@@ -1639,3 +1676,6 @@ For each completed task, ensure:
 | WebSearchTool Caching           | ✅     | -   | Implemented CachedWebSearchTool wrapper with content-aware caching                             |
 | MCP Abstraction Layer           | ✅     | -   | Implemented Manager/Registry pattern with type-safe wrappers                                   |
 | Specific MCP Wrappers           | ✅     | -   | Implemented Supabase, Neo4j Memory, Duffel Flights, and Airbnb wrappers                        |
+| Backend BYOK Architecture       | 🖄     | -   | Created comprehensive database schema and encryption design with PBKDF2 + Fernet                |
+| Frontend BYOK Architecture      | 🖄     | -   | Designed secure key management UI with auto-clear and client-side validation                   |
+| Frontend-Backend BYOK Alignment | ✅     | -   | Aligned frontend and backend implementations with comprehensive documentation                   |
