@@ -7,7 +7,7 @@ using the OpenAI Agents SDK, following the direct MCP call pattern.
 
 from typing import Any, Dict, List, Optional
 
-from openai_agents_sdk import function_tool
+from agents import function_tool
 from pydantic import BaseModel, Field
 
 from tripsage.mcp_abstraction.manager import mcp_manager
