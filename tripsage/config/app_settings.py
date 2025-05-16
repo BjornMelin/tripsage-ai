@@ -228,6 +228,32 @@ class AgentConfig(BaseSettings):
     )
 
 
+class OpenTelemetryConfig(BaseSettings):
+    """OpenTelemetry configuration for distributed tracing."""
+
+    enabled: bool = Field(default=True, description="Enable OpenTelemetry tracing")
+    service_name: str = Field(
+        default="tripsage", description="Service name for tracing"
+    )
+    service_version: str = Field(default="1.0.0", description="Service version")
+    otlp_endpoint: Optional[str] = Field(
+        default=None,
+        description="OTLP exporter endpoint (e.g., http://localhost:4318/v1/traces)",
+    )
+    use_console_exporter: bool = Field(
+        default=True, description="Use console exporter for development"
+    )
+    export_timeout_millis: int = Field(
+        default=30000, description="Export timeout in milliseconds"
+    )
+    max_queue_size: int = Field(
+        default=2048, description="Maximum queue size for span export"
+    )
+    headers: Optional[Dict[str, str]] = Field(
+        default=None, description="Headers for OTLP exporter (e.g., authentication)"
+    )
+
+
 # Main Application Settings
 class AppSettings(BaseSettings):
     """
@@ -288,6 +314,9 @@ class AppSettings(BaseSettings):
 
     # Agent configuration
     agent: AgentConfig = AgentConfig()
+
+    # OpenTelemetry configuration
+    opentelemetry: OpenTelemetryConfig = OpenTelemetryConfig()
 
     @field_validator("environment")
     def validate_environment(cls, v: str) -> str:
