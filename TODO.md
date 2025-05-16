@@ -71,6 +71,239 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
   - **PR:** Completed in #91
   - **Added:** Created comprehensive documentation in dual_storage_refactoring.md
 
+- [ ] **Backend BYOK (Bring Your Own Key) Implementation**
+
+  - **Target:** Backend API and database layer
+  - **Goal:** Implement secure API key storage and usage for user-provided keys
+  - **Tasks:**
+    - [ ] Create API key models and database schema:
+      - [ ] Design UserApiKey table in Supabase with encryption fields:
+        ```sql
+        CREATE TABLE user_api_keys (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          user_id UUID NOT NULL REFERENCES users(id),
+          service VARCHAR(255) NOT NULL, -- 'google_maps', 'duffel_flights', etc.
+          encrypted_dek BYTEA NOT NULL,  -- Encrypted data encryption key
+          encrypted_key BYTEA NOT NULL,  -- API key encrypted with DEK
+          salt BYTEA NOT NULL,           -- Salt for key derivation
+          description TEXT,
+          created_at TIMESTAMPTZ DEFAULT NOW(),
+          updated_at TIMESTAMPTZ DEFAULT NOW(),
+          last_used_at TIMESTAMPTZ,
+          rotation_due_at TIMESTAMPTZ,
+          is_active BOOLEAN DEFAULT true,
+          UNIQUE(user_id, service)
+        );
+        ```
+      - [ ] Create Pydantic models for API key management:
+        ```python
+        from pydantic import BaseModel, Field
+        from typing import Optional
+        from datetime import datetime
+        
+        class UserApiKeyCreate(BaseModel):
+            service: str = Field(..., pattern="^[a-z_]+$")
+            api_key: str = Field(..., min_length=1)
+            description: Optional[str] = None
+        
+        class UserApiKeyResponse(BaseModel):
+            id: str
+            service: str
+            description: Optional[str]
+            created_at: datetime
+            last_used_at: Optional[datetime]
+            rotation_due_at: Optional[datetime]
+            is_active: bool
+        ```
+    - [ ] Create key encryption service using envelope encryption:
+      - [ ] Implement master key derivation with PBKDF2:
+        ```python
+        from cryptography.fernet import Fernet
+        from cryptography.hazmat.primitives import hashes
+        from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+        import base64, os
+        
+        def generate_master_key(user_secret: str, salt: Optional[bytes] = None):
+            """Generate master key using PBKDF2 with high iteration count"""
+            salt = salt or os.urandom(16)
+            kdf = PBKDF2HMAC(
+                algorithm=hashes.SHA256(),
+                length=32,
+                salt=salt,
+                iterations=600000,  # High iteration count for security
+            )
+            key = base64.urlsafe_b64encode(kdf.derive(user_secret.encode()))
+            return key, salt
+        ```
+      - [ ] Implement envelope encryption pattern:
+        ```python
+        def encrypt_api_key(api_key: str, user_secret: str):
+            """Encrypt API key using envelope encryption"""
+            # Generate Data Encryption Key (DEK)
+            dek = Fernet.generate_key()
+            
+            # Generate Master Key from user secret
+            master_key, salt = generate_master_key(user_secret)
+            
+            # Encrypt DEK with master key
+            master_fernet = Fernet(master_key)
+            encrypted_dek = master_fernet.encrypt(dek)
+            
+            # Encrypt API key with DEK
+            dek_fernet = Fernet(dek)
+            encrypted_key = dek_fernet.encrypt(api_key.encode())
+            
+            return encrypted_dek, encrypted_key, salt
+        ```
+      - [ ] Implement secure decryption:
+        ```python
+        def decrypt_api_key(encrypted_dek: bytes, encrypted_key: bytes, 
+                          salt: bytes, user_secret: str) -> str:
+            """Decrypt API key using envelope encryption"""
+            # Regenerate master key
+            master_key, _ = generate_master_key(user_secret, salt)
+            
+            # Decrypt DEK with master key
+            master_fernet = Fernet(master_key)
+            dek = master_fernet.decrypt(encrypted_dek)
+            
+            # Decrypt API key with DEK
+            dek_fernet = Fernet(dek)
+            api_key = dek_fernet.decrypt(encrypted_key).decode()
+            
+            # Clear sensitive data from memory
+            del dek
+            del master_key
+            
+            return api_key
+        ```
+      - [ ] Add key rotation support with rotation schedule
+      - [ ] Implement secure key validation before storage
+    - [ ] Implement API endpoints:
+      - [ ] POST `/api/user/keys` - Store encrypted API keys:
+        ```python
+        @router.post("/api/user/keys")
+        async def create_api_key(
+            key_data: UserApiKeyCreate,
+            user: User = Depends(get_current_user),
+            db: Database = Depends(get_db)
+        ):
+            # Validate key with service first
+            is_valid = await validate_key_with_service(
+                key_data.service, 
+                key_data.api_key
+            )
+            if not is_valid:
+                raise HTTPException(400, "Invalid API key")
+            
+            # Encrypt using envelope encryption
+            encrypted_dek, encrypted_key, salt = encrypt_api_key(
+                key_data.api_key, 
+                user.secret_key
+            )
+            
+            # Store encrypted data
+            result = await db.execute(
+                user_api_keys.insert().values(
+                    user_id=user.id,
+                    service=key_data.service,
+                    encrypted_dek=encrypted_dek,
+                    encrypted_key=encrypted_key,
+                    salt=salt,
+                    description=key_data.description,
+                    rotation_due_at=datetime.utcnow() + timedelta(days=90)
+                )
+            )
+            
+            # Clear sensitive data
+            key_data.api_key = ""
+            
+            return {"id": result.inserted_primary_key[0]}
+        ```
+      - [ ] GET `/api/user/keys` - List available keys (without values)
+      - [ ] DELETE `/api/user/keys/{id}` - Remove a stored key
+      - [ ] POST `/api/user/keys/validate` - Validate a key with service
+      - [ ] POST `/api/user/keys/{id}/rotate` - Rotate an existing key
+    - [ ] Update MCPManager for user keys:
+      - [ ] Create UserKeyProvider class:
+        ```python
+        class UserKeyProvider:
+            def __init__(self, redis_client: Redis):
+                self.redis = redis_client
+                self.cache_ttl = 300  # 5 minutes
+            
+            async def get_user_key(self, user_id: str, service: str) -> Optional[str]:
+                # Check cache first
+                cache_key = f"user_key:{user_id}:{service}"
+                cached = await self.redis.get(cache_key)
+                if cached:
+                    return cached
+                
+                # Fetch and decrypt from database
+                key_data = await fetch_user_key(user_id, service)
+                if not key_data:
+                    return None
+                
+                # Decrypt key
+                api_key = decrypt_api_key(
+                    key_data.encrypted_dek,
+                    key_data.encrypted_key,
+                    key_data.salt,
+                    get_user_secret(user_id)
+                )
+                
+                # Cache decrypted key with TTL
+                await self.redis.setex(cache_key, self.cache_ttl, api_key)
+                
+                # Update last_used_at
+                await update_key_usage(key_data.id)
+                
+                return api_key
+        ```
+      - [ ] Modify MCPManager.invoke to accept user context:
+        ```python
+        async def invoke(self, server_type: str, method: str, 
+                        params: Dict[str, Any], user_id: Optional[str] = None):
+            # Get user key if available
+            if user_id:
+                user_key = await self.key_provider.get_user_key(user_id, server_type)
+                if user_key:
+                    params = {**params, "api_key": user_key}
+            
+            # Continue with MCP invocation
+            return await self._invoke_internal(server_type, method, params)
+        ```
+      - [ ] Implement dynamic key injection for MCP calls
+      - [ ] Add fallback to default keys when user keys unavailable
+      - [ ] Create secure caching mechanism for decrypted keys
+    - [ ] Add monitoring and security:
+      - [ ] Implement access logging with structured logs:
+        ```python
+        async def log_key_access(user_id: str, service: str, action: str):
+            await logger.info(
+                "api_key_access",
+                user_id=user_id,
+                service=service,
+                action=action,
+                timestamp=datetime.utcnow()
+            )
+        ```
+      - [ ] Add rate limiting for key operations (max 10 per minute)
+      - [ ] Create alerts for suspicious patterns:
+        - Rapid key rotation attempts
+        - Failed validation attempts
+        - Unusual access patterns
+      - [ ] Implement key expiration notifications
+      - [ ] Add automatic key rotation reminders (90 days)
+      - [ ] Create key health metrics dashboard
+    - [ ] Security best practices:
+      - [ ] Use secure random for all salt generation
+      - [ ] Clear sensitive data from memory after use
+      - [ ] Implement proper session timeouts
+      - [ ] Add audit trail for all key operations
+      - [ ] Use constant-time comparison for key validation
+      - [ ] Implement proper error handling without information leakage
+
 - [ ] **Complete Codebase Restructuring (Issue #31)**
 
   - **Target:** Throughout codebase
@@ -210,6 +443,8 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
       - ✓ Created detailed frontend TODO list (TODO-FRONTEND.md)
       - ✓ Validated technology stack with latest documentation
       - ✓ Defined architecture patterns for AI-native interface
+      - ✓ Established backend-only MCP interaction pattern
+      - ✓ Designed secure BYOK (Bring Your Own Key) architecture
     - [ ] Phase 1: Foundation & Core Setup
       - [ ] Initialize Next.js 15 with App Router
       - [ ] Configure TypeScript 5.0+ with strict mode
@@ -222,14 +457,14 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
       - [ ] Create base UI components library
       - [ ] Set up development environment with Turbopack
     - [ ] Phase 2: Authentication & Security
-      - [ ] Build secure API key management interface
-      - [ ] Implement client-side key storage with encryption
-      - [ ] Create provider-specific validation
+      - [ ] Build secure API key management interface (BYOK)
+      - [ ] Create key submission endpoint `/api/user/keys`
+      - [ ] Implement server-side key encryption with Fernet
+      - [ ] Create key validation endpoint
       - [ ] Add usage tracking and limits visualization
       - [ ] Implement secure key rotation support
-      - [ ] Create environment-based configuration
-      - [ ] Add runtime key validation
-      - [ ] Build cost estimation per provider
+      - [ ] Create key health check UI
+      - [ ] Build key status display components
     - [ ] Phase 3: AI Chat Interface
       - [ ] Implement chat UI with Vercel AI SDK
       - [ ] Add streaming responses with typing indicators
@@ -1094,6 +1329,22 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
       - ✓ Added domain-specific memory tools for complex entity relationships
       - ✓ Migrated domain schemas to appropriate tool schemas
       - ✓ Implemented proper error handling for Neo4j operations
+
+- [x] **Frontend Application Development**
+  - [x] Frontend Architecture & Planning:
+    - ✓ Created comprehensive technology stack recommendations
+    - ✓ Designed complete frontend architecture (docs/frontend/ARCHITECTURE.md)
+    - ✓ Selected SOTA tech stack: Next.js 15.3, React 19, TypeScript 5.5, Tailwind CSS v4
+    - ✓ Established Supabase Auth as authentication solution
+    - ✓ Designed SSE-based real-time communication with Vercel AI SDK v5
+    - ✓ Created phased implementation plan in TODO-FRONTEND.md
+    - ✓ Defined secure API key management strategy (backend proxy pattern)
+  - [ ] Phase 1: Foundation & Core Setup (see TODO-FRONTEND.md)
+    - [ ] Project initialization with Next.js 15.3
+    - [ ] Development environment setup
+    - [ ] Core dependencies installation
+    - [ ] Tailwind CSS v4 configuration
+    - [ ] shadcn/ui v3 setup
 
 ## Low Priority
 
