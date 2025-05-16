@@ -73,23 +73,23 @@ This document tracks the migration progress from the old `src/` directory to the
 
 ### utils/
 
-| File                    | Status | Notes                                                     |
-| ----------------------- | ------ | --------------------------------------------------------- |
-| **init**.py             | ✅     | Exists in tripsage/utils/                                 |
-| cache.py                | ⚠️     | Appears to be new implementation in tripsage/utils/       |
-| client_utils.py         | ❌     | Only in tripsage/utils/                                   |
-| config.py               | ⚠️     | Marked deprecated - delegates to settings module          |
-| db_utils.py             | ❌     | Only in tripsage/utils/                                   |
-| decorators.py           | ⚠️     | Check if functionality integrated elsewhere               |
-| dual_storage.py         | 🔍     | Different abstraction - tripsage is generic storage class |
-| dual_storage_service.py | ⚠️     | Check if functionality in tripsage/storage/               |
-| error_decorators.py     | ⚠️     | Check if integrated into error_handling.py                |
-| error_handling.py       | 🔍     | Different - tripsage version has MCPError class           |
-| logging.py              | ⚠️     | Check differences between versions                        |
-| session_memory.py       | ⚠️     | Check differences between versions                        |
-| settings.py             | ⚠️     | Check differences between versions                        |
-| settings_init.py        | ❌     | Not found in tripsage/                                    |
-| trip_storage_service.py | ⚠️     | Check if functionality in tripsage/storage/               |
+| File                    | Status | Notes                                                                |
+| ----------------------- | ------ | -------------------------------------------------------------------- |
+| **init**.py             | ✅     | Exists in tripsage/utils/                                            |
+| cache.py                | ⚠️     | Appears to be new implementation in tripsage/utils/                  |
+| client_utils.py         | ❌     | Only in tripsage/utils/                                              |
+| config.py               | 🗑️ DELETED | Superseded by tripsage/config/app_settings.py and mcp_settings.py |
+| db_utils.py             | ❌     | Only in tripsage/utils/                                              |
+| decorators.py           | 🗑️ DELETED | Migrated to tripsage/utils/decorators.py with both decorators     |
+| dual_storage.py         | 🔍     | Different abstraction - tripsage is generic storage class            |
+| dual_storage_service.py | ⚠️     | Check if functionality in tripsage/storage/                          |
+| error_decorators.py     | 🗑️ DELETED | Merged into tripsage/utils/decorators.py                          |
+| error_handling.py       | 🗑️ DELETED | Functionality covered by tripsage/utils/error_handling.py         |
+| logging.py              | ⚠️     | Check differences between versions                                   |
+| session_memory.py       | ⚠️     | Check differences between versions                                   |
+| settings.py             | ⚠️     | Check differences between versions                                   |
+| settings_init.py        | ❌     | Not found in tripsage/                                               |
+| trip_storage_service.py | ⚠️     | Check if functionality in tripsage/storage/                          |
 
 ### tests/
 

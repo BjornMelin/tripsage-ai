@@ -100,9 +100,15 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
       - ✓ Update imports in test files to use tripsage module
       - [ ] Create new test files for migrated tools and agents
       - [ ] Ensure all tests pass with new structure
-    - [ ] Clean up duplicated files:
-      - Remove unnecessary files from src/ after migration
-      - Ensure no duplicate functionality exists
+    - [x] Clean up duplicated files:
+      - [x] Migrate key utilities from src/utils:
+        - ✓ Deleted deprecated `src/utils/config.py`
+        - ✓ Migrated `src/utils/decorators.py` functionality to `tripsage/utils/decorators.py`
+        - ✓ Deleted `src/utils/error_decorators.py` (merged into decorators.py)
+        - ✓ Deleted `src/utils/error_handling.py` (covered by new implementation)
+      - [ ] Complete remaining source directory cleanup
+      - [ ] Remove unnecessary files from src/ after migration
+      - [ ] Ensure no duplicate functionality exists
     - [ ] Documentation updates:
       - Update README.md to reflect new structure
       - Add directory structure documentation
