@@ -235,7 +235,7 @@ async def run_migrations(
 if __name__ == "__main__":
     """
     Run migrations when the script is executed directly.
-    
+
     Example usage:
         python -m tripsage.db.migrations.runner
     """
