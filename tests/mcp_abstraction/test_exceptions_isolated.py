@@ -18,9 +18,8 @@ sys.modules['tripsage.config.app_settings'] = MagicMock()
 sys.modules['tripsage.utils.settings'] = MagicMock()
 sys.modules['tripsage.config.mcp_settings'] = MagicMock()
 
-
 # Now safe to import our exceptions
-from tripsage.mcp_abstraction.exceptions import (
+from tripsage.mcp_abstraction.exceptions import (  # noqa: E402
     MCPAuthenticationError,
     MCPCommunicationProtocolError,
     MCPConfigurationError,
