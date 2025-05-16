@@ -103,25 +103,34 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
 
       ### Phase 1: Test Infrastructure Setup
 
-      - [ ] Create new `tests/` directory structure mirroring `tripsage/`
-      - [ ] Create shared `conftest.py` with common fixtures
+      - [x] Create new `tests/` directory structure mirroring `tripsage/`
+      - [x] Create shared `conftest.py` with common fixtures
       - [ ] Set up test configuration for mocking MCPManager
       - [ ] Create integration test directory for end-to-end scenarios
+      - [ ] **BLOCKER**: Resolve circular import issues with MCP abstraction layer
+      - [ ] **BLOCKER**: Handle environment variable dependencies for tests
+      - [ ] **BLOCKER**: Fix Redis URL dependency in cache initialization
 
       ### Phase 2: Core Component Tests
 
-      - [ ] Create unit tests for MCPManager
-        - [ ] Test initialization and configuration
-        - [ ] Test invoke() method with various scenarios
-        - [ ] Test error handling and retries
-      - [ ] Create unit tests for MCPClientRegistry
-        - [ ] Test wrapper registration
-        - [ ] Test wrapper retrieval
-        - [ ] Test dynamic loading
-      - [ ] Create tests for all MCP wrappers
-        - [ ] Test method mapping
-        - [ ] Test parameter validation
-        - [ ] Test error handling
+      - [x] Create unit tests for MCPManager
+        - [x] Test initialization and configuration
+        - [x] Test invoke() method with various scenarios
+        - [x] Test error handling and retries
+      - [x] Create unit tests for MCPClientRegistry
+        - [x] Test wrapper registration
+        - [x] Test wrapper retrieval
+        - [x] Test dynamic loading
+      - [x] Create tests for core MCP wrappers
+        - [x] Test Weather MCP wrapper
+        - [x] Test Google Maps MCP wrapper
+        - [x] Test Time MCP wrapper
+        - [x] Test Supabase MCP wrapper
+        - [x] Test method mapping
+        - [x] Test parameter validation
+        - [x] Test error handling
+      - [x] Create tests for Base MCP Wrapper
+      - [x] Create tests for exception hierarchy
 
       ### Phase 3: Migrate Existing Tests
 
