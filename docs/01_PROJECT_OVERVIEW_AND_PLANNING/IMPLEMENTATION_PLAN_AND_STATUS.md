@@ -14,7 +14,7 @@ The primary goal of TripSage is to create an AI-powered travel assistant that se
 
 TripSage is currently in an active implementation phase. Significant progress has been made in establishing the core architecture, integrating key MCP servers, and defining development patterns.
 
-### Key Strategic Decisions & Architectural Shifts:
+### Key Strategic Decisions & Architectural Shifts
 
 - **Standardization on Python FastMCP 2.0**: All custom MCP servers are built using this framework for consistency and maintainability.
 - **Leveraging Official MCP Implementations**: Where available (e.g., Time MCP, Neo4j Memory MCP), official implementations are prioritized.
@@ -28,7 +28,7 @@ TripSage is currently in an active implementation phase. Significant progress ha
 - **Browser Automation**: Standardized on Playwright with Python, integrated via external MCPs, replacing the previous custom Browser-use implementation (Issue #26).
 - **Isolated Testing Patterns**: Established for MCP clients and dual storage services to ensure reliable and environment-independent testing.
 
-### Major Completed Milestones:
+### Major Completed Milestones
 
 - **Core Infrastructure**:
   - Python development environment (uv) and project structure established.
@@ -75,7 +75,7 @@ This section outlines the tasks required to complete the TripSage system, organi
 
 ### 4.1 Core Infrastructure
 
-**High Priority**
+#### High Priority
 
 - [x] **ENV-001**: Set up Python development environment using `uv`.
   - Reference: `docs/07_INSTALLATION_AND_SETUP/INSTALLATION_GUIDE.md`
@@ -101,7 +101,7 @@ This section outlines the tasks required to complete the TripSage system, organi
   - Reference: `docs/05_SEARCH_AND_CACHING/CACHING_STRATEGY_AND_IMPLEMENTATION.md`
   - Status: Completed.
 
-**Medium Priority**
+#### Medium Priority
 
 - [ ] **SEC-001**: Create authentication and authorization infrastructure.
   - Dependencies: DB-001
@@ -119,7 +119,7 @@ This section outlines the tasks required to complete the TripSage system, organi
 
 ### 4.2 MCP Server Implementation
 
-**Core MCP Infrastructure**
+#### Core MCP Infrastructure
 
 - [x] **MCP-002**: Standardize MCP client implementations with Pydantic v2 validation.
   - Reference: PR #53
@@ -128,147 +128,148 @@ This section outlines the tasks required to complete the TripSage system, organi
   - Reference: `docs/04_MCP_SERVERS/GENERAL_MCP_IMPLEMENTATION_PATTERNS.md` (linking to isolated testing guide)
   - Status: Completed.
 
-**Specific MCP Servers**
+#### Specific MCP Servers
 
-- **Weather MCP Server**
+##### Weather MCP Server
 
-  - [x] **WEATHER-001**: Create Weather MCP Server structure.
-    - Reference: `docs/04_MCP_SERVERS/Weather_MCP.md`
-    - Status: Completed.
-  - [x] **WEATHER-002**: Implement OpenWeatherMap API client (and fallbacks).
-    - Status: Completed.
-  - [x] **WEATHER-003**: Create weather data caching strategy.
-    - Status: Completed.
-  - [x] **WEATHER-004**: Implement travel recommendations based on weather data.
-    - Status: Completed.
+- [x] **WEATHER-001**: Create Weather MCP Server structure.
+  - Reference: `docs/04_MCP_SERVERS/Weather_MCP.md`
+  - Status: Completed.
+- [x] **WEATHER-002**: Implement OpenWeatherMap API client (and fallbacks).
+  - Status: Completed.
+- [x] **WEATHER-003**: Create weather data caching strategy.
+  - Status: Completed.
+- [x] **WEATHER-004**: Implement travel recommendations based on weather data.
+  - Status: Completed.
 
-- **Web Crawling MCP Server**
+##### Web Crawling MCP Server
 
-  - [x] **WEBCRAWL-001**: Set up Crawl4AI self-hosted environment (Issue #19).
-    - Reference: `docs/04_MCP_SERVERS/WebCrawl_MCP.md`
-    - Status: Completed.
-  - [x] **WEBCRAWL-002**: Create Web Crawling MCP Server structure.
-    - Status: Completed.
-  - [x] **WEBCRAWL-003**: Implement source selection strategy (Crawl4AI, Firecrawl, Playwright).
-    - Status: Completed.
-  - [x] **WEBCRAWL-004**: Create page content extraction functionality.
-    - Status: Completed.
-  - [x] **WEBCRAWL-005**: Implement destination research capabilities.
-    - Status: Completed.
-  - [x] **WEBCRAWL-009**: Integrate Firecrawl API for advanced web crawling (Issue #19).
-    - Status: Completed.
-  - [ ] **WEBCRAWL-006**: Implement intelligent source selection based on URL characteristics.
-    - Reference: `docs/04_MCP_SERVERS/WebCrawl_MCP.md` (under improvements section)
-    - Status: ⏳ Planned
-  - [ ] **WEBCRAWL-008**: Implement result normalization across sources.
-    - Reference: `docs/04_MCP_SERVERS/WebCrawl_MCP.md` (under result normalization)
-    - Status: ⏳ Planned
+- [x] **WEBCRAWL-001**: Set up Crawl4AI self-hosted environment (Issue #19).
+  - Reference: `docs/04_MCP_SERVERS/WebCrawl_MCP.md`
+  - Status: Completed.
+- [x] **WEBCRAWL-002**: Create Web Crawling MCP Server structure.
+  - Status: Completed.
+- [x] **WEBCRAWL-003**: Implement source selection strategy (Crawl4AI, Firecrawl, Playwright).
+  - Status: Completed.
+- [x] **WEBCRAWL-004**: Create page content extraction functionality.
+  - Status: Completed.
+- [x] **WEBCRAWL-005**: Implement destination research capabilities.
+  - Status: Completed.
+- [x] **WEBCRAWL-009**: Integrate Firecrawl API for advanced web crawling (Issue #19).
+  - Status: Completed.
+- [ ] **WEBCRAWL-006**: Implement intelligent source selection based on URL characteristics.
+  - Reference: `docs/04_MCP_SERVERS/WebCrawl_MCP.md` (under improvements section)
+  - Status: ⏳ Planned
+- [ ] **WEBCRAWL-008**: Implement result normalization across sources.
+  - Reference: `docs/04_MCP_SERVERS/WebCrawl_MCP.md` (under result normalization)
+  - Status: ⏳ Planned
 
-- **Browser Automation Tools (via external MCPs)**
+##### Browser Automation Tools (via external MCPs)
 
-  - [x] **BROWSER-001**: Set up Playwright with Python infrastructure (as client to external MCP).
-    - Reference: `docs/04_MCP_SERVERS/BrowserAutomation_MCP.md`
-    - Status: Completed (Issue #26).
-  - [x] **BROWSER-007**: Replace custom Browser MCP with external Playwright & Stagehand MCPs (Issue #26).
-    - Status: Completed.
-  - [x] **BROWSER-004**: Create flight status checking functionality.
-    - Status: Completed.
-  - [x] **BROWSER-005**: Implement booking verification capabilities with Pydantic v2.
-    - Status: Completed.
-  - [x] **BROWSER-006**: Create price monitoring functionality.
-    - Status: Completed.
+- [x] **BROWSER-001**: Set up Playwright with Python infrastructure (as client to external MCP).
+  - Reference: `docs/04_MCP_SERVERS/BrowserAutomation_MCP.md`
+  - Status: Completed (Issue #26).
+- [x] **BROWSER-007**: Replace custom Browser MCP with external Playwright & Stagehand MCPs (Issue #26).
+  - Status: Completed.
+- [x] **BROWSER-004**: Create flight status checking functionality.
+  - Status: Completed.
+- [x] **BROWSER-005**: Implement booking verification capabilities with Pydantic v2.
+  - Status: Completed.
+- [x] **BROWSER-006**: Create price monitoring functionality.
+  - Status: Completed.
 
-- **Flights MCP Server**
+##### Flights MCP Server
 
-  - [x] **FLIGHTS-001**: Integrate `ravinahp/flights-mcp` server (Duffel API) (Issue #16).
-    - Reference: `docs/04_MCP_SERVERS/Flights_MCP.md`
-    - Status: Completed.
-  - [x] **FLIGHTS-002**: Create client implementation for flights MCP.
-    - Status: Completed.
-  - [x] **FLIGHTS-003**: Create flight search functionality.
-    - Status: Completed.
-  - [x] **FLIGHTS-004**: Implement price tracking and history.
-    - Status: Completed.
+- [x] **FLIGHTS-001**: Integrate `ravinahp/flights-mcp` server (Duffel API) (Issue #16).
+  - Reference: `docs/04_MCP_SERVERS/Flights_MCP.md`
+  - Status: Completed.
+- [x] **FLIGHTS-002**: Create client implementation for flights MCP.
+  - Status: Completed.
+- [x] **FLIGHTS-003**: Create flight search functionality.
+  - Status: Completed.
+- [x] **FLIGHTS-004**: Implement price tracking and history.
+  - Status: Completed.
 
-- **Time MCP Integration**
+##### Time MCP Integration
 
-  - [x] **TIME-001**: Integrate with official Time MCP server (PR #51).
-    - Reference: `docs/04_MCP_SERVERS/Time_MCP.md`
-    - Status: Completed.
-  - [x] **TIME-002**: Create Time MCP client implementation.
-    - Status: Completed.
-  - [x] **TIME-003**: Develop agent function tools for time operations.
-    - Status: Completed.
-  - [x] **TIME-004**: Create deployment script for Time MCP server.
-    - Status: Completed.
-  - [x] **TIME-005**: Create comprehensive tests for Time MCP client.
-    - Status: Completed.
+- [x] **TIME-001**: Integrate with official Time MCP server (PR #51).
+  - Reference: `docs/04_MCP_SERVERS/Time_MCP.md`
+  - Status: Completed.
+- [x] **TIME-002**: Create Time MCP client implementation.
+  - Status: Completed.
+- [x] **TIME-003**: Develop agent function tools for time operations.
+  - Status: Completed.
+- [x] **TIME-004**: Create deployment script for Time MCP server.
+  - Status: Completed.
+- [x] **TIME-005**: Create comprehensive tests for Time MCP client.
+  - Status: Completed.
 
-- **Google Maps MCP Server**
+##### Google Maps MCP Server
 
-  - [x] **GOOGLEMAPS-001**: Integrate Google Maps MCP server (Issue #18).
-    - Reference: `docs/04_MCP_SERVERS/GoogleMaps_MCP.md`
-    - Status: Completed.
-  - [x] **GOOGLEMAPS-002**: Create client implementation for Google Maps MCP.
-    - Status: Completed.
-  - [x] **GOOGLEMAPS-003**: Integrate Google Maps data with Memory MCP.
-    - Status: Completed.
+- [x] **GOOGLEMAPS-001**: Integrate Google Maps MCP server (Issue #18).
+  - Reference: `docs/04_MCP_SERVERS/GoogleMaps_MCP.md`
+  - Status: Completed.
+- [x] **GOOGLEMAPS-002**: Create client implementation for Google Maps MCP.
+  - Status: Completed.
+- [x] **GOOGLEMAPS-003**: Integrate Google Maps data with Memory MCP.
+  - Status: Completed.
 
-- **Accommodation MCP Server**
+##### Accommodation MCP Server
 
-  - [x] **ACCOM-001**: Create Accommodation MCP Server structure (Issue #17).
-    - Reference: `docs/04_MCP_SERVERS/Accommodations_MCP.md`
-    - Status: Completed.
-  - [x] **ACCOM-002**: Implement OpenBnB Airbnb MCP integration (Issue #24).
-    - Status: Completed.
-  - [x] **ACCOM-003**: Implement dual storage for accommodation data.
-    - Status: Completed.
-  - [x] **ACCOM-004**: Implement factory pattern for accommodation sources.
-    - Status: Completed.
+- [x] **ACCOM-001**: Create Accommodation MCP Server structure (Issue #17).
+  - Reference: `docs/04_MCP_SERVERS/Accommodations_MCP.md`
+  - Status: Completed.
+- [x] **ACCOM-002**: Implement OpenBnB Airbnb MCP integration (Issue #24).
+  - Status: Completed.
+- [x] **ACCOM-003**: Implement dual storage for accommodation data.
+  - Status: Completed.
+- [x] **ACCOM-004**: Implement factory pattern for accommodation sources.
+  - Status: Completed.
 
-- **Calendar MCP Server**
+##### Calendar MCP Server
 
-  - [x] **CAL-001**: Create Calendar MCP Server structure.
-    - Reference: `docs/04_MCP_SERVERS/Calendar_MCP.md`
-    - Status: Completed.
-  - [x] **CAL-002**: Set up Google Calendar API integration.
-    - Status: Completed.
-  - [x] **CAL-003**: Implement OAuth flow for user authorization.
-    - Status: Completed.
-  - [x] **CAL-004**: Create travel itinerary management tools.
-    - Status: Completed.
-  - [ ] **CAL-005 (New from old ITINAGENT-003)**: Integrate Calendar tools with Itinerary Agent.
-    - Dependencies: ITINAGENT-001, CAL-004
-    - Reference: `docs/02_SYSTEM_ARCHITECTURE_AND_DESIGN/AGENT_DESIGN_AND_OPTIMIZATION.md`
-    - Status: ⏳ Pending (dependent on Issue #25)
+- [x] **CAL-001**: Create Calendar MCP Server structure.
+  - Reference: `docs/04_MCP_SERVERS/Calendar_MCP.md`
+  - Status: Completed.
+- [x] **CAL-002**: Set up Google Calendar API integration.
+  - Status: Completed.
+- [x] **CAL-003**: Implement OAuth flow for user authorization.
+  - Status: Completed.
+- [x] **CAL-004**: Create travel itinerary management tools.
+  - Status: Completed.
+- [ ] **CAL-005 (New from old ITINAGENT-003)**: Integrate Calendar tools with Itinerary Agent.
+  - Dependencies: ITINAGENT-001, CAL-004
+  - Reference: `docs/02_SYSTEM_ARCHITECTURE_AND_DESIGN/AGENT_DESIGN_AND_OPTIMIZATION.md`
+  - Status: ⏳ Pending (dependent on Issue #25)
 
-- **Memory MCP Server (Neo4j)**
-  - [x] **MEM-001**: Integrate Neo4j Memory MCP and client implementation (Issue #20).
-    - Reference: `docs/03_DATABASE_AND_STORAGE/KNOWLEDGE_GRAPH_GUIDE.md`
-    - Status: Completed.
-  - [x] **MEM-002**: Implement entity creation and management.
-    - Status: Completed.
-  - [x] **MEM-003**: Create relationship tracking capabilities.
-    - Status: Completed.
-  - [x] **MEM-004**: Implement cross-session memory persistence.
-    - Status: Completed.
-  - [x] **MEM-006**: Implement dual storage strategy (Supabase + Neo4j).
-    - Status: Completed.
-  - [x] **MEM-007**: Refactor dual storage pattern to service-based architecture (Issue #69, PR #78).
-    - Reference: `docs/03_DATABASE_AND_STORAGE/DUAL_STORAGE_IMPLEMENTATION.md`
-    - Status: Completed.
-  - [x] **MEM-008**: Create isolated testing pattern for dual storage services.
-    - Reference: `docs/03_DATABASE_AND_STORAGE/DUAL_STORAGE_IMPLEMENTATION.md` (linking to isolated testing guide)
-    - Status: Completed.
-  - [x] **MEM-005**: Expand knowledge graph with additional entity and relation types.
-    - Reference: `docs/03_DATABASE_AND_STORAGE/KNOWLEDGE_GRAPH_GUIDE.md`
-    - Status: Completed.
+##### Memory MCP Server (Neo4j)
+
+- [x] **MEM-001**: Integrate Neo4j Memory MCP and client implementation (Issue #20).
+  - Reference: `docs/03_DATABASE_AND_STORAGE/KNOWLEDGE_GRAPH_GUIDE.md`
+  - Status: Completed.
+- [x] **MEM-002**: Implement entity creation and management.
+  - Status: Completed.
+- [x] **MEM-003**: Create relationship tracking capabilities.
+  - Status: Completed.
+- [x] **MEM-004**: Implement cross-session memory persistence.
+  - Status: Completed.
+- [x] **MEM-006**: Implement dual storage strategy (Supabase + Neo4j).
+  - Status: Completed.
+- [x] **MEM-007**: Refactor dual storage pattern to service-based architecture (Issue #69, PR #78).
+  - Reference: `docs/03_DATABASE_AND_STORAGE/DUAL_STORAGE_IMPLEMENTATION.md`
+  - Status: Completed.
+- [x] **MEM-008**: Create isolated testing pattern for dual storage services.
+  - Reference: `docs/03_DATABASE_AND_STORAGE/DUAL_STORAGE_IMPLEMENTATION.md` (linking to isolated testing guide)
+  - Status: Completed.
+- [x] **MEM-005**: Expand knowledge graph with additional entity and relation types.
+  - Reference: `docs/03_DATABASE_AND_STORAGE/KNOWLEDGE_GRAPH_GUIDE.md`
+  - Status: Completed.
 
 ---
 
 ### 4.3 Agent Development
 
-**High Priority**
+#### High Priority - Agents
 
 - [x] **AGENT-001**: Create base agent class using OpenAI Agents SDK.
   - Reference: `docs/02_SYSTEM_ARCHITECTURE_AND_DESIGN/AGENT_DESIGN_AND_OPTIMIZATION.md`
@@ -302,7 +303,7 @@ This section outlines the tasks required to complete the TripSage system, organi
   - Reference: `docs/04_MCP_SERVERS/WebCrawl_MCP.md` (under improvements section)
   - Status: ⏳ Planned
 
-**Medium Priority**
+#### Medium Priority - Agents
 
 - [ ] **TRAVELAGENT-005**: Implement accommodation search and comparison.
   - Dependencies: AGENT-004 (was TRAVELAGENT-001), ACCOM-004
@@ -331,7 +332,7 @@ This section outlines the tasks required to complete the TripSage system, organi
 
 ### 4.4 API Implementation
 
-**High Priority**
+#### High Priority - API
 
 - [ ] **API-001**: Set up FastAPI application structure.
   - Dependencies: ENV-001
@@ -348,7 +349,7 @@ This section outlines the tasks required to complete the TripSage system, organi
   - Dependencies: API-001, API-002, DB-001
   - Status: ⏳ Pending
 
-**Medium Priority**
+#### Medium Priority - API
 
 - [ ] **API-005**: Implement agent interaction endpoints.
   - Dependencies: API-001, AGENT-004 (was TRAVELAGENT-001), BUDGETAGENT-001, ITINAGENT-001
@@ -361,7 +362,7 @@ This section outlines the tasks required to complete the TripSage system, organi
 
 ### 4.5 Database Implementation
 
-**High Priority**
+#### High Priority - Database
 
 - [x] **DB-003**: Execute initial schema migrations.
   - Reference: `docs/03_DATABASE_AND_STORAGE/RELATIONAL_DATABASE_GUIDE.md`
@@ -376,7 +377,7 @@ This section outlines the tasks required to complete the TripSage system, organi
 - [x] **DB-008**: Implement connection pooling and error handling for DB providers.
   - Status: Completed.
 
-**Medium Priority**
+#### Medium Priority - Database
 
 - [ ] **DB-006**: Implement data synchronization between Supabase and Neo4j.
   - Dependencies: DB-003, DB-005, MEM-001
@@ -395,7 +396,7 @@ This section outlines the tasks required to complete the TripSage system, organi
 
 ### 4.6 Testing Implementation
 
-**High Priority**
+#### High Priority - Testing
 
 - [x] **TEST-001**: Set up testing framework for MCP servers (pytest, fixtures, mocks).
   - Status: Completed.
@@ -415,7 +416,7 @@ This section outlines the tasks required to complete the TripSage system, organi
   - Dependencies: All major components.
   - Status: 🔄 In Progress
 
-**Medium Priority**
+#### Medium Priority - Testing
 
 - [ ] **TEST-003**: Create integration tests for agent workflows.
   - Dependencies: TEST-001, AGENT-004 (was TRAVELAGENT-001), BUDGETAGENT-001, ITINAGENT-001
@@ -431,7 +432,7 @@ This section outlines the tasks required to complete the TripSage system, organi
 
 ### 4.7 Deployment Implementation
 
-**Medium Priority**
+#### Medium Priority - Deployment
 
 - [ ] **DEPLOY-001**: Create Docker configuration for MCP servers.
   - Dependencies: All MCP server implementations.
@@ -441,7 +442,7 @@ This section outlines the tasks required to complete the TripSage system, organi
   - Dependencies: DEPLOY-001
   - Status: ⏳ Planned
 
-**Low Priority**
+#### Low Priority - Deployment
 
 - [ ] **DEPLOY-003**: Create Kubernetes deployment manifests.
   - Dependencies: DEPLOY-001
@@ -526,7 +527,7 @@ These changes are integral to the tasks listed in the detailed plan, particularl
 
 ## 7. Post-MVP Enhancements
 
-**Low Priority / Future Considerations**
+### Low Priority / Future Considerations
 
 - [ ] **VECTOR-001**: Set up Qdrant integration for vector search (Issue #41, #2).
   - Reference: `docs/05_SEARCH_AND_CACHING/SEARCH_STRATEGY.md` (will need a vector search section)
