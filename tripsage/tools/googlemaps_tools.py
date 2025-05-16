@@ -3,33 +3,26 @@ Google Maps function tools for TripSage.
 
 This module provides OpenAI Agents SDK function tools for Google Maps operations,
 allowing agents to geocode addresses, search for places, get directions,
-calculate distances, and other location-based services.
+calculate distances, and other location-based services using the Google Maps MCP
+through the abstraction layer.
 """
 
 from typing import Any, Dict, List, Optional
 
 from agents import function_tool
-from tripsage.config.app_settings import settings
+from tripsage.mcp_abstraction.manager import mcp_manager
 from tripsage.tools.schemas.googlemaps import (
     DirectionsParams,
-    DirectionsResponse,
     DistanceMatrixParams,
-    DistanceMatrixResponse,
     ElevationParams,
-    ElevationResponse,
     GeocodeParams,
-    GeocodeResponse,
     PlaceDetailsParams,
-    PlaceDetailsResponse,
     PlaceField,
     PlaceSearchParams,
-    PlaceSearchResponse,
     ReverseGeocodeParams,
     TimeZoneParams,
-    TimeZoneResponse,
     TravelMode,
 )
-from tripsage.utils.client_utils import validate_and_call_mcp_tool
 from tripsage.utils.error_handling import with_error_handling
 from tripsage.utils.logging import get_logger
 
@@ -67,13 +60,11 @@ async def geocode_tool(
     logger.info(f"Geocoding: {params.model_dump(exclude_none=True)}")
 
     try:
-        result = await validate_and_call_mcp_tool(
-            endpoint=settings.googlemaps_mcp_endpoint,
-            tool_name="geocode",
+        # Call the Google Maps MCP through the abstraction layer
+        result = await mcp_manager.invoke(
+            mcp_name="google_maps",
+            method_name="geocode",
             params=params.model_dump(exclude_none=True),
-            response_model=GeocodeResponse,
-            timeout=15.0,
-            server_name="Google Maps MCP",
         )
 
         # Parse the response for better usability
@@ -147,19 +138,17 @@ async def reverse_geocode_tool(
     logger.info(f"Reverse geocoding: {params.model_dump(exclude_none=True)}")
 
     try:
-        result = await validate_and_call_mcp_tool(
-            endpoint=settings.googlemaps_mcp_endpoint,
-            tool_name="reverse_geocode",
+        # Call the Google Maps MCP through the abstraction layer
+        result = await mcp_manager.invoke(
+            mcp_name="google_maps",
+            method_name="reverse_geocode",
             params=params.model_dump(exclude_none=True),
-            response_model=GeocodeResponse,
-            timeout=15.0,
-            server_name="Google Maps MCP",
         )
 
         # Parse the response for better usability
-        addresses = []
+        locations = []
         for loc in result.results:
-            addresses.append(
+            locations.append(
                 {
                     "place_id": loc.place_id,
                     "formatted_address": loc.formatted_address,
@@ -169,22 +158,22 @@ async def reverse_geocode_tool(
             )
 
         formatted_result = ""
-        if addresses:
-            formatted_result = (
-                f"Found {len(addresses)} addresses for coordinates ({lat}, {lng}):\n"
-            )
-            for i, addr in enumerate(addresses):
-                formatted_result += f"{i + 1}. {addr['formatted_address']}\n"
+        if locations:
+            coord_str = f"({lat}, {lng})"
+            matches = len(locations)
+            formatted_result = f"Found {matches} results for coordinates {coord_str}:\n"
+            for i, loc in enumerate(locations):
+                formatted_result += f"{i + 1}. {loc['formatted_address']}\n"
         else:
-            formatted_result = f"No addresses found for coordinates ({lat}, {lng})."
+            formatted_result = f"No address found for coordinates ({lat}, {lng})."
 
         return {
             "status": result.status,
-            "addresses": addresses,
+            "locations": locations,
             "formatted": formatted_result,
         }
     except Exception as e:
-        logger.error(f"Error reverse geocoding coordinates: {str(e)}")
+        logger.error(f"Error reverse geocoding: {str(e)}")
         return {"error": f"Failed to reverse geocode coordinates: {str(e)}"}
 
 
@@ -192,72 +181,49 @@ async def reverse_geocode_tool(
 @with_error_handling
 async def place_search_tool(
     query: Optional[str] = None,
-    location: Optional[str] = None,
+    location: Optional[Dict[str, float]] = None,
     radius: Optional[int] = None,
     type: Optional[str] = None,
-    keyword: Optional[str] = None,
     min_price: Optional[int] = None,
     max_price: Optional[int] = None,
-    open_now: Optional[bool] = None,
-    rank_by: Optional[str] = None,
+    open_now: bool = False,
 ) -> Dict[str, Any]:
-    """Search for places based on text query or location.
+    """Search for places near a location.
 
     Args:
-        query: Text search query (e.g., "restaurants in Manhattan")
-        location: Location to search around (lat,lng or address)
-        radius: Search radius in meters (max 50000)
-        type: Place type (e.g., "restaurant", "museum", "tourist_attraction")
-        keyword: Keyword to match in places
+        query: Search query (e.g., "restaurants")
+        location: Dict with "lat" and "lng" fields for the search center
+        radius: Search radius in meters
+        type: Place type (e.g., "restaurant", "museum")
         min_price: Minimum price level (0-4)
         max_price: Maximum price level (0-4)
-        open_now: Whether place is open now
-        rank_by: Ranking method ("prominence" or "distance")
+        open_now: Whether to return only places that are open now
 
     Returns:
         Dictionary with place search results
     """
     try:
-        # Handle case when location is a string address
-        location_coordinates = None
-        if location and "," in location:
-            try:
-                lat, lng = map(float, location.split(","))
-                location_coordinates = location
-            except ValueError:
-                # If not lat,lng format, assume it's an address and geocode it
-                geocode_result = await geocode_tool(address=location)
-                if "error" not in geocode_result and geocode_result.get("locations"):
-                    first_location = geocode_result["locations"][0]["location"]
-                    location_coordinates = (
-                        f"{first_location['lat']},{first_location['lng']}"
-                    )
-
         # Validate parameters
-        try:
-            params = PlaceSearchParams(
-                query=query,
-                location=location_coordinates,
-                radius=radius,
-                type=type,
-                keyword=keyword,
-                min_price=min_price,
-                max_price=max_price,
-                open_now=open_now,
-                rank_by=rank_by,
-            )
-        except ValueError as e:
-            return {"error": str(e)}
+        params = PlaceSearchParams(
+            query=query,
+            location=location,
+            radius=radius,
+            type=type,
+            min_price=min_price,
+            max_price=max_price,
+            open_now=open_now,
+        )
+    except ValueError as e:
+        return {"error": str(e)}
 
-        logger.info(f"Place search: {params.model_dump(exclude_none=True)}")
+    logger.info(f"Searching places: {params.model_dump(exclude_none=True)}")
 
-        result = await validate_and_call_mcp_tool(
-            endpoint=settings.googlemaps_mcp_endpoint,
-            tool_name="place_search",
+    try:
+        # Call the Google Maps MCP through the abstraction layer
+        result = await mcp_manager.invoke(
+            mcp_name="google_maps",
+            method_name="search_places",
             params=params.model_dump(exclude_none=True),
-            response_model=PlaceSearchResponse,
-            timeout=15.0,
-            server_name="Google Maps MCP",
         )
 
         # Parse the response for better usability
@@ -273,31 +239,36 @@ async def place_search_tool(
                         "lng": place.geometry["location"]["lng"],
                     },
                     "types": place.types,
-                    "price_level": place.price_level,
                     "rating": place.rating,
                     "user_ratings_total": place.user_ratings_total,
+                    "price_level": place.price_level,
                     "vicinity": place.vicinity,
                 }
             )
 
         formatted_result = ""
         if places:
-            formatted_result = f"Found {len(places)} places:\n"
+            if query:
+                formatted_result = f"Found {len(places)} places matching '{query}':\n"
+            else:
+                formatted_result = f"Found {len(places)} places:\n"
             for i, place in enumerate(places):
                 rating_info = (
-                    f" - Rating: {place['rating']}" if place.get("rating") else ""
+                    f" ({place['rating']} ⭐ {place['user_ratings_total']} reviews)"
+                    if place.get("rating")
+                    else ""
                 )
-                address = place.get("formatted_address") or place.get("vicinity", "N/A")
-                formatted_result += (
-                    f"{i + 1}. {place['name']}{rating_info}\n   Address: {address}\n"
-                )
+                place_loc = place.get("vicinity", place.get("formatted_address", ""))
+                num = i + 1
+                name = place["name"]
+                formatted_result += f"{num}. {name}{rating_info}\n   {place_loc}\n"
         else:
-            formatted_result = "No places found for the given criteria."
+            formatted_result = "No places found."
 
         return {
             "status": result.status,
-            "next_page_token": result.next_page_token,
             "places": places,
+            "next_page_token": result.next_page_token,
             "formatted": formatted_result,
         }
     except Exception as e:
@@ -309,84 +280,73 @@ async def place_search_tool(
 @with_error_handling
 async def place_details_tool(
     place_id: str,
-    fields: Optional[List[str]] = None,
+    fields: Optional[List[PlaceField]] = None,
 ) -> Dict[str, Any]:
-    """Get detailed information about a place.
+    """Get detailed information about a specific place.
 
     Args:
         place_id: Google Maps place ID
-        fields: Place fields to include in response
+        fields: List of fields to include in the response
+            (e.g., ["name", "rating", "photos"])
 
     Returns:
         Dictionary with place details
     """
     try:
-        # Convert string field names to PlaceField enum values
-        converted_fields = None
-        if fields:
-            try:
-                converted_fields = [f for f in fields if f in PlaceField.__members__]
-            except Exception:
-                pass
-
         # Validate parameters
         params = PlaceDetailsParams(
             place_id=place_id,
-            fields=converted_fields,
+            fields=fields,
         )
     except ValueError as e:
         return {"error": str(e)}
 
-    logger.info(f"Place details: {params.model_dump(exclude_none=True)}")
+    logger.info(f"Getting place details for {place_id}")
 
     try:
-        result = await validate_and_call_mcp_tool(
-            endpoint=settings.googlemaps_mcp_endpoint,
-            tool_name="place_details",
+        # Call the Google Maps MCP through the abstraction layer
+        result = await mcp_manager.invoke(
+            mcp_name="google_maps",
+            method_name="get_place_details",
             params=params.model_dump(exclude_none=True),
-            response_model=PlaceDetailsResponse,
-            timeout=15.0,
-            server_name="Google Maps MCP",
         )
 
-        # Create a nicely formatted response
-        details = result.result or {}
-        formatted_result = ""
+        # Process result
+        place = result.result
+        details = {
+            "place_id": place.place_id,
+            "name": place.name,
+            "formatted_address": place.formatted_address,
+            "location": {
+                "lat": place.geometry["location"]["lat"],
+                "lng": place.geometry["location"]["lng"],
+            },
+            "types": place.types,
+            "formatted_phone_number": place.formatted_phone_number,
+            "international_phone_number": place.international_phone_number,
+            "website": place.website,
+            "rating": place.rating,
+            "user_ratings_total": place.user_ratings_total,
+            "price_level": place.price_level,
+            "reviews": place.reviews,
+            "opening_hours": place.opening_hours,
+            "utc_offset": place.utc_offset,
+        }
 
-        if details:
-            name = details.get("name", "Unknown place")
-            formatted_result = f"Details for {name}:\n"
-
-            if details.get("formatted_address"):
-                formatted_result += f"Address: {details['formatted_address']}\n"
-
-            if details.get("formatted_phone_number"):
-                formatted_result += f"Phone: {details['formatted_phone_number']}\n"
-
-            if details.get("website"):
-                formatted_result += f"Website: {details['website']}\n"
-
-            if details.get("rating"):
-                formatted_result += (
-                    f"Rating: {details['rating']} "
-                    f"({details.get('user_ratings_total', 0)} reviews)\n"
-                )
-
-            if details.get("opening_hours", {}).get("weekday_text"):
-                formatted_result += "Hours:\n"
-                for hours in details["opening_hours"]["weekday_text"]:
-                    formatted_result += f"  {hours}\n"
-
-            if details.get("price_level") is not None:
-                price = (
-                    "$" * details["price_level"]
-                    if details["price_level"] > 0
-                    else "Free"
-                )
-                formatted_result += f"Price level: {price}\n"
-
-        else:
-            formatted_result = "No details found for this place."
+        # Create formatted result
+        formatted_result = f"{place.name}\n"
+        formatted_result += f"Address: {place.formatted_address}\n"
+        if place.formatted_phone_number:
+            formatted_result += f"Phone: {place.formatted_phone_number}\n"
+        if place.website:
+            formatted_result += f"Website: {place.website}\n"
+        if place.rating:
+            reviews = place.user_ratings_total
+            formatted_result += f"Rating: {place.rating} ⭐ ({reviews} reviews)\n"
+        if place.opening_hours and "weekday_text" in place.opening_hours:
+            formatted_result += "Hours:\n"
+            for hours in place.opening_hours["weekday_text"]:
+                formatted_result += f"  {hours}\n"
 
         return {
             "status": result.status,
@@ -403,144 +363,100 @@ async def place_details_tool(
 async def directions_tool(
     origin: str,
     destination: str,
-    mode: str = "driving",
+    mode: TravelMode = TravelMode.driving,
     waypoints: Optional[List[str]] = None,
-    alternatives: Optional[bool] = None,
     avoid: Optional[List[str]] = None,
-    units: Optional[str] = None,
     arrival_time: Optional[int] = None,
     departure_time: Optional[int] = None,
+    alternatives: bool = False,
 ) -> Dict[str, Any]:
     """Get directions between locations.
 
     Args:
-        origin: Origin address or coordinates
-        destination: Destination address or coordinates
+        origin: Starting location (address, coords, or place_id)
+        destination: Ending location (address, coords, or place_id)
         mode: Travel mode (driving, walking, bicycling, transit)
-        waypoints: Waypoints to include in route
-        alternatives: Whether to provide alternative routes
+        waypoints: List of waypoints to include in the route
         avoid: Features to avoid (tolls, highways, ferries)
-        units: Unit system (metric or imperial)
-        arrival_time: Desired arrival time (unix timestamp)
-        departure_time: Desired departure time (unix timestamp)
+        arrival_time: Desired arrival time (epoch timestamp)
+        departure_time: Desired departure time (epoch timestamp)
+        alternatives: Whether to return alternative routes
 
     Returns:
         Dictionary with directions information
     """
     try:
-        # Validate and convert mode to TravelMode
-        try:
-            travel_mode = TravelMode(mode.lower()) if mode else TravelMode.DRIVING
-        except ValueError:
-            travel_mode = TravelMode.DRIVING
-
         # Validate parameters
         params = DirectionsParams(
             origin=origin,
             destination=destination,
-            mode=travel_mode,
+            mode=mode,
             waypoints=waypoints,
-            alternatives=alternatives,
             avoid=avoid,
-            units=units,
             arrival_time=arrival_time,
             departure_time=departure_time,
+            alternatives=alternatives,
         )
     except ValueError as e:
         return {"error": str(e)}
 
-    logger.info(f"Getting directions: {params.model_dump(exclude_none=True)}")
+    logger.info(f"Getting directions from {origin} to {destination} via {mode}")
 
     try:
-        result = await validate_and_call_mcp_tool(
-            endpoint=settings.googlemaps_mcp_endpoint,
-            tool_name="directions",
+        # Call the Google Maps MCP through the abstraction layer
+        result = await mcp_manager.invoke(
+            mcp_name="google_maps",
+            method_name="get_directions",
             params=params.model_dump(exclude_none=True),
-            response_model=DirectionsResponse,
-            timeout=15.0,
-            server_name="Google Maps MCP",
         )
 
+        # Process routes
         routes = []
         for route in result.routes:
-            legs = []
-            total_distance = 0
-            total_duration = 0
-
-            for leg in route.legs:
-                leg_info = {
-                    "start_address": leg.get("start_address", ""),
-                    "end_address": leg.get("end_address", ""),
-                    "distance": leg.get("distance", {}).get("text", ""),
-                    "distance_meters": leg.get("distance", {}).get("value", 0),
-                    "duration": leg.get("duration", {}).get("text", ""),
-                    "duration_seconds": leg.get("duration", {}).get("value", 0),
-                    "steps": [],
-                }
-
-                total_distance += leg_info["distance_meters"]
-                total_duration += leg_info["duration_seconds"]
-
-                for step in leg.get("steps", []):
-                    step_info = {
-                        "instructions": step.get("html_instructions", "")
-                        .replace("<b>", "")
-                        .replace("</b>", "")
-                        .replace("<div>", " - ")
-                        .replace("</div>", ""),
-                        "distance": step.get("distance", {}).get("text", ""),
-                        "duration": step.get("duration", {}).get("text", ""),
+            route_info = {
+                "summary": route.summary,
+                "distance": route.legs[0].distance,
+                "duration": route.legs[0].duration,
+                "start_address": route.legs[0].start_address,
+                "end_address": route.legs[0].end_address,
+                "steps": [
+                    {
+                        "distance": step.distance,
+                        "duration": step.duration,
+                        "html_instructions": step.html_instructions,
+                        "travel_mode": step.travel_mode,
                     }
-                    leg_info["steps"].append(step_info)
+                    for step in route.legs[0].steps
+                ],
+            }
+            routes.append(route_info)
 
-                legs.append(leg_info)
-
-            routes.append(
-                {
-                    "summary": route.summary,
-                    "legs": legs,
-                    "total_distance": total_distance,
-                    "total_distance_text": f"{total_distance / 1000:.1f} km",
-                    "total_duration": total_duration,
-                    "total_duration_text": format_duration(total_duration),
-                    "warnings": route.warnings,
-                    "fare": route.fare,
-                }
-            )
-
-        # Create formatted directions
+        # Create formatted result
         formatted_result = ""
         if routes:
-            formatted_result = f"Directions from {origin} to {destination}:\n\n"
-
-            for i, route in enumerate(routes):
-                formatted_result += f"Route {i + 1}: {route['summary']}\n"
-                formatted_result += (
-                    f"Distance: {route['total_distance_text']}, "
-                    f"Duration: {route['total_duration_text']}\n"
+            route = routes[0]  # Use the first (recommended) route
+            formatted_result = (
+                f"Directions from {route['start_address']} to {route['end_address']}:\n"
+                f"Distance: {route['distance']['text']}\n"
+                f"Duration: {route['duration']['text']}\n\n"
+                "Steps:\n"
+            )
+            for i, step in enumerate(route["steps"]):
+                # Remove HTML tags from instructions
+                # (a proper implementation would use a proper HTML parser)
+                instructions = step["html_instructions"]
+                instructions = (
+                    instructions.replace("<b>", "")
+                    .replace("</b>", "")
+                    .replace("<div>", "\n")
+                    .replace("</div>", "")
                 )
-
-                for j, leg in enumerate(route["legs"]):
-                    if len(route["legs"]) > 1:
-                        formatted_result += (
-                            f"\nLeg {j + 1}: {leg['start_address']} to "
-                            f"{leg['end_address']}\n"
-                        )
-
-                    for k, step in enumerate(leg["steps"]):
-                        formatted_result += (
-                            f"{k + 1}. {step['instructions']} ({step['distance']})\n"
-                        )
-
-                if route["warnings"]:
-                    formatted_result += "\nWarnings:\n"
-                    for warning in route["warnings"]:
-                        formatted_result += f"- {warning}\n"
-
-                if i < len(routes) - 1:
-                    formatted_result += "\n---\n\n"
+                formatted_result += (
+                    f"{i + 1}. {instructions}\n"
+                    f"   ({step['distance']['text']}, {step['duration']['text']})\n"
+                )
         else:
-            formatted_result = "No routes found."
+            formatted_result = f"No directions found from {origin} to {destination}."
 
         return {
             "status": result.status,
@@ -557,104 +473,79 @@ async def directions_tool(
 async def distance_matrix_tool(
     origins: List[str],
     destinations: List[str],
-    mode: str = "driving",
+    mode: TravelMode = TravelMode.driving,
     avoid: Optional[List[str]] = None,
-    units: Optional[str] = None,
     departure_time: Optional[int] = None,
 ) -> Dict[str, Any]:
     """Calculate distances and travel times between multiple origins and destinations.
 
     Args:
-        origins: List of origin addresses or coordinates
-        destinations: List of destination addresses or coordinates
+        origins: List of starting locations
+        destinations: List of ending locations
         mode: Travel mode (driving, walking, bicycling, transit)
         avoid: Features to avoid (tolls, highways, ferries)
-        units: Unit system (metric or imperial)
-        departure_time: Desired departure time (unix timestamp)
+        departure_time: Desired departure time (epoch timestamp)
 
     Returns:
         Dictionary with distance matrix information
     """
     try:
-        # Validate and convert mode to TravelMode
-        try:
-            travel_mode = TravelMode(mode.lower()) if mode else TravelMode.DRIVING
-        except ValueError:
-            travel_mode = TravelMode.DRIVING
-
         # Validate parameters
         params = DistanceMatrixParams(
             origins=origins,
             destinations=destinations,
-            mode=travel_mode,
+            mode=mode,
             avoid=avoid,
-            units=units,
             departure_time=departure_time,
         )
     except ValueError as e:
         return {"error": str(e)}
 
-    logger.info(f"Getting distance matrix: {params.model_dump(exclude_none=True)}")
+    logger.info(
+        f"Calculating distance matrix: {len(origins)} origins, "
+        f"{len(destinations)} destinations"
+    )
 
     try:
-        result = await validate_and_call_mcp_tool(
-            endpoint=settings.googlemaps_mcp_endpoint,
-            tool_name="distance_matrix",
+        # Call the Google Maps MCP through the abstraction layer
+        result = await mcp_manager.invoke(
+            mcp_name="google_maps",
+            method_name="distance_matrix",
             params=params.model_dump(exclude_none=True),
-            response_model=DistanceMatrixResponse,
-            timeout=15.0,
-            server_name="Google Maps MCP",
         )
 
-        # Parse the response for better usability
+        # Process matrix
         matrix = []
         for i, row in enumerate(result.rows):
-            matrix_row = []
-            for j, element in enumerate(row.get("elements", [])):
-                matrix_row.append(
+            row_data = []
+            for j, element in enumerate(row.elements):
+                row_data.append(
                     {
-                        "origin": (
-                            result.origin_addresses[i]
-                            if i < len(result.origin_addresses)
-                            else f"Origin {i + 1}"
-                        ),
-                        "destination": (
-                            result.destination_addresses[j]
-                            if j < len(result.destination_addresses)
-                            else f"Destination {j + 1}"
-                        ),
-                        "status": element.get("status", ""),
-                        "distance": element.get("distance", {}).get("text", ""),
-                        "distance_meters": element.get("distance", {}).get("value", 0),
-                        "duration": element.get("duration", {}).get("text", ""),
-                        "duration_seconds": element.get("duration", {}).get("value", 0),
+                        "origin": origins[i],
+                        "destination": destinations[j],
+                        "status": element.status,
+                        "distance": element.distance,
+                        "duration": element.duration,
                     }
                 )
-            matrix.append(matrix_row)
+            matrix.append(row_data)
 
-        # Create formatted output
-        formatted_result = "Distance Matrix:\n\n"
+        # Create formatted result
+        formatted_result = "Distance Matrix:\n"
         for i, row in enumerate(matrix):
-            origin_name = (
-                result.origin_addresses[i]
-                if i < len(result.origin_addresses)
-                else f"Origin {i + 1}"
-            )
-            formatted_result += f"From {origin_name}:\n"
-
+            formatted_result += f"From {origins[i]}:\n"
             for element in row:
                 if element["status"] == "OK":
                     formatted_result += (
-                        f"  To {element['destination']}: {element['distance']} "
-                        f"({element['duration']})\n"
+                        f"  To {element['destination']}: "
+                        f"{element['distance']['text']} "
+                        f"({element['duration']['text']})\n"
                     )
                 else:
                     formatted_result += (
-                        f"  To {element['destination']}: {element['status']}\n"
+                        f"  To {element['destination']}: Unable to calculate "
+                        f"({element['status']})\n"
                     )
-
-            if i < len(matrix) - 1:
-                formatted_result += "\n"
 
         return {
             "status": result.status,
@@ -664,81 +555,19 @@ async def distance_matrix_tool(
             "formatted": formatted_result,
         }
     except Exception as e:
-        logger.error(f"Error getting distance matrix: {str(e)}")
-        return {"error": f"Failed to get distance matrix: {str(e)}"}
-
-
-@function_tool
-@with_error_handling
-async def timezone_tool(
-    location: str,
-    timestamp: Optional[int] = None,
-) -> Dict[str, Any]:
-    """Get time zone information for a location.
-
-    Args:
-        location: Location coordinates (lat,lng)
-        timestamp: Timestamp to use (defaults to current time)
-
-    Returns:
-        Dictionary with time zone information
-    """
-    try:
-        # Validate parameters
-        params = TimeZoneParams(
-            location=location,
-            timestamp=timestamp,
-        )
-    except ValueError as e:
-        return {"error": str(e)}
-
-    logger.info(f"Getting timezone: {params.model_dump(exclude_none=True)}")
-
-    try:
-        result = await validate_and_call_mcp_tool(
-            endpoint=settings.googlemaps_mcp_endpoint,
-            tool_name="timezone",
-            params=params.model_dump(exclude_none=True),
-            response_model=TimeZoneResponse,
-            timeout=15.0,
-            server_name="Google Maps MCP",
-        )
-
-        # Calculate total offset in hours
-        total_offset = (result.rawOffset + result.dstOffset) / 3600
-        offset_sign = "+" if total_offset >= 0 else "-"
-        offset_str = f"{offset_sign}{abs(total_offset):.1f}"
-
-        formatted_result = (
-            f"Time zone: {result.timeZoneName} ({result.timeZoneId})\n"
-            f"UTC offset: {offset_str} hours\n"
-            f"Raw offset: {result.rawOffset / 3600:.1f} hours\n"
-            f"DST offset: {result.dstOffset / 3600:.1f} hours"
-        )
-
-        return {
-            "status": result.status,
-            "time_zone_id": result.timeZoneId,
-            "time_zone_name": result.timeZoneName,
-            "raw_offset": result.rawOffset,
-            "dst_offset": result.dstOffset,
-            "total_offset": result.rawOffset + result.dstOffset,
-            "formatted": formatted_result,
-        }
-    except Exception as e:
-        logger.error(f"Error getting timezone: {str(e)}")
-        return {"error": f"Failed to get timezone: {str(e)}"}
+        logger.error(f"Error calculating distance matrix: {str(e)}")
+        return {"error": f"Failed to calculate distance matrix: {str(e)}"}
 
 
 @function_tool
 @with_error_handling
 async def elevation_tool(
-    locations: List[str],
+    locations: List[Dict[str, float]],
 ) -> Dict[str, Any]:
     """Get elevation data for locations.
 
     Args:
-        locations: List of location coordinates (lat,lng)
+        locations: List of locations as dicts with "lat" and "lng" fields
 
     Returns:
         Dictionary with elevation information
@@ -751,35 +580,33 @@ async def elevation_tool(
     except ValueError as e:
         return {"error": str(e)}
 
-    logger.info(f"Getting elevation: {params.model_dump(exclude_none=True)}")
+    logger.info(f"Getting elevation for {len(locations)} locations")
 
     try:
-        result = await validate_and_call_mcp_tool(
-            endpoint=settings.googlemaps_mcp_endpoint,
-            tool_name="elevation",
+        # Call the Google Maps MCP through the abstraction layer
+        result = await mcp_manager.invoke(
+            mcp_name="google_maps",
+            method_name="get_elevation",
             params=params.model_dump(exclude_none=True),
-            response_model=ElevationResponse,
-            timeout=15.0,
-            server_name="Google Maps MCP",
         )
 
-        # Parse the response for better usability
+        # Process results
         elevations = []
-        for i, elev in enumerate(result.results):
-            location = locations[i] if i < len(locations) else f"Location {i + 1}"
+        for i, result_item in enumerate(result.results):
             elevations.append(
                 {
-                    "location": location,
-                    "elevation": elev.get("elevation", 0),
-                    "resolution": elev.get("resolution", 0),
+                    "location": locations[i],
+                    "elevation": result_item.elevation,
+                    "resolution": result_item.resolution,
                 }
             )
 
-        # Create formatted output
-        formatted_result = "Elevation data:\n\n"
-        for elev in elevations:
+        # Create formatted result
+        formatted_result = "Elevation Results:\n"
+        for i, elev in enumerate(elevations):
             formatted_result += (
-                f"Location {elev['location']}: {elev['elevation']:.1f} meters\n"
+                f"{i + 1}. ({elev['location']['lat']}, {elev['location']['lng']}): "
+                f"{elev['elevation']:.1f} meters\n"
             )
 
         return {
@@ -788,22 +615,69 @@ async def elevation_tool(
             "formatted": formatted_result,
         }
     except Exception as e:
-        logger.error(f"Error getting elevation: {str(e)}")
-        return {"error": f"Failed to get elevation: {str(e)}"}
+        logger.error(f"Error getting elevation data: {str(e)}")
+        return {"error": f"Failed to get elevation data: {str(e)}"}
 
 
-def format_duration(seconds: int) -> str:
-    """Format duration in seconds to a human-readable string.
+@function_tool
+@with_error_handling
+async def timezone_tool(
+    location: Dict[str, float], timestamp: Optional[int] = None
+) -> Dict[str, Any]:
+    """Get timezone information for a location.
 
     Args:
-        seconds: Duration in seconds
+        location: Dict with "lat" and "lng" fields
+        timestamp: Unix timestamp (defaults to current time)
 
     Returns:
-        Human-readable duration string
+        Dictionary with timezone information
     """
-    hours, remainder = divmod(seconds, 3600)
-    minutes, seconds = divmod(remainder, 60)
+    try:
+        # Validate parameters
+        params = TimeZoneParams(
+            location=location,
+            timestamp=timestamp,
+        )
+    except ValueError as e:
+        return {"error": str(e)}
 
-    if hours > 0:
-        return f"{hours} hr {minutes} min"
-    return f"{minutes} min"
+    logger.info(f"Getting timezone for location: {location}")
+
+    try:
+        # Call the Google Maps MCP through the abstraction layer
+        result = await mcp_manager.invoke(
+            mcp_name="google_maps",
+            method_name="get_timezone",
+            params=params.model_dump(exclude_none=True),
+        )
+
+        # Process result
+        timezone_info = {
+            "timezone_id": result.timezone_id,
+            "timezone_name": result.timezone_id.replace("_", " "),
+            "dst_offset": result.dst_offset,
+            "raw_offset": result.raw_offset,
+        }
+
+        # Calculate total offset in hours
+        total_offset_seconds = timezone_info["dst_offset"] + timezone_info["raw_offset"]
+        total_offset_hours = total_offset_seconds / 3600
+        offset_sign = "+" if total_offset_hours >= 0 else ""
+        timezone_info["total_offset"] = f"{offset_sign}{total_offset_hours:.1f}"
+
+        # Create formatted result
+        formatted_result = (
+            f"Timezone: {timezone_info['timezone_name']}\n"
+            f"({timezone_info['timezone_id']})\n"
+            f"UTC Offset: {timezone_info['total_offset']} hours\n"
+        )
+
+        return {
+            "status": result.status,
+            "timezone": timezone_info,
+            "formatted": formatted_result,
+        }
+    except Exception as e:
+        logger.error(f"Error getting timezone information: {str(e)}")
+        return {"error": f"Failed to get timezone information: {str(e)}"}

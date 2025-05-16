@@ -7,8 +7,8 @@ mapping user-friendly method names to actual Duffel Flights MCP client methods.
 
 from typing import Dict, List
 
-from src.mcp.flights.client import FlightsMCPClient
 from tripsage.config.mcp_settings import mcp_settings
+from tripsage.mcp.flights.client import FlightsMCPClient
 from tripsage.mcp_abstraction.base_wrapper import BaseMCPWrapper
 
 

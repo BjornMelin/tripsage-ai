@@ -7,8 +7,8 @@ mapping user-friendly method names to actual Neo4j Memory MCP client methods.
 
 from typing import Dict, List
 
-from src.mcp.memory.client import MemoryMCPClient
 from tripsage.config.mcp_settings import mcp_settings
+from tripsage.mcp.memory.client import MemoryMCPClient
 from tripsage.mcp_abstraction.base_wrapper import BaseMCPWrapper
 
 

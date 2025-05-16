@@ -7,8 +7,8 @@ mapping user-friendly method names to actual Supabase MCP client methods.
 
 from typing import Dict, List
 
-from src.mcp.supabase.client import SupabaseMCPClient
 from tripsage.config.mcp_settings import mcp_settings
+from tripsage.mcp.supabase.client import SupabaseMCPClient
 from tripsage.mcp_abstraction.base_wrapper import BaseMCPWrapper
 
 

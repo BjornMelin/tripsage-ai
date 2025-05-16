@@ -2,7 +2,7 @@
 Memory tools for TripSage agents.
 
 This module provides function tools that wrap the Neo4j Memory MCP
-client for use with the OpenAI Agents SDK.
+client for use with the OpenAI Agents SDK through the MCPManager abstraction layer.
 """
 
 from typing import Any, Dict, List, Optional
@@ -10,6 +10,8 @@ from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, Field
 
 from agents import function_tool
+from tripsage.mcp_abstraction.exceptions import TripSageMCPError
+from tripsage.mcp_abstraction.manager import mcp_manager
 from tripsage.tools.schemas.memory import (
     AddObservationsResponse,
     CreateEntitiesResponse,
@@ -24,10 +26,8 @@ from tripsage.tools.schemas.memory import (
     Relation,
     SearchNodesResponse,
 )
-from tripsage.utils.client_utils import validate_and_call_mcp_tool
 from tripsage.utils.error_handling import with_error_handling
 from tripsage.utils.logging import get_logger
-from tripsage.utils.settings import settings
 
 # Set up logger
 logger = get_logger(__name__)
@@ -51,15 +51,15 @@ async def get_knowledge_graph() -> Dict[str, Any]:
     try:
         logger.info("Reading knowledge graph")
 
-        # Call the MCP to read the graph
-        result = await validate_and_call_mcp_tool(
-            endpoint=settings.memory_mcp.endpoint,
-            tool_name="read_graph",
+        # Call the MCP via MCPManager
+        result = await mcp_manager.invoke(
+            mcp_name="neo4j_memory",
+            method_name="read_graph",
             params={},
-            response_model=GraphResponse,
-            timeout=settings.memory_mcp.timeout,
-            server_name="Memory MCP",
         )
+
+        # Convert the result to the expected response model
+        result = GraphResponse.model_validate(result)
 
         return {
             "entities": result.entities,
@@ -67,6 +67,9 @@ async def get_knowledge_graph() -> Dict[str, Any]:
             "statistics": getattr(result, "statistics", {}),
         }
 
+    except TripSageMCPError as e:
+        logger.error(f"MCP error reading knowledge graph: {str(e)}")
+        raise
     except Exception as e:
         logger.error(f"Error reading knowledge graph: {str(e)}")
         raise
@@ -86,18 +89,21 @@ async def search_knowledge_graph(query: str) -> Dict[str, Any]:
     try:
         logger.info(f"Searching knowledge graph with query: {query}")
 
-        # Call the MCP to search nodes
-        result = await validate_and_call_mcp_tool(
-            endpoint=settings.memory_mcp.endpoint,
-            tool_name="search_nodes",
+        # Call the MCP via MCPManager
+        result = await mcp_manager.invoke(
+            mcp_name="neo4j_memory",
+            method_name="search_nodes",
             params={"query": query},
-            response_model=SearchNodesResponse,
-            timeout=settings.memory_mcp.timeout,
-            server_name="Memory MCP",
         )
+
+        # Convert the result to the expected response model
+        result = SearchNodesResponse.model_validate(result)
 
         return {"nodes": result.results, "count": result.count}
 
+    except TripSageMCPError as e:
+        logger.error(f"MCP error searching knowledge graph: {str(e)}")
+        raise
     except Exception as e:
         logger.error(f"Error searching knowledge graph: {str(e)}")
         raise
@@ -117,18 +123,21 @@ async def get_entity_details(names: List[str]) -> Dict[str, Any]:
     try:
         logger.info(f"Getting entity details for: {names}")
 
-        # Call the MCP to open nodes
-        result = await validate_and_call_mcp_tool(
-            endpoint=settings.memory_mcp.endpoint,
-            tool_name="open_nodes",
+        # Call the MCP via MCPManager
+        result = await mcp_manager.invoke(
+            mcp_name="neo4j_memory",
+            method_name="open_nodes",
             params={"names": names},
-            response_model=OpenNodesResponse,
-            timeout=settings.memory_mcp.timeout,
-            server_name="Memory MCP",
         )
+
+        # Convert the result to the expected response model
+        result = OpenNodesResponse.model_validate(result)
 
         return {"entities": result.entities, "count": result.count}
 
+    except TripSageMCPError as e:
+        logger.error(f"MCP error getting entity details: {str(e)}")
+        raise
     except Exception as e:
         logger.error(f"Error getting entity details: {str(e)}")
         raise
@@ -151,18 +160,21 @@ async def create_knowledge_entities(entities: List[Entity]) -> Dict[str, Any]:
         # Convert to dictionary format
         entity_dicts = [entity.model_dump(by_alias=True) for entity in entities]
 
-        # Call the MCP to create entities
-        result = await validate_and_call_mcp_tool(
-            endpoint=settings.memory_mcp.endpoint,
-            tool_name="create_entities",
+        # Call the MCP via MCPManager
+        result = await mcp_manager.invoke(
+            mcp_name="neo4j_memory",
+            method_name="create_entities",
             params={"entities": entity_dicts},
-            response_model=CreateEntitiesResponse,
-            timeout=settings.memory_mcp.timeout,
-            server_name="Memory MCP",
         )
+
+        # Convert the result to the expected response model
+        result = CreateEntitiesResponse.model_validate(result)
 
         return {"entities": result.entities, "message": result.message}
 
+    except TripSageMCPError as e:
+        logger.error(f"MCP error creating entities: {str(e)}")
+        raise
     except Exception as e:
         logger.error(f"Error creating entities: {str(e)}")
         raise
@@ -185,18 +197,21 @@ async def create_knowledge_relations(relations: List[Relation]) -> Dict[str, Any
         # Convert to dictionary format
         relation_dicts = [relation.model_dump(by_alias=True) for relation in relations]
 
-        # Call the MCP to create relations
-        result = await validate_and_call_mcp_tool(
-            endpoint=settings.memory_mcp.endpoint,
-            tool_name="create_relations",
+        # Call the MCP via MCPManager
+        result = await mcp_manager.invoke(
+            mcp_name="neo4j_memory",
+            method_name="create_relations",
             params={"relations": relation_dicts},
-            response_model=CreateRelationsResponse,
-            timeout=settings.memory_mcp.timeout,
-            server_name="Memory MCP",
         )
+
+        # Convert the result to the expected response model
+        result = CreateRelationsResponse.model_validate(result)
 
         return {"relations": result.relations, "message": result.message}
 
+    except TripSageMCPError as e:
+        logger.error(f"MCP error creating relations: {str(e)}")
+        raise
     except Exception as e:
         logger.error(f"Error creating relations: {str(e)}")
         raise
@@ -221,18 +236,21 @@ async def add_entity_observations(
         # Convert to dictionary format
         observation_dicts = [obs.model_dump() for obs in observations]
 
-        # Call the MCP to add observations
-        result = await validate_and_call_mcp_tool(
-            endpoint=settings.memory_mcp.endpoint,
-            tool_name="add_observations",
+        # Call the MCP via MCPManager
+        result = await mcp_manager.invoke(
+            mcp_name="neo4j_memory",
+            method_name="add_observations",
             params={"observations": observation_dicts},
-            response_model=AddObservationsResponse,
-            timeout=settings.memory_mcp.timeout,
-            server_name="Memory MCP",
         )
+
+        # Convert the result to the expected response model
+        result = AddObservationsResponse.model_validate(result)
 
         return {"entities": result.updated_entities, "message": result.message}
 
+    except TripSageMCPError as e:
+        logger.error(f"MCP error adding observations: {str(e)}")
+        raise
     except Exception as e:
         logger.error(f"Error adding observations: {str(e)}")
         raise
@@ -252,18 +270,21 @@ async def delete_knowledge_entities(entity_names: List[str]) -> Dict[str, Any]:
     try:
         logger.info(f"Deleting {len(entity_names)} entities")
 
-        # Call the MCP to delete entities
-        result = await validate_and_call_mcp_tool(
-            endpoint=settings.memory_mcp.endpoint,
-            tool_name="delete_entities",
+        # Call the MCP via MCPManager
+        result = await mcp_manager.invoke(
+            mcp_name="neo4j_memory",
+            method_name="delete_entities",
             params={"entityNames": entity_names},
-            response_model=DeleteEntitiesResponse,
-            timeout=settings.memory_mcp.timeout,
-            server_name="Memory MCP",
         )
+
+        # Convert the result to the expected response model
+        result = DeleteEntitiesResponse.model_validate(result)
 
         return {"deleted": result.deleted_count, "message": result.message}
 
+    except TripSageMCPError as e:
+        logger.error(f"MCP error deleting entities: {str(e)}")
+        raise
     except Exception as e:
         logger.error(f"Error deleting entities: {str(e)}")
         raise
@@ -286,18 +307,21 @@ async def delete_knowledge_relations(relations: List[Relation]) -> Dict[str, Any
         # Convert to dictionary format
         relation_dicts = [relation.model_dump(by_alias=True) for relation in relations]
 
-        # Call the MCP to delete relations
-        result = await validate_and_call_mcp_tool(
-            endpoint=settings.memory_mcp.endpoint,
-            tool_name="delete_relations",
+        # Call the MCP via MCPManager
+        result = await mcp_manager.invoke(
+            mcp_name="neo4j_memory",
+            method_name="delete_relations",
             params={"relations": relation_dicts},
-            response_model=DeleteRelationsResponse,
-            timeout=settings.memory_mcp.timeout,
-            server_name="Memory MCP",
         )
+
+        # Convert the result to the expected response model
+        result = DeleteRelationsResponse.model_validate(result)
 
         return {"deleted": result.deleted_count, "message": result.message}
 
+    except TripSageMCPError as e:
+        logger.error(f"MCP error deleting relations: {str(e)}")
+        raise
     except Exception as e:
         logger.error(f"Error deleting relations: {str(e)}")
         raise
@@ -322,18 +346,21 @@ async def delete_entity_observations(
         # Convert to dictionary format
         deletion_dicts = [deletion.model_dump() for deletion in deletions]
 
-        # Call the MCP to delete observations
-        result = await validate_and_call_mcp_tool(
-            endpoint=settings.memory_mcp.endpoint,
-            tool_name="delete_observations",
+        # Call the MCP via MCPManager
+        result = await mcp_manager.invoke(
+            mcp_name="neo4j_memory",
+            method_name="delete_observations",
             params={"deletions": deletion_dicts},
-            response_model=DeleteObservationsResponse,
-            timeout=settings.memory_mcp.timeout,
-            server_name="Memory MCP",
         )
+
+        # Convert the result to the expected response model
+        result = DeleteObservationsResponse.model_validate(result)
 
         return {"entities": result.updated_entities, "message": result.message}
 
+    except TripSageMCPError as e:
+        logger.error(f"MCP error deleting observations: {str(e)}")
+        raise
     except Exception as e:
         logger.error(f"Error deleting observations: {str(e)}")
         raise
@@ -413,6 +440,9 @@ async def initialize_agent_memory(
 
         return session_data
 
+    except TripSageMCPError as e:
+        logger.error(f"MCP error initializing agent memory: {str(e)}")
+        raise
     except Exception as e:
         logger.error(f"Error initializing agent memory: {str(e)}")
         raise
@@ -449,6 +479,9 @@ async def update_agent_memory(user_id: str, updates: Dict[str, Any]) -> Dict[str
 
         return result
 
+    except TripSageMCPError as e:
+        logger.error(f"MCP error updating agent memory: {str(e)}")
+        raise
     except Exception as e:
         logger.error(f"Error updating agent memory: {str(e)}")
         raise
@@ -594,6 +627,9 @@ async def save_session_summary(
             "session_relation": session_relation_result.get("relations", [None])[0],
         }
 
+    except TripSageMCPError as e:
+        logger.error(f"MCP error saving session summary: {str(e)}")
+        raise
     except Exception as e:
         logger.error(f"Error saving session summary: {str(e)}")
         raise

@@ -10,6 +10,7 @@ from typing import Any, Dict, List, Optional
 from openai_agents_sdk import function_tool
 from pydantic import BaseModel, Field
 
+from tripsage.mcp_abstraction.manager import mcp_manager
 from tripsage.tools.schemas.supabase import (
     ApplyMigrationResponse,
     ConfirmCostResponse,
@@ -33,10 +34,8 @@ from tripsage.tools.schemas.supabase import (
     ResetBranchResponse,
     RestoreProjectResponse,
 )
-from tripsage.utils.client_utils import validate_and_call_mcp_tool
 from tripsage.utils.error_handling import with_error_handling
 from tripsage.utils.logging import get_logger
-from tripsage.utils.settings import settings
 
 logger = get_logger(__name__)
 
@@ -57,17 +56,17 @@ async def list_organizations() -> Dict[str, Any]:
         Dictionary with organization information
 
     Raises:
-        MCPError: If the request fails
+        TripSageMCPError: If the request fails
     """
     logger.info("Listing Supabase organizations")
-    result = await validate_and_call_mcp_tool(
-        endpoint=settings.supabase_mcp.endpoint,
-        tool_name="list_organizations",
+    result = await mcp_manager.invoke(
+        mcp_name="supabase",
+        method_name="list_organizations",
         params={},
-        response_model=ListOrganizationsResponse,
-        timeout=settings.supabase_mcp.timeout,
-        server_name="Supabase MCP",
     )
+
+    # Convert the result to the expected response model
+    result = ListOrganizationsResponse.model_validate(result)
 
     # Format the response for agent consumption
     organizations = []
@@ -96,17 +95,17 @@ async def get_organization(id: str) -> Dict[str, Any]:
         Dictionary with organization details
 
     Raises:
-        MCPError: If the request fails
+        TripSageMCPError: If the request fails
     """
     logger.info(f"Getting organization details for ID: {id}")
-    result = await validate_and_call_mcp_tool(
-        endpoint=settings.supabase_mcp.endpoint,
-        tool_name="get_organization",
+    result = await mcp_manager.invoke(
+        mcp_name="supabase",
+        method_name="get_organization",
         params={"id": id},
-        response_model=GetOrganizationResponse,
-        timeout=settings.supabase_mcp.timeout,
-        server_name="Supabase MCP",
     )
+
+    # Convert the result to the expected response model
+    result = GetOrganizationResponse.model_validate(result)
 
     return {
         "id": result.id,
@@ -126,17 +125,17 @@ async def list_projects() -> Dict[str, Any]:
         Dictionary with project information
 
     Raises:
-        MCPError: If the request fails
+        TripSageMCPError: If the request fails
     """
     logger.info("Listing Supabase projects")
-    result = await validate_and_call_mcp_tool(
-        endpoint=settings.supabase_mcp.endpoint,
-        tool_name="list_projects",
+    result = await mcp_manager.invoke(
+        mcp_name="supabase",
+        method_name="list_projects",
         params={},
-        response_model=ListProjectsResponse,
-        timeout=settings.supabase_mcp.timeout,
-        server_name="Supabase MCP",
     )
+
+    # Convert the result to the expected response model
+    result = ListProjectsResponse.model_validate(result)
 
     # Format the response for agent consumption
     projects = []
@@ -166,17 +165,17 @@ async def get_project(id: str) -> Dict[str, Any]:
         Dictionary with project details
 
     Raises:
-        MCPError: If the request fails
+        TripSageMCPError: If the request fails
     """
     logger.info(f"Getting project details for ID: {id}")
-    result = await validate_and_call_mcp_tool(
-        endpoint=settings.supabase_mcp.endpoint,
-        tool_name="get_project",
+    result = await mcp_manager.invoke(
+        mcp_name="supabase",
+        method_name="get_project",
         params={"id": id},
-        response_model=GetProjectResponse,
-        timeout=settings.supabase_mcp.timeout,
-        server_name="Supabase MCP",
     )
+
+    # Convert the result to the expected response model
+    result = GetProjectResponse.model_validate(result)
 
     return {
         "id": result.id,
@@ -205,17 +204,17 @@ async def get_cost(type: str, organization_id: str) -> Dict[str, Any]:
         Dictionary with cost information
 
     Raises:
-        MCPError: If the request fails
+        TripSageMCPError: If the request fails
     """
     logger.info(f"Getting cost for {type} in organization: {organization_id}")
-    result = await validate_and_call_mcp_tool(
-        endpoint=settings.supabase_mcp.endpoint,
-        tool_name="get_cost",
+    result = await mcp_manager.invoke(
+        mcp_name="supabase",
+        method_name="get_cost",
         params={"type": type, "organization_id": organization_id},
-        response_model=GetCostResponse,
-        timeout=settings.supabase_mcp.timeout,
-        server_name="Supabase MCP",
     )
+
+    # Convert the result to the expected response model
+    result = GetCostResponse.model_validate(result)
 
     return {"amount": result.amount, "recurrence": result.recurrence}
 
@@ -235,17 +234,17 @@ async def confirm_cost(type: str, recurrence: str, amount: float) -> Dict[str, A
         Dictionary with confirmation ID
 
     Raises:
-        MCPError: If the request fails
+        TripSageMCPError: If the request fails
     """
     logger.info(f"Confirming {recurrence} cost of {amount} for {type}")
-    result = await validate_and_call_mcp_tool(
-        endpoint=settings.supabase_mcp.endpoint,
-        tool_name="confirm_cost",
+    result = await mcp_manager.invoke(
+        mcp_name="supabase",
+        method_name="confirm_cost",
         params={"type": type, "recurrence": recurrence, "amount": amount},
-        response_model=ConfirmCostResponse,
-        timeout=settings.supabase_mcp.timeout,
-        server_name="Supabase MCP",
     )
+
+    # Convert the result to the expected response model
+    result = ConfirmCostResponse.model_validate(result)
 
     return {"id": result.id}
 
@@ -270,7 +269,7 @@ async def create_project(
         Dictionary with project information
 
     Raises:
-        MCPError: If the request fails
+        TripSageMCPError: If the request fails
     """
     logger.info(f"Creating project '{name}' in organization: {organization_id}")
 
@@ -283,14 +282,14 @@ async def create_project(
     if region:
         params["region"] = region
 
-    result = await validate_and_call_mcp_tool(
-        endpoint=settings.supabase_mcp.endpoint,
-        tool_name="create_project",
+    result = await mcp_manager.invoke(
+        mcp_name="supabase",
+        method_name="create_project",
         params=params,
-        response_model=CreateProjectResponse,
-        timeout=settings.supabase_mcp.timeout,
-        server_name="Supabase MCP",
     )
+
+    # Convert the result to the expected response model
+    result = CreateProjectResponse.model_validate(result)
 
     return {
         "id": result.id,
@@ -317,7 +316,7 @@ async def list_tables(
         Dictionary with table information
 
     Raises:
-        MCPError: If the request fails
+        TripSageMCPError: If the request fails
     """
     logger.info(f"Listing tables for project: {project_id}")
 
@@ -325,14 +324,14 @@ async def list_tables(
     if schemas:
         params["schemas"] = schemas
 
-    result = await validate_and_call_mcp_tool(
-        endpoint=settings.supabase_mcp.endpoint,
-        tool_name="list_tables",
+    result = await mcp_manager.invoke(
+        mcp_name="supabase",
+        method_name="list_tables",
         params=params,
-        response_model=ListTablesResponse,
-        timeout=settings.supabase_mcp.timeout,
-        server_name="Supabase MCP",
     )
+
+    # Convert the result to the expected response model
+    result = ListTablesResponse.model_validate(result)
 
     # Format the response for agent consumption
     tables = []
@@ -356,17 +355,17 @@ async def list_extensions(project_id: str) -> Dict[str, Any]:
         Dictionary with extension information
 
     Raises:
-        MCPError: If the request fails
+        TripSageMCPError: If the request fails
     """
     logger.info(f"Listing extensions for project: {project_id}")
-    result = await validate_and_call_mcp_tool(
-        endpoint=settings.supabase_mcp.endpoint,
-        tool_name="list_extensions",
+    result = await mcp_manager.invoke(
+        mcp_name="supabase",
+        method_name="list_extensions",
         params={"project_id": project_id},
-        response_model=ListExtensionsResponse,
-        timeout=settings.supabase_mcp.timeout,
-        server_name="Supabase MCP",
     )
+
+    # Convert the result to the expected response model
+    result = ListExtensionsResponse.model_validate(result)
 
     # Format the response for agent consumption
     extensions = []
@@ -396,17 +395,17 @@ async def execute_sql(project_id: str, query: str) -> Dict[str, Any]:
         Dictionary with query results
 
     Raises:
-        MCPError: If the request fails
+        TripSageMCPError: If the request fails
     """
     logger.info(f"Executing SQL query on project: {project_id}")
-    result = await validate_and_call_mcp_tool(
-        endpoint=settings.supabase_mcp.endpoint,
-        tool_name="execute_sql",
+    result = await mcp_manager.invoke(
+        mcp_name="supabase",
+        method_name="execute_sql",
         params={"project_id": project_id, "query": query},
-        response_model=ExecuteSQLResponse,
-        timeout=settings.supabase_mcp.timeout,
-        server_name="Supabase MCP",
     )
+
+    # Convert the result to the expected response model
+    result = ExecuteSQLResponse.model_validate(result)
 
     # Format the column data
     columns = [{"name": col.name, "type": col.type} for col in result.columns]
@@ -431,17 +430,17 @@ async def apply_migration(project_id: str, name: str, query: str) -> Dict[str, A
         Dictionary with migration status
 
     Raises:
-        MCPError: If the request fails
+        TripSageMCPError: If the request fails
     """
     logger.info(f"Applying migration '{name}' to project: {project_id}")
-    result = await validate_and_call_mcp_tool(
-        endpoint=settings.supabase_mcp.endpoint,
-        tool_name="apply_migration",
+    result = await mcp_manager.invoke(
+        mcp_name="supabase",
+        method_name="apply_migration",
         params={"project_id": project_id, "name": name, "query": query},
-        response_model=ApplyMigrationResponse,
-        timeout=settings.supabase_mcp.timeout,
-        server_name="Supabase MCP",
     )
+
+    # Convert the result to the expected response model
+    result = ApplyMigrationResponse.model_validate(result)
 
     return {
         "id": result.id,
@@ -463,17 +462,17 @@ async def get_project_url(project_id: str) -> Dict[str, Any]:
         Dictionary with project URL
 
     Raises:
-        MCPError: If the request fails
+        TripSageMCPError: If the request fails
     """
     logger.info(f"Getting API URL for project: {project_id}")
-    result = await validate_and_call_mcp_tool(
-        endpoint=settings.supabase_mcp.endpoint,
-        tool_name="get_project_url",
+    result = await mcp_manager.invoke(
+        mcp_name="supabase",
+        method_name="get_project_url",
         params={"project_id": project_id},
-        response_model=GetProjectUrlResponse,
-        timeout=settings.supabase_mcp.timeout,
-        server_name="Supabase MCP",
     )
+
+    # Convert the result to the expected response model
+    result = GetProjectUrlResponse.model_validate(result)
 
     return {"url": result.url}
 
@@ -490,17 +489,17 @@ async def get_anon_key(project_id: str) -> Dict[str, Any]:
         Dictionary with anonymous key
 
     Raises:
-        MCPError: If the request fails
+        TripSageMCPError: If the request fails
     """
     logger.info(f"Getting anonymous API key for project: {project_id}")
-    result = await validate_and_call_mcp_tool(
-        endpoint=settings.supabase_mcp.endpoint,
-        tool_name="get_anon_key",
+    result = await mcp_manager.invoke(
+        mcp_name="supabase",
+        method_name="get_anon_key",
         params={"project_id": project_id},
-        response_model=GetAnonKeyResponse,
-        timeout=settings.supabase_mcp.timeout,
-        server_name="Supabase MCP",
     )
+
+    # Convert the result to the expected response model
+    result = GetAnonKeyResponse.model_validate(result)
 
     return {"key": result.key}
 
@@ -521,21 +520,21 @@ async def create_branch(
         Dictionary with branch information
 
     Raises:
-        MCPError: If the request fails
+        TripSageMCPError: If the request fails
     """
     logger.info(f"Creating branch '{name}' for project: {project_id}")
-    result = await validate_and_call_mcp_tool(
-        endpoint=settings.supabase_mcp.endpoint,
-        tool_name="create_branch",
+    result = await mcp_manager.invoke(
+        mcp_name="supabase",
+        method_name="create_branch",
         params={
             "project_id": project_id,
             "confirm_cost_id": confirm_cost_id,
             "name": name,
         },
-        response_model=CreateBranchResponse,
-        timeout=settings.supabase_mcp.timeout,
-        server_name="Supabase MCP",
     )
+
+    # Convert the result to the expected response model
+    result = CreateBranchResponse.model_validate(result)
 
     return {
         "id": result.id,
@@ -558,17 +557,17 @@ async def list_branches(project_id: str) -> Dict[str, Any]:
         Dictionary with branch information
 
     Raises:
-        MCPError: If the request fails
+        TripSageMCPError: If the request fails
     """
     logger.info(f"Listing branches for project: {project_id}")
-    result = await validate_and_call_mcp_tool(
-        endpoint=settings.supabase_mcp.endpoint,
-        tool_name="list_branches",
+    result = await mcp_manager.invoke(
+        mcp_name="supabase",
+        method_name="list_branches",
         params={"project_id": project_id},
-        response_model=ListBranchesResponse,
-        timeout=settings.supabase_mcp.timeout,
-        server_name="Supabase MCP",
     )
+
+    # Convert the result to the expected response model
+    result = ListBranchesResponse.model_validate(result)
 
     # Format the response for agent consumption
     branches = []
@@ -598,17 +597,17 @@ async def merge_branch(branch_id: str) -> Dict[str, Any]:
         Dictionary with operation status
 
     Raises:
-        MCPError: If the request fails
+        TripSageMCPError: If the request fails
     """
     logger.info(f"Merging branch: {branch_id}")
-    result = await validate_and_call_mcp_tool(
-        endpoint=settings.supabase_mcp.endpoint,
-        tool_name="merge_branch",
+    result = await mcp_manager.invoke(
+        mcp_name="supabase",
+        method_name="merge_branch",
         params={"branch_id": branch_id},
-        response_model=MergeBranchResponse,
-        timeout=settings.supabase_mcp.timeout,
-        server_name="Supabase MCP",
     )
+
+    # Convert the result to the expected response model
+    result = MergeBranchResponse.model_validate(result)
 
     return {"id": result.id, "status": result.status}
 
@@ -625,17 +624,17 @@ async def delete_branch(branch_id: str) -> Dict[str, Any]:
         Dictionary with operation status
 
     Raises:
-        MCPError: If the request fails
+        TripSageMCPError: If the request fails
     """
     logger.info(f"Deleting branch: {branch_id}")
-    result = await validate_and_call_mcp_tool(
-        endpoint=settings.supabase_mcp.endpoint,
-        tool_name="delete_branch",
+    result = await mcp_manager.invoke(
+        mcp_name="supabase",
+        method_name="delete_branch",
         params={"branch_id": branch_id},
-        response_model=DeleteBranchResponse,
-        timeout=settings.supabase_mcp.timeout,
-        server_name="Supabase MCP",
     )
+
+    # Convert the result to the expected response model
+    result = DeleteBranchResponse.model_validate(result)
 
     return {"id": result.id, "status": result.status}
 
@@ -655,7 +654,7 @@ async def reset_branch(
         Dictionary with operation status
 
     Raises:
-        MCPError: If the request fails
+        TripSageMCPError: If the request fails
     """
     logger.info(f"Resetting branch: {branch_id}")
 
@@ -663,14 +662,14 @@ async def reset_branch(
     if migration_version:
         params["migration_version"] = migration_version
 
-    result = await validate_and_call_mcp_tool(
-        endpoint=settings.supabase_mcp.endpoint,
-        tool_name="reset_branch",
+    result = await mcp_manager.invoke(
+        mcp_name="supabase",
+        method_name="reset_branch",
         params=params,
-        response_model=ResetBranchResponse,
-        timeout=settings.supabase_mcp.timeout,
-        server_name="Supabase MCP",
     )
+
+    # Convert the result to the expected response model
+    result = ResetBranchResponse.model_validate(result)
 
     return {"id": result.id, "status": result.status}
 
@@ -687,17 +686,17 @@ async def rebase_branch(branch_id: str) -> Dict[str, Any]:
         Dictionary with operation status
 
     Raises:
-        MCPError: If the request fails
+        TripSageMCPError: If the request fails
     """
     logger.info(f"Rebasing branch: {branch_id}")
-    result = await validate_and_call_mcp_tool(
-        endpoint=settings.supabase_mcp.endpoint,
-        tool_name="rebase_branch",
+    result = await mcp_manager.invoke(
+        mcp_name="supabase",
+        method_name="rebase_branch",
         params={"branch_id": branch_id},
-        response_model=RebaseBranchResponse,
-        timeout=settings.supabase_mcp.timeout,
-        server_name="Supabase MCP",
     )
+
+    # Convert the result to the expected response model
+    result = RebaseBranchResponse.model_validate(result)
 
     return {"id": result.id, "status": result.status}
 
@@ -714,17 +713,17 @@ async def pause_project(project_id: str) -> Dict[str, Any]:
         Dictionary with operation status
 
     Raises:
-        MCPError: If the request fails
+        TripSageMCPError: If the request fails
     """
     logger.info(f"Pausing project: {project_id}")
-    result = await validate_and_call_mcp_tool(
-        endpoint=settings.supabase_mcp.endpoint,
-        tool_name="pause_project",
+    result = await mcp_manager.invoke(
+        mcp_name="supabase",
+        method_name="pause_project",
         params={"project_id": project_id},
-        response_model=PauseProjectResponse,
-        timeout=settings.supabase_mcp.timeout,
-        server_name="Supabase MCP",
     )
+
+    # Convert the result to the expected response model
+    result = PauseProjectResponse.model_validate(result)
 
     return {"id": result.id, "status": result.status}
 
@@ -741,16 +740,16 @@ async def restore_project(project_id: str) -> Dict[str, Any]:
         Dictionary with operation status
 
     Raises:
-        MCPError: If the request fails
+        TripSageMCPError: If the request fails
     """
     logger.info(f"Restoring project: {project_id}")
-    result = await validate_and_call_mcp_tool(
-        endpoint=settings.supabase_mcp.endpoint,
-        tool_name="restore_project",
+    result = await mcp_manager.invoke(
+        mcp_name="supabase",
+        method_name="restore_project",
         params={"project_id": project_id},
-        response_model=RestoreProjectResponse,
-        timeout=settings.supabase_mcp.timeout,
-        server_name="Supabase MCP",
     )
+
+    # Convert the result to the expected response model
+    result = RestoreProjectResponse.model_validate(result)
 
     return {"id": result.id, "status": result.status}

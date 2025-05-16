@@ -11,6 +11,8 @@ from typing import Any, Dict, Optional
 from pydantic import BaseModel, Field
 
 from agents import WebSearchTool
+from tripsage.mcp_abstraction.exceptions import TripSageMCPError
+from tripsage.mcp_abstraction.manager import mcp_manager
 from tripsage.utils.cache import ContentType, WebOperationsCache
 from tripsage.utils.error_handling import log_exception
 from tripsage.utils.logging import get_logger
@@ -165,27 +167,36 @@ async def get_web_cache_stats(time_window: str = "1h") -> WebCacheStats:
     Returns:
         Cache statistics
     """
-    metrics = await web_cache.get_stats(time_window)
+    try:
+        metrics = await mcp_manager.invoke(
+            mcp_name="redis",
+            method_name="get_stats",
+            params={"time_window": time_window},
+        )
 
-    # Calculate hit ratio
-    total_ops = metrics.hits + metrics.misses
-    hit_ratio = metrics.hits / total_ops if total_ops > 0 else 0.0
+        # Calculate hit ratio
+        total_ops = metrics.hits + metrics.misses
+        hit_ratio = metrics.hits / total_ops if total_ops > 0 else 0.0
 
-    # Convert size to MB
-    size_mb = (
-        metrics.total_size_bytes / (1024 * 1024)
-        if metrics.total_size_bytes > 0
-        else 0.0
-    )
+        # Convert size to MB
+        size_mb = (
+            metrics.total_size_bytes / (1024 * 1024)
+            if metrics.total_size_bytes > 0
+            else 0.0
+        )
 
-    return WebCacheStats(
-        cache_hits=metrics.hits,
-        cache_misses=metrics.misses,
-        hit_ratio=hit_ratio,
-        key_count=metrics.key_count,
-        size_mb=size_mb,
-        time_window=time_window,
-    )
+        return WebCacheStats(
+            cache_hits=metrics.hits,
+            cache_misses=metrics.misses,
+            hit_ratio=hit_ratio,
+            key_count=metrics.key_count,
+            size_mb=size_mb,
+            time_window=time_window,
+        )
+    except TripSageMCPError as e:
+        logger.error(f"Error getting web cache stats: {str(e)}")
+        # Return default stats on error
+        return WebCacheStats(time_window=time_window)
 
 
 async def invalidate_web_cache_for_query(query: str) -> int:
@@ -197,17 +208,25 @@ async def invalidate_web_cache_for_query(query: str) -> int:
     Returns:
         Number of keys invalidated
     """
-    # Generate hash for the query
-    import hashlib
+    try:
+        # Generate hash for the query
+        import hashlib
 
-    query_hash = hashlib.md5(query.lower().strip().encode()).hexdigest()
+        query_hash = hashlib.md5(query.lower().strip().encode()).hexdigest()
 
-    # Invalidate all entries containing this hash
-    pattern = f"*{query_hash}*"
-    count = await web_cache.invalidate_pattern(pattern)
+        # Invalidate all entries containing this hash
+        pattern = f"*{query_hash}*"
+        count = await mcp_manager.invoke(
+            mcp_name="redis",
+            method_name="invalidate_pattern",
+            params={"pattern": pattern},
+        )
 
-    logger.info(f"Invalidated {count} cache entries for query: {query}")
-    return count
+        logger.info(f"Invalidated {count} cache entries for query: {query}")
+        return count
+    except TripSageMCPError as e:
+        logger.error(f"Error invalidating web cache for query '{query}': {str(e)}")
+        return 0
 
 
 async def web_cached(func: Any, content_type: ContentType) -> Any:
@@ -220,7 +239,16 @@ async def web_cached(func: Any, content_type: ContentType) -> Any:
     Returns:
         The wrapped function
     """
-    return web_cache.web_cached(content_type)(func)
+    try:
+        return await mcp_manager.invoke(
+            mcp_name="redis",
+            method_name="web_cached",
+            params={"func": func, "content_type": content_type},
+        )
+    except TripSageMCPError as e:
+        logger.error(f"Error applying web_cached decorator: {str(e)}")
+        # Return the original function on error
+        return func
 
 
 # Export API

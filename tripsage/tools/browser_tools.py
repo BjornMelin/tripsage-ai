@@ -9,8 +9,9 @@ It also includes Playwright MCP tools for general browser automation.
 from typing import Any, Dict, Literal, Optional
 
 from agents import function_tool
+from tripsage.mcp_abstraction.exceptions import TripSageMCPError
+from tripsage.mcp_abstraction.manager import mcp_manager
 from tripsage.tools.browser.playwright_mcp_client import (
-    PlaywrightMCPClient,
     PlaywrightNavigateOptions,
     PlaywrightScreenshotOptions,
 )
@@ -149,7 +150,10 @@ async def navigate_to_url(
     """
     logger.info(f"Navigating to {url} using Playwright MCP")
 
-    async with PlaywrightMCPClient() as client:
+    try:
+        # Initialize MCP
+        await mcp_manager.initialize_mcp("playwright")
+
         options = PlaywrightNavigateOptions(
             browser_type=browser_type,
             headless=headless,
@@ -158,10 +162,16 @@ async def navigate_to_url(
         )
 
         # Navigate to the URL
-        nav_result = await client.navigate(url, options)
+        nav_result = await mcp_manager.invoke(
+            mcp_name="playwright",
+            method_name="navigate",
+            params={"url": url, "options": options},
+        )
 
         # Get the visible text content
-        text_content = await client.get_visible_text()
+        text_content = await mcp_manager.invoke(
+            mcp_name="playwright", method_name="get_visible_text", params={}
+        )
 
         # Create a summary (just take first 500 chars for example)
         content_summary = (
@@ -172,6 +182,12 @@ async def navigate_to_url(
             "title": nav_result.get("title", "Unknown title"),
             "url": url,
             "content_summary": content_summary,
+        }
+    except TripSageMCPError as e:
+        logger.error(f"Error navigating to {url}: {str(e)}")
+        return {
+            "error": str(e),
+            "url": url,
         }
 
 
@@ -196,9 +212,14 @@ async def take_webpage_screenshot(
     """
     logger.info(f"Taking screenshot of {url} using Playwright MCP")
 
-    async with PlaywrightMCPClient() as client:
+    try:
+        # Initialize MCP
+        await mcp_manager.initialize_mcp("playwright")
+
         # Navigate to the URL
-        await client.navigate(url)
+        await mcp_manager.invoke(
+            mcp_name="playwright", method_name="navigate", params={"url": url}
+        )
 
         # Take the screenshot
         screenshot_options = PlaywrightScreenshotOptions(
@@ -207,11 +228,23 @@ async def take_webpage_screenshot(
             store_base64=True,
         )
 
-        result = await client.take_screenshot(name, screenshot_options)
+        result = await mcp_manager.invoke(
+            mcp_name="playwright",
+            method_name="take_screenshot",
+            params={"name": name, "options": screenshot_options},
+        )
 
         return {
             "success": True,
             "screenshot_base64": result.get("base64", ""),
+            "url": url,
+            "name": name,
+        }
+    except TripSageMCPError as e:
+        logger.error(f"Error taking screenshot of {url}: {str(e)}")
+        return {
+            "success": False,
+            "error": str(e),
             "url": url,
             "name": name,
         }
@@ -234,21 +267,38 @@ async def extract_webpage_content(
     """
     logger.info(f"Extracting {format} content from {url} using Playwright MCP")
 
-    async with PlaywrightMCPClient() as client:
+    try:
+        # Initialize MCP
+        await mcp_manager.initialize_mcp("playwright")
+
         # Navigate to the URL
-        await client.navigate(url)
+        await mcp_manager.invoke(
+            mcp_name="playwright", method_name="navigate", params={"url": url}
+        )
 
         # Extract the content
         if format == "text":
-            content = await client.get_visible_text()
+            content = await mcp_manager.invoke(
+                mcp_name="playwright", method_name="get_visible_text", params={}
+            )
         else:  # HTML
-            content = await client.get_visible_html()
+            content = await mcp_manager.invoke(
+                mcp_name="playwright", method_name="get_visible_html", params={}
+            )
 
         return {
             "success": True,
             "url": url,
             "format": format,
             "content": content,
+        }
+    except TripSageMCPError as e:
+        logger.error(f"Error extracting content from {url}: {str(e)}")
+        return {
+            "success": False,
+            "error": str(e),
+            "url": url,
+            "format": format,
         }
 
 
@@ -271,22 +321,39 @@ async def fill_web_form(
     """
     logger.info(f"Filling web form at {url} using Playwright MCP")
 
-    async with PlaywrightMCPClient() as client:
+    try:
+        # Initialize MCP
+        await mcp_manager.initialize_mcp("playwright")
+
         # Navigate to the URL
-        await client.navigate(url)
+        await mcp_manager.invoke(
+            mcp_name="playwright", method_name="navigate", params={"url": url}
+        )
 
         # Fill each form field
         for selector, value in form_fields.items():
-            await client.fill(selector, value)
+            await mcp_manager.invoke(
+                mcp_name="playwright",
+                method_name="fill",
+                params={"selector": selector, "value": value},
+            )
             logger.debug(f"Filled field {selector} with value {value}")
 
         # Submit the form if a submit selector is provided
         if submit_selector:
-            await client.click(submit_selector)
+            await mcp_manager.invoke(
+                mcp_name="playwright",
+                method_name="click",
+                params={"selector": submit_selector},
+            )
             logger.debug(f"Clicked submit button {submit_selector}")
 
         # Get the current URL (which might have changed after submission)
-        result = await client.execute_raw_command("Playwright_navigate", {"url": ""})
+        result = await mcp_manager.invoke(
+            mcp_name="playwright",
+            method_name="execute_command",
+            params={"command": "Playwright_navigate", "params": {"url": ""}},
+        )
         current_url = result.get("url", url)
 
         return {
@@ -294,4 +361,11 @@ async def fill_web_form(
             "url": current_url,
             "message": "Form filled successfully"
             + (" and submitted" if submit_selector else ""),
+        }
+    except TripSageMCPError as e:
+        logger.error(f"Error filling form at {url}: {str(e)}")
+        return {
+            "success": False,
+            "error": str(e),
+            "url": url,
         }

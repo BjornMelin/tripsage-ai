@@ -5,12 +5,35 @@ This module provides a singleton manager that handles configuration loading,
 client initialization, and method routing for all MCP clients.
 """
 
+import logging
 import threading
+import time
+import traceback
 from typing import Any, Dict, Optional
 
+import httpx
+from opentelemetry import trace
+from opentelemetry.trace import Status, StatusCode
+
 from .base_wrapper import BaseMCPWrapper
-from .exceptions import MCPManagerError, MCPNotFoundError
+from .exceptions import (
+    MCPAuthenticationError,
+    MCPClientError,
+    MCPInvocationError,
+    MCPManagerError,
+    MCPMethodNotFoundError,
+    MCPNotFoundError,
+    MCPNotRegisteredError,
+    MCPRateLimitError,
+    MCPTimeoutError,
+)
 from .registry import registry
+
+# Get logger for this module
+logger = logging.getLogger(__name__)
+
+# Get tracer for OpenTelemetry
+tracer = trace.get_tracer(__name__)
 
 
 class MCPManager:
@@ -78,7 +101,7 @@ class MCPManager:
             return wrapper
 
         except KeyError as e:
-            raise MCPNotFoundError(
+            raise MCPNotRegisteredError(
                 f"MCP '{mcp_name}' not found in registry", mcp_name=mcp_name
             ) from e
         except Exception as e:
@@ -119,24 +142,162 @@ class MCPManager:
             The result from the MCP method call
 
         Raises:
-            MCPNotFoundError: If the MCP is not found
+            MCPNotRegisteredError: If the MCP is not found
             MCPManagerError: If the invocation fails
         """
-        try:
-            # Initialize the MCP if not already done
-            wrapper = await self.initialize_mcp(mcp_name)
+        # Create OpenTelemetry span
+        with tracer.start_as_current_span(
+            f"mcp.call.{mcp_name}.{method_name}",
+            attributes={
+                "mcp.name": mcp_name,
+                "mcp.method": method_name,
+            },
+        ) as span:
+            # Start timing
+            start_time = time.time()
 
-            # Prepare parameters
-            call_params = params or {}
-            call_params.update(kwargs)
+            # Log the start of the MCP call (don't log sensitive params)
+            logger.info(
+                "MCP call started",
+                extra={
+                    "mcp_name": mcp_name,
+                    "method": method_name,
+                    "has_params": bool(params or kwargs),
+                },
+            )
 
-            # Invoke the method
-            return wrapper.invoke_method(method_name, **call_params)
+            try:
+                # Initialize the MCP if not already done
+                wrapper = await self.initialize_mcp(mcp_name)
 
-        except Exception as e:
-            raise MCPManagerError(
-                f"Failed to invoke {mcp_name}.{method_name}: {str(e)}"
-            ) from e
+                # Prepare parameters
+                call_params = params or {}
+                call_params.update(kwargs)
+
+                # Invoke the method
+                result = await wrapper.invoke_method(method_name, **call_params)
+
+                # Calculate duration
+                duration_ms = (time.time() - start_time) * 1000
+
+                # Log successful completion
+                logger.info(
+                    "MCP call completed successfully",
+                    extra={
+                        "mcp_name": mcp_name,
+                        "method": method_name,
+                        "duration_ms": duration_ms,
+                        "success": True,
+                    },
+                )
+
+                # Set span status to OK
+                span.set_status(Status(StatusCode.OK))
+                span.set_attribute("mcp.success", True)
+                span.set_attribute("mcp.duration_ms", duration_ms)
+
+                return result
+
+            except Exception as e:
+                # Calculate duration
+                duration_ms = (time.time() - start_time) * 1000
+
+                # Map common exceptions to specific MCP errors
+                mapped_exception = self._map_exception(e, mcp_name, method_name)
+
+                # Log the error
+                logger.error(
+                    f"MCP call failed: {str(mapped_exception)}",
+                    extra={
+                        "mcp_name": mcp_name,
+                        "method": method_name,
+                        "duration_ms": duration_ms,
+                        "success": False,
+                        "error_type": mapped_exception.__class__.__name__,
+                        "error_message": str(mapped_exception),
+                        "traceback": traceback.format_exc(),
+                    },
+                )
+
+                # Record exception on span
+                span.record_exception(mapped_exception)
+                error_name = mapped_exception.__class__.__name__
+                span.set_status(
+                    Status(StatusCode.ERROR, f"{error_name}: {str(mapped_exception)}")
+                )
+                span.set_attribute("mcp.success", False)
+                span.set_attribute("mcp.error_type", error_name)
+                span.set_attribute("mcp.duration_ms", duration_ms)
+
+                raise mapped_exception from e
+
+    def _map_exception(
+        self, original_error: Exception, mcp_name: str, method_name: str
+    ) -> MCPClientError:
+        """
+        Map common exceptions to specific MCP error types.
+
+        Args:
+            original_error: The original exception
+            mcp_name: Name of the MCP
+            method_name: Name of the method
+
+        Returns:
+            A specific MCPClientError subtype
+        """
+        error_message = str(original_error)
+
+        # Check for timeout errors
+        if isinstance(original_error, (httpx.TimeoutException, TimeoutError)):
+            timeout_seconds = getattr(original_error, "timeout", 30)
+            return MCPTimeoutError(
+                f"MCP operation timed out after {timeout_seconds}s: {error_message}",
+                mcp_name=mcp_name,
+                timeout_seconds=timeout_seconds,
+                original_error=original_error,
+            )
+
+        # Check for authentication errors
+        if isinstance(original_error, httpx.HTTPStatusError):
+            if original_error.response.status_code == 401:
+                return MCPAuthenticationError(
+                    f"Authentication failed for MCP {mcp_name}: {error_message}",
+                    mcp_name=mcp_name,
+                    original_error=original_error,
+                )
+            elif original_error.response.status_code == 429:
+                retry_after = original_error.response.headers.get("Retry-After")
+                return MCPRateLimitError(
+                    f"Rate limit exceeded for MCP {mcp_name}: {error_message}",
+                    mcp_name=mcp_name,
+                    retry_after=float(retry_after) if retry_after else None,
+                    original_error=original_error,
+                )
+            elif original_error.response.status_code == 404:
+                return MCPNotFoundError(
+                    f"Resource not found in MCP {mcp_name}: {error_message}",
+                    mcp_name=mcp_name,
+                    original_error=original_error,
+                )
+
+        # Check for method not found errors
+        if (
+            "method not found" in error_message.lower()
+            or "unknown method" in error_message.lower()
+        ):
+            return MCPMethodNotFoundError(
+                f"Method '{method_name}' not found in MCP {mcp_name}: {error_message}",
+                mcp_name=mcp_name,
+                method_name=method_name,
+            )
+
+        # Default to generic invocation error
+        return MCPInvocationError(
+            f"Failed to invoke {mcp_name}.{method_name}: {error_message}",
+            mcp_name=mcp_name,
+            method_name=method_name,
+            original_error=original_error,
+        )
 
     def get_available_mcps(self) -> list[str]:
         """

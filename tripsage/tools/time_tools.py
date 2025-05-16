@@ -2,22 +2,20 @@
 Time-related function tools for TripSage agents.
 
 This module provides OpenAI Agents SDK function tools for time operations
-using the Time MCP client, allowing agents to get current time, convert
-time between timezones, and perform other time-related operations.
+using the Time MCP through the abstraction layer, allowing agents to get
+current time, convert time between timezones, and perform other time-related
+operations.
 """
 
 from typing import Any, Dict, List
 
 from agents import function_tool
-from tripsage.config.app_settings import settings
+from tripsage.mcp_abstraction.manager import mcp_manager
 from tripsage.tools.schemas.time import (
     ConvertTimeParams,
     GetCurrentTimeParams,
     ItineraryItem,
-    TimeConversionResponse,
-    TimeResponse,
 )
-from tripsage.utils.client_utils import validate_and_call_mcp_tool
 from tripsage.utils.error_handling import with_error_handling
 from tripsage.utils.logging import get_logger
 
@@ -38,26 +36,31 @@ async def get_current_time_tool(timezone: str) -> Dict[str, Any]:
     logger.info(f"Getting current time for timezone: {timezone}")
 
     # Validate parameters
-    _params = GetCurrentTimeParams(timezone=timezone)
+    try:
+        # Validate timezone format - if this passes, the timezone is valid
+        GetCurrentTimeParams(timezone=timezone)
+    except ValueError as e:
+        return {"error": str(e)}
 
-    # Call the Time MCP
-    result = await validate_and_call_mcp_tool(
-        endpoint=settings.time_mcp_endpoint,
-        tool_name="get_current_time",
-        params={"timezone": timezone},
-        response_model=TimeResponse,
-        timeout=30.0,
-        server_name="Time MCP",
-    )
+    # Call the Time MCP through the abstraction layer
+    try:
+        result = await mcp_manager.invoke(
+            mcp_name="time",
+            method_name="get_current_time",
+            params={"timezone": timezone},
+        )
 
-    return {
-        "current_time": result.current_time,
-        "current_date": result.current_date,
-        "timezone": result.timezone,
-        "utc_offset": result.utc_offset,
-        "is_dst": result.is_dst,
-        "formatted": (f"{result.current_date} {result.current_time} ({timezone})"),
-    }
+        return {
+            "current_time": result.current_time,
+            "current_date": result.current_date,
+            "timezone": result.timezone,
+            "utc_offset": result.utc_offset,
+            "is_dst": result.is_dst,
+            "formatted": (f"{result.current_date} {result.current_time} ({timezone})"),
+        }
+    except Exception as e:
+        logger.error(f"Error getting current time: {str(e)}")
+        return {"error": f"Failed to get current time: {str(e)}"}
 
 
 @function_tool
@@ -76,38 +79,47 @@ async def convert_timezone_tool(time: str, from_tz: str, to_tz: str) -> Dict[str
     logger.info(f"Converting time {time} from {from_tz} to {to_tz}")
 
     # Validate parameters
-    params = ConvertTimeParams(
-        time=time,
-        source_timezone=from_tz,
-        target_timezone=to_tz,
-    )
+    try:
+        # Validate parameter formats - if this passes, the parameters are valid
+        ConvertTimeParams(
+            time=time,
+            source_timezone=from_tz,
+            target_timezone=to_tz,
+        )
+    except ValueError as e:
+        return {"error": str(e)}
 
-    # Call the Time MCP
-    result = await validate_and_call_mcp_tool(
-        endpoint=settings.time_mcp_endpoint,
-        tool_name="convert_time",
-        params=params,
-        response_model=TimeConversionResponse,
-        timeout=30.0,
-        server_name="Time MCP",
-    )
+    # Call the Time MCP through the abstraction layer
+    try:
+        result = await mcp_manager.invoke(
+            mcp_name="time",
+            method_name="convert_time",
+            params={
+                "time": time,
+                "source_timezone": from_tz,
+                "target_timezone": to_tz,
+            },
+        )
 
-    # Extract target time from datetime
-    target_time = ""
-    if "T" in result.target.datetime:
-        target_time = result.target.datetime.split("T")[1].split("+")[0]
+        # Extract target time from datetime
+        target_time = ""
+        if "T" in result.target.datetime:
+            target_time = result.target.datetime.split("T")[1].split("+")[0]
 
-    return {
-        "source_time": time,
-        "source_timezone": from_tz,
-        "target_time": target_time,
-        "target_timezone": to_tz,
-        "time_difference": result.time_difference,
-        "formatted": (
-            f"{time} {from_tz} = {target_time} {to_tz} "
-            f"(difference: {result.time_difference})"
-        ),
-    }
+        return {
+            "source_time": time,
+            "source_timezone": from_tz,
+            "target_time": target_time,
+            "target_timezone": to_tz,
+            "time_difference": result.time_difference,
+            "formatted": (
+                f"{time} {from_tz} = {target_time} {to_tz} "
+                f"(difference: {result.time_difference})"
+            ),
+        }
+    except Exception as e:
+        logger.error(f"Error converting time: {str(e)}")
+        return {"error": f"Failed to convert time: {str(e)}"}
 
 
 @function_tool
@@ -147,323 +159,325 @@ async def get_local_time_tool(location: str) -> Dict[str, Any]:
         "shanghai": "Asia/Shanghai",
         "toronto": "America/Toronto",
         "vancouver": "America/Vancouver",
+        "montreal": "America/Toronto",
+        "miami": "America/New_York",
+        "boston": "America/New_York",
+        "seattle": "America/Los_Angeles",
+        "atlanta": "America/New_York",
+        "denver": "America/Denver",
+        "phoenix": "America/Phoenix",
+        "madrid": "Europe/Madrid",
+        "barcelona": "Europe/Madrid",
+        "amsterdam": "Europe/Amsterdam",
+        "moscow": "Europe/Moscow",
+        "cairo": "Africa/Cairo",
+        "johannesburg": "Africa/Johannesburg",
         "melbourne": "Australia/Melbourne",
+        "perth": "Australia/Perth",
         "auckland": "Pacific/Auckland",
+        "seoul": "Asia/Seoul",
+        "taipei": "Asia/Taipei",
+        "istanbul": "Europe/Istanbul",
+        "athens": "Europe/Athens",
+        "prague": "Europe/Prague",
+        "vienna": "Europe/Vienna",
+        "zurich": "Europe/Zurich",
+        "stockholm": "Europe/Stockholm",
+        "oslo": "Europe/Oslo",
+        "copenhagen": "Europe/Copenhagen",
+        "brussels": "Europe/Brussels",
+        "lisbon": "Europe/Lisbon",
+        "dublin": "Europe/Dublin",
+        "edinburgh": "Europe/London",
+        "tel aviv": "Asia/Jerusalem",
+        "kuala lumpur": "Asia/Kuala_Lumpur",
+        "jakarta": "Asia/Jakarta",
+        "manila": "Asia/Manila",
+        "ho chi minh city": "Asia/Ho_Chi_Minh",
+        "hanoi": "Asia/Bangkok",
+        "mexico city": "America/Mexico_City",
+        "buenos aires": "America/Argentina/Buenos_Aires",
         "rio de janeiro": "America/Sao_Paulo",
         "sao paulo": "America/Sao_Paulo",
-        "mexico city": "America/Mexico_City",
-        "johannesburg": "Africa/Johannesburg",
-        "cairo": "Africa/Cairo",
-        "istanbul": "Europe/Istanbul",
-        "moscow": "Europe/Moscow",
+        "lima": "America/Lima",
+        "santiago": "America/Santiago",
+        "bogota": "America/Bogota",
     }
 
+    # Find timezone for location (case-insensitive)
     location_lower = location.lower()
-    if location_lower in location_timezone_map:
-        timezone = location_timezone_map[location_lower]
-    else:
-        # Default to UTC if location not found
-        timezone = "UTC"
-        logger.warning(f"No timezone mapping found for location: {location}, using UTC")
+    timezone = location_timezone_map.get(location_lower)
 
-    # Get current time in the location's timezone
-    result = await get_current_time_tool(timezone)
+    if not timezone:
+        # Try partial matching
+        for city, tz in location_timezone_map.items():
+            if location_lower in city or city in location_lower:
+                timezone = tz
+                break
 
-    return {
-        "location": location,
-        "current_time": result.get("current_time", ""),
-        "current_date": result.get("current_date", ""),
-        "timezone": result.get("timezone", ""),
-        "utc_offset": result.get("utc_offset", ""),
-        "is_dst": result.get("is_dst", False),
-        "formatted": (
-            f"Current time in {location}: {result.get('current_date', '')} "
-            f"{result.get('current_time', '')} ({result.get('timezone', '')})"
-        ),
-    }
+    if not timezone:
+        return {
+            "error": f"Cannot determine timezone for location: {location}. "
+            "Please provide a major city name or IANA timezone."
+        }
+
+    # Get current time for the determined timezone
+    return await get_current_time_tool(timezone=timezone)
 
 
 @function_tool
 @with_error_handling
-async def calculate_flight_arrival_tool(
-    departure_time: str,
-    departure_location: str,
-    flight_duration_hours: float,
-    arrival_location: str,
+async def calculate_time_difference_tool(
+    time1_zone: str, time2_zone: str
 ) -> Dict[str, Any]:
-    """Calculate the arrival time for a flight accounting for timezone differences.
+    """Calculate the time difference between two timezones.
+
+    Args:
+        time1_zone: First IANA timezone name
+        time2_zone: Second IANA timezone name
+
+    Returns:
+        Dictionary with time difference information
+    """
+    logger.info(f"Calculating time difference between {time1_zone} and {time2_zone}")
+
+    try:
+        # Get current time in both zones
+        time1_result = await mcp_manager.invoke(
+            mcp_name="time",
+            method_name="get_current_time",
+            params={"timezone": time1_zone},
+        )
+
+        time2_result = await mcp_manager.invoke(
+            mcp_name="time",
+            method_name="get_current_time",
+            params={"timezone": time2_zone},
+        )
+
+        # Calculate difference based on UTC offsets
+        offset1 = time1_result.utc_offset
+        offset2 = time2_result.utc_offset
+
+        # Parse offsets (format: "+05:30" or "-08:00")
+        def parse_offset(offset_str):
+            if not offset_str:
+                return 0
+            sign = 1 if offset_str[0] == "+" else -1
+            parts = offset_str[1:].split(":")
+            hours = int(parts[0])
+            minutes = int(parts[1]) if len(parts) > 1 else 0
+            return sign * (hours * 60 + minutes)
+
+        offset1_minutes = parse_offset(offset1)
+        offset2_minutes = parse_offset(offset2)
+        difference_minutes = offset2_minutes - offset1_minutes
+
+        # Convert to hours and minutes
+        hours = abs(difference_minutes) // 60
+        minutes = abs(difference_minutes) % 60
+        difference_str = f"{hours}h {minutes}m" if minutes > 0 else f"{hours}h"
+
+        if difference_minutes > 0:
+            difference_str = f"+{difference_str}"
+        elif difference_minutes < 0:
+            difference_str = f"-{difference_str}"
+        else:
+            difference_str = "No time difference"
+
+        return {
+            "timezone1": time1_zone,
+            "timezone2": time2_zone,
+            "utc_offset1": offset1,
+            "utc_offset2": offset2,
+            "difference": difference_str,
+            "difference_minutes": difference_minutes,
+            "formatted": f"{time2_zone} is {difference_str} from {time1_zone}",
+        }
+    except Exception as e:
+        logger.error(f"Error calculating time difference: {str(e)}")
+        return {"error": f"Failed to calculate time difference: {str(e)}"}
+
+
+@function_tool
+@with_error_handling
+async def schedule_meeting_time_tool(
+    participants: List[Dict[str, str]], duration_hours: float = 1.0
+) -> Dict[str, Any]:
+    """Suggest optimal meeting times across multiple timezones.
+
+    Args:
+        participants: List of participant dicts with 'name' and 'timezone' keys
+        duration_hours: Meeting duration in hours
+
+    Returns:
+        Dictionary with suggested meeting times for all participants
+    """
+    logger.info(
+        f"Finding meeting time for {len(participants)} participants "
+        f"({duration_hours}h duration)"
+    )
+
+    if not participants or len(participants) < 2:
+        return {"error": "At least 2 participants required for meeting scheduling"}
+
+    try:
+        # Call the Time MCP through the abstraction layer
+        result = await mcp_manager.invoke(
+            mcp_name="time",
+            method_name="find_meeting_time",
+            params={
+                "participants": [
+                    {
+                        "name": p["name"],
+                        "timezone": p["timezone"],
+                        "availability": p.get("availability", "09:00-17:00"),
+                    }
+                    for p in participants
+                ],
+                "duration_hours": duration_hours,
+            },
+        )
+
+        return {
+            "suggested_utc_time": result.suggested_utc_time,
+            "local_times": result.local_times,
+            "is_optimal": result.is_optimal,
+            "conflicts": result.conflicts,
+            "duration_hours": duration_hours,
+            "formatted": (
+                f"Suggested meeting time: {result.suggested_utc_time} UTC\n"
+                + "\n".join(
+                    [f"- {name}: {time}" for name, time in result.local_times.items()]
+                )
+            ),
+        }
+    except Exception as e:
+        logger.error(f"Error scheduling meeting: {str(e)}")
+        return {"error": f"Failed to schedule meeting: {str(e)}"}
+
+
+@function_tool
+@with_error_handling
+async def process_travel_itinerary_times_tool(
+    itinerary: List[ItineraryItem],
+) -> Dict[str, Any]:
+    """Process and convert times in a travel itinerary to local timezones.
+
+    Args:
+        itinerary: List of itinerary items with locations and times
+
+    Returns:
+        Dictionary with processed itinerary including local times
+    """
+    logger.info(f"Processing times for {len(itinerary)} itinerary items")
+
+    try:
+        # Convert to the expected format for the MCP
+        items = []
+        for item in itinerary:
+            items.append(
+                {
+                    "name": item.name,
+                    "location": item.location,
+                    "datetime": item.datetime,
+                    "duration_hours": item.duration_hours,
+                }
+            )
+
+        # Call the Time MCP through the abstraction layer
+        result = await mcp_manager.invoke(
+            mcp_name="time",
+            method_name="process_itinerary",
+            params={
+                "items": items,
+            },
+        )
+
+        # Process the results
+        processed_items = []
+        for item in result.processed_items:
+            processed_items.append(
+                {
+                    "name": item.name,
+                    "location": item.location,
+                    "original_datetime": item.original_datetime,
+                    "local_datetime": item.local_datetime,
+                    "timezone": item.timezone,
+                    "duration_hours": item.duration_hours,
+                    "formatted": (
+                        f"{item.name} at {item.location}: "
+                        f"{item.local_datetime} ({item.timezone})"
+                    ),
+                }
+            )
+
+        # Create summary
+        timezones = list({item["timezone"] for item in processed_items})
+        summary = (
+            f"Itinerary crosses {len(timezones)} timezone(s): {', '.join(timezones)}"
+        )
+
+        return {
+            "processed_items": processed_items,
+            "timezones": timezones,
+            "summary": summary,
+            "formatted": "\n".join([item["formatted"] for item in processed_items]),
+        }
+    except Exception as e:
+        logger.error(f"Error processing itinerary times: {str(e)}")
+        return {"error": f"Failed to process itinerary times: {str(e)}"}
+
+
+@function_tool
+@with_error_handling
+async def calculate_flight_arrival_time_tool(
+    departure_time: str,
+    departure_timezone: str,
+    flight_duration_hours: float,
+    arrival_timezone: str,
+) -> Dict[str, Any]:
+    """Calculate arrival time for a flight accounting for timezone changes.
 
     Args:
         departure_time: Departure time in 24-hour format (HH:MM)
-        departure_location: Departure location (city name)
-        flight_duration_hours: Flight duration in hours (e.g., 5.5)
-        arrival_location: Arrival location (city name)
+        departure_timezone: IANA timezone of departure
+        flight_duration_hours: Flight duration in hours
+        arrival_timezone: IANA timezone of arrival
 
     Returns:
-        Dictionary with arrival time information
+        Dictionary with calculated arrival time information
     """
     logger.info(
-        f"Calculating flight arrival: {departure_time} from {departure_location} "
-        f"to {arrival_location} (duration: {flight_duration_hours}h)"
+        f"Calculating arrival time for {flight_duration_hours}h flight "
+        f"from {departure_timezone} to {arrival_timezone}"
     )
 
-    # Get timezone for departure location
-    departure_info = await get_local_time_tool(departure_location)
-    departure_timezone = departure_info.get("timezone", "UTC")
-
-    # Get timezone for arrival location
-    arrival_info = await get_local_time_tool(arrival_location)
-    arrival_timezone = arrival_info.get("timezone", "UTC")
-
-    # Calculate flight arrival time
-    departure_date_info = await get_current_time_tool(departure_timezone)
-    _departure_date = departure_date_info.get("current_date", "")
-
-    # Parse departure time
     try:
-        hours, minutes = map(int, departure_time.split(":"))
-    except ValueError:
-        return {"error": "Invalid departure time format. Please use HH:MM format."}
-
-    # Add flight duration
-    duration_hours = int(flight_duration_hours)
-    duration_minutes = int((flight_duration_hours - duration_hours) * 60)
-
-    # Calculate arrival time in departure timezone
-    arrival_hours = hours + duration_hours
-    arrival_minutes = minutes + duration_minutes
-
-    # Adjust for overflow
-    while arrival_minutes >= 60:
-        arrival_hours += 1
-        arrival_minutes -= 60
-
-    day_offset = 0
-    while arrival_hours >= 24:
-        day_offset += 1
-        arrival_hours -= 24
-
-    # Format arrival time
-    arrival_time_in_departure_tz = f"{arrival_hours:02d}:{arrival_minutes:02d}"
-
-    # Convert to arrival timezone
-    conversion = await convert_timezone_tool(
-        time=arrival_time_in_departure_tz,
-        from_tz=departure_timezone,
-        to_tz=arrival_timezone,
-    )
-
-    # Create response
-    result = {
-        "departure_location": departure_location,
-        "departure_timezone": departure_timezone,
-        "departure_time": departure_time,
-        "flight_duration": f"{duration_hours}h {duration_minutes}m",
-        "arrival_location": arrival_location,
-        "arrival_timezone": arrival_timezone,
-        "arrival_time_local": conversion.get("target_time", ""),
-        "arrival_time_departure_tz": arrival_time_in_departure_tz,
-        "day_offset": day_offset,
-        "time_difference": conversion.get("time_difference", ""),
-    }
-
-    day_text = (
-        f" (+{day_offset} day{'s' if day_offset > 1 else ''})" if day_offset > 0 else ""
-    )
-
-    result["formatted"] = (
-        f"Flight from {departure_location} ({departure_time}) "
-        f"to {arrival_location}\nDuration: "
-        f"{result['flight_duration']}\n"
-        f"Local arrival time: {result['arrival_time_local']}{day_text} "
-        f"({arrival_timezone})\n"
-        f"Time zone difference: {result['time_difference']}"
-    )
-
-    return result
-
-
-@function_tool
-@with_error_handling
-async def find_meeting_times_tool(
-    first_location: str,
-    second_location: str,
-    first_available_hours: str = "9-17",
-    second_available_hours: str = "9-17",
-) -> Dict[str, Any]:
-    """Find suitable meeting times across different timezones.
-
-    Args:
-        first_location: First participant's location (city name)
-        second_location: Second participant's location (city name)
-        first_available_hours: Hours range for first participant (format: "9-17")
-        second_available_hours: Hours range for second participant (format: "9-17")
-
-    Returns:
-        Dictionary with suitable meeting times in both timezones
-    """
-    logger.info(
-        f"Finding meeting times for {first_location} ({first_available_hours}) "
-        f"and {second_location} ({second_available_hours})"
-    )
-
-    # Parse available hours
-    try:
-        first_start, first_end = map(int, first_available_hours.split("-"))
-        second_start, second_end = map(int, second_available_hours.split("-"))
-    except ValueError:
-        return {
-            "error": (
-                "Invalid hours format. Please use the format 'start-end' "
-                "(e.g., '9-17')."
-            )
-        }
-
-    # Get timezone for first location
-    first_info = await get_local_time_tool(first_location)
-    first_timezone = first_info.get("timezone", "UTC")
-
-    # Get timezone for second location
-    second_info = await get_local_time_tool(second_location)
-    second_timezone = second_info.get("timezone", "UTC")
-
-    # Find suitable meeting times
-    suitable_times = []
-
-    # Step through each hour in the first timezone's available range
-    for hour in range(first_start, first_end):
-        for minute in [0, 30]:  # Check both :00 and :30 times
-            first_time = f"{hour:02d}:{minute:02d}"
-
-            # Convert to second timezone
-            conversion = await convert_timezone_tool(
-                time=first_time,
-                from_tz=first_timezone,
-                to_tz=second_timezone,
-            )
-
-            second_time = conversion.get("target_time", "00:00")
-
-            try:
-                # Extract hour from time string
-                second_hour = int(second_time.split(":")[0])
-            except (ValueError, IndexError):
-                # Reset to midnight if parsing fails
-                second_hour = 0
-
-            # Check if time is suitable (within available hours in second timezone)
-            if second_start <= second_hour < second_end:
-                meeting_time = {
-                    "first_timezone": first_timezone,
-                    "first_time": first_time,
-                    "second_timezone": second_timezone,
-                    "second_time": second_time,
-                    "time_difference": conversion.get("time_difference", ""),
-                }
-                suitable_times.append(meeting_time)
-
-    # Format results
-    if not suitable_times:
-        return {
-            "first_location": first_location,
-            "first_timezone": first_timezone,
-            "second_location": second_location,
-            "second_timezone": second_timezone,
-            "suitable_times": [],
-            "time_difference": "",
-            "count": 0,
-            "formatted": (
-                f"No suitable meeting times found between {first_location} and "
-                f"{second_location} during specified hours."
-            ),
-        }
-
-    # Get time difference from any suitable time
-    time_difference = suitable_times[0].get("time_difference", "")
-
-    formatted_times = []
-    for i, time in enumerate(suitable_times[:5], 1):  # Show top 5 options
-        formatted_times.append(
-            f"{i}. {time['first_time']} in {first_location} = "
-            f"{time['second_time']} in {second_location}"
+        # Call the Time MCP through the abstraction layer
+        result = await mcp_manager.invoke(
+            mcp_name="time",
+            method_name="calculate_arrival_time",
+            params={
+                "departure_time": departure_time,
+                "departure_timezone": departure_timezone,
+                "flight_duration_hours": flight_duration_hours,
+                "arrival_timezone": arrival_timezone,
+            },
         )
 
-    formatted_result = (
-        f"Suitable meeting times between {first_location} and {second_location}:\n"
-        f"{chr(10).join(formatted_times)}\n\n"
-        f"Time difference: {time_difference}"
-    )
-
-    return {
-        "first_location": first_location,
-        "first_timezone": first_timezone,
-        "second_location": second_location,
-        "second_timezone": second_timezone,
-        "suitable_times": suitable_times,
-        "time_difference": time_difference,
-        "count": len(suitable_times),
-        "formatted": formatted_result,
-    }
-
-
-@function_tool
-@with_error_handling
-async def create_timezone_aware_itinerary_tool(
-    itinerary_items: List[Dict[str, Any]],
-) -> Dict[str, List[Dict[str, Any]]]:
-    """Create a timezone-aware itinerary for a multi-city trip.
-
-    Args:
-        itinerary_items: List of itinerary items with location, activity,
-                         and time info (in UTC or local time)
-
-    Returns:
-        Dictionary with timezone-aware itinerary items
-    """
-    logger.info(f"Creating timezone-aware itinerary with {len(itinerary_items)} items")
-
-    processed_itinerary = []
-
-    for item in itinerary_items:
-        # Validate input item
-        try:
-            item_model = ItineraryItem.model_validate(item)
-        except Exception as e:
-            logger.warning(f"Invalid itinerary item: {str(e)}")
-            # Include the original item in the response
-            processed_itinerary.append(item)
-            continue
-
-        # Get local timezone for the location
-        location_info = await get_local_time_tool(item_model.location)
-        location_timezone = location_info.get("timezone", "UTC")
-
-        # If time is in UTC, convert to local time
-        local_time = item_model.time or ""
-        if item_model.time and item_model.time_format == "UTC":
-            time_conversion = await convert_timezone_tool(
-                time=item_model.time,
-                from_tz="UTC",
-                to_tz=location_timezone,
-            )
-            local_time = time_conversion.get("target_time", "00:00")
-
-        # Add timezone information to the itinerary item
-        processed_item = {
-            "location": item_model.location,
-            "activity": item_model.activity,
-            "time": item_model.time,
-            "time_format": item_model.time_format,
-            "timezone": location_timezone,
-            "local_time": local_time,
-            "utc_offset": location_info.get("utc_offset", ""),
+        return {
+            "departure_time": result.departure_time,
+            "arrival_time": result.arrival_time,
+            "departure_timezone": departure_timezone,
+            "arrival_timezone": arrival_timezone,
+            "flight_duration": flight_duration_hours,
+            "formatted": (
+                f"Departure: {result.departure_time} ({departure_timezone})\n"
+                f"Arrival: {result.arrival_time} ({arrival_timezone})\n"
+                f"Flight duration: {flight_duration_hours}h"
+            ),
         }
-
-        # Add any extra fields from the original item
-        for key, value in item.items():
-            if key not in processed_item:
-                processed_item[key] = value
-
-        processed_itinerary.append(processed_item)
-
-    return {"itinerary": processed_itinerary, "count": len(processed_itinerary)}
+    except Exception as e:
+        logger.error(f"Error calculating flight arrival time: {str(e)}")
+        return {"error": f"Failed to calculate arrival time: {str(e)}"}

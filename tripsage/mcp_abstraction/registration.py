@@ -7,12 +7,24 @@ MCPClientRegistry. This code runs automatically on import.
 
 from tripsage.mcp_abstraction.registry import registry
 from tripsage.mcp_abstraction.wrappers.airbnb_wrapper import AirbnbMCPWrapper
-from tripsage.mcp_abstraction.wrappers.duffel_flights_wrapper import DuffelFlightsMCPWrapper
+from tripsage.mcp_abstraction.wrappers.crawl4ai_wrapper import Crawl4AIMCPWrapper
+from tripsage.mcp_abstraction.wrappers.duffel_flights_wrapper import (
+    DuffelFlightsMCPWrapper,
+)
+from tripsage.mcp_abstraction.wrappers.firecrawl_wrapper import FirecrawlMCPWrapper
+from tripsage.mcp_abstraction.wrappers.google_calendar_wrapper import (
+    GoogleCalendarMCPWrapper,
+)
 from tripsage.mcp_abstraction.wrappers.google_maps_wrapper import GoogleMapsMCPWrapper
 from tripsage.mcp_abstraction.wrappers.neo4j_memory_wrapper import Neo4jMemoryMCPWrapper
 from tripsage.mcp_abstraction.wrappers.playwright_wrapper import PlaywrightMCPWrapper
+from tripsage.mcp_abstraction.wrappers.redis_wrapper import RedisMCPWrapper
 from tripsage.mcp_abstraction.wrappers.supabase_wrapper import SupabaseMCPWrapper
+from tripsage.mcp_abstraction.wrappers.time_wrapper import TimeMCPWrapper
 from tripsage.mcp_abstraction.wrappers.weather_wrapper import WeatherMCPWrapper
+from tripsage.mcp_abstraction.wrappers.web_search_wrapper import (
+    CachedWebSearchToolWrapper,
+)
 from tripsage.utils.logging import get_module_logger
 
 logger = get_module_logger(__name__)
@@ -70,6 +82,48 @@ def register_default_wrappers():
     registry.register(
         mcp_name="airbnb",
         wrapper_class=AirbnbMCPWrapper,
+        replace=True,
+    )
+
+    # Register Firecrawl MCP wrapper
+    registry.register(
+        mcp_name="firecrawl",
+        wrapper_class=FirecrawlMCPWrapper,
+        replace=True,
+    )
+
+    # Register Crawl4AI MCP wrapper
+    registry.register(
+        mcp_name="crawl4ai",
+        wrapper_class=Crawl4AIMCPWrapper,
+        replace=True,
+    )
+
+    # Register Time MCP wrapper
+    registry.register(
+        mcp_name="time",
+        wrapper_class=TimeMCPWrapper,
+        replace=True,
+    )
+
+    # Register Google Calendar MCP wrapper
+    registry.register(
+        mcp_name="google_calendar",
+        wrapper_class=GoogleCalendarMCPWrapper,
+        replace=True,
+    )
+
+    # Register Redis MCP wrapper
+    registry.register(
+        mcp_name="redis",
+        wrapper_class=RedisMCPWrapper,
+        replace=True,
+    )
+
+    # Register Web Search Tool wrapper
+    registry.register(
+        mcp_name="web_search",
+        wrapper_class=CachedWebSearchToolWrapper,
         replace=True,
     )
 

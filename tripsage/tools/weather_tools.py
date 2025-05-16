@@ -3,16 +3,14 @@ Weather-related function tools for TripSage.
 
 This module provides OpenAI Agents SDK function tools for weather operations,
 allowing agents to get current weather, forecasts, and weather-based
-travel recommendations using the Weather MCP.
+travel recommendations using the Weather MCP through the abstraction layer.
 """
 
 from typing import Any, Dict, List, Optional
 
 from agents import function_tool
-from tripsage.clients.weather import WeatherMCPClient
-from tripsage.tools.schemas.weather import (
-    WeatherLocation,
-)
+from tripsage.mcp_abstraction.manager import mcp_manager
+from tripsage.tools.schemas.weather import WeatherLocation
 from tripsage.utils.error_handling import with_error_handling
 from tripsage.utils.logging import get_logger
 
@@ -51,16 +49,17 @@ async def get_current_weather_tool(
 
     logger.info(f"Getting current weather for location: {location.model_dump()}")
 
-    # Get client instance
-    client = await WeatherMCPClient.get_instance()
-
     try:
-        # Call the Weather MCP client
-        result = await client.get_current_weather(
-            city=location.city,
-            country=location.country,
-            lat=location.lat,
-            lon=location.lon,
+        # Call the Weather MCP through the abstraction layer
+        result = await mcp_manager.invoke(
+            mcp_name="weather",
+            method_name="get_current_weather",
+            params={
+                "city": location.city,
+                "country": location.country,
+                "lat": location.lat,
+                "lon": location.lon,
+            },
         )
 
         # Format the result for better readability
@@ -95,9 +94,6 @@ async def get_current_weather_tool(
     except Exception as e:
         logger.error(f"Error getting current weather: {str(e)}")
         return {"error": f"Failed to get current weather: {str(e)}"}
-    finally:
-        # Ensure client is disconnected
-        await client.disconnect()
 
 
 @function_tool
@@ -137,564 +133,340 @@ async def get_weather_forecast_tool(
     # Validate days parameter
     days = max(1, min(16, days))  # Ensure days is between 1 and 16
 
-    # Get client instance
-    client = await WeatherMCPClient.get_instance()
-
     try:
-        # Call the Weather MCP client
-        result = await client.get_forecast(
-            city=location.city,
-            country=location.country,
-            lat=location.lat,
-            lon=location.lon,
-            days=days,
+        # Call the Weather MCP through the abstraction layer
+        result = await mcp_manager.invoke(
+            mcp_name="weather",
+            method_name="get_forecast",
+            params={
+                "city": location.city,
+                "country": location.country,
+                "lat": location.lat,
+                "lon": location.lon,
+                "days": days,
+            },
         )
 
-        # Create a summary of the forecast
-        daily_summaries: List[str] = []
-        for day in result.daily:
-            daily_summaries.append(
-                f"{day.date}: {day.temp_min}°C to {day.temp_max}°C, "
-                f"{day.weather.description}"
+        # Format daily summaries for better readability
+        formatted_result = f"Weather forecast for {result.location.get('name', '')}:\n"
+        for i, day in enumerate(result.forecast[:5]):  # Limit to first 5 days
+            formatted_result += (
+                f"Day {i + 1}: {day.weather.description}, "
+                f"High: {day.temp_max}°C, Low: {day.temp_min}°C\n"
             )
-
-        formatted_result = (
-            f"Weather forecast for {result.location.get('name', '')}:\n"
-            f"{chr(10).join(daily_summaries)}"
-        )
 
         return {
             "location": result.location,
-            "daily": [day.model_dump() for day in result.daily],
+            "timezone": result.timezone,
+            "forecast": [
+                {
+                    "date": day.date,
+                    "temperature": {
+                        "day": day.temperature,
+                        "min": day.temp_min,
+                        "max": day.temp_max,
+                        "night": day.temp_night,
+                        "evening": day.temp_evening,
+                        "morning": day.temp_morning,
+                    },
+                    "feels_like": {
+                        "day": day.feels_like,
+                        "night": day.feels_like_night,
+                        "evening": day.feels_like_evening,
+                        "morning": day.feels_like_morning,
+                    },
+                    "humidity": day.humidity,
+                    "pressure": day.pressure,
+                    "wind_speed": day.wind_speed,
+                    "wind_direction": day.wind_direction,
+                    "clouds": day.clouds,
+                    "weather": {
+                        "id": day.weather.id,
+                        "main": day.weather.main,
+                        "description": day.weather.description,
+                        "icon": day.weather.icon,
+                    },
+                    "rain": day.rain,
+                    "snow": day.snow,
+                    "uvi": day.uvi,
+                }
+                for day in result.forecast
+            ],
             "source": result.source,
             "formatted": formatted_result,
         }
     except Exception as e:
         logger.error(f"Error getting weather forecast: {str(e)}")
         return {"error": f"Failed to get weather forecast: {str(e)}"}
-    finally:
-        # Ensure client is disconnected
-        await client.disconnect()
 
 
 @function_tool
 @with_error_handling
-async def get_travel_recommendation_tool(
+async def get_weather_recommendation_tool(
     city: Optional[str] = None,
     country: Optional[str] = None,
     lat: Optional[float] = None,
     lon: Optional[float] = None,
-    start_date: Optional[str] = None,
-    end_date: Optional[str] = None,
-    activities: Optional[List[str]] = None,
+    activity_type: str = "general",
 ) -> Dict[str, Any]:
-    """Get travel recommendations based on weather conditions.
+    """Get weather-based travel recommendations for a location.
 
     Args:
         city: City name (e.g., 'Paris')
         country: Country code (e.g., 'FR')
         lat: Latitude coordinate (optional if city is provided)
         lon: Longitude coordinate (optional if city is provided)
-        start_date: Trip start date (YYYY-MM-DD)
-        end_date: Trip end date (YYYY-MM-DD)
-        activities: Planned activities (e.g., ['hiking', 'sightseeing'])
+        activity_type: Type of activity
+            (e.g., 'outdoor', 'sightseeing', 'beach', 'hiking')
 
     Returns:
-        Dictionary with travel recommendations
+        Dictionary with weather recommendations
     """
-    # Validate location parameters
-    try:
-        location = WeatherLocation(
-            city=city,
-            country=country,
-            lat=lat,
-            lon=lon,
-        )
-    except ValueError as e:
-        return {"error": str(e)}
+    # Get current weather first
+    weather_result = await get_current_weather_tool(
+        city=city, country=country, lat=lat, lon=lon
+    )
 
-    logger.info(f"Getting travel recommendations for location: {location.model_dump()}")
+    if "error" in weather_result:
+        return weather_result
 
-    # Get client instance
-    client = await WeatherMCPClient.get_instance()
+    temperature = weather_result["temperature"]
+    humidity = weather_result["humidity"]
+    wind_speed = weather_result["wind_speed"]
+    weather_main = weather_result["weather"]["main"]
+    weather_desc = weather_result["weather"]["description"]
 
-    try:
-        # Call the Weather MCP client
-        result = await client.get_travel_recommendation(
-            city=location.city,
-            country=location.country,
-            lat=location.lat,
-            lon=location.lon,
-            start_date=start_date,
-            end_date=end_date,
-            activities=activities,
-        )
+    # Basic recommendation logic
+    recommendations = []
+    suitable_activities = []
+    warnings = []
 
-        # Format the recommendations for better readability
-        recommendations = result.recommendations
-        summary = recommendations.get("summary", "")
-        clothing_tips = recommendations.get("clothing", [])
-        activity_tips = recommendations.get("activities", [])
-        forecast_tips = recommendations.get("forecast_based", [])
+    # Temperature-based recommendations
+    if temperature < 0:
+        recommendations.append("Very cold weather - wear heavy winter clothing")
+        suitable_activities.extend(["winter sports", "indoor activities"])
+        warnings.append("Risk of frostbite in exposed skin")
+    elif temperature < 10:
+        recommendations.append("Cool weather - bring warm layers")
+        suitable_activities.extend(["hiking", "city tours", "museums"])
+    elif temperature < 20:
+        recommendations.append("Mild weather - light jacket recommended")
+        suitable_activities.extend(["outdoor sightseeing", "cycling", "walking tours"])
+    elif temperature < 30:
+        recommendations.append("Pleasant weather - comfortable clothing")
+        suitable_activities.extend(["all outdoor activities", "beach", "water sports"])
+    else:
+        recommendations.append("Hot weather - stay hydrated and use sun protection")
+        suitable_activities.extend(["water activities", "indoor attractions"])
+        warnings.append("Heat exposure risk - avoid midday sun")
 
-        formatted_result = f"{summary}\n\nClothing recommendations:\n"
-        for tip in clothing_tips:
-            formatted_result += f"- {tip}\n"
+    # Weather conditions
+    if weather_main == "Rain":
+        recommendations.append("Rainy conditions - bring waterproof gear")
+        warnings.append("Outdoor activities may be affected")
+        suitable_activities = ["museums", "indoor shopping", "covered attractions"]
+    elif weather_main == "Snow":
+        recommendations.append("Snowy conditions - wear appropriate footwear")
+        suitable_activities = ["winter sports", "indoor activities"]
+        warnings.append("Travel may be affected by snow")
+    elif weather_main == "Thunderstorm":
+        recommendations.append("Storms expected - avoid outdoor activities")
+        warnings.append("Dangerous weather conditions")
+        suitable_activities = ["indoor activities only"]
 
-        formatted_result += "\nActivity recommendations:\n"
-        for tip in activity_tips:
-            formatted_result += f"- {tip}\n"
+    # Activity-specific recommendations
+    activity_recommendations = {
+        "beach": {
+            "min_temp": 20,
+            "ideal_temp": 25,
+            "max_wind": 30,
+            "avoid_weather": ["Rain", "Thunderstorm"],
+        },
+        "hiking": {
+            "min_temp": 5,
+            "ideal_temp": 18,
+            "max_wind": 40,
+            "avoid_weather": ["Thunderstorm", "Heavy Rain"],
+        },
+        "sightseeing": {
+            "min_temp": 0,
+            "ideal_temp": 20,
+            "max_wind": 50,
+            "avoid_weather": ["Thunderstorm"],
+        },
+        "outdoor": {
+            "min_temp": 10,
+            "ideal_temp": 22,
+            "max_wind": 35,
+            "avoid_weather": ["Thunderstorm", "Heavy Rain"],
+        },
+    }
 
-        if forecast_tips:
-            formatted_result += "\nForecast-based recommendations:\n"
-            for tip in forecast_tips:
-                formatted_result += f"- {tip}\n"
+    activity_info = activity_recommendations.get(
+        activity_type, activity_recommendations["general"]
+    )
 
-        return {
-            "current_weather": result.current_weather,
-            "forecast": result.forecast,
-            "recommendations": result.recommendations,
-            "formatted": formatted_result,
-        }
-    except Exception as e:
-        logger.error(f"Error getting travel recommendations: {str(e)}")
-        return {"error": f"Failed to get travel recommendations: {str(e)}"}
-    finally:
-        # Ensure client is disconnected
-        await client.disconnect()
+    # Check if activity is suitable
+    activity_suitable = True
+    unsuitable_reasons = []
+
+    if temperature < activity_info.get("min_temp", -10):
+        activity_suitable = False
+        unsuitable_reasons.append("too cold")
+    if wind_speed > activity_info.get("max_wind", 100):
+        activity_suitable = False
+        unsuitable_reasons.append("too windy")
+    if weather_main in activity_info.get("avoid_weather", []):
+        activity_suitable = False
+        unsuitable_reasons.append(f"unsuitable weather ({weather_main.lower()})")
+
+    location_name = weather_result["location"]["name"]
+    recommendation_text = f"Weather recommendation for {location_name}:\n"
+    recommendation_text += f"Current conditions: {temperature}°C, {weather_desc}\n"
+    if activity_suitable:
+        activity_name = activity_type.capitalize()
+        recommendation_text += f"✓ {activity_name} activities are recommended\n"
+    else:
+        activity_name = activity_type.capitalize()
+        reasons = ", ".join(unsuitable_reasons)
+        not_recommended = f"not recommended: {reasons}"
+        recommendation_text += f"✗ {activity_name} activities {not_recommended}\n"
+    recommendation_text += "\nRecommendations:\n"
+    for rec in recommendations:
+        recommendation_text += f"- {rec}\n"
+    if warnings:
+        recommendation_text += "\nWarnings:\n"
+        for warning in warnings:
+            recommendation_text += f"⚠️ {warning}\n"
+
+    return {
+        "location": weather_result["location"],
+        "activity_type": activity_type,
+        "suitable_for_activity": activity_suitable,
+        "unsuitable_reasons": unsuitable_reasons,
+        "recommendations": recommendations,
+        "suitable_activities": suitable_activities,
+        "warnings": warnings,
+        "current_conditions": {
+            "temperature": temperature,
+            "weather": weather_main,
+            "description": weather_desc,
+            "humidity": humidity,
+            "wind_speed": wind_speed,
+        },
+        "formatted": recommendation_text,
+    }
 
 
 @function_tool
 @with_error_handling
-async def get_destination_weather_tool(destination: str) -> Dict[str, Any]:
-    """Get current weather for a travel destination.
+async def get_destination_weather_tool(
+    destination: str, arrival_date: Optional[str] = None
+) -> Dict[str, Any]:
+    """Get weather information for a travel destination.
 
     Args:
-        destination: Travel destination (e.g., "Paris" or "Paris, FR")
+        destination: Travel destination name (e.g., 'Paris, France')
+        arrival_date: Expected arrival date (YYYY-MM-DD format)
 
     Returns:
-        Dictionary containing current weather information
+        Dictionary with destination weather information
     """
     logger.info(f"Getting weather for destination: {destination}")
 
-    # Parse city and country from destination string
-    parts = [part.strip() for part in destination.split(",")]
-    city = parts[0]
-    country = parts[1] if len(parts) > 1 else None
+    # Parse destination to extract city and country
+    parts = destination.split(",")
+    city = parts[0].strip()
+    country = parts[1].strip() if len(parts) > 1 else None
 
-    # Get client instance
-    client = await WeatherMCPClient.get_instance()
+    # Get current weather
+    current_weather = await get_current_weather_tool(city=city, country=country)
 
-    try:
-        # Call the Weather MCP client
-        result = await client.get_current_weather(
-            city=city,
-            country=country,
-        )
+    # Get forecast if arrival date is specified
+    forecast = None
+    if arrival_date:
+        forecast_result = await get_weather_forecast_tool(city=city, country=country)
+        if "error" not in forecast_result:
+            forecast = forecast_result
 
-        # Format the result
-        formatted_result = (
-            f"Weather in {destination}: {result.temperature}°C, "
-            f"{result.weather.description}. "
-            f"Feels like: {result.feels_like}°C. "
-            f"Wind: {result.wind_speed} m/s."
-        )
+    # Prepare response
+    result = {
+        "destination": destination,
+        "current_weather": current_weather,
+        "arrival_date": arrival_date,
+    }
 
-        return {
-            "destination": destination,
-            "temperature": result.temperature,
-            "feels_like": result.feels_like,
-            "temp_min": result.temp_min,
-            "temp_max": result.temp_max,
-            "humidity": result.humidity,
-            "pressure": result.pressure,
-            "wind_speed": result.wind_speed,
-            "wind_direction": result.wind_direction,
-            "clouds": result.clouds,
-            "weather": {
-                "id": result.weather.id,
-                "main": result.weather.main,
-                "description": result.weather.description,
-                "icon": result.weather.icon,
-            },
-            "location": result.location,
-            "timestamp": result.timestamp,
-            "source": result.source,
-            "formatted": formatted_result,
-        }
-    except Exception as e:
-        logger.error(f"Error getting destination weather: {str(e)}")
-        return {"error": f"Failed to get weather for {destination}: {str(e)}"}
-    finally:
-        # Ensure client is disconnected
-        await client.disconnect()
+    if forecast:
+        result["forecast"] = forecast
+        # Try to find forecast for arrival date
+        for day in forecast.get("forecast", []):
+            if day["date"].startswith(arrival_date):
+                result["arrival_day_forecast"] = day
+                break
+
+    return result
 
 
 @function_tool
 @with_error_handling
 async def get_trip_weather_summary_tool(
-    destination: str, start_date: str, end_date: str
+    destinations: List[str], dates: Optional[List[str]] = None
 ) -> Dict[str, Any]:
-    """Get a weather summary for a trip period.
+    """Get weather summary for multiple trip destinations.
 
     Args:
-        destination: Travel destination (e.g., "Paris" or "Paris, FR")
-        start_date: Trip start date (YYYY-MM-DD)
-        end_date: Trip end date (YYYY-MM-DD)
+        destinations: List of destination names
+        dates: Optional list of dates corresponding to each destination
 
     Returns:
-        Dictionary containing weather summary for the trip period
+        Dictionary with weather summary for all destinations
     """
-    logger.info(
-        f"Getting trip weather summary for {destination} from "
-        f"{start_date} to {end_date}"
-    )
-
-    # Parse city and country from destination string
-    parts = [part.strip() for part in destination.split(",")]
-    city = parts[0]
-    country = parts[1] if len(parts) > 1 else None
-
-    # Get client instance
-    client = await WeatherMCPClient.get_instance()
-
-    try:
-        # Call the Weather MCP client to get forecast
-        forecast_result = await client.get_forecast(
-            city=city,
-            country=country,
-            days=16,  # Maximum forecast days
-        )
-
-        # Filter daily forecast to trip dates
-        trip_days = []
-        for day in forecast_result.daily:
-            date = day.date
-            if start_date <= date <= end_date:
-                trip_days.append(day.model_dump())
-
-        # Calculate temperature statistics
-        avg_temps = [day["temp_avg"] for day in trip_days]
-        min_temps = [day["temp_min"] for day in trip_days]
-        max_temps = [day["temp_max"] for day in trip_days]
-
-        # Count weather conditions
-        weather_counts = {}
-        for day in trip_days:
-            condition = day["weather"]["main"]
-            weather_counts[condition] = weather_counts.get(condition, 0) + 1
-
-        # Find most common condition
-        most_common = (
-            max(weather_counts.items(), key=lambda x: x[1]) if weather_counts else None
-        )
-
-        # Create summary result
-        summary = {
-            "destination": destination,
-            "start_date": start_date,
-            "end_date": end_date,
-            "temperature": {
-                "average": sum(avg_temps) / len(avg_temps) if avg_temps else None,
-                "min": min(min_temps) if min_temps else None,
-                "max": max(max_temps) if max_temps else None,
-            },
-            "conditions": {
-                "most_common": most_common[0] if most_common else None,
-                "frequency": most_common[1] / len(trip_days)
-                if most_common and trip_days
-                else None,
-                "breakdown": weather_counts,
-            },
-            "days": trip_days,
-        }
-
-        # Create formatted summary
-        trip_length = len(trip_days)
-        most_common_condition = most_common[0] if most_common else "unknown"
-        avg_temp = summary["temperature"]["average"]
-        temp_range = (
-            f"{summary['temperature']['min']}°C to {summary['temperature']['max']}°C"
-        )
-
-        formatted_result = (
-            f"Weather summary for {destination} ({start_date} to {end_date}):\n"
-            f"• Trip duration: {trip_length} days\n"
-            f"• Average temperature: {avg_temp:.1f}°C (range: {temp_range})\n"
-            f"• Most common condition: {most_common_condition} "
-            f"({int(weather_counts.get(most_common_condition, 0))} days)\n\n"
-            f"Daily breakdown:\n"
-        )
-
-        for day in trip_days:
-            formatted_result += (
-                f"• {day['date']}: {day['temp_min']}°C to {day['temp_max']}°C, "
-                f"{day['weather']['description']}\n"
-            )
-
-        summary["formatted"] = formatted_result
-        return summary
-
-    except Exception as e:
-        logger.error(f"Error getting trip weather summary: {str(e)}")
-        return {
-            "error": f"Failed to get trip weather summary: {str(e)}",
-            "destination": destination,
-            "start_date": start_date,
-            "end_date": end_date,
-        }
-    finally:
-        # Ensure client is disconnected
-        await client.disconnect()
-
-
-@function_tool
-@with_error_handling
-async def compare_destinations_weather_tool(
-    destinations: List[str], date: Optional[str] = None
-) -> Dict[str, Any]:
-    """Compare weather across multiple potential destinations.
-
-    Args:
-        destinations: List of destinations to compare
-        date: Date for comparison (YYYY-MM-DD). If not provided, uses current date.
-
-    Returns:
-        Dictionary containing weather comparison results
-    """
-    logger.info(f"Comparing weather across destinations: {destinations}")
+    logger.info(f"Getting weather summary for {len(destinations)} destinations")
 
     results = []
-
-    # Get client instance
-    client = await WeatherMCPClient.get_instance()
-
-    try:
-        # Fetch weather for each destination
-        for destination in destinations:
-            parts = [part.strip() for part in destination.split(",")]
-            city = parts[0]
-            country = parts[1] if len(parts) > 1 else None
-
-            try:
-                if date:
-                    # Get forecast and find the specified date
-                    forecast_result = await client.get_forecast(
-                        city=city, country=country
-                    )
-
-                    # Find the forecast for the specified date
-                    date_forecast = None
-                    for day in forecast_result.daily:
-                        if day.date == date:
-                            date_forecast = day
-                            break
-
-                    if date_forecast:
-                        results.append(
-                            {
-                                "destination": destination,
-                                "date": date,
-                                "temperature": {
-                                    "average": date_forecast.temp_avg,
-                                    "min": date_forecast.temp_min,
-                                    "max": date_forecast.temp_max,
-                                },
-                                "conditions": date_forecast.weather.main,
-                                "description": date_forecast.weather.description,
-                            }
-                        )
-                    else:
-                        results.append(
-                            {
-                                "destination": destination,
-                                "error": f"No forecast available for {date}",
-                            }
-                        )
-                else:
-                    # Get current weather
-                    weather_result = await client.get_current_weather(
-                        city=city, country=country
-                    )
-
-                    results.append(
-                        {
-                            "destination": destination,
-                            "temperature": weather_result.temperature,
-                            "feels_like": weather_result.feels_like,
-                            "conditions": weather_result.weather.main,
-                            "description": weather_result.weather.description,
-                        }
-                    )
-            except Exception as e:
-                logger.warning(f"Error getting weather for {destination}: {str(e)}")
-                results.append({"destination": destination, "error": str(e)})
-
-        # Rank destinations based on weather (simple temperature-based ranking)
-        valid_results = [r for r in results if "error" not in r]
-        ranking = None
-
-        if valid_results:
-            # Sort by temperature (higher is better)
-            if date:
-                temp_sorted = sorted(
-                    valid_results,
-                    key=lambda x: x["temperature"]["average"],
-                    reverse=True,
-                )
-            else:
-                temp_sorted = sorted(
-                    valid_results,
-                    key=lambda x: x["temperature"],
-                    reverse=True,
-                )
-
-            ranking = [r["destination"] for r in temp_sorted]
-
-        # Create comparison result
-        comparison = {
-            "destinations": destinations,
-            "date": date or "current",
-            "results": results,
-            "ranking": ranking,
-        }
-
-        # Create formatted output
-        formatted_result = f"Weather comparison for {len(destinations)} destinations"
-        if date:
-            formatted_result += f" on {date}:\n\n"
-        else:
-            formatted_result += " (current weather):\n\n"
-
-        for i, result in enumerate(results):
-            formatted_result += f"{i + 1}. {result['destination']}: "
-
-            if "error" in result:
-                formatted_result += f"Error: {result['error']}\n"
-            else:
-                if date:
-                    formatted_result += (
-                        f"{result['temperature']['average']}°C "
-                        f"({result['temperature']['min']}°C to "
-                        f"{result['temperature']['max']}°C), "
-                        f"{result['description']}\n"
-                    )
-                else:
-                    formatted_result += (
-                        f"{result['temperature']}°C, {result['description']}\n"
-                    )
-
-        if ranking:
-            formatted_result += "\nRanking (based on temperature):\n"
-            for i, dest in enumerate(ranking):
-                formatted_result += f"{i + 1}. {dest}\n"
-
-        comparison["formatted"] = formatted_result
-        return comparison
-    finally:
-        # Ensure client is disconnected
-        await client.disconnect()
-
-
-@function_tool
-@with_error_handling
-async def get_optimal_travel_time_tool(
-    destination: str, activity_type: str = "general", months_ahead: int = 6
-) -> Dict[str, Any]:
-    """Get recommendations for the optimal time to travel to a destination.
-
-    Args:
-        destination: Travel destination (e.g., "Paris" or "Paris, FR")
-        activity_type: Type of activity planned (e.g., 'beach', 'skiing', 'sightseeing')
-        months_ahead: How many months ahead to consider
-
-    Returns:
-        Dictionary containing optimal travel time recommendations
-    """
-    logger.info(
-        f"Getting optimal travel time for {destination} for {activity_type} activities"
-    )
-
-    # Parse city and country from destination string
-    parts = [part.strip() for part in destination.split(",")]
-    city = parts[0]
-    country = parts[1] if len(parts) > 1 else None
-
-    # Get client instance
-    client = await WeatherMCPClient.get_instance()
-
-    try:
-        # Get travel recommendations
-        result = await client.get_travel_recommendation(
-            city=city, country=country, activities=[activity_type]
+    for i, destination in enumerate(destinations):
+        date = dates[i] if dates and i < len(dates) else None
+        weather_info = await get_destination_weather_tool(
+            destination=destination, arrival_date=date
         )
+        results.append(weather_info)
 
-        # Extract information from the recommendations
-        recommendations = result.recommendations
-        current_weather = result.current_weather
+    # Create summary
+    summary = {
+        "destinations": destinations,
+        "weather_data": results,
+        "overall_summary": _create_trip_weather_summary(results),
+    }
 
-        # Extract the specific activity recommendation
-        activity_recs = [
-            rec
-            for rec in recommendations.get("activities", [])
-            if activity_type.lower() in rec.lower()
-        ]
+    return summary
 
-        # Analyze forecast-based recommendations
-        forecast_recs = recommendations.get("forecast_based", [])
-        good_days = [rec for rec in forecast_recs if "Good" in rec]
 
-        # Create a specific recommendation for the activity
-        if activity_recs:
-            activity_advice = activity_recs[0]
-        else:
-            activity_advice = (
-                "No specific recommendations available for this activity type."
+def _create_trip_weather_summary(results: List[Dict[str, Any]]) -> str:
+    """Create a text summary of weather conditions across all destinations."""
+    summary_parts = []
+    summary_parts.append(f"Weather summary for {len(results)} destinations:\n")
+
+    for result in results:
+        destination = result["destination"]
+        current = result.get("current_weather", {})
+
+        if "error" in current:
+            summary_parts.append(f"• {destination}: Unable to fetch weather data\n")
+            continue
+
+        # Get the formatted weather info if available
+        formatted = current.get("formatted", "")
+
+        summary_parts.append(f"• {destination}: {formatted}\n")
+
+        # Add arrival day forecast if available
+        arrival_forecast = result.get("arrival_day_forecast")
+        if arrival_forecast:
+            arrival_date = result.get("arrival_date", "")
+            day_temp = arrival_forecast.get("temperature", {}).get("day", "N/A")
+            day_desc = arrival_forecast.get("weather", {}).get("description", "N/A")
+            summary_parts.append(
+                f"  Forecast for {arrival_date}: {day_desc}, {day_temp}°C\n"
             )
 
-        # Create the result
-        response = {
-            "destination": destination,
-            "activity_type": activity_type,
-            "current_weather": current_weather.get("weather", {}).get("main"),
-            "current_temp": current_weather.get("temperature"),
-            "activity_recommendation": activity_advice,
-            "good_weather_days": good_days,
-            "forecast_recommendations": forecast_recs,
-            "clothing_recommendations": recommendations.get("clothing", []),
-        }
-
-        # Create formatted output
-        formatted_result = (
-            f"Optimal travel recommendations for {activity_type} in {destination}:\n\n"
-            f"Current weather: {response['current_weather']}, "
-            f"{response['current_temp']}°C\n\n"
-            f"Activity recommendation: {activity_advice}\n\n"
-            f"Upcoming good weather days:\n"
-        )
-
-        for day in good_days:
-            formatted_result += f"• {day}\n"
-
-        formatted_result += "\nGeneral recommendations:\n"
-        for rec in forecast_recs:
-            if rec not in good_days:
-                formatted_result += f"• {rec}\n"
-
-        formatted_result += "\nClothing recommendations:\n"
-        for item in response["clothing_recommendations"]:
-            formatted_result += f"• {item}\n"
-
-        response["formatted"] = formatted_result
-        return response
-
-    except Exception as e:
-        logger.error(f"Error getting optimal travel time: {str(e)}")
-        return {
-            "error": f"Failed to get optimal travel time: {str(e)}",
-            "destination": destination,
-            "activity_type": activity_type,
-        }
-    finally:
-        # Ensure client is disconnected
-        await client.disconnect()
+    return "".join(summary_parts)

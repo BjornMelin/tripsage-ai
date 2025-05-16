@@ -2,15 +2,15 @@
 Flight search tools for TripSage agents.
 
 This module provides function tools for flight search and booking using the
-Flights MCP client.
+Duffel Flights MCP client via the MCPManager abstraction layer.
 """
 
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
 
 from agents import function_tool
-
-# from openai_agents_sdk import function_tool
+from tripsage.mcp_abstraction.exceptions import TripSageMCPError
+from tripsage.mcp_abstraction.manager import mcp_manager
 from tripsage.tools.schemas.flights import (
     AirportSearchParams,
     AirportSearchResponse,
@@ -25,10 +25,8 @@ from tripsage.tools.schemas.flights import (
     PriceTrackingParams,
     PriceTrackingResponse,
 )
-from tripsage.utils.client_utils import validate_and_call_mcp_tool
 from tripsage.utils.error_handling import with_error_handling
 from tripsage.utils.logging import get_logger
-from tripsage.utils.settings import settings
 
 # Set up logger
 logger = get_logger(__name__)
@@ -107,15 +105,15 @@ async def search_flights_tool(
         # Create validated model
         validated_params = FlightSearchParams(**search_params)
 
-        # Call the MCP
-        result = await validate_and_call_mcp_tool(
-            endpoint=settings.flights_mcp.endpoint,
-            tool_name="search_flights",
+        # Call the MCP via MCPManager
+        result = await mcp_manager.invoke(
+            mcp_name="duffel_flights",
+            method_name="search_flights",
             params=validated_params.model_dump(by_alias=True),
-            response_model=FlightSearchResponse,
-            timeout=settings.flights_mcp.timeout,
-            server_name="Flights MCP",
         )
+
+        # Convert the result to the expected response model
+        result = FlightSearchResponse.model_validate(result)
 
         # Apply post-search filtering
         filtered_offers = result.offers
@@ -228,6 +226,9 @@ async def search_flights_tool(
             "currency": result.currency,
         }
 
+    except TripSageMCPError as e:
+        logger.error(f"MCP error searching flights: {str(e)}")
+        raise
     except Exception as e:
         logger.error(f"Error searching flights: {str(e)}")
         raise
@@ -258,15 +259,15 @@ async def search_airports_tool(
             code=code.upper() if code else None,
         )
 
-        # Call the MCP
-        result = await validate_and_call_mcp_tool(
-            endpoint=settings.flights_mcp.endpoint,
-            tool_name="search_airports",
+        # Call the MCP via MCPManager
+        result = await mcp_manager.invoke(
+            mcp_name="duffel_flights",
+            method_name="get_airports",
             params=validated_params.model_dump(by_alias=True),
-            response_model=AirportSearchResponse,
-            timeout=settings.flights_mcp.timeout,
-            server_name="Flights MCP",
         )
+
+        # Convert the result to the expected response model
+        result = AirportSearchResponse.model_validate(result)
 
         # Format results for agent consumption
         formatted_airports = []
@@ -294,6 +295,9 @@ async def search_airports_tool(
             "query": search_term or code,
         }
 
+    except TripSageMCPError as e:
+        logger.error(f"MCP error searching airports: {str(e)}")
+        raise
     except Exception as e:
         logger.error(f"Error searching airports: {str(e)}")
         raise
@@ -331,15 +335,15 @@ async def get_flight_prices_tool(
             return_date=return_date,
         )
 
-        # Call the MCP
-        result = await validate_and_call_mcp_tool(
-            endpoint=settings.flights_mcp.endpoint,
-            tool_name="get_flight_prices",
+        # Call the MCP via MCPManager
+        result = await mcp_manager.invoke(
+            mcp_name="duffel_flights",
+            method_name="get_flight_prices",
             params=validated_params.model_dump(by_alias=True),
-            response_model=FlightPriceResponse,
-            timeout=settings.flights_mcp.timeout,
-            server_name="Flights MCP",
         )
+
+        # Convert the result to the expected response model
+        result = FlightPriceResponse.model_validate(result)
 
         # Format price history data
         price_history = {
@@ -377,6 +381,9 @@ async def get_flight_prices_tool(
 
         return price_history
 
+    except TripSageMCPError as e:
+        logger.error(f"MCP error getting flight prices: {str(e)}")
+        raise
     except Exception as e:
         logger.error(f"Error getting flight prices: {str(e)}")
         raise
@@ -401,15 +408,15 @@ async def get_offer_details_tool(
         # Create validated model
         validated_params = OfferDetailsParams(offer_id=offer_id)
 
-        # Call the MCP
-        result = await validate_and_call_mcp_tool(
-            endpoint=settings.flights_mcp.endpoint,
-            tool_name="get_offer_details",
+        # Call the MCP via MCPManager
+        result = await mcp_manager.invoke(
+            mcp_name="duffel_flights",
+            method_name="get_offer_details",
             params=validated_params.model_dump(by_alias=True),
-            response_model=OfferDetailsResponse,
-            timeout=settings.flights_mcp.timeout,
-            server_name="Flights MCP",
         )
+
+        # Convert the result to the expected response model
+        result = OfferDetailsResponse.model_validate(result)
 
         # Format offer details
         offer_details = {
@@ -425,6 +432,9 @@ async def get_offer_details_tool(
 
         return offer_details
 
+    except TripSageMCPError as e:
+        logger.error(f"MCP error getting offer details: {str(e)}")
+        raise
     except Exception as e:
         logger.error(f"Error getting offer details: {str(e)}")
         raise
@@ -472,15 +482,15 @@ async def track_flight_prices_tool(
             threshold_percentage=threshold_percentage,
         )
 
-        # Call the MCP
-        result = await validate_and_call_mcp_tool(
-            endpoint=settings.flights_mcp.endpoint,
-            tool_name="track_prices",
+        # Call the MCP via MCPManager
+        result = await mcp_manager.invoke(
+            mcp_name="duffel_flights",
+            method_name="track_flight_prices",
             params=validated_params.model_dump(by_alias=True),
-            response_model=PriceTrackingResponse,
-            timeout=settings.flights_mcp.timeout,
-            server_name="Flights MCP",
         )
+
+        # Convert the result to the expected response model
+        result = PriceTrackingResponse.model_validate(result)
 
         # Format tracking confirmation
         tracking_info = {
@@ -500,6 +510,9 @@ async def track_flight_prices_tool(
 
         return tracking_info
 
+    except TripSageMCPError as e:
+        logger.error(f"MCP error setting up price tracking: {str(e)}")
+        raise
     except Exception as e:
         logger.error(f"Error setting up price tracking: {str(e)}")
         raise
@@ -588,15 +601,15 @@ async def search_flexible_dates_tool(
                 # Create validated model
                 validated_params = FlightSearchParams(**search_params)
 
-                # Call the MCP
-                result = await validate_and_call_mcp_tool(
-                    endpoint=settings.flights_mcp.endpoint,
-                    tool_name="search_flights",
+                # Call the MCP via MCPManager
+                result = await mcp_manager.invoke(
+                    mcp_name="duffel_flights",
+                    method_name="search_flights",
                     params=validated_params.model_dump(by_alias=True),
-                    response_model=FlightSearchResponse,
-                    timeout=settings.flights_mcp.timeout,
-                    server_name="Flights MCP",
                 )
+
+                # Convert the result to the expected response model
+                result = FlightSearchResponse.model_validate(result)
 
                 # Extract best price for this date
                 if result.offers:
@@ -619,6 +632,9 @@ async def search_flexible_dates_tool(
 
         # Generate recommendation
         recommendation = None
+        avg_price = 0
+        savings_percent = 0
+
         if results:
             cheapest = results[0]
             # Calculate average price
@@ -653,6 +669,9 @@ async def search_flexible_dates_tool(
             ),
         }
 
+    except TripSageMCPError as e:
+        logger.error(f"MCP error searching flexible dates: {str(e)}")
+        raise
     except Exception as e:
         logger.error(f"Error searching flexible dates: {str(e)}")
         raise
@@ -705,15 +724,15 @@ async def search_multi_city_flights_tool(
             cabin_class=cabin_class_enum,
         )
 
-        # Call the MCP
-        result = await validate_and_call_mcp_tool(
-            endpoint=settings.flights_mcp.endpoint,
-            tool_name="search_multi_city",
+        # Call the MCP via MCPManager
+        result = await mcp_manager.invoke(
+            mcp_name="duffel_flights",
+            method_name="search_multi_city",
             params=validated_params.model_dump(by_alias=True),
-            response_model=FlightSearchResponse,
-            timeout=settings.flights_mcp.timeout,
-            server_name="Flights MCP",
         )
+
+        # Convert the result to the expected response model
+        result = FlightSearchResponse.model_validate(result)
 
         # Format results for agent consumption (similar to search_flights_tool)
         formatted_offers = []
@@ -785,6 +804,9 @@ async def search_multi_city_flights_tool(
             "currency": result.currency,
         }
 
+    except TripSageMCPError as e:
+        logger.error(f"MCP error searching multi-city flights: {str(e)}")
+        raise
     except Exception as e:
         logger.error(f"Error searching multi-city flights: {str(e)}")
         raise

@@ -10,16 +10,11 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 from agents import function_tool
-from tripsage.config.app_settings import settings
+from tripsage.mcp_abstraction.exceptions import TripSageMCPError
+from tripsage.mcp_abstraction.manager import mcp_manager
 from tripsage.tools.schemas.calendar import (
-    CalendarListResponse,
-    CreateItineraryEventsResponse,
-    Event,
-    EventListResponse,
-    EventSearchResponse,
     EventTime,
 )
-from tripsage.utils.client_utils import validate_and_call_mcp_tool
 from tripsage.utils.error_handling import with_error_handling
 from tripsage.utils.logging import get_logger
 
@@ -44,13 +39,8 @@ async def list_calendars_tool(max_results: Optional[int] = None) -> Dict[str, An
         if max_results:
             params["max_results"] = max_results
 
-        result = await validate_and_call_mcp_tool(
-            endpoint=settings.calendar_mcp_endpoint,
-            tool_name="get_calendars",
-            params=params,
-            response_model=CalendarListResponse,
-            timeout=15.0,
-            server_name="Calendar MCP",
+        result = await mcp_manager.invoke(
+            mcp_name="google_calendar", method_name="get_calendars", params=params
         )
 
         calendars_info = []
@@ -72,6 +62,13 @@ async def list_calendars_tool(max_results: Optional[int] = None) -> Dict[str, An
             "calendars": calendars_info,
             "count": len(calendars_info),
             "formatted": "\n".join([cal["formatted"] for cal in calendars_info]),
+        }
+    except TripSageMCPError as e:
+        logger.error(f"MCP error in list_calendars_tool: {str(e)}")
+        return {
+            "error": f"Failed to list calendars: {str(e)}",
+            "calendars": [],
+            "count": 0,
         }
     except Exception as e:
         logger.error(f"Error in list_calendars_tool: {str(e)}")
@@ -133,13 +130,8 @@ async def list_events_tool(
         if max_events:
             params["max_results"] = max_events
 
-        result = await validate_and_call_mcp_tool(
-            endpoint=settings.calendar_mcp_endpoint,
-            tool_name="get_events",
-            params=params,
-            response_model=EventListResponse,
-            timeout=15.0,
-            server_name="Calendar MCP",
+        result = await mcp_manager.invoke(
+            mcp_name="google_calendar", method_name="get_events", params=params
         )
 
         events_info = []
@@ -169,6 +161,14 @@ async def list_events_tool(
             "formatted": "\n".join([event["formatted"] for event in events_info])
             if events_info
             else "No events found in the specified time range.",
+        }
+    except TripSageMCPError as e:
+        logger.error(f"MCP error in list_events_tool: {str(e)}")
+        return {
+            "error": f"Failed to list events: {str(e)}",
+            "events": [],
+            "count": 0,
+            "calendar_id": calendar_id,
         }
     except Exception as e:
         logger.error(f"Error in list_events_tool: {str(e)}")
@@ -208,13 +208,8 @@ async def search_events_tool(
         if max_results:
             params["max_results"] = max_results
 
-        result = await validate_and_call_mcp_tool(
-            endpoint=settings.calendar_mcp_endpoint,
-            tool_name="search_events",
-            params=params,
-            response_model=EventSearchResponse,
-            timeout=15.0,
-            server_name="Calendar MCP",
+        result = await mcp_manager.invoke(
+            mcp_name="google_calendar", method_name="search_events", params=params
         )
 
         events_info = []
@@ -245,6 +240,15 @@ async def search_events_tool(
             "formatted": "\n".join([event["formatted"] for event in events_info])
             if events_info
             else f"No events found matching query: {query}",
+        }
+    except TripSageMCPError as e:
+        logger.error(f"MCP error in search_events_tool: {str(e)}")
+        return {
+            "error": f"Failed to search events: {str(e)}",
+            "events": [],
+            "count": 0,
+            "query": query,
+            "calendar_id": calendar_id,
         }
     except Exception as e:
         logger.error(f"Error in search_events_tool: {str(e)}")
@@ -335,13 +339,8 @@ async def create_event_tool(
             params["attendees"] = formatted_attendees
 
         # Call the MCP
-        result = await validate_and_call_mcp_tool(
-            endpoint=settings.calendar_mcp_endpoint,
-            tool_name="create_event",
-            params=params,
-            response_model=Event,
-            timeout=15.0,
-            server_name="Calendar MCP",
+        result = await mcp_manager.invoke(
+            mcp_name="google_calendar", method_name="create_event", params=params
         )
 
         # Format response
@@ -359,6 +358,13 @@ async def create_event_tool(
             "calendar_id": calendar_id,
             "formatted": f"Event created: {result.summary} - {start_info} to {end_info}"
             + (f" at {result.location}" if result.location else ""),
+        }
+    except TripSageMCPError as e:
+        logger.error(f"MCP error in create_event_tool: {str(e)}")
+        return {
+            "error": f"Failed to create event: {str(e)}",
+            "calendar_id": calendar_id,
+            "summary": summary,
         }
     except Exception as e:
         logger.error(f"Error in create_event_tool: {str(e)}")
@@ -423,13 +429,10 @@ async def update_event_tool(
                 "max_results": 1,
             }
 
-            events_response = await validate_and_call_mcp_tool(
-                endpoint=settings.calendar_mcp_endpoint,
-                tool_name="get_events",
+            events_response = await mcp_manager.invoke(
+                mcp_name="google_calendar",
+                method_name="get_events",
                 params=current_event_params,
-                response_model=EventListResponse,
-                timeout=15.0,
-                server_name="Calendar MCP",
             )
 
             current_event = None
@@ -510,13 +513,8 @@ async def update_event_tool(
                             params["end"]["time_zone"] = time_zone
 
         # Update the event
-        result = await validate_and_call_mcp_tool(
-            endpoint=settings.calendar_mcp_endpoint,
-            tool_name="update_event",
-            params=params,
-            response_model=Event,
-            timeout=15.0,
-            server_name="Calendar MCP",
+        result = await mcp_manager.invoke(
+            mcp_name="google_calendar", method_name="update_event", params=params
         )
 
         # Format response
@@ -534,6 +532,13 @@ async def update_event_tool(
             "calendar_id": calendar_id,
             "formatted": f"Event updated: {result.summary} - {start_info} to {end_info}"
             + (f" at {result.location}" if result.location else ""),
+        }
+    except TripSageMCPError as e:
+        logger.error(f"MCP error in update_event_tool: {str(e)}")
+        return {
+            "error": f"Failed to update event: {str(e)}",
+            "calendar_id": calendar_id,
+            "event_id": event_id,
         }
     except Exception as e:
         logger.error(f"Error in update_event_tool: {str(e)}")
@@ -564,13 +569,8 @@ async def delete_event_tool(calendar_id: str, event_id: str) -> Dict[str, Any]:
             "event_id": event_id,
         }
 
-        result = await validate_and_call_mcp_tool(
-            endpoint=settings.calendar_mcp_endpoint,
-            tool_name="delete_event",
-            params=params,
-            response_model=Dict[str, Any],
-            timeout=15.0,
-            server_name="Calendar MCP",
+        result = await mcp_manager.invoke(
+            mcp_name="google_calendar", method_name="delete_event", params=params
         )
 
         return {
@@ -579,6 +579,15 @@ async def delete_event_tool(calendar_id: str, event_id: str) -> Dict[str, Any]:
             "calendar_id": calendar_id,
             "event_id": event_id,
             "formatted": f"Event {event_id} successfully deleted from calendar.",
+        }
+    except TripSageMCPError as e:
+        logger.error(f"MCP error in delete_event_tool: {str(e)}")
+        return {
+            "error": f"Failed to delete event: {str(e)}",
+            "success": False,
+            "deleted": False,
+            "calendar_id": calendar_id,
+            "event_id": event_id,
         }
     except Exception as e:
         logger.error(f"Error in delete_event_tool: {str(e)}")
@@ -625,13 +634,10 @@ async def create_itinerary_events_tool(
         if trip_name:
             params["trip_name"] = trip_name
 
-        result = await validate_and_call_mcp_tool(
-            endpoint=settings.calendar_mcp_endpoint,
-            tool_name="create_itinerary_events",
+        result = await mcp_manager.invoke(
+            mcp_name="google_calendar",
+            method_name="create_itinerary_events",
             params=params,
-            response_model=CreateItineraryEventsResponse,
-            timeout=30.0,
-            server_name="Calendar MCP",
         )
 
         # Format successful events
@@ -692,6 +698,17 @@ async def create_itinerary_events_tool(
                 "Created events:\n"
                 + "\n".join([e["formatted"] for e in created_events_info])
             ),
+        }
+    except TripSageMCPError as e:
+        logger.error(f"MCP error in create_itinerary_events_tool: {str(e)}")
+        return {
+            "error": f"Failed to create itinerary events: {str(e)}",
+            "created_events": [],
+            "failed_items": [{"error": str(e), "formatted": f"Error: {str(e)}"}],
+            "calendar_id": calendar_id,
+            "success_count": 0,
+            "failure_count": len(itinerary_items),
+            "total_items": len(itinerary_items),
         }
     except Exception as e:
         logger.error(f"Error in create_itinerary_events_tool: {str(e)}")

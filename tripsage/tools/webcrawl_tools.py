@@ -7,6 +7,7 @@ with Playwright MCP as a fallback for JavaScript-heavy sites.
 
 from typing import Optional
 
+from tripsage.mcp_abstraction.manager import mcp_manager
 from tripsage.tools.webcrawl.models import UnifiedCrawlResult
 from tripsage.tools.webcrawl.result_normalizer import get_normalizer
 from tripsage.tools.webcrawl.source_selector import get_source_selector
@@ -122,8 +123,10 @@ async def crawl_website_content(
                 mobile=requires_javascript,  # Mobile view can help with JS content
             )
 
-            raw_result = await client.scrape_url(
-                url, params=params, use_cache=use_cache
+            raw_result = await mcp_manager.invoke(
+                mcp_name="firecrawl",
+                method_name="scrape_url",
+                params={"url": url, "params": params, "use_cache": use_cache},
             )
             primary_result = await normalizer.normalize_firecrawl_output(
                 raw_result, url
@@ -145,14 +148,25 @@ async def crawl_website_content(
                 wait_until="networkidle",
             )
 
-            navigation_result = await client.navigate(url, navigate_options)
+            navigation_result = await mcp_manager.invoke(
+                mcp_name="playwright",
+                method_name="navigate",
+                params={"url": url, "options": navigate_options},
+            )
 
             # Get the page content
-            visible_text = await client.get_visible_text()
-            visible_html = await client.get_visible_html()
+            visible_text = await mcp_manager.invoke(
+                mcp_name="playwright", method_name="get_visible_text", params={}
+            )
+
+            visible_html = await mcp_manager.invoke(
+                mcp_name="playwright", method_name="get_visible_html", params={}
+            )
 
             # Close the browser
-            await client.close()
+            await mcp_manager.invoke(
+                mcp_name="playwright", method_name="close", params={}
+            )
 
             # Create the raw output for normalizer
             playwright_output = {
@@ -181,7 +195,11 @@ async def crawl_website_content(
                 extract_structured_data=extract_structured_data,
             )
 
-            raw_result = await client.crawl_url(url, params=params, use_cache=use_cache)
+            raw_result = await mcp_manager.invoke(
+                mcp_name="crawl4ai",
+                method_name="crawl_url",
+                params={"url": url, "params": params, "use_cache": use_cache},
+            )
             primary_result = await normalizer.normalize_crawl4ai_output(raw_result, url)
 
     except Exception as e:
@@ -207,12 +225,8 @@ async def crawl_website_content(
 
         try:
             from tripsage.tools.browser.playwright_mcp_client import (
-                PlaywrightMCPClient,
                 PlaywrightNavigateOptions,
             )
-
-            # Create Playwright client
-            playwright_client = PlaywrightMCPClient()
 
             # Navigate to the URL
             navigate_options = PlaywrightNavigateOptions(
@@ -224,14 +238,25 @@ async def crawl_website_content(
                 wait_until="networkidle",
             )
 
-            navigation_result = await playwright_client.navigate(url, navigate_options)
+            navigation_result = await mcp_manager.invoke(
+                mcp_name="playwright",
+                method_name="navigate",
+                params={"url": url, "options": navigate_options},
+            )
 
             # Get the page content
-            visible_text = await playwright_client.get_visible_text()
-            visible_html = await playwright_client.get_visible_html()
+            visible_text = await mcp_manager.invoke(
+                mcp_name="playwright", method_name="get_visible_text", params={}
+            )
+
+            visible_html = await mcp_manager.invoke(
+                mcp_name="playwright", method_name="get_visible_html", params={}
+            )
 
             # Close the browser
-            await playwright_client.close()
+            await mcp_manager.invoke(
+                mcp_name="playwright", method_name="close", params={}
+            )
 
             # Create the raw output for normalizer
             playwright_output = {
