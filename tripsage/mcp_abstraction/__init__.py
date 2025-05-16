@@ -5,8 +5,6 @@ various external MCP clients, serving as the primary way TripSage tools
 and services interact with MCPs.
 """
 
-# Auto-register default wrappers
-from . import registration  # noqa: F401
 from .base_wrapper import BaseMCPWrapper
 from .exceptions import (
     MCPInvocationError,
