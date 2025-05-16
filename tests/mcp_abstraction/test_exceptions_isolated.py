@@ -1,11 +1,12 @@
 """
 Tests for MCP exception hierarchy - isolated version.
 
-This module tests the custom exception classes used throughout the MCP abstraction layer.
+Tests custom exception classes used throughout the MCP abstraction layer.
 """
 
 # Setup environment variables before imports
 import os
+
 os.environ["REDIS_URL"] = "redis://localhost:6379/0"
 
 # Setup mocks before any imports
@@ -17,22 +18,21 @@ sys.modules['tripsage.config.app_settings'] = MagicMock()
 sys.modules['tripsage.utils.settings'] = MagicMock()
 sys.modules['tripsage.config.mcp_settings'] = MagicMock()
 
-import pytest
 
 # Now safe to import our exceptions
 from tripsage.mcp_abstraction.exceptions import (
-    TripSageMCPError,
+    MCPAuthenticationError,
+    MCPCommunicationProtocolError,
     MCPConfigurationError,
     MCPConnectionError,
-    MCPTimeoutError,
-    MCPAuthenticationError,
-    MCPRateLimitError,
+    MCPInternalError,
     MCPInvocationError,
-    MCPNotFoundError,
     MCPManagerError,
     MCPMethodNotFoundError,
-    MCPCommunicationProtocolError,
-    MCPInternalError
+    MCPNotFoundError,
+    MCPRateLimitError,
+    MCPTimeoutError,
+    TripSageMCPError,
 )
 
 
