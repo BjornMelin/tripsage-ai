@@ -9,7 +9,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from src.agents.calendar_tools import (
+from tripsage.agents.calendar_tools import (
     create_event_tool,
     create_itinerary_events_tool,
     delete_event_tool,
@@ -17,7 +17,7 @@ from src.agents.calendar_tools import (
     list_events_tool,
     search_events_tool,
 )
-from src.mcp.calendar.models import (
+from tripsage.mcp.calendar.models import (
     Calendar,
     CalendarListResponse,
     CreateItineraryEventsResponse,

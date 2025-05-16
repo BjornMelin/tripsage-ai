@@ -9,7 +9,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from src.agents.flight_search import TripSageFlightSearch
+from tripsage.agents.flight_search import TripSageFlightSearch
 
 
 class TestFlightSearchDecorators:

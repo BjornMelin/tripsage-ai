@@ -9,8 +9,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from src.mcp.time.client import TimeMCPClient, TimeService
-from src.mcp.time.models import TimeConversionResponse, TimeResponse
+from tripsage.mcp.time.client import TimeMCPClient, TimeService
+from tripsage.mcp.time.models import TimeConversionResponse, TimeResponse
 
 
 @pytest.fixture

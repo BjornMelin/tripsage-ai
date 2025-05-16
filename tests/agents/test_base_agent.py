@@ -10,7 +10,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from agents import RunContext, RunResult
-from src.agents.base_agent import BaseAgent
+from tripsage.agents.base_agent import BaseAgent
 
 
 @pytest.fixture

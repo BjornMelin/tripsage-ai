@@ -8,14 +8,14 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from src.agents.tools.webcrawl.models import (
+from tripsage.agents.tools.webcrawl.models import (
     BlogCrawlParams,
     EventSearchParams,
     ExtractContentParams,
     PriceMonitorParams,
     SearchDestinationParams,
 )
-from src.agents.webcrawl_tools import (
+from tripsage.agents.webcrawl_tools import (
     crawl_travel_blog_tool,
     extract_page_content_tool,
     get_latest_events_tool,
@@ -244,7 +244,7 @@ async def test_extract_page_content_tool_error(mock_webcrawl_client):
 
 def test_extract_destination_from_url():
     """Test the extract_destination_from_url function."""
-    from src.agents.webcrawl_tools import extract_destination_from_url
+    from tripsage.agents.webcrawl_tools import extract_destination_from_url
 
     # Test with city name in URL
     assert (

@@ -6,7 +6,7 @@ This module tests the error handling decorator in calendar tools.
 
 import pytest
 
-from src.utils.decorators import with_error_handling
+from tripsage.utils.decorators import with_error_handling
 
 
 @pytest.mark.asyncio

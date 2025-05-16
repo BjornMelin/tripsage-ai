@@ -9,8 +9,8 @@ from unittest.mock import patch
 
 import pytest
 
-from src.mcp.weather.client import WeatherMCPClient, WeatherService
-from src.mcp.weather.models import (
+from tripsage.mcp.weather.client import WeatherMCPClient, WeatherService
+from tripsage.mcp.weather.models import (
     CurrentWeatherResponse,
     DestinationWeatherComparison,
     ForecastResponse,
@@ -18,7 +18,7 @@ from src.mcp.weather.models import (
     RecommendationResponse,
     TravelWeatherSummary,
 )
-from src.utils.error_handling import MCPError
+from tripsage.utils.error_handling import MCPError
 
 
 @pytest.fixture

@@ -9,7 +9,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from src.mcp.supabase.client import SupabaseMCPClient, SupabaseService, get_client
+from tripsage.mcp.supabase.client import SupabaseMCPClient, SupabaseService, get_client
 
 
 @pytest.fixture

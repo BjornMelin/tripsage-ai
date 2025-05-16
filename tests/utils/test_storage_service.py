@@ -15,8 +15,8 @@ from pydantic import BaseModel
 
 # Import path takes care of the environment setup via conftest.py
 # Import modules being tested
-from src.utils.dual_storage import trip_service
-from src.utils.dual_storage_service import DualStorageService
+from tripsage.utils.dual_storage import trip_service
+from tripsage.utils.dual_storage_service import DualStorageService
 
 
 @pytest.fixture
@@ -64,7 +64,7 @@ class TestErrorHandlingDecorators:
     async def test_with_error_handling_decorator(self):
         """Test the with_error_handling decorator on sync and async functions."""
         # Import here to avoid circular imports
-        from src.utils.error_decorators import with_error_handling
+        from tripsage.utils.error_decorators import with_error_handling
 
         # Test sync function with error handling
         @with_error_handling
@@ -90,7 +90,7 @@ class TestErrorHandlingDecorators:
     async def test_ensure_memory_client_initialized(self):
         """Test the ensure_memory_client_initialized decorator."""
         # Import here to avoid circular imports
-        from src.utils.decorators import ensure_memory_client_initialized
+        from tripsage.utils.decorators import ensure_memory_client_initialized
 
         # Create mock memory client
         mock_memory_client = MagicMock()
@@ -114,7 +114,7 @@ class TestErrorHandlingDecorators:
     async def test_memory_client_initialization_error(self):
         """Test error handling in memory client initialization."""
         # Import here to avoid circular imports
-        from src.utils.decorators import ensure_memory_client_initialized
+        from tripsage.utils.decorators import ensure_memory_client_initialized
 
         # Create mock memory client that raises exception
         mock_memory_client = MagicMock()
@@ -512,7 +512,7 @@ class TestDualStorageServiceInheritance:
             patch("src.utils.trip_storage_service.db_client") as mock_db,
             patch("src.utils.trip_storage_service.memory_client") as mock_memory,
         ):
-            from src.utils.trip_storage_service import TripStorageService
+            from tripsage.utils.trip_storage_service import TripStorageService
 
             service = TripStorageService()
 
@@ -524,7 +524,7 @@ class TestDualStorageServiceInheritance:
         """Test that DualStorageService cannot be instantiated directly."""
         from typing import TypeVar
 
-        from src.utils.dual_storage_service import DualStorageService
+        from tripsage.utils.dual_storage_service import DualStorageService
 
         P = TypeVar("P", bound=BaseModel)
         G = TypeVar("G", bound=BaseModel)

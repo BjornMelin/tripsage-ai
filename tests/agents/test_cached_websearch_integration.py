@@ -10,8 +10,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from src.agents.destination_research_agent import DestinationResearchAgent
-from src.agents.travel_planning_agent import TravelPlanningAgent
+from tripsage.agents.destination_research_agent import DestinationResearchAgent
+from tripsage.agents.travel_planning_agent import TravelPlanningAgent
 from tripsage.tools.web_tools import CachedWebSearchTool
 
 

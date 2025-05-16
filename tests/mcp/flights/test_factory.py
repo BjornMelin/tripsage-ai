@@ -41,8 +41,8 @@ sys.modules["src.utils.settings"] = MagicMock()
 sys.modules["src.utils.settings"].settings = mock_settings
 
 # Now import the modules that depend on these mocks
-from src.mcp.flights.client import FlightsMCPClient  # noqa: E402
-from src.mcp.flights.factory import (  # noqa: E402
+from tripsage.mcp.flights.client import FlightsMCPClient  # noqa: E402
+from tripsage.mcp.flights.factory import (  # noqa: E402
     FlightsMCPClientFactory,
     FlightsMCPConfig,
 )

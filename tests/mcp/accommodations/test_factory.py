@@ -9,8 +9,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from src.mcp.accommodations.client import AirbnbMCPClient
-from src.mcp.accommodations.factory import (
+from tripsage.mcp.accommodations.client import AirbnbMCPClient
+from tripsage.mcp.accommodations.factory import (
     airbnb_client,
     create_accommodation_client,
     create_airbnb_client,

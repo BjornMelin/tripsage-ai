@@ -8,7 +8,10 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from src.utils.decorators import ensure_memory_client_initialized, with_error_handling
+from tripsage.utils.decorators import (
+    ensure_memory_client_initialized,
+    with_error_handling,
+)
 
 
 @pytest.mark.asyncio

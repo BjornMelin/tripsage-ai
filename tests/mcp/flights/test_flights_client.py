@@ -10,15 +10,15 @@ from unittest.mock import patch
 import pytest
 from pydantic import ValidationError
 
-from src.mcp.flights.client import FlightsMCPClient, MCPError
-from src.mcp.flights.models import (
+from tripsage.mcp.flights.client import FlightsMCPClient, MCPError
+from tripsage.mcp.flights.models import (
     AirportSearchResponse,
     FlightPriceResponse,
     FlightSearchResponse,
     OfferDetailsResponse,
     PriceTrackingResponse,
 )
-from src.mcp.flights.service import FlightService as FlightServiceService
+from tripsage.mcp.flights.service import FlightService as FlightServiceService
 
 
 @pytest.fixture

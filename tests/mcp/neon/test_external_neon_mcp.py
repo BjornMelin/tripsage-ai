@@ -10,9 +10,9 @@ from unittest.mock import patch
 
 import pytest
 
-from src.mcp.db_factory import DatabaseMCPFactory
-from src.mcp.neon.client import NeonMCPClient, NeonService
-from src.utils.settings import settings
+from tripsage.mcp.db_factory import DatabaseMCPFactory
+from tripsage.mcp.neon.client import NeonMCPClient, NeonService
+from tripsage.utils.settings import settings
 
 
 @pytest.fixture

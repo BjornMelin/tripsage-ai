@@ -11,10 +11,10 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from pydantic import SecretStr
 
-from src.mcp.flights.client import FlightsMCPClient
-from src.mcp.flights.models import FlightSearchResponse
-from src.mcp.flights.service import FlightService
-from src.utils.settings import FlightsMCPConfig
+from tripsage.mcp.flights.client import FlightsMCPClient
+from tripsage.mcp.flights.models import FlightSearchResponse
+from tripsage.mcp.flights.service import FlightService
+from tripsage.utils.settings import FlightsMCPConfig
 
 
 @pytest.fixture

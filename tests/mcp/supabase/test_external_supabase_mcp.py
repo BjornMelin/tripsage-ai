@@ -12,11 +12,11 @@ from unittest.mock import patch
 import pytest
 from pydantic import BaseModel
 
-from src.mcp.db_factory import Environment, get_mcp_client, get_mcp_service
-from src.mcp.supabase.client import SupabaseMCPClient
-from src.mcp.supabase.models import ListOrganizationsResponse, ListProjectsResponse
-from src.mcp.supabase.service import SupabaseService
-from src.utils.settings import settings
+from tripsage.mcp.db_factory import Environment, get_mcp_client, get_mcp_service
+from tripsage.mcp.supabase.client import SupabaseMCPClient
+from tripsage.mcp.supabase.models import ListOrganizationsResponse, ListProjectsResponse
+from tripsage.mcp.supabase.service import SupabaseService
+from tripsage.utils.settings import settings
 
 
 class SupabaseMCPAvailableModel(BaseModel):
