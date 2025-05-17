@@ -102,6 +102,7 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
   - **Tasks:**
     - [ ] Create API key models and database schema:
       - [x] Design UserApiKey table in Supabase with encryption fields:
+
         ```sql
         CREATE TABLE user_api_keys (
           id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -119,7 +120,9 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
           UNIQUE(user_id, service)
         );
         ```
+
       - [x] Create Pydantic models for API key management:
+
         ```python
         from pydantic import BaseModel, Field
         from typing import Optional
@@ -139,8 +142,10 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
             rotation_due_at: Optional[datetime]
             is_active: bool
         ```
+
     - [ ] Create key encryption service using envelope encryption:
       - [x] Implement master key derivation with PBKDF2:
+
         ```python
         from cryptography.fernet import Fernet
         from cryptography.hazmat.primitives import hashes
@@ -159,7 +164,9 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
             key = base64.urlsafe_b64encode(kdf.derive(user_secret.encode()))
             return key, salt
         ```
+
       - [x] Implement envelope encryption pattern:
+
         ```python
         def encrypt_api_key(api_key: str, user_secret: str):
             """Encrypt API key using envelope encryption"""
@@ -179,7 +186,9 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
             
             return encrypted_dek, encrypted_key, salt
         ```
+
       - [x] Implement secure decryption:
+
         ```python
         def decrypt_api_key(encrypted_dek: bytes, encrypted_key: bytes, 
                           salt: bytes, user_secret: str) -> str:
@@ -201,10 +210,12 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
             
             return api_key
         ```
+
       - [ ] Add key rotation support with rotation schedule
       - [ ] Implement secure key validation before storage
     - [ ] Implement API endpoints:
       - [x] POST `/api/user/keys` - Store encrypted API keys (specification completed):
+
         ```python
         @router.post("/api/user/keys")
         async def create_api_key(
@@ -244,12 +255,14 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
             
             return {"id": result.inserted_primary_key[0]}
         ```
+
       - [ ] GET `/api/user/keys` - List available keys (without values)
       - [ ] DELETE `/api/user/keys/{id}` - Remove a stored key
       - [ ] POST `/api/user/keys/validate` - Validate a key with service
       - [ ] POST `/api/user/keys/{id}/rotate` - Rotate an existing key
     - [ ] Update MCPManager for user keys:
       - [x] Create UserKeyProvider class (specification completed):
+
         ```python
         class UserKeyProvider:
             def __init__(self, redis_client: Redis):
@@ -284,7 +297,9 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
                 
                 return api_key
         ```
+
       - [x] Modify MCPManager.invoke to accept user context (specification completed):
+
         ```python
         async def invoke(self, server_type: str, method: str, 
                         params: Dict[str, Any], user_id: Optional[str] = None):
@@ -297,11 +312,13 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
             # Continue with MCP invocation
             return await self._invoke_internal(server_type, method, params)
         ```
+
       - [ ] Implement dynamic key injection for MCP calls
       - [ ] Add fallback to default keys when user keys unavailable
       - [ ] Create secure caching mechanism for decrypted keys
     - [ ] Add monitoring and security:
       - [ ] Implement access logging with structured logs:
+
         ```python
         async def log_key_access(user_id: str, service: str, action: str):
             await logger.info(
@@ -312,6 +329,7 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
                 timestamp=datetime.utcnow()
             )
         ```
+
       - [ ] Add rate limiting for key operations (max 10 per minute)
       - [ ] Create alerts for suspicious patterns:
         - Rapid key rotation attempts
@@ -616,8 +634,8 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
         - 100% schema validation coverage
         - 95%+ test coverage with integration tests
       - **Resources:**
-        - **Server Repo:** https://github.com/supabase/mcp-supabase
-        - **Supabase Docs:** https://supabase.com/docs
+        - **Server Repo:** <https://github.com/supabase/mcp-supabase>
+        - **Supabase Docs:** <https://supabase.com/docs>
       - **Completed Tasks:**
         - ✓ Set up Supabase MCP server configuration
         - ✓ Created SupabaseMCPWrapper with standardized method mapping
@@ -633,9 +651,9 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
         - Complete coverage of entity/relationship models
         - 90%+ test coverage for graph operations
       - **Resources:**
-        - **Server Repo:** https://github.com/neo4j-contrib/mcp-neo4j
-        - **Neo4j Docs:** https://neo4j.com/docs/
-        - **Memory MCP Docs:** https://neo4j.com/labs/claude-memory-mcp/
+        - **Server Repo:** <https://github.com/neo4j-contrib/mcp-neo4j>
+        - **Neo4j Docs:** <https://neo4j.com/docs/>
+        - **Memory MCP Docs:** <https://neo4j.com/labs/claude-memory-mcp/>
       - **Completed Tasks:**
         - ✓ Configured Neo4j Memory MCP server
         - ✓ Created Neo4jMemoryMCPWrapper with standardized method mapping
@@ -652,8 +670,8 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
         - Complete coverage of major global airlines
         - 90%+ test coverage with realistic flight scenarios
       - **Resources:**
-        - **Server Repo:** https://github.com/duffel/mcp-flights
-        - **Duffel API Docs:** https://duffel.com/docs/api
+        - **Server Repo:** <https://github.com/duffel/mcp-flights>
+        - **Duffel API Docs:** <https://duffel.com/docs/api>
       - **Completed Tasks:**
         - ✓ Set up Duffel Flights MCP configuration
         - ✓ Created DuffelFlightsMCPWrapper with standardized method mapping
@@ -670,8 +688,8 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
         - Accurate pricing and availability data
         - 90%+ test coverage for accommodation operations
       - **Resources:**
-        - **Server Repo:** https://github.com/openbnb/mcp-airbnb
-        - **API Reference:** https://github.com/openbnb/openbnb-api
+        - **Server Repo:** <https://github.com/openbnb/mcp-airbnb>
+        - **API Reference:** <https://github.com/openbnb/openbnb-api>
       - **Completed Tasks:**
         - ✓ Configured Airbnb MCP server
         - ✓ Created AirbnbMCPWrapper with standardized method mapping
@@ -688,8 +706,8 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
         - 90%+ test coverage with integration tests
         - Successful fallback handling for at least 5 major travel sites
       - **Resources:**
-        - **Server Repo:** https://github.com/executeautomation/mcp-playwright
-        - **Playwright Docs:** https://playwright.dev/docs/intro
+        - **Server Repo:** <https://github.com/executeautomation/mcp-playwright>
+        - **Playwright Docs:** <https://playwright.dev/docs/intro>
       - **Tasks:**
         - [x] Configure Playwright MCP server with Python integration
           - ✓ Created PlaywrightMCPClient class in tripsage/tools/browser/playwright_mcp_client.py
@@ -721,8 +739,8 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
       - **Tasks:**
         - [x] Crawl4AI MCP Integration:
           - **Resources:**
-            - **Server Repo:** https://github.com/unclecode/crawl4ai
-            - **API Docs:** https://github.com/unclecode/crawl4ai/blob/main/DEPLOY.md
+            - **Server Repo:** <https://github.com/unclecode/crawl4ai>
+            - **API Docs:** <https://github.com/unclecode/crawl4ai/blob/main/DEPLOY.md>
           - **Completed Tasks:**
             - ✓ Configured Crawl4AI MCP server with WebSocket and SSE support
             - ✓ Implemented in `tripsage/clients/webcrawl/crawl4ai_mcp_client.py`
@@ -734,8 +752,8 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
             - ✓ Extended ContentType enum with JSON, MARKDOWN, HTML, BINARY types
         - [x] Firecrawl MCP Integration:
           - **Resources:**
-            - **Server Repo:** https://github.com/mendableai/firecrawl-mcp-server
-            - **API Docs:** https://docs.firecrawl.dev/
+            - **Server Repo:** <https://github.com/mendableai/firecrawl-mcp-server>
+            - **API Docs:** <https://docs.firecrawl.dev/>
           - **Completed Tasks:**
             - ✓ Configured official Firecrawl MCP server from MendableAI
             - ✓ Implemented in `tripsage/clients/webcrawl/firecrawl_mcp_client.py`
@@ -806,8 +824,8 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
         - Complete coverage of required location services
         - 90%+ test coverage for all implemented functions
       - **Resources:**
-        - **Server Repo:** https://github.com/googlemaps/mcp-googlemaps
-        - **API Docs:** https://developers.google.com/maps/documentation
+        - **Server Repo:** <https://github.com/googlemaps/mcp-googlemaps>
+        - **API Docs:** <https://developers.google.com/maps/documentation>
       - **Tasks:**
         - [x] Set up Google Maps MCP configuration
           - ✓ Created GoogleMapsMCPConfig in tripsage/config/app_settings.py
@@ -837,8 +855,8 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
         - Support for all global timezones
         - 95%+ test coverage
       - **Resources:**
-        - **Server Repo:** https://github.com/anthropics/mcp-time
-        - **API Docs:** https://worldtimeapi.org/api/
+        - **Server Repo:** <https://github.com/anthropics/mcp-time>
+        - **API Docs:** <https://worldtimeapi.org/api/>
       - [x] Configure Time MCP server
       - [x] Create time tools in `tripsage/tools/time_tools.py`
         - ✓ Implemented MCP client wrapper for the Time MCP
@@ -855,8 +873,8 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
         - Accurate forecasting for 7+ day window
         - 90%+ test coverage for API functions
       - **Resources:**
-        - **Server Repo:** https://github.com/szypetike/weather-mcp-server
-        - **API Docs:** https://github.com/szypetike/weather-mcp-server#usage
+        - **Server Repo:** <https://github.com/szypetike/weather-mcp-server>
+        - **API Docs:** <https://github.com/szypetike/weather-mcp-server#usage>
       - **Tasks:**
         - [x] Configure Weather MCP server
           - ✓ Created WeatherMCPConfig in tripsage/config/app_settings.py
@@ -886,8 +904,8 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
         - Complete support for all required calendar operations
         - 95%+ test coverage
       - **Resources:**
-        - **Server Repo:** https://github.com/googleapis/mcp-calendar
-        - **API Docs:** https://developers.google.com/calendar/api/v3/reference
+        - **Server Repo:** <https://github.com/googleapis/mcp-calendar>
+        - **API Docs:** <https://developers.google.com/calendar/api/v3/reference>
       - ✓ Configure Google Calendar MCP server
       - ✓ Create calendar tools in `tripsage/tools/calendar_tools.py`
         - ✓ Created GoogleCalendarMCPWrapper with standardized method mapping
@@ -904,8 +922,8 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
         - 90%+ cache hit rate for common operations
         - Proper TTL management across content types
       - **Resources:**
-        - **Server Repo:** https://github.com/redis/mcp-redis
-        - **Redis Docs:** https://redis.io/docs/
+        - **Server Repo:** <https://github.com/redis/mcp-redis>
+        - **Redis Docs:** <https://redis.io/docs/>
       - Configure Redis MCP server
       - Create caching tools in `tripsage/tools/cache_tools.py`
       - Implement distributed caching functionality
@@ -916,8 +934,8 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
       - **Goal:** Optimize performance and reduce API usage for web searches
       - **Status:** ✅ COMPLETED - Integration implemented and validated
       - **Resources:**
-        - **OpenAI Agents SDK:** https://openai.github.io/openai-agents-python/
-        - **Redis Client Docs:** https://redis-py.readthedocs.io/en/stable/
+        - **OpenAI Agents SDK:** <https://openai.github.io/openai-agents-python/>
+        - **Redis Client Docs:** <https://redis-py.readthedocs.io/en/stable/>
       - **Research Findings:**
         - WebSearchTool already implemented in TravelPlanningAgent and DestinationResearchAgent
         - Domain configurations differ appropriately between agents
@@ -948,8 +966,8 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
       - **Goal:** Create a centralized, content-aware caching system for all web operation tools
       - **Status:** Implemented core functionality, requires integration testing
       - **Resources:**
-        - **Redis Client Docs:** https://redis-py.readthedocs.io/en/stable/
-        - **OpenAI Agents SDK:** https://openai.github.io/openai-agents-python/
+        - **Redis Client Docs:** <https://redis-py.readthedocs.io/en/stable/>
+        - **OpenAI Agents SDK:** <https://openai.github.io/openai-agents-python/>
       - **Tasks:**
         - [x] Implement WebOperationsCache Class in `tripsage/utils/cache.py`:
           - [x] Create `ContentType` enum with categories (REALTIME, TIME_SENSITIVE, DAILY, SEMI_STATIC, STATIC)
@@ -1510,6 +1528,75 @@ For each completed task, ensure:
 
 ## Detailed Implementation Plans
 
+### Frontend Architecture v2 (NEW - May 2025)
+
+- **Target:** Modern, AI-centric frontend implementation
+- **Goal:** Build state-of-the-art frontend with Next.js 15, React 19, and Tailwind CSS v4
+- **Key Technologies:**
+  - Next.js 15.3.1 with App Router
+  - React 19.1.0 with Server Components
+  - TypeScript 5.5+ (strict mode)
+  - Tailwind CSS v4.0 with OKLCH colors
+  - Zustand v5.0.4 for state management
+  - TanStack Query v5 for data fetching
+  - Vercel AI SDK v5 for AI streaming
+
+**Implementation Phases:**
+
+1. **Phase 1: Foundation (Weeks 1-2)**
+   - [ ] Initialize Next.js 15.3.1 project
+   - [ ] Configure TypeScript and ESLint 9
+   - [ ] Set up Tailwind CSS v4 with OKLCH
+   - [ ] Install and configure shadcn/ui v3
+   - [ ] Implement authentication with Supabase
+
+2. **Phase 2: Component Library (Weeks 3-4)**
+   - [ ] Build core UI components
+   - [ ] Create feature-specific components
+   - [ ] Implement loading states and skeletons
+   - [ ] Design notification system
+   - [ ] Build data visualization components
+
+3. **Phase 3: Core Features (Weeks 5-8)**
+   - [ ] Trip planning workflows
+   - [ ] Search and discovery interface
+   - [ ] AI chat with streaming (Vercel AI SDK)
+   - [ ] Booking flows
+   - [ ] User profile management
+   - [ ] Budget tracking dashboard
+   - [ ] Expense management system
+
+4. **Phase 4: Budget Features (Weeks 9-12)**
+   - [ ] Price prediction engine
+   - [ ] Fare alert system
+   - [ ] Group cost splitting
+   - [ ] Alternative routing (hidden city, split tickets)
+   - [ ] Currency converter and fee calculator
+   - [ ] Deals aggregation platform
+   - [ ] Community savings tips system
+   - [ ] Budget templates and tracking
+
+5. **Phase 5: Advanced Features (Weeks 13-16)**
+   - [ ] Real-time updates with SSE
+   - [ ] Collaborative planning features
+   - [ ] Advanced data visualization
+   - [ ] Performance optimizations
+   - [ ] Code splitting and lazy loading
+
+6. **Phase 6: Enhancement (Weeks 17-20)**
+   - [ ] Progressive Web App features
+   - [ ] Service worker implementation
+   - [ ] Internationalization (i18n)
+   - [ ] Advanced security (BYOK UI)
+   - [ ] Comprehensive testing
+
+7. **Phase 7: Polish & Launch (Weeks 21-24)**
+   - [ ] User experience refinements
+   - [ ] Analytics and monitoring
+   - [ ] Performance audit
+   - [ ] Production deployment
+   - [ ] Documentation completion
+
 ### Codebase Restructuring (Issue #31)
 
 - **Target:** Core application logic
@@ -1676,6 +1763,10 @@ For each completed task, ensure:
 | WebSearchTool Caching           | ✅     | -   | Implemented CachedWebSearchTool wrapper with content-aware caching                             |
 | MCP Abstraction Layer           | ✅     | -   | Implemented Manager/Registry pattern with type-safe wrappers                                   |
 | Specific MCP Wrappers           | ✅     | -   | Implemented Supabase, Neo4j Memory, Duffel Flights, and Airbnb wrappers                        |
-| Backend BYOK Architecture       | 🖄     | -   | Created comprehensive database schema and encryption design with PBKDF2 + Fernet                |
-| Frontend BYOK Architecture      | 🖄     | -   | Designed secure key management UI with auto-clear and client-side validation                   |
+| Backend BYOK Architecture       | ✅     | -   | Created comprehensive database schema and encryption design with PBKDF2 + Fernet                |
+| Frontend BYOK Architecture      | ✅     | -   | Designed secure key management UI with auto-clear and client-side validation                   |
 | Frontend-Backend BYOK Alignment | ✅     | -   | Aligned frontend and backend implementations with comprehensive documentation                   |
+| Frontend Architecture v2        | ✅     | -   | Designed state-of-the-art architecture with Next.js 15, React 19, and AI-centric features      |
+| Technology Stack v2             | ✅     | -   | Updated tech stack recommendations with latest stable versions and justifications              |
+| Frontend Implementation Plan v2 | ✅     | -   | Created comprehensive 20-week phased implementation plan with code examples                     |
+| Gap Analysis & Recommendations  | ✅     | -   | Identified gaps (offline support, PWA, i18n) and provided future enhancement roadmap            |

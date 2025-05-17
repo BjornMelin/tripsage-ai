@@ -1,1000 +1,977 @@
-# TripSage Frontend Architecture
+# TripSage Frontend Architecture (v2.0)
 
 ## Executive Summary
 
-TripSage's frontend is a modern, AI-centric travel planning application built with Next.js 15.3, React 19, and TypeScript 5.5. It provides real-time streaming interfaces for agent interactions using Vercel AI SDK v5, integrates seamlessly with the FastAPI backend and MCP servers, and is optimized for deployment on Vercel with edge runtime capabilities.
+This document defines the state-of-the-art frontend architecture for TripSage AI Travel Application. The architecture prioritizes AI-centric features, security, scalability, and modern web standards while aligning with the backend architecture and leveraging the latest stable technology versions.
 
-## Technology Stack
+## 1. Core Technology Stack
 
-### Core Framework
-- **Next.js 15.3**: App Router, Server Components, Turbopack (production builds)
-- **React 19**: Concurrent features, new hooks (use, useOptimistic), automatic batching
-- **TypeScript 5.5+**: Enhanced type inference, type predicates, improved performance
+### 1.1 Framework & Runtime
 
-### Styling & UI
-- **Tailwind CSS v4**: OKLCH color space, container queries, enhanced theming
-- **shadcn/ui v3-canary**: React 19 compatibility, accessible components built on Radix UI
-- **Framer Motion v11**: Advanced animations and gestures
-- **lucide-react**: Modern icon library
+- **Next.js 15.3.1** (Latest stable as of May 2025)
 
-### State Management
-- **Zustand v5**: Client state management with TypeScript-first API
-- **TanStack Query v5**: Server state, caching, optimistic updates
-- **React Hook Form v8**: Form handling with Next.js 15 compatibility
-- **Zod v3**: Runtime validation with TypeScript inference
+  - App Router for enhanced performance and developer experience
+  - React Server Components for optimized data fetching
+  - Built-in API routes for backend integration
+  - Edge Runtime support for global performance
 
-### Real-time & AI
-- **Vercel AI SDK v5**: UI Message Streaming Protocol, agent interactions
-- **Server-Sent Events (SSE)**: Primary streaming mechanism for AI responses
-- **WebSocket (fallback)**: Bidirectional communication when needed
+- **React 19.1.0** (Latest stable)
+  - Server Components & Actions
+  - Improved Suspense boundaries
+  - Enhanced concurrent features
+  - Built-in `useSyncExternalStore`
 
-### Authentication
-- **Supabase Auth**: Integrated with backend, JWT-based
-- **iron-session**: Secure session management for server components
-- **Custom middleware**: Protected routes and API endpoints
+### 1.2 Language & Type Safety
 
-### Maps & Visualization
-- **Mapbox GL JS v3**: Interactive maps with WebGL performance
-- **React Flow v12**: Agent workflow visualization
-- **Recharts v2**: Data visualization for analytics
+- **TypeScript 5.5+** (Strict mode enabled)
+  - Complete type safety across the codebase
+  - Template literal types for API routes
+  - Improved type inference
+  - Better module resolution
 
-### Development & Build
-- **Turbopack**: Next.js integrated bundler (28-83% faster builds)
-- **Vitest v2**: Unit testing with native ESM support
-- **Playwright v1.48+**: E2E testing with Next.js 15 support
-- **Biome**: Fast linting and formatting (ruff equivalent for JS/TS)
+### 1.3 Styling & UI Components
 
-## Directory Structure
+- **Tailwind CSS v4.0**
+  - OKLCH color space for wider gamut colors
+  - CSS-based configuration
+  - Container queries built-in
+  - Performance optimizations
+- **shadcn/ui v3**
+  - Radix UI primitives
+  - Accessible components
+  - Customizable themes
+  - Copy-paste architecture
 
-```
+### 1.4 State Management
+
+- **Zustand v5.0.4** (Latest stable)
+
+  - Native `useSyncExternalStore` integration
+  - Simplified API with no boilerplate
+  - TypeScript-first design
+  - Middleware support
+
+- **TanStack Query v5**
+  - Suspense support (non-experimental)
+  - Improved optimistic updates
+  - Shareable mutation state
+  - Enhanced devtools
+
+### 1.5 AI & Streaming
+
+- **Vercel AI SDK v5**
+  - Streaming responses
+  - Tool calling support
+  - Provider abstraction
+  - React Hooks integration
+
+### 1.6 Forms & Validation
+
+- **React Hook Form v8**
+  - Performance optimized
+  - Built-in validation
+  - TypeScript support
+- **Zod v3**
+  - Schema validation
+  - Type inference
+  - Runtime safety
+
+### 1.7 Additional Libraries
+
+- **Recharts** - Data visualization
+- **date-fns** - Date manipulation
+- **React Email** - Email templates
+- **Framer Motion** - Animations
+- **React Hot Toast** - Notifications
+
+## 2. Architecture Patterns
+
+### 2.1 Component Architecture
+
+```plaintext
 src/
-├── app/                      # Next.js 15 App Router
-│   ├── (auth)/              # Authentication route group
-│   │   ├── login/
-│   │   ├── register/
-│   │   └── reset-password/
-│   ├── (dashboard)/         # Protected dashboard routes
-│   │   ├── layout.tsx       # Shared dashboard layout
-│   │   ├── page.tsx         # Dashboard home
-│   │   ├── trips/           # Trip management
-│   │   ├── agents/          # Agent chat interfaces
-│   │   └── settings/        # User settings
-│   ├── api/                 # API routes
-│   │   ├── agents/          # Agent streaming endpoints
-│   │   │   └── [agentId]/   
-│   │   │       └── stream/
-│   │   ├── auth/            # Auth endpoints
-│   │   └── trpc/            # Optional tRPC router
-│   ├── layout.tsx          # Root layout with providers
-│   ├── error.tsx           # Error boundary
-│   └── global-error.tsx    # Global error handler
-│
-├── components/              # React components
-│   ├── ui/                 # Base UI components (shadcn/ui)
-│   │   ├── button.tsx
-│   │   ├── dialog.tsx
-│   │   └── ...
-│   ├── agents/             # Agent-specific components
-│   │   ├── agent-chat.tsx
-│   │   ├── message-list.tsx
-│   │   ├── tool-invocation.tsx
-│   │   └── workflow-visualizer.tsx
-│   ├── trips/              # Trip planning components
-│   │   ├── trip-card.tsx
-│   │   ├── itinerary-builder.tsx
-│   │   └── budget-tracker.tsx
-│   ├── auth/               # Authentication components
-│   │   ├── login-form.tsx
-│   │   └── auth-provider.tsx
-│   └── shared/             # Shared components
-│       ├── header.tsx
-│       ├── sidebar.tsx
-│       └── loading.tsx
-│
-├── hooks/                  # Custom React hooks
-│   ├── use-agent-stream.ts
-│   ├── use-auth.ts
-│   ├── use-mcp-tool.ts
-│   └── use-realtime.ts
-│
-├── lib/                    # Core utilities
-│   ├── api/               # API client configuration
-│   │   ├── client.ts      # Configured fetch client
-│   │   └── endpoints.ts   # API endpoint constants
-│   ├── ai/                # AI SDK configuration
-│   │   ├── stream.ts      # Streaming utilities
-│   │   └── agents.ts      # Agent configurations
-│   ├── supabase/          # Supabase client setup
-│   │   ├── client.ts
-│   │   └── server.ts      # Server-side client
-│   └── utils/             # General utilities
-│       ├── cn.ts          # clsx + tailwind merge
-│       └── format.ts      # Formatting helpers
-│
-├── services/              # Business logic services
-│   ├── agent-service.ts   # Agent communication
-│   ├── trip-service.ts    # Trip management
-│   └── auth-service.ts    # Authentication logic
-│
-├── stores/                # Zustand stores
-│   ├── auth-store.ts
-│   ├── agent-store.ts
-│   ├── trip-store.ts
-│   └── ui-store.ts
-│
-├── types/                 # TypeScript definitions
-│   ├── api.ts             # API response types
-│   ├── agent.ts           # Agent-related types
-│   ├── trip.ts            # Trip domain types
-│   └── mcp.ts             # MCP tool types
-│
-└── styles/               # Global styles
-    ├── globals.css       # Global CSS with Tailwind
-    └── themes.css        # OKLCH theme variables
+├── app/                            # Next.js App Router
+│   ├── (auth)/                    # Auth group routes
+│   │   ├── login/                 # Login page
+│   │   ├── register/              # Registration page
+│   │   └── reset-password/        # Password reset
+│   ├── (dashboard)/               # Dashboard routes
+│   │   ├── page.tsx              # Main dashboard
+│   │   ├── trips/                # Trip management
+│   │   │   ├── page.tsx          # Saved trips list
+│   │   │   ├── [id]/             # Individual trip details
+│   │   │   └── new/              # Create new trip
+│   │   ├── search/               # Search interfaces
+│   │   │   ├── flights/          # Flight search page
+│   │   │   ├── hotels/           # Hotel search page
+│   │   │   ├── activities/       # Activities search
+│   │   │   └── destinations/     # Destination search
+│   │   ├── chat/                 # AI Chat interface
+│   │   │   ├── page.tsx          # Main chat UI
+│   │   │   └── [sessionId]/      # Specific chat session
+│   │   ├── agent-status/         # Agent workflow visualization
+│   │   ├── profile/              # User profile
+│   │   ├── settings/             # App settings
+│   │   │   ├── api-keys/         # API key management
+│   │   │   └── preferences/      # User preferences
+│   │   └── analytics/            # Trip analytics
+│   ├── api/                       # API routes
+│   │   ├── chat/                 # AI chat endpoints
+│   │   ├── trips/                # Trip CRUD operations
+│   │   ├── search/               # Search endpoints
+│   │   └── agents/               # Agent status endpoints
+│   └── layout.tsx                 # Root layout
+├── components/
+│   ├── ui/                        # shadcn/ui components
+│   ├── features/                  # Feature-specific components
+│   │   ├── trips/                # Trip-related components
+│   │   ├── search/               # Search components
+│   │   ├── chat/                 # Chat components
+│   │   ├── agents/               # Agent visualization
+│   │   └── analytics/            # Analytics components
+│   └── layouts/                   # Layout components
+├── lib/
+│   ├── api/                      # API client layer
+│   ├── hooks/                    # Custom React hooks
+│   ├── stores/                   # Zustand stores
+│   └── utils/                    # Utility functions
+├── types/                        # TypeScript definitions
+└── config/                       # Configuration files
 ```
 
-## Core Architecture Layers
+### 2.2 Data Flow Architecture
 
-### 1. Presentation Layer
-- **Server Components**: Default for static content, SEO-optimized pages
-- **Client Components**: Interactive features, real-time updates
-- **Streaming UI**: Token-by-token rendering for AI responses
-- **Mobile-First Design**: Responsive layouts with Tailwind container queries
-
-### 2. State Management Layer
-```typescript
-// Client State (Zustand)
-interface UIStore {
-  theme: 'light' | 'dark' | 'system'
-  sidebarOpen: boolean
-  activeAgent: string | null
-}
-
-// Server State (TanStack Query)
-const useTrips = () => {
-  return useQuery({
-    queryKey: ['trips'],
-    queryFn: () => api.get('/trips'),
-    staleTime: 5 * 60 * 1000, // 5 minutes
-  })
-}
-
-// Real-time State (Vercel AI SDK)
-const { messages, input, handleSubmit } = useChat({
-  api: '/api/agents/travel-planner/stream',
-  streamProtocol: 'data-stream',
-})
+```mermaid
+graph TD
+    A[React Components] --> B[Zustand Stores]
+    A --> C[TanStack Query]
+    B --> D[Local State]
+    C --> E[API Layer]
+    E --> F[Next.js API Routes]
+    F --> G[Backend Services]
+    G --> H[MCP Servers]
+    F --> I[SSE Endpoints]
+    I --> J[Real-time Updates]
+    J --> A
 ```
 
-### 3. API Integration Layer
+### 2.3 Security Architecture
+
+- **BYOK Implementation**
+
+  - Frontend never stores raw API keys
+  - Envelope encryption handled server-side
+  - Secure key submission flow
+  - Auto-clearing forms for sensitive data
+
+- **Authentication & Authorization**
+  - Supabase Auth integration
+  - JWT-based session management
+  - Role-based access control
+  - Secure cookie handling
+
+## 3. Key Design Decisions
+
+### 3.1 AI-Centric Features
+
 ```typescript
-// API Client with automatic retry and error handling
-class TripSageAPI {
-  private baseURL = process.env.NEXT_PUBLIC_API_URL
-  
-  async request<T>(path: string, options?: RequestInit): Promise<T> {
-    const res = await fetch(`${this.baseURL}${path}`, {
-      ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${await getSessionToken()}`,
-        ...options?.headers,
-      },
-    })
-    
-    if (!res.ok) {
-      throw new APIError(res.status, await res.text())
-    }
-    
-    return res.json()
-  }
-}
-```
-
-### 4. Real-time Communication Layer
-```typescript
-// Agent streaming with SSE
-export async function POST(req: Request) {
-  const encoder = new TextEncoder()
-  
-  const stream = new ReadableStream({
-    async start(controller) {
-      const { messages } = await req.json()
-      
-      // Call FastAPI backend
-      const response = await fetch(`${BACKEND_URL}/agents/stream`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'text/event-stream',
-        },
-        body: JSON.stringify({ messages }),
-      })
-      
-      const reader = response.body?.getReader()
-      const decoder = new TextDecoder()
-      
-      while (true) {
-        const { done, value } = await reader!.read()
-        if (done) break
-        
-        const chunk = decoder.decode(value)
-        controller.enqueue(encoder.encode(chunk))
-      }
-      
-      controller.close()
-    },
-  })
-  
-  return new Response(stream, {
-    headers: {
-      'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache',
-      'Connection': 'keep-alive',
-    },
-  })
-}
-```
-
-## Component Strategy
-
-### Server Components (Default)
-```typescript
-// app/(dashboard)/trips/page.tsx
-export default async function TripsPage() {
-  const trips = await api.get('/trips')
-  
-  return (
-    <div className="container py-8">
-      <TripGrid trips={trips} />
-    </div>
-  )
-}
-```
-
-### Client Components
-```typescript
-'use client'
-
-// components/agents/agent-chat.tsx
-export function AgentChat({ agentId }: { agentId: string }) {
+// AI Streaming Component
+export function AIChat() {
   const { messages, input, handleSubmit, isLoading } = useChat({
-    api: `/api/agents/${agentId}/stream`,
-    streamProtocol: 'data-stream',
-  })
-  
+    api: "/api/chat",
+    streamProtocol: "sse",
+  });
+
   return (
-    <div className="flex flex-col h-full">
-      <MessageList messages={messages} />
-      <ChatInput
-        value={input}
-        onChange={handleInputChange}
-        onSubmit={handleSubmit}
-        disabled={isLoading}
-      />
-    </div>
-  )
-}
-```
-
-### Streaming Components
-```typescript
-// components/agents/streaming-message.tsx
-export function StreamingMessage({ content }: { content: string }) {
-  const [displayedContent, setDisplayedContent] = useState('')
-  
-  useEffect(() => {
-    let index = 0
-    const interval = setInterval(() => {
-      if (index < content.length) {
-        setDisplayedContent(content.slice(0, index + 1))
-        index++
-      } else {
-        clearInterval(interval)
-      }
-    }, 10) // Smooth character-by-character display
-    
-    return () => clearInterval(interval)
-  }, [content])
-  
-  return <div className="prose">{displayedContent}</div>
-}
-```
-
-## Authentication Strategy
-
-### Supabase Auth Integration
-```typescript
-// lib/supabase/server.ts
-import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
-
-export function createClient() {
-  const cookieStore = cookies()
-  
-  return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return cookieStore.getAll()
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) =>
-            cookieStore.set(name, value, options)
-          )
-        },
-      },
-    }
-  )
-}
-```
-
-### Middleware Protection
-```typescript
-// middleware.ts
-import { NextResponse } from 'next/server'
-import type { NextRequest } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
-
-export async function middleware(request: NextRequest) {
-  const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  
-  if (!user && request.nextUrl.pathname.startsWith('/dashboard')) {
-    return NextResponse.redirect(new URL('/login', request.url))
-  }
-  
-  return NextResponse.next()
-}
-
-export const config = {
-  matcher: ['/dashboard/:path*', '/api/protected/:path*'],
-}
-```
-
-## MCP Server Interaction Pattern
-
-### Backend-Only MCP Communication
-All interactions with MCP servers are exclusively handled through the FastAPI backend. The frontend never makes direct calls to MCP servers.
-
-**Architecture:**
-```
-Frontend (Next.js) → FastAPI Backend → MCPManager → MCP Servers
-```
-
-**Benefits:**
-- API keys remain server-side only
-- Centralized error handling and retry logic
-- Consistent monitoring and logging
-- Flexible MCP implementation changes without frontend impact
-
-### Example Flow:
-```typescript
-// Frontend makes authenticated request to backend
-const response = await api.post('/agents/travel-planner/search', {
-  destination: 'Paris',
-  dates: { start: '2025-06-01', end: '2025-06-07' }
-});
-
-// Backend handles MCP orchestration
-// 1. Retrieves user's decrypted API keys
-// 2. Invokes appropriate MCP wrappers
-// 3. Aggregates and normalizes responses
-// 4. Returns unified result to frontend
-```
-
-## Secure API Key Management (BYOK)
-
-### Architecture Overview
-TripSage implements a secure Bring Your Own Key (BYOK) system allowing users to provide their own API keys for external services.
-
-### Key Components:
-
-#### 1. Frontend Key Input
-```typescript
-// components/settings/api-key-manager.tsx
-interface ApiKeyFormData {
-  service: 'openai' | 'duffel' | 'mapbox' | 'weatherapi';
-  apiKey: string;
-}
-
-export function ApiKeyManager() {
-  const [showKey, setShowKey] = useState(false);
-  
-  const handleSubmit = async (data: ApiKeyFormData) => {
-    // Always use HTTPS in production
-    const response = await fetch('/api/user/keys', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${sessionToken}`,
-      },
-      body: JSON.stringify({
-        service: data.service,
-        api_key: data.apiKey,
-      }),
-    });
-    
-    // Clear the key from memory immediately after submission
-    data.apiKey = '';
-  };
-  
-  return (
-    <Form onSubmit={handleSubmit}>
-      <Select name="service" label="Service">
-        <option value="openai">OpenAI</option>
-        <option value="duffel">Duffel Flights</option>
-        <option value="mapbox">Mapbox</option>
-        <option value="weatherapi">Weather API</option>
-      </Select>
-      
-      <Input
-        name="apiKey"
-        type={showKey ? 'text' : 'password'}
-        label="API Key"
-        autoComplete="off"
-        spellCheck={false}
-      />
-      
-      <Button type="submit">Save API Key</Button>
-    </Form>
+    <StreamingChat
+      messages={messages}
+      onSubmit={handleSubmit}
+      isStreaming={isLoading}
+    />
   );
 }
 ```
 
-#### 2. Secure Transmission
-- HTTPS-only communication
-- JWT-authenticated endpoints
-- Keys transmitted once and never stored client-side
+### 3.2 Real-time Communication
 
-#### 3. Backend Encryption & Storage
-```python
-# Backend handles secure storage (Python/FastAPI)
-# Fernet symmetric encryption
-encrypted_key = cipher.encrypt(api_key.encode())
+- Server-Sent Events (SSE) for AI streaming
+- WebSocket fallback for bidirectional communication
+- Automatic reconnection handling
+- Event-based state synchronization
 
-# Stored in Supabase
-user_api_keys: {
-  user_id: string
-  service: string
-  encrypted_key: string (base64)
-  key_hash: string (SHA256 prefix for identification)
-  created_at: timestamp
-  updated_at: timestamp
-}
-```
+### 3.3 Performance Optimizations
 
-#### 4. Key Usage Flow
-1. Agent/service requests key for specific service
-2. KeyManager retrieves encrypted key from database
-3. Key decrypted in memory with short TTL cache (5 min)
-4. Key used for MCP invocation
-5. Key cleared from memory after use
+- React Server Components for initial page loads
+- Dynamic imports for code splitting
+- Image optimization with Next.js Image
+- Route prefetching strategies
+- Edge caching for static content
 
-#### 5. Frontend Status Display
+### 3.4 Progressive Enhancement
+
+- Works without JavaScript (basic functionality)
+- Enhanced with client-side interactivity
+- Graceful degradation for older browsers
+- Accessibility-first approach
+
+## 4. Key Pages & Features
+
+### 4.1 Core Pages
+
+#### Dashboard (`/dashboard`)
+
 ```typescript
-// components/settings/api-key-status.tsx
-interface ApiKeyStatus {
-  service: string;
-  isSet: boolean;
-  lastUpdated?: string;
-  keyPreview?: string; // First 4 and last 4 characters only
-}
-
-export function ApiKeyStatusList() {
-  const [statuses, setStatuses] = useState<ApiKeyStatus[]>([]);
-  
-  useEffect(() => {
-    // Fetch key statuses (never the actual keys)
-    fetch('/api/user/keys/status', {
-      headers: {
-        'Authorization': `Bearer ${sessionToken}`,
-      },
-    })
-      .then(res => res.json())
-      .then(data => setStatuses(data));
-  }, []);
-  
+export default function DashboardPage() {
   return (
-    <div className="space-y-4">
-      {statuses.map(status => (
-        <div key={status.service} className="flex items-center justify-between">
-          <div>
-            <h3 className="font-medium">{status.service}</h3>
-            <p className="text-sm text-gray-500">
-              {status.isSet ? (
-                <>
-                  Key set • Preview: {status.keyPreview} • 
-                  Last updated: {formatDate(status.lastUpdated)}
-                </>
-              ) : (
-                'No key configured'
-              )}
-            </p>
-          </div>
-          <Button
-            onClick={() => openKeyModal(status.service)}
-            variant={status.isSet ? 'secondary' : 'primary'}
-          >
-            {status.isSet ? 'Update' : 'Add'} Key
-          </Button>
-        </div>
-      ))}
-    </div>
+    <DashboardLayout>
+      <RecentTrips />
+      <UpcomingFlights />
+      <QuickActions />
+      <TripSuggestions />
+    </DashboardLayout>
   );
 }
 ```
 
-### Security Measures:
-- Master encryption key managed by secure key service (AWS KMS, Azure Key Vault)
-- Keys encrypted at rest using Fernet (AES-128 CBC + HMAC)
-- Short-lived memory cache for performance
-- Audit logging for all key operations
-- Key rotation support
-- Secure key deletion with crypto-shredding
+#### Saved Trips (`/dashboard/trips`)
 
-## Agent-Specific Components
-
-### Flight Agent Components
 ```typescript
-// components/agents/flight/flight-results.tsx
-export function FlightResults({ offers }: { offers: DuffelOffer[] }) {
-  return (
-    <div className="space-y-4">
-      {offers.map(offer => (
-        <FlightOfferCard
-          key={offer.id}
-          offer={offer}
-          segments={offer.segments}
-          pricing={offer.pricing}
-        />
-      ))}
-    </div>
-  )
-}
+export default function SavedTripsPage() {
+  const { data: trips } = useSuspenseQuery({
+    queryKey: ["trips"],
+    queryFn: api.trips.getAll,
+  });
 
-// components/agents/flight/segment-display.tsx
-export function SegmentDisplay({ segment }: { segment: FlightSegment }) {
-  return (
-    <div className="flex items-center gap-4">
-      <AirlineInfo carrier={segment.airline} />
-      <FlightTimes departure={segment.departure} arrival={segment.arrival} />
-      <DurationBadge duration={segment.duration} />
-    </div>
-  )
-}
-```
-
-### Accommodation Agent Components
-```typescript
-// components/agents/accommodation/listing-grid.tsx
-export function AccommodationGrid({ listings }: { listings: AirbnbListing[] }) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {listings.map(listing => (
-        <ListingCard
-          key={listing.id}
-          listing={listing}
-          amenities={listing.amenities}
-          pricing={listing.pricing}
-        />
+      {trips.map((trip) => (
+        <TripCard key={trip.id} trip={trip} />
       ))}
     </div>
-  )
+  );
 }
 ```
 
-### Destination Research Components
+#### Trip Details (`/dashboard/trips/[id]`)
+
 ```typescript
-// components/agents/research/content-display.tsx
-export function ResearchContent({ content }: { content: WebCrawlResult }) {
-  return (
-    <div className="prose max-w-none">
-      <CrawlSourceBadge source={content.source} domain={content.domain} />
-      <div dangerouslySetInnerHTML={{ __html: content.sanitizedHtml }} />
-      <ExtractedDataSummary data={content.extractedData} />
-    </div>
-  )
-}
-```
-
-### MCP Tool Result Components
-```typescript
-// components/mcp/weather-widget.tsx
-export function WeatherWidget({ forecast }: { forecast: WeatherForecast }) {
-  return (
-    <div className="weather-card">
-      <CurrentConditions data={forecast.current} />
-      <DailyForecast days={forecast.daily} />
-      <WeatherAlerts alerts={forecast.alerts} />
-    </div>
-  )
-}
-
-// components/mcp/map-display.tsx
-export function MCPMapDisplay({ places }: { places: GooglePlacesResult[] }) {
-  return (
-    <MapContainer>
-      {places.map(place => (
-        <PlaceMarker
-          key={place.id}
-          place={place}
-          onClick={() => showPlaceDetails(place)}
-        />
-      ))}
-    </MapContainer>
-  )
-}
-```
-
-## Web Crawling Integration
-
-### Crawl Control Interface
-```typescript
-// components/webcrawl/crawl-control.tsx
-export function CrawlControl({ onCrawl }: { onCrawl: (url: string) => void }) {
-  const [crawlStatus, setCrawlStatus] = useState<CrawlStatus>()
-
-  return (
-    <div className="crawl-interface">
-      <CrawlUrlInput onSubmit={onCrawl} />
-      <DomainRoutingIndicator domain={crawlStatus?.domain} />
-      <CrawlProgress status={crawlStatus} />
-      <CrawlResults results={crawlStatus?.results} />
-    </div>
-  )
-}
-
-// services/crawl-service.ts
-export class CrawlService {
-  async initiateHybridCrawl(url: string): Promise<CrawlResult> {
-    // Calls backend which handles domain-based routing
-    const response = await api.post('/api/crawl/hybrid', { url })
-    return response.data
-  }
-
-  subscribeToCrawlUpdates(crawlId: string): EventSource {
-    return new EventSource(`/api/crawl/${crawlId}/stream`)
-  }
-}
-```
-
-### Crawl Result Display
-```typescript
-// components/webcrawl/result-viewer.tsx
-export function CrawlResultViewer({ result }: { result: CrawlResult }) {
-  const getSourceIcon = (source: string) => {
-    switch(source) {
-      case 'crawl4ai': return <Crawl4AIIcon />
-      case 'firecrawl': return <FirecrawlIcon />
-      case 'playwright': return <PlaywrightIcon />
-    }
-  }
-
-  return (
-    <div className="crawl-result">
-      <header className="flex items-center gap-2">
-        {getSourceIcon(result.source)}
-        <span>{result.domain}</span>
-        <CrawlTimestamp time={result.timestamp} />
-      </header>
-      <ContentDisplay content={result.content} type={result.contentType} />
-    </div>
-  )
-}
-```
-
-## Tool Invocation Visualization
-
-### Tool Invocation Tracking
-```typescript
-// components/agents/tool-tracker.tsx
-export function ToolInvocationTracker({ agentId }: { agentId: string }) {
-  const { invocations } = useToolInvocations(agentId)
-
-  return (
-    <div className="tool-tracker">
-      {invocations.map(inv => (
-        <ToolInvocationCard
-          key={inv.id}
-          tool={inv.tool}
-          status={inv.status}
-          input={inv.input}
-          output={inv.output}
-          duration={inv.duration}
-        />
-      ))}
-    </div>
-  )
-}
-
-// types/agent.ts
-interface ToolInvocation {
-  id: string
-  tool: MCPTool
-  status: 'pending' | 'running' | 'success' | 'error'
-  input: Record<string, any>
-  output?: Record<string, any>
-  error?: string
-  duration?: number
-  timestamp: Date
-}
-```
-
-## Error Handling Strategy
-
-### Global Error Boundary
-```typescript
-// app/error.tsx
-'use client'
-
-export default function Error({
-  error,
-  reset,
+export default function TripDetailsPage({
+  params,
 }: {
-  error: Error & { digest?: string }
-  reset: () => void
+  params: { id: string };
 }) {
-  useEffect(() => {
-    // Log error to monitoring service
-    console.error(error)
-  }, [error])
-  
   return (
-    <div className="flex h-full flex-col items-center justify-center">
-      <h2 className="text-2xl font-semibold">Something went wrong!</h2>
-      <button
-        onClick={reset}
-        className="mt-4 rounded-md bg-blue-500 px-4 py-2 text-white"
-      >
-        Try again
-      </button>
-    </div>
-  )
+    <TripDetailsLayout>
+      <TripHeader tripId={params.id} />
+      <TripItinerary tripId={params.id} />
+      <TripBudget tripId={params.id} />
+      <TripDocuments tripId={params.id} />
+      <TripCollaborators tripId={params.id} />
+    </TripDetailsLayout>
+  );
 }
 ```
 
-### API Error Handling
+#### AI Chat Interface (`/dashboard/chat`)
+
 ```typescript
-// lib/api/errors.ts
-export class APIError extends Error {
-  constructor(public status: number, message: string) {
-    super(message)
-  }
-}
-
-// With TanStack Query
-function useTrips() {
-  return useQuery({
-    queryKey: ['trips'],
-    queryFn: fetchTrips,
-    retry: (failureCount, error) => {
-      if (error instanceof APIError && error.status === 401) {
-        return false // Don't retry auth errors
-      }
-      return failureCount < 3
-    },
-    onError: (error) => {
-      toast.error(error.message)
-    },
-  })
+export default function ChatPage() {
+  return (
+    <ChatLayout>
+      <ChatSidebar />
+      <ChatWindow />
+      <AgentStatusPanel />
+    </ChatLayout>
+  );
 }
 ```
 
-## Performance Optimization
+#### Search Pages (`/dashboard/search/*`)
 
-### Code Splitting & Lazy Loading
+```typescript
+// Flight Search
+export default function FlightSearchPage() {
+  return (
+    <SearchLayout>
+      <FlightSearchForm />
+      <FlightResults />
+      <FlightFilters />
+      <PriceAlerts />
+    </SearchLayout>
+  );
+}
+
+// Hotel Search
+export default function HotelSearchPage() {
+  return (
+    <SearchLayout>
+      <HotelSearchForm />
+      <MapView />
+      <HotelResults />
+      <HotelFilters />
+    </SearchLayout>
+  );
+}
+```
+
+#### Agent Status Visualization (`/dashboard/agent-status`)
+
+```typescript
+export default function AgentStatusPage() {
+  return (
+    <AgentLayout>
+      <AgentWorkflowDiagram />
+      <ActiveAgentsList />
+      <TaskTimeline />
+      <ResourceMetrics />
+    </AgentLayout>
+  );
+}
+```
+
+### 4.2 Key UI Components
+
+#### AgentWorkflowVisualizer
+
+```typescript
+export function AgentWorkflowVisualizer({ agentId }: { agentId: string }) {
+  const { data: workflow } = useAgentWorkflow(agentId);
+
+  return (
+    <ReactFlow
+      nodes={workflow.nodes}
+      edges={workflow.edges}
+      nodeTypes={nodeTypes}
+    >
+      <MiniMap />
+      <Controls />
+      <Background />
+    </ReactFlow>
+  );
+}
+```
+
+#### TripTimeline
+
+```typescript
+export function TripTimeline({ tripId }: { tripId: string }) {
+  const { data: events } = useTripEvents(tripId);
+
+  return (
+    <div className="relative">
+      {events.map((event, index) => (
+        <TimelineEvent
+          key={event.id}
+          event={event}
+          isLast={index === events.length - 1}
+        />
+      ))}
+    </div>
+  );
+}
+```
+
+#### AIAssistantPanel
+
+```typescript
+export function AIAssistantPanel() {
+  const { isProcessing, currentTask, suggestions } = useAIAssistant();
+
+  return (
+    <Card className="p-4">
+      <CardHeader>
+        <CardTitle>AI Assistant</CardTitle>
+        {isProcessing && <LoadingIndicator />}
+      </CardHeader>
+      <CardContent>
+        {currentTask && <TaskProgress task={currentTask} />}
+        <SuggestionsList suggestions={suggestions} />
+      </CardContent>
+    </Card>
+  );
+}
+```
+
+### 4.3 Feature-Specific Components
+
+#### Search Components
+
+- `FlightSearchForm`: Multi-city, date flexibility options
+- `HotelSearchForm`: Location, dates, guest configuration
+- `SearchResults`: Paginated, filterable results
+- `PriceGraph`: Price trends visualization
+- `MapSearchView`: Interactive map with markers
+
+#### Trip Management Components
+
+- `TripCard`: Summary view of saved trips
+- `ItineraryBuilder`: Drag-and-drop timeline
+- `BudgetTracker`: Expense categorization
+- `DocumentManager`: File uploads, organization
+- `ShareModal`: Collaboration settings
+
+#### Chat Components
+
+- `MessageList`: Scrollable chat history
+- `MessageInput`: Rich text, file attachments
+- `AgentAvatar`: Status indicators
+- `StreamingMessage`: Real-time text display
+- `ChatActionButtons`: Quick actions
+
+#### Analytics Components
+
+- `SpendingChart`: Budget visualization
+- `TripStats`: Key metrics display
+- `PopularDestinations`: Heat map
+- `CostBreakdown`: Category analysis
+- `TravelHistory`: Timeline view
+
+#### Budget Management Components
+
+- `BudgetDashboard`: Overview of trip costs
+- `PricePredictor`: AI-powered price forecasting
+- `FareAlertManager`: Price tracking and notifications
+- `ExpenseTracker`: Real-time expense logging
+- `CurrencyConverter`: Multi-currency support
+- `GroupCostSplitter`: Shared expense calculations
+- `DealsFinder`: Aggregated deals and discounts
+- `HiddenCityFinder`: Alternative routing options
+- `BudgetTemplates`: Pre-built trip budgets
+- `CostComparator`: Side-by-side price analysis
+
+## 5. Component Strategy
+
+### 5.1 UI Component Hierarchy
+
+```typescript
+// Base component with shadcn/ui
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+
+// Feature component
+export function FlightSearchCard() {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Search Flights</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <FlightSearchForm />
+      </CardContent>
+    </Card>
+  );
+}
+
+// Composite component with AI features
+export function SmartFlightSearch() {
+  const { suggestions, isLoading } = useAISuggestions();
+
+  return (
+    <div className="space-y-4">
+      <FlightSearchCard />
+      {isLoading ? (
+        <LoadingSpinner />
+      ) : (
+        <SuggestionsList suggestions={suggestions} />
+      )}
+    </div>
+  );
+}
+```
+
+### 4.2 State Management Patterns
+
+```typescript
+// Zustand store for trip planning
+interface TripStore {
+  currentTrip: Trip | null;
+  destinations: Destination[];
+  addDestination: (destination: Destination) => void;
+  updateItinerary: (itinerary: Partial<Itinerary>) => void;
+  saveTrip: () => Promise<void>;
+}
+
+export const useTripStore = create<TripStore>((set, get) => ({
+  currentTrip: null,
+  destinations: [],
+
+  addDestination: (destination) =>
+    set((state) => ({
+      destinations: [...state.destinations, destination],
+    })),
+
+  updateItinerary: (itinerary) =>
+    set((state) => ({
+      currentTrip: state.currentTrip
+        ? { ...state.currentTrip, itinerary }
+        : null,
+    })),
+
+  saveTrip: async () => {
+    const trip = get().currentTrip;
+    if (!trip) return;
+
+    await api.trips.save(trip);
+    // Additional logic...
+  },
+}));
+
+// Zustand store for budget management
+interface BudgetStore {
+  tripBudget: number;
+  expenses: Expense[];
+  categories: CategoryBudget[];
+  currency: string;
+  addExpense: (expense: Expense) => void;
+  updateBudget: (budget: number) => void;
+  setCurrency: (currency: string) => void;
+  getRemaining: () => number;
+  getCategorySpending: (category: string) => number;
+}
+
+export const useBudgetStore = create<BudgetStore>((set, get) => ({
+  tripBudget: 0,
+  expenses: [],
+  categories: [],
+  currency: "USD",
+
+  addExpense: (expense) =>
+    set((state) => ({
+      expenses: [...state.expenses, expense],
+    })),
+
+  updateBudget: (budget) =>
+    set({ tripBudget: budget }),
+
+  setCurrency: (currency) =>
+    set({ currency }),
+
+  getRemaining: () => {
+    const state = get();
+    const totalSpent = state.expenses.reduce((sum, exp) => sum + exp.amount, 0);
+    return state.tripBudget - totalSpent;
+  },
+
+  getCategorySpending: (category) => {
+    const state = get();
+    return state.expenses
+      .filter((exp) => exp.category === category)
+      .reduce((sum, exp) => sum + exp.amount, 0);
+  },
+}));
+```
+
+## 5. Integration Patterns
+
+### 5.1 MCP Client Integration
+
+```typescript
+// Abstracted MCP client hook
+export function useWeatherData(location: string) {
+  return useQuery({
+    queryKey: ["weather", location],
+    queryFn: () => api.mcp.weather.getCurrentWeather(location),
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+}
+
+// Usage in component
+export function WeatherWidget({ location }: { location: string }) {
+  const { data, isLoading } = useWeatherData(location);
+
+  if (isLoading) return <WeatherSkeleton />;
+
+  return (
+    <div className="weather-widget">
+      <Temperature value={data.temperature} />
+      <Conditions status={data.conditions} />
+    </div>
+  );
+}
+```
+
+### 5.2 Error Handling
+
+```typescript
+// Global error boundary
+export function GlobalErrorBoundary({ children }: PropsWithChildren) {
+  return (
+    <ErrorBoundary
+      fallback={<ErrorFallback />}
+      onError={(error) => {
+        console.error("Application error:", error);
+        // Send to error tracking service
+      }}
+    >
+      {children}
+    </ErrorBoundary>
+  );
+}
+
+// API error handling with retry logic
+export function useApiQuery<T>(queryKey: QueryKey, queryFn: QueryFunction<T>) {
+  return useQuery({
+    queryKey,
+    queryFn,
+    retry: (failureCount, error) => {
+      if (error.status === 401) return false; // Don't retry auth errors
+      return failureCount < 3;
+    },
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+  });
+}
+```
+
+## 6. Security Implementation
+
+### 6.1 BYOK Security Flow
+
+```typescript
+// Secure API key submission
+export function ApiKeyForm() {
+  const [isVisible, setIsVisible] = useState(false);
+  const { register, handleSubmit, reset } = useForm<ApiKeyFormData>();
+
+  // Auto-clear after 60 seconds
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      reset();
+      setIsVisible(false);
+    }, 60000);
+
+    return () => clearTimeout(timer);
+  }, [reset]);
+
+  const onSubmit = async (data: ApiKeyFormData) => {
+    try {
+      await api.keys.encrypt(data);
+      toast.success("API key securely stored");
+      reset();
+    } catch (error) {
+      toast.error("Failed to store API key");
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit(onSubmit)}>
+      <PasswordInput
+        {...register("apiKey", { required: true })}
+        visible={isVisible}
+        onVisibilityChange={setIsVisible}
+      />
+      <Button type="submit">Save Securely</Button>
+    </form>
+  );
+}
+```
+
+### 6.2 Authentication Flow
+
+```typescript
+// Protected route wrapper
+export function ProtectedRoute({ children }: PropsWithChildren) {
+  const { user, isLoading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!isLoading && !user) {
+      router.push("/login");
+    }
+  }, [user, isLoading, router]);
+
+  if (isLoading) return <LoadingScreen />;
+  if (!user) return null;
+
+  return <>{children}</>;
+}
+```
+
+## 7. Performance Considerations
+
+### 7.1 Code Splitting Strategy
+
 ```typescript
 // Dynamic imports for heavy components
-const MapView = dynamic(() => import('@/components/maps/map-view'), {
-  loading: () => <div>Loading map...</div>,
+const MapView = dynamic(() => import("@/components/features/MapView"), {
+  loading: () => <MapSkeleton />,
   ssr: false,
-})
+});
 
-const WorkflowVisualizer = dynamic(
-  () => import('@/components/agents/workflow-visualizer'),
-  { loading: () => <Skeleton className="h-96" /> }
-)
+// Route-based code splitting
+const AdminDashboard = lazy(() => import("@/pages/admin"));
 ```
 
-### Image Optimization
-```typescript
-import Image from 'next/image'
+### 7.2 Data Fetching Optimization
 
-export function DestinationCard({ destination }) {
-  return (
-    <div className="relative aspect-video">
-      <Image
-        src={destination.image}
-        alt={destination.name}
-        fill
-        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-        className="object-cover"
-        priority={destination.featured}
-      />
-    </div>
-  )
+```typescript
+// Parallel data fetching with React Server Components
+export async function TripDetailsPage({ params }: { params: { id: string } }) {
+  // Parallel fetching
+  const [trip, flights, hotels] = await Promise.all([
+    api.trips.getById(params.id),
+    api.flights.getByTripId(params.id),
+    api.hotels.getByTripId(params.id),
+  ]);
+
+  return <TripDetails trip={trip} flights={flights} hotels={hotels} />;
 }
 ```
 
-### Streaming Optimization
+### 7.3 Caching Strategy
+
 ```typescript
-// Throttled updates for rapid token streams
-const { messages } = useChat({
-  api: '/api/agents/chat',
-  streamProtocol: 'data-stream',
-  experimental_throttle: 50, // Update UI every 50ms max
-})
-```
-
-## Testing Strategy
-
-### Unit Tests (Vitest)
-```typescript
-// components/ui/button.test.tsx
-import { render, screen } from '@testing-library/react'
-import { Button } from './button'
-
-describe('Button', () => {
-  it('renders with correct text', () => {
-    render(<Button>Click me</Button>)
-    expect(screen.getByRole('button')).toHaveTextContent('Click me')
-  })
-  
-  it('handles click events', async () => {
-    const handleClick = vi.fn()
-    render(<Button onClick={handleClick}>Click me</Button>)
-    
-    await userEvent.click(screen.getByRole('button'))
-    expect(handleClick).toHaveBeenCalledOnce()
-  })
-})
-```
-
-### Integration Tests
-```typescript
-// app/api/agents/[agentId]/stream/route.test.ts
-describe('Agent Streaming API', () => {
-  it('returns SSE stream for valid requests', async () => {
-    const response = await fetch('/api/agents/travel-planner/stream', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ messages: [{ role: 'user', content: 'Plan a trip to Paris' }] }),
-    })
-    
-    expect(response.headers.get('content-type')).toBe('text/event-stream')
-    expect(response.ok).toBe(true)
-  })
-})
-```
-
-### E2E Tests (Playwright)
-```typescript
-// e2e/trip-planning.spec.ts
-test('complete trip planning flow', async ({ page }) => {
-  await page.goto('/dashboard')
-  await page.click('text=Plan New Trip')
-  
-  await page.fill('[name="destination"]', 'Paris, France')
-  await page.fill('[name="startDate"]', '2025-06-01')
-  await page.fill('[name="endDate"]', '2025-06-07')
-  
-  await page.click('text=Start Planning')
-  
-  // Wait for agent response
-  await expect(page.locator('.agent-message')).toContainText('I can help you plan')
-})
-```
-
-## Deployment Configuration
-
-### Vercel Deployment
-```json
-// vercel.json
-{
-  "functions": {
-    "app/api/agents/*/stream/route.ts": {
-      "maxDuration": 30
-    }
+// TanStack Query caching configuration
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      gcTime: 10 * 60 * 1000, // 10 minutes
+      refetchOnWindowFocus: false,
+      retry: 2,
+    },
   },
-  "env": {
-    "NEXT_PUBLIC_API_URL": "@production-api-url",
-    "NEXT_PUBLIC_SUPABASE_URL": "@supabase-url",
-    "NEXT_PUBLIC_SUPABASE_ANON_KEY": "@supabase-anon-key"
-  }
+});
+
+// Optimistic updates
+export function useUpdateTrip() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: api.trips.update,
+    onMutate: async (newTrip) => {
+      await queryClient.cancelQueries({ queryKey: ["trips", newTrip.id] });
+
+      const previousTrip = queryClient.getQueryData(["trips", newTrip.id]);
+      queryClient.setQueryData(["trips", newTrip.id], newTrip);
+
+      return { previousTrip };
+    },
+    onError: (err, newTrip, context) => {
+      queryClient.setQueryData(["trips", newTrip.id], context?.previousTrip);
+    },
+  });
 }
 ```
 
-### Environment Variables
-```env
-# .env.local
-NEXT_PUBLIC_API_URL=https://api.tripsage.ai
-NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
-SUPABASE_SERVICE_ROLE_KEY=your-service-key
-MAPBOX_ACCESS_TOKEN=your-mapbox-token
+## 8. Deployment Architecture
+
+### 8.1 Build Configuration
+
+```javascript
+// next.config.js
+module.exports = {
+  reactStrictMode: true,
+  images: {
+    domains: ["images.tripsage.com"],
+    formats: ["image/avif", "image/webp"],
+  },
+  experimental: {
+    serverActions: true,
+    ppr: true, // Partial Prerendering
+  },
+  env: {
+    NEXT_PUBLIC_API_URL: process.env.API_URL,
+  },
+};
 ```
 
-## Security Considerations
+### 8.2 Environment Strategy
 
-### Content Security Policy
-```typescript
-// next.config.mjs
-const securityHeaders = [
-  {
-    key: 'Content-Security-Policy',
-    value: `
-      default-src 'self';
-      script-src 'self' 'unsafe-eval' 'unsafe-inline' https://vercel.live;
-      style-src 'self' 'unsafe-inline';
-      img-src 'self' data: https:;
-      connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.mapbox.com;
-    `.replace(/\n/g, ' ')
-  },
-  {
-    key: 'X-Frame-Options',
-    value: 'DENY'
-  },
-  {
-    key: 'X-Content-Type-Options',
-    value: 'nosniff'
-  }
-]
+- Development: Local environment with hot reloading
+- Staging: Mirror of production with test data
+- Production: Optimized builds with CDN distribution
+
+### 8.3 CI/CD Pipeline
+
+```yaml
+# GitHub Actions workflow
+name: Deploy Frontend
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: "20"
+      - run: npm ci
+      - run: npm run build
+      - run: npm run test
+      - uses: vercel/action@v1
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
 ```
 
-### API Security
-- All sensitive operations proxied through backend
-- JWT tokens validated on every request
-- Rate limiting on API endpoints
-- Input validation with Zod schemas
+## 9. Testing Strategy
 
-## Monitoring & Analytics
+### 9.1 Unit Testing
 
-### Performance Monitoring
 ```typescript
-// lib/monitoring.ts
+// Component testing with React Testing Library
+describe("FlightSearchForm", () => {
+  it("validates required fields", async () => {
+    render(<FlightSearchForm />);
+
+    const submitButton = screen.getByRole("button", { name: /search/i });
+    fireEvent.click(submitButton);
+
+    expect(await screen.findByText(/origin is required/i)).toBeInTheDocument();
+  });
+});
+```
+
+### 9.2 Integration Testing
+
+```typescript
+// API integration tests
+describe("Trip API", () => {
+  it("creates a new trip with flights", async () => {
+    const trip = await api.trips.create({
+      name: "European Adventure",
+      destinations: ["Paris", "Rome"],
+    });
+
+    expect(trip.id).toBeDefined();
+    expect(trip.destinations).toHaveLength(2);
+  });
+});
+```
+
+### 9.3 E2E Testing
+
+```typescript
+// Playwright E2E tests
+test("complete trip booking flow", async ({ page }) => {
+  await page.goto("/trips/new");
+
+  // Search for flights
+  await page.fill('[name="origin"]', "NYC");
+  await page.fill('[name="destination"]', "LON");
+  await page.click('button[type="submit"]');
+
+  // Select flight
+  await page.click(".flight-option:first-child");
+
+  // Continue to booking
+  await page.click("text=Continue to Booking");
+
+  // Assert success
+  await expect(page).toHaveURL(/\/booking\/confirmation/);
+});
+```
+
+## 10. Monitoring & Analytics
+
+### 10.1 Error Tracking
+
+- Sentry for error monitoring
+- Custom error boundaries
+- Performance monitoring
+- User session replay
+
+### 10.2 Analytics
+
+- Google Analytics 4
+- Custom event tracking
+- User behavior analysis
+- Conversion tracking
+
+### 10.3 Performance Monitoring
+
+```typescript
+// Web Vitals tracking
 export function reportWebVitals(metric: NextWebVitalsMetric) {
-  if (metric.label === 'web-vital') {
-    // Send to analytics service
-    analytics.track('Web Vitals', {
-      metric: metric.name,
-      value: metric.value,
-      label: metric.label,
-    })
+  switch (metric.name) {
+    case "FCP":
+    case "LCP":
+    case "CLS":
+    case "FID":
+    case "TTFB":
+      // Send to analytics
+      analytics.track("Web Vitals", {
+        metric: metric.name,
+        value: Math.round(metric.value),
+      });
+      break;
   }
 }
 ```
 
-### Error Tracking
-```typescript
-// lib/sentry.ts
-import * as Sentry from '@sentry/nextjs'
+## 11. Gap Analysis & Recommendations
 
-Sentry.init({
-  dsn: process.env.SENTRY_DSN,
-  tracesSampleRate: 1.0,
-  debug: false,
-  environment: process.env.NODE_ENV,
-})
-```
+### 11.1 Identified Gaps
 
-## Future Enhancements
+1. **Offline Support** - Limited offline functionality
+2. **PWA Features** - No Progressive Web App capabilities
+3. **Internationalization** - Basic i18n support needed
+4. **Advanced Caching** - Could benefit from service workers
+5. **Native Features** - No mobile app bridge
 
-### Progressive Web App
-- Service Worker implementation
-- Offline functionality
-- Push notifications
+### 11.2 Recommendations
 
-### Advanced AI Features
-- Voice input/output
-- Multi-modal agent interactions
-- Predictive UI based on user behavior
+1. **Implement Service Workers**
 
-### Performance Improvements
-- Edge runtime for API routes
-- Partial pre-rendering
-- React Server Components optimization
+   - Offline caching strategy
+   - Background sync for failed requests
+   - Push notifications support
 
-This architecture provides a solid foundation for TripSage's frontend, ensuring scalability, performance, and an excellent developer experience while maintaining flexibility for future enhancements.
+2. **Add PWA Support**
+
+   - Web app manifest
+   - Install prompts
+   - Native-like experience
+
+3. **Enhance Accessibility**
+
+   - ARIA labels improvement
+   - Keyboard navigation enhancement
+   - Screen reader optimization
+
+4. **Implement Advanced Features**
+
+   - Voice search capabilities
+   - Gesture controls
+   - AR/VR previews for destinations
+
+5. **Performance Enhancements**
+   - WebAssembly for compute-intensive tasks
+   - Edge computing for global performance
+   - Advanced prefetching strategies
+
+## 12. Future Roadmap
+
+### Phase 1: Foundation (Months 1-2)
+
+- Set up Next.js 15 with TypeScript
+- Implement authentication flow
+- Basic UI components with shadcn/ui
+- Initial state management setup
+
+### Phase 2: Core Features (Months 3-4)
+
+- AI chat integration
+- Trip planning interface
+- Search functionality
+- Booking flows
+
+### Phase 3: Advanced Features (Months 5-6)
+
+- Real-time updates
+- Collaborative planning
+- Advanced filtering
+- Performance optimizations
+
+### Phase 4: Enhancement (Months 7-8)
+
+- PWA implementation
+- Offline support
+- Internationalization
+- Advanced analytics
+
+## Conclusion
+
+This architecture provides a robust, scalable foundation for TripSage's frontend, leveraging the latest web technologies while maintaining security, performance, and developer experience. The modular design allows for incremental improvements and easy maintenance as the application grows.
