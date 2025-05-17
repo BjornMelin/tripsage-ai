@@ -81,6 +81,14 @@ This document tracks the current implementation status of the TripSage travel pl
 - ✅ Centralized configuration with Pydantic Settings (Issue #15)
 - ✅ Implemented basic WebSearchTool caching with Redis
 
+### MCP Server Standardization
+- ✅ Removed legacy /mcp_servers/ directory (incompatible with FastMCP 2.0)
+- ✅ Implemented unified MCP launcher script (scripts/mcp_launcher.py)
+- ✅ Created Docker-Compose orchestration for all MCP services
+- ✅ Implemented service registry pattern for dynamic management
+- ✅ Enhanced MCP configuration with runtime/transport type support
+- ✅ Added comprehensive test suite for launcher and service registry
+
 ## Current Development Focus
 
 - 🔄 Refactoring agent orchestration using OpenAI Agents SDK (#28)
