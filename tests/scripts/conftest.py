@@ -1,8 +1,10 @@
 """Conftest for scripts tests."""
 
 import os
-import pytest
 from unittest.mock import patch
+
+import pytest
+
 
 # Mock environment variables before importing MCP settings
 @pytest.fixture(autouse=True)

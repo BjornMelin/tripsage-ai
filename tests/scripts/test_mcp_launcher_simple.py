@@ -1,8 +1,6 @@
 """Simple isolated tests for the MCP launcher script."""
 
-import subprocess
-from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -54,8 +52,8 @@ class TestMCPLauncher:
     def test_list_servers(self, launcher):
         """Test listing servers"""
         launcher.servers["supabase"] = MagicMock()
-        
+
         servers = launcher.list_servers()
-        
+
         assert "supabase" in servers
         assert "running" in servers["supabase"]["status"]
