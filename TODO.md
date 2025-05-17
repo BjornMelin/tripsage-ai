@@ -11,7 +11,31 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
 - Files should be ≤350 LoC (hard cap: 500)
 - Test coverage target: ≥90%
 
-## High Priority
+## System Gaps Analysis
+
+- [ ] **UI Gaps - Not Leveraging Full Capabilities**
+  - Missing personalized recommendations from memory-mcp
+  - No timezone-aware scheduling with time-mcp
+  - Weather data not integrated into trip planning
+  - No automated price monitoring with browser-mcp
+  - Missing version control for itineraries
+  - No real-time agent workflow visualization
+
+- [ ] **Backend Gaps - Missing Integrations**
+  - Incomplete memory-mcp implementation for learning
+  - No browser automation for price tracking
+  - Missing GitHub integration for itinerary versioning
+  - Limited use of perplexity-mcp for research
+  - No firecrawl deep research implementation
+
+- [ ] **Database Gaps - Required Tables**
+  - Missing user_preferences for personalization
+  - No search_history for recommendations
+  - Missing price_alerts table
+  - No agent_interactions tracking
+  - Missing group collaboration tables
+
+## MVP Priority (Version 1.0)
 
 - [ ] **Frontend-Backend BYOK Integration**
 
@@ -1528,7 +1552,7 @@ For each completed task, ensure:
 
 ## Detailed Implementation Plans
 
-### Frontend Architecture v2 (NEW - May 2025)
+### MVP Frontend Implementation (Version 1.0)
 
 - **Target:** Modern, AI-centric frontend implementation
 - **Goal:** Build state-of-the-art frontend with Next.js 15, React 19, and Tailwind CSS v4
@@ -1687,6 +1711,76 @@ For each completed task, ensure:
    - [ ] Create streaming response handlers
    - [ ] Implement memory integration with graph database
    - [ ] Add custom model integration capabilities
+
+### Next Release Features (Version 2.0)
+
+- **Target:** Advanced features and enterprise capabilities
+- **Goal:** Build comprehensive collaborative, intelligent travel platform
+- **Key Enhancements:**
+  - Group travel and expense splitting
+  - Price prediction and monitoring
+  - Advanced personalization with AI learning
+  - Complete MCP server coverage
+  - Mobile application support
+
+**Implementation Phases:**
+
+1. **Phase 1: Collaborative Features (Months 4-5)**
+   - [ ] Group trip planning interface
+   - [ ] Real-time expense splitting
+   - [ ] Shared itinerary management
+   - [ ] Voting and decision systems
+   - [ ] Activity feed for group updates
+
+2. **Phase 2: Intelligence Layer (Months 6-7)**
+   - [ ] Price prediction algorithms
+   - [ ] Fare alert system
+   - [ ] Learning user preferences
+   - [ ] AI recommendation engine
+   - [ ] Alternative routing finder
+
+3. **Phase 3: Platform Expansion (Months 8-9)**
+   - [ ] Mobile app development (React Native)
+   - [ ] PWA capabilities
+   - [ ] Offline support
+   - [ ] Advanced MCP integrations
+   - [ ] Enterprise features
+
+### Database Requirements
+
+- **Target:** Complete database schema implementation
+- **Goal:** Support all MVP features with scalable architecture
+- **MVP Tables Required:**
+  - users (authentication, profiles)
+  - api_keys (BYOK storage)
+  - trips (trip planning)
+  - trip_items (flights, hotels, activities)
+  - budgets (budget tracking)
+  - expenses (expense management)
+  - chat_sessions (AI interactions)
+
+**Implementation Tasks:**
+
+1. **Core Tables Creation**
+   - [ ] Implement users table with OAuth support
+   - [ ] Create api_keys table with encryption fields
+   - [ ] Design trips table with status tracking
+   - [ ] Build trip_items with flexible JSON storage
+   - [ ] Implement budgets with category support
+
+2. **Relationships and Indices**
+   - [ ] Add foreign key constraints
+   - [ ] Create composite indices for queries
+   - [ ] Implement soft delete support
+   - [ ] Add audit timestamps
+
+3. **Next Release Tables (v2.0)**
+   - [ ] user_preferences (personalization)
+   - [ ] search_history (recommendations)
+   - [ ] price_alerts (monitoring)
+   - [ ] groups (collaboration)
+   - [ ] shared_expenses (splitting)
+   - [ ] agent_interactions (tracking)
 
 ### Pydantic V2 Migration
 
