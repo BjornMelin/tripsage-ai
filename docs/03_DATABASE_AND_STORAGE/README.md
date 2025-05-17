@@ -8,21 +8,21 @@ TripSage employs a **dual-storage architecture** to optimally handle different t
 
 1. **Relational Database (SQL)**:
 
-   - **Technology**: PostgreSQL.
-   - **Providers**:
-     - **Supabase**: Used for production and staging environments. Provides managed PostgreSQL along with integrated services like authentication, real-time capabilities, and storage.
-     - **Neon**: Used for development and testing environments. Offers serverless PostgreSQL with excellent branching capabilities, allowing for isolated databases per feature or developer.
-   - **Purpose**: Stores core structured data such as user accounts, trip itineraries, booking details, and other transactional information.
+    - **Technology**: PostgreSQL.
+    - **Providers**:
+      - **Supabase**: Used for production and staging environments. Provides managed PostgreSQL along with integrated services like authentication, real-time capabilities, and storage.
+      - **Neon**: Used for development and testing environments. Offers serverless PostgreSQL with excellent branching capabilities, allowing for isolated databases per feature or developer.
+    - **Purpose**: Stores core structured data such as user accounts, trip itineraries, booking details, and other transactional information.
 
 2. **Knowledge Graph Database (Graph)**:
 
-   - **Technology**: Neo4j.
-   - **Integration**: Accessed via the official **Memory MCP (Model Context Protocol) Server**.
-   - **Purpose**: Stores relationship-rich data, including travel entity connections (destinations, accommodations, flights), user preferences, historical travel patterns, and semantic knowledge that powers AI agent recommendations and contextual understanding.
+    - **Technology**: Neo4j.
+    - **Integration**: Accessed via the official **Memory MCP (Model Context Protocol) Server**.
+    - **Purpose**: Stores relationship-rich data, including travel entity connections (destinations, accommodations, flights), user preferences, historical travel patterns, and semantic knowledge that powers AI agent recommendations and contextual understanding.
 
 3. **Caching Layer**:
-   - **Technology**: Redis.
-   - **Purpose**: Used for caching frequently accessed data, API responses, and search results to improve performance and reduce load on primary data stores and external APIs. Details are covered in the [Search and Caching](../05_SEARCH_AND_CACHING/README.md) section.
+    - **Technology**: Redis.
+    - **Purpose**: Used for caching frequently accessed data, API responses, and search results to improve performance and reduce load on primary data stores and external APIs. Details are covered in the [Search and Caching](../05_SEARCH_AND_CACHING/README.md) section.
 
 ## Contents
 

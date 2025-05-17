@@ -38,7 +38,6 @@ The official Time MCP server can be run using various methods. TripSage includes
   - Checking if the MCP server package (e.g., `@uvx/mcp-server-time` for Node.js, or a Python equivalent) is installed.
   - Installing it globally or locally if missing (e.g., via `npx uvx mcp-server-time` or `uv pip install mcp-time-server`).
   - Starting the server, usually on a default port (e.g., 3000 or as configured).
-- **`scripts/stop_official_time_mcp.sh`**: Stops the running Time MCP server process.
 
 **Example `start_official_time_mcp.sh` content (conceptual for a Node.js based server):**
 
@@ -62,11 +61,15 @@ echo "Starting Official Time MCP Server on port ${MCP_PORT}..."
 npx "${MCP_TIME_SERVER_PACKAGE}" --port "${MCP_PORT}"
 ```
 
-## 3. TripSage Time MCP Client (`TimeMCPClient`)
+## 3. TripSage Time MCP Client (TimeMCPClient)
 
-TripSage interacts with the Time MCP server via a dedicated Python client, `TimeMCPClient`, located in `src/mcp/time/client.py`. This client acts as a wrapper, providing type-safe methods and integrating with TripSage's MCP Abstraction Layer.
+TripSage interacts with the Time MCP server via a dedicated Python client, TimeMCPClient, located in src/mcp/time/client.py. This client acts as a wrapper, providing type-safe methods and integrating with TripSage's MCP Abstraction Layer.
 
 ### 3.1. Client Implementation Highlights
+
+Inherits from BaseMCPClient.
+Configured via centralized settings (endpoint URL for the Time MCP server).
+Provides methods mapping to the Time MCP server's tools.
 
 ```python
 # src/mcp/time/client.py (Simplified Snippet)
@@ -123,18 +126,20 @@ def get_time_mcp_client() -> TimeMCPClient:
 
 ### 3.2. Expected Response Format from Official Time MCP
 
-**For `get_current_time`:**
+The TimeMCPClient is designed to parse responses from the official Time MCP server, which typically follow a standard format.
+
+For `get_current_time`:
 
 ```json
 {
   "timezone": "America/New_York",
-  "datetime": "2025-05-16T10:30:45-04:00",
+  "datetime": "2025-05-16T10:30:45-04:00", // ISO 8601 format
   "is_dst": true,
   "utc_offset": "-04:00"
 }
 ```
 
-**For `convert_time`:**
+For `convert_time`:
 
 ```json
 {
@@ -146,15 +151,15 @@ def get_time_mcp_client() -> TimeMCPClient:
     "timezone": "Europe/London",
     "datetime": "2025-05-16T19:30:00+01:00"
   },
-  "time_difference_hours": 5.0
+  "time_difference_hours": 5.0 // Example
 }
 ```
 
 The client methods transform these responses into Python-friendly objects or dictionaries.
 
-## 4. TripSage Time Service (`TimeService`)
+## 4. TripSage Time Service (TimeService)
 
-Building on the `TimeMCPClient`, a higher-level `TimeService` (e.g., in `src/services/time_service.py` or as part of the client file) provides travel-specific time functionalities:
+Building on the TimeMCPClient, a higher-level TimeService (e.g., in src/services/time_service.py or as part of the client file) provides travel-specific time functionalities:
 
 ```python
 # Part of src/mcp/time/client.py or a separate src/services/time_service.py
@@ -168,6 +173,7 @@ class TripSageTimeService:
         """Gets the current local time for a given travel destination."""
         try:
             current_time_data = await self.time_mcp_client.get_current_time(timezone=destination_timezone)
+            # Assuming datetime is in ISO format "YYYY-MM-DDTHH:MM:SSZ" or "YYYY-MM-DDTHH:MM:SS+/-HH:MM"
             dt_obj = datetime.fromisoformat(current_time_data['datetime'])
             return dt_obj.strftime('%Y-%m-%d %H:%M:%S %Z%z')
         except Exception as e:
@@ -176,42 +182,141 @@ class TripSageTimeService:
 
     async def calculate_flight_arrival_details(
         self,
-        departure_datetime_str: str,
-        departure_timezone: str,
-        arrival_timezone: str,
+        departure_datetime_str: str, # ISO format e.g., "2025-10-20T10:00:00"
+        departure_timezone: str,     # e.g., "America/Los_Angeles"
+        arrival_timezone: str,       # e.g., "Asia/Tokyo"
         flight_duration_minutes: int
     ) -> Optional[Dict[str, str]]:
         """Calculates flight arrival time in both UTC and local arrival timezone."""
         try:
-            # Convert departure time to aware datetime via Time MCP, then add flight duration, convert to arrival tz
-            # (Implementation details omitted for brevity)
+            # 1. Convert departure time to UTC
+            # This requires knowing the UTC offset of departure_datetime_str in departure_timezone
+            # The Time MCP's convert_time can be used: convert departure_datetime_str from departure_timezone to UTC
+
+            # For simplicity, let's assume departure_datetime_str is naive and needs to be localized first.
+            # A robust solution would use TimeMCP to get full datetime object with offset.
+            # This is a conceptual example; actual implementation needs careful handling of naive vs. aware datetimes.
+
+            # This is a simplified calculation. A robust version would use the TimeMCP for all conversions.
+            # Assume departure_datetime_str is local to departure_timezone
+            # Step 1: Get departure time as a full datetime object from TimeMCP to ensure correct DST
+            departure_time_info = await self.time_mcp_client.convert_time(
+                time_string=departure_datetime_str.split("T"), # "10:00:00"
+                date_string=departure_datetime_str.split("T"),   # "2025-10-20"
+                source_timezone=departure_timezone,
+                target_timezone=departure_timezone # Convert to itself to get full object
+            )
+            departure_dt_aware = datetime.fromisoformat(departure_time_info['target']['datetime'])
+
+            # Step 2: Calculate arrival time in UTC
+            arrival_dt_utc = departure_dt_aware.astimezone(timezone.utc) + timedelta(minutes=flight_duration_minutes)
+
+            # Step 3: Convert UTC arrival time to local arrival timezone using TimeMCP
+            arrival_local_info = await self.time_mcp_client.convert_time(
+                time_string=arrival_dt_utc.strftime("%H:%M:%S"),
+                date_string=arrival_dt_utc.strftime("%Y-%m-%d"),
+                source_timezone="UTC",
+                target_timezone=arrival_timezone
+            )
+
             return {
-                "departure_local": "...",
+                "departure_local": departure_dt_aware.isoformat(),
                 "departure_timezone": departure_timezone,
-                "arrival_utc": "...",
-                "arrival_local": "...",
+                "arrival_utc": arrival_dt_utc.isoformat(),
+                "arrival_local": datetime.fromisoformat(arrival_local_info['target']['datetime']).isoformat(),
                 "arrival_timezone": arrival_timezone,
                 "flight_duration_minutes": flight_duration_minutes
             }
         except Exception as e:
             logger.error(f"Error calculating flight arrival: {e}")
             return None
+
+    # ... other travel-specific time methods ...
+
+# Factory function for the service
+# def get_time_service() -> TripSageTimeService:
+#    client = get_time_mcp_client()
+#    return TripSageTimeService(client)
 ```
 
 ## 5. Agent Function Tools
 
-The `TimeMCPClient` methods, decorated with `@function_tool`, are directly usable by AI agents. Additionally, higher-level tools can be created based on `TripSageTimeService` methods (e.g., `calculate_flight_arrival_time_tool`).
+The TimeMCPClient methods, decorated with @function_tool, are directly usable by AI agents. Additionally, higher-level tools can be created based on TripSageTimeService methods.
+
+Example agent tools (can be defined in src/agents/tools/time_tools.py):
+
+```python
+# src/agents/tools/time_tools.py
+# from ....mcp.time.client import get_time_mcp_client, get_time_service # Adjust import
+# from agents import function_tool
+# from pydantic import BaseModel, Field
+# from typing import Optional, List
+
+# time_mcp_client = get_time_mcp_client()
+# time_service = get_time_service()
+
+# @function_tool
+# async def get_current_time_in_city(city_name: str, timezone_iana: str) -> str:
+#     """Gets the current local time for a specified city and its IANA timezone."""
+#     # params_model = time_mcp_client.get_current_time._openapi_parameters_model # Access Pydantic model
+#     # validated_params = params_model(timezone=timezone_iana)
+#     response = await time_mcp_client.get_current_time(timezone=timezone_iana)
+#     if response.get("datetime"):
+#         return f"The current time in {city_name} ({timezone_iana}) is {response['datetime']}."
+#     return f"Could not retrieve time for {city_name}."
+
+# @function_tool
+# async def calculate_flight_arrival_time_tool(
+#         departure_datetime_str: str,
+#         departure_timezone: str,
+#         arrival_timezone: str,
+#         flight_duration_minutes: int
+#     ) -> str:
+#     """Calculates the local arrival time for a flight given departure details and duration."""
+#     # ... (validation using Pydantic models) ...
+#     arrival_details = await time_service.calculate_flight_arrival_details(
+#         departure_datetime_str, departure_timezone, arrival_timezone, flight_duration_minutes
+#     )
+#     if arrival_details:
+#         return f"The flight will arrive at {arrival_details['arrival_local']} local time in the destination ({arrival_details['arrival_timezone']})."
+#     return "Could not calculate flight arrival time."
+
+# ... other tools like find_meeting_times_tool, create_timezone_aware_itinerary_tool ...
+```
 
 ## 6. Configuration
 
-The Time MCP client relies on the centralized configuration system for its endpoint. Ensure `TIME_MCP_ENDPOINT` is set in `.env` if running the server on a non-default port.
+The Time MCP client relies on the centralized configuration system (AppSettings) for its endpoint:
+
+```python
+# From AppSettings in src/utils/config.py
+# class TimeMCPServiceConfig(BaseModel):
+#     endpoint: str = "http://localhost:3000" # Default if official server runs there
+#     # api_key: Optional[SecretStr] = None # Usually not needed for Time MCP
+
+# class MCPServerSettings(BaseModel):
+#     time: TimeMCPServiceConfig = TimeMCPServiceConfig()
+#     # ... other mcp configs
+
+# class AppSettings(BaseSettings):
+#     # ...
+#     mcp_servers: MCPServerSettings = MCPServerSettings()
+```
+
+Ensure TIME_MCP_ENDPOINT (or TRIPSAGE_MCP_TIME_ENDPOINT depending on your naming convention in AppSettings) is set in your .env file if the Time MCP server runs on a non-default URL/port.
 
 ## 7. Testing
 
-- **Client Tests**: Mock `invoke_tool` in `TimeMCPClient`.
-- **Service Tests**: Mock `TimeMCPClient` to test `TripSageTimeService`.
-- **Integration Tests**: Test against a live Time MCP server instance.
+Client Tests (tests/mcp/time/test_time_mcp_client.py):
+Mock the invoke_tool method of BaseMCPClient to test TimeMCPClient methods without a live Time MCP server.
+Verify correct parameter formatting and response parsing.
+Service Tests (tests/services/test_time_service.py):
+Mock the TimeMCPClient to test the business logic within TripSageTimeService.
+Integration Tests:
+Run tests against a live instance of the official Time MCP server (can be started locally using the provided script). This verifies compatibility with the actual server.
+Agent Tool Tests (tests/agents/tools/test_time_tools.py):
+Mock the service or client layer to test the agent tool wrappers.
 
 ## 8. Conclusion
 
-By integrating with the official Time MCP Server, TripSage gains a standardized and reliable approach to time and timezone handling, ensuring consistent scheduling and accurate local times for user itineraries.
+By integrating with the official Time MCP Server, TripSage gains standardized and reliable time and timezone functionalities. The TimeMCPClient and TripSageTimeService provide a clean, type-safe, and travel-domain-specific interface for the rest of the application, particularly for AI agents, to perform complex time-related calculations essential for travel planning.

@@ -43,39 +43,39 @@ TripSage's architecture consists of several key layers:
 
 1. **Frontend Layer (Not detailed in this document)**:
 
-   - Next.js application serving the user interface.
-   - Interacts with the FastAPI Backend.
+    - Next.js application serving the user interface.
+    - Interacts with the FastAPI Backend.
 
 2. **FastAPI Backend**:
 
-   - Python-based API server handling core business logic, user authentication, and client communication.
-   - Serves as the main entry point for frontend requests.
+    - Python-based API server handling core business logic, user authentication, and client communication.
+    - Serves as the main entry point for frontend requests.
 
 3. **Agent Implementation Layer**:
 
-   - Contains the AI agents (e.g., Travel Planning Agent, Budget Agent, Itinerary Agent) built using the OpenAI Agents SDK.
-   - These agents orchestrate tasks and interact with various tools and services.
+    - Contains the AI agents (e.g., Travel Planning Agent, Budget Agent, Itinerary Agent) built using the OpenAI Agents SDK.
+    - These agents orchestrate tasks and interact with various tools and services.
 
 4. **OpenAI Agents SDK Adapters**:
 
-   - Provides the function tools and definitions that bridge the agents' capabilities with the underlying MCP services and other utilities.
+    - Provides the function tools and definitions that bridge the agents' capabilities with the underlying MCP services and other utilities.
 
 5. **Integration & Abstraction Layer (MCP Abstraction Layer)**:
 
-   - A crucial layer that standardizes how agents and the backend interact with various Model Context Protocol (MCP) servers.
-   - It ensures consistent interfaces, error handling, and configuration management for all MCP communications.
-   - Includes the MCP Manager, MCP Client Registry, and specific MCP Wrappers.
+    - A crucial layer that standardizes how agents and the backend interact with various Model Context Protocol (MCP) servers.
+    - It ensures consistent interfaces, error handling, and configuration management for all MCP communications.
+    - Includes the MCP Manager, MCP Client Registry, and specific MCP Wrappers.
 
 6. **MCP Server Layer**:
 
-   - A suite of specialized microservices, each providing domain-specific functionality (e.g., weather, flights, accommodations, knowledge graph memory).
-   - Most are built using Python FastMCP 2.0 for custom logic or integrate official/external MCP implementations.
+    - A suite of specialized microservices, each providing domain-specific functionality (e.g., weather, flights, accommodations, knowledge graph memory).
+    - Most are built using Python FastMCP 2.0 for custom logic or integrate official/external MCP implementations.
 
 7. **Storage Layer (Dual Storage Architecture)**:
-   - **Relational Database (Supabase/Neon)**: Primary storage for structured data like user profiles, trip details, bookings, and cached API responses. Supabase is used for production, while Neon is used for development due to its branching capabilities.
-   - **Knowledge Graph (Neo4j via Memory MCP)**: Stores travel entity relationships, user preferences, historical travel patterns, and contextual information to enhance AI agent reasoning and recommendations.
-   - **Vector Search (Qdrant - Post-MVP)**: Planned for future integration to enable advanced semantic search capabilities.
-   - **Redis Cache**: Used for caching API responses, search results, and other frequently accessed data to improve performance and reduce external API calls.
+    - **Relational Database (Supabase/Neon)**: Primary storage for structured data like user profiles, trip details, bookings, and cached API responses. Supabase is used for production, while Neon is used for development due to its branching capabilities.
+    - **Knowledge Graph (Neo4j via Memory MCP)**: Stores travel entity relationships, user preferences, historical travel patterns, and contextual information to enhance AI agent reasoning and recommendations.
+    - **Vector Search (Qdrant - Post-MVP)**: Planned for future integration to enable advanced semantic search capabilities.
+    - **Redis Cache**: Used for caching API responses, search results, and other frequently accessed data to improve performance and reduce external API calls.
 
 ## 3. MCP Abstraction Layer
 
@@ -208,9 +208,9 @@ A typical data flow for a user request might be:
 3. **Agent Invocation**: Backend invokes the appropriate AI Agent (e.g., Travel Planning Agent).
 4. **Tool Selection**: The Agent determines the need to use one or more tools, which are often interfaces to MCP servers.
 5. **MCP Interaction**:
-   - The Agent's tool calls the `MCPManager`.
-   - The `MCPManager` uses the `MCPClientRegistry` to get the appropriate MCP Wrapper.
-   - The Wrapper interacts with the target MCP Server (e.g., Flights MCP).
+    - The Agent's tool calls the `MCPManager`.
+    - The `MCPManager` uses the `MCPClientRegistry` to get the appropriate MCP Wrapper.
+    - The Wrapper interacts with the target MCP Server (e.g., Flights MCP).
 6. **Data Retrieval/Processing**: The MCP Server performs its task (e.g., calls Duffel API, queries Neo4j).
 7. **Response Propagation**: The response flows back through the Wrapper, Manager, Agent tool, and Agent.
 8. **Data Storage**: Relevant information from the interaction may be stored in the Relational Database (Supabase/Neon) and/or the Knowledge Graph (Neo4j via Memory MCP).

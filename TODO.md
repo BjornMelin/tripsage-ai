@@ -1065,6 +1065,21 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
         - ✓ Implemented PlaywrightMCPClient with core browser operations
         - ✓ Created agent-callable tools in browser_tools.py
         - ✓ Added proper error handling and logging
+      - [x] Remove legacy /mcp_servers/ directory (completed)
+        - ✓ Removed incompatible legacy Node/JS approach
+        - ✓ Cleaned up old configuration files
+      - [x] Implement unified MCP launcher script (completed)
+        - ✓ Created scripts/mcp_launcher.py with standardized launch mechanism
+        - ✓ Supports all MCP server configurations
+      - [x] Create Docker-Compose orchestration (completed)
+        - ✓ Created docker-compose.mcp.yml for MCP services
+        - ✓ Defined service configurations and dependencies
+      - [x] Implement service registry pattern (completed)
+        - ✓ Created dynamic MCP service management
+        - ✓ Supports runtime discovery and configuration
+      - [x] Enhance MCP configuration with runtime/transport options (completed)
+        - ✓ Added transport type configuration (stdio, http, ws)
+        - ✓ Implemented runtime environment settings
       - Integrate Google Maps MCP (see Google Maps MCP Integration)
       - Integrate Weather MCP for essential trip planning data (see Weather MCP Integration)
       - Begin hybrid web crawling implementation (see Crawl4AI & Firecrawl Integration)
@@ -1082,6 +1097,14 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
       - Integrate Duffel Flights MCP and Airbnb MCP (see respective integration sections)
       - Create domain-specific performance testing framework
       - Complete comprehensive error handling for all integrated MCPs
+    - [ ] MCP Server Strategy Decision:
+      - [x] Standardized on shell-script + Python-wrapper approach
+        - ✓ Selected as the compatible strategy for FastMCP 2.0
+        - ✓ Legacy Node/JS approach removed as incompatible
+      - [ ] Next steps: Migrate all start/stop scripts to use unified launcher
+        - Standardize all MCP server scripts to use mcp_launcher.py
+        - Remove redundant individual start/stop scripts
+        - Ensure Docker-Compose integration for all services
     - [ ] Medium-Term Actions (Weeks 7-12):
       - Develop Trip Planning Coordinator and Content Aggregator wrappers
       - Implement OpenTelemetry-based monitoring for all MCP interactions
@@ -1864,3 +1887,9 @@ For each completed task, ensure:
 | Technology Stack v2             | ✅     | -   | Updated tech stack recommendations with latest stable versions and justifications              |
 | Frontend Implementation Plan v2 | ✅     | -   | Created comprehensive 20-week phased implementation plan with code examples                     |
 | Gap Analysis & Recommendations  | ✅     | -   | Identified gaps (offline support, PWA, i18n) and provided future enhancement roadmap            |
+| MCP Server Strategy Decision    | ✅     | -   | Standardized on shell-script + Python-wrapper approach                                         |
+| Legacy MCP Directory Removal    | ✅     | -   | Removed /mcp_servers/ directory                                                                |
+| Unified MCP Launcher            | ✅     | -   | Created scripts/mcp_launcher.py                                                                |
+| Docker-Compose MCP              | ✅     | -   | Created docker-compose.mcp.yml                                                                 |
+| MCP Service Registry            | ✅     | -   | Implemented dynamic service management                                                         |
+| Enhanced MCP Config             | ✅     | -   | Added runtime/transport configuration                                                          |

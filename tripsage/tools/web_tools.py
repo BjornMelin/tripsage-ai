@@ -8,9 +8,9 @@ including caching for WebSearchTool from the OpenAI Agents SDK.
 import time
 from typing import Any, Dict, Optional
 
+from agents import WebSearchTool
 from pydantic import BaseModel, Field
 
-from agents import WebSearchTool
 from tripsage.mcp_abstraction.exceptions import TripSageMCPError
 from tripsage.mcp_abstraction.manager import mcp_manager
 from tripsage.utils.cache import ContentType, WebOperationsCache

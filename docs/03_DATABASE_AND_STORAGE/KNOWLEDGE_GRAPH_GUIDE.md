@@ -43,7 +43,6 @@ A `GraphSyncService` is envisioned to handle these transformations and updates.
 ### 3.2. Installation and Setup
 
 **Using Docker (Recommended for Development/Self-Hosting):**
-
 A `docker-compose-neo4j.yml` or an entry in the main `docker-compose.yml` is used:
 
 ```yaml
@@ -75,13 +74,7 @@ volumes:
   neo4j_plugins:
 ```
 
-To start:
-
-```bash
-docker-compose -f docker-compose-neo4j.yml up -d
-```
-
-_(If using a separate file for Neo4j. Otherwise, integrate into your main `docker-compose.yml`.)_
+To start: `docker-compose -f docker-compose-neo4j.yml up -d` (if separate file).
 
 **Neo4j AuraDB (Production):**
 
@@ -152,49 +145,27 @@ TripSage's knowledge graph is designed to capture rich travel-related informatio
 ### 4.1. Core Node Labels (Entity Types)
 
 - **`Destination`**: Represents travel locations (cities, countries, regions, landmarks).
-
   - Properties: `name` (string, unique), `type` (string: city, country, landmark), `country` (string), `region` (string), `description` (text), `latitude` (float), `longitude` (float), `climate` (string), `bestTimeToVisit` (list of strings), `currency` (string), `language` (string), `safetyRating` (float), `costLevel` (integer).
-
 - **`Accommodation`**: Hotels, hostels, vacation rentals.
-
   - Properties: `id` (string, unique from provider), `provider` (string: airbnb, booking.com), `name` (string), `type` (string: hotel, apartment), `address` (string), `latitude` (float), `longitude` (float), `rating` (float), `priceRange` (string), `amenities` (list of strings).
-
 - **`Activity`**: Points of interest, tours, events.
-
   - Properties: `name` (string), `type` (string: museum, tour, park), `description` (text), `duration` (string), `cost` (float), `bookingLink` (string).
-
 - **`Transportation`**: Flights, trains, buses.
-
   - Properties: `type` (string: flight, train), `providerName` (string), `routeId` (string), `duration` (integer minutes).
-
 - **`FlightSegment`**: A specific leg of a flight.
-
   - Properties: `flightNumber` (string), `departureAirport` (string), `arrivalAirport` (string), `departureTime` (datetime), `arrivalTime` (datetime), `airline` (string).
-
 - **`User`**: System users.
-
   - Properties: `userId` (string, unique, links to Supabase user ID), `name` (string), `homeLocation` (string).
-
 - **`UserPreference`**: User's travel preferences.
-
   - Properties: `preferenceType` (string: airline, accommodation_style, activity_type), `value` (string), `strength` (float).
-
 - **`Trip`**: A planned itinerary.
-
   - Properties: `tripId` (string, unique, links to Supabase trip ID), `name` (string), `startDate` (date), `endDate` (date), `status` (string: planning, booked).
-
 - **`Review`**: User reviews for accommodations, activities, etc.
-
   - Properties: `reviewId` (string, unique), `rating` (float), `text` (string), `date` (datetime).
-
 - **`Session`**: Represents a user's interaction session with TripSage.
-
   - Properties: `sessionId` (string, unique), `startTime` (datetime), `endTime` (datetime), `summary` (text).
-
 - **`Search`**: A search query made during a session.
-
   - Properties: `searchId` (string, unique), `queryText` (string), `timestamp` (datetime), `resultCount` (integer).
-
 - **`Observation`**: Generic textual observations linked to any entity. Used by the Memory MCP.
   - Properties: `content` (string), `timestamp` (datetime).
 
@@ -307,7 +278,7 @@ The `mcp-neo4j-memory` server typically exposes tools like:
 
 ### 5.3. `MemoryClient` (Python Client for Memory MCP)
 
-A Python client (`src/mcp/memory/client.py`) is used by TripSage agents and services to interact with the Memory MCP server:
+A Python client (`src/mcp/memory/client.py` or similar) is used by TripSage agents and services to interact with the Memory MCP server.
 
 ```python
 # src/mcp/memory/client.py (Simplified Example)
@@ -367,7 +338,7 @@ While day-to-day operations use the Memory MCP, direct Neo4j driver access is ne
 
 ### 6.1. Python Neo4j Driver Client
 
-A `Neo4jDirectClient` (e.g., in `src/db/neo4j_direct_client.py`) using the `neo4j` Python package:
+A `Neo4jDirectClient` (e.g., in `src/db/neo4j_direct_client.py`) using the `neo4j` Python package.
 
 ```python
 # src/db/neo4j_direct_client.py (Simplified Example)
@@ -388,9 +359,10 @@ class Neo4jDirectClient:
         self.database = settings.neo4j.database
 
     async def _get_driver(self) -> AsyncDriver:
-        if self._driver is None or self._driver._closed:
+        if self._driver is None or self._driver._closed: # Check if driver is closed
             logger.info(f"Connecting to Neo4j: {self.uri}, Database: {self.database}")
             self._driver = AsyncGraphDatabase.driver(self.uri, auth=(self.user, self.password))
+            # Optionally verify connectivity here if needed, though driver creation itself can fail
         return self._driver
 
     async def close(self):
@@ -403,7 +375,7 @@ class Neo4jDirectClient:
         driver = await self._get_driver()
         async with driver.session(database=self.database) as session:
             results = await session.run(query, parameters)
-            return [record.data() async for record in results]
+            return [record.data() async for record in results] # Process results asynchronously
 
     async def apply_constraint(self, constraint_cypher: str):
         logger.info(f"Applying constraint: {constraint_cypher}")
@@ -412,15 +384,18 @@ class Neo4jDirectClient:
     async def apply_index(self, index_cypher: str):
         logger.info(f"Applying index: {index_cypher}")
         await self.execute_cypher_query(index_cypher)
+
+# Singleton instance or factory function
+# neo4j_direct_client = Neo4jDirectClient()
 ```
 
 ### 6.2. Schema Migrations (Constraints and Indexes)
 
-Migration scripts (e.g., `src/db/migrations/neo4j/V1__initial_schema.py`) use the `Neo4jDirectClient` to apply constraints and indexes:
+Migration scripts (e.g., `src/db/migrations/neo4j/V1__initial_schema.py`) use the `Neo4jDirectClient` to apply constraints and indexes.
 
 ```python
 # src/db/migrations/neo4j/V1__initial_schema.py
-# from ....db.neo4j_direct_client import Neo4jDirectClient
+# from ....db.neo4j_direct_client import Neo4jDirectClient # Adjust import path
 
 # async def apply_migrations(client: Neo4jDirectClient):
 #     constraints = [
@@ -477,9 +452,10 @@ ON CREATE SET p.entityType = "FlightPreference", p.created_at = datetime()
 CREATE (obs_p:Observation {content: "User prefers window seats on flights", timestamp: datetime()})
 MERGE (p)-[:HAS_OBSERVATION]->(obs_p)
 
+
 // Link User to Preference
 WITH u, p
-MERGE (u)-[:HAS_FLIGHT_PREFERENCE]->(p)
+MERGE (u)-[:HAS_FLIGHT_PREFERENCE]->(p) // Using a more specific relationship type
 ```
 
 **Querying for Destinations near "Paris" that offer "Museums":**
@@ -491,7 +467,7 @@ WHERE point.distance(
           point({latitude: paris.latitude, longitude: paris.longitude}),
           point({latitude: nearby_dest.latitude, longitude: nearby_dest.longitude})
       ) < 50000 // 50km radius
-AND activity.name CONTAINS "Museum"
+AND activity.name CONTAINS "Museum" // Or (activity)-[:HAS_OBSERVATION]->(obs) WHERE obs.content CONTAINS "Museum"
 RETURN DISTINCT nearby_dest.name, activity.name
 ```
 
@@ -513,32 +489,32 @@ _(Note: This query assumes `latitude`, `longitude` are properties on `Destinatio
 - **Unit Tests**: For the `MemoryClient` and any service layers interacting with it. Mock the `invoke_tool` method of `BaseMCPClient`.
 - **Integration Tests**: Test interactions with a live (but test-dedicated) Memory MCP server connected to a test Neo4j instance. These tests verify that entities and relations are created and queried correctly.
   - Use `pytest` fixtures to manage test Neo4j instances or clear data between tests.
+- **Example Integration Test Snippet**:
 
-**Example Integration Test Snippet**:
+  ```python
+  # tests/integration/test_memory_integration.py
+  # import pytest
+  # from ...mcp.memory.client import MemoryClient # Adjust import
 
-```python
-# tests/integration/test_memory_integration.py
-# import pytest
-# from ...mcp.memory.client import MemoryClient
+  # @pytest.mark.asyncio
+  # async def test_create_and_retrieve_entity(memory_mcp_client: MemoryClient): # Fixture for client
+  #     entity_name = "TestLocationAlpha"
+  #     entity_type = "TestDestination"
+  #     observations = ["Observation A", "Observation B"]
 
-# @pytest.mark.asyncio
-# async def test_create_and_retrieve_entity(memory_mcp_client: MemoryClient):
-#     entity_name = "TestLocationAlpha"
-#     entity_type = "TestDestination"
-#     observations = ["Observation A", "Observation B"]
+  #     create_response = await memory_mcp_client.create_entities([
+  #         {"name": entity_name, "entityType": entity_type, "observations": observations}
+  #     ])
+  #     assert create_response.get("created", []).get("name") == entity_name
 
-#     create_response = await memory_mcp_client.create_entities([
-#         {"name": entity_name, "entityType": entity_type, "observations": observations}
-#     ])
-#     assert create_response.get("created", []).get("name") == entity_name
-
-#     open_response = await memory_mcp_client.open_nodes([entity_name])
-#     assert len(open_response) == 1
-#     node = open_response
-#     assert node["name"] == entity_name
-#     assert node["type"] == entity_type
-#     # Check observations as needed based on actual open_nodes response structure
-```
+  #     open_response = await memory_mcp_client.open_nodes([entity_name])
+  #     assert len(open_response) == 1
+  #     node = open_response
+  #     assert node["name"] == entity_name
+  #     assert node["type"] == entity_type # Assuming 'type' is returned by open_nodes
+  #     # Check observations, may need to adjust based on actual open_nodes response structure
+  #     # assert all(obs_content in [obs.get("content") for obs in node.get("observations", [])] for obs_content in observations)
+  ```
 
 ## 10. Troubleshooting
 

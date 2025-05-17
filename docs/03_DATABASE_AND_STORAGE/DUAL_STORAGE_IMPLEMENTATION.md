@@ -29,166 +29,215 @@ To address the limitations of the initial approach, the dual storage pattern was
 
 ### 3.1. Key Components of the Refactored Design
 
-1. **`DualStorageService` (Abstract Base Class)**
+1. **`DualStorageService` (Abstract Base Class)**:
 
-   - Located in a module like `src/services/storage/base_dual_storage_service.py` (adjust path as per your final structure).
-   - A generic abstract base class (`abc.ABCMeta`) that defines the common interface and shared logic for all dual storage operations.
-   - Uses Python generics (`Generic[P, G]`) where `P` represents the Pydantic model for the primary (relational) database entity and `G` represents the Pydantic model for the graph database entity representation or related graph data.
-   - Provides standardized CRUD (Create, Retrieve, Update, Delete) method signatures.
-   - Contains common orchestration logic, such as ensuring data is written to the primary store before attempting to create related graph entities.
-   - Defines abstract methods (e.g., `_store_in_primary`, `_retrieve_from_primary`, `_create_graph_entities`, `_link_to_graph_entities`) that must be implemented by concrete entity-specific services.
+    - Located in a module like `src/services/storage/base_dual_storage_service.py` (adjust path as per your final structure).
+    - A generic abstract base class (`abc.ABCMeta`) that defines the common interface and shared logic for all dual storage operations.
+    - Uses Python generics (`Generic[P, G]`) where `P` represents the Pydantic model for the primary (relational) database entity and `G` represents the Pydantic model for the graph database entity representation or related graph data.
+    - Provides standardized CRUD (Create, Retrieve, Update, Delete) method signatures.
+    - Contains common orchestration logic, such as ensuring data is written to the primary store before attempting to create related graph entities.
+    - Defines abstract methods (e.g., `_store_in_primary`, `_retrieve_from_primary`, `_create_graph_entities`, `_link_to_graph_entities`) that must be implemented by concrete entity-specific services.
 
-   ```python
-   import abc
-   from typing import Generic, TypeVar, Dict, Any, List, Optional
-   from pydantic import BaseModel
-   # Assuming MCP clients for database and memory graph
-   # from src.mcp.database_mcp_client import DatabaseMCPClient # Placeholder
-   # from src.mcp.memory_client import MemoryClient # Placeholder
+    ```python
+    # Conceptual structure of DualStorageService
+    import abc
+    from typing import Generic, TypeVar, Dict, Any, List, Optional
+    from pydantic import BaseModel
+    # Assuming MCP clients for database and memory graph
+    # from src.mcp.database_mcp_client import DatabaseMCPClient # Placeholder
+    # from src.mcp.memory_client import MemoryClient # Placeholder
 
-   P = TypeVar('P', bound=BaseModel)  # Primary DB Pydantic Model
-   G = TypeVar('G', bound=BaseModel)  # Graph DB Pydantic Model (or related data model)
+    P = TypeVar('P', bound=BaseModel) # Primary DB Pydantic Model
+    G = TypeVar('G', bound=BaseModel) # Graph DB Pydantic Model (or related data model)
 
-   class DualStorageService(Generic[P, G], metaclass=abc.ABCMeta):
-       def __init__(self, primary_client: Any, graph_client: Any, entity_name: str):
-           self.primary_client = primary_client  # e.g., Supabase/Neon MCP client
-           self.graph_client = graph_client      # e.g., Memory MCP client
-           self.entity_name = entity_name
+    class DualStorageService(Generic[P, G], metaclass=abc.ABCMeta):
+        def __init__(self, primary_client: Any, graph_client: Any, entity_name: str):
+            self.primary_client = primary_client # e.g., Supabase/Neon MCP client
+            self.graph_client = graph_client   # e.g., Memory MCP client
+            self.entity_name = entity_name
+            # self.logger = get_module_logger(__name__) # Assuming a logger utility
 
-       async def create(self, data: Dict[str, Any]) -> Dict[str, Any]:
-           primary_id = await self._store_in_primary(data)
-           graph_entities_created = await self._create_graph_entities(data, primary_id)
-           return {
-               f"{self.entity_name.lower()}_id": primary_id,
-               "primary_db_status": "success",
-               "graph_db_entities_created": graph_entities_created
-           }
+        async def create(self, data: Dict[str, Any]) -> Dict[str, Any]:
+            # self.logger.info(f"Creating {self.entity_name} with data: {data}")
+            primary_id = await self._store_in_primary(data)
+            # self.logger.info(f"Stored {self.entity_name} in primary DB with ID: {primary_id}")
 
-       async def retrieve(self, entity_id: str, include_graph_data: bool = False) -> Optional[Dict[str, Any]]:
-           primary_data = await self._retrieve_from_primary(entity_id)
-           if not primary_data:
-               return None
+            graph_entities_created = await self._create_graph_entities(data, primary_id)
+            # self.logger.info(f"Created {len(graph_entities_created)} graph entities for {self.entity_name} ID: {primary_id}")
 
-           response = {"primary_data": primary_data}
-           if include_graph_data:
-               graph_data = await self._retrieve_from_graph(entity_id)
-               response["graph_data"] = graph_data
-           return response
+            # Potentially link primary entity to other existing graph entities
+            # graph_relations_created = await self._link_to_graph_entities(data, primary_id)
 
-       async def update(self, entity_id: str, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-           updated_primary_data = await self._update_in_primary(entity_id, data)
-           if not updated_primary_data:
-               return None
+            return {
+                f"{self.entity_name.lower()}_id": primary_id,
+                "primary_db_status": "success",
+                "graph_db_entities_created": graph_entities_created,
+                # "graph_db_relations_created": graph_relations_created
+            }
 
-           await self._update_in_graph(entity_id, data)
-           return {"primary_data": updated_primary_data, "graph_update_status": "success"}
+        async def retrieve(self, entity_id: str, include_graph_data: bool = False) -> Optional[Dict[str, Any]]:
+            primary_data = await self._retrieve_from_primary(entity_id)
+            if not primary_data:
+                return None
 
-       async def delete(self, entity_id: str) -> bool:
-           deleted_from_primary = await self._delete_from_primary(entity_id)
-           if not deleted_from_primary:
-               return False
+            response = {"primary_data": primary_data}
+            if include_graph_data:
+                graph_data = await self._retrieve_from_graph(entity_id)
+                response["graph_data"] = graph_data
+            return response
 
-           await self._delete_from_graph(entity_id)
-           return True
+        async def update(self, entity_id: str, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+            updated_primary_data = await self._update_in_primary(entity_id, data)
+            if not updated_primary_data:
+                return None # Or raise error
 
-       @abc.abstractmethod
-       async def _store_in_primary(self, data: Dict[str, Any]) -> str:
-           """Returns the primary_id."""
-           pass
+            await self._update_in_graph(entity_id, data)
 
-       @abc.abstractmethod
-       async def _retrieve_from_primary(self, entity_id: str) -> Optional[Dict[str, Any]]:
-           pass
+            return {"primary_data": updated_primary_data, "graph_update_status": "success"}
 
-       @abc.abstractmethod
-       async def _update_in_primary(self, entity_id: str, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-           pass
 
-       @abc.abstractmethod
-       async def _delete_from_primary(self, entity_id: str) -> bool:
-           pass
+        async def delete(self, entity_id: str) -> bool:
+            deleted_from_primary = await self._delete_from_primary(entity_id)
+            if not deleted_from_primary:
+                return False # Or raise error
 
-       @abc.abstractmethod
-       async def _create_graph_entities(self, primary_data: Dict[str, Any], primary_id: str) -> List[Dict[str, Any]]:
-           pass
+            await self._delete_from_graph(entity_id)
+            return True
 
-       @abc.abstractmethod
-       async def _retrieve_from_graph(self, primary_id: str) -> Optional[Dict[str, Any]]:
-           pass
+        @abc.abstractmethod
+        async def _store_in_primary(self, data: Dict[str, Any]) -> str: # Returns primary_id
+            pass
 
-       @abc.abstractmethod
-       async def _update_in_graph(self, primary_id: str, primary_data_update: Dict[str, Any]) -> None:
-           pass
+        @abc.abstractmethod
+        async def _retrieve_from_primary(self, entity_id: str) -> Optional[Dict[str, Any]]:
+            pass
 
-       @abc.abstractmethod
-       async def _delete_from_graph(self, primary_id: str) -> None:
-           pass
-   ```
+        @abc.abstractmethod
+        async def _update_in_primary(self, entity_id: str, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+            pass
 
-2. **Entity-Specific Services** (e.g., `TripStorageService`)
+        @abc.abstractmethod
+        async def _delete_from_primary(self, entity_id: str) -> bool:
+            pass
 
-   - Concrete classes that inherit from `DualStorageService`.
-   - Each service is responsible for a specific entity type (e.g., Trips, Users, Accommodations).
-   - Implements the abstract methods defined in the base class, providing the specific logic for how that entity is stored and represented in both Supabase and Neo4j.
-   - Uses Pydantic models for data validation specific to the entity for both primary and graph representations.
+        @abc.abstractmethod
+        async def _create_graph_entities(self, primary_data: Dict[str, Any], primary_id: str) -> List[Dict[str, Any]]:
+            pass
 
-   ```python
-   # Example: src/services/storage/trip_storage_service.py
-   # from .base_dual_storage_service import DualStorageService, P, G
-   # from ...models.trip import TripPrimaryModel, TripGraphModel
-   # from ...mcp.database_mcp_client import db_client
-   # from ...mcp.memory_client import memory_client
+        @abc.abstractmethod
+        async def _retrieve_from_graph(self, primary_id: str) -> Optional[Dict[str, Any]]: # Or specific graph model
+            pass
 
-   # class TripStorageService(DualStorageService[TripPrimaryModel, TripGraphModel]):
-   #     def __init__(self):
-   #         super().__init__(
-   #             primary_client=db_client,
-   #             graph_client=memory_client,
-   #             entity_name="Trip"
-   #         )
+        @abc.abstractmethod
+        async def _update_in_graph(self, primary_id: str, primary_data_update: Dict[str, Any]) -> None:
+            pass
 
-   #     async def _store_in_primary(self, data: Dict[str, Any]) -> str:
-   #         # Validate with TripPrimaryModel.model_validate(data)
-   #         # Logic to insert/update trip data in Supabase using self.primary_client
-   #         pass
+        @abc.abstractmethod
+        async def _delete_from_graph(self, primary_id: str) -> None:
+            pass
 
-   #     async def _retrieve_from_primary(self, entity_id: str) -> Optional[Dict[str, Any]]:
-   #         # Logic to get trip from Supabase
-   #         pass
+        # Optional: Abstract method for linking to existing graph entities
+        # @abc.abstractmethod
+        # async def _link_to_graph_entities(self, primary_data: Dict[str, Any], primary_id: str) -> List[Dict[str, Any]]:
+        #     pass
+    ```
 
-   #     async def _update_in_primary(self, entity_id: str, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-   #         pass
+2. **Entity-Specific Services** (e.g., `TripStorageService`):
 
-   #     async def _delete_from_primary(self, entity_id: str) -> bool:
-   #         pass
+    - Concrete classes that inherit from `DualStorageService`.
+    - Each service is responsible for a specific entity type (e.g., Trips, Users, Accommodations).
+    - Implements the abstract methods defined in the base class, providing the specific logic for how that entity is stored and represented in both Supabase and Neo4j.
+    - Uses Pydantic models for data validation specific to the entity for both primary and graph representations.
 
-   #     async def _create_graph_entities(self, primary_data: Dict[str, Any], primary_id: str) -> List[Dict[str, Any]]:
-   #         # Logic to create corresponding trip node in Neo4j using self.graph_client
-   #         pass
+    ```python
+    # Example: src/services/storage/trip_storage_service.py
+    # from .base_dual_storage_service import DualStorageService, P, G # P, G would be Trip specific models
+    # from ...models.trip import TripPrimaryModel, TripGraphModel # Example Pydantic models
+    # from ...mcp.database_mcp_client import db_client # Placeholder for actual DB MCP client
+    # from ...mcp.memory_client import memory_client # Placeholder for actual Memory MCP client
 
-   #     async def _retrieve_from_graph(self, primary_id: str) -> Optional[Dict[str, Any]]:
-   #         pass
+    # class TripStorageService(DualStorageService[TripPrimaryModel, TripGraphModel]):
+    #     def __init__(self):
+    #         super().__init__(
+    #             primary_client=db_client, # Actual initialized client
+    #             graph_client=memory_client, # Actual initialized client
+    #             entity_name="Trip"
+    #         )
 
-   #     async def _update_in_graph(self, primary_id: str, primary_data_update: Dict[str, Any]) -> None:
-   #         pass
+    #     async def _store_in_primary(self, data: Dict[str, Any]) -> str:
+    #         # Validate with TripPrimaryModel.model_validate(data)
+    #         # Logic to insert/update trip data in Supabase using self.primary_client
+    #         # Example: trip_record = await self.primary_client.table("trips").insert(validated_data).execute()
+    #         # return trip_record.data['id']
+    #         pass # Replace with actual implementation
 
-   #     async def _delete_from_graph(self, primary_id: str) -> None:
-   #         pass
+    #     async def _retrieve_from_primary(self, entity_id: str) -> Optional[Dict[str, Any]]:
+    #         # Logic to get trip from Supabase
+    #         # Example: response = await self.primary_client.table("trips").select("*").eq("id", entity_id).single().execute()
+    #         # return response.data
+    #         pass
 
-   # # trip_storage_service = TripStorageService() # Singleton instance
-   ```
+    #     async def _update_in_primary(self, entity_id: str, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    #         # Logic to update trip in Supabase
+    #         pass
 
-3. **Simplified Access Module** (e.g., `src/services/storage/__init__.py`)
+    #     async def _delete_from_primary(self, entity_id: str) -> bool:
+    #         # Logic to delete trip from Supabase
+    #         pass
 
-   - This module now primarily instantiates and exports the specific storage service instances (like `trip_service = TripStorageService()`).
-   - Client code (e.g., agent tools) imports the service instance directly.
+    #     async def _create_graph_entities(self, primary_data: Dict[str, Any], primary_id: str) -> List[Dict[str, Any]]:
+    #         # Logic to create corresponding trip node and related nodes/relationships in Neo4j
+    #         # using self.graph_client (Memory MCP client)
+    #         # Example:
+    #         # trip_entity = { "name": f"Trip:{primary_id}", "entityType": "Trip", "observations": [f"Destination: {primary_data['destination']}"] }
+    #         # destination_entity = { "name": primary_data['destination'], "entityType": "Destination", "observations": [] }
+    #         # await self.graph_client.create_entities([trip_entity, destination_entity])
+    #         # await self.graph_client.create_relations([{ "from": f"Trip:{primary_id}", "relationType": "HAS_DESTINATION", "to": primary_data['destination']}])
+    #         # return [trip_entity, destination_entity]
+    #         pass
 
-   ```python
-   # Example: src/services/storage/__init__.py
-   # from .trip_storage_service import TripStorageService
-   # trip_service = TripStorageService()
-   # __all__ = ["trip_service"]
-   ```
+    #     async def _retrieve_from_graph(self, primary_id: str) -> Optional[Dict[str, Any]]:
+    #         # Logic to get trip related data from Neo4j
+    #         # Example: nodes = await self.graph_client.open_nodes([f"Trip:{primary_id}"])
+    #         # return nodes if nodes else None
+    #         pass
+
+    #     async def _update_in_graph(self, primary_id: str, primary_data_update: Dict[str, Any]) -> None:
+    #         # Logic to update trip related data in Neo4j
+    #         # Example:
+    #         # observations_to_add = []
+    #         # if 'description' in primary_data_update:
+    #         #     observations_to_add.append(f"Updated description: {primary_data_update['description']}")
+    #         # if observations_to_add:
+    #         #    await self.graph_client.add_observations(f"Trip:{primary_id}", observations_to_add)
+    #         pass
+
+    #     async def _delete_from_graph(self, primary_id: str) -> None:
+    #         # Logic to delete trip related data from Neo4j
+    #         # Example: await self.graph_client.delete_entities([f"Trip:{primary_id}"])
+    #         pass
+
+    # # trip_storage_service = TripStorageService() # Singleton instance
+    ```
+
+3. **Simplified Access Module** (e.g., `src/utils/dual_storage.py` or `src/services/storage/__init__.py`):
+
+    - This module now primarily instantiates and exports the specific storage service instances (like `trip_service = TripStorageService()`).
+    - Client code (e.g., agent tools) imports the service instance directly.
+
+    ```python
+    # Example: src/services/storage/__init__.py
+    # from .trip_storage_service import TripStorageService
+    # # Import other storage services as they are created
+    # # from .user_storage_service import UserStorageService
+
+    # trip_service = TripStorageService()
+    # # user_service = UserStorageService()
+
+    # __all__ = ["trip_service",
+    #            # "user_service"
+    #           ]
+    ```
 
 ### 3.2. Client Code Updates
 
@@ -203,7 +252,7 @@ Agent tools and other parts of the application that interact with dual storage n
 **New Way:**
 
 ```python
-from src.services.storage import trip_service
+from src.services.storage import trip_service # Assuming __init__.py exports it
 
 # result = await trip_service.create({**trip_data, "user_id": user_id})
 # trip_details = await trip_service.retrieve(trip_id="some_trip_id", include_graph_data=True)
@@ -211,28 +260,33 @@ from src.services.storage import trip_service
 
 ## 4. Benefits of the Refactored Pattern
 
-- **DRY (Don't Repeat Yourself)**: Core dual storage logic is implemented once in the `DualStorageService` base class.
-- **Improved Type Safety**: Pydantic models are used within each service to validate data for both primary and graph representations.
-- **Consistent Interface**: All entity types share the same CRUD API (create, retrieve, update, delete).
-- **Enhanced Extensibility**: Adding support for a new entity type involves creating a new service class inheriting from `DualStorageService`.
-- **Increased Testability**: Entity-specific services can be unit-tested in isolation by mocking `primary_client` and `graph_client`.
-- **Clearer API**: The service-based approach provides a well-defined interface for all storage operations related to an entity.
+- **DRY (Don't Repeat Yourself)**: Core dual storage logic (e.g., orchestration of writes, error handling patterns) is implemented once in the `DualStorageService` base class.
+- **Improved Type Safety**: Pydantic models are used within each service to validate data for both primary (SQL) and graph (Neo4j) representations, catching errors early.
+- **Consistent Interface**: All entity types managed by dual storage will share the same CRUD API (create, retrieve, update, delete), making the system more predictable and easier to use.
+- **Enhanced Extensibility**: Adding dual storage support for a new entity type (e.g., "User", "Destination") primarily involves:
+  1. Defining its Pydantic models for primary and graph data.
+  2. Creating a new service class that inherits from `DualStorageService`.
+  3. Implementing the entity-specific abstract methods.
+- **Increased Testability**: Entity-specific services can be unit-tested in isolation by mocking their `primary_client` and `graph_client` dependencies. The `DualStorageService` base class can also be tested with mock concrete implementations. The isolated testing pattern is particularly useful here.
+- **Clearer API**: The service-based approach provides a well-defined and discoverable API for all storage operations related to an entity.
 
 ## 5. Status and Future Work (as of Refactoring Completion)
 
 - **Completed**:
-
   - `DualStorageService` abstract base class created.
   - `TripStorageService` concrete implementation for Trip entities developed.
   - Original `dual_storage.py` module simplified to expose the `TripStorageService` instance.
-  - Client code updated to use the new `TripStorageService`.
-  - Established isolated testing pattern for dual storage services.
-
+  - Client code (e.g., Travel Agent's `create_trip` tool) updated to use the new `TripStorageService`.
+  - Isolated testing pattern established for dual storage services.
 - **Future Work**:
-  - Implement additional entity-specific storage services (User, Destination, Accommodation, Activity).
-  - Enhance test coverage.
-  - Refine data synchronization strategies between Supabase and Neo4j.
-  - Develop comprehensive documentation and usage examples.
+  - Implement additional entity-specific storage services:
+    - `UserStorageService`
+    - `DestinationStorageService`
+    - `AccommodationStorageService`
+    - `ActivityStorageService`
+  - Enhance test coverage for each new service and the base class.
+  - Refine data synchronization strategies between Supabase and Neo4j within the services.
+  - Develop comprehensive documentation and usage examples for each service.
 
 ## 6. Conclusion
 

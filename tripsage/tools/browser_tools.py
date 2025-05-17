@@ -9,6 +9,7 @@ It also includes Playwright MCP tools for general browser automation.
 from typing import Any, Dict, Literal, Optional
 
 from agents import function_tool
+
 from tripsage.mcp_abstraction.exceptions import TripSageMCPError
 from tripsage.mcp_abstraction.manager import mcp_manager
 from tripsage.tools.browser.playwright_mcp_client import (

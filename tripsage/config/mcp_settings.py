@@ -36,6 +36,7 @@ Usage:
 """
 
 import logging
+from enum import Enum
 from functools import lru_cache
 from typing import Any, Dict, List, Literal, Optional
 
@@ -52,10 +53,34 @@ from pydantic import (
 logger = logging.getLogger(__name__)
 
 
+class TransportType(str, Enum):
+    """MCP server transport types"""
+
+    STDIO = "stdio"
+    HTTP = "http"
+    HTTPSSE = "httpsse"
+    WEBSOCKET = "ws"
+
+
+class RuntimeType(str, Enum):
+    """MCP server runtime types"""
+
+    PYTHON = "python"
+    NODE = "node"
+    BINARY = "binary"
+
+
 class BaseMCPConfig(BaseModel):
     """Base configuration for all MCP servers."""
 
     enabled: bool = True
+    runtime: RuntimeType = RuntimeType.NODE
+    transport: TransportType = TransportType.STDIO
+    command: Optional[str] = None
+    args: List[str] = Field(default_factory=list)
+    env: Dict[str, str] = Field(default_factory=dict)
+    auto_start: bool = False
+    health_check_endpoint: Optional[str] = None
     timeout: int = Field(default=30, ge=1, le=300, description="Timeout in seconds")
     retry_attempts: int = Field(default=3, ge=0, le=10)
     retry_backoff: float = Field(default=1.0, ge=0.1, le=10.0)
@@ -71,10 +96,11 @@ class BaseMCPConfig(BaseModel):
 class RestMCPConfig(BaseMCPConfig):
     """Configuration for REST API based MCP servers."""
 
-    url: AnyHttpUrl
-    api_key: SecretStr
+    url: AnyHttpUrl = Field(default="http://localhost:8080/")
+    api_key: SecretStr = Field(default=SecretStr("test-api-key"))
     headers: Dict[str, str] = Field(default_factory=dict)
     max_connections: int = Field(default=10, ge=1, le=100)
+    transport: TransportType = TransportType.HTTP  # Override default
 
     @field_validator("url")
     @classmethod
@@ -88,11 +114,11 @@ class RestMCPConfig(BaseMCPConfig):
 class DatabaseMCPConfig(BaseMCPConfig):
     """Configuration for database MCP servers."""
 
-    host: str
-    port: int = Field(ge=1, le=65535)
-    username: str
-    password: SecretStr
-    database: str
+    host: str = Field(default="localhost")
+    port: int = Field(default=5432, ge=1, le=65535)
+    username: str = Field(default="postgres")
+    password: SecretStr = Field(default=SecretStr(""))
+    database: str = Field(default="postgres")
     use_ssl: bool = True
     pool_size: int = Field(default=5, ge=1, le=50)
     connection_timeout: int = Field(default=10, ge=1, le=60)
@@ -145,8 +171,8 @@ class BrowserMCPConfig(RestMCPConfig):
 class CacheMCPConfig(BaseMCPConfig):
     """Configuration for caching MCP servers."""
 
-    host: str
-    port: int = Field(ge=1, le=65535)
+    host: str = Field(default="localhost")
+    port: int = Field(default=6379, ge=1, le=65535)
     db_index: int = Field(default=0, ge=0, le=15)
     default_ttl: int = Field(default=3600, ge=0, description="Default TTL in seconds")
     namespace: str = "tripsage"
@@ -202,6 +228,8 @@ class Crawl4AIMCPConfig(WebCrawlMCPConfig):
         default="ws://localhost:11235/mcp/ws",
         description="URL of the Crawl4AI MCP server (WebSocket or SSE endpoint)",
     )
+    runtime: RuntimeType = RuntimeType.PYTHON  # Override default
+    transport: TransportType = TransportType.WEBSOCKET  # Override default
     rag_enabled: bool = True
     max_pages: int = Field(default=10, ge=1, le=100)
     extract_images: bool = False
@@ -225,9 +253,9 @@ class FirecrawlMCPConfig(WebCrawlMCPConfig):
 class SupabaseMCPConfig(DatabaseMCPConfig):
     """Configuration for Supabase MCP server."""
 
-    project_ref: str
-    anon_key: SecretStr
-    service_key: SecretStr
+    project_ref: str = Field(default="test-project")
+    anon_key: SecretStr = Field(default=SecretStr("test-anon-key"))
+    service_key: SecretStr = Field(default=SecretStr("test-service-key"))
 
     model_config = ConfigDict(env_prefix="TRIPSAGE_MCP_SUPABASE_")
 
