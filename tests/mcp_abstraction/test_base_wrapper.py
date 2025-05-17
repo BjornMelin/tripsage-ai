@@ -4,7 +4,6 @@ Tests for BaseMCPWrapper.
 This module tests the abstract base wrapper class that all MCP wrappers inherit from.
 """
 
-
 import pytest
 
 from tripsage.mcp_abstraction.base_wrapper import BaseMCPWrapper

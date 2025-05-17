@@ -21,10 +21,10 @@ def mock_mcp_manager():
 def mock_redis():
     """Mock Redis client for all tests."""
     mock_redis_client = MagicMock()
-    
+
     # Create a mock for redis.from_url
     mock_from_url = MagicMock(return_value=mock_redis_client)
-    
+
     # Patch both redis and redis.asyncio
     with patch("redis.from_url", mock_from_url):
         with patch("redis.asyncio.from_url", mock_from_url):
@@ -58,7 +58,7 @@ def mock_mcp_settings():
         mock_settings.supabase.anon_key.get_secret_value.return_value = "anon_key"
         mock_settings.supabase.service_key = MagicMock()
         mock_settings.supabase.service_key.get_secret_value.return_value = "service_key"
-        
+
         # Create mock for neo4j_memory config
         mock_settings.neo4j_memory = MagicMock()
         mock_settings.neo4j_memory.enabled = True
@@ -68,7 +68,7 @@ def mock_mcp_settings():
         mock_settings.neo4j_memory.username = "neo4j"
         mock_settings.neo4j_memory.password = MagicMock()
         mock_settings.neo4j_memory.password.get_secret_value.return_value = "password"
-        
+
         # Create mock for duffel_flights config
         mock_settings.duffel_flights = MagicMock()
         mock_settings.duffel_flights.enabled = True
@@ -79,7 +79,7 @@ def mock_mcp_settings():
         mock_settings.duffel_flights.timeout = 30
         mock_settings.duffel_flights.retry_attempts = 3
         mock_settings.duffel_flights.retry_backoff = 5
-        
+
         # Create mock for airbnb config
         mock_settings.airbnb = MagicMock()
         mock_settings.airbnb.enabled = True
@@ -87,5 +87,5 @@ def mock_mcp_settings():
         mock_settings.airbnb.timeout = 30
         mock_settings.airbnb.retry_attempts = 3
         mock_settings.airbnb.retry_backoff = 5
-        
+
         yield mock_settings

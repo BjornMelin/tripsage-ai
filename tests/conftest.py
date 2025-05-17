@@ -16,6 +16,7 @@ from pydantic import BaseModel
 # Add the project root directory to the path so tests can import modules directly
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
+
 # Mock environment variables instead of setting them directly
 @pytest.fixture(autouse=True)
 def mock_environment_variables():
@@ -57,7 +58,7 @@ def mock_mcp_manager():
     manager.get_available_mcps = Mock(return_value=available_mcps)
     manager.get_initialized_mcps = Mock(return_value=[])
     manager.load_configurations = Mock()
-    
+
     # Create a side effect that returns different responses based on the MCP type
     def invoke_side_effect(mcp_name, method_name, params=None, **kwargs):
         if mcp_name == "weather":
@@ -69,9 +70,9 @@ def mock_mcp_manager():
         elif mcp_name == "supabase":
             return {"id": "123", "created_at": "2025-01-16T12:00:00Z"}
         return {}
-        
+
     manager.invoke.side_effect = invoke_side_effect
-    
+
     with patch("tripsage.mcp_abstraction.manager.mcp_manager", manager):
         yield manager
 
@@ -88,7 +89,7 @@ def mock_mcp_registry():
     registry.get_wrapper_class = Mock()
     registry.is_registered = Mock(return_value=False)
     registry.get_registered_mcps = Mock(return_value=[])
-    
+
     # Setup side_effect for get_wrapper_class
     def get_wrapper_class_side_effect(mcp_name):
         if mcp_name == "weather":
@@ -101,9 +102,9 @@ def mock_mcp_registry():
             return MagicMock(__name__="SupabaseMCPWrapper")
         else:
             raise KeyError(f"MCP '{mcp_name}' not found in registry")
-            
+
     registry.get_wrapper_class.side_effect = get_wrapper_class_side_effect
-    
+
     with patch("tripsage.mcp_abstraction.registry.registry", registry):
         yield registry
 
@@ -194,28 +195,25 @@ def create_mock_tool_response(data: Any, error: Optional[str] = None):
 def mock_web_operations_cache():
     """Create a mock WebOperationsCache for testing."""
     from tripsage.utils.cache import ContentType
-    
+
     cache = MagicMock()
     cache.get = AsyncMock(return_value=None)
     cache.set = AsyncMock(return_value=True)
     cache.delete = AsyncMock(return_value=True)
     cache.invalidate_pattern = AsyncMock(return_value=0)
-    cache.get_stats = AsyncMock(return_value={
-        "hits": 0,
-        "misses": 0,
-        "hit_ratio": 0.0,
-        "total": 0
-    })
+    cache.get_stats = AsyncMock(
+        return_value={"hits": 0, "misses": 0, "hit_ratio": 0.0, "total": 0}
+    )
     cache.determine_content_type = Mock(return_value=ContentType.DAILY)
     cache.generate_cache_key = Mock(return_value="test-key")
-    
+
     # Add cached response helper
     def set_cached_response(key, value, content_type=ContentType.DAILY):
         cache.get.return_value = value
         cache.determine_content_type.return_value = content_type
-        
+
     cache.set_cached_response = set_cached_response
-    
+
     with patch("tripsage.utils.cache.web_cache", cache):
         yield cache
 
@@ -223,7 +221,7 @@ def mock_web_operations_cache():
 @pytest.fixture(autouse=True)
 def mock_redis():
     """Mock Redis client to avoid actual connections.
-    
+
     This fixture is marked autouse=True since many components require Redis,
     including WebOperationsCache, which is initialized at module import.
     """
@@ -234,10 +232,10 @@ def mock_redis():
     mock_client.scan_iter = AsyncMock(return_value=[])
     mock_client.incr = AsyncMock(return_value=1)
     mock_client.expire = AsyncMock(return_value=True)
-    
+
     # Mock the redis module's from_url function to return our mock
     mock_from_url = MagicMock(return_value=mock_client)
-    
+
     # We need to patch both redis.asyncio and redis directly
     with patch("redis.asyncio.from_url", mock_from_url):
         with patch("redis.from_url", mock_from_url):
