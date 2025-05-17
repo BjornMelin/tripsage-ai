@@ -9,6 +9,7 @@ The database layer has been successfully migrated from the old `src/db/` directo
 ## What Was Migrated
 
 ### 1. Business Models
+
 - ✅ `User` model → `tripsage/models/db/user.py`
 - ✅ `Trip` model → `tripsage/models/db/trip.py`
 - ❌ `Flight` model → Not migrated (using Duffel MCP for flight operations)
@@ -16,6 +17,7 @@ The database layer has been successfully migrated from the old `src/db/` directo
 ### 2. Database Operations
 
 #### Supabase SQL Operations
+
 - ✅ `find_user_by_email` - Find user by email address
 - ✅ `find_users_by_name_pattern` - Search users by name pattern
 - ✅ `update_user_preferences` - Update user preferences
@@ -25,6 +27,7 @@ The database layer has been successfully migrated from the old `src/db/` directo
 - ✅ `execute_sql` - Execute raw SQL queries
 
 #### Neo4j Graph Operations
+
 - ✅ `find_destinations_by_country` - Search destinations by country
 - ✅ `find_nearby_destinations` - Find destinations within radius
 - ✅ `find_popular_destinations` - Get popular destinations
@@ -32,6 +35,7 @@ The database layer has been successfully migrated from the old `src/db/` directo
 - ✅ `find_accommodations_in_destination` - Search accommodations
 
 ### 3. Migration Infrastructure
+
 - ✅ SQL migration runner using Supabase MCP
 - ✅ Neo4j migration runner using Memory MCP
 - ✅ Unified migration script supporting both databases
@@ -40,16 +44,19 @@ The database layer has been successfully migrated from the old `src/db/` directo
 ## What's Missing (Low Priority)
 
 ### User Operations
+
 - `set_admin_status` - Set user admin privileges
 - `set_disabled_status` - Enable/disable user account
 - `update_password` - Update user password hash
 - `get_admins` - Retrieve all admin users
 
 ### Trip Operations
+
 - `get_upcoming_trips` - Get trips starting in the future
 - `create_trip` - Create new trip (basic insert exists)
 
 ### Flight Operations
+
 - `find_flights_by_trip_id` - Find all flights for a trip
 - `find_flights_by_route` - Find flights by origin/destination
 - `find_flights_by_date_range` - Find flights within date range
@@ -69,6 +76,7 @@ These missing operations are documented and can be added as needed based on actu
 ## Files to Delete
 
 All files in `src/db/` can now be safely deleted:
+
 - `src/db/client.py`
 - `src/db/config.py`
 - `src/db/exceptions.py`
@@ -84,6 +92,7 @@ All files in `src/db/` can now be safely deleted:
 ## Testing
 
 Comprehensive test suite created:
+
 - `tests/database/test_database_migration_simple.py` - Model validation tests
 - `tests/database/test_missing_operations_simple.py` - Missing operations documentation
 - `tests/database/test_final_verification.py` - Migration completeness check

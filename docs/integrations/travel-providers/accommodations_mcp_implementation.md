@@ -135,7 +135,7 @@ The Accommodations MCP Server provides comprehensive accommodation search, booki
 
 ## File Structure
 
-```
+```plaintext
 src/
   mcp/
     accommodations/

@@ -5,6 +5,7 @@ This document outlines the Supabase MCP integration in TripSage, focused on prod
 ## Overview
 
 TripSage implements a dual-database architecture:
+
 - **Development/Testing**: Uses Neon DB MCP
 - **Production/Staging**: Uses Supabase MCP
 

@@ -3,6 +3,7 @@
 ## Overview
 
 The dual storage pattern is a key architectural component of TripSage, allowing us to store:
+
 - Structured data in Supabase (relational database)
 - Unstructured data and relationships in Neo4j (graph database via Memory MCP)
 

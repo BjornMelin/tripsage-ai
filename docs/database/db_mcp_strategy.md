@@ -7,6 +7,7 @@ This document describes the dual database strategy for TripSage, using Neon for 
 TripSage uses a dual database strategy to optimize the development workflow while maintaining a robust production environment:
 
 1. **Development Environment**: [Neon PostgreSQL](https://neon.tech/)
+
    - Serverless postgres with branching capabilities
    - Perfect for development, allowing each branch to have its own isolated database
    - Free tier with generous limits for development work
@@ -23,12 +24,14 @@ TripSage leverages the MCP (Model Context Protocol) approach for both database p
 ### Key Components
 
 1. **NeonMCPClient**: For development environments
+
    - Branch management capabilities
    - SQL execution and transaction support
    - Project creation and management
    - Connection string generation
 
 2. **SupabaseMCPClient**: For production environments
+
    - Project management
    - SQL execution and transaction support
    - Row-Level Security management
@@ -98,13 +101,13 @@ from src.mcp.db_factory import db_mcp_factory
 async def create_dev_branch_for_feature():
     # Get the Neon service
     neon_service = db_mcp_factory.get_development_service()
-    
+
     # Create a branch based on the git branch name
     git_branch = get_current_git_branch()
     branch_info = await neon_service.create_development_branch(
         branch_name=f"db-{git_branch}"
     )
-    
+
     # Store connection string in .env.local
     connection_string = branch_info["connection_string"]
     update_env_file(".env.local", "NEON_CONNECTION_STRING", connection_string)
@@ -118,17 +121,17 @@ from src.mcp.db_factory import db_mcp_factory
 async def apply_migrations_to_production():
     # Get the Supabase service
     supabase_service = db_mcp_factory.get_production_service()
-    
+
     # Get migration files from migrations directory
     migration_files = get_migration_files("migrations/")
-    
+
     # Apply migrations
     result = await supabase_service.apply_migrations(
         project_id=settings.supabase_mcp.default_project_id,
         migrations=migration_files,
         migration_names=[file.name for file in migration_files]
     )
-    
+
     print(f"Applied {result['migrations_applied']} migrations")
 ```
 
@@ -148,18 +151,22 @@ This allows tests to run against isolated Neon database branches without affecti
 ## Best Practices
 
 1. **Environment Awareness**: Always be aware of which environment you're working in
+
    - Development: Use Neon for isolated, disposable databases
    - Production: Use Supabase with proper RLS policies
 
 2. **Migration Management**: Maintain migrations in SQL files and apply them systematically
+
    - Track migrations with version numbers and descriptions
    - Test migrations on development branches before applying to production
 
 3. **Connection Pooling**: Use appropriate connection pooling settings for each environment
+
    - Development: Lower pool sizes for local work
    - Production: Higher pool sizes for concurrent operations
 
 4. **Security**: Apply appropriate security measures in each environment
+
    - Development: Basic security is sufficient
    - Production: Strict RLS policies and secret management
 

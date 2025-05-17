@@ -9,7 +9,9 @@ This report summarizes the migration of database functionality from the old `src
 ### Successfully Migrated Components
 
 #### 1. Core Business Models
+
 - ✅ **User Model** (`src/db/models/user.py` → `tripsage/models/db/user.py`)
+
   - Preserved all business logic and validation
   - Maintained preference management
   - Added Pydantic V2 patterns
@@ -20,7 +22,9 @@ This report summarizes the migration of database functionality from the old `src
   - Added comprehensive validation
 
 #### 2. Database Operations
+
 - ✅ **SQL Operations** (Supabase MCP)
+
   - Generic CRUD operations via `supabase_tools.py`
   - Domain-specific operations:
     - `find_user_by_email`
@@ -41,7 +45,9 @@ This report summarizes the migration of database functionality from the old `src
     - `create_trip_entities`
 
 #### 3. Migration System
+
 - ✅ **SQL Migrations** (`src/db/migrations.py` → `tripsage/db/migrations/runner.py`)
+
   - Uses Supabase MCP's execute_sql for applying migrations
   - Maintains migration history in database
 
@@ -51,6 +57,7 @@ This report summarizes the migration of database functionality from the old `src
   - Entity type definitions
 
 #### 4. Database Initialization
+
 - ✅ **Initialize Module** (`src/db/initialize.py` → `tripsage/db/initialize.py`)
   - Uses MCP managers for connections
   - Verifies both SQL and Neo4j databases
@@ -59,15 +66,18 @@ This report summarizes the migration of database functionality from the old `src
 ### Missing Operations (Documented)
 
 #### User Operations (Priority: Medium)
+
 - ❌ `set_admin_status` - Set user admin privileges
 - ❌ `set_disabled_status` - Enable/disable user account
 - ❌ `update_password` - Update user password hash
 - ❌ `get_admins` - Retrieve all admin users
 
 #### Trip Operations (Priority: Medium)
+
 - ❌ `get_upcoming_trips` - Get trips starting in the future
 
 #### Flight Operations (Priority: High)
+
 - ❌ `find_flights_by_trip_id` - Find all flights for a trip
 - ❌ `find_flights_by_route` - Find flights by origin/destination
 - ❌ `find_flights_by_date_range` - Find flights within date range
@@ -75,6 +85,7 @@ This report summarizes the migration of database functionality from the old `src
 - ❌ `get_flight_statistics` - Get flight analytics
 
 #### Models
+
 - ❌ **Flight Model** - Not migrated to database models
   - Current flight model in `tripsage/models/flight.py` is for MCP integration
   - Database persistence may not be needed (using Duffel MCP)
@@ -82,6 +93,7 @@ This report summarizes the migration of database functionality from the old `src
 ## Architecture Changes
 
 ### Old Architecture
+
 ```
 src/db/
 ├── client.py         # Direct Supabase/Neon clients
@@ -91,6 +103,7 @@ src/db/
 ```
 
 ### New Architecture
+
 ```
 tripsage/
 ├── models/db/       # Business models only
@@ -118,6 +131,7 @@ tripsage/
 ## Testing
 
 Comprehensive test suite created:
+
 - `tests/database/test_database_migration.py` - Unit tests for all operations
 - `tests/database/test_missing_operations.py` - Documentation of missing operations
 - `tests/database/test_integration.py` - Integration tests (requires real databases)

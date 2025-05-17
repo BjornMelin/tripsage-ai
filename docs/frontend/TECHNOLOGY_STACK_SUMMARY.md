@@ -3,6 +3,7 @@
 ## Definitive Frontend Technology Stack
 
 ### Core Technologies
+
 - **Framework**: Next.js 15.3 with App Router and Turbopack
 - **UI Library**: React 19 with concurrent features
 - **Language**: TypeScript 5.5 with strict mode
@@ -19,8 +20,10 @@
 ## Key Architecture Decisions
 
 ### 1. Authentication Strategy
+
 **Decision**: Supabase Auth
-- **Justification**: 
+
+- **Justification**:
   - Already integrated with the FastAPI backend
   - Provides JWT tokens compatible with existing backend
   - Includes built-in user management and session handling
@@ -28,7 +31,9 @@
 - **Implementation**: Server-side auth with cookies and middleware protection
 
 ### 2. Real-time Communication
+
 **Decision**: Server-Sent Events (SSE) via Vercel AI SDK v5
+
 - **Justification**:
   - Ideal for unidirectional streaming (server → client)
   - Built-in browser support with automatic reconnection
@@ -37,7 +42,9 @@
 - **Fallback**: WebSocket for bidirectional needs
 
 ### 3. API Key Management
+
 **Decision**: Backend Proxy Pattern
+
 - **Justification**:
   - Never expose sensitive keys to the client
   - All MCP tool invocations go through FastAPI backend
@@ -46,7 +53,9 @@
 - **Implementation**: Next.js API routes proxy to FastAPI
 
 ### 4. Technology Versions
+
 All selected versions are SOTA as of January 2025:
+
 - Next.js 15.3: Latest with Turbopack production support
 - React 19: Stable release with new hooks (use, useOptimistic)
 - TypeScript 5.5: Latest with enhanced type inference
@@ -56,6 +65,7 @@ All selected versions are SOTA as of January 2025:
 ## Integration Strategy
 
 ### Backend Communication
+
 ```typescript
 // Frontend → FastAPI → MCP Servers
 const response = await fetch('/api/mcp/flights/search', {
@@ -69,6 +79,7 @@ const response = await fetch('/api/mcp/flights/search', {
 ```
 
 ### Agent Streaming
+
 ```typescript
 // SSE streaming from FastAPI backend
 const { messages, input, handleSubmit } = useChat({
@@ -81,6 +92,7 @@ const { messages, input, handleSubmit } = useChat({
 ```
 
 ### Authentication Flow
+
 ```typescript
 // Supabase Auth with server-side session
 const supabase = createServerClient(
@@ -124,6 +136,7 @@ const supabase = createServerClient(
 - Zero security vulnerabilities
 
 This technology stack ensures:
+
 - Excellent developer experience
 - High performance and scalability
 - Strong type safety throughout

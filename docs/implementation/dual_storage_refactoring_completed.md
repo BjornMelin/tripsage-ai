@@ -120,7 +120,7 @@ async def create_trip(self, params: Dict[str, Any]) -> Dict[str, Any]:
    - UserStorageService
    - DestinationStorageService
    - AccommodationStorageService
-   
+
 2. Enhance test coverage:
    - Add mocking for settings
    - Create comprehensive test suite for each service

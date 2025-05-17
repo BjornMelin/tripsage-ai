@@ -195,6 +195,7 @@ For blog content and reviews, the normalizer performs basic sentiment analysis:
 ### Automatic Summarization
 
 Long content (>500 characters) is automatically summarized using:
+
 - First 2-3 sentences extraction
 - Key phrase identification
 - Length-controlled output (typically 300 characters)

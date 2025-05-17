@@ -2,7 +2,7 @@
 
 ## Overview
 
-The `FirecrawlMCPClient` has been implemented to integrate with the Firecrawl MCP server (https://github.com/mendableai/firecrawl-mcp-server) for advanced web scraping and crawling capabilities in TripSage.
+The `FirecrawlMCPClient` has been implemented to integrate with the Firecrawl MCP server (<https://github.com/mendableai/firecrawl-mcp-server>) for advanced web scraping and crawling capabilities in TripSage.
 
 ## Design Choices
 
@@ -16,11 +16,11 @@ The `FirecrawlMCPClient` has been implemented to integrate with the Firecrawl MC
 
 The client implements intelligent caching based on content type and domain:
 
-- **Dynamic Content (Booking Sites)**: 
+- **Dynamic Content (Booking Sites)**:
   - Sites like `airbnb.com`, `booking.com`, `hotels.com` get a shorter TTL of 1 hour
   - This accounts for frequently changing prices and availability
   
-- **Static Content**: 
+- **Static Content**:
   - General web content gets a 24-hour TTL
   - Search results get a 12-hour TTL
   - Structured extraction data gets a 24-hour TTL
@@ -28,6 +28,7 @@ The client implements intelligent caching based on content type and domain:
 ### 3. API Method Mapping
 
 The client provides high-level methods that map to Firecrawl MCP tools:
+
 - `scrape_url()` → `firecrawl_scrape` tool
 - `crawl_url()` → `firecrawl_crawl` tool
 - `extract_structured_data()` → `firecrawl_extract` tool
@@ -38,6 +39,7 @@ The client provides high-level methods that map to Firecrawl MCP tools:
 ### 4. Configuration Integration
 
 The client integrates with TripSage's MCP configuration system:
+
 - Uses `FirecrawlMCPConfig` from `mcp_settings.py`
 - Supports environment variable configuration
 - Allows for both cloud and self-hosted Firecrawl instances
@@ -45,11 +47,13 @@ The client integrates with TripSage's MCP configuration system:
 ### 5. Parameter Models
 
 Created Pydantic models for request parameters:
+
 - `FirecrawlScrapeParams`: For single URL scraping
 - `FirecrawlCrawlParams`: For website crawling
 - `FirecrawlExtractParams`: For structured data extraction
 
 These models:
+
 - Provide type safety and validation
 - Handle camelCase to snake_case conversion for MCP compatibility
 - Support optional parameters with sensible defaults
@@ -75,6 +79,7 @@ These models:
 ### Cache Key Strategy
 
 Cache keys are constructed based on:
+
 - Tool name (e.g., "firecrawl:scrape")
 - Primary identifier (URL, query, etc.)
 - Relevant parameters that affect the result
@@ -131,6 +136,7 @@ search_results = await client.search_web(
 ## Integration with TripSage
 
 The `FirecrawlMCPClient` will be used by:
+
 1. `SourceSelectionLogic` in `source_selector.py` for determining when to use Firecrawl
 2. Unified webcrawl tools in `webcrawl_tools.py` for agent access
 3. Accommodation and flight search agents for scraping booking sites

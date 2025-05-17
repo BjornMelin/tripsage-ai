@@ -1,6 +1,6 @@
 # TripSage Optimization Strategy
 
-_Version: 1.0.1 - Last Updated: May 10, 2025_
+Version: 1.0.1 - Last Updated: May 10, 2025
 
 ## 1. Executive Summary
 
@@ -160,7 +160,7 @@ We will adopt official MCP implementations where available:
 - **Implementation**: Python FastMCP 2.0 with OpenAPI integration
 - **Tools**:
   - `mcp__weather__get_current_conditions`: Current weather for a location
-  - `mcp__weather__get_forecast`: Multi-day forecast with travel recommendations 
+  - `mcp__weather__get_forecast`: Multi-day forecast with travel recommendations
   - `mcp__weather__get_historical_data`: Historical weather patterns for planning
   - `mcp__weather__get_travel_recommendation`: Weather-based travel suggestions
   - `mcp__weather__get_extreme_alerts`: Weather alerts for a location and date range
@@ -425,6 +425,7 @@ The database schema follows these principles:
 - Add appropriate comments to tables and complex columns
 
 Core tables include:
+
 - trips
 - flights
 - accommodations

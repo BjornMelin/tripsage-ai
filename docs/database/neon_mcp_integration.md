@@ -8,7 +8,7 @@ focusing on its role in the development workflow.
 TripSage uses a dual database architecture:
 
 1. **Development Environment**: [Neon DB](https://neon.tech) via MCP integration
-2. **Production Environment**: Supabase PostgreSQL 
+2. **Production Environment**: Supabase PostgreSQL
 
 The Neon DB MCP server provides a serverless PostgreSQL database with excellent development
 features like database branching, query analysis, and connection pooling.
@@ -128,7 +128,7 @@ await neon_service.apply_migrations(
 
 To enable Neon DB MCP in your development environment, add these settings to your `.env` file:
 
-```
+```env
 # Neon MCP Configuration
 NEON_MCP_ENDPOINT=http://localhost:8099
 NEON_MCP_API_KEY=your_api_key_here

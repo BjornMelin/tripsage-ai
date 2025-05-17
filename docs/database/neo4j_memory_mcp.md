@@ -48,7 +48,7 @@ volumes:
 
 Configure the following environment variables in your `.env` file:
 
-```
+```env
 # Neo4j Database - Direct access (used by Migration tools)
 NEO4J_URI=bolt://localhost:7687
 NEO4J_USERNAME=neo4j

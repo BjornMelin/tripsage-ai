@@ -30,17 +30,20 @@ TripSage integrates with the official Model Context Protocol Time Server to hand
 The official Time MCP server can be installed and run in several ways:
 
 1. **Using NPX (Recommended)**:
+
    ```bash
    npx uvx mcp-server-time --port 3000
    ```
 
 2. **Using NPM**:
+
    ```bash
    npm install -g @uvx/mcp-server-time
    mcp-server-time --port 3000
    ```
 
 3. **Using Docker**:
+
    ```bash
    docker run --rm -p 3000:3000 uvx/mcp-server-time
    ```
@@ -103,7 +106,7 @@ The server is automatically configured to use local system timezone and runs on 
 
 To configure the Time MCP client, set the following environment variables:
 
-```
+```env
 TIME_MCP_SERVER_URL=http://localhost:3000
 TIME_MCP_PORT=3000 # Optional, defaults to 3000
 ```
@@ -195,6 +198,7 @@ The Time MCP Server integration provides TripSage with robust time and timezone 
 The official Time MCP server returns responses in ISO 8601 format:
 
 For `get_current_time`:
+
 ```json
 {
   "timezone": "America/New_York",
@@ -204,6 +208,7 @@ For `get_current_time`:
 ```
 
 For `convert_time`:
+
 ```json
 {
   "source": {

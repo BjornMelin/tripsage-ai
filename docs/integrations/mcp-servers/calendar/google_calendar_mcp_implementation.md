@@ -139,7 +139,7 @@ Configure the OAuth consent screen with the following information:
 
 Add the following environment variables to your `.env` file:
 
-```
+```env
 GOOGLE_CLIENT_ID=your-client-id
 GOOGLE_CLIENT_SECRET=your-client-secret
 GOOGLE_REDIRECT_URI=http://localhost:3003/auth/callback
@@ -151,17 +151,20 @@ CALENDAR_MCP_ENDPOINT=http://localhost:3003
 ### Installation
 
 1. Clone the repository:
+
    ```bash
    git clone https://github.com/nspady/google-calendar-mcp.git
    cd google-calendar-mcp
    ```
 
 2. Install dependencies:
+
    ```bash
    npm install
    ```
 
 3. Copy the OAuth keys template:
+
    ```bash
    cp gcp-oauth.keys.example.json gcp-oauth.keys.json
    ```

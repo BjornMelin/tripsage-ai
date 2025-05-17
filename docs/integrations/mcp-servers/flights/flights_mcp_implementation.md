@@ -517,7 +517,7 @@ CMD ["node", "src/mcp/flights/server.js"]
 - **Logging**: Structured logs with request/response details
 - **Alerts**: Set up for high error rates, slow responses, or payment failures
 
-## Integration with Agent Architecture
+## Integration with Agent Architecture - Flights
 
 The Flights MCP Server is integrated with the TripSage agent architecture to provide flight search and booking capabilities. The agent uses the following tools:
 

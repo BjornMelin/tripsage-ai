@@ -30,6 +30,7 @@ TRIPSAGE_MCP_CRAWL4AI_MAX_PAGES=10
 ```
 
 Default configuration:
+
 - **URL**: `ws://localhost:11235/mcp/ws` (WebSocket) or `http://localhost:11235/mcp/sse` (SSE)
 - **Timeout**: 30 seconds
 - **Max Pages**: 10 pages for multi-page crawls

@@ -37,6 +37,7 @@ After extensive evaluation of Crawl4AI, Firecrawl, and various browser automatio
 Based on empirical evidence, we recommend the following domain-based routing rules:
 
 ### Crawl4AI Optimized Sites
+
 - tripadvisor.com
 - wikitravel.org  
 - wikipedia.org
@@ -45,6 +46,7 @@ Based on empirical evidence, we recommend the following domain-based routing rul
 - flyertalk.com
 
 ### Firecrawl Optimized Sites
+
 - airbnb.com
 - booking.com
 - expedia.com

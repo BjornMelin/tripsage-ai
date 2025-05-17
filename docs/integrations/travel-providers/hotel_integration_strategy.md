@@ -5,6 +5,7 @@ This document outlines the strategy for integrating hotel search capabilities in
 ## Current Status
 
 TripSage currently integrates with:
+
 - **Airbnb** via OpenBnB MCP server - For vacation rentals and unique stays
 
 ## Hotel Search Strategy

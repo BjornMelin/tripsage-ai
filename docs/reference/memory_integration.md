@@ -247,6 +247,7 @@ async def travel_planning_session(user_query):
    ```
 
 4. **Travel Patterns**
+
    ```python
    await memory_client.create_relations([
        {
