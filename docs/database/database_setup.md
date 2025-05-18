@@ -62,7 +62,7 @@ If you need to create a new Supabase project:
 To verify the database setup, you can use the provided verification script:
 
 ```bash
-node scripts/verify_connection.js
+node scripts/verification/verify_connection.js
 ```
 
 Or manually run these SQL queries:

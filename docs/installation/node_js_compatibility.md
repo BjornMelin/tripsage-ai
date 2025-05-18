@@ -128,10 +128,10 @@ Once Node.js is properly installed (through any method), MCP servers can be laun
 
 ```bash
 # Using the unified launcher
-python scripts/mcp_launcher.py start supabase
+python scripts/mcp/mcp_launcher.py start supabase
 
 # Individual scripts also work
-./scripts/start_time_mcp.sh
+./scripts/startup/start_time_mcp.sh
 
 # Direct npx usage (what the launcher does internally)
 npx -y supabase-mcp

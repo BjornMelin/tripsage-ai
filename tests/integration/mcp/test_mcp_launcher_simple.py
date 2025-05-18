@@ -9,8 +9,8 @@ mock_settings = MagicMock()
 mock_settings.supabase = MagicMock(enabled=True, command="supabase", runtime="python")
 mock_settings.neo4j_memory = MagicMock(enabled=True, command="neo4j", runtime="python")
 
-with patch("scripts.mcp_launcher.MCPSettings", return_value=mock_settings):
-    from scripts.mcp_launcher import MCPLauncher
+with patch("scripts.mcp.mcp_launcher.MCPSettings", return_value=mock_settings):
+    from scripts.mcp.mcp_launcher import MCPLauncher
 
 
 class TestMCPLauncher:

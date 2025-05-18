@@ -19,6 +19,7 @@ This document outlines all use cases for TripSage AI Travel Application, detaili
 ### 1. Trip Planning and Booking
 
 #### 1.1 Basic Trip Planning
+
 **User Goal**: Plan a simple vacation with flights and hotels
 **Agents Involved**: `TravelPlanningAgent`, `FlightAgent`, `AccommodationAgent`
 **MCP Servers Used**: `flights-mcp`, `airbnb-mcp`, `google-maps-mcp`, `weather-mcp`
@@ -47,6 +48,7 @@ sequenceDiagram
 ```
 
 #### 1.2 Multi-Destination Trip
+
 **User Goal**: Plan complex trip with multiple cities
 **Agents Involved**: `TravelPlanningAgent`, `FlightAgent`, `ItineraryAgent`
 **MCP Servers Used**: `flights-mcp`, `time-mcp`, `google-maps-mcp`
@@ -54,6 +56,7 @@ sequenceDiagram
 ### 2. Budget Management
 
 #### 2.1 Budget Tracking
+
 **User Goal**: Track expenses and stay within budget
 **Agents Involved**: `BudgetAgent`, `TravelPlanningAgent`
 **MCP Servers Used**: `memory-mcp`, `time-mcp`
@@ -71,6 +74,7 @@ graph TD
 ```
 
 #### 2.2 Price Monitoring
+
 **User Goal**: Get alerts when prices drop
 **Agents Involved**: `FlightAgent`, `BudgetAgent`
 **MCP Servers Used**: `flights-mcp`, `browser-mcp`, `memory-mcp`
@@ -78,6 +82,7 @@ graph TD
 ### 3. Collaborative Travel
 
 #### 3.1 Group Trip Planning
+
 **User Goal**: Plan trip with multiple people
 **Agents Involved**: `TravelPlanningAgent`, `CollaborationAgent`
 **MCP Servers Used**: `google-calendar-mcp`, `memory-mcp`, `supabase-mcp`
@@ -96,11 +101,13 @@ graph LR
 ### 4. AI-Powered Recommendations
 
 #### 4.1 Personalized Suggestions
+
 **User Goal**: Get recommendations based on preferences
 **Agents Involved**: `TravelInsightsAgent`, `DestinationResearchAgent`
 **MCP Servers Used**: `memory-mcp`, `linkup-mcp`, `firecrawl-mcp`
 
 #### 4.2 Weather-Based Planning
+
 **User Goal**: Plan activities based on weather
 **Agents Involved**: `TravelPlanningAgent`, `ItineraryAgent`
 **MCP Servers Used**: `weather-mcp`, `google-maps-mcp`
@@ -108,11 +115,13 @@ graph LR
 ### 5. Real-Time Travel Management
 
 #### 5.1 Flight Status Updates
+
 **User Goal**: Get real-time flight updates
 **Agents Involved**: `FlightAgent`
 **MCP Servers Used**: `flights-mcp`, `time-mcp`
 
 #### 5.2 Dynamic Itinerary Adjustments
+
 **User Goal**: Adjust plans based on changes
 **Agents Involved**: `ItineraryAgent`, `TravelPlanningAgent`
 **MCP Servers Used**: All relevant MCPs
@@ -457,6 +466,7 @@ graph TD
 ### MVP Features (Version 1.0)
 
 #### Core Functionality
+
 1. **User Authentication**
    - OAuth login (Google, Facebook)
    - Basic profile management
@@ -486,6 +496,7 @@ graph TD
    - supabase-mcp
 
 #### Database Tables for MVP
+
 - users
 - trips
 - trip_items
@@ -497,6 +508,7 @@ graph TD
 ### Next Release Features (Version 2.0)
 
 #### Advanced Features
+
 1. **Collaborative Travel**
    - Group trip planning
    - Expense splitting
@@ -531,6 +543,7 @@ graph TD
    - google-calendar-mcp
 
 #### Additional Database Tables
+
 - user_preferences
 - search_history
 - price_alerts
@@ -558,6 +571,7 @@ graph TD
 ### Phase 1: MVP Development (3 months)
 
 #### Month 1: Foundation
+
 - [ ] Set up Next.js frontend
 - [ ] Implement authentication
 - [ ] Create basic UI components
@@ -565,6 +579,7 @@ graph TD
 - [ ] Initialize agent framework
 
 #### Month 2: Core Features
+
 - [ ] Flight search and booking
 - [ ] Hotel search and booking
 - [ ] Basic itinerary builder
@@ -572,6 +587,7 @@ graph TD
 - [ ] Basic AI chat
 
 #### Month 3: Integration & Polish
+
 - [ ] MCP server integration
 - [ ] Agent orchestration
 - [ ] Testing and bug fixes
@@ -581,18 +597,21 @@ graph TD
 ### Phase 2: Advanced Features (6 months)
 
 #### Months 4-5: Collaboration & Groups
+
 - [ ] Group trip planning
 - [ ] Expense splitting
 - [ ] Shared itineraries
 - [ ] Real-time sync
 
 #### Months 6-7: Intelligence & Personalization
+
 - [ ] Price prediction engine
 - [ ] Learning algorithms
 - [ ] Recommendation system
 - [ ] Advanced search
 
 #### Months 8-9: Platform Enhancement
+
 - [ ] Additional MCP servers
 - [ ] Complex agent workflows
 - [ ] Mobile app development
@@ -603,6 +622,7 @@ graph TD
 TripSage represents a comprehensive travel planning platform that leverages AI agents and MCP servers to deliver unparalleled user experiences. By focusing on MVP features first, we can quickly deliver value while building toward a more sophisticated system. The architecture supports scalability and extensibility, allowing for continuous improvement and feature additions.
 
 The key to success lies in:
+
 1. Proper agent orchestration
 2. Effective MCP server utilization
 3. User-centric design

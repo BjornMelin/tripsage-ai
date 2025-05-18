@@ -95,8 +95,8 @@ For detailed schema information, see the [Database Setup Documentation](./docs/d
 4. Install dependencies:
 
    ```bash
-   # API server dependencies
-   pip install -r src/api/requirements.txt
+   # Project dependencies
+   pip install -r requirements.txt
 
    # Agent dependencies
    pip install -r src/agents/requirements.txt

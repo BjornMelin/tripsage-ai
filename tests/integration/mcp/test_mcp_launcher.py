@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from scripts.mcp_launcher import MCPLauncher, ServerRuntime
+from scripts.mcp.mcp_launcher import MCPLauncher, ServerRuntime
 
 
 class TestMCPLauncher:
@@ -14,7 +14,7 @@ class TestMCPLauncher:
     @pytest.fixture
     def mock_settings(self):
         """Create mock MCP settings"""
-        with patch("scripts.mcp_launcher.MCPSettings") as mock:
+        with patch("scripts.mcp.mcp_launcher.MCPSettings") as mock:
             settings = MagicMock()
             settings.supabase.server_url = "http://localhost:54321"
             settings.supabase.supabase_key = "test-key"
