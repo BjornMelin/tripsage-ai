@@ -38,7 +38,7 @@ def test_cached_websearch_implementation():
 def test_travel_planning_agent_integration():
     """Test that TravelPlanningAgent uses CachedWebSearchTool."""
     # Read the travel_planning_agent.py file
-    with open("src/agents/travel_planning_agent.py", "r") as f:
+    with open("tripsage/agents/planning.py", "r") as f:
         content = f.read()
 
     # Check imports
@@ -59,7 +59,7 @@ def test_travel_planning_agent_integration():
 def test_destination_research_agent_integration():
     """Test that DestinationResearchAgent uses CachedWebSearchTool."""
     # Read the destination_research_agent.py file
-    with open("src/agents/destination_research_agent.py", "r") as f:
+    with open("tripsage/agents/destination_research.py", "r") as f:
         content = f.read()
 
     # Check imports
@@ -79,7 +79,7 @@ def test_destination_research_agent_integration():
 def test_no_allowed_domains_in_agents():
     """Test that agents don't use AllowedDomains anymore."""
     # Check travel_agent.py
-    with open("src/agents/travel_agent.py", "r") as f:
+    with open("tripsage/agents/travel.py", "r") as f:
         content = f.read()
 
     # Should not import or use AllowedDomains

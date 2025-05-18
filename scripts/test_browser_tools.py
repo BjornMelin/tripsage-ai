@@ -30,10 +30,10 @@ def import_module(name, path):
 # Import the required modules
 browser_tools = import_module(
     "browser_tools",
-    os.path.join(parent_dir, "src/agents/tools/browser/browser_tools.py"),
+    os.path.join(parent_dir, "tripsage/tools/browser/browser_tools.py"),
 )
 settings_module = import_module(
-    "settings", os.path.join(parent_dir, "src/utils/settings.py")
+    "settings", os.path.join(parent_dir, "tripsage/utils/settings.py")
 )
 
 

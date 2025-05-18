@@ -7,6 +7,7 @@ This guide explains how to set up, install, and run the TripSage project and its
 - Python 3.10 or higher
 - `uv` package manager (installation instructions below)
 - Git (for cloning the repository)
+- Node.js 16+ (for MCP servers - see [Node.js Compatibility Guide](./node_js_compatibility.md))
 
 ## Installing UV
 

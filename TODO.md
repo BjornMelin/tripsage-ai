@@ -1071,6 +1071,9 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
       - [x] Implement unified MCP launcher script (completed)
         - ✓ Created scripts/mcp_launcher.py with standardized launch mechanism
         - ✓ Supports all MCP server configurations
+        - ✓ Added Node.js dependency checking with compatibility for all installation methods (nvm, fnm, volta, etc.)
+        - ✓ Created comprehensive Node.js compatibility documentation
+        - ✓ Fixed configuration attribute mapping to match actual MCPSettings structure
       - [x] Create Docker-Compose orchestration (completed)
         - ✓ Created docker-compose.mcp.yml for MCP services
         - ✓ Defined service configurations and dependencies

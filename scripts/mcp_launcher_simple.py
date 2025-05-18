@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Unified MCP Server Launcher
+Simplified MCP Server Launcher
 
 This script provides a centralized way to launch and manage MCP servers
 for TripSage. It automatically detects server runtime (Python/Node) and
@@ -15,6 +15,7 @@ Node.js Compatibility:
 import asyncio
 import json
 import logging
+import os
 import shutil
 import subprocess
 import sys
@@ -22,12 +23,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Dict, List, Optional
 
-# Add project root to Python path
-sys.path.insert(0, str(Path(__file__).parent.parent))
-
 from pydantic import BaseModel, Field
-
-from tripsage.config.mcp_settings import MCPSettings
 
 
 class ServerRuntime(str, Enum):
@@ -52,31 +48,25 @@ class MCPServerConfig(BaseModel):
 class MCPLauncher:
     """Manages launching and lifecycle of MCP servers"""
 
-    def __init__(self, settings: Optional[MCPSettings] = None):
-        try:
-            self.settings = settings or MCPSettings()
-        except Exception as e:
-            self.logger = logging.getLogger(__name__)
-            self.logger.warning(f"Failed to load MCP settings: {e}")
-            self.settings = None
+    def __init__(self):
         self.servers: Dict[str, subprocess.Popen] = {}
         self.configs = self._load_server_configs()
         self.logger = logging.getLogger(__name__)
         self._check_dependencies()
 
     def _load_server_configs(self) -> Dict[str, MCPServerConfig]:
-        """Load server configurations from settings"""
+        """Load server configurations from environment variables"""
         configs = {}
 
-        # Map existing shell scripts to unified launcher configs
+        # Map server configurations with environment variable fallbacks
         script_mappings = {
             "supabase": {
                 "runtime": ServerRuntime.NODE,
                 "command": "npx",
                 "args": ["-y", "supabase-mcp"],
                 "env": {
-                    "SUPABASE_URL": str(self.settings.supabase.url),
-                    "SUPABASE_KEY": self.settings.supabase.service_key.get_secret_value(),
+                    "SUPABASE_URL": os.getenv("SUPABASE_URL", ""),
+                    "SUPABASE_KEY": os.getenv("SUPABASE_KEY", ""),
                 },
             },
             "neo4j_memory": {
@@ -84,22 +74,22 @@ class MCPLauncher:
                 "command": "npx",
                 "args": ["-y", "@neo4j-contrib/mcp-neo4j"],
                 "env": {
-                    "NEO4J_URI": f"{self.settings.neo4j_memory.scheme}://{self.settings.neo4j_memory.host}:{self.settings.neo4j_memory.port}",
-                    "NEO4J_USERNAME": self.settings.neo4j_memory.username,
-                    "NEO4J_PASSWORD": self.settings.neo4j_memory.password.get_secret_value(),
+                    "NEO4J_URI": os.getenv("NEO4J_URI", ""),
+                    "NEO4J_USERNAME": os.getenv("NEO4J_USERNAME", ""),
+                    "NEO4J_PASSWORD": os.getenv("NEO4J_PASSWORD", ""),
                 },
             },
             "duffel_flights": {
                 "runtime": ServerRuntime.NODE,
                 "command": "npx",
                 "args": ["-y", "duffel-mcp"],
-                "env": {"DUFFEL_API_KEY": self.settings.duffel_flights.api_key.get_secret_value()},
+                "env": {"DUFFEL_API_KEY": os.getenv("DUFFEL_API_KEY", "")},
             },
             "airbnb": {
                 "runtime": ServerRuntime.NODE,
                 "command": "npx",
                 "args": ["-y", "airbnb-mcp"],
-                "env": {"AIRBNB_API_KEY": self.settings.airbnb.api_key.get_secret_value()},
+                "env": {"AIRBNB_API_KEY": os.getenv("AIRBNB_API_KEY", "")},
             },
             "playwright": {
                 "runtime": ServerRuntime.NODE,
@@ -112,24 +102,20 @@ class MCPLauncher:
                 "command": "python",
                 "args": ["-m", "crawl4ai.mcp_server"],
                 "env": {
-                    "CRAWL4AI_API_KEY": (
-                        self.settings.crawl4ai.api_key.get_secret_value()
-                        if hasattr(self.settings, "crawl4ai") and hasattr(self.settings.crawl4ai, "api_key")
-                        else ""
-                    )
+                    "CRAWL4AI_API_KEY": os.getenv("CRAWL4AI_API_KEY", "")
                 },
             },
             "firecrawl": {
                 "runtime": ServerRuntime.NODE,
                 "command": "npx",
                 "args": ["-y", "@mendableai/firecrawl-mcp-server"],
-                "env": {"FIRECRAWL_API_KEY": self.settings.firecrawl.api_key.get_secret_value()},
+                "env": {"FIRECRAWL_API_KEY": os.getenv("FIRECRAWL_API_KEY", "")},
             },
             "google_maps": {
                 "runtime": ServerRuntime.NODE,
                 "command": "npx",
                 "args": ["-y", "google-maps-mcp"],
-                "env": {"GOOGLE_MAPS_API_KEY": self.settings.google_maps.api_key.get_secret_value()},
+                "env": {"GOOGLE_MAPS_API_KEY": os.getenv("GOOGLE_MAPS_API_KEY", "")},
             },
             "time": {
                 "runtime": ServerRuntime.NODE,
@@ -141,15 +127,15 @@ class MCPLauncher:
                 "runtime": ServerRuntime.NODE,
                 "command": "npx",
                 "args": ["-y", "weather-mcp-server"],
-                "env": {"OPENWEATHERMAP_API_KEY": self.settings.weather.api_key.get_secret_value()},
+                "env": {"OPENWEATHERMAP_API_KEY": os.getenv("OPENWEATHERMAP_API_KEY", "")},
             },
             "google_calendar": {
                 "runtime": ServerRuntime.NODE,
                 "command": "npx",
                 "args": ["-y", "google-calendar-mcp"],
                 "env": {
-                    "GOOGLE_CLIENT_ID": str(self.settings.google_calendar.auth_mode),
-                    "GOOGLE_CLIENT_SECRET": self.settings.google_calendar.api_key.get_secret_value(),
+                    "GOOGLE_CLIENT_ID": os.getenv("GOOGLE_CLIENT_ID", ""),
+                    "GOOGLE_CLIENT_SECRET": os.getenv("GOOGLE_CLIENT_SECRET", ""),
                 },
             },
         }
@@ -225,7 +211,7 @@ class MCPLauncher:
 
         try:
             # Prepare environment
-            env = {**config.env}
+            env = {**os.environ, **config.env}
 
             # Launch server process
             process = subprocess.Popen(
