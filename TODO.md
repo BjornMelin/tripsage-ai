@@ -1068,12 +1068,26 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
       - [x] Remove legacy /mcp_servers/ directory (completed)
         - ✓ Removed incompatible legacy Node/JS approach
         - ✓ Cleaned up old configuration files
+      - [x] Reorganize scripts directory for better maintainability (completed)
+        - ✓ Moved all test files from scripts/ to tests/integration/
+          - ✓ Created subdirectories for different test types (mcp/, api/, database/)
+          - ✓ Updated all imports to reflect new paths
+        - ✓ Created subdirectories in scripts/ for better organization
+          - ✓ mcp/ for MCP launcher scripts
+          - ✓ database/ for database management scripts  
+          - ✓ startup/ for server start/stop scripts
+          - ✓ verification/ for connection testing scripts
+        - ✓ Added README.md documenting the new directory structure
+        - ✓ Added __init__.py files to make directories proper Python packages
+        - ✓ Updated documentation references to reflect new paths
       - [x] Implement unified MCP launcher script (completed)
-        - ✓ Created scripts/mcp_launcher.py with standardized launch mechanism
+        - ✓ Created scripts/mcp/mcp_launcher.py with standardized launch mechanism
         - ✓ Supports all MCP server configurations
         - ✓ Added Node.js dependency checking with compatibility for all installation methods (nvm, fnm, volta, etc.)
         - ✓ Created comprehensive Node.js compatibility documentation
         - ✓ Fixed configuration attribute mapping to match actual MCPSettings structure
+        - ✓ Added dependency checking functionality to warn users when Node.js is missing
+        - ✓ Created scripts/mcp/mcp_launcher_simple.py for testing without configuration complexity
       - [x] Create Docker-Compose orchestration (completed)
         - ✓ Created docker-compose.mcp.yml for MCP services
         - ✓ Defined service configurations and dependencies
