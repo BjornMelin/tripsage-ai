@@ -68,7 +68,7 @@ src/
 │   │   └── settings/        # User settings
 │   ├── api/                 # API routes
 │   │   ├── agents/          # Agent streaming endpoints
-│   │   │   └── [agentId]/   
+│   │   │   └── [agentId]/
 │   │   │       └── stream/
 │   │   ├── auth/            # Auth endpoints
 │   │   └── trpc/            # Optional tRPC router
@@ -154,25 +154,25 @@ src/
 ```typescript
 // Client State (Zustand)
 interface UIStore {
-  theme: 'light' | 'dark' | 'system'
-  sidebarOpen: boolean
-  activeAgent: string | null
+  theme: "light" | "dark" | "system";
+  sidebarOpen: boolean;
+  activeAgent: string | null;
 }
 
 // Server State (TanStack Query)
 const useTrips = () => {
   return useQuery({
-    queryKey: ['trips'],
-    queryFn: () => api.get('/trips'),
+    queryKey: ["trips"],
+    queryFn: () => api.get("/trips"),
     staleTime: 5 * 60 * 1000, // 5 minutes
-  })
-}
+  });
+};
 
 // Real-time State (Vercel AI SDK)
 const { messages, input, handleSubmit } = useChat({
-  api: '/api/agents/travel-planner/stream',
-  streamProtocol: 'data-stream',
-})
+  api: "/api/agents/travel-planner/stream",
+  streamProtocol: "data-stream",
+});
 ```
 
 ### 3. API Integration Layer
@@ -180,23 +180,23 @@ const { messages, input, handleSubmit } = useChat({
 ```typescript
 // API Client with automatic retry and error handling
 class TripSageAPI {
-  private baseURL = process.env.NEXT_PUBLIC_API_URL
-  
+  private baseURL = process.env.NEXT_PUBLIC_API_URL;
+
   async request<T>(path: string, options?: RequestInit): Promise<T> {
     const res = await fetch(`${this.baseURL}${path}`, {
       ...options,
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${await getSessionToken()}`,
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${await getSessionToken()}`,
         ...options?.headers,
       },
-    })
-    
+    });
+
     if (!res.ok) {
-      throw new APIError(res.status, await res.text())
+      throw new APIError(res.status, await res.text());
     }
-    
-    return res.json()
+
+    return res.json();
   }
 }
 ```
@@ -206,44 +206,44 @@ class TripSageAPI {
 ```typescript
 // Agent streaming with SSE
 export async function POST(req: Request) {
-  const encoder = new TextEncoder()
-  
+  const encoder = new TextEncoder();
+
   const stream = new ReadableStream({
     async start(controller) {
-      const { messages } = await req.json()
-      
+      const { messages } = await req.json();
+
       // Call FastAPI backend
       const response = await fetch(`${BACKEND_URL}/agents/stream`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'text/event-stream',
+          "Content-Type": "application/json",
+          Accept: "text/event-stream",
         },
         body: JSON.stringify({ messages }),
-      })
-      
-      const reader = response.body?.getReader()
-      const decoder = new TextDecoder()
-      
+      });
+
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+
       while (true) {
-        const { done, value } = await reader!.read()
-        if (done) break
-        
-        const chunk = decoder.decode(value)
-        controller.enqueue(encoder.encode(chunk))
+        const { done, value } = await reader!.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value);
+        controller.enqueue(encoder.encode(chunk));
       }
-      
-      controller.close()
+
+      controller.close();
     },
-  })
-  
+  });
+
   return new Response(stream, {
     headers: {
-      'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache',
-      'Connection': 'keep-alive',
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache",
+      Connection: "keep-alive",
     },
-  })
+  });
 }
 ```
 
@@ -254,28 +254,28 @@ export async function POST(req: Request) {
 ```typescript
 // app/(dashboard)/trips/page.tsx
 export default async function TripsPage() {
-  const trips = await api.get('/trips')
-  
+  const trips = await api.get("/trips");
+
   return (
     <div className="container py-8">
       <TripGrid trips={trips} />
     </div>
-  )
+  );
 }
 ```
 
 ### Client Components
 
 ```typescript
-'use client'
+"use client";
 
 // components/agents/agent-chat.tsx
 export function AgentChat({ agentId }: { agentId: string }) {
   const { messages, input, handleSubmit, isLoading } = useChat({
     api: `/api/agents/${agentId}/stream`,
-    streamProtocol: 'data-stream',
-  })
-  
+    streamProtocol: "data-stream",
+  });
+
   return (
     <div className="flex flex-col h-full">
       <MessageList messages={messages} />
@@ -286,7 +286,7 @@ export function AgentChat({ agentId }: { agentId: string }) {
         disabled={isLoading}
       />
     </div>
-  )
+  );
 }
 ```
 
@@ -295,23 +295,23 @@ export function AgentChat({ agentId }: { agentId: string }) {
 ```typescript
 // components/agents/streaming-message.tsx
 export function StreamingMessage({ content }: { content: string }) {
-  const [displayedContent, setDisplayedContent] = useState('')
-  
+  const [displayedContent, setDisplayedContent] = useState("");
+
   useEffect(() => {
-    let index = 0
+    let index = 0;
     const interval = setInterval(() => {
       if (index < content.length) {
-        setDisplayedContent(content.slice(0, index + 1))
-        index++
+        setDisplayedContent(content.slice(0, index + 1));
+        index++;
       } else {
-        clearInterval(interval)
+        clearInterval(interval);
       }
-    }, 10) // Smooth character-by-character display
-    
-    return () => clearInterval(interval)
-  }, [content])
-  
-  return <div className="prose">{displayedContent}</div>
+    }, 10); // Smooth character-by-character display
+
+    return () => clearInterval(interval);
+  }, [content]);
+
+  return <div className="prose">{displayedContent}</div>;
 }
 ```
 
@@ -321,28 +321,28 @@ export function StreamingMessage({ content }: { content: string }) {
 
 ```typescript
 // lib/supabase/server.ts
-import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
+import { createServerClient } from "@supabase/ssr";
+import { cookies } from "next/headers";
 
 export function createClient() {
-  const cookieStore = cookies()
-  
+  const cookieStore = cookies();
+
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
         getAll() {
-          return cookieStore.getAll()
+          return cookieStore.getAll();
         },
         setAll(cookiesToSet) {
           cookiesToSet.forEach(({ name, value, options }) =>
             cookieStore.set(name, value, options)
-          )
+          );
         },
       },
     }
-  )
+  );
 }
 ```
 
@@ -350,24 +350,26 @@ export function createClient() {
 
 ```typescript
 // middleware.ts
-import { NextResponse } from 'next/server'
-import type { NextRequest } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+import { createClient } from "@/lib/supabase/server";
 
 export async function middleware(request: NextRequest) {
-  const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  
-  if (!user && request.nextUrl.pathname.startsWith('/dashboard')) {
-    return NextResponse.redirect(new URL('/login', request.url))
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user && request.nextUrl.pathname.startsWith("/dashboard")) {
+    return NextResponse.redirect(new URL("/login", request.url));
   }
-  
-  return NextResponse.next()
+
+  return NextResponse.next();
 }
 
 export const config = {
-  matcher: ['/dashboard/:path*', '/api/protected/:path*'],
-}
+  matcher: ["/dashboard/:path*", "/api/protected/:path*"],
+};
 ```
 
 ## MCP Server Interaction Pattern
@@ -393,9 +395,9 @@ Frontend (Next.js) → FastAPI Backend → MCPManager → MCP Servers
 
 ```typescript
 // Frontend makes authenticated request to backend
-const response = await api.post('/agents/travel-planner/search', {
-  destination: 'Paris',
-  dates: { start: '2025-06-01', end: '2025-06-07' }
+const response = await api.post("/agents/travel-planner/search", {
+  destination: "Paris",
+  dates: { start: "2025-06-01", end: "2025-06-07" },
 });
 
 // Backend handles MCP orchestration
@@ -418,31 +420,31 @@ TripSage implements a secure Bring Your Own Key (BYOK) system allowing users to 
 ```typescript
 // components/settings/api-key-manager.tsx
 interface ApiKeyFormData {
-  service: 'openai' | 'duffel' | 'mapbox' | 'weatherapi';
+  service: "openai" | "duffel" | "mapbox" | "weatherapi";
   apiKey: string;
 }
 
 export function ApiKeyManager() {
   const [showKey, setShowKey] = useState(false);
-  
+
   const handleSubmit = async (data: ApiKeyFormData) => {
     // Always use HTTPS in production
-    const response = await fetch('/api/user/keys', {
-      method: 'POST',
+    const response = await fetch("/api/user/keys", {
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${sessionToken}`,
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${sessionToken}`,
       },
       body: JSON.stringify({
         service: data.service,
         api_key: data.apiKey,
       }),
     });
-    
+
     // Clear the key from memory immediately after submission
-    data.apiKey = '';
+    data.apiKey = "";
   };
-  
+
   return (
     <Form onSubmit={handleSubmit}>
       <Select name="service" label="Service">
@@ -451,15 +453,15 @@ export function ApiKeyManager() {
         <option value="mapbox">Mapbox</option>
         <option value="weatherapi">Weather API</option>
       </Select>
-      
+
       <Input
         name="apiKey"
-        type={showKey ? 'text' : 'password'}
+        type={showKey ? "text" : "password"}
         label="API Key"
         autoComplete="off"
         spellCheck={false}
       />
-      
+
       <Button type="submit">Save API Key</Button>
     </Form>
   );
@@ -511,40 +513,40 @@ interface ApiKeyStatus {
 
 export function ApiKeyStatusList() {
   const [statuses, setStatuses] = useState<ApiKeyStatus[]>([]);
-  
+
   useEffect(() => {
     // Fetch key statuses (never the actual keys)
-    fetch('/api/user/keys/status', {
+    fetch("/api/user/keys/status", {
       headers: {
-        'Authorization': `Bearer ${sessionToken}`,
+        Authorization: `Bearer ${sessionToken}`,
       },
     })
-      .then(res => res.json())
-      .then(data => setStatuses(data));
+      .then((res) => res.json())
+      .then((data) => setStatuses(data));
   }, []);
-  
+
   return (
     <div className="space-y-4">
-      {statuses.map(status => (
+      {statuses.map((status) => (
         <div key={status.service} className="flex items-center justify-between">
           <div>
             <h3 className="font-medium">{status.service}</h3>
             <p className="text-sm text-gray-500">
               {status.isSet ? (
                 <>
-                  Key set • Preview: {status.keyPreview} • 
-                  Last updated: {formatDate(status.lastUpdated)}
+                  Key set • Preview: {status.keyPreview} • Last updated:{" "}
+                  {formatDate(status.lastUpdated)}
                 </>
               ) : (
-                'No key configured'
+                "No key configured"
               )}
             </p>
           </div>
           <Button
             onClick={() => openKeyModal(status.service)}
-            variant={status.isSet ? 'secondary' : 'primary'}
+            variant={status.isSet ? "secondary" : "primary"}
           >
-            {status.isSet ? 'Update' : 'Add'} Key
+            {status.isSet ? "Update" : "Add"} Key
           </Button>
         </div>
       ))}
@@ -571,7 +573,7 @@ export function ApiKeyStatusList() {
 export function FlightResults({ offers }: { offers: DuffelOffer[] }) {
   return (
     <div className="space-y-4">
-      {offers.map(offer => (
+      {offers.map((offer) => (
         <FlightOfferCard
           key={offer.id}
           offer={offer}
@@ -580,7 +582,7 @@ export function FlightResults({ offers }: { offers: DuffelOffer[] }) {
         />
       ))}
     </div>
-  )
+  );
 }
 
 // components/agents/flight/segment-display.tsx
@@ -591,7 +593,7 @@ export function SegmentDisplay({ segment }: { segment: FlightSegment }) {
       <FlightTimes departure={segment.departure} arrival={segment.arrival} />
       <DurationBadge duration={segment.duration} />
     </div>
-  )
+  );
 }
 ```
 
@@ -602,7 +604,7 @@ export function SegmentDisplay({ segment }: { segment: FlightSegment }) {
 export function AccommodationGrid({ listings }: { listings: AirbnbListing[] }) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {listings.map(listing => (
+      {listings.map((listing) => (
         <ListingCard
           key={listing.id}
           listing={listing}
@@ -611,7 +613,7 @@ export function AccommodationGrid({ listings }: { listings: AirbnbListing[] }) {
         />
       ))}
     </div>
-  )
+  );
 }
 ```
 
@@ -626,7 +628,7 @@ export function ResearchContent({ content }: { content: WebCrawlResult }) {
       <div dangerouslySetInnerHTML={{ __html: content.sanitizedHtml }} />
       <ExtractedDataSummary data={content.extractedData} />
     </div>
-  )
+  );
 }
 ```
 
@@ -641,14 +643,14 @@ export function WeatherWidget({ forecast }: { forecast: WeatherForecast }) {
       <DailyForecast days={forecast.daily} />
       <WeatherAlerts alerts={forecast.alerts} />
     </div>
-  )
+  );
 }
 
 // components/mcp/map-display.tsx
 export function MCPMapDisplay({ places }: { places: GooglePlacesResult[] }) {
   return (
     <MapContainer>
-      {places.map(place => (
+      {places.map((place) => (
         <PlaceMarker
           key={place.id}
           place={place}
@@ -656,7 +658,7 @@ export function MCPMapDisplay({ places }: { places: GooglePlacesResult[] }) {
         />
       ))}
     </MapContainer>
-  )
+  );
 }
 ```
 
@@ -667,7 +669,7 @@ export function MCPMapDisplay({ places }: { places: GooglePlacesResult[] }) {
 ```typescript
 // components/webcrawl/crawl-control.tsx
 export function CrawlControl({ onCrawl }: { onCrawl: (url: string) => void }) {
-  const [crawlStatus, setCrawlStatus] = useState<CrawlStatus>()
+  const [crawlStatus, setCrawlStatus] = useState<CrawlStatus>();
 
   return (
     <div className="crawl-interface">
@@ -676,19 +678,19 @@ export function CrawlControl({ onCrawl }: { onCrawl: (url: string) => void }) {
       <CrawlProgress status={crawlStatus} />
       <CrawlResults results={crawlStatus?.results} />
     </div>
-  )
+  );
 }
 
 // services/crawl-service.ts
 export class CrawlService {
   async initiateHybridCrawl(url: string): Promise<CrawlResult> {
     // Calls backend which handles domain-based routing
-    const response = await api.post('/api/crawl/hybrid', { url })
-    return response.data
+    const response = await api.post("/api/crawl/hybrid", { url });
+    return response.data;
   }
 
   subscribeToCrawlUpdates(crawlId: string): EventSource {
-    return new EventSource(`/api/crawl/${crawlId}/stream`)
+    return new EventSource(`/api/crawl/${crawlId}/stream`);
   }
 }
 ```
@@ -699,12 +701,15 @@ export class CrawlService {
 // components/webcrawl/result-viewer.tsx
 export function CrawlResultViewer({ result }: { result: CrawlResult }) {
   const getSourceIcon = (source: string) => {
-    switch(source) {
-      case 'crawl4ai': return <Crawl4AIIcon />
-      case 'firecrawl': return <FirecrawlIcon />
-      case 'playwright': return <PlaywrightIcon />
+    switch (source) {
+      case "crawl4ai":
+        return <Crawl4AIIcon />;
+      case "firecrawl":
+        return <FirecrawlIcon />;
+      case "playwright":
+        return <PlaywrightIcon />;
     }
-  }
+  };
 
   return (
     <div className="crawl-result">
@@ -715,7 +720,7 @@ export function CrawlResultViewer({ result }: { result: CrawlResult }) {
       </header>
       <ContentDisplay content={result.content} type={result.contentType} />
     </div>
-  )
+  );
 }
 ```
 
@@ -726,11 +731,11 @@ export function CrawlResultViewer({ result }: { result: CrawlResult }) {
 ```typescript
 // components/agents/tool-tracker.tsx
 export function ToolInvocationTracker({ agentId }: { agentId: string }) {
-  const { invocations } = useToolInvocations(agentId)
+  const { invocations } = useToolInvocations(agentId);
 
   return (
     <div className="tool-tracker">
-      {invocations.map(inv => (
+      {invocations.map((inv) => (
         <ToolInvocationCard
           key={inv.id}
           tool={inv.tool}
@@ -741,19 +746,19 @@ export function ToolInvocationTracker({ agentId }: { agentId: string }) {
         />
       ))}
     </div>
-  )
+  );
 }
 
 // types/agent.ts
 interface ToolInvocation {
-  id: string
-  tool: MCPTool
-  status: 'pending' | 'running' | 'success' | 'error'
-  input: Record<string, any>
-  output?: Record<string, any>
-  error?: string
-  duration?: number
-  timestamp: Date
+  id: string;
+  tool: MCPTool;
+  status: "pending" | "running" | "success" | "error";
+  input: Record<string, any>;
+  output?: Record<string, any>;
+  error?: string;
+  duration?: number;
+  timestamp: Date;
 }
 ```
 
@@ -763,20 +768,20 @@ interface ToolInvocation {
 
 ```typescript
 // app/error.tsx
-'use client'
+"use client";
 
 export default function Error({
   error,
   reset,
 }: {
-  error: Error & { digest?: string }
-  reset: () => void
+  error: Error & { digest?: string };
+  reset: () => void;
 }) {
   useEffect(() => {
     // Log error to monitoring service
-    console.error(error)
-  }, [error])
-  
+    console.error(error);
+  }, [error]);
+
   return (
     <div className="flex h-full flex-col items-center justify-center">
       <h2 className="text-2xl font-semibold">Something went wrong!</h2>
@@ -787,7 +792,7 @@ export default function Error({
         Try again
       </button>
     </div>
-  )
+  );
 }
 ```
 
@@ -797,25 +802,25 @@ export default function Error({
 // lib/api/errors.ts
 export class APIError extends Error {
   constructor(public status: number, message: string) {
-    super(message)
+    super(message);
   }
 }
 
 // With TanStack Query
 function useTrips() {
   return useQuery({
-    queryKey: ['trips'],
+    queryKey: ["trips"],
     queryFn: fetchTrips,
     retry: (failureCount, error) => {
       if (error instanceof APIError && error.status === 401) {
-        return false // Don't retry auth errors
+        return false; // Don't retry auth errors
       }
-      return failureCount < 3
+      return failureCount < 3;
     },
     onError: (error) => {
-      toast.error(error.message)
+      toast.error(error.message);
     },
-  })
+  });
 }
 ```
 
@@ -825,21 +830,21 @@ function useTrips() {
 
 ```typescript
 // Dynamic imports for heavy components
-const MapView = dynamic(() => import('@/components/maps/map-view'), {
+const MapView = dynamic(() => import("@/components/maps/map-view"), {
   loading: () => <div>Loading map...</div>,
   ssr: false,
-})
+});
 
 const WorkflowVisualizer = dynamic(
-  () => import('@/components/agents/workflow-visualizer'),
+  () => import("@/components/agents/workflow-visualizer"),
   { loading: () => <Skeleton className="h-96" /> }
-)
+);
 ```
 
 ### Image Optimization
 
 ```typescript
-import Image from 'next/image'
+import Image from "next/image";
 
 export function DestinationCard({ destination }) {
   return (
@@ -853,7 +858,7 @@ export function DestinationCard({ destination }) {
         priority={destination.featured}
       />
     </div>
-  )
+  );
 }
 ```
 
@@ -862,10 +867,10 @@ export function DestinationCard({ destination }) {
 ```typescript
 // Throttled updates for rapid token streams
 const { messages } = useChat({
-  api: '/api/agents/chat',
-  streamProtocol: 'data-stream',
+  api: "/api/agents/chat",
+  streamProtocol: "data-stream",
   experimental_throttle: 50, // Update UI every 50ms max
-})
+});
 ```
 
 ## Testing Strategy
@@ -874,60 +879,64 @@ const { messages } = useChat({
 
 ```typescript
 // components/ui/button.test.tsx
-import { render, screen } from '@testing-library/react'
-import { Button } from './button'
+import { render, screen } from "@testing-library/react";
+import { Button } from "./button";
 
-describe('Button', () => {
-  it('renders with correct text', () => {
-    render(<Button>Click me</Button>)
-    expect(screen.getByRole('button')).toHaveTextContent('Click me')
-  })
-  
-  it('handles click events', async () => {
-    const handleClick = vi.fn()
-    render(<Button onClick={handleClick}>Click me</Button>)
-    
-    await userEvent.click(screen.getByRole('button'))
-    expect(handleClick).toHaveBeenCalledOnce()
-  })
-})
+describe("Button", () => {
+  it("renders with correct text", () => {
+    render(<Button>Click me</Button>);
+    expect(screen.getByRole("button")).toHaveTextContent("Click me");
+  });
+
+  it("handles click events", async () => {
+    const handleClick = vi.fn();
+    render(<Button onClick={handleClick}>Click me</Button>);
+
+    await userEvent.click(screen.getByRole("button"));
+    expect(handleClick).toHaveBeenCalledOnce();
+  });
+});
 ```
 
 ### Integration Tests
 
 ```typescript
 // app/api/agents/[agentId]/stream/route.test.ts
-describe('Agent Streaming API', () => {
-  it('returns SSE stream for valid requests', async () => {
-    const response = await fetch('/api/agents/travel-planner/stream', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ messages: [{ role: 'user', content: 'Plan a trip to Paris' }] }),
-    })
-    
-    expect(response.headers.get('content-type')).toBe('text/event-stream')
-    expect(response.ok).toBe(true)
-  })
-})
+describe("Agent Streaming API", () => {
+  it("returns SSE stream for valid requests", async () => {
+    const response = await fetch("/api/agents/travel-planner/stream", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        messages: [{ role: "user", content: "Plan a trip to Paris" }],
+      }),
+    });
+
+    expect(response.headers.get("content-type")).toBe("text/event-stream");
+    expect(response.ok).toBe(true);
+  });
+});
 ```
 
 ### E2E Tests (Playwright)
 
 ```typescript
 // e2e/trip-planning.spec.ts
-test('complete trip planning flow', async ({ page }) => {
-  await page.goto('/dashboard')
-  await page.click('text=Plan New Trip')
-  
-  await page.fill('[name="destination"]', 'Paris, France')
-  await page.fill('[name="startDate"]', '2025-06-01')
-  await page.fill('[name="endDate"]', '2025-06-07')
-  
-  await page.click('text=Start Planning')
-  
+test("complete trip planning flow", async ({ page }) => {
+  await page.goto("/dashboard");
+  await page.click("text=Plan New Trip");
+
+  await page.fill('[name="destination"]', "Paris, France");
+  await page.fill('[name="startDate"]', "2025-06-01");
+  await page.fill('[name="endDate"]', "2025-06-07");
+
+  await page.click("text=Start Planning");
+
   // Wait for agent response
-  await expect(page.locator('.agent-message')).toContainText('I can help you plan')
-})
+  await expect(page.locator(".agent-message")).toContainText(
+    "I can help you plan"
+  );
+});
 ```
 
 ## Deployment Configuration
@@ -969,24 +978,24 @@ MAPBOX_ACCESS_TOKEN=your-mapbox-token
 // next.config.mjs
 const securityHeaders = [
   {
-    key: 'Content-Security-Policy',
+    key: "Content-Security-Policy",
     value: `
       default-src 'self';
       script-src 'self' 'unsafe-eval' 'unsafe-inline' https://vercel.live;
       style-src 'self' 'unsafe-inline';
       img-src 'self' data: https:;
       connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.mapbox.com;
-    `.replace(/\n/g, ' ')
+    `.replace(/\n/g, " "),
   },
   {
-    key: 'X-Frame-Options',
-    value: 'DENY'
+    key: "X-Frame-Options",
+    value: "DENY",
   },
   {
-    key: 'X-Content-Type-Options',
-    value: 'nosniff'
-  }
-]
+    key: "X-Content-Type-Options",
+    value: "nosniff",
+  },
+];
 ```
 
 ### API Security
@@ -1003,13 +1012,13 @@ const securityHeaders = [
 ```typescript
 // lib/monitoring.ts
 export function reportWebVitals(metric: NextWebVitalsMetric) {
-  if (metric.label === 'web-vital') {
+  if (metric.label === "web-vital") {
     // Send to analytics service
-    analytics.track('Web Vitals', {
+    analytics.track("Web Vitals", {
       metric: metric.name,
       value: metric.value,
       label: metric.label,
-    })
+    });
   }
 }
 ```
@@ -1018,14 +1027,14 @@ export function reportWebVitals(metric: NextWebVitalsMetric) {
 
 ```typescript
 // lib/sentry.ts
-import * as Sentry from '@sentry/nextjs'
+import * as Sentry from "@sentry/nextjs";
 
 Sentry.init({
   dsn: process.env.SENTRY_DSN,
   tracesSampleRate: 1.0,
   debug: false,
   environment: process.env.NODE_ENV,
-})
+});
 ```
 
 ## Future Enhancements

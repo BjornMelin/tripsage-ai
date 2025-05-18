@@ -10,22 +10,22 @@ The following Node.js installation methods are fully supported:
 
 1. **nvm (Node Version Manager)**
    - Popular version manager for Node.js
-   - https://github.com/nvm-sh/nvm
+   - <https://github.com/nvm-sh/nvm>
    - Automatically sets up PATH for Node.js and npm/npx
 
 2. **fnm (Fast Node Manager)**
    - Rust-based alternative to nvm
-   - https://github.com/Schniz/fnm
+   - <https://github.com/Schniz/fnm>
    - Works seamlessly with our MCP servers
 
 3. **volta**
    - JavaScript toolchain manager
-   - https://volta.sh/
+   - <https://volta.sh/>
    - Provides automatic project-based Node.js versions
 
 4. **asdf**
    - Multi-language version manager
-   - https://asdf-vm.com/
+   - <https://asdf-vm.com/>
    - Supports Node.js through plugins
 
 5. **System Package Managers**
@@ -34,7 +34,7 @@ The following Node.js installation methods are fully supported:
    - Windows: Chocolatey, Scoop
 
 6. **Official Node.js Installer**
-   - Direct download from https://nodejs.org/
+   - Direct download from <https://nodejs.org/>
    - Includes npm and npx by default
 
 ## How It Works
@@ -48,7 +48,9 @@ The MCP launcher uses `npx` command, which is included with npm (Node Package Ma
 ## Server Types
 
 ### Node.js-based MCP Servers
+
 These servers require Node.js to be installed:
+
 - Supabase MCP
 - Neo4j Memory MCP
 - Duffel Flights MCP
@@ -60,7 +62,9 @@ These servers require Node.js to be installed:
 - Firecrawl MCP
 
 ### Python-based MCP Servers
+
 These servers don't require Node.js:
+
 - Crawl4AI MCP
 - Custom Python MCP servers
 
@@ -73,7 +77,8 @@ The MCP launcher automatically checks for Node.js availability on startup. If No
 3. Continue running (Python-based servers will still work)
 
 Example output when Node.js is missing:
-```
+
+```plaintext
 Node.js not found in PATH. Node-based MCP servers will not work.
 Please install Node.js using one of the following:
   - Official installer: https://nodejs.org/
@@ -91,18 +96,24 @@ Please install Node.js using one of the following:
 ## Troubleshooting
 
 ### Node.js not found
+
 If you see "Node.js not found in PATH":
+
 1. Verify Node.js is installed: `node --version`
 2. Check if npm/npx is available: `npx --version`
 3. Ensure your Node version manager has been properly initialized in your shell
 
 ### npx not found
+
 If Node.js is installed but npx is missing:
+
 1. Update npm: `npm install -g npm@latest`
 2. Install npx separately: `npm install -g npx`
 
 ### Version Manager Issues
+
 For nvm users:
+
 ```bash
 # Add to ~/.bashrc, ~/.zshrc, etc.
 export NVM_DIR="$HOME/.nvm"
@@ -110,6 +121,7 @@ export NVM_DIR="$HOME/.nvm"
 ```
 
 For fnm users:
+
 ```bash
 # Add to shell configuration
 eval "$(fnm env)"

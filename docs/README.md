@@ -43,7 +43,11 @@ This documentation is organized into several key sections to help you find the i
 
 If you are new to the project or setting up your development environment, please begin with the **[Installation Guide](./07_INSTALLATION_AND_SETUP/INSTALLATION_GUIDE.md)**.
 
+For specific Node.js installation requirements and compatibility, refer to the **[Node.js Compatibility Guide](./07_INSTALLATION_AND_SETUP/node_js/COMPATIBILITY_GUIDE.md)**.
+
 To understand the current development roadmap and status, refer to the **[Implementation Plan and Status](./01_PROJECT_OVERVIEW_AND_PLANNING/IMPLEMENTATION_PLAN_AND_STATUS.md)**.
+
+For details on deployment strategies and CI/CD pipeline implementation, see the **[Deployment Strategy](./02_SYSTEM_ARCHITECTURE_AND_DESIGN/DEPLOYMENT_STRATEGY.md)**.
 
 ## Contributing
 

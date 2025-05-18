@@ -1,6 +1,6 @@
 # GPT-4.1 Prompting Essentials
 
-*A condensed guide to the key best practices for prompting GPT-4.1 models*
+A condensed guide to the key best practices for prompting GPT-4.1 models.
 
 ## Core Insights
 
@@ -12,22 +12,26 @@
 
 ### Three Critical Reminders (20% performance boost)
 
-1. **Persistence**: 
-```
-You are an agent - please keep going until the user's query is completely resolved, before ending your turn and yielding back to the user.
-```
+1. **Persistence**:
+
+   ```plaintext
+   You are an agent - please keep going until the user's query is completely resolved, before ending your turn and yielding back to the user.
+   ```
 
 2. **Tool-calling**:
-```
-If you are not sure about file content or codebase structure, use your tools to read files and gather relevant information: do NOT guess or make up an answer.
-```
+
+   ```plaintext
+   If you are not sure about file content or codebase structure, use your tools to read files and gather relevant information: do NOT guess or make up an answer.
+   ```
 
 3. **Planning (optional, +4% success)**:
-```
-You MUST plan extensively before each function call, and reflect extensively on the outcomes of the previous function calls.
-```
+
+    ```plaintext
+    You MUST plan extensively before each function call, and reflect extensively on the outcomes of the previous function calls.
+    ```
 
 ### Tool Best Practices
+
 - Use the API tools field exclusively (2% better performance)
 - Name tools clearly with detailed descriptions
 - Place examples in system prompt's `# Examples` section
@@ -35,6 +39,7 @@ You MUST plan extensively before each function call, and reflect extensively on 
 ## 2. Long Context (up to 1M tokens)
 
 ### Key Strategies
+
 - Place instructions at **both** beginning and end of long context for best performance
 - If using instructions once, place them above the context
 - Use appropriate delimiters for documents:
@@ -43,7 +48,8 @@ You MUST plan extensively before each function call, and reflect extensively on 
   - Avoid JSON for document lists
 
 ### Context Reliance Options
-```
+
+```plaintext
 // For strict context-only answers:
 - Only use the documents in the provided External Context to answer the User Query.
 
@@ -56,12 +62,14 @@ You MUST plan extensively before each function call, and reflect extensively on 
 While GPT-4.1 isn't a reasoning model, you can induce step-by-step thinking:
 
 Basic prompt:
-```
+
+```plaintext
 First, think carefully step by step about what documents are needed to answer the query. Then, print out the TITLE and ID of each document. Then, format the IDs into a list.
 ```
 
 For complex analysis:
-```
+
+```plaintext
 # Reasoning Strategy
 1. Query Analysis: Break down and analyze the query
 2. Context Analysis: Carefully select relevant documents
@@ -71,6 +79,7 @@ For complex analysis:
 ## 4. Instruction Following
 
 ### Development Workflow
+
 1. Start with `# Instructions` section with high-level bullet points
 2. Add specific sections for detailed behaviors (`# Sample Phrases`)
 3. Create ordered lists for specific workflow steps
@@ -80,13 +89,14 @@ For complex analysis:
    - Avoiding all-caps or incentives unless necessary
 
 ### Common Fixes
+
 - For tool-calling issues: Add "if you don't have enough information, ask the user"
 - For repetitive responses: Instruct to "vary sample phrases as necessary"
 - For verbose outputs: Provide specific formatting instructions
 
 ## 5. Optimal Prompt Structure
 
-```
+```plaintext
 # Role and Objective
 
 # Instructions
