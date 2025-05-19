@@ -9,13 +9,13 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from src.agents.accommodations import (
+from tripsage.agents.accommodations import (
     AccommodationSearchTool,
     get_airbnb_listing_details,
     search_accommodations,
     search_airbnb_rentals,
 )
-from src.mcp.accommodations.models import AirbnbListingDetails, AirbnbSearchResult
+from tripsage.mcp.accommodations.models import AirbnbListingDetails, AirbnbSearchResult
 
 # Test data
 TEST_LOCATION = "San Francisco, CA"

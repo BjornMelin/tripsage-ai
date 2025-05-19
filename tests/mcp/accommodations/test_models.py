@@ -11,7 +11,7 @@ from datetime import date, timedelta
 import pytest
 from pydantic import ValidationError
 
-from src.mcp.accommodations.models import (
+from tripsage.mcp.accommodations.models import (
     AccommodationSearchParams,
     AccommodationType,
     AirbnbHost,

@@ -10,9 +10,9 @@ from unittest.mock import patch
 import pytest
 from pydantic import ValidationError
 
-from src.mcp.googlemaps.client import GoogleMapsMCPClient, MCPError
-from src.mcp.googlemaps.factory import create_googlemaps_client
-from src.mcp.googlemaps.models import (
+from tripsage.mcp.googlemaps.client import GoogleMapsMCPClient, MCPError
+from tripsage.mcp.googlemaps.factory import create_googlemaps_client
+from tripsage.mcp.googlemaps.models import (
     GeocodeParams,
     GeocodeResponse,
 )

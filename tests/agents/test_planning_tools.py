@@ -10,7 +10,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from src.agents.planning_tools import (
+from tripsage.agents.planning_tools import (
     combine_search_results,
     create_travel_plan,
     update_travel_plan,

@@ -8,7 +8,7 @@ to use the OpenBnB MCP server for accommodation search and details.
 import unittest
 from unittest.mock import MagicMock, patch
 
-from src.mcp.accommodations.client import AirbnbMCPClient
+from tripsage.mcp.accommodations.client import AirbnbMCPClient
 
 
 class TestOpenBnBIntegration(unittest.TestCase):

@@ -10,7 +10,7 @@ from uuid import uuid4
 
 import pytest
 
-from src.utils.session_memory import (
+from tripsage.utils.session_memory import (
     initialize_session_memory,
     store_session_summary,
     update_session_memory,

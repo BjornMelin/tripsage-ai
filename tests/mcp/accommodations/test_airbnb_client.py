@@ -10,9 +10,9 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from src.mcp.accommodations.client import AirbnbMCPClient
-from src.mcp.accommodations.models import AirbnbListingDetails, AirbnbSearchResult
-from src.utils.error_handling import MCPError
+from tripsage.mcp.accommodations.client import AirbnbMCPClient
+from tripsage.mcp.accommodations.models import AirbnbListingDetails, AirbnbSearchResult
+from tripsage.utils.error_handling import MCPError
 
 # Test data
 TEST_LOCATION = "San Francisco, CA"

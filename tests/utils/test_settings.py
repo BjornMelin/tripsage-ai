@@ -5,7 +5,7 @@ from unittest.mock import patch
 
 import pytest
 
-from src.utils.settings import get_settings
+from tripsage.utils.settings import get_settings
 
 
 @pytest.fixture(autouse=True)

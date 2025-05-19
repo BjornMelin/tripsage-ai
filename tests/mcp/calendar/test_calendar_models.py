@@ -6,7 +6,7 @@ import unittest
 
 from pydantic import ValidationError
 
-from src.mcp.calendar.models import (
+from tripsage.mcp.calendar.models import (
     Calendar,
     CreateEventParams,
     CreateItineraryEventsParams,

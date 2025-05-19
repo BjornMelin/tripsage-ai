@@ -10,8 +10,8 @@ from unittest.mock import patch
 
 import pytest
 
-from src.mcp.time.client import TimeMCPClient, TimeService
-from src.utils.error_handling import MCPError
+from tripsage.mcp.time.client import TimeMCPClient, TimeService
+from tripsage.utils.error_handling import MCPError
 
 
 @pytest.fixture

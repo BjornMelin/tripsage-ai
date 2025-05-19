@@ -11,7 +11,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from agents import RunContextWrapper
-from src.agents.flight_agent import (
+from tripsage.agents.flight_agent import (
     FlightAgent,
     create_flight_agent,
     create_flight_agent_handoff,

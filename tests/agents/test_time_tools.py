@@ -9,7 +9,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from src.agents.time_tools import (
+from tripsage.agents.time_tools import (
     calculate_flight_arrival_tool,
     convert_timezone_tool,
     create_timezone_aware_itinerary_tool,

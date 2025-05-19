@@ -9,7 +9,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from src.mcp.neon.client import NeonMCPClient, NeonService, get_client
+from tripsage.mcp.neon.client import NeonMCPClient, NeonService, get_client
 
 
 @pytest.fixture

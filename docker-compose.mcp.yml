@@ -1,0 +1,140 @@
+version: '3.8'
+
+services:
+  # Database MCP Servers
+  supabase-mcp:
+    image: node:20-alpine
+    container_name: tripsage-supabase-mcp
+    environment:
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_KEY=${SUPABASE_KEY}
+    command: npx -y supabase-mcp
+    restart: unless-stopped
+    networks:
+      - tripsage-mcp
+
+  neo4j-memory-mcp:
+    image: node:20-alpine
+    container_name: tripsage-neo4j-mcp
+    environment:
+      - NEO4J_URI=${NEO4J_URI}
+      - NEO4J_USERNAME=${NEO4J_USERNAME}
+      - NEO4J_PASSWORD=${NEO4J_PASSWORD}
+    command: npx -y @neo4j-contrib/mcp-neo4j
+    restart: unless-stopped
+    networks:
+      - tripsage-mcp
+
+  # Travel Provider MCP Servers
+  duffel-flights-mcp:
+    image: node:20-alpine
+    container_name: tripsage-duffel-mcp
+    environment:
+      - DUFFEL_API_KEY=${DUFFEL_API_KEY}
+    command: npx -y duffel-mcp
+    restart: unless-stopped
+    networks:
+      - tripsage-mcp
+
+  airbnb-mcp:
+    image: node:20-alpine
+    container_name: tripsage-airbnb-mcp
+    environment:
+      - AIRBNB_API_KEY=${AIRBNB_API_KEY}
+    command: npx -y airbnb-mcp
+    restart: unless-stopped
+    networks:
+      - tripsage-mcp
+
+  # Browser Automation MCP
+  playwright-mcp:
+    image: mcr.microsoft.com/playwright:latest
+    container_name: tripsage-playwright-mcp
+    environment:
+      - BROWSER_TYPE=chromium
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix
+    command: npx -y playwright-mcp
+    restart: unless-stopped
+    networks:
+      - tripsage-mcp
+
+  # Web Crawling MCP Servers
+  crawl4ai-mcp:
+    build:
+      context: .
+      dockerfile: Dockerfile.crawl4ai
+    container_name: tripsage-crawl4ai-mcp
+    environment:
+      - CRAWL4AI_API_KEY=${CRAWL4AI_API_KEY}
+    restart: unless-stopped
+    networks:
+      - tripsage-mcp
+
+  firecrawl-mcp:
+    image: node:20-alpine
+    container_name: tripsage-firecrawl-mcp
+    environment:
+      - FIRECRAWL_API_KEY=${FIRECRAWL_API_KEY}
+    command: npx -y @mendableai/firecrawl-mcp-server
+    restart: unless-stopped
+    networks:
+      - tripsage-mcp
+
+  # Location and Utility MCP Servers
+  google-maps-mcp:
+    image: node:20-alpine
+    container_name: tripsage-googlemaps-mcp
+    environment:
+      - GOOGLE_MAPS_API_KEY=${GOOGLE_MAPS_API_KEY}
+    command: npx -y google-maps-mcp
+    restart: unless-stopped
+    networks:
+      - tripsage-mcp
+
+  time-mcp:
+    image: node:20-alpine
+    container_name: tripsage-time-mcp
+    command: npx -y @anthropics/mcp-time
+    restart: unless-stopped
+    networks:
+      - tripsage-mcp
+
+  weather-mcp:
+    image: node:20-alpine
+    container_name: tripsage-weather-mcp
+    environment:
+      - OPENWEATHERMAP_API_KEY=${OPENWEATHERMAP_API_KEY}
+    command: npx -y weather-mcp-server
+    restart: unless-stopped
+    networks:
+      - tripsage-mcp
+
+  google-calendar-mcp:
+    image: node:20-alpine
+    container_name: tripsage-calendar-mcp
+    environment:
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+    command: npx -y google-calendar-mcp
+    restart: unless-stopped
+    networks:
+      - tripsage-mcp
+
+  # Cache MCP Server (future)
+  redis-mcp:
+    image: node:20-alpine
+    container_name: tripsage-redis-mcp
+    environment:
+      - REDIS_URL=${REDIS_URL}
+    command: npx -y redis-mcp
+    restart: unless-stopped
+    networks:
+      - tripsage-mcp
+    profiles:
+      - future
+
+networks:
+  tripsage-mcp:
+    driver: bridge
+    name: tripsage-mcp-network
