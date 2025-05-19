@@ -14,7 +14,7 @@ from uuid import uuid4
 
 import pytest
 
-from src.utils.dual_storage import trip_service
+from tripsage.utils.dual_storage import trip_service
 
 
 @pytest.fixture

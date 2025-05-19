@@ -28,8 +28,8 @@ mock_redis_module.RedisCache = MagicMock()
 sys.modules["src.cache.redis_cache"] = mock_redis_module
 
 # Now import from MCP client
-from src.mcp.base_mcp_client import BaseMCPClient, ErrorCategory  # noqa: E402
-from src.utils.error_handling import MCPError  # noqa: E402
+from tripsage.mcp.base_mcp_client import BaseMCPClient, ErrorCategory  # noqa: E402
+from tripsage.utils.error_handling import MCPError  # noqa: E402
 
 
 # Define test models

@@ -39,8 +39,8 @@ sys.modules["src.utils.settings"] = MagicMock()
 sys.modules["src.utils.settings"].settings = mock_settings
 
 # Now import the modules that depend on these mocks
-from src.mcp.time.client import TimeMCPClient  # noqa: E402
-from src.mcp.time.factory import TimeMCPClientFactory, TimeMCPConfig  # noqa: E402
+from tripsage.mcp.time.client import TimeMCPClient  # noqa: E402
+from tripsage.mcp.time.factory import TimeMCPClientFactory, TimeMCPConfig  # noqa: E402
 
 # Mock FastMCPClient for clean testing
 mock_client = MagicMock()

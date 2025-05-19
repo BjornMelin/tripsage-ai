@@ -47,7 +47,7 @@ For detailed schema information, see the [Database Setup Documentation](./docs/d
 
 ### Prerequisites
 
-- Node.js (v16+)
+- Node.js (v16+) - Works with any installation method (nvm, fnm, volta, etc.). See [Node.js Compatibility Guide](./docs/installation/node_js_compatibility.md)
 - Python (v3.9+)
 - Supabase account
 - OpenAI API key
@@ -95,8 +95,8 @@ For detailed schema information, see the [Database Setup Documentation](./docs/d
 4. Install dependencies:
 
    ```bash
-   # API server dependencies
-   pip install -r src/api/requirements.txt
+   # Project dependencies
+   pip install -r requirements.txt
 
    # Agent dependencies
    pip install -r src/agents/requirements.txt

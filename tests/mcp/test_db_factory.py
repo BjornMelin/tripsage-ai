@@ -7,14 +7,14 @@ database MCP client based on the environment (development or production).
 
 from unittest.mock import MagicMock, patch
 
-from src.mcp.db_factory import (
+from tripsage.mcp.db_factory import (
     DatabaseMCPFactory,
     db_mcp_factory,
     get_mcp_client,
     get_mcp_service,
 )
-from src.mcp.neon.client import NeonMCPClient, NeonService
-from src.mcp.supabase.client import SupabaseMCPClient, SupabaseService
+from tripsage.mcp.neon.client import NeonMCPClient, NeonService
+from tripsage.mcp.supabase.client import SupabaseMCPClient, SupabaseService
 
 
 class TestDatabaseMCPFactory:

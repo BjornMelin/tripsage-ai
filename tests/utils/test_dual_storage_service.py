@@ -31,8 +31,8 @@ class MockGraphModel(BaseModel):
 
 
 # Import after setting environment variables
-from src.utils.dual_storage_service import DualStorageService  # noqa: E402
-from src.utils.trip_storage_service import TripStorageService  # noqa: E402
+from tripsage.utils.dual_storage_service import DualStorageService  # noqa: E402
+from tripsage.utils.trip_storage_service import TripStorageService  # noqa: E402
 
 
 class TestDualStorageService:

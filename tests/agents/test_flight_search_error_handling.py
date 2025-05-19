@@ -8,7 +8,7 @@ exceptions in the flight search methods.
 import pytest
 
 # Import the decorator to test
-from src.utils.decorators import with_error_handling
+from tripsage.utils.decorators import with_error_handling
 
 
 class TestFlightSearchErrorHandling:

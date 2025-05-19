@@ -11,7 +11,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from src.agents.tools.browser.browser_tools import (
+from tripsage.agents.tools.browser.browser_tools import (
     FlightInfo,
     browser_service,
     check_flight_status,

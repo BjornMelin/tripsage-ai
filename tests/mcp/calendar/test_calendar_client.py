@@ -7,8 +7,8 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from src.mcp.calendar.client import CalendarMCPClient
-from src.mcp.calendar.models import (
+from tripsage.mcp.calendar.client import CalendarMCPClient
+from tripsage.mcp.calendar.models import (
     CalendarListResponse,
     Event,
     EventListResponse,

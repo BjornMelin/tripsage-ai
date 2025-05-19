@@ -9,8 +9,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from agents import RunContext, RunResult
-from src.agents.travel_planning_agent import TravelPlanningAgent
+from agents import RunContextWrapper as RunContext, RunResult
+from tripsage.agents.planning import TravelPlanningAgent
 
 
 @pytest.fixture

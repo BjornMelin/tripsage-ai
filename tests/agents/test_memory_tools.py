@@ -14,7 +14,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from src.agents.memory_tools import (
+from tripsage.agents.memory_tools import (
     Entity,
     Observation,
     Relation,
@@ -29,7 +29,7 @@ from src.agents.memory_tools import (
     search_knowledge_graph,
     update_agent_memory,
 )
-from src.utils.decorators import ensure_memory_client_initialized
+from tripsage.utils.decorators import ensure_memory_client_initialized
 
 # Add parent directory to path for imports
 sys.path.insert(0, ".")
