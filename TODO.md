@@ -554,7 +554,7 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
       - [x] Add comprehensive request/response models
     - [ ] Implement database migration:
       - [x] Create tripsage/models/db/ for essential business models (User, Trip)
-      - [ ] Port validation logic from src/db/models/ to new Pydantic models
+      - [x] Port validation logic from src/db/models/ to new Pydantic models
       - [ ] Replace repository patterns with MCP tool implementations
       - [ ] Adapt SQL migrations to use Supabase MCP apply_migration
       - [ ] Create Neo4j schema initialization scripts
