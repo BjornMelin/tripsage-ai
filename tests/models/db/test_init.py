@@ -1,32 +1,31 @@
 """Tests for the module initialization in tripsage.models.db."""
 
-import pytest
 import importlib
 
 from tripsage.models.db import (
-    # Models
-    User, 
-    Trip, 
-    Flight, 
-    Accommodation, 
-    SearchParameters, 
-    TripNote, 
-    PriceHistory, 
-    SavedOption, 
-    TripComparison,
-    Transportation,
-    # Enums
-    UserRole,
-    TripStatus,
-    TripVisibility,
+    Accommodation,
+    AccommodationType,
     AirlineProvider,
     BookingStatus,
-    DataSource,
-    AccommodationType,
     CancellationPolicy,
+    DataSource,
     EntityType,
+    Flight,
     OptionType,
+    PriceHistory,
+    SavedOption,
+    SearchParameters,
+    Transportation,
     TransportationType,
+    Trip,
+    TripComparison,
+    TripNote,
+    TripStatus,
+    TripVisibility,
+    # Models
+    User,
+    # Enums
+    UserRole,
 )
 
 
@@ -62,7 +61,7 @@ def test_enum_imports():
 def test_model_inheritance():
     """Test that all models inherit from TripSageModel."""
     from tripsage.models.base import TripSageModel
-    
+
     assert issubclass(User, TripSageModel)
     assert issubclass(Trip, TripSageModel)
     assert issubclass(Flight, TripSageModel)

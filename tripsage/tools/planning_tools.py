@@ -8,9 +8,9 @@ TravelPlanningAgent, including plan creation, updates, and persistence.
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
+from agents import function_tool
 from pydantic import BaseModel, Field
 
-from agents import function_tool
 from tripsage.utils.cache import cache
 from tripsage.utils.error_handling import log_exception, with_error_handling
 from tripsage.utils.logging import get_logger

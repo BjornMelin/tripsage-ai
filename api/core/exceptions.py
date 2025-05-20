@@ -11,7 +11,7 @@ from fastapi import status
 
 class TripSageError(Exception):
     """Base exception for all TripSage API errors."""
-    
+
     def __init__(
         self,
         message: str = "An unexpected error occurred",
@@ -36,10 +36,10 @@ class TripSageError(Exception):
 
 class AuthenticationError(TripSageError):
     """Raised when authentication fails."""
-    
+
     def __init__(
-        self, 
-        message: str = "Authentication failed", 
+        self,
+        message: str = "Authentication failed",
         code: str = "AUTHENTICATION_ERROR",
         details: Optional[Dict[str, Any]] = None,
     ):
@@ -60,10 +60,10 @@ class AuthenticationError(TripSageError):
 
 class AuthorizationError(TripSageError):
     """Raised when a user is not authorized to perform an action."""
-    
+
     def __init__(
-        self, 
-        message: str = "You are not authorized to perform this action", 
+        self,
+        message: str = "You are not authorized to perform this action",
         code: str = "AUTHORIZATION_ERROR",
         details: Optional[Dict[str, Any]] = None,
     ):
@@ -84,10 +84,10 @@ class AuthorizationError(TripSageError):
 
 class ResourceNotFoundError(TripSageError):
     """Raised when a requested resource is not found."""
-    
+
     def __init__(
-        self, 
-        message: str = "Resource not found", 
+        self,
+        message: str = "Resource not found",
         code: str = "RESOURCE_NOT_FOUND",
         details: Optional[Dict[str, Any]] = None,
     ):
@@ -108,10 +108,10 @@ class ResourceNotFoundError(TripSageError):
 
 class ValidationError(TripSageError):
     """Raised when input validation fails."""
-    
+
     def __init__(
-        self, 
-        message: str = "Validation error", 
+        self,
+        message: str = "Validation error",
         code: str = "VALIDATION_ERROR",
         details: Optional[Dict[str, Any]] = None,
     ):
@@ -132,10 +132,10 @@ class ValidationError(TripSageError):
 
 class MCPServiceError(TripSageError):
     """Raised when an MCP service operation fails."""
-    
+
     def __init__(
-        self, 
-        message: str = "Service operation failed", 
+        self,
+        message: str = "Service operation failed",
         code: str = "SERVICE_ERROR",
         details: Optional[Dict[str, Any]] = None,
     ):
@@ -156,10 +156,10 @@ class MCPServiceError(TripSageError):
 
 class RateLimitError(TripSageError):
     """Raised when a rate limit is exceeded."""
-    
+
     def __init__(
-        self, 
-        message: str = "Rate limit exceeded", 
+        self,
+        message: str = "Rate limit exceeded",
         code: str = "RATE_LIMIT_EXCEEDED",
         details: Optional[Dict[str, Any]] = None,
     ):
@@ -180,10 +180,10 @@ class RateLimitError(TripSageError):
 
 class KeyValidationError(TripSageError):
     """Raised when a user-provided API key is invalid."""
-    
+
     def __init__(
-        self, 
-        message: str = "Invalid API key", 
+        self,
+        message: str = "Invalid API key",
         code: str = "INVALID_API_KEY",
         details: Optional[Dict[str, Any]] = None,
     ):

@@ -4,21 +4,20 @@ Request models for trip endpoints.
 This module defines Pydantic models for validating incoming trip-related requests.
 """
 
-from datetime import date, datetime
-from typing import Dict, List, Optional, Any
-from uuid import UUID
+from datetime import date
+from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, Field, model_validator
 
 
 class TripDestination(BaseModel):
     """Model for a trip destination."""
-    
+
     name: str = Field(..., description="Destination name")
     country: Optional[str] = Field(None, description="Country")
     city: Optional[str] = Field(None, description="City")
     coordinates: Optional[Dict[str, float]] = Field(
-        None, 
+        None,
         description="Coordinates (latitude, longitude)",
     )
     arrival_date: Optional[date] = Field(None, description="Date of arrival")
@@ -28,7 +27,7 @@ class TripDestination(BaseModel):
 
 class TripPreferences(BaseModel):
     """Model for trip preferences."""
-    
+
     budget: Optional[Dict[str, Any]] = Field(
         None,
         description="Budget information",
@@ -83,30 +82,30 @@ class TripPreferences(BaseModel):
 
 class CreateTripRequest(BaseModel):
     """Request model for creating a trip."""
-    
+
     title: str = Field(
-        ..., 
-        description="Trip title", 
-        min_length=1, 
+        ...,
+        description="Trip title",
+        min_length=1,
         max_length=100,
     )
     description: Optional[str] = Field(
-        None, 
+        None,
         description="Trip description",
         max_length=500,
     )
     start_date: date = Field(..., description="Trip start date")
     end_date: date = Field(..., description="Trip end date")
     destinations: List[TripDestination] = Field(
-        ..., 
+        ...,
         description="Trip destinations",
         min_items=1,
     )
     preferences: Optional[TripPreferences] = Field(
-        None, 
+        None,
         description="Trip preferences",
     )
-    
+
     @model_validator(mode="after")
     def validate_dates(self) -> "CreateTripRequest":
         """Validate that end_date is after start_date."""
@@ -117,25 +116,25 @@ class CreateTripRequest(BaseModel):
 
 class UpdateTripRequest(BaseModel):
     """Request model for updating a trip."""
-    
+
     title: Optional[str] = Field(
-        None, 
-        description="Trip title", 
-        min_length=1, 
+        None,
+        description="Trip title",
+        min_length=1,
         max_length=100,
     )
     description: Optional[str] = Field(
-        None, 
+        None,
         description="Trip description",
         max_length=500,
     )
     start_date: Optional[date] = Field(None, description="Trip start date")
     end_date: Optional[date] = Field(None, description="Trip end date")
     destinations: Optional[List[TripDestination]] = Field(
-        None, 
+        None,
         description="Trip destinations",
     )
-    
+
     @model_validator(mode="after")
     def validate_dates(self) -> "UpdateTripRequest":
         """Validate that end_date is after start_date if both are provided."""
@@ -146,4 +145,5 @@ class UpdateTripRequest(BaseModel):
 
 class TripPreferencesRequest(TripPreferences):
     """Request model for updating trip preferences."""
+
     pass

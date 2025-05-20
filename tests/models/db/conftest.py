@@ -19,6 +19,7 @@ from tripsage.models.db.user import UserRole
 # Temporarily commented out until fixed
 # from tripsage.models.db.itinerary_item import ItineraryItem, ItemType
 
+
 @pytest.fixture
 def sample_user_dict() -> Dict[str, Any]:
     """Return a sample user dict for testing."""
@@ -171,7 +172,12 @@ def sample_trip_comparison_dict() -> Dict[str, Any]:
         "timestamp": datetime.now(),
         "comparison_json": {
             "options": [
-                {"id": 1, "type": "flight", "price": 1200.00, "airline": "Japan Airlines"},
+                {
+                    "id": 1,
+                    "type": "flight",
+                    "price": 1200.00,
+                    "airline": "Japan Airlines",
+                },
                 {"id": 2, "type": "flight", "price": 1350.00, "airline": "ANA"},
             ],
             "criteria": ["price", "duration", "layovers"],

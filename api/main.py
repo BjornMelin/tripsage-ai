@@ -5,9 +5,7 @@ This module creates and configures the FastAPI application with all necessary mi
 routes, and startup/shutdown events.
 """
 
-import contextlib
 import logging
-from typing import Callable
 
 from fastapi import FastAPI, Request, status
 from fastapi.exceptions import RequestValidationError
@@ -21,8 +19,16 @@ from api.middlewares.authentication import AuthenticationMiddleware
 from api.middlewares.error_handling import ErrorHandlingMiddleware
 from api.middlewares.logging import LoggingMiddleware
 from api.middlewares.metrics import MetricsMiddleware
-from api.routers import auth, trips, flights, accommodations, destinations, itineraries, keys
-from tripsage.api.dependencies import startup_event, shutdown_event
+from api.routers import (
+    accommodations,
+    auth,
+    destinations,
+    flights,
+    itineraries,
+    keys,
+    trips,
+)
+from tripsage.api.dependencies import shutdown_event, startup_event
 
 # Configure root logger
 logging.basicConfig(
@@ -69,8 +75,11 @@ def register_exception_handlers(app: FastAPI) -> None:
     Args:
         app: FastAPI application
     """
+
     @app.exception_handler(TripSageError)
-    async def tripsage_error_handler(request: Request, exc: TripSageError) -> JSONResponse:
+    async def tripsage_error_handler(
+        request: Request, exc: TripSageError
+    ) -> JSONResponse:
         """Handle TripSage-specific errors."""
         return JSONResponse(
             status_code=exc.status_code,
@@ -78,12 +87,21 @@ def register_exception_handlers(app: FastAPI) -> None:
         )
 
     @app.exception_handler(RequestValidationError)
-    async def validation_error_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
+    async def validation_error_handler(
+        request: Request, exc: RequestValidationError
+    ) -> JSONResponse:
         """Handle request validation errors."""
-        errors = [{"loc": err["loc"], "msg": err["msg"], "type": err["type"]} for err in exc.errors()]
+        errors = [
+            {"loc": err["loc"], "msg": err["msg"], "type": err["type"]}
+            for err in exc.errors()
+        ]
         return JSONResponse(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            content={"error": "VALIDATION_ERROR", "message": "Validation error", "details": errors},
+            content={
+                "error": "VALIDATION_ERROR",
+                "message": "Validation error",
+                "details": errors,
+            },
         )
 
 
@@ -96,10 +114,9 @@ def register_middleware(app: FastAPI) -> None:
     # Add CORS middleware
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"] if settings.debug else [
-            "https://tripsage.ai", 
-            "https://app.tripsage.ai"
-        ],
+        allow_origins=["*"]
+        if settings.debug
+        else ["https://tripsage.ai", "https://app.tripsage.ai"],
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
@@ -109,7 +126,7 @@ def register_middleware(app: FastAPI) -> None:
     app.add_middleware(MetricsMiddleware)
     app.add_middleware(LoggingMiddleware)
     app.add_middleware(ErrorHandlingMiddleware)
-    
+
     # Add authentication middleware (conditionally)
     if not settings.debug:
         app.add_middleware(AuthenticationMiddleware)
@@ -128,9 +145,15 @@ def register_routers(app: FastAPI) -> None:
     api_router.include_router(auth.router, prefix="/auth", tags=["Authentication"])
     api_router.include_router(trips.router, prefix="/trips", tags=["Trips"])
     api_router.include_router(flights.router, prefix="/flights", tags=["Flights"])
-    api_router.include_router(accommodations.router, prefix="/accommodations", tags=["Accommodations"])
-    api_router.include_router(destinations.router, prefix="/destinations", tags=["Destinations"])
-    api_router.include_router(itineraries.router, prefix="/itineraries", tags=["Itineraries"])
+    api_router.include_router(
+        accommodations.router, prefix="/accommodations", tags=["Accommodations"]
+    )
+    api_router.include_router(
+        destinations.router, prefix="/destinations", tags=["Destinations"]
+    )
+    api_router.include_router(
+        itineraries.router, prefix="/itineraries", tags=["Itineraries"]
+    )
     api_router.include_router(keys.router, prefix="/keys", tags=["API Keys"])
 
     # Include the API router in the main app

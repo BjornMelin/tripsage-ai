@@ -184,20 +184,17 @@ class Accommodation(TripSageModel):
     def has_free_cancellation(self) -> bool:
         """Check if the accommodation has free cancellation."""
         return self.cancellation_policy == CancellationPolicy.FREE
-        
+
     @property
     def has_flexible_cancellation(self) -> bool:
         """Check if the accommodation has flexible cancellation."""
         return self.cancellation_policy == CancellationPolicy.FLEXIBLE
-        
+
     @property
     def is_refundable(self) -> bool:
         """Check if the accommodation is refundable."""
-        return self.cancellation_policy not in [
-            CancellationPolicy.NO_REFUND, 
-            None
-        ]
-        
+        return self.cancellation_policy not in [CancellationPolicy.NO_REFUND, None]
+
     @property
     def stay_duration(self) -> int:
         """Get the duration of the stay in nights."""
@@ -222,13 +219,13 @@ class Accommodation(TripSageModel):
     def book(self) -> None:
         """Book this accommodation."""
         self.booking_status = BookingStatus.BOOKED
-        
+
     def cancel(self) -> None:
         """Cancel this accommodation booking."""
         if self.booking_status != BookingStatus.BOOKED:
             raise ValueError("Only booked accommodations can be canceled")
         self.booking_status = BookingStatus.CANCELED
-        
+
     def can_cancel(self) -> bool:
         """Check if the accommodation can be canceled."""
         # Can only cancel if booked and check-in date hasn't passed

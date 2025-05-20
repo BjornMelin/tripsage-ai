@@ -38,7 +38,8 @@ with your email and password. Then include the token in the `Authorization` head
 subsequent requests:
 
 ```
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyQGV4YW1wbGUuY29tIiwidXNlcl9pZCI6ImFiYzEyMyIsImV4cCI6MTcwOTgxNjQ2Mi44MTk1OTJ9.XXXXXXXXXXXXXXXXXXXXX
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyQGV4YW1wbGUuY29
+tIiwidXNlcl9pZCI6ImFiYzEyMyIsImV4cCI6MTcwOTgxNjQ2Mi44MTk1OTJ9.XXXXXXXXXXXXXXXXXXXXX
 ```
 
 ### API Key Authentication
@@ -90,7 +91,9 @@ TAG_DESCRIPTIONS = [
     },
     {
         "name": "auth",
-        "description": "Authentication endpoints for user registration, login, and token management",
+        "description": (
+            "Authentication endpoints for user registration, login, and token management"
+        ),
     },
     {
         "name": "users",
@@ -187,16 +190,16 @@ EXAMPLES = {
 
 def custom_openapi(app):
     """Create a custom OpenAPI schema for the FastAPI application.
-    
+
     Args:
         app: The FastAPI application
-        
+
     Returns:
         The custom OpenAPI schema
     """
     if app.openapi_schema:
         return app.openapi_schema
-    
+
     openapi_schema = get_openapi(
         title=API_TITLE,
         version=API_VERSION,
@@ -206,23 +209,23 @@ def custom_openapi(app):
         license_info=API_LICENSE,
         terms_of_service=API_TERMS,
     )
-    
+
     # Add tags with descriptions
     openapi_schema["tags"] = TAG_DESCRIPTIONS
-    
+
     # Add examples to components
     if "components" not in openapi_schema:
         openapi_schema["components"] = {}
-    
+
     if "examples" not in openapi_schema["components"]:
         openapi_schema["components"]["examples"] = {}
-    
+
     openapi_schema["components"]["examples"].update(EXAMPLES)
-    
+
     # Add security schemes
     if "securitySchemes" not in openapi_schema["components"]:
         openapi_schema["components"]["securitySchemes"] = {}
-    
+
     # Add JWT security scheme
     openapi_schema["components"]["securitySchemes"]["jwt"] = {
         "type": "http",
@@ -230,7 +233,7 @@ def custom_openapi(app):
         "bearerFormat": "JWT",
         "description": "JWT authentication",
     }
-    
+
     # Add API key security scheme
     openapi_schema["components"]["securitySchemes"]["api_key"] = {
         "type": "apiKey",
@@ -238,6 +241,6 @@ def custom_openapi(app):
         "name": "X-API-Key",
         "description": "API key authentication",
     }
-    
+
     app.openapi_schema = openapi_schema
     return app.openapi_schema

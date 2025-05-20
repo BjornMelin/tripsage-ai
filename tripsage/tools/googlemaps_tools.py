@@ -10,6 +10,7 @@ through the abstraction layer.
 from typing import Any, Dict, List, Optional
 
 from agents import function_tool
+
 from tripsage.mcp_abstraction.manager import mcp_manager
 from tripsage.tools.schemas.googlemaps import (
     DirectionsParams,

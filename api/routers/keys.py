@@ -6,14 +6,14 @@ allowing users to bring their own keys for services like OpenAI, weather APIs, e
 """
 
 import logging
-from typing import Dict, List, Optional, Any
+from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 
-from api.deps import get_current_user
 from api.core.config import settings
 from api.core.exceptions import KeyValidationError
+from api.deps import get_current_user
 from api.services.key_service import KeyService
 
 logger = logging.getLogger(__name__)
@@ -24,21 +24,26 @@ router = APIRouter()
 # Models
 class KeyResponse(BaseModel):
     """Response model for API key information."""
+
     service: str = Field(..., description="Service name")
     has_key: bool = Field(..., description="Whether a key is configured")
     is_valid: bool = Field(..., description="Whether the key is valid")
-    last_validated: Optional[str] = Field(None, description="When the key was last validated")
+    last_validated: Optional[str] = Field(
+        None, description="When the key was last validated"
+    )
     last_used: Optional[str] = Field(None, description="When the key was last used")
 
 
 class AllKeysResponse(BaseModel):
     """Response model for all API keys."""
+
     keys: Dict[str, KeyResponse] = Field(..., description="API keys by service")
     supported_services: List[str] = Field(..., description="List of supported services")
 
 
 class AddKeyRequest(BaseModel):
     """Request model for adding an API key."""
+
     service: str = Field(..., description="Service name")
     api_key: str = Field(..., description="API key value")
     save: bool = Field(True, description="Whether to save the key for future use")
@@ -46,6 +51,7 @@ class AddKeyRequest(BaseModel):
 
 class AddKeyResponse(BaseModel):
     """Response model for adding an API key."""
+
     service: str = Field(..., description="Service name")
     is_valid: bool = Field(..., description="Whether the key is valid")
     message: str = Field(..., description="Status message")
@@ -53,6 +59,7 @@ class AddKeyResponse(BaseModel):
 
 class DeleteKeyResponse(BaseModel):
     """Response model for deleting an API key."""
+
     service: str = Field(..., description="Service name")
     success: bool = Field(..., description="Whether deletion was successful")
     message: str = Field(..., description="Status message")
@@ -60,10 +67,13 @@ class DeleteKeyResponse(BaseModel):
 
 class ValidateKeyResponse(BaseModel):
     """Response model for validating an API key."""
+
     service: str = Field(..., description="Service name")
     is_valid: bool = Field(..., description="Whether the key is valid")
     message: str = Field(..., description="Status message")
-    details: Optional[Dict[str, Any]] = Field(None, description="Additional validation details")
+    details: Optional[Dict[str, Any]] = Field(
+        None, description="Additional validation details"
+    )
 
 
 # Routes
@@ -73,13 +83,13 @@ async def get_all_keys(
     key_service: KeyService = Depends(),
 ):
     """Get all configured API keys for the current user.
-    
+
     Returns:
         Dictionary of service names to key information
     """
     user_id = current_user["id"]
     keys = await key_service.get_all_keys(user_id)
-    
+
     return {
         "keys": keys,
         "supported_services": settings.byok_services,
@@ -93,10 +103,10 @@ async def get_key(
     key_service: KeyService = Depends(),
 ):
     """Get information about a specific API key.
-    
+
     Args:
         service: The service name
-        
+
     Returns:
         Key information
     """
@@ -105,17 +115,17 @@ async def get_key(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Service {service} is not supported for BYOK",
         )
-    
+
     user_id = current_user["id"]
     key_info = await key_service.get_key(user_id, service)
-    
+
     if key_info is None:
         return KeyResponse(
             service=service,
             has_key=False,
             is_valid=False,
         )
-    
+
     return key_info
 
 
@@ -126,10 +136,10 @@ async def add_key(
     key_service: KeyService = Depends(),
 ):
     """Add or update an API key.
-    
+
     Args:
         request: Add key request
-        
+
     Returns:
         Status of the operation
     """
@@ -138,18 +148,18 @@ async def add_key(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Service {request.service} is not supported for BYOK",
         )
-    
+
     user_id = current_user["id"]
-    
+
     try:
         # Validate the key
         validation = await key_service.validate_key(request.service, request.api_key)
-        
+
         if validation["is_valid"]:
             # Save the key if requested
             if request.save:
                 await key_service.save_key(user_id, request.service, request.api_key)
-            
+
             return AddKeyResponse(
                 service=request.service,
                 is_valid=True,
@@ -157,10 +167,9 @@ async def add_key(
             )
         else:
             raise KeyValidationError(
-                message=validation["message"],
-                details={"service": request.service}
+                message=validation["message"], details={"service": request.service}
             )
-    
+
     except KeyValidationError as e:
         return AddKeyResponse(
             service=request.service,
@@ -176,10 +185,10 @@ async def delete_key(
     key_service: KeyService = Depends(),
 ):
     """Delete an API key.
-    
+
     Args:
         service: The service name
-        
+
     Returns:
         Status of the operation
     """
@@ -188,10 +197,10 @@ async def delete_key(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Service {service} is not supported for BYOK",
         )
-    
+
     user_id = current_user["id"]
     success = await key_service.delete_key(user_id, service)
-    
+
     return DeleteKeyResponse(
         service=service,
         success=success,
@@ -205,10 +214,10 @@ async def validate_key(
     key_service: KeyService = Depends(),
 ):
     """Validate an API key without saving it.
-    
+
     Args:
         request: Add key request
-        
+
     Returns:
         Validation result
     """
@@ -217,20 +226,20 @@ async def validate_key(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Service {request.service} is not supported for BYOK",
         )
-    
+
     try:
         validation = await key_service.validate_key(request.service, request.api_key)
-        
+
         return ValidateKeyResponse(
             service=request.service,
             is_valid=validation["is_valid"],
             message=validation["message"],
             details=validation.get("details"),
         )
-    
+
     except Exception as e:
         logger.exception(f"Error validating key for {request.service}: {str(e)}")
-        
+
         return ValidateKeyResponse(
             service=request.service,
             is_valid=False,

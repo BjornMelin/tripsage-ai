@@ -9,10 +9,10 @@ from typing import Any, Dict, Optional
 
 class TripSageException(Exception):
     """Base exception for TripSage API.
-    
+
     All custom exceptions should inherit from this class.
     """
-    
+
     def __init__(
         self,
         message: str,
@@ -21,7 +21,7 @@ class TripSageException(Exception):
         details: Optional[Dict[str, Any]] = None,
     ):
         """Initialize TripSageException.
-        
+
         Args:
             message: Human-readable error message
             status_code: HTTP status code
@@ -37,7 +37,7 @@ class TripSageException(Exception):
 
 class NotFoundError(TripSageException):
     """Raised when a resource is not found."""
-    
+
     def __init__(
         self,
         message: str = "Resource not found",
@@ -45,7 +45,7 @@ class NotFoundError(TripSageException):
         details: Optional[Dict[str, Any]] = None,
     ):
         """Initialize NotFoundError.
-        
+
         Args:
             message: Human-readable error message
             error_code: Machine-readable error code
@@ -61,7 +61,7 @@ class NotFoundError(TripSageException):
 
 class AuthenticationError(TripSageException):
     """Raised when authentication fails."""
-    
+
     def __init__(
         self,
         message: str = "Authentication failed",
@@ -69,7 +69,7 @@ class AuthenticationError(TripSageException):
         details: Optional[Dict[str, Any]] = None,
     ):
         """Initialize AuthenticationError.
-        
+
         Args:
             message: Human-readable error message
             error_code: Machine-readable error code
@@ -85,7 +85,7 @@ class AuthenticationError(TripSageException):
 
 class AuthorizationError(TripSageException):
     """Raised when a user is not authorized to access a resource."""
-    
+
     def __init__(
         self,
         message: str = "Not authorized",
@@ -93,7 +93,7 @@ class AuthorizationError(TripSageException):
         details: Optional[Dict[str, Any]] = None,
     ):
         """Initialize AuthorizationError.
-        
+
         Args:
             message: Human-readable error message
             error_code: Machine-readable error code
@@ -109,7 +109,7 @@ class AuthorizationError(TripSageException):
 
 class ValidationError(TripSageException):
     """Raised when data validation fails."""
-    
+
     def __init__(
         self,
         message: str = "Validation error",
@@ -117,7 +117,7 @@ class ValidationError(TripSageException):
         details: Optional[Dict[str, Any]] = None,
     ):
         """Initialize ValidationError.
-        
+
         Args:
             message: Human-readable error message
             error_code: Machine-readable error code
@@ -133,7 +133,7 @@ class ValidationError(TripSageException):
 
 class RateLimitError(TripSageException):
     """Raised when a rate limit is exceeded."""
-    
+
     def __init__(
         self,
         message: str = "Rate limit exceeded",
@@ -141,7 +141,7 @@ class RateLimitError(TripSageException):
         details: Optional[Dict[str, Any]] = None,
     ):
         """Initialize RateLimitError.
-        
+
         Args:
             message: Human-readable error message
             error_code: Machine-readable error code
@@ -157,7 +157,7 @@ class RateLimitError(TripSageException):
 
 class MCPError(TripSageException):
     """Raised when an MCP service encounters an error."""
-    
+
     def __init__(
         self,
         message: str = "MCP service error",
@@ -165,7 +165,7 @@ class MCPError(TripSageException):
         details: Optional[Dict[str, Any]] = None,
     ):
         """Initialize MCPError.
-        
+
         Args:
             message: Human-readable error message
             error_code: Machine-readable error code
@@ -181,7 +181,7 @@ class MCPError(TripSageException):
 
 class APIKeyError(TripSageException):
     """Raised when there's an issue with an API key."""
-    
+
     def __init__(
         self,
         message: str = "Invalid or expired API key",
@@ -189,7 +189,7 @@ class APIKeyError(TripSageException):
         details: Optional[Dict[str, Any]] = None,
     ):
         """Initialize APIKeyError.
-        
+
         Args:
             message: Human-readable error message
             error_code: Machine-readable error code

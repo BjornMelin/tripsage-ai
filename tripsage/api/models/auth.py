@@ -12,7 +12,7 @@ from pydantic import BaseModel, EmailStr, Field
 
 class Token(BaseModel):
     """Token response model."""
-    
+
     access_token: str
     refresh_token: str
     token_type: str = "bearer"
@@ -21,7 +21,7 @@ class Token(BaseModel):
 
 class TokenData(BaseModel):
     """Token data model."""
-    
+
     user_id: str
     scopes: List[str] = []
     exp: datetime
@@ -29,7 +29,7 @@ class TokenData(BaseModel):
 
 class UserCreate(BaseModel):
     """User creation request model."""
-    
+
     email: EmailStr
     password: str = Field(min_length=8)
     full_name: Optional[str] = None
@@ -37,14 +37,14 @@ class UserCreate(BaseModel):
 
 class UserLogin(BaseModel):
     """User login request model."""
-    
+
     email: EmailStr
     password: str
 
 
 class UserResponse(BaseModel):
     """User response model."""
-    
+
     id: str
     email: EmailStr
     full_name: Optional[str] = None
@@ -54,5 +54,5 @@ class UserResponse(BaseModel):
 
 class RefreshToken(BaseModel):
     """Refresh token request model."""
-    
+
     refresh_token: str
