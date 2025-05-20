@@ -6,7 +6,7 @@ This middleware handles unexpected exceptions during request processing.
 
 import logging
 import traceback
-from typing import Dict, Any
+from typing import Any, Dict
 
 from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -20,19 +20,19 @@ logger = logging.getLogger(__name__)
 
 class ErrorHandlingMiddleware(BaseHTTPMiddleware):
     """Middleware for handling unexpected exceptions.
-    
+
     This middleware catches any unhandled exceptions during request processing
     and returns a standardized error response. It also logs the error for
     debugging and monitoring.
     """
-    
+
     async def dispatch(self, request: Request, call_next):
         """Process the request and handle errors.
-        
+
         Args:
             request: The FastAPI request
             call_next: The next middleware or route handler
-            
+
         Returns:
             The response from the next middleware or route handler,
             or an error response if an exception occurs
@@ -46,7 +46,7 @@ class ErrorHandlingMiddleware(BaseHTTPMiddleware):
                 f"TripSageError during request processing: {str(e)} "
                 f"[code={e.code}, status={e.status_code}]"
             )
-            
+
             # Create a standardized error response
             return JSONResponse(
                 status_code=e.status_code,
@@ -55,11 +55,11 @@ class ErrorHandlingMiddleware(BaseHTTPMiddleware):
         except Exception as e:
             # Handle unexpected exceptions
             logger.exception(f"Unhandled exception during request processing: {str(e)}")
-            
+
             # Create a standardized error response
             # In production, don't include the traceback in the response
             details = self._get_error_details(e) if settings.debug else None
-            
+
             return JSONResponse(
                 status_code=500,
                 content=self._format_error_response(
@@ -68,15 +68,17 @@ class ErrorHandlingMiddleware(BaseHTTPMiddleware):
                     details,
                 ),
             )
-    
-    def _format_error_response(self, code: str, message: str, details: Dict[str, Any] = None) -> Dict[str, Any]:
+
+    def _format_error_response(
+        self, code: str, message: str, details: Dict[str, Any] = None
+    ) -> Dict[str, Any]:
         """Format a standardized error response.
-        
+
         Args:
             code: Machine-readable error code
             message: Human-readable error message
             details: Additional error details
-            
+
         Returns:
             Formatted error response
         """
@@ -84,18 +86,18 @@ class ErrorHandlingMiddleware(BaseHTTPMiddleware):
             "error": code,
             "message": message,
         }
-        
+
         if details:
             response["details"] = details
-            
+
         return response
-    
+
     def _get_error_details(self, exception: Exception) -> Dict[str, Any]:
         """Get detailed information about an exception.
-        
+
         Args:
             exception: The exception that occurred
-            
+
         Returns:
             Details about the exception
         """

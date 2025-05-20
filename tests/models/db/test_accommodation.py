@@ -39,21 +39,23 @@ def test_accommodation_optional_fields():
         total_price=1750.00,
         location="Tokyo, Japan",
     )
-    
+
     assert minimal_accommodation.trip_id == 1
     assert minimal_accommodation.id is None
     assert minimal_accommodation.rating is None
     assert minimal_accommodation.amenities is None
     assert minimal_accommodation.booking_link is None
     assert minimal_accommodation.booking_status == BookingStatus.VIEWED  # Default value
-    assert minimal_accommodation.cancellation_policy == CancellationPolicy.UNKNOWN  # Default value
+    assert (
+        minimal_accommodation.cancellation_policy == CancellationPolicy.UNKNOWN
+    )  # Default value
     assert minimal_accommodation.images == []  # Default value
 
 
 def test_accommodation_validation_dates():
     """Test date validation."""
     today = date.today()
-    
+
     # Test check_out before check_in
     with pytest.raises(ValidationError) as excinfo:
         Accommodation(
@@ -72,7 +74,7 @@ def test_accommodation_validation_dates():
 def test_accommodation_validation_price():
     """Test price validation."""
     today = date.today()
-    
+
     # Test negative price_per_night
     with pytest.raises(ValidationError) as excinfo:
         Accommodation(
@@ -86,7 +88,7 @@ def test_accommodation_validation_price():
             location="Tokyo, Japan",
         )
     assert "ensure this value is greater than 0" in str(excinfo.value)
-    
+
     # Test negative total_price
     with pytest.raises(ValidationError) as excinfo:
         Accommodation(
@@ -105,7 +107,7 @@ def test_accommodation_validation_price():
 def test_accommodation_validation_rating():
     """Test rating validation."""
     today = date.today()
-    
+
     # Test rating above 5.0
     with pytest.raises(ValidationError) as excinfo:
         Accommodation(
@@ -120,7 +122,7 @@ def test_accommodation_validation_rating():
             rating=5.5,  # Above maximum
         )
     assert "ensure this value is less than or equal to 5" in str(excinfo.value)
-    
+
     # Test rating below 0.0
     with pytest.raises(ValidationError) as excinfo:
         Accommodation(
@@ -147,7 +149,7 @@ def test_accommodation_is_booked_property(sample_accommodation_dict):
     """Test the is_booked property."""
     accommodation = Accommodation(**sample_accommodation_dict)
     assert accommodation.is_booked is False
-    
+
     accommodation.booking_status = BookingStatus.BOOKED
     assert accommodation.is_booked is True
 
@@ -156,7 +158,7 @@ def test_accommodation_is_canceled_property(sample_accommodation_dict):
     """Test the is_canceled property."""
     accommodation = Accommodation(**sample_accommodation_dict)
     assert accommodation.is_canceled is False
-    
+
     accommodation.booking_status = BookingStatus.CANCELED
     assert accommodation.is_canceled is True
 
@@ -173,11 +175,11 @@ def test_accommodation_cancel(sample_accommodation_dict):
     # First book it
     accommodation = Accommodation(**sample_accommodation_dict)
     accommodation.book()
-    
+
     # Now cancel it
     accommodation.cancel()
     assert accommodation.booking_status == BookingStatus.CANCELED
-    
+
     # Cannot cancel a viewed accommodation
     accommodation = Accommodation(**sample_accommodation_dict)
     with pytest.raises(ValueError) as excinfo:
@@ -189,7 +191,7 @@ def test_accommodation_has_flexible_cancellation(sample_accommodation_dict):
     """Test the has_flexible_cancellation property."""
     accommodation = Accommodation(**sample_accommodation_dict)
     assert accommodation.has_flexible_cancellation is True
-    
+
     accommodation.cancellation_policy = CancellationPolicy.STRICT
     assert accommodation.has_flexible_cancellation is False
 
@@ -198,7 +200,7 @@ def test_accommodation_is_refundable(sample_accommodation_dict):
     """Test the is_refundable property."""
     accommodation = Accommodation(**sample_accommodation_dict)
     assert accommodation.is_refundable is True
-    
+
     accommodation.cancellation_policy = CancellationPolicy.NON_REFUNDABLE
     assert accommodation.is_refundable is False
 
@@ -206,7 +208,7 @@ def test_accommodation_is_refundable(sample_accommodation_dict):
 def test_accommodation_total_price_calculation():
     """Test the automatic calculation of total_price."""
     today = date.today()
-    
+
     accommodation = Accommodation(
         trip_id=1,
         name="Grand Hyatt Tokyo",
@@ -218,7 +220,7 @@ def test_accommodation_total_price_calculation():
         location="Tokyo, Japan",
         calculate_total_price=True,  # Tell it to calculate
     )
-    
+
     expected_total = 250.00 * 7  # 7 nights at $250 per night
     assert accommodation.total_price == expected_total
 
@@ -227,7 +229,7 @@ def test_accommodation_model_dump(sample_accommodation_dict):
     """Test model_dump method."""
     accommodation = Accommodation(**sample_accommodation_dict)
     accommodation_dict = accommodation.model_dump()
-    
+
     assert accommodation_dict["name"] == "Grand Hyatt Tokyo"
     assert accommodation_dict["accommodation_type"] == AccommodationType.HOTEL
     assert accommodation_dict["price_per_night"] == 250.00

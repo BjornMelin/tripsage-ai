@@ -8,9 +8,9 @@ with support for price history, recommendations, and advanced filtering.
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
 
+from agents import function_tool
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from agents import function_tool
 from tripsage.mcp.flights.client import get_client as get_flights_client
 from tripsage.mcp.flights.service import get_service as get_flights_service
 from tripsage.utils.error_handling import with_error_handling

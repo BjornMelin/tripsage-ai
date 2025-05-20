@@ -101,9 +101,7 @@ class MCPLauncher:
                 "runtime": ServerRuntime.PYTHON,
                 "command": "python",
                 "args": ["-m", "crawl4ai.mcp_server"],
-                "env": {
-                    "CRAWL4AI_API_KEY": os.getenv("CRAWL4AI_API_KEY", "")
-                },
+                "env": {"CRAWL4AI_API_KEY": os.getenv("CRAWL4AI_API_KEY", "")},
             },
             "firecrawl": {
                 "runtime": ServerRuntime.NODE,
@@ -127,7 +125,9 @@ class MCPLauncher:
                 "runtime": ServerRuntime.NODE,
                 "command": "npx",
                 "args": ["-y", "weather-mcp-server"],
-                "env": {"OPENWEATHERMAP_API_KEY": os.getenv("OPENWEATHERMAP_API_KEY", "")},
+                "env": {
+                    "OPENWEATHERMAP_API_KEY": os.getenv("OPENWEATHERMAP_API_KEY", "")
+                },
             },
             "google_calendar": {
                 "runtime": ServerRuntime.NODE,
@@ -150,7 +150,7 @@ class MCPLauncher:
         # Check for Node.js and npm/npx
         node_cmd = shutil.which("node")
         npx_cmd = shutil.which("npx")
-        
+
         if not node_cmd:
             self.logger.warning(
                 "Node.js not found in PATH. Node-based MCP servers will not work."
@@ -169,15 +169,12 @@ class MCPLauncher:
             # Get Node.js version for info
             try:
                 result = subprocess.run(
-                    ["node", "--version"],
-                    capture_output=True,
-                    text=True,
-                    check=True
+                    ["node", "--version"], capture_output=True, text=True, check=True
                 )
                 self.logger.info(f"Node.js {result.stdout.strip()} detected")
             except subprocess.SubprocessError:
                 pass
-        
+
         # Check for Python (for Python-based servers)
         python_cmd = shutil.which("python") or shutil.which("python3")
         if not python_cmd:
@@ -190,7 +187,7 @@ class MCPLauncher:
                     [python_cmd, "--version"],
                     capture_output=True,
                     text=True,
-                    check=True
+                    check=True,
                 )
                 self.logger.info(f"{result.stdout.strip()} detected")
             except subprocess.SubprocessError:

@@ -4,17 +4,16 @@ Dependency injection for TripSage API.
 This module centralizes all FastAPI dependencies for the TripSage API.
 """
 
-from typing import AsyncGenerator, Optional, Union
+from typing import AsyncGenerator, Optional
 
 from fastapi import Depends, Request, Security
 from fastapi.security import APIKeyHeader, APIKeyQuery, OAuth2PasswordBearer
 
 from api.core.config import settings
 from api.core.exceptions import AuthenticationError
-from tripsage.mcp_abstraction import get_mcp_manager, MCPManager
+from tripsage.mcp_abstraction import MCPManager, get_mcp_manager
 from tripsage.storage.dual_storage import DualStorageService
 from tripsage.utils.session_memory import SessionMemory
-
 
 # OAuth2 setup
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/v1/auth/token", auto_error=False)
@@ -64,15 +63,16 @@ async def get_session_memory(request: Request) -> SessionMemory:
     if not hasattr(request.state, "session_memory"):
         # Create or get a session memory instance for this request
         session_id = request.cookies.get("session_id", None)
-        
+
         if not session_id:
             # Generate a new session ID if it doesn't exist
             from uuid import uuid4
+
             session_id = str(uuid4())
-        
+
         # Initialize session memory
         request.state.session_memory = SessionMemory(session_id=session_id)
-        
+
     return request.state.session_memory
 
 
@@ -94,16 +94,21 @@ async def get_current_user_optional(
     """
     # First check API key (from header or query)
     api_key = api_key_header or api_key_query
-    
+
     if api_key:
         # Validate API key
-        # This is a simplified implementation - in a real system, 
+        # This is a simplified implementation - in a real system,
         # you'd verify the key against a database
         if api_key.startswith("tripsage_"):
             # Get user info associated with this API key
             # This is just a placeholder - implement your actual logic
-            return {"id": "api_user", "username": "api_user", "is_api": True, "api_key": api_key}
-    
+            return {
+                "id": "api_user",
+                "username": "api_user",
+                "is_api": True,
+                "api_key": api_key,
+            }
+
     # If no API key, check OAuth2 token
     if token:
         try:
@@ -111,18 +116,18 @@ async def get_current_user_optional(
             # This is a simplified implementation
             # In a real system, you'd verify the JWT signature and extract claims
             import jwt
-            
-            payload = jwt.decode(
-                token, 
-                settings.secret_key, 
-                algorithms=["HS256"]
-            )
-            
-            return {"id": payload["sub"], "username": payload["username"], "is_api": False}
+
+            payload = jwt.decode(token, settings.secret_key, algorithms=["HS256"])
+
+            return {
+                "id": payload["sub"],
+                "username": payload["username"],
+                "is_api": False,
+            }
         except Exception:
             # Invalid token - return None for optional auth
             return None
-    
+
     # No authentication provided
     return None
 
