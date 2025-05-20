@@ -12,7 +12,7 @@ from tripsage.mcp_abstraction import get_mcp_manager
 router = APIRouter()
 
 
-# Create dependency functions
+# Get the MCP manager dependency
 def get_mcp_manager_dep():
     """Get the MCP manager instance as a dependency.
 
@@ -22,8 +22,12 @@ def get_mcp_manager_dep():
     return get_mcp_manager()
 
 
+# Create the initialized variable to avoid function call in default parameter
+mcp_manager_dep_instance = get_mcp_manager_dep()
+
+
 # Create singleton dependencies
-mcp_manager_dependency = Depends(get_mcp_manager_dep)
+mcp_manager_dependency = Depends(mcp_manager_dep_instance)
 
 
 # Weather MCP dependency
@@ -36,8 +40,11 @@ def get_weather_mcp_dep():
     return _get_weather_mcp
 
 
+# Create the function first
+weather_mcp_dep_fn = get_weather_mcp_dep()
+
 # Create weather dependency singleton
-weather_mcp_dependency = Depends(get_weather_mcp_dep())
+weather_mcp_dependency = Depends(weather_mcp_dep_fn)
 
 
 # Example of using the MCP manager in an endpoint
