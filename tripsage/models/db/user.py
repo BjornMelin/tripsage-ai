@@ -4,11 +4,19 @@ This module provides the User model with business logic validation,
 used across different storage backends.
 """
 
+from enum import Enum
 from typing import Any, Dict, Optional
 
 from pydantic import EmailStr, Field, field_validator
 
 from tripsage.models.base import TripSageModel
+
+
+class UserRole(str, Enum):
+    """Enum for user role values."""
+
+    USER = "user"
+    ADMIN = "admin"
 
 
 class User(TripSageModel):
@@ -28,6 +36,7 @@ class User(TripSageModel):
     name: Optional[str] = Field(None, description="User's display name")
     email: Optional[EmailStr] = Field(None, description="User's email address")
     password_hash: Optional[str] = Field(None, description="Hashed password")
+    role: UserRole = Field(UserRole.USER, description="User's role")
     is_admin: bool = Field(False, description="Whether the user is an admin")
     is_disabled: bool = Field(False, description="Whether the user is disabled")
     preferences_json: Optional[Dict[str, Any]] = Field(
