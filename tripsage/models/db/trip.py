@@ -32,6 +32,14 @@ class TripType(str, Enum):
     OTHER = "other"
 
 
+class TripVisibility(str, Enum):
+    """Enum for trip visibility values."""
+
+    PRIVATE = "private"
+    PUBLIC = "public"
+    SHARED = "shared"
+
+
 class Trip(TripSageModel):
     """Trip model for TripSage.
 
