@@ -6,16 +6,17 @@ and its dependencies.
 
 from fastapi import APIRouter, Depends
 
-from tripsage.api.core.config import Settings, get_settings
+from tripsage.api.core.config import Settings
+from tripsage.api.core.dependencies import get_settings_dependency
 from tripsage.mcp_abstraction import get_mcp_manager
 
 router = APIRouter()
 
 
 @router.get("/health")
-async def health_check(settings: Settings = Depends(get_settings)):
+async def health_check(settings: Settings = Depends(get_settings_dependency)):
     """Basic health check endpoint.
-    
+
     Returns:
         Dict with status and application information
     """
@@ -30,14 +31,14 @@ async def health_check(settings: Settings = Depends(get_settings)):
 @router.get("/health/mcp")
 async def mcp_health_check():
     """Check the health of MCP services.
-    
+
     Returns:
         Dict with MCP status information
     """
     mcp_manager = get_mcp_manager()
     available_mcps = mcp_manager.get_available_mcps()
     enabled_mcps = mcp_manager.get_enabled_mcps()
-    
+
     return {
         "status": "ok",
         "available_mcps": available_mcps,
