@@ -1,14 +1,16 @@
 """Tests for Accommodation model."""
 
-import pytest
 from datetime import date, timedelta
-from tripsage.models.db.accommodation import (
-    Accommodation, 
-    AccommodationType, 
-    BookingStatus,
-    CancellationPolicy
-)
+
+import pytest
 from pydantic import ValidationError
+
+from tripsage.models.db.accommodation import (
+    Accommodation,
+    AccommodationType,
+    BookingStatus,
+    CancellationPolicy,
+)
 
 
 def test_accommodation_creation(sample_accommodation_dict):
@@ -17,7 +19,7 @@ def test_accommodation_creation(sample_accommodation_dict):
     assert accommodation.id == 1
     assert accommodation.trip_id == 1
     assert accommodation.name == "Grand Hyatt Tokyo"
-    assert accommodation.type == AccommodationType.HOTEL
+    assert accommodation.accommodation_type == AccommodationType.HOTEL
     assert accommodation.price_per_night == 250.00
     assert accommodation.total_price == 1750.00
     assert accommodation.booking_status == BookingStatus.VIEWED
@@ -30,7 +32,7 @@ def test_accommodation_optional_fields():
     minimal_accommodation = Accommodation(
         trip_id=1,
         name="Grand Hyatt Tokyo",
-        type=AccommodationType.HOTEL,
+        accommodation_type=AccommodationType.HOTEL,
         check_in=today + timedelta(days=10),
         check_out=today + timedelta(days=17),
         price_per_night=250.00,
@@ -57,7 +59,7 @@ def test_accommodation_validation_dates():
         Accommodation(
             trip_id=1,
             name="Grand Hyatt Tokyo",
-            type=AccommodationType.HOTEL,
+            accommodation_type=AccommodationType.HOTEL,
             check_in=today + timedelta(days=17),  # Later date
             check_out=today + timedelta(days=10),  # Earlier date
             price_per_night=250.00,
@@ -76,7 +78,7 @@ def test_accommodation_validation_price():
         Accommodation(
             trip_id=1,
             name="Grand Hyatt Tokyo",
-            type=AccommodationType.HOTEL,
+            accommodation_type=AccommodationType.HOTEL,
             check_in=today + timedelta(days=10),
             check_out=today + timedelta(days=17),
             price_per_night=-250.00,  # Negative price
@@ -90,7 +92,7 @@ def test_accommodation_validation_price():
         Accommodation(
             trip_id=1,
             name="Grand Hyatt Tokyo",
-            type=AccommodationType.HOTEL,
+            accommodation_type=AccommodationType.HOTEL,
             check_in=today + timedelta(days=10),
             check_out=today + timedelta(days=17),
             price_per_night=250.00,
@@ -109,7 +111,7 @@ def test_accommodation_validation_rating():
         Accommodation(
             trip_id=1,
             name="Grand Hyatt Tokyo",
-            type=AccommodationType.HOTEL,
+            accommodation_type=AccommodationType.HOTEL,
             check_in=today + timedelta(days=10),
             check_out=today + timedelta(days=17),
             price_per_night=250.00,
@@ -124,7 +126,7 @@ def test_accommodation_validation_rating():
         Accommodation(
             trip_id=1,
             name="Grand Hyatt Tokyo",
-            type=AccommodationType.HOTEL,
+            accommodation_type=AccommodationType.HOTEL,
             check_in=today + timedelta(days=10),
             check_out=today + timedelta(days=17),
             price_per_night=250.00,
@@ -208,7 +210,7 @@ def test_accommodation_total_price_calculation():
     accommodation = Accommodation(
         trip_id=1,
         name="Grand Hyatt Tokyo",
-        type=AccommodationType.HOTEL,
+        accommodation_type=AccommodationType.HOTEL,
         check_in=today + timedelta(days=10),
         check_out=today + timedelta(days=17),
         price_per_night=250.00,
@@ -227,7 +229,7 @@ def test_accommodation_model_dump(sample_accommodation_dict):
     accommodation_dict = accommodation.model_dump()
     
     assert accommodation_dict["name"] == "Grand Hyatt Tokyo"
-    assert accommodation_dict["type"] == AccommodationType.HOTEL
+    assert accommodation_dict["accommodation_type"] == AccommodationType.HOTEL
     assert accommodation_dict["price_per_night"] == 250.00
     assert accommodation_dict["booking_status"] == BookingStatus.VIEWED
     assert accommodation_dict["cancellation_policy"] == CancellationPolicy.FLEXIBLE

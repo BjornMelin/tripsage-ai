@@ -41,7 +41,7 @@ class Transportation(TripSageModel):
     Attributes:
         id: Unique identifier for the transportation
         trip_id: Reference to the associated trip
-        type: Type of transportation
+        transportation_type: Type of transportation
         provider: Name of the transportation provider
         pickup_date: Pickup date and time
         dropoff_date: Dropoff date and time
@@ -52,7 +52,9 @@ class Transportation(TripSageModel):
 
     id: Optional[int] = Field(None, description="Unique identifier")
     trip_id: int = Field(..., description="Reference to the associated trip")
-    type: TransportationType = Field(..., description="Type of transportation")
+    transportation_type: TransportationType = Field(
+        ..., description="Type of transportation"
+    )
     provider: Optional[str] = Field(
         None, description="Name of the transportation provider"
     )

@@ -4,7 +4,8 @@ This module provides the ItineraryItem model with business logic validation,
 used across different storage backends.
 """
 
-from datetime import date, time
+from datetime import date
+from datetime import time as dt_time
 from enum import Enum
 from typing import Optional
 
@@ -29,9 +30,9 @@ class ItineraryItem(TripSageModel):
     Attributes:
         id: Unique identifier for the itinerary item
         trip_id: Reference to the associated trip
-        type: Type of itinerary item
+        item_type: Type of itinerary item
         date: Date of the itinerary item
-        time: Time of the itinerary item
+        scheduled_time: Time of the itinerary item
         description: Description of the itinerary item
         cost: Cost of the itinerary item in default currency
         notes: Additional notes or information
@@ -39,9 +40,11 @@ class ItineraryItem(TripSageModel):
 
     id: Optional[int] = Field(None, description="Unique identifier")
     trip_id: int = Field(..., description="Reference to the associated trip")
-    type: ItemType = Field(..., description="Type of itinerary item")
+    item_type: ItemType = Field(..., description="Type of itinerary item")
     date: date = Field(..., description="Date of the itinerary item")
-    time: Optional[time] = Field(None, description="Time of the itinerary item")
+    scheduled_time: Optional[dt_time] = Field(
+        None, description="Time of the itinerary item"
+    )
     description: str = Field(..., description="Description of the itinerary item")
     cost: Optional[float] = Field(None, description="Cost in default currency")
     notes: Optional[str] = Field(None, description="Additional notes or information")
@@ -57,32 +60,34 @@ class ItineraryItem(TripSageModel):
     @property
     def has_time(self) -> bool:
         """Check if the itinerary item has a specific time."""
-        return self.time is not None
+        return self.scheduled_time is not None
 
     @property
     def is_activity(self) -> bool:
         """Check if the itinerary item is an activity."""
-        return self.type == ItemType.ACTIVITY
+        return self.item_type == ItemType.ACTIVITY
 
     @property
     def is_meal(self) -> bool:
         """Check if the itinerary item is a meal."""
-        return self.type == ItemType.MEAL
+        return self.item_type == ItemType.MEAL
 
     @property
     def is_transport(self) -> bool:
         """Check if the itinerary item is transportation."""
-        return self.type == ItemType.TRANSPORT
+        return self.item_type == ItemType.TRANSPORT
 
     @property
     def is_accommodation(self) -> bool:
         """Check if the itinerary item is accommodation."""
-        return self.type == ItemType.ACCOMMODATION
+        return self.item_type == ItemType.ACCOMMODATION
 
     @property
     def formatted_time(self) -> str:
         """Get the formatted time for the itinerary item."""
-        return self.time.strftime("%H:%M") if self.time else "All day"
+        if self.scheduled_time:
+            return self.scheduled_time.strftime("%H:%M")
+        return "All day"
 
     @property
     def formatted_cost(self) -> str:

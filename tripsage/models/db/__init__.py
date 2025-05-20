@@ -21,7 +21,9 @@ from tripsage.models.db.flight import (
 from tripsage.models.db.flight import (
     BookingStatus as FlightBookingStatus,
 )
-from tripsage.models.db.itinerary_item import ItemType, ItineraryItem
+
+# Temporarily commented out until fixed
+# from tripsage.models.db.itinerary_item import ItemType, ItineraryItem
 from tripsage.models.db.price_history import EntityType, PriceHistory
 from tripsage.models.db.saved_option import OptionType, SavedOption
 from tripsage.models.db.search_parameters import SearchParameters
@@ -58,9 +60,9 @@ __all__ = [
     "Transportation",
     "TransportationType",
     "TransportationBookingStatus",
-    # Itinerary Item
-    "ItineraryItem",
-    "ItemType",
+    # Itinerary Item - temporarily commented out
+    # "ItineraryItem",
+    # "ItemType",
     # Search Parameters
     "SearchParameters",
     # Trip Note

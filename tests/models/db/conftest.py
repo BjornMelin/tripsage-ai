@@ -1,21 +1,23 @@
 """Test fixtures for database model tests."""
 
-import pytest
-from datetime import datetime, date, time, timedelta
-from enum import Enum
-from typing import Dict, Any, Optional, List
+from datetime import date, datetime, timedelta
+from typing import Any, Dict
 
-from tripsage.models.db.user import User, UserRole
-from tripsage.models.db.trip import Trip, TripStatus, TripVisibility
-from tripsage.models.db.flight import Flight, AirlineProvider, BookingStatus, DataSource
-from tripsage.models.db.accommodation import Accommodation, AccommodationType, CancellationPolicy
-from tripsage.models.db.search_parameters import SearchParameters
-from tripsage.models.db.trip_note import TripNote
-from tripsage.models.db.price_history import PriceHistory, EntityType
-from tripsage.models.db.saved_option import SavedOption, OptionType
-from tripsage.models.db.trip_comparison import TripComparison
-from tripsage.models.db.transportation import Transportation, TransportationType
-from tripsage.models.db.itinerary_item import ItineraryItem, ItemType
+import pytest
+
+from tripsage.models.db.accommodation import (
+    AccommodationType,
+    CancellationPolicy,
+)
+from tripsage.models.db.flight import AirlineProvider, BookingStatus, DataSource
+from tripsage.models.db.price_history import EntityType
+from tripsage.models.db.saved_option import OptionType
+from tripsage.models.db.transportation import TransportationType
+from tripsage.models.db.trip import TripStatus, TripVisibility
+from tripsage.models.db.user import UserRole
+
+# Temporarily commented out until fixed
+# from tripsage.models.db.itinerary_item import ItineraryItem, ItemType
 
 @pytest.fixture
 def sample_user_dict() -> Dict[str, Any]:
@@ -86,7 +88,7 @@ def sample_accommodation_dict() -> Dict[str, Any]:
         "id": 1,
         "trip_id": 1,
         "name": "Grand Hyatt Tokyo",
-        "type": AccommodationType.HOTEL,
+        "accommodation_type": AccommodationType.HOTEL,
         "check_in": date.today() + timedelta(days=10),
         "check_out": date.today() + timedelta(days=17),
         "price_per_night": 250.00,
@@ -185,7 +187,7 @@ def sample_transportation_dict() -> Dict[str, Any]:
     return {
         "id": 1,
         "trip_id": 1,
-        "type": TransportationType.TRAIN,
+        "transportation_type": TransportationType.TRAIN,
         "provider": "JR Rail",
         "pickup_date": now + timedelta(days=11),
         "dropoff_date": now + timedelta(days=11, hours=3),
