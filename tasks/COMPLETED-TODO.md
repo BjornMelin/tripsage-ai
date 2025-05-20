@@ -372,6 +372,14 @@ This file contains all the tasks that were marked as completed in the main TODO.
 
   - ✓ Created tripsage/models/db/ directory for essential business models
   - ✓ Migrated core entity models (User, Trip) with business validation
+  - ✓ Implemented all essential database models:
+    - ✓ Flight model with airline, booking status, and validation
+    - ✓ Accommodation model with type, cancellation policy, and pricing
+    - ✓ SearchParameters model with flexible parameter storage
+    - ✓ TripNote model for note storage and management
+    - ✓ PriceHistory model for tracking price changes
+    - ✓ SavedOption model for storing travel options
+    - ✓ TripComparison model for comparing trip alternatives
   - ✓ Implemented domain-specific Supabase tools in supabase_tools.py
   - ✓ Enhanced SupabaseMCPWrapper for database operations
   - ✓ Created tripsage/db/migrations/sql/ directory (exists as root migrations/)
