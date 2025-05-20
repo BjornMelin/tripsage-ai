@@ -5,9 +5,9 @@ This module provides helper functions to facilitate handoffs between
 different agent types in TripSage, leveraging OpenAI Agents SDK patterns.
 """
 
-from typing import Any, Callable, Dict, List, Optional, Type, Union
+from typing import Any, Callable, Dict, Optional, Type
 
-from agents import Agent, function_tool, handoff
+from agents import Agent, handoff
 from agents.extensions import handoff_filters
 from agents.handoffs import Handoff
 from pydantic import BaseModel
@@ -128,11 +128,14 @@ def create_user_announcement(
         Formatted announcement message
     """
     # Format names for display
-    source_name = source_agent_name.replace("Agent", "").strip()
+    _source_name = source_agent_name.replace("Agent", "").strip()
     target_name = target_agent_name.replace("Agent", "").strip()
 
     # Base announcement
-    announcement = f"👋 I'm connecting you with our {target_name} Specialist to better assist with your request."
+    announcement = (
+        f"👋 I'm connecting you with our {target_name} Specialist to "
+        f"better assist with your request."
+    )
 
     # Add reason if provided
     if reason:
