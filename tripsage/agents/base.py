@@ -9,9 +9,10 @@ import importlib
 import inspect
 import time
 import uuid
-from typing import Any, Callable, Dict, List, Optional, Set
+from typing import Any, Callable, Dict, List, Optional, Set, Type, Union
 
 from agents import Agent, function_tool
+
 from tripsage.config.app_settings import settings
 from tripsage.utils.error_handling import TripSageError, log_exception
 from tripsage.utils.logging import get_module_logger
@@ -50,6 +51,8 @@ class BaseAgent:
         # Initialize tools
         self._tools = tools or []
         self._registered_tools: Set[str] = set()
+        self._handoff_tools: Dict[str, Dict[str, Any]] = {}
+        self._delegation_tools: Dict[str, Dict[str, Any]] = {}
 
         # Register default tools
         self._register_default_tools()
@@ -67,6 +70,7 @@ class BaseAgent:
         self.messages_history = []
         self.session_id = str(uuid.uuid4())
         self.session_data = {}
+        self.handoff_data = {}
 
         logger.info("Initialized agent: %s", name)
 
@@ -93,7 +97,30 @@ class BaseAgent:
 
         self._tools.append(tool)
         self._registered_tools.add(tool_name)
-        logger.debug("Registered tool: %s", tool_name)
+
+        # Track handoff and delegation tools separately
+        if hasattr(tool, "__is_handoff_tool__"):
+            self._handoff_tools[tool_name] = {
+                "target_agent": getattr(tool, "__target_agent__", "Unknown"),
+                "tool": tool,
+            }
+            logger.debug(
+                "Registered handoff tool: %s → %s",
+                tool_name,
+                self._handoff_tools[tool_name]["target_agent"],
+            )
+        elif hasattr(tool, "__is_delegation_tool__"):
+            self._delegation_tools[tool_name] = {
+                "target_agent": getattr(tool, "__target_agent__", "Unknown"),
+                "tool": tool,
+            }
+            logger.debug(
+                "Registered delegation tool: %s → %s",
+                tool_name,
+                self._delegation_tools[tool_name]["target_agent"],
+            )
+        else:
+            logger.debug("Registered tool: %s", tool_name)
 
     def register_tool_group(
         self, module_name: str, package: Optional[str] = None
@@ -136,6 +163,102 @@ class BaseAgent:
         except (ImportError, AttributeError) as e:
             logger.warning("Could not register tools from %s: %s", module_name, str(e))
             return 0
+
+    def register_handoff(
+        self,
+        target_agent_class: Type["BaseAgent"],
+        tool_name: str,
+        description: str,
+        context_filter: Optional[List[str]] = None,
+    ) -> None:
+        """Register a handoff tool for transferring control to another agent.
+
+        Args:
+            target_agent_class: The agent class to hand off to
+            tool_name: Name for the handoff tool
+            description: Description of what this handoff does
+            context_filter: Optional list of context keys to pass along
+        """
+        from tripsage.agents.handoffs.helper import create_handoff_tool
+
+        handoff_tool = create_handoff_tool(
+            target_agent_class,
+            tool_name,
+            description,
+            context_filter=context_filter,
+        )
+
+        self._register_tool(handoff_tool)
+
+    def register_delegation(
+        self,
+        target_agent_class: Type["BaseAgent"],
+        tool_name: str,
+        description: str,
+        return_key: str = "content",
+        context_filter: Optional[List[str]] = None,
+    ) -> None:
+        """Register a delegation tool for using another agent as a tool.
+
+        Args:
+            target_agent_class: The agent class to delegate to
+            tool_name: Name for the delegation tool
+            description: Description of what this delegation does
+            return_key: Key in the response to return (defaults to "content")
+            context_filter: Optional list of context keys to pass along
+        """
+        from tripsage.agents.handoffs.helper import create_delegation_tool
+
+        delegation_tool = create_delegation_tool(
+            target_agent_class,
+            tool_name,
+            description,
+            return_key=return_key,
+            context_filter=context_filter,
+        )
+
+        self._register_tool(delegation_tool)
+
+    def register_multiple_handoffs(
+        self,
+        target_agents: Dict[str, Dict[str, Union[Type["BaseAgent"], str, List[str]]]],
+    ) -> int:
+        """Register multiple handoff tools at once.
+
+        Args:
+            target_agents: Dictionary mapping tool names to dictionaries with keys:
+                - "agent_class": Target agent class
+                - "description": Handoff description
+                - "context_filter": Optional list of context keys to pass along
+
+        Returns:
+            Number of tools registered
+        """
+        from tripsage.agents.handoffs.helper import register_handoff_tools
+
+        return register_handoff_tools(self, target_agents)
+
+    def register_multiple_delegations(
+        self,
+        target_agents: Dict[
+            str, Dict[str, Union[Type["BaseAgent"], str, List[str], str]]
+        ],
+    ) -> int:
+        """Register multiple delegation tools at once.
+
+        Args:
+            target_agents: Dictionary mapping tool names to dictionaries with keys:
+                - "agent_class": Target agent class
+                - "description": Delegation description
+                - "return_key": Key in the response to return (defaults to "content")
+                - "context_filter": Optional list of context keys to pass along
+
+        Returns:
+            Number of tools registered
+        """
+        from tripsage.agents.handoffs.helper import register_delegation_tools
+
+        return register_delegation_tools(self, target_agents)
 
     async def _initialize_session(
         self, user_id: Optional[str] = None
@@ -199,6 +322,37 @@ class BaseAgent:
         # Set up context
         run_context = context or {}
 
+        # Check if this is a handoff from another agent
+        is_handoff = run_context.get("is_handoff", False)
+        handoff_source = run_context.get("handoff_source", None)
+
+        if is_handoff and handoff_source:
+            logger.info("Receiving handoff from %s to %s", handoff_source, self.name)
+
+            # Extract handoff data if available
+            handoff_data = run_context.get("handoff_data", {})
+            self.handoff_data = handoff_data
+
+            # Add handoff information to context
+            run_context["handoff_received"] = True
+
+            # Store handoff in session data
+            if "handoffs" not in self.session_data:
+                self.session_data["handoffs"] = []
+
+            self.session_data["handoffs"].append(
+                {
+                    "from": handoff_source,
+                    "to": self.name,
+                    "timestamp": time.time(),
+                    "query": (
+                        user_input[:100] + "..."
+                        if len(user_input) > 100
+                        else user_input
+                    ),
+                }
+            )
+
         # Initialize session data if this is the first message
         if not self.session_data and "user_id" in run_context:
             await self._initialize_session(run_context.get("user_id"))
@@ -210,12 +364,54 @@ class BaseAgent:
             logger.info("Running agent: %s", self.name)
             result = await Runner.run(self.agent, user_input, context=run_context)
 
-            # Extract response
+            # Check if any tool calls were handoffs
+            tool_calls = result.tool_calls if hasattr(result, "tool_calls") else []
+            handoff_detected = False
+
+            for tool_call in tool_calls:
+                tool_name = tool_call.get("name", "")
+
+                # Check if the tool call was a handoff
+                if tool_name in self._handoff_tools:
+                    logger.info(
+                        "Detected handoff to %s via %s",
+                        self._handoff_tools[tool_name]["target_agent"],
+                        tool_name,
+                    )
+                    _handoff_detected = True
+
+                    # Add handoff information to response
+                    result.handoff_detected = True
+                    result.handoff_target = self._handoff_tools[tool_name][
+                        "target_agent"
+                    ]
+                    result.handoff_tool = tool_name
+
+                    # No need to add to message history since control is transferred
+
+                    # Create handoff response with both content and handoff metadata
+                    return {
+                        "content": result.final_output,
+                        "tool_calls": tool_calls,
+                        "status": "handoff",
+                        "handoff_target": result.handoff_target,
+                        "handoff_tool": result.handoff_tool,
+                    }
+
+                # Check if the tool call was a delegation
+                elif tool_name in self._delegation_tools:
+                    logger.info(
+                        "Detected delegation to %s via %s",
+                        self._delegation_tools[tool_name]["target_agent"],
+                        tool_name,
+                    )
+
+                    # For delegations, we continue as normal since control comes back
+
+            # Extract response for normal processing (no handoff)
             response = {
                 "content": result.final_output,
-                "tool_calls": (
-                    result.tool_calls if hasattr(result, "tool_calls") else []
-                ),
+                "tool_calls": tool_calls,
                 "status": "success",
             }
 

@@ -94,49 +94,87 @@ class SpecializedAgent(Agent):
 
 ### Handoff Mechanism
 
-The OpenAI Agents SDK's `handoff` feature is used to pass control between the main agent and specialized agents.
+TripSage implements a robust handoff mechanism that enables agents to seamlessly transfer control or delegate tasks to specialized agents. For detailed implementation and usage, see the dedicated [Agent Handoffs](AGENT_HANDOFFS.md) documentation.
+
+#### Two Handoff Patterns
+
+TripSage supports two primary handoff patterns:
+
+1. **Full Handoffs**: Transfer complete control to a specialist agent (conversation handoff)
+2. **Delegations**: Use a specialist agent as a tool without transferring conversation control
+
+The implementation in TripSage extends the OpenAI Agents SDK with custom handoff infrastructure that allows for flexible agent interactions while maintaining context and session data across handoffs.
+
+#### Example Implementation
+
+Here's a simplified example of how handoffs are registered in TripSage:
 
 ```python
-from agents import Agent, handoff, RunContextWrapper
-from agents.extensions.handoff_prompt import RECOMMENDED_PROMPT_PREFIX
-from pydantic import BaseModel
+from tripsage.agents.base import BaseAgent
+from tripsage.agents.handoffs import register_handoff_tools, register_delegation_tools
 
-# Define data structure for handoff if needed
-class AccommodationHandoffData(BaseModel):
-    destination: str
-    check_in_date: str
-    check_out_date: str
-    num_guests: int
-    budget_per_night: Optional[float] = None
+class MainAgent(BaseAgent):
+    def __init__(self, name="Main Agent", model=None, temperature=None):
+        super().__init__(name=name, instructions="...", model=model, temperature=temperature)
 
-# Specialized Agent
-accommodation_agent = Agent(
-    name="Accommodation Specialist",
-    instructions=f"{RECOMMENDED_PROMPT_PREFIX}\nYou are an expert in finding accommodations..."
-    # ... other params
-)
+        # Register handoff tools
+        handoff_configs = {
+            "hand_off_to_flight_agent": {
+                "agent_class": FlightAgent,
+                "description": "Hand off to flight specialist for flight search and booking",
+                "context_filter": ["user_id", "session_id", "session_data"],
+            },
+            "hand_off_to_accommodation_agent": {
+                "agent_class": AccommodationAgent,
+                "description": "Hand off to accommodation specialist for lodging search",
+                "context_filter": ["user_id", "session_id", "session_data"],
+            }
+        }
 
-# Handoff function
-async def on_accommodation_handoff(ctx: RunContextWrapper[None], input_data: AccommodationHandoffData):
-    # ctx.context can be used to pass/retrieve shared information
-    # This function can prepare context for the accommodation_agent
-    print(f"Handing off to Accommodation Specialist with data: {input_data}")
+        # Register delegation tools
+        delegation_configs = {
+            "get_flight_options": {
+                "agent_class": FlightAgent,
+                "description": "Get flight options without transferring the conversation",
+                "return_key": "content",
+                "context_filter": ["user_id", "session_id"],
+            }
+        }
 
-# Create handoff object
-accommodation_handoff_tool = handoff(
-    agent=accommodation_agent,
-    on_handoff=on_accommodation_handoff,
-    input_type=AccommodationHandoffData # Ensures data passed to handoff is validated
-)
-
-# Main Travel Agent
-travel_planning_agent = Agent(
-    name="Travel Planning Agent",
-    instructions="Orchestrate travel planning. Handoff to specialists when needed.",
-    handoffs=[accommodation_handoff_tool] # Register the handoff as a tool
-    # ... other params
-)
+        # Register both types of tools
+        self.register_multiple_handoffs(handoff_configs)
+        self.register_multiple_delegations(delegation_configs)
 ```
+
+To process handoffs in your code:
+
+```python
+# Run the agent
+response = await main_agent.run(user_input, context=context)
+
+# Check if this is a handoff
+if response.get("status") == "handoff":
+    # Process the handoff
+    handoff_response = await main_agent.process_handoff_result(response, context=context)
+
+    # Handle the response from the specialist agent
+    print(f"Specialist agent response: {handoff_response.get('content')}")
+else:
+    # Handle normal response
+    print(f"Main agent response: {response.get('content')}")
+```
+
+#### Handoff Context Management
+
+The TripSage handoff system preserves important context across handoffs:
+
+- **Session data**: User preferences, interaction history, etc.
+- **Memory data**: Data from the knowledge graph
+- **Handoff metadata**: Information about the source agent, handoff reason, etc.
+
+This ensures that specialized agents have the context they need to provide seamless user experiences.
+
+See [Agent Handoffs](AGENT_HANDOFFS.md) for detailed documentation on TripSage's handoff capabilities.
 
 ## 4. Agent Prompt Optimization
 
