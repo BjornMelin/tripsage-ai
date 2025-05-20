@@ -1,9 +1,11 @@
 """Tests for TripNote model."""
 
-import pytest
 from datetime import datetime
-from tripsage.models.db.trip_note import TripNote
+
+import pytest
 from pydantic import ValidationError
+
+from tripsage.models.db.trip_note import TripNote
 
 
 def test_trip_note_creation(sample_trip_note_dict):
@@ -22,7 +24,7 @@ def test_trip_note_optional_fields():
         timestamp=now,
         content="Remember to exchange currency before departure",
     )
-    
+
     assert minimal_trip_note.trip_id == 1
     assert minimal_trip_note.id is None
     assert minimal_trip_note.timestamp == now
@@ -31,7 +33,7 @@ def test_trip_note_optional_fields():
 def test_trip_note_validation_content():
     """Test content validation."""
     now = datetime.now()
-    
+
     # Test empty content
     with pytest.raises(ValidationError) as excinfo:
         TripNote(
@@ -46,9 +48,11 @@ def test_trip_note_content_snippet(sample_trip_note_dict):
     """Test the content_snippet property."""
     trip_note = TripNote(**sample_trip_note_dict)
     assert trip_note.content_snippet == "Remember to exchange currency before departure"
-    
+
     # Test with long content
-    long_content = "This is a very long note that should be truncated for the snippet. " * 5
+    long_content = (
+        "This is a very long note that should be truncated for the snippet. " * 5
+    )
     trip_note.content = long_content
     assert len(trip_note.content_snippet) <= 100
     assert trip_note.content_snippet.endswith("...")
@@ -66,6 +70,6 @@ def test_trip_note_model_dump(sample_trip_note_dict):
     """Test model_dump method."""
     trip_note = TripNote(**sample_trip_note_dict)
     note_dict = trip_note.model_dump()
-    
+
     assert note_dict["trip_id"] == 1
     assert note_dict["content"] == "Remember to exchange currency before departure"

@@ -15,32 +15,48 @@ from tripsage.config.app_settings import settings as app_settings
 
 class APISettings(BaseSettings):
     """API-specific settings extending the main application settings."""
-    
+
     # JWT authentication settings
     secret_key: SecretStr = Field(..., description="Secret key for signing JWT tokens")
     algorithm: str = Field(default="HS256", description="Algorithm for JWT encoding")
-    access_token_expire_minutes: int = Field(default=30, description="Minutes until access token expires")
-    refresh_token_expire_days: int = Field(default=7, description="Days until refresh token expires")
-    
+    access_token_expire_minutes: int = Field(
+        default=30, description="Minutes until access token expires"
+    )
+    refresh_token_expire_days: int = Field(
+        default=7, description="Days until refresh token expires"
+    )
+
     # CORS settings
     cors_origins: List[str] = Field(
-        default=["*"] if app_settings.debug else [
+        default=["*"]
+        if app_settings.debug
+        else [
             "https://tripsage.ai",
             "https://app.tripsage.ai",
             "https://api.tripsage.ai",
         ],
         description="List of allowed origins for CORS",
     )
-    cors_allow_credentials: bool = Field(default=True, description="Allow credentials for CORS")
-    cors_allow_methods: List[str] = Field(default=["*"], description="Allowed HTTP methods for CORS")
-    cors_allow_headers: List[str] = Field(default=["*"], description="Allowed HTTP headers for CORS")
-    
+    cors_allow_credentials: bool = Field(
+        default=True, description="Allow credentials for CORS"
+    )
+    cors_allow_methods: List[str] = Field(
+        default=["*"], description="Allowed HTTP methods for CORS"
+    )
+    cors_allow_headers: List[str] = Field(
+        default=["*"], description="Allowed HTTP headers for CORS"
+    )
+
     # API Rate limiting
     rate_limit_enabled: bool = Field(default=True, description="Enable rate limiting")
-    rate_limit_requests: int = Field(default=60, description="Maximum requests per minute")
-    
+    rate_limit_requests: int = Field(
+        default=60, description="Maximum requests per minute"
+    )
+
     # BYOK (Bring Your Own Key) settings
-    enable_byok: bool = Field(default=True, description="Enable Bring Your Own Key functionality")
+    enable_byok: bool = Field(
+        default=True, description="Enable Bring Your Own Key functionality"
+    )
     byok_services: List[str] = Field(
         default=[
             "openai",
@@ -52,14 +68,14 @@ class APISettings(BaseSettings):
         ],
         description="Services that support Bring Your Own Key",
     )
-    
+
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
         case_sensitive = False
         env_prefix = "API_"
-        
-    
+
+
 # Create settings instance
 settings = APISettings()
 

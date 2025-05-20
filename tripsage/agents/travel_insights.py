@@ -10,6 +10,7 @@ from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
 
 from agents import function_tool
+
 from tripsage.agents.base import BaseAgent
 from tripsage.config.app_settings import settings
 from tripsage.mcp.webcrawl.client import WebCrawlMCPClient

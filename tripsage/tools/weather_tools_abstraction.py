@@ -8,6 +8,7 @@ MCP abstraction layer instead of direct client instances.
 from typing import Any, Dict, Optional
 
 from agents import function_tool
+
 from tripsage.mcp_abstraction import mcp_manager
 from tripsage.tools.schemas.weather import WeatherLocation
 from tripsage.utils.error_handling import with_error_handling

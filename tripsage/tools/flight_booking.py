@@ -10,9 +10,9 @@ import uuid
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
+from agents import function_tool
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from agents import function_tool
 from tripsage.db.client import get_client as get_db_client
 from tripsage.mcp.flights.client import get_client as get_flights_client
 from tripsage.mcp.memory.client import get_client as get_memory_client

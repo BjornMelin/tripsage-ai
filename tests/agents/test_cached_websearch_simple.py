@@ -8,8 +8,8 @@ without requiring the full settings infrastructure.
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-
 from agents import WebSearchTool
+
 from tripsage.tools.web_tools import CachedWebSearchTool
 from tripsage.utils.cache import ContentType
 

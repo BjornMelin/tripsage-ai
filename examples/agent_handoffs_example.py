@@ -35,7 +35,7 @@ async def simulate_conversation(
 
     # Process each message
     for i, message in enumerate(messages):
-        print(f"\n[USER Message {i+1}]: {message}")
+        print(f"\n[USER Message {i + 1}]: {message}")
 
         # Run the current agent
         response = await current_agent.run(message, context=run_context)

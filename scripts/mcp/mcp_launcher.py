@@ -93,13 +93,17 @@ class MCPLauncher:
                 "runtime": ServerRuntime.NODE,
                 "command": "npx",
                 "args": ["-y", "duffel-mcp"],
-                "env": {"DUFFEL_API_KEY": self.settings.duffel_flights.api_key.get_secret_value()},
+                "env": {
+                    "DUFFEL_API_KEY": self.settings.duffel_flights.api_key.get_secret_value()
+                },
             },
             "airbnb": {
                 "runtime": ServerRuntime.NODE,
                 "command": "npx",
                 "args": ["-y", "airbnb-mcp"],
-                "env": {"AIRBNB_API_KEY": self.settings.airbnb.api_key.get_secret_value()},
+                "env": {
+                    "AIRBNB_API_KEY": self.settings.airbnb.api_key.get_secret_value()
+                },
             },
             "playwright": {
                 "runtime": ServerRuntime.NODE,
@@ -114,7 +118,8 @@ class MCPLauncher:
                 "env": {
                     "CRAWL4AI_API_KEY": (
                         self.settings.crawl4ai.api_key.get_secret_value()
-                        if hasattr(self.settings, "crawl4ai") and hasattr(self.settings.crawl4ai, "api_key")
+                        if hasattr(self.settings, "crawl4ai")
+                        and hasattr(self.settings.crawl4ai, "api_key")
                         else ""
                     )
                 },
@@ -123,13 +128,17 @@ class MCPLauncher:
                 "runtime": ServerRuntime.NODE,
                 "command": "npx",
                 "args": ["-y", "@mendableai/firecrawl-mcp-server"],
-                "env": {"FIRECRAWL_API_KEY": self.settings.firecrawl.api_key.get_secret_value()},
+                "env": {
+                    "FIRECRAWL_API_KEY": self.settings.firecrawl.api_key.get_secret_value()
+                },
             },
             "google_maps": {
                 "runtime": ServerRuntime.NODE,
                 "command": "npx",
                 "args": ["-y", "google-maps-mcp"],
-                "env": {"GOOGLE_MAPS_API_KEY": self.settings.google_maps.api_key.get_secret_value()},
+                "env": {
+                    "GOOGLE_MAPS_API_KEY": self.settings.google_maps.api_key.get_secret_value()
+                },
             },
             "time": {
                 "runtime": ServerRuntime.NODE,
@@ -141,7 +150,9 @@ class MCPLauncher:
                 "runtime": ServerRuntime.NODE,
                 "command": "npx",
                 "args": ["-y", "weather-mcp-server"],
-                "env": {"OPENWEATHERMAP_API_KEY": self.settings.weather.api_key.get_secret_value()},
+                "env": {
+                    "OPENWEATHERMAP_API_KEY": self.settings.weather.api_key.get_secret_value()
+                },
             },
             "google_calendar": {
                 "runtime": ServerRuntime.NODE,
@@ -164,7 +175,7 @@ class MCPLauncher:
         # Check for Node.js and npm/npx
         node_cmd = shutil.which("node")
         npx_cmd = shutil.which("npx")
-        
+
         if not node_cmd:
             self.logger.warning(
                 "Node.js not found in PATH. Node-based MCP servers will not work."
@@ -183,15 +194,12 @@ class MCPLauncher:
             # Get Node.js version for info
             try:
                 result = subprocess.run(
-                    ["node", "--version"],
-                    capture_output=True,
-                    text=True,
-                    check=True
+                    ["node", "--version"], capture_output=True, text=True, check=True
                 )
                 self.logger.info(f"Node.js {result.stdout.strip()} detected")
             except subprocess.SubprocessError:
                 pass
-        
+
         # Check for Python (for Python-based servers)
         python_cmd = shutil.which("python") or shutil.which("python3")
         if not python_cmd:
@@ -204,7 +212,7 @@ class MCPLauncher:
                     [python_cmd, "--version"],
                     capture_output=True,
                     text=True,
-                    check=True
+                    check=True,
                 )
                 self.logger.info(f"{result.stdout.strip()} detected")
             except subprocess.SubprocessError:
