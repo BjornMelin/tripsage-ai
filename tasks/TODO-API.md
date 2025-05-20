@@ -1,0 +1,292 @@
+# API and Middleware TODO List
+
+This file tracks tasks related to API development, middleware, and external service integrations (MCPs) for TripSage.
+
+## MVP Priority (Version 1.0)
+
+- [ ] **Frontend-Backend BYOK Integration**
+
+  - **Target:** Full-stack secure API key management
+  - **Goal:** Create seamless, secure API key management across frontend and backend
+  - **Status:** Architecture and specifications completed
+  - **Key Documents:**
+    - Backend implementation details: TODO.md (Backend BYOK section)
+    - Frontend implementation details: TODO-FRONTEND.md (API Key Management section)
+    - Architecture documentation: docs/frontend/ARCHITECTURE.md
+  - **Integration Points:**
+    - API endpoints: `/api/user/keys` (CREATE, LIST, DELETE, VALIDATE, ROTATE)
+    - Envelope encryption: PBKDF2 + Fernet (AES-128 CBC + HMAC-SHA256)
+    - Key validation: Service-specific patterns on frontend, comprehensive checks on backend
+    - Status display: Comprehensive UI without revealing actual keys
+    - Security features: Auto-clearing forms, session timeouts, CSP headers
+  - **Next Steps:**
+    - [ ] Implement backend encryption service with envelope pattern
+    - [ ] Create FastAPI endpoints with proper authentication
+    - [ ] Build React components for secure key input and management
+    - [ ] Implement Redis caching for decrypted keys
+    - [ ] Add monitoring and alerting for key operations
+    - [ ] Create comprehensive test suite for security features
+
+- [ ] **Backend BYOK (Bring Your Own Key) Implementation**
+
+  - **Target:** Backend API and database layer
+  - **Goal:** Implement secure API key storage and usage for user-provided keys
+  - **Status:** Database schema and encryption design completed
+  - **Tasks:**
+    - [ ] Create API key models and database schema:
+      - [ ] Add key rotation support with rotation schedule
+      - [ ] Implement secure key validation before storage
+    - [ ] Create key encryption service using envelope encryption:
+      - [ ] Add key rotation support with rotation schedule
+      - [ ] Implement secure key validation before storage
+    - [ ] Implement API endpoints:
+      - [ ] GET `/api/user/keys` - List available keys (without values)
+      - [ ] DELETE `/api/user/keys/{id}` - Remove a stored key
+      - [ ] POST `/api/user/keys/validate` - Validate a key with service
+      - [ ] POST `/api/user/keys/{id}/rotate` - Rotate an existing key
+    - [ ] Update MCPManager for user keys:
+      - [ ] Implement dynamic key injection for MCP calls
+      - [ ] Add fallback to default keys when user keys unavailable
+      - [ ] Create secure caching mechanism for decrypted keys
+    - [ ] Add monitoring and security:
+      - [ ] Implement access logging with structured logs:
+      - [ ] Add rate limiting for key operations (max 10 per minute)
+      - [ ] Create alerts for suspicious patterns:
+        - Rapid key rotation attempts
+        - Failed validation attempts
+        - Unusual access patterns
+      - [ ] Implement key expiration notifications
+      - [ ] Add automatic key rotation reminders (90 days)
+      - [ ] Create key health metrics dashboard
+    - [ ] Security best practices:
+      - [ ] Use secure random for all salt generation
+      - [ ] Clear sensitive data from memory after use
+      - [ ] Implement proper session timeouts
+      - [ ] Add audit trail for all key operations
+      - [ ] Use constant-time comparison for key validation
+      - [ ] Implement proper error handling without information leakage
+    - [ ] Frontend Integration:
+      - [ ] Coordinate with frontend BYOK implementation in TODO-FRONTEND.md
+      - [ ] Ensure API endpoints match frontend expectations
+      - [ ] Implement CORS configuration for secure key submission
+      - [ ] Add rate limiting middleware for key endpoints
+      - [ ] Document API integration for frontend developers
+
+- [ ] **Integrate External MCP Servers**
+
+  - **Target:** MCP server architecture and implementation
+  - **Goal:** Adopt a hybrid approach favoring external MCPs when possible
+  - **Strategy:**
+    - Prioritize existing external MCPs when available
+    - Only build custom MCPs for core business logic, direct database integration, or when privacy/security requirements can't be met externally
+  - **Tasks:**
+    - **Sub-tasks for further enhancements:**
+      - [ ] Configure production OpenTelemetry exporter (OTLP)
+      - [ ] Implement advanced error alerting based on error types
+      - [ ] Integrate structlog more deeply if PoC is successful
+      - [ ] Add metrics collection for MCP performance
+      - [ ] Create dashboards for monitoring MCP operations
+    - [ ] Playwright MCP Integration:
+      - [ ] Implement session persistence for authenticated workflows
+      - [ ] Develop travel-specific browser operations (booking verification, check-ins)
+      - [ ] Create escalation logic from crawler to browser automation
+      - [ ] Add anti-detection capabilities for travel websites
+      - [ ] Implement comprehensive testing with mock travel websites
+    - [ ] Hybrid Web Crawling Integration:
+      - [ ] Develop empirical performance testing framework
+      - [ ] Production Scenario Testing Strategy: - Create test suite with real-world travel planning scenarios - Develop 10+ realistic multi-site test cases covering booking flows and research patterns - Implement automated performance comparison between single-crawler and hybrid approach - Create a/b testing framework to empirically verify domain routing effectiveness - Implement monitoring for crawler selection decisions - Add telemetry for source selection logic - Create dashboard for crawler performance by domain - Set up alerting for fallback escalation patterns - Establish quantitative success metrics - 95%+ successful extractions across tracked domains - <3 second average response time for cached results - <8 second average for uncached results - <5% fallback rate to Playwright for optimized domains
+    - [ ] Redis MCP Integration: (Short-Term Phase)
+      - **Target:** Distributed caching for performance optimization
+      - **Goal:** Improve response times and reduce API call volumes
+      - **Success Metrics:**
+        - 99.9% cache operation reliability
+        - <50ms average cache operation time
+        - 90%+ cache hit rate for common operations
+        - Proper TTL management across content types
+      - **Resources:**
+        - **Server Repo:** <https://github.com/redis/mcp-redis>
+        - **Redis Docs:** <https://redis.io/docs/>
+      - Configure Redis MCP server
+      - Create caching tools in `tripsage/tools/cache_tools.py`
+      - Implement distributed caching functionality
+      - Add tests for cache-related operations
+    - [ ] Apply web_cached decorator to appropriate web operation functions
+      - Add to existing webcrawl operations in both agents
+      - Add performance monitoring hooks for cache hit rate analysis
+      - **Note:** Need to review and integrate with TravelPlanningAgent and DestinationResearchAgent
+
+- [ ] **MCP Implementation Roadmap**
+
+  - **Target:** Phased MCP integration
+  - **Goal:** Implement MCP integration in structured phases
+  - **Tasks:**
+    - [ ] Immediate Actions (Next 2 Weeks):
+      - Integrate Google Maps MCP (see Google Maps MCP Integration)
+      - Integrate Weather MCP for essential trip planning data (see Weather MCP Integration)
+      - Begin hybrid web crawling implementation (see Crawl4AI & Firecrawl Integration)
+      - Implement WebSearchTool caching with WebOperationsCache (Issue #37, partially completed)
+      - Develop proof-of-concept for unified abstraction layer
+      - Implement error handling and monitoring infrastructure
+    - [ ] Short-Term Actions (Weeks 3-6):
+      - Complete Neo4j Memory MCP Integration (see Neo4j Memory MCP Integration)
+      - Complete hybrid Crawl4AI/Firecrawl implementation with domain routing
+      - Integrate Time MCP (see Time MCP Integration)
+      - Integrate Google Calendar MCP (see Google Calendar MCP Integration)
+      - Develop and test the Unified Travel Search Wrapper
+      - Implement Redis MCP for standardized response caching (see Redis MCP Integration)
+      - Integrate Supabase MCP (see Supabase MCP Integration)
+      - Integrate Duffel Flights MCP and Airbnb MCP (see respective integration sections)
+      - Create domain-specific performance testing framework
+      - Complete comprehensive error handling for all integrated MCPs
+    - [ ] MCP Server Strategy Decision:
+      - [ ] Next steps: Migrate all start/stop scripts to use unified launcher
+        - Standardize all MCP server scripts to use mcp_launcher.py
+        - Remove redundant individual start/stop scripts
+        - Ensure Docker-Compose integration for all services
+    - [ ] Medium-Term Actions (Weeks 7-12):
+      - Develop Trip Planning Coordinator and Content Aggregator wrappers
+      - Implement OpenTelemetry-based monitoring for all MCP interactions
+      - Complete thorough integration testing across all MCPs
+      - Optimize performance through Redis MCP caching and parallel execution
+      - Complete production scenario testing for all integrations
+
+- [ ] **MCP Client Cleanup**
+
+  - **Target:** `/src/mcp/` directory
+  - **Goal:** Replace redundant MCP client implementations with external MCP servers
+  - **Strategy:** Follow hybrid approach - prioritize external MCPs, build custom only when necessary
+  - **Tasks:**
+    - [ ] Audit `src/mcp/` to identify functionality covered by external MCPs:
+      - Map current clients to Supabase, Neo4j Memory, Duffel Flights, Airbnb MCPs
+      - Map webcrawl functionality to hybrid Crawl4AI/Firecrawl implementation with domain-based routing
+      - Map browser automation needs to Playwright MCP
+      - Map Google Maps, Time, Weather, Google Calendar, and Redis MCPs
+      - Document any functionality requiring custom implementations
+      - Map specific correspondences:
+        - `src/mcp/weather/` → Weather MCP
+        - `src/mcp/calendar/` → Google Calendar MCP
+        - `src/mcp/time/` → Time MCP
+        - `src/mcp/webcrawl/` → Firecrawl MCP
+        - `src/cache/redis_cache.py` → Redis MCP
+    - [ ] Implement Redis MCP for standardized caching:
+      - Configure Redis MCP server with appropriate connection parameters
+      - Create cache key generation that respects parameters
+      - Implement TTL management based on data type (shorter for prices, longer for destination info)
+      - Add cache invalidation patterns based on travel dates and data changes
+      - Develop comprehensive monitoring for cache hit/miss rates
+    - [ ] Refactor all agent tools to use MCPManager.invoke:
+    - [ ] Implement monitoring and observability:
+      - Add OpenTelemetry instrumentation for MCP interactions
+      - Create performance metrics for MCP operations
+      - Implement structured logging for all MCP interactions
+
+- [ ] **Implement Neo4j Knowledge Graph Integration (using Neo4j Memory MCP)**
+  - **Target:** Throughout codebase
+  - **Goal:** Standardize Neo4j integration using Neo4j Memory MCP server
+  - **Tasks:**
+    - [ ] Set up Neo4j Memory MCP server configuration
+    - [ ] Define standard entity models compatible with MCP schema
+    - [ ] Create reusable CRUD operations using MCP tools
+    - [ ] Implement graph query patterns via MCP integration
+    - [ ] Define relationship type constants in knowledge graph schema
+    - [ ] Create standard validation for MCP-based graph operations
+    - [ ] Implement caching for Neo4j Memory MCP operations
+    - [ ] Add comprehensive test suite for Neo4j MCP integration
+
+## Medium Priority
+
+- [ ] **Optimize Cache Implementation via Redis MCP**
+
+  - **Target:** Redis MCP integration
+  - **Goal:** Standardize caching across clients using Redis MCP
+  - **Context:** Old generic caching in `/src/cache/redis_cache.py` deprecated in favor of:
+    - WebOperationsCache for web-specific caching (already implemented)
+    - Redis MCP for generic caching (to be implemented)
+  - **Tasks:**
+    - [ ] Complete Redis MCP client implementation in RedisMCPWrapper
+    - [ ] Create generic `cached()` decorator using Redis MCP
+    - [ ] Implement standard cache key generation utility via MCP
+    - [ ] Implement TTL management based on data type
+    - [ ] Add cache invalidation patterns
+    - [ ] Migrate cache hit/miss statistics to Redis MCP
+    - [ ] Implement cache prefetching for common queries
+    - [ ] Create cache warming strategies
+    - [ ] Add distributed cache locking via Redis MCP
+    - [ ] Implement typed cache interface using MCP patterns
+
+- [ ] **Consider Additional MCP Servers**
+
+  - **Target:** Potential new MCP integrations
+  - **Goal:** Evaluate additional MCP servers for integration
+  - **Tasks:**
+    - [ ] Evaluate Sequential Thinking MCP:
+      - Assess benefits for complex travel planning logic
+      - Create prototype integration with planning agents
+      - Test effectiveness vs. traditional approaches
+      - Document integration patterns if adopted
+    - [ ] Evaluate LinkUp MCP:
+      - Assess benefits for destination research
+      - Compare results quality with Firecrawl
+      - Create integration plan if beneficial
+      - Document content sourcing strategy
+    - [ ] Evaluate Exa MCP:
+      - Compare web search capabilities with other MCPs
+      - Test integration for destination research
+      - Determine optimal search provider mix
+      - Create integration plan if adopted
+
+- [ ] **Custom MCP Wrapper Development**
+
+  - **Target:** TripSage-specific MCP functionality
+  - **Goal:** Create thin custom MCP wrappers only for core functionality
+  - **Tasks:**
+    - [ ] Unified Travel Search Wrapper:
+      - Design integrated search API that leverages multiple MCPs
+      - Implement result aggregation and normalization
+      - Create unified schema for travel options
+      - Add comprehensive tests for combined search
+    - [ ] Trip Planning Coordinator:
+      - Develop coordinator for complex planning operations
+      - Implement orchestration across multiple underlying MCPs
+      - Create optimization algorithms for itinerary planning
+      - Add tests for coordinator functionality
+    - [ ] Content Aggregator:
+      - Implement wrapper around hybrid Crawl4AI/Firecrawl solution
+      - Create content normalization for unified schema
+      - Implement domain-based source selection logic
+      - Develop destination content enrichment features
+      - Add comprehensive caching with Redis MCP
+      - Implement error handling and fallback mechanisms
+      - Add tests for multi-source content aggregation
+    - [ ] Development Guidelines:
+      - Use FastMCP 2.0 for all custom MCP development
+      - Implement Pydantic v2 models for all schemas
+      - Use function tool pattern for all MCP tools
+      - Implement decorator-based error handling
+      - Document when to build vs. use existing MCPs
+      - Create templates for custom MCP development
+      - Implement standard validation patterns
+      - Define testing requirements for custom MCPs
+
+- [ ] **API and Database Migrations**
+  - **Target:** `/src/api/` and `/src/db/` directories
+  - **Goal:** Migrate API and database components to tripsage structure
+  - **Tasks:**
+    - [ ] Create tripsage/api directory with FastAPI structure:
+      - Create endpoint groups by domain (users, trips, flights, etc.)
+      - Implement proper dependency injection
+      - Add comprehensive request/response models
+    - [ ] Implement database migration:
+      - Create tripsage/models/db/ for essential business models (User, Trip)
+      - Port validation logic from src/db/models/ to new Pydantic models
+      - Replace repository patterns with MCP tool implementations
+      - Adapt SQL migrations to use Supabase MCP apply_migration
+      - Create Neo4j schema initialization scripts
+      - Ensure consistent error handling through MCP abstraction
+      - Remove direct database connection pooling (handled by MCPs)
+    - [ ] API Improvements:
+      - Add OpenAPI documentation
+      - Implement API versioning
+      - Add proper rate limiting
+      - Implement comprehensive logging
+      - Add request validation with Pydantic

@@ -5,7 +5,17 @@ This module provides the travel agent implementation using the OpenAI Agents SDK
 and specializes in travel planning with various MCP tools.
 """
 
+import time
+from typing import Any, Dict, Optional
+
+from tripsage.agents.accommodation import AccommodationAgent
 from tripsage.agents.base import BaseAgent
+from tripsage.agents.budget import BudgetAgent
+from tripsage.agents.destination_research import DestinationResearchAgent
+
+# Import specialized agents for handoffs
+from tripsage.agents.flight import FlightAgent
+from tripsage.agents.itinerary import ItineraryAgent
 from tripsage.config.app_settings import settings
 from tripsage.utils.logging import get_module_logger
 
@@ -81,6 +91,39 @@ class TravelAgent(BaseAgent):
         For specialized travel data (flights, weather, etc.), use the appropriate domain-specific MCP tool.
         Use the most specific and appropriate tool for each task.
         
+        SPECIALIZED AGENT HANDOFFS:
+        You can also hand off specific tasks to specialized agents:
+        
+        - hand_off_to_flight_agent: For complex flight search and booking questions
+          Use when the user is focused on flight details, comparing flight options,
+          or needs to book flights.
+        
+        - hand_off_to_accommodation_agent: For hotel, Airbnb, and lodging inquiries
+          Use when the user is primarily interested in accommodation details, 
+          comparing options, or needs to book stays.
+          
+        - hand_off_to_budget_agent: For calculating and optimizing travel budgets
+          Use when the user wants to create a trip budget, compare costs, or optimize
+          spending across different aspects of their trip.
+          
+        - hand_off_to_destination_agent: For in-depth destination research
+          Use when the user wants detailed information about specific destinations,
+          including attractions, local tips, and cultural information.
+          
+        - hand_off_to_itinerary_agent: For creating and managing detailed itineraries
+          Use when the user wants to build a day-by-day itinerary, optimize their
+          schedule, or balance activities across their trip.
+        
+        When to hand off:
+        - When the user's request is very focused on one specific domain
+        - When complex or detailed information is needed in a specific area
+        - When dealing with multi-step processes in a specific domain
+        
+        Before handing off:
+        - Gather relevant context information
+        - Make sure you've collected the user's preferences
+        - Be explicit with the user about the handoff
+        
         MEMORY OPERATIONS:
         - initialize_agent_memory: Retrieve user preferences and recent trips
         - search_knowledge_graph: Find relevant entities like destinations
@@ -107,6 +150,9 @@ class TravelAgent(BaseAgent):
         # Register travel-specific tools
         self._register_travel_tools()
 
+        # Register handoff and delegation tools for specialized agents
+        self._register_specialized_agent_tools()
+
     def _register_travel_tools(self) -> None:
         """Register travel-specific tools."""
         # Register all travel tool groups
@@ -123,3 +169,215 @@ class TravelAgent(BaseAgent):
 
         for module in tool_modules:
             self.register_tool_group(module)
+
+    def _register_specialized_agent_tools(self) -> None:
+        """Register specialized agent handoff and delegation tools."""
+        # Configure handoff tools
+        handoff_configs = {
+            "hand_off_to_flight_agent": {
+                "agent_class": FlightAgent,
+                "description": "Hand off the conversation to a flight specialist agent for detailed flight search, comparison and booking assistance. Use this for complex flight queries.",
+                "context_filter": [
+                    "user_id",
+                    "session_id",
+                    "session_data",
+                    "handoff_data",
+                ],
+            },
+            "hand_off_to_accommodation_agent": {
+                "agent_class": AccommodationAgent,
+                "description": "Hand off the conversation to an accommodation specialist agent for detailed hotel and lodging search, comparison and booking. Use this for complex accommodation queries.",
+                "context_filter": [
+                    "user_id",
+                    "session_id",
+                    "session_data",
+                    "handoff_data",
+                ],
+            },
+            "hand_off_to_budget_agent": {
+                "agent_class": BudgetAgent,
+                "description": "Hand off the conversation to a budget specialist agent for creating and optimizing travel budgets. Use this for detailed budget planning.",
+                "context_filter": [
+                    "user_id",
+                    "session_id",
+                    "session_data",
+                    "handoff_data",
+                ],
+            },
+            "hand_off_to_destination_agent": {
+                "agent_class": DestinationResearchAgent,
+                "description": "Hand off the conversation to a destination research specialist for detailed destination information, attractions, and local insights.",
+                "context_filter": [
+                    "user_id",
+                    "session_id",
+                    "session_data",
+                    "handoff_data",
+                ],
+            },
+            "hand_off_to_itinerary_agent": {
+                "agent_class": ItineraryAgent,
+                "description": "Hand off the conversation to an itinerary specialist agent for creating and managing detailed day-by-day travel itineraries.",
+                "context_filter": [
+                    "user_id",
+                    "session_id",
+                    "session_data",
+                    "handoff_data",
+                ],
+            },
+        }
+
+        # Configure delegation tools (used for specific tasks without transferring control)
+        delegation_configs = {
+            "get_flight_options": {
+                "agent_class": FlightAgent,
+                "description": "Get flight options between locations without transferring the conversation. The flight agent will return detailed flight search results.",
+                "return_key": "content",
+                "context_filter": ["user_id", "session_id", "session_data"],
+            },
+            "get_accommodation_options": {
+                "agent_class": AccommodationAgent,
+                "description": "Get accommodation options for a location without transferring the conversation. The accommodation agent will return detailed lodging search results.",
+                "return_key": "content",
+                "context_filter": ["user_id", "session_id", "session_data"],
+            },
+            "calculate_trip_budget": {
+                "agent_class": BudgetAgent,
+                "description": "Calculate a trip budget without transferring the conversation. The budget agent will analyze costs and return a budget breakdown.",
+                "return_key": "content",
+                "context_filter": ["user_id", "session_id", "session_data"],
+            },
+            "research_destination": {
+                "agent_class": DestinationResearchAgent,
+                "description": "Research a destination without transferring the conversation. The destination agent will return key information about the location.",
+                "return_key": "content",
+                "context_filter": ["user_id", "session_id", "session_data"],
+            },
+            "create_day_itinerary": {
+                "agent_class": ItineraryAgent,
+                "description": "Create a day itinerary without transferring the conversation. The itinerary agent will return a detailed schedule for a specific day.",
+                "return_key": "content",
+                "context_filter": ["user_id", "session_id", "session_data"],
+            },
+        }
+
+        # Register both types of tools
+        self.register_multiple_handoffs(handoff_configs)
+        self.register_multiple_delegations(delegation_configs)
+
+        logger.info("Registered specialized agent tools with Travel Agent")
+
+    async def process_handoff_result(
+        self, result: Dict[str, Any], context: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
+        """Process a result that contains a handoff to another agent.
+
+        Args:
+            result: Result from the agent run that contains a handoff
+            context: Optional context to pass to the target agent
+
+        Returns:
+            Response from the target agent
+        """
+        if result.get("status") != "handoff":
+            logger.warning("Called process_handoff_result on non-handoff result")
+            return result
+
+        # Extract handoff information
+        handoff_target = result.get("handoff_target")
+        handoff_tool = result.get("handoff_tool")
+
+        if not handoff_target or not handoff_tool:
+            logger.error("Missing handoff target or tool")
+            return {
+                "content": "There was an error processing your request. The handoff could not be completed.",
+                "status": "error",
+                "error_type": "HandoffError",
+                "error_message": "Missing handoff target or tool information",
+            }
+
+        # Find the appropriate tool in handoff tools
+        tool_info = self._handoff_tools.get(handoff_tool)
+        if not tool_info:
+            logger.error(f"Handoff tool {handoff_tool} not found")
+            return {
+                "content": "There was an error processing your request. The handoff could not be completed.",
+                "status": "error",
+                "error_type": "HandoffError",
+                "error_message": f"Handoff tool {handoff_tool} not found",
+            }
+
+        # Extract the tool callable
+        tool = tool_info.get("tool")
+        if not callable(tool):
+            logger.error(f"Handoff tool {handoff_tool} is not callable")
+            return {
+                "content": "There was an error processing your request. The handoff could not be completed.",
+                "status": "error",
+                "error_type": "HandoffError",
+                "error_message": f"Handoff tool {handoff_tool} is not callable",
+            }
+
+        # Set up context for handoff
+        handoff_context = context or {}
+        handoff_context["is_handoff"] = True
+        handoff_context["handoff_source"] = self.name
+
+        # Add original content and tool calls to handoff data
+        handoff_context["handoff_data"] = {
+            "original_content": result.get("content", ""),
+            "original_tool_calls": result.get("tool_calls", []),
+            "source_agent": self.name,
+            "handoff_tool": handoff_tool,
+            "timestamp": time.time(),
+        }
+
+        # Set up query from tool calls if present
+        if "tool_calls" in result and result["tool_calls"]:
+            # Find the handoff tool call
+            for tool_call in result["tool_calls"]:
+                if tool_call.get("name") == handoff_tool:
+                    # Use the arguments as the query base
+                    query_components = []
+                    for arg_name, arg_value in tool_call.get("arguments", {}).items():
+                        if arg_name != "context":
+                            query_components.append(f"{arg_name}: {arg_value}")
+
+                    query = "\n".join(query_components)
+                    if not query:
+                        # If no arguments, use the original content
+                        query = result.get("content", "")
+
+                    # Call the handoff tool with the extracted query and context
+                    try:
+                        logger.info(
+                            f"Executing handoff to {handoff_target} via {handoff_tool}"
+                        )
+                        handoff_result = await tool(
+                            query=query, context=handoff_context
+                        )
+                        return handoff_result
+                    except Exception as e:
+                        logger.error(f"Error executing handoff: {str(e)}")
+                        return {
+                            "content": f"There was an error handling your request: {str(e)}",
+                            "status": "error",
+                            "error_type": type(e).__name__,
+                            "error_message": str(e),
+                        }
+
+        # If we couldn't extract a query from tool calls, use original content
+        query = result.get("content", "")
+        try:
+            logger.info(
+                f"Executing handoff to {handoff_target} via {handoff_tool} with original content"
+            )
+            handoff_result = await tool(query=query, context=handoff_context)
+            return handoff_result
+        except Exception as e:
+            logger.error(f"Error executing handoff: {str(e)}")
+            return {
+                "content": f"There was an error handling your request: {str(e)}",
+                "status": "error",
+                "error_type": type(e).__name__,
+                "error_message": str(e),
+            }
