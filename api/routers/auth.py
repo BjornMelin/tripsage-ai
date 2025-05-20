@@ -15,7 +15,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from api.core.config import settings
 from api.core.exceptions import AuthenticationError
 from api.deps import get_current_user
-from api.models.requests.auth import RegisterUserRequest, RefreshTokenRequest
+from api.models.requests.auth import RefreshTokenRequest, RegisterUserRequest
 from api.models.responses.auth import TokenResponse, UserResponse
 from api.services.auth_service import AuthService
 
@@ -24,16 +24,18 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
-@router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED
+)
 async def register(
     request: RegisterUserRequest,
     auth_service: AuthService = Depends(),
 ):
     """Register a new user.
-    
+
     Args:
         request: User registration request
-        
+
     Returns:
         Registered user information
     """
@@ -43,13 +45,13 @@ async def register(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Username already taken",
         )
-    
+
     if await auth_service.get_user_by_email(request.email):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Email already registered",
         )
-    
+
     # Create the user
     user = await auth_service.create_user(
         username=request.username,
@@ -57,7 +59,7 @@ async def register(
         password=request.password,
         full_name=request.full_name,
     )
-    
+
     # Return user information (without password)
     return user
 
@@ -69,11 +71,11 @@ async def login(
     auth_service: AuthService = Depends(),
 ):
     """Authenticate and get access tokens.
-    
+
     Args:
         response: FastAPI response object (for setting cookies)
         form_data: OAuth2 form data
-        
+
     Returns:
         Access and refresh tokens
     """
@@ -83,21 +85,21 @@ async def login(
             username=form_data.username,
             password=form_data.password,
         )
-        
+
         # Create access token
         access_token_expires = timedelta(minutes=settings.access_token_expire_minutes)
         access_token = auth_service.create_access_token(
             data={"sub": user["id"], "username": user["username"]},
             expires_delta=access_token_expires,
         )
-        
+
         # Create refresh token
         refresh_token_expires = timedelta(days=settings.refresh_token_expire_days)
         refresh_token = auth_service.create_refresh_token(
             data={"sub": user["id"]},
             expires_delta=refresh_token_expires,
         )
-        
+
         # Set the refresh token as an HTTP-only cookie
         expires = datetime.utcnow() + refresh_token_expires
         response.set_cookie(
@@ -108,7 +110,7 @@ async def login(
             samesite="lax",
             expires=expires.strftime("%a, %d %b %Y %H:%M:%S GMT"),
         )
-        
+
         # Return the tokens
         return {
             "access_token": access_token,
@@ -116,7 +118,7 @@ async def login(
             "token_type": "bearer",
             "expires_in": settings.access_token_expire_minutes * 60,
         }
-        
+
     except AuthenticationError as e:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -133,12 +135,12 @@ async def refresh_token(
     auth_service: AuthService = Depends(),
 ):
     """Refresh access token.
-    
+
     Args:
         response: FastAPI response object (for setting cookies)
         request: Refresh token request (optional)
         refresh_token: Refresh token from cookie (optional)
-        
+
     Returns:
         New access and refresh tokens
     """
@@ -148,37 +150,37 @@ async def refresh_token(
         token = request.refresh_token
     elif refresh_token:
         token = refresh_token
-    
+
     if not token:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Refresh token is required",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    
+
     try:
         # Validate the refresh token
         token_data = auth_service.validate_refresh_token(token)
-        
+
         # Get the user
         user = await auth_service.get_user_by_id(token_data["sub"])
         if not user:
             raise AuthenticationError("Invalid user")
-        
+
         # Create a new access token
         access_token_expires = timedelta(minutes=settings.access_token_expire_minutes)
         access_token = auth_service.create_access_token(
             data={"sub": user["id"], "username": user["username"]},
             expires_delta=access_token_expires,
         )
-        
+
         # Create a new refresh token
         refresh_token_expires = timedelta(days=settings.refresh_token_expire_days)
         new_refresh_token = auth_service.create_refresh_token(
             data={"sub": user["id"]},
             expires_delta=refresh_token_expires,
         )
-        
+
         # Set the new refresh token as an HTTP-only cookie
         expires = datetime.utcnow() + refresh_token_expires
         response.set_cookie(
@@ -189,7 +191,7 @@ async def refresh_token(
             samesite="lax",
             expires=expires.strftime("%a, %d %b %Y %H:%M:%S GMT"),
         )
-        
+
         # Return the new tokens
         return {
             "access_token": access_token,
@@ -197,7 +199,7 @@ async def refresh_token(
             "token_type": "bearer",
             "expires_in": settings.access_token_expire_minutes * 60,
         }
-        
+
     except AuthenticationError as e:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -209,10 +211,10 @@ async def refresh_token(
 @router.post("/logout")
 async def logout(response: Response):
     """Log out the current user.
-    
+
     Args:
         response: FastAPI response object (for clearing cookies)
-        
+
     Returns:
         Success message
     """
@@ -223,7 +225,7 @@ async def logout(response: Response):
         secure=not settings.debug,  # True in production
         samesite="lax",
     )
-    
+
     return {"message": "Successfully logged out"}
 
 
@@ -233,7 +235,7 @@ async def get_current_user_info(
     auth_service: AuthService = Depends(),
 ):
     """Get information about the current user.
-    
+
     Returns:
         Current user information
     """
@@ -243,5 +245,5 @@ async def get_current_user_info(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User not found",
         )
-    
+
     return user

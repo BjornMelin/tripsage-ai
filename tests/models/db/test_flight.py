@@ -1,9 +1,11 @@
 """Tests for Flight model."""
 
-import pytest
 from datetime import datetime, timedelta
-from tripsage.models.db.flight import Flight, AirlineProvider, BookingStatus, DataSource
+
+import pytest
 from pydantic import ValidationError
+
+from tripsage.models.db.flight import AirlineProvider, BookingStatus, DataSource, Flight
 
 
 def test_flight_creation(sample_flight_dict):
@@ -33,7 +35,7 @@ def test_flight_optional_fields():
         search_timestamp=now,
         data_source=DataSource.DUFFEL,
     )
-    
+
     assert minimal_flight.trip_id == 1
     assert minimal_flight.id is None
     assert minimal_flight.booking_link is None
@@ -44,7 +46,7 @@ def test_flight_optional_fields():
 def test_flight_validation_airport_codes():
     """Test airport code validation."""
     now = datetime.now()
-    
+
     # Test valid code
     flight = Flight(
         trip_id=1,
@@ -58,7 +60,7 @@ def test_flight_validation_airport_codes():
         data_source=DataSource.DUFFEL,
     )
     assert flight.origin == "LAX"
-    
+
     # Test invalid origin code
     with pytest.raises(ValidationError) as excinfo:
         Flight(
@@ -73,7 +75,7 @@ def test_flight_validation_airport_codes():
             data_source=DataSource.DUFFEL,
         )
     assert "Airport code must be a 3-letter IATA code" in str(excinfo.value)
-    
+
     # Test invalid destination code
     with pytest.raises(ValidationError) as excinfo:
         Flight(
@@ -93,7 +95,7 @@ def test_flight_validation_airport_codes():
 def test_flight_validation_dates():
     """Test date validation."""
     now = datetime.now()
-    
+
     # Test arrival before departure
     with pytest.raises(ValidationError) as excinfo:
         Flight(
@@ -113,7 +115,7 @@ def test_flight_validation_dates():
 def test_flight_validation_price():
     """Test price validation."""
     now = datetime.now()
-    
+
     # Test negative price
     with pytest.raises(ValidationError) as excinfo:
         Flight(
@@ -140,7 +142,7 @@ def test_flight_formatted_duration(sample_flight_dict):
     """Test the formatted_duration property."""
     flight = Flight(**sample_flight_dict)
     assert flight.formatted_duration == "12h 0m"
-    
+
     # Test with minutes
     now = datetime.now()
     flight = Flight(
@@ -161,7 +163,7 @@ def test_flight_is_booked_property(sample_flight_dict):
     """Test the is_booked property."""
     flight = Flight(**sample_flight_dict)
     assert flight.is_booked is False
-    
+
     flight.booking_status = BookingStatus.BOOKED
     assert flight.is_booked is True
 
@@ -170,7 +172,7 @@ def test_flight_is_canceled_property(sample_flight_dict):
     """Test the is_canceled property."""
     flight = Flight(**sample_flight_dict)
     assert flight.is_canceled is False
-    
+
     flight.booking_status = BookingStatus.CANCELED
     assert flight.is_canceled is True
 
@@ -188,7 +190,7 @@ def test_flight_cancel(sample_flight_dict):
     flight.book()
     flight.cancel()
     assert flight.booking_status == BookingStatus.CANCELED
-    
+
     # Cannot cancel a viewed flight
     flight = Flight(**sample_flight_dict)
     with pytest.raises(ValueError) as excinfo:
@@ -200,7 +202,7 @@ def test_flight_model_dump(sample_flight_dict):
     """Test model_dump method."""
     flight = Flight(**sample_flight_dict)
     flight_dict = flight.model_dump()
-    
+
     assert flight_dict["origin"] == "LAX"
     assert flight_dict["destination"] == "NRT"
     assert flight_dict["airline"] == AirlineProvider.JAPAN_AIRLINES

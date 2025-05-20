@@ -5,15 +5,14 @@ This module defines Pydantic models for API responses related to authentication.
 """
 
 from datetime import datetime
-from typing import Dict, List, Optional
-from uuid import UUID
+from typing import Dict, Optional
 
 from pydantic import BaseModel, EmailStr, Field
 
 
 class TokenResponse(BaseModel):
     """Response model for authentication tokens."""
-    
+
     access_token: str = Field(..., description="JWT access token")
     refresh_token: str = Field(..., description="JWT refresh token")
     token_type: str = Field("bearer", description="Token type")
@@ -22,7 +21,7 @@ class TokenResponse(BaseModel):
 
 class UserResponse(BaseModel):
     """Response model for user information."""
-    
+
     id: str = Field(..., description="User ID")
     username: str = Field(..., description="Username")
     email: EmailStr = Field(..., description="Email address")
@@ -36,19 +35,19 @@ class UserResponse(BaseModel):
 
 class UserPreferencesResponse(BaseModel):
     """Response model for user preferences."""
-    
+
     id: str = Field(..., description="User ID")
     preferences: Dict = Field({}, description="User preferences")
 
 
 class MessageResponse(BaseModel):
     """Response model for simple messages."""
-    
+
     message: str = Field(..., description="Message")
 
 
 class PasswordResetResponse(BaseModel):
     """Response model for password reset."""
-    
+
     message: str = Field(..., description="Message")
     email: EmailStr = Field(..., description="Email address")

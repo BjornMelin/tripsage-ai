@@ -1,9 +1,8 @@
 """Tests for SearchParameters model."""
 
-import pytest
 from datetime import datetime
+
 from tripsage.models.db.search_parameters import SearchParameters
-from pydantic import ValidationError
 
 
 def test_search_parameters_creation(sample_search_parameters_dict):
@@ -24,7 +23,7 @@ def test_search_parameters_optional_fields():
         timestamp=now,
         parameter_json={"type": "accommodation", "location": "Tokyo, Japan"},
     )
-    
+
     assert minimal_search_params.trip_id == 1
     assert minimal_search_params.id is None
     assert minimal_search_params.timestamp == now
@@ -35,7 +34,7 @@ def test_is_flight_search(sample_search_parameters_dict):
     """Test the is_flight_search property."""
     search_params = SearchParameters(**sample_search_parameters_dict)
     assert search_params.is_flight_search is True
-    
+
     # Change to accommodation search
     search_params.parameter_json["type"] = "accommodation"
     assert search_params.is_flight_search is False
@@ -45,7 +44,7 @@ def test_is_accommodation_search(sample_search_parameters_dict):
     """Test the is_accommodation_search property."""
     search_params = SearchParameters(**sample_search_parameters_dict)
     assert search_params.is_accommodation_search is False
-    
+
     # Change to accommodation search
     search_params.parameter_json["type"] = "accommodation"
     assert search_params.is_accommodation_search is True
@@ -55,7 +54,7 @@ def test_is_activity_search(sample_search_parameters_dict):
     """Test the is_activity_search property."""
     search_params = SearchParameters(**sample_search_parameters_dict)
     assert search_params.is_activity_search is False
-    
+
     # Change to activity search
     search_params.parameter_json["type"] = "activity"
     assert search_params.is_activity_search is True
@@ -65,7 +64,7 @@ def test_is_transportation_search(sample_search_parameters_dict):
     """Test the is_transportation_search property."""
     search_params = SearchParameters(**sample_search_parameters_dict)
     assert search_params.is_transportation_search is False
-    
+
     # Change to transportation search
     search_params.parameter_json["type"] = "transportation"
     assert search_params.is_transportation_search is True
@@ -140,7 +139,9 @@ def test_search_summary_unknown_type():
         timestamp=now,
         parameter_json={"type": "unknown", "query": "something"},
     )
-    expected_summary = "Search for unknown with parameters: {'type': 'unknown', 'query': 'something'}"
+    expected_summary = (
+        "Search for unknown with parameters: {'type': 'unknown', 'query': 'something'}"
+    )
     assert search_params.search_summary == expected_summary
 
 
@@ -148,7 +149,7 @@ def test_model_dump(sample_search_parameters_dict):
     """Test model_dump method."""
     search_params = SearchParameters(**sample_search_parameters_dict)
     params_dict = search_params.model_dump()
-    
+
     assert params_dict["trip_id"] == 1
     assert params_dict["parameter_json"]["type"] == "flight"
     assert params_dict["parameter_json"]["origin"] == "LAX"

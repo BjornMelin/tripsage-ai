@@ -10,13 +10,13 @@ from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 
-from tripsage.api.core.config import Settings, get_settings
+from tripsage.api.core.config import Settings
+from tripsage.api.core.dependencies import get_settings_dependency
 from tripsage.api.middlewares.auth import create_access_token
 from tripsage.api.models.auth import (
     RefreshToken,
     Token,
     UserCreate,
-    UserLogin,
     UserResponse,
 )
 from tripsage.api.services.auth import AuthService
@@ -34,19 +34,19 @@ logger = logging.getLogger(__name__)
 )
 async def register(
     user_data: UserCreate,
-    settings: Settings = Depends(get_settings),
+    settings: Settings = Depends(get_settings_dependency),
     user_service: UserService = Depends(),
 ):
     """Register a new user.
-    
+
     Args:
         user_data: User registration data
         settings: API settings
         user_service: User service for database operations
-        
+
     Returns:
         The created user
-        
+
     Raises:
         HTTPException: If the email is already registered
     """
@@ -56,14 +56,14 @@ async def register(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Email already registered",
         )
-    
+
     # Create the user
     user = await user_service.create_user(
         email=user_data.email,
         password=user_data.password,
         full_name=user_data.full_name,
     )
-    
+
     return user
 
 
@@ -74,19 +74,19 @@ async def register(
 )
 async def login(
     form_data: OAuth2PasswordRequestForm = Depends(),
-    settings: Settings = Depends(get_settings),
+    settings: Settings = Depends(get_settings_dependency),
     auth_service: AuthService = Depends(),
 ):
     """Login to get an access token.
-    
+
     Args:
         form_data: OAuth2 password request form
         settings: API settings
         auth_service: Authentication service
-        
+
     Returns:
         The access token
-        
+
     Raises:
         HTTPException: If the credentials are invalid
     """
@@ -95,14 +95,14 @@ async def login(
         form_data.username,  # Username is email in our case
         form_data.password,
     )
-    
+
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid credentials",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    
+
     # Create access token
     access_token_expires = timedelta(minutes=settings.token_expiration_minutes)
     access_token = create_access_token(
@@ -110,7 +110,7 @@ async def login(
         settings=settings,
         expires_delta=access_token_expires,
     )
-    
+
     # Create refresh token
     refresh_token_expires = timedelta(days=settings.refresh_token_expiration_days)
     refresh_token = create_access_token(
@@ -118,10 +118,10 @@ async def login(
         settings=settings,
         expires_delta=refresh_token_expires,
     )
-    
+
     # Calculate expiration time
     expires_at = datetime.utcnow() + access_token_expires
-    
+
     return {
         "access_token": access_token,
         "refresh_token": refresh_token,
@@ -137,32 +137,32 @@ async def login(
 )
 async def refresh_token(
     refresh_data: RefreshToken,
-    settings: Settings = Depends(get_settings),
+    settings: Settings = Depends(get_settings_dependency),
     auth_service: AuthService = Depends(),
 ):
     """Refresh an access token.
-    
+
     Args:
         refresh_data: Refresh token data
         settings: API settings
         auth_service: Authentication service
-        
+
     Returns:
         New access and refresh tokens
-        
+
     Raises:
         HTTPException: If the refresh token is invalid
     """
     # Validate the refresh token
     user = await auth_service.validate_refresh_token(refresh_data.refresh_token)
-    
+
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid refresh token",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    
+
     # Create new access token
     access_token_expires = timedelta(minutes=settings.token_expiration_minutes)
     access_token = create_access_token(
@@ -170,7 +170,7 @@ async def refresh_token(
         settings=settings,
         expires_delta=access_token_expires,
     )
-    
+
     # Create new refresh token
     refresh_token_expires = timedelta(days=settings.refresh_token_expiration_days)
     refresh_token = create_access_token(
@@ -178,10 +178,10 @@ async def refresh_token(
         settings=settings,
         expires_delta=refresh_token_expires,
     )
-    
+
     # Calculate expiration time
     expires_at = datetime.utcnow() + access_token_expires
-    
+
     return {
         "access_token": access_token,
         "refresh_token": refresh_token,

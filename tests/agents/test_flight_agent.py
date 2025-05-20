@@ -9,8 +9,8 @@ operations with the flight search and booking components.
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-
 from agents import RunContextWrapper
+
 from tripsage.agents.flight_agent import (
     FlightAgent,
     create_flight_agent,

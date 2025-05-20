@@ -8,6 +8,7 @@ using the OpenAI Agents SDK, following the direct MCP call pattern.
 from typing import Any, Dict, List, Optional
 
 from agents import function_tool
+
 from tripsage.tools.schemas.neon import (
     BranchResponse,
     ConnectionStringResponse,

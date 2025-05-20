@@ -12,7 +12,7 @@ from pydantic import BaseModel, Field
 
 class ApiKeyCreate(BaseModel):
     """API key creation request model."""
-    
+
     name: str = Field(min_length=1, max_length=255)
     service: str = Field(min_length=1, max_length=255)
     key: str
@@ -22,7 +22,7 @@ class ApiKeyCreate(BaseModel):
 
 class ApiKeyResponse(BaseModel):
     """API key response model."""
-    
+
     id: str
     name: str
     service: str
@@ -36,14 +36,14 @@ class ApiKeyResponse(BaseModel):
 
 class ApiKeyValidateRequest(BaseModel):
     """API key validation request model."""
-    
+
     key: str
     service: str
 
 
 class ApiKeyValidateResponse(BaseModel):
     """API key validation response model."""
-    
+
     is_valid: bool
     service: str
     message: str
@@ -51,5 +51,5 @@ class ApiKeyValidateResponse(BaseModel):
 
 class ApiKeyRotateRequest(BaseModel):
     """API key rotation request model."""
-    
+
     new_key: str

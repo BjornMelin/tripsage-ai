@@ -5,7 +5,6 @@ database access, and authentication helpers.
 """
 
 import asyncio
-import os
 from typing import AsyncGenerator, Dict, Generator
 
 import pytest
@@ -28,7 +27,7 @@ def event_loop() -> Generator:
 @pytest.fixture
 def test_client() -> TestClient:
     """Create a FastAPI TestClient instance.
-    
+
     Returns:
         TestClient: FastAPI test client
     """
@@ -38,7 +37,7 @@ def test_client() -> TestClient:
 @pytest.fixture
 async def async_client() -> AsyncGenerator[AsyncClient, None]:
     """Create an AsyncClient instance for async tests.
-    
+
     Yields:
         AsyncClient: Async HTTP client
     """
@@ -49,7 +48,7 @@ async def async_client() -> AsyncGenerator[AsyncClient, None]:
 @pytest.fixture
 def test_user() -> Dict:
     """Create a test user for authentication.
-    
+
     Returns:
         Dict: Test user data
     """
@@ -57,7 +56,8 @@ def test_user() -> Dict:
         "id": "test-user-id",
         "email": "test@example.com",
         "password": "test-password",
-        "hashed_password": "$2b$12$M5A1R.jRG9HZ0Qw7U14QZOIRcKjvEzdvqExQzmZWjJ3pdaM6FpDEi",  # test-password
+        # Hashed version of "test-password"
+        "hashed_password": "$2b$12$M5A1R.jRG9HZ0Qw7U14QZOIRcKjvEzdvqExQzmZWjJ3pdaM6FpDEi",
         "full_name": "Test User",
     }
 
@@ -65,10 +65,10 @@ def test_user() -> Dict:
 @pytest.fixture
 def auth_headers(test_user: Dict) -> Dict:
     """Create authentication headers with a JWT token.
-    
+
     Args:
         test_user: Test user data
-        
+
     Returns:
         Dict: Authentication headers
     """
@@ -78,14 +78,14 @@ def auth_headers(test_user: Dict) -> Dict:
         data={"sub": test_user["email"], "user_id": test_user["id"]},
         settings=settings,
     )
-    
+
     return {"Authorization": f"Bearer {token}"}
 
 
 @pytest.fixture
 def api_key_headers() -> Dict:
     """Create authentication headers with an API key.
-    
+
     Returns:
         Dict: API key headers
     """

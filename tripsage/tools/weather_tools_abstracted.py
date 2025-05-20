@@ -6,9 +6,9 @@ to interact with weather services.
 
 from typing import Optional
 
+from agents import function_tool
 from pydantic import BaseModel, Field
 
-from agents import function_tool
 from tripsage.mcp_abstraction import mcp_manager
 from tripsage.utils.error_handling import with_error_handling
 from tripsage.utils.logging import get_module_logger
