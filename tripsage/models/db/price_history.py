@@ -50,34 +50,36 @@ class PriceHistory(TripSageModel):
     @property
     def is_recent(self) -> bool:
         """Check if the price was recorded recently (within 24 hours)."""
-        from datetime import datetime as datetime_type, timedelta
+        from datetime import datetime as datetime_type
+        from datetime import timedelta
+
         return datetime_type.now() - self.timestamp < timedelta(hours=24)
-    
+
     @property
     def formatted_timestamp(self) -> str:
         """Get the formatted timestamp for display."""
         return self.timestamp.strftime("%Y-%m-%d %H:%M")
-    
+
     @property
     def formatted_price(self) -> str:
         """Get the formatted price with currency symbol."""
         return f"${self.price:.2f}"
-    
+
     @property
     def is_flight_price(self) -> bool:
         """Check if this is a flight price."""
         return self.entity_type == EntityType.FLIGHT
-    
+
     @property
     def is_accommodation_price(self) -> bool:
         """Check if this is an accommodation price."""
         return self.entity_type == EntityType.ACCOMMODATION
-    
+
     @property
     def is_transportation_price(self) -> bool:
         """Check if this is a transportation price."""
         return self.entity_type == EntityType.TRANSPORTATION
-    
+
     @property
     def is_activity_price(self) -> bool:
         """Check if this is an activity price."""

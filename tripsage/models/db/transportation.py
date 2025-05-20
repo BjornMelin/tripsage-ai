@@ -53,7 +53,9 @@ class Transportation(TripSageModel):
     id: Optional[int] = Field(None, description="Unique identifier")
     trip_id: int = Field(..., description="Reference to the associated trip")
     type: TransportationType = Field(..., description="Type of transportation")
-    provider: Optional[str] = Field(None, description="Name of the transportation provider")
+    provider: Optional[str] = Field(
+        None, description="Name of the transportation provider"
+    )
     pickup_date: datetime = Field(..., description="Pickup date and time")
     dropoff_date: datetime = Field(..., description="Dropoff date and time")
     price: float = Field(..., description="Price in default currency")
@@ -96,7 +98,11 @@ class Transportation(TripSageModel):
     @property
     def is_active(self) -> bool:
         """Check if the transportation is in an active state."""
-        return self.booking_status in [BookingStatus.VIEWED, BookingStatus.SAVED, BookingStatus.BOOKED]
+        return self.booking_status in [
+            BookingStatus.VIEWED,
+            BookingStatus.SAVED,
+            BookingStatus.BOOKED,
+        ]
 
     def can_cancel(self) -> bool:
         """Check if the transportation can be canceled."""
@@ -104,6 +110,7 @@ class Transportation(TripSageModel):
         if self.booking_status != BookingStatus.BOOKED:
             return False
         from datetime import datetime as datetime_type
+
         return datetime_type.now() < self.pickup_date
 
     def update_status(self, new_status: BookingStatus) -> bool:
@@ -117,8 +124,16 @@ class Transportation(TripSageModel):
         """
         # Define valid status transitions
         valid_transitions = {
-            BookingStatus.VIEWED: [BookingStatus.SAVED, BookingStatus.BOOKED, BookingStatus.CANCELED],
-            BookingStatus.SAVED: [BookingStatus.BOOKED, BookingStatus.CANCELED, BookingStatus.VIEWED],
+            BookingStatus.VIEWED: [
+                BookingStatus.SAVED,
+                BookingStatus.BOOKED,
+                BookingStatus.CANCELED,
+            ],
+            BookingStatus.SAVED: [
+                BookingStatus.BOOKED,
+                BookingStatus.CANCELED,
+                BookingStatus.VIEWED,
+            ],
             BookingStatus.BOOKED: [BookingStatus.CANCELED],
             BookingStatus.CANCELED: [],  # Cannot change from canceled
         }

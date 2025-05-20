@@ -31,14 +31,16 @@ class TripComparison(TripSageModel):
     @property
     def is_recent(self) -> bool:
         """Check if the comparison was created recently (within 24 hours)."""
-        from datetime import datetime as datetime_type, timedelta
+        from datetime import datetime as datetime_type
+        from datetime import timedelta
+
         return datetime_type.now() - self.timestamp < timedelta(hours=24)
-    
+
     @property
     def formatted_timestamp(self) -> str:
         """Get the formatted timestamp for display."""
         return self.timestamp.strftime("%Y-%m-%d %H:%M")
-    
+
     @property
     def options_count(self) -> int:
         """Get the number of options being compared."""
@@ -46,47 +48,51 @@ class TripComparison(TripSageModel):
         if isinstance(options, list):
             return len(options)
         return 0
-    
+
     @property
     def has_flights(self) -> bool:
         """Check if the comparison includes flight options."""
         return "flights" in self.comparison_json or any(
             "flight" in option for option in self.comparison_json.get("options", [])
         )
-    
+
     @property
     def has_accommodations(self) -> bool:
         """Check if the comparison includes accommodation options."""
         return "accommodations" in self.comparison_json or any(
-            "accommodation" in option for option in self.comparison_json.get("options", [])
+            "accommodation" in option
+            for option in self.comparison_json.get("options", [])
         )
-    
+
     @property
     def has_transportation(self) -> bool:
         """Check if the comparison includes transportation options."""
         return "transportation" in self.comparison_json or any(
-            "transportation" in option for option in self.comparison_json.get("options", [])
+            "transportation" in option
+            for option in self.comparison_json.get("options", [])
         )
-    
+
     @property
     def has_complete_options(self) -> bool:
-        """Check if the comparison includes complete trip options with all components."""
+        """Check if comparison includes complete trip options with all components."""
         options = self.comparison_json.get("options", [])
         if not options or not isinstance(options, list):
             return False
-        
+
         # Check if each option has flight, accommodation, and transportation
         for option in options:
-            if not all(key in option for key in ["flight", "accommodation", "transportation"]):
+            if not all(
+                key in option for key in ["flight", "accommodation", "transportation"]
+            ):
                 return False
-        
+
         return True
-    
+
     @property
     def comparison_summary(self) -> str:
         """Get a summary of the comparison."""
         options_count = self.options_count
-        
+
         components = []
         if self.has_flights:
             components.append("flights")
@@ -94,7 +100,7 @@ class TripComparison(TripSageModel):
             components.append("accommodations")
         if self.has_transportation:
             components.append("transportation")
-        
+
         components_str = ", ".join(components) if components else "no components"
-        
+
         return f"Comparison of {options_count} options with {components_str}"

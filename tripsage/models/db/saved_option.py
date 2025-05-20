@@ -52,42 +52,44 @@ class SavedOption(TripSageModel):
     @property
     def is_recent(self) -> bool:
         """Check if the option was saved recently (within 24 hours)."""
-        from datetime import datetime as datetime_type, timedelta
+        from datetime import datetime as datetime_type
+        from datetime import timedelta
+
         return datetime_type.now() - self.timestamp < timedelta(hours=24)
-    
+
     @property
     def formatted_timestamp(self) -> str:
         """Get the formatted timestamp for display."""
         return self.timestamp.strftime("%Y-%m-%d %H:%M")
-    
+
     @property
     def is_flight(self) -> bool:
         """Check if this is a flight option."""
         return self.option_type == OptionType.FLIGHT
-    
+
     @property
     def is_accommodation(self) -> bool:
         """Check if this is an accommodation option."""
         return self.option_type == OptionType.ACCOMMODATION
-    
+
     @property
     def is_transportation(self) -> bool:
         """Check if this is a transportation option."""
         return self.option_type == OptionType.TRANSPORTATION
-    
+
     @property
     def is_activity(self) -> bool:
         """Check if this is an activity option."""
         return self.option_type == OptionType.ACTIVITY
-    
+
     @property
     def has_notes(self) -> bool:
         """Check if the option has notes."""
         return self.notes is not None and len(self.notes.strip()) > 0
-    
+
     def update_notes(self, new_notes: Optional[str]) -> None:
         """Update the notes for this saved option.
-        
+
         Args:
             new_notes: The new notes to set, or None to clear
         """
