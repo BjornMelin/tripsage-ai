@@ -74,15 +74,21 @@ class Accommodation(TripSageModel):
     type: AccommodationType = Field(..., description="Type of accommodation")
     check_in: date = Field(..., description="Check-in date")
     check_out: date = Field(..., description="Check-out date")
-    price_per_night: float = Field(..., description="Price per night in default currency")
-    total_price: float = Field(..., description="Total price for the stay in default currency")
+    price_per_night: float = Field(
+        ..., description="Price per night in default currency"
+    )
+    total_price: float = Field(
+        ..., description="Total price for the stay in default currency"
+    )
     location: str = Field(..., description="Address or location description")
     rating: Optional[float] = Field(None, description="Rating score out of 5")
-    amenities: Optional[Dict[str, Any]] = Field(
-        None, description="Available amenities"
+    amenities: Optional[Dict[str, Any]] = Field(None, description="Available amenities")
+    booking_link: Optional[str] = Field(
+        None, description="URL for booking this accommodation"
     )
-    booking_link: Optional[str] = Field(None, description="URL for booking this accommodation")
-    search_timestamp: date = Field(..., description="When this accommodation data was fetched")
+    search_timestamp: date = Field(
+        ..., description="When this accommodation data was fetched"
+    )
     booking_status: BookingStatus = Field(
         BookingStatus.VIEWED, description="Status of the accommodation booking"
     )
@@ -127,16 +133,18 @@ class Accommodation(TripSageModel):
 
     @model_validator(mode="after")
     def validate_total_price(self) -> "Accommodation":
-        """Validate that total_price is reasonable based on duration and price_per_night."""
+        """Validate that total_price is consistent with duration and price_per_night."""
         nights = (self.check_out - self.check_in).days
         expected_min = self.price_per_night * 0.95 * nights  # Allow 5% variation
         expected_max = self.price_per_night * 1.05 * nights  # Allow 5% variation
-        
-        if nights > 0 and (self.total_price < expected_min or self.total_price > expected_max):
-            # This is a warning, not an error - total price might include fees, taxes, etc.
+
+        if nights > 0 and (
+            self.total_price < expected_min or self.total_price > expected_max
+        ):
+            # This is a warning - total price might include fees, taxes, etc.
             # We won't raise an error but could log this inconsistency in a real system
             pass
-        
+
         return self
 
     @property
@@ -179,7 +187,7 @@ class Accommodation(TripSageModel):
         """Get the list of amenities."""
         if not self.amenities:
             return []
-        
+
         # Depending on how amenities are stored, extract the list
         # Assuming amenities is a dict with a key 'list' containing the amenities
         if isinstance(self.amenities, dict) and "list" in self.amenities:
@@ -196,6 +204,7 @@ class Accommodation(TripSageModel):
         if self.booking_status != BookingStatus.BOOKED:
             return False
         from datetime import date as date_type
+
         return date_type.today() < self.check_in
 
     def update_status(self, new_status: BookingStatus) -> bool:
