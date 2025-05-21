@@ -9,37 +9,44 @@ import time
 from typing import Any, Dict, Optional
 
 from agents import WebSearchTool
-from pydantic import BaseModel, Field
 
-from tripsage.mcp_abstraction.exceptions import TripSageMCPError
-from tripsage.mcp_abstraction.manager import mcp_manager
-from tripsage.utils.cache import ContentType, WebOperationsCache
+from tripsage.mcp_abstraction.wrappers.redis_wrapper import ContentType
+from tripsage.utils.cache_tools import (
+    CacheStats,
+    cached,
+    determine_content_type,
+    generate_cache_key,
+    get_cache,
+    get_cache_stats,
+    invalidate_pattern,
+    set_cache,
+)
 from tripsage.utils.error_handling import log_exception
 from tripsage.utils.logging import get_logger
 
 logger = get_logger(__name__)
 
-# Global web cache instance
-web_cache = WebOperationsCache(namespace="web-search")
+# Default namespace for web cache operations
+WEB_CACHE_NAMESPACE = "web-search"
 
 
 class CachedWebSearchTool(WebSearchTool):
-    """Wrapper for WebSearchTool with Redis-based caching.
+    """Wrapper for WebSearchTool with Redis MCP-based caching.
 
     This class extends the OpenAI WebSearchTool to provide content-aware
-    caching based on the query and search parameters.
+    caching based on the query and search parameters using Redis MCP.
     """
 
     def __init__(
         self,
-        cache: Optional[WebOperationsCache] = None,
+        namespace: str = WEB_CACHE_NAMESPACE,
         user_location: Optional[Any] = None,
         search_context_size: str = "medium",
     ):
         """Initialize the CachedWebSearchTool.
 
         Args:
-            cache: Cache instance to use (defaults to global web_cache)
+            namespace: Cache namespace
             user_location: Optional user location for geographic context
             search_context_size: Context size ('low', 'medium', 'high')
         """
@@ -47,8 +54,8 @@ class CachedWebSearchTool(WebSearchTool):
             user_location=user_location,
             search_context_size=search_context_size,
         )
-        self.cache = cache or web_cache
-        logger.info("Initialized CachedWebSearchTool with caching")
+        self.namespace = namespace
+        logger.info(f"Initialized CachedWebSearchTool with namespace '{namespace}'")
 
     async def _run(self, query: str, *, skip_cache: bool = False, **kwargs: Any) -> Any:
         """Execute the web search with caching.
@@ -70,16 +77,17 @@ class CachedWebSearchTool(WebSearchTool):
                 return await super()._run(query, **kwargs)
 
             # Generate cache key
-            cache_key = self.cache.generate_cache_key(
+            cache_key = generate_cache_key(
                 "websearch",
                 query,
+                None,
                 user_location=self.user_location,
                 search_context_size=self.search_context_size,
                 **kwargs,
             )
 
             # Try to get from cache
-            cached_result = await self.cache.get(cache_key)
+            cached_result = await get_cache(cache_key, namespace=self.namespace)
             if cached_result is not None:
                 logger.info(
                     f"Cache hit for web search query: {query} "
@@ -100,7 +108,9 @@ class CachedWebSearchTool(WebSearchTool):
             logger.debug(f"Determined content type {content_type} for query: {query}")
 
             # Store in cache
-            await self.cache.set(cache_key, result, content_type=content_type)
+            await set_cache(
+                cache_key, result, content_type=content_type, namespace=self.namespace
+            )
 
             # Log execution time
             execution_time = time.time() - start_time
@@ -143,22 +153,11 @@ class CachedWebSearchTool(WebSearchTool):
                     except Exception:
                         pass
 
-        # Use cache's content type detection logic
-        return self.cache.determine_content_type(query=query, domains=domains or None)
+        # Use content type detection logic
+        return determine_content_type(query=query, domains=domains or None)
 
 
-class WebCacheStats(BaseModel):
-    """Statistics for WebOperationsCache."""
-
-    cache_hits: int = Field(0, description="Number of cache hits")
-    cache_misses: int = Field(0, description="Number of cache misses")
-    hit_ratio: float = Field(0.0, description="Cache hit ratio (0.0-1.0)")
-    key_count: int = Field(0, description="Number of keys in cache")
-    size_mb: float = Field(0.0, description="Estimated cache size in MB")
-    time_window: str = Field("1h", description="Stats time window")
-
-
-async def get_web_cache_stats(time_window: str = "1h") -> WebCacheStats:
+async def get_web_cache_stats(time_window: str = "1h") -> CacheStats:
     """Get statistics for the web cache.
 
     Args:
@@ -167,36 +166,7 @@ async def get_web_cache_stats(time_window: str = "1h") -> WebCacheStats:
     Returns:
         Cache statistics
     """
-    try:
-        metrics = await mcp_manager.invoke(
-            mcp_name="redis",
-            method_name="get_stats",
-            params={"time_window": time_window},
-        )
-
-        # Calculate hit ratio
-        total_ops = metrics.hits + metrics.misses
-        hit_ratio = metrics.hits / total_ops if total_ops > 0 else 0.0
-
-        # Convert size to MB
-        size_mb = (
-            metrics.total_size_bytes / (1024 * 1024)
-            if metrics.total_size_bytes > 0
-            else 0.0
-        )
-
-        return WebCacheStats(
-            cache_hits=metrics.hits,
-            cache_misses=metrics.misses,
-            hit_ratio=hit_ratio,
-            key_count=metrics.key_count,
-            size_mb=size_mb,
-            time_window=time_window,
-        )
-    except TripSageMCPError as e:
-        logger.error(f"Error getting web cache stats: {str(e)}")
-        # Return default stats on error
-        return WebCacheStats(time_window=time_window)
+    return await get_cache_stats(namespace=WEB_CACHE_NAMESPACE, time_window=time_window)
 
 
 async def invalidate_web_cache_for_query(query: str) -> int:
@@ -216,47 +186,37 @@ async def invalidate_web_cache_for_query(query: str) -> int:
 
         # Invalidate all entries containing this hash
         pattern = f"*{query_hash}*"
-        count = await mcp_manager.invoke(
-            mcp_name="redis",
-            method_name="invalidate_pattern",
-            params={"pattern": pattern},
-        )
+        count = await invalidate_pattern(pattern, namespace=WEB_CACHE_NAMESPACE)
 
         logger.info(f"Invalidated {count} cache entries for query: {query}")
         return count
-    except TripSageMCPError as e:
+    except Exception as e:
         logger.error(f"Error invalidating web cache for query '{query}': {str(e)}")
         return 0
 
 
-async def web_cached(func: Any, content_type: ContentType) -> Any:
+def web_cached(content_type: ContentType, ttl: Optional[int] = None):
     """Decorator for adding web caching to any function.
 
     Args:
-        func: The function to decorate
         content_type: Content type for TTL determination
+        ttl: Optional TTL in seconds (overrides content_type TTL)
 
     Returns:
-        The wrapped function
+        The cached function decorator
     """
-    try:
-        return await mcp_manager.invoke(
-            mcp_name="redis",
-            method_name="web_cached",
-            params={"func": func, "content_type": content_type},
-        )
-    except TripSageMCPError as e:
-        logger.error(f"Error applying web_cached decorator: {str(e)}")
-        # Return the original function on error
-        return func
+    return cached(
+        content_type=content_type,
+        ttl=ttl,
+        namespace=WEB_CACHE_NAMESPACE,
+    )
 
 
 # Export API
 __all__ = [
     "CachedWebSearchTool",
-    "WebCacheStats",
-    "web_cache",
     "get_web_cache_stats",
     "invalidate_web_cache_for_query",
     "web_cached",
+    "WEB_CACHE_NAMESPACE",
 ]
