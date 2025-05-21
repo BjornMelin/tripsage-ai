@@ -6,3 +6,4 @@ export { useApiKeyStore } from './api-key-store';
 export { useAgentStatusStore } from './agent-status-store';
 export { useSearchStore } from './search-store';
 export { useBudgetStore } from './budget-store';
+export { useCurrencyStore } from './currency-store';
