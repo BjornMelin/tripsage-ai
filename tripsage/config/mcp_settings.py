@@ -250,14 +250,60 @@ class FirecrawlMCPConfig(WebCrawlMCPConfig):
     model_config = ConfigDict(env_prefix="TRIPSAGE_MCP_FIRECRAWL_")
 
 
-class SupabaseMCPConfig(DatabaseMCPConfig):
-    """Configuration for Supabase MCP server."""
+class SupabaseMCPConfig(BaseMCPConfig):
+    """Configuration for external Supabase MCP server."""
 
-    project_ref: str = Field(default="test-project")
-    anon_key: SecretStr = Field(default=SecretStr("test-anon-key"))
-    service_key: SecretStr = Field(default=SecretStr("test-service-key"))
+    # For external MCP server, we use stdio transport with npx command
+    runtime: RuntimeType = RuntimeType.NODE  # Override default
+    transport: TransportType = TransportType.STDIO  # Override default
+
+    # Command to run the external Supabase MCP server
+    command: str = "npx"
+    args: List[str] = Field(
+        default_factory=lambda: [
+            "-y",
+            "@supabase/mcp-server-supabase@latest",
+            "--access-token",
+            "${SUPABASE_ACCESS_TOKEN}",
+        ]
+    )
+
+    # Configuration for connecting to Supabase
+    access_token: SecretStr = Field(default=SecretStr("test-access-token"))
+    project_ref: Optional[str] = Field(
+        default=None, description="Optional project ref to scope operations"
+    )
+    read_only: bool = Field(
+        default=False, description="Enable read-only mode for safety"
+    )
 
     model_config = ConfigDict(env_prefix="TRIPSAGE_MCP_SUPABASE_")
+
+    @model_validator(mode="after")
+    def update_args_with_token(self) -> "SupabaseMCPConfig":
+        """Update the args to include the actual access token from env."""
+        if self.access_token:
+            # Replace the token placeholder in args
+            updated_args = []
+            for arg in self.args:
+                if arg == "${SUPABASE_ACCESS_TOKEN}":
+                    updated_args.append(self.access_token.get_secret_value())
+                else:
+                    updated_args.append(arg)
+            # Use object.__setattr__ to avoid validation recursion
+            object.__setattr__(self, "args", updated_args)
+
+        # Add project ref if specified
+        if self.project_ref:
+            object.__setattr__(
+                self, "args", self.args + ["--project-ref", self.project_ref]
+            )
+
+        # Add read-only flag if enabled
+        if self.read_only:
+            object.__setattr__(self, "args", self.args + ["--read-only"])
+
+        return self
 
 
 class Neo4jMemoryMCPConfig(DatabaseMCPConfig):

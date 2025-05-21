@@ -1,16 +1,17 @@
 """Tests for the web cache tools."""
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 from tripsage.mcp_abstraction.wrappers.redis_wrapper import ContentType
 from tripsage.tools.web_tools import (
+    WEB_CACHE_NAMESPACE,
     CachedWebSearchTool,
     batch_web_search,
     get_web_cache_stats,
     invalidate_web_cache_for_query,
     web_cached,
-    WEB_CACHE_NAMESPACE,
 )
 
 
@@ -54,20 +55,20 @@ class TestCachedWebSearchTool:
                     }
                 ]
             }
-            
+
             # Mock the cache_lock context manager
             with patch("tripsage.tools.web_tools.cache_lock") as mock_lock:
                 # Configure the context manager's __aenter__ method
                 mock_lock.return_value.__aenter__ = AsyncMock()
                 mock_lock.return_value.__aexit__ = AsyncMock()
-                
+
                 # Call the method
                 result = await cached_tool._run("test query")
-                
+
                 # Check that get_cache was called and super()._run was not called
                 mock_get.assert_called_once()
                 cached_tool._run.assert_not_called()
-                
+
                 # Check the result
                 assert result["search_results"][0]["title"] == "Cached Result"
 
@@ -75,20 +76,23 @@ class TestCachedWebSearchTool:
     async def test_run_with_cache_miss(self, cached_tool):
         """Test _run with a cache miss."""
         # Mock the cache-related methods
-        with patch("tripsage.tools.web_tools.get_cache") as mock_get, \
-             patch("tripsage.tools.web_tools.set_cache") as mock_set, \
-             patch("tripsage.tools.web_tools.cache_lock") as mock_lock, \
-             patch.object(cached_tool, "_prefetch_related_queries") as mock_prefetch:
-            
+        with (
+            patch("tripsage.tools.web_tools.get_cache") as mock_get,
+            patch("tripsage.tools.web_tools.set_cache") as mock_set,
+            patch("tripsage.tools.web_tools.cache_lock") as mock_lock,
+            patch.object(cached_tool, "_prefetch_related_queries") as mock_prefetch,
+        ):
             # Simulate cache miss
             mock_get.return_value = None
-            
+
             # Configure the lock context manager
             mock_lock.return_value.__aenter__ = AsyncMock()
             mock_lock.return_value.__aexit__ = AsyncMock()
-            
+
             # Mock the parent class's _run method
-            with patch.object(cached_tool, "_run", side_effect=AsyncMock()) as mock_super_run:
+            with patch.object(
+                cached_tool, "_run", side_effect=AsyncMock()
+            ) as mock_super_run:
                 # Set up the mock to return test data
                 mock_super_run.return_value = {
                     "search_results": [
@@ -99,19 +103,19 @@ class TestCachedWebSearchTool:
                         }
                     ]
                 }
-                
+
                 # Call the method
                 result = await cached_tool._run("test query")
-                
+
                 # Check that get_cache was called
                 mock_get.assert_called_once()
-                
+
                 # Check that set_cache was called
                 mock_set.assert_called_once()
-                
+
                 # Check that prefetch was called
                 mock_prefetch.assert_called_once()
-                
+
                 # Check the result
                 assert result["search_results"][0]["title"] == "Fresh Result"
 
@@ -121,14 +125,17 @@ class TestCachedWebSearchTool:
         # Test with a realtime query
         result = cached_tool._determine_content_type("current weather")
         assert result == ContentType.REALTIME
-        
+
         # Test with domains
-        result = cached_tool._determine_content_type("test", {
-            "search_results": [
-                {"link": "https://cnn.com/article"},
-                {"link": "https://nytimes.com/article"},
-            ]
-        })
+        result = cached_tool._determine_content_type(
+            "test",
+            {
+                "search_results": [
+                    {"link": "https://cnn.com/article"},
+                    {"link": "https://nytimes.com/article"},
+                ]
+            },
+        )
         assert result == ContentType.TIME_SENSITIVE
 
 
@@ -139,30 +146,31 @@ class TestBatchWebSearch:
     async def test_batch_web_search_with_cache(self):
         """Test batch_web_search with cache hits."""
         # Mock the cache and search methods
-        with patch("tripsage.tools.web_tools.batch_cache_get") as mock_get, \
-             patch("tripsage.tools.web_tools.CachedWebSearchTool") as mock_tool:
-            
+        with (
+            patch("tripsage.tools.web_tools.batch_cache_get") as mock_get,
+            patch("tripsage.tools.web_tools.CachedWebSearchTool") as mock_tool,
+        ):
             # Simulate some cache hits and some misses
             mock_get.return_value = [
                 {"result": "cached1"},  # Hit
-                None,                   # Miss
+                None,  # Miss
                 {"result": "cached3"},  # Hit
             ]
-            
+
             # Mock the CachedWebSearchTool
             instance = mock_tool.return_value
             instance._run = AsyncMock()
             instance._run.return_value = {"result": "fresh"}
-            
+
             # Call the function
             results = await batch_web_search(["query1", "query2", "query3"])
-            
+
             # Check that batch_cache_get was called
             mock_get.assert_called_once()
-            
+
             # Check that search was called once for the miss
             instance._run.assert_called_once_with("query2", skip_cache=True)
-            
+
             # Check the results
             assert len(results) == 3
             assert results[0]["result"] == "cached1"
@@ -180,10 +188,10 @@ class TestWebCacheDecorators:
         with patch("tripsage.tools.web_tools.cached") as mock_cached:
             # Configure the mock
             mock_cached.return_value = lambda func: func
-            
+
             # Use the decorator
             decorator = web_cached(ContentType.DAILY)
-            
+
             # Check that cached was called with the correct parameters
             mock_cached.assert_called_once_with(
                 content_type=ContentType.DAILY,
@@ -202,10 +210,10 @@ class TestWebCacheManagement:
         with patch("tripsage.tools.web_tools.get_cache_stats") as mock_stats:
             # Configure the mock
             mock_stats.return_value = MagicMock()
-            
+
             # Call the function
             await get_web_cache_stats()
-            
+
             # Check that get_cache_stats was called with the correct parameters
             mock_stats.assert_called_once_with(
                 namespace=WEB_CACHE_NAMESPACE,
@@ -219,12 +227,12 @@ class TestWebCacheManagement:
         with patch("tripsage.tools.web_tools.invalidate_pattern") as mock_invalidate:
             # Configure the mock
             mock_invalidate.return_value = 5
-            
+
             # Call the function
             count = await invalidate_web_cache_for_query("test query")
-            
+
             # Check that invalidate_pattern was called
             mock_invalidate.assert_called_once()
-            
+
             # Check the result
             assert count == 5
