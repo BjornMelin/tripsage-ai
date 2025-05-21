@@ -82,7 +82,8 @@ async def test_log_operation(monitoring_service, mock_redis_mcp):
         metadata={"test": "data"},
     )
 
-    # We only check for one Redis call since we mocked the _store_operation_for_pattern_detection method
+    # We only check for one Redis call since we mocked
+    # the _store_operation_for_pattern_detection method
     assert mock_redis_mcp.invoke_method.call_count >= 1
 
     # Check that list_push was called with the right method and key

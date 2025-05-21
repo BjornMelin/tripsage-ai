@@ -23,13 +23,20 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
+_auth_service_singleton = AuthService()
+
+
+def get_auth_service() -> AuthService:
+    """Dependency provider for the AuthService singleton."""
+    return _auth_service_singleton
+
 
 @router.post(
     "/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED
 )
 async def register(
     request: RegisterUserRequest,
-    auth_service: AuthService = Depends(),
+    auth_service: AuthService = Depends(get_auth_service),
 ):
     """Register a new user.
 
@@ -68,7 +75,7 @@ async def register(
 async def login(
     response: Response,
     form_data: OAuth2PasswordRequestForm = Depends(),
-    auth_service: AuthService = Depends(),
+    auth_service: AuthService = Depends(get_auth_service),
 ):
     """Authenticate and get access tokens.
 
@@ -124,7 +131,7 @@ async def login(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=str(e),
             headers={"WWW-Authenticate": "Bearer"},
-        )
+        ) from e
 
 
 @router.post("/refresh", response_model=TokenResponse)
@@ -132,7 +139,7 @@ async def refresh_token(
     response: Response,
     request: RefreshTokenRequest = None,
     refresh_token: Optional[str] = None,
-    auth_service: AuthService = Depends(),
+    auth_service: AuthService = Depends(get_auth_service),
 ):
     """Refresh access token.
 
@@ -205,7 +212,7 @@ async def refresh_token(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=str(e),
             headers={"WWW-Authenticate": "Bearer"},
-        )
+        ) from e
 
 
 @router.post("/logout")
@@ -232,7 +239,7 @@ async def logout(response: Response):
 @router.get("/me", response_model=UserResponse)
 async def get_current_user_info(
     current_user: dict = Depends(get_current_user),
-    auth_service: AuthService = Depends(),
+    auth_service: AuthService = Depends(get_auth_service),
 ):
     """Get information about the current user.
 

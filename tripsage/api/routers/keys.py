@@ -30,6 +30,7 @@ logger = logging.getLogger(__name__)
 # Create monitoring service
 _key_monitoring_service_singleton = KeyMonitoringService()
 
+
 def get_monitoring_service() -> KeyMonitoringService:
     """Dependency provider for the KeyMonitoringService singleton."""
     return _key_monitoring_service_singleton

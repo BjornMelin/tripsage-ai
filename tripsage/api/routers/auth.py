@@ -29,9 +29,11 @@ logger = logging.getLogger(__name__)
 _user_service_singleton = UserService()
 _auth_service_singleton = AuthService()
 
+
 def get_user_service() -> UserService:
     """Dependency provider for the UserService singleton."""
     return _user_service_singleton
+
 
 def get_auth_service() -> AuthService:
     """Dependency provider for the AuthService singleton."""

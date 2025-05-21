@@ -160,7 +160,9 @@ class TripSummaryResponse(BaseModel):
                 "duration_days": 14,
                 "destinations": ["Paris", "Rome", "Barcelona"],
                 "accommodation_summary": "4-star hotels in city centers",
-                "transportation_summary": "Economy flights with 1 connection, local transit",
+                "transportation_summary": (
+                    "Economy flights with 1 connection, local transit"
+                ),
                 "budget_summary": {
                     "total": 5000,
                     "currency": "USD",
