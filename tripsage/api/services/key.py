@@ -21,7 +21,7 @@ from tripsage.api.models.api_key import (
     ApiKeyResponse,
     ApiKeyValidateResponse,
 )
-from tripsage.mcp_abstraction import get_mcp_manager
+from tripsage.mcp_abstraction import mcp_manager
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +35,7 @@ class KeyService:
 
     def __init__(self):
         """Initialize the key service."""
-        self.mcp_manager = get_mcp_manager()
+        self.mcp_manager = mcp_manager
         self.settings = get_settings()
 
         # Initialize the key encryption system
