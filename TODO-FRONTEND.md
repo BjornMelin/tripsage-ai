@@ -42,7 +42,7 @@
   - [x] Search store
   - [x] Budget store
   - [x] Currency store
-  - [ ] Deals store
+  - [x] Deals store
   - [x] API Key store
 - [x] Configure TanStack Query v5
 - [x] Create base layouts and routing
@@ -443,7 +443,7 @@
 | Phase 1: Foundation | 97% | Core foundation complete, need CI/CD pipeline |
 | Phase 2: Component Library | 55% | Basic and search components in place, more feature components needed |
 | Phase 3: Core Pages | 40% | Dashboard, Settings/API keys, and Search pages implemented |
-| Phase 4: Budget Features | 0% | Not started |
+| Phase 4: Budget Features | 10% | Deals store implemented with budget and currency stores |
 | Phase 5: Advanced Features | 20% | BYOK implementation complete, Agent Status Store and Currency Store implemented |
 | Phase 6: Polish & Launch | 0% | Not started |
 

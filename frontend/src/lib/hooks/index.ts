@@ -5,3 +5,4 @@ export * from './use-agent-status';
 export * from './use-search';
 export * from './use-budget';
 export * from './use-currency';
+export * from './use-deals';
