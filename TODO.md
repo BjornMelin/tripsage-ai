@@ -39,7 +39,8 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
 
 ## API and Middleware Tasks
 
-- For API, MCP, and Middleware related tasks, see [tasks/TODO-API.md](./tasks/TODO-API.md)
+- ✅ API consolidation completed (May 20, 2025) - See PR #91
+- For remaining API, MCP, and Middleware related tasks, see [tasks/TODO-API.md](./tasks/TODO-API.md)
 
 ## MVP Priority (Version 1.0)
 
@@ -323,30 +324,32 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
 
   - **Target:** Phased MCP integration
   - **Goal:** Implement MCP integration in structured phases
+  - **Status:** Several key MCPs already integrated, continuing with remaining components
   - **Tasks:**
-    - [ ] Immediate Actions (Next 2 Weeks):
-      - Integrate Google Maps MCP (see Google Maps MCP Integration)
-      - Integrate Weather MCP for essential trip planning data (see Weather MCP Integration)
-      - Begin hybrid web crawling implementation (see Crawl4AI & Firecrawl Integration)
-      - Implement WebSearchTool caching with WebOperationsCache (Issue #37, partially completed)
-      - Develop proof-of-concept for unified abstraction layer
-      - Implement error handling and monitoring infrastructure
-    - [ ] Short-Term Actions (Weeks 3-6):
-      - Complete Neo4j Memory MCP Integration (see Neo4j Memory MCP Integration)
-      - Complete hybrid Crawl4AI/Firecrawl implementation with domain routing
-      - Integrate Time MCP (see Time MCP Integration)
-      - Integrate Google Calendar MCP (see Google Calendar MCP Integration)
-      - Develop and test the Unified Travel Search Wrapper
-      - Implement Redis MCP for standardized response caching (see Redis MCP Integration)
-      - Integrate Supabase MCP (see Supabase MCP Integration)
-      - Integrate Duffel Flights MCP and Airbnb MCP (see respective integration sections)
+    - [x] Completed Integrations:
+      - ✅ Integrated Google Maps MCP for location services
+      - ✅ Integrated Weather MCP for trip planning data
+      - ✅ Implemented hybrid web crawling with Crawl4AI & Firecrawl
+      - ✅ Integrated Time MCP for timezone and clock operations
+      - ✅ Implemented WebSearchTool caching with WebOperationsCache
+      - ✅ Developed unified abstraction layer via MCPManager
+      - ✅ Implemented error handling and monitoring infrastructure
+      - ✅ Integrated Neo4j Memory MCP
+      - ✅ Integrated Duffel Flights MCP for flight search
+      - ✅ Integrated Airbnb MCP for accommodation search
+    - [ ] Current Focus (Next 2 Weeks):
+      - Complete API consolidation (✅ Completed on May 20, 2025)
+      - Continue developing the Unified Travel Search Wrapper
+      - Implement Redis MCP for standardized response caching
+      - Integrate Supabase MCP for relational database operations
+      - Integrate Google Calendar MCP for itinerary scheduling
       - Create domain-specific performance testing framework
       - Complete comprehensive error handling for all integrated MCPs
-    - [ ] MCP Server Strategy Decision:
-      - [ ] Next steps: Migrate all start/stop scripts to use unified launcher
-        - Standardize all MCP server scripts to use mcp_launcher.py
-        - Remove redundant individual start/stop scripts
-        - Ensure Docker-Compose integration for all services
+    - [x] MCP Server Strategy Implementation:
+      - ✅ Created unified launcher (scripts/mcp_launcher.py)
+      - ✅ Standardized MCP server scripts to use mcp_launcher.py
+      - ✅ Implemented Docker-Compose integration for all services
+      - [ ] Next steps: Remove any redundant individual start/stop scripts
     - [ ] Medium-Term Actions (Weeks 7-12):
       - Develop Trip Planning Coordinator and Content Aggregator wrappers
       - Implement OpenTelemetry-based monitoring for all MCP interactions
@@ -356,22 +359,22 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
 
 - [ ] **MCP Client Cleanup**
 
-  - **Target:** `/src/mcp/` directory
+  - **Target:** `/tripsage/clients/` directory
   - **Goal:** Replace redundant MCP client implementations with external MCP servers
   - **Strategy:** Follow hybrid approach - prioritize external MCPs, build custom only when necessary
   - **Tasks:**
-    - [ ] Audit `src/mcp/` to identify functionality covered by external MCPs:
+    - [ ] Audit `tripsage/clients/` to identify functionality covered by external MCPs:
       - Map current clients to Supabase, Neo4j Memory, Duffel Flights, Airbnb MCPs
       - Map webcrawl functionality to hybrid Crawl4AI/Firecrawl implementation with domain-based routing
       - Map browser automation needs to Playwright MCP
       - Map Google Maps, Time, Weather, Google Calendar, and Redis MCPs
       - Document any functionality requiring custom implementations
       - Map specific correspondences:
-        - `src/mcp/weather/` → Weather MCP
-        - `src/mcp/calendar/` → Google Calendar MCP
-        - `src/mcp/time/` → Time MCP
-        - `src/mcp/webcrawl/` → Firecrawl MCP
-        - `src/cache/redis_cache.py` → Redis MCP
+        - `tripsage/clients/weather/` → Weather MCP
+        - `tripsage/clients/accommodations.py` → Airbnb MCP
+        - `tripsage/clients/flights.py` → Duffel Flights MCP
+        - `tripsage/clients/webcrawl/` → Hybrid Crawl4AI/Firecrawl MCP
+        - `tripsage/utils/cache.py` → Redis MCP
     - [ ] Implement Redis MCP for standardized caching:
       - Configure Redis MCP server with appropriate connection parameters
       - Create cache key generation that respects parameters
@@ -444,18 +447,20 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
       - Create efficient context retrieval methods
       - Ensure consistent memory integration
 
-- [ ] **Implement Neo4j Knowledge Graph Integration (using Neo4j Memory MCP)**
+- [x] **Implement Neo4j Knowledge Graph Integration (using Neo4j Memory MCP)**
   - **Target:** Throughout codebase
   - **Goal:** Standardize Neo4j integration using Neo4j Memory MCP server
+  - **Status:** Core integration completed, enhancing with additional features
   - **Tasks:**
-    - [ ] Set up Neo4j Memory MCP server configuration
-    - [ ] Define standard entity models compatible with MCP schema
-    - [ ] Create reusable CRUD operations using MCP tools
-    - [ ] Implement graph query patterns via MCP integration
-    - [ ] Define relationship type constants in knowledge graph schema
-    - [ ] Create standard validation for MCP-based graph operations
-    - [ ] Implement caching for Neo4j Memory MCP operations
-    - [ ] Add comprehensive test suite for Neo4j MCP integration
+    - [x] Set up Neo4j Memory MCP server configuration
+    - [x] Define standard entity models compatible with MCP schema
+    - [x] Create reusable CRUD operations using MCP tools
+    - [x] Implement graph query patterns via MCP integration
+    - [x] Define relationship type constants in knowledge graph schema
+    - [x] Create standard validation for MCP-based graph operations
+    - [ ] Implement advanced caching for Neo4j Memory MCP operations
+    - [ ] Enhance comprehensive test suite for Neo4j MCP integration
+    - [ ] Create dual storage pattern with Supabase and Neo4j
 
 ## Medium Priority
 
@@ -463,7 +468,7 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
 
   - **Target:** Redis MCP integration
   - **Goal:** Standardize caching across clients using Redis MCP
-  - **Context:** Old generic caching in `/src/cache/redis_cache.py` deprecated in favor of:
+  - **Context:** Generic caching in `tripsage/utils/cache.py` to be enhanced with:
     - WebOperationsCache for web-specific caching (already implemented)
     - Redis MCP for generic caching (to be implemented)
   - **Tasks:**
@@ -544,28 +549,42 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
 
 - [x] **API and Database Migrations**
 
-  - **Target:** `/src/api/` and `/src/db/` directories
-  - **Goal:** Migrate API and database components to tripsage structure
-  - **Status:** FastAPI implementation completed
+  - **Target:** `/tripsage/api/` directory (completed consolidation from `/api/` root directory)
+  - **Goal:** Provide unified API implementation with modern FastAPI patterns
+  - **Status:** ✅ API consolidation completed on May 20, 2025 (PR #91), database migration in progress
   - **Tasks:**
-    - [x] Create tripsage/api directory with FastAPI structure:
+    - [x] Create and implement tripsage/api directory with FastAPI structure:
       - [x] Create endpoint groups by domain (users, trips, flights, etc.)
-      - [x] Implement proper dependency injection
-      - [x] Add comprehensive request/response models
+      - [x] Implement proper dependency injection with modern patterns
+      - [x] Add comprehensive request/response models with Pydantic V2
+      - [x] Migrate all routers from `/api/` to `/tripsage/api/`:
+        - [x] Auth router with logout and user info endpoints
+        - [x] Trips router with improved implementation
+        - [x] Flights router with Pydantic V2 validation
+        - [x] Accommodations router with service pattern
+        - [x] Destinations router with proper dependencies
+        - [x] Itineraries router with enhanced functionality
+      - [x] Create and implement service layer:
+        - [x] TripService with singleton pattern
+        - [x] FlightService with proper abstraction
+        - [x] AccommodationService with dependency injection
+        - [x] DestinationService with proper error handling
+        - [x] ItineraryService with time slot management
     - [ ] Implement database migration:
       - [x] Create tripsage/models/db/ for essential business models (User, Trip)
-      - [x] Port validation logic from src/db/models/ to new Pydantic models
+      - [x] Port validation logic to new Pydantic V2 models with field_validator
       - [ ] Replace repository patterns with MCP tool implementations
       - [ ] Adapt SQL migrations to use Supabase MCP apply_migration
       - [ ] Create Neo4j schema initialization scripts
       - [ ] Ensure consistent error handling through MCP abstraction
       - [ ] Remove direct database connection pooling (handled by MCPs)
     - [x] API Improvements:
-      - [x] Add OpenAPI documentation
-      - [x] Implement API versioning
-      - [x] Add proper rate limiting
-      - [x] Implement comprehensive logging
-      - [x] Add request validation with Pydantic
+      - [x] Add OpenAPI documentation with enhanced descriptions
+      - [x] Implement API versioning with path prefixes
+      - [x] Add proper rate limiting with configurable limits
+      - [x] Implement comprehensive logging with structured logs
+      - [x] Add request validation with Pydantic V2
+      - [x] Create comprehensive test suite for all API endpoints
 
 - [ ] **Frontend Application Development**
   - [ ] Phase 1: Foundation & Core Setup (see TODO-FRONTEND.md)
