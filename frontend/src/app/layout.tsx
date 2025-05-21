@@ -3,6 +3,8 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { TanStackQueryProvider } from "@/components/providers/query-provider";
+import { Navbar } from "@/components/layout/navbar";
+import { Toaster } from "@/components/ui/toaster";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -36,7 +38,11 @@ export default function RootLayout({
       >
         <TanStackQueryProvider>
           <ThemeProvider defaultTheme="system" storageKey="tripsage-theme">
-            {children}
+            <div className="flex flex-col min-h-screen">
+              <Navbar />
+              <main className="flex-1">{children}</main>
+            </div>
+            <Toaster />
           </ThemeProvider>
         </TanStackQueryProvider>
       </body>
