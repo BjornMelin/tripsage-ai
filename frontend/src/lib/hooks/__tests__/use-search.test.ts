@@ -1,16 +1,18 @@
-import { renderHook, act } from "@testing-library/react-hooks";
+import { describe, it, expect, beforeEach } from "vitest";
+import { renderHook, act } from "@testing-library/react";
 import { useSearch, useSavedSearches, useRecentSearches } from "../use-search";
 import { useSearchStore } from "@/stores/search-store";
 import { useApiQuery, useApiMutation } from "@/lib/hooks/use-api-query";
+import { vi } from "vitest";
 
 // Mock dependencies
-jest.mock("@/stores/search-store", () => ({
-  useSearchStore: jest.fn(),
+vi.mock("@/stores/search-store", () => ({
+  useSearchStore: vi.fn(),
 }));
 
-jest.mock("@/lib/hooks/use-api-query", () => ({
-  useApiQuery: jest.fn(),
-  useApiMutation: jest.fn(),
+vi.mock("@/lib/hooks/use-api-query", () => ({
+  useApiQuery: vi.fn(),
+  useApiMutation: vi.fn(),
 }));
 
 // Mock zustand store implementation
@@ -29,22 +31,22 @@ const createMockStore = (initialState: any = {}) => {
     savedSearches: [],
     recentSearches: [],
     
-    setSearchType: jest.fn(),
-    updateFlightParams: jest.fn(),
-    updateAccommodationParams: jest.fn(),
-    updateActivityParams: jest.fn(),
-    resetParams: jest.fn(),
-    setResults: jest.fn(),
-    setIsLoading: jest.fn(),
-    setError: jest.fn(),
-    clearResults: jest.fn(),
-    setActiveFilter: jest.fn(),
-    clearFilters: jest.fn(),
-    setActiveSortOption: jest.fn(),
-    saveSearch: jest.fn(),
-    deleteSearch: jest.fn(),
-    addRecentSearch: jest.fn(),
-    clearRecentSearches: jest.fn(),
+    setSearchType: vi.fn(),
+    updateFlightParams: vi.fn(),
+    updateAccommodationParams: vi.fn(),
+    updateActivityParams: vi.fn(),
+    resetParams: vi.fn(),
+    setResults: vi.fn(),
+    setIsLoading: vi.fn(),
+    setError: vi.fn(),
+    clearResults: vi.fn(),
+    setActiveFilter: vi.fn(),
+    clearFilters: vi.fn(),
+    setActiveSortOption: vi.fn(),
+    saveSearch: vi.fn(),
+    deleteSearch: vi.fn(),
+    addRecentSearch: vi.fn(),
+    clearRecentSearches: vi.fn(),
     ...initialState,
   };
   
@@ -71,15 +73,15 @@ const createMockStore = (initialState: any = {}) => {
 
 describe("useSearch hook", () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     
     // Mock store
     const mockState = createMockStore();
-    (useSearchStore as jest.Mock).mockImplementation(() => mockState);
+    (useSearchStore as any).mockImplementation(() => mockState);
     
     // Mock API mutation
-    (useApiMutation as jest.Mock).mockImplementation(() => ({
-      mutate: jest.fn(),
+    (useApiMutation as any).mockImplementation(() => ({
+      mutate: vi.fn(),
       isPending: false,
     }));
   });
@@ -106,7 +108,7 @@ describe("useSearch hook", () => {
     const mockStore = createMockStore({
       currentSearchType: "flight",
     });
-    (useSearchStore as jest.Mock).mockImplementation(() => mockStore);
+    (useSearchStore as any).mockImplementation(() => mockStore);
     
     const { result } = renderHook(() => useSearch());
     
@@ -121,8 +123,8 @@ describe("useSearch hook", () => {
   });
   
   it("performs a search with correct parameters", () => {
-    const searchMutateMock = jest.fn();
-    (useApiMutation as jest.Mock).mockImplementation(() => ({
+    const searchMutateMock = vi.fn();
+    (useApiMutation as any).mockImplementation(() => ({
       mutate: searchMutateMock,
       isPending: false,
     }));
@@ -138,7 +140,7 @@ describe("useSearch hook", () => {
       activeFilters: { airline: ["test-airlines"] },
       activeSortOption: { value: "price", direction: "asc" },
     });
-    (useSearchStore as jest.Mock).mockImplementation(() => mockStore);
+    (useSearchStore as any).mockImplementation(() => mockStore);
     
     const { result } = renderHook(() => useSearch());
     
@@ -163,13 +165,13 @@ describe("useSearch hook", () => {
   });
   
   it("updates loading state based on mutation state", () => {
-    (useApiMutation as jest.Mock).mockImplementation(() => ({
-      mutate: jest.fn(),
+    (useApiMutation as any).mockImplementation(() => ({
+      mutate: vi.fn(),
       isPending: true,
     }));
     
     const mockStore = createMockStore({ isLoading: false });
-    (useSearchStore as jest.Mock).mockImplementation(() => mockStore);
+    (useSearchStore as any).mockImplementation(() => mockStore);
     
     const { result } = renderHook(() => useSearch());
     
@@ -179,9 +181,9 @@ describe("useSearch hook", () => {
   it("handles search error when parameters not set", () => {
     const mockStore = createMockStore({
       currentSearchType: null,
-      setError: jest.fn(),
+      setError: vi.fn(),
     });
-    (useSearchStore as jest.Mock).mockImplementation(() => mockStore);
+    (useSearchStore as any).mockImplementation(() => mockStore);
     
     const { result } = renderHook(() => useSearch());
     
@@ -195,7 +197,7 @@ describe("useSearch hook", () => {
 
 describe("useSavedSearches hook", () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     
     // Mock store
     const mockState = createMockStore({
@@ -209,17 +211,17 @@ describe("useSavedSearches hook", () => {
         },
       ],
     });
-    (useSearchStore as jest.Mock).mockImplementation(() => mockState);
+    (useSearchStore as any).mockImplementation(() => mockState);
     
     // Mock API query and mutation
-    (useApiQuery as jest.Mock).mockImplementation(() => ({
+    (useApiQuery as any).mockImplementation(() => ({
       data: { searches: [] },
       isLoading: false,
-      refetch: jest.fn(),
+      refetch: vi.fn(),
     }));
     
-    (useApiMutation as jest.Mock).mockImplementation(() => ({
-      mutate: jest.fn(),
+    (useApiMutation as any).mockImplementation(() => ({
+      mutate: vi.fn(),
       isPending: false,
     }));
   });
@@ -244,15 +246,15 @@ describe("useSavedSearches hook", () => {
       ],
     });
     
-    const mockGetState = jest.fn(() => ({
-      setSearchType: jest.fn(),
-      updateFlightParams: jest.fn(),
-      updateAccommodationParams: jest.fn(),
-      updateActivityParams: jest.fn(),
+    const mockGetState = vi.fn(() => ({
+      setSearchType: vi.fn(),
+      updateFlightParams: vi.fn(),
+      updateAccommodationParams: vi.fn(),
+      updateActivityParams: vi.fn(),
     }));
     
-    (useSearchStore as jest.Mock).mockImplementation(() => mockStore);
-    (useSearchStore.getState as jest.Mock) = mockGetState;
+    (useSearchStore as any).mockImplementation(() => mockStore);
+    (useSearchStore.getState as any) = mockGetState;
     
     const { result } = renderHook(() => useSavedSearches());
     
@@ -264,9 +266,9 @@ describe("useSavedSearches hook", () => {
   });
   
   it("enables remote operations for saved searches", () => {
-    const refetchMock = jest.fn();
+    const refetchMock = vi.fn();
     
-    (useApiQuery as jest.Mock).mockImplementation(() => ({
+    (useApiQuery as any).mockImplementation(() => ({
       data: { 
         searches: [
           {
@@ -297,7 +299,7 @@ describe("useSavedSearches hook", () => {
 
 describe("useRecentSearches hook", () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     
     // Mock store
     const mockState = createMockStore({
@@ -308,9 +310,9 @@ describe("useRecentSearches hook", () => {
           timestamp: "2025-01-01T00:00:00Z",
         },
       ],
-      clearRecentSearches: jest.fn(),
+      clearRecentSearches: vi.fn(),
     });
-    (useSearchStore as jest.Mock).mockImplementation(() => mockState);
+    (useSearchStore as any).mockImplementation(() => mockState);
   });
   
   it("provides recent searches", () => {
@@ -321,14 +323,14 @@ describe("useRecentSearches hook", () => {
   });
   
   it("loads a recent search correctly", () => {
-    const mockGetState = jest.fn(() => ({
-      setSearchType: jest.fn(),
-      updateFlightParams: jest.fn(),
-      updateAccommodationParams: jest.fn(),
-      updateActivityParams: jest.fn(),
+    const mockGetState = vi.fn(() => ({
+      setSearchType: vi.fn(),
+      updateFlightParams: vi.fn(),
+      updateAccommodationParams: vi.fn(),
+      updateActivityParams: vi.fn(),
     }));
     
-    (useSearchStore.getState as jest.Mock) = mockGetState;
+    (useSearchStore.getState as any) = mockGetState;
     
     const { result } = renderHook(() => useRecentSearches());
     
@@ -348,9 +350,9 @@ describe("useRecentSearches hook", () => {
           timestamp: "2025-01-01T00:00:00Z",
         },
       ],
-      clearRecentSearches: jest.fn(),
+      clearRecentSearches: vi.fn(),
     });
-    (useSearchStore as jest.Mock).mockImplementation(() => mockStore);
+    (useSearchStore as any).mockImplementation(() => mockStore);
     
     const { result } = renderHook(() => useRecentSearches());
     
