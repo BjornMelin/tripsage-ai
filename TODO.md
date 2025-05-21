@@ -464,20 +464,20 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
 
 ## Medium Priority
 
-- [ ] **Optimize Cache Implementation via Redis MCP**
+- [x] **Optimize Cache Implementation via Redis MCP**
 
   - **Target:** Redis MCP integration
   - **Goal:** Standardize caching across clients using Redis MCP
   - **Context:** Generic caching in `tripsage/utils/cache.py` to be enhanced with:
     - WebOperationsCache for web-specific caching (already implemented)
-    - Redis MCP for generic caching (to be implemented)
+    - Redis MCP for generic caching (now implemented)
   - **Tasks:**
-    - [ ] Complete Redis MCP client implementation in RedisMCPWrapper
-    - [ ] Create generic `cached()` decorator using Redis MCP
-    - [ ] Implement standard cache key generation utility via MCP
-    - [ ] Implement TTL management based on data type
-    - [ ] Add cache invalidation patterns
-    - [ ] Migrate cache hit/miss statistics to Redis MCP
+    - [x] Complete Redis MCP client implementation in RedisMCPWrapper
+    - [x] Create generic `cached()` decorator using Redis MCP
+    - [x] Implement standard cache key generation utility via MCP
+    - [x] Implement TTL management based on data type
+    - [x] Add cache invalidation patterns
+    - [x] Migrate cache hit/miss statistics to Redis MCP
     - [ ] Implement cache prefetching for common queries
     - [ ] Create cache warming strategies
     - [ ] Add distributed cache locking via Redis MCP
@@ -513,6 +513,11 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
       - Test integration for destination research
       - Determine optimal search provider mix
       - Create integration plan if adopted
+    - [x] Implement Redis MCP Integration:
+      - Standardize caching across applications
+      - Create comprehensive cache tools
+      - Implement TTL management by content type
+      - Add cache invalidation patterns
 
 - [ ] **Custom MCP Wrapper Development**
 
