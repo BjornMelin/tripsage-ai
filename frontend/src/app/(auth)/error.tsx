@@ -1,14 +1,14 @@
 "use client";
 
 import { useEffect } from "react";
-import { MinimalErrorFallback } from "@/components/error/error-fallback";
+import { ErrorFallback } from "@/components/error/error-fallback";
 import { errorService } from "@/lib/error-service";
 
 /**
- * Global error boundary - catches errors in the root layout or template
- * This is a last resort fallback that replaces the entire root layout
+ * Authentication-level error boundary
+ * Catches errors within the auth layout and pages
  */
-export default function GlobalError({
+export default function AuthError({
   error,
   reset,
 }: {
@@ -16,38 +16,24 @@ export default function GlobalError({
   reset: () => void;
 }) {
   useEffect(() => {
-    // Report the critical error
+    // Report the auth error
     const errorReport = errorService.createErrorReport(
       error,
       undefined,
       {
-        userId: getUserId(),
         sessionId: getSessionId(),
       }
     );
 
     errorService.reportError(errorReport);
 
-    // Log critical error
-    console.error("CRITICAL: Global error boundary caught error:", error);
+    // Log error in development
+    if (process.env.NODE_ENV === "development") {
+      console.error("Auth error boundary caught error:", error);
+    }
   }, [error]);
 
-  return (
-    <html>
-      <body>
-        <MinimalErrorFallback error={error} reset={reset} />
-      </body>
-    </html>
-  );
-}
-
-function getUserId(): string | undefined {
-  try {
-    const userStore = (window as any).__USER_STORE__;
-    return userStore?.user?.id;
-  } catch {
-    return undefined;
-  }
+  return <ErrorFallback error={error} reset={reset} />;
 }
 
 function getSessionId(): string | undefined {

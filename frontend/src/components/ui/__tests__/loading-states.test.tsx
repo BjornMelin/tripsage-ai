@@ -1,180 +1,244 @@
-import { describe, it, expect } from "vitest"
-import { render, screen } from "@testing-library/react"
-import {
-  ChatMessageSkeleton,
-  ChatLoadingSkeleton,
-  SearchResultsSkeleton,
-  FormLoadingSkeleton,
-  ProfileLoadingSkeleton,
-  SettingsLoadingSkeleton,
-  AnalyticsCardSkeleton,
-  AnalyticsDashboardSkeleton,
-  NavigationSkeleton,
-  InlineSpinner,
-  PageLoadingOverlay,
-} from "../loading-states"
+import { render, screen, fireEvent } from "@testing-library/react";
+import { describe, it, expect, vi } from "vitest";
+import { 
+  LoadingOverlay, 
+  LoadingState, 
+  LoadingButton, 
+  LoadingContainer, 
+  PageLoading 
+} from "../loading-states";
 
-describe("ChatMessageSkeleton", () => {
-  it("renders message skeleton for assistant", () => {
-    render(<ChatMessageSkeleton />)
-    
-    const skeletons = screen.getAllByRole("status", { hidden: true })
-    expect(skeletons.length).toBeGreaterThan(0)
-  })
+describe("LoadingOverlay", () => {
+  it("does not render when not visible", () => {
+    const { container } = render(<LoadingOverlay isVisible={false} />);
+    expect(container.firstChild).toBeNull();
+  });
 
-  it("renders message skeleton for user with reverse layout", () => {
-    render(<ChatMessageSkeleton isUser />)
+  it("renders when visible", () => {
+    render(<LoadingOverlay isVisible={true} data-testid="overlay" />);
     
-    const container = screen.getAllByRole("status", { hidden: true })[0].closest('.flex')
-    expect(container).toHaveClass("flex-row-reverse")
-  })
-})
+    const overlay = screen.getByTestId("overlay");
+    expect(overlay).toBeInTheDocument();
+    expect(overlay).toHaveAttribute("role", "status");
+  });
 
-describe("ChatLoadingSkeleton", () => {
-  it("renders multiple chat messages and typing indicator", () => {
-    render(<ChatLoadingSkeleton />)
+  it("displays message", () => {
+    render(<LoadingOverlay isVisible={true} message="Loading data..." />);
     
-    // Should have multiple message skeletons plus typing indicator
-    expect(screen.getByText("Thinking...")).toBeInTheDocument()
-    
-    // Should have bouncing dots
-    const dots = screen.container.querySelectorAll('.animate-bounce')
-    expect(dots).toHaveLength(3)
-  })
-})
+    expect(screen.getByText("Loading data...")).toBeInTheDocument();
+  });
 
-describe("SearchResultsSkeleton", () => {
-  it("renders default number of results", () => {
-    render(<SearchResultsSkeleton />)
+  it("displays progress bar", () => {
+    render(<LoadingOverlay isVisible={true} progress={50} />);
     
-    const skeletons = screen.getAllByRole("status", { hidden: true })
-    expect(skeletons.length).toBeGreaterThan(10) // Multiple skeletons per result
-  })
+    expect(screen.getByText("50%")).toBeInTheDocument();
+    expect(screen.getByText("Progress")).toBeInTheDocument();
+  });
 
-  it("renders custom number of results", () => {
-    render(<SearchResultsSkeleton count={3} />)
+  it("applies backdrop by default", () => {
+    render(<LoadingOverlay isVisible={true} data-testid="overlay" />);
     
-    // Each result has multiple skeletons, so we check for result containers
-    const resultContainers = screen.container.querySelectorAll('.border.rounded-lg')
-    expect(resultContainers).toHaveLength(3)
-  })
-})
+    const overlay = screen.getByTestId("overlay");
+    expect(overlay).toHaveClass("bg-background/80", "backdrop-blur-sm");
+  });
 
-describe("FormLoadingSkeleton", () => {
-  it("renders form field skeletons", () => {
-    render(<FormLoadingSkeleton />)
+  it("can disable backdrop", () => {
+    render(<LoadingOverlay isVisible={true} backdrop={false} data-testid="overlay" />);
     
-    const skeletons = screen.getAllByRole("status", { hidden: true })
-    // Should have skeletons for labels, inputs, and button
-    expect(skeletons.length).toBeGreaterThan(5)
-  })
-})
+    const overlay = screen.getByTestId("overlay");
+    expect(overlay).not.toHaveClass("bg-background/80", "backdrop-blur-sm");
+  });
+});
 
-describe("ProfileLoadingSkeleton", () => {
-  it("renders profile components", () => {
-    render(<ProfileLoadingSkeleton />)
+describe("LoadingState", () => {
+  it("shows children when not loading", () => {
+    render(
+      <LoadingState isLoading={false}>
+        <div>Content</div>
+      </LoadingState>
+    );
     
-    const skeletons = screen.getAllByRole("status", { hidden: true })
-    // Avatar, name, stats, content
-    expect(skeletons.length).toBeGreaterThan(8)
-  })
-})
+    expect(screen.getByText("Content")).toBeInTheDocument();
+  });
 
-describe("SettingsLoadingSkeleton", () => {
-  it("renders settings sections", () => {
-    render(<SettingsLoadingSkeleton />)
+  it("shows spinner when loading", () => {
+    render(
+      <LoadingState isLoading={true}>
+        <div>Content</div>
+      </LoadingState>
+    );
     
-    const skeletons = screen.getAllByRole("status", { hidden: true })
-    // Multiple sections with multiple items each
-    expect(skeletons.length).toBeGreaterThan(15)
-  })
-})
+    expect(screen.queryByText("Content")).not.toBeInTheDocument();
+    // Check for spinner presence
+    expect(screen.getByRole("status")).toBeInTheDocument();
+  });
 
-describe("AnalyticsCardSkeleton", () => {
-  it("renders analytics card structure", () => {
-    render(<AnalyticsCardSkeleton />)
+  it("shows skeleton when provided", () => {
+    render(
+      <LoadingState isLoading={true} skeleton={<div data-testid="skeleton">Skeleton</div>}>
+        <div>Content</div>
+      </LoadingState>
+    );
     
-    const skeletons = screen.getAllByRole("status", { hidden: true })
-    // Title, value, change indicator, icon
-    expect(skeletons.length).toBeGreaterThanOrEqual(4)
-  })
-})
+    expect(screen.getByTestId("skeleton")).toBeInTheDocument();
+    expect(screen.queryByText("Content")).not.toBeInTheDocument();
+  });
 
-describe("AnalyticsDashboardSkeleton", () => {
-  it("renders complete dashboard", () => {
-    render(<AnalyticsDashboardSkeleton />)
+  it("shows fallback when provided", () => {
+    render(
+      <LoadingState isLoading={true} fallback={<div data-testid="fallback">Fallback</div>}>
+        <div>Content</div>
+      </LoadingState>
+    );
     
-    const skeletons = screen.getAllByRole("status", { hidden: true })
-    // KPI cards + charts + table = many skeletons
-    expect(skeletons.length).toBeGreaterThan(50)
-  })
-})
+    expect(screen.getByTestId("fallback")).toBeInTheDocument();
+    expect(screen.queryByText("Content")).not.toBeInTheDocument();
+  });
+});
 
-describe("NavigationSkeleton", () => {
-  it("renders navigation items", () => {
-    render(<NavigationSkeleton />)
+describe("LoadingButton", () => {
+  it("renders children when not loading", () => {
+    render(<LoadingButton>Click me</LoadingButton>);
     
-    const skeletons = screen.getAllByRole("status", { hidden: true })
-    // 6 nav items × 2 skeletons each (icon + text) = 12
-    expect(skeletons).toHaveLength(12)
-  })
-})
+    expect(screen.getByText("Click me")).toBeInTheDocument();
+  });
 
-describe("InlineSpinner", () => {
-  it("renders with default size", () => {
-    render(<InlineSpinner />)
+  it("shows loading text when loading", () => {
+    render(
+      <LoadingButton isLoading={true} loadingText="Saving...">
+        Click me
+      </LoadingButton>
+    );
     
-    const spinner = screen.getByRole("status")
-    expect(spinner).toHaveClass("h-4", "w-4")
-    expect(spinner).toHaveAttribute("aria-label", "Loading")
-  })
+    expect(screen.getByText("Saving...")).toBeInTheDocument();
+    expect(screen.queryByText("Click me")).not.toBeInTheDocument();
+  });
 
-  it("renders with medium size", () => {
-    render(<InlineSpinner size="md" />)
+  it("is disabled when loading", () => {
+    render(
+      <LoadingButton isLoading={true}>
+        Click me
+      </LoadingButton>
+    );
     
-    const spinner = screen.getByRole("status")
-    expect(spinner).toHaveClass("h-6", "w-6")
-  })
+    const button = screen.getByRole("button");
+    expect(button).toBeDisabled();
+    expect(button).toHaveClass("cursor-not-allowed", "opacity-70");
+  });
 
-  it("renders with large size", () => {
-    render(<InlineSpinner size="lg" />)
+  it("handles click events when not loading", () => {
+    const handleClick = vi.fn();
+    render(
+      <LoadingButton onClick={handleClick}>
+        Click me
+      </LoadingButton>
+    );
     
-    const spinner = screen.getByRole("status")
-    expect(spinner).toHaveClass("h-8", "w-8")
-  })
-
-  it("applies custom className", () => {
-    render(<InlineSpinner className="custom-spinner" />)
+    const button = screen.getByRole("button");
+    fireEvent.click(button);
     
-    const spinner = screen.getByRole("status")
-    expect(spinner).toHaveClass("custom-spinner")
-  })
+    expect(handleClick).toHaveBeenCalledTimes(1);
+  });
 
-  it("has screen reader text", () => {
-    render(<InlineSpinner />)
+  it("respects disabled prop", () => {
+    render(
+      <LoadingButton disabled>
+        Click me
+      </LoadingButton>
+    );
     
-    expect(screen.getByText("Loading...")).toBeInTheDocument()
-  })
-})
+    const button = screen.getByRole("button");
+    expect(button).toBeDisabled();
+  });
+});
 
-describe("PageLoadingOverlay", () => {
+describe("LoadingContainer", () => {
+  it("shows children when not loading", () => {
+    render(
+      <LoadingContainer isLoading={false}>
+        <div>Content</div>
+      </LoadingContainer>
+    );
+    
+    expect(screen.getByText("Content")).toBeInTheDocument();
+  });
+
+  it("shows loading spinner when loading", () => {
+    render(
+      <LoadingContainer isLoading={true}>
+        <div>Content</div>
+      </LoadingContainer>
+    );
+    
+    expect(screen.queryByText("Content")).not.toBeInTheDocument();
+    expect(screen.getByRole("status")).toBeInTheDocument();
+  });
+
+  it("displays loading message", () => {
+    render(
+      <LoadingContainer isLoading={true} loadingMessage="Loading data...">
+        <div>Content</div>
+      </LoadingContainer>
+    );
+    
+    expect(screen.getByText("Loading data...")).toBeInTheDocument();
+  });
+
+  it("applies minimum height", () => {
+    render(
+      <LoadingContainer isLoading={false} minHeight="400px" data-testid="container">
+        <div>Content</div>
+      </LoadingContainer>
+    );
+    
+    const container = screen.getByTestId("container");
+    expect(container).toHaveStyle({ minHeight: "400px" });
+  });
+
+  it("applies numeric minimum height", () => {
+    render(
+      <LoadingContainer isLoading={false} minHeight={300} data-testid="container">
+        <div>Content</div>
+      </LoadingContainer>
+    );
+    
+    const container = screen.getByTestId("container");
+    expect(container).toHaveStyle({ minHeight: "300px" });
+  });
+});
+
+describe("PageLoading", () => {
   it("renders with default message", () => {
-    render(<PageLoadingOverlay />)
+    render(<PageLoading />);
     
-    expect(screen.getByText("Loading...")).toBeInTheDocument()
-    expect(screen.getByRole("status")).toBeInTheDocument()
-  })
+    expect(screen.getByText("Loading page...")).toBeInTheDocument();
+  });
 
   it("renders with custom message", () => {
-    render(<PageLoadingOverlay message="Processing..." />)
+    render(<PageLoading message="Loading application..." />);
     
-    expect(screen.getByText("Processing...")).toBeInTheDocument()
-  })
+    expect(screen.getByText("Loading application...")).toBeInTheDocument();
+  });
 
-  it("has overlay styling", () => {
-    render(<PageLoadingOverlay />)
+  it("displays progress bar", () => {
+    render(<PageLoading progress={75} />);
     
-    const overlay = screen.getByText("Loading...").closest('.fixed')
-    expect(overlay).toHaveClass("fixed", "inset-0", "z-50")
-  })
-})
+    expect(screen.getByText("75%")).toBeInTheDocument();
+    expect(screen.getByText("Loading")).toBeInTheDocument();
+  });
+
+  it("has correct accessibility attributes", () => {
+    render(<PageLoading message="Loading app..." />);
+    
+    const loading = screen.getByRole("status");
+    expect(loading).toHaveAttribute("aria-live", "polite");
+    expect(loading).toHaveAttribute("aria-label", "Loading app...");
+  });
+
+  it("applies custom className", () => {
+    render(<PageLoading className="custom-loading" data-testid="page-loading" />);
+    
+    const loading = screen.getByTestId("page-loading");
+    expect(loading).toHaveClass("custom-loading");
+  });
+});

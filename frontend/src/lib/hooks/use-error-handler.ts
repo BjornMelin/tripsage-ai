@@ -1,40 +1,52 @@
 "use client";
 
-import { useEffect } from "react";
-import { PageErrorFallback } from "@/components/error/error-fallback";
+import { useCallback } from "react";
 import { errorService } from "@/lib/error-service";
 
 /**
- * Root-level error boundary for the app directory
- * This catches errors in the root layout and pages
+ * Hook for handling errors in components
  */
-export default function Error({
-  error,
-  reset,
-}: {
-  error: Error & { digest?: string };
-  reset: () => void;
-}) {
-  useEffect(() => {
-    // Report the error
+export function useErrorHandler() {
+  const handleError = useCallback((error: Error, additionalInfo?: Record<string, any>) => {
+    // Create error report
     const errorReport = errorService.createErrorReport(
       error,
       undefined,
       {
         userId: getUserId(),
         sessionId: getSessionId(),
+        ...additionalInfo,
       }
     );
 
+    // Report error
     errorService.reportError(errorReport);
 
-    // Log error in development
+    // Log in development
     if (process.env.NODE_ENV === "development") {
-      console.error("Root error boundary caught error:", error);
+      console.error("Error handled by useErrorHandler:", error, additionalInfo);
     }
-  }, [error]);
+  }, []);
 
-  return <PageErrorFallback error={error} reset={reset} />;
+  const handleAsyncError = useCallback(async (
+    asyncOperation: () => Promise<any>,
+    fallback?: () => void
+  ) => {
+    try {
+      return await asyncOperation();
+    } catch (error) {
+      handleError(error as Error, { context: "async_operation" });
+      if (fallback) {
+        fallback();
+      }
+      throw error; // Re-throw to allow component-level handling
+    }
+  }, [handleError]);
+
+  return {
+    handleError,
+    handleAsyncError,
+  };
 }
 
 function getUserId(): string | undefined {
