@@ -31,6 +31,7 @@ router = APIRouter()
 
 _trip_service_singleton = TripService()
 
+
 def get_trip_service() -> TripService:
     """Dependency provider for the TripService singleton."""
     return _trip_service_singleton

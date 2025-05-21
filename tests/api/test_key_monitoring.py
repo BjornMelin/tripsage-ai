@@ -137,14 +137,20 @@ async def test_get_key_alerts(async_client: AsyncClient, auth_headers):
         mock_alerts.return_value = [
             {
                 "timestamp": "2023-01-01T00:00:00Z",
-                "message": "ALERT: Suspicious API key create activity detected for user test-user-id",
+                "message": (
+                    "ALERT: Suspicious API key create activity detected for user "
+                    "test-user-id"
+                ),
                 "operation": KeyOperation.CREATE,
                 "user_id": "test-user-id",
                 "data": {"count": 10},
             },
             {
                 "timestamp": "2023-01-02T00:00:00Z",
-                "message": "ALERT: Suspicious API key rotate activity detected for user test-user-id",
+                "message": (
+                    "ALERT: Suspicious API key rotate activity detected for user "
+                    "test-user-id"
+                ),
                 "operation": KeyOperation.ROTATE,
                 "user_id": "test-user-id",
                 "data": {"count": 5},

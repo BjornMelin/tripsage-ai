@@ -68,7 +68,8 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
                     return await call_next(request)
 
             # No authentication provided
-            # If the route requires authentication, it will be handled at the dependency level
+            # If the route requires authentication,
+            # it will be handled at the dependency level
             # For now, continue without user information
             return await call_next(request)
 
@@ -183,7 +184,7 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
                 "username": payload["username"],
                 "is_api": False,
             }
-        except jwt.ExpiredSignatureError:
-            raise AuthenticationError("Token has expired")
-        except jwt.InvalidTokenError:
-            raise AuthenticationError("Invalid token")
+        except jwt.ExpiredSignatureError as err:
+            raise AuthenticationError("Token has expired") from err
+        except jwt.InvalidTokenError as err:
+            raise AuthenticationError("Invalid token") from err

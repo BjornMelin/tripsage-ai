@@ -20,6 +20,13 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
+_key_service_singleton = KeyService()
+
+
+def get_key_service() -> KeyService:
+    """Dependency provider for the KeyService singleton."""
+    return _key_service_singleton
+
 
 # Models
 class KeyResponse(BaseModel):
@@ -80,7 +87,7 @@ class ValidateKeyResponse(BaseModel):
 @router.get("/", response_model=AllKeysResponse)
 async def get_all_keys(
     current_user: dict = Depends(get_current_user),
-    key_service: KeyService = Depends(),
+    key_service: KeyService = Depends(get_key_service),
 ):
     """Get all configured API keys for the current user.
 
@@ -100,7 +107,7 @@ async def get_all_keys(
 async def get_key(
     service: str,
     current_user: dict = Depends(get_current_user),
-    key_service: KeyService = Depends(),
+    key_service: KeyService = Depends(get_key_service),
 ):
     """Get information about a specific API key.
 
@@ -133,7 +140,7 @@ async def get_key(
 async def add_key(
     request: AddKeyRequest,
     current_user: dict = Depends(get_current_user),
-    key_service: KeyService = Depends(),
+    key_service: KeyService = Depends(get_key_service),
 ):
     """Add or update an API key.
 
@@ -182,7 +189,7 @@ async def add_key(
 async def delete_key(
     service: str,
     current_user: dict = Depends(get_current_user),
-    key_service: KeyService = Depends(),
+    key_service: KeyService = Depends(get_key_service),
 ):
     """Delete an API key.
 
@@ -211,7 +218,7 @@ async def delete_key(
 @router.post("/validate", response_model=ValidateKeyResponse)
 async def validate_key(
     request: AddKeyRequest,
-    key_service: KeyService = Depends(),
+    key_service: KeyService = Depends(get_key_service),
 ):
     """Validate an API key without saving it.
 

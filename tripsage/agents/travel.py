@@ -88,7 +88,8 @@ class TravelAgent(BaseAgent):
         For general travel information queries, use the built-in Web Search tool first.
         For more in-depth research or specific data extraction, use Web Crawling MCP.
         For interactive tasks like checking availability, use Browser MCP.
-        For specialized travel data (flights, weather, etc.), use the appropriate domain-specific MCP tool.
+        For specialized travel data (flights, weather, etc.), use the appropriate
+        domain-specific MCP tool.
         Use the most specific and appropriate tool for each task.
         
         SPECIALIZED AGENT HANDOFFS:
@@ -134,7 +135,7 @@ class TravelAgent(BaseAgent):
         
         Always use memory operations to provide personalized recommendations
         and to learn from user interactions over time.
-        """  # noqa: E501
+        """
 
         model = model or settings.agent.model_name
         temperature = temperature or settings.agent.temperature
@@ -176,7 +177,11 @@ class TravelAgent(BaseAgent):
         handoff_configs = {
             "hand_off_to_flight_agent": {
                 "agent_class": FlightAgent,
-                "description": "Hand off the conversation to a flight specialist agent for detailed flight search, comparison and booking assistance. Use this for complex flight queries.",
+                "description": (
+                    "Hand off the conversation to a flight specialist agent for "
+                    "detailed flight search, comparison and booking assistance. "
+                    "Use this for complex flight queries."
+                ),
                 "context_filter": [
                     "user_id",
                     "session_id",
@@ -186,7 +191,11 @@ class TravelAgent(BaseAgent):
             },
             "hand_off_to_accommodation_agent": {
                 "agent_class": AccommodationAgent,
-                "description": "Hand off the conversation to an accommodation specialist agent for detailed hotel and lodging search, comparison and booking. Use this for complex accommodation queries.",
+                "description": (
+                    "Hand off the conversation to an accommodation specialist agent "
+                    "for detailed hotel and lodging search, comparison and booking. "
+                    "Use this for complex accommodation queries."
+                ),
                 "context_filter": [
                     "user_id",
                     "session_id",
@@ -196,7 +205,11 @@ class TravelAgent(BaseAgent):
             },
             "hand_off_to_budget_agent": {
                 "agent_class": BudgetAgent,
-                "description": "Hand off the conversation to a budget specialist agent for creating and optimizing travel budgets. Use this for detailed budget planning.",
+                "description": (
+                    "Hand off the conversation to a budget specialist agent for "
+                    "creating and optimizing travel budgets. Use this for detailed "
+                    "budget planning."
+                ),
                 "context_filter": [
                     "user_id",
                     "session_id",
@@ -206,7 +219,11 @@ class TravelAgent(BaseAgent):
             },
             "hand_off_to_destination_agent": {
                 "agent_class": DestinationResearchAgent,
-                "description": "Hand off the conversation to a destination research specialist for detailed destination information, attractions, and local insights.",
+                "description": (
+                    "Hand off the conversation to a destination research specialist "
+                    "for detailed destination information, attractions, and local "
+                    "insights."
+                ),
                 "context_filter": [
                     "user_id",
                     "session_id",
@@ -216,7 +233,10 @@ class TravelAgent(BaseAgent):
             },
             "hand_off_to_itinerary_agent": {
                 "agent_class": ItineraryAgent,
-                "description": "Hand off the conversation to an itinerary specialist agent for creating and managing detailed day-by-day travel itineraries.",
+                "description": (
+                    "Hand off the conversation to an itinerary specialist agent for "
+                    "creating and managing detailed day-by-day travel itineraries."
+                ),
                 "context_filter": [
                     "user_id",
                     "session_id",
@@ -226,35 +246,55 @@ class TravelAgent(BaseAgent):
             },
         }
 
-        # Configure delegation tools (used for specific tasks without transferring control)
+        # Configure delegation tools (used for specific tasks without
+        # transferring control)
         delegation_configs = {
             "get_flight_options": {
                 "agent_class": FlightAgent,
-                "description": "Get flight options between locations without transferring the conversation. The flight agent will return detailed flight search results.",
+                "description": (
+                    "Get flight options between locations without transferring the "
+                    "conversation. The flight agent will return detailed flight "
+                    "search results."
+                ),
                 "return_key": "content",
                 "context_filter": ["user_id", "session_id", "session_data"],
             },
             "get_accommodation_options": {
                 "agent_class": AccommodationAgent,
-                "description": "Get accommodation options for a location without transferring the conversation. The accommodation agent will return detailed lodging search results.",
+                "description": (
+                    "Get accommodation options for a location without transferring "
+                    "the conversation. The accommodation agent will return detailed "
+                    "lodging search results."
+                ),
                 "return_key": "content",
                 "context_filter": ["user_id", "session_id", "session_data"],
             },
             "calculate_trip_budget": {
                 "agent_class": BudgetAgent,
-                "description": "Calculate a trip budget without transferring the conversation. The budget agent will analyze costs and return a budget breakdown.",
+                "description": (
+                    "Calculate a trip budget without transferring the conversation. "
+                    "The budget agent will analyze costs and return a budget "
+                    "breakdown."
+                ),
                 "return_key": "content",
                 "context_filter": ["user_id", "session_id", "session_data"],
             },
             "research_destination": {
                 "agent_class": DestinationResearchAgent,
-                "description": "Research a destination without transferring the conversation. The destination agent will return key information about the location.",
+                "description": (
+                    "Research a destination without transferring the conversation. "
+                    "The destination agent will provide detailed information about "
+                    "attractions, culture, and local tips."
+                ),
                 "return_key": "content",
                 "context_filter": ["user_id", "session_id", "session_data"],
             },
-            "create_day_itinerary": {
+            "create_trip_itinerary": {
                 "agent_class": ItineraryAgent,
-                "description": "Create a day itinerary without transferring the conversation. The itinerary agent will return a detailed schedule for a specific day.",
+                "description": (
+                    "Create a trip itinerary without transferring the conversation. "
+                    "The itinerary agent will generate a structured day-by-day plan."
+                ),
                 "return_key": "content",
                 "context_filter": ["user_id", "session_id", "session_data"],
             },
@@ -289,7 +329,10 @@ class TravelAgent(BaseAgent):
         if not handoff_target or not handoff_tool:
             logger.error("Missing handoff target or tool")
             return {
-                "content": "There was an error processing your request. The handoff could not be completed.",
+                "content": (
+                    "There was an error processing your request. The handoff could "
+                    "not be completed."
+                ),
                 "status": "error",
                 "error_type": "HandoffError",
                 "error_message": "Missing handoff target or tool information",
@@ -300,7 +343,10 @@ class TravelAgent(BaseAgent):
         if not tool_info:
             logger.error(f"Handoff tool {handoff_tool} not found")
             return {
-                "content": "There was an error processing your request. The handoff could not be completed.",
+                "content": (
+                    "There was an error processing your request. The handoff could "
+                    "not be completed."
+                ),
                 "status": "error",
                 "error_type": "HandoffError",
                 "error_message": f"Handoff tool {handoff_tool} not found",
@@ -311,7 +357,10 @@ class TravelAgent(BaseAgent):
         if not callable(tool):
             logger.error(f"Handoff tool {handoff_tool} is not callable")
             return {
-                "content": "There was an error processing your request. The handoff could not be completed.",
+                "content": (
+                    "There was an error processing your request. The handoff could "
+                    "not be completed."
+                ),
                 "status": "error",
                 "error_type": "HandoffError",
                 "error_message": f"Handoff tool {handoff_tool} is not callable",
@@ -359,7 +408,9 @@ class TravelAgent(BaseAgent):
                     except Exception as e:
                         logger.error(f"Error executing handoff: {str(e)}")
                         return {
-                            "content": f"There was an error handling your request: {str(e)}",
+                            "content": (
+                                f"There was an error handling your request: {str(e)}"
+                            ),
                             "status": "error",
                             "error_type": type(e).__name__,
                             "error_message": str(e),
@@ -369,14 +420,15 @@ class TravelAgent(BaseAgent):
         query = result.get("content", "")
         try:
             logger.info(
-                f"Executing handoff to {handoff_target} via {handoff_tool} with original content"
+                f"Executing handoff to {handoff_target} via {handoff_tool} "
+                f"with original content: {query}"
             )
             handoff_result = await tool(query=query, context=handoff_context)
             return handoff_result
         except Exception as e:
             logger.error(f"Error executing handoff: {str(e)}")
             return {
-                "content": f"There was an error handling your request: {str(e)}",
+                "content": (f"There was an error handling your request: {str(e)}"),
                 "status": "error",
                 "error_type": type(e).__name__,
                 "error_message": str(e),
