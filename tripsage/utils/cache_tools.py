@@ -4,13 +4,46 @@ Redis MCP-based caching functionality for TripSage.
 This module provides Redis MCP-based caching utilities for TripSage, building on top of
 the RedisMCPClient implementation to provide a standardized interface for caching
 operations across the application.
+
+Features include:
+- Standard key-value cache operations (get, set, delete)
+- Content-aware caching with TTL based on content volatility
+- Cache decorators for various content types
+- Cache key generation for deterministic caching
+- Batch cache operations for improved performance
+- Distributed locking for coordinated cache operations
+- Cache prefetching and warming capabilities
+- Cache statistics and monitoring
+
+Usage examples:
+
+```python
+# Basic cache operations
+await set_cache("my-key", value, content_type=ContentType.DAILY)
+await get_cache("my-key")
+
+# Function caching with decorators
+@cached_daily
+async def get_weather(city: str) -> dict:
+    ...
+
+# Batch operations
+await batch_cache_set([{"key": "key1", "value": 1}, {"key": "key2", "value": 2}])
+
+# Distributed locking
+async with cache_lock("operation-lock"):
+    # Critical section
+    ...
+```
 """
 
+import asyncio
+import contextlib
 import functools
 import hashlib
 import json
 import time
-from typing import Any, Callable, List, Optional, TypeVar, Union, cast
+from typing import Any, AsyncIterator, Callable, Dict, List, Optional, Tuple, TypeVar, Union, cast
 
 from pydantic import BaseModel, Field
 
@@ -91,6 +124,8 @@ async def set_cache(
     ttl: Optional[int] = None,
     content_type: Optional[Union[ContentType, str]] = None,
     namespace: str = "tripsage",
+    nx: bool = False,  # Only set if key doesn't exist
+    xx: bool = False,  # Only set if key already exists
 ) -> bool:
     """Set a value in the cache.
 
@@ -100,6 +135,8 @@ async def set_cache(
         ttl: Time-to-live in seconds (None for default TTL)
         content_type: ContentType enum value or string
         namespace: Cache namespace
+        nx: Only set the key if it does not already exist
+        xx: Only set the key if it already exists
 
     Returns:
         True if successful, False otherwise
@@ -118,6 +155,8 @@ async def set_cache(
                 "value": value,
                 "ttl": ttl,
                 "content_type": content_type,
+                "nx": nx,
+                "xx": xx,
             },
         )
 
@@ -599,13 +638,361 @@ def cached_static(ttl: Optional[int] = None, **kwargs: Any) -> Callable[[F], F]:
     return cached(content_type=ContentType.STATIC, ttl=ttl, **kwargs)
 
 
+async def batch_cache_set(
+    items: List[Dict[str, Any]], namespace: str = "tripsage"
+) -> List[bool]:
+    """Set multiple values in the cache in a single operation.
+
+    Args:
+        items: List of items to cache, each with keys:
+            - key: Cache key
+            - value: Value to cache
+            - ttl: Optional TTL in seconds
+            - content_type: Optional ContentType
+        namespace: Cache namespace
+
+    Returns:
+        List of success/failure status for each item
+    """
+    try:
+        # Prepare commands for pipeline execution
+        commands = []
+        for item in items:
+            key = item["key"]
+            if not key.startswith(f"{namespace}:"):
+                key = f"{namespace}:{key}"
+                
+            value = item["value"]
+            ttl = item.get("ttl", None)
+            content_type = item.get("content_type", None)
+            
+            # Add command to pipeline
+            commands.append({
+                "command": "set",
+                "args": [key, value],
+                "kwargs": {
+                    "ex": ttl,
+                    "content_type": content_type,
+                }
+            })
+        
+        # Execute pipeline
+        if commands:
+            results = await mcp_manager.invoke(
+                mcp_name="redis",
+                method_name="pipeline_execute",
+                params={"commands": commands},
+            )
+            return [bool(result) for result in results]
+        return []
+    except TripSageMCPError as e:
+        logger.error(f"Error batch setting cache values: {str(e)}")
+        return [False] * len(items)
+
+
+async def batch_cache_get(
+    keys: List[str], namespace: str = "tripsage"
+) -> List[Optional[Any]]:
+    """Get multiple values from the cache in a single operation.
+
+    Args:
+        keys: List of cache keys to retrieve
+        namespace: Cache namespace
+
+    Returns:
+        List of values in the same order as keys (None for missing keys)
+    """
+    try:
+        # Prepare namespaced keys
+        namespaced_keys = []
+        for key in keys:
+            if not key.startswith(f"{namespace}:"):
+                namespaced_keys.append(f"{namespace}:{key}")
+            else:
+                namespaced_keys.append(key)
+                
+        # Prepare commands for pipeline execution
+        commands = [{
+            "command": "get",
+            "args": [key],
+        } for key in namespaced_keys]
+        
+        # Execute pipeline
+        if commands:
+            results = await mcp_manager.invoke(
+                mcp_name="redis",
+                method_name="pipeline_execute",
+                params={"commands": commands},
+            )
+            return results
+        return []
+    except TripSageMCPError as e:
+        logger.error(f"Error batch getting cache values: {str(e)}")
+        return [None] * len(keys)
+
+
+async def batch_cache_delete(
+    keys: List[str], namespace: str = "tripsage"
+) -> List[bool]:
+    """Delete multiple values from the cache in a single operation.
+
+    Args:
+        keys: List of cache keys to delete
+        namespace: Cache namespace
+
+    Returns:
+        List of success/failure status for each key
+    """
+    try:
+        # Prepare namespaced keys
+        namespaced_keys = []
+        for key in keys:
+            if not key.startswith(f"{namespace}:"):
+                namespaced_keys.append(f"{namespace}:{key}")
+            else:
+                namespaced_keys.append(key)
+                
+        # Prepare commands for pipeline execution
+        commands = [{
+            "command": "delete",
+            "args": [key],
+        } for key in namespaced_keys]
+        
+        # Execute pipeline
+        if commands:
+            results = await mcp_manager.invoke(
+                mcp_name="redis",
+                method_name="pipeline_execute",
+                params={"commands": commands},
+            )
+            return [bool(result) for result in results]
+        return []
+    except TripSageMCPError as e:
+        logger.error(f"Error batch deleting cache values: {str(e)}")
+        return [False] * len(keys)
+
+
+async def prefetch_cache_keys(pattern: str, namespace: str = "tripsage", limit: int = 100) -> int:
+    """Prefetch keys matching a pattern into the cache memory.
+    
+    This operation helps improve cache hit rates for predictable access patterns.
+    
+    Args:
+        pattern: Pattern to match keys
+        namespace: Cache namespace
+        limit: Maximum number of keys to prefetch
+        
+    Returns:
+        Number of keys prefetched
+    """
+    try:
+        # Ensure pattern has namespace if not already present
+        if not pattern.startswith(f"{namespace}:"):
+            pattern = f"{namespace}:{pattern}"
+            
+        # Prefetch keys through Redis MCP
+        result = await mcp_manager.invoke(
+            mcp_name="redis",
+            method_name="prefetch_keys",
+            params={"pattern": pattern, "limit": limit},
+        )
+        
+        prefetched_count = int(result)
+        logger.debug(f"Prefetched {prefetched_count} keys matching pattern {pattern}")
+        return prefetched_count
+    except TripSageMCPError as e:
+        logger.error(f"Error prefetching cache keys: {str(e)}")
+        return 0
+
+
+async def acquire_cache_lock(
+    lock_name: str,
+    timeout: Optional[int] = None,
+    retry_delay: float = 0.1,
+    retry_count: int = 50,
+    namespace: str = "tripsage",
+) -> Tuple[bool, str]:
+    """Acquire a distributed lock for coordinated cache operations.
+    
+    Args:
+        lock_name: Name of the lock to acquire
+        timeout: Time in seconds the lock should be held (None for default)
+        retry_delay: Time in seconds to wait between retries
+        retry_count: Maximum number of retry attempts
+        namespace: Cache namespace
+        
+    Returns:
+        Tuple of (success, lock_token)
+    """
+    try:
+        # Acquire lock through Redis MCP
+        success, token = await mcp_manager.invoke(
+            mcp_name="redis",
+            method_name="acquire_lock",
+            params={
+                "lock_name": lock_name,
+                "timeout": timeout,
+                "retry_delay": retry_delay,
+                "retry_count": retry_count,
+            },
+        )
+        
+        if success:
+            logger.debug(f"Acquired cache lock '{lock_name}'")
+        else:
+            logger.warning(f"Failed to acquire cache lock '{lock_name}'")
+            
+        return bool(success), str(token)
+    except TripSageMCPError as e:
+        logger.error(f"Error acquiring cache lock: {str(e)}")
+        return False, ""
+
+
+async def release_cache_lock(lock_name: str, lock_token: str, namespace: str = "tripsage") -> bool:
+    """Release a previously acquired distributed lock.
+    
+    Args:
+        lock_name: Name of the lock to release
+        lock_token: Token returned when the lock was acquired
+        namespace: Cache namespace
+        
+    Returns:
+        True if the lock was released, False otherwise
+    """
+    try:
+        # Release lock through Redis MCP
+        result = await mcp_manager.invoke(
+            mcp_name="redis",
+            method_name="release_lock",
+            params={
+                "lock_name": lock_name,
+                "lock_token": lock_token,
+            },
+        )
+        
+        if result:
+            logger.debug(f"Released cache lock '{lock_name}'")
+        else:
+            logger.warning(f"Failed to release cache lock '{lock_name}'")
+            
+        return bool(result)
+    except TripSageMCPError as e:
+        logger.error(f"Error releasing cache lock: {str(e)}")
+        return False
+
+
+async def extend_cache_lock(
+    lock_name: str, lock_token: str, timeout: int, namespace: str = "tripsage"
+) -> bool:
+    """Extend the expiration time of a distributed lock.
+    
+    Args:
+        lock_name: Name of the lock to extend
+        lock_token: Token returned when the lock was acquired
+        timeout: New timeout in seconds
+        namespace: Cache namespace
+        
+    Returns:
+        True if the lock was extended, False otherwise
+    """
+    try:
+        # Extend lock through Redis MCP
+        result = await mcp_manager.invoke(
+            mcp_name="redis",
+            method_name="extend_lock",
+            params={
+                "lock_name": lock_name,
+                "lock_token": lock_token,
+                "timeout": timeout,
+            },
+        )
+        
+        if result:
+            logger.debug(f"Extended cache lock '{lock_name}'")
+        else:
+            logger.warning(f"Failed to extend cache lock '{lock_name}'")
+            
+        return bool(result)
+    except TripSageMCPError as e:
+        logger.error(f"Error extending cache lock: {str(e)}")
+        return False
+
+
+@contextlib.asynccontextmanager
+async def cache_lock(
+    lock_name: str,
+    timeout: Optional[int] = None,
+    retry_delay: float = 0.1,
+    retry_count: int = 50,
+    extend_interval: Optional[float] = None,
+    namespace: str = "tripsage",
+) -> AsyncIterator[bool]:
+    """Context manager for using a distributed lock.
+    
+    This automatically acquires the lock on entry and releases it on exit.
+    Optionally extends the lock periodically while the context is active.
+    
+    Args:
+        lock_name: Name of the lock
+        timeout: Lock timeout in seconds
+        retry_delay: Delay between acquisition attempts
+        retry_count: Maximum number of acquisition attempts
+        extend_interval: If set, extend the lock at this interval (seconds)
+        namespace: Cache namespace
+        
+    Yields:
+        True if the lock was acquired, False otherwise
+    """
+    extend_task = None
+    success, token = False, ""
+    
+    try:
+        # Acquire the lock
+        success, token = await acquire_cache_lock(
+            lock_name, timeout, retry_delay, retry_count, namespace
+        )
+        
+        if not success:
+            logger.warning(f"Failed to acquire lock '{lock_name}', proceeding without lock")
+            yield False
+            return
+            
+        # Set up periodic lock extension if requested
+        if extend_interval and timeout:
+            extend_time = timeout // 2  # Extend by half the timeout
+            
+            async def _extend_lock_periodically():
+                while True:
+                    try:
+                        await asyncio.sleep(extend_interval)
+                        await extend_cache_lock(lock_name, token, extend_time, namespace)
+                    except asyncio.CancelledError:
+                        break
+                    except Exception as e:
+                        logger.error(f"Error extending lock '{lock_name}': {e}")
+                        
+            # Start extension task
+            extend_task = asyncio.create_task(_extend_lock_periodically())
+            
+        # Yield control to the context body
+        yield True
+        
+    finally:
+        # Clean up extension task if it exists
+        if extend_task:
+            extend_task.cancel()
+            try:
+                await extend_task
+            except asyncio.CancelledError:
+                pass
+                
+        # Release the lock if we acquired it
+        if success and token:
+            await release_cache_lock(lock_name, token, namespace)
+
+
 __all__ = [
-    "cached",
-    "cached_realtime",
-    "cached_time_sensitive",
-    "cached_daily",
-    "cached_semi_static",
-    "cached_static",
+    # Basic cache operations
     "get_cache",
     "set_cache",
     "delete_cache",
@@ -613,6 +1000,28 @@ __all__ = [
     "generate_cache_key",
     "determine_content_type",
     "get_cache_stats",
+    
+    # Batch operations
+    "batch_cache_set",
+    "batch_cache_get",
+    "batch_cache_delete",
+    "prefetch_cache_keys",
+    
+    # Distributed locks
+    "acquire_cache_lock",
+    "release_cache_lock",
+    "extend_cache_lock",
+    "cache_lock",
+    
+    # Cache decorators
+    "cached",
+    "cached_realtime",
+    "cached_time_sensitive",
+    "cached_daily",
+    "cached_semi_static",
+    "cached_static",
+    
+    # Models and types
     "CacheStats",
     "ContentType",
 ]
