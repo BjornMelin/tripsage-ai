@@ -48,23 +48,23 @@ This file tracks tasks related to API development, middleware, and external serv
       - [ ] Implement dynamic key injection for MCP calls
       - [ ] Add fallback to default keys when user keys unavailable
       - [ ] Create secure caching mechanism for decrypted keys
-    - [ ] Add monitoring and security:
-      - [ ] Implement access logging with structured logs:
-      - [ ] Add rate limiting for key operations (max 10 per minute)
-      - [ ] Create alerts for suspicious patterns:
+    - [x] Add monitoring and security:
+      - [x] Implement access logging with structured logs:
+      - [x] Add rate limiting for key operations (max 10 per minute)
+      - [x] Create alerts for suspicious patterns:
         - Rapid key rotation attempts
         - Failed validation attempts
         - Unusual access patterns
-      - [ ] Implement key expiration notifications
-      - [ ] Add automatic key rotation reminders (90 days)
-      - [ ] Create key health metrics dashboard
-    - [ ] Security best practices:
-      - [ ] Use secure random for all salt generation
-      - [ ] Clear sensitive data from memory after use
-      - [ ] Implement proper session timeouts
-      - [ ] Add audit trail for all key operations
-      - [ ] Use constant-time comparison for key validation
-      - [ ] Implement proper error handling without information leakage
+      - [x] Implement key expiration notifications
+      - [x] Add automatic key rotation reminders (90 days)
+      - [x] Create key health metrics dashboard
+    - [x] Security best practices:
+      - [x] Use secure random for all salt generation
+      - [x] Clear sensitive data from memory after use
+      - [x] Implement proper session timeouts
+      - [x] Add audit trail for all key operations
+      - [x] Use constant-time comparison for key validation
+      - [x] Implement proper error handling without information leakage
     - [ ] Frontend Integration:
       - [ ] Coordinate with frontend BYOK implementation in TODO-FRONTEND.md
       - [ ] Ensure API endpoints match frontend expectations

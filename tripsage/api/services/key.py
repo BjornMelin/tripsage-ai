@@ -21,6 +21,13 @@ from tripsage.api.models.api_key import (
     ApiKeyResponse,
     ApiKeyValidateResponse,
 )
+from tripsage.api.services.key_monitoring import (
+    KeyMonitoringService,
+    KeyOperation,
+    constant_time_compare,
+    monitor_key_operation,
+    secure_random_token,
+)
 from tripsage.mcp_abstraction import mcp_manager
 
 logger = logging.getLogger(__name__)
@@ -37,9 +44,24 @@ class KeyService:
         """Initialize the key service."""
         self.mcp_manager = mcp_manager
         self.settings = get_settings()
+        self.supabase_mcp = None
+        self.monitoring_service = None
+        self.initialized = False
 
         # Initialize the key encryption system
         self._initialize_encryption()
+        
+    async def initialize(self):
+        """Initialize connections and services."""
+        if not self.initialized:
+            # Initialize Supabase MCP
+            self.supabase_mcp = await self.mcp_manager.initialize_mcp("supabase")
+            
+            # Initialize monitoring service
+            self.monitoring_service = KeyMonitoringService()
+            await self.monitoring_service.initialize()
+            
+            self.initialized = True
 
     def _initialize_encryption(self):
         """Initialize the encryption system for API keys.
