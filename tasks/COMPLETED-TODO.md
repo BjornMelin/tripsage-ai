@@ -388,6 +388,37 @@ This file contains all the tasks that were marked as completed in the main TODO.
   - ✓ Implemented Neo4j initialization logic using Memory MCP
   - ✓ Added domain-specific tools in memory_tools.py for complex queries
 
+- [x] **API Consolidation**
+
+  - **Target:** `/tripsage/api/` directory (completed consolidation from `/api/` root directory)
+  - **Goal:** Provide unified API implementation with modern FastAPI patterns
+  - **Status:** ✅ Completed on May 20, 2025 (PR #91)
+  - **Tasks:**
+    - [x] Create and implement tripsage/api directory with FastAPI structure:
+      - [x] Create endpoint groups by domain (users, trips, flights, etc.)
+      - [x] Implement proper dependency injection with modern patterns
+      - [x] Add comprehensive request/response models with Pydantic V2
+      - [x] Migrate all routers from `/api/` to `/tripsage/api/`:
+        - [x] Auth router with logout and user info endpoints
+        - [x] Trips router with improved implementation
+        - [x] Flights router with Pydantic V2 validation
+        - [x] Accommodations router with service pattern
+        - [x] Destinations router with proper dependencies
+        - [x] Itineraries router with enhanced functionality
+      - [x] Create and implement service layer:
+        - [x] TripService with singleton pattern
+        - [x] FlightService with proper abstraction
+        - [x] AccommodationService with dependency injection
+        - [x] DestinationService with proper error handling
+        - [x] ItineraryService with time slot management
+    - [x] API Improvements:
+      - [x] Add OpenAPI documentation with enhanced descriptions
+      - [x] Implement API versioning with path prefixes
+      - [x] Add proper rate limiting with configurable limits
+      - [x] Implement comprehensive logging with structured logs
+      - [x] Add request validation with Pydantic V2
+      - [x] Create comprehensive test suite for all API endpoints
+
 - [x] Implement error handling and monitoring infrastructure (foundational):
 
   - **Target:** MCP error handling, structured logging, and OpenTelemetry tracing
@@ -978,6 +1009,45 @@ This file contains all the tasks that were marked as completed in the main TODO.
   - ✓ Created phased implementation plan in TODO-FRONTEND.md
   - ✓ Defined secure API key management strategy (backend proxy pattern)
   - ✓ Updated frontend BYOK implementation to align with backend design
+
+- [x] **API and Database Migrations**
+
+  - **Target:** `/tripsage/api/` directory (completed consolidation from `/api/` root directory)
+  - **Goal:** Provide unified API implementation with modern FastAPI patterns
+  - **Status:** ✅ API consolidation completed on May 20, 2025 (PR #91), database migration in progress
+  - **Tasks:**
+    - [x] Create and implement tripsage/api directory with FastAPI structure:
+      - [x] Create endpoint groups by domain (users, trips, flights, etc.)
+      - [x] Implement proper dependency injection with modern patterns
+      - [x] Add comprehensive request/response models with Pydantic V2
+      - [x] Migrate all routers from `/api/` to `/tripsage/api/`:
+        - [x] Auth router with logout and user info endpoints
+        - [x] Trips router with improved implementation
+        - [x] Flights router with Pydantic V2 validation
+        - [x] Accommodations router with service pattern
+        - [x] Destinations router with proper dependencies
+        - [x] Itineraries router with enhanced functionality
+      - [x] Create and implement service layer:
+        - [x] TripService with singleton pattern
+        - [x] FlightService with proper abstraction
+        - [x] AccommodationService with dependency injection
+        - [x] DestinationService with proper error handling
+        - [x] ItineraryService with time slot management
+    - [x] API Improvements:
+      - [x] Add OpenAPI documentation with enhanced descriptions
+      - [x] Implement API versioning with path prefixes
+      - [x] Add proper rate limiting with configurable limits
+      - [x] Implement comprehensive logging with structured logs
+      - [x] Add request validation with Pydantic V2
+      - [x] Create comprehensive test suite for all API endpoints
+    - [ ] Implement database migration:
+      - [x] Create tripsage/models/db/ for essential business models (User, Trip)
+      - [x] Port validation logic to new Pydantic V2 models with field_validator
+      - [ ] Replace repository patterns with MCP tool implementations
+      - [ ] Adapt SQL migrations to use Supabase MCP apply_migration
+      - [ ] Create Neo4j schema initialization scripts
+      - [ ] Ensure consistent error handling through MCP abstraction
+      - [ ] Remove direct database connection pooling (handled by MCPs)
 
 - [x] FastAPI Implementation:
   - ✓ Created tripsage/api directory with modern FastAPI structure

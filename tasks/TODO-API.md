@@ -160,7 +160,6 @@ This file tracks tasks related to API development, middleware, and external serv
       - ✅ Integrated Duffel Flights MCP for flight search
       - ✅ Integrated Airbnb MCP for accommodation search
     - [ ] Current Focus (Next 2 Weeks):
-      - Complete API consolidation (✅ Completed on May 20, 2025)
       - Continue developing the Unified Travel Search Wrapper
       - Implement Redis MCP for standardized response caching
       - Integrate Supabase MCP for relational database operations
@@ -299,10 +298,10 @@ This file tracks tasks related to API development, middleware, and external serv
       - Implement standard validation patterns
       - Define testing requirements for custom MCPs
 
-- [x] **API and Database Migrations (FastAPI Implementation)**
+- [x] **API Consolidation**
   - **Target:** `/tripsage/api/` directory (completed consolidation from `/api/` root directory)
   - **Goal:** Provide unified API implementation with modern FastAPI patterns
-  - **Status:** ✅ API consolidation completed on May 20, 2025, database migration in progress
+  - **Status:** ✅ Completed on May 20, 2025 (PR #91)
   - **Tasks:**
     - [x] Create and implement tripsage/api directory with FastAPI structure:
       - [x] Create endpoint groups by domain (users, trips, flights, etc.)
@@ -321,14 +320,6 @@ This file tracks tasks related to API development, middleware, and external serv
         - [x] AccommodationService with dependency injection
         - [x] DestinationService with proper error handling
         - [x] ItineraryService with time slot management
-    - [ ] Implement database migration:
-      - [x] Create tripsage/models/db/ for essential business models (User, Trip)
-      - [x] Port validation logic to new Pydantic V2 models with field_validator
-      - [ ] Replace repository patterns with MCP tool implementations
-      - [ ] Adapt SQL migrations to use Supabase MCP apply_migration
-      - [ ] Create Neo4j schema initialization scripts
-      - [ ] Ensure consistent error handling through MCP abstraction
-      - [ ] Remove direct database connection pooling (handled by MCPs)
     - [x] API Improvements:
       - [x] Add OpenAPI documentation with enhanced descriptions
       - [x] Implement API versioning with path prefixes
@@ -336,3 +327,16 @@ This file tracks tasks related to API development, middleware, and external serv
       - [x] Implement comprehensive logging with structured logs
       - [x] Add request validation with Pydantic V2
       - [x] Create comprehensive test suite for all API endpoints
+
+- [ ] **Database Migration**
+  - **Target:** Database implementation
+  - **Goal:** Complete database migration using MCP tool implementations
+  - **Status:** In progress
+  - **Tasks:**
+    - [x] Create tripsage/models/db/ for essential business models (User, Trip)
+    - [x] Port validation logic to new Pydantic V2 models with field_validator
+    - [ ] Replace repository patterns with MCP tool implementations
+    - [ ] Adapt SQL migrations to use Supabase MCP apply_migration
+    - [ ] Create Neo4j schema initialization scripts
+    - [ ] Ensure consistent error handling through MCP abstraction
+    - [ ] Remove direct database connection pooling (handled by MCPs)

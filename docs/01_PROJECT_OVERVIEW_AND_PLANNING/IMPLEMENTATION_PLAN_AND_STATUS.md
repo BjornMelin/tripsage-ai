@@ -347,7 +347,7 @@ This work establishes a robust foundation for maintaining code quality and enabl
 
 ## API Consolidation Status
 
-The API consolidation effort has been completed, migrating all functionality from the older implementation at `/api/` to the newer, more modern implementation at `/tripsage/api/`. This work included:
+The API consolidation effort has been completed (May 20, 2025 - PR #91), migrating all functionality from the older implementation at `/api/` to the newer, more modern implementation at `/tripsage/api/`. This work included:
 
 1. **Core Components**
    - ✅ Enabled auth router with logout and user info endpoints
@@ -388,6 +388,15 @@ The API consolidation effort has been completed, migrating all functionality fro
    - ✅ Created comprehensive tests for destinations endpoints
    - ✅ Created comprehensive tests for itineraries endpoints
    - ✅ Ensured backward compatibility with existing tests
+
+6. **Documentation**
+   - ✅ Updated API status documents to reflect completed consolidation
+   - ✅ Moved completed implementation details to COMPLETED-TODO.md
+   - ✅ Refocused TODO.md on remaining database migration tasks
+   - ✅ Added comprehensive OpenAPI documentation for all endpoints
+   - ✅ Created example API request/response pairs for testing
+
+The next phase following API consolidation is the database migration implementation, which will replace direct database operations with MCP tool implementations, adapt SQL migrations to use Supabase MCP, and create Neo4j schema initialization scripts.
 
 The consolidation followed modern FastAPI patterns, using Pydantic V2 validation, proper dependency injection, and service-based architecture. All components now follow a consistent structure with improved error handling, validation, and testing.
 
