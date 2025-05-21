@@ -7,7 +7,7 @@ Depends() function to inject services and components into endpoint handlers.
 from fastapi import Depends
 
 from tripsage.api.core.config import get_settings
-from tripsage.mcp_abstraction import get_mcp_manager
+from tripsage.mcp_abstraction import mcp_manager
 
 
 # Create function for settings dependency
@@ -22,7 +22,7 @@ def get_mcp_manager_dependency():
     Returns:
         The singleton MCP manager instance
     """
-    return get_mcp_manager()
+    return mcp_manager
 
 
 # Create singleton dependencies

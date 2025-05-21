@@ -85,8 +85,8 @@ class TestUserOperations(TestDatabaseMigrationCompleteness):
         mock_mcp_manager.invoke.return_value = mock_supabase_response([updated_user])
 
         with patch(
-            "tripsage.tools.supabase_tools.get_mcp_manager",
-            return_value=mock_mcp_manager,
+            "tripsage.tools.supabase_tools.mcp_manager",
+            mock_mcp_manager,
         ):
             result = await supabase_tools.update_user_preferences(
                 project_id="test",
@@ -128,8 +128,8 @@ class TestTripOperations(TestDatabaseMigrationCompleteness):
         mock_mcp_manager.invoke.return_value = mock_supabase_response([new_trip])
 
         with patch(
-            "tripsage.tools.supabase_tools.get_mcp_manager",
-            return_value=mock_mcp_manager,
+            "tripsage.tools.supabase_tools.mcp_manager",
+            mock_mcp_manager,
         ):
             result = await supabase_tools.create_trip(
                 project_id="test",
@@ -151,8 +151,8 @@ class TestTripOperations(TestDatabaseMigrationCompleteness):
         mock_mcp_manager.invoke.return_value = mock_supabase_response(trips)
 
         with patch(
-            "tripsage.tools.supabase_tools.get_mcp_manager",
-            return_value=mock_mcp_manager,
+            "tripsage.tools.supabase_tools.mcp_manager",
+            mock_mcp_manager,
         ):
             result = await supabase_tools.find_trips_by_user(
                 project_id="test", user_id=1
@@ -209,7 +209,7 @@ class TestNeo4jOperations(TestDatabaseMigrationCompleteness):
         mock_mcp_manager.invoke.return_value = mock_memory_response(destinations)
 
         with patch(
-            "tripsage.tools.memory_tools.get_mcp_manager", return_value=mock_mcp_manager
+            "tripsage.tools.memory_tools.mcp_manager", mock_mcp_manager
         ):
             result = await memory_tools.find_destinations_by_country("France")
 
@@ -231,7 +231,7 @@ class TestNeo4jOperations(TestDatabaseMigrationCompleteness):
         }
 
         with patch(
-            "tripsage.tools.memory_tools.get_mcp_manager", return_value=mock_mcp_manager
+            "tripsage.tools.memory_tools.mcp_manager", mock_mcp_manager
         ):
             result = await memory_tools.create_trip_entities(
                 trip_id=1,
@@ -299,8 +299,8 @@ class TestMigrationRunnners(TestDatabaseMigrationCompleteness):
         )
 
         with patch(
-            "tripsage.db.migrations.runner.MCPManager.get_instance",
-            return_value=mock_mcp_manager,
+            "tripsage.db.migrations.runner.mcp_manager",
+            mock_mcp_manager,
         ):
             result = await apply_migration(
                 mcp_manager=mock_mcp_manager,
@@ -338,8 +338,8 @@ class TestInitialization(TestDatabaseMigrationCompleteness):
         )
 
         with patch(
-            "tripsage.db.initialize.MCPManager.get_instance",
-            return_value=mock_mcp_manager,
+            "tripsage.db.initialize.mcp_manager",
+            mock_mcp_manager,
         ):
             result = await initialize_databases(
                 verify_connections=True, project_id="test"

@@ -10,7 +10,7 @@ from datetime import datetime
 from typing import Any, Dict, Optional
 
 from api.core.exceptions import KeyValidationError
-from tripsage.mcp_abstraction import get_mcp_manager
+from tripsage.mcp_abstraction import mcp_manager
 from tripsage.storage.dual_storage import DualStorageService
 
 logger = logging.getLogger(__name__)
@@ -22,7 +22,7 @@ class KeyService:
     def __init__(self):
         """Initialize the key service."""
         self.storage = DualStorageService()
-        self.mcp_manager = get_mcp_manager()
+        self.mcp_manager = mcp_manager
 
     async def save_key(self, user_id: str, service: str, api_key: str) -> bool:
         """Save an API key for a user.

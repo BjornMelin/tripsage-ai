@@ -11,7 +11,7 @@ from fastapi.security import APIKeyHeader, APIKeyQuery, OAuth2PasswordBearer
 
 from api.core.config import settings
 from api.core.exceptions import AuthenticationError
-from tripsage.mcp_abstraction import MCPManager, get_mcp_manager
+from tripsage.mcp_abstraction import MCPManager, mcp_manager
 from tripsage.storage.dual_storage import DualStorageService
 from tripsage.utils.session_memory import SessionMemory
 
@@ -30,7 +30,7 @@ def get_mcp_manager_dep() -> MCPManager:
     Returns:
         The singleton MCP manager instance
     """
-    return get_mcp_manager()
+    return mcp_manager
 
 
 # Storage dependency
