@@ -1,0 +1,100 @@
+/* Loading animations for skeleton components */
+
+/* Wave animation for skeleton loading */
+@keyframes wave {
+  0% {
+    transform: translateX(-100%);
+  }
+  50% {
+    transform: translateX(100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* Shimmer effect for skeleton components */
+@keyframes shimmer {
+  0% {
+    background-position: -200px 0;
+  }
+  100% {
+    background-position: calc(200px + 100%) 0;
+  }
+}
+
+/* Pulse animation with better timing */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Skeleton with shimmer effect */
+.skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.2) 20%,
+    rgba(255, 255, 255, 0.5) 60%,
+    rgba(255, 255, 255, 0)
+  );
+  background-size: 200px 100%;
+  animation: shimmer 2s infinite;
+}
+
+/* Dark mode shimmer */
+.dark .skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.05) 20%,
+    rgba(255, 255, 255, 0.1) 60%,
+    rgba(255, 255, 255, 0)
+  );
+}
+
+/* Wave animation for loader bars */
+.wave-loader {
+  animation: wave 1.5s ease-in-out infinite;
+}
+
+/* Staggered animation for multiple elements */
+.skeleton-stagger-1 {
+  animation-delay: 0.1s;
+}
+
+.skeleton-stagger-2 {
+  animation-delay: 0.2s;
+}
+
+.skeleton-stagger-3 {
+  animation-delay: 0.3s;
+}
+
+.skeleton-stagger-4 {
+  animation-delay: 0.4s;
+}
+
+.skeleton-stagger-5 {
+  animation-delay: 0.5s;
+}
+
+/* Reduce motion for accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .animate-pulse,
+  .animate-spin,
+  .animate-ping,
+  .skeleton-shimmer,
+  .wave-loader {
+    animation: none !important;
+  }
+  
+  /* Provide static visual indication for loading states */
+  .animate-pulse {
+    opacity: 0.7;
+  }
+}
