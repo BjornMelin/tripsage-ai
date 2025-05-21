@@ -1,251 +1,270 @@
-"use client"
+import * as React from "react";
+import { LoadingSpinner } from "./loading-spinner";
+import { cn } from "@/lib/utils";
 
-import React from "react"
-import { Skeleton, SkeletonText, SkeletonCard, SkeletonAvatar, SkeletonTable } from "./enhanced-skeleton"
-import { cn } from "@/lib/utils"
-
-// Chat loading states
-export function ChatMessageSkeleton({ isUser = false }: { isUser?: boolean }) {
-  return (
-    <div className={cn("flex gap-3 p-4", isUser ? "flex-row-reverse" : "flex-row")}>
-      <SkeletonAvatar size="sm" />
-      <div className="flex-1 space-y-2 max-w-md">
-        <SkeletonText lines={2} />
-      </div>
-    </div>
-  )
+/**
+ * Loading overlay component for full-screen or container loading
+ */
+export interface LoadingOverlayProps {
+  isVisible: boolean;
+  message?: string;
+  progress?: number;
+  spinnerProps?: React.ComponentProps<typeof LoadingSpinner>;
+  className?: string;
+  backdrop?: boolean;
 }
 
-export function ChatLoadingSkeleton() {
-  return (
-    <div className="space-y-4">
-      <ChatMessageSkeleton />
-      <ChatMessageSkeleton isUser />
-      <ChatMessageSkeleton />
-      <div className="flex gap-3 p-4">
-        <SkeletonAvatar size="sm" />
-        <div className="flex items-center space-x-2">
-          <div className="flex space-x-1">
-            <div className="w-2 h-2 bg-muted rounded-full animate-bounce" />
-            <div className="w-2 h-2 bg-muted rounded-full animate-bounce [animation-delay:0.1s]" />
-            <div className="w-2 h-2 bg-muted rounded-full animate-bounce [animation-delay:0.2s]" />
-          </div>
-          <span className="text-sm text-muted-foreground">Thinking...</span>
-        </div>
-      </div>
-    </div>
-  )
-}
+export const LoadingOverlay = React.forwardRef<HTMLDivElement, LoadingOverlayProps>(
+  ({ 
+    isVisible, 
+    message, 
+    progress, 
+    spinnerProps, 
+    className, 
+    backdrop = true,
+    ...props 
+  }, ref) => {
+    if (!isVisible) return null;
 
-// Search results loading
-export function SearchResultsSkeleton({ count = 5 }: { count?: number }) {
-  return (
-    <div className="space-y-4">
-      {Array.from({ length: count }).map((_, i) => (
-        <div key={i} className="border rounded-lg p-4 space-y-3">
-          <div className="flex items-start justify-between">
-            <div className="flex-1 space-y-2">
-              <Skeleton className="h-5 w-3/4" />
-              <Skeleton className="h-4 w-full" />
-              <Skeleton className="h-4 w-2/3" />
-            </div>
-            <Skeleton variant="rectangular" className="h-20 w-20 ml-4 rounded-md" />
-          </div>
-          <div className="flex items-center space-x-4">
-            <Skeleton className="h-4 w-16" />
-            <Skeleton className="h-4 w-20" />
-            <Skeleton className="h-4 w-12" />
-          </div>
-        </div>
-      ))}
-    </div>
-  )
-}
-
-// Form loading states
-export function FormLoadingSkeleton() {
-  return (
-    <div className="space-y-6">
-      <div className="space-y-2">
-        <Skeleton className="h-4 w-24" />
-        <Skeleton className="h-10 w-full rounded-md" />
-      </div>
-      <div className="space-y-2">
-        <Skeleton className="h-4 w-32" />
-        <Skeleton className="h-10 w-full rounded-md" />
-      </div>
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Skeleton className="h-4 w-20" />
-          <Skeleton className="h-10 w-full rounded-md" />
-        </div>
-        <div className="space-y-2">
-          <Skeleton className="h-4 w-28" />
-          <Skeleton className="h-10 w-full rounded-md" />
-        </div>
-      </div>
-      <Skeleton className="h-10 w-32 rounded-md" />
-    </div>
-  )
-}
-
-// Profile loading state
-export function ProfileLoadingSkeleton() {
-  return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center space-x-4">
-        <SkeletonAvatar size="lg" />
-        <div className="space-y-2">
-          <Skeleton className="h-6 w-48" />
-          <Skeleton className="h-4 w-32" />
-          <Skeleton className="h-4 w-24" />
-        </div>
-      </div>
-
-      {/* Stats */}
-      <div className="grid grid-cols-3 gap-4">
-        {Array.from({ length: 3 }).map((_, i) => (
-          <div key={i} className="text-center space-y-2">
-            <Skeleton className="h-8 w-12 mx-auto" />
-            <Skeleton className="h-4 w-16 mx-auto" />
-          </div>
-        ))}
-      </div>
-
-      {/* Content */}
-      <div className="space-y-4">
-        <Skeleton className="h-5 w-32" />
-        <SkeletonText lines={4} />
-      </div>
-    </div>
-  )
-}
-
-// Settings page loading
-export function SettingsLoadingSkeleton() {
-  return (
-    <div className="space-y-8">
-      {/* Page header */}
-      <div className="space-y-2">
-        <Skeleton className="h-8 w-32" />
-        <Skeleton className="h-4 w-64" />
-      </div>
-
-      {/* Settings sections */}
-      {Array.from({ length: 3 }).map((_, sectionIndex) => (
-        <div key={sectionIndex} className="space-y-4">
-          <Skeleton className="h-6 w-48" />
-          <div className="border rounded-lg p-6 space-y-6">
-            {Array.from({ length: 3 }).map((_, itemIndex) => (
-              <div key={itemIndex} className="flex items-center justify-between">
-                <div className="space-y-1">
-                  <Skeleton className="h-4 w-32" />
-                  <Skeleton className="h-3 w-48" />
-                </div>
-                <Skeleton className="h-6 w-12 rounded-full" />
+    return (
+      <div
+        ref={ref}
+        className={cn(
+          "absolute inset-0 z-50 flex flex-col items-center justify-center",
+          backdrop && "bg-background/80 backdrop-blur-sm",
+          className
+        )}
+        role="status"
+        aria-live="polite"
+        aria-label={message || "Loading"}
+        {...props}
+      >
+        <div className="flex flex-col items-center space-y-4">
+          <LoadingSpinner {...spinnerProps} />
+          
+          {message && (
+            <p className="text-sm text-muted-foreground text-center max-w-sm">
+              {message}
+            </p>
+          )}
+          
+          {typeof progress === "number" && (
+            <div className="w-48 space-y-2">
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>Progress</span>
+                <span>{Math.round(progress)}%</span>
               </div>
-            ))}
+              <div className="h-2 bg-muted rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-primary transition-all duration-300 ease-out"
+                  style={{ width: `${Math.min(100, Math.max(0, progress))}%` }}
+                />
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+);
+
+LoadingOverlay.displayName = "LoadingOverlay";
+
+/**
+ * Loading state wrapper that shows skeleton or spinner while loading
+ */
+export interface LoadingStateProps {
+  isLoading: boolean;
+  skeleton?: React.ReactNode;
+  spinner?: React.ComponentProps<typeof LoadingSpinner>;
+  children: React.ReactNode;
+  className?: string;
+  fallback?: React.ReactNode;
+}
+
+export const LoadingState = React.forwardRef<HTMLDivElement, LoadingStateProps>(
+  ({ 
+    isLoading, 
+    skeleton, 
+    spinner, 
+    children, 
+    className, 
+    fallback,
+    ...props 
+  }, ref) => {
+    if (isLoading) {
+      if (skeleton) {
+        return <div ref={ref} className={className} {...props}>{skeleton}</div>;
+      }
+      
+      if (fallback) {
+        return <div ref={ref} className={className} {...props}>{fallback}</div>;
+      }
+      
+      return (
+        <div 
+          ref={ref} 
+          className={cn("flex items-center justify-center p-8", className)}
+          {...props}
+        >
+          <LoadingSpinner {...spinner} />
+        </div>
+      );
+    }
+
+    return <div ref={ref} className={className} {...props}>{children}</div>;
+  }
+);
+
+LoadingState.displayName = "LoadingState";
+
+/**
+ * Button loading state component
+ */
+export interface LoadingButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  isLoading?: boolean;
+  loadingText?: string;
+  spinnerProps?: React.ComponentProps<typeof LoadingSpinner>;
+  children: React.ReactNode;
+}
+
+export const LoadingButton = React.forwardRef<HTMLButtonElement, LoadingButtonProps>(
+  ({ 
+    isLoading = false, 
+    loadingText, 
+    spinnerProps = { size: "sm" }, 
+    children, 
+    disabled,
+    className,
+    ...props 
+  }, ref) => {
+    return (
+      <button
+        ref={ref}
+        disabled={disabled || isLoading}
+        className={cn(
+          "inline-flex items-center justify-center gap-2 transition-opacity",
+          isLoading && "cursor-not-allowed opacity-70",
+          className
+        )}
+        aria-disabled={disabled || isLoading}
+        {...props}
+      >
+        {isLoading && <LoadingSpinner {...spinnerProps} />}
+        {isLoading && loadingText ? loadingText : children}
+      </button>
+    );
+  }
+);
+
+LoadingButton.displayName = "LoadingButton";
+
+/**
+ * Container loading component for inline loading states
+ */
+export interface LoadingContainerProps {
+  isLoading: boolean;
+  children: React.ReactNode;
+  loadingMessage?: string;
+  spinnerProps?: React.ComponentProps<typeof LoadingSpinner>;
+  className?: string;
+  minHeight?: string | number;
+}
+
+export const LoadingContainer = React.forwardRef<HTMLDivElement, LoadingContainerProps>(
+  ({ 
+    isLoading, 
+    children, 
+    loadingMessage, 
+    spinnerProps, 
+    className, 
+    minHeight,
+    ...props 
+  }, ref) => {
+    const containerStyle = minHeight 
+      ? { minHeight: typeof minHeight === 'number' ? `${minHeight}px` : minHeight }
+      : undefined;
+
+    return (
+      <div 
+        ref={ref} 
+        className={cn("relative", className)}
+        style={containerStyle}
+        {...props}
+      >
+        {isLoading ? (
+          <div 
+            className="flex flex-col items-center justify-center p-8 space-y-4"
+            role="status"
+            aria-live="polite"
+            aria-label={loadingMessage || "Loading content"}
+          >
+            <LoadingSpinner {...spinnerProps} />
+            {loadingMessage && (
+              <p className="text-sm text-muted-foreground text-center">
+                {loadingMessage}
+              </p>
+            )}
+          </div>
+        ) : (
+          children
+        )}
+      </div>
+    );
+  }
+);
+
+LoadingContainer.displayName = "LoadingContainer";
+
+/**
+ * Page loading component for full page loading states
+ */
+export interface PageLoadingProps {
+  message?: string;
+  progress?: number;
+  className?: string;
+}
+
+export const PageLoading = React.forwardRef<HTMLDivElement, PageLoadingProps>(
+  ({ message = "Loading page...", progress, className, ...props }, ref) => {
+    return (
+      <div
+        ref={ref}
+        className={cn(
+          "fixed inset-0 z-50 flex flex-col items-center justify-center bg-background",
+          className
+        )}
+        role="status"
+        aria-live="polite"
+        aria-label={message}
+        {...props}
+      >
+        <div className="flex flex-col items-center space-y-6">
+          <div className="relative">
+            <LoadingSpinner size="xl" />
+          </div>
+          
+          <div className="text-center space-y-2">
+            <h2 className="text-lg font-semibold">{message}</h2>
+            {typeof progress === "number" && (
+              <div className="w-64 space-y-2">
+                <div className="flex justify-between text-sm text-muted-foreground">
+                  <span>Loading</span>
+                  <span>{Math.round(progress)}%</span>
+                </div>
+                <div className="h-2 bg-muted rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-primary transition-all duration-300 ease-out"
+                    style={{ width: `${Math.min(100, Math.max(0, progress))}%` }}
+                  />
+                </div>
+              </div>
+            )}
           </div>
         </div>
-      ))}
-    </div>
-  )
-}
-
-// Analytics/Dashboard cards
-export function AnalyticsCardSkeleton() {
-  return (
-    <div className="border rounded-lg p-6 space-y-4">
-      <div className="flex items-center justify-between">
-        <Skeleton className="h-4 w-28" />
-        <Skeleton variant="circular" className="h-4 w-4" />
       </div>
-      <Skeleton className="h-8 w-20" />
-      <div className="flex items-center space-x-2">
-        <Skeleton className="h-3 w-16" />
-        <Skeleton className="h-3 w-6" />
-      </div>
-    </div>
-  )
-}
-
-export function AnalyticsDashboardSkeleton() {
-  return (
-    <div className="space-y-6">
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <AnalyticsCardSkeleton key={i} />
-        ))}
-      </div>
-
-      {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="border rounded-lg p-6 space-y-4">
-          <Skeleton className="h-5 w-32" />
-          <Skeleton variant="rectangular" className="h-64 w-full rounded-md" />
-        </div>
-        <div className="border rounded-lg p-6 space-y-4">
-          <Skeleton className="h-5 w-28" />
-          <Skeleton variant="rectangular" className="h-64 w-full rounded-md" />
-        </div>
-      </div>
-
-      {/* Table */}
-      <div className="border rounded-lg p-6 space-y-4">
-        <Skeleton className="h-5 w-36" />
-        <SkeletonTable rows={8} columns={5} />
-      </div>
-    </div>
-  )
-}
-
-// Navigation loading
-export function NavigationSkeleton() {
-  return (
-    <div className="space-y-2">
-      {Array.from({ length: 6 }).map((_, i) => (
-        <div key={i} className="flex items-center space-x-3 px-2 py-2">
-          <Skeleton variant="circular" className="h-4 w-4" />
-          <Skeleton className="h-4 w-24" />
-        </div>
-      ))}
-    </div>
-  )
-}
-
-// Inline loading spinner for buttons and small areas
-export function InlineSpinner({ size = "sm", className }: { size?: "sm" | "md" | "lg"; className?: string }) {
-  const sizeClasses = {
-    sm: "h-4 w-4",
-    md: "h-6 w-6",
-    lg: "h-8 w-8",
+    );
   }
+);
 
-  return (
-    <div
-      className={cn(
-        "animate-spin rounded-full border-2 border-current border-t-transparent",
-        sizeClasses[size],
-        className
-      )}
-      role="status"
-      aria-label="Loading"
-    >
-      <span className="sr-only">Loading...</span>
-    </div>
-  )
-}
-
-// Full page loading overlay
-export function PageLoadingOverlay({ message = "Loading..." }: { message?: string }) {
-  return (
-    <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
-      <div className="text-center space-y-4">
-        <InlineSpinner size="lg" />
-        <p className="text-sm text-muted-foreground">{message}</p>
-      </div>
-    </div>
-  )
-}
+PageLoading.displayName = "PageLoading";

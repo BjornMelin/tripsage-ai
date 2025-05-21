@@ -193,7 +193,7 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
       - [ ] Set up Tailwind CSS v4 with OKLCH colors
       - [ ] Install and configure shadcn/ui components
       - [ ] Create root layout with theme support
-      - [x] Implement Zustand stores for state management
+      - [x] Implement Zustand stores for state management (User, Trip, Chat, Agent status, Search, Budget, Currency, Deals, API Key)
       - [ ] Set up React Query for server state
       - [ ] Configure Vercel AI SDK v5
       - [ ] Create base UI components library

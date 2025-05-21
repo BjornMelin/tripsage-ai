@@ -1,13 +1,13 @@
 import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
-import { resolve } from "path";
+import path from "path";
 
 export default defineConfig({
   plugins: [react()],
   test: {
     globals: true,
     environment: "jsdom",
-    setupFiles: "./src/test/setup.ts",
+    setupFiles: ["./src/test-setup.ts"],
     exclude: [
       "**/node_modules/**",
       "**/e2e/**",
@@ -15,15 +15,18 @@ export default defineConfig({
       "**/*.spec.*",
     ],
     coverage: {
+      provider: "v8",
       reporter: ["text", "json", "html"],
       exclude: [
         "node_modules/",
-        "src/test/",
+        "src/test-setup.ts",
         "e2e/",
         "**/*.d.ts",
         "**/*.config.*",
         "**/*.test.*",
         "**/*.spec.*",
+        "**/dist/**",
+        "**/__tests__/**",
         "**/coverage/**",
       ],
       thresholds: {
@@ -38,7 +41,7 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      "@": resolve(__dirname, "./src"),
+      "@": path.resolve(__dirname, "./src"),
     },
   },
 });

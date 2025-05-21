@@ -1,14 +1,14 @@
 "use client";
 
 import { useEffect } from "react";
-import { MinimalErrorFallback } from "@/components/error/error-fallback";
+import { ErrorFallback } from "@/components/error/error-fallback";
 import { errorService } from "@/lib/error-service";
 
 /**
- * Global error boundary - catches errors in the root layout or template
- * This is a last resort fallback that replaces the entire root layout
+ * Dashboard-level error boundary
+ * Catches errors within the dashboard layout and pages
  */
-export default function GlobalError({
+export default function DashboardError({
   error,
   reset,
 }: {
@@ -16,7 +16,7 @@ export default function GlobalError({
   reset: () => void;
 }) {
   useEffect(() => {
-    // Report the critical error
+    // Report the dashboard error
     const errorReport = errorService.createErrorReport(
       error,
       undefined,
@@ -28,17 +28,13 @@ export default function GlobalError({
 
     errorService.reportError(errorReport);
 
-    // Log critical error
-    console.error("CRITICAL: Global error boundary caught error:", error);
+    // Log error in development
+    if (process.env.NODE_ENV === "development") {
+      console.error("Dashboard error boundary caught error:", error);
+    }
   }, [error]);
 
-  return (
-    <html>
-      <body>
-        <MinimalErrorFallback error={error} reset={reset} />
-      </body>
-    </html>
-  );
+  return <ErrorFallback error={error} reset={reset} />;
 }
 
 function getUserId(): string | undefined {
