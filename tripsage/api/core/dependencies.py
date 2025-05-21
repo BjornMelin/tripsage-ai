@@ -34,9 +34,9 @@ _session_memory = {}
 
 def get_session_memory() -> Dict[str, Any]:
     """Get the session memory.
-    
+
     This dependency provides access to temporary memory for the current session.
-    
+
     Returns:
         Dictionary with session memory data
     """
@@ -45,10 +45,10 @@ def get_session_memory() -> Dict[str, Any]:
 
 async def initialize_memory_for_user(user_id: str) -> Dict[str, Any]:
     """Initialize memory for a specific user.
-    
+
     Args:
         user_id: The user ID
-        
+
     Returns:
         The initialized session memory
     """

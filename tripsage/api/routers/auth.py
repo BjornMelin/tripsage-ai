@@ -83,13 +83,17 @@ async def register(
     return user
 
 
+# Define the OAuth2 form dependency once
+oauth2_form = Depends(OAuth2PasswordRequestForm)
+
+
 @router.post(
     "/token",
     response_model=Token,
     summary="Login to get access token",
 )
 async def login(
-    form_data: OAuth2PasswordRequestForm = Depends(),
+    form_data: OAuth2PasswordRequestForm = oauth2_form,
 ):
     """Login to get an access token.
 
@@ -212,16 +216,16 @@ async def refresh_token(
 )
 async def logout(response: Response):
     """Logout the current user.
-    
+
     Args:
         response: FastAPI response object (for clearing cookies)
-        
+
     Returns:
         Success message
     """
     # Get dependencies
     settings = get_settings_dependency()
-    
+
     # Clear the refresh token cookie (if used)
     response.delete_cookie(
         key="refresh_token",
@@ -229,7 +233,7 @@ async def logout(response: Response):
         secure=not settings.debug,
         samesite="lax",
     )
-    
+
     return {"message": "Successfully logged out"}
 
 
@@ -240,19 +244,19 @@ async def logout(response: Response):
 )
 async def get_current_user_info(user_id: str = Depends(get_current_user)):
     """Get information about the currently authenticated user.
-    
+
     Args:
         user_id: The ID of the current user (from token)
-        
+
     Returns:
         Current user information
-        
+
     Raises:
         HTTPException: If the user is not found
     """
     # Get dependencies
     user_service = get_user_service()
-    
+
     # Get the user
     user = await user_service.get_user_by_id(user_id)
     if not user:
@@ -260,5 +264,5 @@ async def get_current_user_info(user_id: str = Depends(get_current_user)):
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User not found",
         )
-        
+
     return user

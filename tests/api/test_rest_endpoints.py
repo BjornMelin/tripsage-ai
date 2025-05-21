@@ -406,7 +406,7 @@ async def test_search_destinations(async_client: AsyncClient, auth_headers):
                     ],
                     "best_time_to_visit": ["April", "May", "June", "September"],
                     "travel_advisory": "Exercise normal precautions",
-                    "visa_requirements": "Schengen visa required for many nationalities",
+                    "visa_requirements": "Schengen visa required for many countries",
                     "local_transportation": "Metro, bus, taxis",
                     "popular_activities": [
                         "Visiting museums",

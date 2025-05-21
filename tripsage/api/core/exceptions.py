@@ -205,18 +205,18 @@ class APIKeyError(TripSageException):
 
 class ResourceNotFoundError(NotFoundError):
     """Raised when a specific resource is not found.
-    
+
     This is an alias for NotFoundError for compatibility with the old API.
     """
 
     def __init__(
-        self, 
+        self,
         message: str = "Resource not found",
         error_code: str = "resource_not_found",
         details: Optional[Dict[str, Any]] = None,
     ):
         """Initialize ResourceNotFoundError.
-        
+
         Args:
             message: Human-readable error message
             error_code: Machine-readable error code
