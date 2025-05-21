@@ -18,7 +18,11 @@ from tripsage.api.core.openapi import custom_openapi
 from tripsage.api.middlewares.auth import AuthMiddleware
 from tripsage.api.middlewares.logging import LoggingMiddleware
 from tripsage.api.middlewares.rate_limit import RateLimitMiddleware
-from tripsage.api.routers import health
+from tripsage.api.routers import health, keys
+from tripsage.api.services.key_monitoring import (
+    KeyMonitoringService,
+    KeyOperationRateLimitMiddleware,
+)
 from tripsage.mcp_abstraction import mcp_manager
 
 logger = logging.getLogger(__name__)
@@ -88,6 +92,12 @@ def create_app() -> FastAPI:
     # Authentication middleware
     app.add_middleware(AuthMiddleware, settings=settings)
 
+    # Add key operation rate limiting middleware
+    key_monitoring_service = KeyMonitoringService(settings)
+    app.add_middleware(
+        KeyOperationRateLimitMiddleware, monitoring_service=key_monitoring_service
+    )
+
     # Add exception handlers
     @app.exception_handler(TripSageException)
     async def tripsage_exception_handler(request: Request, exc: TripSageException):
@@ -155,6 +165,7 @@ def create_app() -> FastAPI:
 
     # Include routers
     app.include_router(health.router, prefix="/api", tags=["health"])
+    app.include_router(keys.router, prefix="/api/user/keys", tags=["api_keys"])
 
     # TODO: Include additional routers as they are implemented
     # app.include_router(auth.router, prefix="/api", tags=["auth"])
@@ -164,7 +175,6 @@ def create_app() -> FastAPI:
     # app.include_router(
     #     accommodations.router, prefix="/api/accommodations", tags=["accommodations"]
     # )
-    # app.include_router(keys.router, prefix="/api/user/keys", tags=["api_keys"])
 
     # Set custom OpenAPI schema
     app.openapi = lambda: custom_openapi(app)

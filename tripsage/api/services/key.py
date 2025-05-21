@@ -21,6 +21,13 @@ from tripsage.api.models.api_key import (
     ApiKeyResponse,
     ApiKeyValidateResponse,
 )
+from tripsage.api.services.key_monitoring import (
+    KeyMonitoringService,
+    KeyOperation,
+    constant_time_compare,
+    monitor_key_operation,
+    secure_random_token,
+)
 from tripsage.mcp_abstraction import mcp_manager
 
 logger = logging.getLogger(__name__)
@@ -37,9 +44,24 @@ class KeyService:
         """Initialize the key service."""
         self.mcp_manager = mcp_manager
         self.settings = get_settings()
+        self.supabase_mcp = None
+        self.monitoring_service = None
+        self.initialized = False
 
         # Initialize the key encryption system
         self._initialize_encryption()
+        
+    async def initialize(self):
+        """Initialize connections and services."""
+        if not self.initialized:
+            # Initialize Supabase MCP
+            self.supabase_mcp = await self.mcp_manager.initialize_mcp("supabase")
+            
+            # Initialize monitoring service
+            self.monitoring_service = KeyMonitoringService()
+            await self.monitoring_service.initialize()
+            
+            self.initialized = True
 
     def _initialize_encryption(self):
         """Initialize the encryption system for API keys.
@@ -371,12 +393,21 @@ class KeyService:
             logger.error(f"Error rotating API key: {e}")
             raise
 
-    async def validate_key(self, key: str, service: str) -> ApiKeyValidateResponse:
+    @monitor_key_operation(KeyOperation.VALIDATE)
+    async def validate_key(
+        self,
+        key: str,
+        service: str,
+        user_id: Optional[str] = None,
+        monitoring_service: Optional[KeyMonitoringService] = None,
+    ) -> ApiKeyValidateResponse:
         """Validate an API key with the service.
 
         Args:
             key: The API key to validate
             service: The service to validate against
+            user_id: Optional user ID for monitoring
+            monitoring_service: Optional monitoring service
 
         Returns:
             Validation result
@@ -399,6 +430,9 @@ class KeyService:
                     message="API key is valid",
                 )
             else:
+                # Use constant time comparison even on invalid keys to prevent timing attacks
+                constant_time_compare(key, secure_random_token(len(key)))
+
                 return ApiKeyValidateResponse(
                     is_valid=False,
                     service=service,
@@ -406,6 +440,10 @@ class KeyService:
                 )
         except Exception as e:
             logger.error(f"Error validating API key: {e}")
+
+            # Use constant time comparison to avoid timing attacks even on errors
+            constant_time_compare(key, secure_random_token(len(key)))
+
             return ApiKeyValidateResponse(
                 is_valid=False,
                 service=service,
