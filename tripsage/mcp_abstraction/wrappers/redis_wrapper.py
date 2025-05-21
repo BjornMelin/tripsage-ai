@@ -6,9 +6,14 @@ mapping user-friendly method names to actual Redis MCP client methods.
 """
 
 import asyncio
+import hashlib
 import json
+import os
+import random
+import time
+import uuid
 from enum import Enum
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import redis.asyncio as redis
 from pydantic import BaseModel, Field
@@ -49,7 +54,12 @@ class CacheMetrics(BaseModel):
 
 
 class RedisMCPClient:
-    """Client for Redis MCP server based operations."""
+    """Client for Redis MCP server based operations.
+    
+    This client provides a comprehensive interface to Redis operations,
+    including key-value operations, data structure operations, TTL management,
+    metrics collection, and distributed locking.
+    """
 
     def __init__(
         self,
@@ -60,6 +70,7 @@ class RedisMCPClient:
         namespace: str = "tripsage",
         default_ttl: int = 3600,
         sample_rate: float = 0.1,
+        lock_timeout: int = 10,
     ):
         """
         Initialize the Redis MCP client.
@@ -72,6 +83,7 @@ class RedisMCPClient:
             namespace: Namespace for cache keys
             default_ttl: Default TTL in seconds
             sample_rate: Rate at which to sample operations for metrics
+            lock_timeout: Default timeout for distributed locks in seconds
         """
         self.host = host
         self.port = port
@@ -80,9 +92,13 @@ class RedisMCPClient:
         self.namespace = namespace
         self.default_ttl = default_ttl
         self.sample_rate = sample_rate
+        self.lock_timeout = lock_timeout
         self.connection_pool = None
         self._redis = None
         self._lock = asyncio.Lock()
+        
+        # Generate a unique client ID for distributed locking
+        self.client_id = f"{uuid.uuid4()}-{os.getpid()}"
 
         # TTL settings for different content types (in seconds)
         self.ttl_settings = {
@@ -759,10 +775,245 @@ class RedisMCPClient:
         except Exception as e:
             logger.warning(f"Error estimating cache size: {str(e)}")
             return 0
+            
+    async def acquire_lock(
+        self, 
+        lock_name: str, 
+        timeout: Optional[int] = None, 
+        retry_delay: float = 0.1,
+        retry_count: int = 50
+    ) -> Tuple[bool, str]:
+        """
+        Acquire a distributed lock using Redis.
+        
+        Implements a simplified version of the Redlock algorithm for 
+        distributed locking with a single Redis instance.
+        
+        Args:
+            lock_name: The name of the lock to acquire
+            timeout: Time in seconds the lock should be held (None for no timeout)
+            retry_delay: Time in seconds to wait between retries
+            retry_count: Maximum number of retry attempts
+            
+        Returns:
+            Tuple of (success, lock_token)
+        """
+        try:
+            # Add namespace to lock name
+            full_lock_name = f"{self.namespace}:lock:{lock_name}"
+            client = await self._get_redis_client()
+            
+            # Generate a unique token for this lock
+            lock_token = f"{self.client_id}:{uuid.uuid4()}"
+            
+            # Determine expiry time
+            if timeout is None:
+                timeout = self.lock_timeout
+                
+            # Try to acquire the lock with retries
+            for _ in range(retry_count):
+                # Use SET NX to atomically acquire the lock
+                result = await client.set(
+                    full_lock_name, 
+                    lock_token, 
+                    nx=True,
+                    ex=timeout
+                )
+                
+                if result:
+                    logger.debug(f"Acquired lock '{lock_name}' with token {lock_token}")
+                    return True, lock_token
+                    
+                # Wait before retrying
+                await asyncio.sleep(retry_delay)
+                
+            logger.warning(f"Failed to acquire lock '{lock_name}' after {retry_count} attempts")
+            return False, ""
+        except Exception as e:
+            logger.error(f"Error acquiring lock '{lock_name}': {str(e)}")
+            return False, ""
+            
+    async def release_lock(self, lock_name: str, lock_token: str) -> bool:
+        """
+        Release a previously acquired distributed lock.
+        
+        Uses a Lua script to ensure we only release our own locks.
+        
+        Args:
+            lock_name: The name of the lock to release
+            lock_token: The token returned when the lock was acquired
+            
+        Returns:
+            True if the lock was released, False otherwise
+        """
+        try:
+            # Add namespace to lock name
+            full_lock_name = f"{self.namespace}:lock:{lock_name}"
+            client = await self._get_redis_client()
+            
+            # Lua script to release lock only if it belongs to us
+            release_script = """
+            if redis.call('get', KEYS[1]) == ARGV[1] then
+                return redis.call('del', KEYS[1])
+            else
+                return 0
+            end
+            """
+            
+            # Execute script
+            result = await client.eval(release_script, 1, full_lock_name, lock_token)
+            
+            if result:
+                logger.debug(f"Released lock '{lock_name}' with token {lock_token}")
+                return True
+            else:
+                logger.warning(
+                    f"Failed to release lock '{lock_name}' with token {lock_token}: "
+                    f"Lock doesn't exist or token doesn't match"
+                )
+                return False
+        except Exception as e:
+            logger.error(f"Error releasing lock '{lock_name}': {str(e)}")
+            return False
+            
+    async def extend_lock(self, lock_name: str, lock_token: str, timeout: int) -> bool:
+        """
+        Extend the expiration time of a lock.
+        
+        Args:
+            lock_name: The name of the lock to extend
+            lock_token: The token returned when the lock was acquired
+            timeout: New expiration time in seconds
+            
+        Returns:
+            True if the lock was extended, False otherwise
+        """
+        try:
+            # Add namespace to lock name
+            full_lock_name = f"{self.namespace}:lock:{lock_name}"
+            client = await self._get_redis_client()
+            
+            # Lua script to extend lock only if it belongs to us
+            extend_script = """
+            if redis.call('get', KEYS[1]) == ARGV[1] then
+                return redis.call('expire', KEYS[1], ARGV[2])
+            else
+                return 0
+            end
+            """
+            
+            # Execute script
+            result = await client.eval(extend_script, 1, full_lock_name, lock_token, timeout)
+            
+            if result:
+                logger.debug(f"Extended lock '{lock_name}' with token {lock_token}")
+                return True
+            else:
+                logger.warning(
+                    f"Failed to extend lock '{lock_name}' with token {lock_token}: "
+                    f"Lock doesn't exist or token doesn't match"
+                )
+                return False
+        except Exception as e:
+            logger.error(f"Error extending lock '{lock_name}': {str(e)}")
+            return False
+
+    async def pipeline_execute(self, commands: List[Dict[str, Any]]) -> List[Any]:
+        """
+        Execute multiple Redis commands in a pipeline for improved performance.
+        
+        Args:
+            commands: List of command dictionaries, each containing:
+                - command: Redis command to execute
+                - args: List of arguments for the command
+                
+        Returns:
+            List of results from each command
+        """
+        try:
+            client = await self._get_redis_client()
+            
+            # Create pipeline
+            pipeline = client.pipeline()
+            
+            # Add commands to pipeline
+            for cmd in commands:
+                command = cmd.get("command")
+                args = cmd.get("args", [])
+                kwargs = cmd.get("kwargs", {})
+                
+                # Get method from client
+                method = getattr(pipeline, command, None)
+                if method:
+                    method(*args, **kwargs)
+                else:
+                    logger.warning(f"Unknown Redis command '{command}'")
+                    
+            # Execute pipeline
+            results = await pipeline.execute()
+            return results
+        except Exception as e:
+            logger.error(f"Error executing Redis pipeline: {str(e)}")
+            return []
+
+    async def prefetch_keys(self, pattern: str, limit: int = 100) -> int:
+        """
+        Prefetch keys matching a pattern into Redis cache memory.
+        
+        This operation helps improve cache hit rates for predictable access patterns.
+        
+        Args:
+            pattern: Pattern to match keys
+            limit: Maximum number of keys to prefetch
+            
+        Returns:
+            Number of keys prefetched
+        """
+        try:
+            client = await self._get_redis_client()
+            
+            # Add namespace to pattern if not already present
+            if not pattern.startswith(f"{self.namespace}:"):
+                full_pattern = f"{self.namespace}:{pattern}"
+            else:
+                full_pattern = pattern
+                
+            # Get matching keys
+            cursor = 0
+            keys = []
+            
+            while len(keys) < limit:
+                cursor, batch = await self.scan(cursor=cursor, match=full_pattern, count=100)
+                keys.extend(batch[:limit - len(keys)])
+                
+                if cursor == 0 or len(keys) >= limit:
+                    break
+                    
+            # Prefetch keys (just accessing them will load into memory)
+            pipeline = client.pipeline()
+            for key in keys:
+                pipeline.get(key)
+                
+            await pipeline.execute()
+            logger.debug(f"Prefetched {len(keys)} keys matching pattern {pattern}")
+            
+            return len(keys)
+        except Exception as e:
+            logger.error(f"Error prefetching keys: {str(e)}")
+            return 0
 
 
 class RedisMCPWrapper(BaseMCPWrapper):
-    """Wrapper for the Redis MCP client."""
+    """Wrapper for the Redis MCP client.
+    
+    This wrapper provides a standardized interface to the Redis MCP client,
+    mapping friendly method names to actual Redis operations. It includes
+    comprehensive Redis operations such as key-value operations, list/set/hash
+    operations, TTL management, pattern operations, and cache metrics.
+    
+    It also supports distributed locking, advanced cache invalidation,
+    and performant batch operations.
+    """
 
     def __init__(self, client: Optional[RedisMCPClient] = None, mcp_name: str = "redis"):
         """
@@ -827,6 +1078,19 @@ class RedisMCPWrapper(BaseMCPWrapper):
             "keys": "keys",
             "find_keys": "keys",
             "scan": "scan",
+            "invalidate_pattern": "invalidate_pattern",
+            # Metrics and stats
+            "get_stats": "get_stats",
+            "estimate_size": "_estimate_cache_size",
+            # Cache key operations
+            "generate_cache_key": "generate_cache_key",
+            # Distributed locking
+            "acquire_lock": "acquire_lock",
+            "release_lock": "release_lock",
+            "extend_lock": "extend_lock",
+            # Performance optimizations
+            "pipeline_execute": "pipeline_execute",
+            "prefetch_keys": "prefetch_keys",
         }
 
     def get_available_methods(self) -> List[str]:
@@ -837,3 +1101,40 @@ class RedisMCPWrapper(BaseMCPWrapper):
             List of available method names
         """
         return list(self._method_map.keys())
+        
+    async def generate_cache_key(self, prefix: str, query: str, **kwargs: Any) -> str:
+        """
+        Generate a deterministic cache key for the given parameters.
+        
+        This method is useful for creating consistent cache keys based on
+        function name, query, and additional parameters.
+        
+        Args:
+            prefix: The prefix for the cache key (typically function name)
+            query: The main query string
+            **kwargs: Additional parameters that affect the cache key
+            
+        Returns:
+            A deterministic cache key string
+        """
+        try:
+            # Normalize query (lowercase, strip whitespace)
+            normalized_query = query.lower().strip() if query else ""
+            
+            # Sort kwargs for deterministic key generation
+            sorted_items = sorted(kwargs.items()) if kwargs else []
+            kwargs_str = json.dumps(sorted_items, sort_keys=True) if sorted_items else ""
+            
+            # Create hash of combined parameters
+            combined = f"{prefix}:{normalized_query}:{kwargs_str}"
+            hash_obj = hashlib.md5(combined.encode())
+            query_hash = hash_obj.hexdigest()
+            
+            # Get namespace from client
+            namespace = self._client.namespace
+            
+            return f"{namespace}:{prefix}:{query_hash}"
+        except Exception as e:
+            logger.error(f"Error generating cache key: {str(e)}")
+            # Fallback to simple key generation
+            return f"{self._client.namespace}:{prefix}:{hash(query)}"
