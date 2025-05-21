@@ -1,9 +1,10 @@
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import { useAgentStatusStore } from "../agent-status-store";
 import { act } from "@testing-library/react";
-import { renderHook } from "@testing-library/react-hooks";
+import { renderHook } from "@testing-library/react";
 
 // Mock the store to avoid persistence issues in tests
-jest.mock("zustand/middleware", () => ({
+vi.mock("zustand/middleware", () => ({
   persist: (fn) => fn,
 }));
 

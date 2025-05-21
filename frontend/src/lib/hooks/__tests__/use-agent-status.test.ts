@@ -1,4 +1,5 @@
-import { renderHook, act } from "@testing-library/react-hooks";
+import { describe, it, expect, beforeEach, vi } from "vitest";
+import { renderHook, act } from "@testing-library/react";
 import {
   useAgentStatus,
   useAgentTasks,
@@ -9,19 +10,19 @@ import { useAgentStatusStore } from "@/stores/agent-status-store";
 import * as apiQuery from "@/lib/hooks/use-api-query";
 
 // Mock the API query hooks
-jest.mock("@/lib/hooks/use-api-query", () => ({
-  useApiQuery: jest.fn(),
-  useApiMutation: jest.fn(),
+vi.mock("@/lib/hooks/use-api-query", () => ({
+  useApiQuery: vi.fn(),
+  useApiMutation: vi.fn(),
 }));
 
 // Mock the Zustand store to avoid persistence issues
-jest.mock("zustand/middleware", () => ({
+vi.mock("zustand/middleware", () => ({
   persist: (fn) => fn,
 }));
 
 // Use the actual implementation of the store
-jest.mock("@/stores/agent-status-store", () => {
-  const actual = jest.requireActual("@/stores/agent-status-store");
+vi.mock("@/stores/agent-status-store", async () => {
+  const actual = await vi.importActual("@/stores/agent-status-store");
   return {
     useAgentStatusStore: actual.useAgentStatusStore,
   };
@@ -41,19 +42,19 @@ describe("Agent Status Hooks", () => {
       });
     });
 
-    jest.clearAllMocks();
+    vi.clearAllMocks();
 
     // Default mocks for API hooks
-    (apiQuery.useApiQuery as jest.Mock).mockReturnValue({
+    (apiQuery.useApiQuery as any).mockReturnValue({
       isLoading: false,
       isError: false,
       data: null,
       error: null,
-      refetch: jest.fn(),
+      refetch: vi.fn(),
     });
 
-    (apiQuery.useApiMutation as jest.Mock).mockReturnValue({
-      mutate: jest.fn(),
+    (apiQuery.useApiMutation as any).mockReturnValue({
+      mutate: vi.fn(),
       isPending: false,
     });
   });
@@ -99,8 +100,8 @@ describe("Agent Status Hooks", () => {
     });
 
     it("starts an agent via API", () => {
-      const startAgentMock = jest.fn();
-      (apiQuery.useApiMutation as jest.Mock).mockReturnValueOnce({
+      const startAgentMock = vi.fn();
+      (apiQuery.useApiMutation as any).mockReturnValueOnce({
         mutate: startAgentMock,
         isPending: false,
       });
@@ -119,10 +120,10 @@ describe("Agent Status Hooks", () => {
     });
 
     it("stops an agent via API", () => {
-      const stopAgentMock = jest.fn();
-      (apiQuery.useApiMutation as jest.Mock)
+      const stopAgentMock = vi.fn();
+      (apiQuery.useApiMutation as any)
         .mockReturnValueOnce({
-          mutate: jest.fn(), // For startAgentMutation
+          mutate: vi.fn(), // For startAgentMutation
         })
         .mockReturnValueOnce({
           mutate: stopAgentMock,
@@ -158,8 +159,8 @@ describe("Agent Status Hooks", () => {
     });
 
     it("fetches agent status from API when monitoring", () => {
-      const mockStatusQuery = jest.fn();
-      (apiQuery.useApiQuery as jest.Mock).mockReturnValue({
+      const mockStatusQuery = vi.fn();
+      (apiQuery.useApiQuery as any).mockReturnValue({
         isLoading: false,
         isError: false,
         data: {
@@ -211,7 +212,7 @@ describe("Agent Status Hooks", () => {
       // The mock data should have updated our agent's status and progress
       act(() => {
         // Manually trigger the onSuccess callback to simulate data fetch
-        const onSuccess = (apiQuery.useApiQuery as jest.Mock).mock.calls[0][2]
+        const onSuccess = (apiQuery.useApiQuery as any).mock.calls[0][2]
           .onSuccess;
         onSuccess({
           agents: [
