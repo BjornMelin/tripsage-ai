@@ -38,8 +38,8 @@
   - [x] User store
   - [x] Trip store
   - [x] Chat store
-  - [ ] Agent status store
-  - [ ] Search store
+  - [x] Agent status store
+  - [x] Search store
   - [ ] Budget store
   - [ ] Currency store
   - [ ] Deals store
@@ -440,11 +440,11 @@
 
 | Section | Completion | Notes |
 |---------|------------|-------|
-| Phase 1: Foundation | 85% | Core foundation complete, need CI/CD pipeline |
+| Phase 1: Foundation | 95% | Core foundation complete, need CI/CD pipeline |
 | Phase 2: Component Library | 35% | Basic components in place, more feature components needed |
 | Phase 3: Core Pages | 25% | Dashboard and Settings/API keys pages implemented |
 | Phase 4: Budget Features | 0% | Not started |
-| Phase 5: Advanced Features | 10% | BYOK implementation complete |
+| Phase 5: Advanced Features | 15% | BYOK implementation complete, Agent Status Store implemented |
 | Phase 6: Polish & Launch | 0% | Not started |
 
 ## Next Steps
