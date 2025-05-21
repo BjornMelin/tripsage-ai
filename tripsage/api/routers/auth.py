@@ -1,18 +1,17 @@
 """Authentication endpoints for the TripSage API.
 
 This module provides endpoints for authentication, including user registration,
-login, token refresh, and password reset.
+login, token refresh, logout, and user information.
 """
 
 import logging
 from datetime import datetime, timedelta
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
 
-from tripsage.api.core.config import Settings
 from tripsage.api.core.dependencies import get_settings_dependency
-from tripsage.api.middlewares.auth import create_access_token
+from tripsage.api.middlewares.auth import create_access_token, get_current_user
 from tripsage.api.models.auth import (
     RefreshToken,
     Token,
@@ -48,15 +47,11 @@ def get_auth_service() -> AuthService:
 )
 async def register(
     user_data: UserCreate,
-    settings: Settings = Depends(get_settings_dependency),
-    user_service: UserService = Depends(get_user_service),
 ):
     """Register a new user.
 
     Args:
         user_data: User registration data
-        settings: API settings
-        user_service: User service for database operations
 
     Returns:
         The created user
@@ -64,6 +59,10 @@ async def register(
     Raises:
         HTTPException: If the email is already registered
     """
+    # Get dependencies
+    settings = get_settings_dependency()
+    user_service = get_user_service()
+
     # Check if email already exists
     if await user_service.get_user_by_email(user_data.email):
         raise HTTPException(
@@ -78,6 +77,9 @@ async def register(
         full_name=user_data.full_name,
     )
 
+    # Log the registration event
+    logger.info(f"User registered: {user.email} in environment: {settings.environment}")
+
     return user
 
 
@@ -88,15 +90,11 @@ async def register(
 )
 async def login(
     form_data: OAuth2PasswordRequestForm = Depends(),
-    settings: Settings = Depends(get_settings_dependency),
-    auth_service: AuthService = Depends(get_auth_service),
 ):
     """Login to get an access token.
 
     Args:
-        form_data: OAuth2 password request form
-        settings: API settings
-        auth_service: Authentication service
+        form_data: OAuth2 password request form data
 
     Returns:
         The access token
@@ -104,6 +102,10 @@ async def login(
     Raises:
         HTTPException: If the credentials are invalid
     """
+    # Get dependencies
+    settings = get_settings_dependency()
+    auth_service = get_auth_service()
+
     # Authenticate the user
     user = await auth_service.authenticate_user(
         form_data.username,  # Username is email in our case
@@ -151,15 +153,11 @@ async def login(
 )
 async def refresh_token(
     refresh_data: RefreshToken,
-    settings: Settings = Depends(get_settings_dependency),
-    auth_service: AuthService = Depends(get_auth_service),
 ):
     """Refresh an access token.
 
     Args:
         refresh_data: Refresh token data
-        settings: API settings
-        auth_service: Authentication service
 
     Returns:
         New access and refresh tokens
@@ -167,6 +165,10 @@ async def refresh_token(
     Raises:
         HTTPException: If the refresh token is invalid
     """
+    # Get dependencies
+    settings = get_settings_dependency()
+    auth_service = get_auth_service()
+
     # Validate the refresh token
     user = await auth_service.validate_refresh_token(refresh_data.refresh_token)
 
@@ -202,3 +204,61 @@ async def refresh_token(
         "token_type": "bearer",
         "expires_at": expires_at,
     }
+
+
+@router.post(
+    "/logout",
+    summary="Logout the current user",
+)
+async def logout(response: Response):
+    """Logout the current user.
+    
+    Args:
+        response: FastAPI response object (for clearing cookies)
+        
+    Returns:
+        Success message
+    """
+    # Get dependencies
+    settings = get_settings_dependency()
+    
+    # Clear the refresh token cookie (if used)
+    response.delete_cookie(
+        key="refresh_token",
+        httponly=True,
+        secure=not settings.debug,
+        samesite="lax",
+    )
+    
+    return {"message": "Successfully logged out"}
+
+
+@router.get(
+    "/me",
+    response_model=UserResponse,
+    summary="Get current user information",
+)
+async def get_current_user_info(user_id: str = Depends(get_current_user)):
+    """Get information about the currently authenticated user.
+    
+    Args:
+        user_id: The ID of the current user (from token)
+        
+    Returns:
+        Current user information
+        
+    Raises:
+        HTTPException: If the user is not found
+    """
+    # Get dependencies
+    user_service = get_user_service()
+    
+    # Get the user
+    user = await user_service.get_user_by_id(user_id)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found",
+        )
+        
+    return user

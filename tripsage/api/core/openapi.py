@@ -38,8 +38,8 @@ with your email and password. Then include the token in the `Authorization` head
 subsequent requests:
 
 ```
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyQGV4YW1wbGUuY29
-tIiwidXNlcl9pZCI6ImFiYzEyMyIsImV4cCI6MTcwOTgxNjQ2Mi44MTk1OTJ9.XXXXXXXXXXXXXXXXXXXXX
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyQGV4YW1w
+bGUuY29tIiwidXNlcl9pZCI6ImFiYzEyMyIsImV4cCI6MTcwOTgxNjQ2Mi44MTk1OTJ9.XXXXXXXXXXXXX
 ```
 
 ### API Key Authentication
@@ -59,7 +59,8 @@ Requests response.
 
 ## Error Handling
 
-The API uses standard HTTP status codes and returns error responses in a consistent format:
+The API uses standard HTTP status codes and returns error responses in a 
+consistent format:
 
 ```json
 {
@@ -92,7 +93,8 @@ TAG_DESCRIPTIONS = [
     {
         "name": "auth",
         "description": (
-            "Authentication endpoints for user registration, login, and token management"
+            "Authentication endpoints for user registration, login, "
+            "and token management"
         ),
     },
     {

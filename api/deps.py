@@ -132,13 +132,8 @@ async def get_current_user_optional(
     return None
 
 
-async def get_current_user(
-    user: Optional[dict] = Depends(get_current_user_optional),
-):
+async def get_current_user():
     """Get the current authenticated user or raise an error.
-
-    Args:
-        user: User object from optional auth
 
     Returns:
         User object if authenticated
@@ -146,6 +141,7 @@ async def get_current_user(
     Raises:
         AuthenticationError: If no user is authenticated
     """
+    user = await get_current_user_optional()
     if user is None:
         raise AuthenticationError(message="Not authenticated")
     return user
