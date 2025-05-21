@@ -4,6 +4,22 @@ This package contains Pydantic V2 models for request and response validation.
 """
 
 # Auth models
+# Accommodations models
+from tripsage.api.models.accommodations import (
+    AccommodationAmenity,
+    AccommodationDetailsRequest,
+    AccommodationDetailsResponse,
+    AccommodationImage,
+    AccommodationListing,
+    AccommodationLocation,
+    AccommodationSearchRequest,
+    AccommodationSearchResponse,
+    BookingStatus,
+    CancellationPolicy,
+    PropertyType,
+    SavedAccommodationRequest,
+    SavedAccommodationResponse,
+)
 from tripsage.api.models.api_key import (
     ApiKeyCreate,
     ApiKeyResponse,
@@ -18,6 +34,65 @@ from tripsage.api.models.auth import (
     UserCreate,
     UserLogin,
     UserResponse,
+)
+
+# Destinations models
+from tripsage.api.models.destinations import (
+    Destination,
+    DestinationCategory,
+    DestinationDetailsRequest,
+    DestinationDetailsResponse,
+    DestinationImage,
+    DestinationSearchRequest,
+    DestinationSearchResponse,
+    DestinationSuggestionRequest,
+    DestinationSuggestionResponse,
+    DestinationVisitSchedule,
+    DestinationWeather,
+    PointOfInterest,
+    SavedDestinationRequest,
+    SavedDestinationResponse,
+)
+
+# Flights models
+from tripsage.api.models.flights import (
+    Airport,
+    AirportSearchRequest,
+    AirportSearchResponse,
+    FlightOffer,
+    FlightSearchRequest,
+    FlightSearchResponse,
+    MultiCityFlightSearchRequest,
+    MultiCityFlightSegment,
+    SavedFlightRequest,
+    SavedFlightResponse,
+)
+
+# Itineraries models
+from tripsage.api.models.itineraries import (
+    AccommodationItineraryItem,
+    ActivityItineraryItem,
+    FlightItineraryItem,
+    Itinerary,
+    ItineraryConflictCheckResponse,
+    ItineraryCreateRequest,
+    ItineraryDay,
+    ItineraryItem,
+    ItineraryItemCreateRequest,
+    ItineraryItemType,
+    ItineraryItemUpdateRequest,
+    ItineraryOptimizeRequest,
+    ItineraryOptimizeResponse,
+    ItinerarySearchRequest,
+    ItinerarySearchResponse,
+    ItineraryShareSettings,
+    ItineraryStatus,
+    ItineraryUpdateRequest,
+    ItineraryVisibility,
+    Location,
+    OptimizationSetting,
+    TimeSlot,
+    TransportationItineraryItem,
 )
 
 # Request models
@@ -52,20 +127,122 @@ from tripsage.api.models.responses.trips import (
     TripSummaryResponse,
 )
 
+# Trip models
+from tripsage.api.models.trips import (
+    Trip,
+    TripDay,
+    TripDestinationData,
+    TripMember,
+    TripPreferenceData,
+    TripStatus,
+    TripVisibility,
+)
+
 __all__ = [
     # Auth models
-    "Token", "TokenData", "UserCreate", "UserLogin", "UserResponse", "RefreshToken",
-    "ApiKeyCreate", "ApiKeyResponse", "ApiKeyValidateRequest", 
-    "ApiKeyValidateResponse", "ApiKeyRotateRequest",
-    
+    "Token",
+    "TokenData",
+    "UserCreate",
+    "UserLogin",
+    "UserResponse",
+    "RefreshToken",
+    "ApiKeyCreate",
+    "ApiKeyResponse",
+    "ApiKeyValidateRequest",
+    "ApiKeyValidateResponse",
+    "ApiKeyRotateRequest",
+    # Accommodations models
+    "AccommodationAmenity",
+    "AccommodationDetailsRequest",
+    "AccommodationDetailsResponse",
+    "AccommodationImage",
+    "AccommodationListing",
+    "AccommodationLocation",
+    "AccommodationSearchRequest",
+    "AccommodationSearchResponse",
+    "BookingStatus",
+    "CancellationPolicy",
+    "PropertyType",
+    "SavedAccommodationRequest",
+    "SavedAccommodationResponse",
+    # Destinations models
+    "Destination",
+    "DestinationCategory",
+    "DestinationDetailsRequest",
+    "DestinationDetailsResponse",
+    "DestinationImage",
+    "DestinationSearchRequest",
+    "DestinationSearchResponse",
+    "DestinationSuggestionRequest",
+    "DestinationSuggestionResponse",
+    "DestinationVisitSchedule",
+    "DestinationWeather",
+    "PointOfInterest",
+    "SavedDestinationRequest",
+    "SavedDestinationResponse",
+    # Flights models
+    "Airport",
+    "AirportSearchRequest",
+    "AirportSearchResponse",
+    "FlightOffer",
+    "FlightSearchRequest",
+    "FlightSearchResponse",
+    "MultiCityFlightSearchRequest",
+    "MultiCityFlightSegment",
+    "SavedFlightRequest",
+    "SavedFlightResponse",
+    # Itineraries models
+    "AccommodationItineraryItem",
+    "ActivityItineraryItem",
+    "FlightItineraryItem",
+    "Itinerary",
+    "ItineraryConflictCheckResponse",
+    "ItineraryCreateRequest",
+    "ItineraryDay",
+    "ItineraryItem",
+    "ItineraryItemCreateRequest",
+    "ItineraryItemType",
+    "ItineraryItemUpdateRequest",
+    "ItineraryOptimizeRequest",
+    "ItineraryOptimizeResponse",
+    "ItinerarySearchRequest",
+    "ItinerarySearchResponse",
+    "ItineraryShareSettings",
+    "ItineraryStatus",
+    "ItineraryUpdateRequest",
+    "ItineraryVisibility",
+    "Location",
+    "OptimizationSetting",
+    "TimeSlot",
+    "TransportationItineraryItem",
     # Request models
-    "RegisterUserRequest", "LoginRequest", "RefreshTokenRequest", 
-    "ChangePasswordRequest", "ForgotPasswordRequest", "ResetPasswordRequest", 
-    "TripDestination", "TripPreferences", "CreateTripRequest", "UpdateTripRequest", 
+    "RegisterUserRequest",
+    "LoginRequest",
+    "RefreshTokenRequest",
+    "ChangePasswordRequest",
+    "ForgotPasswordRequest",
+    "ResetPasswordRequest",
+    "TripDestination",
+    "TripPreferences",
+    "CreateTripRequest",
+    "UpdateTripRequest",
     "TripPreferencesRequest",
-    
     # Response models
-    "TokenResponse", "UserResponseExtended", "UserPreferencesResponse", 
-    "MessageResponse", "PasswordResetResponse", "TripResponse", "TripListItem", 
-    "TripListResponse", "TripSummaryResponse"
+    "TokenResponse",
+    "UserResponseExtended",
+    "UserPreferencesResponse",
+    "MessageResponse",
+    "PasswordResetResponse",
+    "TripResponse",
+    "TripListItem",
+    "TripListResponse",
+    "TripSummaryResponse",
+    # Trip models
+    "Trip",
+    "TripDay",
+    "TripDestinationData",
+    "TripMember",
+    "TripPreferenceData",
+    "TripStatus",
+    "TripVisibility",
 ]
