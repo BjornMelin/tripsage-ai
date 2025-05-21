@@ -208,9 +208,7 @@ class TestNeo4jOperations(TestDatabaseMigrationCompleteness):
 
         mock_mcp_manager.invoke.return_value = mock_memory_response(destinations)
 
-        with patch(
-            "tripsage.tools.memory_tools.mcp_manager", mock_mcp_manager
-        ):
+        with patch("tripsage.tools.memory_tools.mcp_manager", mock_mcp_manager):
             result = await memory_tools.find_destinations_by_country("France")
 
         assert len(result["destinations"]) == 2
@@ -230,9 +228,7 @@ class TestNeo4jOperations(TestDatabaseMigrationCompleteness):
             "end_date": "2024-07-15",
         }
 
-        with patch(
-            "tripsage.tools.memory_tools.mcp_manager", mock_mcp_manager
-        ):
+        with patch("tripsage.tools.memory_tools.mcp_manager", mock_mcp_manager):
             result = await memory_tools.create_trip_entities(
                 trip_id=1,
                 user_id=1,

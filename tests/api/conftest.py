@@ -30,10 +30,16 @@ def mock_mcp_manager():
     manager.initialize_mcp = AsyncMock()
     manager.initialize_all_enabled = AsyncMock()
     manager.shutdown = AsyncMock()
-    manager.get_available_mcps = MagicMock(return_value=["weather", "time", "googlemaps", "supabase"])
+    manager.get_available_mcps = MagicMock(
+        return_value=["weather", "time", "googlemaps", "supabase"]
+    )
     # Must add this method, appears to be missing or has a different name in API
-    manager.get_enabled_mcps = MagicMock(return_value=["weather", "time", "googlemaps", "supabase"])
-    manager.get_initialized_mcps = MagicMock(return_value=["weather", "time", "googlemaps", "supabase"])
+    manager.get_enabled_mcps = MagicMock(
+        return_value=["weather", "time", "googlemaps", "supabase"]
+    )
+    manager.get_initialized_mcps = MagicMock(
+        return_value=["weather", "time", "googlemaps", "supabase"]
+    )
 
     # Patch the mcp_manager singleton
     with patch("tripsage.mcp_abstraction.mcp_manager", manager):
@@ -61,7 +67,7 @@ def test_client() -> TestClient:
 @pytest.fixture
 async def async_client(test_client) -> AsyncGenerator[AsyncClient, None]:
     """Create an AsyncClient instance for async tests.
-    
+
     Yields:
         AsyncClient: Async HTTP client
     """
