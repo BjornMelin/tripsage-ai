@@ -1,7 +1,7 @@
 """
 TripSage API main application entry point.
 
-This module creates and configures the FastAPI application with all necessary 
+This module creates and configures the FastAPI application with all necessary
 middleware, routes, and startup/shutdown events.
 """
 
