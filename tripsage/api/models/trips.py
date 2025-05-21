@@ -4,12 +4,93 @@ This module defines Pydantic models for trip-related requests and responses.
 """
 
 from datetime import date, datetime
+from enum import Enum
 from typing import Any, Dict, List, Optional
 from uuid import UUID
 
 from pydantic import BaseModel, Field, model_validator
 
+
+class TripStatus(str, Enum):
+    """Status options for trips."""
+
+    PLANNING = "planning"
+    BOOKED = "booked"
+    IN_PROGRESS = "in_progress"
+    COMPLETED = "completed"
+    CANCELLED = "cancelled"
+
+
+class TripVisibility(str, Enum):
+    """Visibility options for trips."""
+
+    PRIVATE = "private"
+    SHARED = "shared"
+    PUBLIC = "public"
+
+
+class TripPreferenceData(BaseModel):
+    """Model for detailed trip preferences."""
+
+    key: str = Field(description="Preference key")
+    value: Any = Field(description="Preference value")
+    category: str = Field(description="Preference category")
+
+
+class TripDestinationData(BaseModel):
+    """Model for detailed trip destination data."""
+
+    id: str = Field(description="Destination ID")
+    name: str = Field(description="Destination name")
+    details: Dict[str, Any] = Field(description="Destination details")
+
+
+class TripMember(BaseModel):
+    """Model for a trip member."""
+
+    user_id: str = Field(description="User ID of the member")
+    role: str = Field(description="Member role (owner, editor, viewer)")
+    joined_at: datetime = Field(description="When the member joined")
+
+
+class TripDay(BaseModel):
+    """Model for a day in a trip."""
+
+    date: date = Field(description="Date of this trip day")
+    location: Optional[str] = Field(default=None, description="Location on this day")
+    notes: Optional[str] = Field(default=None, description="Notes for this day")
+
+
+class Trip(BaseModel):
+    """Complete trip model."""
+
+    id: UUID = Field(description="Trip ID")
+    user_id: str = Field(description="Owner user ID")
+    title: str = Field(description="Trip title")
+    description: Optional[str] = Field(default=None, description="Trip description")
+    start_date: date = Field(description="Trip start date")
+    end_date: date = Field(description="Trip end date")
+    status: TripStatus = Field(default=TripStatus.PLANNING, description="Trip status")
+    visibility: TripVisibility = Field(
+        default=TripVisibility.PRIVATE, description="Trip visibility"
+    )
+    destinations: List[TripDestinationData] = Field(
+        default=[], description="Trip destinations"
+    )
+    preferences: Dict[str, Any] = Field(default={}, description="Trip preferences")
+    members: List[TripMember] = Field(default=[], description="Trip members")
+    days: List[TripDay] = Field(default=[], description="Trip days")
+    created_at: datetime = Field(description="Creation timestamp")
+    updated_at: datetime = Field(description="Last update timestamp")
+
+    @property
+    def duration_days(self) -> int:
+        """Calculate the duration of the trip in days."""
+        return (self.end_date - self.start_date).days + 1
+
+
 # Request Models
+
 
 class TripDestination(BaseModel):
     """Model for a trip destination."""
@@ -34,37 +115,43 @@ class TripPreferences(BaseModel):
     budget: Optional[Dict[str, Any]] = Field(
         default=None,
         description="Budget information",
-        examples=[{
-            "total": 2000,
-            "currency": "USD",
-            "accommodation_budget": 1000,
-            "transportation_budget": 600,
-            "food_budget": 300,
-            "activities_budget": 100,
-        }],
+        examples=[
+            {
+                "total": 2000,
+                "currency": "USD",
+                "accommodation_budget": 1000,
+                "transportation_budget": 600,
+                "food_budget": 300,
+                "activities_budget": 100,
+            }
+        ],
     )
     accommodation: Optional[Dict[str, Any]] = Field(
         default=None,
         description="Accommodation preferences",
-        examples=[{
-            "type": "hotel",
-            "min_rating": 3.5,
-            "amenities": ["wifi", "breakfast"],
-            "location_preference": "city_center",
-        }],
+        examples=[
+            {
+                "type": "hotel",
+                "min_rating": 3.5,
+                "amenities": ["wifi", "breakfast"],
+                "location_preference": "city_center",
+            }
+        ],
     )
     transportation: Optional[Dict[str, Any]] = Field(
         default=None,
         description="Transportation preferences",
-        examples=[{
-            "flight_preferences": {
-                "seat_class": "economy",
-                "max_stops": 1,
-                "preferred_airlines": [],
-                "time_window": "flexible",
-            },
-            "local_transportation": ["public_transport", "walking"],
-        }],
+        examples=[
+            {
+                "flight_preferences": {
+                    "seat_class": "economy",
+                    "max_stops": 1,
+                    "preferred_airlines": [],
+                    "time_window": "flexible",
+                },
+                "local_transportation": ["public_transport", "walking"],
+            }
+        ],
     )
     activities: Optional[List[str]] = Field(
         default=None,
@@ -146,10 +233,12 @@ class UpdateTripRequest(BaseModel):
 
 class TripPreferencesRequest(TripPreferences):
     """Request model for updating trip preferences."""
+
     pass
 
 
 # Response Models
+
 
 class TripResponse(BaseModel):
     """Response model for trip details."""
