@@ -41,7 +41,7 @@
   - [x] Agent status store
   - [x] Search store
   - [x] Budget store
-  - [ ] Currency store
+  - [x] Currency store
   - [ ] Deals store
   - [x] API Key store
 - [x] Configure TanStack Query v5
@@ -444,7 +444,7 @@
 | Phase 2: Component Library | 55% | Basic and search components in place, more feature components needed |
 | Phase 3: Core Pages | 40% | Dashboard, Settings/API keys, and Search pages implemented |
 | Phase 4: Budget Features | 0% | Not started |
-| Phase 5: Advanced Features | 15% | BYOK implementation complete, Agent Status Store implemented |
+| Phase 5: Advanced Features | 20% | BYOK implementation complete, Agent Status Store and Currency Store implemented |
 | Phase 6: Polish & Launch | 0% | Not started |
 
 ## Next Steps
