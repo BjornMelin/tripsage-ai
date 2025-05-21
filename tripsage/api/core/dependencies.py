@@ -4,10 +4,13 @@ This module provides dependency functions that can be used with FastAPI's
 Depends() function to inject services and components into endpoint handlers.
 """
 
+from typing import Any, Dict
+
 from fastapi import Depends
 
 from tripsage.api.core.config import get_settings
 from tripsage.mcp_abstraction import mcp_manager
+from tripsage.utils.session_memory import initialize_session_memory
 
 
 # Create function for settings dependency
@@ -25,9 +28,39 @@ def get_mcp_manager_dependency():
     return mcp_manager
 
 
+# Session memory dependency
+_session_memory = {}
+
+
+def get_session_memory() -> Dict[str, Any]:
+    """Get the session memory.
+    
+    This dependency provides access to temporary memory for the current session.
+    
+    Returns:
+        Dictionary with session memory data
+    """
+    return _session_memory
+
+
+async def initialize_memory_for_user(user_id: str) -> Dict[str, Any]:
+    """Initialize memory for a specific user.
+    
+    Args:
+        user_id: The user ID
+        
+    Returns:
+        The initialized session memory
+    """
+    session_data = await initialize_session_memory(user_id)
+    _session_memory.update(session_data)
+    return _session_memory
+
+
 # Create singleton dependencies
 mcp_manager_dependency = Depends(get_mcp_manager_dependency)
 settings_dependency = Depends(get_settings)
+session_memory_dependency = Depends(get_session_memory)
 
 
 # Weather MCP dependency

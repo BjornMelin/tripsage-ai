@@ -46,7 +46,8 @@ class TravelAgent(BaseAgent):
         
         Key responsibilities:
         1. Help users discover, research, and plan trips to destinations worldwide
-        2. Find flights, accommodations, and activities that match user budget and preferences
+        2. Find flights, accommodations, and activities that match user budget 
+           and preferences
         3. Provide weather and local information to assist with planning
         4. Optimize travel plans to maximize value and enjoyment
         5. Store and retrieve information across sessions

@@ -224,7 +224,6 @@ def create_access_token(
 
 async def get_current_user(
     token: str = Depends(oauth2_scheme),
-    settings: Settings = Depends(get_settings_dependency),
 ) -> str:
     """Get the current authenticated user from the JWT token.
 
@@ -232,7 +231,6 @@ async def get_current_user(
 
     Args:
         token: The JWT token
-        settings: API settings
 
     Returns:
         The user ID from the token
@@ -240,6 +238,8 @@ async def get_current_user(
     Raises:
         HTTPException: If the token is invalid
     """
+    settings = get_settings_dependency()
+
     try:
         # Decode the token
         payload = jwt.decode(
