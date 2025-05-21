@@ -1,0 +1,51 @@
+@import "tailwindcss";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: oklch(100% 0 0);
+    --foreground: oklch(20% 0.01 0);
+    
+    --card: oklch(100% 0 0);
+    --card-foreground: oklch(20% 0.01 0);
+    
+    --popover: oklch(100% 0 0);
+    --popover-foreground: oklch(20% 0.01 0);
+    
+    --radius-sm: 0.375rem;
+    --radius-md: 0.5rem;
+    --radius-lg: 0.75rem;
+    
+    --font-geist-sans: var(--font-geist-sans);
+    --font-geist-mono: var(--font-geist-mono);
+  }
+ 
+  .dark {
+    --background: oklch(14% 0.01 0);
+    --foreground: oklch(95% 0.01 0);
+    
+    --card: oklch(14% 0.01 0);
+    --card-foreground: oklch(95% 0.01 0);
+    
+    --popover: oklch(14% 0.01 0);
+    --popover-foreground: oklch(95% 0.01 0);
+  }
+}
+ 
+@layer base {
+  * {
+    @apply border-border;
+  }
+  
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+.invert-on-dark {
+  @apply dark:invert;
+}

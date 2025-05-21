@@ -1,6 +1,7 @@
 # TripSage Budget-Conscious Features Specification
 
 ## Overview
+
 This document outlines budget-focused features for TripSage designed to help cost-conscious travelers find the best deals and optimize their travel spending.
 
 ## Core Budget Features
@@ -8,6 +9,7 @@ This document outlines budget-focused features for TripSage designed to help cos
 ### 1. Advanced Price Comparison & Prediction
 
 #### 1.1 Flight Price Tracking
+
 - **Real-time price monitoring** across multiple booking sites
 - **Price prediction algorithms** showing when to buy vs wait
 - **Fare alerts** for specific routes and dates
@@ -15,6 +17,7 @@ This document outlines budget-focused features for TripSage designed to help cos
 - **"Price Drop Guarantee"** - automatic rebooking if prices drop
 
 #### 1.2 Hidden City Ticketing (Skiplagging)
+
 - **Safe implementation** with legal disclaimers
 - **One-way only** recommendations to avoid issues
 - **Risk assessment** for each hidden city option
@@ -22,6 +25,7 @@ This document outlines budget-focused features for TripSage designed to help cos
 - **Multi-city search** for complex routing savings
 
 #### 1.3 Split Ticketing
+
 - **Automated split ticket search** for cheaper combinations
 - **Carrier mixing** to find lowest total cost
 - **Connection time validation** to ensure feasibility
@@ -30,6 +34,7 @@ This document outlines budget-focused features for TripSage designed to help cos
 ### 2. Total Trip Cost Calculator
 
 #### 2.1 Comprehensive Cost Breakdown
+
 ```typescript
 interface TripCost {
   flights: {
@@ -72,6 +77,7 @@ interface TripCost {
 ```
 
 #### 2.2 Budget Templates
+
 - **Pre-built budget templates** for popular destinations
 - **Backpacker/Mid-range/Luxury** spending profiles
 - **User-generated templates** from community
@@ -80,6 +86,7 @@ interface TripCost {
 ### 3. Accommodation Cost Optimization
 
 #### 3.1 Multi-Platform Comparison
+
 - **Real-time pricing** from hotels, hostels, Airbnb, VRBO
 - **Alternative options**: camping, couchsurfing, work exchanges
 - **Monthly rental detection** for longer stays
@@ -87,6 +94,7 @@ interface TripCost {
 - **Public transport proximity** calculations
 
 #### 3.2 Dynamic Pricing Insights
+
 - **Best booking windows** based on historical data
 - **Cancellation policy optimization**
 - **Group booking discounts**
@@ -95,6 +103,7 @@ interface TripCost {
 ### 4. Smart Date Flexibility
 
 #### 4.1 Flexible Date Search
+
 - **Price calendar** showing cost variations
 - **"Cheapest month" finder**
 - **Weekend vs weekday analysis**
@@ -102,6 +111,7 @@ interface TripCost {
 - **School vacation considerations**
 
 #### 4.2 Duration Optimization
+
 - **"Add a day, save money"** suggestions
 - **Optimal trip length** for destination
 - **Cost per day** breakdowns
@@ -109,12 +119,14 @@ interface TripCost {
 ### 5. Alternative Destination Suggestions
 
 #### 5.1 Similar Experience, Lower Cost
+
 - **AI-powered destination matching**
 - **"If you like X, consider Y"** recommendations
 - **Climate/culture similarity scores**
 - **Cost comparison charts**
 
 #### 5.2 Emerging Destinations
+
 - **Up-and-coming alternatives** to tourist hotspots
 - **Local festival/event calendars**
 - **Shoulder season opportunities**
@@ -122,6 +134,7 @@ interface TripCost {
 ### 6. Group Travel Optimization
 
 #### 6.1 Cost Splitting Features
+
 - **Trip cost sharing** calculator
 - **Group accommodation** finder
 - **Bulk booking** discounts
@@ -129,6 +142,7 @@ interface TripCost {
 - **IOU tracking** and settlement
 
 #### 6.2 Travel Companion Matching
+
 - **Budget-based matching** algorithm
 - **Travel style compatibility**
 - **Verified user profiles**
@@ -137,6 +151,7 @@ interface TripCost {
 ### 7. Real-Time Currency & Fee Management
 
 #### 7.1 Smart Currency Conversion
+
 - **Live exchange rates**
 - **ATM fee calculator**
 - **Best exchange locations**
@@ -144,6 +159,7 @@ interface TripCost {
 - **Multi-currency budget tracking**
 
 #### 7.2 Hidden Cost Alerts
+
 - **Tourist tax notifications**
 - **Resort fee warnings**
 - **Tipping guidelines** by country
@@ -152,6 +168,7 @@ interface TripCost {
 ### 8. Budget Travel Community Features
 
 #### 8.1 User-Generated Money-Saving Tips
+
 - **Destination-specific hacks**
 - **Free activity recommendations**
 - **Happy hour/discount databases**
@@ -159,12 +176,14 @@ interface TripCost {
 - **Free walking tour schedules**
 
 #### 8.2 Deal Sharing Platform
+
 - **Time-sensitive deal alerts**
 - **Error fare notifications**
 - **Flash sale aggregation**
 - **Coupon/promo code sharing**
 
 #### 8.3 Budget Leaderboard
+
 - **"Best trip value" rankings**
 - **Cost per experience** metrics
 - **Savings achievement** badges
@@ -173,6 +192,7 @@ interface TripCost {
 ### 9. Offline Functionality
 
 #### 9.1 Offline Access
+
 - **Downloaded maps** and directions
 - **Offline itineraries**
 - **Currency converter**
@@ -180,6 +200,7 @@ interface TripCost {
 - **Emergency information**
 
 #### 9.2 Data Optimization
+
 - **Low data mode**
 - **WiFi-only updates**
 - **Compressed images**
@@ -188,12 +209,14 @@ interface TripCost {
 ### 10. Predictive Budgeting
 
 #### 10.1 AI-Powered Predictions
+
 - **Spending pattern analysis**
 - **Budget alert system**
 - **Overspending warnings**
 - **Category-based insights**
 
 #### 10.2 Post-Trip Analysis
+
 - **Actual vs planned** comparison
 - **Spending insights**
 - **Optimization suggestions**
@@ -202,6 +225,7 @@ interface TripCost {
 ## Technical Implementation
 
 ### Frontend Components
+
 ```typescript
 // Price Prediction Component
 export function PricePredictor({ route, dates }: PricePredictorProps) {
@@ -235,6 +259,7 @@ export function GroupCostSplitter({ participants }: GroupCostProps) {
 ```
 
 ### API Integration
+
 ```typescript
 // Price Prediction API
 interface PricePredictionAPI {
@@ -254,6 +279,7 @@ interface CurrencyAPI {
 ## User Interface Design
 
 ### Budget Dashboard
+
 - **Total trip cost** at a glance
 - **Category breakdowns** with visualizations
 - **Daily spending** limits and tracking
@@ -261,6 +287,7 @@ interface CurrencyAPI {
 - **Budget vs actual** comparison
 
 ### Price Comparison Views
+
 - **Side-by-side comparisons**
 - **Hidden cost** breakdowns
 - **Total cost** calculations
@@ -268,6 +295,7 @@ interface CurrencyAPI {
 - **Time vs money** trade-offs
 
 ### Mobile-First Design
+
 - **Quick expense** entry
 - **Offline capability**
 - **Push notifications** for deals
@@ -277,12 +305,14 @@ interface CurrencyAPI {
 ## Integration with Existing Features
 
 ### Agent Integration
+
 - **Budget Agent** for cost optimization
 - **Deal Finder Agent** for opportunities
 - **Expense Tracker Agent** for monitoring
 - **Currency Agent** for conversions
 
 ### MCP Integration
+
 - **Flights MCP** for price data
 - **Accommodation MCP** for lodging costs
 - **Maps MCP** for transport calculations
@@ -291,12 +321,14 @@ interface CurrencyAPI {
 ## Success Metrics
 
 ### User Engagement
+
 - Average savings per trip
 - Feature adoption rates
 - Community contribution levels
 - Return user percentage
 
 ### Business Metrics
+
 - Booking conversion rates
 - Partner commission optimization
 - Premium feature upgrades
@@ -305,24 +337,28 @@ interface CurrencyAPI {
 ## Implementation Phases
 
 ### Phase 1: Core Budget Tools
+
 - Price comparison engine
 - Basic expense tracking
 - Currency conversion
 - Budget templates
 
 ### Phase 2: Predictive Features
+
 - Price prediction algorithms
 - Fare alerts
 - Flexible date search
 - Alternative suggestions
 
 ### Phase 3: Community Features
+
 - Deal sharing platform
 - Travel companion matching
 - User-generated content
 - Budget leaderboard
 
 ### Phase 4: Advanced Optimization
+
 - Hidden city ticketing
 - Split ticketing
 - Group optimization
@@ -331,12 +367,14 @@ interface CurrencyAPI {
 ## Security & Privacy
 
 ### Data Protection
+
 - Encrypted financial data
 - Secure payment processing
 - Anonymous spending patterns
 - GDPR compliance
 
 ### User Control
+
 - Data export options
 - Privacy settings
 - Sharing preferences
