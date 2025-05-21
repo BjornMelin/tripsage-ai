@@ -62,7 +62,7 @@
 
 - [x] Implement core shadcn/ui components
 - [ ] Create custom form components
-- [ ] Build loading states and skeletons
+- [x] Build loading states and skeletons
 - [x] Design notification system
 - [x] Create modal/dialog system
 - [x] Implement data tables
@@ -441,7 +441,7 @@
 | Section | Completion | Notes |
 |---------|------------|-------|
 | Phase 1: Foundation | 100% | Complete! All foundation components implemented including error boundaries |
-| Phase 2: Component Library | 55% | Basic and search components in place, more feature components needed |
+| Phase 2: Component Library | 65% | Basic and search components in place, loading states completed, more feature components needed |
 | Phase 3: Core Pages | 40% | Dashboard, Settings/API keys, and Search pages implemented |
 | Phase 4: Budget Features | 10% | Deals store implemented with budget and currency stores |
 | Phase 5: Advanced Features | 20% | BYOK implementation complete, Agent Status Store and Currency Store implemented |
