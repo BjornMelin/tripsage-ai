@@ -42,9 +42,11 @@ from typing import Any, Dict, List, Literal, Optional
 
 from pydantic import (
     AnyHttpUrl,
+    AnyUrl,
     BaseModel,
     ConfigDict,
     Field,
+    HttpUrl,
     SecretStr,
     field_validator,
     model_validator,
@@ -96,7 +98,9 @@ class BaseMCPConfig(BaseModel):
 class RestMCPConfig(BaseMCPConfig):
     """Configuration for REST API based MCP servers."""
 
-    url: AnyHttpUrl = Field(default="http://localhost:8080/")
+    url: AnyHttpUrl = Field(
+        default_factory=lambda: AnyHttpUrl("http://localhost:8080/")
+    )
     api_key: SecretStr = Field(default=SecretStr("test-api-key"))
     headers: Dict[str, str] = Field(default_factory=dict)
     max_connections: int = Field(default=10, ge=1, le=100)
@@ -224,8 +228,8 @@ class RedisMCPConfig(CacheMCPConfig):
 class Crawl4AIMCPConfig(WebCrawlMCPConfig):
     """Configuration for Crawl4AI MCP server."""
 
-    url: AnyHttpUrl = Field(
-        default="ws://localhost:11235/mcp/ws",
+    url: AnyUrl = Field(
+        default_factory=lambda: AnyUrl("ws://localhost:11235/mcp/ws"),
         description="URL of the Crawl4AI MCP server (WebSocket or SSE endpoint)",
     )
     runtime: RuntimeType = RuntimeType.PYTHON  # Override default
@@ -241,7 +245,8 @@ class FirecrawlMCPConfig(WebCrawlMCPConfig):
     """Configuration for Firecrawl MCP server."""
 
     mcp_server_url: AnyHttpUrl = Field(
-        default="http://localhost:4000", description="URL of the Firecrawl MCP server"
+        default_factory=lambda: AnyHttpUrl("http://localhost:4000"),
+        description="URL of the Firecrawl MCP server",
     )
     js_rendering: bool = True
     wait_for_selectors: List[str] = Field(default_factory=list)
