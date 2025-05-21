@@ -18,7 +18,7 @@ from tripsage.api.core.openapi import custom_openapi
 from tripsage.api.middlewares.auth import AuthMiddleware
 from tripsage.api.middlewares.logging import LoggingMiddleware
 from tripsage.api.middlewares.rate_limit import RateLimitMiddleware
-from tripsage.api.routers import accommodations, auth, flights, health, keys, trips
+from tripsage.api.routers import accommodations, auth, destinations, flights, health, keys, trips
 from tripsage.api.services.key_monitoring import (
     KeyMonitoringService,
     KeyOperationRateLimitMiddleware,
@@ -171,6 +171,9 @@ def create_app() -> FastAPI:
     app.include_router(flights.router, prefix="/api/flights", tags=["flights"])
     app.include_router(
         accommodations.router, prefix="/api/accommodations", tags=["accommodations"]
+    )
+    app.include_router(
+        destinations.router, prefix="/api/destinations", tags=["destinations"]
     )
 
     # TODO: Include additional routers as they are implemented
