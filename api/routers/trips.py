@@ -29,12 +29,18 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
+_trip_service_singleton = TripService()
+
+def get_trip_service() -> TripService:
+    """Dependency provider for the TripService singleton."""
+    return _trip_service_singleton
+
 
 @router.post("/", response_model=TripResponse, status_code=status.HTTP_201_CREATED)
 async def create_trip(
     trip_request: CreateTripRequest,
     current_user: dict = Depends(get_current_user),
-    trip_service: TripService = Depends(),
+    trip_service: TripService = Depends(get_trip_service),
     storage: DualStorageService = Depends(get_storage_service),
     session_memory: SessionMemory = Depends(get_session_memory),
 ):
@@ -72,7 +78,7 @@ async def list_trips(
         10, ge=1, le=100, description="Limit the number of trips returned"
     ),
     current_user: dict = Depends(get_current_user),
-    trip_service: TripService = Depends(),
+    trip_service: TripService = Depends(get_trip_service),
 ):
     """List trips for the current user.
 
@@ -104,7 +110,7 @@ async def list_trips(
 async def get_trip(
     trip_id: UUID,
     current_user: dict = Depends(get_current_user),
-    trip_service: TripService = Depends(),
+    trip_service: TripService = Depends(get_trip_service),
     session_memory: SessionMemory = Depends(get_session_memory),
 ):
     """Get a trip by ID.
@@ -140,7 +146,7 @@ async def update_trip(
     trip_id: UUID,
     trip_request: UpdateTripRequest,
     current_user: dict = Depends(get_current_user),
-    trip_service: TripService = Depends(),
+    trip_service: TripService = Depends(get_trip_service),
 ):
     """Update a trip.
 
@@ -173,7 +179,7 @@ async def update_trip(
 async def delete_trip(
     trip_id: UUID,
     current_user: dict = Depends(get_current_user),
-    trip_service: TripService = Depends(),
+    trip_service: TripService = Depends(get_trip_service),
 ):
     """Delete a trip.
 
@@ -200,7 +206,7 @@ async def update_trip_preferences(
     trip_id: UUID,
     preferences: TripPreferencesRequest,
     current_user: dict = Depends(get_current_user),
-    trip_service: TripService = Depends(),
+    trip_service: TripService = Depends(get_trip_service),
 ):
     """Update trip preferences.
 
@@ -233,7 +239,7 @@ async def update_trip_preferences(
 async def get_trip_summary(
     trip_id: UUID,
     current_user: dict = Depends(get_current_user),
-    trip_service: TripService = Depends(),
+    trip_service: TripService = Depends(get_trip_service),
 ):
     """Get a summary of a trip.
 

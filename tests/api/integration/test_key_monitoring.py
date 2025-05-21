@@ -5,7 +5,7 @@ the interaction between key service, monitoring service, and API endpoints.
 """
 
 from datetime import datetime, timedelta
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from httpx import AsyncClient
@@ -71,7 +71,9 @@ def setup_mocked_services(mock_redis_mcp, mock_supabase_mcp):
 
 
 @pytest.mark.asyncio
-async def test_create_key_with_monitoring(async_client: AsyncClient, auth_headers, setup_mocked_services):
+async def test_create_key_with_monitoring(
+    async_client: AsyncClient, auth_headers, setup_mocked_services
+):
     """Test creating an API key with monitoring integration.
 
     Args:
@@ -85,7 +87,9 @@ async def test_create_key_with_monitoring(async_client: AsyncClient, auth_header
 
     # Configure mocks
     # For key validation
-    with patch("tripsage.api.services.key._validate_openai_key", AsyncMock(return_value=True)):
+    with patch(
+        "tripsage.api.services.key._validate_openai_key", AsyncMock(return_value=True)
+    ):
         # For pattern detection
         redis_mcp.invoke_method.return_value = {"data": []}
 
@@ -145,7 +149,9 @@ async def test_create_key_with_monitoring(async_client: AsyncClient, auth_header
             params={
                 "key": "key_logs:test-user-id",
                 "value": {
-                    "timestamp": pytest.approx(datetime.utcnow().isoformat(), abs=timedelta(seconds=5)),
+                    "timestamp": pytest.approx(
+                        datetime.utcnow().isoformat(), abs=timedelta(seconds=5)
+                    ),
                     "operation": KeyOperation.CREATE,
                     "user_id": "test-user-id",
                     "key_id": "new-key",
@@ -159,7 +165,9 @@ async def test_create_key_with_monitoring(async_client: AsyncClient, auth_header
 
 
 @pytest.mark.asyncio
-async def test_suspicious_key_creation(async_client: AsyncClient, auth_headers, setup_mocked_services):
+async def test_suspicious_key_creation(
+    async_client: AsyncClient, auth_headers, setup_mocked_services
+):
     """Test handling suspicious key creation.
 
     Args:
@@ -173,7 +181,9 @@ async def test_suspicious_key_creation(async_client: AsyncClient, auth_headers, 
 
     # Configure mocks
     # For key validation
-    with patch("tripsage.api.services.key._validate_openai_key", AsyncMock(return_value=True)):
+    with patch(
+        "tripsage.api.services.key._validate_openai_key", AsyncMock(return_value=True)
+    ):
         # For pattern detection - return many operations to trigger suspicious pattern
         redis_mcp.invoke_method.side_effect = [
             # First call: check pattern
@@ -241,8 +251,13 @@ async def test_suspicious_key_creation(async_client: AsyncClient, auth_headers, 
             params={
                 "key": "key_alerts",
                 "value": {
-                    "timestamp": pytest.approx(datetime.utcnow().isoformat(), abs=timedelta(seconds=5)),
-                    "message": "ALERT: Suspicious API key create activity detected for user test-user-id",
+                    "timestamp": pytest.approx(
+                        datetime.utcnow().isoformat(), abs=timedelta(seconds=5)
+                    ),
+                    "message": (
+                        "ALERT: Suspicious API key create activity detected for user "
+                        "test-user-id"
+                    ),
                     "operation": KeyOperation.CREATE,
                     "user_id": "test-user-id",
                     "data": {"count": 10},
@@ -253,7 +268,9 @@ async def test_suspicious_key_creation(async_client: AsyncClient, auth_headers, 
 
 
 @pytest.mark.asyncio
-async def test_rate_limited_key_operation(async_client: AsyncClient, auth_headers, setup_mocked_services):
+async def test_rate_limited_key_operation(
+    async_client: AsyncClient, auth_headers, setup_mocked_services
+):
     """Test handling rate limited key operations.
 
     Args:

@@ -76,7 +76,9 @@ class MCPLauncher:
                 "args": ["-y", "supabase-mcp"],
                 "env": {
                     "SUPABASE_URL": str(self.settings.supabase.url),
-                    "SUPABASE_KEY": self.settings.supabase.service_key.get_secret_value(),
+                    "SUPABASE_KEY": (
+                        self.settings.supabase.service_key.get_secret_value()
+                    ),
                 },
             },
             "neo4j_memory": {
@@ -84,9 +86,15 @@ class MCPLauncher:
                 "command": "npx",
                 "args": ["-y", "@neo4j-contrib/mcp-neo4j"],
                 "env": {
-                    "NEO4J_URI": f"{self.settings.neo4j_memory.scheme}://{self.settings.neo4j_memory.host}:{self.settings.neo4j_memory.port}",
+                    "NEO4J_URI": (
+                        f"{self.settings.neo4j_memory.scheme}://"
+                        f"{self.settings.neo4j_memory.host}:"
+                        f"{self.settings.neo4j_memory.port}"
+                    ),
                     "NEO4J_USERNAME": self.settings.neo4j_memory.username,
-                    "NEO4J_PASSWORD": self.settings.neo4j_memory.password.get_secret_value(),
+                    "NEO4J_PASSWORD": (
+                        self.settings.neo4j_memory.password.get_secret_value()
+                    ),
                 },
             },
             "duffel_flights": {
@@ -94,7 +102,9 @@ class MCPLauncher:
                 "command": "npx",
                 "args": ["-y", "duffel-mcp"],
                 "env": {
-                    "DUFFEL_API_KEY": self.settings.duffel_flights.api_key.get_secret_value()
+                    "DUFFEL_API_KEY": (
+                        self.settings.duffel_flights.api_key.get_secret_value()
+                    )
                 },
             },
             "airbnb": {
@@ -129,7 +139,9 @@ class MCPLauncher:
                 "command": "npx",
                 "args": ["-y", "@mendableai/firecrawl-mcp-server"],
                 "env": {
-                    "FIRECRAWL_API_KEY": self.settings.firecrawl.api_key.get_secret_value()
+                    "FIRECRAWL_API_KEY": (
+                        self.settings.firecrawl.api_key.get_secret_value()
+                    )
                 },
             },
             "google_maps": {
@@ -137,7 +149,9 @@ class MCPLauncher:
                 "command": "npx",
                 "args": ["-y", "google-maps-mcp"],
                 "env": {
-                    "GOOGLE_MAPS_API_KEY": self.settings.google_maps.api_key.get_secret_value()
+                    "GOOGLE_MAPS_API_KEY": (
+                        self.settings.google_maps.api_key.get_secret_value()
+                    )
                 },
             },
             "time": {
@@ -151,7 +165,9 @@ class MCPLauncher:
                 "command": "npx",
                 "args": ["-y", "weather-mcp-server"],
                 "env": {
-                    "OPENWEATHERMAP_API_KEY": self.settings.weather.api_key.get_secret_value()
+                    "OPENWEATHERMAP_API_KEY": (
+                        self.settings.weather.api_key.get_secret_value()
+                    )
                 },
             },
             "google_calendar": {
@@ -160,7 +176,9 @@ class MCPLauncher:
                 "args": ["-y", "google-calendar-mcp"],
                 "env": {
                     "GOOGLE_CLIENT_ID": str(self.settings.google_calendar.auth_mode),
-                    "GOOGLE_CLIENT_SECRET": self.settings.google_calendar.api_key.get_secret_value(),
+                    "GOOGLE_CLIENT_SECRET": (
+                        self.settings.google_calendar.api_key.get_secret_value()
+                    ),
                 },
             },
         }

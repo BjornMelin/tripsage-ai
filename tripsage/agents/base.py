@@ -366,7 +366,7 @@ class BaseAgent:
 
             # Check if any tool calls were handoffs
             tool_calls = result.tool_calls if hasattr(result, "tool_calls") else []
-            handoff_detected = False
+            # handoff_detected = False
 
             for tool_call in tool_calls:
                 tool_name = tool_call.get("name", "")

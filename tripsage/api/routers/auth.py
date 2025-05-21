@@ -26,6 +26,18 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
+_user_service_singleton = UserService()
+_auth_service_singleton = AuthService()
+
+def get_user_service() -> UserService:
+    """Dependency provider for the UserService singleton."""
+    return _user_service_singleton
+
+def get_auth_service() -> AuthService:
+    """Dependency provider for the AuthService singleton."""
+    return _auth_service_singleton
+
+
 @router.post(
     "/register",
     response_model=UserResponse,
@@ -35,7 +47,7 @@ logger = logging.getLogger(__name__)
 async def register(
     user_data: UserCreate,
     settings: Settings = Depends(get_settings_dependency),
-    user_service: UserService = Depends(),
+    user_service: UserService = Depends(get_user_service),
 ):
     """Register a new user.
 
@@ -75,7 +87,7 @@ async def register(
 async def login(
     form_data: OAuth2PasswordRequestForm = Depends(),
     settings: Settings = Depends(get_settings_dependency),
-    auth_service: AuthService = Depends(),
+    auth_service: AuthService = Depends(get_auth_service),
 ):
     """Login to get an access token.
 
@@ -138,7 +150,7 @@ async def login(
 async def refresh_token(
     refresh_data: RefreshToken,
     settings: Settings = Depends(get_settings_dependency),
-    auth_service: AuthService = Depends(),
+    auth_service: AuthService = Depends(get_auth_service),
 ):
     """Refresh an access token.
 

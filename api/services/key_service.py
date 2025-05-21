@@ -87,7 +87,8 @@ class KeyService:
 
         except Exception as e:
             logger.error(
-                f"Error retrieving API key for user {user_id}, service {service}: {str(e)}"
+                f"Error retrieving API key for user {user_id}, "
+                f"service {service}: {str(e)}"
             )
             return None
 
@@ -141,7 +142,8 @@ class KeyService:
 
         except Exception as e:
             logger.error(
-                f"Error deleting API key for user {user_id}, service {service}: {str(e)}"
+                f"Error deleting API key for user {user_id}, "
+                f"service {service}: {str(e)}"
             )
             return False
 
@@ -194,7 +196,7 @@ class KeyService:
             raise KeyValidationError(
                 message=f"Error validating API key: {str(e)}",
                 details={"service": service},
-            )
+            ) from e
 
     async def _validate_openai_key(self, api_key: str) -> Dict[str, Any]:
         """Validate an OpenAI API key.
@@ -237,7 +239,7 @@ class KeyService:
         """
         try:
             # Initialize the weather MCP
-            weather_mcp = await self.mcp_manager.initialize_mcp("weather")
+            # weather_mcp = await self.mcp_manager.initialize_mcp("weather")
 
             # Call a simple validation method
             # In a real implementation, this would call the weather API with the key

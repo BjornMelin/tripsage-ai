@@ -1,7 +1,7 @@
 """API key management service for TripSage API.
 
-This module provides services for API key management, including BYOK (Bring Your Own Key)
-functionality for user-provided API keys.
+This module provides services for API key management, including BYOK
+(Bring Your Own Key) functionality for user-provided API keys.
 """
 
 import base64
@@ -50,17 +50,17 @@ class KeyService:
 
         # Initialize the key encryption system
         self._initialize_encryption()
-        
+
     async def initialize(self):
         """Initialize connections and services."""
         if not self.initialized:
             # Initialize Supabase MCP
             self.supabase_mcp = await self.mcp_manager.initialize_mcp("supabase")
-            
+
             # Initialize monitoring service
             self.monitoring_service = KeyMonitoringService()
             await self.monitoring_service.initialize()
-            
+
             self.initialized = True
 
     def _initialize_encryption(self):
@@ -430,7 +430,8 @@ class KeyService:
                     message="API key is valid",
                 )
             else:
-                # Use constant time comparison even on invalid keys to prevent timing attacks
+                # Use constant time comparison even on invalid keys to prevent
+                # timing attacks
                 constant_time_compare(key, secure_random_token(len(key)))
 
                 return ApiKeyValidateResponse(

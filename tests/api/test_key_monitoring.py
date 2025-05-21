@@ -21,7 +21,8 @@ async def test_get_key_metrics(async_client: AsyncClient, auth_headers):
     """
     # Mock the key monitoring service
     with patch(
-        "tripsage.api.services.key_monitoring.get_key_health_metrics", new_callable=AsyncMock
+        "tripsage.api.services.key_monitoring.get_key_health_metrics",
+        new_callable=AsyncMock,
     ) as mock_metrics:
         # Configure mocks
         mock_metrics.return_value = {

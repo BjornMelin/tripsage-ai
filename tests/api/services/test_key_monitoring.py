@@ -5,20 +5,17 @@ operations in TripSage.
 """
 
 import functools
-import secrets
 import time
 from datetime import datetime, timedelta
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
-import structlog
 
 from tripsage.api.services.key_monitoring import (
     KeyMonitoringService,
     KeyOperation,
     clear_sensitive_data,
     constant_time_compare,
-    monitor_key_operation,
     secure_random_token,
 )
 
@@ -87,25 +84,27 @@ async def test_log_operation(monitoring_service, mock_redis_mcp):
 
     # We only check for one Redis call since we mocked the _store_operation_for_pattern_detection method
     assert mock_redis_mcp.invoke_method.call_count >= 1
-    
+
     # Check that list_push was called with the right method and key
     call_args_list = mock_redis_mcp.invoke_method.call_args_list
     found_log_push = False
-    
+
     for call in call_args_list:
         args, kwargs = call
-        if (args[0] == "list_push" and 
-            "params" in kwargs and 
-            kwargs["params"].get("key") == "key_logs:test-user"):
+        if (
+            args[0] == "list_push"
+            and "params" in kwargs
+            and kwargs["params"].get("key") == "key_logs:test-user"
+        ):
             found_log_push = True
             log_value = kwargs["params"]["value"]
             assert log_value["user_id"] == "test-user"
-            assert log_value["key_id"] == "test-key" 
+            assert log_value["key_id"] == "test-key"
             assert log_value["service"] == "openai"
             assert log_value["success"] is True
             assert log_value["metadata"] == {"test": "data"}
             break
-    
+
     assert found_log_push, "Expected list_push call for key_logs was not found"
 
 
@@ -114,10 +113,12 @@ async def test_check_suspicious_patterns_normal(monitoring_service, mock_redis_m
     """Test checking for suspicious patterns - normal case."""
     # Configure mocks
     mock_redis_mcp.invoke_method.return_value = {"data": ["2023-01-01T00:00:00Z"]}
-    
+
     # Replace the mocked method with the original for this test
     original_method = monitoring_service._check_suspicious_patterns
-    monitoring_service._check_suspicious_patterns = KeyMonitoringService._check_suspicious_patterns
+    monitoring_service._check_suspicious_patterns = (
+        KeyMonitoringService._check_suspicious_patterns
+    )
 
     # Call check_suspicious_patterns
     result = await monitoring_service._check_suspicious_patterns(
@@ -139,10 +140,12 @@ async def test_check_suspicious_patterns_suspicious(monitoring_service, mock_red
     mock_redis_mcp.invoke_method.return_value = {
         "data": ["2023-01-01T00:00:00Z"] * 10  # 10 operations
     }
-    
+
     # Replace the mocked method with the original for this test
     original_method = monitoring_service._check_suspicious_patterns
-    monitoring_service._check_suspicious_patterns = KeyMonitoringService._check_suspicious_patterns
+    monitoring_service._check_suspicious_patterns = (
+        KeyMonitoringService._check_suspicious_patterns
+    )
     # Set a lower threshold to ensure suspicious pattern detection
     monitoring_service.alert_threshold = {
         KeyOperation.CREATE: 5,  # 5 creates is suspicious (we have 10)
@@ -179,7 +182,7 @@ async def test_send_alert(monitoring_service, mock_redis_mcp):
         assert call_args[0][0] == "list_push"
         assert call_args[1]["params"]["key"] == "key_alerts"
         assert call_args[1]["params"]["ttl"] == 2592000
-        
+
         value = call_args[1]["params"]["value"]
         assert "timestamp" in value
         assert "ALERT: Suspicious API key" in value["message"]
@@ -187,7 +190,7 @@ async def test_send_alert(monitoring_service, mock_redis_mcp):
         assert value["operation"] == KeyOperation.CREATE
         assert value["user_id"] == "test-user"
         assert value["data"] == {"count": 10}
-        
+
         # Verify logger was called
         mock_logger.error.assert_called_once()
 
@@ -267,7 +270,7 @@ async def test_is_rate_limited(monitoring_service, mock_redis_mcp):
     # Verify Redis call with parameters (ignoring exact key string)
     call_args = mock_redis_mcp.invoke_method.call_args[0]
     call_kwargs = mock_redis_mcp.invoke_method.call_args[1]
-    
+
     assert call_args[0] == "rate_limit"
     assert "key" in call_kwargs["params"]
     assert call_kwargs["params"]["limit"] == 10
@@ -401,6 +404,7 @@ def test_clear_sensitive_data():
 @pytest.mark.asyncio
 async def test_monitor_key_operation_decorator():
     """Test the monitor_key_operation decorator."""
+
     # Create a new version of the decorator for testing
     def test_monitor_decorator(operation):
         def decorator(func):
@@ -421,7 +425,7 @@ async def test_monitor_key_operation_decorator():
                     metadata = {"execution_time": execution_time * 1000}
                     if error:
                         metadata["error"] = error
-                    
+
                     if monitoring_svc:
                         await monitoring_svc.log_operation(
                             operation=operation,
@@ -431,9 +435,11 @@ async def test_monitor_key_operation_decorator():
                             success=success,
                             metadata=metadata,
                         )
+
             return wrapper
+
         return decorator
-    
+
     # Apply our test decorator
     @test_monitor_decorator(KeyOperation.CREATE)
     async def test_func(user_id, key_id=None, service=None):
@@ -444,7 +450,9 @@ async def test_monitor_key_operation_decorator():
     monitoring_service.log_operation = AsyncMock()
 
     # Call the decorated function
-    result = await test_func("test-user", "test-key", "test-service", monitoring_service)
+    result = await test_func(
+        "test-user", "test-key", "test-service", monitoring_service
+    )
 
     # Verify result
     assert result is True
@@ -463,6 +471,7 @@ async def test_monitor_key_operation_decorator():
 @pytest.mark.asyncio
 async def test_monitor_key_operation_decorator_error():
     """Test the monitor_key_operation decorator with an error."""
+
     # Create a new version of the decorator for testing
     def test_monitor_decorator(operation):
         def decorator(func):
@@ -483,7 +492,7 @@ async def test_monitor_key_operation_decorator_error():
                     metadata = {"execution_time": execution_time * 1000}
                     if error:
                         metadata["error"] = error
-                    
+
                     if monitoring_svc:
                         await monitoring_svc.log_operation(
                             operation=operation,
@@ -493,9 +502,11 @@ async def test_monitor_key_operation_decorator_error():
                             success=success,
                             metadata=metadata,
                         )
+
             return wrapper
+
         return decorator
-        
+
     # Apply our test decorator
     @test_monitor_decorator(KeyOperation.CREATE)
     async def test_func_error(user_id, key_id=None, service=None):
@@ -507,7 +518,9 @@ async def test_monitor_key_operation_decorator_error():
 
     # Call the decorated function and expect an error
     with pytest.raises(ValueError, match="Test error"):
-        await test_func_error("test-user", "test-key", "test-service", monitoring_service)
+        await test_func_error(
+            "test-user", "test-key", "test-service", monitoring_service
+        )
 
     # Verify monitoring service call
     monitoring_service.log_operation.assert_called_once()

@@ -4,14 +4,13 @@ This module provides tests for the key service used for API key
 operations in TripSage.
 """
 
-import secrets
 from datetime import datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from tripsage.api.services.key import KeyService
-from tripsage.api.services.key_monitoring import KeyMonitoringService, KeyOperation
+from tripsage.api.services.key_monitoring import KeyOperation
 
 
 @pytest.fixture
@@ -51,9 +50,10 @@ async def test_initialize(key_service, mock_monitoring_service):
     key_service.monitoring_service = None
 
     # Mock MCP manager
-    with patch("tripsage.api.services.key.mcp_manager") as mock_manager, patch(
-        "tripsage.api.services.key.KeyMonitoringService"
-    ) as mock_monitoring_cls:
+    with (
+        patch("tripsage.api.services.key.mcp_manager") as mock_manager,
+        patch("tripsage.api.services.key.KeyMonitoringService") as mock_monitoring_cls,
+    ):
         mock_manager.initialize_mcp = AsyncMock(return_value=AsyncMock())
         mock_monitoring_cls.return_value = mock_monitoring_service
 
@@ -176,7 +176,9 @@ async def test_get_key(key_service, mock_supabase_mcp, mock_monitoring_service):
 
 
 @pytest.mark.asyncio
-async def test_get_key_not_found(key_service, mock_supabase_mcp, mock_monitoring_service):
+async def test_get_key_not_found(
+    key_service, mock_supabase_mcp, mock_monitoring_service
+):
     """Test getting a non-existent API key."""
     # Configure mocks
     mock_supabase_mcp.invoke_method.return_value = {"data": []}
@@ -323,7 +325,9 @@ async def test_delete_key(key_service, mock_supabase_mcp, mock_monitoring_servic
 
 
 @pytest.mark.asyncio
-async def test_delete_key_not_found(key_service, mock_supabase_mcp, mock_monitoring_service):
+async def test_delete_key_not_found(
+    key_service, mock_supabase_mcp, mock_monitoring_service
+):
     """Test deleting a non-existent API key."""
     # Configure mocks
     mock_supabase_mcp.invoke_method.return_value = {"count": 0}
@@ -356,8 +360,14 @@ async def test_validate_key(key_service, mock_supabase_mcp, mock_monitoring_serv
     """Test validating an API key."""
     # Mock key validation for different services
     with (
-        patch("tripsage.api.services.key._validate_openai_key", AsyncMock(return_value=True)),
-        patch("tripsage.api.services.key._validate_googlemaps_key", AsyncMock(return_value=True)),
+        patch(
+            "tripsage.api.services.key._validate_openai_key",
+            AsyncMock(return_value=True),
+        ),
+        patch(
+            "tripsage.api.services.key._validate_googlemaps_key",
+            AsyncMock(return_value=True),
+        ),
     ):
         # Call validate_key for OpenAI
         openai_result = await key_service.validate_key("sk-test-key", "openai")
@@ -496,7 +506,9 @@ async def test_rotate_key(key_service, mock_supabase_mcp, mock_monitoring_servic
             "query": {"id": "test-key"},
             "data": {
                 "encrypted_key": "encrypted-key",
-                "updated_at": pytest.approx(datetime.utcnow().isoformat(), abs=timedelta(seconds=5)),
+                "updated_at": pytest.approx(
+                    datetime.utcnow().isoformat(), abs=timedelta(seconds=5)
+                ),
                 "is_valid": True,
             },
         },
@@ -516,7 +528,7 @@ def test_decrypt_api_key(key_service, mock_supabase_mcp):
     # Configure key_service and mock cipher
     key_service.cipher = MagicMock()
     key_service.cipher.decrypt.return_value = b"data-key"
-    
+
     # Create a mock Fernet instance
     mock_fernet = MagicMock()
     mock_fernet.decrypt.return_value = b"decrypted-key"
@@ -525,9 +537,11 @@ def test_decrypt_api_key(key_service, mock_supabase_mcp):
     with patch("tripsage.api.services.key.Fernet", return_value=mock_fernet):
         # Mock base64 decoding function
         with patch("tripsage.api.services.key.base64") as mock_base64:
-            mock_base64.urlsafe_b64decode.return_value = b"encrypted_data_key.encrypted_key"
+            mock_base64.urlsafe_b64decode.return_value = (
+                b"encrypted_data_key.encrypted_key"
+            )
             mock_base64.urlsafe_b64encode.return_value = b"encoded"
-            
+
             # Create test data with encrypted key
             key_data = {
                 "id": "test-key",
@@ -540,9 +554,11 @@ def test_decrypt_api_key(key_service, mock_supabase_mcp):
 
             # Verify result
             assert result == "decrypted-key"
-            
+
             # Verify split operation on the decoded data
-            mock_base64.urlsafe_b64decode.assert_called_once_with(b"encrypted-key-base64")
+            mock_base64.urlsafe_b64decode.assert_called_once_with(
+                b"encrypted-key-base64"
+            )
 
 
 def test_encrypt_api_key(key_service, mock_supabase_mcp):
@@ -550,7 +566,7 @@ def test_encrypt_api_key(key_service, mock_supabase_mcp):
     # Configure key_service and mock cipher
     key_service.cipher = MagicMock()
     key_service.cipher.encrypt.return_value = b"encrypted_data_key"
-    
+
     # Create a mock Fernet instance
     mock_fernet = MagicMock()
     mock_fernet.encrypt.return_value = b"encrypted_key"
@@ -560,17 +576,17 @@ def test_encrypt_api_key(key_service, mock_supabase_mcp):
     with patch("tripsage.api.services.key.Fernet") as mock_fernet_cls:
         mock_fernet_cls.return_value = mock_fernet
         mock_fernet_cls.generate_key.return_value = b"data_key"
-        
+
         # Mock base64 encoding function
         with patch("tripsage.api.services.key.base64") as mock_base64:
             mock_base64.urlsafe_b64encode.return_value = b"combined_encrypted_key"
-            
+
             # Call _encrypt_api_key directly for testing
             result = key_service._encrypt_api_key("test-key")
 
             # Verify result
             assert result == "combined_encrypted_key"
-            
+
             # Verify the encryptions and base64 encoding
             mock_fernet.encrypt.assert_called_once()
             mock_base64.urlsafe_b64encode.assert_called_once()
