@@ -13,7 +13,7 @@ from passlib.context import CryptContext
 from pydantic import EmailStr
 
 from tripsage.api.models.auth import UserResponse
-from tripsage.mcp_abstraction import get_mcp_manager
+from tripsage.mcp_abstraction import mcp_manager
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +30,7 @@ class UserService:
 
     def __init__(self):
         """Initialize the user service."""
-        self.mcp_manager = get_mcp_manager()
+        self.mcp_manager = mcp_manager
 
     async def get_user_by_id(self, user_id: str) -> Optional[UserResponse]:
         """Get a user by ID.

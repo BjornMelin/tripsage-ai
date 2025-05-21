@@ -19,7 +19,7 @@ from tripsage.api.middlewares.auth import AuthMiddleware
 from tripsage.api.middlewares.logging import LoggingMiddleware
 from tripsage.api.middlewares.rate_limit import RateLimitMiddleware
 from tripsage.api.routers import health
-from tripsage.mcp_abstraction import get_mcp_manager
+from tripsage.mcp_abstraction import mcp_manager
 
 logger = logging.getLogger(__name__)
 
@@ -33,13 +33,12 @@ async def lifespan(app: FastAPI):
     """
     # Startup: Initialize MCP Manager and other resources
     logger.info("Initializing MCP Manager on API startup")
-    mcp_manager = get_mcp_manager()
     await mcp_manager.initialize_all_enabled()
 
     available_mcps = mcp_manager.get_available_mcps()
-    enabled_mcps = mcp_manager.get_enabled_mcps()
+    initialized_mcps = mcp_manager.get_initialized_mcps()
     logger.info(f"Available MCPs: {available_mcps}")
-    logger.info(f"Enabled MCPs: {enabled_mcps}")
+    logger.info(f"Initialized MCPs: {initialized_mcps}")
 
     yield  # Application runs here
 

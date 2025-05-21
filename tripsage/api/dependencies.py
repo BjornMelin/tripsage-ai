@@ -6,7 +6,7 @@ MCP services and other components.
 
 from fastapi import APIRouter, Depends
 
-from tripsage.mcp_abstraction import get_mcp_manager
+from tripsage.mcp_abstraction import mcp_manager
 
 # Router for API endpoints
 router = APIRouter()
@@ -19,7 +19,7 @@ def get_mcp_manager_dep():
     Returns:
         The singleton MCP manager instance
     """
-    return get_mcp_manager()
+    return mcp_manager
 
 
 # Create the initialized variable to avoid function call in default parameter
@@ -98,19 +98,17 @@ async def get_detailed_weather(city: str, weather_mcp=weather_mcp_dependency):
 # Example of initialization on startup
 async def startup_event():
     """Initialize all enabled MCPs on startup."""
-    mcp_manager = get_mcp_manager_dep()
     await mcp_manager.initialize_all_enabled()
 
     # Log available MCPs
     available = mcp_manager.get_available_mcps()
-    enabled = mcp_manager.get_enabled_mcps()
+    initialized = mcp_manager.get_initialized_mcps()
 
     print(f"Available MCPs: {available}")
-    print(f"Enabled MCPs: {enabled}")
+    print(f"Initialized MCPs: {initialized}")
 
 
 # Example of cleanup on shutdown
 async def shutdown_event():
     """Cleanup MCP connections on shutdown."""
-    mcp_manager = get_mcp_manager_dep()
     await mcp_manager.shutdown()

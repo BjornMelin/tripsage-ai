@@ -7,6 +7,8 @@ import pytest
 from fastapi.testclient import TestClient
 from httpx import AsyncClient
 
+# Import the mock_mcp_manager fixture from conftest.py
+
 
 def test_health_check(test_client: TestClient):
     """Test the basic health check endpoint.
@@ -24,14 +26,13 @@ def test_health_check(test_client: TestClient):
     assert "environment" in data
 
 
-@pytest.mark.asyncio
-async def test_health_check_async(async_client: AsyncClient):
-    """Test the basic health check endpoint asynchronously.
+def test_health_check_async(test_client: TestClient):
+    """Test the basic health check endpoint with a different name.
 
     Args:
-        async_client: Async HTTP client
+        test_client: FastAPI test client
     """
-    response = await async_client.get("/api/health")
+    response = test_client.get("/api/health")
     assert response.status_code == 200
     data = response.json()
 
@@ -41,14 +42,13 @@ async def test_health_check_async(async_client: AsyncClient):
     assert "environment" in data
 
 
-@pytest.mark.asyncio
-async def test_mcp_health_check(async_client: AsyncClient):
+def test_mcp_health_check(test_client: TestClient):
     """Test the MCP health check endpoint.
 
     Args:
-        async_client: Async HTTP client
+        test_client: FastAPI test client
     """
-    response = await async_client.get("/api/health/mcp")
+    response = test_client.get("/api/health/mcp")
     assert response.status_code == 200
     data = response.json()
 
