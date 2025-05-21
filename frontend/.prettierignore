@@ -1,0 +1,19 @@
+# Directories
+node_modules/
+.next/
+public/
+coverage/
+dist/
+
+# File extensions
+*.log
+*.lock
+*.json
+*.md
+*.svg
+
+# Specific files
+.gitignore
+.prettierignore
+.env
+.env.*
