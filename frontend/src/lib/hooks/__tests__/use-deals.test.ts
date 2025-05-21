@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import { renderHook, act } from '@testing-library/react-hooks';
+import { renderHook, act } from '@testing-library/react';
 import { useDeals, useDealAlerts, useFeaturedDeals, useSavedDeals } from '../use-deals';
 import { useDealsStore } from '@/stores/deals-store';
 import { DealType } from '@/types/deals';

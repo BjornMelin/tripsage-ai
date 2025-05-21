@@ -1,4 +1,4 @@
-import { renderHook, act } from "@testing-library/react-hooks";
+import { renderHook, act } from "@testing-library/react";
 import {
   useCurrency,
   useCurrencyActions,
@@ -9,17 +9,17 @@ import {
 import { useCurrencyStore } from "@/stores/currency-store";
 
 // Mock the store to avoid persistence issues in tests
-jest.mock("zustand/middleware", () => ({
+vi.mock("zustand/middleware", () => ({
   persist: (fn) => fn,
 }));
 
 // Mock API query hooks
-jest.mock("@/lib/hooks/use-api-query", () => ({
-  useApiQuery: jest.fn().mockReturnValue({
+vi.mock("@/lib/hooks/use-api-query", () => ({
+  useApiQuery: vi.fn().mockReturnValue({
     data: null,
     isLoading: false,
     error: null,
-    refetch: jest.fn(),
+    refetch: vi.fn(),
   }),
 }));
 

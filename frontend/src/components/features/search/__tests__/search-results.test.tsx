@@ -3,8 +3,8 @@ import { SearchResults } from '../search-results';
 import { Flight } from '@/types/search';
 
 // Mock the onSort and onFilter functions
-const mockOnSort = jest.fn();
-const mockOnFilter = jest.fn();
+const mockOnSort = vi.fn();
+const mockOnFilter = vi.fn();
 
 // Create mock flight data
 const mockFlights: Flight[] = [
