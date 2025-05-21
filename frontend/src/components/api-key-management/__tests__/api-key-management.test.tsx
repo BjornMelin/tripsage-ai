@@ -1,3 +1,4 @@
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ApiKeyForm } from '../api-key-form';
@@ -9,29 +10,29 @@ import * as apiHooks from '@/lib/hooks/use-api-keys';
 import { useApiKeyStore } from '@/stores/api-key-store';
 
 // Mock the TanStack Query hooks
-jest.mock('@/lib/hooks/use-api-keys', () => ({
-  useApiKeys: jest.fn(),
-  useAddApiKey: jest.fn(),
-  useDeleteApiKey: jest.fn(),
-  useValidateApiKey: jest.fn(),
+vi.mock('@/lib/hooks/use-api-keys', () => ({
+  useApiKeys: vi.fn(),
+  useAddApiKey: vi.fn(),
+  useDeleteApiKey: vi.fn(),
+  useValidateApiKey: vi.fn(),
 }));
 
 // Mock Zustand store
-jest.mock('@/stores/api-key-store', () => ({
-  useApiKeyStore: jest.fn(),
+vi.mock('@/stores/api-key-store', () => ({
+  useApiKeyStore: vi.fn(),
 }));
 
 // Mock the toast component
-jest.mock('@/components/ui/use-toast', () => ({
+vi.mock('@/components/ui/use-toast', () => ({
   useToast: () => ({
-    toast: jest.fn(),
+    toast: vi.fn(),
   }),
 }));
 
 describe('API Key Management Components', () => {
   // Reset mocks before each test
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('ApiKeyInput Component', () => {
@@ -52,7 +53,7 @@ describe('API Key Management Components', () => {
     });
 
     it('toggles visibility when button is clicked', async () => {
-      const mockToggle = jest.fn();
+      const mockToggle = vi.fn();
       const user = userEvent.setup();
       
       render(
@@ -104,7 +105,7 @@ describe('API Key Management Components', () => {
     });
 
     it('calls onChange when a service is selected', async () => {
-      const mockOnChange = jest.fn();
+      const mockOnChange = vi.fn();
       const user = userEvent.setup();
       
       render(
@@ -130,20 +131,20 @@ describe('API Key Management Components', () => {
   describe('ApiKeyForm Component', () => {
     beforeEach(() => {
       // Mock store
-      (useApiKeyStore as jest.Mock).mockReturnValue({
+      (useApiKeyStore as any).mockReturnValue({
         supportedServices: ['google-maps', 'openai'],
         selectedService: null,
-        setSelectedService: jest.fn(),
+        setSelectedService: vi.fn(),
       });
       
       // Mock API hooks
-      (apiHooks.useValidateApiKey as jest.Mock).mockReturnValue({
-        mutate: jest.fn(),
+      (apiHooks.useValidateApiKey as any).mockReturnValue({
+        mutate: vi.fn(),
         isPending: false,
       });
       
-      (apiHooks.useAddApiKey as jest.Mock).mockReturnValue({
-        mutate: jest.fn(),
+      (apiHooks.useAddApiKey as any).mockReturnValue({
+        mutate: vi.fn(),
         isPending: false,
       });
     });
@@ -157,8 +158,8 @@ describe('API Key Management Components', () => {
     });
 
     it('submits the form with valid data', async () => {
-      const validateMock = jest.fn();
-      (apiHooks.useValidateApiKey as jest.Mock).mockReturnValue({
+      const validateMock = vi.fn();
+      (apiHooks.useValidateApiKey as any).mockReturnValue({
         mutate: validateMock,
         isPending: false,
       });
@@ -183,7 +184,7 @@ describe('API Key Management Components', () => {
 
   describe('ApiKeyList Component', () => {
     beforeEach(() => {
-      (useApiKeyStore as jest.Mock).mockReturnValue({
+      (useApiKeyStore as any).mockReturnValue({
         keys: {
           'google-maps': {
             service: 'google-maps',
@@ -201,13 +202,13 @@ describe('API Key Management Components', () => {
         },
       });
       
-      (apiHooks.useDeleteApiKey as jest.Mock).mockReturnValue({
-        mutate: jest.fn(),
+      (apiHooks.useDeleteApiKey as any).mockReturnValue({
+        mutate: vi.fn(),
         isPending: false,
       });
       
-      (apiHooks.useValidateApiKey as jest.Mock).mockReturnValue({
-        mutate: jest.fn(),
+      (apiHooks.useValidateApiKey as any).mockReturnValue({
+        mutate: vi.fn(),
         isPending: false,
       });
     });
@@ -222,8 +223,8 @@ describe('API Key Management Components', () => {
     });
 
     it('calls delete function when remove is confirmed', async () => {
-      const deleteMock = jest.fn();
-      (apiHooks.useDeleteApiKey as jest.Mock).mockReturnValue({
+      const deleteMock = vi.fn();
+      (apiHooks.useDeleteApiKey as any).mockReturnValue({
         mutate: deleteMock,
         isPending: false,
       });
@@ -245,11 +246,11 @@ describe('API Key Management Components', () => {
 
   describe('ApiKeySettings Component', () => {
     beforeEach(() => {
-      (apiHooks.useApiKeys as jest.Mock).mockReturnValue({
+      (apiHooks.useApiKeys as any).mockReturnValue({
         isLoading: false,
         isError: false,
         error: null,
-        refetch: jest.fn(),
+        refetch: vi.fn(),
       });
     });
 
@@ -261,11 +262,11 @@ describe('API Key Management Components', () => {
     });
 
     it('shows loading state when loading', () => {
-      (apiHooks.useApiKeys as jest.Mock).mockReturnValue({
+      (apiHooks.useApiKeys as any).mockReturnValue({
         isLoading: true,
         isError: false,
         error: null,
-        refetch: jest.fn(),
+        refetch: vi.fn(),
       });
       
       render(<ApiKeySettings />);
@@ -275,11 +276,11 @@ describe('API Key Management Components', () => {
     });
 
     it('shows error state when error occurs', () => {
-      (apiHooks.useApiKeys as jest.Mock).mockReturnValue({
+      (apiHooks.useApiKeys as any).mockReturnValue({
         isLoading: false,
         isError: true,
         error: new Error('Failed to load API keys'),
-        refetch: jest.fn(),
+        refetch: vi.fn(),
       });
       
       render(<ApiKeySettings />);

@@ -1,8 +1,9 @@
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { FlightSearchForm } from '../flight-search-form';
 
 // Mock the onSearch function
-const mockOnSearch = jest.fn();
+const mockOnSearch = vi.fn();
 
 describe('FlightSearchForm', () => {
   beforeEach(() => {

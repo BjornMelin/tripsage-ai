@@ -1,4 +1,4 @@
-import { renderHook, act } from "@testing-library/react-hooks";
+import { renderHook, act } from "@testing-library/react";
 import { useBudget, useBudgetActions, useExpenses, useAlerts, useCurrency } from "../use-budget";
 import {
   useFetchBudgets,
@@ -16,33 +16,33 @@ import {
 } from "../use-budget";
 
 // Mock all API-related hooks
-jest.mock("../use-api-query", () => ({
-  useApiQuery: jest.fn().mockReturnValue({
+vi.mock("../use-api-query", () => ({
+  useApiQuery: vi.fn().mockReturnValue({
     data: undefined,
     isLoading: false,
     error: null,
-    refetch: jest.fn(),
+    refetch: vi.fn(),
   }),
-  useApiMutation: jest.fn().mockReturnValue({
-    mutate: jest.fn(),
+  useApiMutation: vi.fn().mockReturnValue({
+    mutate: vi.fn(),
     isPending: false,
     error: null,
   }),
-  useApiPutMutation: jest.fn().mockReturnValue({
-    mutate: jest.fn(),
+  useApiPutMutation: vi.fn().mockReturnValue({
+    mutate: vi.fn(),
     isPending: false,
     error: null,
   }),
-  useApiDeleteMutation: jest.fn().mockReturnValue({
-    mutate: jest.fn(),
+  useApiDeleteMutation: vi.fn().mockReturnValue({
+    mutate: vi.fn(),
     isPending: false,
     error: null,
   }),
 }));
 
 // Mock the budget store
-jest.mock("../../../stores/budget-store", () => ({
-  useBudgetStore: jest.fn().mockImplementation(() => ({
+vi.mock("../../../stores/budget-store", () => ({
+  useBudgetStore: vi.fn().mockImplementation(() => ({
     budgets: {
       "budget-1": {
         id: "budget-1",
@@ -131,25 +131,25 @@ jest.mock("../../../stores/budget-store", () => ({
     budgetsByTrip: {
       "trip-1": ["budget-1"],
     },
-    setActiveBudget: jest.fn(),
-    addBudget: jest.fn(),
-    updateBudget: jest.fn(),
-    removeBudget: jest.fn(),
-    addBudgetCategory: jest.fn(),
-    updateBudgetCategory: jest.fn(),
-    removeBudgetCategory: jest.fn(),
-    setExpenses: jest.fn(),
-    addExpense: jest.fn(),
-    updateExpense: jest.fn(),
-    removeExpense: jest.fn(),
-    setBaseCurrency: jest.fn(),
-    setCurrencies: jest.fn(),
-    updateCurrencyRate: jest.fn(),
-    setAlerts: jest.fn(),
-    addAlert: jest.fn(),
-    markAlertAsRead: jest.fn(),
-    clearAlerts: jest.fn(),
-    setBudgets: jest.fn(),
+    setActiveBudget: vi.fn(),
+    addBudget: vi.fn(),
+    updateBudget: vi.fn(),
+    removeBudget: vi.fn(),
+    addBudgetCategory: vi.fn(),
+    updateBudgetCategory: vi.fn(),
+    removeBudgetCategory: vi.fn(),
+    setExpenses: vi.fn(),
+    addExpense: vi.fn(),
+    updateExpense: vi.fn(),
+    removeExpense: vi.fn(),
+    setBaseCurrency: vi.fn(),
+    setCurrencies: vi.fn(),
+    updateCurrencyRate: vi.fn(),
+    setAlerts: vi.fn(),
+    addAlert: vi.fn(),
+    markAlertAsRead: vi.fn(),
+    clearAlerts: vi.fn(),
+    setBudgets: vi.fn(),
   })),
 }));
 

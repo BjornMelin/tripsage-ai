@@ -8,14 +8,23 @@ export default defineConfig({
     globals: true,
     environment: "jsdom",
     setupFiles: ["./src/test-setup.ts"],
+    exclude: [
+      "**/node_modules/**",
+      "**/e2e/**",
+      "**/*.e2e.*",
+      "**/*.spec.*",
+    ],
     coverage: {
       provider: "v8",
       reporter: ["text", "json", "html"],
       exclude: [
         "node_modules/",
         "src/test-setup.ts",
+        "e2e/",
         "**/*.d.ts",
         "**/*.config.*",
+        "**/*.test.*",
+        "**/*.spec.*",
         "**/dist/**",
         "**/__tests__/**",
         "**/coverage/**",

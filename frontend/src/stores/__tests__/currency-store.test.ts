@@ -1,10 +1,12 @@
+import { describe, it, expect, beforeEach } from "vitest";
 import { useCurrencyStore } from "../currency-store";
 import { act } from "@testing-library/react";
-import { renderHook } from "@testing-library/react-hooks";
+import { renderHook } from "@testing-library/react";
 import type { Currency, ExchangeRate } from "@/types/currency";
+import { vi } from "vitest";
 
 // Mock the store to avoid persistence issues in tests
-jest.mock("zustand/middleware", () => ({
+vi.mock("zustand/middleware", () => ({
   persist: (fn) => fn,
 }));
 
