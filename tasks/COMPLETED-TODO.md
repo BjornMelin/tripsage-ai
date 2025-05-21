@@ -753,6 +753,41 @@ This file contains all the tasks that were marked as completed in the main TODO.
       - ✓ Created validation tests for code structure
       - ✓ Verified integration in both agents
 
+- [x] **Redis MCP Integration**
+
+  - **Target:** Redis MCP integration for standardized caching
+  - **Goal:** Implement comprehensive Redis MCP-based caching system
+  - **Status:** ✅ COMPLETED - PR created with complete implementation (May 21, 2025)
+  - **Tasks:**
+    - ✓ Complete Redis MCP client implementation in RedisMCPWrapper:
+      - ✓ Implemented full RedisMCPClient with comprehensive Redis operations
+      - ✓ Added support for key operations (get, set, delete)
+      - ✓ Added support for list, set, and hash operations
+      - ✓ Implemented pattern matching and key scanning
+      - ✓ Created connection management with pooling and reconnection
+      - ✓ Added metrics collection and sampling
+    - ✓ Create comprehensive cache tools in cache_tools.py:
+      - ✓ Implemented standardized caching functions using Redis MCP
+      - ✓ Created cache decorators with content-type awareness
+      - ✓ Added cache key generation utilities
+      - ✓ Implemented TTL management based on content types
+      - ✓ Added cache invalidation patterns
+      - ✓ Created metrics collection with different time windows
+    - ✓ Update web_tools.py to use new cache_tools:
+      - ✓ Modified CachedWebSearchTool to use Redis MCP tools
+      - ✓ Updated web_cached decorator to use Redis MCP
+      - ✓ Standardized cache approach across web operations
+    - ✓ Create comprehensive tests for Redis MCP:
+      - ✓ Implemented thorough tests for all caching functionality
+      - ✓ Added tests for cache decorators and key generation
+      - ✓ Created tests for TTL management and content type detection
+      - ✓ Added tests for cache statistics and metrics
+    - ✓ Update TODO.md to reflect implementation progress
+  - **Resources:**
+    - **Redis MCP Server:** <https://github.com/redis/mcp-redis>
+    - **Redis Docs:** <https://redis.io/docs/>
+  - **PR:** #f269a43 (May 21, 2025)
+
 - [x] Implement WebOperationsCache for Web Operations (Issue #38):
 
   - **Target:** Advanced caching system for TripSage web operations
