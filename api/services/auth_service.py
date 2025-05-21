@@ -252,11 +252,10 @@ class AuthService:
                 raise AuthenticationError("Invalid token type")
 
             return payload
-
-        except jwt.ExpiredSignatureError:
-            raise AuthenticationError("Token has expired")
-        except jwt.InvalidTokenError:
-            raise AuthenticationError("Invalid token")
+        except jwt.ExpiredSignatureError as err:
+            raise AuthenticationError("Token has expired") from err
+        except jwt.InvalidTokenError as err:
+            raise AuthenticationError("Invalid token") from err
 
     def validate_refresh_token(self, token: str) -> Dict[str, Any]:
         """Validate a JWT refresh token.
@@ -283,11 +282,10 @@ class AuthService:
                 raise AuthenticationError("Invalid token type")
 
             return payload
-
-        except jwt.ExpiredSignatureError:
-            raise AuthenticationError("Token has expired")
-        except jwt.InvalidTokenError:
-            raise AuthenticationError("Invalid token")
+        except jwt.ExpiredSignatureError as err:
+            raise AuthenticationError("Token has expired") from err
+        except jwt.InvalidTokenError as err:
+            raise AuthenticationError("Invalid token") from err
 
     async def change_password(
         self,
@@ -372,10 +370,10 @@ class AuthService:
 
             return result is not None
 
-        except jwt.ExpiredSignatureError:
-            raise AuthenticationError("Token has expired")
-        except jwt.InvalidTokenError:
-            raise AuthenticationError("Invalid token")
+        except jwt.ExpiredSignatureError as err:
+            raise AuthenticationError("Token has expired") from err
+        except jwt.InvalidTokenError as err:
+            raise AuthenticationError("Invalid token") from err
 
     def create_password_reset_token(self, user_id: str) -> str:
         """Create a password reset token.

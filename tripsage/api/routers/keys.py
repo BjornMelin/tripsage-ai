@@ -1,11 +1,10 @@
 """API key management endpoints for the TripSage API.
 
-This module provides endpoints for API key management, including BYOK (Bring Your 
+This module provides endpoints for API key management, including BYOK (Bring Your
 Own Key) functionality for user-provided API keys.
 """
 
 import logging
-from datetime import timedelta
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
@@ -29,7 +28,11 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 # Create monitoring service
-key_monitoring_service = KeyMonitoringService()
+_key_monitoring_service_singleton = KeyMonitoringService()
+
+def get_monitoring_service() -> KeyMonitoringService:
+    """Dependency provider for the KeyMonitoringService singleton."""
+    return _key_monitoring_service_singleton
 
 
 @router.get(
@@ -40,7 +43,7 @@ key_monitoring_service = KeyMonitoringService()
 async def list_keys(
     user_id: str = Depends(get_current_user),
     key_service: KeyService = Depends(),
-    monitoring_service: KeyMonitoringService = Depends(lambda: key_monitoring_service),
+    monitoring_service: KeyMonitoringService = Depends(get_monitoring_service),
 ):
     """List all API keys for the current user.
 
@@ -64,7 +67,7 @@ async def create_key(
     key_data: ApiKeyCreate,
     user_id: str = Depends(get_current_user),
     key_service: KeyService = Depends(),
-    monitoring_service: KeyMonitoringService = Depends(lambda: key_monitoring_service),
+    monitoring_service: KeyMonitoringService = Depends(get_monitoring_service),
 ):
     """Create a new API key.
 
@@ -108,7 +111,7 @@ async def delete_key(
     key_id: str = Path(..., description="The API key ID"),
     user_id: str = Depends(get_current_user),
     key_service: KeyService = Depends(),
-    monitoring_service: KeyMonitoringService = Depends(lambda: key_monitoring_service),
+    monitoring_service: KeyMonitoringService = Depends(get_monitoring_service),
 ):
     """Delete an API key.
 
@@ -148,7 +151,7 @@ async def validate_key(
     key_data: ApiKeyValidateRequest,
     user_id: Optional[str] = Depends(get_current_user),
     key_service: KeyService = Depends(),
-    monitoring_service: KeyMonitoringService = Depends(lambda: key_monitoring_service),
+    monitoring_service: KeyMonitoringService = Depends(get_monitoring_service),
 ):
     """Validate an API key with the service.
 
@@ -172,7 +175,7 @@ async def rotate_key(
     key_id: str = Path(..., description="The API key ID"),
     user_id: str = Depends(get_current_user),
     key_service: KeyService = Depends(),
-    monitoring_service: KeyMonitoringService = Depends(lambda: key_monitoring_service),
+    monitoring_service: KeyMonitoringService = Depends(get_monitoring_service),
 ):
     """Rotate an API key.
 
@@ -225,7 +228,7 @@ async def rotate_key(
 )
 async def get_metrics(
     user_id: str = Depends(get_current_user),
-    monitoring_service: KeyMonitoringService = Depends(lambda: key_monitoring_service),
+    monitoring_service: KeyMonitoringService = Depends(get_monitoring_service),
 ):
     """Get API key health metrics.
 
@@ -248,7 +251,7 @@ async def get_metrics(
 async def get_audit_log(
     user_id: str = Depends(get_current_user),
     limit: int = Query(100, ge=1, le=1000),
-    monitoring_service: KeyMonitoringService = Depends(lambda: key_monitoring_service),
+    monitoring_service: KeyMonitoringService = Depends(get_monitoring_service),
 ):
     """Get API key audit log for a user.
 
@@ -270,7 +273,7 @@ async def get_audit_log(
 async def get_alerts(
     user_id: str = Depends(get_current_user),
     limit: int = Query(100, ge=1, le=1000),
-    monitoring_service: KeyMonitoringService = Depends(lambda: key_monitoring_service),
+    monitoring_service: KeyMonitoringService = Depends(get_monitoring_service),
 ):
     """Get API key alerts.
 
@@ -294,7 +297,7 @@ async def get_alerts(
 async def get_expiring_keys(
     user_id: str = Depends(get_current_user),
     days: int = Query(7, ge=1, le=90),
-    monitoring_service: KeyMonitoringService = Depends(lambda: key_monitoring_service),
+    monitoring_service: KeyMonitoringService = Depends(get_monitoring_service),
 ):
     """Get API keys that are about to expire.
 
@@ -309,6 +312,6 @@ async def get_expiring_keys(
     keys = await check_key_expiration(monitoring_service, days)
 
     # Filter keys by user ID for regular users
-    # This would normally check if the user is an admin, but for now we'll use a 
+    # This would normally check if the user is an admin, but for now we'll use a
     # simple approach
     return [key for key in keys if key["user_id"] == user_id]

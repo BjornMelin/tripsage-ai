@@ -91,7 +91,9 @@ def test_user() -> Dict:
         "email": "test@example.com",
         "password": "test-password",
         # Hashed version of "test-password"
-        "hashed_password": "$2b$12$M5A1R.jRG9HZ0Qw7U14QZOIRcKjvEzdvqExQzmZWjJ3pdaM6FpDEi",
+        "hashed_password": (
+            "$2b$12$M5A1R.jRG9HZ0Qw7U14QZOIRcKjvEzdvqExQzmZWjJ3pdaM6FpDEi"
+        ),
         "full_name": "Test User",
     }
 
@@ -140,7 +142,9 @@ def mock_user_service():
         "id": "test-user-id",
         "email": "test@example.com",
         "full_name": "Test User",
-        "hashed_password": "$2b$12$M5A1R.jRG9HZ0Qw7U14QZOIRcKjvEzdvqExQzmZWjJ3pdaM6FpDEi",
+        "hashed_password": (
+            "$2b$12$M5A1R.jRG9HZ0Qw7U14QZOIRcKjvEzdvqExQzmZWjJ3pdaM6FpDEi"
+        ),
         "created_at": "2023-07-27T12:34:56.789Z",
         "updated_at": "2023-07-27T12:34:56.789Z",
     }

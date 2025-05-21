@@ -3,9 +3,7 @@
 This module provides tests for the health check endpoints in the TripSage API.
 """
 
-import pytest
 from fastapi.testclient import TestClient
-from httpx import AsyncClient
 
 # Import the mock_mcp_manager fixture from conftest.py
 
