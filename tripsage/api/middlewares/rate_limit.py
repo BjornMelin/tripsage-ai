@@ -15,7 +15,7 @@ from starlette.status import HTTP_429_TOO_MANY_REQUESTS
 from starlette.types import ASGIApp
 
 from tripsage.api.core.config import Settings, get_settings
-from tripsage.mcp_abstraction import get_mcp_manager
+from tripsage.mcp_abstraction import mcp_manager
 
 logger = logging.getLogger(__name__)
 
@@ -89,7 +89,6 @@ class RedisRateLimiter:
     async def initialize(self):
         """Initialize the Redis MCP client."""
         if not self.redis_mcp:
-            mcp_manager = get_mcp_manager()
             self.redis_mcp = await mcp_manager.initialize_mcp("redis")
 
     async def is_rate_limited(self, key: str) -> bool:
