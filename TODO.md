@@ -39,7 +39,8 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
 
 ## API and Middleware Tasks
 
-- ✅ API consolidation completed (May 20, 2025) - See PR #91
+- ✅ API consolidation completed (May 20, 2025) - See PR #91 and [tasks/COMPLETED-TODO.md](./tasks/COMPLETED-TODO.md)
+- The database migration is in progress - See "Database Migration" section below
 - For remaining API, MCP, and Middleware related tasks, see [tasks/TODO-API.md](./tasks/TODO-API.md)
 
 ## MVP Priority (Version 1.0)
@@ -338,7 +339,6 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
       - ✅ Integrated Duffel Flights MCP for flight search
       - ✅ Integrated Airbnb MCP for accommodation search
     - [ ] Current Focus (Next 2 Weeks):
-      - Complete API consolidation (✅ Completed on May 20, 2025)
       - Continue developing the Unified Travel Search Wrapper
       - Implement Redis MCP for standardized response caching
       - Integrate Supabase MCP for relational database operations
@@ -547,29 +547,12 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
       - Implement standard validation patterns
       - Define testing requirements for custom MCPs
 
-- [x] **API and Database Migrations**
+- [ ] **Database Migration**
 
-  - **Target:** `/tripsage/api/` directory (completed consolidation from `/api/` root directory)
-  - **Goal:** Provide unified API implementation with modern FastAPI patterns
-  - **Status:** ✅ API consolidation completed on May 20, 2025 (PR #91), database migration in progress
+  - **Target:** `/tripsage/api/` directory and database implementation
+  - **Goal:** Complete the database migration following API consolidation
+  - **Status:** API consolidation completed on May 20, 2025 (PR #91), database migration in progress
   - **Tasks:**
-    - [x] Create and implement tripsage/api directory with FastAPI structure:
-      - [x] Create endpoint groups by domain (users, trips, flights, etc.)
-      - [x] Implement proper dependency injection with modern patterns
-      - [x] Add comprehensive request/response models with Pydantic V2
-      - [x] Migrate all routers from `/api/` to `/tripsage/api/`:
-        - [x] Auth router with logout and user info endpoints
-        - [x] Trips router with improved implementation
-        - [x] Flights router with Pydantic V2 validation
-        - [x] Accommodations router with service pattern
-        - [x] Destinations router with proper dependencies
-        - [x] Itineraries router with enhanced functionality
-      - [x] Create and implement service layer:
-        - [x] TripService with singleton pattern
-        - [x] FlightService with proper abstraction
-        - [x] AccommodationService with dependency injection
-        - [x] DestinationService with proper error handling
-        - [x] ItineraryService with time slot management
     - [ ] Implement database migration:
       - [x] Create tripsage/models/db/ for essential business models (User, Trip)
       - [x] Port validation logic to new Pydantic V2 models with field_validator
@@ -578,13 +561,6 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
       - [ ] Create Neo4j schema initialization scripts
       - [ ] Ensure consistent error handling through MCP abstraction
       - [ ] Remove direct database connection pooling (handled by MCPs)
-    - [x] API Improvements:
-      - [x] Add OpenAPI documentation with enhanced descriptions
-      - [x] Implement API versioning with path prefixes
-      - [x] Add proper rate limiting with configurable limits
-      - [x] Implement comprehensive logging with structured logs
-      - [x] Add request validation with Pydantic V2
-      - [x] Create comprehensive test suite for all API endpoints
 
 - [ ] **Frontend Application Development**
   - [ ] Phase 1: Foundation & Core Setup (see TODO-FRONTEND.md)
