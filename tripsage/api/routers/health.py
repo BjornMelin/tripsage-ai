@@ -20,7 +20,7 @@ async def health_check():
         Dict with status and application information
     """
     settings = get_settings_dependency()
-    
+
     return {
         "status": "ok",
         "application": settings.app_name,

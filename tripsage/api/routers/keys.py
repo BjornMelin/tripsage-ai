@@ -27,13 +27,19 @@ from tripsage.api.services.key_monitoring import (
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
-# Create monitoring service
+# Create singleton instances
 _key_monitoring_service_singleton = KeyMonitoringService()
+_key_service_singleton = KeyService()
 
 
 def get_monitoring_service() -> KeyMonitoringService:
     """Dependency provider for the KeyMonitoringService singleton."""
     return _key_monitoring_service_singleton
+
+
+def get_key_service() -> KeyService:
+    """Dependency provider for the KeyService."""
+    return _key_service_singleton
 
 
 @router.get(
@@ -43,18 +49,19 @@ def get_monitoring_service() -> KeyMonitoringService:
 )
 async def list_keys(
     user_id: str = Depends(get_current_user),
-    key_service: KeyService = Depends(),
-    monitoring_service: KeyMonitoringService = Depends(get_monitoring_service),
 ):
     """List all API keys for the current user.
 
     Args:
         user_id: Current user ID
-        key_service: Key service for database operations
 
     Returns:
         List of API keys
     """
+    # Get dependencies
+    key_service = get_key_service()
+    # monitoring_service = get_monitoring_service()
+
     return await key_service.list_keys(user_id)
 
 
@@ -67,15 +74,12 @@ async def list_keys(
 async def create_key(
     key_data: ApiKeyCreate,
     user_id: str = Depends(get_current_user),
-    key_service: KeyService = Depends(),
-    monitoring_service: KeyMonitoringService = Depends(get_monitoring_service),
 ):
     """Create a new API key.
 
     Args:
         key_data: API key data
         user_id: Current user ID
-        key_service: Key service for database operations
 
     Returns:
         The created API key
@@ -83,6 +87,10 @@ async def create_key(
     Raises:
         HTTPException: If the key is invalid
     """
+    # Get dependencies
+    key_service = get_key_service()
+    # monitoring_service = get_monitoring_service()
+
     try:
         # Validate the API key with the service
         validation = await key_service.validate_key(key_data.key, key_data.service)
@@ -111,19 +119,20 @@ async def create_key(
 async def delete_key(
     key_id: str = Path(..., description="The API key ID"),
     user_id: str = Depends(get_current_user),
-    key_service: KeyService = Depends(),
-    monitoring_service: KeyMonitoringService = Depends(get_monitoring_service),
 ):
     """Delete an API key.
 
     Args:
         key_id: The API key ID
         user_id: Current user ID
-        key_service: Key service for database operations
 
     Raises:
         HTTPException: If the key is not found or does not belong to the user
     """
+    # Get dependencies
+    key_service = get_key_service()
+    # monitoring_service = get_monitoring_service()
+
     # Check if the key exists and belongs to the user
     key = await key_service.get_key(key_id)
 
@@ -151,18 +160,20 @@ async def delete_key(
 async def validate_key(
     key_data: ApiKeyValidateRequest,
     user_id: Optional[str] = Depends(get_current_user),
-    key_service: KeyService = Depends(),
-    monitoring_service: KeyMonitoringService = Depends(get_monitoring_service),
 ):
     """Validate an API key with the service.
 
     Args:
         key_data: API key data
-        key_service: Key service for database operations
+        user_id: Current user ID
 
     Returns:
         Validation result
     """
+    # Get dependencies
+    key_service = get_key_service()
+    # monitoring_service = get_monitoring_service()
+
     return await key_service.validate_key(key_data.key, key_data.service, user_id)
 
 
@@ -175,8 +186,6 @@ async def rotate_key(
     key_data: ApiKeyRotateRequest,
     key_id: str = Path(..., description="The API key ID"),
     user_id: str = Depends(get_current_user),
-    key_service: KeyService = Depends(),
-    monitoring_service: KeyMonitoringService = Depends(get_monitoring_service),
 ):
     """Rotate an API key.
 
@@ -184,7 +193,6 @@ async def rotate_key(
         key_data: New API key data
         key_id: The API key ID
         user_id: Current user ID
-        key_service: Key service for database operations
 
     Returns:
         The updated API key
@@ -192,6 +200,10 @@ async def rotate_key(
     Raises:
         HTTPException: If the key is not found or does not belong to the user
     """
+    # Get dependencies
+    key_service = get_key_service()
+    # monitoring_service = get_monitoring_service()
+
     # Check if the key exists and belongs to the user
     key = await key_service.get_key(key_id)
 
@@ -229,7 +241,6 @@ async def rotate_key(
 )
 async def get_metrics(
     user_id: str = Depends(get_current_user),
-    monitoring_service: KeyMonitoringService = Depends(get_monitoring_service),
 ):
     """Get API key health metrics.
 
@@ -239,6 +250,9 @@ async def get_metrics(
     Returns:
         Key health metrics
     """
+    # Get dependencies
+    # monitoring_service = get_monitoring_service()
+
     # Only allow admin users to access metrics
     # This would normally check user roles, but for now we'll use a simple approach
     return await get_key_health_metrics()
@@ -252,7 +266,6 @@ async def get_metrics(
 async def get_audit_log(
     user_id: str = Depends(get_current_user),
     limit: int = Query(100, ge=1, le=1000),
-    monitoring_service: KeyMonitoringService = Depends(get_monitoring_service),
 ):
     """Get API key audit log for a user.
 
@@ -263,6 +276,9 @@ async def get_audit_log(
     Returns:
         List of audit log entries
     """
+    # Get dependencies
+    monitoring_service = get_monitoring_service()
+
     return await monitoring_service.get_user_operations(user_id, limit)
 
 
@@ -274,7 +290,6 @@ async def get_audit_log(
 async def get_alerts(
     user_id: str = Depends(get_current_user),
     limit: int = Query(100, ge=1, le=1000),
-    monitoring_service: KeyMonitoringService = Depends(get_monitoring_service),
 ):
     """Get API key alerts.
 
@@ -285,6 +300,9 @@ async def get_alerts(
     Returns:
         List of alerts
     """
+    # Get dependencies
+    monitoring_service = get_monitoring_service()
+
     # Only allow admin users to access alerts
     # This would normally check user roles, but for now we'll use a simple approach
     return await monitoring_service.get_alerts(limit)
@@ -298,7 +316,6 @@ async def get_alerts(
 async def get_expiring_keys(
     user_id: str = Depends(get_current_user),
     days: int = Query(7, ge=1, le=90),
-    monitoring_service: KeyMonitoringService = Depends(get_monitoring_service),
 ):
     """Get API keys that are about to expire.
 
@@ -309,6 +326,9 @@ async def get_expiring_keys(
     Returns:
         List of expiring keys
     """
+    # Get dependencies
+    monitoring_service = get_monitoring_service()
+
     # Check for keys that are about to expire
     keys = await check_key_expiration(monitoring_service, days)
 
