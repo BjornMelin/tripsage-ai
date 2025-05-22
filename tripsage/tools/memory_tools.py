@@ -26,7 +26,7 @@ from tripsage.tools.schemas.memory import (
     Relation,
     SearchNodesResponse,
 )
-from tripsage.utils.error_handling import with_error_handling
+from tripsage.utils.decorators import with_error_handling
 from tripsage.utils.logging import get_logger
 
 # Set up logger
@@ -370,7 +370,7 @@ async def delete_entity_observations(
 @with_error_handling
 async def initialize_agent_memory(
     user_id: Optional[str] = None,
-) -> Dict[str, Any]:
+) -> dict:
     """Initialize agent memory by retrieving relevant knowledge.
 
     Args:
@@ -450,7 +450,7 @@ async def initialize_agent_memory(
 
 @function_tool
 @with_error_handling
-async def update_agent_memory(user_id: str, updates: Dict[str, Any]) -> Dict[str, Any]:
+async def update_agent_memory(user_id: str, updates: dict) -> dict:
     """Update agent memory with new knowledge.
 
     Args:
