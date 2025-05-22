@@ -4,14 +4,21 @@ This document outlines standardized patterns, best practices, and evaluation cri
 
 ## 1. MCP Strategy and Evaluation Criteria
 
-TripSage adopts a hybrid approach to MCP server integration:
+TripSage follows an **External-Only** strategy for MCP server integration:
 
-* **External First**: Prioritize using existing, well-maintained external MCPs for standardized functionality (e.g., Time, Neo4j Memory, Google Maps).
-* **Custom When Necessary**: Build custom MCPs using Python FastMCP 2.0 when:
-  * The functionality is core to TripSage's unique business logic.
-  * Direct database integration or complex orchestration of multiple APIs is required.
-  * Specific privacy, security, or performance requirements cannot be met by external MCPs.
-* **Thin Wrapper Clients**: Create lightweight Python client wrappers around all MCPs (both external and custom). These wrappers add TripSage-specific validation, error handling, logging, and metrics, and integrate with the MCP Abstraction Layer.
+* **External Only**: Use ONLY existing, well-maintained external MCPs for all functionality (e.g., Supabase, Redis, Neo4j Memory, Google Maps, Weather, etc.).
+* **No Custom Servers**: Following KISS/YAGNI principles, we do NOT build custom MCP servers. The complexity and maintenance burden is not justified when external servers meet all our needs.
+* **Thin Wrapper Clients**: Create lightweight Python client wrappers around all external MCPs. These wrappers add TripSage-specific validation, error handling, logging, and metrics, and integrate with the MCP Abstraction Layer.
+
+### When to Consider Custom MCPs (Currently: NEVER)
+
+Custom MCPs should only be considered if ALL of the following are true:
+1. No external MCP exists for the required functionality
+2. The functionality is absolutely core to TripSage's unique value proposition
+3. The functionality cannot be achieved through combining existing external MCPs
+4. There are specific regulatory/compliance requirements that prevent external usage
+
+**Current Assessment**: All TripSage requirements are met by external MCPs. No custom servers needed.
 
 ### Evaluation Criteria for MCP Solutions
 
@@ -28,9 +35,11 @@ When choosing or building an MCP solution, consider the following:
 9. **Documentation & Community Support**.
 10. **Licensing**.
 
-## 2. Custom MCP Server Implementation with Python FastMCP 2.0
+## 2. Custom MCP Server Implementation (NOT CURRENTLY USED)
 
-All custom MCP servers in TripSage are developed using Python FastMCP 2.0.
+**Note**: This section is retained for reference only. TripSage currently uses NO custom MCP servers, following the External-Only strategy.
+
+If custom MCP servers were ever needed (which they currently are not), they would be developed using Python FastMCP 2.0.
 
 ### 2.1. Server Structure Example
 
