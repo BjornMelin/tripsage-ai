@@ -60,7 +60,24 @@ from pydantic import BaseModel, Field
 
 from tripsage.mcp_abstraction.exceptions import TripSageMCPError
 from tripsage.mcp_abstraction.manager import mcp_manager
-from tripsage.mcp_abstraction.wrappers.redis_wrapper import ContentType
+
+# Import ContentType from the existing redis_wrapper for compatibility
+try:
+    from tripsage.mcp_abstraction.wrappers.redis_wrapper import ContentType
+except ImportError:
+    # Fallback if redis_wrapper doesn't exist
+    from enum import Enum
+
+    class ContentType(str, Enum):
+        """Content types for web operations with different TTL requirements."""
+
+        REALTIME = "realtime"
+        TIME_SENSITIVE = "time_sensitive"
+        DAILY = "daily"
+        SEMI_STATIC = "semi_static"
+        STATIC = "static"
+
+
 from tripsage.utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -522,8 +539,8 @@ def cached(
                     namespace=namespace,
                 )
                 logger.debug(
-                    f"Cached result for {function_name} completed in {execution_time:.2f}s "
-                    f"(key: {cache_key})"
+                    f"Cached result for {function_name} completed in "
+                    f"{execution_time:.2f}s (key: {cache_key})"
                 )
 
             return result
