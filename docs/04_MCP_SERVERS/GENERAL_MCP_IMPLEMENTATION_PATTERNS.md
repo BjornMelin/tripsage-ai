@@ -4,33 +4,42 @@ This document outlines standardized patterns, best practices, and evaluation cri
 
 ## 1. MCP Strategy and Evaluation Criteria
 
-TripSage adopts a hybrid approach to MCP server integration:
+TripSage follows an **External-Only** strategy for MCP server integration:
 
-*   **External First**: Prioritize using existing, well-maintained external MCPs for standardized functionality (e.g., Time, Neo4j Memory, Google Maps).
-*   **Custom When Necessary**: Build custom MCPs using Python FastMCP 2.0 when:
-    *   The functionality is core to TripSage's unique business logic.
-    *   Direct database integration or complex orchestration of multiple APIs is required.
-    *   Specific privacy, security, or performance requirements cannot be met by external MCPs.
-*   **Thin Wrapper Clients**: Create lightweight Python client wrappers around all MCPs (both external and custom). These wrappers add TripSage-specific validation, error handling, logging, and metrics, and integrate with the MCP Abstraction Layer.
+* **External Only**: Use ONLY existing, well-maintained external MCPs for all functionality (e.g., Supabase, Redis, Neo4j Memory, Google Maps, Weather, etc.).
+* **No Custom Servers**: Following KISS/YAGNI principles, we do NOT build custom MCP servers. The complexity and maintenance burden is not justified when external servers meet all our needs.
+* **Thin Wrapper Clients**: Create lightweight Python client wrappers around all external MCPs. These wrappers add TripSage-specific validation, error handling, logging, and metrics, and integrate with the MCP Abstraction Layer.
 
-### Evaluation Criteria for MCP Solutions:
+### When to Consider Custom MCPs (Currently: NEVER)
+
+Custom MCPs should only be considered if ALL of the following are true:
+1. No external MCP exists for the required functionality
+2. The functionality is absolutely core to TripSage's unique value proposition
+3. The functionality cannot be achieved through combining existing external MCPs
+4. There are specific regulatory/compliance requirements that prevent external usage
+
+**Current Assessment**: All TripSage requirements are met by external MCPs. No custom servers needed.
+
+### Evaluation Criteria for MCP Solutions
 
 When choosing or building an MCP solution, consider the following:
 
-1.  **Functionality & Feature Set**: Does it meet TripSage's requirements?
-2.  **Maturity & Maintenance**: Is it actively maintained? Is it stable?
-3.  **Implementation Language & Technology**: Preference for Python (FastMCP 2.0) for custom servers to align with the backend stack.
-4.  **Ease of Integration**: How well does it fit into the TripSage architecture (MCP Abstraction Layer, OpenAI Agents SDK)?
-5.  **Performance**: Latency, throughput, resource consumption.
-6.  **Scalability**: Can it handle increasing load?
-7.  **Cost**: API fees, hosting costs, development effort.
-8.  **Security**: Authentication, data protection.
-9.  **Documentation & Community Support**.
+1. **Functionality & Feature Set**: Does it meet TripSage's requirements?
+2. **Maturity & Maintenance**: Is it actively maintained? Is it stable?
+3. **Implementation Language & Technology**: Preference for Python (FastMCP 2.0) for custom servers to align with the backend stack.
+4. **Ease of Integration**: How well does it fit into the TripSage architecture (MCP Abstraction Layer, OpenAI Agents SDK)?
+5. **Performance**: Latency, throughput, resource consumption.
+6. **Scalability**: Can it handle increasing load?
+7. **Cost**: API fees, hosting costs, development effort.
+8. **Security**: Authentication, data protection.
+9. **Documentation & Community Support**.
 10. **Licensing**.
 
-## 2. Custom MCP Server Implementation with Python FastMCP 2.0
+## 2. Custom MCP Server Implementation (NOT CURRENTLY USED)
 
-All custom MCP servers in TripSage are developed using Python FastMCP 2.0.
+**Note**: This section is retained for reference only. TripSage currently uses NO custom MCP servers, following the External-Only strategy.
+
+If custom MCP servers were ever needed (which they currently are not), they would be developed using Python FastMCP 2.0.
 
 ### 2.1. Server Structure Example
 
@@ -138,52 +147,54 @@ async def get_available_data_sources(ctx: Context) -> List[str]:
 
 The `Context` object passed to tool handlers is crucial for:
 
-*   **Logging**:
-    *   `await ctx.debug("Detailed debug message")`
-    *   `await ctx.info("Informational message")`
-    *   `await ctx.warning("Potential issue encountered")`
-    *   `await ctx.error("Error occurred", exc_info=True)` (includes traceback)
-*   **Progress Reporting**:
-    *   `await ctx.report_progress(0.0, "Starting task...")`
-    *   `await ctx.report_progress(0.5, "Halfway done.")`
-    *   `await ctx.report_progress(1.0, "Task completed.")`
-*   **Resource Access**:
-    *   `available_sources = await ctx.read_resource("custom://data_sources/available")`
-*   **LLM Assistance (Sampling)**:
-    *   `summary = await ctx.sample("Summarize this text:", long_text_data)`
+* **Logging**:
+  * `await ctx.debug("Detailed debug message")`
+  * `await ctx.info("Informational message")`
+  * `await ctx.warning("Potential issue encountered")`
+  * `await ctx.error("Error occurred", exc_info=True)` (includes traceback)
+* **Progress Reporting**:
+  * `await ctx.report_progress(0.0, "Starting task...")`
+  * `await ctx.report_progress(0.5, "Halfway done.")`
+  * `await ctx.report_progress(1.0, "Task completed.")`
+* **Resource Access**:
+  * `available_sources = await ctx.read_resource("custom://data_sources/available")`
+* **LLM Assistance (Sampling)**:
+  * `summary = await ctx.sample("Summarize this text:", long_text_data)`
 
 ### 2.3. Error Handling Best Practices
 
-*   **Use Pydantic for Input Validation**: Define Pydantic models for tool inputs. FastMCP automatically validates incoming parameters against these models.
-*   **Specific Exception Handling**: Catch specific exceptions from API calls or business logic (e.g., `httpx.HTTPStatusError`, `ValueError`).
-*   **Log Detailed Errors**: Use `await ctx.error(..., exc_info=True)` for comprehensive server-side logs.
-*   **Return Structured Errors or Raise MCP Exceptions**:
-    *   For errors the client might be able to handle or display, return a Pydantic model that includes error details.
-    *   For unrecoverable tool execution failures, raise an appropriate exception (e.g., `fastmcp.MCPError` or a custom derivative). FastMCP will format this into a standard MCP error response.
-*   **Graceful Degradation**: If a primary data source fails, attempt to use a fallback if available and inform the context (`ctx.warning`).
+* **Use Pydantic for Input Validation**: Define Pydantic models for tool inputs. FastMCP automatically validates incoming parameters against these models.
+* **Specific Exception Handling**: Catch specific exceptions from API calls or business logic (e.g., `httpx.HTTPStatusError`, `ValueError`).
+* **Log Detailed Errors**: Use `await ctx.error(..., exc_info=True)` for comprehensive server-side logs.
+* **Return Structured Errors or Raise MCP Exceptions**:
+  * For errors the client might be able to handle or display, return a Pydantic model that includes error details.
+  * For unrecoverable tool execution failures, raise an appropriate exception (e.g., `fastmcp.MCPError` or a custom derivative). FastMCP will format this into a standard MCP error response.
+* **Graceful Degradation**: If a primary data source fails, attempt to use a fallback if available and inform the context (`ctx.warning`).
 
 ### 2.4. Tool Naming and Registration
 
-*   **Automatic Discovery**: Methods ending with `_tool` (e.g., `get_weather_data_tool`) are automatically registered. The `_tool` suffix is typically removed to form the MCP tool name unless explicitly decorated.
-*   **Explicit Decoration**: Use `@mcp_server.tool(name="actual_tool_name", ...)` for:
-    *   Methods not following the `_tool` suffix convention.
-    *   Overriding the automatically derived tool name.
-    *   Providing schema directly if not inferable from type hints or if more complex.
+* **Automatic Discovery**: Methods ending with `_tool` (e.g., `get_weather_data_tool`) are automatically registered. The `_tool` suffix is typically removed to form the MCP tool name unless explicitly decorated.
+* **Explicit Decoration**: Use `@mcp_server.tool(name="actual_tool_name", ...)` for:
+  * Methods not following the `_tool` suffix convention.
+  * Overriding the automatically derived tool name.
+  * Providing schema directly if not inferable from type hints or if more complex.
 
 ## 3. Standardized Service Patterns (CRUD & Search)
 
 For MCPs that manage persistent entities, TripSage uses base service classes to standardize CRUD (Create, Read, Update, Delete) and Search operations. These are typically used when an MCP server directly interacts with a database (like the Supabase/Neon MCPs or a custom MCP managing its own data).
 
-*   **`MCPServiceBase`**: Foundational abstract base class.
-*   **`CRUDServiceBase`**: Generic implementation for CRUD tools.
-*   **`SearchServiceBase`**: Base for search-focused tools.
+* **`MCPServiceBase`**: Foundational abstract base class.
+* **`CRUDServiceBase`**: Generic implementation for CRUD tools.
+* **`SearchServiceBase`**: Base for search-focused tools.
 
 These base classes (e.g., in `src/mcp/service_base.py`) promote:
-*   Automatic registration of standard tools (`create_<entity>`, `read_<entity>`, etc.).
-*   Type safety using Python generics tied to Pydantic entity models.
-*   Consistent error handling for common database operations.
+
+* Automatic registration of standard tools (`create_<entity>`, `read_<entity>`, etc.).
+* Type safety using Python generics tied to Pydantic entity models.
+* Consistent error handling for common database operations.
 
 **Example of a Service using `CRUDServiceBase`:**
+
 ```python
 # Conceptual example - actual implementation in specific DB MCPs
 # from typing import Dict, List, Optional, Any
@@ -249,12 +260,13 @@ These base classes (e.g., in `src/mcp/service_base.py`) promote:
 All MCP servers (custom or external) are accessed within TripSage via Python client classes that inherit from a `BaseMCPClient`. This `BaseMCPClient` is part of the MCP Abstraction Layer.
 
 Key features of these clients:
-*   **Configuration**: Loaded from the centralized settings system.
-*   **Error Handling**: Standardized wrapping of MCP errors.
-*   **Tool Invocation**: A common method like `invoke_tool(tool_name: str, params: Dict)`.
-*   **Pydantic Validation**: Input parameters for tool calls are validated against Pydantic models. Response data can also be validated.
-*   **Caching**: Integration with Redis for caching MCP tool responses where appropriate (see Caching Strategy docs).
-*   **`@function_tool` Decorator**: Methods on these clients intended for direct use by OpenAI Agents are decorated with `@function_tool` to expose them correctly.
+
+* **Configuration**: Loaded from the centralized settings system.
+* **Error Handling**: Standardized wrapping of MCP errors.
+* **Tool Invocation**: A common method like `invoke_tool(tool_name: str, params: Dict)`.
+* **Pydantic Validation**: Input parameters for tool calls are validated against Pydantic models. Response data can also be validated.
+* **Caching**: Integration with Redis for caching MCP tool responses where appropriate (see Caching Strategy docs).
+* **`@function_tool` Decorator**: Methods on these clients intended for direct use by OpenAI Agents are decorated with `@function_tool` to expose them correctly.
 
 Refer to the documentation for the MCP Abstraction Layer and specific client implementations (e.g., `FlightsMCPClient`, `WeatherMCPClient`) for more details.
 

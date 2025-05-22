@@ -6,16 +6,17 @@ This document provides a comprehensive guide to TripSage's browser automation st
 
 Browser automation is essential for TripSage to perform tasks that cannot be achieved through standard APIs or static web crawling. These tasks include:
 
-*   Checking real-time flight status on airline websites.
-*   Automating flight check-in procedures.
-*   Verifying booking details on provider websites, especially when confirmation APIs are lacking.
-*   Capturing screenshots for verification or user records.
-*   Monitoring dynamic price changes on specific pages.
-*   Interacting with websites that heavily rely on JavaScript or require user login for data access.
+* Checking real-time flight status on airline websites.
+* Automating flight check-in procedures.
+* Verifying booking details on provider websites, especially when confirmation APIs are lacking.
+* Capturing screenshots for verification or user records.
+* Monitoring dynamic price changes on specific pages.
+* Interacting with websites that heavily rely on JavaScript or require user login for data access.
 
 **Strategic Shift**: TripSage has moved away from a custom-built Browser MCP. Instead, it integrates with **specialized external MCP servers** built for browser automation, primarily:
-1.  **Playwright MCP**: For precise, script-based browser automation leveraging the Playwright framework.
-2.  **Stagehand MCP (Considered for future/advanced use)**: For AI-driven, more resilient browser automation that can adapt to UI changes.
+
+1. **Playwright MCP**: For precise, script-based browser automation leveraging the Playwright framework.
+2. **Stagehand MCP (Considered for future/advanced use)**: For AI-driven, more resilient browser automation that can adapt to UI changes.
 
 This approach aligns with the "external first" MCP strategy, reducing custom development and maintenance while leveraging robust, dedicated solutions. TripSage interacts with these external MCPs via its Python-based `BrowserAutomationClient`.
 
@@ -23,32 +24,33 @@ This approach aligns with the "external first" MCP strategy, reducing custom dev
 
 A thorough evaluation of browser automation frameworks was conducted, considering performance, compatibility, cost, integration complexity, and resilience.
 
-### Key Findings:
+### Key Findings
 
-*   **Playwright**:
-    *   **Performance**: Excellent, significantly faster than Selenium (e.g., ~35% faster navigation).
-    *   **Compatibility**: Strong cross-browser support (Chromium, Firefox, WebKit).
-    *   **Language Support**: First-class Python support, ideal for TripSage.
-    *   **Cost**: Free and open-source.
-    *   **Features**: Rich API, auto-waiting, network interception, multi-page support.
-    *   **Reliability**: Good, especially with auto-waiting.
-    *   **TripSage Fit**: Optimal due to Python bindings and performance.
-*   **Stagehand (Playwright-based AI Framework)**:
-    *   **Performance**: Built on Playwright, slight AI overhead but potentially faster for complex adaptive tasks.
-    *   **Resilience**: Outstanding due to AI adaptation to DOM changes.
-    *   **Language Support**: Primarily JavaScript/TypeScript; requires a bridge for Python.
-    *   **Cost**: Framework is free, but LLM API calls for AI features incur costs.
-    *   **TripSage Fit**: Promising for future use, especially for volatile UIs, but adds complexity and LLM dependency.
-*   **Browser-use (Previous Consideration)**:
-    *   **Limitations**: Free tier limited to 100 minutes/month, JavaScript-only, less direct Python integration.
-    *   **Decision**: Deprecated in favor of Playwright/Stagehand MCPs for better control, unlimited usage (self-hosted), and Python synergy.
-*   **Selenium**:
-    *   **Limitations**: Slower performance, more prone to flakiness compared to Playwright.
-    *   **Decision**: Not preferred due to Playwright's advantages.
+* **Playwright**:
+  * **Performance**: Excellent, significantly faster than Selenium (e.g., ~35% faster navigation).
+  * **Compatibility**: Strong cross-browser support (Chromium, Firefox, WebKit).
+  * **Language Support**: First-class Python support, ideal for TripSage.
+  * **Cost**: Free and open-source.
+  * **Features**: Rich API, auto-waiting, network interception, multi-page support.
+  * **Reliability**: Good, especially with auto-waiting.
+  * **TripSage Fit**: Optimal due to Python bindings and performance.
+* **Stagehand (Playwright-based AI Framework)**:
+  * **Performance**: Built on Playwright, slight AI overhead but potentially faster for complex adaptive tasks.
+  * **Resilience**: Outstanding due to AI adaptation to DOM changes.
+  * **Language Support**: Primarily JavaScript/TypeScript; requires a bridge for Python.
+  * **Cost**: Framework is free, but LLM API calls for AI features incur costs.
+  * **TripSage Fit**: Promising for future use, especially for volatile UIs, but adds complexity and LLM dependency.
+* **Browser-use (Previous Consideration)**:
+  * **Limitations**: Free tier limited to 100 minutes/month, JavaScript-only, less direct Python integration.
+  * **Decision**: Deprecated in favor of Playwright/Stagehand MCPs for better control, unlimited usage (self-hosted), and Python synergy.
+* **Selenium**:
+  * **Limitations**: Slower performance, more prone to flakiness compared to Playwright.
+  * **Decision**: Not preferred due to Playwright's advantages.
 
 **Recommendation**:
-*   **Primary**: Utilize a **Playwright MCP server** for most browser automation tasks due to its performance, Python compatibility, and rich feature set.
-*   **Secondary/Future**: Consider integrating a **Stagehand MCP server** for tasks requiring high resilience to UI changes or natural language command capabilities.
+
+* **Primary**: Utilize a **Playwright MCP server** for most browser automation tasks due to its performance, Python compatibility, and rich feature set.
+* **Secondary/Future**: Consider integrating a **Stagehand MCP server** for tasks requiring high resilience to UI changes or natural language command capabilities.
 
 ## 3. Playwright MCP Server Integration
 
@@ -58,22 +60,22 @@ TripSage assumes an external Playwright MCP server is running. This server would
 
 A Playwright MCP server would typically expose tools like:
 
-*   `playwright_navigate`: Navigates to a URL.
-    *   Params: `url` (string), `session_id` (string, optional for context reuse).
-*   `playwright_click`: Clicks an element.
-    *   Params: `selector` (string), `session_id`.
-*   `playwright_fill`: Fills a form field.
-    *   Params: `selector` (string), `text` (string), `session_id`.
-*   `playwright_screenshot`: Captures a screenshot.
-    *   Params: `path` (string, optional), `full_page` (bool, optional), `session_id`.
-    *   Output: Base64 encoded image or path to saved file.
-*   `playwright_get_text`: Extracts text from an element or page.
-    *   Params: `selector` (string, optional for specific element), `session_id`.
-*   `playwright_get_html`: Extracts HTML content.
-    *   Params: `selector` (string, optional), `session_id`.
-*   `playwright_run_script`: Executes custom JavaScript on the page.
-    *   Params: `script` (string), `session_id`.
-*   `playwright_manage_context`: Creates, closes, or lists browser contexts/sessions.
+* `playwright_navigate`: Navigates to a URL.
+  * Params: `url` (string), `session_id` (string, optional for context reuse).
+* `playwright_click`: Clicks an element.
+  * Params: `selector` (string), `session_id`.
+* `playwright_fill`: Fills a form field.
+  * Params: `selector` (string), `text` (string), `session_id`.
+* `playwright_screenshot`: Captures a screenshot.
+  * Params: `path` (string, optional), `full_page` (bool, optional), `session_id`.
+  * Output: Base64 encoded image or path to saved file.
+* `playwright_get_text`: Extracts text from an element or page.
+  * Params: `selector` (string, optional for specific element), `session_id`.
+* `playwright_get_html`: Extracts HTML content.
+  * Params: `selector` (string, optional), `session_id`.
+* `playwright_run_script`: Executes custom JavaScript on the page.
+  * Params: `script` (string), `session_id`.
+* `playwright_manage_context`: Creates, closes, or lists browser contexts/sessions.
 
 ### 3.2. TripSage Configuration for Playwright MCP
 
@@ -82,6 +84,7 @@ A Playwright MCP server would typically expose tools like:
 PLAYWRIGHT_MCP_ENDPOINT=http://localhost:3001 # URL of the Playwright MCP server
 # PLAYWRIGHT_MCP_API_KEY=... # If the Playwright MCP is secured
 ```
+
 This endpoint is configured in TripSage's centralized settings.
 
 ## 4. TripSage Browser Automation Client and Tools
@@ -226,35 +229,36 @@ async def verify_booking_on_website(params: BookingVerificationParams) -> Dict[s
 
 # ... other tools like automate_flight_check_in, monitor_webpage_price ...
 ```
+
 A `BrowserService` layer can be added between the agent tools and the `BrowserAutomationClient` to encapsulate complex multi-step automation sequences (e.g., logging into an airline website, navigating to flight status, and then filling the form).
 
 ## 5. Performance and Resource Management
 
-*   **Browser Context Reuse**: The `BrowserAutomationClient` should manage and reuse browser contexts (`session_id`) where appropriate to minimize the overhead of launching new browser instances for every task.
-*   **Headless Mode**: Run browsers in headless mode for production/automated tasks to save resources. Enable headed mode for debugging.
-*   **Timeouts**: Implement appropriate timeouts for navigation, element interaction, and page loading.
-*   **Resource Cleanup**: Ensure browser instances and contexts are properly closed after use to prevent resource leaks. The Playwright MCP server should handle robust cleanup.
-*   **Concurrency**: If the Playwright MCP server supports concurrent sessions, the `BrowserAutomationClient` can be made to manage multiple active sessions.
+* **Browser Context Reuse**: The `BrowserAutomationClient` should manage and reuse browser contexts (`session_id`) where appropriate to minimize the overhead of launching new browser instances for every task.
+* **Headless Mode**: Run browsers in headless mode for production/automated tasks to save resources. Enable headed mode for debugging.
+* **Timeouts**: Implement appropriate timeouts for navigation, element interaction, and page loading.
+* **Resource Cleanup**: Ensure browser instances and contexts are properly closed after use to prevent resource leaks. The Playwright MCP server should handle robust cleanup.
+* **Concurrency**: If the Playwright MCP server supports concurrent sessions, the `BrowserAutomationClient` can be made to manage multiple active sessions.
 
 ## 6. Caching
 
-*   Results from browser automation tasks (e.g., flight status, verified booking details) should be cached using TripSage's Redis cache.
-*   Cache TTLs should be relatively short for dynamic data like flight status (e.g., 5-15 minutes) and longer for more static verification data (e.g., 1-6 hours).
+* Results from browser automation tasks (e.g., flight status, verified booking details) should be cached using TripSage's Redis cache.
+* Cache TTLs should be relatively short for dynamic data like flight status (e.g., 5-15 minutes) and longer for more static verification data (e.g., 1-6 hours).
 
 ## 7. Error Handling and Resilience
 
-*   Browser automation can be brittle due to website UI changes.
-*   **Robust Selectors**: Use selectors that are less likely to change (e.g., based on `data-testid` attributes if available, or stable ARIA roles, rather than relying solely on CSS classes or complex XPath).
-*   **Retry Mechanisms**: Implement retries for transient network issues or element loading delays.
-*   **Explicit Waits**: Use Playwright's auto-waiting capabilities and add explicit waits for specific conditions where necessary.
-*   **Screenshots on Failure**: Capture screenshots when an automation task fails to aid in debugging.
-*   **Fallback to Simpler Methods**: If browser automation fails for a task (e.g., flight status), the agent should be able to fall back to API-based methods or inform the user.
+* Browser automation can be brittle due to website UI changes.
+* **Robust Selectors**: Use selectors that are less likely to change (e.g., based on `data-testid` attributes if available, or stable ARIA roles, rather than relying solely on CSS classes or complex XPath).
+* **Retry Mechanisms**: Implement retries for transient network issues or element loading delays.
+* **Explicit Waits**: Use Playwright's auto-waiting capabilities and add explicit waits for specific conditions where necessary.
+* **Screenshots on Failure**: Capture screenshots when an automation task fails to aid in debugging.
+* **Fallback to Simpler Methods**: If browser automation fails for a task (e.g., flight status), the agent should be able to fall back to API-based methods or inform the user.
 
 ## 8. Security Considerations
 
-*   **Input Sanitization**: Sanitize any user-provided data that might be typed into web forms.
-*   **Credential Management**: If automation involves logging into websites, handle credentials securely. Avoid storing them directly; prefer methods where the user performs login in their own session if possible, or use securely managed service account credentials if automating backend tasks.
-*   **Data Scraping**: Be mindful of website terms of service and data privacy when scraping information. Only extract necessary and publicly available data.
+* **Input Sanitization**: Sanitize any user-provided data that might be typed into web forms.
+* **Credential Management**: If automation involves logging into websites, handle credentials securely. Avoid storing them directly; prefer methods where the user performs login in their own session if possible, or use securely managed service account credentials if automating backend tasks.
+* **Data Scraping**: Be mindful of website terms of service and data privacy when scraping information. Only extract necessary and publicly available data.
 
 ## 9. Conclusion
 
