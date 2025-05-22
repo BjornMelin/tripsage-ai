@@ -1,11 +1,11 @@
-import { z } from 'zod';
+import { z } from "zod";
 
 // Message role schema
-export const MessageRoleSchema = z.enum(['user', 'assistant', 'system']);
+export const MessageRoleSchema = z.enum(["user", "assistant", "system"]);
 export type MessageRole = z.infer<typeof MessageRoleSchema>;
 
 // Tool call state schema
-export const ToolCallStateSchema = z.enum(['partial-call', 'call', 'result']);
+export const ToolCallStateSchema = z.enum(["partial-call", "call", "result"]);
 export type ToolCallState = z.infer<typeof ToolCallStateSchema>;
 
 // Tool invocation schema
@@ -20,20 +20,20 @@ export type ToolInvocation = z.infer<typeof ToolInvocationSchema>;
 
 // Message part for text content
 export const TextPartSchema = z.object({
-  type: z.literal('text'),
+  type: z.literal("text"),
   text: z.string(),
 });
 export type TextPart = z.infer<typeof TextPartSchema>;
 
 // Message part for tool invocation
 export const ToolInvocationPartSchema = z.object({
-  type: z.literal('tool-invocation'),
+  type: z.literal("tool-invocation"),
   toolInvocation: ToolInvocationSchema,
 });
 export type ToolInvocationPart = z.infer<typeof ToolInvocationPartSchema>;
 
 // Union of message part types
-export const MessagePartSchema = z.discriminatedUnion('type', [
+export const MessagePartSchema = z.discriminatedUnion("type", [
   TextPartSchema,
   ToolInvocationPartSchema,
 ]);
@@ -78,7 +78,7 @@ export type ChatSession = z.infer<typeof ChatSessionSchema>;
 export const ChatStoreStateSchema = z.object({
   sessions: z.array(ChatSessionSchema),
   currentSessionId: z.string().nullable(),
-  status: z.enum(['idle', 'loading', 'streaming', 'error']),
+  status: z.enum(["idle", "loading", "streaming", "error"]),
   error: z.string().nullable(),
 });
 export type ChatStoreState = z.infer<typeof ChatStoreStateSchema>;
@@ -108,10 +108,14 @@ export type ChatCompletionRequest = z.infer<typeof ChatCompletionRequestSchema>;
 export const ChatCompletionResponseSchema = z.object({
   id: z.string(),
   message: MessageSchema,
-  usage: z.object({
-    promptTokens: z.number(),
-    completionTokens: z.number(),
-    totalTokens: z.number(),
-  }).optional(),
+  usage: z
+    .object({
+      promptTokens: z.number(),
+      completionTokens: z.number(),
+      totalTokens: z.number(),
+    })
+    .optional(),
 });
-export type ChatCompletionResponse = z.infer<typeof ChatCompletionResponseSchema>;
+export type ChatCompletionResponse = z.infer<
+  typeof ChatCompletionResponseSchema
+>;

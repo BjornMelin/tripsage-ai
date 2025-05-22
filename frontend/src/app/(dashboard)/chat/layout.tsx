@@ -13,10 +13,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <ChatLayout
-      onNewChat={handleNewChat}
-      showAgentPanel={true}
-    >
+    <ChatLayout onNewChat={handleNewChat} showAgentPanel={true}>
       {children}
     </ChatLayout>
   );

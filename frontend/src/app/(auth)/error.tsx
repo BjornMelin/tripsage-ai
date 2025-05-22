@@ -17,13 +17,9 @@ export default function AuthError({
 }) {
   useEffect(() => {
     // Report the auth error
-    const errorReport = errorService.createErrorReport(
-      error,
-      undefined,
-      {
-        sessionId: getSessionId(),
-      }
-    );
+    const errorReport = errorService.createErrorReport(error, undefined, {
+      sessionId: getSessionId(),
+    });
 
     errorService.reportError(errorReport);
 

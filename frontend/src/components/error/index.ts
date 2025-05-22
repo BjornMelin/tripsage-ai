@@ -1,15 +1,15 @@
 /**
  * Error Boundary Components - Export index
- * 
+ *
  * This module provides comprehensive error handling components for React applications,
  * including error boundaries, fallback UI components, and error reporting services.
  */
 
 export { ErrorBoundary, withErrorBoundary } from "./error-boundary";
-export { 
-  ErrorFallback, 
-  MinimalErrorFallback, 
-  PageErrorFallback 
+export {
+  ErrorFallback,
+  MinimalErrorFallback,
+  PageErrorFallback,
 } from "./error-fallback";
 
 // Re-export types for convenience

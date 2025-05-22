@@ -29,9 +29,27 @@ describe("Currency Hooks", () => {
     act(() => {
       useCurrencyStore.setState({
         currencies: {
-          USD: { code: "USD", symbol: "$", name: "US Dollar", decimals: 2, flag: "🇺🇸" },
-          EUR: { code: "EUR", symbol: "€", name: "Euro", decimals: 2, flag: "🇪🇺" },
-          GBP: { code: "GBP", symbol: "£", name: "British Pound", decimals: 2, flag: "🇬🇧" },
+          USD: {
+            code: "USD",
+            symbol: "$",
+            name: "US Dollar",
+            decimals: 2,
+            flag: "🇺🇸",
+          },
+          EUR: {
+            code: "EUR",
+            symbol: "€",
+            name: "Euro",
+            decimals: 2,
+            flag: "🇪🇺",
+          },
+          GBP: {
+            code: "GBP",
+            symbol: "£",
+            name: "British Pound",
+            decimals: 2,
+            flag: "🇬🇧",
+          },
         },
         baseCurrency: "USD",
         exchangeRates: {
@@ -91,7 +109,7 @@ describe("Currency Hooks", () => {
       // Check that the base currency changed
       const newState = useCurrencyStore.getState();
       expect(newState.baseCurrency).toBe("EUR");
-      
+
       // Exchange rates should be recalculated
       expect(newState.exchangeRates["USD"]).toBeDefined();
       expect(newState.exchangeRates["USD"]?.rate).toBeCloseTo(1 / 0.85);
@@ -161,7 +179,9 @@ describe("Currency Hooks", () => {
       // Check that the rate was updated
       const newState = useCurrencyStore.getState();
       expect(newState.exchangeRates["EUR"]?.rate).toBe(0.9);
-      expect(newState.exchangeRates["EUR"]?.timestamp).toBe("2025-05-21T12:00:00Z");
+      expect(newState.exchangeRates["EUR"]?.timestamp).toBe(
+        "2025-05-21T12:00:00Z"
+      );
     });
 
     it("can update all exchange rates", () => {

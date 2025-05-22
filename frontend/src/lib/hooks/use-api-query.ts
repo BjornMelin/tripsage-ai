@@ -31,10 +31,11 @@ export function useApiQuery<TData = any, TError = ApiError>(
 }
 
 // Hook for POST requests
-export function useApiMutation<TData = any, TVariables = any, TError = ApiError>(
-  endpoint: string,
-  options?: ApiMutationOptions<TData, TVariables, TError>
-) {
+export function useApiMutation<
+  TData = any,
+  TVariables = any,
+  TError = ApiError,
+>(endpoint: string, options?: ApiMutationOptions<TData, TVariables, TError>) {
   const queryClient = useQueryClient();
 
   return useMutation<TData, TError, TVariables, unknown>({
@@ -52,10 +53,11 @@ export function useApiMutation<TData = any, TVariables = any, TError = ApiError>
 }
 
 // Hook for PUT requests
-export function useApiPutMutation<TData = any, TVariables = any, TError = ApiError>(
-  endpoint: string,
-  options?: ApiMutationOptions<TData, TVariables, TError>
-) {
+export function useApiPutMutation<
+  TData = any,
+  TVariables = any,
+  TError = ApiError,
+>(endpoint: string, options?: ApiMutationOptions<TData, TVariables, TError>) {
   const queryClient = useQueryClient();
 
   return useMutation<TData, TError, TVariables, unknown>({
@@ -72,10 +74,11 @@ export function useApiPutMutation<TData = any, TVariables = any, TError = ApiErr
 }
 
 // Hook for PATCH requests
-export function useApiPatchMutation<TData = any, TVariables = any, TError = ApiError>(
-  endpoint: string,
-  options?: ApiMutationOptions<TData, TVariables, TError>
-) {
+export function useApiPatchMutation<
+  TData = any,
+  TVariables = any,
+  TError = ApiError,
+>(endpoint: string, options?: ApiMutationOptions<TData, TVariables, TError>) {
   const queryClient = useQueryClient();
 
   return useMutation<TData, TError, TVariables, unknown>({
@@ -92,10 +95,11 @@ export function useApiPatchMutation<TData = any, TVariables = any, TError = ApiE
 }
 
 // Hook for DELETE requests
-export function useApiDeleteMutation<TData = any, TVariables = any, TError = ApiError>(
-  endpoint: string,
-  options?: ApiMutationOptions<TData, TVariables, TError>
-) {
+export function useApiDeleteMutation<
+  TData = any,
+  TVariables = any,
+  TError = ApiError,
+>(endpoint: string, options?: ApiMutationOptions<TData, TVariables, TError>) {
   const queryClient = useQueryClient();
 
   return useMutation<TData, TError, TVariables, unknown>({

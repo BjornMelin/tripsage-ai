@@ -36,7 +36,7 @@ describe("ErrorBoundary", () => {
     consoleSpy.error.mockClear();
     consoleSpy.group.mockClear();
     consoleSpy.groupEnd.mockClear();
-    
+
     // Mock createErrorReport to return a valid report
     (errorService.createErrorReport as any).mockReturnValue({
       error: {
@@ -47,7 +47,7 @@ describe("ErrorBoundary", () => {
       userAgent: "Test User Agent",
       timestamp: new Date().toISOString(),
     });
-    
+
     // Mock reportError to return a resolved promise
     (errorService.reportError as any).mockResolvedValue(undefined);
   });
@@ -84,7 +84,9 @@ describe("ErrorBoundary", () => {
       );
 
       expect(screen.getByText("Something went wrong")).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: /try again/i })).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: /try again/i })
+      ).toBeInTheDocument();
     });
 
     it("should call error reporting when error occurs", () => {
@@ -132,7 +134,9 @@ describe("ErrorBoundary", () => {
       );
 
       expect(consoleSpy.error).toHaveBeenCalled();
-      expect(consoleSpy.group).toHaveBeenCalledWith("🚨 Error Boundary Caught Error");
+      expect(consoleSpy.group).toHaveBeenCalledWith(
+        "🚨 Error Boundary Caught Error"
+      );
       expect(consoleSpy.groupEnd).toHaveBeenCalled();
 
       process.env.NODE_ENV = originalEnv;
@@ -171,7 +175,9 @@ describe("ErrorBoundary", () => {
       );
 
       // Try again should be available initially
-      expect(screen.getByRole("button", { name: /try again/i })).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: /try again/i })
+      ).toBeInTheDocument();
 
       // Click try again multiple times
       for (let i = 0; i < 3; i++) {
@@ -192,8 +198,12 @@ describe("ErrorBoundary", () => {
       );
 
       // Should still have reset button but not try again
-      expect(screen.getByRole("button", { name: /reset/i })).toBeInTheDocument();
-      expect(screen.queryByRole("button", { name: /try again/i })).not.toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: /reset/i })
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: /try again/i })
+      ).not.toBeInTheDocument();
     });
   });
 
@@ -215,7 +225,9 @@ describe("ErrorBoundary", () => {
 
       expect(screen.getByText("Custom Error UI")).toBeInTheDocument();
       expect(screen.getByText("Test error")).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: "Custom Reset" })).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "Custom Reset" })
+      ).toBeInTheDocument();
     });
   });
 
@@ -250,16 +262,20 @@ describe("ErrorBoundary", () => {
     it("should set correct display name", () => {
       const TestComponent = () => <div>Test</div>;
       TestComponent.displayName = "TestComponent";
-      
+
       const WrappedComponent = withErrorBoundary(TestComponent);
 
-      expect(WrappedComponent.displayName).toBe("withErrorBoundary(TestComponent)");
+      expect(WrappedComponent.displayName).toBe(
+        "withErrorBoundary(TestComponent)"
+      );
     });
 
     it("should handle components without display name", () => {
       const WrappedComponent = withErrorBoundary(NormalComponent);
 
-      expect(WrappedComponent.displayName).toBe("withErrorBoundary(NormalComponent)");
+      expect(WrappedComponent.displayName).toBe(
+        "withErrorBoundary(NormalComponent)"
+      );
     });
   });
 
@@ -291,7 +307,9 @@ describe("ErrorBoundary", () => {
     });
 
     it("should use existing session ID", () => {
-      (window.sessionStorage.getItem as any).mockReturnValue("existing_session_id");
+      (window.sessionStorage.getItem as any).mockReturnValue(
+        "existing_session_id"
+      );
 
       render(
         <ErrorBoundary>

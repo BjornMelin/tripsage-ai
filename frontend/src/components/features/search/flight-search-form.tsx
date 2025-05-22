@@ -4,9 +4,23 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import type { FlightSearchParams } from "@/types/search";
@@ -21,7 +35,9 @@ const flightSearchFormSchema = z.object({
   adults: z.number().min(1).max(9).default(1),
   children: z.number().min(0).max(9).default(0),
   infants: z.number().min(0).max(9).default(0),
-  cabinClass: z.enum(["economy", "premium_economy", "business", "first"]).default("economy"),
+  cabinClass: z
+    .enum(["economy", "premium_economy", "business", "first"])
+    .default("economy"),
   directOnly: z.boolean().default(false),
   flexibleDates: z.boolean().default(false),
 });
@@ -33,7 +49,7 @@ interface FlightSearchFormProps {
   initialValues?: Partial<FlightSearchFormValues>;
 }
 
-export function FlightSearchForm({ 
+export function FlightSearchForm({
   onSearch,
   initialValues = {
     tripType: "roundTrip",
@@ -43,9 +59,11 @@ export function FlightSearchForm({
     cabinClass: "economy",
     directOnly: false,
     flexibleDates: false,
-  }
+  },
 }: FlightSearchFormProps) {
-  const [tripType, setTripType] = useState<"oneWay" | "roundTrip" | "multiCity">(initialValues.tripType || "roundTrip");
+  const [tripType, setTripType] = useState<
+    "oneWay" | "roundTrip" | "multiCity"
+  >(initialValues.tripType || "roundTrip");
 
   const form = useForm<FlightSearchFormValues>({
     resolver: zodResolver(flightSearchFormSchema),
@@ -68,7 +86,7 @@ export function FlightSearchForm({
     };
 
     console.log("Search params:", searchParams);
-    
+
     if (onSearch) {
       onSearch(searchParams);
     }
@@ -78,19 +96,20 @@ export function FlightSearchForm({
     <Card>
       <CardHeader>
         <CardTitle>Flight Search</CardTitle>
-        <CardDescription>
-          Search for flights to any destination
-        </CardDescription>
+        <CardDescription>Search for flights to any destination</CardDescription>
       </CardHeader>
       <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <div className="space-y-4">
-              <Tabs 
-                value={tripType} 
+              <Tabs
+                value={tripType}
                 onValueChange={(value) => {
                   setTripType(value as "oneWay" | "roundTrip" | "multiCity");
-                  form.setValue("tripType", value as "oneWay" | "roundTrip" | "multiCity");
+                  form.setValue(
+                    "tripType",
+                    value as "oneWay" | "roundTrip" | "multiCity"
+                  );
                 }}
                 className="w-full"
               >
@@ -177,12 +196,14 @@ export function FlightSearchForm({
                     <FormItem>
                       <FormLabel>Adults</FormLabel>
                       <FormControl>
-                        <Input 
-                          type="number" 
-                          min={1} 
-                          max={9} 
-                          {...field} 
-                          onChange={(e) => field.onChange(Number.parseInt(e.target.value))}
+                        <Input
+                          type="number"
+                          min={1}
+                          max={9}
+                          {...field}
+                          onChange={(e) =>
+                            field.onChange(Number.parseInt(e.target.value))
+                          }
                         />
                       </FormControl>
                       <FormMessage />
@@ -197,12 +218,14 @@ export function FlightSearchForm({
                     <FormItem>
                       <FormLabel>Children (2-11)</FormLabel>
                       <FormControl>
-                        <Input 
-                          type="number" 
-                          min={0} 
-                          max={9} 
-                          {...field} 
-                          onChange={(e) => field.onChange(Number.parseInt(e.target.value))}
+                        <Input
+                          type="number"
+                          min={0}
+                          max={9}
+                          {...field}
+                          onChange={(e) =>
+                            field.onChange(Number.parseInt(e.target.value))
+                          }
                         />
                       </FormControl>
                       <FormMessage />
@@ -217,12 +240,14 @@ export function FlightSearchForm({
                     <FormItem>
                       <FormLabel>Infants (0-1)</FormLabel>
                       <FormControl>
-                        <Input 
-                          type="number" 
-                          min={0} 
-                          max={9} 
-                          {...field} 
-                          onChange={(e) => field.onChange(Number.parseInt(e.target.value))}
+                        <Input
+                          type="number"
+                          min={0}
+                          max={9}
+                          {...field}
+                          onChange={(e) =>
+                            field.onChange(Number.parseInt(e.target.value))
+                          }
                         />
                       </FormControl>
                       <FormMessage />
@@ -240,7 +265,9 @@ export function FlightSearchForm({
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                       <Button
                         type="button"
-                        variant={field.value === "economy" ? "default" : "outline"}
+                        variant={
+                          field.value === "economy" ? "default" : "outline"
+                        }
                         onClick={() => form.setValue("cabinClass", "economy")}
                         className="w-full"
                       >
@@ -248,15 +275,23 @@ export function FlightSearchForm({
                       </Button>
                       <Button
                         type="button"
-                        variant={field.value === "premium_economy" ? "default" : "outline"}
-                        onClick={() => form.setValue("cabinClass", "premium_economy")}
+                        variant={
+                          field.value === "premium_economy"
+                            ? "default"
+                            : "outline"
+                        }
+                        onClick={() =>
+                          form.setValue("cabinClass", "premium_economy")
+                        }
                         className="w-full"
                       >
                         Premium Economy
                       </Button>
                       <Button
                         type="button"
-                        variant={field.value === "business" ? "default" : "outline"}
+                        variant={
+                          field.value === "business" ? "default" : "outline"
+                        }
                         onClick={() => form.setValue("cabinClass", "business")}
                         className="w-full"
                       >
@@ -264,7 +299,9 @@ export function FlightSearchForm({
                       </Button>
                       <Button
                         type="button"
-                        variant={field.value === "first" ? "default" : "outline"}
+                        variant={
+                          field.value === "first" ? "default" : "outline"
+                        }
                         onClick={() => form.setValue("cabinClass", "first")}
                         className="w-full"
                       >
@@ -321,7 +358,9 @@ export function FlightSearchForm({
               </div>
             </div>
 
-            <Button type="submit" className="w-full">Search Flights</Button>
+            <Button type="submit" className="w-full">
+              Search Flights
+            </Button>
           </form>
         </Form>
       </CardContent>

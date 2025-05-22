@@ -53,10 +53,12 @@ export const DealAlertSchema = z.object({
   destination: z.string().optional(),
   minDiscount: z.number().min(0).max(100).optional(),
   maxPrice: z.number().positive().optional(),
-  dateRange: z.object({
-    start: z.string().datetime().optional(),
-    end: z.string().datetime().optional(),
-  }).optional(),
+  dateRange: z
+    .object({
+      start: z.string().datetime().optional(),
+      end: z.string().datetime().optional(),
+    })
+    .optional(),
   isActive: z.boolean().default(true),
   notificationType: z.enum(["email", "push", "both"]).default("both"),
   createdAt: z.string().datetime(),
@@ -72,18 +74,22 @@ export const DealStateSchema = z.object({
   alerts: z.array(DealAlertSchema),
   savedDeals: z.array(z.string()), // IDs of saved deals
   recentlyViewedDeals: z.array(z.string()), // IDs of recently viewed deals
-  filters: z.object({
-    types: z.array(DealTypeSchema).optional(),
-    origins: z.array(z.string()).optional(),
-    destinations: z.array(z.string()).optional(),
-    providers: z.array(z.string()).optional(),
-    minDiscount: z.number().min(0).max(100).optional(),
-    maxPrice: z.number().positive().optional(),
-    dateRange: z.object({
-      start: z.string().datetime().optional(),
-      end: z.string().datetime().optional(),
-    }).optional(),
-  }).optional(),
+  filters: z
+    .object({
+      types: z.array(DealTypeSchema).optional(),
+      origins: z.array(z.string()).optional(),
+      destinations: z.array(z.string()).optional(),
+      providers: z.array(z.string()).optional(),
+      minDiscount: z.number().min(0).max(100).optional(),
+      maxPrice: z.number().positive().optional(),
+      dateRange: z
+        .object({
+          start: z.string().datetime().optional(),
+          end: z.string().datetime().optional(),
+        })
+        .optional(),
+    })
+    .optional(),
   lastUpdated: z.string().datetime().nullable(),
   isInitialized: z.boolean().default(false),
 });
@@ -111,10 +117,12 @@ export const SearchDealsRequestSchema = z.object({
   providers: z.array(z.string()).optional(),
   minDiscount: z.number().min(0).max(100).optional(),
   maxPrice: z.number().positive().optional(),
-  dateRange: z.object({
-    start: z.string().datetime().optional(),
-    end: z.string().datetime().optional(),
-  }).optional(),
+  dateRange: z
+    .object({
+      start: z.string().datetime().optional(),
+      end: z.string().datetime().optional(),
+    })
+    .optional(),
   featured: z.boolean().optional(),
   verified: z.boolean().optional(),
   limit: z.number().positive().optional(),
@@ -131,14 +139,18 @@ export const CreateDealAlertRequestSchema = z.object({
   destination: z.string().optional(),
   minDiscount: z.number().min(0).max(100).optional(),
   maxPrice: z.number().positive().optional(),
-  dateRange: z.object({
-    start: z.string().datetime().optional(),
-    end: z.string().datetime().optional(),
-  }).optional(),
+  dateRange: z
+    .object({
+      start: z.string().datetime().optional(),
+      end: z.string().datetime().optional(),
+    })
+    .optional(),
   notificationType: z.enum(["email", "push", "both"]).default("both"),
 });
 
-export type CreateDealAlertRequest = z.infer<typeof CreateDealAlertRequestSchema>;
+export type CreateDealAlertRequest = z.infer<
+  typeof CreateDealAlertRequestSchema
+>;
 
 // Stats
 export const DealStatsSchema = z.object({

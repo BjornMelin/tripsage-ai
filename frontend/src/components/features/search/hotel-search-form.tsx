@@ -3,9 +3,23 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import type { AccommodationSearchParams } from "@/types/search";
 
@@ -40,14 +54,14 @@ const AMENITIES = [
   { id: "aircon", label: "Air Conditioning" },
 ];
 
-export function HotelSearchForm({ 
+export function HotelSearchForm({
   onSearch,
   initialValues = {
     rooms: 1,
     adults: 1,
     children: 0,
     amenities: [],
-  }
+  },
 }: HotelSearchFormProps) {
   const form = useForm<HotelSearchFormValues>({
     resolver: zodResolver(hotelSearchFormSchema),
@@ -67,14 +81,17 @@ export function HotelSearchForm({
       rooms: data.rooms,
       amenities: data.amenities,
       rating: data.rating,
-      priceRange: (data.priceMin || data.priceMax) ? {
-        min: data.priceMin || 0,
-        max: data.priceMax || 10000,
-      } : undefined,
+      priceRange:
+        data.priceMin || data.priceMax
+          ? {
+              min: data.priceMin || 0,
+              max: data.priceMax || 10000,
+            }
+          : undefined,
     };
 
     console.log("Search params:", searchParams);
-    
+
     if (onSearch) {
       onSearch(searchParams);
     }
@@ -99,7 +116,10 @@ export function HotelSearchForm({
                   <FormItem>
                     <FormLabel>Location</FormLabel>
                     <FormControl>
-                      <Input placeholder="City, address, or landmark" {...field} />
+                      <Input
+                        placeholder="City, address, or landmark"
+                        {...field}
+                      />
                     </FormControl>
                     <FormDescription>
                       Enter city name, specific address, or landmark
@@ -147,12 +167,14 @@ export function HotelSearchForm({
                     <FormItem>
                       <FormLabel>Rooms</FormLabel>
                       <FormControl>
-                        <Input 
-                          type="number" 
-                          min={1} 
-                          max={9} 
-                          {...field} 
-                          onChange={(e) => field.onChange(Number.parseInt(e.target.value))}
+                        <Input
+                          type="number"
+                          min={1}
+                          max={9}
+                          {...field}
+                          onChange={(e) =>
+                            field.onChange(Number.parseInt(e.target.value))
+                          }
                         />
                       </FormControl>
                       <FormMessage />
@@ -167,12 +189,14 @@ export function HotelSearchForm({
                     <FormItem>
                       <FormLabel>Adults</FormLabel>
                       <FormControl>
-                        <Input 
-                          type="number" 
-                          min={1} 
-                          max={9} 
-                          {...field} 
-                          onChange={(e) => field.onChange(Number.parseInt(e.target.value))}
+                        <Input
+                          type="number"
+                          min={1}
+                          max={9}
+                          {...field}
+                          onChange={(e) =>
+                            field.onChange(Number.parseInt(e.target.value))
+                          }
                         />
                       </FormControl>
                       <FormMessage />
@@ -187,12 +211,14 @@ export function HotelSearchForm({
                     <FormItem>
                       <FormLabel>Children (0-17)</FormLabel>
                       <FormControl>
-                        <Input 
-                          type="number" 
-                          min={0} 
-                          max={9} 
-                          {...field} 
-                          onChange={(e) => field.onChange(Number.parseInt(e.target.value))}
+                        <Input
+                          type="number"
+                          min={0}
+                          max={9}
+                          {...field}
+                          onChange={(e) =>
+                            field.onChange(Number.parseInt(e.target.value))
+                          }
                         />
                       </FormControl>
                       <FormMessage />
@@ -209,12 +235,14 @@ export function HotelSearchForm({
                     <FormItem>
                       <FormLabel>Star Rating (min)</FormLabel>
                       <FormControl>
-                        <Input 
-                          type="number" 
-                          min={1} 
-                          max={5} 
-                          {...field} 
-                          onChange={(e) => field.onChange(Number.parseInt(e.target.value))}
+                        <Input
+                          type="number"
+                          min={1}
+                          max={5}
+                          {...field}
+                          onChange={(e) =>
+                            field.onChange(Number.parseInt(e.target.value))
+                          }
                         />
                       </FormControl>
                       <FormMessage />
@@ -229,12 +257,14 @@ export function HotelSearchForm({
                     <FormItem>
                       <FormLabel>Min Price ($)</FormLabel>
                       <FormControl>
-                        <Input 
-                          type="number" 
-                          min={0} 
+                        <Input
+                          type="number"
+                          min={0}
                           placeholder="No minimum"
-                          {...field} 
-                          onChange={(e) => field.onChange(Number.parseInt(e.target.value))}
+                          {...field}
+                          onChange={(e) =>
+                            field.onChange(Number.parseInt(e.target.value))
+                          }
                         />
                       </FormControl>
                       <FormMessage />
@@ -249,12 +279,14 @@ export function HotelSearchForm({
                     <FormItem>
                       <FormLabel>Max Price ($)</FormLabel>
                       <FormControl>
-                        <Input 
-                          type="number" 
-                          min={0} 
+                        <Input
+                          type="number"
+                          min={0}
                           placeholder="No maximum"
-                          {...field} 
-                          onChange={(e) => field.onChange(Number.parseInt(e.target.value))}
+                          {...field}
+                          onChange={(e) =>
+                            field.onChange(Number.parseInt(e.target.value))
+                          }
                         />
                       </FormControl>
                       <FormMessage />
@@ -271,17 +303,25 @@ export function HotelSearchForm({
                     <FormLabel>Amenities</FormLabel>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                       {AMENITIES.map((amenity) => (
-                        <label key={amenity.id} className="flex items-center space-x-2 border rounded-md p-2 cursor-pointer hover:bg-accent">
+                        <label
+                          key={amenity.id}
+                          className="flex items-center space-x-2 border rounded-md p-2 cursor-pointer hover:bg-accent"
+                        >
                           <input
                             type="checkbox"
                             value={amenity.id}
-                            checked={form.watch("amenities").includes(amenity.id)}
+                            checked={form
+                              .watch("amenities")
+                              .includes(amenity.id)}
                             onChange={(e) => {
                               const checked = e.target.checked;
                               const amenities = form.getValues("amenities");
-                              
+
                               if (checked) {
-                                form.setValue("amenities", [...amenities, amenity.id]);
+                                form.setValue("amenities", [
+                                  ...amenities,
+                                  amenity.id,
+                                ]);
                               } else {
                                 form.setValue(
                                   "amenities",
@@ -301,7 +341,9 @@ export function HotelSearchForm({
               />
             </div>
 
-            <Button type="submit" className="w-full">Search Hotels</Button>
+            <Button type="submit" className="w-full">
+              Search Hotels
+            </Button>
           </form>
         </Form>
       </CardContent>

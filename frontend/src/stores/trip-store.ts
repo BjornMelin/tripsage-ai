@@ -45,7 +45,7 @@ interface TripState {
   currentTrip: Trip | null;
   isLoading: boolean;
   error: string | null;
-  
+
   // Actions
   setTrips: (trips: Trip[]) => void;
   setCurrentTrip: (trip: Trip | null) => void;
@@ -53,7 +53,11 @@ interface TripState {
   updateTrip: (id: string, data: Partial<Trip>) => Promise<void>;
   deleteTrip: (id: string) => Promise<void>;
   addDestination: (tripId: string, destination: Destination) => Promise<void>;
-  updateDestination: (tripId: string, destinationId: string, data: Partial<Destination>) => Promise<void>;
+  updateDestination: (
+    tripId: string,
+    destinationId: string,
+    data: Partial<Destination>
+  ) => Promise<void>;
   removeDestination: (tripId: string, destinationId: string) => Promise<void>;
   clearError: () => void;
 }
@@ -65,18 +69,18 @@ export const useTripStore = create<TripState>()(
       currentTrip: null,
       isLoading: false,
       error: null,
-      
+
       setTrips: (trips) => set({ trips }),
-      
+
       setCurrentTrip: (trip) => set({ currentTrip: trip }),
-      
+
       createTrip: async (data) => {
         set({ isLoading: true, error: null });
-        
+
         try {
           // This will be replaced with actual API call
           await new Promise((resolve) => setTimeout(resolve, 1000));
-          
+
           const newTrip: Trip = {
             id: Date.now().toString(),
             name: data.name || "Untitled Trip",
@@ -90,7 +94,7 @@ export const useTripStore = create<TripState>()(
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
           };
-          
+
           set((state) => ({
             trips: [...state.trips, newTrip],
             currentTrip: newTrip,
@@ -98,21 +102,22 @@ export const useTripStore = create<TripState>()(
           }));
         } catch (error) {
           set({
-            error: error instanceof Error ? error.message : "Failed to create trip",
+            error:
+              error instanceof Error ? error.message : "Failed to create trip",
             isLoading: false,
           });
         }
       },
-      
+
       updateTrip: async (id, data) => {
         set({ isLoading: true, error: null });
-        
+
         try {
           // This will be replaced with actual API call
           await new Promise((resolve) => setTimeout(resolve, 1000));
-          
+
           set((state) => {
-            const trips = state.trips.map((trip) => 
+            const trips = state.trips.map((trip) =>
               trip.id === id
                 ? {
                     ...trip,
@@ -121,54 +126,62 @@ export const useTripStore = create<TripState>()(
                   }
                 : trip
             );
-            
-            const currentTrip = state.currentTrip?.id === id
-              ? { ...state.currentTrip, ...data, updatedAt: new Date().toISOString() }
-              : state.currentTrip;
-            
+
+            const currentTrip =
+              state.currentTrip?.id === id
+                ? {
+                    ...state.currentTrip,
+                    ...data,
+                    updatedAt: new Date().toISOString(),
+                  }
+                : state.currentTrip;
+
             return { trips, currentTrip, isLoading: false };
           });
         } catch (error) {
           set({
-            error: error instanceof Error ? error.message : "Failed to update trip",
+            error:
+              error instanceof Error ? error.message : "Failed to update trip",
             isLoading: false,
           });
         }
       },
-      
+
       deleteTrip: async (id) => {
         set({ isLoading: true, error: null });
-        
+
         try {
           // This will be replaced with actual API call
           await new Promise((resolve) => setTimeout(resolve, 1000));
-          
+
           set((state) => {
             const trips = state.trips.filter((trip) => trip.id !== id);
-            const currentTrip = state.currentTrip?.id === id ? null : state.currentTrip;
-            
+            const currentTrip =
+              state.currentTrip?.id === id ? null : state.currentTrip;
+
             return { trips, currentTrip, isLoading: false };
           });
         } catch (error) {
           set({
-            error: error instanceof Error ? error.message : "Failed to delete trip",
+            error:
+              error instanceof Error ? error.message : "Failed to delete trip",
             isLoading: false,
           });
         }
       },
-      
+
       addDestination: async (tripId, destination) => {
         set({ isLoading: true, error: null });
-        
+
         try {
           // This will be replaced with actual API call
           await new Promise((resolve) => setTimeout(resolve, 1000));
-          
+
           const newDestination: Destination = {
             ...destination,
             id: destination.id || Date.now().toString(),
           };
-          
+
           set((state) => {
             const trips = state.trips.map((trip) => {
               if (trip.id === tripId) {
@@ -180,32 +193,39 @@ export const useTripStore = create<TripState>()(
               }
               return trip;
             });
-            
-            const currentTrip = state.currentTrip?.id === tripId
-              ? {
-                  ...state.currentTrip,
-                  destinations: [...state.currentTrip.destinations, newDestination],
-                  updatedAt: new Date().toISOString(),
-                }
-              : state.currentTrip;
-            
+
+            const currentTrip =
+              state.currentTrip?.id === tripId
+                ? {
+                    ...state.currentTrip,
+                    destinations: [
+                      ...state.currentTrip.destinations,
+                      newDestination,
+                    ],
+                    updatedAt: new Date().toISOString(),
+                  }
+                : state.currentTrip;
+
             return { trips, currentTrip, isLoading: false };
           });
         } catch (error) {
           set({
-            error: error instanceof Error ? error.message : "Failed to add destination",
+            error:
+              error instanceof Error
+                ? error.message
+                : "Failed to add destination",
             isLoading: false,
           });
         }
       },
-      
+
       updateDestination: async (tripId, destinationId, data) => {
         set({ isLoading: true, error: null });
-        
+
         try {
           // This will be replaced with actual API call
           await new Promise((resolve) => setTimeout(resolve, 1000));
-          
+
           set((state) => {
             const trips = state.trips.map((trip) => {
               if (trip.id === tripId) {
@@ -219,69 +239,84 @@ export const useTripStore = create<TripState>()(
               }
               return trip;
             });
-            
-            const currentTrip = state.currentTrip?.id === tripId
-              ? {
-                  ...state.currentTrip,
-                  destinations: state.currentTrip.destinations.map((dest) =>
-                    dest.id === destinationId ? { ...dest, ...data } : dest
-                  ),
-                  updatedAt: new Date().toISOString(),
-                }
-              : state.currentTrip;
-            
+
+            const currentTrip =
+              state.currentTrip?.id === tripId
+                ? {
+                    ...state.currentTrip,
+                    destinations: state.currentTrip.destinations.map((dest) =>
+                      dest.id === destinationId ? { ...dest, ...data } : dest
+                    ),
+                    updatedAt: new Date().toISOString(),
+                  }
+                : state.currentTrip;
+
             return { trips, currentTrip, isLoading: false };
           });
         } catch (error) {
           set({
-            error: error instanceof Error ? error.message : "Failed to update destination",
+            error:
+              error instanceof Error
+                ? error.message
+                : "Failed to update destination",
             isLoading: false,
           });
         }
       },
-      
+
       removeDestination: async (tripId, destinationId) => {
         set({ isLoading: true, error: null });
-        
+
         try {
           // This will be replaced with actual API call
           await new Promise((resolve) => setTimeout(resolve, 1000));
-          
+
           set((state) => {
             const trips = state.trips.map((trip) => {
               if (trip.id === tripId) {
                 return {
                   ...trip,
-                  destinations: trip.destinations.filter((dest) => dest.id !== destinationId),
+                  destinations: trip.destinations.filter(
+                    (dest) => dest.id !== destinationId
+                  ),
                   updatedAt: new Date().toISOString(),
                 };
               }
               return trip;
             });
-            
-            const currentTrip = state.currentTrip?.id === tripId
-              ? {
-                  ...state.currentTrip,
-                  destinations: state.currentTrip.destinations.filter((dest) => dest.id !== destinationId),
-                  updatedAt: new Date().toISOString(),
-                }
-              : state.currentTrip;
-            
+
+            const currentTrip =
+              state.currentTrip?.id === tripId
+                ? {
+                    ...state.currentTrip,
+                    destinations: state.currentTrip.destinations.filter(
+                      (dest) => dest.id !== destinationId
+                    ),
+                    updatedAt: new Date().toISOString(),
+                  }
+                : state.currentTrip;
+
             return { trips, currentTrip, isLoading: false };
           });
         } catch (error) {
           set({
-            error: error instanceof Error ? error.message : "Failed to remove destination",
+            error:
+              error instanceof Error
+                ? error.message
+                : "Failed to remove destination",
             isLoading: false,
           });
         }
       },
-      
+
       clearError: () => set({ error: null }),
     }),
     {
       name: "trip-storage",
-      partialize: (state) => ({ trips: state.trips, currentTrip: state.currentTrip }),
+      partialize: (state) => ({
+        trips: state.trips,
+        currentTrip: state.currentTrip,
+      }),
     }
   )
 );

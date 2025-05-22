@@ -1,11 +1,15 @@
-import { useApiQuery, useApiMutation, useApiDeleteMutation } from "@/lib/hooks/use-api-query";
+import {
+  useApiQuery,
+  useApiMutation,
+  useApiDeleteMutation,
+} from "@/lib/hooks/use-api-query";
 import { useApiKeyStore } from "@/stores/api-key-store";
-import type { 
-  AddKeyRequest, 
-  AddKeyResponse, 
-  AllKeysResponse, 
-  DeleteKeyResponse, 
-  ValidateKeyResponse 
+import type {
+  AddKeyRequest,
+  AddKeyResponse,
+  AllKeysResponse,
+  DeleteKeyResponse,
+  ValidateKeyResponse,
 } from "@/types/api-keys";
 
 /**
@@ -13,9 +17,9 @@ import type {
  */
 export function useApiKeys() {
   const { setKeys, setSupportedServices } = useApiKeyStore();
-  
+
   return useApiQuery<AllKeysResponse>(
-    "/api/user/keys", 
+    "/api/user/keys",
     {},
     {
       onSuccess: (data) => {
@@ -31,20 +35,17 @@ export function useApiKeys() {
  */
 export function useAddApiKey() {
   const { updateKey } = useApiKeyStore();
-  
-  return useApiMutation<AddKeyResponse, AddKeyRequest>(
-    "/api/user/keys",
-    {
-      onSuccess: (data) => {
-        updateKey(data.service, {
-          is_valid: data.is_valid,
-          has_key: true,
-          service: data.service,
-          last_validated: new Date().toISOString(),
-        });
-      },
-    }
-  );
+
+  return useApiMutation<AddKeyResponse, AddKeyRequest>("/api/user/keys", {
+    onSuccess: (data) => {
+      updateKey(data.service, {
+        is_valid: data.is_valid,
+        has_key: true,
+        service: data.service,
+        last_validated: new Date().toISOString(),
+      });
+    },
+  });
 }
 
 /**
@@ -61,15 +62,12 @@ export function useValidateApiKey() {
  */
 export function useDeleteApiKey() {
   const { removeKey } = useApiKeyStore();
-  
-  return useApiDeleteMutation<DeleteKeyResponse, string>(
-    "/api/user/keys",
-    {
-      onSuccess: (data) => {
-        if (data.success) {
-          removeKey(data.service);
-        }
-      },
-    }
-  );
+
+  return useApiDeleteMutation<DeleteKeyResponse, string>("/api/user/keys", {
+    onSuccess: (data) => {
+      if (data.success) {
+        removeKey(data.service);
+      }
+    },
+  });
 }

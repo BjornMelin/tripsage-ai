@@ -14,16 +14,22 @@ export interface LoadingOverlayProps {
   backdrop?: boolean;
 }
 
-export const LoadingOverlay = React.forwardRef<HTMLDivElement, LoadingOverlayProps>(
-  ({ 
-    isVisible, 
-    message, 
-    progress, 
-    spinnerProps, 
-    className, 
-    backdrop = true,
-    ...props 
-  }, ref) => {
+export const LoadingOverlay = React.forwardRef<
+  HTMLDivElement,
+  LoadingOverlayProps
+>(
+  (
+    {
+      isVisible,
+      message,
+      progress,
+      spinnerProps,
+      className,
+      backdrop = true,
+      ...props
+    },
+    ref
+  ) => {
     if (!isVisible) return null;
 
     return (
@@ -41,13 +47,13 @@ export const LoadingOverlay = React.forwardRef<HTMLDivElement, LoadingOverlayPro
       >
         <div className="flex flex-col items-center space-y-4">
           <LoadingSpinner {...spinnerProps} />
-          
+
           {message && (
             <p className="text-sm text-muted-foreground text-center max-w-sm">
               {message}
             </p>
           )}
-          
+
           {typeof progress === "number" && (
             <div className="w-48 space-y-2">
               <div className="flex justify-between text-xs text-muted-foreground">
@@ -55,7 +61,7 @@ export const LoadingOverlay = React.forwardRef<HTMLDivElement, LoadingOverlayPro
                 <span>{Math.round(progress)}%</span>
               </div>
               <div className="h-2 bg-muted rounded-full overflow-hidden">
-                <div 
+                <div
                   className="h-full bg-primary transition-all duration-300 ease-out"
                   style={{ width: `${Math.min(100, Math.max(0, progress))}%` }}
                 />
@@ -83,27 +89,30 @@ export interface LoadingStateProps {
 }
 
 export const LoadingState = React.forwardRef<HTMLDivElement, LoadingStateProps>(
-  ({ 
-    isLoading, 
-    skeleton, 
-    spinner, 
-    children, 
-    className, 
-    fallback,
-    ...props 
-  }, ref) => {
+  (
+    { isLoading, skeleton, spinner, children, className, fallback, ...props },
+    ref
+  ) => {
     if (isLoading) {
       if (skeleton) {
-        return <div ref={ref} className={className} {...props}>{skeleton}</div>;
+        return (
+          <div ref={ref} className={className} {...props}>
+            {skeleton}
+          </div>
+        );
       }
-      
+
       if (fallback) {
-        return <div ref={ref} className={className} {...props}>{fallback}</div>;
+        return (
+          <div ref={ref} className={className} {...props}>
+            {fallback}
+          </div>
+        );
       }
-      
+
       return (
-        <div 
-          ref={ref} 
+        <div
+          ref={ref}
           className={cn("flex items-center justify-center p-8", className)}
           {...props}
         >
@@ -112,7 +121,11 @@ export const LoadingState = React.forwardRef<HTMLDivElement, LoadingStateProps>(
       );
     }
 
-    return <div ref={ref} className={className} {...props}>{children}</div>;
+    return (
+      <div ref={ref} className={className} {...props}>
+        {children}
+      </div>
+    );
   }
 );
 
@@ -121,23 +134,30 @@ LoadingState.displayName = "LoadingState";
 /**
  * Button loading state component
  */
-export interface LoadingButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+export interface LoadingButtonProps
+  extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   isLoading?: boolean;
   loadingText?: string;
   spinnerProps?: React.ComponentProps<typeof LoadingSpinner>;
   children: React.ReactNode;
 }
 
-export const LoadingButton = React.forwardRef<HTMLButtonElement, LoadingButtonProps>(
-  ({ 
-    isLoading = false, 
-    loadingText, 
-    spinnerProps = { size: "sm" }, 
-    children, 
-    disabled,
-    className,
-    ...props 
-  }, ref) => {
+export const LoadingButton = React.forwardRef<
+  HTMLButtonElement,
+  LoadingButtonProps
+>(
+  (
+    {
+      isLoading = false,
+      loadingText,
+      spinnerProps = { size: "sm" },
+      children,
+      disabled,
+      className,
+      ...props
+    },
+    ref
+  ) => {
     return (
       <button
         ref={ref}
@@ -171,29 +191,38 @@ export interface LoadingContainerProps {
   minHeight?: string | number;
 }
 
-export const LoadingContainer = React.forwardRef<HTMLDivElement, LoadingContainerProps>(
-  ({ 
-    isLoading, 
-    children, 
-    loadingMessage, 
-    spinnerProps, 
-    className, 
-    minHeight,
-    ...props 
-  }, ref) => {
-    const containerStyle = minHeight 
-      ? { minHeight: typeof minHeight === 'number' ? `${minHeight}px` : minHeight }
+export const LoadingContainer = React.forwardRef<
+  HTMLDivElement,
+  LoadingContainerProps
+>(
+  (
+    {
+      isLoading,
+      children,
+      loadingMessage,
+      spinnerProps,
+      className,
+      minHeight,
+      ...props
+    },
+    ref
+  ) => {
+    const containerStyle = minHeight
+      ? {
+          minHeight:
+            typeof minHeight === "number" ? `${minHeight}px` : minHeight,
+        }
       : undefined;
 
     return (
-      <div 
-        ref={ref} 
+      <div
+        ref={ref}
         className={cn("relative", className)}
         style={containerStyle}
         {...props}
       >
         {isLoading ? (
-          <div 
+          <div
             className="flex flex-col items-center justify-center p-8 space-y-4"
             role="status"
             aria-live="polite"
@@ -243,7 +272,7 @@ export const PageLoading = React.forwardRef<HTMLDivElement, PageLoadingProps>(
           <div className="relative">
             <LoadingSpinner size="xl" />
           </div>
-          
+
           <div className="text-center space-y-2">
             <h2 className="text-lg font-semibold">{message}</h2>
             {typeof progress === "number" && (
@@ -253,9 +282,11 @@ export const PageLoading = React.forwardRef<HTMLDivElement, PageLoadingProps>(
                   <span>{Math.round(progress)}%</span>
                 </div>
                 <div className="h-2 bg-muted rounded-full overflow-hidden">
-                  <div 
+                  <div
                     className="h-full bg-primary transition-all duration-300 ease-out"
-                    style={{ width: `${Math.min(100, Math.max(0, progress))}%` }}
+                    style={{
+                      width: `${Math.min(100, Math.max(0, progress))}%`,
+                    }}
                   />
                 </div>
               </div>

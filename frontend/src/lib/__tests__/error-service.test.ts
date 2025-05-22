@@ -44,9 +44,9 @@ describe("ErrorService", () => {
       maxRetries: 2,
       enableLocalStorage: true,
     };
-    
+
     errorService = new ErrorService(mockConfig);
-    
+
     // Reset mocks
     vi.clearAllMocks();
     mockFetch.mockClear();
@@ -114,7 +114,11 @@ describe("ErrorService", () => {
         sessionId: "session456",
       };
 
-      const report = errorService.createErrorReport(error, undefined, additionalInfo);
+      const report = errorService.createErrorReport(
+        error,
+        undefined,
+        additionalInfo
+      );
 
       expect(report.userId).toBe("user123");
       expect(report.sessionId).toBe("session456");
@@ -150,22 +154,24 @@ describe("ErrorService", () => {
 
       await errorService.reportError(errorReport);
 
-      expect(mockFetch).toHaveBeenCalledWith(
-        "https://api.example.com/errors",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: "Bearer test-api-key",
-          },
-          body: JSON.stringify(errorReport),
-        }
-      );
+      expect(mockFetch).toHaveBeenCalledWith("https://api.example.com/errors", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "Bearer test-api-key",
+        },
+        body: JSON.stringify(errorReport),
+      });
     });
 
     it("should not send request when disabled", async () => {
-      const disabledService = new ErrorService({ ...mockConfig, enabled: false });
-      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      const disabledService = new ErrorService({
+        ...mockConfig,
+        enabled: false,
+      });
+      const consoleErrorSpy = vi
+        .spyOn(console, "error")
+        .mockImplementation(() => {});
 
       const errorReport: ErrorReport = {
         error: {
@@ -180,7 +186,10 @@ describe("ErrorService", () => {
       await disabledService.reportError(errorReport);
 
       expect(mockFetch).not.toHaveBeenCalled();
-      expect(consoleErrorSpy).toHaveBeenCalledWith("Error reported:", errorReport);
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        "Error reported:",
+        errorReport
+      );
 
       consoleErrorSpy.mockRestore();
     });
@@ -214,7 +223,9 @@ describe("ErrorService", () => {
     });
 
     it("should validate error report with Zod", async () => {
-      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      const consoleErrorSpy = vi
+        .spyOn(console, "error")
+        .mockImplementation(() => {});
 
       const invalidErrorReport = {
         error: {
@@ -277,8 +288,10 @@ describe("ErrorService", () => {
     });
 
     it("should give up after max retries", async () => {
-      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-      
+      const consoleErrorSpy = vi
+        .spyOn(console, "error")
+        .mockImplementation(() => {});
+
       // All calls fail
       mockFetch.mockRejectedValue(new Error("Network error"));
 
@@ -319,7 +332,7 @@ describe("ErrorService", () => {
 
       // Mock 15 existing error keys
       const oldKeys = Array.from({ length: 15 }, (_, i) => `error_${i}_old`);
-      
+
       Object.defineProperty(mockLocalStorage, "keys", {
         value: () => [...oldKeys, "other_key"],
       });

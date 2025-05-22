@@ -1,4 +1,9 @@
-import { useApiQuery, useApiMutation, useApiPutMutation, useApiDeleteMutation } from "@/lib/hooks/use-api-query";
+import {
+  useApiQuery,
+  useApiMutation,
+  useApiPutMutation,
+  useApiDeleteMutation,
+} from "@/lib/hooks/use-api-query";
 import { useBudgetStore } from "@/stores/budget-store";
 import type {
   Budget,
@@ -62,7 +67,8 @@ export function useBudgetActions() {
  * Hook for expense management
  */
 export function useExpenses(budgetId?: string) {
-  const { expenses, addExpense, updateExpense, removeExpense } = useBudgetStore();
+  const { expenses, addExpense, updateExpense, removeExpense } =
+    useBudgetStore();
   const budgetExpenses = budgetId ? expenses[budgetId] || [] : [];
 
   return {
@@ -92,7 +98,8 @@ export function useAlerts(budgetId?: string) {
  * Hook for currency management
  */
 export function useCurrency() {
-  const { baseCurrency, currencies, setBaseCurrency, updateCurrencyRate } = useBudgetStore();
+  const { baseCurrency, currencies, setBaseCurrency, updateCurrencyRate } =
+    useBudgetStore();
 
   return {
     baseCurrency,
@@ -116,11 +123,14 @@ export function useFetchBudgets() {
     {
       onSuccess: (data) => {
         // Convert array to record
-        const budgetsRecord = data.budgets.reduce((acc, budget) => {
-          acc[budget.id] = budget;
-          return acc;
-        }, {} as Record<string, Budget>);
-        
+        const budgetsRecord = data.budgets.reduce(
+          (acc, budget) => {
+            acc[budget.id] = budget;
+            return acc;
+          },
+          {} as Record<string, Budget>
+        );
+
         setBudgets(budgetsRecord);
       },
     }
@@ -150,15 +160,12 @@ export function useFetchBudget(id: string) {
  */
 export function useCreateBudget() {
   const { addBudget } = useBudgetStore();
-  
-  return useApiMutation<Budget, CreateBudgetRequest>(
-    "/api/budgets",
-    {
-      onSuccess: (data) => {
-        addBudget(data);
-      },
-    }
-  );
+
+  return useApiMutation<Budget, CreateBudgetRequest>("/api/budgets", {
+    onSuccess: (data) => {
+      addBudget(data);
+    },
+  });
 }
 
 /**
@@ -166,15 +173,12 @@ export function useCreateBudget() {
  */
 export function useUpdateBudget() {
   const { updateBudget } = useBudgetStore();
-  
-  return useApiPutMutation<Budget, UpdateBudgetRequest>(
-    "/api/budgets",
-    {
-      onSuccess: (data) => {
-        updateBudget(data.id, data);
-      },
-    }
-  );
+
+  return useApiPutMutation<Budget, UpdateBudgetRequest>("/api/budgets", {
+    onSuccess: (data) => {
+      updateBudget(data.id, data);
+    },
+  });
 }
 
 /**
@@ -182,8 +186,8 @@ export function useUpdateBudget() {
  */
 export function useDeleteBudget() {
   const { removeBudget } = useBudgetStore();
-  
-  return useApiDeleteMutation<{ success: boolean, id: string }, string>(
+
+  return useApiDeleteMutation<{ success: boolean; id: string }, string>(
     "/api/budgets",
     {
       onSuccess: (data) => {
@@ -200,7 +204,7 @@ export function useDeleteBudget() {
  */
 export function useFetchExpenses(budgetId: string) {
   const { setExpenses } = useBudgetStore();
-  
+
   return useApiQuery<{ expenses: Expense[] }>(
     `/api/budgets/${budgetId}/expenses`,
     {},
@@ -218,15 +222,12 @@ export function useFetchExpenses(budgetId: string) {
  */
 export function useAddExpense() {
   const { addExpense } = useBudgetStore();
-  
-  return useApiMutation<Expense, AddExpenseRequest>(
-    "/api/expenses",
-    {
-      onSuccess: (data) => {
-        addExpense(data);
-      },
-    }
-  );
+
+  return useApiMutation<Expense, AddExpenseRequest>("/api/expenses", {
+    onSuccess: (data) => {
+      addExpense(data);
+    },
+  });
 }
 
 /**
@@ -234,15 +235,12 @@ export function useAddExpense() {
  */
 export function useUpdateExpense() {
   const { updateExpense } = useBudgetStore();
-  
-  return useApiPutMutation<Expense, UpdateExpenseRequest>(
-    "/api/expenses",
-    {
-      onSuccess: (data) => {
-        updateExpense(data.id, data.budgetId, data);
-      },
-    }
-  );
+
+  return useApiPutMutation<Expense, UpdateExpenseRequest>("/api/expenses", {
+    onSuccess: (data) => {
+      updateExpense(data.id, data.budgetId, data);
+    },
+  });
 }
 
 /**
@@ -250,17 +248,17 @@ export function useUpdateExpense() {
  */
 export function useDeleteExpense() {
   const { removeExpense } = useBudgetStore();
-  
-  return useApiDeleteMutation<{ success: boolean, id: string, budgetId: string }, string>(
-    "/api/expenses",
-    {
-      onSuccess: (data) => {
-        if (data.success) {
-          removeExpense(data.id, data.budgetId);
-        }
-      },
-    }
-  );
+
+  return useApiDeleteMutation<
+    { success: boolean; id: string; budgetId: string },
+    string
+  >("/api/expenses", {
+    onSuccess: (data) => {
+      if (data.success) {
+        removeExpense(data.id, data.budgetId);
+      }
+    },
+  });
 }
 
 /**
@@ -268,7 +266,7 @@ export function useDeleteExpense() {
  */
 export function useFetchAlerts(budgetId: string) {
   const { setAlerts } = useBudgetStore();
-  
+
   return useApiQuery<{ alerts: BudgetAlert[] }>(
     `/api/budgets/${budgetId}/alerts`,
     {},
@@ -286,15 +284,12 @@ export function useFetchAlerts(budgetId: string) {
  */
 export function useCreateAlert() {
   const { addAlert } = useBudgetStore();
-  
-  return useApiMutation<BudgetAlert, CreateBudgetAlertRequest>(
-    "/api/alerts",
-    {
-      onSuccess: (data) => {
-        addAlert(data);
-      },
-    }
-  );
+
+  return useApiMutation<BudgetAlert, CreateBudgetAlertRequest>("/api/alerts", {
+    onSuccess: (data) => {
+      addAlert(data);
+    },
+  });
 }
 
 /**
@@ -302,15 +297,15 @@ export function useCreateAlert() {
  */
 export function useMarkAlertAsRead() {
   const { markAlertAsRead } = useBudgetStore();
-  
-  return useApiPutMutation<{ id: string, budgetId: string, isRead: boolean }, { id: string, budgetId: string }>(
-    "/api/alerts/read",
-    {
-      onSuccess: (data) => {
-        markAlertAsRead(data.id, data.budgetId);
-      },
-    }
-  );
+
+  return useApiPutMutation<
+    { id: string; budgetId: string; isRead: boolean },
+    { id: string; budgetId: string }
+  >("/api/alerts/read", {
+    onSuccess: (data) => {
+      markAlertAsRead(data.id, data.budgetId);
+    },
+  });
 }
 
 /**
@@ -318,22 +313,28 @@ export function useMarkAlertAsRead() {
  */
 export function useFetchCurrencyRates() {
   const { setCurrencies } = useBudgetStore();
-  
+
   return useApiQuery<{ rates: Record<string, number> }>(
     "/api/currencies/rates",
     {},
     {
       onSuccess: (data) => {
         // Transform response to match our store format
-        const formattedRates = Object.entries(data.rates).reduce((acc, [code, rate]) => {
-          acc[code] = {
-            code,
-            rate,
-            lastUpdated: new Date().toISOString(),
-          };
-          return acc;
-        }, {} as Record<string, { code: string; rate: number; lastUpdated: string }>);
-        
+        const formattedRates = Object.entries(data.rates).reduce(
+          (acc, [code, rate]) => {
+            acc[code] = {
+              code,
+              rate,
+              lastUpdated: new Date().toISOString(),
+            };
+            return acc;
+          },
+          {} as Record<
+            string,
+            { code: string; rate: number; lastUpdated: string }
+          >
+        );
+
         setCurrencies(formattedRates);
       },
       // Refresh currency rates every hour

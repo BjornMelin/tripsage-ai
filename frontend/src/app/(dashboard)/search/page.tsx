@@ -1,5 +1,11 @@
 import { SearchLayout } from "@/components/layouts/search-layout";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function SearchPage() {
@@ -23,23 +29,23 @@ export default function SearchPage() {
               </TabsList>
               <TabsContent value="all" className="py-4">
                 <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-                  <SearchQuickOptionCard 
-                    title="Find Flights" 
+                  <SearchQuickOptionCard
+                    title="Find Flights"
                     description="Search for flights to any destination"
                     href="/dashboard/search/flights"
                   />
-                  <SearchQuickOptionCard 
-                    title="Book Hotels" 
+                  <SearchQuickOptionCard
+                    title="Book Hotels"
                     description="Find accommodations for your stay"
                     href="/dashboard/search/hotels"
                   />
-                  <SearchQuickOptionCard 
-                    title="Discover Activities" 
+                  <SearchQuickOptionCard
+                    title="Discover Activities"
                     description="Explore things to do at your destination"
                     href="/dashboard/search/activities"
                   />
-                  <SearchQuickOptionCard 
-                    title="Browse Destinations" 
+                  <SearchQuickOptionCard
+                    title="Browse Destinations"
                     description="Get inspired for your next trip"
                     href="/dashboard/search/destinations"
                   />
@@ -61,24 +67,22 @@ export default function SearchPage() {
         <Card className="w-full">
           <CardHeader>
             <CardTitle>Recent Searches</CardTitle>
-            <CardDescription>
-              Your most recent search queries
-            </CardDescription>
+            <CardDescription>Your most recent search queries</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-              <RecentSearchCard 
-                title="New York to London" 
+              <RecentSearchCard
+                title="New York to London"
                 type="Flight"
                 date="May 26, 2025"
               />
-              <RecentSearchCard 
-                title="Hotels in Barcelona" 
+              <RecentSearchCard
+                title="Hotels in Barcelona"
                 type="Hotel"
                 date="May 22, 2025"
               />
-              <RecentSearchCard 
-                title="Activities in Tokyo" 
+              <RecentSearchCard
+                title="Activities in Tokyo"
                 type="Activity"
                 date="May 18, 2025"
               />
@@ -90,11 +94,11 @@ export default function SearchPage() {
   );
 }
 
-function SearchQuickOptionCard({ 
-  title, 
-  description, 
-  href 
-}: { 
+function SearchQuickOptionCard({
+  title,
+  description,
+  href,
+}: {
   title: string;
   description: string;
   href: string;
@@ -113,11 +117,11 @@ function SearchQuickOptionCard({
   );
 }
 
-function RecentSearchCard({ 
-  title, 
-  type, 
-  date 
-}: { 
+function RecentSearchCard({
+  title,
+  type,
+  date,
+}: {
   title: string;
   type: string;
   date: string;
@@ -135,7 +139,9 @@ function RecentSearchCard({
       <CardContent>
         <div className="flex justify-between items-center">
           <p className="text-xs text-muted-foreground">{date}</p>
-          <button type="button" className="text-xs text-primary">Search again</button>
+          <button type="button" className="text-xs text-primary">
+            Search again
+          </button>
         </div>
       </CardContent>
     </Card>

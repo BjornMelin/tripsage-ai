@@ -5,7 +5,7 @@ import { LoadingSpinner } from "../loading-spinner";
 describe("LoadingSpinner", () => {
   it("renders default spinner", () => {
     render(<LoadingSpinner data-testid="spinner" />);
-    
+
     const spinner = screen.getByTestId("spinner");
     expect(spinner).toBeInTheDocument();
     expect(spinner).toHaveAttribute("role", "status");
@@ -13,7 +13,9 @@ describe("LoadingSpinner", () => {
   });
 
   it("renders different variants", () => {
-    const { rerender } = render(<LoadingSpinner variant="dots" data-testid="spinner" />);
+    const { rerender } = render(
+      <LoadingSpinner variant="dots" data-testid="spinner" />
+    );
     let spinner = screen.getByTestId("spinner");
     expect(spinner).toBeInTheDocument();
 
@@ -27,7 +29,9 @@ describe("LoadingSpinner", () => {
   });
 
   it("applies different sizes", () => {
-    const { rerender } = render(<LoadingSpinner size="sm" data-testid="spinner" />);
+    const { rerender } = render(
+      <LoadingSpinner size="sm" data-testid="spinner" />
+    );
     let spinner = screen.getByTestId("spinner");
     expect(spinner).toHaveClass("h-4", "w-4");
 
@@ -41,7 +45,9 @@ describe("LoadingSpinner", () => {
   });
 
   it("applies different colors", () => {
-    const { rerender } = render(<LoadingSpinner color="white" data-testid="spinner" />);
+    const { rerender } = render(
+      <LoadingSpinner color="white" data-testid="spinner" />
+    );
     let spinner = screen.getByTestId("spinner");
     expect(spinner).toHaveClass("text-white");
 
@@ -56,21 +62,21 @@ describe("LoadingSpinner", () => {
 
   it("applies custom className", () => {
     render(<LoadingSpinner className="custom-spinner" data-testid="spinner" />);
-    
+
     const spinner = screen.getByTestId("spinner");
     expect(spinner).toHaveClass("custom-spinner");
   });
 
   it("renders dots variant with correct structure", () => {
     const { container } = render(<LoadingSpinner variant="dots" />);
-    
+
     const dots = container.querySelectorAll(".dots-spinner");
     expect(dots).toHaveLength(3);
   });
 
   it("renders bars variant with correct structure", () => {
     const { container } = render(<LoadingSpinner variant="bars" />);
-    
+
     const bars = container.querySelectorAll(".bars-spinner");
     expect(bars).toHaveLength(5);
   });
@@ -78,7 +84,7 @@ describe("LoadingSpinner", () => {
   it("forwards ref correctly", () => {
     const ref = { current: null };
     render(<LoadingSpinner ref={ref} data-testid="spinner" />);
-    
+
     expect(ref.current).toBeInstanceOf(SVGSVGElement);
   });
 });

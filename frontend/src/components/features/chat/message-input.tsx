@@ -1,11 +1,17 @@
-'use client';
+"use client";
 
-import type React from 'react';
-import { useState, useRef, useCallback, FormEvent } from 'react';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { SendHorizontal, Paperclip, Mic, Loader2, StopCircle } from 'lucide-react';
-import { uploadAttachments } from '@/lib/api/chat-api';
+import type React from "react";
+import { useState, useRef, useCallback, FormEvent } from "react";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  SendHorizontal,
+  Paperclip,
+  Mic,
+  Loader2,
+  StopCircle,
+} from "lucide-react";
+import { uploadAttachments } from "@/lib/api/chat-api";
 
 interface MessageInputProps {
   disabled?: boolean;
@@ -22,29 +28,29 @@ interface MessageInputProps {
 
 export default function MessageInput({
   disabled,
-  placeholder = 'Type a message...',
+  placeholder = "Type a message...",
   showAttachmentButton = true,
   showVoiceButton = true,
   className,
-  value = '',
+  value = "",
   onChange,
   onSend,
   onCancel,
   isStreaming = false,
 }: MessageInputProps) {
   // Use local state if no controlled value is provided
-  const [localInput, setLocalInput] = useState('');
+  const [localInput, setLocalInput] = useState("");
   const [isUploading, setIsUploading] = useState(false);
   const [attachments, setAttachments] = useState<File[]>([]);
   const [attachmentUrls, setAttachmentUrls] = useState<string[]>([]);
-  
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  
+
   // Determine if using controlled or uncontrolled input
   const isControlled = onChange !== undefined;
   const inputValue = isControlled ? value : localInput;
-  
+
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     if (isControlled) {
       onChange(e);
@@ -55,49 +61,57 @@ export default function MessageInput({
 
   const handleSendMessage = useCallback(async () => {
     if (!inputValue.trim() && attachments.length === 0) return;
-    
+
     // If streaming and onCancel is provided, cancel the stream
     if (isStreaming && onCancel) {
       onCancel();
       return;
     }
-    
+
     try {
       // Handle file uploads if needed
       let urls: string[] = [...attachmentUrls];
-      
+
       if (attachments.length > 0) {
         setIsUploading(true);
         const result = await uploadAttachments(attachments);
         urls = [...urls, ...result.urls];
         setIsUploading(false);
       }
-      
+
       // Send the message
       if (onSend) {
         onSend(inputValue.trim(), urls);
       }
-      
+
       // Reset local state
       if (!isControlled) {
-        setLocalInput('');
+        setLocalInput("");
       }
       setAttachments([]);
       setAttachmentUrls([]);
-      
+
       // Focus the textarea again
       if (textareaRef.current) {
         textareaRef.current.focus();
       }
     } catch (error) {
-      console.error('Error handling message send:', error);
+      console.error("Error handling message send:", error);
       setIsUploading(false);
     }
-  }, [inputValue, attachments, attachmentUrls, isControlled, isStreaming, onSend, onCancel]);
+  }, [
+    inputValue,
+    attachments,
+    attachmentUrls,
+    isControlled,
+    isStreaming,
+    onSend,
+    onCancel,
+  ]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     // Send message on Enter (but not with Shift+Enter)
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage();
     }
@@ -116,7 +130,7 @@ export default function MessageInput({
   const handleRemoveAttachment = (index: number) => {
     setAttachments(attachments.filter((_, i) => i !== index));
   };
-  
+
   const handleRemoveAttachmentUrl = (index: number) => {
     setAttachmentUrls(attachmentUrls.filter((_, i) => i !== index));
   };
@@ -128,35 +142,35 @@ export default function MessageInput({
         <div className="flex flex-wrap gap-2 mb-2">
           {/* Local file attachments */}
           {attachments.map((file, index) => (
-            <div 
+            <div
               key={`file-${index}`}
               className="flex items-center gap-1 bg-secondary/50 text-secondary-foreground rounded-full pl-2 pr-1 py-1 text-xs"
             >
               <span className="truncate max-w-[100px]">{file.name}</span>
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="h-4 w-4 rounded-full" 
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-4 w-4 rounded-full"
                 onClick={() => handleRemoveAttachment(index)}
               >
                 ×
               </Button>
             </div>
           ))}
-          
+
           {/* Remote attachment URLs */}
           {attachmentUrls.map((url, index) => (
-            <div 
+            <div
               key={`url-${index}`}
               className="flex items-center gap-1 bg-secondary text-secondary-foreground rounded-full pl-2 pr-1 py-1 text-xs"
             >
               <span className="truncate max-w-[100px]">
-                {url.split('/').pop() || 'Attachment'}
+                {url.split("/").pop() || "Attachment"}
               </span>
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="h-4 w-4 rounded-full" 
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-4 w-4 rounded-full"
                 onClick={() => handleRemoveAttachmentUrl(index)}
               >
                 ×
@@ -165,7 +179,7 @@ export default function MessageInput({
           ))}
         </div>
       )}
-      
+
       {/* Input area */}
       <div className="relative">
         <Textarea
@@ -178,7 +192,7 @@ export default function MessageInput({
           className="min-h-[60px] resize-none pr-20 py-4"
           rows={1}
         />
-        
+
         <div className="absolute right-2 bottom-2 flex items-center gap-2">
           {/* File attachment button */}
           {showAttachmentButton && (
@@ -202,7 +216,7 @@ export default function MessageInput({
               </Button>
             </>
           )}
-          
+
           {/* Voice input button (placeholder for future implementation) */}
           {showVoiceButton && (
             <Button
@@ -215,7 +229,7 @@ export default function MessageInput({
               <Mic className="h-4 w-4" />
             </Button>
           )}
-          
+
           {/* Send button */}
           <Button
             type="button"
@@ -224,9 +238,12 @@ export default function MessageInput({
             className="h-8 w-8 rounded-full"
             onClick={handleSendMessage}
             disabled={
-              disabled || 
-              isUploading || 
-              ((!inputValue.trim() && attachments.length === 0 && attachmentUrls.length === 0) && !isStreaming)
+              disabled ||
+              isUploading ||
+              (!inputValue.trim() &&
+                attachments.length === 0 &&
+                attachmentUrls.length === 0 &&
+                !isStreaming)
             }
           >
             {isUploading ? (

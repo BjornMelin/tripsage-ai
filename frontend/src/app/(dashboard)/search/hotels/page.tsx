@@ -1,6 +1,12 @@
 import { SearchLayout } from "@/components/layouts/search-layout";
 import { HotelSearchForm } from "@/components/features/search/hotel-search-form";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
 export default function HotelSearchPage() {
   return (
@@ -17,38 +23,38 @@ export default function HotelSearchPage() {
           </CardHeader>
           <CardContent>
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-              <PopularDestinationCard 
-                destination="New York" 
+              <PopularDestinationCard
+                destination="New York"
                 priceFrom={199}
                 image="/placeholder.jpg"
                 rating={4.8}
               />
-              <PopularDestinationCard 
-                destination="Paris" 
+              <PopularDestinationCard
+                destination="Paris"
                 priceFrom={229}
                 image="/placeholder.jpg"
                 rating={4.7}
               />
-              <PopularDestinationCard 
-                destination="Tokyo" 
+              <PopularDestinationCard
+                destination="Tokyo"
                 priceFrom={179}
                 image="/placeholder.jpg"
                 rating={4.9}
               />
-              <PopularDestinationCard 
-                destination="London" 
+              <PopularDestinationCard
+                destination="London"
                 priceFrom={249}
                 image="/placeholder.jpg"
                 rating={4.6}
               />
-              <PopularDestinationCard 
-                destination="Barcelona" 
+              <PopularDestinationCard
+                destination="Barcelona"
                 priceFrom={159}
                 image="/placeholder.jpg"
                 rating={4.5}
               />
-              <PopularDestinationCard 
-                destination="Rome" 
+              <PopularDestinationCard
+                destination="Rome"
                 priceFrom={169}
                 image="/placeholder.jpg"
                 rating={4.7}
@@ -66,20 +72,20 @@ export default function HotelSearchPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <AccommodationTip 
-                title="Book directly with hotels for possible benefits" 
+              <AccommodationTip
+                title="Book directly with hotels for possible benefits"
                 description="While we show you the best deals from all sites, booking directly with hotels can sometimes get you perks like free breakfast, room upgrades, or loyalty points."
               />
-              <AccommodationTip 
-                title="Consider location carefully" 
+              <AccommodationTip
+                title="Consider location carefully"
                 description="A slightly higher price for a central location can save you time and transportation costs. Use the map view to see where properties are located relative to attractions."
               />
-              <AccommodationTip 
-                title="Check cancellation policies" 
+              <AccommodationTip
+                title="Check cancellation policies"
                 description="For maximum flexibility, filter for properties with free cancellation. This allows you to lock in a good rate while still keeping your options open."
               />
-              <AccommodationTip 
-                title="Read recent reviews" 
+              <AccommodationTip
+                title="Read recent reviews"
                 description="Look at reviews from the last 3-6 months to get the most accurate picture of the current state of the property. Pay special attention to reviews from travelers similar to you."
               />
             </div>
@@ -90,12 +96,12 @@ export default function HotelSearchPage() {
   );
 }
 
-function PopularDestinationCard({ 
-  destination, 
+function PopularDestinationCard({
+  destination,
   priceFrom,
   image,
-  rating
-}: { 
+  rating,
+}: {
   destination: string;
   priceFrom: number;
   image: string;
@@ -127,10 +133,10 @@ function PopularDestinationCard({
   );
 }
 
-function AccommodationTip({ 
-  title, 
-  description
-}: { 
+function AccommodationTip({
+  title,
+  description,
+}: {
   title: string;
   description: string;
 }) {

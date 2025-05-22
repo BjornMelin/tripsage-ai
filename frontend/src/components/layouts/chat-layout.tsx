@@ -13,9 +13,24 @@ interface ChatSidebarProps extends React.HTMLAttributes<HTMLElement> {
 
 // Sample chat sessions for placeholder functionality
 const SAMPLE_SESSIONS = [
-  { id: "1", title: "Flight Search Help", lastMessage: "Find me flights to Paris", updatedAt: "2025-05-21T10:00:00Z" },
-  { id: "2", title: "Budget Planning", lastMessage: "How can I save money on travel?", updatedAt: "2025-05-21T09:30:00Z" },
-  { id: "3", title: "Hotel Recommendations", lastMessage: "Best hotels in Tokyo", updatedAt: "2025-05-21T08:45:00Z" },
+  {
+    id: "1",
+    title: "Flight Search Help",
+    lastMessage: "Find me flights to Paris",
+    updatedAt: "2025-05-21T10:00:00Z",
+  },
+  {
+    id: "2",
+    title: "Budget Planning",
+    lastMessage: "How can I save money on travel?",
+    updatedAt: "2025-05-21T09:30:00Z",
+  },
+  {
+    id: "3",
+    title: "Hotel Recommendations",
+    lastMessage: "Best hotels in Tokyo",
+    updatedAt: "2025-05-21T08:45:00Z",
+  },
 ];
 
 function ChatSidebar({ className, onNewChat, ...props }: ChatSidebarProps) {
@@ -24,10 +39,7 @@ function ChatSidebar({ className, onNewChat, ...props }: ChatSidebarProps) {
 
   return (
     <nav
-      className={cn(
-        "flex flex-col h-full bg-muted/30 border-r",
-        className
-      )}
+      className={cn("flex flex-col h-full bg-muted/30 border-r", className)}
       {...props}
     >
       {/* New Chat Button */}
@@ -71,9 +83,7 @@ function ChatSidebar({ className, onNewChat, ...props }: ChatSidebarProps) {
                     : "text-muted-foreground"
                 )}
               >
-                <div className="font-medium truncate mb-1">
-                  {session.title}
-                </div>
+                <div className="font-medium truncate mb-1">{session.title}</div>
                 <div className="text-xs opacity-70 truncate">
                   {session.lastMessage}
                 </div>
@@ -128,10 +138,7 @@ function AgentStatusPanel({ className, ...props }: AgentStatusPanelProps) {
 
   return (
     <div
-      className={cn(
-        "w-80 bg-muted/30 border-l p-4 overflow-y-auto",
-        className
-      )}
+      className={cn("w-80 bg-muted/30 border-l p-4 overflow-y-auto", className)}
       {...props}
     >
       <div className="space-y-4">
@@ -141,7 +148,11 @@ function AgentStatusPanel({ className, ...props }: AgentStatusPanelProps) {
           <div
             className={cn(
               "w-2 h-2 rounded-full",
-              isLoading ? "bg-yellow-500" : activeAgents.length > 0 ? "bg-green-500" : "bg-gray-400"
+              isLoading
+                ? "bg-yellow-500"
+                : activeAgents.length > 0
+                  ? "bg-green-500"
+                  : "bg-gray-400"
             )}
           />
         </div>
@@ -200,7 +211,9 @@ function AgentStatusPanel({ className, ...props }: AgentStatusPanelProps) {
               </svg>
             </div>
             <p className="text-sm">No active agents</p>
-            <p className="text-xs">Start a conversation to see agent activity</p>
+            <p className="text-xs">
+              Start a conversation to see agent activity
+            </p>
           </div>
         )}
 
@@ -211,13 +224,16 @@ function AgentStatusPanel({ className, ...props }: AgentStatusPanelProps) {
           </h4>
           <div className="space-y-2">
             <div className="text-xs p-2 bg-background rounded border">
-              <span className="text-muted-foreground">Flight Agent:</span> Found 12 results for Paris
+              <span className="text-muted-foreground">Flight Agent:</span> Found
+              12 results for Paris
             </div>
             <div className="text-xs p-2 bg-background rounded border">
-              <span className="text-muted-foreground">Budget Agent:</span> Calculated trip estimate
+              <span className="text-muted-foreground">Budget Agent:</span>{" "}
+              Calculated trip estimate
             </div>
             <div className="text-xs p-2 bg-background rounded border">
-              <span className="text-muted-foreground">Weather Agent:</span> Retrieved forecast data
+              <span className="text-muted-foreground">Weather Agent:</span>{" "}
+              Retrieved forecast data
             </div>
           </div>
         </div>
@@ -252,9 +268,7 @@ export function ChatLayout({
       </div>
 
       {/* Main Chat Area */}
-      <main className="flex-1 flex flex-col min-w-0 relative">
-        {children}
-      </main>
+      <main className="flex-1 flex flex-col min-w-0 relative">{children}</main>
 
       {/* Agent Status Panel */}
       {showAgentPanel && (

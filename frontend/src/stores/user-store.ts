@@ -18,7 +18,12 @@ interface UserState {
   setUser: (user: User | null) => void;
   updateUser: (data: Partial<User>) => void;
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, firstName?: string, lastName?: string) => Promise<void>;
+  register: (
+    email: string,
+    password: string,
+    firstName?: string,
+    lastName?: string
+  ) => Promise<void>;
   logout: () => void;
   clearError: () => void;
 }
@@ -29,25 +34,25 @@ export const useUserStore = create<UserState>()(
       user: null,
       isLoading: false,
       error: null,
-      
+
       setUser: (user) => set({ user }),
-      
+
       updateUser: (data) => {
         const { user } = get();
         if (!user) return;
-        
+
         set({
           user: { ...user, ...data },
         });
       },
-      
+
       login: async (email, password) => {
         set({ isLoading: true, error: null });
-        
+
         try {
           // This will be replaced with actual API call
           await new Promise((resolve) => setTimeout(resolve, 1000));
-          
+
           // Mock user data
           set({
             user: {
@@ -65,14 +70,14 @@ export const useUserStore = create<UserState>()(
           });
         }
       },
-      
+
       register: async (email, password, firstName, lastName) => {
         set({ isLoading: true, error: null });
-        
+
         try {
           // This will be replaced with actual API call
           await new Promise((resolve) => setTimeout(resolve, 1000));
-          
+
           // Mock user data
           set({
             user: {
@@ -80,23 +85,26 @@ export const useUserStore = create<UserState>()(
               email,
               firstName,
               lastName,
-              displayName: firstName ? `${firstName} ${lastName || ""}`.trim() : email.split("@")[0],
+              displayName: firstName
+                ? `${firstName} ${lastName || ""}`.trim()
+                : email.split("@")[0],
               isEmailVerified: false,
             },
             isLoading: false,
           });
         } catch (error) {
           set({
-            error: error instanceof Error ? error.message : "Registration failed",
+            error:
+              error instanceof Error ? error.message : "Registration failed",
             isLoading: false,
           });
         }
       },
-      
+
       logout: () => {
         set({ user: null, error: null });
       },
-      
+
       clearError: () => set({ error: null }),
     }),
     {
