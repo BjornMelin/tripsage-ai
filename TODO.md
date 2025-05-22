@@ -299,13 +299,15 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
       - [ ] Add performance monitoring
     - [ ] Delete old src/db/ directory after migration completion
 
-- [ ] **Integrate External MCP Servers**
+- [ ] **Integrate External MCP Servers (External-Only Strategy)**
 
   - **Target:** MCP server architecture and implementation
-  - **Goal:** Adopt a hybrid approach favoring external MCPs when possible
+  - **Goal:** Use external MCP servers exclusively - NO custom MCP servers
   - **Strategy:**
-    - Prioritize existing external MCPs when available
-    - Only build custom MCPs for core business logic, direct database integration, or when privacy/security requirements can't be met externally
+    - ✅ Use existing external MCPs for ALL functionality
+    - ✅ Create thin Python wrappers for integration
+    - ✅ NO custom MCP servers (violates KISS principle)
+  - **Status:** See tasks/MCP_EXTERNAL_SERVERS_TODO.md for detailed tracking
   - **Tasks:**
     - **Sub-tasks for further enhancements:**
       - [ ] Configure production OpenTelemetry exporter (OTLP)
@@ -366,7 +368,7 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
     - [ ] Current Focus (Next 2 Weeks):
       - Continue developing the Unified Travel Search Wrapper
       - ✅ Implement Redis MCP for standardized response caching
-      - ✅ Integrate Supabase MCP for relational database operations
+      - ✅ Supabase MCP already integrated (See COMPLETED-TODO.md lines 455-478)
       - Integrate Google Calendar MCP for itinerary scheduling
       - Create domain-specific performance testing framework
       - Complete comprehensive error handling for all integrated MCPs

@@ -36,7 +36,7 @@ def register_default_wrappers():
         replace=True,
     )
 
-    # Supabase MCP
+    # Supabase MCP (external server)
     registry.register_lazy(
         mcp_name="supabase",
         loader=lambda: _import_supabase_wrapper(),
