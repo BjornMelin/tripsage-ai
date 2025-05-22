@@ -152,7 +152,7 @@ class TestDatabaseIntegration:
         from tripsage.mcp_abstraction.manager import MCPManager
 
         project_id = mcp_settings.SUPABASE_PROJECT_ID
-        mcp_manager = await MCPManager.get_instance(mcp_settings.dict())
+        mcp_manager = await MCPManager.get_instance(mcp_settings.model_dump())
 
         try:
             # Check applied migrations

@@ -44,7 +44,7 @@ async def initialize_databases(
             return False
 
     # Initialize MCP manager
-    mcp_manager = await MCPManager.get_instance(mcp_settings.dict())
+    mcp_manager = await MCPManager.get_instance(mcp_settings.model_dump())
 
     try:
         # Verify SQL connection
@@ -125,7 +125,7 @@ async def verify_database_schema(project_id: Optional[str] = None) -> Dict[str, 
     if not project_id:
         project_id = mcp_settings.SUPABASE_PROJECT_ID
 
-    mcp_manager = await MCPManager.get_instance(mcp_settings.dict())
+    mcp_manager = await MCPManager.get_instance(mcp_settings.model_dump())
     results = {"sql": {}, "neo4j": {}}
 
     try:
@@ -188,7 +188,7 @@ async def create_sample_data(project_id: Optional[str] = None) -> bool:
     if not project_id:
         project_id = mcp_settings.SUPABASE_PROJECT_ID
 
-    mcp_manager = await MCPManager.get_instance(mcp_settings.dict())
+    mcp_manager = await MCPManager.get_instance(mcp_settings.model_dump())
 
     try:
         # Create sample user in SQL

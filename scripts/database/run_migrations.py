@@ -74,7 +74,7 @@ async def main():
             from tripsage.db.migrations.neo4j_runner import initialize_neo4j_schema
             from tripsage.mcp_abstraction.manager import MCPManager
 
-            mcp_manager = await MCPManager.get_instance(mcp_settings.dict())
+            mcp_manager = await MCPManager.get_instance(mcp_settings.model_dump())
             try:
                 await initialize_neo4j_schema(mcp_manager)
                 logger.info("Neo4j schema initialized")
