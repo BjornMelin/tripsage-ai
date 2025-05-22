@@ -90,9 +90,9 @@ describe("RecentTrips", () => {
     expect(screen.getByText("Recent Trips")).toBeInTheDocument();
     expect(screen.getByText("Your latest travel plans")).toBeInTheDocument();
     // Should show skeleton loading
-    expect(
-      document.querySelectorAll(".animate-pulse").length
-    ).toBeGreaterThan(0);
+    expect(document.querySelectorAll(".animate-pulse").length).toBeGreaterThan(
+      0
+    );
   });
 
   it("renders empty state when no trips exist", () => {
