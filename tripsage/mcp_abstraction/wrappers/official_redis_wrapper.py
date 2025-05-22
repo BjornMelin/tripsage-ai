@@ -6,7 +6,7 @@ from @modelcontextprotocol/server-redis, mapping TripSage methods to MCP tools.
 """
 
 import json
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 from pydantic import BaseModel, Field
 
@@ -208,6 +208,169 @@ class OfficialRedisMCPWrapper(BaseMCPWrapper):
             "operations": stats.operations,
             "server_type": "official_redis_mcp",
         }
+
+    # Enhanced methods for cache_tools.py compatibility
+
+    async def pipeline_execute(self, commands: List[Dict[str, Any]]) -> List[Any]:
+        """Execute multiple Redis commands as a pipeline for better performance."""
+        # Since official Redis MCP doesn't support pipelining, execute sequentially
+        # This is a fallback implementation for compatibility
+        results = []
+
+        for command in commands:
+            try:
+                cmd = command["command"]
+                args = command.get("args", [])
+                kwargs = command.get("kwargs", {})
+
+                if cmd == "set":
+                    key, value = args[:2]
+                    ttl = kwargs.get("ex") or kwargs.get("ttl")
+                    result = await self.cache_set(key, value, ttl)
+                elif cmd == "get":
+                    key = args[0]
+                    result = await self.cache_get(key)
+                elif cmd == "delete":
+                    key = args[0]
+                    result = await self.cache_delete(key)
+                else:
+                    result = None
+                    logger.warning(f"Unsupported pipeline command: {cmd}")
+
+                results.append(result)
+
+            except Exception as e:
+                logger.error(f"Error executing pipeline command {command}: {e}")
+                results.append(None)
+
+        return results
+
+    async def acquire_lock(
+        self,
+        lock_name: str,
+        timeout: Optional[int] = None,
+        retry_delay: float = 0.1,
+        retry_count: int = 50,
+    ) -> Tuple[bool, str]:
+        """Acquire a distributed lock using Redis."""
+        import asyncio
+        import uuid
+
+        lock_key = f"lock:{lock_name}"
+        lock_token = str(uuid.uuid4())
+        lock_timeout = timeout or 30  # Default 30 seconds
+
+        for attempt in range(retry_count):
+            try:
+                # Try to set lock with expiration
+                success = await self.cache_set(lock_key, lock_token, lock_timeout)
+                if success:
+                    # Verify we actually got the lock (handle race conditions)
+                    current_value = await self.cache_get(lock_key)
+                    if current_value == lock_token:
+                        logger.debug(
+                            f"Acquired lock: {lock_name} (token: {lock_token[:8]}...)"
+                        )
+                        return True, lock_token
+
+                # Wait before retrying
+                if attempt < retry_count - 1:
+                    await asyncio.sleep(retry_delay)
+
+            except Exception as e:
+                logger.error(f"Error acquiring lock {lock_name}: {e}")
+                if attempt < retry_count - 1:
+                    await asyncio.sleep(retry_delay)
+
+        logger.warning(
+            f"Failed to acquire lock: {lock_name} after {retry_count} attempts"
+        )
+        return False, ""
+
+    async def release_lock(self, lock_name: str, lock_token: str) -> bool:
+        """Release a distributed lock."""
+        lock_key = f"lock:{lock_name}"
+
+        try:
+            # Only release if we own the lock
+            current_value = await self.cache_get(lock_key)
+            if current_value == lock_token:
+                deleted = await self.cache_delete(lock_key)
+                logger.debug(f"Released lock: {lock_name} (token: {lock_token[:8]}...)")
+                return deleted > 0
+            else:
+                logger.warning(f"Cannot release lock {lock_name}: token mismatch")
+                return False
+
+        except Exception as e:
+            logger.error(f"Error releasing lock {lock_name}: {e}")
+            return False
+
+    async def extend_lock(self, lock_name: str, lock_token: str, timeout: int) -> bool:
+        """Extend the expiration time of a distributed lock."""
+        lock_key = f"lock:{lock_name}"
+
+        try:
+            # Only extend if we own the lock
+            current_value = await self.cache_get(lock_key)
+            if current_value == lock_token:
+                success = await self.cache_set(lock_key, lock_token, timeout)
+                if success:
+                    logger.debug(
+                        f"Extended lock: {lock_name} "
+                        f"(token: {lock_token[:8]}..., timeout: {timeout}s)"
+                    )
+                return success
+            else:
+                logger.warning(f"Cannot extend lock {lock_name}: token mismatch")
+                return False
+
+        except Exception as e:
+            logger.error(f"Error extending lock {lock_name}: {e}")
+            return False
+
+    async def prefetch_keys(self, pattern: str, limit: int = 100) -> int:
+        """Prefetch keys matching a pattern into cache memory."""
+        try:
+            # Get keys matching pattern
+            keys = await self.cache_keys(pattern)
+
+            # Limit the number of keys to prefetch
+            limited_keys = keys[:limit]
+
+            # Prefetch values by reading them (loads into Redis memory)
+            prefetched = 0
+            for key in limited_keys:
+                try:
+                    value = await self.cache_get(key)
+                    if value is not None:
+                        prefetched += 1
+                except Exception:
+                    continue  # Skip failed keys
+
+            logger.debug(
+                f"Prefetched {prefetched}/{len(limited_keys)} keys "
+                f"matching pattern: {pattern}"
+            )
+            return prefetched
+
+        except Exception as e:
+            logger.error(f"Error prefetching keys with pattern {pattern}: {e}")
+            return 0
+
+    async def invalidate_pattern(self, pattern: str) -> int:
+        """Invalidate all keys matching a pattern."""
+        try:
+            keys = await self.cache_keys(pattern)
+            if keys:
+                deleted = await self.cache_delete(keys)
+                logger.debug(f"Invalidated {deleted} keys matching pattern: {pattern}")
+                return deleted
+            return 0
+
+        except Exception as e:
+            logger.error(f"Error invalidating pattern {pattern}: {e}")
+            return 0
 
     # Direct Redis MCP tool access
 
