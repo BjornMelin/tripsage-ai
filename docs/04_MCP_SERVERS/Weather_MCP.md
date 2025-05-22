@@ -10,17 +10,17 @@ The server integrates with multiple weather data providers to ensure data reliab
 
 ## 2. Architecture and Design Choices
 
-*   **Primary API Integration**: OpenWeatherMap API.
-    *   **Rationale**: Offers a wide range of data (current, forecast, historical, air pollution), global coverage, and a reasonable free/paid tier structure.
-*   **Secondary/Fallback APIs**:
-    *   Weather.gov API (for US locations, no API key required).
-    *   Visual Crossing Weather API (provides another data source, good free tier).
-    *   **Rationale**: Using multiple providers enhances data reliability and coverage, and provides fallbacks if one API is down or rate-limited.
-*   **MCP Framework**: Python FastMCP 2.0.
-    *   **Rationale**: Consistency with TripSage's backend stack, ease of integration with Python-based API clients, and robust Pydantic-based validation.
-*   **Caching**: Redis is used for caching API responses to improve performance and stay within API rate limits. TTLs are content-aware (e.g., current weather cached for shorter periods than historical seasonal data).
-*   **Data Transformation**: Raw API responses from different providers are transformed into a standardized TripSage weather data model.
-*   **Error Handling**: Implements provider fallback logic and consistent error reporting.
+* **Primary API Integration**: OpenWeatherMap API.
+  * **Rationale**: Offers a wide range of data (current, forecast, historical, air pollution), global coverage, and a reasonable free/paid tier structure.
+* **Secondary/Fallback APIs**:
+  * Weather.gov API (for US locations, no API key required).
+  * Visual Crossing Weather API (provides another data source, good free tier).
+  * **Rationale**: Using multiple providers enhances data reliability and coverage, and provides fallbacks if one API is down or rate-limited.
+* **MCP Framework**: Python FastMCP 2.0.
+  * **Rationale**: Consistency with TripSage's backend stack, ease of integration with Python-based API clients, and robust Pydantic-based validation.
+* **Caching**: Redis is used for caching API responses to improve performance and stay within API rate limits. TTLs are content-aware (e.g., current weather cached for shorter periods than historical seasonal data).
+* **Data Transformation**: Raw API responses from different providers are transformed into a standardized TripSage weather data model.
+* **Error Handling**: Implements provider fallback logic and consistent error reporting.
 
 ### Comparison of Weather Data Providers (Summary)
 
@@ -41,8 +41,9 @@ The Weather MCP Server exposes the following tools:
 
 ### 3.1. `get_current_weather` (was `weather.get_current_conditions`)
 
-*   **Description**: Fetches current weather conditions for a specific location.
-*   **Input Schema (Pydantic)**:
+* **Description**: Fetches current weather conditions for a specific location.
+* **Input Schema (Pydantic)**:
+
     ```python
     class LocationParams(BaseModel):
         lat: Optional[float] = None
@@ -56,7 +57,9 @@ The Weather MCP Server exposes the following tools:
                 raise ValueError("Either (lat, lon) or city must be provided.")
             return values
     ```
-*   **Output Schema (Pydantic - Simplified)**:
+
+* **Output Schema (Pydantic - Simplified)**:
+
     ```python
     class CurrentWeatherResponse(BaseModel):
         temperature: float
@@ -73,28 +76,32 @@ The Weather MCP Server exposes the following tools:
         timestamp: int # Unix timestamp
         source: str
     ```
-*   **Handler Logic**:
-    1.  Validates input `LocationParams`.
-    2.  Generates cache key (e.g., `weather:current:city:Paris` or `weather:current:lat:48.85:lon:2.35`).
-    3.  Checks Redis cache. Returns cached data if fresh (TTL ~30 mins).
-    4.  If cache miss:
-        *   Tries OpenWeatherMapAPI `get_current_weather()`.
-        *   If US location and OpenWeatherMap fails, tries WeatherGovAPI.
-        *   If still fails, tries VisualCrossingAPI.
-    5.  Transforms API response to `CurrentWeatherResponse`.
-    6.  Caches and returns the response.
+
+* **Handler Logic**:
+    1. Validates input `LocationParams`.
+    2. Generates cache key (e.g., `weather:current:city:Paris` or `weather:current:lat:48.85:lon:2.35`).
+    3. Checks Redis cache. Returns cached data if fresh (TTL ~30 mins).
+    4. If cache miss:
+        * Tries OpenWeatherMapAPI `get_current_weather()`.
+        * If US location and OpenWeatherMap fails, tries WeatherGovAPI.
+        * If still fails, tries VisualCrossingAPI.
+    5. Transforms API response to `CurrentWeatherResponse`.
+    6. Caches and returns the response.
 
 ### 3.2. `get_forecast`
 
-*   **Description**: Fetches a multi-day weather forecast for a location.
-*   **Input Schema (Pydantic)**:
+* **Description**: Fetches a multi-day weather forecast for a location.
+* **Input Schema (Pydantic)**:
+
     ```python
     class ForecastParams(BaseModel):
         location: LocationParams # Reuses LocationParams
         days: int = Field(default=5, ge=1, le=16, description="Number of days to forecast (1-16 for OpenWeatherMap).")
         # start_date: Optional[date] = None # If API supports forecast from a specific start date
     ```
-*   **Output Schema (Pydantic - Simplified)**:
+
+* **Output Schema (Pydantic - Simplified)**:
+
     ```python
     class DailyForecast(BaseModel):
         date: str # YYYY-MM-DD
@@ -111,24 +118,28 @@ The Weather MCP Server exposes the following tools:
         daily: List[DailyForecast]
         source: str
     ```
-*   **Handler Logic**: Similar to `get_current_weather` regarding cache and provider fallback. Transforms provider responses (often 3-hourly) into daily summaries. Cache TTL ~1-6 hours depending on forecast length.
+
+* **Handler Logic**: Similar to `get_current_weather` regarding cache and provider fallback. Transforms provider responses (often 3-hourly) into daily summaries. Cache TTL ~1-6 hours depending on forecast length.
 
 ### 3.3. `get_historical_weather` (was `weather.get_historical_data`)
 
-*   **Description**: Fetches historical weather data for a location on a specific date.
-*   **Input Schema (Pydantic)**:
+* **Description**: Fetches historical weather data for a location on a specific date.
+* **Input Schema (Pydantic)**:
+
     ```python
     class HistoricalWeatherParams(BaseModel):
         location: LocationParams
         date: date # Pydantic will parse "YYYY-MM-DD"
     ```
-*   **Output Schema**: Similar to `CurrentWeatherResponse` but for a past date.
-*   **Handler Logic**: Uses OpenWeatherMap's "Timestamp request" or Visual Crossing's historical data. Caches results for a long duration (e.g., 30 days) as historical data doesn't change.
+
+* **Output Schema**: Similar to `CurrentWeatherResponse` but for a past date.
+* **Handler Logic**: Uses OpenWeatherMap's "Timestamp request" or Visual Crossing's historical data. Caches results for a long duration (e.g., 30 days) as historical data doesn't change.
 
 ### 3.4. `get_travel_recommendation`
 
-*   **Description**: Generates weather-based travel recommendations (e.g., packing advice, suitable activities).
-*   **Input Schema (Pydantic)**:
+* **Description**: Generates weather-based travel recommendations (e.g., packing advice, suitable activities).
+* **Input Schema (Pydantic)**:
+
     ```python
     class TravelRecommendationParams(BaseModel):
         location: LocationParams
@@ -136,7 +147,9 @@ The Weather MCP Server exposes the following tools:
         end_date: date
         activities: Optional[List[str]] = None # e.g., ["hiking", "beach"]
     ```
-*   **Output Schema (Pydantic - Simplified)**:
+
+* **Output Schema (Pydantic - Simplified)**:
+
     ```python
     class TravelRecommendationResponse(BaseModel):
         location_name: str
@@ -145,17 +158,19 @@ The Weather MCP Server exposes the following tools:
         clothing_suggestions: List[str]
         activity_suitability: Dict[str, str] # activity_name: "Recommended" | "Caution" | "Not Recommended"
     ```
-*   **Handler Logic**:
-    1.  Fetches forecast for the given date range using `get_forecast`.
-    2.  Analyzes the forecast data (avg temp, precipitation chance, conditions).
-    3.  Applies heuristics or a simple rule-based system to generate recommendations based on weather and provided activities.
-    4.  This tool primarily processes data from other tools; caching of its output can be shorter if underlying forecast data is cached well.
+
+* **Handler Logic**:
+    1. Fetches forecast for the given date range using `get_forecast`.
+    2. Analyzes the forecast data (avg temp, precipitation chance, conditions).
+    3. Applies heuristics or a simple rule-based system to generate recommendations based on weather and provided activities.
+    4. This tool primarily processes data from other tools; caching of its output can be shorter if underlying forecast data is cached well.
 
 ### 3.5. `get_extreme_weather_alerts` (was `weather.get_extreme_alerts`)
 
-*   **Description**: Checks for active extreme weather alerts (warnings, advisories) for a location.
-*   **Input Schema**: `LocationParams`
-*   **Output Schema (Pydantic - Simplified)**:
+* **Description**: Checks for active extreme weather alerts (warnings, advisories) for a location.
+* **Input Schema**: `LocationParams`
+* **Output Schema (Pydantic - Simplified)**:
+
     ```python
     class WeatherAlert(BaseModel):
         event_name: str
@@ -170,13 +185,15 @@ The Weather MCP Server exposes the following tools:
         alerts: List[WeatherAlert]
         active_alert_count: int
     ```
-*   **Handler Logic**: Queries OpenWeatherMap and Weather.gov (for US) alert endpoints. Results are cached for a very short TTL (e.g., 15-30 minutes) due to the time-sensitive nature of alerts.
+
+* **Handler Logic**: Queries OpenWeatherMap and Weather.gov (for US) alert endpoints. Results are cached for a very short TTL (e.g., 15-30 minutes) due to the time-sensitive nature of alerts.
 
 ## 4. API Client Implementations
 
 Dedicated Python classes within the Weather MCP server project will handle interactions with each weather API provider.
 
-### `OpenWeatherMapAPI` Client:
+### `OpenWeatherMapAPI` Client
+
 ```python
 # src/mcp/weather/providers/openweathermap.py (Conceptual)
 import httpx
@@ -218,6 +235,7 @@ class OpenWeatherMapAPI:
     
     # ... methods for historical data and alerts if using relevant OWM endpoints ...
 ```
+
 Similar client classes would be implemented for `WeatherGovAPI` and `VisualCrossingAPI`.
 
 ## 5. Data Transformation and Standardization
@@ -226,11 +244,11 @@ A transformer module will convert responses from various providers into TripSage
 
 ## 6. Caching Strategy
 
-*   **Current Weather**: TTL of 30 minutes - 1 hour.
-*   **Forecasts**: TTL of 1-6 hours. Shorter for near-term, longer for extended forecasts.
-*   **Historical Weather**: Long TTL (e.g., 24 hours or more), as it doesn't change.
-*   **Alerts**: Very short TTL (e.g., 5-15 minutes).
-*   **Cache Keys**: Generated based on normalized location (e.g., geohash or standardized city/country) and query parameters (e.g., date for historical, number of days for forecast).
+* **Current Weather**: TTL of 30 minutes - 1 hour.
+* **Forecasts**: TTL of 1-6 hours. Shorter for near-term, longer for extended forecasts.
+* **Historical Weather**: Long TTL (e.g., 24 hours or more), as it doesn't change.
+* **Alerts**: Very short TTL (e.g., 5-15 minutes).
+* **Cache Keys**: Generated based on normalized location (e.g., geohash or standardized city/country) and query parameters (e.g., date for historical, number of days for forecast).
 
 ## 7. Python Client (`src/mcp/weather/client.py`)
 
@@ -329,23 +347,23 @@ class TripSageWeatherService:
 
 The `WeatherMCPClient` tools are registered with the relevant AI agents (e.g., Travel Planning Agent, Itinerary Agent). Agents can then use these tools to:
 
-*   Fetch weather when a user asks about a destination.
-*   Proactively provide weather information for planned trips.
-*   Suggest activities based on weather forecasts.
-*   Recommend appropriate clothing.
+* Fetch weather when a user asks about a destination.
+* Proactively provide weather information for planned trips.
+* Suggest activities based on weather forecasts.
+* Recommend appropriate clothing.
 
 (Refer to `docs/02_SYSTEM_ARCHITECTURE_AND_DESIGN/AGENT_DESIGN_AND_OPTIMIZATION.md` for general agent tool integration patterns.)
 
 ## 9. Deployment
 
-*   **Dockerfile**: Python FastMCP 2.0 server Dockerfile.
-*   **Configuration**: API keys for OpenWeatherMap, etc., managed via centralized settings and injected as environment variables.
-*   **Dependencies**: `httpx` for API calls, `redis` for caching.
+* **Dockerfile**: Python FastMCP 2.0 server Dockerfile.
+* **Configuration**: API keys for OpenWeatherMap, etc., managed via centralized settings and injected as environment variables.
+* **Dependencies**: `httpx` for API calls, `redis` for caching.
 
 ## 10. Testing
 
-*   **Unit Tests**: Mock external API calls (OpenWeatherMap, etc.) to test transformation logic, caching, and error handling within the MCP server tools.
-*   **Integration Tests**: Test the Weather MCP client against a running instance of the Weather MCP server (which might still use mocked external APIs for reliability in CI).
-*   **Contract Tests**: Ensure the MCP server adheres to the defined tool schemas.
+* **Unit Tests**: Mock external API calls (OpenWeatherMap, etc.) to test transformation logic, caching, and error handling within the MCP server tools.
+* **Integration Tests**: Test the Weather MCP client against a running instance of the Weather MCP server (which might still use mocked external APIs for reliability in CI).
+* **Contract Tests**: Ensure the MCP server adheres to the defined tool schemas.
 
 This guide provides the blueprint for a robust and reliable Weather MCP Server for TripSage.
