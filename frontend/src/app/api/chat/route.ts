@@ -1,87 +1,216 @@
-import { StreamingTextResponse, AIStream, type AIStreamCallbacks } from "ai";
+import { StreamingTextResponse } from "ai";
 import type { NextRequest } from "next/server";
+import { z } from "zod";
 
-// This function simulates a streaming response from an AI model
-// In production, this would connect to your API/LLM
-function createSimulatedAIStream(
-  prompt: string,
-  callbacks?: AIStreamCallbacks
-) {
-  // Sample chunks to simulate streaming
-  const chunks = [
-    { content: "I'm analyzing your travel query" },
-    { content: " about" },
-    { content: " " + prompt + "." },
-    { content: " Here's what I found:" },
-    { content: "\n\n" },
-    { content: "TripSage can help you plan" },
-    { content: " your perfect trip to " + prompt + "." },
-    { content: " When would you like to travel?" },
-  ];
+// Environment variables
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API_TIMEOUT = parseInt(process.env.API_TIMEOUT || "30000", 10);
 
-  let lastContent = "";
+// Request validation schema
+const ChatRequestSchema = z.object({
+  messages: z.array(
+    z.object({
+      role: z.enum(["user", "assistant", "system"]),
+      content: z.string().max(4000, "Message content too long"),
+    })
+  ),
+  session_id: z.string().uuid().optional(),
+  stream: z.boolean().default(true),
+});
 
-  // Return a readable stream that emits chunks at intervals to simulate typing
-  return new ReadableStream({
-    async start(controller) {
-      try {
-        for (const chunk of chunks) {
-          lastContent += chunk.content;
-          const text = JSON.stringify({ content: lastContent });
+// Error response types
+class ChatError extends Error {
+  constructor(
+    message: string,
+    public status: number = 500,
+    public code?: string
+  ) {
+    super(message);
+    this.name = "ChatError";
+  }
+}
 
-          // Encode the text chunk
-          const encoder = new TextEncoder();
-          const encoded = encoder.encode(text);
+/**
+ * Forward request to FastAPI backend and handle streaming response
+ */
+async function forwardToBackend(
+  messages: any[],
+  sessionId?: string,
+  stream: boolean = true,
+  authToken?: string
+): Promise<ReadableStream> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
 
-          // Send chunk to stream
-          controller.enqueue(encoded);
+  try {
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
 
-          // Simulate typing delay
-          await new Promise((resolve) => setTimeout(resolve, 300));
-        }
-      } catch (error) {
-        // Handle errors
-        controller.error(error);
-      } finally {
-        // Close the stream when finished
-        controller.close();
+    // Forward authorization header if present
+    if (authToken) {
+      headers["Authorization"] = authToken;
+    } else if (process.env.API_KEY) {
+      // Fallback to server-side API key if no user token
+      headers["Authorization"] = `Bearer ${process.env.API_KEY}`;
+    }
+
+    const response = await fetch(`${API_BASE_URL}/api/v1/chat/`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        messages,
+        session_id: sessionId,
+        stream,
+      }),
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+
+    // Handle error responses
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      
+      // Map backend error codes to user-friendly messages
+      switch (response.status) {
+        case 401:
+          throw new ChatError("Authentication required", 401, "AUTH_REQUIRED");
+        case 403:
+          throw new ChatError("Access denied", 403, "ACCESS_DENIED");
+        case 429:
+          throw new ChatError(
+            "Too many requests. Please try again later.",
+            429,
+            "RATE_LIMITED"
+          );
+        case 503:
+          throw new ChatError(
+            "AI service temporarily unavailable",
+            503,
+            "SERVICE_UNAVAILABLE"
+          );
+        default:
+          throw new ChatError(
+            errorData.detail || "Failed to process chat request",
+            response.status
+          );
       }
-    },
-  });
+    }
+
+    // Return the response body as a readable stream
+    if (!response.body) {
+      throw new ChatError("No response body from backend", 500);
+    }
+
+    return response.body;
+  } catch (error) {
+    clearTimeout(timeoutId);
+    
+    if (error instanceof ChatError) {
+      throw error;
+    }
+    
+    if (error instanceof Error) {
+      if (error.name === "AbortError") {
+        throw new ChatError("Request timeout", 408, "TIMEOUT");
+      }
+      throw new ChatError(error.message);
+    }
+    
+    throw new ChatError("Unknown error occurred");
+  }
 }
 
 /**
  * POST handler for /api/chat
- * In production, this would connect to your TripSage AI backend
+ * Forwards requests to the FastAPI backend with proper error handling and streaming
  */
 export async function POST(req: NextRequest) {
   try {
-    // Parse the request body
-    const { messages, toolCalls } = await req.json();
+    // Parse and validate request body
+    const body = await req.json();
+    const validatedData = ChatRequestSchema.parse(body);
+    const { messages, session_id, stream } = validatedData;
 
-    // Get the last user message
+    // Validate messages array
+    if (messages.length === 0) {
+      throw new ChatError("No messages provided", 400, "INVALID_REQUEST");
+    }
+
     const lastMessage = messages[messages.length - 1];
+    if (lastMessage.role !== "user") {
+      throw new ChatError("Last message must be from user", 400, "INVALID_REQUEST");
+    }
 
-    // Simulate an AI stream based on the user's last message
-    const stream = AIStream(createSimulatedAIStream(lastMessage.content), {
-      onStart: async () => {
-        console.log("Stream started");
-      },
-      onToken: async (token: string) => {
-        // Process tokens if needed
-      },
-      onFinal: async (completion: string) => {
-        console.log("Stream completed");
+    // Get authorization header from the request
+    const authToken = req.headers.get("authorization");
+
+    // Forward to backend and get stream
+    const backendStream = await forwardToBackend(messages, session_id, stream, authToken || undefined);
+
+    // Transform the backend stream to match Vercel AI SDK format
+    const transformedStream = new TransformStream({
+      async transform(chunk, controller) {
+        // The backend already sends in Vercel AI SDK format, so we can pass through
+        controller.enqueue(chunk);
       },
     });
 
+    // Pipe the backend stream through our transform
+    backendStream.pipeTo(transformedStream.writable);
+
     // Return the streaming response
-    return new StreamingTextResponse(stream);
+    return new StreamingTextResponse(transformedStream.readable, {
+      headers: {
+        "Cache-Control": "no-cache",
+        "Connection": "keep-alive",
+        "X-Content-Type-Options": "nosniff",
+      },
+    });
   } catch (error) {
     console.error("Error in chat API route:", error);
+
+    // Handle validation errors
+    if (error instanceof z.ZodError) {
+      const firstError = error.errors[0];
+      return new Response(
+        JSON.stringify({
+          error: "Validation error",
+          code: "VALIDATION_ERROR",
+          details: firstError.message,
+        }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    // Handle chat errors
+    if (error instanceof ChatError) {
+      return new Response(
+        JSON.stringify({
+          error: error.message,
+          code: error.code,
+        }),
+        {
+          status: error.status,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    // Generic error response
     return new Response(
-      JSON.stringify({ error: "Failed to process chat request" }),
-      { status: 500, headers: { "Content-Type": "application/json" } }
+      JSON.stringify({
+        error: "Internal server error",
+        code: "INTERNAL_ERROR",
+      }),
+      {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      }
     );
   }
 }
