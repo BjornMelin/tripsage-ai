@@ -9,6 +9,30 @@ interface User {
   lastName?: string;
   avatarUrl?: string;
   isEmailVerified: boolean;
+  bio?: string;
+  location?: string;
+  website?: string;
+  preferences?: {
+    language?: string;
+    timezone?: string;
+    theme?: "light" | "dark" | "system";
+    units?: "metric" | "imperial";
+    dateFormat?: "MM/DD/YYYY" | "DD/MM/YYYY" | "YYYY-MM-DD";
+    timeFormat?: "12h" | "24h";
+    notifications?: {
+      email?: boolean;
+      tripReminders?: boolean;
+      priceAlerts?: boolean;
+      marketing?: boolean;
+    };
+    autoSaveSearches?: boolean;
+    smartSuggestions?: boolean;
+    locationServices?: boolean;
+    analytics?: boolean;
+  };
+  security?: {
+    twoFactorEnabled?: boolean;
+  };
 }
 
 interface UserState {

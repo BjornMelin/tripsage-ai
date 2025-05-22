@@ -125,11 +125,11 @@
   - [x] Budget breakdown
   - [ ] Documents section
   - [ ] Collaborators list
-- [ ] User profile page (`/dashboard/profile`)
+- [x] User profile page (`/dashboard/profile`) ✅ COMPLETED
 - [x] Settings pages (`/dashboard/settings/*`)
   - [x] API keys management
-  - [ ] User preferences
-  - [ ] Notification settings
+  - [x] User preferences (implemented in profile page)
+  - [x] Notification settings (implemented in profile page)
 
 ### Week 6: AI Chat Interface ✅ COMPLETED
 
