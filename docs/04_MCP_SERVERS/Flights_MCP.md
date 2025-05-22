@@ -10,14 +10,14 @@ The server is implemented using **FastMCP 2.0** (JavaScript/Node.js version, as 
 
 ## 2. Architecture and Design Choices
 
-*   **Primary API Integration**: Duffel API.
-    *   **Rationale**: Duffel provides access to content from over 300 airlines, including NDC, GDS, and LCC channels, through a modern, developer-friendly API. Its transaction-based pricing model is suitable for TripSage.
-*   **MCP Framework**: FastMCP 2.0 (JavaScript/Node.js).
-    *   **Rationale**: Provides a standardized way to build MCP servers, ensuring compatibility with the TripSage ecosystem (OpenAI Agents SDK, Claude Desktop).
-*   **Caching**: Redis is used for caching search results, offer details, and other frequently accessed data to improve performance and reduce Duffel API call volume.
-*   **Data Transformation**: A dedicated transformer module (`duffel_transformer.js`) converts Duffel API responses into a standardized TripSage flight data model.
-*   **Error Handling**: Robust error handling with retries (exponential backoff) for API calls and clear error reporting to MCP clients.
-*   **Price History**: Integration with Supabase for storing historical pricing data for trend analysis and user recommendations.
+* **Primary API Integration**: Duffel API.
+  * **Rationale**: Duffel provides access to content from over 300 airlines, including NDC, GDS, and LCC channels, through a modern, developer-friendly API. Its transaction-based pricing model is suitable for TripSage.
+* **MCP Framework**: FastMCP 2.0 (JavaScript/Node.js).
+  * **Rationale**: Provides a standardized way to build MCP servers, ensuring compatibility with the TripSage ecosystem (OpenAI Agents SDK, Claude Desktop).
+* **Caching**: Redis is used for caching search results, offer details, and other frequently accessed data to improve performance and reduce Duffel API call volume.
+* **Data Transformation**: A dedicated transformer module (`duffel_transformer.js`) converts Duffel API responses into a standardized TripSage flight data model.
+* **Error Handling**: Robust error handling with retries (exponential backoff) for API calls and clear error reporting to MCP clients.
+* **Price History**: Integration with Supabase for storing historical pricing data for trend analysis and user recommendations.
 
 ## 3. Exposed MCP Tools
 
@@ -25,8 +25,9 @@ The Flights MCP Server exposes the following tools:
 
 ### 3.1. `search_flights`
 
-*   **Description**: Searches for one-way or round-trip flight offers.
-*   **Input Schema (Zod for JS FastMCP, or Pydantic for Python FastMCP)**:
+* **Description**: Searches for one-way or round-trip flight offers.
+* **Input Schema (Zod for JS FastMCP, or Pydantic for Python FastMCP)**:
+
     ```javascript
     // Zod schema example (for JS FastMCP)
     z.object({
@@ -43,21 +44,23 @@ The Flights MCP Server exposes the following tools:
       currency: z.string().length(3).default("USD").describe("Currency for prices (ISO 4217)")
     })
     ```
-*   **Output**: Formatted search results including a list of flight offers, airline details, and metadata (count, lowest price). (See `duffel_transformer.js` for detailed output structure).
-*   **Handler Logic**:
-    1.  Validates input parameters.
-    2.  Generates a cache key based on input.
-    3.  Checks Redis cache for existing results. Returns cached data if fresh.
-    4.  If cache miss, constructs payload for Duffel's Offer Request API.
-    5.  Calls `duffelService.createOfferRequest()` then `duffelService.getOffers()`.
-    6.  Transforms Duffel API response using `formatSearchResults` from `duffel_transformer.js`.
-    7.  Caches the transformed results in Redis with an appropriate TTL (e.g., 5-10 minutes).
-    8.  Returns the results.
+
+* **Output**: Formatted search results including a list of flight offers, airline details, and metadata (count, lowest price). (See `duffel_transformer.js` for detailed output structure).
+* **Handler Logic**:
+    1. Validates input parameters.
+    2. Generates a cache key based on input.
+    3. Checks Redis cache for existing results. Returns cached data if fresh.
+    4. If cache miss, constructs payload for Duffel's Offer Request API.
+    5. Calls `duffelService.createOfferRequest()` then `duffelService.getOffers()`.
+    6. Transforms Duffel API response using `formatSearchResults` from `duffel_transformer.js`.
+    7. Caches the transformed results in Redis with an appropriate TTL (e.g., 5-10 minutes).
+    8. Returns the results.
 
 ### 3.2. `search_multi_city`
 
-*   **Description**: Searches for multi-city flight itineraries.
-*   **Input Schema**:
+* **Description**: Searches for multi-city flight itineraries.
+* **Input Schema**:
+
     ```javascript
     z.object({
       slices: z.array(z.object({
@@ -68,38 +71,42 @@ The Flights MCP Server exposes the following tools:
       // ... (passengers, cabin_class, etc. similar to search_flights)
     })
     ```
-*   **Output**: Similar to `search_flights`, adapted for multi-city structure.
-*   **Handler Logic**: Similar to `search_flights`, but constructs a multi-slice Offer Request.
+
+* **Output**: Similar to `search_flights`, adapted for multi-city structure.
+* **Handler Logic**: Similar to `search_flights`, but constructs a multi-slice Offer Request.
 
 ### 3.3. `get_offer_details`
 
-*   **Description**: Retrieves detailed information for a specific flight offer, including fare rules.
-*   **Input Schema**:
+* **Description**: Retrieves detailed information for a specific flight offer, including fare rules.
+* **Input Schema**:
+
     ```javascript
     z.object({
       offer_id: z.string().describe("The Duffel offer ID"),
       currency: z.string().length(3).default("USD")
     })
     ```
-*   **Output**: Detailed offer information, including segment details, baggage allowance, and fare conditions. (See `duffel_transformer.js` `formatOfferDetails`).
-*   **Handler Logic**:
-    1.  Validates input.
-    2.  Generates cache key. Checks cache.
-    3.  Calls `duffelService.getOffer()` and `duffelService.getFareRules()`.
-    4.  Transforms and combines results.
-    5.  Caches and returns data. TTL typically shorter (e.g., 2-5 minutes).
+
+* **Output**: Detailed offer information, including segment details, baggage allowance, and fare conditions. (See `duffel_transformer.js` `formatOfferDetails`).
+* **Handler Logic**:
+    1. Validates input.
+    2. Generates cache key. Checks cache.
+    3. Calls `duffelService.getOffer()` and `duffelService.getFareRules()`.
+    4. Transforms and combines results.
+    5. Caches and returns data. TTL typically shorter (e.g., 2-5 minutes).
 
 ### 3.4. `get_fare_rules` (Potentially merged into `get_offer_details` or kept separate)
 
-*   **Description**: Retrieves fare rules and conditions for a specific offer.
-*   **Input Schema**: `z.object({ offer_id: z.string() })`
-*   **Output**: Structured fare rule information.
-*   **Handler Logic**: Calls `duffelService.getFareRules()`, caches, and returns.
+* **Description**: Retrieves fare rules and conditions for a specific offer.
+* **Input Schema**: `z.object({ offer_id: z.string() })`
+* **Output**: Structured fare rule information.
+* **Handler Logic**: Calls `duffelService.getFareRules()`, caches, and returns.
 
 ### 3.5. `create_order`
 
-*   **Description**: Creates a flight booking from a selected offer.
-*   **Input Schema**:
+* **Description**: Creates a flight booking from a selected offer.
+* **Input Schema**:
+
     ```javascript
     z.object({
       selected_offers: z.array(z.string()).min(1).describe("List of offer IDs to book"),
@@ -119,25 +126,27 @@ The Flights MCP Server exposes the following tools:
       // ... other necessary booking fields like contact info
     })
     ```
-*   **Output**: Order confirmation details from Duffel.
-*   **Handler Logic**:
-    1.  Validates input.
-    2.  Calls `duffelService.createOrder()`.
-    3.  **Important**: Does NOT cache booking responses.
-    4.  Returns Duffel's order confirmation.
-    5.  (Agent-level logic will then store this booking in Supabase and the Knowledge Graph).
+
+* **Output**: Order confirmation details from Duffel.
+* **Handler Logic**:
+    1. Validates input.
+    2. Calls `duffelService.createOrder()`.
+    3. **Important**: Does NOT cache booking responses.
+    4. Returns Duffel's order confirmation.
+    5. (Agent-level logic will then store this booking in Supabase and the Knowledge Graph).
 
 ### 3.6. `get_order`
 
-*   **Description**: Retrieves details of an existing booking.
-*   **Input Schema**: `z.object({ order_id: z.string() })`
-*   **Output**: Detailed order information.
-*   **Handler Logic**: Calls `duffelService.getOrder()`. Does NOT cache.
+* **Description**: Retrieves details of an existing booking.
+* **Input Schema**: `z.object({ order_id: z.string() })`
+* **Output**: Detailed order information.
+* **Handler Logic**: Calls `duffelService.getOrder()`. Does NOT cache.
 
 ### 3.7. `track_prices`
 
-*   **Description**: Sets up price tracking for a specific flight route or offer.
-*   **Input Schema**:
+* **Description**: Sets up price tracking for a specific flight route or offer.
+* **Input Schema**:
+
     ```javascript
     z.object({
       origin: z.string().length(3),
@@ -150,12 +159,13 @@ The Flights MCP Server exposes the following tools:
       threshold_percentage: z.number().min(0).default(5).describe("Min change % to notify")
     })
     ```
-*   **Output**: Confirmation of tracking setup, including tracking ID.
-*   **Handler Logic**:
-    1.  Validates input.
-    2.  Stores tracking request in Supabase (`price_tracking` table).
-    3.  Optionally performs an initial search to establish a baseline price and stores it in `price_history`.
-    4.  (A separate scheduled worker/job, not part of this MCP tool, would periodically re-check prices and send notifications).
+
+* **Output**: Confirmation of tracking setup, including tracking ID.
+* **Handler Logic**:
+    1. Validates input.
+    2. Stores tracking request in Supabase (`price_tracking` table).
+    3. Optionally performs an initial search to establish a baseline price and stores it in `price_history`.
+    4. (A separate scheduled worker/job, not part of this MCP tool, would periodically re-check prices and send notifications).
 
 ## 4. Duffel API Service (`duffel_service.js` or `.ts`)
 
@@ -257,25 +267,26 @@ module.exports = DuffelService;
 This module is responsible for converting raw Duffel API responses into the standardized TripSage flight data models.
 
 Key transformation functions:
-*   `formatSearchResults(duffelOffers, currency)`: Transforms a list of Duffel offers.
-*   `formatOffer(duffelOffer, airlinesRef, currency)`: Formats a single offer.
-*   `formatSlice(duffelSlice, airlinesRef)`: Formats a flight slice (journey leg).
-*   `formatSegment(duffelSegment, airlinesRef)`: Formats an individual flight segment.
-*   `extractAirlines(duffelOffers)`: Creates a reference list of airlines.
-*   `formatOfferDetails(duffelOffer, duffelFareRules, currency)`: Combines offer and fare rule data.
+
+* `formatSearchResults(duffelOffers, currency)`: Transforms a list of Duffel offers.
+* `formatOffer(duffelOffer, airlinesRef, currency)`: Formats a single offer.
+* `formatSlice(duffelSlice, airlinesRef)`: Formats a flight slice (journey leg).
+* `formatSegment(duffelSegment, airlinesRef)`: Formats an individual flight segment.
+* `extractAirlines(duffelOffers)`: Creates a reference list of airlines.
+* `formatOfferDetails(duffelOffer, duffelFareRules, currency)`: Combines offer and fare rule data.
 
 (Refer to `docs/implementation/flight_search_booking_implementation.md` for an example of the Python data models these transformers would map to. The JS/TS transformer would produce a similar structure.)
 
 ## 6. Caching (`cache.js` or `.ts`)
 
-*   **Client**: `ioredis` for Node.js.
-*   **Key Generation**: Standardized functions like `generateSearchCacheKey(params)` and `generateOfferCacheKey(offerId)`.
-*   **TTL Strategy**:
-    *   Search Results: 5-10 minutes (configurable via `config.CACHE_TTL.SEARCH_RESULTS`).
-    *   Offer Details: 2-5 minutes (configurable via `config.CACHE_TTL.OFFER_DETAILS`).
-    *   Fare Rules: 60 minutes (configurable via `config.CACHE_TTL.FARE_RULES`).
-    *   Static data (Airlines, Airports): 24 hours.
-*   **Functions**: `cacheResults(key, data, ttl)`, `getCachedResults(key)`.
+* **Client**: `ioredis` for Node.js.
+* **Key Generation**: Standardized functions like `generateSearchCacheKey(params)` and `generateOfferCacheKey(offerId)`.
+* **TTL Strategy**:
+  * Search Results: 5-10 minutes (configurable via `config.CACHE_TTL.SEARCH_RESULTS`).
+  * Offer Details: 2-5 minutes (configurable via `config.CACHE_TTL.OFFER_DETAILS`).
+  * Fare Rules: 60 minutes (configurable via `config.CACHE_TTL.FARE_RULES`).
+  * Static data (Airlines, Airports): 24 hours.
+* **Functions**: `cacheResults(key, data, ttl)`, `getCachedResults(key)`.
 
 ## 7. Python Client (`client.py`)
 
@@ -410,6 +421,7 @@ class FlightsMCPClient(BaseMCPClient):
 The `FlightsMCPClient` methods, decorated with `@function_tool`, are registered with the Travel Planning Agent and other relevant agents. This allows agents to naturally call these functions when flight-related information or actions are needed.
 
 Example agent tool usage (conceptual):
+
 ```python
 # In TravelAgent or a specialized FlightAgent
 # ...
@@ -427,23 +439,23 @@ Example agent tool usage (conceptual):
 
 ## 9. Deployment
 
-*   **Dockerfile**: A Node.js based Dockerfile for the Flights MCP Server.
-*   **Docker Compose**: Included in the main `docker-compose.yml` for local development, linking with Redis.
-*   **Kubernetes**: Manifests for deploying to staging/production Kubernetes clusters.
-*   **Environment Variables**: `DUFFEL_API_KEY`, `REDIS_URL`, `PORT`, `LOG_LEVEL` are critical.
-*   **Health Check**: Implement a `/health` endpoint in the FastMCP server for Kubernetes liveness/readiness probes.
+* **Dockerfile**: A Node.js based Dockerfile for the Flights MCP Server.
+* **Docker Compose**: Included in the main `docker-compose.yml` for local development, linking with Redis.
+* **Kubernetes**: Manifests for deploying to staging/production Kubernetes clusters.
+* **Environment Variables**: `DUFFEL_API_KEY`, `REDIS_URL`, `PORT`, `LOG_LEVEL` are critical.
+* **Health Check**: Implement a `/health` endpoint in the FastMCP server for Kubernetes liveness/readiness probes.
 
 ## 10. Testing
 
-*   **Unit Tests**: For `duffel_service.js`, `duffel_transformer.js`, and individual tool handlers. Mock Duffel API responses.
-*   **Integration Tests**: Test the MCP server by making HTTP calls to its tool endpoints with a mock Duffel service.
-*   **Python Client Tests**: Unit test `FlightsMCPClient` by mocking `invoke_tool`.
-*   **End-to-End Tests**: (Limited due to external API dependency) Test basic search functionality against Duffel's test environment if feasible during CI, or as part of manual QA.
+* **Unit Tests**: For `duffel_service.js`, `duffel_transformer.js`, and individual tool handlers. Mock Duffel API responses.
+* **Integration Tests**: Test the MCP server by making HTTP calls to its tool endpoints with a mock Duffel service.
+* **Python Client Tests**: Unit test `FlightsMCPClient` by mocking `invoke_tool`.
+* **End-to-End Tests**: (Limited due to external API dependency) Test basic search functionality against Duffel's test environment if feasible during CI, or as part of manual QA.
 
 ## 11. Monitoring and Logging
 
-*   **Logging**: Use a structured logger (e.g., Winston for Node.js) to log requests, responses, errors, and cache interactions.
-*   **Metrics**: Expose Prometheus metrics for request counts, latencies, error rates, cache hit/miss ratios.
-*   **Alerts**: Set up alerts for high error rates from Duffel API, high MCP server error rates, or cache failures.
+* **Logging**: Use a structured logger (e.g., Winston for Node.js) to log requests, responses, errors, and cache interactions.
+* **Metrics**: Expose Prometheus metrics for request counts, latencies, error rates, cache hit/miss ratios.
+* **Alerts**: Set up alerts for high error rates from Duffel API, high MCP server error rates, or cache failures.
 
 This detailed guide provides a solid foundation for implementing the Flights MCP Server.
