@@ -52,6 +52,17 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
 
 - [x] **Frontend-Backend BYOK Integration** ✅ COMPLETED (January 21, 2025)
 
+- [x] **FastAPI Chat Endpoint with Streaming** ✅ COMPLETED (May 22, 2025)
+  - **Target:** Backend AI chat infrastructure
+  - **Goal:** Implement streaming chat endpoint compatible with Vercel AI SDK
+  - **Status:** ✅ IMPLEMENTED (PR #118)
+  - **Key Features:**
+    - FastAPI endpoint at `/api/v1/chat` with streaming support
+    - Vercel AI SDK data stream protocol implementation
+    - Session continuation and history endpoints
+    - Comprehensive test suite
+  - **Next Steps:** See tasks/TODO-INTEGRATION.md for frontend integration
+
   - **Target:** Full-stack secure API key management
   - **Goal:** Create seamless, secure API key management across frontend and backend
   - **Status:** ✅ IMPLEMENTED AND VERIFIED
