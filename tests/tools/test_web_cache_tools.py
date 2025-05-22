@@ -190,7 +190,7 @@ class TestWebCacheDecorators:
             mock_cached.return_value = lambda func: func
 
             # Use the decorator
-            decorator = web_cached(ContentType.DAILY)
+            web_cached(ContentType.DAILY)
 
             # Check that cached was called with the correct parameters
             mock_cached.assert_called_once_with(
