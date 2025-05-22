@@ -2,7 +2,7 @@ import { useChat, type Message as AiMessage } from 'ai/react';
 import { useCallback, useEffect, useRef } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { useChatStore } from '@/stores/chat-store';
-import { Message, MessageRole, ChatSession } from '@/types/chat';
+import type { Message, MessageRole, ChatSession } from '@/types/chat';
 
 interface UseChatAiOptions {
   /**

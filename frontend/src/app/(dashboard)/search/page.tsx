@@ -135,7 +135,7 @@ function RecentSearchCard({
       <CardContent>
         <div className="flex justify-between items-center">
           <p className="text-xs text-muted-foreground">{date}</p>
-          <button className="text-xs text-primary">Search again</button>
+          <button type="button" className="text-xs text-primary">Search again</button>
         </div>
       </CardContent>
     </Card>

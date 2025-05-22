@@ -40,6 +40,11 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
 ## API and Middleware Tasks
 
 - ✅ API consolidation completed (May 20, 2025) - See PR #91 and [tasks/COMPLETED-TODO.md](./tasks/COMPLETED-TODO.md)
+- ✅ Frontend security vulnerability audit and fixes completed (May 21, 2025)
+  - Removed vulnerable dependencies (old biome v0.3.3)
+  - Fixed type safety issues (replaced `any` types)
+  - Improved code security patterns
+  - All known vulnerabilities resolved
 - The database migration is in progress - See "Database Migration" section below
 - For remaining API, MCP, and Middleware related tasks, see [tasks/TODO-API.md](./tasks/TODO-API.md)
 

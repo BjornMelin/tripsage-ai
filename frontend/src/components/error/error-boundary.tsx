@@ -1,6 +1,7 @@
 "use client";
 
-import React, { Component, type ErrorInfo, type ReactNode } from "react";
+import type React from "react";
+import { Component, type ErrorInfo, type ReactNode } from "react";
 import { ErrorFallback } from "./error-fallback";
 import { errorService } from "@/lib/error-service";
 import type { ErrorBoundaryProps, ErrorInfo as CustomErrorInfo } from "@/types/errors";

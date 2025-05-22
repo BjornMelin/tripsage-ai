@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import { FlightSearchParams } from "@/types/search";
+import type { FlightSearchParams } from "@/types/search";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const flightSearchFormSchema = z.object({
@@ -182,7 +182,7 @@ export function FlightSearchForm({
                           min={1} 
                           max={9} 
                           {...field} 
-                          onChange={(e) => field.onChange(parseInt(e.target.value))}
+                          onChange={(e) => field.onChange(Number.parseInt(e.target.value))}
                         />
                       </FormControl>
                       <FormMessage />
@@ -202,7 +202,7 @@ export function FlightSearchForm({
                           min={0} 
                           max={9} 
                           {...field} 
-                          onChange={(e) => field.onChange(parseInt(e.target.value))}
+                          onChange={(e) => field.onChange(Number.parseInt(e.target.value))}
                         />
                       </FormControl>
                       <FormMessage />
@@ -222,7 +222,7 @@ export function FlightSearchForm({
                           min={0} 
                           max={9} 
                           {...field} 
-                          onChange={(e) => field.onChange(parseInt(e.target.value))}
+                          onChange={(e) => field.onChange(Number.parseInt(e.target.value))}
                         />
                       </FormControl>
                       <FormMessage />

@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { AccommodationSearchParams } from "@/types/search";
+import type { AccommodationSearchParams } from "@/types/search";
 
 const hotelSearchFormSchema = z.object({
   location: z.string().min(1, { message: "Location is required" }),
@@ -152,7 +152,7 @@ export function HotelSearchForm({
                           min={1} 
                           max={9} 
                           {...field} 
-                          onChange={(e) => field.onChange(parseInt(e.target.value))}
+                          onChange={(e) => field.onChange(Number.parseInt(e.target.value))}
                         />
                       </FormControl>
                       <FormMessage />
@@ -172,7 +172,7 @@ export function HotelSearchForm({
                           min={1} 
                           max={9} 
                           {...field} 
-                          onChange={(e) => field.onChange(parseInt(e.target.value))}
+                          onChange={(e) => field.onChange(Number.parseInt(e.target.value))}
                         />
                       </FormControl>
                       <FormMessage />
@@ -192,7 +192,7 @@ export function HotelSearchForm({
                           min={0} 
                           max={9} 
                           {...field} 
-                          onChange={(e) => field.onChange(parseInt(e.target.value))}
+                          onChange={(e) => field.onChange(Number.parseInt(e.target.value))}
                         />
                       </FormControl>
                       <FormMessage />
@@ -214,7 +214,7 @@ export function HotelSearchForm({
                           min={1} 
                           max={5} 
                           {...field} 
-                          onChange={(e) => field.onChange(parseInt(e.target.value))}
+                          onChange={(e) => field.onChange(Number.parseInt(e.target.value))}
                         />
                       </FormControl>
                       <FormMessage />
@@ -234,7 +234,7 @@ export function HotelSearchForm({
                           min={0} 
                           placeholder="No minimum"
                           {...field} 
-                          onChange={(e) => field.onChange(parseInt(e.target.value))}
+                          onChange={(e) => field.onChange(Number.parseInt(e.target.value))}
                         />
                       </FormControl>
                       <FormMessage />
@@ -254,7 +254,7 @@ export function HotelSearchForm({
                           min={0} 
                           placeholder="No maximum"
                           {...field} 
-                          onChange={(e) => field.onChange(parseInt(e.target.value))}
+                          onChange={(e) => field.onChange(Number.parseInt(e.target.value))}
                         />
                       </FormControl>
                       <FormMessage />

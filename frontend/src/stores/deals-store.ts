@@ -2,11 +2,11 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { z } from "zod";
 import {
-  DealType,
-  Deal,
-  DealAlert,
-  DealState,
-  DealStats,
+  type DealType,
+  type Deal,
+  type DealAlert,
+  type DealState,
+  type DealStats,
   DealNotification,
   DealSchema,
   DealAlertSchema,

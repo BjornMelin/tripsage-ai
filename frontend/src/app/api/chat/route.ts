@@ -1,5 +1,5 @@
 import { StreamingTextResponse, AIStream, type AIStreamCallbacks } from 'ai';
-import { NextRequest } from 'next/server';
+import type { NextRequest } from 'next/server';
 
 // This function simulates a streaming response from an AI model
 // In production, this would connect to your API/LLM
