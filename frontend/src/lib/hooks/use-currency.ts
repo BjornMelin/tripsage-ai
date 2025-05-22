@@ -80,7 +80,11 @@ export function useCurrencyConverter() {
   const { convertAmount, formatAmountWithCurrency } = useCurrencyStore();
 
   const convert = useCallback(
-    (amount: number, from: CurrencyCode, to: CurrencyCode): ConversionResult | null => {
+    (
+      amount: number,
+      from: CurrencyCode,
+      to: CurrencyCode
+    ): ConversionResult | null => {
       return convertAmount(amount, from, to);
     },
     [convertAmount]
@@ -112,11 +116,8 @@ export function useCurrencyConverter() {
  * Hook for getting currency data like recent pairs and popular currencies
  */
 export function useCurrencyData() {
-  const {
-    getRecentCurrencyPairs,
-    getPopularCurrencies,
-    getCurrencyByCode,
-  } = useCurrencyStore();
+  const { getRecentCurrencyPairs, getPopularCurrencies, getCurrencyByCode } =
+    useCurrencyStore();
 
   const recentPairs = getRecentCurrencyPairs();
   const popularCurrencies = getPopularCurrencies();

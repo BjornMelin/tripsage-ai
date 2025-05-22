@@ -39,11 +39,12 @@ export function ApiKeyForm() {
     isValid: boolean;
     message: string;
   } | null>(null);
-  
-  const { supportedServices, selectedService, setSelectedService } = useApiKeyStore();
+
+  const { supportedServices, selectedService, setSelectedService } =
+    useApiKeyStore();
   const { mutate: validateKey, isPending: isValidating } = useValidateApiKey();
   const { mutate: addKey, isPending: isAdding } = useAddApiKey();
-  
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -52,13 +53,13 @@ export function ApiKeyForm() {
       save: true,
     },
   });
-  
+
   // Update form when selected service changes
   const serviceValue = form.watch("service");
   if (selectedService !== serviceValue && serviceValue) {
     setSelectedService(serviceValue);
   }
-  
+
   // Handle form submission
   const onSubmit = (values: z.infer<typeof formSchema>) => {
     // First validate the key
@@ -74,32 +75,36 @@ export function ApiKeyForm() {
             isValid: data.is_valid,
             message: data.message,
           });
-          
+
           // If validation successful and user wants to save, add the key
           if (data.is_valid && values.save) {
-            addKey({
-              service: values.service,
-              api_key: values.apiKey,
-              save: true,
-            }, {
-              onSuccess: () => {
-                // Reset form on successful save
-                form.reset({
-                  service: "",
-                  apiKey: "",
-                  save: true,
-                });
-                setValidationResult(null);
+            addKey(
+              {
+                service: values.service,
+                api_key: values.apiKey,
+                save: true,
               },
-            });
+              {
+                onSuccess: () => {
+                  // Reset form on successful save
+                  form.reset({
+                    service: "",
+                    apiKey: "",
+                    save: true,
+                  });
+                  setValidationResult(null);
+                },
+              }
+            );
           }
         },
         onError: (error) => {
           setValidationResult({
             isValid: false,
-            message: error instanceof Error 
-              ? error.message 
-              : "Failed to validate API key",
+            message:
+              error instanceof Error
+                ? error.message
+                : "Failed to validate API key",
           });
         },
       }
@@ -119,12 +124,10 @@ export function ApiKeyForm() {
             <AlertTitle>
               {validationResult.isValid ? "Valid API Key" : "Invalid API Key"}
             </AlertTitle>
-            <AlertDescription>
-              {validationResult.message}
-            </AlertDescription>
+            <AlertDescription>{validationResult.message}</AlertDescription>
           </Alert>
         )}
-        
+
         <FormField
           control={form.control}
           name="service"
@@ -146,7 +149,7 @@ export function ApiKeyForm() {
             </FormItem>
           )}
         />
-        
+
         <FormField
           control={form.control}
           name="apiKey"
@@ -163,13 +166,14 @@ export function ApiKeyForm() {
                 />
               </FormControl>
               <FormDescription>
-                Enter your API key for the selected service. This will never be stored in plain text.
+                Enter your API key for the selected service. This will never be
+                stored in plain text.
               </FormDescription>
               <FormMessage />
             </FormItem>
           )}
         />
-        
+
         <FormField
           control={form.control}
           name="save"
@@ -178,7 +182,8 @@ export function ApiKeyForm() {
               <div className="space-y-0.5">
                 <FormLabel className="text-base">Save API Key</FormLabel>
                 <FormDescription>
-                  Save this API key for future use. Keys are stored securely using envelope encryption.
+                  Save this API key for future use. Keys are stored securely
+                  using envelope encryption.
                 </FormDescription>
               </div>
               <FormControl>
@@ -191,16 +196,20 @@ export function ApiKeyForm() {
             </FormItem>
           )}
         />
-        
-        <Button 
-          type="submit" 
+
+        <Button
+          type="submit"
           disabled={isValidating || isAdding}
           className="w-full"
         >
           {(isValidating || isAdding) && (
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
           )}
-          {isValidating ? "Validating..." : isAdding ? "Saving..." : "Validate & Save"}
+          {isValidating
+            ? "Validating..."
+            : isAdding
+              ? "Saving..."
+              : "Validate & Save"}
         </Button>
       </form>
     </Form>

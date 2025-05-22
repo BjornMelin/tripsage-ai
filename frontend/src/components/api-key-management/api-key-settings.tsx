@@ -5,7 +5,13 @@ import { useApiKeys } from "@/lib/hooks/use-api-keys";
 import { ApiKeyForm } from "./api-key-form";
 import { ApiKeyList } from "./api-key-list";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
 
 export function ApiKeySettings() {
@@ -49,8 +55,8 @@ export function ApiKeySettings() {
       <CardHeader>
         <CardTitle>API Key Management</CardTitle>
         <CardDescription>
-          Manage your API keys for external services. These keys are securely stored and used
-          to access various services on your behalf.
+          Manage your API keys for external services. These keys are securely
+          stored and used to access various services on your behalf.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -59,11 +65,11 @@ export function ApiKeySettings() {
             <TabsTrigger value="keys">Your API Keys</TabsTrigger>
             <TabsTrigger value="add">Add New Key</TabsTrigger>
           </TabsList>
-          
+
           <TabsContent value="keys" className="mt-4">
             <ApiKeyList />
           </TabsContent>
-          
+
           <TabsContent value="add" className="mt-4">
             <div className="flex justify-center">
               <ApiKeyForm />

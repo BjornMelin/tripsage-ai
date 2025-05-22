@@ -429,13 +429,17 @@ describe("Agent Status Hooks", () => {
       const { result } = renderHook(() => useAgentActivities());
 
       act(() => {
-        result.current.recordActivity("agent1", "complete", { status: "success" });
+        result.current.recordActivity("agent1", "complete", {
+          status: "success",
+        });
       });
 
       expect(result.current.activities.length).toBe(4);
       expect(result.current.activities[3].agentId).toBe("agent1");
       expect(result.current.activities[3].action).toBe("complete");
-      expect(result.current.activities[3].details).toEqual({ status: "success" });
+      expect(result.current.activities[3].details).toEqual({
+        status: "success",
+      });
     });
 
     it("returns recent activities", () => {

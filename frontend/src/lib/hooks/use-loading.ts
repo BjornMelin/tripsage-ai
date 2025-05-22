@@ -41,11 +41,11 @@ export interface UseLoadingReturn {
  * Hook for managing loading states with optional timeout
  */
 export function useLoading(options: UseLoadingOptions = {}): UseLoadingReturn {
-  const { 
-    initialLoading = false, 
-    initialMessage, 
-    timeout, 
-    onTimeout 
+  const {
+    initialLoading = false,
+    initialMessage,
+    timeout,
+    onTimeout,
   } = options;
 
   const [state, setState] = useState<UseLoadingState>({
@@ -66,67 +66,70 @@ export function useLoading(options: UseLoadingOptions = {}): UseLoadingReturn {
     };
   }, []);
 
-  const startLoading = useCallback((message?: string) => {
-    setState(prev => ({
-      ...prev,
-      isLoading: true,
-      message,
-      error: undefined,
-    }));
+  const startLoading = useCallback(
+    (message?: string) => {
+      setState((prev) => ({
+        ...prev,
+        isLoading: true,
+        message,
+        error: undefined,
+      }));
 
-    // Set timeout if specified
-    if (timeout) {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
+      // Set timeout if specified
+      if (timeout) {
+        if (timeoutRef.current) {
+          clearTimeout(timeoutRef.current);
+        }
+
+        timeoutRef.current = setTimeout(() => {
+          setState((prev) => ({ ...prev, isLoading: false }));
+          onTimeout?.();
+        }, timeout);
       }
-      
-      timeoutRef.current = setTimeout(() => {
-        setState(prev => ({ ...prev, isLoading: false }));
-        onTimeout?.();
-      }, timeout);
-    }
-  }, [timeout, onTimeout]);
+    },
+    [timeout, onTimeout]
+  );
 
   const stopLoading = useCallback(() => {
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
     }
-    
-    setState(prev => ({ ...prev, isLoading: false }));
+
+    setState((prev) => ({ ...prev, isLoading: false }));
   }, []);
 
   const setProgress = useCallback((progress: number) => {
-    setState(prev => ({ 
-      ...prev, 
-      progress: Math.min(100, Math.max(0, progress)) 
+    setState((prev) => ({
+      ...prev,
+      progress: Math.min(100, Math.max(0, progress)),
     }));
   }, []);
 
   const setMessage = useCallback((message: string) => {
-    setState(prev => ({ ...prev, message }));
+    setState((prev) => ({ ...prev, message }));
   }, []);
 
   const setError = useCallback((error: string) => {
-    setState(prev => ({ 
-      ...prev, 
-      error, 
-      isLoading: false 
+    setState((prev) => ({
+      ...prev,
+      error,
+      isLoading: false,
     }));
-    
+
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
     }
   }, []);
 
   const clearError = useCallback(() => {
-    setState(prev => ({ ...prev, error: undefined }));
+    setState((prev) => ({ ...prev, error: undefined }));
   }, []);
 
   const reset = useCallback(() => {
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
     }
-    
+
     setState({
       isLoading: false,
       message: undefined,
@@ -168,22 +171,26 @@ export function useAsyncLoading<T>(
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string>();
 
-  const execute = useCallback(async (...args: any[]): Promise<T> => {
-    setIsLoading(true);
-    setError(undefined);
+  const execute = useCallback(
+    async (...args: any[]): Promise<T> => {
+      setIsLoading(true);
+      setError(undefined);
 
-    try {
-      const result = await asyncFn(...args);
-      setData(result);
-      return result;
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'An error occurred';
-      setError(errorMessage);
-      throw err;
-    } finally {
-      setIsLoading(false);
-    }
-  }, [asyncFn]);
+      try {
+        const result = await asyncFn(...args);
+        setData(result);
+        return result;
+      } catch (err) {
+        const errorMessage =
+          err instanceof Error ? err.message : "An error occurred";
+        setError(errorMessage);
+        throw err;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [asyncFn]
+  );
 
   const reset = useCallback(() => {
     setData(undefined);
@@ -207,21 +214,24 @@ export function useDebouncedLoading(delay = 300): UseLoadingReturn {
   const loading = useLoading();
   const debounceRef = useRef<NodeJS.Timeout>();
 
-  const debouncedStartLoading = useCallback((message?: string) => {
-    if (debounceRef.current) {
-      clearTimeout(debounceRef.current);
-    }
+  const debouncedStartLoading = useCallback(
+    (message?: string) => {
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current);
+      }
 
-    debounceRef.current = setTimeout(() => {
-      loading.startLoading(message);
-    }, delay);
-  }, [loading, delay]);
+      debounceRef.current = setTimeout(() => {
+        loading.startLoading(message);
+      }, delay);
+    },
+    [loading, delay]
+  );
 
   const debouncedStopLoading = useCallback(() => {
     if (debounceRef.current) {
       clearTimeout(debounceRef.current);
     }
-    
+
     debounceRef.current = setTimeout(() => {
       loading.stopLoading();
     }, delay);

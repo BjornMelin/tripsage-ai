@@ -1,4 +1,8 @@
-import { type ErrorReport, ErrorReportSchema, type ErrorServiceConfig } from "@/types/errors";
+import {
+  type ErrorReport,
+  ErrorReportSchema,
+  type ErrorServiceConfig,
+} from "@/types/errors";
 
 /**
  * Error service for logging and reporting errors
@@ -19,7 +23,7 @@ class ErrorService {
     try {
       // Validate the error report using Zod
       const validatedReport = ErrorReportSchema.parse(report);
-      
+
       if (!this.config.enabled) {
         console.error("Error reported:", validatedReport);
         return;
@@ -27,7 +31,7 @@ class ErrorService {
 
       // Add to queue for processing
       this.queue.push(validatedReport);
-      
+
       // Store in localStorage for persistence if enabled
       if (this.config.enableLocalStorage) {
         this.storeErrorLocally(validatedReport);
@@ -47,9 +51,9 @@ class ErrorService {
    */
   private async processQueue(): Promise<void> {
     if (this.queue.length === 0) return;
-    
+
     this.isProcessing = true;
-    
+
     try {
       while (this.queue.length > 0) {
         const report = this.queue.shift()!;
@@ -70,7 +74,7 @@ class ErrorService {
     retryCount = 0
   ): Promise<void> {
     const maxRetries = this.config.maxRetries ?? 3;
-    
+
     try {
       if (!this.config.endpoint) {
         console.error("Error report (no endpoint configured):", report);
@@ -111,7 +115,7 @@ class ErrorService {
     try {
       const key = `error_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       localStorage.setItem(key, JSON.stringify(report));
-      
+
       // Clean up old errors (keep last 10)
       this.cleanupLocalErrors();
     } catch (error) {
@@ -125,13 +129,13 @@ class ErrorService {
   private cleanupLocalErrors(): void {
     try {
       const errorKeys = Object.keys(localStorage)
-        .filter(key => key.startsWith("error_"))
+        .filter((key) => key.startsWith("error_"))
         .sort()
         .reverse();
 
       // Keep only the last 10 errors
       const keysToRemove = errorKeys.slice(10);
-      keysToRemove.forEach(key => localStorage.removeItem(key));
+      keysToRemove.forEach((key) => localStorage.removeItem(key));
     } catch (error) {
       console.error("Failed to cleanup local errors:", error);
     }

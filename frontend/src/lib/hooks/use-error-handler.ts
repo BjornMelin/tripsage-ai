@@ -7,41 +7,44 @@ import { errorService } from "@/lib/error-service";
  * Hook for handling errors in components
  */
 export function useErrorHandler() {
-  const handleError = useCallback((error: Error, additionalInfo?: Record<string, any>) => {
-    // Create error report
-    const errorReport = errorService.createErrorReport(
-      error,
-      undefined,
-      {
+  const handleError = useCallback(
+    (error: Error, additionalInfo?: Record<string, any>) => {
+      // Create error report
+      const errorReport = errorService.createErrorReport(error, undefined, {
         userId: getUserId(),
         sessionId: getSessionId(),
         ...additionalInfo,
+      });
+
+      // Report error
+      errorService.reportError(errorReport);
+
+      // Log in development
+      if (process.env.NODE_ENV === "development") {
+        console.error(
+          "Error handled by useErrorHandler:",
+          error,
+          additionalInfo
+        );
       }
-    );
+    },
+    []
+  );
 
-    // Report error
-    errorService.reportError(errorReport);
-
-    // Log in development
-    if (process.env.NODE_ENV === "development") {
-      console.error("Error handled by useErrorHandler:", error, additionalInfo);
-    }
-  }, []);
-
-  const handleAsyncError = useCallback(async (
-    asyncOperation: () => Promise<any>,
-    fallback?: () => void
-  ) => {
-    try {
-      return await asyncOperation();
-    } catch (error) {
-      handleError(error as Error, { context: "async_operation" });
-      if (fallback) {
-        fallback();
+  const handleAsyncError = useCallback(
+    async (asyncOperation: () => Promise<any>, fallback?: () => void) => {
+      try {
+        return await asyncOperation();
+      } catch (error) {
+        handleError(error as Error, { context: "async_operation" });
+        if (fallback) {
+          fallback();
+        }
+        throw error; // Re-throw to allow component-level handling
       }
-      throw error; // Re-throw to allow component-level handling
-    }
-  }, [handleError]);
+    },
+    [handleError]
+  );
 
   return {
     handleError,

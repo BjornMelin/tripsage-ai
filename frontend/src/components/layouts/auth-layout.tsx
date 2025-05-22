@@ -11,9 +11,7 @@ export function AuthLayout({ children }: { children: React.ReactNode }) {
         </Link>
       </header>
       <main className="flex-1 flex items-center justify-center p-6">
-        <div className="w-full max-w-md space-y-6">
-          {children}
-        </div>
+        <div className="w-full max-w-md space-y-6">{children}</div>
       </main>
       <footer className="border-t py-4 px-6 text-center text-sm text-muted-foreground">
         <p>© {new Date().getFullYear()} TripSage AI. All rights reserved.</p>

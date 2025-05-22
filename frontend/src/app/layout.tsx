@@ -20,7 +20,8 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "TripSage AI - Intelligent Travel Planning",
-  description: "Plan your perfect trip with AI-powered recommendations and insights",
+  description:
+    "Plan your perfect trip with AI-powered recommendations and insights",
   keywords: ["travel", "AI", "planning", "trips", "budget", "itinerary"],
   authors: [{ name: "TripSage Team" }],
   viewport: "width=device-width, initial-scale=1",

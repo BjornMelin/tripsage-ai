@@ -1,5 +1,11 @@
 import { renderHook, act } from "@testing-library/react";
-import { useBudget, useBudgetActions, useExpenses, useAlerts, useCurrency } from "../use-budget";
+import {
+  useBudget,
+  useBudgetActions,
+  useExpenses,
+  useAlerts,
+  useCurrency,
+} from "../use-budget";
 import {
   useFetchBudgets,
   useCreateBudget,
@@ -97,7 +103,7 @@ vi.mock("../../../stores/budget-store", () => ({
     },
     baseCurrency: "USD",
     currencies: {
-      "EUR": {
+      EUR: {
         code: "EUR",
         rate: 0.85,
         lastUpdated: "2025-05-20T12:00:00Z",

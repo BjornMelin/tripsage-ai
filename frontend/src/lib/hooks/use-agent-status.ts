@@ -74,19 +74,19 @@ export function useAgentStatus() {
   });
 
   // Mutation for stopping an agent
-  const stopAgentMutation = useApiMutation<{ success: boolean }, { agentId: string }>(
-    "/api/agents/stop",
-    {
-      onSuccess: (data, variables) => {
-        if (data.success) {
-          updateAgentStatus(variables.agentId, "completed");
-        }
-      },
-      onError: (error: any) => {
-        setError(error.message || "Failed to stop agent");
-      },
-    }
-  );
+  const stopAgentMutation = useApiMutation<
+    { success: boolean },
+    { agentId: string }
+  >("/api/agents/stop", {
+    onSuccess: (data, variables) => {
+      if (data.success) {
+        updateAgentStatus(variables.agentId, "completed");
+      }
+    },
+    onError: (error: any) => {
+      setError(error.message || "Failed to stop agent");
+    },
+  });
 
   // Function to start monitoring agents
   const startMonitoring = useCallback(() => {

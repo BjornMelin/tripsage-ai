@@ -4,9 +4,12 @@
 import { z } from "zod";
 
 // Zod schemas for validation
-export const CurrencyCodeSchema = z.string()
+export const CurrencyCodeSchema = z
+  .string()
   .length(3)
-  .regex(/^[A-Z]{3}$/, { message: "Currency code must be a valid 3-letter ISO code" });
+  .regex(/^[A-Z]{3}$/, {
+    message: "Currency code must be a valid 3-letter ISO code",
+  });
 
 export const CurrencySchema = z.object({
   code: CurrencyCodeSchema,
@@ -65,5 +68,9 @@ export type ExchangeRate = z.infer<typeof ExchangeRateSchema>;
 export type CurrencyPair = z.infer<typeof CurrencyPairSchema>;
 export type ConversionResult = z.infer<typeof ConversionResultSchema>;
 export type CurrencyState = z.infer<typeof CurrencyStateSchema>;
-export type FetchExchangeRatesRequest = z.infer<typeof FetchExchangeRatesRequestSchema>;
-export type UpdateExchangeRatesResponse = z.infer<typeof UpdateExchangeRatesResponseSchema>;
+export type FetchExchangeRatesRequest = z.infer<
+  typeof FetchExchangeRatesRequestSchema
+>;
+export type UpdateExchangeRatesResponse = z.infer<
+  typeof UpdateExchangeRatesResponseSchema
+>;

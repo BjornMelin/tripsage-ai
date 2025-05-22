@@ -1,14 +1,21 @@
-'use client';
+"use client";
 
-import React from 'react';
-import { FileIcon, ImageIcon, FileTextIcon, FileArchiveIcon } from 'lucide-react';
-import Image from 'next/image';
+import React from "react";
+import {
+  FileIcon,
+  ImageIcon,
+  FileTextIcon,
+  FileArchiveIcon,
+} from "lucide-react";
+import Image from "next/image";
 
 interface MessageAttachmentsProps {
   attachments: string[];
 }
 
-export default function MessageAttachments({ attachments }: MessageAttachmentsProps) {
+export default function MessageAttachments({
+  attachments,
+}: MessageAttachmentsProps) {
   if (!attachments || attachments.length === 0) return null;
 
   return (
@@ -26,87 +33,86 @@ interface AttachmentItemProps {
 
 function AttachmentItem({ url }: AttachmentItemProps) {
   // Extract file name from URL
-  const fileName = url.split('/').pop() || 'File';
-  
+  const fileName = url.split("/").pop() || "File";
+
   // Determine file type from extension
-  const fileExt = fileName.split('.').pop()?.toLowerCase() || '';
-  
-  const isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(fileExt);
-  const isPDF = fileExt === 'pdf';
-  const isText = ['txt', 'md', 'csv', 'json', 'xml', 'html', 'js', 'ts', 'css'].includes(fileExt);
-  const isArchive = ['zip', 'rar', '7z', 'tar', 'gz'].includes(fileExt);
-  
+  const fileExt = fileName.split(".").pop()?.toLowerCase() || "";
+
+  const isImage = ["jpg", "jpeg", "png", "gif", "webp", "svg"].includes(
+    fileExt
+  );
+  const isPDF = fileExt === "pdf";
+  const isText = [
+    "txt",
+    "md",
+    "csv",
+    "json",
+    "xml",
+    "html",
+    "js",
+    "ts",
+    "css",
+  ].includes(fileExt);
+  const isArchive = ["zip", "rar", "7z", "tar", "gz"].includes(fileExt);
+
   const handleClick = () => {
-    window.open(url, '_blank');
+    window.open(url, "_blank");
   };
-  
+
   if (isImage) {
     return (
-      <div 
+      <div
         className="relative h-40 w-40 overflow-hidden rounded-md border bg-background cursor-pointer"
         onClick={handleClick}
       >
-        <Image
-          src={url}
-          alt={fileName}
-          fill
-          className="object-cover"
-        />
+        <Image src={url} alt={fileName} fill className="object-cover" />
       </div>
     );
   }
-  
+
   if (isPDF) {
     return (
-      <div 
+      <div
         className="flex items-center gap-2 rounded-md border bg-background p-2 cursor-pointer hover:bg-secondary/50"
         onClick={handleClick}
       >
         <FileIcon className="h-5 w-5 text-red-500" />
-        <span className="text-sm truncate max-w-[200px]">
-          {fileName}
-        </span>
+        <span className="text-sm truncate max-w-[200px]">{fileName}</span>
       </div>
     );
   }
-  
+
   if (isText) {
     return (
-      <div 
+      <div
         className="flex items-center gap-2 rounded-md border bg-background p-2 cursor-pointer hover:bg-secondary/50"
         onClick={handleClick}
       >
         <FileTextIcon className="h-5 w-5 text-blue-500" />
-        <span className="text-sm truncate max-w-[200px]">
-          {fileName}
-        </span>
+        <span className="text-sm truncate max-w-[200px]">{fileName}</span>
       </div>
     );
   }
-  
+
   if (isArchive) {
     return (
-      <div 
+      <div
         className="flex items-center gap-2 rounded-md border bg-background p-2 cursor-pointer hover:bg-secondary/50"
         onClick={handleClick}
       >
         <FileArchiveIcon className="h-5 w-5 text-yellow-500" />
-        <span className="text-sm truncate max-w-[200px]">
-          {fileName}
-        </span>
+        <span className="text-sm truncate max-w-[200px]">{fileName}</span>
       </div>
     );
   }
-  
+
   return (
-    <div 
+    <div
       className="flex items-center gap-2 rounded-md border bg-background p-2 cursor-pointer hover:bg-secondary/50"
       onClick={handleClick}
     >
       <FileIcon className="h-5 w-5" />
-      <span className="text-sm truncate max-w-[200px]">
-        {fileName}
-      </span>
+      <span className="text-sm truncate max-w-[200px]">{fileName}</span>
     </div>
   );
 }

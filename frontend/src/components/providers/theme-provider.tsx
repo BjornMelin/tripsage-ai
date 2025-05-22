@@ -32,11 +32,12 @@ export function ThemeProvider({
 
   useEffect(() => {
     const savedTheme = localStorage.getItem(storageKey) as Theme | null;
-    
+
     if (savedTheme) {
       setTheme(savedTheme);
     } else if (defaultTheme === "system") {
-      const systemTheme = window.matchMedia("(prefers-color-scheme: dark)").matches
+      const systemTheme = window.matchMedia("(prefers-color-scheme: dark)")
+        .matches
         ? "dark"
         : "light";
       setTheme(systemTheme);
@@ -45,11 +46,12 @@ export function ThemeProvider({
 
   useEffect(() => {
     const root = window.document.documentElement;
-    
+
     root.classList.remove("light", "dark");
-    
+
     if (theme === "system") {
-      const systemTheme = window.matchMedia("(prefers-color-scheme: dark)").matches
+      const systemTheme = window.matchMedia("(prefers-color-scheme: dark)")
+        .matches
         ? "dark"
         : "light";
       root.classList.add(systemTheme);
@@ -75,10 +77,10 @@ export function ThemeProvider({
 
 export const useTheme = () => {
   const context = useContext(ThemeProviderContext);
-  
+
   if (context === undefined) {
     throw new Error("useTheme must be used within a ThemeProvider");
   }
-  
+
   return context;
 };

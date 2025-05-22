@@ -5,32 +5,29 @@ import { cn } from "@/lib/utils";
 /**
  * Loading spinner variants for different styles and sizes
  */
-const spinnerVariants = cva(
-  "animate-spin",
-  {
-    variants: {
-      size: {
-        sm: "h-4 w-4",
-        md: "h-6 w-6",
-        lg: "h-8 w-8",
-        xl: "h-12 w-12",
-      },
-      color: {
-        default: "text-primary",
-        white: "text-white",
-        muted: "text-muted-foreground",
-        destructive: "text-destructive",
-        success: "text-green-600",
-        warning: "text-yellow-600",
-        info: "text-blue-600",
-      },
+const spinnerVariants = cva("animate-spin", {
+  variants: {
+    size: {
+      sm: "h-4 w-4",
+      md: "h-6 w-6",
+      lg: "h-8 w-8",
+      xl: "h-12 w-12",
     },
-    defaultVariants: {
-      size: "md",
-      color: "default",
+    color: {
+      default: "text-primary",
+      white: "text-white",
+      muted: "text-muted-foreground",
+      destructive: "text-destructive",
+      success: "text-green-600",
+      warning: "text-yellow-600",
+      info: "text-blue-600",
     },
-  }
-);
+  },
+  defaultVariants: {
+    size: "md",
+    color: "default",
+  },
+});
 
 export interface LoadingSpinnerProps
   extends React.HTMLAttributes<HTMLDivElement>,
@@ -121,7 +118,7 @@ const BarsSpinner = React.forwardRef<HTMLDivElement, LoadingSpinnerProps>(
   ({ size, color, className, ...props }, ref) => {
     const barSizes = {
       sm: "h-3 w-0.5",
-      md: "h-4 w-0.5", 
+      md: "h-4 w-0.5",
       lg: "h-6 w-1",
       xl: "h-8 w-1",
     };
@@ -165,7 +162,7 @@ const PulseSpinner = React.forwardRef<HTMLDivElement, LoadingSpinnerProps>(
     const pulseSizes = {
       sm: "h-4 w-4",
       md: "h-6 w-6",
-      lg: "h-8 w-8", 
+      lg: "h-8 w-8",
       xl: "h-12 w-12",
     };
 

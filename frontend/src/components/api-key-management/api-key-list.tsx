@@ -73,7 +73,8 @@ export function ApiKeyList() {
       <div className="text-center p-8 border rounded-lg bg-muted/20">
         <h3 className="text-lg font-medium">No API Keys Added</h3>
         <p className="text-muted-foreground mt-2">
-          You haven't added any API keys yet. Add a key to use external services.
+          You haven't added any API keys yet. Add a key to use external
+          services.
         </p>
       </div>
     );
@@ -97,12 +98,18 @@ export function ApiKeyList() {
               <TableCell className="font-medium">{key.service}</TableCell>
               <TableCell>
                 {key.is_valid ? (
-                  <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                  <Badge
+                    variant="outline"
+                    className="bg-green-50 text-green-700 border-green-200"
+                  >
                     <CheckCircle className="h-3 w-3 mr-1" />
                     Valid
                   </Badge>
                 ) : (
-                  <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
+                  <Badge
+                    variant="outline"
+                    className="bg-red-50 text-red-700 border-red-200"
+                  >
                     <XCircle className="h-3 w-3 mr-1" />
                     Invalid
                   </Badge>
@@ -125,7 +132,10 @@ export function ApiKeyList() {
                     )}
                     Validate
                   </Button>
-                  <AlertDialog open={keyToDelete === key.service} onOpenChange={(open) => !open && setKeyToDelete(null)}>
+                  <AlertDialog
+                    open={keyToDelete === key.service}
+                    onOpenChange={(open) => !open && setKeyToDelete(null)}
+                  >
                     <AlertDialogTrigger asChild>
                       <Button
                         variant="outline"
@@ -146,12 +156,17 @@ export function ApiKeyList() {
                       <AlertDialogHeader>
                         <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                         <AlertDialogDescription>
-                          This will permanently delete your {key.service} API key. You will need to add it again if you want to use this service.
+                          This will permanently delete your {key.service} API
+                          key. You will need to add it again if you want to use
+                          this service.
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
                         <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700">
+                        <AlertDialogAction
+                          onClick={handleDelete}
+                          className="bg-red-600 hover:bg-red-700"
+                        >
                           Delete
                         </AlertDialogAction>
                       </AlertDialogFooter>

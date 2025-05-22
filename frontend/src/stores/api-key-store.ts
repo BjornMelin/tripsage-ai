@@ -6,7 +6,7 @@ interface ApiKeyState {
   supportedServices: string[];
   keys: Record<string, ApiKey>;
   selectedService: string | null;
-  
+
   // Actions
   setSupportedServices: (services: string[]) => void;
   setKeys: (keys: Record<string, ApiKey>) => void;
@@ -21,21 +21,21 @@ export const useApiKeyStore = create<ApiKeyState>()(
       supportedServices: [],
       keys: {},
       selectedService: null,
-      
+
       setSupportedServices: (services) => set({ supportedServices: services }),
       setKeys: (keys) => set({ keys }),
       setSelectedService: (service) => set({ selectedService: service }),
-      updateKey: (service, keyData) => 
+      updateKey: (service, keyData) =>
         set((state) => ({
           keys: {
             ...state.keys,
-            [service]: { 
+            [service]: {
               ...state.keys[service],
-              ...keyData
-            }
-          }
+              ...keyData,
+            },
+          },
         })),
-      removeKey: (service) => 
+      removeKey: (service) =>
         set((state) => {
           const newKeys = { ...state.keys };
           delete newKeys[service];

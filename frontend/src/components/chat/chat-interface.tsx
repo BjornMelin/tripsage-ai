@@ -24,24 +24,30 @@ const SAMPLE_MESSAGES: Message[] = [
   {
     id: "1",
     role: "assistant",
-    content: "Hello! I'm your TripSage AI assistant. I can help you plan trips, find flights, book accommodations, and answer travel questions. What can I help you with today?",
+    content:
+      "Hello! I'm your TripSage AI assistant. I can help you plan trips, find flights, book accommodations, and answer travel questions. What can I help you with today?",
     timestamp: new Date(Date.now() - 60000).toISOString(),
   },
   {
     id: "2",
     role: "user",
-    content: "I'm looking for flights from New York to Paris for next month. Can you help?",
+    content:
+      "I'm looking for flights from New York to Paris for next month. Can you help?",
     timestamp: new Date(Date.now() - 30000).toISOString(),
   },
   {
     id: "3",
     role: "assistant",
-    content: "I'd be happy to help you find flights from New York to Paris! To provide you with the best options, I'll need a few more details:\n\n• What are your preferred travel dates?\n• How many passengers?\n• Do you have a preference for cabin class (Economy, Business, etc.)?\n• Any preferred airlines or specific requirements?\n\nOnce I have these details, I can search for the best flight options for you.",
+    content:
+      "I'd be happy to help you find flights from New York to Paris! To provide you with the best options, I'll need a few more details:\n\n• What are your preferred travel dates?\n• How many passengers?\n• Do you have a preference for cabin class (Economy, Business, etc.)?\n• Any preferred airlines or specific requirements?\n\nOnce I have these details, I can search for the best flight options for you.",
     timestamp: new Date(Date.now() - 15000).toISOString(),
   },
 ];
 
-function MessageBubble({ message, className }: { message: Message; className?: string }) {
+function MessageBubble({
+  message,
+  className,
+}: { message: Message; className?: string }) {
   const isUser = message.role === "user";
   const isSystem = message.role === "system";
 
@@ -59,14 +65,12 @@ function MessageBubble({ message, className }: { message: Message; className?: s
           isUser
             ? "bg-primary text-primary-foreground"
             : isSystem
-            ? "bg-muted text-muted-foreground border"
-            : "bg-muted text-foreground border",
+              ? "bg-muted text-muted-foreground border"
+              : "bg-muted text-foreground border",
           message.isStreaming && "animate-pulse"
         )}
       >
-        <div className="whitespace-pre-wrap break-words">
-          {message.content}
-        </div>
+        <div className="whitespace-pre-wrap break-words">{message.content}</div>
         <div
           className={cn(
             "text-xs mt-1 opacity-60",
@@ -123,7 +127,10 @@ function MessageInput({
   }, [input]);
 
   return (
-    <form onSubmit={handleSubmit} className="flex gap-3 p-4 border-t bg-background">
+    <form
+      onSubmit={handleSubmit}
+      className="flex gap-3 p-4 border-t bg-background"
+    >
       <div className="flex-1 relative">
         <textarea
           ref={textareaRef}
@@ -199,17 +206,21 @@ export function ChatInterface({
     setIsLoading(true);
 
     // Simulate AI response
-    setTimeout(() => {
-      const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        role: "assistant",
-        content: "I understand you're looking for help with that. Let me process your request and provide you with the best assistance possible. This is a placeholder response while the actual AI integration is being implemented.",
-        timestamp: new Date().toISOString(),
-      };
+    setTimeout(
+      () => {
+        const assistantMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          role: "assistant",
+          content:
+            "I understand you're looking for help with that. Let me process your request and provide you with the best assistance possible. This is a placeholder response while the actual AI integration is being implemented.",
+          timestamp: new Date().toISOString(),
+        };
 
-      setMessages((prev) => [...prev, assistantMessage]);
-      setIsLoading(false);
-    }, 1000 + Math.random() * 2000); // Random delay to simulate real response
+        setMessages((prev) => [...prev, assistantMessage]);
+        setIsLoading(false);
+      },
+      1000 + Math.random() * 2000
+    ); // Random delay to simulate real response
   };
 
   return (

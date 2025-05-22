@@ -288,7 +288,7 @@ describe("useErrorHandler", () => {
   describe("hook stability", () => {
     it("should return stable function references", () => {
       const { result, rerender } = renderHook(() => useErrorHandler());
-      
+
       const firstHandleError = result.current.handleError;
       const firstHandleAsyncError = result.current.handleAsyncError;
 

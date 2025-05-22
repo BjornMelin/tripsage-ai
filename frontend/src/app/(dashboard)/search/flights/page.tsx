@@ -1,6 +1,12 @@
 import { SearchLayout } from "@/components/layouts/search-layout";
 import { FlightSearchForm } from "@/components/features/search/flight-search-form";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
 export default function FlightSearchPage() {
   return (
@@ -11,44 +17,42 @@ export default function FlightSearchPage() {
         <Card>
           <CardHeader>
             <CardTitle>Popular Routes</CardTitle>
-            <CardDescription>
-              Trending flight routes and deals
-            </CardDescription>
+            <CardDescription>Trending flight routes and deals</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-              <PopularRouteCard 
-                origin="New York" 
+              <PopularRouteCard
+                origin="New York"
                 destination="London"
                 price={499}
                 date="Dec 2025"
               />
-              <PopularRouteCard 
-                origin="Los Angeles" 
+              <PopularRouteCard
+                origin="Los Angeles"
                 destination="Tokyo"
                 price={799}
                 date="Nov 2025"
               />
-              <PopularRouteCard 
-                origin="Chicago" 
+              <PopularRouteCard
+                origin="Chicago"
                 destination="Paris"
                 price={649}
                 date="Aug 2025"
               />
-              <PopularRouteCard 
-                origin="Miami" 
+              <PopularRouteCard
+                origin="Miami"
                 destination="Cancun"
                 price={299}
                 date="Sep 2025"
               />
-              <PopularRouteCard 
-                origin="Seattle" 
+              <PopularRouteCard
+                origin="Seattle"
                 destination="Amsterdam"
                 price={749}
                 date="Oct 2025"
               />
-              <PopularRouteCard 
-                origin="Dallas" 
+              <PopularRouteCard
+                origin="Dallas"
                 destination="Sydney"
                 price={999}
                 date="Nov 2025"
@@ -66,20 +70,20 @@ export default function FlightSearchPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <TravelTip 
-                title="Book 1-3 months in advance for the best prices" 
+              <TravelTip
+                title="Book 1-3 months in advance for the best prices"
                 description="Studies show that booking domestic flights about 1-3 months in advance and international flights 2-8 months in advance typically yields the best prices."
               />
-              <TravelTip 
-                title="Consider nearby airports" 
+              <TravelTip
+                title="Consider nearby airports"
                 description="Flying to or from a nearby airport can sometimes save you hundreds of dollars. Our search automatically checks nearby airports too."
               />
-              <TravelTip 
-                title="Be flexible with dates if possible" 
+              <TravelTip
+                title="Be flexible with dates if possible"
                 description="Prices can vary significantly from one day to the next. Use our flexible dates option to see prices across multiple days and find the best deal."
               />
-              <TravelTip 
-                title="Set price alerts for your routes" 
+              <TravelTip
+                title="Set price alerts for your routes"
                 description="If your travel dates are still far out, set up price alerts to be notified when prices drop for your specific routes."
               />
             </div>
@@ -90,12 +94,12 @@ export default function FlightSearchPage() {
   );
 }
 
-function PopularRouteCard({ 
-  origin, 
-  destination, 
+function PopularRouteCard({
+  origin,
+  destination,
   price,
-  date
-}: { 
+  date,
+}: {
   origin: string;
   destination: string;
   price: number;
@@ -106,7 +110,9 @@ function PopularRouteCard({
       <CardContent className="p-4">
         <div className="flex justify-between items-start mb-3">
           <div>
-            <h3 className="font-medium">{origin} to {destination}</h3>
+            <h3 className="font-medium">
+              {origin} to {destination}
+            </h3>
             <p className="text-xs text-muted-foreground">{date}</p>
           </div>
           <div className="text-right">
@@ -124,10 +130,10 @@ function PopularRouteCard({
   );
 }
 
-function TravelTip({ 
-  title, 
-  description
-}: { 
+function TravelTip({
+  title,
+  description,
+}: {
   title: string;
   description: string;
 }) {

@@ -40,19 +40,19 @@ export function useSearch() {
   } = useSearchStore();
 
   // Search mutation
-  const searchMutation = useApiMutation<SearchResponse, { type: SearchType; params: SearchParams }>(
-    "/api/search",
-    {
-      onSuccess: (data) => {
-        setResults(data.results);
-        // Add to recent searches
-        addRecentSearch();
-      },
-      onError: (error: any) => {
-        setError(error.message || "Failed to perform search");
-      },
-    }
-  );
+  const searchMutation = useApiMutation<
+    SearchResponse,
+    { type: SearchType; params: SearchParams }
+  >("/api/search", {
+    onSuccess: (data) => {
+      setResults(data.results);
+      // Add to recent searches
+      addRecentSearch();
+    },
+    onError: (error: any) => {
+      setError(error.message || "Failed to perform search");
+    },
+  });
 
   // Function to start a search
   const search = useCallback(() => {
@@ -63,15 +63,16 @@ export function useSearch() {
 
     setIsLoading(true);
     clearResults();
-    
+
     // Apply any active filters to the search params
     const paramsWithFilters = {
       ...currentParams,
-      filters: Object.keys(activeFilters).length > 0 ? activeFilters : undefined,
+      filters:
+        Object.keys(activeFilters).length > 0 ? activeFilters : undefined,
       sort: activeSortOption?.value,
       sortDirection: activeSortOption?.direction,
     };
-    
+
     searchMutation.mutate({
       type: currentSearchType,
       params: paramsWithFilters as SearchParams,
@@ -97,14 +98,21 @@ export function useSearch() {
           updateFlightParams(params as Partial<FlightSearchParams>);
           break;
         case "accommodation":
-          updateAccommodationParams(params as Partial<AccommodationSearchParams>);
+          updateAccommodationParams(
+            params as Partial<AccommodationSearchParams>
+          );
           break;
         case "activity":
           updateActivityParams(params as Partial<ActivitySearchParams>);
           break;
       }
     },
-    [currentSearchType, updateFlightParams, updateAccommodationParams, updateActivityParams]
+    [
+      currentSearchType,
+      updateFlightParams,
+      updateAccommodationParams,
+      updateActivityParams,
+    ]
   );
 
   return {
@@ -175,34 +183,40 @@ export function useSavedSearches() {
   );
 
   // Function to load a saved search
-  const loadSavedSearch = useCallback(
-    (search: SavedSearch) => {
-      const { type, params } = search;
-      useSearchStore.getState().setSearchType(type);
-      
-      switch (type) {
-        case "flight":
-          useSearchStore.getState().updateFlightParams(params as FlightSearchParams);
-          break;
-        case "accommodation":
-          useSearchStore.getState().updateAccommodationParams(params as AccommodationSearchParams);
-          break;
-        case "activity":
-          useSearchStore.getState().updateActivityParams(params as ActivitySearchParams);
-          break;
-      }
-    },
-    []
-  );
+  const loadSavedSearch = useCallback((search: SavedSearch) => {
+    const { type, params } = search;
+    useSearchStore.getState().setSearchType(type);
+
+    switch (type) {
+      case "flight":
+        useSearchStore
+          .getState()
+          .updateFlightParams(params as FlightSearchParams);
+        break;
+      case "accommodation":
+        useSearchStore
+          .getState()
+          .updateAccommodationParams(params as AccommodationSearchParams);
+        break;
+      case "activity":
+        useSearchStore
+          .getState()
+          .updateActivityParams(params as ActivitySearchParams);
+        break;
+    }
+  }, []);
 
   return {
     // Local state
     savedSearches,
-    
+
     // Remote state
     remoteSavedSearches: savedSearchesQuery.data?.searches || [],
-    isLoading: savedSearchesQuery.isLoading || saveSearchMutation.isPending || deleteSearchMutation.isPending,
-    
+    isLoading:
+      savedSearchesQuery.isLoading ||
+      saveSearchMutation.isPending ||
+      deleteSearchMutation.isPending,
+
     // Actions
     saveSearch,
     saveSearchRemote,
@@ -223,16 +237,22 @@ export function useRecentSearches() {
   const loadRecentSearch = useCallback(
     (type: SearchType, params: SearchParams) => {
       useSearchStore.getState().setSearchType(type);
-      
+
       switch (type) {
         case "flight":
-          useSearchStore.getState().updateFlightParams(params as FlightSearchParams);
+          useSearchStore
+            .getState()
+            .updateFlightParams(params as FlightSearchParams);
           break;
         case "accommodation":
-          useSearchStore.getState().updateAccommodationParams(params as AccommodationSearchParams);
+          useSearchStore
+            .getState()
+            .updateAccommodationParams(params as AccommodationSearchParams);
           break;
         case "activity":
-          useSearchStore.getState().updateActivityParams(params as ActivitySearchParams);
+          useSearchStore
+            .getState()
+            .updateActivityParams(params as ActivitySearchParams);
           break;
       }
     },
