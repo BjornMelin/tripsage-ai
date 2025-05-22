@@ -1,4 +1,4 @@
-import { ErrorReport, ErrorReportSchema, type ErrorServiceConfig } from "@/types/errors";
+import { type ErrorReport, ErrorReportSchema, type ErrorServiceConfig } from "@/types/errors";
 
 /**
  * Error service for logging and reporting errors

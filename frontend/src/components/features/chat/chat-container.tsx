@@ -8,7 +8,7 @@ import AgentStatusPanel from './agent-status-panel';
 import { PanelRightOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { Message } from '@/types/chat';
+import type { Message } from '@/types/chat';
 import { useChatAi } from '@/hooks/use-chat-ai';
 
 interface ChatContainerProps {

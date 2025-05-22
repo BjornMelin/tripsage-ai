@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useApiKeyStore } from "@/stores/api-key-store";
 import { useDeleteApiKey, useValidateApiKey } from "@/lib/hooks/use-api-keys";
-import { ApiKey } from "@/types/api-keys";
+import type { ApiKey } from "@/types/api-keys";
 import { formatDistanceToNow } from "date-fns";
 
 import {

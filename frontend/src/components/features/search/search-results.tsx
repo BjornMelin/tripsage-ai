@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { SearchType, Flight, Accommodation, Activity } from "@/types/search";
+import type { SearchType, Flight, Accommodation, Activity } from "@/types/search";
 
 interface SearchResultsProps {
   type: SearchType;

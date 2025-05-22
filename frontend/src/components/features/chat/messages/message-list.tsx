@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef } from 'react';
-import { Message } from '@/types/chat';
+import type { Message } from '@/types/chat';
 import { cn } from '@/lib/utils';
 import MessageItem from './message-item';
 import { Loader2 } from 'lucide-react';

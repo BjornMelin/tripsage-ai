@@ -5,7 +5,7 @@ import {
   type UseQueryOptions,
   type UseMutationOptions,
 } from "@tanstack/react-query";
-import { api, ApiError } from "@/lib/api/client";
+import { api, type ApiError } from "@/lib/api/client";
 
 type ApiQueryOptions<TData, TError> = Omit<
   UseQueryOptions<TData, TError, TData, string[]>,

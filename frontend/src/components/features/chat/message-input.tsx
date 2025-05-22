@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useRef, useCallback, FormEvent } from 'react';
+import type React from 'react';
+import { useState, useRef, useCallback, FormEvent } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { SendHorizontal, Paperclip, Mic, Loader2, StopCircle } from 'lucide-react';
