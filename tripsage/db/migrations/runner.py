@@ -179,7 +179,7 @@ async def run_migrations(
             )
 
     # Initialize MCP manager
-    mcp_manager = await MCPManager.get_instance(mcp_settings.dict())
+    mcp_manager = await MCPManager.get_instance(mcp_settings.model_dump())
 
     try:
         migration_files = get_migration_files()

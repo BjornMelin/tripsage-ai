@@ -226,7 +226,7 @@ async def run_neo4j_migrations(
         Tuple of (number of successful migrations, number of failed migrations)
     """
     # Initialize MCP manager
-    mcp_manager = await MCPManager.get_instance(mcp_settings.dict())
+    mcp_manager = await MCPManager.get_instance(mcp_settings.model_dump())
 
     try:
         migration_files = get_migration_files()
@@ -401,7 +401,7 @@ if __name__ == "__main__":
 
     async def main():
         if args.init_schema:
-            mcp_manager = await MCPManager.get_instance(mcp_settings.dict())
+            mcp_manager = await MCPManager.get_instance(mcp_settings.model_dump())
             try:
                 await initialize_neo4j_schema(mcp_manager)
                 logger.info("Schema initialization completed")
