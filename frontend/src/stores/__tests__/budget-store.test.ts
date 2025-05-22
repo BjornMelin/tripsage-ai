@@ -116,7 +116,9 @@ describe("useBudgetStore", () => {
       expect(result.current.budgets["budget-1"].name).toBe("Updated Vacation");
       expect(result.current.budgets["budget-1"].totalAmount).toBe(6000);
       // Make sure the updatedAt timestamp was updated
-      expect(result.current.budgets["budget-1"].updatedAt).not.toBe("2025-05-20T12:00:00Z");
+      expect(result.current.budgets["budget-1"].updatedAt).not.toBe(
+        "2025-05-20T12:00:00Z"
+      );
     });
 
     it("removes a budget", () => {
@@ -191,7 +193,7 @@ describe("useBudgetStore", () => {
           createdAt: "2025-05-20T12:00:00Z",
           updatedAt: "2025-05-20T12:00:00Z",
         });
-        
+
         result.current.addBudget({
           id: "budget-2",
           name: "Winter Vacation",
@@ -245,9 +247,13 @@ describe("useBudgetStore", () => {
         result.current.addBudgetCategory("budget-1", newCategory);
       });
 
-      expect(result.current.budgets["budget-1"].categories).toContainEqual(newCategory);
+      expect(result.current.budgets["budget-1"].categories).toContainEqual(
+        newCategory
+      );
       // Check that updatedAt was changed
-      expect(result.current.budgets["budget-1"].updatedAt).not.toBe("2025-05-20T12:00:00Z");
+      expect(result.current.budgets["budget-1"].updatedAt).not.toBe(
+        "2025-05-20T12:00:00Z"
+      );
     });
 
     it("updates a budget category", () => {
@@ -286,10 +292,16 @@ describe("useBudgetStore", () => {
         });
       });
 
-      expect(result.current.budgets["budget-1"].categories[0].amount).toBe(2000);
+      expect(result.current.budgets["budget-1"].categories[0].amount).toBe(
+        2000
+      );
       expect(result.current.budgets["budget-1"].categories[0].spent).toBe(500);
-      expect(result.current.budgets["budget-1"].categories[0].remaining).toBe(1500);
-      expect(result.current.budgets["budget-1"].categories[0].percentage).toBe(25);
+      expect(result.current.budgets["budget-1"].categories[0].remaining).toBe(
+        1500
+      );
+      expect(result.current.budgets["budget-1"].categories[0].percentage).toBe(
+        25
+      );
     });
 
     it("removes a budget category", () => {
@@ -427,9 +439,13 @@ describe("useBudgetStore", () => {
       });
 
       expect(result.current.expenses["budget-1"][0].amount).toBe(600);
-      expect(result.current.expenses["budget-1"][0].description).toBe("Updated flight to NYC");
+      expect(result.current.expenses["budget-1"][0].description).toBe(
+        "Updated flight to NYC"
+      );
       // Make sure updatedAt was changed
-      expect(result.current.expenses["budget-1"][0].updatedAt).not.toBe("2025-05-20T12:00:00Z");
+      expect(result.current.expenses["budget-1"][0].updatedAt).not.toBe(
+        "2025-05-20T12:00:00Z"
+      );
     });
 
     it("removes an expense", () => {
@@ -449,7 +465,7 @@ describe("useBudgetStore", () => {
           createdAt: "2025-05-20T12:00:00Z",
           updatedAt: "2025-05-20T12:00:00Z",
         });
-        
+
         result.current.addExpense({
           id: "expense-2",
           budgetId: "budget-1",
@@ -648,7 +664,7 @@ describe("useBudgetStore", () => {
           updatedAt: "2025-05-20T12:00:00Z",
         });
         result.current.setActiveBudget("budget-1");
-        
+
         // Add some expenses
         result.current.addExpense({
           id: "expense-1",
@@ -662,7 +678,7 @@ describe("useBudgetStore", () => {
           createdAt: "2025-05-20T12:00:00Z",
           updatedAt: "2025-05-20T12:00:00Z",
         });
-        
+
         result.current.addExpense({
           id: "expense-2",
           budgetId: "budget-1",
@@ -684,10 +700,12 @@ describe("useBudgetStore", () => {
       expect(result.current.budgetSummary?.totalSpent).toBe(1800);
       expect(result.current.budgetSummary?.totalRemaining).toBe(3200);
       expect(result.current.budgetSummary?.percentageSpent).toBe(36);
-      
+
       // Verify the spent by category
       expect(result.current.budgetSummary?.spentByCategory.flights).toBe(1000);
-      expect(result.current.budgetSummary?.spentByCategory.accommodations).toBe(800);
+      expect(result.current.budgetSummary?.spentByCategory.accommodations).toBe(
+        800
+      );
     });
 
     it("returns budgets by trip ID", () => {
@@ -706,7 +724,7 @@ describe("useBudgetStore", () => {
           createdAt: "2025-05-20T12:00:00Z",
           updatedAt: "2025-05-20T12:00:00Z",
         });
-        
+
         result.current.addBudget({
           id: "budget-2",
           name: "Winter Vacation",
@@ -718,7 +736,7 @@ describe("useBudgetStore", () => {
           createdAt: "2025-05-20T12:00:00Z",
           updatedAt: "2025-05-20T12:00:00Z",
         });
-        
+
         result.current.addBudget({
           id: "budget-3",
           name: "Trip 1 - Food Budget",
@@ -735,7 +753,7 @@ describe("useBudgetStore", () => {
       expect(result.current.budgetsByTrip["trip-1"]).toContain("budget-1");
       expect(result.current.budgetsByTrip["trip-1"]).toContain("budget-3");
       expect(result.current.budgetsByTrip["trip-1"].length).toBe(2);
-      
+
       expect(result.current.budgetsByTrip["trip-2"]).toContain("budget-2");
       expect(result.current.budgetsByTrip["trip-2"].length).toBe(1);
     });
@@ -757,7 +775,7 @@ describe("useBudgetStore", () => {
           createdAt: "2025-05-20T12:00:00Z",
           updatedAt: "2025-05-20T12:00:00Z",
         });
-        
+
         result.current.addExpense({
           id: "expense-2",
           budgetId: "budget-1",
@@ -770,7 +788,7 @@ describe("useBudgetStore", () => {
           createdAt: "2025-05-20T12:00:00Z",
           updatedAt: "2025-05-20T12:00:00Z",
         });
-        
+
         result.current.addExpense({
           id: "expense-3",
           budgetId: "budget-2",

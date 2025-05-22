@@ -37,7 +37,7 @@ export type LoadingSpinnerConfig = z.infer<typeof LoadingSpinnerConfigSchema>;
  */
 export enum SkeletonType {
   TEXT = "text",
-  PARAGRAPH = "paragraph", 
+  PARAGRAPH = "paragraph",
   CARD = "card",
   LIST = "list",
   AVATAR = "avatar",

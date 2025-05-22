@@ -2,7 +2,13 @@
 
 import { AlertTriangle, RefreshCw, Home, Bug } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import type { ErrorFallbackProps } from "@/types/errors";
 
@@ -31,12 +37,13 @@ export function ErrorFallback({ error, reset, retry }: ErrorFallbackProps) {
             Something went wrong
           </CardTitle>
         </CardHeader>
-        
+
         <CardContent className="space-y-4">
           <p className="text-center text-muted-foreground">
-            We apologize for the inconvenience. An unexpected error has occurred.
+            We apologize for the inconvenience. An unexpected error has
+            occurred.
           </p>
-          
+
           {isDev && error.message && (
             <Alert variant="destructive">
               <Bug className="h-4 w-4" />
@@ -45,7 +52,7 @@ export function ErrorFallback({ error, reset, retry }: ErrorFallbackProps) {
               </AlertDescription>
             </Alert>
           )}
-          
+
           {error.digest && (
             <Alert>
               <AlertDescription className="text-xs">
@@ -54,7 +61,7 @@ export function ErrorFallback({ error, reset, retry }: ErrorFallbackProps) {
             </Alert>
           )}
         </CardContent>
-        
+
         <CardFooter className="flex flex-col space-y-2">
           <div className="flex space-x-2 w-full">
             {retry && (
@@ -70,9 +77,13 @@ export function ErrorFallback({ error, reset, retry }: ErrorFallbackProps) {
               </Button>
             )}
           </div>
-          
+
           <div className="flex space-x-2 w-full">
-            <Button onClick={handleReload} variant="secondary" className="flex-1">
+            <Button
+              onClick={handleReload}
+              variant="secondary"
+              className="flex-1"
+            >
               Reload Page
             </Button>
             <Button onClick={handleGoHome} variant="ghost" className="flex-1">
@@ -96,7 +107,8 @@ export function MinimalErrorFallback({ error, reset }: ErrorFallbackProps) {
         <AlertTriangle className="h-16 w-16 text-destructive mx-auto" />
         <h1 className="text-2xl font-bold">Application Error</h1>
         <p className="text-muted-foreground max-w-md">
-          The application has encountered an unexpected error and needs to restart.
+          The application has encountered an unexpected error and needs to
+          restart.
         </p>
         {reset && (
           <Button onClick={reset}>
@@ -121,7 +133,7 @@ export function PageErrorFallback({ error, reset }: ErrorFallbackProps) {
         <p className="text-lg text-muted-foreground">
           This page has encountered an error and cannot be displayed properly.
         </p>
-        
+
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           {reset && (
             <Button onClick={reset} size="lg">
@@ -129,16 +141,16 @@ export function PageErrorFallback({ error, reset }: ErrorFallbackProps) {
               Try Again
             </Button>
           )}
-          <Button 
-            onClick={() => window.location.href = "/"} 
-            variant="outline" 
+          <Button
+            onClick={() => (window.location.href = "/")}
+            variant="outline"
             size="lg"
           >
             <Home className="mr-2 h-5 w-5" />
             Go to Dashboard
           </Button>
         </div>
-        
+
         {process.env.NODE_ENV === "development" && error.stack && (
           <details className="mt-8 text-left">
             <summary className="cursor-pointer font-semibold mb-2">

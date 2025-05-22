@@ -3,13 +3,13 @@
  */
 
 export type CurrencyCode = string; // ISO 4217 currency code (e.g., "USD", "EUR")
-export type ExpenseCategory = 
-  | "flights" 
-  | "accommodations" 
-  | "transportation" 
-  | "food" 
-  | "activities" 
-  | "shopping" 
+export type ExpenseCategory =
+  | "flights"
+  | "accommodations"
+  | "transportation"
+  | "food"
+  | "activities"
+  | "shopping"
   | "other";
 
 export interface Budget {

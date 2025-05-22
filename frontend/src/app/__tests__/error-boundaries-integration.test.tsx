@@ -33,7 +33,9 @@ Object.defineProperty(window, "sessionStorage", {
 const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
 describe("Next.js Error Boundaries Integration", () => {
-  const mockError = new Error("Test integration error") as Error & { digest?: string };
+  const mockError = new Error("Test integration error") as Error & {
+    digest?: string;
+  };
   const mockReset = vi.fn();
 
   beforeEach(() => {
@@ -47,12 +49,16 @@ describe("Next.js Error Boundaries Integration", () => {
       render(<Error error={mockError} reset={mockReset} />);
 
       expect(screen.getByText("Page Error")).toBeInTheDocument();
-      expect(screen.getByText("This page has encountered an error and cannot be displayed properly.")).toBeInTheDocument();
+      expect(
+        screen.getByText(
+          "This page has encountered an error and cannot be displayed properly."
+        )
+      ).toBeInTheDocument();
     });
 
     it("should report error on mount", () => {
       const { errorService } = require("@/lib/error-service");
-      
+
       render(<Error error={mockError} reset={mockReset} />);
 
       expect(errorService.createErrorReport).toHaveBeenCalledWith(
@@ -81,7 +87,7 @@ describe("Next.js Error Boundaries Integration", () => {
 
     it("should handle error with digest", () => {
       const errorWithDigest = { ...mockError, digest: "root_error_123" };
-      
+
       render(<Error error={errorWithDigest} reset={mockReset} />);
 
       // Should still render and report the error
@@ -94,11 +100,17 @@ describe("Next.js Error Boundaries Integration", () => {
       render(<GlobalError error={mockError} reset={mockReset} />);
 
       expect(screen.getByText("Application Error")).toBeInTheDocument();
-      expect(screen.getByText("The application has encountered an unexpected error and needs to restart.")).toBeInTheDocument();
+      expect(
+        screen.getByText(
+          "The application has encountered an unexpected error and needs to restart."
+        )
+      ).toBeInTheDocument();
     });
 
     it("should include html and body tags", () => {
-      const { container } = render(<GlobalError error={mockError} reset={mockReset} />);
+      const { container } = render(
+        <GlobalError error={mockError} reset={mockReset} />
+      );
 
       // Check that the component renders html and body tags
       expect(container.querySelector("html")).toBeInTheDocument();
@@ -107,7 +119,7 @@ describe("Next.js Error Boundaries Integration", () => {
 
     it("should report critical error", () => {
       const { errorService } = require("@/lib/error-service");
-      
+
       render(<GlobalError error={mockError} reset={mockReset} />);
 
       expect(errorService.createErrorReport).toHaveBeenCalled();
@@ -134,12 +146,16 @@ describe("Next.js Error Boundaries Integration", () => {
       render(<DashboardError error={mockError} reset={mockReset} />);
 
       expect(screen.getByText("Something went wrong")).toBeInTheDocument();
-      expect(screen.getByText("We apologize for the inconvenience. An unexpected error has occurred.")).toBeInTheDocument();
+      expect(
+        screen.getByText(
+          "We apologize for the inconvenience. An unexpected error has occurred."
+        )
+      ).toBeInTheDocument();
     });
 
     it("should report dashboard error", () => {
       const { errorService } = require("@/lib/error-service");
-      
+
       render(<DashboardError error={mockError} reset={mockReset} />);
 
       expect(errorService.createErrorReport).toHaveBeenCalled();
@@ -170,7 +186,7 @@ describe("Next.js Error Boundaries Integration", () => {
 
     it("should report auth error without user ID", () => {
       const { errorService } = require("@/lib/error-service");
-      
+
       render(<AuthError error={mockError} reset={mockReset} />);
 
       expect(errorService.createErrorReport).toHaveBeenCalledWith(
@@ -180,7 +196,7 @@ describe("Next.js Error Boundaries Integration", () => {
           sessionId: "test_session_id",
         })
       );
-      
+
       // Should not include userId since user is not authenticated in auth flow
       expect(errorService.createErrorReport).not.toHaveBeenCalledWith(
         expect.anything(),
@@ -279,7 +295,7 @@ describe("Next.js Error Boundaries Integration", () => {
   describe("Error Reporting Integration", () => {
     it("should create error reports with consistent format", () => {
       const { errorService } = require("@/lib/error-service");
-      
+
       render(<Error error={mockError} reset={mockReset} />);
 
       expect(errorService.createErrorReport).toHaveBeenCalledWith(
@@ -305,7 +321,9 @@ describe("Next.js Error Boundaries Integration", () => {
   describe("Error Boundary Hierarchy", () => {
     it("should show different UI for different error levels", () => {
       // Global error shows minimal UI
-      const { rerender } = render(<GlobalError error={mockError} reset={mockReset} />);
+      const { rerender } = render(
+        <GlobalError error={mockError} reset={mockReset} />
+      );
       expect(screen.getByText("Application Error")).toBeInTheDocument();
 
       // Page error shows more detailed UI

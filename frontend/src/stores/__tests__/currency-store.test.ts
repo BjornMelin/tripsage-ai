@@ -16,9 +16,27 @@ describe("useCurrencyStore", () => {
     act(() => {
       useCurrencyStore.setState({
         currencies: {
-          USD: { code: "USD", symbol: "$", name: "US Dollar", decimals: 2, flag: "🇺🇸" },
-          EUR: { code: "EUR", symbol: "€", name: "Euro", decimals: 2, flag: "🇪🇺" },
-          GBP: { code: "GBP", symbol: "£", name: "British Pound", decimals: 2, flag: "🇬🇧" },
+          USD: {
+            code: "USD",
+            symbol: "$",
+            name: "US Dollar",
+            decimals: 2,
+            flag: "🇺🇸",
+          },
+          EUR: {
+            code: "EUR",
+            symbol: "€",
+            name: "Euro",
+            decimals: 2,
+            flag: "🇪🇺",
+          },
+          GBP: {
+            code: "GBP",
+            symbol: "£",
+            name: "British Pound",
+            decimals: 2,
+            flag: "🇬🇧",
+          },
         },
         baseCurrency: "USD",
         exchangeRates: {},
@@ -94,11 +112,13 @@ describe("useCurrencyStore", () => {
       });
 
       expect(result.current.baseCurrency).toBe("EUR");
-      
+
       // Exchange rates should be recalculated
       expect(result.current.exchangeRates["USD"]).toBeDefined();
       expect(result.current.exchangeRates["USD"]?.rate).toBeCloseTo(1 / 0.85);
-      expect(result.current.exchangeRates["GBP"]?.rate).toBeCloseTo(0.75 / 0.85);
+      expect(result.current.exchangeRates["GBP"]?.rate).toBeCloseTo(
+        0.75 / 0.85
+      );
     });
   });
 
@@ -198,10 +218,34 @@ describe("useCurrencyStore", () => {
       act(() => {
         useCurrencyStore.setState({
           currencies: {
-            USD: { code: "USD", symbol: "$", name: "US Dollar", decimals: 2, flag: "🇺🇸" },
-            EUR: { code: "EUR", symbol: "€", name: "Euro", decimals: 2, flag: "🇪🇺" },
-            GBP: { code: "GBP", symbol: "£", name: "British Pound", decimals: 2, flag: "🇬🇧" },
-            JPY: { code: "JPY", symbol: "¥", name: "Japanese Yen", decimals: 0, flag: "🇯🇵" },
+            USD: {
+              code: "USD",
+              symbol: "$",
+              name: "US Dollar",
+              decimals: 2,
+              flag: "🇺🇸",
+            },
+            EUR: {
+              code: "EUR",
+              symbol: "€",
+              name: "Euro",
+              decimals: 2,
+              flag: "🇪🇺",
+            },
+            GBP: {
+              code: "GBP",
+              symbol: "£",
+              name: "British Pound",
+              decimals: 2,
+              flag: "🇬🇧",
+            },
+            JPY: {
+              code: "JPY",
+              symbol: "¥",
+              name: "Japanese Yen",
+              decimals: 0,
+              flag: "🇯🇵",
+            },
           },
           baseCurrency: "USD",
           exchangeRates: {

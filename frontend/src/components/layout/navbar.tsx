@@ -10,8 +10,16 @@ import { useState } from "react";
 const navItems = [
   { name: "Home", href: "/" },
   { name: "Trips", href: "/trips", icon: <MapPin className="h-4 w-4 mr-2" /> },
-  { name: "Itinerary", href: "/itinerary", icon: <Calendar className="h-4 w-4 mr-2" /> },
-  { name: "Settings", href: "/settings", icon: <Settings className="h-4 w-4 mr-2" /> },
+  {
+    name: "Itinerary",
+    href: "/itinerary",
+    icon: <Calendar className="h-4 w-4 mr-2" />,
+  },
+  {
+    name: "Settings",
+    href: "/settings",
+    icon: <Settings className="h-4 w-4 mr-2" />,
+  },
 ];
 
 export function Navbar() {
@@ -25,7 +33,7 @@ export function Navbar() {
           <Link href="/" className="font-bold text-xl flex items-center">
             TripSage<span className="text-primary ml-1">AI</span>
           </Link>
-          
+
           {/* Desktop navigation */}
           <nav className="hidden md:flex items-center gap-6">
             {navItems.map((item) => (
@@ -34,7 +42,9 @@ export function Navbar() {
                 href={item.href}
                 className={cn(
                   "text-sm font-medium transition-colors hover:text-primary flex items-center",
-                  pathname === item.href ? "text-primary" : "text-muted-foreground"
+                  pathname === item.href
+                    ? "text-primary"
+                    : "text-muted-foreground"
                 )}
               >
                 {item.icon}
@@ -43,7 +53,7 @@ export function Navbar() {
             ))}
           </nav>
         </div>
-        
+
         {/* User section */}
         <div className="flex items-center gap-4">
           <Button variant="outline" size="sm" asChild>
@@ -52,7 +62,7 @@ export function Navbar() {
           <Button size="sm" asChild>
             <Link href="/signup">Sign up</Link>
           </Button>
-          
+
           {/* Mobile menu button */}
           <Button
             variant="ghost"
@@ -60,11 +70,15 @@ export function Navbar() {
             className="md:hidden"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
           >
-            {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            {mobileMenuOpen ? (
+              <X className="h-5 w-5" />
+            ) : (
+              <Menu className="h-5 w-5" />
+            )}
           </Button>
         </div>
       </div>
-      
+
       {/* Mobile navigation */}
       {mobileMenuOpen && (
         <nav className="md:hidden py-4 border-t">

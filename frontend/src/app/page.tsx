@@ -1,7 +1,14 @@
 import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
 export default function Home() {
   return (
@@ -27,14 +34,24 @@ export default function Home() {
                 Plan Your Perfect Trip with TripSage AI
               </h1>
               <p className="text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
-                Intelligent travel planning powered by AI. Get personalized recommendations, budget optimization, and seamless booking - all in one place.
+                Intelligent travel planning powered by AI. Get personalized
+                recommendations, budget optimization, and seamless booking - all
+                in one place.
               </p>
               <div className="flex flex-col gap-2 min-[400px]:flex-row">
                 <Link href="/auth/register">
-                  <Button size="lg" className="w-full min-[400px]:w-auto">Get Started</Button>
+                  <Button size="lg" className="w-full min-[400px]:w-auto">
+                    Get Started
+                  </Button>
                 </Link>
                 <Link href="/dashboard/chat">
-                  <Button size="lg" variant="outline" className="w-full min-[400px]:w-auto">Try Demo</Button>
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    className="w-full min-[400px]:w-auto"
+                  >
+                    Try Demo
+                  </Button>
                 </Link>
               </div>
             </div>
@@ -58,7 +75,8 @@ export default function Home() {
                   Why Choose TripSage AI?
                 </h2>
                 <p className="mx-auto max-w-[700px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
-                  Our AI-powered platform makes travel planning simpler, smarter, and more personalized than ever before.
+                  Our AI-powered platform makes travel planning simpler,
+                  smarter, and more personalized than ever before.
                 </p>
               </div>
             </div>
@@ -68,7 +86,10 @@ export default function Home() {
                   <CardTitle>AI-Powered Planning</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p>Get intelligent recommendations based on your preferences, budget, and travel style.</p>
+                  <p>
+                    Get intelligent recommendations based on your preferences,
+                    budget, and travel style.
+                  </p>
                 </CardContent>
               </Card>
               <Card>
@@ -76,7 +97,10 @@ export default function Home() {
                   <CardTitle>Budget Optimization</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p>Find the best deals and optimize your spending across flights, hotels, and activities.</p>
+                  <p>
+                    Find the best deals and optimize your spending across
+                    flights, hotels, and activities.
+                  </p>
                 </CardContent>
               </Card>
               <Card>
@@ -84,7 +108,10 @@ export default function Home() {
                   <CardTitle>All-in-One Platform</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p>Plan, book, and manage your entire trip in one seamless experience.</p>
+                  <p>
+                    Plan, book, and manage your entire trip in one seamless
+                    experience.
+                  </p>
                 </CardContent>
               </Card>
             </div>
@@ -97,13 +124,22 @@ export default function Home() {
             © {new Date().getFullYear()} TripSage AI. All rights reserved.
           </p>
           <div className="flex items-center gap-4">
-            <Link href="/privacy" className="text-sm text-muted-foreground underline-offset-4 hover:underline">
+            <Link
+              href="/privacy"
+              className="text-sm text-muted-foreground underline-offset-4 hover:underline"
+            >
               Privacy
             </Link>
-            <Link href="/terms" className="text-sm text-muted-foreground underline-offset-4 hover:underline">
+            <Link
+              href="/terms"
+              className="text-sm text-muted-foreground underline-offset-4 hover:underline"
+            >
               Terms
             </Link>
-            <Link href="/contact" className="text-sm text-muted-foreground underline-offset-4 hover:underline">
+            <Link
+              href="/contact"
+              className="text-sm text-muted-foreground underline-offset-4 hover:underline"
+            >
               Contact
             </Link>
           </div>

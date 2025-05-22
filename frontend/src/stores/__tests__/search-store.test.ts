@@ -2,7 +2,10 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { useSearchStore } from "../search-store";
 import { act } from "@testing-library/react";
 import { renderHook } from "@testing-library/react";
-import type { FlightSearchParams, AccommodationSearchParams } from "@/types/search";
+import type {
+  FlightSearchParams,
+  AccommodationSearchParams,
+} from "@/types/search";
 import { vi } from "vitest";
 
 // Mock the store to avoid persistence issues in tests
@@ -367,7 +370,9 @@ describe("useSearchStore", () => {
         result.current.setAvailableSortOptions("flight", mockSortOptions);
       });
 
-      expect(result.current.availableSortOptions.flight).toEqual(mockSortOptions);
+      expect(result.current.availableSortOptions.flight).toEqual(
+        mockSortOptions
+      );
     });
 
     it("sets active sort option", () => {
@@ -504,7 +509,9 @@ describe("useSearchStore", () => {
 
       expect(result.current.recentSearches.length).toBe(10);
       // The most recent one should be first
-      expect(result.current.recentSearches[0].params.destination).toBe("DEST-10");
+      expect(result.current.recentSearches[0].params.destination).toBe(
+        "DEST-10"
+      );
     });
 
     it("clears recent searches", () => {

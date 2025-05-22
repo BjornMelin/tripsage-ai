@@ -45,7 +45,8 @@ describe("Error Type Schemas", () => {
       const validErrorDetails = {
         name: "TypeError",
         message: "Cannot read property 'foo' of undefined",
-        stack: "TypeError: Cannot read property 'foo' of undefined\n    at Component",
+        stack:
+          "TypeError: Cannot read property 'foo' of undefined\n    at Component",
         digest: "abc123",
       };
 
@@ -79,7 +80,8 @@ describe("Error Type Schemas", () => {
         error: {
           name: "TypeError",
           message: "Cannot read property 'foo' of undefined",
-          stack: "TypeError: Cannot read property 'foo' of undefined\n    at Component",
+          stack:
+            "TypeError: Cannot read property 'foo' of undefined\n    at Component",
           digest: "abc123",
         },
         errorInfo: {
@@ -87,7 +89,8 @@ describe("Error Type Schemas", () => {
           errorBoundary: "ErrorBoundary",
         },
         url: "https://example.com/dashboard",
-        userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        userAgent:
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
         timestamp: "2024-01-01T00:00:00.000Z",
         userId: "user123",
         sessionId: "session456",
@@ -104,7 +107,8 @@ describe("Error Type Schemas", () => {
           message: "Something went wrong",
         },
         url: "https://example.com",
-        userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        userAgent:
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
         timestamp: "2024-01-01T00:00:00.000Z",
       };
 
@@ -119,7 +123,8 @@ describe("Error Type Schemas", () => {
           // Missing required message field
         },
         url: "https://example.com",
-        userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        userAgent:
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
         timestamp: "2024-01-01T00:00:00.000Z",
       };
 

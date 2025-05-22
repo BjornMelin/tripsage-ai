@@ -19,14 +19,62 @@ import {
 const COMMON_CURRENCIES: Record<CurrencyCode, Currency> = {
   USD: { code: "USD", symbol: "$", name: "US Dollar", decimals: 2, flag: "🇺🇸" },
   EUR: { code: "EUR", symbol: "€", name: "Euro", decimals: 2, flag: "🇪🇺" },
-  GBP: { code: "GBP", symbol: "£", name: "British Pound", decimals: 2, flag: "🇬🇧" },
-  JPY: { code: "JPY", symbol: "¥", name: "Japanese Yen", decimals: 0, flag: "🇯🇵" },
-  CAD: { code: "CAD", symbol: "C$", name: "Canadian Dollar", decimals: 2, flag: "🇨🇦" },
-  AUD: { code: "AUD", symbol: "A$", name: "Australian Dollar", decimals: 2, flag: "🇦🇺" },
-  CHF: { code: "CHF", symbol: "Fr", name: "Swiss Franc", decimals: 2, flag: "🇨🇭" },
-  CNY: { code: "CNY", symbol: "¥", name: "Chinese Yuan", decimals: 2, flag: "🇨🇳" },
-  INR: { code: "INR", symbol: "₹", name: "Indian Rupee", decimals: 2, flag: "🇮🇳" },
-  MXN: { code: "MXN", symbol: "$", name: "Mexican Peso", decimals: 2, flag: "🇲🇽" },
+  GBP: {
+    code: "GBP",
+    symbol: "£",
+    name: "British Pound",
+    decimals: 2,
+    flag: "🇬🇧",
+  },
+  JPY: {
+    code: "JPY",
+    symbol: "¥",
+    name: "Japanese Yen",
+    decimals: 0,
+    flag: "🇯🇵",
+  },
+  CAD: {
+    code: "CAD",
+    symbol: "C$",
+    name: "Canadian Dollar",
+    decimals: 2,
+    flag: "🇨🇦",
+  },
+  AUD: {
+    code: "AUD",
+    symbol: "A$",
+    name: "Australian Dollar",
+    decimals: 2,
+    flag: "🇦🇺",
+  },
+  CHF: {
+    code: "CHF",
+    symbol: "Fr",
+    name: "Swiss Franc",
+    decimals: 2,
+    flag: "🇨🇭",
+  },
+  CNY: {
+    code: "CNY",
+    symbol: "¥",
+    name: "Chinese Yuan",
+    decimals: 2,
+    flag: "🇨🇳",
+  },
+  INR: {
+    code: "INR",
+    symbol: "₹",
+    name: "Indian Rupee",
+    decimals: 2,
+    flag: "🇮🇳",
+  },
+  MXN: {
+    code: "MXN",
+    symbol: "$",
+    name: "Mexican Peso",
+    decimals: 2,
+    flag: "🇲🇽",
+  },
 };
 
 interface CurrencyStore extends CurrencyState {
@@ -34,7 +82,7 @@ interface CurrencyStore extends CurrencyState {
   setBaseCurrency: (currency: CurrencyCode) => void;
   addCurrency: (currency: unknown) => boolean;
   removeCurrency: (code: CurrencyCode) => void;
-  
+
   // Exchange rate management
   updateExchangeRate: (
     targetCurrency: CurrencyCode,
@@ -45,18 +93,18 @@ interface CurrencyStore extends CurrencyState {
     rates: Record<string, number>,
     timestamp?: string
   ) => void;
-  
+
   // Favorites management
   addFavoriteCurrency: (code: CurrencyCode) => void;
   removeFavoriteCurrency: (code: CurrencyCode) => void;
-  
+
   // Conversion utilities
   convertAmount: (
     amount: number,
     fromCurrency: CurrencyCode,
     toCurrency: CurrencyCode
   ) => ConversionResult | null;
-  
+
   // Advanced features
   getRecentCurrencyPairs: () => CurrencyPair[];
   getPopularCurrencies: () => Currency[];
@@ -86,9 +134,9 @@ export const useCurrencyStore = create<CurrencyStore>()(
       exchangeRates: {},
       favoriteCurrencies: ["USD", "EUR", "GBP"],
       lastUpdated: null,
-      
+
       // Currency management
-      setBaseCurrency: (currency) => 
+      setBaseCurrency: (currency) =>
         set((state) => {
           // Validate the currency code
           if (!validateCurrencyCode(currency)) {
@@ -97,26 +145,23 @@ export const useCurrencyStore = create<CurrencyStore>()(
           }
 
           // Don't update if the currency is already the base or doesn't exist
-          if (
-            currency === state.baseCurrency || 
-            !state.currencies[currency]
-          ) {
+          if (currency === state.baseCurrency || !state.currencies[currency]) {
             return state;
           }
-          
+
           // When changing base currency, we need to recalculate all exchange rates
           const oldBaseCurrency = state.baseCurrency;
           const oldBaseRate = state.exchangeRates[currency]?.rate || 1;
-          
+
           // Calculate new exchange rates relative to the new base currency
           const newExchangeRates: Record<CurrencyCode, ExchangeRate> = {};
-          
+
           Object.keys(state.exchangeRates).forEach((currencyCode) => {
             if (currencyCode === currency) return; // Skip the new base currency
-            
+
             const oldRate = state.exchangeRates[currencyCode]?.rate || 1;
             const newRate = oldRate / oldBaseRate;
-            
+
             // Create and validate the new exchange rate
             const newExchangeRate = {
               baseCurrency: currency,
@@ -124,12 +169,12 @@ export const useCurrencyStore = create<CurrencyStore>()(
               rate: newRate,
               timestamp: getCurrentTimestamp(),
             };
-            
+
             if (ExchangeRateSchema.safeParse(newExchangeRate).success) {
               newExchangeRates[currencyCode] = newExchangeRate;
             }
           });
-          
+
           // Add the old base currency to the exchange rates
           const oldBaseExchangeRate = {
             baseCurrency: currency,
@@ -137,18 +182,18 @@ export const useCurrencyStore = create<CurrencyStore>()(
             rate: 1 / oldBaseRate,
             timestamp: getCurrentTimestamp(),
           };
-          
+
           if (ExchangeRateSchema.safeParse(oldBaseExchangeRate).success) {
             newExchangeRates[oldBaseCurrency] = oldBaseExchangeRate;
           }
-          
+
           return {
             baseCurrency: currency,
             exchangeRates: newExchangeRates,
             lastUpdated: getCurrentTimestamp(),
           };
         }),
-      
+
       addCurrency: (currency) => {
         // Validate the currency against the schema
         const result = CurrencySchema.safeParse(currency);
@@ -164,8 +209,8 @@ export const useCurrencyStore = create<CurrencyStore>()(
         console.error("Invalid currency data:", result.error);
         return false;
       },
-      
-      removeCurrency: (code) => 
+
+      removeCurrency: (code) =>
         set((state) => {
           // Validate the currency code
           if (!validateCurrencyCode(code)) {
@@ -175,27 +220,31 @@ export const useCurrencyStore = create<CurrencyStore>()(
 
           // Don't remove the base currency
           if (code === state.baseCurrency) return state;
-          
+
           // Create new state objects without the currency
           const newCurrencies = { ...state.currencies };
           const newExchangeRates = { ...state.exchangeRates };
           const newFavoriteCurrencies = state.favoriteCurrencies.filter(
             (c) => c !== code
           );
-          
+
           // Remove the currency from all state
           delete newCurrencies[code];
           delete newExchangeRates[code];
-          
+
           return {
             currencies: newCurrencies,
             exchangeRates: newExchangeRates,
             favoriteCurrencies: newFavoriteCurrencies,
           };
         }),
-      
+
       // Exchange rate management
-      updateExchangeRate: (targetCurrency, rate, timestamp = getCurrentTimestamp()) => 
+      updateExchangeRate: (
+        targetCurrency,
+        rate,
+        timestamp = getCurrentTimestamp()
+      ) =>
         set((state) => {
           // Validate the currency code
           if (!validateCurrencyCode(targetCurrency)) {
@@ -210,7 +259,7 @@ export const useCurrencyStore = create<CurrencyStore>()(
           }
 
           if (targetCurrency === state.baseCurrency) return state; // Can't set exchange rate for base currency
-          
+
           // Create and validate the new exchange rate
           const newExchangeRate = {
             baseCurrency: state.baseCurrency,
@@ -218,13 +267,13 @@ export const useCurrencyStore = create<CurrencyStore>()(
             rate,
             timestamp,
           };
-          
+
           const result = ExchangeRateSchema.safeParse(newExchangeRate);
           if (!result.success) {
             console.error("Invalid exchange rate data:", result.error);
             return state;
           }
-          
+
           return {
             exchangeRates: {
               ...state.exchangeRates,
@@ -233,22 +282,22 @@ export const useCurrencyStore = create<CurrencyStore>()(
             lastUpdated: timestamp,
           };
         }),
-      
-      updateAllExchangeRates: (rates, timestamp = getCurrentTimestamp()) => 
+
+      updateAllExchangeRates: (rates, timestamp = getCurrentTimestamp()) =>
         set((state) => {
           const newExchangeRates: Record<CurrencyCode, ExchangeRate> = {};
-          
+
           Object.entries(rates).forEach(([currencyCode, rate]) => {
             // Skip if it's the base currency or invalid code
             if (
-              currencyCode === state.baseCurrency || 
+              currencyCode === state.baseCurrency ||
               !validateCurrencyCode(currencyCode) ||
               typeof rate !== "number" ||
               rate <= 0
             ) {
               return;
             }
-            
+
             // Create and validate the new exchange rate
             const newExchangeRate = {
               baseCurrency: state.baseCurrency,
@@ -256,21 +305,21 @@ export const useCurrencyStore = create<CurrencyStore>()(
               rate,
               timestamp,
             };
-            
+
             const result = ExchangeRateSchema.safeParse(newExchangeRate);
             if (result.success) {
               newExchangeRates[currencyCode] = newExchangeRate;
             }
           });
-          
+
           return {
             exchangeRates: newExchangeRates,
             lastUpdated: timestamp,
           };
         }),
-      
+
       // Favorites management
-      addFavoriteCurrency: (code) => 
+      addFavoriteCurrency: (code) =>
         set((state) => {
           // Validate the currency code
           if (!validateCurrencyCode(code)) {
@@ -279,18 +328,18 @@ export const useCurrencyStore = create<CurrencyStore>()(
           }
 
           if (
-            !state.currencies[code] || 
+            !state.currencies[code] ||
             state.favoriteCurrencies.includes(code)
           ) {
             return state;
           }
-          
+
           return {
             favoriteCurrencies: [...state.favoriteCurrencies, code],
           };
         }),
-      
-      removeFavoriteCurrency: (code) => 
+
+      removeFavoriteCurrency: (code) =>
         set((state) => {
           // Validate the currency code
           if (!validateCurrencyCode(code)) {
@@ -304,11 +353,11 @@ export const useCurrencyStore = create<CurrencyStore>()(
             ),
           };
         }),
-      
+
       // Conversion utilities
       convertAmount: (amount, fromCurrency, toCurrency) => {
         const state = get();
-        
+
         // Validate inputs
         if (
           typeof amount !== "number" ||
@@ -318,7 +367,7 @@ export const useCurrencyStore = create<CurrencyStore>()(
           console.error("Invalid conversion parameters");
           return null;
         }
-        
+
         // Same currency, no conversion needed
         if (fromCurrency === toCurrency) {
           const result = {
@@ -329,17 +378,17 @@ export const useCurrencyStore = create<CurrencyStore>()(
             rate: 1,
             timestamp: getCurrentTimestamp(),
           };
-          
+
           return ConversionResultSchema.parse(result);
         }
-        
+
         // Convert from base currency
         if (fromCurrency === state.baseCurrency) {
           const exchangeRate = state.exchangeRates[toCurrency];
           if (!exchangeRate) return null;
-          
+
           const convertedAmount = amount * exchangeRate.rate;
-          
+
           const result = {
             fromAmount: amount,
             fromCurrency,
@@ -348,17 +397,17 @@ export const useCurrencyStore = create<CurrencyStore>()(
             rate: exchangeRate.rate,
             timestamp: exchangeRate.timestamp,
           };
-          
+
           return ConversionResultSchema.parse(result);
         }
-        
+
         // Convert to base currency
         if (toCurrency === state.baseCurrency) {
           const exchangeRate = state.exchangeRates[fromCurrency];
           if (!exchangeRate) return null;
-          
+
           const convertedAmount = amount / exchangeRate.rate;
-          
+
           const result = {
             fromAmount: amount,
             fromCurrency,
@@ -367,21 +416,21 @@ export const useCurrencyStore = create<CurrencyStore>()(
             rate: 1 / exchangeRate.rate,
             timestamp: exchangeRate.timestamp,
           };
-          
+
           return ConversionResultSchema.parse(result);
         }
-        
+
         // Convert between two non-base currencies
         const fromExchangeRate = state.exchangeRates[fromCurrency];
         const toExchangeRate = state.exchangeRates[toCurrency];
-        
+
         if (!fromExchangeRate || !toExchangeRate) return null;
-        
+
         // Convert via the base currency
         const amountInBaseCurrency = amount / fromExchangeRate.rate;
         const convertedAmount = amountInBaseCurrency * toExchangeRate.rate;
         const effectiveRate = toExchangeRate.rate / fromExchangeRate.rate;
-        
+
         const result = {
           fromAmount: amount,
           fromCurrency,
@@ -390,15 +439,15 @@ export const useCurrencyStore = create<CurrencyStore>()(
           rate: effectiveRate,
           timestamp: getCurrentTimestamp(),
         };
-        
+
         return ConversionResultSchema.parse(result);
       },
-      
+
       // Utility methods
       getRecentCurrencyPairs: () => {
         const state = get();
         const pairs: CurrencyPair[] = [];
-        
+
         // Base currency to favorites
         state.favoriteCurrencies.forEach((code) => {
           if (code !== state.baseCurrency) {
@@ -406,23 +455,23 @@ export const useCurrencyStore = create<CurrencyStore>()(
               fromCurrency: state.baseCurrency,
               toCurrency: code,
             };
-            
+
             if (CurrencyPairSchema.safeParse(pair).success) {
               pairs.push(pair);
             }
           }
         });
-        
+
         return pairs;
       },
-      
+
       getPopularCurrencies: () => {
         const state = get();
         return state.favoriteCurrencies
           .map((code) => state.currencies[code])
           .filter(Boolean);
       },
-      
+
       getCurrencyByCode: (code) => {
         const state = get();
         const result = CurrencyCodeSchema.safeParse(code);
@@ -431,22 +480,22 @@ export const useCurrencyStore = create<CurrencyStore>()(
         }
         return undefined;
       },
-      
+
       formatAmountWithCurrency: (amount, currencyCode) => {
         const state = get();
         const result = CurrencyCodeSchema.safeParse(currencyCode);
-        
+
         if (!result.success) {
           return `${amount} ${currencyCode}`;
         }
-        
+
         const code = result.data;
         const currency = state.currencies[code];
-        
+
         if (!currency) {
           return `${amount} ${code}`;
         }
-        
+
         try {
           return new Intl.NumberFormat(undefined, {
             style: "currency",

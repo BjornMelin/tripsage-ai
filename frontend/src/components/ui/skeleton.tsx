@@ -5,28 +5,25 @@ import { cn } from "@/lib/utils";
 /**
  * Skeleton component variants for consistent styling
  */
-const skeletonVariants = cva(
-  "rounded-md bg-muted",
-  {
-    variants: {
-      variant: {
-        default: "bg-slate-100 dark:bg-slate-800",
-        light: "bg-slate-50 dark:bg-slate-700",
-        medium: "bg-slate-200 dark:bg-slate-600",
-        rounded: "rounded-full",
-      },
-      animation: {
-        pulse: "animate-pulse",
-        wave: "animate-[wave_1.5s_ease-in-out_infinite]",
-        none: "",
-      },
+const skeletonVariants = cva("rounded-md bg-muted", {
+  variants: {
+    variant: {
+      default: "bg-slate-100 dark:bg-slate-800",
+      light: "bg-slate-50 dark:bg-slate-700",
+      medium: "bg-slate-200 dark:bg-slate-600",
+      rounded: "rounded-full",
     },
-    defaultVariants: {
-      variant: "default",
-      animation: "pulse",
+    animation: {
+      pulse: "animate-pulse",
+      wave: "animate-[wave_1.5s_ease-in-out_infinite]",
+      none: "",
     },
-  }
-);
+  },
+  defaultVariants: {
+    variant: "default",
+    animation: "pulse",
+  },
+});
 
 export interface SkeletonProps
   extends React.HTMLAttributes<HTMLDivElement>,
@@ -41,24 +38,27 @@ export interface SkeletonProps
  * Basic skeleton component with accessibility support
  */
 const Skeleton = React.forwardRef<HTMLDivElement, SkeletonProps>(
-  ({ 
-    className, 
-    variant, 
-    animation, 
-    width, 
-    height, 
-    lines = 1, 
-    animate = true,
-    style,
-    ...props 
-  }, ref) => {
+  (
+    {
+      className,
+      variant,
+      animation,
+      width,
+      height,
+      lines = 1,
+      animate = true,
+      style,
+      ...props
+    },
+    ref
+  ) => {
     // Calculate final animation variant
     const finalAnimation = animate === false ? "none" : animation;
-    
+
     // Build inline styles
     const inlineStyles: React.CSSProperties = {
-      width: typeof width === 'number' ? `${width}px` : width,
-      height: typeof height === 'number' ? `${height}px` : height,
+      width: typeof width === "number" ? `${width}px` : width,
+      height: typeof height === "number" ? `${height}px` : height,
       ...style,
     };
 
@@ -67,7 +67,11 @@ const Skeleton = React.forwardRef<HTMLDivElement, SkeletonProps>(
       return (
         <div
           ref={ref}
-          className={cn(skeletonVariants({ variant, animation: finalAnimation }), "skeleton", className)}
+          className={cn(
+            skeletonVariants({ variant, animation: finalAnimation }),
+            "skeleton",
+            className
+          )}
           style={inlineStyles}
           role="status"
           aria-label="Loading content..."
@@ -88,11 +92,14 @@ const Skeleton = React.forwardRef<HTMLDivElement, SkeletonProps>(
         {Array.from({ length: lines }).map((_, index) => {
           // Vary the width of lines to look more natural
           const lineWidth = index === lines - 1 ? "75%" : "100%";
-          
+
           return (
             <div
               key={index}
-              className={cn(skeletonVariants({ variant, animation: finalAnimation }), "skeleton")}
+              className={cn(
+                skeletonVariants({ variant, animation: finalAnimation }),
+                "skeleton"
+              )}
               style={{
                 width: lineWidth,
                 height: inlineStyles.height || "1rem",

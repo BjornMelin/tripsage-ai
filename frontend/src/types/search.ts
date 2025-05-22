@@ -15,12 +15,12 @@ export interface BaseSearchParams {
 // Flight specific search parameters
 export interface FlightSearchParams extends BaseSearchParams {
   origin: string;
-  cabinClass: 'economy' | 'premium_economy' | 'business' | 'first';
+  cabinClass: "economy" | "premium_economy" | "business" | "first";
   directOnly: boolean;
   maxStops?: number;
   preferredAirlines?: string[];
-  departureTime?: 'morning' | 'afternoon' | 'evening' | 'night';
-  returnTime?: 'morning' | 'afternoon' | 'evening' | 'night';
+  departureTime?: "morning" | "afternoon" | "evening" | "night";
+  returnTime?: "morning" | "afternoon" | "evening" | "night";
 }
 
 // Accommodation specific search parameters
@@ -48,13 +48,13 @@ export interface ActivitySearchParams extends BaseSearchParams {
 }
 
 // Union type for all search parameters
-export type SearchParams = 
-  | FlightSearchParams 
-  | AccommodationSearchParams 
+export type SearchParams =
+  | FlightSearchParams
+  | AccommodationSearchParams
   | ActivitySearchParams;
 
 // Search type
-export type SearchType = 'flight' | 'accommodation' | 'activity';
+export type SearchType = "flight" | "accommodation" | "activity";
 
 // Flight search result
 export interface Flight {
@@ -136,7 +136,7 @@ export interface SavedSearch {
 // Filter value type
 export type FilterValue = string | number | boolean | string[] | number[];
 
-// Metadata value type  
+// Metadata value type
 export type MetadataValue = string | number | boolean | Record<string, unknown>;
 
 // Search response from API
@@ -152,7 +152,7 @@ export interface FilterOption {
   id: string;
   label: string;
   value: FilterValue;
-  type: 'checkbox' | 'radio' | 'range' | 'select';
+  type: "checkbox" | "radio" | "range" | "select";
   count?: number;
   options?: Array<{
     label: string;
@@ -166,5 +166,5 @@ export interface SortOption {
   id: string;
   label: string;
   value: string;
-  direction: 'asc' | 'desc';
+  direction: "asc" | "desc";
 }

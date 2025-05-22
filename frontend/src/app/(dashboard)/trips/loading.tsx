@@ -1,4 +1,4 @@
-import { Skeleton, SkeletonCard } from "@/components/ui/enhanced-skeleton"
+import { Skeleton, SkeletonCard } from "@/components/ui/enhanced-skeleton";
 
 export default function TripsLoading() {
   return (
@@ -28,7 +28,7 @@ export default function TripsLoading() {
           <div key={i} className="border rounded-lg overflow-hidden">
             {/* Trip image */}
             <Skeleton variant="rectangular" className="h-48 w-full" />
-            
+
             {/* Trip content */}
             <div className="p-4 space-y-3">
               <div className="space-y-2">
@@ -38,7 +38,7 @@ export default function TripsLoading() {
                   <Skeleton className="h-4 w-24" />
                 </div>
               </div>
-              
+
               {/* Trip dates */}
               <div className="flex items-center space-x-4">
                 <div className="space-y-1">
@@ -51,7 +51,7 @@ export default function TripsLoading() {
                   <Skeleton className="h-4 w-16" />
                 </div>
               </div>
-              
+
               {/* Trip details */}
               <div className="flex items-center justify-between pt-2">
                 <div className="space-y-1">
@@ -60,7 +60,7 @@ export default function TripsLoading() {
                 </div>
                 <Skeleton className="h-6 w-16 rounded-full" />
               </div>
-              
+
               {/* Action buttons */}
               <div className="flex items-center space-x-2 pt-3">
                 <Skeleton className="h-8 w-20 rounded-md" />
@@ -87,5 +87,5 @@ export default function TripsLoading() {
         </div>
       </div>
     </div>
-  )
+  );
 }

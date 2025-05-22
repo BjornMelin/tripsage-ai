@@ -28,22 +28,27 @@ export function ApiKeyInput({
   error,
 }: ApiKeyInputProps) {
   const [visible, setVisible] = useState(false);
-  const [inactivityTimer, setInactivityTimer] = useState<NodeJS.Timeout | null>(null);
+  const [inactivityTimer, setInactivityTimer] = useState<NodeJS.Timeout | null>(
+    null
+  );
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Auto-clear after 2 minutes of inactivity for security
   useEffect(() => {
     if (value && !disabled) {
       if (inactivityTimer) clearTimeout(inactivityTimer);
-      
-      const timer = setTimeout(() => {
-        onChange("");
-        if (inputRef.current) inputRef.current.blur();
-      }, 1000 * 60 * 2); // 2 minutes
-      
+
+      const timer = setTimeout(
+        () => {
+          onChange("");
+          if (inputRef.current) inputRef.current.blur();
+        },
+        1000 * 60 * 2
+      ); // 2 minutes
+
       setInactivityTimer(timer);
     }
-    
+
     return () => {
       if (inactivityTimer) clearTimeout(inactivityTimer);
     };
@@ -96,9 +101,7 @@ export function ApiKeyInput({
           {visible ? "Hide API key" : "Show API key"}
         </span>
       </Button>
-      {error && (
-        <p className="mt-1 text-sm text-destructive">{error}</p>
-      )}
+      {error && <p className="mt-1 text-sm text-destructive">{error}</p>}
     </div>
   );
 }

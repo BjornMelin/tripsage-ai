@@ -1,5 +1,12 @@
 import Link from "next/link";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
 export default function DashboardPage() {
@@ -7,9 +14,11 @@ export default function DashboardPage() {
     <div className="space-y-8">
       <div>
         <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
-        <p className="text-muted-foreground">Welcome to TripSage AI. Plan your next adventure.</p>
+        <p className="text-muted-foreground">
+          Welcome to TripSage AI. Plan your next adventure.
+        </p>
       </div>
-      
+
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         <Card>
           <CardHeader>
@@ -17,7 +26,9 @@ export default function DashboardPage() {
             <CardDescription>Your planned adventures</CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="text-center py-8 text-muted-foreground">No upcoming trips yet.</p>
+            <p className="text-center py-8 text-muted-foreground">
+              No upcoming trips yet.
+            </p>
           </CardContent>
           <CardFooter>
             <Button className="w-full" asChild>
@@ -25,7 +36,7 @@ export default function DashboardPage() {
             </Button>
           </CardFooter>
         </Card>
-        
+
         <Card>
           <CardHeader>
             <CardTitle>Quick Search</CardTitle>
@@ -39,7 +50,9 @@ export default function DashboardPage() {
               <Link href="/dashboard/search?type=hotels">Search Hotels</Link>
             </Button>
             <Button variant="outline" className="w-full" asChild>
-              <Link href="/dashboard/search?type=activities">Search Activities</Link>
+              <Link href="/dashboard/search?type=activities">
+                Search Activities
+              </Link>
             </Button>
           </CardContent>
           <CardFooter>
@@ -48,7 +61,7 @@ export default function DashboardPage() {
             </Button>
           </CardFooter>
         </Card>
-        
+
         <Card>
           <CardHeader>
             <CardTitle>AI Assistant</CardTitle>
@@ -56,7 +69,8 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground mb-4">
-              Ask our AI assistant for personalized recommendations, itinerary planning, and travel tips.
+              Ask our AI assistant for personalized recommendations, itinerary
+              planning, and travel tips.
             </p>
           </CardContent>
           <CardFooter>
@@ -66,23 +80,27 @@ export default function DashboardPage() {
           </CardFooter>
         </Card>
       </div>
-      
+
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle>Recent Searches</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-center py-8 text-muted-foreground">No recent searches yet.</p>
+            <p className="text-center py-8 text-muted-foreground">
+              No recent searches yet.
+            </p>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader>
             <CardTitle>Saved Items</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-center py-8 text-muted-foreground">No saved items yet.</p>
+            <p className="text-center py-8 text-muted-foreground">
+              No saved items yet.
+            </p>
           </CardContent>
         </Card>
       </div>
