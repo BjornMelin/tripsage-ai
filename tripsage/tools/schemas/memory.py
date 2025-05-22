@@ -19,7 +19,7 @@ class BaseParams(BaseModel):
 class BaseResponse(BaseModel):
     """Base model for all response models."""
 
-    model_config = ConfigDict(populate_by_name=True, extra="allow")
+    model_config = ConfigDict(populate_by_name=True, extra="forbid")
 
 
 class Entity(BaseModel):
@@ -31,7 +31,7 @@ class Entity(BaseModel):
         [], description="List of observations about the entity"
     )
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="forbid")
 
     @field_validator("name")
     @classmethod
@@ -57,7 +57,7 @@ class Relation(BaseModel):
     relationType: str = Field(..., description="Relation type")
     to: str = Field(..., description="Target entity name")
 
-    model_config = ConfigDict(extra="allow", populate_by_name=True)
+    model_config = ConfigDict(extra="forbid", populate_by_name=True)
 
     @field_validator("from_")
     @classmethod
@@ -90,7 +90,7 @@ class Observation(BaseModel):
     entityName: str = Field(..., description="Entity name to add observations to")
     contents: List[str] = Field(..., description="List of observation contents to add")
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="forbid")
 
     @field_validator("entityName")
     @classmethod
