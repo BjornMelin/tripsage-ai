@@ -155,7 +155,7 @@ if __name__ == "__main__":
     from tripsage.config.mcp_settings import mcp_settings
 
     async def test():
-        mcp_manager = await MCPManager.get_instance(mcp_settings.dict())
+        mcp_manager = await MCPManager.get_instance(mcp_settings.model_dump())
         try:
             await apply(mcp_manager)
             logger.info("Migration test completed successfully")

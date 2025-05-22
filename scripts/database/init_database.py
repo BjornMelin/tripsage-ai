@@ -271,7 +271,7 @@ async def main():
         sys.exit(1)
 
     # Initialize MCP manager
-    mcp_manager = await MCPManager.get_instance(mcp_settings.dict())
+    mcp_manager = await MCPManager.get_instance(mcp_settings.model_dump())
 
     try:
         # Check connections
