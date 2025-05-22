@@ -92,10 +92,10 @@ def register_default_wrappers():
         replace=True,
     )
 
-    # Redis MCP wrapper
+    # Official Redis MCP wrapper (external official server)
     registry.register_lazy(
         mcp_name="redis",
-        loader=lambda: _import_redis_wrapper(),
+        loader=lambda: _import_official_redis_wrapper(),
         replace=True,
     )
 
@@ -186,10 +186,12 @@ def _import_google_calendar_wrapper():
     return GoogleCalendarMCPWrapper
 
 
-def _import_redis_wrapper():
-    from tripsage.mcp_abstraction.wrappers.redis_wrapper import RedisMCPWrapper
+def _import_official_redis_wrapper():
+    from tripsage.mcp_abstraction.wrappers.official_redis_wrapper import (
+        OfficialRedisMCPWrapper,
+    )
 
-    return RedisMCPWrapper
+    return OfficialRedisMCPWrapper
 
 
 def _import_web_search_wrapper():

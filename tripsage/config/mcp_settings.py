@@ -219,9 +219,50 @@ class TimeMCPConfig(RestMCPConfig):
 
 
 class RedisMCPConfig(CacheMCPConfig):
-    """Configuration for Redis MCP server."""
+    """Configuration for official Redis MCP server.
+
+    Uses the official @modelcontextprotocol/server-redis package.
+    """
+
+    # Official Redis MCP server configuration using Docker
+    runtime: RuntimeType = RuntimeType.BINARY  # Use binary for Docker command
+    transport: TransportType = TransportType.STDIO  # Standard MCP transport
+
+    # Command to run the official Redis MCP server via Docker
+    command: str = "docker"
+    args: List[str] = Field(default_factory=lambda: ["run", "-i", "--rm", "mcp/redis"])
+
+    # Redis connection URL - passed as environment variable to MCP server
+    redis_url: str = Field(
+        default="redis://localhost:6379",
+        description="Redis connection URL for the MCP server",
+    )
+
+    # Redis connection parameters for internal wrapper compatibility
+    password: Optional[SecretStr] = Field(default=None)
+    ssl: bool = Field(default=False, description="Enable SSL/TLS")
 
     model_config = ConfigDict(env_prefix="TRIPSAGE_MCP_REDIS_")
+
+    @model_validator(mode="after")
+    def validate_redis_url(self) -> "RedisMCPConfig":
+        """Build Redis URL from components if needed."""
+        if not self.redis_url.startswith("redis://"):
+            # Build URL from host/port/password components
+            auth_part = ""
+            if self.password:
+                auth_part = f":{self.password.get_secret_value()}@"
+
+            protocol = "rediss" if self.ssl else "redis"
+            self.redis_url = (
+                f"{protocol}://{auth_part}{self.host}:{self.port}/{self.db_index}"
+            )
+
+        # Add Redis URL as an argument to the Docker command
+        if self.redis_url not in self.args:
+            self.args.append(self.redis_url)
+
+        return self
 
 
 class Crawl4AIMCPConfig(WebCrawlMCPConfig):
