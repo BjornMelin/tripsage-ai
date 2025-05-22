@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useDeals, useDealAlerts, useFeaturedDeals, useSavedDeals } from '../use-deals';
 import { useDealsStore } from '@/stores/deals-store';
-import { DealType } from '@/types/deals';
+import type { DealType } from '@/types/deals';
 
 // Mock current timestamp for consistent testing
 const mockTimestamp = '2025-05-20T12:00:00.000Z';

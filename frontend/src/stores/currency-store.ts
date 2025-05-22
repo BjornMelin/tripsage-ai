@@ -2,12 +2,12 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { z } from "zod";
 import {
-  CurrencyCode,
-  Currency,
-  ExchangeRate,
-  CurrencyState,
-  ConversionResult,
-  CurrencyPair,
+  type CurrencyCode,
+  type Currency,
+  type ExchangeRate,
+  type CurrencyState,
+  type ConversionResult,
+  type CurrencyPair,
   CurrencySchema,
   ExchangeRateSchema,
   CurrencyCodeSchema,

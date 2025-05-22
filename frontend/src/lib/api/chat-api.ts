@@ -1,11 +1,11 @@
-import { ChatCompletionRequest, ChatCompletionResponse, Message } from '@/types/chat';
+import { type ChatCompletionRequest, type ChatCompletionResponse, Message } from '@/types/chat';
 import { z } from 'zod';
 
 // The base URL for API requests
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || '';
 
 // Extend fetch with timeout functionality
-const fetchWithTimeout = async (url: string, options: RequestInit, timeout: number = 30000) => {
+const fetchWithTimeout = async (url: string, options: RequestInit, timeout = 30000) => {
   const controller = new AbortController();
   const id = setTimeout(() => controller.abort(), timeout);
   

@@ -148,7 +148,7 @@ export const useSearchStore = create<SearchState>()(
       setSearchType: (type) => 
         set((state) => {
           // Initialize default parameters if not set yet
-          let updatedState: Partial<SearchState> = { currentSearchType: type };
+          const updatedState: Partial<SearchState> = { currentSearchType: type };
           
           switch (type) {
             case "flight":

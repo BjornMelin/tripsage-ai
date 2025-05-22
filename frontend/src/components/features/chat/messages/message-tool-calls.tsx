@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { ToolCall, ToolResult } from '@/types/chat';
+import type { ToolCall, ToolResult } from '@/types/chat';
 import { cn } from '@/lib/utils';
 import { AlertCircle, Check, ChevronDown, ChevronUp, Loader2, TerminalSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';

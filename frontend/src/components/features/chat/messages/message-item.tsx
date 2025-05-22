@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Message, MessageRole } from '@/types/chat';
+import { type Message, MessageRole } from '@/types/chat';
 import { cn } from '@/lib/utils';
 import { Avatar } from '@/components/ui/avatar';
 import { Bot, User, Info, Server } from 'lucide-react';

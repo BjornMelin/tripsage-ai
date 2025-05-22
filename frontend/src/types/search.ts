@@ -133,24 +133,30 @@ export interface SavedSearch {
   lastUsed?: string;
 }
 
+// Filter value type
+export type FilterValue = string | number | boolean | string[] | number[];
+
+// Metadata value type  
+export type MetadataValue = string | number | boolean | Record<string, unknown>;
+
 // Search response from API
 export interface SearchResponse {
   results: SearchResults;
   totalResults: number;
-  filters?: Record<string, any>;
-  metadata?: Record<string, any>;
+  filters?: Record<string, FilterValue>;
+  metadata?: Record<string, MetadataValue>;
 }
 
 // Filter option
 export interface FilterOption {
   id: string;
   label: string;
-  value: any;
+  value: FilterValue;
   type: 'checkbox' | 'radio' | 'range' | 'select';
   count?: number;
   options?: Array<{
     label: string;
-    value: any;
+    value: FilterValue;
     count?: number;
   }>;
 }

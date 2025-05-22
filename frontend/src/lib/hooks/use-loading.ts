@@ -203,7 +203,7 @@ export function useAsyncLoading<T>(
 /**
  * Hook for managing loading state with debounced updates
  */
-export function useDebouncedLoading(delay: number = 300): UseLoadingReturn {
+export function useDebouncedLoading(delay = 300): UseLoadingReturn {
   const loading = useLoading();
   const debounceRef = useRef<NodeJS.Timeout>();
 

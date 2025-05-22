@@ -1,4 +1,4 @@
-import { NextRequest } from 'next/server';
+import type { NextRequest } from 'next/server';
 import { randomUUID } from 'crypto';
 import { z } from 'zod';
 import path from 'path';
