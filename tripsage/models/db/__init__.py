@@ -38,10 +38,15 @@ from tripsage.models.db.trip import Trip, TripStatus, TripType
 from tripsage.models.db.trip_comparison import TripComparison
 from tripsage.models.db.trip_note import TripNote
 from tripsage.models.db.user import User
+from tripsage.models.db.api_key import ApiKeyDB, ApiKeyCreate, ApiKeyUpdate
 
 __all__ = [
     # User
     "User",
+    # API Key
+    "ApiKeyDB",
+    "ApiKeyCreate", 
+    "ApiKeyUpdate",
     # Trip
     "Trip",
     "TripStatus",

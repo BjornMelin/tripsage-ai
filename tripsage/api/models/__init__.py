@@ -68,32 +68,32 @@ from tripsage.api.models.flights import (
     SavedFlightResponse,
 )
 
-# Itineraries models
-from tripsage.api.models.itineraries import (
-    AccommodationItineraryItem,
-    ActivityItineraryItem,
-    FlightItineraryItem,
-    Itinerary,
-    ItineraryConflictCheckResponse,
-    ItineraryCreateRequest,
-    ItineraryDay,
-    ItineraryItem,
-    ItineraryItemCreateRequest,
-    ItineraryItemType,
-    ItineraryItemUpdateRequest,
-    ItineraryOptimizeRequest,
-    ItineraryOptimizeResponse,
-    ItinerarySearchRequest,
-    ItinerarySearchResponse,
-    ItineraryShareSettings,
-    ItineraryStatus,
-    ItineraryUpdateRequest,
-    ItineraryVisibility,
-    Location,
-    OptimizationSetting,
-    TimeSlot,
-    TransportationItineraryItem,
-)
+# Itineraries models - temporarily commented out due to Pydantic V2 compatibility issues
+# from tripsage.api.models.itineraries import (
+#     AccommodationItineraryItem,
+#     ActivityItineraryItem,
+#     FlightItineraryItem,
+#     Itinerary,
+#     ItineraryConflictCheckResponse,
+#     ItineraryCreateRequest,
+#     ItineraryDay,
+#     ItineraryItem,
+#     ItineraryItemCreateRequest,
+#     ItineraryItemType,
+#     ItineraryItemUpdateRequest,
+#     ItineraryOptimizeRequest,
+#     ItineraryOptimizeResponse,
+#     ItinerarySearchRequest,
+#     ItinerarySearchResponse,
+#     ItineraryShareSettings,
+#     ItineraryStatus,
+#     ItineraryUpdateRequest,
+#     ItineraryVisibility,
+#     Location,
+#     OptimizationSetting,
+#     TimeSlot,
+#     TransportationItineraryItem,
+# )
 
 # Request models
 from tripsage.api.models.requests.auth import (

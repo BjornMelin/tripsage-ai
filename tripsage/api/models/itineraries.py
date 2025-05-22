@@ -6,7 +6,7 @@ This module defines Pydantic V2 models for itinerary-related requests and respon
 
 from datetime import date, datetime
 from enum import Enum
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -133,13 +133,13 @@ class ItineraryItem(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: str = Field(description="Unique identifier for the itinerary item")
-    type: ItineraryItemType = Field(description="Type of itinerary item")
+    item_item_type: ItineraryItemType = Field(description="Type of itinerary item")
     title: str = Field(description="Title or name of the item")
     description: Optional[str] = Field(
         default=None,
         description="Description of the item",
     )
-    date: date = Field(description="Date of the itinerary item")
+    item_date: date = Field(description="Date of the itinerary item")
     time_slot: Optional[TimeSlot] = Field(
         default=None,
         description="Time slot for the item, if applicable",
@@ -173,9 +173,8 @@ class ItineraryItem(BaseModel):
 class FlightItineraryItem(ItineraryItem):
     """Model for a flight item in an itinerary."""
 
-    type: ItineraryItemType = Field(
-        ItineraryItemType.FLIGHT,
-        const=True,
+    item_type: Literal[ItineraryItemType.FLIGHT] = Field(
+        default=ItineraryItemType.FLIGHT,
         description="Type is always 'flight' for this model",
     )
     flight_number: str = Field(description="Flight number")
@@ -209,7 +208,7 @@ class FlightItineraryItem(ItineraryItem):
 class AccommodationItineraryItem(ItineraryItem):
     """Model for an accommodation item in an itinerary."""
 
-    type: ItineraryItemType = Field(
+    item_type: ItineraryItemType = Field(
         ItineraryItemType.ACCOMMODATION,
         const=True,
         description="Type is always 'accommodation' for this model",
@@ -240,7 +239,7 @@ class AccommodationItineraryItem(ItineraryItem):
 class ActivityItineraryItem(ItineraryItem):
     """Model for an activity item in an itinerary."""
 
-    type: ItineraryItemType = Field(
+    item_type: ItineraryItemType = Field(
         ItineraryItemType.ACTIVITY,
         const=True,
         description="Type is always 'activity' for this model",
@@ -267,7 +266,7 @@ class ActivityItineraryItem(ItineraryItem):
 class TransportationItineraryItem(ItineraryItem):
     """Model for a transportation item in an itinerary."""
 
-    type: ItineraryItemType = Field(
+    item_type: ItineraryItemType = Field(
         ItineraryItemType.TRANSPORTATION,
         const=True,
         description="Type is always 'transportation' for this model",
@@ -475,7 +474,7 @@ class ItineraryUpdateRequest(BaseModel):
 class ItineraryItemCreateRequest(BaseModel):
     """Request model for adding an item to an itinerary."""
 
-    type: ItineraryItemType = Field(description="Type of itinerary item")
+    item_type: ItineraryItemType = Field(description="Type of itinerary item")
     title: str = Field(
         description="Title or name of the item",
         min_length=1,
@@ -485,7 +484,7 @@ class ItineraryItemCreateRequest(BaseModel):
         default=None,
         description="Description of the item",
     )
-    date: date = Field(description="Date of the itinerary item")
+    item_date: date = Field(description="Date of the itinerary item")
     time_slot: Optional[TimeSlot] = Field(
         default=None,
         description="Time slot for the item, if applicable",
