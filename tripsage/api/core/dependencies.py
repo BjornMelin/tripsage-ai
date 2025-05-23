@@ -5,15 +5,14 @@ Depends() function to inject services and components into endpoint handlers.
 """
 
 import os
-from typing import Any, Dict, AsyncGenerator
+from typing import Any, AsyncGenerator, Dict
 
 from fastapi import Depends
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from tripsage.api.core.config import get_settings
 from tripsage.mcp_abstraction import mcp_manager
 from tripsage.utils.session_memory import initialize_session_memory
-
 
 # Database configuration
 _engine = None
@@ -26,14 +25,14 @@ def get_database_url() -> str:
     db_url = os.getenv("SUPABASE_DB_URL")
     if db_url:
         return db_url
-    
+
     # Fall back to standard PostgreSQL URL
     db_host = os.getenv("POSTGRES_HOST", "localhost")
     db_port = os.getenv("POSTGRES_PORT", "5432")
     db_name = os.getenv("POSTGRES_DB", "tripsage")
     db_user = os.getenv("POSTGRES_USER", "postgres")
     db_password = os.getenv("POSTGRES_PASSWORD", "postgres")
-    
+
     return f"postgresql+asyncpg://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
 
 

@@ -1,7 +1,8 @@
 import { useChat, type Message as AiMessage } from "ai/react";
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { useChatStore } from "@/stores/chat-store";
+import { useApiKeyStore } from "@/stores/api-key-store";
 import type { Message, MessageRole, ChatSession } from "@/types/chat";
 
 interface UseChatAiOptions {
@@ -30,6 +31,20 @@ export function useChatAi(options: UseChatAiOptions = {}) {
 
   // Generate a session ID if not provided
   const sessionIdRef = useRef<string>(providedSessionId || uuidv4());
+  
+  // Auth and API key state
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [isInitialized, setIsInitialized] = useState(false);
+  
+  const {
+    isAuthenticated,
+    isApiKeyValid,
+    authError: storeAuthError,
+    token,
+    loadKeys,
+    validateKey,
+    setAuthError: setStoreAuthError,
+  } = useApiKeyStore();
 
   // Access chat store functions
   const {
@@ -43,8 +58,44 @@ export function useChatAi(options: UseChatAiOptions = {}) {
     cancelStream,
   } = useChatStore();
 
-  // Ensure the session exists
+  // Initialize authentication and validate API keys
   useEffect(() => {
+    const initializeAuth = async () => {
+      if (!isAuthenticated) {
+        setAuthError("Authentication required. Please log in to use the chat.");
+        setIsInitialized(false);
+        return;
+      }
+
+      // Load keys if authenticated
+      try {
+        await loadKeys();
+        
+        // Validate the OpenAI key (required for chat)
+        const hasValidKey = await validateKey("openai");
+        if (!hasValidKey) {
+          setAuthError("Valid OpenAI API key required. Please add one in your API settings.");
+          setIsInitialized(false);
+          return;
+        }
+
+        setAuthError(null);
+        setStoreAuthError(null);
+        setIsInitialized(true);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Authentication failed";
+        setAuthError(message);
+        setIsInitialized(false);
+      }
+    };
+
+    initializeAuth();
+  }, [isAuthenticated, loadKeys, validateKey, setStoreAuthError]);
+
+  // Ensure the session exists (only after auth is initialized)
+  useEffect(() => {
+    if (!isInitialized) return;
+    
     const sessionId = sessionIdRef.current;
 
     // Check if this session already exists
@@ -72,6 +123,7 @@ export function useChatAi(options: UseChatAiOptions = {}) {
       setActiveSessionId(sessionId);
     }
   }, [
+    isInitialized,
     sessions,
     activeSessionId,
     setActiveSessionId,
@@ -90,7 +142,7 @@ export function useChatAi(options: UseChatAiOptions = {}) {
         content: msg.content,
       })) || [];
 
-  // Set up Vercel AI SDK chat
+  // Set up Vercel AI SDK chat (only if initialized)
   const {
     messages: aiSdkMessages,
     input,
@@ -104,6 +156,9 @@ export function useChatAi(options: UseChatAiOptions = {}) {
     api: "/api/chat",
     initialMessages: aiMessages,
     id: sessionIdRef.current,
+    headers: {
+      ...(token && { Authorization: `Bearer ${token}` }),
+    },
     onResponse: (response) => {
       // Check for rate limit headers
       const retryAfter = response.headers.get("X-RateLimit-Reset");
@@ -226,6 +281,18 @@ export function useChatAi(options: UseChatAiOptions = {}) {
   // Handle sending a user message
   const sendMessage = useCallback(
     (content: string, attachments: string[] = []) => {
+      // Check if initialized and authenticated
+      if (!isInitialized || !isAuthenticated) {
+        setAuthError("Please authenticate before sending messages");
+        return;
+      }
+
+      // Check for valid API key
+      if (!isApiKeyValid) {
+        setAuthError("Valid API key required before sending messages");
+        return;
+      }
+
       // Set agent status to thinking
       setAgentStatus({
         sessionId: sessionIdRef.current,
@@ -264,7 +331,7 @@ export function useChatAi(options: UseChatAiOptions = {}) {
 
       handleSubmit(submitEvent);
     },
-    [addMessage, handleSubmit, setAgentStatus]
+    [addMessage, handleSubmit, setAgentStatus, isInitialized, isAuthenticated, isApiKeyValid]
   );
 
   // Handle stopping the generation
@@ -284,7 +351,13 @@ export function useChatAi(options: UseChatAiOptions = {}) {
     messages:
       sessions.find((s) => s.id === sessionIdRef.current)?.messages || [],
     isLoading,
-    error,
+    error: error || authError || storeAuthError,
+
+    // Auth state
+    isAuthenticated,
+    isInitialized,
+    isApiKeyValid,
+    authError: authError || storeAuthError,
 
     // Input state (from AI SDK)
     input,

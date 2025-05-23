@@ -7,7 +7,7 @@ __all__ = [
     "accommodations",
     "auth",
     "chat",
-    "destinations", 
+    "destinations",
     "flights",
     "health",
     "itineraries",
