@@ -6,6 +6,7 @@ import type {
   FlightSearchParams,
   AccommodationSearchParams,
   ActivitySearchParams,
+  DestinationSearchParams,
   SearchResults,
   SavedSearch,
   FilterOption,
@@ -18,6 +19,7 @@ interface SearchState {
   flightParams: Partial<FlightSearchParams>;
   accommodationParams: Partial<AccommodationSearchParams>;
   activityParams: Partial<ActivitySearchParams>;
+  destinationParams: Partial<DestinationSearchParams>;
 
   // Results
   results: SearchResults;
@@ -48,6 +50,7 @@ interface SearchState {
     params: Partial<AccommodationSearchParams>
   ) => void;
   updateActivityParams: (params: Partial<ActivitySearchParams>) => void;
+  updateDestinationParams: (params: Partial<DestinationSearchParams>) => void;
   resetParams: (type?: SearchType) => void;
 
   setResults: (results: SearchResults) => void;
@@ -91,6 +94,12 @@ const getDefaultSearchParams = (type: SearchType): Partial<SearchParams> => {
       return {
         ...baseParams,
       };
+    case "destination":
+      return {
+        query: "",
+        limit: 10,
+        types: ["locality", "country"],
+      };
     default:
       return baseParams;
   }
@@ -108,6 +117,7 @@ export const useSearchStore = create<SearchState>()(
       flightParams: {},
       accommodationParams: {},
       activityParams: {},
+      destinationParams: {},
 
       results: {},
       isLoading: false,
@@ -117,12 +127,14 @@ export const useSearchStore = create<SearchState>()(
         flight: [],
         accommodation: [],
         activity: [],
+        destination: [],
       },
       activeFilters: {},
       availableSortOptions: {
         flight: [],
         accommodation: [],
         activity: [],
+        destination: [],
       },
       activeSortOption: null,
 
@@ -136,6 +148,7 @@ export const useSearchStore = create<SearchState>()(
           flightParams,
           accommodationParams,
           activityParams,
+          destinationParams,
         } = get();
 
         if (!currentSearchType) return null;
@@ -147,6 +160,8 @@ export const useSearchStore = create<SearchState>()(
             return accommodationParams as AccommodationSearchParams;
           case "activity":
             return activityParams as ActivitySearchParams;
+          case "destination":
+            return destinationParams as DestinationSearchParams;
           default:
             return null;
         }
@@ -178,6 +193,12 @@ export const useSearchStore = create<SearchState>()(
                   getDefaultSearchParams("activity");
               }
               break;
+            case "destination":
+              if (Object.keys(state.destinationParams).length === 0) {
+                updatedState.destinationParams =
+                  getDefaultSearchParams("destination");
+              }
+              break;
           }
 
           return updatedState;
@@ -199,6 +220,11 @@ export const useSearchStore = create<SearchState>()(
           activityParams: { ...state.activityParams, ...params },
         })),
 
+      updateDestinationParams: (params) =>
+        set((state) => ({
+          destinationParams: { ...state.destinationParams, ...params },
+        })),
+
       // Reset search parameters
       resetParams: (type) =>
         set((state) => {
@@ -207,6 +233,7 @@ export const useSearchStore = create<SearchState>()(
               flightParams: {},
               accommodationParams: {},
               activityParams: {},
+              destinationParams: {},
             };
           }
 
@@ -219,6 +246,10 @@ export const useSearchStore = create<SearchState>()(
               };
             case "activity":
               return { activityParams: getDefaultSearchParams("activity") };
+            case "destination":
+              return {
+                destinationParams: getDefaultSearchParams("destination"),
+              };
             default:
               return {};
           }

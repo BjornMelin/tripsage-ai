@@ -181,7 +181,12 @@
   - [x] Accommodation search integration with API
   - [x] AccommodationCard component
   - [x] useAccommodationSearch hook
-- [ ] Activities search (`/dashboard/search/activities`)
+- [x] Activities search (`/dashboard/search/activities`) ✅ COMPLETED
+  - [x] ActivitySearchForm with 12 activity categories
+  - [x] ActivityCard component for results display
+  - [x] useActivitySearch hook with API integration
+  - [x] Full search page with form and results
+  - [x] Comprehensive test coverage
 - [ ] Destinations search (`/dashboard/search/destinations`)
 - [ ] Unified search features
   - [ ] Recent searches
