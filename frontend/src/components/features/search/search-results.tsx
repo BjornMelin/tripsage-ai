@@ -3,19 +3,23 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { AccommodationCard } from "./accommodation-card";
 import type {
   SearchType,
   Flight,
   Accommodation,
   Activity,
+  SearchResults as SearchResultsType,
+  SearchResult,
 } from "@/types/search";
 
 interface SearchResultsProps {
-  type: SearchType;
-  results: Flight[] | Accommodation[] | Activity[];
+  type?: SearchType;
+  results: SearchResultsType | Flight[] | Accommodation[] | Activity[];
   loading?: boolean;
   onFilter?: (filters: Record<string, any>) => void;
   onSort?: (sortBy: string, direction: "asc" | "desc") => void;
+  onSelectResult?: (result: SearchResult) => void;
 }
 
 export function SearchResults({
@@ -24,10 +28,34 @@ export function SearchResults({
   loading = false,
   onFilter,
   onSort,
+  onSelectResult,
 }: SearchResultsProps) {
   const [sortBy, setSortBy] = useState<string>("price");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const [activeView, setActiveView] = useState<"list" | "grid" | "map">("list");
+
+  // Extract the actual results array based on the type
+  const getResultsArray = (): SearchResult[] => {
+    if (!results) return [];
+    
+    // If results is already an array
+    if (Array.isArray(results)) return results;
+    
+    // If results is SearchResultsType, extract based on type
+    if (type === "accommodation" && "accommodations" in results) {
+      return results.accommodations || [];
+    }
+    if (type === "flight" && "flights" in results) {
+      return results.flights || [];
+    }
+    if (type === "activity" && "activities" in results) {
+      return results.activities || [];
+    }
+    
+    return [];
+  };
+
+  const resultsArray = getResultsArray();
 
   const handleSort = (field: string) => {
     const newDirection =
@@ -45,7 +73,7 @@ export function SearchResults({
       <CardHeader className="pb-2">
         <div className="flex justify-between items-center">
           <CardTitle>
-            {loading ? "Searching..." : `${results.length} Results`}
+            {loading ? "Searching..." : `${resultsArray.length} Results`}
           </CardTitle>
           <div className="flex space-x-2">
             <Button
@@ -140,7 +168,7 @@ export function SearchResults({
           <div className="py-8 flex justify-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
           </div>
-        ) : results.length === 0 ? (
+        ) : resultsArray.length === 0 ? (
           <div className="py-8 text-center">
             <p className="text-muted-foreground">
               No results found. Try adjusting your search criteria.
@@ -155,7 +183,7 @@ export function SearchResults({
             }
           >
             {type === "flight" &&
-              (results as Flight[]).map((flight) => (
+              (resultsArray as Flight[]).map((flight) => (
                 <FlightResultCard
                   key={flight.id}
                   flight={flight}
@@ -163,15 +191,15 @@ export function SearchResults({
                 />
               ))}
             {type === "accommodation" &&
-              (results as Accommodation[]).map((accommodation) => (
-                <AccommodationResultCard
+              (resultsArray as Accommodation[]).map((accommodation) => (
+                <AccommodationCard
                   key={accommodation.id}
                   accommodation={accommodation}
-                  view={activeView}
+                  onSelect={onSelectResult}
                 />
               ))}
             {type === "activity" &&
-              (results as Activity[]).map((activity) => (
+              (resultsArray as Activity[]).map((activity) => (
                 <ActivityResultCard
                   key={activity.id}
                   activity={activity}
@@ -181,7 +209,7 @@ export function SearchResults({
           </div>
         )}
 
-        {!loading && results.length > 0 && (
+        {!loading && resultsArray.length > 0 && (
           <div className="mt-4 flex justify-center">
             <Button variant="outline">Load More</Button>
           </div>
