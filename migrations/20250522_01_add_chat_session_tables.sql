@@ -99,21 +99,31 @@ EXECUTE FUNCTION update_updated_at_column();
 CREATE OR REPLACE FUNCTION get_recent_messages(
     p_session_id UUID,
     p_limit INTEGER DEFAULT 10,
-    p_max_tokens INTEGER DEFAULT 8000
+    p_max_tokens INTEGER DEFAULT 8000,
+    p_offset INTEGER DEFAULT 0,
+    p_chars_per_token INTEGER DEFAULT 4
 ) RETURNS TABLE (
     id BIGINT,
     role TEXT,
     content TEXT,
     created_at TIMESTAMP WITH TIME ZONE,
     metadata JSONB,
-    estimated_tokens INTEGER
+    estimated_tokens INTEGER,
+    total_messages BIGINT
 ) AS $$
 DECLARE
     v_total_tokens INTEGER := 0;
     v_message RECORD;
+    v_messages RECORD[];
+    v_total_messages BIGINT;
 BEGIN
-    -- Estimate tokens as roughly 4 characters per token (conservative estimate)
-    -- Return most recent messages that fit within token limit
+    -- Get total message count for pagination info
+    SELECT COUNT(*) INTO v_total_messages
+    FROM chat_messages
+    WHERE session_id = p_session_id;
+
+    -- Estimate tokens using configurable chars per token
+    -- Collect messages that fit within token limit
     FOR v_message IN 
         SELECT 
             m.id,
@@ -121,26 +131,39 @@ BEGIN
             m.content,
             m.created_at,
             m.metadata,
-            CEIL(LENGTH(m.content) / 4.0)::INTEGER as estimated_tokens
+            LEAST(
+                CEIL(LENGTH(m.content)::FLOAT / p_chars_per_token)::INTEGER,
+                p_max_tokens  -- Cap single message tokens at max
+            ) as estimated_tokens
         FROM chat_messages m
         WHERE m.session_id = p_session_id
         ORDER BY m.created_at DESC
-        LIMIT p_limit
+        LIMIT p_limit OFFSET p_offset
     LOOP
         -- Check if adding this message would exceed token limit
         IF v_total_tokens + v_message.estimated_tokens > p_max_tokens THEN
+            -- If this is the first message and it exceeds limit, include it partially
+            IF v_total_tokens = 0 THEN
+                v_messages := ARRAY[v_message];
+            END IF;
             EXIT;
         END IF;
         
         v_total_tokens := v_total_tokens + v_message.estimated_tokens;
-        
+        v_messages := v_message || v_messages; -- Prepend to maintain chronological order
+    END LOOP;
+    
+    -- Return messages in chronological order (oldest first)
+    FOREACH v_message IN ARRAY v_messages
+    LOOP
         RETURN QUERY SELECT 
             v_message.id,
             v_message.role,
             v_message.content,
             v_message.created_at,
             v_message.metadata,
-            v_message.estimated_tokens;
+            v_message.estimated_tokens,
+            v_total_messages;
     END LOOP;
     
     RETURN;
@@ -185,3 +208,71 @@ END;
 $$ LANGUAGE plpgsql;
 
 COMMENT ON FUNCTION cleanup_old_sessions IS 'Removes old ended sessions for maintenance';
+
+-- Create function to expire inactive sessions
+CREATE OR REPLACE FUNCTION expire_inactive_sessions(p_hours_inactive INTEGER DEFAULT 24)
+RETURNS INTEGER AS $$
+DECLARE
+    v_expired_count INTEGER;
+BEGIN
+    WITH expired AS (
+        UPDATE chat_sessions
+        SET ended_at = NOW()
+        WHERE ended_at IS NULL
+        AND updated_at < NOW() - INTERVAL '1 hour' * p_hours_inactive
+        RETURNING 1
+    )
+    SELECT COUNT(*) INTO v_expired_count FROM expired;
+    
+    RETURN v_expired_count;
+END;
+$$ LANGUAGE plpgsql;
+
+COMMENT ON FUNCTION expire_inactive_sessions IS 'Expires sessions that have been inactive for specified hours';
+
+-- Create audit log table for session operations
+CREATE TABLE IF NOT EXISTS chat_session_audit (
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    session_id UUID NOT NULL,
+    user_id BIGINT NOT NULL,
+    action TEXT NOT NULL,
+    details JSONB DEFAULT '{}',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    
+    CONSTRAINT chat_session_audit_action_check CHECK (action IN ('created', 'updated', 'ended', 'expired', 'deleted'))
+);
+
+CREATE INDEX idx_chat_session_audit_session_id ON chat_session_audit(session_id);
+CREATE INDEX idx_chat_session_audit_user_id ON chat_session_audit(user_id);
+CREATE INDEX idx_chat_session_audit_created_at ON chat_session_audit(created_at DESC);
+
+COMMENT ON TABLE chat_session_audit IS 'Audit log for chat session operations';
+
+-- Create trigger for session audit logging
+CREATE OR REPLACE FUNCTION audit_chat_session_changes()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF TG_OP = 'INSERT' THEN
+        INSERT INTO chat_session_audit (session_id, user_id, action, details)
+        VALUES (NEW.id, NEW.user_id, 'created', jsonb_build_object('metadata', NEW.metadata));
+    ELSIF TG_OP = 'UPDATE' THEN
+        IF OLD.ended_at IS NULL AND NEW.ended_at IS NOT NULL THEN
+            INSERT INTO chat_session_audit (session_id, user_id, action, details)
+            VALUES (NEW.id, NEW.user_id, 'ended', jsonb_build_object('duration_seconds', 
+                EXTRACT(EPOCH FROM (NEW.ended_at - NEW.created_at))));
+        ELSE
+            INSERT INTO chat_session_audit (session_id, user_id, action, details)
+            VALUES (NEW.id, NEW.user_id, 'updated', jsonb_build_object('changes', 
+                jsonb_build_object('old_metadata', OLD.metadata, 'new_metadata', NEW.metadata)));
+        END IF;
+    ELSIF TG_OP = 'DELETE' THEN
+        INSERT INTO chat_session_audit (session_id, user_id, action, details)
+        VALUES (OLD.id, OLD.user_id, 'deleted', jsonb_build_object('deleted_at', NOW()));
+    END IF;
+    RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER audit_chat_sessions
+AFTER INSERT OR UPDATE OR DELETE ON chat_sessions
+FOR EACH ROW EXECUTE FUNCTION audit_chat_session_changes();

@@ -3,12 +3,17 @@
 Handles chat session lifecycle, message persistence, and context management.
 """
 
+import asyncio
+import html
 import logging
+import re
+import time
 from datetime import datetime
 from typing import Any, Optional
 from uuid import UUID, uuid4
 
 from sqlalchemy import text
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from tripsage.api.core.exceptions import NotFoundError, ValidationError
@@ -24,16 +29,163 @@ from tripsage.models.db.chat import (
 logger = logging.getLogger(__name__)
 
 
+class RateLimiter:
+    """Simple in-memory rate limiter for message creation."""
+
+    def __init__(self, max_messages: int = 10, window_seconds: int = 60):
+        """Initialize rate limiter.
+
+        Args:
+            max_messages: Maximum messages allowed per window
+            window_seconds: Time window in seconds
+        """
+        self.max_messages = max_messages
+        self.window_seconds = window_seconds
+        self.user_windows: dict[int, list[float]] = {}
+
+    def is_allowed(self, user_id: int, count: int = 1) -> bool:
+        """Check if user is allowed to send messages.
+
+        Args:
+            user_id: User ID to check
+            count: Number of messages to check (default 1)
+
+        Returns:
+            True if allowed, False if rate limited
+        """
+        now = time.time()
+        window_start = now - self.window_seconds
+
+        # Get user's message timestamps
+        if user_id not in self.user_windows:
+            self.user_windows[user_id] = []
+
+        # Remove old timestamps
+        self.user_windows[user_id] = [
+            ts for ts in self.user_windows[user_id] if ts > window_start
+        ]
+
+        # Check if under limit
+        if len(self.user_windows[user_id]) + count > self.max_messages:
+            return False
+
+        # Add current timestamps
+        for _ in range(count):
+            self.user_windows[user_id].append(now)
+        return True
+
+    def check_rate_limit(self, user_id: int, count: int = 1) -> bool:
+        """Alias for is_allowed for backward compatibility."""
+        return self.is_allowed(user_id, count)
+
+    def reset_user(self, user_id: int) -> None:
+        """Reset rate limit for a user.
+
+        Args:
+            user_id: User ID to reset
+        """
+        if user_id in self.user_windows:
+            del self.user_windows[user_id]
+
+
 class ChatService:
     """Service for managing chat sessions and messages."""
 
-    def __init__(self, db: AsyncSession):
+    def __init__(
+        self,
+        db: AsyncSession,
+        rate_limiter: Optional[RateLimiter] = None,
+        chars_per_token: int = 4,
+    ):
         """Initialize chat service.
 
         Args:
             db: Database session
+            rate_limiter: Optional rate limiter instance
+            chars_per_token: Characters per token for estimation
         """
         self.db = db
+        self.rate_limiter = rate_limiter or RateLimiter()
+        self.chars_per_token = chars_per_token
+        self._retry_count = 3
+        self._retry_delay = 0.1
+
+    def _sanitize_content(self, content: str) -> str:
+        """Sanitize message content to prevent XSS and injection attacks.
+
+        Args:
+            content: Raw message content
+
+        Returns:
+            Sanitized content
+        """
+        # HTML escape special characters
+        content = html.escape(content)
+
+        # Remove any null bytes
+        content = content.replace("\x00", "")
+
+        # Limit consecutive whitespace
+        content = re.sub(r"\s{3,}", "  ", content)
+
+        return content.strip()
+
+    def _validate_metadata(self, metadata: Any) -> dict[str, Any]:
+        """Validate and normalize metadata.
+
+        Args:
+            metadata: Raw metadata
+
+        Returns:
+            Validated metadata dictionary
+        """
+        if metadata is None:
+            return {}
+
+        if not isinstance(metadata, dict):
+            raise ValidationError("Metadata must be a dictionary")
+
+        # Remove None values and ensure all keys are strings
+        cleaned = {}
+        for key, value in metadata.items():
+            if not isinstance(key, str):
+                raise ValidationError("Metadata keys must be strings")
+            if value is not None:
+                cleaned[key] = value
+
+        return cleaned
+
+    async def _execute_with_retry(self, query, params: dict) -> Any:
+        """Execute a database query with retry logic.
+
+        Args:
+            query: SQL query to execute
+            params: Query parameters
+
+        Returns:
+            Query result
+
+        Raises:
+            OperationalError: If all retries fail
+        """
+        last_error = None
+
+        for attempt in range(self._retry_count):
+            try:
+                return await self.db.execute(query, params)
+            except OperationalError as e:
+                last_error = e
+                if attempt < self._retry_count - 1:
+                    await asyncio.sleep(self._retry_delay * (attempt + 1))
+                    logger.warning(
+                        f"Database query failed (attempt {attempt + 1}/{self._retry_count}): {e}"
+                    )
+                else:
+                    logger.error(
+                        f"Database query failed after {self._retry_count} attempts: {e}"
+                    )
+
+        raise last_error
 
     async def create_session(
         self, user_id: int, metadata: Optional[dict[str, Any]] = None
@@ -48,7 +200,7 @@ class ChatService:
             Created chat session
         """
         session_id = uuid4()
-        metadata = metadata or {}
+        metadata = self._validate_metadata(metadata)
 
         query = text(
             """
@@ -58,13 +210,15 @@ class ChatService:
             """
         )
 
-        result = await self.db.execute(
+        result = await self._execute_with_retry(
             query, {"id": session_id, "user_id": user_id, "metadata": metadata}
         )
         row = result.fetchone()
 
         if not row:
             raise ValidationError("Failed to create chat session")
+
+        logger.info(f"Created chat session {session_id} for user {user_id}")
 
         return ChatSessionDB(
             id=row.id,
@@ -174,6 +328,7 @@ class ChatService:
         role: str,
         content: str,
         metadata: Optional[dict[str, Any]] = None,
+        user_id: Optional[int] = None,
     ) -> ChatMessageDB:
         """Add a message to a chat session.
 
@@ -182,16 +337,29 @@ class ChatService:
             role: Message role (user/assistant/system)
             content: Message content
             metadata: Optional message metadata
+            user_id: Optional user ID for rate limiting
 
         Returns:
             Created message
 
         Raises:
-            ValidationError: If message validation fails
+            ValidationError: If message validation fails or rate limit exceeded
         """
-        metadata = metadata or {}
+        # Check rate limit if user_id provided
+        if user_id and role == "user":
+            if not self.rate_limiter.check_rate_limit(user_id):
+                raise ValidationError(
+                    f"Rate limit exceeded. Maximum {self.rate_limiter.max_messages} messages "
+                    f"per {self.rate_limiter.window_seconds} seconds."
+                )
 
-        # Validate message
+        # Sanitize content
+        content = self._sanitize_content(content)
+
+        # Validate metadata
+        metadata = self._validate_metadata(metadata)
+
+        # Validate message structure
         try:
             ChatMessageDB(
                 id=0,  # Dummy ID for validation
@@ -213,7 +381,7 @@ class ChatService:
             """
         )
 
-        result = await self.db.execute(
+        result = await self._execute_with_retry(
             query,
             {
                 "session_id": session_id,
@@ -241,6 +409,102 @@ class ChatService:
             created_at=row.created_at,
             metadata=row.metadata or {},
         )
+
+    async def add_messages_batch(
+        self,
+        session_id: UUID,
+        messages: list[tuple[str, str, Optional[dict[str, Any]]]],
+        user_id: Optional[int] = None,
+    ) -> list[ChatMessageDB]:
+        """Add multiple messages to a chat session in a single transaction.
+
+        Args:
+            session_id: Session ID
+            messages: List of (role, content, metadata) tuples
+            user_id: Optional user ID for rate limiting
+
+        Returns:
+            List of created messages
+
+        Raises:
+            ValidationError: If any message validation fails or rate limit exceeded
+        """
+        # Count user messages for rate limiting
+        if user_id:
+            user_message_count = sum(1 for role, _, _ in messages if role == "user")
+            if user_message_count > 0 and not self.rate_limiter.check_rate_limit(
+                user_id, count=user_message_count
+            ):
+                raise ValidationError(
+                    f"Rate limit exceeded. Maximum {self.rate_limiter.max_messages} messages "
+                    f"per {self.rate_limiter.window_seconds} seconds."
+                )
+
+        # Prepare batch data
+        batch_data = []
+        for role, content, metadata in messages:
+            # Sanitize and validate each message
+            sanitized_content = self._sanitize_content(content)
+            validated_metadata = self._validate_metadata(metadata)
+
+            # Validate message structure
+            try:
+                ChatMessageDB(
+                    id=0,  # Dummy ID for validation
+                    session_id=session_id,
+                    role=role,
+                    content=sanitized_content,
+                    created_at=datetime.utcnow(),
+                    metadata=validated_metadata,
+                )
+            except ValueError as e:
+                raise ValidationError(f"Invalid message: {str(e)}") from e
+
+            batch_data.append(
+                {
+                    "session_id": session_id,
+                    "role": role,
+                    "content": sanitized_content,
+                    "metadata": validated_metadata,
+                }
+            )
+
+        # Insert all messages in a single query
+        query = text(
+            """
+            INSERT INTO chat_messages (session_id, role, content, metadata)
+            VALUES (:session_id, :role, :content, :metadata)
+            RETURNING id, session_id, role, content, created_at, metadata
+            """
+        )
+
+        created_messages = []
+        async with self.db.begin():
+            for data in batch_data:
+                result = await self.db.execute(query, data)
+                row = result.fetchone()
+                if row:
+                    created_messages.append(
+                        ChatMessageDB(
+                            id=row.id,
+                            session_id=row.session_id,
+                            role=row.role,
+                            content=row.content,
+                            created_at=row.created_at,
+                            metadata=row.metadata or {},
+                        )
+                    )
+
+            # Update session updated_at
+            await self.db.execute(
+                text(
+                    "UPDATE chat_sessions SET updated_at = NOW() WHERE id = :session_id"
+                ),
+                {"session_id": session_id},
+            )
+
+        logger.info(f"Added {len(created_messages)} messages to session {session_id}")
+        return created_messages
 
     async def get_messages(
         self, session_id: UUID, limit: Optional[int] = None, offset: int = 0
@@ -285,7 +549,12 @@ class ChatService:
         ]
 
     async def get_recent_messages(
-        self, session_id: UUID, limit: int = 10, max_tokens: int = 8000
+        self,
+        session_id: UUID,
+        limit: int = 10,
+        max_tokens: int = 8000,
+        offset: int = 0,
+        chars_per_token: Optional[int] = None,
     ) -> RecentMessagesResponse:
         """Get recent messages within token limit.
 
@@ -296,20 +565,31 @@ class ChatService:
             session_id: Session ID
             limit: Maximum number of messages to consider
             max_tokens: Maximum total tokens to include
+            offset: Number of messages to skip (for pagination)
+            chars_per_token: Characters per token for estimation (uses service default if None)
 
         Returns:
             Recent messages response with token information
         """
+        if chars_per_token is None:
+            chars_per_token = self._chars_per_token
+
         query = text(
             """
-            SELECT * FROM get_recent_messages(:session_id, :limit, :max_tokens)
+            SELECT * FROM get_recent_messages(:session_id, :limit, :max_tokens, :offset, :chars_per_token)
             ORDER BY created_at ASC
             """
         )
 
-        result = await self.db.execute(
+        result = await self._execute_with_retry(
             query,
-            {"session_id": session_id, "limit": limit, "max_tokens": max_tokens},
+            {
+                "session_id": session_id,
+                "limit": limit,
+                "max_tokens": max_tokens,
+                "offset": offset,
+                "chars_per_token": chars_per_token,
+            },
         )
         rows = result.fetchall()
 
@@ -508,4 +788,24 @@ class ChatService:
         query = text("SELECT cleanup_old_sessions(:days_old)")
         result = await self.db.execute(query, {"days_old": days_old})
         count = result.scalar()
+        return count or 0
+
+    async def expire_inactive_sessions(self, hours_inactive: int = 24) -> int:
+        """Expire inactive sessions.
+
+        Args:
+            hours_inactive: Hours of inactivity before expiration
+
+        Returns:
+            Number of sessions expired
+        """
+        query = text("SELECT expire_inactive_sessions(:hours_inactive)")
+        result = await self._execute_with_retry(
+            query, {"hours_inactive": hours_inactive}
+        )
+        count = result.scalar()
+
+        if count:
+            logger.info(f"Expired {count} inactive sessions")
+
         return count or 0
