@@ -40,6 +40,11 @@ export default function ChatContainer({
     isInitialized,
     isApiKeyValid,
     authError,
+    // Tool call functionality
+    activeToolCalls,
+    toolResults,
+    retryToolCall,
+    cancelToolCall,
   } = useChatAi({
     sessionId,
     initialMessages,
@@ -115,7 +120,14 @@ export default function ChatContainer({
     <div className={cn("flex flex-col h-full relative", className)}>
       {/* Main chat area */}
       <div className="flex-1 overflow-hidden flex flex-col">
-        <MessageList messages={messages} isStreaming={isStreaming} />
+        <MessageList 
+          messages={messages} 
+          isStreaming={isStreaming}
+          activeToolCalls={activeToolCalls}
+          toolResults={toolResults}
+          onRetryToolCall={retryToolCall}
+          onCancelToolCall={cancelToolCall}
+        />
 
         <MessageInput
           disabled={isLoading && !isStreaming}

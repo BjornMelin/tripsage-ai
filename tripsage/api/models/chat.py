@@ -58,6 +58,7 @@ class ChatRequest(BaseModel):
     messages: list[ChatMessage] = Field(..., description="Chat messages")
     session_id: Optional[UUID] = Field(None, description="Session ID for context")
     stream: bool = Field(True, description="Whether to stream the response")
+    save_history: bool = Field(True, description="Whether to save chat history")
     temperature: Optional[float] = Field(
         None, ge=0.0, le=2.0, description="Model temperature"
     )

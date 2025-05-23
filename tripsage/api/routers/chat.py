@@ -1,13 +1,14 @@
 """Chat router for TripSage API.
 
 This module provides endpoints for AI chat functionality, including streaming
-responses compatible with Vercel AI SDK and session persistence.
+responses compatible with Vercel AI SDK, session persistence, and tool calling.
 """
 
 import asyncio
+import json
 import logging
 from datetime import datetime
-from typing import AsyncGenerator, Optional
+from typing import AsyncGenerator, Dict, List, Optional
 from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -15,10 +16,10 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from api.deps import verify_api_key
-from tripsage.agents.travel import TravelPlanningAgent
-from tripsage.api.core.dependencies import get_db, get_session_memory
+from tripsage.agents.chat import ChatAgent
+from tripsage.api.core.dependencies import get_db, get_session_memory, verify_api_key
 from tripsage.api.middlewares.auth import get_current_user
+from tripsage.api.models.chat import ToolCall
 from tripsage.api.services.chat_service import ChatService, RateLimiter
 from tripsage.models.db.user import UserDB
 
@@ -27,16 +28,22 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 # Global instances (singleton pattern)
-_travel_agent = None
+_chat_agent = None
 _rate_limiter = None
 
+# Module-level dependency singletons to avoid B008 warnings
+get_current_user_dep = Depends(get_current_user)
+get_session_memory_dep = Depends(get_session_memory)
+verify_api_key_dep = Depends(verify_api_key)
+get_db_dep = Depends(get_db)
 
-def get_travel_agent() -> TravelPlanningAgent:
-    """Get or create the travel planning agent singleton."""
-    global _travel_agent
-    if _travel_agent is None:
-        _travel_agent = TravelPlanningAgent()
-    return _travel_agent
+
+def get_chat_agent() -> ChatAgent:
+    """Get or create the chat agent singleton."""
+    global _chat_agent
+    if _chat_agent is None:
+        _chat_agent = ChatAgent()
+    return _chat_agent
 
 
 def get_rate_limiter() -> RateLimiter:
@@ -47,9 +54,13 @@ def get_rate_limiter() -> RateLimiter:
     return _rate_limiter
 
 
-async def get_chat_service(db: AsyncSession = Depends(get_db)) -> ChatService:
+async def get_chat_service(db: AsyncSession = get_db_dep) -> ChatService:
     """Get chat service instance."""
     return ChatService(db, rate_limiter=get_rate_limiter())
+
+
+# Create module-level dependency for chat service
+get_chat_service_dep = Depends(get_chat_service)
 
 
 class ChatMessage(BaseModel):
@@ -102,48 +113,138 @@ async def format_vercel_stream_chunk(chunk_type: str, content: str) -> str:
     return ""
 
 
-async def stream_agent_response(
-    agent: TravelPlanningAgent,
-    user_input: str,
-    context: dict,
-) -> AsyncGenerator[str, None]:
-    """Stream the agent response using Vercel AI SDK protocol.
+def get_user_available_tools(user: UserDB) -> List[str]:
+    """Get list of tools available to the user based on their API keys.
 
     Args:
-        agent: Travel planning agent
+        user: User object
+
+    Returns:
+        List of available tool names
+    """
+    # Base tools always available
+    available_tools = [
+        "time_tools",
+        "weather_tools",
+        "googlemaps_tools",
+        "webcrawl_tools",
+        "memory_tools",
+    ]
+
+    # Add tools based on user's API keys
+    # (would check user.api_keys in real implementation)
+    # For now, assume all tools are available if user is authenticated
+    if user:
+        available_tools.extend(
+            ["flight_tools", "accommodations_tools", "planning_tools"]
+        )
+
+    return available_tools
+
+
+async def format_tool_call_chunk(tool_call: Dict) -> str:
+    """Format a tool call for Vercel AI SDK protocol.
+
+    Args:
+        tool_call: Tool call dictionary
+
+    Returns:
+        Formatted tool call chunk
+    """
+    # Tool call format: 9:{id,name,args}\n
+    tool_data = {
+        "id": tool_call.get("id", str(uuid4())),
+        "name": tool_call.get("name", ""),
+        "args": tool_call.get("arguments", {}),
+    }
+    return f"9:{json.dumps(tool_data)}\n"
+
+
+async def format_tool_result_chunk(tool_call_id: str, result: Dict) -> str:
+    """Format a tool result for Vercel AI SDK protocol.
+
+    Args:
+        tool_call_id: ID of the tool call
+        result: Tool execution result
+
+    Returns:
+        Formatted tool result chunk
+    """
+    # Tool result format: a:{callId,result}\n
+    result_data = {"callId": tool_call_id, "result": result}
+    return f"a:{json.dumps(result_data)}\n"
+
+
+async def stream_agent_response(
+    agent: ChatAgent,
+    user_input: str,
+    context: dict,
+    available_tools: List[str] = None,
+) -> AsyncGenerator[str, None]:
+    """Stream the agent response using Vercel AI SDK protocol with tool calling.
+
+    Args:
+        agent: Chat agent
         user_input: User input message
         context: Request context
+        available_tools: Available tools for this user
 
     Yields:
         Formatted stream chunks
     """
     try:
-        # Run the agent
-        response = await agent.run(user_input, context)
+        # Run the agent with tool calling
+        response = await agent.run_with_tools(user_input, context, available_tools)
 
-        # Extract content
+        # Extract content and metadata
         content = response.get("content", "")
         tool_calls = response.get("tool_calls", [])
+        routing_info = response.get("routed_to")
 
-        # For now, we'll send the entire response as chunks
-        # In a real implementation, we'd stream from the LLM directly
-        words = content.split()
-        chunk_size = 5  # Send 5 words at a time
+        # Send routing information if present
+        if routing_info:
+            routing_chunk = f"🔄 Routing to {routing_info} specialist...\n\n"
+            yield await format_vercel_stream_chunk("text", routing_chunk)
+            await asyncio.sleep(0.1)
 
-        # Stream text in chunks
-        for i in range(0, len(words), chunk_size):
-            chunk = " ".join(words[i : i + chunk_size])
-            if i + chunk_size < len(words):
-                chunk += " "
-            yield await format_vercel_stream_chunk("text", chunk)
-            # Small delay to simulate streaming
-            await asyncio.sleep(0.05)
-
-        # Send tool calls if any
+        # Send tool calls first if any
         if tool_calls:
-            # Tool calls could be streamed in a real implementation
-            # For now, we'll just log them
-            logger.info(f"Tool calls made: {tool_calls}")
+            for tool_call in tool_calls:
+                yield await format_tool_call_chunk(tool_call)
+                await asyncio.sleep(0.05)
+
+                # Execute tool call if it has arguments
+                if "arguments" in tool_call:
+                    try:
+                        user_id = context.get("user_id", "anonymous")
+                        tool_result = await agent.execute_tool_call(
+                            tool_call["name"], tool_call["arguments"], user_id
+                        )
+
+                        yield await format_tool_result_chunk(
+                            tool_call.get("id", str(uuid4())), tool_result
+                        )
+                        await asyncio.sleep(0.05)
+
+                    except Exception as e:
+                        logger.error(f"Tool execution failed: {str(e)}")
+                        error_result = {"status": "error", "error": str(e)}
+                        yield await format_tool_result_chunk(
+                            tool_call.get("id", str(uuid4())), error_result
+                        )
+
+        # Stream text content in chunks
+        if content:
+            words = content.split()
+            chunk_size = 5  # Send 5 words at a time
+
+            for i in range(0, len(words), chunk_size):
+                chunk = " ".join(words[i : i + chunk_size])
+                if i + chunk_size < len(words):
+                    chunk += " "
+                yield await format_vercel_stream_chunk("text", chunk)
+                # Small delay to simulate streaming
+                await asyncio.sleep(0.05)
 
         # Send finish message
         yield await format_vercel_stream_chunk("finish", "")
@@ -156,10 +257,10 @@ async def stream_agent_response(
 @router.post("/")
 async def chat(
     request: ChatRequest,
-    current_user: UserDB = Depends(get_current_user),
-    session_memory: dict = Depends(get_session_memory),
-    chat_service: ChatService = Depends(get_chat_service),
-    api_key_valid: bool = Depends(verify_api_key),
+    current_user: UserDB = get_current_user_dep,
+    session_memory: dict = get_session_memory_dep,
+    chat_service: ChatService = get_chat_service_dep,
+    api_key_valid: bool = verify_api_key_dep,
 ):
     """Handle chat requests with optional streaming and session persistence.
 
@@ -172,8 +273,8 @@ async def chat(
     Returns:
         StreamingResponse for streaming requests, ChatResponse otherwise
     """
-    # Get the travel agent
-    agent = get_travel_agent()
+    # Get the chat agent
+    agent = get_chat_agent()
 
     # Get the last user message
     if not request.messages:
@@ -209,11 +310,11 @@ async def chat(
             session = await chat_service.get_session(
                 session_id, user_id=current_user.id
             )
-        except Exception:
+        except Exception as e:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Session not found or access denied",
-            )
+            ) from e
 
     # Store incoming message (only if history saving is enabled)
     if request.save_history:
@@ -229,18 +330,27 @@ async def chat(
                 raise HTTPException(
                     status_code=status.HTTP_429_TOO_MANY_REQUESTS,
                     detail=str(e),
-                )
+                ) from e
             raise
 
-    # Build context with session history
+    # Build context with session history and tool information
     recent_messages = await chat_service.get_recent_messages(
         session_id=session_id, limit=50, max_tokens=4000
     )
+
+    # Get available tools for this user
+    available_tools = get_user_available_tools(current_user)
+
+    # Filter tools if specific tools requested
+    if request.tools:
+        available_tools = [tool for tool in available_tools if tool in request.tools]
 
     context = {
         "user_id": str(current_user.id),
         "session_id": str(session_id),
         "session_memory": session_memory,
+        "available_tools": available_tools,
+        "tool_calling_enabled": True,
         "message_history": [
             {"role": msg.role, "content": msg.content}
             for msg in recent_messages.messages[
@@ -256,23 +366,46 @@ async def chat(
             """Stream response and persist assistant message."""
             full_content = ""
             tool_calls = []
+            tool_results = []
 
             async for chunk in stream_agent_response(
-                agent, last_message.content, context
+                agent, last_message.content, context, available_tools
             ):
-                # Extract content from chunk if it's a text chunk
+                # Extract content from chunk based on type
                 if chunk.startswith('0:"'):
                     content_part = chunk[3:-2]  # Remove 0:" prefix and "\n suffix
                     full_content += content_part
+                elif chunk.startswith("9:"):
+                    # Tool call chunk
+                    try:
+                        tool_call_data = json.loads(chunk[2:])
+                        tool_calls.append(tool_call_data)
+                    except json.JSONDecodeError:
+                        logger.warning(f"Failed to parse tool call chunk: {chunk}")
+                elif chunk.startswith("a:"):
+                    # Tool result chunk
+                    try:
+                        tool_result_data = json.loads(chunk[2:])
+                        tool_results.append(tool_result_data)
+                    except json.JSONDecodeError:
+                        logger.warning(f"Failed to parse tool result chunk: {chunk}")
+
                 yield chunk
 
-            # Store assistant response after streaming completes (only if history saving is enabled)
-            if full_content and request.save_history:
+            # Store assistant response after streaming completes
+            # (only if history saving is enabled)
+            if request.save_history:
+                metadata = {}
+                if tool_calls:
+                    metadata["tool_calls"] = tool_calls
+                if tool_results:
+                    metadata["tool_results"] = tool_results
+
                 await chat_service.add_message(
                     session_id=session_id,
                     role="assistant",
                     content=full_content,
-                    metadata={"tool_calls": tool_calls} if tool_calls else None,
+                    metadata=metadata if metadata else None,
                 )
 
         return StreamingResponse(
@@ -287,24 +420,59 @@ async def chat(
         )
     else:
         # Return regular JSON response
-        response = await agent.run(last_message.content, context)
+        response = await agent.run_with_tools(
+            last_message.content, context, available_tools
+        )
+
+        # Process tool calls for response format
+        processed_tool_calls = []
+        if response.get("tool_calls"):
+            for tool_call in response["tool_calls"]:
+                # Execute tool if not already executed
+                tool_result = None
+                if "arguments" in tool_call:
+                    try:
+                        tool_result = await agent.execute_tool_call(
+                            tool_call["name"],
+                            tool_call["arguments"],
+                            str(current_user.id),
+                        )
+                    except Exception as e:
+                        logger.error(f"Tool execution failed: {str(e)}")
+                        tool_result = {"status": "error", "error": str(e)}
+
+                processed_tool_calls.append(
+                    ToolCall(
+                        id=tool_call.get("id", str(uuid4())),
+                        name=tool_call["name"],
+                        args=tool_call.get("arguments", {}),
+                        result=tool_result,
+                    )
+                )
 
         # Store assistant response (only if history saving is enabled)
         if request.save_history:
+            metadata = {}
+            if processed_tool_calls:
+                metadata["tool_calls"] = [
+                    {"id": tc.id, "name": tc.name, "args": tc.args, "result": tc.result}
+                    for tc in processed_tool_calls
+                ]
+
             await chat_service.add_message(
                 session_id=session_id,
                 role="assistant",
                 content=response.get("content", ""),
-                metadata={"tool_calls": response.get("tool_calls", [])}
-                if response.get("tool_calls")
-                else None,
+                metadata=metadata if metadata else None,
             )
 
         return ChatResponse(
             id=session_id,  # Use session ID as response ID for consistency
+            session_id=session_id,
             content=response.get("content", ""),
-            tool_calls=response.get("tool_calls", []),
+            tool_calls=processed_tool_calls,
             finish_reason="stop",
+            usage={"prompt_tokens": 0, "completion_tokens": 0},  # Placeholder
         )
 
 
@@ -312,10 +480,10 @@ async def chat(
 async def continue_session(
     session_id: UUID,
     request: ChatRequest,
-    current_user: UserDB = Depends(get_current_user),
-    session_memory: dict = Depends(get_session_memory),
-    chat_service: ChatService = Depends(get_chat_service),
-    api_key_valid: bool = Depends(verify_api_key),
+    current_user: UserDB = get_current_user_dep,
+    session_memory: dict = get_session_memory_dep,
+    chat_service: ChatService = get_chat_service_dep,
+    api_key_valid: bool = verify_api_key_dep,
 ):
     """Continue an existing chat session.
 
@@ -339,8 +507,8 @@ async def continue_session(
 @router.get("/sessions/{session_id}/history")
 async def get_session_history(
     session_id: UUID,
-    current_user: UserDB = Depends(get_current_user),
-    chat_service: ChatService = Depends(get_chat_service),
+    current_user: UserDB = get_current_user_dep,
+    chat_service: ChatService = get_chat_service_dep,
     limit: int = 100,
     offset: int = 0,
 ):
@@ -359,11 +527,11 @@ async def get_session_history(
     # Get session (verifies access)
     try:
         session = await chat_service.get_session(session_id, user_id=current_user.id)
-    except Exception:
+    except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Session not found or access denied",
-        )
+        ) from e
 
     # Get messages
     messages = await chat_service.get_messages(session_id, limit=limit, offset=offset)
@@ -389,8 +557,8 @@ async def get_session_history(
 
 @router.get("/sessions")
 async def list_sessions(
-    current_user: UserDB = Depends(get_current_user),
-    chat_service: ChatService = Depends(get_chat_service),
+    current_user: UserDB = get_current_user_dep,
+    chat_service: ChatService = get_chat_service_dep,
     limit: int = 20,
 ):
     """List active chat sessions for the current user.
@@ -425,8 +593,8 @@ async def list_sessions(
 @router.post("/sessions/{session_id}/end")
 async def end_session(
     session_id: UUID,
-    current_user: UserDB = Depends(get_current_user),
-    chat_service: ChatService = Depends(get_chat_service),
+    current_user: UserDB = get_current_user_dep,
+    chat_service: ChatService = get_chat_service_dep,
 ):
     """End a chat session.
 
@@ -441,11 +609,11 @@ async def end_session(
     # Verify session belongs to user
     try:
         await chat_service.get_session(session_id, user_id=current_user.id)
-    except Exception:
+    except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Session not found or access denied",
-        )
+        ) from e
 
     # End the session
     await chat_service.end_session(session_id)
@@ -455,8 +623,8 @@ async def end_session(
 
 @router.get("/export")
 async def export_chat_data(
-    current_user: UserDB = Depends(get_current_user),
-    chat_service: ChatService = Depends(get_chat_service),
+    current_user: UserDB = get_current_user_dep,
+    chat_service: ChatService = get_chat_service_dep,
     format: str = "json",
 ):
     """Export all chat data for the current user.
@@ -549,8 +717,8 @@ async def export_chat_data(
 
 @router.delete("/data")
 async def delete_all_chat_data(
-    current_user: UserDB = Depends(get_current_user),
-    chat_service: ChatService = Depends(get_chat_service),
+    current_user: UserDB = get_current_user_dep,
+    chat_service: ChatService = get_chat_service_dep,
     confirm: bool = False,
 ):
     """Delete all chat data for the current user.

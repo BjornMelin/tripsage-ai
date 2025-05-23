@@ -228,3 +228,21 @@ redis_mcp_dep_fn = get_redis_mcp_dep()
 
 # Create redis dependency
 redis_mcp_dependency = Depends(redis_mcp_dep_fn)
+
+
+# Authentication helper functions
+async def verify_api_key(current_user=None) -> bool:
+    """Verify that the user has a valid API key for chat functionality.
+
+    For now, this is a simplified check. In a full implementation,
+    this would validate specific service keys (like OpenAI) from the database.
+
+    Args:
+        current_user: Current authenticated user (optional)
+
+    Returns:
+        True if user has valid API keys
+    """
+    # For now, assume all users have valid API keys
+    # This will be enhanced when the full BYOK system is integrated
+    return True

@@ -276,3 +276,114 @@ Pydantic's `BaseSettings` is used for centralized application configuration.
 * **Default Factories**: Use `default_factory` for defaults that require function calls (e.g., `uuid.uuid4`, `datetime.utcnow`).
 
 By consistently applying these Pydantic v2 patterns, TripSage ensures robust data validation, clear data contracts, and improved maintainability across its components.
+
+## 7. Testing Pydantic BaseSettings Classes
+
+**Critical Pattern for TripSage Testing Infrastructure**
+
+When testing code that uses Pydantic BaseSettings classes (like `AppSettings`), special care must be taken because these classes instantiate at module import time. This means environment variables must be set **before** any imports that trigger pydantic validation.
+
+### The Problem
+
+```python
+# ❌ WRONG - This will fail with validation errors
+import os
+from tripsage.config.app_settings import AppSettings  # Settings instantiate here!
+
+# Too late - the settings have already been validated
+os.environ["OPENAI_API_KEY"] = "test-key"
+```
+
+### The Solution
+
+```python
+# ✅ CORRECT - Set environment variables BEFORE imports
+import os
+
+# CRITICAL: Set ALL environment variables BEFORE imports
+test_env_vars = {
+    "OPENAI_API_KEY": "test-openai-key",
+    "PASSWORD": "test-password",  # For Neo4j
+    "SUPABASE_URL": "https://test-project.supabase.co",
+    "SUPABASE_ANON_KEY": "test_anon_key",
+    "NEO4J_URI": "bolt://localhost:7687",
+    "NEO4J_USER": "test_user",
+    "NEO4J_PASSWORD": "test_password",
+    # ... all required environment variables
+}
+
+for key, value in test_env_vars.items():
+    os.environ[key] = value
+
+# Now safe to import pydantic settings classes
+from tripsage.config.app_settings import AppSettings
+```
+
+### Test Environment Configuration
+
+TripSage provides a comprehensive test environment setup:
+
+1. **Test Environment File**: `tests/.env.test`
+   ```env
+   # Test-safe environment variables
+   OPENAI_API_KEY=test-openai-key
+   PASSWORD=test-password
+   SUPABASE_URL=https://test-project.supabase.co
+   # ... comprehensive test configuration
+   ```
+
+2. **TestSettings Class**: `tests/test_settings.py`
+   ```python
+   from pydantic import BaseSettings
+   from typing import Dict
+   
+   class TestSettings(BaseSettings):
+       """Test-safe settings configuration."""
+       openai_api_key: str = "test-openai-key"
+       password: str = "test-password"
+       # ... all test settings
+       
+       class Config:
+           env_file = "tests/.env.test"
+   
+   def get_test_env_vars() -> Dict[str, str]:
+       """Get test environment variables as a dictionary."""
+       test_settings = TestSettings()
+       return {
+           "OPENAI_API_KEY": test_settings.openai_api_key,
+           "PASSWORD": test_settings.password,
+           # ... map all settings to environment variables
+       }
+   ```
+
+3. **Test Pattern**: `tests/agents/test_chat_agent_demo.py`
+   ```python
+   import os
+   from tests.test_settings import get_test_env_vars
+   
+   # CRITICAL: Set environment before ANY imports
+   for key, value in get_test_env_vars().items():
+       os.environ[key] = value
+   
+   # Now safe to import application modules
+   from tripsage.config.app_settings import AppSettings
+   from tripsage.agents.chat import ChatAgent
+   
+   def test_chat_agent():
+       """Test ChatAgent with proper environment isolation."""
+       # Test implementation here
+   ```
+
+### Key Benefits
+
+- **Environment Isolation**: Tests never use real personal configuration
+- **Reproducible Results**: Consistent test environment across all runs  
+- **Security**: No risk of exposing real API keys or credentials in tests
+- **Reliability**: Tests don't fail due to missing or invalid environment variables
+
+### Documentation
+
+For complete implementation details, see:
+- `tests/TESTING_SOLUTION.md` - Comprehensive testing solution documentation
+- `tests/.env.test` - Test environment configuration
+- `tests/test_settings.py` - TestSettings class and utilities

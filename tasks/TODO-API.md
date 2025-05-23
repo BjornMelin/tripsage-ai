@@ -355,6 +355,19 @@ This file tracks tasks related to API development, middleware, and external serv
       - [x] Add request validation with Pydantic V2
       - [x] Create comprehensive test suite for all API endpoints
 
+- [x] ✅ **Chat Router Dependencies Resolution (May 23, 2025)**
+  - **Target:** `tripsage/api/routers/chat.py` and related dependencies
+  - **Goal:** Resolve missing dependencies and import issues for chat functionality
+  - **Status:** ✅ COMPLETED - All dependencies resolved and linting errors fixed
+  - **Tasks:**
+    - [x] ✅ Added missing SQLAlchemy[asyncio]>=2.0.41 and greenlet>=3.1.1 to requirements.txt
+    - [x] ✅ Updated pyproject.toml with matching database dependencies
+    - [x] ✅ Fixed import path from `api.deps` to `tripsage.api.core.dependencies`
+    - [x] ✅ Added missing verify_api_key function to core dependencies
+    - [x] ✅ Added save_history field to ChatRequest model
+    - [x] ✅ Created module-level dependency singletons to fix B008 linting errors
+    - [x] ✅ Resolved all ruff linting and formatting errors
+
 - [ ] **Database Migration**
   - **Target:** Database implementation
   - **Goal:** Complete database migration using MCP tool implementations

@@ -17,33 +17,53 @@ from pydantic import BaseModel
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 
-# Mock environment variables instead of setting them directly
+# Set up test environment before any imports
+os.environ.update({
+    # Basic API keys
+    "OPENAI_API_KEY": "test-openai-key",
+    "ANTHROPIC_API_KEY": "test-anthropic-key",
+    
+    # Database configuration - Core required fields
+    "SUPABASE_URL": "https://test-supabase-url.com",
+    "SUPABASE_ANON_KEY": "test-anon-key",
+    "NEO4J_PASSWORD": "test-password",
+    
+    # Redis configuration
+    "REDIS_URL": "redis://localhost:6379/0",
+    
+    # MCP Endpoints - All required MCP configurations
+    "TIME_MCP_ENDPOINT": "http://localhost:3006",
+    "WEATHER_MCP_ENDPOINT": "http://localhost:3007", 
+    "WEATHER_MCP_OPENWEATHERMAP_API_KEY": "test-weather-api-key",
+    "GOOGLEMAPS_MCP_ENDPOINT": "http://localhost:3008",
+    "GOOGLEMAPS_MCP_MAPS_API_KEY": "test-maps-api-key",
+    "MEMORY_MCP_ENDPOINT": "http://localhost:3009",
+    "WEBCRAWL_MCP_ENDPOINT": "http://localhost:3010",
+    "WEBCRAWL_MCP_CRAWL4AI_API_KEY": "test-crawl-key",
+    "WEBCRAWL_MCP_FIRECRAWL_API_KEY": "test-firecrawl-key", 
+    "FLIGHTS_MCP_ENDPOINT": "http://localhost:3011",
+    "FLIGHTS_MCP_DUFFEL_API_KEY": "test-duffel-key",
+    "ACCOMMODATIONS_MCP_AIRBNB_ENDPOINT": "http://localhost:3012",
+    "PLAYWRIGHT_MCP_ENDPOINT": "http://localhost:3013",
+    "CALENDAR_MCP_ENDPOINT": "http://localhost:3014",
+    "CALENDAR_MCP_GOOGLE_CLIENT_ID": "test-client-id",
+    "CALENDAR_MCP_GOOGLE_CLIENT_SECRET": "test-client-secret",
+    "CALENDAR_MCP_GOOGLE_REDIRECT_URI": "http://localhost:3000/callback",
+    "NEON_MCP_ENDPOINT": "http://localhost:3015",
+    "NEON_MCP_API_KEY": "test-neon-key",
+    "SUPABASE_MCP_ENDPOINT": "http://localhost:3016",
+    
+    # Additional environment variables for compatibility
+    "ENVIRONMENT": "testing",
+    "DEBUG": "false",
+    "LOG_LEVEL": "INFO",
+})
+
 @pytest.fixture(autouse=True)
 def mock_environment_variables():
-    """Mock common environment variables needed for tests."""
-    env_vars = {
-        "AIRBNB_MCP_ENDPOINT": "http://localhost:3000",
-        "REDIS_URL": "redis://localhost:6379/0",
-        "SUPABASE_URL": "https://test-supabase-url.com",
-        "SUPABASE_ANON_KEY": "test-anon-key",
-        "NEO4J_URI": "bolt://localhost:7687",
-        "NEO4J_USERNAME": "neo4j",
-        "NEO4J_PASSWORD": "test-password",
-        "OPENAI_API_KEY": "test-openai-key",
-        "ANTHROPIC_API_KEY": "test-anthropic-key",
-        "WEATHER_API_KEY": "test-weather-key",
-        "GOOGLE_MAPS_API_KEY": "test-google-maps-key",
-        "DUFFEL_API_KEY": "test-duffel-key",
-        "PLAYWRIGHT_URL": "http://localhost:3003",
-        "FIRECRAWL_URL": "http://localhost:3004",
-        "CRAWL4AI_URL": "http://localhost:3005",
-        "TIME_MCP_ENDPOINT": "http://localhost:3006",
-        "WEATHER_MCP_ENDPOINT": "http://localhost:3007",
-        "GOOGLEMAPS_MCP_ENDPOINT": "http://localhost:3008",
-    }
-
-    with patch.dict(os.environ, env_vars):
-        yield env_vars
+    """Ensure environment variables are available for tests."""
+    # Environment already set above, just yield
+    yield os.environ
 
 
 # Mock MCP manager for use in tests
@@ -219,29 +239,43 @@ def mock_web_operations_cache():
 
 
 @pytest.fixture(autouse=True)
-def mock_redis():
-    """Mock Redis client to avoid actual connections.
+def mock_settings_and_redis():
+    """Mock settings and Redis client to avoid actual connections and validation errors."""
+    # Create a comprehensive mock settings object
+    mock_settings = MagicMock()
+    mock_settings.agent.model_name = "gpt-4"
+    mock_settings.agent.temperature = 0.7
+    mock_settings.agent.max_tokens = 4096
+    mock_settings.agent.timeout = 120
+    mock_settings.agent.max_retries = 3
+    
+    # Mock Redis client
+    mock_redis_client = MagicMock()
+    mock_redis_client.get = AsyncMock(return_value=None)
+    mock_redis_client.set = AsyncMock(return_value=True)
+    mock_redis_client.delete = AsyncMock(return_value=1)
+    mock_redis_client.scan_iter = AsyncMock(return_value=[])
+    mock_redis_client.incr = AsyncMock(return_value=1)
+    mock_redis_client.expire = AsyncMock(return_value=True)
 
-    This fixture is marked autouse=True since many components require Redis,
-    including WebOperationsCache, which is initialized at module import.
-    """
-    mock_client = MagicMock()
-    mock_client.get = AsyncMock(return_value=None)
-    mock_client.set = AsyncMock(return_value=True)
-    mock_client.delete = AsyncMock(return_value=1)
-    mock_client.scan_iter = AsyncMock(return_value=[])
-    mock_client.incr = AsyncMock(return_value=1)
-    mock_client.expire = AsyncMock(return_value=True)
+    mock_from_url = MagicMock(return_value=mock_redis_client)
+    redis_mock = MagicMock(asyncio=MagicMock(from_url=mock_from_url))
 
-    # Mock the redis module's from_url function to return our mock
-    mock_from_url = MagicMock(return_value=mock_client)
-
-    # We need to patch both redis.asyncio and redis directly
-    with patch("redis.asyncio.from_url", mock_from_url):
-        with patch("redis.from_url", mock_from_url):
-            redis_mock = MagicMock(asyncio=MagicMock(from_url=mock_from_url))
-            with patch("tripsage.utils.cache.redis", redis_mock):
-                yield mock_client
+    # Apply all the patches we need
+    with (
+        patch("tripsage.config.app_settings.AppSettings", return_value=mock_settings),
+        patch("tripsage.utils.settings.AppSettings", return_value=mock_settings),
+        patch("tripsage.utils.settings.get_settings", return_value=mock_settings),
+        patch("tripsage.utils.settings.settings", mock_settings),
+        patch("redis.asyncio.from_url", mock_from_url),
+        patch("redis.from_url", mock_from_url),
+        patch("tripsage.utils.cache.redis", redis_mock),
+        patch("tripsage.utils.cache.settings", mock_settings),
+    ):
+        yield {
+            "settings": mock_settings,
+            "redis": mock_redis_client,
+        }
 
 
 # Clean up after tests

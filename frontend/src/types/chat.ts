@@ -8,7 +8,41 @@ export type MessageRole = z.infer<typeof MessageRoleSchema>;
 export const ToolCallStateSchema = z.enum(["partial-call", "call", "result"]);
 export type ToolCallState = z.infer<typeof ToolCallStateSchema>;
 
-// Tool invocation schema
+// Tool call status schema for execution tracking
+export const ToolCallStatusSchema = z.enum([
+  "pending",
+  "executing", 
+  "completed",
+  "error",
+  "cancelled"
+]);
+export type ToolCallStatus = z.infer<typeof ToolCallStatusSchema>;
+
+// Enhanced tool call schema that matches backend
+export const ToolCallSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  arguments: z.record(z.any()).optional(),
+  status: ToolCallStatusSchema.optional().default("pending"),
+  result: z.any().optional(),
+  error: z.string().optional(),
+  executionTime: z.number().optional(),
+  sessionId: z.string().optional(),
+  messageId: z.string().optional(),
+});
+export type ToolCall = z.infer<typeof ToolCallSchema>;
+
+// Tool result schema for displaying results
+export const ToolResultSchema = z.object({
+  callId: z.string(),
+  result: z.any(),
+  status: z.enum(["success", "error"]),
+  executionTime: z.number().optional(),
+  errorMessage: z.string().optional(),
+});
+export type ToolResult = z.infer<typeof ToolResultSchema>;
+
+// Legacy tool invocation schema (for compatibility)
 export const ToolInvocationSchema = z.object({
   toolCallId: z.string(),
   toolName: z.string(),
@@ -60,6 +94,14 @@ export const MessageSchema = z.object({
   attachments: z.array(AttachmentSchema).optional(),
   annotations: z.record(z.any()).optional(),
   toolInvocations: z.array(ToolInvocationSchema).optional(),
+  // Enhanced tool calling support
+  toolCalls: z.array(ToolCallSchema).optional(),
+  toolResults: z.array(ToolResultSchema).optional(),
+  // Agent routing information
+  routedTo: z.string().optional(),
+  routingConfidence: z.number().optional(),
+  intentDetected: z.record(z.any()).optional(),
+  handledBy: z.string().optional(),
 });
 export type Message = z.infer<typeof MessageSchema>;
 
