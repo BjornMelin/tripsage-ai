@@ -187,7 +187,7 @@
   - [x] useActivitySearch hook with API integration
   - [x] Full search page with form and results
   - [x] Comprehensive test coverage
-- [ ] Destinations search (`/dashboard/search/destinations`)
+- [x] Destinations search (`/dashboard/search/destinations`) ✅ COMPLETED
 - [ ] Unified search features
   - [ ] Recent searches
   - [ ] Saved searches
