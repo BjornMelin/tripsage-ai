@@ -1,21 +1,19 @@
 """Tests for chat session management endpoints."""
 
-import json
 from datetime import datetime
-from unittest.mock import AsyncMock, MagicMock, patch
-from uuid import UUID, uuid4
+from unittest.mock import AsyncMock, patch
+from uuid import uuid4
 
 import pytest
 from fastapi import status
 from fastapi.testclient import TestClient
 
-from tripsage.api.models.chat import ChatMessage, ChatRequest, SessionHistoryResponse
 from tripsage.models.db.chat import (
     ChatMessageDB,
     ChatSessionDB,
     ChatSessionWithStats,
-    RecentMessagesResponse,
     MessageWithTokenEstimate,
+    RecentMessagesResponse,
 )
 
 
