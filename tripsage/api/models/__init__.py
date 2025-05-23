@@ -94,7 +94,6 @@ from tripsage.api.models.flights import (
 #     TimeSlot,
 #     TransportationItineraryItem,
 # )
-
 # Request models
 from tripsage.api.models.requests.auth import (
     ChangePasswordRequest,
