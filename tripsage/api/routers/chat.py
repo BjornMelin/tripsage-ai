@@ -6,6 +6,7 @@ responses compatible with Vercel AI SDK and session persistence.
 
 import asyncio
 import logging
+from datetime import datetime
 from typing import AsyncGenerator, Optional
 from uuid import UUID, uuid4
 
@@ -14,6 +15,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from api.deps import verify_api_key
 from tripsage.agents.travel import TravelPlanningAgent
 from tripsage.api.core.dependencies import get_db, get_session_memory
 from tripsage.api.middlewares.auth import get_current_user
@@ -63,6 +65,7 @@ class ChatRequest(BaseModel):
     messages: list[ChatMessage] = Field(..., description="Chat messages")
     session_id: Optional[UUID] = Field(None, description="Session ID for context")
     stream: bool = Field(True, description="Whether to stream the response")
+    save_history: bool = Field(True, description="Whether to save chat history")
 
 
 class ChatResponse(BaseModel):
@@ -156,6 +159,7 @@ async def chat(
     current_user: UserDB = Depends(get_current_user),
     session_memory: dict = Depends(get_session_memory),
     chat_service: ChatService = Depends(get_chat_service),
+    api_key_valid: bool = Depends(verify_api_key),
 ):
     """Handle chat requests with optional streaming and session persistence.
 
@@ -191,7 +195,11 @@ async def chat(
         # Create new session
         session = await chat_service.create_session(
             user_id=current_user.id,
-            metadata={"agent": "travel_planning", "stream": request.stream},
+            metadata={
+                "agent": "travel_planning",
+                "stream": request.stream,
+                "save_history": request.save_history,
+            },
         )
         session_id = session.id
         logger.info(f"Created new chat session {session_id} for user {current_user.id}")
@@ -207,21 +215,22 @@ async def chat(
                 detail="Session not found or access denied",
             )
 
-    # Store incoming message
-    try:
-        await chat_service.add_message(
-            session_id=session_id,
-            role=last_message.role,
-            content=last_message.content,
-            user_id=current_user.id,
-        )
-    except Exception as e:
-        if "Rate limit exceeded" in str(e):
-            raise HTTPException(
-                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                detail=str(e),
+    # Store incoming message (only if history saving is enabled)
+    if request.save_history:
+        try:
+            await chat_service.add_message(
+                session_id=session_id,
+                role=last_message.role,
+                content=last_message.content,
+                user_id=current_user.id,
             )
-        raise
+        except Exception as e:
+            if "Rate limit exceeded" in str(e):
+                raise HTTPException(
+                    status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                    detail=str(e),
+                )
+            raise
 
     # Build context with session history
     recent_messages = await chat_service.get_recent_messages(
@@ -257,8 +266,8 @@ async def chat(
                     full_content += content_part
                 yield chunk
 
-            # Store assistant response after streaming completes
-            if full_content:
+            # Store assistant response after streaming completes (only if history saving is enabled)
+            if full_content and request.save_history:
                 await chat_service.add_message(
                     session_id=session_id,
                     role="assistant",
@@ -280,15 +289,16 @@ async def chat(
         # Return regular JSON response
         response = await agent.run(last_message.content, context)
 
-        # Store assistant response
-        await chat_service.add_message(
-            session_id=session_id,
-            role="assistant",
-            content=response.get("content", ""),
-            metadata={"tool_calls": response.get("tool_calls", [])}
-            if response.get("tool_calls")
-            else None,
-        )
+        # Store assistant response (only if history saving is enabled)
+        if request.save_history:
+            await chat_service.add_message(
+                session_id=session_id,
+                role="assistant",
+                content=response.get("content", ""),
+                metadata={"tool_calls": response.get("tool_calls", [])}
+                if response.get("tool_calls")
+                else None,
+            )
 
         return ChatResponse(
             id=session_id,  # Use session ID as response ID for consistency
@@ -305,6 +315,7 @@ async def continue_session(
     current_user: UserDB = Depends(get_current_user),
     session_memory: dict = Depends(get_session_memory),
     chat_service: ChatService = Depends(get_chat_service),
+    api_key_valid: bool = Depends(verify_api_key),
 ):
     """Continue an existing chat session.
 
@@ -440,3 +451,142 @@ async def end_session(
     await chat_service.end_session(session_id)
 
     return {"message": "Session ended successfully", "session_id": str(session_id)}
+
+
+@router.get("/export")
+async def export_chat_data(
+    current_user: UserDB = Depends(get_current_user),
+    chat_service: ChatService = Depends(get_chat_service),
+    format: str = "json",
+):
+    """Export all chat data for the current user.
+
+    Args:
+        current_user: Current user object
+        chat_service: Chat service instance
+        format: Export format (json, csv)
+
+    Returns:
+        User's chat data in the requested format
+    """
+    # Get all user sessions
+    sessions = await chat_service.get_active_sessions(current_user.id, limit=1000)
+
+    export_data = {
+        "user_id": current_user.id,
+        "exported_at": datetime.utcnow().isoformat(),
+        "sessions": [],
+    }
+
+    # Get messages for each session
+    for session in sessions:
+        messages = await chat_service.get_messages(session.id, limit=10000)
+
+        session_data = {
+            "session_id": str(session.id),
+            "created_at": session.created_at.isoformat(),
+            "updated_at": session.updated_at.isoformat(),
+            "ended_at": session.ended_at.isoformat() if session.ended_at else None,
+            "metadata": session.metadata,
+            "message_count": session.message_count,
+            "messages": [
+                {
+                    "id": str(msg.id),
+                    "role": msg.role,
+                    "content": msg.content,
+                    "created_at": msg.created_at.isoformat(),
+                    "metadata": msg.metadata,
+                }
+                for msg in messages
+            ],
+        }
+        export_data["sessions"].append(session_data)
+
+    if format.lower() == "csv":
+        # Convert to CSV format
+        import csv
+        import io
+
+        output = io.StringIO()
+        writer = csv.writer(output)
+
+        # Write header
+        writer.writerow(
+            [
+                "session_id",
+                "message_id",
+                "role",
+                "content",
+                "message_created_at",
+                "session_created_at",
+            ]
+        )
+
+        # Write data
+        for session in export_data["sessions"]:
+            for message in session["messages"]:
+                writer.writerow(
+                    [
+                        session["session_id"],
+                        message["id"],
+                        message["role"],
+                        message["content"],
+                        message["created_at"],
+                        session["created_at"],
+                    ]
+                )
+
+        content = output.getvalue()
+        return StreamingResponse(
+            io.StringIO(content),
+            media_type="text/csv",
+            headers={"Content-Disposition": "attachment; filename=chat_export.csv"},
+        )
+
+    # Default JSON format
+    return export_data
+
+
+@router.delete("/data")
+async def delete_all_chat_data(
+    current_user: UserDB = Depends(get_current_user),
+    chat_service: ChatService = Depends(get_chat_service),
+    confirm: bool = False,
+):
+    """Delete all chat data for the current user.
+
+    Args:
+        current_user: Current user object
+        chat_service: Chat service instance
+        confirm: Confirmation flag
+
+    Returns:
+        Success message
+    """
+    if not confirm:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Data deletion requires confirmation. Set confirm=true.",
+        )
+
+    # Get all user sessions
+    sessions = await chat_service.get_active_sessions(current_user.id, limit=1000)
+
+    deleted_sessions = 0
+    deleted_messages = 0
+
+    # Delete all sessions and their messages
+    for session in sessions:
+        # Get message count
+        messages = await chat_service.get_messages(session.id, limit=10000)
+        deleted_messages += len(messages)
+
+        # End/delete the session (this should cascade delete messages)
+        await chat_service.end_session(session.id)
+        deleted_sessions += 1
+
+    return {
+        "message": "All chat data deleted successfully",
+        "deleted_sessions": deleted_sessions,
+        "deleted_messages": deleted_messages,
+    }

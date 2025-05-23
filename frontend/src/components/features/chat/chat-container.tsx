@@ -5,11 +5,13 @@ import { useChatStore } from "@/stores";
 import MessageList from "./messages/message-list";
 import MessageInput from "./message-input";
 import AgentStatusPanel from "./agent-status-panel";
-import { PanelRightOpen } from "lucide-react";
+import { PanelRightOpen, AlertCircle, Key } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
 import type { Message } from "@/types/chat";
 import { useChatAi } from "@/hooks/use-chat-ai";
+import Link from "next/link";
 
 interface ChatContainerProps {
   sessionId?: string;
@@ -34,6 +36,10 @@ export default function ChatContainer({
     handleInputChange,
     sendMessage,
     stopGeneration,
+    isAuthenticated,
+    isInitialized,
+    isApiKeyValid,
+    authError,
   } = useChatAi({
     sessionId,
     initialMessages,
@@ -58,7 +64,44 @@ export default function ChatContainer({
     stopGeneration();
   }, [stopGeneration]);
 
-  if (!chatSessionId) {
+  // Show authentication required UI
+  if (!isAuthenticated) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="p-8 text-center max-w-md">
+          <AlertCircle className="h-12 w-12 text-orange-500 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold mb-2">Authentication Required</h3>
+          <p className="text-muted-foreground mb-6">
+            Please log in to start chatting with TripSage AI.
+          </p>
+          <Link href="/login">
+            <Button className="w-full">Sign In</Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  // Show API key required UI
+  if (isAuthenticated && !isApiKeyValid) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="p-8 text-center max-w-md">
+          <Key className="h-12 w-12 text-blue-500 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold mb-2">API Key Required</h3>
+          <p className="text-muted-foreground mb-6">
+            A valid OpenAI API key is required to use the chat feature. Please add one to get started.
+          </p>
+          <Link href="/settings/api-keys">
+            <Button className="w-full">Manage API Keys</Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  // Show loading UI while initializing
+  if (!isInitialized || !chatSessionId) {
     return (
       <div className="flex items-center justify-center h-full">
         <div className="p-4 text-center">
@@ -108,9 +151,23 @@ export default function ChatContainer({
       )}
 
       {/* Error display */}
-      {error && (
-        <div className="absolute top-2 left-1/2 transform -translate-x-1/2 bg-destructive text-destructive-foreground px-4 py-2 rounded-md text-sm">
-          {error.message || String(error)}
+      {(error || authError) && (
+        <div className="absolute top-2 left-1/2 transform -translate-x-1/2 z-50 max-w-md">
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              {authError || (error?.message || String(error))}
+              {authError && authError.includes("API key") && (
+                <div className="mt-2">
+                  <Link href="/settings/api-keys">
+                    <Button variant="outline" size="sm">
+                      Manage API Keys
+                    </Button>
+                  </Link>
+                </div>
+              )}
+            </AlertDescription>
+          </Alert>
         </div>
       )}
     </div>

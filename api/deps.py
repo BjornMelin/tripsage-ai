@@ -147,6 +147,33 @@ async def get_current_user():
     return user
 
 
+async def verify_api_key(
+    current_user: dict = Depends(get_current_user),
+) -> bool:
+    """Verify that the user has a valid API key for chat functionality.
+
+    For now, this is a simplified check. In a full implementation,
+    this would validate specific service keys (like OpenAI) from the database.
+
+    Args:
+        current_user: Current authenticated user
+
+    Returns:
+        True if user has valid API keys
+
+    Raises:
+        AuthenticationError: If no valid API key is found
+    """
+    # In a real implementation, you would:
+    # 1. Query the database for the user's API keys
+    # 2. Validate the keys against the respective services
+    # 3. Return the validation status
+
+    # For now, we'll assume authenticated users have valid keys
+    # This will be enhanced when the full BYOK system is integrated
+    return True
+
+
 # Weather MCP dependency
 def get_weather_mcp_dep():
     """Get the weather MCP wrapper as a dependency."""

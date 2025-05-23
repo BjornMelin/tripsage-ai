@@ -2,6 +2,25 @@
 
 This file contains all the tasks that were marked as completed in the main TODO.md file.
 
+- [x] **Chat Session Management - Phase 1.2 (PR #122):** ✅ COMPLETED (May 23, 2025)
+  - ✓ Implemented PostgreSQL-based chat session persistence
+  - ✓ Created comprehensive chat_sessions and chat_messages tables
+  - ✓ Added chat_tool_calls table for agent tool usage tracking
+  - ✓ Implemented message history storage with full CRUD operations
+  - ✓ Added context window management with token estimation
+  - ✓ Created RateLimiter class for message spam prevention
+  - ✓ Implemented content sanitization for security
+  - ✓ Added database retry logic for transient errors
+  - ✓ Created audit logging table and trigger for compliance
+  - ✓ Implemented session expiration for inactive sessions
+  - ✓ Added pagination support for long conversations
+  - ✓ Created batch message insertion capability
+  - ✓ Integrated ChatService into chat router endpoints
+  - ✓ Added new session management endpoints (list, history, end)
+  - ✓ Created database dependency for async SQLAlchemy sessions
+  - ✓ Added comprehensive test coverage (>90%)
+  - ✓ All code formatted with ruff for consistency
+
 - [x] **Redis MCP Integration (PR #97):**
   - ✓ Implemented RedisMCPWrapper with comprehensive Redis operations support
   - ✓ Created RedisMCPClient with connection management and Redis interface

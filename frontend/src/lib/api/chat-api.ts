@@ -8,6 +8,30 @@ import { z } from "zod";
 // The base URL for API requests
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "";
 
+// Helper function to get auth headers
+const getAuthHeaders = () => {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+
+  // Get auth token from localStorage or store
+  if (typeof window !== "undefined") {
+    const authState = localStorage.getItem("api-key-storage");
+    if (authState) {
+      try {
+        const parsed = JSON.parse(authState);
+        if (parsed.state?.token) {
+          headers.Authorization = `Bearer ${parsed.state.token}`;
+        }
+      } catch (error) {
+        console.warn("Failed to parse auth state from localStorage");
+      }
+    }
+  }
+
+  return headers;
+};
+
 // Extend fetch with timeout functionality
 const fetchWithTimeout = async (
   url: string,
@@ -43,9 +67,7 @@ export async function sendChatRequest(
       "/api/chat",
       {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify(request),
       },
       60000
@@ -96,9 +118,7 @@ export function streamChatRequest(
       const response = await fetch("/api/chat", {
         // Updated to use /api/chat instead of /api/chat/stream
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify(request),
         signal,
       });
@@ -187,8 +207,13 @@ export async function uploadAttachments(
       formData.append(`file-${i}`, file);
     });
 
+    const authHeaders = getAuthHeaders();
+    // Remove Content-Type for FormData
+    delete authHeaders["Content-Type"];
+    
     const response = await fetch("/api/chat/attachments", {
       method: "POST",
+      headers: authHeaders,
       body: formData,
     });
 

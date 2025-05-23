@@ -351,8 +351,6 @@ class SupabaseMCPConfig(BaseMCPConfig):
         return self
 
 
-
-
 class Neo4jMemoryMCPConfig(DatabaseMCPConfig):
     """Configuration for Neo4j Memory MCP server."""
 
