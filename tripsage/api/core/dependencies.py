@@ -4,13 +4,79 @@ This module provides dependency functions that can be used with FastAPI's
 Depends() function to inject services and components into endpoint handlers.
 """
 
-from typing import Any, Dict
+import os
+from typing import Any, Dict, AsyncGenerator
 
 from fastapi import Depends
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 
 from tripsage.api.core.config import get_settings
 from tripsage.mcp_abstraction import mcp_manager
 from tripsage.utils.session_memory import initialize_session_memory
+
+
+# Database configuration
+_engine = None
+_async_session_maker = None
+
+
+def get_database_url() -> str:
+    """Get database URL from environment or config."""
+    # First check for Supabase environment variables
+    db_url = os.getenv("SUPABASE_DB_URL")
+    if db_url:
+        return db_url
+    
+    # Fall back to standard PostgreSQL URL
+    db_host = os.getenv("POSTGRES_HOST", "localhost")
+    db_port = os.getenv("POSTGRES_PORT", "5432")
+    db_name = os.getenv("POSTGRES_DB", "tripsage")
+    db_user = os.getenv("POSTGRES_USER", "postgres")
+    db_password = os.getenv("POSTGRES_PASSWORD", "postgres")
+    
+    return f"postgresql+asyncpg://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
+
+
+def get_engine():
+    """Get or create the database engine."""
+    global _engine
+    if _engine is None:
+        database_url = get_database_url()
+        _engine = create_async_engine(
+            database_url,
+            echo=False,  # Set to True for SQL logging
+            pool_pre_ping=True,
+            pool_size=5,
+            max_overflow=10,
+        )
+    return _engine
+
+
+def get_session_maker():
+    """Get or create the async session maker."""
+    global _async_session_maker
+    if _async_session_maker is None:
+        engine = get_engine()
+        _async_session_maker = async_sessionmaker(
+            engine,
+            class_=AsyncSession,
+            expire_on_commit=False,
+        )
+    return _async_session_maker
+
+
+async def get_db() -> AsyncGenerator[AsyncSession, None]:
+    """Get database session dependency."""
+    async_session_maker = get_session_maker()
+    async with async_session_maker() as session:
+        try:
+            yield session
+            await session.commit()
+        except Exception:
+            await session.rollback()
+            raise
+        finally:
+            await session.close()
 
 
 # Create function for settings dependency
