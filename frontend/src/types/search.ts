@@ -47,14 +47,31 @@ export interface ActivitySearchParams extends BaseSearchParams {
   rating?: number;
 }
 
+// Destination specific search parameters
+export interface DestinationSearchParams {
+  query: string;
+  types?: ("locality" | "country" | "administrative_area" | "establishment")[];
+  language?: string;
+  region?: string;
+  components?: {
+    country?: string[];
+  };
+  limit?: number;
+}
+
 // Union type for all search parameters
 export type SearchParams =
   | FlightSearchParams
   | AccommodationSearchParams
-  | ActivitySearchParams;
+  | ActivitySearchParams
+  | DestinationSearchParams;
 
 // Search type
-export type SearchType = "flight" | "accommodation" | "activity";
+export type SearchType =
+  | "flight"
+  | "accommodation"
+  | "activity"
+  | "destination";
 
 // Flight search result
 export interface Flight {
@@ -113,14 +130,41 @@ export interface Activity {
   };
 }
 
+// Destination search result
+export interface Destination {
+  id: string;
+  name: string;
+  description: string;
+  formattedAddress: string;
+  types: string[];
+  coordinates: {
+    lat: number;
+    lng: number;
+  };
+  photos?: string[];
+  placeId?: string;
+  country?: string;
+  region?: string;
+  rating?: number;
+  popularityScore?: number;
+  climate?: {
+    season: string;
+    averageTemp: number;
+    rainfall: number;
+  };
+  attractions?: string[];
+  bestTimeToVisit?: string[];
+}
+
 // Union type for all search results
-export type SearchResult = Flight | Accommodation | Activity;
+export type SearchResult = Flight | Accommodation | Activity | Destination;
 
 // Search results grouped by type
 export interface SearchResults {
   flights?: Flight[];
   accommodations?: Accommodation[];
   activities?: Activity[];
+  destinations?: Destination[];
 }
 
 // Saved search
