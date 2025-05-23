@@ -1,10 +1,7 @@
-import { NextRequest, NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 
 // Simple in-memory rate limiter
-const rateLimitStore = new Map<
-  string,
-  { count: number; resetTime: number }
->();
+const rateLimitStore = new Map<string, { count: number; resetTime: number }>();
 
 // Clean up old entries periodically
 setInterval(() => {
@@ -80,7 +77,7 @@ export async function middleware(request: NextRequest) {
     request.headers.get("x-forwarded-for")?.split(",")[0] ||
     request.headers.get("x-real-ip") ||
     "127.0.0.1";
-  
+
   // Check for authenticated user (if auth token exists)
   const authHeader = request.headers.get("authorization");
   const identifier = authHeader ? `auth:${authHeader}` : `ip:${ip}`;

@@ -62,7 +62,9 @@ describe("Rate Limiting Middleware", () => {
     expect(blockedResponse.headers.get("Retry-After")).toBeTruthy();
 
     const body = await blockedResponse.json();
-    expect(body.error).toBe("Too many requests. Please wait before trying again.");
+    expect(body.error).toBe(
+      "Too many requests. Please wait before trying again."
+    );
     expect(body.code).toBe("RATE_LIMITED");
   });
 
@@ -103,7 +105,7 @@ describe("Rate Limiting Middleware", () => {
       method: "POST",
       headers: {
         "x-forwarded-for": "192.168.1.5",
-        "authorization": authToken,
+        authorization: authToken,
       },
     });
 
@@ -213,8 +215,8 @@ describe("Rate Limiting Middleware", () => {
     // Assert
     const retryAfter = blockedResponse.headers.get("Retry-After");
     expect(retryAfter).toBeTruthy();
-    expect(parseInt(retryAfter!)).toBeGreaterThan(0);
-    expect(parseInt(retryAfter!)).toBeLessThanOrEqual(60);
+    expect(Number.parseInt(retryAfter!)).toBeGreaterThan(0);
+    expect(Number.parseInt(retryAfter!)).toBeLessThanOrEqual(60);
 
     const body = await blockedResponse.json();
     expect(body.retryAfter).toBeTruthy();
