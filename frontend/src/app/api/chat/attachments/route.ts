@@ -46,7 +46,12 @@ const fileCache = new Map<
 const FileValidationSchema = z.object({
   name: z.string().min(1).max(255),
   type: z.string(),
-  size: z.number().max(MAX_FILE_SIZE, `File size must not exceed ${MAX_FILE_SIZE / 1024 / 1024}MB`),
+  size: z
+    .number()
+    .max(
+      MAX_FILE_SIZE,
+      `File size must not exceed ${MAX_FILE_SIZE / 1024 / 1024}MB`
+    ),
 });
 
 /**
@@ -55,8 +60,7 @@ const FileValidationSchema = z.object({
 function isValidFileType(file: File): boolean {
   const ext = path.extname(file.name).toLowerCase();
   return (
-    ALLOWED_FILE_TYPES.includes(file.type) &&
-    ALLOWED_EXTENSIONS.includes(ext)
+    ALLOWED_FILE_TYPES.includes(file.type) && ALLOWED_EXTENSIONS.includes(ext)
   );
 }
 

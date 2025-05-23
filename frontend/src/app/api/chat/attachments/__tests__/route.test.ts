@@ -278,9 +278,7 @@ describe("/api/chat/attachments route", () => {
       );
 
       // Mock writeFile to throw error
-      vi.mocked(fs.writeFile).mockRejectedValueOnce(
-        new Error("Disk full")
-      );
+      vi.mocked(fs.writeFile).mockRejectedValueOnce(new Error("Disk full"));
 
       // Act
       const response = await POST(mockRequest);
@@ -302,7 +300,10 @@ describe("/api/chat/attachments route", () => {
         { name: "document.pdf", type: "application/pdf" },
         { name: "notes.txt", type: "text/plain" },
         { name: "data.csv", type: "text/csv" },
-        { name: "spreadsheet.xlsx", type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" },
+        {
+          name: "spreadsheet.xlsx",
+          type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        },
       ];
 
       for (const fileInfo of allowedFiles) {
@@ -334,13 +335,9 @@ describe("/api/chat/attachments route", () => {
 
     it("should handle special characters in filenames", async () => {
       // Arrange
-      const file = new File(
-        [Buffer.from("content")],
-        "my file!@#$%^&*().jpg",
-        {
-          type: "image/jpeg",
-        }
-      );
+      const file = new File([Buffer.from("content")], "my file!@#$%^&*().jpg", {
+        type: "image/jpeg",
+      });
 
       const formData = new FormData();
       formData.append("file-0", file);

@@ -37,10 +37,10 @@ export function SearchResults({
   // Extract the actual results array based on the type
   const getResultsArray = (): SearchResult[] => {
     if (!results) return [];
-    
+
     // If results is already an array
     if (Array.isArray(results)) return results;
-    
+
     // If results is SearchResultsType, extract based on type
     if (type === "accommodation" && "accommodations" in results) {
       return results.accommodations || [];
@@ -51,7 +51,7 @@ export function SearchResults({
     if (type === "activity" && "activities" in results) {
       return results.activities || [];
     }
-    
+
     return [];
   };
 

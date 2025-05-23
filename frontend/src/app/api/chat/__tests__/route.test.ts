@@ -11,7 +11,7 @@ if (typeof TransformStream === "undefined") {
   global.TransformStream = class TransformStream {
     readable: ReadableStream;
     writable: WritableStream;
-    
+
     constructor(transformer?: any) {
       const { readable, writable } = new TransformStream();
       this.readable = readable;
@@ -36,9 +36,7 @@ describe("/api/chat route", () => {
   describe("POST handler", () => {
     it("should forward valid chat requests to backend", async () => {
       // Arrange
-      const mockMessages = [
-        { role: "user", content: "Plan a trip to Paris" },
-      ];
+      const mockMessages = [{ role: "user", content: "Plan a trip to Paris" }];
 
       const mockRequest = new NextRequest("http://localhost:3000/api/chat", {
         method: "POST",
@@ -57,7 +55,11 @@ describe("/api/chat route", () => {
           controller.enqueue(new TextEncoder().encode('0:"Hello"\n'));
           controller.enqueue(new TextEncoder().encode('0:" from"\n'));
           controller.enqueue(new TextEncoder().encode('0:" TripSage!"\n'));
-          controller.enqueue(new TextEncoder().encode('d:{"finishReason":"stop","usage":{"promptTokens":0,"completionTokens":0}}\n'));
+          controller.enqueue(
+            new TextEncoder().encode(
+              'd:{"finishReason":"stop","usage":{"promptTokens":0,"completionTokens":0}}\n'
+            )
+          );
           controller.close();
         },
       });
@@ -97,15 +99,13 @@ describe("/api/chat route", () => {
 
     it("should handle authentication headers", async () => {
       // Arrange
-      const mockMessages = [
-        { role: "user", content: "Book a flight" },
-      ];
+      const mockMessages = [{ role: "user", content: "Book a flight" }];
 
       const mockRequest = new NextRequest("http://localhost:3000/api/chat", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": "Bearer test-token",
+          Authorization: "Bearer test-token",
         },
         body: JSON.stringify({
           messages: mockMessages,
@@ -135,7 +135,7 @@ describe("/api/chat route", () => {
         expect.any(String),
         expect.objectContaining({
           headers: expect.objectContaining({
-            "Authorization": "Bearer test-token",
+            Authorization: "Bearer test-token",
           }),
         })
       );
@@ -398,7 +398,11 @@ describe("/api/chat route", () => {
 
       const mockStream = new ReadableStream({
         start(controller) {
-          controller.enqueue(new TextEncoder().encode('{"content":"Response","finish_reason":"stop"}\n'));
+          controller.enqueue(
+            new TextEncoder().encode(
+              '{"content":"Response","finish_reason":"stop"}\n'
+            )
+          );
           controller.close();
         },
       });

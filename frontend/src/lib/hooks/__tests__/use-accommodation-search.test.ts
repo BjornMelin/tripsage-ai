@@ -45,7 +45,11 @@ describe("useAccommodationSearch", () => {
 
   const wrapper = ({ children }: { children: React.ReactNode }) => {
     const { createElement } = require("react");
-    return createElement(QueryClientProvider, { client: queryClient }, children);
+    return createElement(
+      QueryClientProvider,
+      { client: queryClient },
+      children
+    );
   };
 
   it("should search for accommodations successfully", async () => {
@@ -166,7 +170,7 @@ describe("useAccommodationSearch", () => {
     const promise = new Promise((resolve) => {
       resolvePromise = resolve;
     });
-    
+
     (api.post as any).mockReturnValueOnce(promise);
 
     const { result } = renderHook(() => useAccommodationSearch(), { wrapper });
