@@ -7,10 +7,9 @@ database models, API endpoints, key service, and MCP integration.
 import os
 import uuid
 from datetime import datetime, timedelta
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
-from fastapi import HTTPException
 from fastapi.testclient import TestClient
 
 from tripsage.api.models.api_key import (
@@ -21,7 +20,7 @@ from tripsage.api.models.api_key import (
 )
 from tripsage.api.services.key import KeyService
 from tripsage.api.services.key_mcp_integration import KeyMCPIntegrationService
-from tripsage.models.db.api_key import ApiKeyDB, ApiKeyCreate as ApiKeyCreateDB
+from tripsage.models.db.api_key import ApiKeyDB
 
 
 class TestApiKeyModels:
@@ -35,7 +34,7 @@ class TestApiKeyModels:
             key="sk-test123",
             description="Test key for OpenAI",
         )
-        
+
         assert key_data.name == "Test OpenAI Key"
         assert key_data.service == "openai"
         assert key_data.key == "sk-test123"
@@ -61,7 +60,7 @@ class TestApiKeyModels:
             updated_at=now,
             is_valid=True,
         )
-        
+
         assert response.id == "test-id"
         assert response.name == "Test Key"
         assert response.service == "openai"
@@ -73,7 +72,7 @@ class TestApiKeyModels:
             key="sk-test123",
             service="openai",
         )
-        
+
         assert request.key == "sk-test123"
         assert request.service == "openai"
 
@@ -84,7 +83,7 @@ class TestApiKeyModels:
             service="openai",
             message="API key is valid",
         )
-        
+
         assert response.is_valid is True
         assert response.service == "openai"
         assert response.message == "API key is valid"
@@ -97,7 +96,7 @@ class TestApiKeyDBModels:
         """Test creating a valid database API key model."""
         key_id = uuid.uuid4()
         now = datetime.utcnow()
-        
+
         key_db = ApiKeyDB(
             id=key_id,
             user_id=1,
@@ -107,7 +106,7 @@ class TestApiKeyDBModels:
             created_at=now,
             updated_at=now,
         )
-        
+
         assert key_db.id == key_id
         assert key_db.user_id == 1
         assert key_db.name == "Test Key"
@@ -118,7 +117,7 @@ class TestApiKeyDBModels:
         """Test service name validation in database model."""
         key_id = uuid.uuid4()
         now = datetime.utcnow()
-        
+
         with pytest.raises(ValueError, match="Service name must contain only"):
             ApiKeyDB(
                 id=key_id,
@@ -135,7 +134,7 @@ class TestApiKeyDBModels:
         key_id = uuid.uuid4()
         now = datetime.utcnow()
         past_date = now - timedelta(days=1)
-        
+
         with pytest.raises(ValueError, match="Expiration date must be in the future"):
             ApiKeyDB(
                 id=key_id,
@@ -152,7 +151,7 @@ class TestApiKeyDBModels:
         """Test is_expired method."""
         key_id = uuid.uuid4()
         now = datetime.utcnow()
-        
+
         # Key without expiration
         key_no_exp = ApiKeyDB(
             id=key_id,
@@ -164,7 +163,7 @@ class TestApiKeyDBModels:
             updated_at=now,
         )
         assert not key_no_exp.is_expired()
-        
+
         # Key with future expiration
         future_exp = now + timedelta(days=30)
         key_future = ApiKeyDB(
@@ -183,7 +182,7 @@ class TestApiKeyDBModels:
         """Test is_usable method."""
         key_id = uuid.uuid4()
         now = datetime.utcnow()
-        
+
         # Active, non-expired key
         key_usable = ApiKeyDB(
             id=key_id,
@@ -196,7 +195,7 @@ class TestApiKeyDBModels:
             is_active=True,
         )
         assert key_usable.is_usable()
-        
+
         # Inactive key
         key_inactive = ApiKeyDB(
             id=key_id,
@@ -238,12 +237,12 @@ class TestKeyService:
     def test_encrypt_decrypt_api_key(self, key_service):
         """Test API key encryption and decryption."""
         original_key = "sk-test123456789"
-        
+
         # Encrypt the key
         encrypted = key_service._encrypt_api_key(original_key)
         assert encrypted != original_key
         assert len(encrypted) > len(original_key)
-        
+
         # Decrypt the key
         decrypted = key_service._decrypt_api_key(encrypted)
         assert decrypted == original_key
@@ -254,17 +253,19 @@ class TestKeyService:
         # Setup mocks
         key_service.mcp_manager.initialize_mcp.return_value = mock_supabase_mcp
         mock_supabase_mcp.invoke_method.return_value = {
-            "data": [{
-                "id": "test-id",
-                "name": "Test Key",
-                "service": "openai",
-                "description": "Test description",
-                "created_at": "2025-01-22T10:00:00Z",
-                "updated_at": "2025-01-22T10:00:00Z",
-                "expires_at": None,
-            }]
+            "data": [
+                {
+                    "id": "test-id",
+                    "name": "Test Key",
+                    "service": "openai",
+                    "description": "Test description",
+                    "created_at": "2025-01-22T10:00:00Z",
+                    "updated_at": "2025-01-22T10:00:00Z",
+                    "expires_at": None,
+                }
+            ]
         }
-        
+
         # Create key data
         key_data = ApiKeyCreate(
             name="Test Key",
@@ -272,16 +273,16 @@ class TestKeyService:
             key="sk-test123",
             description="Test description",
         )
-        
+
         # Call the method
         result = await key_service.create_key("user123", key_data)
-        
+
         # Verify the result
         assert isinstance(result, ApiKeyResponse)
         assert result.name == "Test Key"
         assert result.service == "openai"
         assert result.description == "Test description"
-        
+
         # Verify MCP calls
         mock_supabase_mcp.invoke_method.assert_called_once()
         call_args = mock_supabase_mcp.invoke_method.call_args
@@ -314,13 +315,13 @@ class TestKeyService:
                     "updated_at": "2025-01-22T09:00:00Z",
                     "expires_at": None,
                     "last_used": "2025-01-22T10:30:00Z",
-                }
+                },
             ]
         }
-        
+
         # Call the method
         result = await key_service.list_keys("user123")
-        
+
         # Verify the result
         assert len(result) == 2
         assert all(isinstance(key, ApiKeyResponse) for key in result)
@@ -333,13 +334,13 @@ class TestKeyService:
         # Setup mocks
         key_service.mcp_manager.initialize_mcp.return_value = mock_supabase_mcp
         mock_supabase_mcp.invoke_method.return_value = {"count": 1}
-        
+
         # Call the method
         result = await key_service.delete_key("key123")
-        
+
         # Verify the result
         assert result is True
-        
+
         # Verify MCP calls
         mock_supabase_mcp.invoke_method.assert_called_once()
         call_args = mock_supabase_mcp.invoke_method.call_args
@@ -353,10 +354,10 @@ class TestKeyService:
         mock_mcp = AsyncMock()
         mock_mcp.invoke_method.return_value = {"valid": True}
         key_service.mcp_manager.initialize_mcp.return_value = mock_mcp
-        
+
         # Call the method
         result = await key_service.validate_key("sk-test123", "openai")
-        
+
         # Verify the result
         assert isinstance(result, ApiKeyValidateResponse)
         assert result.is_valid is True
@@ -370,10 +371,10 @@ class TestKeyService:
         mock_mcp = AsyncMock()
         mock_mcp.invoke_method.return_value = {"valid": False, "message": "Invalid key"}
         key_service.mcp_manager.initialize_mcp.return_value = mock_mcp
-        
+
         # Call the method
         result = await key_service.validate_key("invalid-key", "openai")
-        
+
         # Verify the result
         assert isinstance(result, ApiKeyValidateResponse)
         assert result.is_valid is False
@@ -398,49 +399,55 @@ class TestKeyMCPIntegrationService:
         return service
 
     @pytest.mark.asyncio
-    async def test_invoke_with_user_key_success(self, integration_service, mock_key_service):
+    async def test_invoke_with_user_key_success(
+        self, integration_service, mock_key_service
+    ):
         """Test successful MCP invocation with user key."""
         # Setup mocks
         mock_key_service.get_key_for_service.return_value = "user-api-key"
         integration_service.mcp_manager.invoke.return_value = {"result": "success"}
-        
+
         # Call the method
         result = await integration_service.invoke_with_user_key(
             "openai", "list_models", "user123", {"max_results": 10}
         )
-        
+
         # Verify the result
         assert result == {"result": "success"}
-        
+
         # Verify key lookup
-        mock_key_service.get_key_for_service.assert_called_once_with("user123", "openai")
-        
+        mock_key_service.get_key_for_service.assert_called_once_with(
+            "user123", "openai"
+        )
+
         # Verify MCP call with injected key
         integration_service.mcp_manager.invoke.assert_called_once()
         call_args = integration_service.mcp_manager.invoke.call_args[0]
         assert call_args[0] == "openai"
         assert call_args[1] == "list_models"
-        
+
         # Verify key injection
         call_params = integration_service.mcp_manager.invoke.call_args[0][2]
         assert "api_key" in call_params
         assert call_params["api_key"] == "user-api-key"
 
     @pytest.mark.asyncio
-    async def test_invoke_with_user_key_fallback(self, integration_service, mock_key_service):
+    async def test_invoke_with_user_key_fallback(
+        self, integration_service, mock_key_service
+    ):
         """Test MCP invocation fallback when no user key."""
         # Setup mocks
         mock_key_service.get_key_for_service.return_value = None
         integration_service.mcp_manager.invoke.return_value = {"result": "success"}
-        
+
         # Call the method
         result = await integration_service.invoke_with_user_key(
             "openai", "list_models", "user123", {"max_results": 10}
         )
-        
+
         # Verify the result
         assert result == {"result": "success"}
-        
+
         # Verify MCP call without user key injection
         integration_service.mcp_manager.invoke.assert_called_once()
         call_params = integration_service.mcp_manager.invoke.call_args[0][2]
@@ -453,24 +460,24 @@ class TestKeyMCPIntegrationService:
     ):
         """Test fallback when user key authentication fails."""
         from tripsage.mcp_abstraction.exceptions import MCPAuthenticationError
-        
+
         # Setup mocks
         mock_key_service.get_key_for_service.return_value = "invalid-user-key"
-        
+
         # First call fails with auth error, second succeeds
         integration_service.mcp_manager.invoke.side_effect = [
             MCPAuthenticationError("Authentication failed", mcp_name="openai"),
             {"result": "success"},
         ]
-        
+
         # Call the method
         result = await integration_service.invoke_with_user_key(
             "openai", "list_models", "user123", {"max_results": 10}
         )
-        
+
         # Verify the result
         assert result == {"result": "success"}
-        
+
         # Verify two MCP calls (first with user key, second with default)
         assert integration_service.mcp_manager.invoke.call_count == 2
 
@@ -478,7 +485,7 @@ class TestKeyMCPIntegrationService:
         """Test API key injection for OpenAI service."""
         params = {"max_results": 10}
         result = integration_service._inject_api_key(params, "openai", "sk-test123")
-        
+
         assert result["api_key"] == "sk-test123"
         assert result["max_results"] == 10
 
@@ -486,7 +493,7 @@ class TestKeyMCPIntegrationService:
         """Test API key injection for Duffel service."""
         params = {"limit": 5}
         result = integration_service._inject_api_key(params, "duffel", "duffel-token")
-        
+
         assert result["api_token"] == "duffel-token"
         assert result["limit"] == 5
 
@@ -494,7 +501,7 @@ class TestKeyMCPIntegrationService:
         """Test removing API key injection."""
         params = {"api_key": "sk-test123", "max_results": 10}
         result = integration_service._remove_api_key_injection(params, "openai")
-        
+
         assert "api_key" not in result
         assert result["max_results"] == 10
 
@@ -502,11 +509,11 @@ class TestKeyMCPIntegrationService:
         """Test key caching operations."""
         # Test caching
         integration_service._cache_user_key("user123", "openai", "sk-test123")
-        
+
         # Test cache retrieval
         assert "user123" in integration_service._cache
         assert integration_service._cache["user123"]["openai"] == "sk-test123"
-        
+
         # Test cache removal
         integration_service._remove_from_cache("user123", "openai")
         assert "user123" not in integration_service._cache
@@ -517,10 +524,10 @@ class TestKeyMCPIntegrationService:
         integration_service._cache_user_key("user1", "openai", "key1")
         integration_service._cache_user_key("user1", "google_maps", "key2")
         integration_service._cache_user_key("user2", "openai", "key3")
-        
+
         # Get stats
         stats = integration_service.get_cache_stats()
-        
+
         assert stats["total_users"] == 2
         assert stats["total_cached_keys"] == 3
         assert set(stats["cached_services"]) == {"openai", "google_maps"}
@@ -539,14 +546,15 @@ class TestBYOKEndpoints:
     def client(self, mock_key_service):
         """Create a test client with mocked dependencies."""
         from fastapi import FastAPI
+
         from tripsage.api.routers.keys import router
-        
+
         app = FastAPI()
         app.include_router(router, prefix="/api/keys")
-        
+
         # Override dependencies
         app.dependency_overrides = {}
-        
+
         return TestClient(app)
 
     def test_health_check(self, client):
@@ -554,7 +562,10 @@ class TestBYOKEndpoints:
         # This is a basic test to ensure our test setup works
         # Since we're testing the router in isolation, we expect 422 for missing auth
         response = client.get("/api/keys")
-        assert response.status_code in [401, 422]  # Either unauthorized or validation error
+        assert response.status_code in [
+            401,
+            422,
+        ]  # Either unauthorized or validation error
 
 
 if __name__ == "__main__":

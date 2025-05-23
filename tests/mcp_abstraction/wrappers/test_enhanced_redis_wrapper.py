@@ -2,8 +2,9 @@
 Tests for enhanced Redis MCP wrapper functionality (locking, pipelining, etc.).
 """
 
+from unittest.mock import patch
+
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
 
 # Mock the settings import to avoid configuration issues
 with patch("tripsage.config.mcp_settings.mcp_settings"):
