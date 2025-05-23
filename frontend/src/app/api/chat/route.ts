@@ -4,7 +4,7 @@ import { z } from "zod";
 
 // Environment variables
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-const API_TIMEOUT = parseInt(process.env.API_TIMEOUT || "30000", 10);
+const API_TIMEOUT = Number.parseInt(process.env.API_TIMEOUT || "30000", 10);
 
 // Request validation schema
 const ChatRequestSchema = z.object({
@@ -22,7 +22,7 @@ const ChatRequestSchema = z.object({
 class ChatError extends Error {
   constructor(
     message: string,
-    public status: number = 500,
+    public status = 500,
     public code?: string
   ) {
     super(message);
@@ -36,7 +36,7 @@ class ChatError extends Error {
 async function forwardToBackend(
   messages: any[],
   sessionId?: string,
-  stream: boolean = true,
+  stream = true,
   authToken?: string
 ): Promise<ReadableStream> {
   const controller = new AbortController();
@@ -71,7 +71,7 @@ async function forwardToBackend(
     // Handle error responses
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      
+
       // Map backend error codes to user-friendly messages
       switch (response.status) {
         case 401:
@@ -106,18 +106,18 @@ async function forwardToBackend(
     return response.body;
   } catch (error) {
     clearTimeout(timeoutId);
-    
+
     if (error instanceof ChatError) {
       throw error;
     }
-    
+
     if (error instanceof Error) {
       if (error.name === "AbortError") {
         throw new ChatError("Request timeout", 408, "TIMEOUT");
       }
       throw new ChatError(error.message);
     }
-    
+
     throw new ChatError("Unknown error occurred");
   }
 }
@@ -140,14 +140,23 @@ export async function POST(req: NextRequest) {
 
     const lastMessage = messages[messages.length - 1];
     if (lastMessage.role !== "user") {
-      throw new ChatError("Last message must be from user", 400, "INVALID_REQUEST");
+      throw new ChatError(
+        "Last message must be from user",
+        400,
+        "INVALID_REQUEST"
+      );
     }
 
     // Get authorization header from the request
     const authToken = req.headers.get("authorization");
 
     // Forward to backend and get stream
-    const backendStream = await forwardToBackend(messages, session_id, stream, authToken || undefined);
+    const backendStream = await forwardToBackend(
+      messages,
+      session_id,
+      stream,
+      authToken || undefined
+    );
 
     // Transform the backend stream to match Vercel AI SDK format
     const transformedStream = new TransformStream({
@@ -164,7 +173,7 @@ export async function POST(req: NextRequest) {
     return new StreamingTextResponse(transformedStream.readable, {
       headers: {
         "Cache-Control": "no-cache",
-        "Connection": "keep-alive",
+        Connection: "keep-alive",
         "X-Content-Type-Options": "nosniff",
       },
     });
