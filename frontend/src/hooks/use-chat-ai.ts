@@ -105,6 +105,18 @@ export function useChatAi(options: UseChatAiOptions = {}) {
     initialMessages: aiMessages,
     id: sessionIdRef.current,
     onResponse: (response) => {
+      // Check for rate limit headers
+      const retryAfter = response.headers.get("X-RateLimit-Reset");
+      if (response.status === 429 && retryAfter) {
+        const resetTime = new Date(parseInt(retryAfter) * 1000);
+        setAgentStatus({
+          sessionId: sessionIdRef.current,
+          status: "error",
+          message: `Rate limited. Try again after ${resetTime.toLocaleTimeString()}`,
+        });
+        return;
+      }
+
       // Set agent to processing when we get a response
       setAgentStatus({
         sessionId: sessionIdRef.current,
@@ -122,10 +134,37 @@ export function useChatAi(options: UseChatAiOptions = {}) {
     },
     onError: (error) => {
       console.error("Chat error:", error);
+      
+      // Parse error for specific handling
+      let errorMessage = "An error occurred while processing your request";
+      let errorStatus = "error";
+      
+      if (error.message) {
+        // Check for specific error patterns
+        if (error.message.includes("timeout") || error.message.includes("TIMEOUT")) {
+          errorMessage = "Request timed out. Please try again.";
+          errorStatus = "timeout";
+        } else if (error.message.includes("Authentication required") || error.message.includes("AUTH_REQUIRED")) {
+          errorMessage = "Authentication required. Please check your API keys.";
+          errorStatus = "auth_error";
+        } else if (error.message.includes("Rate limited") || error.message.includes("RATE_LIMITED")) {
+          errorMessage = "Too many requests. Please wait a moment and try again.";
+          errorStatus = "rate_limited";
+        } else if (error.message.includes("Service unavailable") || error.message.includes("SERVICE_UNAVAILABLE")) {
+          errorMessage = "AI service is temporarily unavailable. Please try again later.";
+          errorStatus = "service_unavailable";
+        } else if (error.message.includes("Model not available")) {
+          errorMessage = "The selected AI model is not available. Please try a different model.";
+          errorStatus = "model_unavailable";
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
       setAgentStatus({
         sessionId: sessionIdRef.current,
-        status: "error",
-        message: error.message || "An error occurred",
+        status: errorStatus as any,
+        message: errorMessage,
       });
     },
   });
