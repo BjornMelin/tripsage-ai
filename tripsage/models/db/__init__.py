@@ -13,6 +13,7 @@ from tripsage.models.db.accommodation import (
 from tripsage.models.db.accommodation import (
     BookingStatus as AccommodationBookingStatus,
 )
+from tripsage.models.db.api_key import ApiKeyCreate, ApiKeyDB, ApiKeyUpdate
 from tripsage.models.db.flight import (
     AirlineProvider,
     DataSource,
@@ -38,14 +39,13 @@ from tripsage.models.db.trip import Trip, TripStatus, TripType
 from tripsage.models.db.trip_comparison import TripComparison
 from tripsage.models.db.trip_note import TripNote
 from tripsage.models.db.user import User
-from tripsage.models.db.api_key import ApiKeyDB, ApiKeyCreate, ApiKeyUpdate
 
 __all__ = [
     # User
     "User",
     # API Key
     "ApiKeyDB",
-    "ApiKeyCreate", 
+    "ApiKeyCreate",
     "ApiKeyUpdate",
     # Trip
     "Trip",

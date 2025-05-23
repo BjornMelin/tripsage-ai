@@ -6,7 +6,7 @@ This module defines Pydantic V2 models for itinerary-related requests and respon
 
 from datetime import date, datetime
 from enum import Enum
-from typing import Dict, List, Optional, Literal
+from typing import Dict, List, Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
