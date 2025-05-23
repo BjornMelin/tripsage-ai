@@ -173,11 +173,14 @@
   - [x] Calendar date picker
   - [x] Results with filtering
   - [ ] Price alerts setup
-- [x] Hotel search page (`/dashboard/search/hotels`)
+- [x] Hotel search page (`/dashboard/search/hotels`) ✅ COMPLETED
   - [x] Location autocomplete
   - [ ] Interactive map view
   - [x] Property filters
   - [ ] Photo galleries
+  - [x] Accommodation search integration with API
+  - [x] AccommodationCard component
+  - [x] useAccommodationSearch hook
 - [ ] Activities search (`/dashboard/search/activities`)
 - [ ] Destinations search (`/dashboard/search/destinations`)
 - [ ] Unified search features
