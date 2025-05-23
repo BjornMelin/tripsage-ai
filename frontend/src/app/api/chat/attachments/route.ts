@@ -1,86 +1,20 @@
 import type { NextRequest } from "next/server";
-import { randomUUID } from "crypto";
-import { z } from "zod";
-import path from "path";
-import { writeFile, mkdir } from "fs/promises";
 
-// Configuration
+// Configuration - moved to backend, keeping for consistency checks
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const MAX_FILES_PER_REQUEST = 5;
-const ALLOWED_FILE_TYPES = [
-  "image/jpeg",
-  "image/png",
-  "image/gif",
-  "image/webp",
-  "application/pdf",
-  "text/plain",
-  "text/csv",
-  "application/vnd.ms-excel",
-  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-];
 
-const ALLOWED_EXTENSIONS = [
-  ".jpg",
-  ".jpeg",
-  ".png",
-  ".gif",
-  ".webp",
-  ".pdf",
-  ".txt",
-  ".csv",
-  ".xls",
-  ".xlsx",
-];
-
-// Mock in-memory storage for uploaded files
-// In production, you would use proper file storage like S3, Supabase Storage, etc.
-const UPLOADS_DIR = path.join(process.cwd(), "public", "uploads");
-
-// Create a temporary in-memory cache for this example
-const fileCache = new Map<
-  string,
-  { name: string; type: string; size: number }
->();
-
-// File validation schema
-const FileValidationSchema = z.object({
-  name: z.string().min(1).max(255),
-  type: z.string(),
-  size: z
-    .number()
-    .max(
-      MAX_FILE_SIZE,
-      `File size must not exceed ${MAX_FILE_SIZE / 1024 / 1024}MB`
-    ),
-});
-
-/**
- * Validate file type and extension
- */
-function isValidFileType(file: File): boolean {
-  const ext = path.extname(file.name).toLowerCase();
-  return (
-    ALLOWED_FILE_TYPES.includes(file.type) && ALLOWED_EXTENSIONS.includes(ext)
-  );
-}
-
-/**
- * Sanitize filename for security
- */
-function sanitizeFilename(filename: string): string {
-  // Remove any path traversal attempts
-  const basename = path.basename(filename);
-  // Replace unsafe characters
-  return basename.replace(/[^a-zA-Z0-9.-]/g, "_");
-}
+// Backend API configuration
+const BACKEND_API_URL = process.env.BACKEND_API_URL || "http://localhost:8000";
+const API_TIMEOUT = 30000; // 30 seconds for file uploads
 
 /**
  * POST handler for /api/chat/attachments
- * Handles secure file uploads with validation
+ * Proxies file uploads to the FastAPI backend with authentication
  */
 export async function POST(req: NextRequest) {
   try {
-    // Check content type
+    // Basic validation before forwarding to backend
     const contentType = req.headers.get("content-type");
     if (!contentType || !contentType.includes("multipart/form-data")) {
       return new Response(
@@ -95,27 +29,19 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Ensure the uploads directory exists
-    try {
-      await mkdir(UPLOADS_DIR, { recursive: true });
-    } catch (error) {
-      console.error("Error creating uploads directory:", error);
-    }
-
-    // Process form data with files
+    // Get form data to check file count and basic validation
     const formData = await req.formData();
     const files: File[] = [];
-    const errors: string[] = [];
-
+    
     // Extract files from form data
     for (const entry of Array.from(formData.entries())) {
       const [key, value] = entry;
-
       if (value instanceof File && value.size > 0) {
         files.push(value);
       }
     }
 
+    // Basic frontend validation
     if (files.length === 0) {
       return new Response(
         JSON.stringify({
@@ -142,37 +68,181 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Validate each file
+    // Quick size check before sending to backend
     for (const file of files) {
-      try {
-        // Validate file properties
-        FileValidationSchema.parse({
-          name: file.name,
-          type: file.type,
-          size: file.size,
-        });
-
-        // Validate file type
-        if (!isValidFileType(file)) {
-          errors.push(
-            `File "${file.name}" has unsupported type. Allowed: images, PDF, text, CSV, Excel`
-          );
-        }
-      } catch (error) {
-        if (error instanceof z.ZodError) {
-          errors.push(`File "${file.name}": ${error.errors[0].message}`);
-        } else {
-          errors.push(`File "${file.name}": Validation failed`);
-        }
+      if (file.size > MAX_FILE_SIZE) {
+        return new Response(
+          JSON.stringify({
+            error: `File "${file.name}" exceeds maximum size of ${MAX_FILE_SIZE / 1024 / 1024}MB`,
+            code: "FILE_TOO_LARGE",
+          }),
+          {
+            status: 400,
+            headers: { "Content-Type": "application/json" },
+          }
+        );
       }
     }
 
-    if (errors.length > 0) {
+    // Determine upload endpoint based on file count
+    const endpoint = files.length === 1 ? "/api/attachments/upload" : "/api/attachments/upload/batch";
+    
+    // Forward request to backend API
+    const backendUrl = `${BACKEND_API_URL}${endpoint}`;
+    
+    // Get authentication token from request headers
+    const authHeader = req.headers.get("authorization");
+    
+    // Create new FormData for backend request
+    const backendFormData = new FormData();
+    
+    if (files.length === 1) {
+      // Single file upload
+      backendFormData.append("file", files[0]);
+    } else {
+      // Batch upload
+      files.forEach((file, index) => {
+        backendFormData.append("files", file);
+      });
+    }
+
+    // Prepare headers for backend request
+    const backendHeaders: HeadersInit = {};
+    if (authHeader) {
+      backendHeaders["Authorization"] = authHeader;
+    }
+
+    // Forward to backend with timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
+
+    try {
+      const backendResponse = await fetch(backendUrl, {
+        method: "POST",
+        headers: backendHeaders,
+        body: backendFormData,
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      // Get response data
+      const responseData = await backendResponse.json();
+
+      // Transform backend response to match frontend expectations
+      if (backendResponse.ok) {
+        if (files.length === 1) {
+          // Single file response
+          const fileData = responseData;
+          return new Response(
+            JSON.stringify({
+              files: [{
+                id: fileData.file_id,
+                name: fileData.filename,
+                size: fileData.file_size,
+                type: fileData.mime_type,
+                url: `/api/attachments/${fileData.file_id}/download`, // Backend download endpoint
+                status: fileData.upload_status,
+              }],
+              urls: [`/api/attachments/${fileData.file_id}/download`], // Backward compatibility
+            }),
+            {
+              status: 200,
+              headers: { "Content-Type": "application/json" },
+            }
+          );
+        } else {
+          // Batch upload response
+          const batchData = responseData;
+          const transformedFiles = batchData.successful_uploads.map((file: any) => ({
+            id: file.file_id,
+            name: file.filename,
+            size: file.file_size,
+            type: file.mime_type,
+            url: `/api/attachments/${file.file_id}/download`,
+            status: file.upload_status,
+          }));
+
+          return new Response(
+            JSON.stringify({
+              files: transformedFiles,
+              urls: transformedFiles.map((f: any) => f.url),
+              batch_summary: {
+                total: batchData.total_files,
+                successful: batchData.successful_count,
+                failed: batchData.failed_count,
+                errors: batchData.failed_uploads,
+              }
+            }),
+            {
+              status: 200,
+              headers: { "Content-Type": "application/json" },
+            }
+          );
+        }
+      } else {
+        // Forward backend error response
+        return new Response(
+          JSON.stringify({
+            error: responseData.detail || "Backend upload failed",
+            code: "BACKEND_ERROR",
+            backend_response: responseData,
+          }),
+          {
+            status: backendResponse.status,
+            headers: { "Content-Type": "application/json" },
+          }
+        );
+      }
+    } catch (fetchError) {
+      clearTimeout(timeoutId);
+      
+      if (fetchError instanceof Error && fetchError.name === "AbortError") {
+        return new Response(
+          JSON.stringify({
+            error: "Upload timeout",
+            code: "TIMEOUT_ERROR",
+          }),
+          {
+            status: 408,
+            headers: { "Content-Type": "application/json" },
+          }
+        );
+      }
+      
+      throw fetchError;
+    }
+
+  } catch (error) {
+    console.error("Error proxying file upload to backend:", error);
+    return new Response(
+      JSON.stringify({
+        error: "Failed to process file upload",
+        code: "PROXY_ERROR",
+        details: error instanceof Error ? error.message : "Unknown error",
+      }),
+      {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      }
+    );
+  }
+}
+
+/**
+ * GET handler for retrieving file metadata
+ * Proxies requests to backend API
+ */
+export async function GET(req: NextRequest) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const fileId = searchParams.get("id");
+
+    if (!fileId) {
       return new Response(
         JSON.stringify({
-          error: "File validation failed",
-          code: "VALIDATION_ERROR",
-          details: errors,
+          error: "File ID is required",
+          code: "MISSING_FILE_ID",
         }),
         {
           status: 400,
@@ -181,56 +251,45 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Process and save valid files
-    const savedFiles = await Promise.all(
-      files.map(async (file) => {
-        const fileId = randomUUID();
-        const sanitizedName = sanitizeFilename(file.name);
-        const fileExt = path.extname(sanitizedName);
-        const uniqueFileName = `${fileId}${fileExt}`;
-        const filePath = path.join(UPLOADS_DIR, uniqueFileName);
+    // Forward to backend
+    const backendUrl = `${BACKEND_API_URL}/api/attachments/${fileId}`;
+    const authHeader = req.headers.get("authorization");
+    
+    const backendHeaders: HeadersInit = {};
+    if (authHeader) {
+      backendHeaders["Authorization"] = authHeader;
+    }
 
-        // Save to a buffer before writing to file
-        const buffer = Buffer.from(await file.arrayBuffer());
-        await writeFile(filePath, buffer);
+    const backendResponse = await fetch(backendUrl, {
+      method: "GET",
+      headers: backendHeaders,
+    });
 
-        // Store metadata in memory (in production, use a database)
-        fileCache.set(fileId, {
-          name: sanitizedName,
-          type: file.type,
-          size: file.size,
-        });
+    const responseData = await backendResponse.json();
 
-        // Generate public URL
-        const publicUrl = `/uploads/${uniqueFileName}`;
-
-        return {
-          url: publicUrl,
-          id: fileId,
-          name: sanitizedName,
-          size: file.size,
-          type: file.type,
-        };
-      })
-    );
-
-    // Return metadata of saved files
-    return new Response(
-      JSON.stringify({
-        files: savedFiles,
-        urls: savedFiles.map((f) => f.url), // Backward compatibility
-      }),
-      {
+    if (backendResponse.ok) {
+      return new Response(JSON.stringify(responseData), {
         status: 200,
         headers: { "Content-Type": "application/json" },
-      }
-    );
+      });
+    } else {
+      return new Response(
+        JSON.stringify({
+          error: responseData.detail || "Failed to retrieve file metadata",
+          code: "BACKEND_ERROR",
+        }),
+        {
+          status: backendResponse.status,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+    }
   } catch (error) {
-    console.error("Error processing file upload:", error);
+    console.error("Error retrieving file metadata:", error);
     return new Response(
       JSON.stringify({
-        error: "Failed to process file upload",
-        code: "UPLOAD_ERROR",
+        error: "Failed to retrieve file metadata",
+        code: "PROXY_ERROR",
       }),
       {
         status: 500,
