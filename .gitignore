@@ -53,6 +53,12 @@ MANIFEST
 instance/
 local_settings.py
 
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
 # Supabase / PostgreSQL
 .supabase/
 # *.sql  # Uncomment if you want to ignore all SQL files
@@ -68,8 +74,46 @@ Thumbs.db
 *.swp
 *~
 
+# AI Coding Assistants
+.cursor/
+.windsurf/
+.windsurfrules
+.cline/
+.roo/
+.roomodes
+.lovable/
+.claude/
+*.local.md
+CLAUDE.local.md
+
+# Taskmaster
+.taskmasterconfig
+tasks/*.json
+!tasks/tasks.json.example
+scripts/prd.txt
+scripts/*.prd
+!scripts/example_prd.txt
+.taskmaster/
+
 # repomix
 repomix-output.*
 
 CLAUDE.md.old
 .archive
+
+# Logs
+logs
+dev-debug.log
+
+# Testing
+test-results/
+playwright-report/
+playwright/.cache/
+
+# Frontend build
+.next/
+out/
+dist/
+
+# Archived local files
+.archived/
