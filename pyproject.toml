@@ -12,6 +12,8 @@ authors = [
 # Subprojects maintain their own requirements.txt files
 dependencies = [
     "pydantic>=2.11.4",
+    "sqlalchemy[asyncio]>=2.0.41",
+    "greenlet>=3.1.1",
 ]
 
 [project.optional-dependencies]

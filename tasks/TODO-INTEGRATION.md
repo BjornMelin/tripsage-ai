@@ -111,19 +111,30 @@ The AI chat interface frontend components have been successfully implemented wit
   - Integration tests: `tests/integration/test_chat_auth_flow.py`
   - Frontend unit tests: `frontend/src/components/features/chat/__tests__/chat-auth.test.tsx`
 
-## Phase 3: Tool Calling & MCP Integration 🛠️
+## Phase 3: Tool Calling & MCP Integration 🛠️ ✅ TESTING INFRASTRUCTURE COMPLETE
 
-### 3.1 Agent Orchestration
+### 3.1 Agent Orchestration ✅ Testing Foundation Complete
+- [x] ✅ **Testing Infrastructure Established (May 23, 2025)**
+  - ✅ Comprehensive testing solution for pydantic settings isolation
+  - ✅ Test environment configuration in `tests/.env.test`
+  - ✅ TestSettings class and utilities in `tests/test_settings.py`
+  - ✅ Working test patterns in `tests/agents/test_chat_agent_demo.py`
+  - ✅ Documentation in `tests/TESTING_SOLUTION.md`
+  - ✅ All dependencies resolved (SQLAlchemy, greenlet)
+  - ✅ Zero ruff linting errors achieved
+
 - [ ] **Create chat agent controller**
   - Location: `tripsage/agents/chat.py` (new file)
   - Purpose: Route chat requests to appropriate specialized agents
   - Integration: Use existing agent handoff patterns from `agents/handoffs/`
+  - Status: Dependencies and testing infrastructure ready
 
 - [ ] **Implement tool calling interface**
   - [ ] Connect to MCP servers (flights, accommodations, maps)
   - [ ] Handle tool call responses in chat interface
   - [ ] Display tool results in MessageToolCalls component
   - Reference: Existing MCP client implementations in `tripsage/clients/`
+  - Note: Can now use established testing patterns for implementation
 
 - [ ] **Add trip planning workflow integration**
   - [ ] Initialize trip planning from chat

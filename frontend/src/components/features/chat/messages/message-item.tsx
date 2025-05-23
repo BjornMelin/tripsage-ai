@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { type Message, MessageRole } from "@/types/chat";
+import { type Message, MessageRole, ToolCall, ToolResult } from "@/types/chat";
 import { cn } from "@/lib/utils";
 import { Avatar } from "@/components/ui/avatar";
 import { Bot, User, Info, Server } from "lucide-react";
@@ -11,9 +11,19 @@ import MessageToolCalls from "./message-tool-calls";
 
 interface MessageItemProps {
   message: Message;
+  activeToolCalls?: ToolCall[];
+  toolResults?: ToolResult[];
+  onRetryToolCall?: (toolCallId: string) => void;
+  onCancelToolCall?: (toolCallId: string) => void;
 }
 
-export default function MessageItem({ message }: MessageItemProps) {
+export default function MessageItem({ 
+  message, 
+  activeToolCalls, 
+  toolResults, 
+  onRetryToolCall, 
+  onCancelToolCall 
+}: MessageItemProps) {
   const isUser = message.role === "USER";
   const isAssistant = message.role === "ASSISTANT";
   const isSystem = message.role === "SYSTEM";
@@ -72,7 +82,9 @@ export default function MessageItem({ message }: MessageItemProps) {
           {hasToolCalls && (
             <MessageToolCalls
               toolCalls={message.toolCalls!}
-              toolResults={message.toolResults}
+              toolResults={message.toolResults || toolResults}
+              onRetryToolCall={onRetryToolCall}
+              onCancelToolCall={onCancelToolCall}
             />
           )}
         </div>

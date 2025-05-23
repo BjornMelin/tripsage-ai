@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef } from "react";
-import type { Message } from "@/types/chat";
+import type { Message, ToolCall, ToolResult } from "@/types/chat";
 import { cn } from "@/lib/utils";
 import MessageItem from "./message-item";
 import { Loader2 } from "lucide-react";
@@ -10,12 +10,20 @@ interface MessageListProps {
   messages: Message[];
   isStreaming?: boolean;
   className?: string;
+  activeToolCalls?: ToolCall[];
+  toolResults?: ToolResult[];
+  onRetryToolCall?: (toolCallId: string) => void;
+  onCancelToolCall?: (toolCallId: string) => void;
 }
 
 export default function MessageList({
   messages,
   isStreaming,
   className,
+  activeToolCalls,
+  toolResults,
+  onRetryToolCall,
+  onCancelToolCall,
 }: MessageListProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -127,7 +135,14 @@ export default function MessageList({
         ) : (
           <>
             {messages.map((message) => (
-              <MessageItem key={message.id} message={message} />
+              <MessageItem 
+                key={message.id} 
+                message={message}
+                activeToolCalls={activeToolCalls}
+                toolResults={toolResults}
+                onRetryToolCall={onRetryToolCall}
+                onCancelToolCall={onCancelToolCall}
+              />
             ))}
           </>
         )}

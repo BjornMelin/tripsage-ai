@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { useChatStore } from "@/stores/chat-store";
 import { useApiKeyStore } from "@/stores/api-key-store";
-import type { Message, MessageRole, ChatSession } from "@/types/chat";
+import type { Message, MessageRole, ChatSession, ToolCall, ToolResult } from "@/types/chat";
 
 interface UseChatAiOptions {
   /**
@@ -35,6 +35,10 @@ export function useChatAi(options: UseChatAiOptions = {}) {
   // Auth and API key state
   const [authError, setAuthError] = useState<string | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
+  
+  // Tool call state
+  const [activeToolCalls, setActiveToolCalls] = useState<Map<string, ToolCall>>(new Map());
+  const [toolResults, setToolResults] = useState<Map<string, ToolResult>>(new Map());
   
   const {
     isAuthenticated,
@@ -132,6 +136,89 @@ export function useChatAi(options: UseChatAiOptions = {}) {
     onNewSession,
   ]);
 
+  // Tool call management functions
+  const addToolCall = useCallback((toolCall: ToolCall) => {
+    setActiveToolCalls(prev => new Map(prev.set(toolCall.id, toolCall)));
+  }, []);
+
+  const updateToolCall = useCallback((toolCallId: string, updates: Partial<ToolCall>) => {
+    setActiveToolCalls(prev => {
+      const newMap = new Map(prev);
+      const existing = newMap.get(toolCallId);
+      if (existing) {
+        newMap.set(toolCallId, { ...existing, ...updates });
+      }
+      return newMap;
+    });
+  }, []);
+
+  const addToolResult = useCallback((result: ToolResult) => {
+    setToolResults(prev => new Map(prev.set(result.callId, result)));
+    // Update the tool call status
+    updateToolCall(result.callId, { 
+      status: result.status === "success" ? "completed" : "error",
+      result: result.result,
+      error: result.errorMessage,
+      executionTime: result.executionTime
+    });
+  }, [updateToolCall]);
+
+  const retryToolCall = useCallback(async (toolCallId: string) => {
+    const toolCall = activeToolCalls.get(toolCallId);
+    if (!toolCall) return;
+
+    // Reset tool call status
+    updateToolCall(toolCallId, { status: "pending", error: undefined });
+    
+    // Remove any existing result
+    setToolResults(prev => {
+      const newMap = new Map(prev);
+      newMap.delete(toolCallId);
+      return newMap;
+    });
+
+    // TODO: Implement actual retry logic with API call
+    console.log("Retrying tool call:", toolCallId);
+  }, [activeToolCalls, updateToolCall]);
+
+  const cancelToolCall = useCallback((toolCallId: string) => {
+    updateToolCall(toolCallId, { status: "cancelled" });
+    
+    // TODO: Implement actual cancellation with API call
+    console.log("Cancelling tool call:", toolCallId);
+  }, [updateToolCall]);
+
+  // Handle streaming tool call chunks
+  const handleToolCallChunk = useCallback((chunk: string) => {
+    try {
+      if (chunk.startsWith('9:')) {
+        // Tool call chunk
+        const toolCallData = JSON.parse(chunk.slice(2));
+        const toolCall: ToolCall = {
+          id: toolCallData.id,
+          name: toolCallData.name,
+          arguments: toolCallData.args,
+          status: "executing",
+          sessionId: sessionIdRef.current,
+        };
+        addToolCall(toolCall);
+      } else if (chunk.startsWith('a:')) {
+        // Tool result chunk
+        const resultData = JSON.parse(chunk.slice(2));
+        const toolResult: ToolResult = {
+          callId: resultData.callId,
+          result: resultData.result,
+          status: resultData.result?.status === "error" ? "error" : "success",
+          errorMessage: resultData.result?.error,
+          executionTime: resultData.result?.executionTime,
+        };
+        addToolResult(toolResult);
+      }
+    } catch (error) {
+      console.warn("Failed to parse tool call chunk:", chunk, error);
+    }
+  }, [addToolCall, addToolResult]);
+
   // Convert our messages to AI SDK format
   const aiMessages: AiMessage[] =
     sessions
@@ -178,14 +265,62 @@ export function useChatAi(options: UseChatAiOptions = {}) {
         status: "processing",
         message: "Processing your request...",
       });
+
+      // Handle streaming tool calls
+      if (response.body) {
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        
+        const processChunk = async () => {
+          try {
+            const { done, value } = await reader.read();
+            if (done) return;
+            
+            const chunk = decoder.decode(value, { stream: true });
+            const lines = chunk.split('\n');
+            
+            for (const line of lines) {
+              if (line.trim()) {
+                handleToolCallChunk(line.trim());
+              }
+            }
+            
+            // Continue processing
+            processChunk();
+          } catch (error) {
+            console.warn("Error processing stream chunk:", error);
+          }
+        };
+        
+        processChunk();
+      }
     },
     onFinish: (message) => {
+      // Update message with tool call information
+      if (activeToolCalls.size > 0) {
+        const toolCallsArray = Array.from(activeToolCalls.values());
+        const toolResultsArray = Array.from(toolResults.values());
+        
+        updateMessage({
+          sessionId: sessionIdRef.current,
+          messageId: message.id,
+          updates: {
+            toolCalls: toolCallsArray,
+            toolResults: toolResultsArray,
+          },
+        });
+      }
+
       // Set agent to idle when message is complete
       setAgentStatus({
         sessionId: sessionIdRef.current,
         status: "idle",
         message: "",
       });
+
+      // Clear active tool calls for next message
+      setActiveToolCalls(new Map());
+      setToolResults(new Map());
     },
     onError: (error) => {
       console.error("Chat error:", error);
@@ -359,6 +494,10 @@ export function useChatAi(options: UseChatAiOptions = {}) {
     isApiKeyValid,
     authError: authError || storeAuthError,
 
+    // Tool call state
+    activeToolCalls: Array.from(activeToolCalls.values()),
+    toolResults: Array.from(toolResults.values()),
+
     // Input state (from AI SDK)
     input,
     handleInputChange,
@@ -367,5 +506,9 @@ export function useChatAi(options: UseChatAiOptions = {}) {
     sendMessage,
     stopGeneration,
     reload,
+    
+    // Tool call actions
+    retryToolCall,
+    cancelToolCall,
   };
 }
