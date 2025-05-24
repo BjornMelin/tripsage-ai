@@ -45,7 +45,7 @@
     "react-dom": "^19.0.0",
     "react-hook-form": "^7.56.4",
     "zod": "^3.25.28",
-    "zustand": "^5.0.4"
+    "zustand": "^5.0.5"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
