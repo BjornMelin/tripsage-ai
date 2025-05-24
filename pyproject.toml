@@ -3,28 +3,23 @@ name = "tripsage-ai"
 version = "0.1.0"
 description = "AI-powered travel planning system with multi-source data integration"
 readme = "README.md"
-requires-python = ">=3.10"
-authors = [
-    {name = "TripSage Team"},
-]
+requires-python = ">=3.12"
+authors = [{ name = "TripSage Team" }]
 
 # Only include core shared dependencies here
 # Subprojects maintain their own requirements.txt files
 dependencies = [
-    "pydantic>=2.11.4",
+    "pydantic>=2.11.5",
     "sqlalchemy[asyncio]>=2.0.41",
     "greenlet>=3.1.1",
 ]
 
 [project.optional-dependencies]
-dev = [
-    "ruff>=0.11.9",
-    "pytest>=8.3.5",
-]
+dev = ["ruff>=0.11.9", "pytest>=8.3.5"]
 
 [tool.ruff]
 line-length = 88
-target-version = "py310"
+target-version = "py312"
 lint.select = ["E", "F", "B", "I"]
 
 [build-system]
