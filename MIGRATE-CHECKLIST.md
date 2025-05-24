@@ -214,7 +214,7 @@ The migration and cleanup is now complete. The only remaining item in `src/` is:
 
 - `src/types/supabase.ts` - TypeScript type definitions (preserved as still useful)
 
-### Next Steps
+### Next Steps (2025-05-23)
 
 1. Decide on API implementation - whether to migrate `src/api/` or create new in `tripsage/api/`
 2. Update import statements in any remaining code that references old `src/` paths
