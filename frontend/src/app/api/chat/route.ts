@@ -1,4 +1,5 @@
-import { StreamingTextResponse } from "ai";
+import { createOpenAI } from "@ai-sdk/openai";
+import { streamText } from "ai";
 import type { NextRequest } from "next/server";
 import { z } from "zod";
 
@@ -170,8 +171,9 @@ export async function POST(req: NextRequest) {
     backendStream.pipeTo(transformedStream.writable);
 
     // Return the streaming response
-    return new StreamingTextResponse(transformedStream.readable, {
+    return new Response(transformedStream.readable, {
       headers: {
+        "Content-Type": "text/plain; charset=utf-8",
         "Cache-Control": "no-cache",
         Connection: "keep-alive",
         "X-Content-Type-Options": "nosniff",
