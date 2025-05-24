@@ -14,7 +14,12 @@ from pathlib import Path
 project_root = Path(__file__).parent
 sys.path.insert(0, str(project_root))
 
-# CRITICAL: Set environment variables BEFORE any imports that trigger pydantic validation
+# Imports needed for testing
+import asyncio  # noqa: E402
+from unittest.mock import AsyncMock, MagicMock, patch  # noqa: E402
+
+# CRITICAL: Set environment variables BEFORE any imports that trigger
+# pydantic validation
 # Using the comprehensive environment setup from conftest.py
 test_env_vars = {
     # Basic API keys
@@ -61,8 +66,6 @@ for key, value in test_env_vars.items():
 print("🔧 Environment variables set for testing")
 
 # Now we can safely import modules that use pydantic settings
-import asyncio
-from unittest.mock import AsyncMock, MagicMock, patch
 
 
 def test_intent_detection_algorithm():
@@ -200,7 +203,9 @@ def test_intent_detection_algorithm():
             passed += 1
         else:
             print(
-                f"  ❌ '{message}' -> Expected: {expected_intent} (>={min_confidence}), Got: {result['intent']} ({result['confidence']})"
+                f"  ❌ '{message}' -> Expected: {expected_intent} "
+                f"(>={min_confidence}), Got: {result['intent']} "
+                f"({result['confidence']})"
             )
             failed += 1
 
@@ -324,12 +329,14 @@ def test_chat_agent_intent_detection():
                         ):
                             if result["intent"] == expected_intent:
                                 print(
-                                    f"  ✅ '{message}' -> {result['intent']} ({result['confidence']})"
+                                    f"  ✅ '{message}' -> {result['intent']} "
+                                    f"({result['confidence']})"
                                 )
                                 passed += 1
                             else:
                                 print(
-                                    f"  ❌ '{message}' -> Expected: {expected_intent}, Got: {result['intent']}"
+                                    f"  ❌ '{message}' -> Expected: {expected_intent}, "
+                                    f"Got: {result['intent']}"
                                 )
                                 failed += 1
                         else:
@@ -343,7 +350,8 @@ def test_chat_agent_intent_detection():
                         failed += 1
 
                 print(
-                    f"\n📊 Intent Detection Method Results: {passed} passed, {failed} failed"
+                    f"\n📊 Intent Detection Method Results: {passed} passed, "
+                    f"{failed} failed"
                 )
                 return failed == 0
 
@@ -498,7 +506,8 @@ async def test_chat_agent_process_flow():
 
                     if len(result["tool_calls"]) != 1:
                         print(
-                            f"  ❌ Expected 1 tool call, got {len(result['tool_calls'])}"
+                            f"  ❌ Expected 1 tool call, got "
+                            f"{len(result['tool_calls'])}"
                         )
                         return False
 
@@ -513,13 +522,15 @@ async def test_chat_agent_process_flow():
 
                     if not isinstance(tool_call["arguments"], dict):
                         print(
-                            f"  ❌ Tool call arguments not a dict: {type(tool_call['arguments'])}"
+                            f"  ❌ Tool call arguments not a dict: "
+                            f"{type(tool_call['arguments'])}"
                         )
                         return False
 
                     if tool_call["arguments"]["origin"] != "NYC":
                         print(
-                            f"  ❌ Unexpected origin: {tool_call['arguments']['origin']}"
+                            f"  ❌ Unexpected origin: "
+                            f"{tool_call['arguments']['origin']}"
                         )
                         return False
 
@@ -532,7 +543,8 @@ async def test_chat_agent_process_flow():
                     print(f"  ✅ Response: {result['response']}")
                     print(f"  ✅ Tool calls: {len(result['tool_calls'])}")
                     print(
-                        f"  ✅ Flight agent called: {mock_flight_agent.handle_request.called}"
+                        f"  ✅ Flight agent called: "
+                        f"{mock_flight_agent.handle_request.called}"
                     )
 
                     return True

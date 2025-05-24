@@ -31,12 +31,18 @@ def get_auth_service() -> AuthService:
     return _auth_service_singleton
 
 
+# Module-level dependency singletons to avoid B008 linting errors
+get_current_user_dep = Depends(get_current_user)
+get_auth_service_dep = Depends(get_auth_service)
+oauth2_form_dep = Depends()
+
+
 @router.post(
     "/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED
 )
 async def register(
     request: RegisterUserRequest,
-    auth_service: AuthService = Depends(get_auth_service),
+    auth_service: AuthService = get_auth_service_dep,
 ):
     """Register a new user.
 
@@ -74,8 +80,8 @@ async def register(
 @router.post("/token", response_model=TokenResponse)
 async def login(
     response: Response,
-    form_data: OAuth2PasswordRequestForm = Depends(),
-    auth_service: AuthService = Depends(get_auth_service),
+    form_data: OAuth2PasswordRequestForm = oauth2_form_dep,
+    auth_service: AuthService = get_auth_service_dep,
 ):
     """Authenticate and get access tokens.
 
@@ -139,7 +145,7 @@ async def refresh_token(
     response: Response,
     request: RefreshTokenRequest = None,
     refresh_token: Optional[str] = None,
-    auth_service: AuthService = Depends(get_auth_service),
+    auth_service: AuthService = get_auth_service_dep,
 ):
     """Refresh access token.
 
@@ -238,8 +244,8 @@ async def logout(response: Response):
 
 @router.get("/me", response_model=UserResponse)
 async def get_current_user_info(
-    current_user: dict = Depends(get_current_user),
-    auth_service: AuthService = Depends(get_auth_service),
+    current_user: dict = get_current_user_dep,
+    auth_service: AuthService = get_auth_service_dep,
 ):
     """Get information about the current user.
 

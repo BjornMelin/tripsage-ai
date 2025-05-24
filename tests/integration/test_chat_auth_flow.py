@@ -82,7 +82,7 @@ class TestChatAuthFlow:
     def test_chat_privacy_controls(self, client, mock_user_headers):
         """Test chat privacy controls (opt-out of history storage)."""
         # Test with save_history=False
-        response = client.post(
+        client.post(
             "/api/chat",
             headers=mock_user_headers,
             json={
@@ -131,7 +131,7 @@ class TestChatAuthFlow:
         """Test API key validation flow."""
         # This test would verify that users with invalid API keys
         # are rejected by the chat endpoint
-        response = client.post(
+        client.post(
             "/api/chat",
             headers=mock_user_headers,
             json={
@@ -175,7 +175,7 @@ class TestChatSecurityFeatures:
         # Test with potentially malicious content
         malicious_content = "<script>alert('xss')</script>"
 
-        response = client.post(
+        client.post(
             "/api/chat",
             headers=mock_user_headers,
             json={

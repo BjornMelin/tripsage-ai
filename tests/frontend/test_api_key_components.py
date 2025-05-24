@@ -33,7 +33,6 @@ def test_api_key_security_features():
 
     # Test that sensitive data is not persisted
     persisted_keys = ["supportedServices"]  # Only non-sensitive data
-    sensitive_keys = ["keys", "selectedService"]  # Should not be persisted
 
     # Verify only non-sensitive data is configured for persistence
     assert "supportedServices" in persisted_keys

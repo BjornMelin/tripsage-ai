@@ -69,15 +69,18 @@ class DocumentAnalyzer:
         # Analysis templates for different document types
         self.analysis_templates = {
             "travel_itinerary": {
-                "prompt": "Extract travel itinerary information including destinations, dates, accommodations, and activities.",
+                "prompt": "Extract travel itinerary information including "
+                "destinations, dates, accommodations, and activities.",
                 "fields": ["destinations", "dates", "accommodations", "activities"],
             },
             "booking_confirmation": {
-                "prompt": "Extract booking details including confirmation numbers, dates, locations, and contact information.",
+                "prompt": "Extract booking details including confirmation "
+                "numbers, dates, locations, and contact information.",
                 "fields": ["booking_reference", "dates", "location", "contact_info"],
             },
             "travel_document": {
-                "prompt": "Extract travel document information including passport details, visa information, and validity dates.",
+                "prompt": "Extract travel document information including "
+                "passport details, visa information, and validity dates.",
                 "fields": [
                     "document_type",
                     "document_number",

@@ -55,7 +55,8 @@ class KeyMCPIntegrationService:
             The result from the MCP method call
 
         Raises:
-            MCPAuthenticationError: If authentication fails with both user and default keys
+            MCPAuthenticationError: If authentication fails with both user
+            and default keys
         """
         # Try to get user's API key for the service
         user_key = await self._get_user_key_for_service(user_id, mcp_name)
