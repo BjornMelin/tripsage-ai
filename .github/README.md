@@ -61,6 +61,8 @@ VERCEL_PROJECT_ID=your_project_id
 CODECOV_TOKEN=your_codecov_token
 ```
 
+📖 **For detailed deployment setup with cost estimates, see [DEPLOYMENT.md](./DEPLOYMENT.md)**
+
 ### Branch Protection
 Recommended branch protection rules for `main`:
 
