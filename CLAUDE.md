@@ -98,6 +98,7 @@ _Build every server with **FastMCP 2.0**; use **Pydantic v2** models and
 - **Unit Tests:** Use pytest with ≥90% coverage
 - **Integration Tests:** Test MCP integrations with mocks
 - **E2E Tests:** Use Playwright for frontend testing
+- **Environment Variables:** Always use `.env.test` for testing - contains mock values for all configurations
 - **Always run:** `uv run pytest --cov=tripsage`
 
 ## Git Workflow

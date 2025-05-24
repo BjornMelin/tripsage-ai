@@ -10,7 +10,7 @@ env_vars = {
     "SKIP_REDIS_INIT": "true",  # Skip Redis initialization in tests
     # Database
     "NEO4J_PASSWORD": "test_password",
-    "NEO4J_USER": "bjorn",
+    "NEO4J_USER": "neo4j",
     "NEO4J_URI": "bolt://localhost:7687",
     # API keys
     "OPENAI_API_KEY": "test_key",
