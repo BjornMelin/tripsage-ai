@@ -37,13 +37,20 @@ def get_trip_service() -> TripService:
     return _trip_service_singleton
 
 
+# Module-level dependency singletons to avoid B008 linting errors
+get_current_user_dep = Depends(get_current_user)
+get_trip_service_dep = Depends(get_trip_service)
+get_storage_service_dep = Depends(get_storage_service)
+get_session_memory_dep = Depends(get_session_memory)
+
+
 @router.post("/", response_model=TripResponse, status_code=status.HTTP_201_CREATED)
 async def create_trip(
     trip_request: CreateTripRequest,
-    current_user: dict = Depends(get_current_user),
-    trip_service: TripService = Depends(get_trip_service),
-    storage: DualStorageService = Depends(get_storage_service),
-    session_memory: SessionMemory = Depends(get_session_memory),
+    current_user: dict = get_current_user_dep,
+    trip_service: TripService = get_trip_service_dep,
+    storage: DualStorageService = get_storage_service_dep,
+    session_memory: SessionMemory = get_session_memory_dep,
 ):
     """Create a new trip.
 
@@ -78,8 +85,8 @@ async def list_trips(
     limit: int = Query(
         10, ge=1, le=100, description="Limit the number of trips returned"
     ),
-    current_user: dict = Depends(get_current_user),
-    trip_service: TripService = Depends(get_trip_service),
+    current_user: dict = get_current_user_dep,
+    trip_service: TripService = get_trip_service_dep,
 ):
     """List trips for the current user.
 
@@ -110,9 +117,9 @@ async def list_trips(
 @router.get("/{trip_id}", response_model=TripResponse)
 async def get_trip(
     trip_id: UUID,
-    current_user: dict = Depends(get_current_user),
-    trip_service: TripService = Depends(get_trip_service),
-    session_memory: SessionMemory = Depends(get_session_memory),
+    current_user: dict = get_current_user_dep,
+    trip_service: TripService = get_trip_service_dep,
+    session_memory: SessionMemory = get_session_memory_dep,
 ):
     """Get a trip by ID.
 
@@ -146,8 +153,8 @@ async def get_trip(
 async def update_trip(
     trip_id: UUID,
     trip_request: UpdateTripRequest,
-    current_user: dict = Depends(get_current_user),
-    trip_service: TripService = Depends(get_trip_service),
+    current_user: dict = get_current_user_dep,
+    trip_service: TripService = get_trip_service_dep,
 ):
     """Update a trip.
 
@@ -179,8 +186,8 @@ async def update_trip(
 @router.delete("/{trip_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_trip(
     trip_id: UUID,
-    current_user: dict = Depends(get_current_user),
-    trip_service: TripService = Depends(get_trip_service),
+    current_user: dict = get_current_user_dep,
+    trip_service: TripService = get_trip_service_dep,
 ):
     """Delete a trip.
 
@@ -206,8 +213,8 @@ async def delete_trip(
 async def update_trip_preferences(
     trip_id: UUID,
     preferences: TripPreferencesRequest,
-    current_user: dict = Depends(get_current_user),
-    trip_service: TripService = Depends(get_trip_service),
+    current_user: dict = get_current_user_dep,
+    trip_service: TripService = get_trip_service_dep,
 ):
     """Update trip preferences.
 
@@ -239,8 +246,8 @@ async def update_trip_preferences(
 @router.get("/{trip_id}/summary", response_model=TripSummaryResponse)
 async def get_trip_summary(
     trip_id: UUID,
-    current_user: dict = Depends(get_current_user),
-    trip_service: TripService = Depends(get_trip_service),
+    current_user: dict = get_current_user_dep,
+    trip_service: TripService = get_trip_service_dep,
 ):
     """Get a summary of a trip.
 

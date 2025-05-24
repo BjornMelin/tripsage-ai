@@ -121,7 +121,7 @@ class TestChatAgentCore:
             user_id = "test_user"
 
             # Should allow first 5 calls
-            for i in range(5):
+            for _i in range(5):
                 assert await agent.check_tool_rate_limit(user_id)
                 await agent.log_tool_call(user_id)
 
@@ -151,7 +151,7 @@ class TestChatAgentCore:
             user_id = "test_user"
 
             # Fill up the rate limit
-            for i in range(5):
+            for _i in range(5):
                 await agent.log_tool_call(user_id)
 
             # Should be at limit
@@ -186,7 +186,7 @@ class TestChatAgentCore:
             user_id = "test_user"
 
             # Fill up rate limit
-            for i in range(5):
+            for _i in range(5):
                 await agent.log_tool_call(user_id)
 
             result = await agent.execute_tool_call(
