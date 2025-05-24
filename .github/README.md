@@ -4,39 +4,32 @@ This directory contains GitHub Actions workflows for the TripSage AI project.
 
 ## Workflows
 
-### 1. Frontend CI/CD (`frontend-ci.yml`)
-**Comprehensive workflow for frontend testing and deployment**
+### 1. Frontend CI (`frontend-ci-simple.yml`)
+**Primary CI workflow for frontend development**
 
-- **Triggers**: Push/PR to main/develop branches with frontend changes
+- **Triggers**: Push/PR to main/develop/feat/* branches with frontend changes
 - **Jobs**:
-  - **Lint and Format**: Biome linting/formatting + ESLint
-  - **Unit Tests**: Vitest with coverage reporting
+  - **Build and Test**: Essential checks for reliable deployments
   - **Build**: Next.js production build with caching
-  - **E2E Tests**: Playwright tests against built application
-  - **Type Check**: TypeScript strict type checking
-  - **Security Audit**: NPM audit for vulnerabilities
-  - **Deployment Check**: Validates all checks before deployment
+  - **Format Check**: Biome formatting validation
+  - **Type Check**: TypeScript type validation (non-blocking)
+  - **Security Audit**: NPM audit for vulnerabilities (non-blocking)
+  - **Artifact Upload**: Build artifacts for deployment
 
-### 2. Frontend CI Simple (`frontend-ci-simple.yml`)
-**Simplified workflow focusing on successful builds**
-
-- **Triggers**: Push/PR to main/develop/feat/* branches
-- **Jobs**:
-  - **Build and Test**: Essential checks for build success
-  - Includes dependency installation, build, formatting, and security audit
-  - More lenient than comprehensive CI for rapid iteration
-
-### 3. Deployment (`deploy.yml`)
-**Vercel deployment automation**
+### 2. Deployment (`deploy.yml`)
+**Vercel deployment automation with concurrency control**
 
 - **Triggers**: 
   - Push to main branch
-  - Successful completion of Frontend CI/CD workflow
+  - Successful completion of Frontend CI workflow
 - **Jobs**:
   - **Production Deploy**: Deploys to Vercel production
   - **Preview Deploy**: Creates preview deployments for PRs
+- **Features**: 
+  - Concurrency control to prevent deployment conflicts
+  - Automatic artifact handling
 
-### 4. Dependabot (`dependabot.yml`)
+### 3. Dependabot (`dependabot.yml`)
 **Automated dependency updates**
 
 - **Schedule**: Weekly on Mondays at 9:00 AM

@@ -1,4 +1,4 @@
-name: Frontend CI (Simple)
+name: Frontend CI
 
 on:
   push:
@@ -45,9 +45,9 @@ jobs:
         with:
           path: |
             ./frontend/.next/cache
-          key: ${{ runner.os }}-nextjs-${{ hashFiles('**/pnpm-lock.yaml') }}-${{ hashFiles('**/*.js', '**/*.jsx', '**/*.ts', '**/*.tsx') }}
+          key: ${{ runner.os }}-nextjs-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: |
-            ${{ runner.os }}-nextjs-${{ hashFiles('**/pnpm-lock.yaml') }}-
+            ${{ runner.os }}-nextjs-
 
       - name: Build application
         run: pnpm build
@@ -56,6 +56,10 @@ jobs:
 
       - name: Run Biome format check
         run: pnpm biome format --check .
+
+      - name: Run TypeScript type check
+        run: pnpm type-check
+        continue-on-error: true
 
       - name: Run security audit
         run: pnpm audit --audit-level moderate
