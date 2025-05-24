@@ -1,7 +1,7 @@
 import type { NextRequest } from "next/server";
 
-// Configuration - moved to backend, keeping for consistency checks
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+// Configuration - should match backend centralized config
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB per file
 const MAX_FILES_PER_REQUEST = 5;
 
 // Backend API configuration
@@ -132,7 +132,7 @@ export async function POST(req: NextRequest) {
       // Transform backend response to match frontend expectations
       if (backendResponse.ok) {
         if (files.length === 1) {
-          // Single file response
+          // Single file response - match backend FileUploadResponse model
           const fileData = responseData;
           return new Response(
             JSON.stringify({
@@ -142,7 +142,7 @@ export async function POST(req: NextRequest) {
                 size: fileData.file_size,
                 type: fileData.mime_type,
                 url: `/api/attachments/${fileData.file_id}/download`, // Backend download endpoint
-                status: fileData.upload_status,
+                status: fileData.processing_status, // Use processing_status instead of upload_status
               }],
               urls: [`/api/attachments/${fileData.file_id}/download`], // Backward compatibility
             }),
@@ -160,7 +160,7 @@ export async function POST(req: NextRequest) {
             size: file.file_size,
             type: file.mime_type,
             url: `/api/attachments/${file.file_id}/download`,
-            status: file.upload_status,
+            status: file.processing_status, // Use processing_status instead of upload_status
           }));
 
           return new Response(
