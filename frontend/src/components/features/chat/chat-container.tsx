@@ -75,7 +75,9 @@ export default function ChatContainer({
       <div className="flex items-center justify-center h-full">
         <div className="p-8 text-center max-w-md">
           <AlertCircle className="h-12 w-12 text-orange-500 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold mb-2">Authentication Required</h3>
+          <h3 className="text-lg font-semibold mb-2">
+            Authentication Required
+          </h3>
           <p className="text-muted-foreground mb-6">
             Please log in to start chatting with TripSage AI.
           </p>
@@ -95,7 +97,8 @@ export default function ChatContainer({
           <Key className="h-12 w-12 text-blue-500 mx-auto mb-4" />
           <h3 className="text-lg font-semibold mb-2">API Key Required</h3>
           <p className="text-muted-foreground mb-6">
-            A valid OpenAI API key is required to use the chat feature. Please add one to get started.
+            A valid OpenAI API key is required to use the chat feature. Please
+            add one to get started.
           </p>
           <Link href="/settings/api-keys">
             <Button className="w-full">Manage API Keys</Button>
@@ -168,7 +171,7 @@ export default function ChatContainer({
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
-              {authError || (error?.message || String(error))}
+              {authError || error?.message || String(error)}
               {authError && authError.includes("API key") && (
                 <div className="mt-2">
                   <Link href="/settings/api-keys">
