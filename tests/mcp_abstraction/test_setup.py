@@ -4,7 +4,7 @@ import os
 
 # Set test environment variables before importing any tripsage modules
 os.environ["NEO4J_PASSWORD"] = "test_password"
-os.environ["NEO4J_USER"] = "bjorn"
+os.environ["NEO4J_USER"] = "neo4j"
 os.environ["NEO4J_URI"] = "bolt://localhost:7687"
 os.environ["OPENAI_API_KEY"] = "test_key"
 os.environ["ANTHROPIC_API_KEY"] = "test_key"

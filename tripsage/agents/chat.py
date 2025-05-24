@@ -17,11 +17,22 @@ from tripsage.agents.flight import FlightAgent
 from tripsage.agents.itinerary import ItineraryAgent
 from tripsage.agents.travel import TravelAgent
 from tripsage.config.app_settings import settings
-from tripsage.mcp_abstraction.manager import mcp_manager
-from tripsage.utils.error_handling import log_exception
+from tripsage.mcp_abstraction.manager import MCPManager
+from tripsage.services.chat_orchestration import ChatOrchestrationService
+from tripsage.utils.error_handling import (
+    TripSageError,
+    log_exception,
+    with_error_handling,
+)
 from tripsage.utils.logging import get_module_logger
 
 logger = get_module_logger(__name__)
+
+
+class ChatAgentError(TripSageError):
+    """Error raised when chat agent operations fail."""
+
+    pass
 
 
 class ChatAgent(BaseAgent):
@@ -32,6 +43,7 @@ class ChatAgent(BaseAgent):
         name: str = "TripSage Chat Assistant",
         model: str = None,
         temperature: float = None,
+        mcp_manager: Optional[MCPManager] = None,
     ):
         """Initialize the chat agent.
 
@@ -39,6 +51,7 @@ class ChatAgent(BaseAgent):
             name: Agent name
             model: Model name to use (defaults to settings if None)
             temperature: Temperature for model sampling (defaults to settings if None)
+            mcp_manager: Optional MCP manager instance. If None, uses global instance.
         """
         # Define comprehensive chat instructions
         instructions = """
@@ -105,6 +118,10 @@ class ChatAgent(BaseAgent):
             metadata={"agent_type": "chat_coordinator", "version": "1.0.0"},
         )
 
+        # Initialize MCP integration (Phase 5 pattern)
+        self.mcp_manager = mcp_manager or MCPManager()
+        self.chat_service = ChatOrchestrationService(self.mcp_manager)
+
         # Initialize specialized agents
         self._initialize_specialized_agents()
 
@@ -114,6 +131,8 @@ class ChatAgent(BaseAgent):
         # Track tool call rate limiting
         self._tool_call_history: Dict[str, List[float]] = {}
         self._max_tool_calls_per_minute = 5
+
+        logger.info("ChatAgent initialized with Phase 5 MCP integration")
 
     def _initialize_specialized_agents(self) -> None:
         """Initialize specialized agents for routing."""
@@ -417,7 +436,7 @@ class ChatAgent(BaseAgent):
 
         try:
             # Execute via MCP manager
-            result = await mcp_manager.invoke(tool_name, **parameters)
+            result = await self.mcp_manager.invoke(tool_name, **parameters)
 
             return {
                 "status": "success",
@@ -451,6 +470,31 @@ class ChatAgent(BaseAgent):
         """
         context = context or {}
         user_id = context.get("user_id", "anonymous")
+        session_id = context.get("session_id")
+
+        # Create session if not exists
+        if not session_id and user_id != "anonymous":
+            try:
+                session_data = await self.create_chat_session_mcp(
+                    user_id=int(user_id) if user_id.isdigit() else 1,
+                    metadata={"agent": "chat", "created_from": "process_message"},
+                )
+                session_id = session_data.get("session_id")
+                context["session_id"] = session_id
+            except Exception as e:
+                logger.warning(f"Failed to create session: {e}")
+
+        # Save user message if session exists
+        if session_id:
+            try:
+                await self.save_message_mcp(
+                    session_id=session_id,
+                    role="user",
+                    content=message,
+                    metadata={"timestamp": context.get("timestamp")},
+                )
+            except Exception as e:
+                logger.warning(f"Failed to save user message: {e}")
 
         # Detect intent
         intent = await self.detect_intent(message)
@@ -470,19 +514,37 @@ class ChatAgent(BaseAgent):
             response["routed_to"] = intent["primary_intent"]
             response["routing_confidence"] = intent["confidence"]
 
-            return response
+        else:
+            # Handle directly for general queries or low confidence
+            logger.info(
+                f"Handling directly - intent: {intent['primary_intent']} (confidence: {intent['confidence']:.2f})"
+            )
 
-        # Handle directly for general queries or low confidence
-        logger.info(
-            f"Handling directly - intent: {intent['primary_intent']} (confidence: {intent['confidence']:.2f})"
-        )
+            # Use parent run method for direct handling
+            response = await super().run(message, context)
 
-        # Use parent run method for direct handling
-        response = await super().run(message, context)
+            # Add intent metadata
+            response["intent_detected"] = intent
+            response["handled_by"] = "chat_agent"
 
-        # Add intent metadata
-        response["intent_detected"] = intent
-        response["handled_by"] = "chat_agent"
+        # Save assistant response if session exists
+        if session_id and response.get("content"):
+            try:
+                await self.save_message_mcp(
+                    session_id=session_id,
+                    role="assistant",
+                    content=response.get("content", ""),
+                    metadata={
+                        "intent": intent,
+                        "routed_to": response.get("routed_to"),
+                        "handled_by": response.get("handled_by"),
+                    },
+                )
+            except Exception as e:
+                logger.warning(f"Failed to save assistant message: {e}")
+
+        # Add session_id to response
+        response["session_id"] = session_id
 
         return response
 
@@ -507,3 +569,272 @@ class ChatAgent(BaseAgent):
         context["tool_calling_enabled"] = True
 
         return await self.process_message(message, context)
+
+    # Phase 5: MCP Tool Integration Methods
+
+    @with_error_handling(logger=logger, raise_on_error=True)
+    async def route_request(
+        self, message: str, session_id: str, context: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
+        """Route chat request to appropriate specialized agent or handle directly.
+
+        This method implements Phase 5 routing patterns using MCP tools.
+
+        Args:
+            message: User message content
+            session_id: Chat session ID
+            context: Optional context data
+
+        Returns:
+            Dictionary with response and routing information
+
+        Raises:
+            ChatAgentError: If request routing fails
+        """
+        try:
+            self.logger.info(f"Routing Phase 5 request for session {session_id}")
+
+            # Use existing intent detection
+            intent = await self.detect_intent(message)
+
+            # Add session context
+            routing_context = context or {}
+            routing_context["session_id"] = session_id
+            routing_context["detected_intent"] = intent
+
+            # For high-confidence intents, use MCP-based services
+            if intent["confidence"] > 0.7:
+                return await self._handle_mcp_routing(intent, message, routing_context)
+            else:
+                return await self._handle_direct_conversation(message, routing_context)
+
+        except Exception as e:
+            self.logger.error(f"Phase 5 request routing failed: {e}")
+            raise ChatAgentError(f"Request routing failed: {str(e)}") from e
+
+    async def _handle_mcp_routing(
+        self, intent: Dict[str, Any], message: str, context: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Handle routing using MCP services.
+
+        Args:
+            intent: Intent detection results
+            message: User message
+            context: Routing context
+
+        Returns:
+            Response dictionary
+        """
+        primary_intent = intent["primary_intent"]
+
+        if primary_intent == "flight":
+            return await self._handle_flight_request_mcp(message, context)
+        elif primary_intent == "accommodation":
+            return await self._handle_accommodation_request_mcp(message, context)
+        elif primary_intent == "weather":
+            return await self._handle_weather_request_mcp(message, context)
+        elif primary_intent == "maps":
+            return await self._handle_maps_request_mcp(message, context)
+        else:
+            # Route to existing specialized agents
+            return await self.route_to_agent(intent, message, context)
+
+    async def _handle_flight_request_mcp(
+        self, message: str, context: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Handle flight requests using MCP services."""
+        try:
+            # For demonstration, extract basic flight parameters
+            # In production, this would use more sophisticated NLP
+            return {
+                "content": "I'll help you search for flights using our MCP-integrated flight service. Let me find the best options for you.",
+                "intent": "flight_search",
+                "action": "mcp_flight_search",
+                "session_id": context.get("session_id"),
+                "mcp_service": "duffel_flights",
+                "status": "ready_for_tool_call",
+            }
+        except Exception as e:
+            return {"content": f"Flight search error: {str(e)}", "status": "error"}
+
+    async def _handle_accommodation_request_mcp(
+        self, message: str, context: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Handle accommodation requests using MCP services."""
+        try:
+            return {
+                "content": "I'll search for accommodations using our integrated booking services. What location and dates are you considering?",
+                "intent": "accommodation_search",
+                "action": "mcp_accommodation_search",
+                "session_id": context.get("session_id"),
+                "mcp_service": "airbnb",
+                "status": "ready_for_tool_call",
+            }
+        except Exception as e:
+            return {
+                "content": f"Accommodation search error: {str(e)}",
+                "status": "error",
+            }
+
+    async def _handle_weather_request_mcp(
+        self, message: str, context: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Handle weather requests using MCP services."""
+        try:
+            return {
+                "content": "Let me check the weather information for your destination.",
+                "intent": "weather_check",
+                "action": "mcp_weather_check",
+                "session_id": context.get("session_id"),
+                "mcp_service": "weather",
+                "status": "ready_for_tool_call",
+            }
+        except Exception as e:
+            return {"content": f"Weather check error: {str(e)}", "status": "error"}
+
+    async def _handle_maps_request_mcp(
+        self, message: str, context: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Handle maps/location requests using MCP services."""
+        try:
+            return {
+                "content": "I'll help you with location information using our maps service.",
+                "intent": "location_info",
+                "action": "mcp_location_lookup",
+                "session_id": context.get("session_id"),
+                "mcp_service": "google_maps",
+                "status": "ready_for_tool_call",
+            }
+        except Exception as e:
+            return {"content": f"Location lookup error: {str(e)}", "status": "error"}
+
+    async def _handle_direct_conversation(
+        self, message: str, context: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Handle general conversation directly."""
+        # Use existing direct handling
+        return await super().run(message, context)
+
+    @with_error_handling(logger=logger, raise_on_error=True)
+    async def call_mcp_tools(self, tool_calls: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Execute tool calls via MCP manager (Phase 5 pattern).
+
+        Args:
+            tool_calls: List of tool call dictionaries
+
+        Returns:
+            Dictionary with tool call results
+
+        Raises:
+            ChatAgentError: If tool calling fails
+        """
+        try:
+            self.logger.info(f"Executing {len(tool_calls)} MCP tool calls")
+
+            # Use chat orchestration service for parallel execution
+            results = await self.chat_service.execute_parallel_tools(tool_calls)
+
+            return {
+                "tool_call_results": results,
+                "execution_count": len(tool_calls),
+                "status": "success",
+                "timestamp": time.time(),
+            }
+
+        except Exception as e:
+            self.logger.error(f"MCP tool calling failed: {e}")
+            raise ChatAgentError(f"MCP tool calling failed: {str(e)}") from e
+
+    @with_error_handling(logger=logger, raise_on_error=True)
+    async def create_chat_session_mcp(
+        self, user_id: int, metadata: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
+        """Create a new chat session using MCP database operations.
+
+        Args:
+            user_id: User ID for the session
+            metadata: Optional session metadata
+
+        Returns:
+            Dictionary with session information
+
+        Raises:
+            ChatAgentError: If session creation fails
+        """
+        try:
+            return await self.chat_service.create_chat_session(user_id, metadata)
+        except Exception as e:
+            self.logger.error(f"MCP session creation failed: {e}")
+            raise ChatAgentError(f"Session creation failed: {str(e)}") from e
+
+    @with_error_handling(logger=logger, raise_on_error=True)
+    async def save_message_mcp(
+        self,
+        session_id: str,
+        role: str,
+        content: str,
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
+        """Save a chat message using MCP database operations.
+
+        Args:
+            session_id: Chat session ID
+            role: Message role (user, assistant, system)
+            content: Message content
+            metadata: Optional message metadata
+
+        Returns:
+            Dictionary with saved message information
+
+        Raises:
+            ChatAgentError: If message saving fails
+        """
+        try:
+            return await self.chat_service.save_message(
+                session_id, role, content, metadata
+            )
+        except Exception as e:
+            self.logger.error(f"MCP message saving failed: {e}")
+            raise ChatAgentError(f"Message saving failed: {str(e)}") from e
+
+    @with_error_handling(logger=logger, raise_on_error=True)
+    async def get_chat_history_mcp(
+        self, session_id: str, limit: int = 10, offset: int = 0
+    ) -> List[Dict[str, Any]]:
+        """Get chat history using MCP database operations.
+
+        Args:
+            session_id: Chat session ID
+            limit: Maximum number of messages to return
+            offset: Number of messages to skip
+
+        Returns:
+            List of message dictionaries
+
+        Raises:
+            ChatAgentError: If history retrieval fails
+        """
+        try:
+            return await self.chat_service.get_chat_history(session_id, limit, offset)
+        except Exception as e:
+            self.logger.error(f"MCP history retrieval failed: {e}")
+            raise ChatAgentError(f"History retrieval failed: {str(e)}") from e
+
+    @with_error_handling(logger=logger, raise_on_error=True)
+    async def end_chat_session_mcp(self, session_id: str) -> bool:
+        """End a chat session using MCP database operations.
+
+        Args:
+            session_id: Chat session ID to end
+
+        Returns:
+            True if session was ended successfully
+
+        Raises:
+            ChatAgentError: If session ending fails
+        """
+        try:
+            return await self.chat_service.end_chat_session(session_id)
+        except Exception as e:
+            self.logger.error(f"MCP session ending failed: {e}")
+            raise ChatAgentError(f"Session ending failed: {str(e)}") from e

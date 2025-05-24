@@ -238,8 +238,12 @@ def mock_web_operations_cache():
 
 
 @pytest.fixture(autouse=True)
-def mock_settings_and_redis():
+def mock_settings_and_redis(monkeypatch):
     """Mock settings and Redis client to avoid actual connections and validation errors."""
+    # First set environment variables to satisfy Pydantic validation
+    monkeypatch.setenv("NEO4J_PASSWORD", "test_password")
+    monkeypatch.setenv("NEO4J_USER", "neo4j")
+
     # Create a comprehensive mock settings object
     mock_settings = MagicMock()
     mock_settings.agent.model_name = "gpt-4"
@@ -247,6 +251,12 @@ def mock_settings_and_redis():
     mock_settings.agent.max_tokens = 4096
     mock_settings.agent.timeout = 120
     mock_settings.agent.max_retries = 3
+
+    # Mock Neo4j settings
+    mock_settings.neo4j.uri = "bolt://localhost:7687"
+    mock_settings.neo4j.user = "neo4j"
+    mock_settings.neo4j.password = "test_password"
+    mock_settings.neo4j.database = "neo4j"
 
     # Mock Redis client
     mock_redis_client = MagicMock()
@@ -263,6 +273,7 @@ def mock_settings_and_redis():
     # Apply all the patches we need
     with (
         patch("tripsage.config.app_settings.AppSettings", return_value=mock_settings),
+        patch("tripsage.config.app_settings.settings", mock_settings),
         patch("tripsage.utils.settings.AppSettings", return_value=mock_settings),
         patch("tripsage.utils.settings.get_settings", return_value=mock_settings),
         patch("tripsage.utils.settings.settings", mock_settings),
