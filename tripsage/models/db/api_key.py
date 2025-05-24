@@ -87,7 +87,8 @@ class ApiKeyDB(BaseModel):
 
         if not re.match(r"^[a-z0-9_-]+$", v):
             raise ValueError(
-                "Service name must contain only lowercase letters, numbers, underscores, and hyphens"
+                "Service name must contain only lowercase letters, "
+                "numbers, underscores, and hyphens"
             )
         return v
 
@@ -159,7 +160,8 @@ class ApiKeyCreate(BaseModel):
 
         if not re.match(r"^[a-z0-9_-]+$", v):
             raise ValueError(
-                "Service name must contain only lowercase letters, numbers, underscores, and hyphens"
+                "Service name must contain only lowercase letters, "
+                "numbers, underscores, and hyphens"
             )
         return v
 
