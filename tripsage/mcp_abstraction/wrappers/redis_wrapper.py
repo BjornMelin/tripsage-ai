@@ -116,7 +116,8 @@ class RedisMCPClient:
         }
 
         logger.info(
-            f"Initialized RedisMCPClient for {host}:{port}/{db} with namespace '{namespace}'"
+            f"Initialized RedisMCPClient for {host}:{port}/{db} with "
+            f"namespace '{namespace}'"
         )
 
     async def _get_redis_client(self) -> redis.Redis:
@@ -142,12 +143,13 @@ class RedisMCPClient:
                 try:
                     await self._redis.ping()
                     logger.info(
-                        f"Successfully connected to Redis at {self.host}:{self.port}/{self.db}"
+                        f"Successfully connected to Redis at "
+                        f"{self.host}:{self.port}/{self.db}"
                     )
                 except redis.RedisError as e:
                     logger.error(f"Failed to connect to Redis: {str(e)}")
                     self._redis = None
-                    raise TripSageMCPError(f"Redis connection failed: {str(e)}")
+                    raise TripSageMCPError(f"Redis connection failed: {str(e)}") from e
             return self._redis
 
     async def get(self, key: str) -> Optional[Any]:

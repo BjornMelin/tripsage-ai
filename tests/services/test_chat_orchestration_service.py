@@ -274,7 +274,9 @@ class TestChatOrchestrationService:
             ),
         ]
 
-        chat_orchestration_service.tool_call_service.execute_parallel_tool_calls.return_value = mock_responses
+        (
+            chat_orchestration_service.tool_call_service.execute_parallel_tool_calls.return_value
+        ) = mock_responses
 
         # Act
         result = await chat_orchestration_service.execute_parallel_tools(tool_calls)
@@ -332,7 +334,9 @@ class TestChatOrchestrationService:
             ),
         ]
 
-        chat_orchestration_service.tool_call_service.execute_parallel_tool_calls.return_value = mock_responses
+        (
+            chat_orchestration_service.tool_call_service.execute_parallel_tool_calls.return_value
+        ) = mock_responses
 
         # Act
         result = await chat_orchestration_service.execute_parallel_tools(tool_calls)
@@ -405,7 +409,9 @@ class TestChatOrchestrationService:
             "actions": ["book", "compare", "save"],
         }
 
-        chat_orchestration_service.tool_call_service.format_tool_result_for_chat.return_value = expected_formatted
+        (
+            chat_orchestration_service.tool_call_service.format_tool_result_for_chat.return_value
+        ) = expected_formatted
 
         # Act
         result = await chat_orchestration_service.format_tool_response_for_chat(

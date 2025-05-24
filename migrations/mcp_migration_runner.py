@@ -132,15 +132,18 @@ class MCPMigrationRunner:
                     "CREATE CONSTRAINT" in query.upper()
                     or "CREATE INDEX" in query.upper()
                 ):
-                    # These are administrative queries that might not be directly supported
+                    # These are administrative queries that might not be
+                    # directly supported
                     # by Memory MCP. Log them for manual execution.
                     self.logger.warning(
-                        f"Administrative query may need manual execution: {query[:100]}..."
+                        f"Administrative query may need manual execution: "
+                        f"{query[:100]}..."
                     )
                     continue
 
                 # For now, we'll use the Memory MCP's available methods
-                # This will need to be adapted based on what Memory MCP actually supports
+                # This will need to be adapted based on what Memory MCP
+                # actually supports
                 await self.mcp_manager.invoke(
                     mcp_name="memory",
                     method_name="create_entities",

@@ -92,7 +92,7 @@ class TestChatAgentLogic:
             }
 
             # Calculate intent scores
-            for intent, config in intent_patterns.items():
+            for _intent, config in intent_patterns.items():
                 # Check keywords
                 for keyword in config["keywords"]:
                     if keyword in message_lower:

@@ -446,7 +446,7 @@ class TestChatAgentPhase5:
         user_id = "test_user"
 
         # Fill up rate limit (5 calls per minute)
-        for i in range(5):
+        for _i in range(5):
             await chat_agent.log_tool_call(user_id)
 
         # Act
@@ -466,7 +466,7 @@ class TestChatAgentPhase5:
             "time.time", side_effect=[1000, 1000, 1000, 1000, 1000, 1070]
         ):  # 70 seconds later
             # Fill up rate limit
-            for i in range(5):
+            for _i in range(5):
                 await chat_agent.log_tool_call(user_id)
 
             # Check if rate limit has reset

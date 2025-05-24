@@ -178,7 +178,8 @@ class ChatService:
                 if attempt < self._retry_count - 1:
                     await asyncio.sleep(self._retry_delay * (attempt + 1))
                     logger.warning(
-                        f"Database query failed (attempt {attempt + 1}/{self._retry_count}): {e}"
+                        f"Database query failed (attempt {attempt + 1}/"
+                        f"{self._retry_count}): {e}"
                     )
                 else:
                     logger.error(
@@ -349,8 +350,8 @@ class ChatService:
         if user_id and role == "user":
             if not self.rate_limiter.check_rate_limit(user_id):
                 raise ValidationError(
-                    f"Rate limit exceeded. Maximum {self.rate_limiter.max_messages} messages "
-                    f"per {self.rate_limiter.window_seconds} seconds."
+                    f"Rate limit exceeded. Maximum {self.rate_limiter.max_messages} "
+                    f"messages per {self.rate_limiter.window_seconds} seconds."
                 )
 
         # Sanitize content
@@ -436,8 +437,8 @@ class ChatService:
                 user_id, count=user_message_count
             ):
                 raise ValidationError(
-                    f"Rate limit exceeded. Maximum {self.rate_limiter.max_messages} messages "
-                    f"per {self.rate_limiter.window_seconds} seconds."
+                    f"Rate limit exceeded. Maximum {self.rate_limiter.max_messages} "
+                    f"messages per {self.rate_limiter.window_seconds} seconds."
                 )
 
         # Prepare batch data
@@ -566,7 +567,8 @@ class ChatService:
             limit: Maximum number of messages to consider
             max_tokens: Maximum total tokens to include
             offset: Number of messages to skip (for pagination)
-            chars_per_token: Characters per token for estimation (uses service default if None)
+            chars_per_token: Characters per token for estimation
+                (uses service default if None)
 
         Returns:
             Recent messages response with token information
@@ -575,10 +577,11 @@ class ChatService:
             chars_per_token = self._chars_per_token
 
         query = text(
-            """
-            SELECT * FROM get_recent_messages(:session_id, :limit, :max_tokens, :offset, :chars_per_token)
-            ORDER BY created_at ASC
-            """
+            (
+                "SELECT * FROM get_recent_messages("
+                ":session_id, :limit, :max_tokens, :offset, :chars_per_token"
+                ") ORDER BY created_at ASC"
+            )
         )
 
         result = await self._execute_with_retry(

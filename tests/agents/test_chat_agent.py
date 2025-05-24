@@ -2,7 +2,8 @@
 Tests for the ChatAgent class.
 
 This module tests the ChatAgent implementation that serves as the central coordinator
-for TripSage chat functionality, including intent detection, agent routing, and tool calling.
+for TripSage chat functionality, including intent detection, agent routing,
+and tool calling.
 """
 
 import time
@@ -116,7 +117,8 @@ class TestChatAgent:
             assert agent.temperature == 0.5
 
     def test_initialization_agent_failure(self):
-        """Test that ChatAgent continues initialization even if specialized agents fail."""
+        """Test that ChatAgent continues initialization even if specialized
+        agents fail."""
         with (
             patch("agents.Agent"),
             patch("agents.Runner"),
@@ -137,7 +139,7 @@ class TestChatAgent:
 
             from tripsage.agents.chat import ChatAgent
 
-            agent = ChatAgent()
+            ChatAgent()
 
             # Should log error but continue
             mock_logger.error.assert_called()
@@ -245,7 +247,7 @@ class TestChatAgent:
         user_id = "test_user"
 
         # Should allow first calls
-        for i in range(5):
+        for _i in range(5):
             assert await chat_agent.check_tool_rate_limit(user_id)
             await chat_agent.log_tool_call(user_id)
 
@@ -258,7 +260,7 @@ class TestChatAgent:
         user_id = "test_user"
 
         # Fill up the rate limit
-        for i in range(5):
+        for _i in range(5):
             await chat_agent.log_tool_call(user_id)
 
         # Should be at limit
@@ -368,7 +370,7 @@ class TestChatAgent:
         user_id = "test_user"
 
         # Fill up rate limit
-        for i in range(5):
+        for _i in range(5):
             await chat_agent.log_tool_call(user_id)
 
         result = await chat_agent.execute_tool_call(

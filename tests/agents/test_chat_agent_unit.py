@@ -93,7 +93,7 @@ class TestChatAgentUnit:
             }
 
             # Calculate intent scores
-            for intent, config in intent_patterns.items():
+            for _intent, config in intent_patterns.items():
                 # Check keywords
                 for keyword in config["keywords"]:
                     if keyword in message_lower:
@@ -383,7 +383,7 @@ class TestChatAgentUnit:
 
                 # Test rate limiting
                 user_id = "test_user"
-                for i in range(5):
+                for _i in range(5):
                     assert await agent.check_tool_rate_limit(user_id)
                     await agent.log_tool_call(user_id)
 

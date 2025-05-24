@@ -197,7 +197,8 @@ class TestSupabaseMCPWrapperIntegration:
     @patch("tripsage.mcp_abstraction.wrappers.supabase_wrapper.mcp_settings")
     @pytest.mark.asyncio
     async def test_invoke_method_not_implemented(self, mock_settings):
-        """Test that invoke_method raises NotImplementedError for external server calls."""
+        """Test that invoke_method raises NotImplementedError for external
+        server calls."""
         # Setup mock config
         mock_config = MagicMock(spec=SupabaseMCPConfig)
         mock_config.enabled = True
@@ -206,8 +207,9 @@ class TestSupabaseMCPWrapperIntegration:
 
         wrapper = SupabaseMCPWrapper()
 
-        # Try to invoke a method - should fail because ExternalMCPClient raises NotImplementedError
-        with pytest.raises(Exception):  # Either MCPClientError or NotImplementedError
+        # Try to invoke a method - should fail because ExternalMCPClient
+        # raises NotImplementedError
+        with pytest.raises((NotImplementedError, Exception)):
             await wrapper.invoke_method("list_organizations")
 
     @patch("tripsage.mcp_abstraction.wrappers.supabase_wrapper.mcp_settings")

@@ -28,6 +28,11 @@ def get_key_service() -> KeyService:
     return _key_service_singleton
 
 
+# Module-level dependency singletons to avoid B008 linting errors
+get_current_user_dep = Depends(get_current_user)
+get_key_service_dep = Depends(get_key_service)
+
+
 # Models
 class KeyResponse(BaseModel):
     """Response model for API key information."""
@@ -86,8 +91,8 @@ class ValidateKeyResponse(BaseModel):
 # Routes
 @router.get("/", response_model=AllKeysResponse)
 async def get_all_keys(
-    current_user: dict = Depends(get_current_user),
-    key_service: KeyService = Depends(get_key_service),
+    current_user: dict = get_current_user_dep,
+    key_service: KeyService = get_key_service_dep,
 ):
     """Get all configured API keys for the current user.
 
@@ -106,8 +111,8 @@ async def get_all_keys(
 @router.get("/{service}", response_model=KeyResponse)
 async def get_key(
     service: str,
-    current_user: dict = Depends(get_current_user),
-    key_service: KeyService = Depends(get_key_service),
+    current_user: dict = get_current_user_dep,
+    key_service: KeyService = get_key_service_dep,
 ):
     """Get information about a specific API key.
 
@@ -139,8 +144,8 @@ async def get_key(
 @router.post("/", response_model=AddKeyResponse)
 async def add_key(
     request: AddKeyRequest,
-    current_user: dict = Depends(get_current_user),
-    key_service: KeyService = Depends(get_key_service),
+    current_user: dict = get_current_user_dep,
+    key_service: KeyService = get_key_service_dep,
 ):
     """Add or update an API key.
 
@@ -188,8 +193,8 @@ async def add_key(
 @router.delete("/{service}", response_model=DeleteKeyResponse)
 async def delete_key(
     service: str,
-    current_user: dict = Depends(get_current_user),
-    key_service: KeyService = Depends(get_key_service),
+    current_user: dict = get_current_user_dep,
+    key_service: KeyService = get_key_service_dep,
 ):
     """Delete an API key.
 
@@ -218,7 +223,7 @@ async def delete_key(
 @router.post("/validate", response_model=ValidateKeyResponse)
 async def validate_key(
     request: AddKeyRequest,
-    key_service: KeyService = Depends(get_key_service),
+    key_service: KeyService = get_key_service_dep,
 ):
     """Validate an API key without saving it.
 

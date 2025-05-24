@@ -165,7 +165,9 @@ class ChatOrchestrationService:
             # Use properly formatted query with sanitized values
             query = f"""
                 INSERT INTO chat_messages (session_id, role, content, metadata)
-                VALUES ({safe_session_id}, {safe_role}, {safe_content}, {safe_metadata}::jsonb)
+                VALUES ({safe_session_id}, ",
+                    f"{safe_role}, {safe_content}, {safe_metadata}::jsonb"
+                )
                 RETURNING id, created_at
             """
 
@@ -305,7 +307,7 @@ class ChatOrchestrationService:
 
     @with_error_handling
     async def execute_parallel_tools(self, tool_calls: List[Dict]) -> Dict[str, Any]:
-        """Execute multiple tool calls in parallel using structured tool calling service.
+        """Execute multiple tool calls in parallel using structured tool calling service
 
         Args:
             tool_calls: List of tool call dictionaries

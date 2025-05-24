@@ -4,12 +4,13 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
 
 ## Coding Standards Reference
 
-- **Python 3.12** with PEP-8 (88-char lines max)
+- **Python 3.12** with PEP-8 (88-char lines max) - ✅ **FIXED: Updated pyproject.toml**
 - Type hints are mandatory
 - Run `ruff check --select I --fix .` for import sorting
 - Run `ruff check . --fix` and `ruff format .` on touched files
 - Files should be ≤350 LoC (hard cap: 500)
 - Test coverage target: ≥90%
+- **NEW**: Pre-commit hooks added for automated code quality - See `.pre-commit-config.yaml`
 
 ## System Gaps Analysis
 
@@ -39,27 +40,44 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
 
 ## API and Middleware Tasks
 
-- ✅ API consolidation completed (May 20, 2025) - See PR #91 and [tasks/COMPLETED-TODO.md](./tasks/COMPLETED-TODO.md)
-- ✅ Frontend security vulnerability audit and fixes completed (May 21, 2025)
+- ✅ **API consolidation completed** (May 20, 2025) - See PR #91 and [tasks/COMPLETED-TODO.md](./tasks/COMPLETED-TODO.md)
+- ✅ **Frontend security vulnerability audit and fixes completed** (May 21, 2025)
   - Removed vulnerable dependencies (old biome v0.3.3)
   - Fixed type safety issues (replaced `any` types)
   - Improved code security patterns
   - All known vulnerabilities resolved
-- ✅ Phase 4: File Handling & Attachments completed (May 23, 2025)
+- ✅ **Phase 4: File Handling & Attachments completed** (May 23, 2025)
   - Implemented secure file upload system with FastAPI backend
   - Added comprehensive file validation and security scanning
   - Created AI-powered document analysis service
   - Integrated frontend proxy with authentication
   - Added support for PDF, images, CSV, and office documents
   - See [tasks/TODO-INTEGRATION.md](./tasks/TODO-INTEGRATION.md) for details
-- ✅ Phase 5: Database Integration & Chat Agent Enhancement completed (May 24, 2025)
+- ✅ **Phase 5: Database Integration & Chat Agent Enhancement completed** (May 24, 2025)
   - Implemented MCP-based database operations (Supabase & Neo4j Memory MCPs)
   - Enhanced chat agent with tool calling and orchestration capabilities
   - Created comprehensive error handling and recovery strategies
   - Added chat session persistence and message history
   - Achieved 42/47 tests passing with comprehensive coverage
   - See PR #129 for implementation details
-- For remaining API, MCP, and Middleware related tasks, see [tasks/TODO-API.md](./tasks/TODO-API.md)
+
+### Priority API Tasks (Updated Based on Phase 5 Completion)
+
+- [ ] **Complete Remaining Database Operations via MCP Tools**
+  - Finalize remaining repository pattern migrations to MCP implementations
+  - Complete Neo4j schema enhancements for advanced queries
+  - Optimize MCP-based error handling and recovery strategies
+- [ ] **Finalize Core API Endpoints** (Phase 7 Focus)
+  - Complete all essential CRUD operations for trips, accommodations, flights
+  - Implement comprehensive request/response validation
+  - Add proper error handling and status codes
+- [ ] **Agent Integration Layer** (Phase 8 Focus)
+  - Complete agent handoff system implementation
+  - Integrate all MCP services into unified workflow
+  - Enhance session management and conversation history
+  - Add advanced error recovery and fallback mechanisms
+
+For remaining API, MCP, and Middleware related tasks, see [tasks/TODO-API.md](./tasks/TODO-API.md)
 
 ## MVP Priority (Version 1.0)
 
@@ -692,18 +710,19 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
 
 ## Code Quality Enforcement
 
-- [ ] **Add Pre-commit Hooks**
+- [x] **Add Pre-commit Hooks** ✅ **COMPLETED**
 
   - **Target:** Root repository
   - **Goal:** Automate code quality checks
-  - **Tasks:**
-    - [ ] Configure pre-commit for ruff checking
-    - [ ] Add type checking with mypy
-    - [ ] Enforce import sorting
-    - [ ] Add line length enforcement
-    - [ ] Implement docstring validation
-    - [ ] Add security scanning with bandit
-    - [ ] Enforce consistent file naming
+  - **Status:** ✅ **Implemented - See `.pre-commit-config.yaml`**
+  - **Features:**
+    - [x] ✅ Configured pre-commit for ruff checking and formatting
+    - [x] ✅ Added type checking with mypy
+    - [x] ✅ Enforced import sorting and line length
+    - [x] ✅ Implemented security scanning with bandit
+    - [x] ✅ Added file validation (YAML, JSON, TOML)
+    - [x] ✅ Configured CI integration for automation
+  - **Installation:** Run `pre-commit install` to enable hooks
 
 - [ ] **Improve Test Coverage**
   - **Target:** Modules with <90% coverage
@@ -881,16 +900,22 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
    - [ ] Implement memory integration with graph database
    - [ ] Add custom model integration capabilities
 
-### Next Release Features (Version 2.0)
+### Implementation Phases (Updated)
 
-- **Target:** Advanced features and enterprise capabilities
-- **Goal:** Build comprehensive collaborative, intelligent travel platform
-- **Key Enhancements:**
-  - Group travel and expense splitting
-  - Price prediction and monitoring
-  - Advanced personalization with AI learning
-  - Complete MCP server coverage
-  - Mobile application support
+- **Current Focus:** Phase 6 (Frontend-Backend Integration) + Phase 7 Prep
+- **Next Phases:**
+  - **Phase 7:** Core API Completion & Database Integration (6 weeks)
+  - **Phase 8:** Advanced Integration & Agent Orchestration (8 weeks)  
+  - **Phase 9:** Production Readiness & Deployment (10 weeks)
+- **Phase Documentation:** See `tasks/phases/` directory for detailed implementation prompts
+
+### Version 2.0 Features (Moved to TODO-V2.md)
+
+- Advanced analytics and complex monitoring
+- Complex optimization algorithms  
+- Enterprise-grade deployment infrastructure
+- Advanced personalization and learning systems
+- **See:** `tasks/TODO-V2.md` for complete list of nice-to-have features
 
 **Implementation Phases:**
 
@@ -921,14 +946,17 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
 
 - **Target:** Complete database schema implementation
 - **Goal:** Support all MVP features with scalable architecture
+- **Status:** Core schema implemented, migration to MCP tools in progress
 - **MVP Tables Required:**
-  - users (authentication, profiles)
-  - api_keys (BYOK storage)
-  - trips (trip planning)
-  - trip_items (flights, hotels, activities)
-  - budgets (budget tracking)
-  - expenses (expense management)
-  - chat_sessions (AI interactions)
+  - ✅ users (authentication, profiles) - Implemented
+  - ✅ api_keys (BYOK storage) - Implemented  
+  - ✅ trips (trip planning) - Core implementation complete
+  - ✅ chat_sessions (AI interactions) - Implemented
+  - [ ] trip_items (flights, hotels, activities) - Migration to MCP needed
+  - [ ] budgets (budget tracking) - Pending MCP integration
+  - [ ] expenses (expense management) - Pending MCP integration
+
+**Migration Priority:** Focus on MCP tool integration for remaining operations per Phase 7 plan
 
 **Implementation Tasks:**
 
@@ -988,9 +1016,12 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
 
 | Task                            | Status | PR  | Notes                                                               |
 | ------------------------------- | ------ | --- | ------------------------------------------------------------------- |
+| Python Version Consistency     | ✅     | -   | **NEW**: Fixed pyproject.toml to require Python ≥3.12             |
+| Pre-commit Hooks Setup         | ✅     | -   | **NEW**: Added .pre-commit-config.yaml with comprehensive checks   |
+| TODO Files Consolidation       | ✅     | -   | **NEW**: Created TODO-V2.md, consolidated main priorities          |
+| Phase Prompt Organization      | ✅     | -   | **NEW**: Created Phase 7-9 prompts, organized in tasks/phases/     |
 | Codebase Restructuring - Part 2 | 🔄     | -   | Remaining import updates and test updates in progress               |
 | OpenAI Agents SDK Integration   | 🔄     | -   | Research completed, implementation planning in progress             |
-| Pydantic V2 Migration           | 📅     | -   | Scheduled to start after Codebase Restructuring is complete         |
-| Supabase MCP Integration        | 📅     | -   | Scheduled to start after Codebase Restructuring is complete         |
-| Neo4j Memory MCP Integration    | 📅     | -   | Prioritized for knowledge graph implementation                      |
-| Travel Data MCP Integration     | 📅     | -   | Duffel Flights MCP and Airbnb MCP identified for travel data access |
+| Database Migration via MCPs     | 🔄     | -   | **UPDATED**: Focus on MCP tool integration per Phase 7 plan        |
+| Neo4j Memory MCP Integration    | ✅     | -   | Core integration completed, enhancements ongoing                    |
+| Agent Handoff System           | 📅     | -   | **NEW**: Scheduled for Phase 8 implementation                      |
