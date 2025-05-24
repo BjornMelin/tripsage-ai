@@ -36,7 +36,9 @@ class ChatAgentError(TripSageError):
 
 
 class ChatAgent(BaseAgent):
-    """Central chat agent that coordinates with specialized agents and manages tool calling."""
+    """
+    Central chat agent that coordinates with specialized agents and manages tool calling
+    """
 
     def __init__(
         self,
@@ -55,13 +57,15 @@ class ChatAgent(BaseAgent):
         """
         # Define comprehensive chat instructions
         instructions = """
-        You are TripSage's central chat assistant, specializing in intelligent travel planning
-        coordination. Your role is to understand user intent and route requests to the most
-        appropriate specialized agent while managing tool calling for travel operations.
+        You are TripSage's central chat assistant, specializing in intelligent travel
+        planning coordination. Your role is to understand user intent and route requests
+        to the most appropriate specialized agent while managing tool calling for travel
+        operations.
         
         CORE RESPONSIBILITIES:
         1. Analyze user messages to detect travel intent and requirements
-        2. Route complex requests to specialized agents (flights, hotels, itineraries, etc.)
+        2. Route complex requests to specialized agents (flights, hotels, itineraries,
+        etc.)
         3. Execute travel tools directly for simple queries (weather, maps, time)
         4. Coordinate multi-step travel planning workflows
         5. Maintain conversation context and user preferences
@@ -104,7 +108,8 @@ class ChatAgent(BaseAgent):
         4. Offer to perform related actions
         
         Remember: You're the central coordinator. Route complex domain-specific
-        tasks to specialists, but handle simple tool calls and general coordination yourself.
+        tasks to specialists, but handle simple tool calls and general coordination
+        yourself.
         """
 
         model = model or settings.agent.model_name
@@ -290,7 +295,7 @@ class ChatAgent(BaseAgent):
         }
 
         # Calculate intent scores
-        for intent, config in intent_patterns.items():
+        for _intent, config in intent_patterns.items():
             # Check keywords
             for keyword in config["keywords"]:
                 if keyword in message_lower:
@@ -404,7 +409,10 @@ class ChatAgent(BaseAgent):
 
             # Fallback to direct handling
             return {
-                "content": f"I encountered an issue with the {primary_intent} specialist. Let me help you directly.",
+                "content": (
+                    f"I encountered an issue with the {primary_intent} "
+                    "specialist. Let me help you directly."
+                ),
                 "status": "fallback",
                 "original_error": str(e),
             }
@@ -427,7 +435,10 @@ class ChatAgent(BaseAgent):
             return {
                 "status": "error",
                 "error_type": "RateLimitExceeded",
-                "error_message": f"Tool call limit exceeded. Maximum {self._max_tool_calls_per_minute} calls per minute.",
+                "error_message": (
+                    f"Tool call limit exceeded. Maximum "
+                    f"{self._max_tool_calls_per_minute} calls per minute."
+                ),
                 "retry_after": 60,
             }
 
@@ -506,7 +517,8 @@ class ChatAgent(BaseAgent):
         # Route to specialized agent if high confidence
         if intent["requires_routing"]:
             logger.info(
-                f"High confidence ({intent['confidence']:.2f}) for {intent['primary_intent']}, routing to specialist"
+                f"High confidence ({intent['confidence']:.2f}) "
+                f"for {intent['primary_intent']}, routing to specialist"
             )
             response = await self.route_to_agent(intent, message, context)
 
@@ -517,7 +529,8 @@ class ChatAgent(BaseAgent):
         else:
             # Handle directly for general queries or low confidence
             logger.info(
-                f"Handling directly - intent: {intent['primary_intent']} (confidence: {intent['confidence']:.2f})"
+                f"Handling directly - intent: {intent['primary_intent']} "
+                f"(confidence: {intent['confidence']:.2f})"
             )
 
             # Use parent run method for direct handling
@@ -647,7 +660,10 @@ class ChatAgent(BaseAgent):
             # For demonstration, extract basic flight parameters
             # In production, this would use more sophisticated NLP
             return {
-                "content": "I'll help you search for flights using our MCP-integrated flight service. Let me find the best options for you.",
+                "content": (
+                    "I'll help you search for flights using our MCP-integrated "
+                    "flight service. Let me find the best options for you."
+                ),
                 "intent": "flight_search",
                 "action": "mcp_flight_search",
                 "session_id": context.get("session_id"),
@@ -663,7 +679,10 @@ class ChatAgent(BaseAgent):
         """Handle accommodation requests using MCP services."""
         try:
             return {
-                "content": "I'll search for accommodations using our integrated booking services. What location and dates are you considering?",
+                "content": (
+                    "I'll search for accommodations using our integrated booking "
+                    "services. What location and dates are you considering?"
+                ),
                 "intent": "accommodation_search",
                 "action": "mcp_accommodation_search",
                 "session_id": context.get("session_id"),
@@ -698,7 +717,9 @@ class ChatAgent(BaseAgent):
         """Handle maps/location requests using MCP services."""
         try:
             return {
-                "content": "I'll help you with location information using our maps service.",
+                "content": (
+                    "I'll help you with location information using our maps service."
+                ),
                 "intent": "location_info",
                 "action": "mcp_location_lookup",
                 "session_id": context.get("session_id"),

@@ -72,12 +72,21 @@ def test_field_validator_pattern():
 
 def test_api_key_types():
     """Test API key types are properly defined."""
-    try:
-        from frontend.src.types.api_keys import ApiKey
+    import importlib.util
 
-        # If we can import it, the types are structured correctly
-        assert True
-    except ImportError:
+    # Test if the module spec exists to avoid F401 linting error
+    spec = importlib.util.find_spec("frontend.src.types.api_keys")
+    if spec is not None:
+        # Module exists, try to import it
+        try:
+            from frontend.src.types.api_keys import ApiKey  # noqa: F401
+
+            # If we can import it, the types are structured correctly
+            assert True
+        except ImportError:
+            # Types might exist but have import issues
+            assert True
+    else:
         # TypeScript types won't be available in Python test, that's expected
         assert True
 

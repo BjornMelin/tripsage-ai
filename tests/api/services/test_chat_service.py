@@ -515,7 +515,7 @@ class TestChatServiceEnhancements:
 
         # Test with content that needs sanitization
         dirty_content = "<script>alert('xss')</script>Test content"
-        message = await chat_service.add_message(
+        await chat_service.add_message(
             session_id=session_id,
             role="user",
             content=dirty_content,
@@ -606,7 +606,7 @@ class TestChatServiceEnhancements:
         mock_db.execute.return_value = mock_result
 
         # Get recent messages with custom parameters
-        response = await chat_service.get_recent_messages(
+        await chat_service.get_recent_messages(
             session_id, limit=5, max_tokens=100, offset=10, chars_per_token=3
         )
 

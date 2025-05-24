@@ -151,7 +151,7 @@ class Neo4jSchemaInitializer:
             ]
 
             # Create schema entities using Memory MCP
-            result = await self.mcp_manager.invoke(
+            await self.mcp_manager.invoke(
                 mcp_name="memory",
                 method_name="create_entities",
                 params={"entities": schema_entities},
@@ -203,7 +203,7 @@ class Neo4jSchemaInitializer:
             ]
 
             # Create relationship schemas
-            result = await self.mcp_manager.invoke(
+            await self.mcp_manager.invoke(
                 mcp_name="memory",
                 method_name="create_entities",
                 params={"entities": relationship_entities},
@@ -243,7 +243,8 @@ class Neo4jSchemaInitializer:
                         "timezone:Europe/Paris",
                         "currency:EUR",
                         "language:French",
-                        "description:The capital of France, known for its art, fashion, and culture",
+                        "description:The capital of France, known for its art, "
+                        "fashion, and culture",
                         "climate:temperate oceanic",
                     ],
                 },
@@ -257,7 +258,8 @@ class Neo4jSchemaInitializer:
                         "timezone:Asia/Tokyo",
                         "currency:JPY",
                         "language:Japanese",
-                        "description:Japan's bustling capital, blending traditional and modern culture",
+                        "description:Japan's bustling capital, blending "
+                        "traditional and modern culture",
                         "climate:humid subtropical",
                     ],
                 },
@@ -290,7 +292,7 @@ class Neo4jSchemaInitializer:
             ]
 
             # Create example entities
-            result = await self.mcp_manager.invoke(
+            await self.mcp_manager.invoke(
                 mcp_name="memory",
                 method_name="create_entities",
                 params={"entities": example_entities},
@@ -312,7 +314,7 @@ class Neo4jSchemaInitializer:
                 },
             ]
 
-            result = await self.mcp_manager.invoke(
+            await self.mcp_manager.invoke(
                 mcp_name="memory",
                 method_name="create_relations",
                 params={"relations": example_relations},
@@ -416,7 +418,8 @@ async def main():
         # Verify schema
         verification = await initializer.verify_schema()
         print(
-            f"✅ Schema verification completed: {len(verification.get('schema_entities', []))} schema entities found"
+            f"✅ Schema verification completed: "
+            f"{len(verification.get('schema_entities', []))} schema entities found"
         )
 
     except Neo4jSchemaError as e:

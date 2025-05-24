@@ -114,7 +114,8 @@ class ErrorRecoveryService:
         # Cached responses for graceful degradation
         self.degraded_responses = {
             "flights": {
-                "message": "Flight search is temporarily unavailable. Please try again later.",
+                "message": "Flight search is temporarily unavailable. "
+                "Please try again later.",
                 "suggestions": [
                     "Check airline websites directly",
                     "Try alternative dates",
@@ -122,7 +123,8 @@ class ErrorRecoveryService:
                 "fallback_data": {"status": "unavailable", "service": "flights"},
             },
             "accommodations": {
-                "message": "Accommodation search is temporarily unavailable. Please try again later.",
+                "message": "Accommodation search is temporarily "
+                "unavailable. Please try again later.",
                 "suggestions": [
                     "Check hotel websites directly",
                     "Try booking platforms",

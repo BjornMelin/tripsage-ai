@@ -239,7 +239,8 @@ def mock_web_operations_cache():
 
 @pytest.fixture(autouse=True)
 def mock_settings_and_redis(monkeypatch):
-    """Mock settings and Redis client to avoid actual connections and validation errors."""
+    """Mock settings and Redis client to avoid actual connections and
+    validation errors."""
     # First set environment variables to satisfy Pydantic validation
     monkeypatch.setenv("NEO4J_PASSWORD", "test_password")
     monkeypatch.setenv("NEO4J_USER", "neo4j")

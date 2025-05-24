@@ -7,6 +7,8 @@ This demonstrates the solution to the pydantic settings import-time validation i
 import os
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest  # noqa: E402
+
 # CRITICAL: Set environment variables BEFORE any imports that use pydantic settings
 test_env_vars = {
     "NEO4J_URI": "bolt://localhost:7687",
@@ -31,7 +33,6 @@ for key, value in test_env_vars.items():
     os.environ[key] = value
 
 # Now we can safely import modules that use pydantic settings
-import pytest
 
 
 class TestChatAgentIsolated:
@@ -118,7 +119,8 @@ class TestChatAgentIsolated:
                 f"Expected {expected_intent} for '{message}', got {result['intent']}"
             )
             assert result["confidence"] >= min_confidence, (
-                f"Expected confidence >= {min_confidence} for '{message}', got {result['confidence']}"
+                f"Expected confidence >= {min_confidence} for '{message}', "
+                f"got {result['confidence']}"
             )
 
 

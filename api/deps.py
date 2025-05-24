@@ -147,8 +147,12 @@ async def get_current_user():
     return user
 
 
+# Module-level dependency singletons to avoid B008 linting errors
+get_current_user_dep = Depends(get_current_user)
+
+
 async def verify_api_key(
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = get_current_user_dep,
 ) -> bool:
     """Verify that the user has a valid API key for chat functionality.
 
