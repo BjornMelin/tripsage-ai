@@ -11,7 +11,7 @@ This guide provides comprehensive instructions for deploying the TripSage AI fro
 - [Monitoring & Maintenance](#monitoring--maintenance)
 - [Troubleshooting](#troubleshooting)
 
-💡 **Need help estimating costs for your specific use case?** Use our [Cost Calculator](./cost-calculator.md)
+💡 **Need help estimating costs for your specific use case?** Use our [Cost Calculator](./cost-planning.md)
 
 ## 🚀 Quick Start with Vercel
 
