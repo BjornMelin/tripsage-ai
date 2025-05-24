@@ -210,7 +210,7 @@ export async function uploadAttachments(
     const authHeaders = getAuthHeaders();
     // Remove Content-Type for FormData
     delete authHeaders["Content-Type"];
-    
+
     const response = await fetch("/api/chat/attachments", {
       method: "POST",
       headers: authHeaders,

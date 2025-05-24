@@ -1,0 +1,76 @@
+version: 2
+updates:
+  # Frontend dependencies
+  - package-ecosystem: "npm"
+    directory: "/frontend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 10
+    assignees:
+      - "BjornMelin"
+    reviewers:
+      - "BjornMelin"
+    commit-message:
+      prefix: "feat(deps)"
+      prefix-development: "chore(deps-dev)"
+    groups:
+      next-js:
+        patterns:
+          - "next*"
+          - "@next/*"
+      react:
+        patterns:
+          - "react*"
+          - "@types/react*"
+      testing:
+        patterns:
+          - "vitest*"
+          - "@vitest/*"
+          - "playwright*"
+          - "@playwright/*"
+          - "@testing-library/*"
+      ui:
+        patterns:
+          - "@radix-ui/*"
+          - "lucide-react"
+          - "tailwindcss*"
+          - "@tailwindcss/*"
+      dev-tools:
+        patterns:
+          - "@biomejs/*"
+          - "eslint*"
+          - "typescript"
+          - "@types/*"
+
+  # Python backend dependencies
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 10
+    assignees:
+      - "BjornMelin"
+    reviewers:
+      - "BjornMelin"
+    commit-message:
+      prefix: "feat(deps)"
+      prefix-development: "chore(deps-dev)"
+
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 5
+    assignees:
+      - "BjornMelin"
+    reviewers:
+      - "BjornMelin"
+    commit-message:
+      prefix: "ci"
