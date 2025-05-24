@@ -149,9 +149,7 @@ class RedisMCPClient:
                 except redis.RedisError as e:
                     logger.error(f"Failed to connect to Redis: {str(e)}")
                     self._redis = None
-                    raise TripSageMCPError(
-                        f"Redis connection failed: {str(e)}"
-                    ) from e
+                    raise TripSageMCPError(f"Redis connection failed: {str(e)}") from e
             return self._redis
 
     async def get(self, key: str) -> Optional[Any]:

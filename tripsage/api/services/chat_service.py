@@ -183,8 +183,7 @@ class ChatService:
                     )
                 else:
                     logger.error(
-                        f"Database query failed after {self._retry_count} "
-                        f"attempts: {e}"
+                        f"Database query failed after {self._retry_count} attempts: {e}"
                     )
 
         raise last_error

@@ -413,12 +413,16 @@ class ToolCallService:
 
             if fallback_result.success and fallback_result.result:
                 logger.info(
-                    f"Error recovery succeeded using {fallback_result.strategy_used.value}"
+                    f"Error recovery succeeded using "
+                    f"{fallback_result.strategy_used.value}"
                 )
                 return fallback_result.result
             else:
                 # All recovery attempts failed
-                error_msg = f"Tool call failed after error recovery: {fallback_result.error or str(e)}"
+                error_msg = (
+                    f"Tool call failed after error recovery: "
+                    f"{fallback_result.error or str(e)}"
+                )
                 raise ToolCallError(error_msg) from e
 
     async def _check_rate_limit(self, service: str) -> bool:
