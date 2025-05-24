@@ -44,10 +44,10 @@ class ChatOrchestrationService:
 
     def _sanitize_sql_value(self, value: Any) -> str:
         """Sanitize SQL values to prevent injection attacks.
-        
+
         Args:
             value: Value to sanitize
-            
+
         Returns:
             Sanitized SQL-safe string
         """
@@ -60,7 +60,8 @@ class ChatOrchestrationService:
         elif isinstance(value, dict):
             # For JSON/JSONB columns, properly escape
             json_str = json.dumps(value)
-            return f"'{json_str.replace(\"'\", \"''\")}'"
+            escaped_json = json_str.replace("'", "''")
+            return f"'{escaped_json}'::jsonb"
         else:
             # String values: escape single quotes and wrap in quotes
             str_value = str(value)

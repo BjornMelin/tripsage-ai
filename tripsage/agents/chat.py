@@ -477,7 +477,7 @@ class ChatAgent(BaseAgent):
             try:
                 session_data = await self.create_chat_session_mcp(
                     user_id=int(user_id) if user_id.isdigit() else 1,
-                    metadata={"agent": "chat", "created_from": "process_message"}
+                    metadata={"agent": "chat", "created_from": "process_message"},
                 )
                 session_id = session_data.get("session_id")
                 context["session_id"] = session_id
@@ -491,7 +491,7 @@ class ChatAgent(BaseAgent):
                     session_id=session_id,
                     role="user",
                     content=message,
-                    metadata={"timestamp": context.get("timestamp")}
+                    metadata={"timestamp": context.get("timestamp")},
                 )
             except Exception as e:
                 logger.warning(f"Failed to save user message: {e}")
@@ -537,8 +537,8 @@ class ChatAgent(BaseAgent):
                     metadata={
                         "intent": intent,
                         "routed_to": response.get("routed_to"),
-                        "handled_by": response.get("handled_by")
-                    }
+                        "handled_by": response.get("handled_by"),
+                    },
                 )
             except Exception as e:
                 logger.warning(f"Failed to save assistant message: {e}")
