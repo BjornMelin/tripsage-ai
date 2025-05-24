@@ -6,6 +6,7 @@ and provides chat orchestration with tool calling capabilities.
 """
 
 import asyncio
+import json
 import time
 from typing import Any, Dict, List, Optional
 
@@ -41,6 +42,31 @@ class ChatOrchestrationService:
         self.tool_call_service = ToolCallService(self.mcp_manager)
         self.logger = logger
 
+    def _sanitize_sql_value(self, value: Any) -> str:
+        """Sanitize SQL values to prevent injection attacks.
+        
+        Args:
+            value: Value to sanitize
+            
+        Returns:
+            Sanitized SQL-safe string
+        """
+        if value is None:
+            return "NULL"
+        elif isinstance(value, bool):
+            return "TRUE" if value else "FALSE"
+        elif isinstance(value, (int, float)):
+            return str(value)
+        elif isinstance(value, dict):
+            # For JSON/JSONB columns, properly escape
+            json_str = json.dumps(value)
+            return f"'{json_str.replace(\"'\", \"''\")}'"
+        else:
+            # String values: escape single quotes and wrap in quotes
+            str_value = str(value)
+            escaped = str_value.replace("'", "''")
+            return f"'{escaped}'"
+
     @with_error_handling
     async def create_chat_session(
         self, user_id: int, metadata: Optional[Dict[str, Any]] = None
@@ -60,10 +86,14 @@ class ChatOrchestrationService:
         try:
             self.logger.info(f"Creating chat session for user {user_id}")
 
-            # Use Supabase MCP to create session
-            query = """
+            # Sanitize values to prevent SQL injection
+            safe_user_id = self._sanitize_sql_value(user_id)
+            safe_metadata = self._sanitize_sql_value(metadata or {})
+
+            # Use properly formatted query with sanitized values
+            query = f"""
                 INSERT INTO chat_sessions (user_id, metadata)
-                VALUES ($1, $2)
+                VALUES ({safe_user_id}, {safe_metadata}::jsonb)
                 RETURNING id, created_at, updated_at
             """
 
@@ -72,8 +102,6 @@ class ChatOrchestrationService:
                 method_name="execute_sql",
                 params={
                     "query": query,
-                    # Note: Parameter binding would depend on Supabase MCP implementation
-                    # This is a simplified example
                 },
             )
 
@@ -122,10 +150,21 @@ class ChatOrchestrationService:
         try:
             self.logger.info(f"Saving message to session {session_id}")
 
-            # Use Supabase MCP to save message
-            query = """
+            # Validate role to prevent injection
+            valid_roles = {"user", "assistant", "system"}
+            if role not in valid_roles:
+                raise ChatOrchestrationError(f"Invalid role: {role}")
+
+            # Sanitize values to prevent SQL injection
+            safe_session_id = self._sanitize_sql_value(session_id)
+            safe_role = self._sanitize_sql_value(role)
+            safe_content = self._sanitize_sql_value(content)
+            safe_metadata = self._sanitize_sql_value(metadata or {})
+
+            # Use properly formatted query with sanitized values
+            query = f"""
                 INSERT INTO chat_messages (session_id, role, content, metadata)
-                VALUES ($1, $2, $3, $4)
+                VALUES ({safe_session_id}, {safe_role}, {safe_content}, {safe_metadata}::jsonb)
                 RETURNING id, created_at
             """
 
@@ -134,7 +173,6 @@ class ChatOrchestrationService:
                 method_name="execute_sql",
                 params={
                     "query": query,
-                    # Parameters would be properly bound in real implementation
                 },
             )
 
@@ -515,15 +553,30 @@ class ChatOrchestrationService:
         try:
             self.logger.info(f"Getting chat history for session {session_id}")
 
-            # Use the get_recent_messages function created in the migration
-            query = "SELECT * FROM get_recent_messages($1, $2, $3, $4)"
+            # Validate and sanitize inputs
+            if limit < 1 or limit > 100:
+                raise ChatOrchestrationError("Limit must be between 1 and 100")
+            if offset < 0:
+                raise ChatOrchestrationError("Offset must be non-negative")
+
+            # Sanitize values to prevent SQL injection
+            safe_session_id = self._sanitize_sql_value(session_id)
+            safe_limit = self._sanitize_sql_value(limit)
+            safe_offset = self._sanitize_sql_value(offset)
+
+            # Use properly formatted query with sanitized values
+            query = f"""
+                SELECT * FROM chat_messages 
+                WHERE session_id = {safe_session_id}
+                ORDER BY created_at DESC
+                LIMIT {safe_limit} OFFSET {safe_offset}
+            """
 
             result = await self.mcp_manager.invoke(
                 mcp_name="supabase",
                 method_name="execute_sql",
                 params={
                     "query": query,
-                    # Parameters would be properly bound in real implementation
                 },
             )
 
@@ -552,10 +605,13 @@ class ChatOrchestrationService:
         try:
             self.logger.info(f"Ending chat session {session_id}")
 
-            query = """
+            # Sanitize session_id to prevent SQL injection
+            safe_session_id = self._sanitize_sql_value(session_id)
+
+            query = f"""
                 UPDATE chat_sessions 
                 SET ended_at = NOW(), updated_at = NOW()
-                WHERE id = $1
+                WHERE id = {safe_session_id}
                 RETURNING ended_at
             """
 

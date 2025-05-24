@@ -436,7 +436,7 @@ class ChatAgent(BaseAgent):
 
         try:
             # Execute via MCP manager
-            result = await mcp_manager.invoke(tool_name, **parameters)
+            result = await self.mcp_manager.invoke(tool_name, **parameters)
 
             return {
                 "status": "success",
@@ -470,6 +470,31 @@ class ChatAgent(BaseAgent):
         """
         context = context or {}
         user_id = context.get("user_id", "anonymous")
+        session_id = context.get("session_id")
+
+        # Create session if not exists
+        if not session_id and user_id != "anonymous":
+            try:
+                session_data = await self.create_chat_session_mcp(
+                    user_id=int(user_id) if user_id.isdigit() else 1,
+                    metadata={"agent": "chat", "created_from": "process_message"}
+                )
+                session_id = session_data.get("session_id")
+                context["session_id"] = session_id
+            except Exception as e:
+                logger.warning(f"Failed to create session: {e}")
+
+        # Save user message if session exists
+        if session_id:
+            try:
+                await self.save_message_mcp(
+                    session_id=session_id,
+                    role="user",
+                    content=message,
+                    metadata={"timestamp": context.get("timestamp")}
+                )
+            except Exception as e:
+                logger.warning(f"Failed to save user message: {e}")
 
         # Detect intent
         intent = await self.detect_intent(message)
@@ -489,19 +514,37 @@ class ChatAgent(BaseAgent):
             response["routed_to"] = intent["primary_intent"]
             response["routing_confidence"] = intent["confidence"]
 
-            return response
+        else:
+            # Handle directly for general queries or low confidence
+            logger.info(
+                f"Handling directly - intent: {intent['primary_intent']} (confidence: {intent['confidence']:.2f})"
+            )
 
-        # Handle directly for general queries or low confidence
-        logger.info(
-            f"Handling directly - intent: {intent['primary_intent']} (confidence: {intent['confidence']:.2f})"
-        )
+            # Use parent run method for direct handling
+            response = await super().run(message, context)
 
-        # Use parent run method for direct handling
-        response = await super().run(message, context)
+            # Add intent metadata
+            response["intent_detected"] = intent
+            response["handled_by"] = "chat_agent"
 
-        # Add intent metadata
-        response["intent_detected"] = intent
-        response["handled_by"] = "chat_agent"
+        # Save assistant response if session exists
+        if session_id and response.get("content"):
+            try:
+                await self.save_message_mcp(
+                    session_id=session_id,
+                    role="assistant",
+                    content=response.get("content", ""),
+                    metadata={
+                        "intent": intent,
+                        "routed_to": response.get("routed_to"),
+                        "handled_by": response.get("handled_by")
+                    }
+                )
+            except Exception as e:
+                logger.warning(f"Failed to save assistant message: {e}")
+
+        # Add session_id to response
+        response["session_id"] = session_id
 
         return response
 
@@ -753,3 +796,45 @@ class ChatAgent(BaseAgent):
         except Exception as e:
             self.logger.error(f"MCP message saving failed: {e}")
             raise ChatAgentError(f"Message saving failed: {str(e)}") from e
+
+    @with_error_handling(logger=logger, raise_on_error=True)
+    async def get_chat_history_mcp(
+        self, session_id: str, limit: int = 10, offset: int = 0
+    ) -> List[Dict[str, Any]]:
+        """Get chat history using MCP database operations.
+
+        Args:
+            session_id: Chat session ID
+            limit: Maximum number of messages to return
+            offset: Number of messages to skip
+
+        Returns:
+            List of message dictionaries
+
+        Raises:
+            ChatAgentError: If history retrieval fails
+        """
+        try:
+            return await self.chat_service.get_chat_history(session_id, limit, offset)
+        except Exception as e:
+            self.logger.error(f"MCP history retrieval failed: {e}")
+            raise ChatAgentError(f"History retrieval failed: {str(e)}") from e
+
+    @with_error_handling(logger=logger, raise_on_error=True)
+    async def end_chat_session_mcp(self, session_id: str) -> bool:
+        """End a chat session using MCP database operations.
+
+        Args:
+            session_id: Chat session ID to end
+
+        Returns:
+            True if session was ended successfully
+
+        Raises:
+            ChatAgentError: If session ending fails
+        """
+        try:
+            return await self.chat_service.end_chat_session(session_id)
+        except Exception as e:
+            self.logger.error(f"MCP session ending failed: {e}")
+            raise ChatAgentError(f"Session ending failed: {str(e)}") from e
