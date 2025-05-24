@@ -69,24 +69,15 @@ class DocumentAnalyzer:
         # Analysis templates for different document types
         self.analysis_templates = {
             "travel_itinerary": {
-                "prompt": (
-                    "Extract travel itinerary information including destinations, "
-                    "dates, accommodations, and activities."
-                ),
+                "prompt": "Extract travel itinerary information including destinations, dates, accommodations, and activities.",
                 "fields": ["destinations", "dates", "accommodations", "activities"],
             },
             "booking_confirmation": {
-                "prompt": (
-                    "Extract booking details including confirmation numbers, dates, "
-                    "locations, and contact information."
-                ),
+                "prompt": "Extract booking details including confirmation numbers, dates, locations, and contact information.",
                 "fields": ["booking_reference", "dates", "location", "contact_info"],
             },
             "travel_document": {
-                "prompt": (
-                    "Extract travel document information including passport details, "
-                    "and visa information, and validity dates."
-                ),
+                "prompt": "Extract travel document information including passport details, visa information, and validity dates.",
                 "fields": [
                     "document_type",
                     "document_number",
@@ -140,9 +131,9 @@ class DocumentAnalyzer:
             return DocumentAnalysisResult(
                 file_id=context.file_id,
                 analysis_type=analysis_type,
-                extracted_text=(
-                    extracted_text[:5000] if extracted_text else None
-                ),  # Limit text for storage
+                extracted_text=extracted_text[:5000]
+                if extracted_text
+                else None,  # Limit text for storage
                 key_information=analysis_results,
                 travel_relevance=travel_info.dict() if travel_info else None,
                 confidence_score=self._calculate_confidence_score(analysis_results),
