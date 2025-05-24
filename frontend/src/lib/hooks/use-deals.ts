@@ -1,3 +1,5 @@
+"use client";
+
 import { useEffect, useCallback, useMemo } from "react";
 import { useDealsStore } from "@/stores/deals-store";
 import type { Deal, DealAlert, DealType, DealState } from "@/types/deals";

@@ -1,3 +1,5 @@
+"use client";
+
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { api } from "@/lib/api/client";
 import type { AccommodationSearchParams, Accommodation } from "@/types/search";
