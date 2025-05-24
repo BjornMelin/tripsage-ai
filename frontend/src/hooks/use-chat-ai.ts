@@ -31,7 +31,7 @@ export function useChatAi(options: UseChatAiOptions = {}) {
 
   // Generate a session ID if not provided
   const sessionIdRef = useRef<string>(providedSessionId || uuidv4());
-  
+
   // Auth and API key state
   const [authError, setAuthError] = useState<string | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
@@ -74,11 +74,13 @@ export function useChatAi(options: UseChatAiOptions = {}) {
       // Load keys if authenticated
       try {
         await loadKeys();
-        
+
         // Validate the OpenAI key (required for chat)
         const hasValidKey = await validateKey("openai");
         if (!hasValidKey) {
-          setAuthError("Valid OpenAI API key required. Please add one in your API settings.");
+          setAuthError(
+            "Valid OpenAI API key required. Please add one in your API settings."
+          );
           setIsInitialized(false);
           return;
         }
@@ -87,7 +89,8 @@ export function useChatAi(options: UseChatAiOptions = {}) {
         setStoreAuthError(null);
         setIsInitialized(true);
       } catch (error) {
-        const message = error instanceof Error ? error.message : "Authentication failed";
+        const message =
+          error instanceof Error ? error.message : "Authentication failed";
         setAuthError(message);
         setIsInitialized(false);
       }
@@ -99,7 +102,7 @@ export function useChatAi(options: UseChatAiOptions = {}) {
   // Ensure the session exists (only after auth is initialized)
   useEffect(() => {
     if (!isInitialized) return;
-    
+
     const sessionId = sessionIdRef.current;
 
     // Check if this session already exists
@@ -466,7 +469,14 @@ export function useChatAi(options: UseChatAiOptions = {}) {
 
       handleSubmit(submitEvent);
     },
-    [addMessage, handleSubmit, setAgentStatus, isInitialized, isAuthenticated, isApiKeyValid]
+    [
+      addMessage,
+      handleSubmit,
+      setAgentStatus,
+      isInitialized,
+      isAuthenticated,
+      isApiKeyValid,
+    ]
   );
 
   // Handle stopping the generation

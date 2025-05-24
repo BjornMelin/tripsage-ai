@@ -125,10 +125,14 @@ export const useApiKeyStore = create<ApiKeyState>()(
 
           const result = await response.json();
           const isValid = result.is_valid;
-          set({ isApiKeyValid: isValid, authError: isValid ? null : result.message });
+          set({
+            isApiKeyValid: isValid,
+            authError: isValid ? null : result.message,
+          });
           return isValid;
         } catch (error) {
-          const message = error instanceof Error ? error.message : "Validation failed";
+          const message =
+            error instanceof Error ? error.message : "Validation failed";
           set({ authError: message, isApiKeyValid: false });
           return false;
         }
@@ -157,7 +161,8 @@ export const useApiKeyStore = create<ApiKeyState>()(
             supportedServices: data.supported_services,
           });
         } catch (error) {
-          const message = error instanceof Error ? error.message : "Failed to load keys";
+          const message =
+            error instanceof Error ? error.message : "Failed to load keys";
           set({ authError: message });
         }
       },
