@@ -195,10 +195,7 @@ def _detect_mime_type(filename: str, content: bytes) -> str:
                 ".wordprocessingml.document"
             )
         elif filename.lower().endswith(".xlsx"):
-            return (
-                "application/vnd.openxmlformats-officedocument"
-                ".spreadsheetml.sheet"
-            )
+            return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         elif filename.lower().endswith(".pptx"):
             return (
                 "application/vnd.openxmlformats-officedocument"

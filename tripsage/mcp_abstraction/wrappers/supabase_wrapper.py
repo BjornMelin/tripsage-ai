@@ -29,13 +29,15 @@ class ExternalMCPClient:
         Handle any method call by returning a coroutine that raises NotImplementedError.
 
         This is a placeholder for external MCP server communication.
-        In a complete implementation, this would communicate with the external server process.
+        In a complete implementation, this would communicate with the
+        external server process.
         """
 
         async def external_call(*args, **kwargs):
             raise NotImplementedError(
-                f"External MCP server communication not yet implemented for {self.mcp_name}.{name}. "
-                f"This requires setting up the MCP protocol communication with the external server process."
+                f"External MCP server communication not yet implemented for "
+                f"{self.mcp_name}.{name}. This requires setting up the MCP protocol "
+                f"communication with the external server process."
             )
 
         return external_call
@@ -70,7 +72,7 @@ class SupabaseMCPWrapper(BaseMCPWrapper):
 
     def _build_method_map(self) -> Dict[str, str]:
         """
-        Build mapping from standardized method names to external Supabase MCP tool names.
+        Build mapping from standardized method names to external Supabase MCP tool names
 
         Based on the Supabase MCP server documentation, these are the available tools.
         The map goes from user-friendly names to actual MCP tool names.

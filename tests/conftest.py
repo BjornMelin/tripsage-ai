@@ -18,46 +18,45 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 
 
 # Set up test environment before any imports
-os.environ.update({
-    # Basic API keys
-    "OPENAI_API_KEY": "test-openai-key",
-    "ANTHROPIC_API_KEY": "test-anthropic-key",
-    
-    # Database configuration - Core required fields
-    "SUPABASE_URL": "https://test-supabase-url.com",
-    "SUPABASE_ANON_KEY": "test-anon-key",
-    "NEO4J_PASSWORD": "test-password",
-    
-    # Redis configuration
-    "REDIS_URL": "redis://localhost:6379/0",
-    
-    # MCP Endpoints - All required MCP configurations
-    "TIME_MCP_ENDPOINT": "http://localhost:3006",
-    "WEATHER_MCP_ENDPOINT": "http://localhost:3007", 
-    "WEATHER_MCP_OPENWEATHERMAP_API_KEY": "test-weather-api-key",
-    "GOOGLEMAPS_MCP_ENDPOINT": "http://localhost:3008",
-    "GOOGLEMAPS_MCP_MAPS_API_KEY": "test-maps-api-key",
-    "MEMORY_MCP_ENDPOINT": "http://localhost:3009",
-    "WEBCRAWL_MCP_ENDPOINT": "http://localhost:3010",
-    "WEBCRAWL_MCP_CRAWL4AI_API_KEY": "test-crawl-key",
-    "WEBCRAWL_MCP_FIRECRAWL_API_KEY": "test-firecrawl-key", 
-    "FLIGHTS_MCP_ENDPOINT": "http://localhost:3011",
-    "FLIGHTS_MCP_DUFFEL_API_KEY": "test-duffel-key",
-    "ACCOMMODATIONS_MCP_AIRBNB_ENDPOINT": "http://localhost:3012",
-    "PLAYWRIGHT_MCP_ENDPOINT": "http://localhost:3013",
-    "CALENDAR_MCP_ENDPOINT": "http://localhost:3014",
-    "CALENDAR_MCP_GOOGLE_CLIENT_ID": "test-client-id",
-    "CALENDAR_MCP_GOOGLE_CLIENT_SECRET": "test-client-secret",
-    "CALENDAR_MCP_GOOGLE_REDIRECT_URI": "http://localhost:3000/callback",
-    "NEON_MCP_ENDPOINT": "http://localhost:3015",
-    "NEON_MCP_API_KEY": "test-neon-key",
-    "SUPABASE_MCP_ENDPOINT": "http://localhost:3016",
-    
-    # Additional environment variables for compatibility
-    "ENVIRONMENT": "testing",
-    "DEBUG": "false",
-    "LOG_LEVEL": "INFO",
-})
+os.environ.update(
+    {
+        # Basic API keys
+        "OPENAI_API_KEY": "test-openai-key",
+        "ANTHROPIC_API_KEY": "test-anthropic-key",
+        # Database configuration - Core required fields
+        "SUPABASE_URL": "https://test-supabase-url.com",
+        "SUPABASE_ANON_KEY": "test-anon-key",
+        "NEO4J_PASSWORD": "test-password",
+        # Redis configuration
+        "REDIS_URL": "redis://localhost:6379/0",
+        # MCP Endpoints - All required MCP configurations
+        "TIME_MCP_ENDPOINT": "http://localhost:3006",
+        "WEATHER_MCP_ENDPOINT": "http://localhost:3007",
+        "WEATHER_MCP_OPENWEATHERMAP_API_KEY": "test-weather-api-key",
+        "GOOGLEMAPS_MCP_ENDPOINT": "http://localhost:3008",
+        "GOOGLEMAPS_MCP_MAPS_API_KEY": "test-maps-api-key",
+        "MEMORY_MCP_ENDPOINT": "http://localhost:3009",
+        "WEBCRAWL_MCP_ENDPOINT": "http://localhost:3010",
+        "WEBCRAWL_MCP_CRAWL4AI_API_KEY": "test-crawl-key",
+        "WEBCRAWL_MCP_FIRECRAWL_API_KEY": "test-firecrawl-key",
+        "FLIGHTS_MCP_ENDPOINT": "http://localhost:3011",
+        "FLIGHTS_MCP_DUFFEL_API_KEY": "test-duffel-key",
+        "ACCOMMODATIONS_MCP_AIRBNB_ENDPOINT": "http://localhost:3012",
+        "PLAYWRIGHT_MCP_ENDPOINT": "http://localhost:3013",
+        "CALENDAR_MCP_ENDPOINT": "http://localhost:3014",
+        "CALENDAR_MCP_GOOGLE_CLIENT_ID": "test-client-id",
+        "CALENDAR_MCP_GOOGLE_CLIENT_SECRET": "test-client-secret",
+        "CALENDAR_MCP_GOOGLE_REDIRECT_URI": "http://localhost:3000/callback",
+        "NEON_MCP_ENDPOINT": "http://localhost:3015",
+        "NEON_MCP_API_KEY": "test-neon-key",
+        "SUPABASE_MCP_ENDPOINT": "http://localhost:3016",
+        # Additional environment variables for compatibility
+        "ENVIRONMENT": "testing",
+        "DEBUG": "false",
+        "LOG_LEVEL": "INFO",
+    }
+)
+
 
 @pytest.fixture(autouse=True)
 def mock_environment_variables():
@@ -248,7 +247,7 @@ def mock_settings_and_redis():
     mock_settings.agent.max_tokens = 4096
     mock_settings.agent.timeout = 120
     mock_settings.agent.max_retries = 3
-    
+
     # Mock Redis client
     mock_redis_client = MagicMock()
     mock_redis_client.get = AsyncMock(return_value=None)

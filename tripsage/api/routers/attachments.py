@@ -31,11 +31,13 @@ get_current_user_dep = Depends(get_current_user)
 file_upload_dep = File(...)
 files_upload_dep = File(...)
 
+
 def get_file_processor() -> FileProcessor:
     """Get file processor singleton."""
     # Choice: Using simple import pattern instead of complex DI
     # Reason: KISS principle - FileProcessor is lightweight and stateless
     return FileProcessor()
+
 
 get_file_processor_dep = Depends(get_file_processor)
 
