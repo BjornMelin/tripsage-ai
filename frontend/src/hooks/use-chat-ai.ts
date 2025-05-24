@@ -1,3 +1,5 @@
+"use client";
+
 import { useChat, type Message as AiMessage } from "ai/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
