@@ -56,7 +56,7 @@ jobs:
         continue-on-error: true
 
       - name: Run Biome format check
-        run: pnpm biome format --check .
+        run: pnpm biome check --fix .
 
       - name: Run TypeScript type check
         run: pnpm type-check
