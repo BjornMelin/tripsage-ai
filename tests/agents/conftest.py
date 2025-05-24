@@ -5,8 +5,9 @@ This module provides fixtures specific to agent testing,
 isolating them from the global conftest dependencies.
 """
 
+from unittest.mock import MagicMock, patch
+
 import pytest
-from unittest.mock import patch, MagicMock
 
 
 @pytest.fixture(autouse=True)
@@ -16,11 +17,11 @@ def mock_all_dependencies():
     mock_settings = MagicMock()
     mock_settings.agent.model_name = "gpt-4"
     mock_settings.agent.temperature = 0.7
-    
+
     mock_cache = MagicMock()
     mock_redis = MagicMock()
     mock_agents = MagicMock()
-    
+
     # Apply all patches
     with (
         patch("tripsage.config.app_settings.settings", mock_settings),
