@@ -25,18 +25,194 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
 
 - [ ] **Backend Gaps - Missing Integrations**
 
-  - Incomplete memory-mcp implementation for learning
+  - Incomplete memory-mcp implementation for learning → **SOLUTION: Mem0 Integration (see below)**
   - No browser automation for price tracking
   - Missing GitHub integration for itinerary versioning
   - Limited use of perplexity-mcp for research
   - No firecrawl deep research implementation
 
 - [ ] **Database Gaps - Required Tables**
-  - Missing user_preferences for personalization
-  - No search_history for recommendations
+  - Missing user_preferences for personalization → **SOLUTION: Mem0 handles this**
+  - No search_history for recommendations → **SOLUTION: Mem0 memory storage**
   - Missing price_alerts table
-  - No agent_interactions tracking
+  - No agent_interactions tracking → **SOLUTION: Mem0 conversation memory**
   - Missing group collaboration tables
+
+## 🚀 Memory System MVP Implementation (NEW - 2025-05-25)
+
+**Goal:** Implement Mem0-based memory system for 26% better accuracy, 91% faster performance, and 90% token savings.
+
+**Documentation:**
+- Research: [docs/REFACTOR/MEMORY_SEARCH/RESEARCH_DB_MEMORY_SEARCH.md](./docs/REFACTOR/MEMORY_SEARCH/RESEARCH_DB_MEMORY_SEARCH.md)
+- Implementation Plan: [docs/REFACTOR/MEMORY_SEARCH/PLAN_DB_MEMORY_SEARCH.md](./docs/REFACTOR/MEMORY_SEARCH/PLAN_DB_MEMORY_SEARCH.md)
+- GitHub Issues: #146, #147, #149, #150, #153, #154, #155
+- Neon Deprecation Analysis: [docs/REFACTOR/MEMORY_SEARCH/NEON_DEPRECATION_ANALYSIS.md](./docs/REFACTOR/MEMORY_SEARCH/NEON_DEPRECATION_ANALYSIS.md)
+
+### Week 1: Infrastructure Setup (Days 1-5)
+
+- [ ] **Day 1-2: DragonflyDB Migration**
+  - [ ] Deploy DragonflyDB container alongside Redis
+  - [ ] Update MCP configuration for multi-threading
+  - [ ] Run parallel testing with 10% traffic
+  - [ ] Monitor performance (target: 6.43M ops/sec)
+  - [ ] Complete migration and decommission Redis
+
+- [ ] **Day 3: PGVector Setup**
+  - [ ] Enable pgvector extension in Supabase
+  - [ ] Enable pgvectorscale for 11x performance
+  - [ ] Create vector indexes with StreamingDiskANN
+  - [ ] Test vector search performance (<100ms)
+
+- [ ] **Day 4-5: Database Schema**
+  - [ ] Create memories table with optimized schema
+  - [ ] Implement deduplication trigger
+  - [ ] Add performance indexes
+  - [ ] Create search functions
+  - [ ] Run migration scripts
+
+### Week 2: Mem0 Integration (Days 6-10)
+
+- [ ] **Day 6-7: Memory Service Implementation**
+  - [ ] Install mem0ai package
+  - [ ] Create TripSageMemoryService class
+  - [ ] Configure pgvector backend
+  - [ ] Implement memory extraction methods
+  - [ ] Add caching with DragonflyDB
+
+- [ ] **Day 8-9: Agent Integration**
+  - [ ] Update ChatAgent with memory service
+  - [ ] Implement memory-aware prompts
+  - [ ] Add conversation memory storage
+  - [ ] Create user preference tracking
+  - [ ] Test personalized responses
+
+- [ ] **Day 10: Advanced Features**
+  - [ ] Session memory management
+  - [ ] Memory search API
+  - [ ] User context aggregation
+  - [ ] Travel-specific enrichment
+  - [ ] GDPR compliance features
+
+### Week 3: Production Readiness (Days 11-15)
+
+- [ ] **Day 11-12: Testing Suite**
+  - [ ] Unit tests (90% coverage target)
+  - [ ] Integration tests with mocked MCPs
+  - [ ] Performance benchmarks
+  - [ ] Memory accuracy validation
+  - [ ] Load testing
+
+- [ ] **Day 13-14: Production Preparation**
+  - [ ] Security hardening
+  - [ ] API rate limiting
+  - [ ] OpenTelemetry monitoring
+  - [ ] Cost tracking setup
+  - [ ] Alert configuration
+
+- [ ] **Day 15: Documentation & Deployment**
+  - [ ] API documentation
+  - [ ] Integration guide
+  - [ ] Operations manual
+  - [ ] Production deployment
+  - [ ] Team training
+
+### Success Metrics
+
+- [ ] **Performance Targets**
+  - [ ] Memory extraction: <500ms
+  - [ ] Search latency: <100ms (91% improvement)
+  - [ ] Cache hit rate: >80%
+  - [ ] Vector search: 471 QPS
+
+- [ ] **Quality Targets**
+  - [ ] Test coverage: 90%+
+  - [ ] Memory accuracy: 26% better than baseline
+  - [ ] Zero downtime deployment
+  - [ ] All monitoring in place
+
+- [ ] **Cost Targets**
+  - [ ] Total monthly cost: <$120
+  - [ ] 90% token savings achieved
+  - [ ] 80% infrastructure cost reduction
+  - [ ] No specialized databases needed
+
+## 🔄 Database Consolidation Migration (NEW - 2025-05-25)
+
+**Goal:** Migrate from dual-database architecture (Neon + Supabase) to single Supabase instance with pgvector + pgvectorscale.
+
+**GitHub Issues:** #146 (parent), #147, #149, #150, #153, #154, #155
+
+### Migration Tasks
+
+- [ ] **Phase 1: Pre-Migration Assessment**
+  - [ ] Audit current Neon database usage and dependencies
+  - [ ] Document all Neon-specific features in use
+  - [ ] Create inventory of all database connections
+  - [ ] Analyze data migration complexity
+  - [ ] Review Neon Deprecation Analysis document
+
+- [ ] **Phase 2: Supabase Setup with pgvector**
+  - [ ] Enable pgvector extension in Supabase (Issue #147)
+  - [ ] Enable pgvectorscale for 11x performance boost
+  - [ ] Configure StreamingDiskANN indexes
+  - [ ] Create vector-enabled schemas
+  - [ ] Set up performance monitoring
+
+- [ ] **Phase 3: Schema and Data Migration**
+  - [ ] Export Neon schema using pg_dump (Issue #149)
+  - [ ] Transform schema for Supabase compatibility
+  - [ ] Create migration scripts with validation
+  - [ ] Implement data transformation pipeline
+  - [ ] Set up parallel write strategy for zero-downtime
+
+- [ ] **Phase 4: Application Code Updates** (Issue #150)
+  - [ ] Remove all Neon MCP tool imports
+  - [ ] Update database connection strings
+  - [ ] Replace Neon-specific operations
+  - [ ] Update error handling for Supabase
+  - [ ] Remove neon_tools.py file
+
+- [ ] **Phase 5: Mem0 Integration** (Issue #153)
+  - [ ] Install and configure Mem0 library
+  - [ ] Create memory storage schema with pgvector
+  - [ ] Implement TripSageMemory service
+  - [ ] Add semantic search capabilities
+  - [ ] Implement memory decay algorithms
+
+- [ ] **Phase 6: DragonflyDB Migration** (Issue #154)
+  - [ ] Deploy DragonflyDB alongside Redis
+  - [ ] Update cache wrapper for DragonflyDB
+  - [ ] Migrate existing cache data
+  - [ ] Performance benchmark (target: 25x improvement)
+  - [ ] Decommission Redis instance
+
+- [ ] **Phase 7: Documentation Updates** (Issue #155)
+  - [ ] Update all architecture documentation
+  - [ ] Remove Neon references from guides
+  - [ ] Add pgvector setup instructions
+  - [ ] Update environment configuration docs
+  - [ ] Create migration guide for developers
+
+- [ ] **Phase 8: Testing and Validation**
+  - [ ] Create comprehensive test suite
+  - [ ] Validate data integrity post-migration
+  - [ ] Performance testing (target: <100ms vector search)
+  - [ ] Load testing with production workloads
+  - [ ] Rollback procedure testing
+
+- [ ] **Phase 9: Production Cutover**
+  - [ ] Schedule maintenance window
+  - [ ] Execute final data sync
+  - [ ] Update DNS/connection strings
+  - [ ] Monitor application health
+  - [ ] Decommission Neon instance
+
+### Success Metrics
+- [ ] Zero data loss during migration
+- [ ] Vector search latency <100ms (91% improvement)
+- [ ] Monthly infrastructure cost <$120 (80% reduction)
+- [ ] All tests passing with >90% coverage
+- [ ] No production incidents during cutover
 
 ## API and Middleware Tasks
 
