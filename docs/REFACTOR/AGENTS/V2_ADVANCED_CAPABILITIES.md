@@ -8,8 +8,8 @@
 
 ## Executive Summary
 
-This document outlines advanced agent capabilities planned for TripSage V2 and 
-beyond, leveraging cutting-edge research in multi-agent systems, autonomous AI, 
+This document outlines advanced agent capabilities planned for TripSage V2 and
+beyond, leveraging cutting-edge research in multi-agent systems, autonomous AI,
 and collaborative intelligence.
 
 ---
@@ -31,7 +31,7 @@ and collaborative intelligence.
 
 ### Capability Overview
 
-Agents autonomously break down complex travel goals into executable subtasks, 
+Agents autonomously break down complex travel goals into executable subtasks,
 adapting their planning based on real-time constraints and discoveries.
 
 ### Implementation
@@ -113,10 +113,10 @@ class GoalDecomposer:
 
 ### Use Cases
 
-1. **Complex Multi-City Trips**: "Plan a 3-month digital nomad journey through 
+1. **Complex Multi-City Trips**: "Plan a 3-month digital nomad journey through
    Southeast Asia optimizing for wifi quality, cost, and visa requirements"
 
-2. **Event-Based Planning**: "Organize a destination wedding in Italy for 150 
+2. **Event-Based Planning**: "Organize a destination wedding in Italy for 150
    guests with varying budgets and dietary restrictions"
 
 ---
@@ -311,7 +311,7 @@ async def inject_specialist_subgraph(
 
 ### Distributed Experience Learning
 
-Agents learn from collective experiences across all users while preserving 
+Agents learn from collective experiences across all users while preserving
 privacy:
 
 ```python
@@ -682,16 +682,19 @@ class SwarmIntelligence:
 ## Implementation Roadmap
 
 ### V2.0 (Q3 2025)
+
 - [ ] Autonomous Goal Decomposition
 - [ ] Basic Multi-Agent Collaboration
 - [ ] Simple Dynamic Workflows
 
 ### V2.5 (Q4 2025)
+
 - [ ] Federated Learning Integration
 - [ ] Multi-Modal Capabilities
 - [ ] Advanced HITL
 
 ### V3.0 (Q1 2026)
+
 - [ ] Self-Improving Agents
 - [ ] Swarm Intelligence
 - [ ] Full Adaptive Systems
