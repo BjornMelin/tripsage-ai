@@ -2,11 +2,11 @@
 
 ## Executive Summary
 
-**Objective**: Migrate 8 of 12 MCP services to direct SDK integration across 3
-sprints  
-**Timeline**: 23-34 development days over 12 weeks  
-**Expected Impact**: 40% performance improvement, 2000+ lines code reduction  
-**Risk Level**: LOW-MEDIUM with comprehensive rollback strategy
+**Objective**: Migrate 11 of 12 MCP services to direct SDK integration, deprecate 
+Firecrawl in favor of Crawl4AI, and consolidate database services  
+**Timeline**: 8 weeks including testing and deployment  
+**Expected Impact**: 50-70% latency reduction, 6-10x crawling improvement, 3000+ lines code reduction  
+**Risk Level**: LOW with comprehensive feature flag rollback strategy
 
 ## Implementation Strategy
 
@@ -622,9 +622,192 @@ flights_service = FlightsService()
 
 Similar pattern with official Google client libraries and OAuth2 flows.
 
-## Phase 3: Tier 3 Migrations (Sprint 6)
+## Phase 3: Web Crawling Migration (Week 3)
 
-### Low-priority migrations for Firecrawl and Weather services with direct API clients
+### Firecrawl Deprecation and Crawl4AI Migration
+
+**Important**: Firecrawl is being completely deprecated in favor of Crawl4AI, which provides:
+- 6x performance improvement
+- Zero licensing costs ($700-1200/year savings)
+- LLM-optimized output formats
+- Memory-adaptive scaling
+
+#### Crawl4AI Direct SDK Integration (2-3 days)
+
+```python
+# File: tripsage/services/crawl4ai_service.py
+from crawl4ai import AsyncWebCrawler, MemoryAdaptiveDispatcher
+from crawl4ai.content_scraping_strategy import LXMLWebScrapingStrategy
+from crawl4ai.async_dispatcher import CrawlerMonitor, DisplayMode
+
+class Crawl4AIService:
+    """Direct Crawl4AI integration with 6x performance improvement"""
+    
+    def __init__(self):
+        self.dispatcher = MemoryAdaptiveDispatcher(
+            memory_threshold_percent=80.0,
+            check_interval=0.5,
+            max_session_permit=20,
+            monitor=CrawlerMonitor(display_mode=DisplayMode.DETAILED)
+        )
+    
+    async def crawl_batch(self, urls: List[str]) -> List[CrawlResult]:
+        """High-performance batch crawling with streaming"""
+        async with AsyncWebCrawler() as crawler:
+            results = []
+            async for result in await crawler.arun_many(
+                urls=urls,
+                config=CrawlerRunConfig(
+                    scraping_strategy=LXMLWebScrapingStrategy(),
+                    stream=True,
+                    extraction_strategy=LLMExtractionStrategy(
+                        provider='openai/gpt-4o-mini',
+                        instruction="Extract travel-relevant content optimized for RAG"
+                    )
+                ),
+                dispatcher=self.dispatcher
+            ):
+                results.append(result)
+            return results
+
+crawl4ai_service = Crawl4AIService()
+```
+
+#### Playwright Native SDK Integration (2-3 days)
+
+```python
+# File: tripsage/services/playwright_service.py
+from playwright.async_api import async_playwright
+import asyncio
+
+class PlaywrightService:
+    """Direct Playwright SDK with browser pooling"""
+    
+    def __init__(self, max_browsers: int = 5):
+        self.max_browsers = max_browsers
+        self.browser_pool = asyncio.Queue(maxsize=max_browsers)
+        self._initialized = False
+    
+    async def initialize(self):
+        """Initialize browser pool"""
+        if self._initialized:
+            return
+            
+        for _ in range(self.max_browsers):
+            playwright = await async_playwright().start()
+            browser = await playwright.chromium.launch(
+                headless=True,
+                args=['--no-sandbox', '--disable-setuid-sandbox']
+            )
+            await self.browser_pool.put((playwright, browser))
+        self._initialized = True
+    
+    async def crawl_complex(self, url: str, actions: List[Action]) -> CrawlResult:
+        """Handle JavaScript-heavy sites with complex interactions"""
+        if not self._initialized:
+            await self.initialize()
+            
+        playwright, browser = await self.browser_pool.get()
+        try:
+            context = await browser.new_context(
+                viewport={'width': 1920, 'height': 1080},
+                user_agent='TripSage/1.0 (Travel Planning Bot)'
+            )
+            page = await context.new_page()
+            
+            await page.goto(url, wait_until='networkidle')
+            
+            # Execute complex interactions
+            for action in actions:
+                await self.execute_action(page, action)
+            
+            content = await page.content()
+            await context.close()
+            
+            return CrawlResult(
+                url=url,
+                content=content,
+                status='success'
+            )
+        finally:
+            await self.browser_pool.put((playwright, browser))
+
+playwright_service = PlaywrightService()
+```
+
+#### Smart Crawler Router (1 day)
+
+```python
+# File: tripsage/services/crawler_router.py
+class SmartCrawlerRouter:
+    """Intelligent routing between Crawl4AI and Playwright"""
+    
+    def __init__(self):
+        self.crawl4ai = crawl4ai_service
+        self.playwright = playwright_service
+        self.js_heavy_domains = {
+            'airbnb.com', 'booking.com', 'expedia.com',
+            'tripadvisor.com', 'kayak.com'
+        }
+    
+    async def crawl(self, url: str, options: CrawlOptions = None) -> CrawlResult:
+        """Route to optimal crawler based on URL and options"""
+        
+        # Check if complex JavaScript interaction needed
+        if self._requires_complex_js(url, options):
+            return await self.playwright.crawl_complex(url, options.actions)
+        
+        # Default to high-performance Crawl4AI
+        return await self.crawl4ai.crawl_batch([url])[0]
+    
+    def _requires_complex_js(self, url: str, options: CrawlOptions) -> bool:
+        """Determine if Playwright is needed"""
+        # Check for known JS-heavy domains
+        domain = urlparse(url).netloc
+        if any(d in domain for d in self.js_heavy_domains):
+            return True
+            
+        # Check if complex actions requested
+        if options and options.actions:
+            return True
+            
+        return False
+
+crawler_router = SmartCrawlerRouter()
+```
+
+## Phase 4: Low Priority Services (Week 4)
+
+### Weather Service Migration (1-2 days)
+
+```python
+# File: tripsage/services/weather_service.py
+import httpx
+from typing import Dict, Any
+
+class WeatherService:
+    """Direct weather API integration"""
+    
+    def __init__(self):
+        self.api_key = settings.weather_api_key
+        self.base_url = "https://api.openweathermap.org/data/2.5"
+    
+    async def get_weather(self, location: str) -> Dict[str, Any]:
+        """Get weather data for location"""
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                f"{self.base_url}/weather",
+                params={
+                    "q": location,
+                    "appid": self.api_key,
+                    "units": "metric"
+                }
+            )
+            response.raise_for_status()
+            return response.json()
+
+weather_service = WeatherService()
+```
 
 ## Testing Strategy
 
@@ -742,17 +925,16 @@ feature_flags.redis_integration = IntegrationMode.MCP
 
 ## Timeline & Dependencies
 
-### Sprint Timeline
+### Updated Sprint Timeline
 
-| Sprint         | Duration | Services           | Dependencies        |
-| -------------- | -------- | ------------------ | ------------------- |
-| **Sprint 1.1** | 1 week   | Redis              | None                |
-| **Sprint 1.2** | 1 week   | Supabase           | Feature flag system |
-| **Sprint 2**   | 1 week   | Neo4j              | Database adapters   |
-| **Sprint 3**   | 0.5 week | Time               | None                |
-| **Sprint 4**   | 1 week   | Duffel Flights     | API credentials     |
-| **Sprint 5**   | 1 week   | Google Services    | OAuth2 setup        |
-| **Sprint 6**   | 0.5 week | Firecrawl, Weather | None                |
+| Week           | Duration | Services/Tasks                        | Dependencies        |
+| -------------- | -------- | ------------------------------------- | ------------------- |
+| **Week 1**     | 1 week   | DragonflyDB, pgvector, Mem0 setup    | Infrastructure      |
+| **Week 2**     | 1 week   | Supabase, Service Registry            | Feature flag system |
+| **Week 3**     | 1 week   | Crawl4AI, Playwright (no Firecrawl)   | None                |
+| **Week 4**     | 1 week   | Maps, Calendar, Flights, Time, Weather| API credentials     |
+| **Week 5-6**   | 2 weeks  | Testing and Performance Validation    | All services ready  |
+| **Week 7-8**   | 2 weeks  | Production Deployment                 | Testing complete    |
 
 ### Resource Requirements
 
@@ -773,17 +955,20 @@ feature_flags.redis_integration = IntegrationMode.MCP
 
 ### Performance Targets
 
-- [x] **30%+ improvement** in P95 latency for database operations
-- [x] **50%+ reduction** in wrapper-related code complexity
+- [x] **50-70% improvement** in P95 latency for overall operations
+- [x] **6-10x improvement** in web crawling throughput
+- [x] **60%+ reduction** in wrapper-related code complexity (~3000 lines)
 - [x] **Zero regression** in service availability or functionality
-- [x] **Improved developer experience** measured by debugging time reduction
+- [x] **25x improvement** in cache operations with DragonflyDB
+- [x] **$1,500-2,000/month** infrastructure cost savings
 
 ### Business Impact
 
-- **Faster page load times** from reduced latency
-- **Better user experience** from improved reliability
-- **Reduced operational costs** from simplified infrastructure
-- **Faster feature development** from direct API access
+- **Dramatically faster page load times** from 50-70% latency reduction
+- **Superior crawling performance** with 6-10x throughput increase
+- **Major cost savings** of $1,500-2,000/month from service consolidation
+- **Simplified architecture** with 8 services instead of 12
+- **Faster feature development** from unified async patterns
 
 ### Technical Validation
 
@@ -794,19 +979,30 @@ feature_flags.redis_integration = IntegrationMode.MCP
 
 ## Conclusion
 
-This migration plan provides a systematic, low-risk approach to eliminating
-complex MCP abstractions while maintaining system reliability. The phased
-approach with comprehensive testing and rollback strategies ensures successful
-delivery of significant performance and maintainability improvements.
+This updated migration plan incorporates findings from crawling and database 
+architecture research, providing a comprehensive approach to modernizing TripSage's 
+integration layer. Key changes include:
+
+- **Firecrawl deprecation** in favor of Crawl4AI (6x performance, $700-1200/year savings)
+- **Service consolidation** from 12 to 8 services total
+- **Direct SDK migration** for 7 of 8 services (only Airbnb remains MCP)
+- **Infrastructure modernization** with DragonflyDB and pgvector
+- **Unified async patterns** throughout the architecture
+
+The phased approach with comprehensive testing and feature flag rollback strategies 
+ensures successful delivery of dramatic performance improvements while maintaining 
+system reliability.
 
 **Next Actions:**
 
-1. **Approve Phase 1 scope** and resource allocation
-2. **Set up development environments** with feature flag infrastructure
-3. **Begin Sprint 1.1** with Redis migration
-4. **Establish monitoring dashboards** for migration tracking
+1. **Approve updated scope** including Firecrawl deprecation
+2. **Set up infrastructure** for DragonflyDB and pgvector
+3. **Begin Week 1** with infrastructure setup
+4. **Implement service registry** pattern for clean architecture
+5. **Deploy Crawl4AI** as primary crawling solution
 
 ---
 
-_Implementation Plan completed: 2025-05-25_  
+_Implementation Plan updated: 2025-05-25_  
+_Incorporates crawling and database architecture findings_  
 _Ready for development team execution_

@@ -146,8 +146,9 @@ complexity.
 # Core Mem0 configuration with Supabase + pgvector
 from mem0 import Memory
 from tripsage.config.settings import settings
+from tripsage.mcp_abstraction.registry import ServiceProtocol
 
-class TripSageMemoryService:
+class TripSageMemoryService(ServiceProtocol):
     def __init__(self):
         self.config = {
             "vector_store": {
@@ -173,6 +174,17 @@ class TripSageMemoryService:
             }
         }
         self.memory = Memory.from_config(self.config)
+        
+    async def health_check(self) -> bool:
+        """Required by ServiceProtocol"""
+        return await self.memory.health_check()
+        
+    async def close(self) -> None:
+        """Required by ServiceProtocol"""
+        await self.memory.close()
+
+# Register with service registry
+registry.register("memory", TripSageMemoryService())
 ```
 
 **Days 3-4: Agent Integration**
