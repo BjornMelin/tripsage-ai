@@ -1,6 +1,7 @@
 """Feature flag system for gradual migration from MCP to direct SDK integration."""
 
 from enum import Enum
+
 from pydantic import Field
 from pydantic_settings import BaseSettings
 

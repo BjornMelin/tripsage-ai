@@ -19,7 +19,6 @@ from typing import Any, Dict, List, Optional
 
 from agents import WebSearchTool
 
-from tripsage.mcp_abstraction.wrappers.redis_wrapper import ContentType
 from tripsage.utils.cache_tools import (
     CacheStats,
     batch_cache_get,
@@ -33,6 +32,7 @@ from tripsage.utils.cache_tools import (
     prefetch_cache_keys,
     set_cache,
 )
+from tripsage.utils.content_types import ContentType
 from tripsage.utils.error_handling import log_exception
 from tripsage.utils.logging import get_logger
 
