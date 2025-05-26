@@ -61,23 +61,8 @@ from pydantic import BaseModel, Field
 from tripsage.mcp_abstraction.exceptions import TripSageMCPError
 from tripsage.mcp_abstraction.manager import mcp_manager
 
-# Import ContentType from the existing redis_wrapper for compatibility
-try:
-    from tripsage.mcp_abstraction.wrappers.redis_wrapper import ContentType
-except ImportError:
-    # Fallback if redis_wrapper doesn't exist
-    from enum import Enum
-
-    class ContentType(str, Enum):
-        """Content types for web operations with different TTL requirements."""
-
-        REALTIME = "realtime"
-        TIME_SENSITIVE = "time_sensitive"
-        DAILY = "daily"
-        SEMI_STATIC = "semi_static"
-        STATIC = "static"
-
-
+# Import ContentType from the content_types module for compatibility
+from tripsage.utils.content_types import ContentType
 from tripsage.utils.logging import get_logger
 
 logger = get_logger(__name__)

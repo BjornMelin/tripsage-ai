@@ -99,6 +99,8 @@ This document captures features that:
   - Sophisticated conflict resolution in collaborative planning
   - Advanced permission and role management
   - Complex notification systems
+  - Real-time expense splitting with complex rules
+  - Shared itinerary management with version control
 
 - [ ] **Advanced Visualization**
   - Complex interactive maps with multiple layers
@@ -106,6 +108,16 @@ This document captures features that:
   - Sophisticated animation systems
   - Complex responsive design systems
   - Advanced accessibility features
+  - Agent flow diagrams with React Flow
+  - Execution timeline visualization
+  - Resource usage metrics visualization
+
+- [ ] **Advanced Agent Features**
+  - Real-time agent workflow visualization
+  - Agent interaction animations
+  - Complex agent personality customization
+  - Voice input/output support with advanced NLP
+  - Chat export functionality with formatting options
 
 ## Performance Over-Engineering
 
@@ -154,6 +166,15 @@ This document captures features that:
   - Complex booking coordination systems
   - Advanced group communication features
   - Sophisticated group decision making tools
+  - Voting and decision systems
+  - Activity feed for group updates
+
+- [ ] **Advanced Travel Intelligence**
+  - Price prediction algorithms
+  - Fare alert system with ML-based predictions
+  - Learning user preferences beyond Mem0 basics
+  - AI recommendation engine with deep learning
+  - Alternative routing finder (hidden city, split tickets)
 
 ## Infrastructure Over-Engineering
 
@@ -163,6 +184,9 @@ This document captures features that:
   - Complex log analysis and correlation
   - Advanced error tracking and alerting
   - Sophisticated performance monitoring
+  - OpenTelemetry with custom business logic spans
+  - Grafana dashboards with complex drill-downs
+  - Prometheus metrics with advanced aggregations
 
 - [ ] **Advanced Security Infrastructure**
   - Complex zero-trust architecture
@@ -170,6 +194,65 @@ This document captures features that:
   - Advanced encryption key management
   - Complex audit and compliance systems
   - Sophisticated threat modeling automation
+  - GitHub integration for itinerary versioning
+  - Advanced GDPR compliance beyond basic requirements
+
+- [ ] **Platform Expansion**
+  - Mobile app development (React Native)
+  - PWA capabilities beyond basic requirements
+  - Offline support with complex sync
+  - Advanced MCP integrations beyond MVP needs
+  - Enterprise features for B2B
+
+## Advanced Database Features (V2.0)
+
+- [ ] **Complex Graph Database Features**
+  - Neo4j integration with Graphiti for temporal reasoning
+  - Complex relationship tracking beyond Mem0
+  - Advanced knowledge graph queries
+  - Temporal graph algorithms
+  - Graph-based recommendation engine
+
+- [ ] **Advanced Storage Patterns**
+  - Multi-region data replication
+  - Complex sharding strategies
+  - Advanced caching beyond DragonflyDB basics
+  - Sophisticated data archival
+  - Complex event sourcing
+
+- [ ] **V2.0 Database Tables**
+  - user_preferences (complex personalization beyond Mem0)
+  - search_history (advanced recommendations)
+  - price_alerts (ML-based monitoring)
+  - groups (complex collaboration)
+  - shared_expenses (sophisticated splitting)
+  - agent_interactions (detailed tracking)
+
+## V2.0 Frontend Features
+
+- [ ] **Advanced Travel Planning**
+  - Mapbox GL with complex overlays
+  - Advanced itinerary timeline with dependencies
+  - Sophisticated budget tracking with forecasting
+  - Complex accommodation search with filters
+  - Advanced flight search with matrix view
+  - Weather integration with trip impact analysis
+  - Destination recommendations with ML
+
+- [ ] **LLM Configuration & Testing**
+  - Model selection UI with cost comparison
+  - Custom parameter controls with presets
+  - Performance metrics dashboard
+  - Model comparison with A/B testing
+  - Usage analytics with cost optimization
+  - Advanced prompt engineering UI
+
+- [ ] **Advanced State Management**
+  - Complex Zustand patterns with middleware
+  - Advanced React Query with optimistic updates
+  - Sophisticated offline support with conflict resolution
+  - Complex server state synchronization
+  - Advanced performance optimizations
 
 ## Migration Considerations
 
@@ -200,3 +283,229 @@ Before moving items from V2.0 to main TODO:
 ---
 
 **Remember**: The goal is to deliver a robust, working MVP first. Complexity should be added judiciously based on real user needs, not anticipated requirements.
+
+## Frontend V2 Features (From Main TODO)
+
+### Advanced Agent Visualization (Beyond Current Implementation)
+- Build agent flow diagrams with React Flow (visual graph representation)
+- Create execution timeline visualization with dependencies
+- Add WebSocket connection for real-time updates
+- Implement agent interaction animations
+- Add advanced debugging and tracing UI
+- Create visual workflow builder
+
+### LLM Configuration UI (Phase 6 replacement)
+- Build model selection UI with providers
+- Add cost estimation per query
+- Create custom parameter controls
+- Implement performance metrics dashboard
+- Add model comparison feature
+- Create usage analytics display
+- Build A/B testing interface
+- Add model switching capabilities
+
+### Advanced Testing Infrastructure (Beyond MVP)
+- Add Storybook for component documentation
+- Add visual regression testing
+- Property-based testing for UI components
+- Advanced performance profiling tools
+- Lighthouse CI integration
+- Mutation testing
+- Contract testing between frontend/backend
+
+### Advanced Performance Features  
+- Complex code splitting strategies
+- Advanced lazy loading patterns
+- Service worker optimizations
+- Advanced caching strategies
+- Micro-frontend architecture
+- Edge computing optimizations
+- Lighthouse CI integration
+- Performance regression testing
+
+### Deferred MVP Features
+
+These were originally considered for MVP but moved to V2:
+
+#### Frontend Development
+- **Advanced Agent Visualization** (Beyond current implementation)
+  - Current implementation includes status monitoring and tracking
+  - V2 would add visual flow diagrams and timeline views
+  - Requires WebSocket infrastructure for real-time updates
+  - Visual workflow builder for advanced users
+
+- **Phase 6: LLM Configuration UI** (Originally Frontend Phase 6)
+  - Deferred as most users won't need model switching initially
+  - Complex UI for limited early adoption benefit
+  - Can use environment variables for MVP
+
+- **Advanced Budget Features**
+  - Price prediction engine
+  - Fare alert system  
+  - Alternative routing (hidden city, split tickets)
+  - Deals aggregation platform
+  - Community savings tips system
+
+- **Enhancement Features**
+  - Progressive Web App beyond basics
+  - Service worker implementation
+  - Internationalization (i18n)
+  - Advanced data visualization
+
+#### Advanced Testing (Beyond Current 90% Coverage)
+- Property-based testing frameworks
+- Mutation testing systems  
+- Visual regression testing
+- Storybook component documentation
+- Contract testing
+- Performance regression testing
+- Load testing for frontend
+
+#### Database Features  
+- user_preferences table (handled by Mem0 for MVP)
+- search_history table (handled by Mem0 for MVP)
+- price_alerts table
+- groups collaboration tables
+- shared_expenses tables
+- agent_interactions tracking
+
+## V2+ Enterprise Enhancement Features (From Enhancement Sprints Research)
+
+### Enterprise Observability Stack
+- [ ] **Full OpenTelemetry OTLP Export**
+  - Jaeger for distributed tracing with complex service maps
+  - Prometheus for metrics with advanced queries
+  - Grafana for unified dashboards
+  - Custom business metric spans
+  - SLO/SLA monitoring with alerting
+  - Full trace context propagation
+  - Baggage API for cross-service metadata
+  
+- [ ] **Advanced Metrics Collection**
+  - Histogram metrics for latency percentiles
+  - Custom business metrics (booking rates, search patterns)
+  - Resource utilization tracking
+  - Performance budgets with automated alerts
+  - Advanced cardinality management
+  
+### Enterprise Event-Driven Architecture
+- [ ] **Redis Streams Event Bus**
+  - Consumer groups with acknowledgments
+  - Message persistence and replay
+  - Dead letter queues
+  - Stream partitioning for scalability
+  - Exactly-once delivery guarantees
+  
+- [ ] **NATS JetStream Alternative**
+  - Subject-based routing
+  - Durable subscriptions
+  - Message deduplication
+  - Stream templates
+  - Advanced filtering and transformation
+  
+- [ ] **Event Sourcing Patterns**
+  - Complete audit trail
+  - Time-travel debugging
+  - Event replay for testing
+  - CQRS implementation
+  - Saga orchestration
+  
+### Enterprise Error Handling
+- [ ] **SAGA Pattern Implementation**
+  - Distributed transaction coordination
+  - Compensating transactions
+  - State machine orchestration
+  - Complex rollback scenarios
+  - Multi-service coordination
+  
+- [ ] **Advanced Circuit Breaker**
+  - Adaptive thresholds with ML
+  - Partial degradation strategies
+  - Service mesh integration
+  - Advanced health checks
+  - Bulkhead isolation patterns
+  
+- [ ] **Chaos Engineering**
+  - Automated failure injection
+  - Resilience testing framework
+  - Recovery time objectives (RTO)
+  - Failure mode analysis
+  - Game day simulations
+  
+### Enterprise Integration Patterns
+- [ ] **Service Mesh Architecture**
+  - Istio/Linkerd integration
+  - Advanced traffic management
+  - mTLS everywhere
+  - Canary deployments
+  - A/B testing infrastructure
+  
+- [ ] **API Gateway Enhancements**
+  - GraphQL federation
+  - Advanced rate limiting with quotas
+  - Request/response transformation
+  - API versioning strategies
+  - Developer portal with documentation
+  
+### Enterprise Data Platform
+- [ ] **Event Data Lake**
+  - S3/MinIO for event storage
+  - Parquet format for analytics
+  - Apache Iceberg for ACID transactions
+  - Time-travel queries
+  - Schema evolution support
+  
+- [ ] **Stream Processing**
+  - Apache Flink for complex event processing
+  - Real-time analytics pipelines
+  - ML feature engineering
+  - Windowed aggregations
+  - Stateful stream processing
+  
+### Enterprise Security & Compliance
+- [ ] **Advanced Audit Logging**
+  - Immutable audit trails
+  - Compliance reporting (SOC2, ISO27001)
+  - Data lineage tracking
+  - Access pattern analysis
+  - Anomaly detection
+  
+- [ ] **Zero Trust Architecture**
+  - Service-to-service authentication
+  - Dynamic secrets management
+  - Policy-based access control
+  - Continuous verification
+  - Microsegmentation
+  
+### Enterprise Performance Features
+- [ ] **Advanced Caching Strategies**
+  - Multi-region cache replication
+  - Cache warming pipelines
+  - Predictive cache invalidation
+  - Edge caching with CDN
+  - GraphQL query caching
+  
+- [ ] **Database Optimization**
+  - Read replicas with lag monitoring
+  - Connection pooling with PgBouncer
+  - Query performance insights
+  - Automated index recommendations
+  - Partitioning strategies
+  
+### Migration Path from MVP to V2+
+When considering V2+ upgrades:
+
+1. **Gradual Enhancement**: Start with monitoring, then events, then advanced patterns
+2. **Interface Stability**: MVP interfaces designed to support V2+ implementations
+3. **Data Migration**: Event sourcing allows replay from MVP events
+4. **Zero Downtime**: Blue-green deployments for seamless upgrades
+5. **Feature Flags**: Progressive rollout of V2+ features
+
+### Technology Stack for V2+
+- **Observability**: Jaeger, Prometheus, Grafana, OpenTelemetry Collector
+- **Event Streaming**: Redis Streams → NATS JetStream
+- **Service Mesh**: Istio or Linkerd
+- **API Gateway**: Kong or Apollo GraphQL Gateway
+- **Data Platform**: Apache Iceberg + Apache Flink
+- **Security**: HashiCorp Vault, OPA (Open Policy Agent)
+- **Orchestration**: Kubernetes with GitOps (ArgoCD)
