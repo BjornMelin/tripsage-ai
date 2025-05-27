@@ -150,7 +150,7 @@ async def test_create_key_with_monitoring(
                 "key": "key_logs:test-user-id",
                 "value": {
                     "timestamp": pytest.approx(
-                        datetime.utcnow().isoformat(), abs=timedelta(seconds=5)
+                        datetime.now(datetime.UTC).isoformat(), abs=timedelta(seconds=5)
                     ),
                     "operation": KeyOperation.CREATE,
                     "user_id": "test-user-id",
@@ -252,7 +252,7 @@ async def test_suspicious_key_creation(
                 "key": "key_alerts",
                 "value": {
                     "timestamp": pytest.approx(
-                        datetime.utcnow().isoformat(), abs=timedelta(seconds=5)
+                        datetime.now(datetime.UTC).isoformat(), abs=timedelta(seconds=5)
                     ),
                     "message": (
                         "ALERT: Suspicious API key create activity detected for user "
@@ -332,14 +332,18 @@ async def test_expiring_keys_integration(setup_mocked_services):
                 "user_id": "test-user-id",
                 "name": "Expiring Key 1",
                 "service": "openai",
-                "expires_at": (datetime.utcnow() + timedelta(days=5)).isoformat(),
+                "expires_at": (
+                    datetime.now(datetime.UTC) + timedelta(days=5)
+                ).isoformat(),
             },
             {
                 "id": "expiring-key-2",
                 "user_id": "other-user",
                 "name": "Expiring Key 2",
                 "service": "googlemaps",
-                "expires_at": (datetime.utcnow() + timedelta(days=3)).isoformat(),
+                "expires_at": (
+                    datetime.now(datetime.UTC) + timedelta(days=3)
+                ).isoformat(),
             },
         ]
     }

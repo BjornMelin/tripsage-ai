@@ -16,7 +16,7 @@ def test_trip_comparison_creation(sample_trip_comparison_dict):
 
 def test_trip_comparison_optional_fields():
     """Test creating a TripComparison model with minimal required fields."""
-    now = datetime.now()
+    now = datetime.now(datetime.UTC)
     minimal_comparison = TripComparison(
         trip_id=1,
         timestamp=now,

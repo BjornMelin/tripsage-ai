@@ -24,8 +24,8 @@ class TestChatEndpoints:
             email="test@example.com",
             username="testuser",
             is_active=True,
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow(),
+            created_at=datetime.now(datetime.UTC),
+            updated_at=datetime.now(datetime.UTC),
         )
 
     @pytest.fixture
@@ -45,8 +45,8 @@ class TestChatEndpoints:
                 mock_session = ChatSessionDB(
                     id=uuid4(),
                     user_id=mock_user.id,
-                    created_at=datetime.utcnow(),
-                    updated_at=datetime.utcnow(),
+                    created_at=datetime.now(datetime.UTC),
+                    updated_at=datetime.now(datetime.UTC),
                     ended_at=None,
                     metadata={},
                 )
@@ -98,8 +98,8 @@ class TestChatEndpoints:
                 mock_session = ChatSessionDB(
                     id=session_id,
                     user_id=mock_user.id,
-                    created_at=datetime.utcnow(),
-                    updated_at=datetime.utcnow(),
+                    created_at=datetime.now(datetime.UTC),
+                    updated_at=datetime.now(datetime.UTC),
                     ended_at=None,
                     metadata={},
                 )
@@ -185,8 +185,8 @@ class TestChatEndpoints:
                 mock_session = ChatSessionDB(
                     id=session_id,
                     user_id=mock_user.id,
-                    created_at=datetime.utcnow(),
-                    updated_at=datetime.utcnow(),
+                    created_at=datetime.now(datetime.UTC),
+                    updated_at=datetime.now(datetime.UTC),
                     ended_at=None,
                     metadata={"agent": "travel_planning"},
                 )
@@ -196,7 +196,7 @@ class TestChatEndpoints:
                         session_id=session_id,
                         role="user",
                         content="Hello",
-                        created_at=datetime.utcnow(),
+                        created_at=datetime.now(datetime.UTC),
                         metadata={},
                     ),
                     ChatMessageDB(
@@ -204,7 +204,7 @@ class TestChatEndpoints:
                         session_id=session_id,
                         role="assistant",
                         content="Hi! How can I help?",
-                        created_at=datetime.utcnow(),
+                        created_at=datetime.now(datetime.UTC),
                         metadata={},
                     ),
                 ]
@@ -239,16 +239,16 @@ class TestChatEndpoints:
                 mock_sessions = [
                     MagicMock(
                         id=uuid4(),
-                        created_at=datetime.utcnow(),
-                        updated_at=datetime.utcnow(),
+                        created_at=datetime.now(datetime.UTC),
+                        updated_at=datetime.now(datetime.UTC),
                         message_count=5,
-                        last_message_at=datetime.utcnow(),
+                        last_message_at=datetime.now(datetime.UTC),
                         metadata={},
                     ),
                     MagicMock(
                         id=uuid4(),
-                        created_at=datetime.utcnow(),
-                        updated_at=datetime.utcnow(),
+                        created_at=datetime.now(datetime.UTC),
+                        updated_at=datetime.now(datetime.UTC),
                         message_count=3,
                         last_message_at=None,
                         metadata={},
@@ -283,8 +283,8 @@ class TestChatEndpoints:
                 mock_session = ChatSessionDB(
                     id=session_id,
                     user_id=mock_user.id,
-                    created_at=datetime.utcnow(),
-                    updated_at=datetime.utcnow(),
+                    created_at=datetime.now(datetime.UTC),
+                    updated_at=datetime.now(datetime.UTC),
                     ended_at=None,
                     metadata={},
                 )
@@ -340,8 +340,8 @@ class TestChatEndpoints:
                 mock_session = ChatSessionDB(
                     id=uuid4(),
                     user_id=mock_user.id,
-                    created_at=datetime.utcnow(),
-                    updated_at=datetime.utcnow(),
+                    created_at=datetime.now(datetime.UTC),
+                    updated_at=datetime.now(datetime.UTC),
                     ended_at=None,
                     metadata={},
                 )

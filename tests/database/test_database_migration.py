@@ -60,7 +60,7 @@ class TestUserOperations(TestDatabaseMigrationCompleteness):
             "id": 1,
             "email": "test@example.com",
             "username": "testuser",
-            "created_at": datetime.now().isoformat(),
+            "created_at": datetime.now(datetime.UTC).isoformat(),
         }
 
         mock_response = MagicMock()

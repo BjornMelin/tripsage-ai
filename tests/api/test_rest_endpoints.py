@@ -147,7 +147,7 @@ async def test_save_flight(async_client: AsyncClient, auth_headers):
                     }
                 ],
             },
-            "saved_at": datetime.now(),
+            "saved_at": datetime.now(datetime.UTC),
             "notes": "Good direct flight option",
         }
 
@@ -602,8 +602,8 @@ async def test_create_itinerary(async_client: AsyncClient, auth_headers):
                 "shared_with": [],
                 "editable_by": [],
             },
-            "created_at": datetime.now(),
-            "updated_at": datetime.now(),
+            "created_at": datetime.now(datetime.UTC),
+            "updated_at": datetime.now(datetime.UTC),
             "tags": ["vacation", "europe"],
         }
 

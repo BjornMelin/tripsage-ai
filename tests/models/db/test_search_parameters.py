@@ -17,7 +17,7 @@ def test_search_parameters_creation(sample_search_parameters_dict):
 
 def test_search_parameters_optional_fields():
     """Test creating a SearchParameters model with minimal required fields."""
-    now = datetime.now()
+    now = datetime.now(datetime.UTC)
     minimal_search_params = SearchParameters(
         trip_id=1,
         timestamp=now,
@@ -79,7 +79,7 @@ def test_search_summary(sample_search_parameters_dict):
 
 def test_search_summary_accommodation():
     """Test the search_summary property for accommodation search."""
-    now = datetime.now()
+    now = datetime.now(datetime.UTC)
     search_params = SearchParameters(
         trip_id=1,
         timestamp=now,
@@ -98,7 +98,7 @@ def test_search_summary_accommodation():
 
 def test_search_summary_activity():
     """Test the search_summary property for activity search."""
-    now = datetime.now()
+    now = datetime.now(datetime.UTC)
     search_params = SearchParameters(
         trip_id=1,
         timestamp=now,
@@ -115,7 +115,7 @@ def test_search_summary_activity():
 
 def test_search_summary_transportation():
     """Test the search_summary property for transportation search."""
-    now = datetime.now()
+    now = datetime.now(datetime.UTC)
     search_params = SearchParameters(
         trip_id=1,
         timestamp=now,
@@ -133,7 +133,7 @@ def test_search_summary_transportation():
 
 def test_search_summary_unknown_type():
     """Test the search_summary property for unknown search type."""
-    now = datetime.now()
+    now = datetime.now(datetime.UTC)
     search_params = SearchParameters(
         trip_id=1,
         timestamp=now,

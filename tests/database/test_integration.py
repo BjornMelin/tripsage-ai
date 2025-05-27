@@ -35,7 +35,7 @@ class TestDatabaseIntegration:
         project_id = mcp_settings.SUPABASE_PROJECT_ID
 
         # Create user
-        test_email = f"test_{datetime.now().timestamp()}@example.com"
+        test_email = f"test_{datetime.now(datetime.UTC).timestamp()}@example.com"
         user_data = {
             "email": test_email,
             "username": "testuser",
@@ -73,7 +73,7 @@ class TestDatabaseIntegration:
 
         # Create test user first
         user_data = {
-            "email": f"triptest_{datetime.now().timestamp()}@example.com",
+            "email": f"triptest_{datetime.now(datetime.UTC).timestamp()}@example.com",
             "username": "tripuser",
         }
         user_result = await supabase_tools.insert_data(

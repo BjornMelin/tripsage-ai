@@ -467,7 +467,7 @@ async def test_rotate_key(key_service, mock_supabase_mcp, mock_monitoring_servic
                     "user_id": "test-user",
                     "name": "Test Key",
                     "service": "openai",
-                    "updated_at": datetime.utcnow().isoformat(),
+                    "updated_at": datetime.now(datetime.UTC).isoformat(),
                 }
             ]
         },
@@ -507,7 +507,7 @@ async def test_rotate_key(key_service, mock_supabase_mcp, mock_monitoring_servic
             "data": {
                 "encrypted_key": "encrypted-key",
                 "updated_at": pytest.approx(
-                    datetime.utcnow().isoformat(), abs=timedelta(seconds=5)
+                    datetime.now(datetime.UTC).isoformat(), abs=timedelta(seconds=5)
                 ),
                 "is_valid": True,
             },

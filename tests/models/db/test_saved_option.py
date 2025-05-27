@@ -17,7 +17,7 @@ def test_saved_option_creation(sample_saved_option_dict):
 
 def test_saved_option_optional_fields():
     """Test creating a SavedOption model with minimal required fields."""
-    now = datetime.now()
+    now = datetime.now(datetime.UTC)
     minimal_saved_option = SavedOption(
         trip_id=1,
         option_type=OptionType.FLIGHT,

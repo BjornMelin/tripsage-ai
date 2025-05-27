@@ -42,7 +42,7 @@ class TestChatService:
         user_id = 1
         metadata = {"source": "web", "device": "desktop"}
         session_id = uuid4()
-        created_at = datetime.utcnow()
+        created_at = datetime.now(datetime.UTC)
 
         # Mock database response
         mock_result = MagicMock()
@@ -87,8 +87,8 @@ class TestChatService:
         mock_row = MagicMock()
         mock_row.id = session_id
         mock_row.user_id = user_id
-        mock_row.created_at = datetime.utcnow()
-        mock_row.updated_at = datetime.utcnow()
+        mock_row.created_at = datetime.now(datetime.UTC)
+        mock_row.updated_at = datetime.now(datetime.UTC)
         mock_row.ended_at = None
         mock_row.metadata = {}
         mock_result.fetchone.return_value = mock_row
@@ -124,12 +124,12 @@ class TestChatService:
         mock_row = MagicMock()
         mock_row.id = session_id
         mock_row.user_id = user_id
-        mock_row.created_at = datetime.utcnow()
-        mock_row.updated_at = datetime.utcnow()
+        mock_row.created_at = datetime.now(datetime.UTC)
+        mock_row.updated_at = datetime.now(datetime.UTC)
         mock_row.ended_at = None
         mock_row.metadata = {}
         mock_row.message_count = 5
-        mock_row.last_message_at = datetime.utcnow()
+        mock_row.last_message_at = datetime.now(datetime.UTC)
         mock_result.fetchall.return_value = [mock_row]
         mock_db.execute.return_value = mock_result
 
@@ -155,7 +155,7 @@ class TestChatService:
         mock_row.session_id = session_id
         mock_row.role = role
         mock_row.content = content
-        mock_row.created_at = datetime.utcnow()
+        mock_row.created_at = datetime.now(datetime.UTC)
         mock_row.metadata = metadata
         mock_result.fetchone.return_value = mock_row
         mock_db.execute.return_value = mock_result
@@ -196,7 +196,7 @@ class TestChatService:
         mock_row1.session_id = session_id
         mock_row1.role = "user"
         mock_row1.content = "Hello"
-        mock_row1.created_at = datetime.utcnow()
+        mock_row1.created_at = datetime.now(datetime.UTC)
         mock_row1.metadata = {}
 
         mock_row2 = MagicMock()
@@ -204,7 +204,7 @@ class TestChatService:
         mock_row2.session_id = session_id
         mock_row2.role = "assistant"
         mock_row2.content = "Hi! How can I help?"
-        mock_row2.created_at = datetime.utcnow()
+        mock_row2.created_at = datetime.now(datetime.UTC)
         mock_row2.metadata = {}
 
         mock_result.fetchall.return_value = [mock_row1, mock_row2]
@@ -228,7 +228,7 @@ class TestChatService:
         mock_row.id = 1
         mock_row.role = "user"
         mock_row.content = "Hello world"
-        mock_row.created_at = datetime.utcnow()
+        mock_row.created_at = datetime.now(datetime.UTC)
         mock_row.metadata = {}
         mock_row.estimated_tokens = 3
         mock_result.fetchall.return_value = [mock_row]
@@ -260,7 +260,7 @@ class TestChatService:
         mock_row.arguments = arguments
         mock_row.result = None
         mock_row.status = "pending"
-        mock_row.created_at = datetime.utcnow()
+        mock_row.created_at = datetime.now(datetime.UTC)
         mock_row.completed_at = None
         mock_row.error_message = None
         mock_result.fetchone.return_value = mock_row
@@ -292,8 +292,8 @@ class TestChatService:
         mock_row.arguments = {}
         mock_row.result = result
         mock_row.status = "completed"
-        mock_row.created_at = datetime.utcnow()
-        mock_row.completed_at = datetime.utcnow()
+        mock_row.created_at = datetime.now(datetime.UTC)
+        mock_row.completed_at = datetime.now(datetime.UTC)
         mock_row.error_message = None
         mock_result.fetchone.return_value = mock_row
         mock_db.execute.return_value = mock_result
@@ -323,8 +323,8 @@ class TestChatService:
         mock_row.arguments = {}
         mock_row.result = None
         mock_row.status = "failed"
-        mock_row.created_at = datetime.utcnow()
-        mock_row.completed_at = datetime.utcnow()
+        mock_row.created_at = datetime.now(datetime.UTC)
+        mock_row.completed_at = datetime.now(datetime.UTC)
         mock_row.error_message = error_message
         mock_result.fetchone.return_value = mock_row
         mock_db.execute.return_value = mock_result
@@ -347,9 +347,9 @@ class TestChatService:
         mock_row = MagicMock()
         mock_row.id = session_id
         mock_row.user_id = 1
-        mock_row.created_at = datetime.utcnow()
-        mock_row.updated_at = datetime.utcnow()
-        mock_row.ended_at = datetime.utcnow()
+        mock_row.created_at = datetime.now(datetime.UTC)
+        mock_row.updated_at = datetime.now(datetime.UTC)
+        mock_row.ended_at = datetime.now(datetime.UTC)
         mock_row.metadata = {}
         mock_result.fetchone.return_value = mock_row
         mock_db.execute.return_value = mock_result
@@ -479,7 +479,7 @@ class TestChatServiceEnhancements:
         mock_row.session_id = session_id
         mock_row.role = "user"
         mock_row.content = "Test"
-        mock_row.created_at = datetime.utcnow()
+        mock_row.created_at = datetime.now(datetime.UTC)
         mock_row.metadata = {}
         mock_result.fetchone.return_value = mock_row
         mock_db.execute.return_value = mock_result
@@ -508,7 +508,7 @@ class TestChatServiceEnhancements:
         mock_row.session_id = session_id
         mock_row.role = "user"
         mock_row.content = "Test content"
-        mock_row.created_at = datetime.utcnow()
+        mock_row.created_at = datetime.now(datetime.UTC)
         mock_row.metadata = {}
         mock_result.fetchone.return_value = mock_row
         mock_db.execute.return_value = mock_result
@@ -546,7 +546,7 @@ class TestChatServiceEnhancements:
             mock_row.session_id = session_id
             mock_row.role = role
             mock_row.content = content
-            mock_row.created_at = datetime.utcnow()
+            mock_row.created_at = datetime.now(datetime.UTC)
             mock_row.metadata = metadata or {}
             mock_result.fetchone.return_value = mock_row
             mock_results.append(mock_result)
@@ -571,8 +571,8 @@ class TestChatServiceEnhancements:
         mock_row = MagicMock()
         mock_row.id = session_id
         mock_row.user_id = 1
-        mock_row.created_at = datetime.utcnow()
-        mock_row.updated_at = datetime.utcnow()
+        mock_row.created_at = datetime.now(datetime.UTC)
+        mock_row.updated_at = datetime.now(datetime.UTC)
         mock_row.ended_at = None
         mock_row.metadata = {}
         mock_result.fetchone.return_value = mock_row
@@ -598,7 +598,7 @@ class TestChatServiceEnhancements:
         mock_row.id = 1
         mock_row.role = "user"
         mock_row.content = "Hello"
-        mock_row.created_at = datetime.utcnow()
+        mock_row.created_at = datetime.now(datetime.UTC)
         mock_row.metadata = {}
         mock_row.estimated_tokens = 2
         mock_row.total_messages = 10

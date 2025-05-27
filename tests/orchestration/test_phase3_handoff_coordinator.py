@@ -71,7 +71,9 @@ class TestAgentHandoffCoordinator:
     def test_task_completion_handoff(self, coordinator, sample_state):
         """Test handoff on task completion."""
         result = coordinator.determine_next_agent(
-            "destination_research_agent", sample_state, HandoffTrigger.TASK_COMPLETION
+            "destination_research_agent",
+            sample_state,
+            HandoffTrigger.TASK_COMPLETION,
         )
 
         assert result is not None
@@ -170,7 +172,9 @@ class TestAgentHandoffCoordinator:
     def test_context_preservation_in_handoff(self, coordinator, sample_state):
         """Test that relevant context is preserved during handoff."""
         result = coordinator.determine_next_agent(
-            "destination_research_agent", sample_state, HandoffTrigger.TASK_COMPLETION
+            "destination_research_agent",
+            sample_state,
+            HandoffTrigger.TASK_COMPLETION,
         )
 
         assert result is not None
@@ -233,9 +237,18 @@ class TestAgentHandoffCoordinator:
         state = create_initial_state("test_user", "Help with flights")
         state["current_agent"] = "flight_agent"
         state["agent_history"] = [
-            {"agent": "flight_agent", "timestamp": datetime.now().isoformat()},
-            {"agent": "accommodation_agent", "timestamp": datetime.now().isoformat()},
-            {"agent": "flight_agent", "timestamp": datetime.now().isoformat()},
+            {
+                "agent": "flight_agent",
+                "timestamp": datetime.now(datetime.UTC).isoformat(),
+            },
+            {
+                "agent": "accommodation_agent",
+                "timestamp": datetime.now(datetime.UTC).isoformat(),
+            },
+            {
+                "agent": "flight_agent",
+                "timestamp": datetime.now(datetime.UTC).isoformat(),
+            },
         ]
 
         # Should avoid circular handoffs
@@ -262,7 +275,10 @@ class TestAgentHandoffCoordinator:
         ]
         state["budget_constraints"] = {"total_budget": 1500, "flight_budget": 700}
         state["messages"].append(
-            {"role": "user", "content": "I found flights but need help with budget"}
+            {
+                "role": "user",
+                "content": "I found flights but need help with budget",
+            }
         )
 
         result = coordinator.determine_next_agent(
@@ -304,7 +320,9 @@ class TestAgentHandoffCoordinator:
         original_state = dict(sample_state)
 
         coordinator.determine_next_agent(
-            "destination_research_agent", sample_state, HandoffTrigger.TASK_COMPLETION
+            "destination_research_agent",
+            sample_state,
+            HandoffTrigger.TASK_COMPLETION,
         )
 
         # State should remain unchanged

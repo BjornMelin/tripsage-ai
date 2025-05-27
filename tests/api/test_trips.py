@@ -48,8 +48,8 @@ async def test_create_trip(async_client: AsyncClient, auth_headers):
             },
             "itinerary_id": None,
             "status": "planning",
-            "created_at": datetime.now(),
-            "updated_at": datetime.now(),
+            "created_at": datetime.now(datetime.UTC),
+            "updated_at": datetime.now(datetime.UTC),
         }
 
         # Send request
@@ -116,7 +116,7 @@ async def test_list_trips(async_client: AsyncClient, auth_headers):
                     "duration_days": 7,
                     "destinations": ["Paris", "London"],
                     "status": "planning",
-                    "created_at": datetime.now(),
+                    "created_at": datetime.now(datetime.UTC),
                 },
                 {
                     "id": UUID("87654321-8765-4321-8765-432187654321"),
@@ -126,7 +126,7 @@ async def test_list_trips(async_client: AsyncClient, auth_headers):
                     "duration_days": 7,
                     "destinations": ["Tokyo", "Kyoto"],
                     "status": "planning",
-                    "created_at": datetime.now(),
+                    "created_at": datetime.now(datetime.UTC),
                 },
             ],
             2,  # Total count
@@ -196,8 +196,8 @@ async def test_get_trip(async_client: AsyncClient, auth_headers):
             },
             "itinerary_id": None,
             "status": "planning",
-            "created_at": datetime.now(),
-            "updated_at": datetime.now(),
+            "created_at": datetime.now(datetime.UTC),
+            "updated_at": datetime.now(datetime.UTC),
         }
 
         # Send request
@@ -296,8 +296,8 @@ async def test_update_trip(async_client: AsyncClient, auth_headers):
             },
             "itinerary_id": None,
             "status": "planning",
-            "created_at": datetime.now(),
-            "updated_at": datetime.now(),
+            "created_at": datetime.now(datetime.UTC),
+            "updated_at": datetime.now(datetime.UTC),
         }
 
         # Send request
@@ -481,8 +481,8 @@ async def test_update_trip_preferences(async_client: AsyncClient, auth_headers):
             },
             "itinerary_id": None,
             "status": "planning",
-            "created_at": datetime.now(),
-            "updated_at": datetime.now(),
+            "created_at": datetime.now(datetime.UTC),
+            "updated_at": datetime.now(datetime.UTC),
         }
 
         # New preferences to set

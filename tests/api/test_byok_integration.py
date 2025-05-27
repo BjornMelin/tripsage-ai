@@ -51,7 +51,7 @@ class TestApiKeyModels:
 
     def test_api_key_response_model(self):
         """Test API key response model."""
-        now = datetime.utcnow()
+        now = datetime.now(datetime.UTC)
         response = ApiKeyResponse(
             id="test-id",
             name="Test Key",
@@ -95,7 +95,7 @@ class TestApiKeyDBModels:
     def test_api_key_db_valid(self):
         """Test creating a valid database API key model."""
         key_id = uuid.uuid4()
-        now = datetime.utcnow()
+        now = datetime.now(datetime.UTC)
 
         key_db = ApiKeyDB(
             id=key_id,
@@ -116,7 +116,7 @@ class TestApiKeyDBModels:
     def test_api_key_db_service_validation(self):
         """Test service name validation in database model."""
         key_id = uuid.uuid4()
-        now = datetime.utcnow()
+        now = datetime.now(datetime.UTC)
 
         with pytest.raises(ValueError, match="Service name must contain only"):
             ApiKeyDB(
@@ -132,7 +132,7 @@ class TestApiKeyDBModels:
     def test_api_key_db_expiration_validation(self):
         """Test expiration date validation."""
         key_id = uuid.uuid4()
-        now = datetime.utcnow()
+        now = datetime.now(datetime.UTC)
         past_date = now - timedelta(days=1)
 
         with pytest.raises(ValueError, match="Expiration date must be in the future"):
@@ -150,7 +150,7 @@ class TestApiKeyDBModels:
     def test_api_key_db_is_expired(self):
         """Test is_expired method."""
         key_id = uuid.uuid4()
-        now = datetime.utcnow()
+        now = datetime.now(datetime.UTC)
 
         # Key without expiration
         key_no_exp = ApiKeyDB(
@@ -181,7 +181,7 @@ class TestApiKeyDBModels:
     def test_api_key_db_is_usable(self):
         """Test is_usable method."""
         key_id = uuid.uuid4()
-        now = datetime.utcnow()
+        now = datetime.now(datetime.UTC)
 
         # Active, non-expired key
         key_usable = ApiKeyDB(

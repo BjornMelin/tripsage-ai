@@ -289,7 +289,9 @@ async def test_check_key_expiration(mock_supabase_mcp):
                 "user_id": "test-user",
                 "name": "Test Key",
                 "service": "openai",
-                "expires_at": (datetime.utcnow() + timedelta(days=5)).isoformat(),
+                "expires_at": (
+                    datetime.now(datetime.UTC) + timedelta(days=5)
+                ).isoformat(),
             }
         ]
     }

@@ -54,8 +54,8 @@ class TestBrowserTools:
             flight_number="123",
             departure_airport="JFK",
             arrival_airport="LAX",
-            scheduled_departure=datetime.utcnow(),
-            scheduled_arrival=datetime.utcnow(),
+            scheduled_departure=datetime.now(datetime.UTC),
+            scheduled_arrival=datetime.now(datetime.UTC),
             status="On Time",
         )
 
@@ -186,8 +186,8 @@ class TestBrowserTools:
             flight_number="123",
             departure_airport="JFK",
             arrival_airport="LAX",
-            scheduled_departure=datetime.utcnow(),
-            scheduled_arrival=datetime.utcnow(),
+            scheduled_departure=datetime.now(datetime.UTC),
+            scheduled_arrival=datetime.now(datetime.UTC),
             status="On Time",
         )
 
@@ -198,7 +198,7 @@ class TestBrowserTools:
             "date": "2025-05-01",
             "flight_info": flight_info.model_dump(),
             "session_id": "cached-session-id",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(datetime.UTC).isoformat(),
         }
 
         mock_redis_cache.get.return_value = json.dumps(cached_response)

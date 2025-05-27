@@ -23,7 +23,7 @@ def test_flight_creation(sample_flight_dict):
 
 def test_flight_optional_fields():
     """Test creating a Flight model with minimal required fields."""
-    now = datetime.now()
+    now = datetime.now(datetime.UTC)
     minimal_flight = Flight(
         trip_id=1,
         origin="LAX",
@@ -45,7 +45,7 @@ def test_flight_optional_fields():
 
 def test_flight_validation_airport_codes():
     """Test airport code validation."""
-    now = datetime.now()
+    now = datetime.now(datetime.UTC)
 
     # Test valid code
     flight = Flight(
@@ -94,7 +94,7 @@ def test_flight_validation_airport_codes():
 
 def test_flight_validation_dates():
     """Test date validation."""
-    now = datetime.now()
+    now = datetime.now(datetime.UTC)
 
     # Test arrival before departure
     with pytest.raises(ValidationError) as excinfo:
@@ -114,7 +114,7 @@ def test_flight_validation_dates():
 
 def test_flight_validation_price():
     """Test price validation."""
-    now = datetime.now()
+    now = datetime.now(datetime.UTC)
 
     # Test negative price
     with pytest.raises(ValidationError) as excinfo:
@@ -144,7 +144,7 @@ def test_flight_formatted_duration(sample_flight_dict):
     assert flight.formatted_duration == "12h 0m"
 
     # Test with minutes
-    now = datetime.now()
+    now = datetime.now(datetime.UTC)
     flight = Flight(
         trip_id=1,
         origin="LAX",

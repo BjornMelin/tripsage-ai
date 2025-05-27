@@ -20,7 +20,7 @@ def test_price_history_creation(sample_price_history_dict):
 
 def test_price_history_optional_fields():
     """Test creating a PriceHistory model with minimal required fields."""
-    now = datetime.now()
+    now = datetime.now(datetime.UTC)
     minimal_price_history = PriceHistory(
         entity_type=EntityType.FLIGHT,
         entity_id=1,
@@ -36,7 +36,7 @@ def test_price_history_optional_fields():
 
 def test_price_history_validation_price():
     """Test price validation."""
-    now = datetime.now()
+    now = datetime.now(datetime.UTC)
 
     # Test negative price
     with pytest.raises(ValidationError) as excinfo:
@@ -51,7 +51,7 @@ def test_price_history_validation_price():
 
 def test_price_history_validation_currency():
     """Test currency validation."""
-    now = datetime.now()
+    now = datetime.now(datetime.UTC)
 
     # Test invalid currency code
     with pytest.raises(ValidationError) as excinfo:
