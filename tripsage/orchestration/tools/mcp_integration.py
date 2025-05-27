@@ -6,7 +6,7 @@ tool calling system, enabling seamless use of the existing tool ecosystem.
 """
 
 import json
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from langchain_core.tools import BaseTool
 from langchain_core.tools.base import ToolException
@@ -30,7 +30,7 @@ class MCPToolWrapper(BaseTool):
     service_name: str = Field(description="Name of the MCP service")
     method_name: str = Field(description="Name of the method to call")
     parameters: Dict = Field(default_factory=dict, description="Parameter schema")
-    mcp_manager: MCPManager = Field(
+    mcp_manager: Any = Field(
         default_factory=MCPManager, description="MCP manager instance"
     )
 

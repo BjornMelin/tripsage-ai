@@ -231,9 +231,7 @@ class ErrorRecoveryNode(BaseAgentNode):
         }
 
         original_desc = agent_descriptions.get(original_agent, "that service")
-        fallback_desc = agent_descriptions.get(
-            fallback_agent, "alternative assistance"
-        )
+        fallback_desc = agent_descriptions.get(fallback_agent, "alternative assistance")
 
         return (
             f"I'm having trouble with {original_desc} at the moment. "
