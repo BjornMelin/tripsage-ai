@@ -12,6 +12,8 @@ dependencies = [
     "pydantic>=2.11.5",
     "sqlalchemy[asyncio]>=2.0.41",
     "greenlet>=3.1.1",
+    "pydantic-settings>=2.9.1",
+    "pytest>=8.3.5",
 ]
 
 [project.optional-dependencies]
