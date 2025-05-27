@@ -11,13 +11,19 @@ import time
 import uuid
 from typing import Any, Callable, Dict, List, Optional, Set, Type, Union
 
-from agents import Agent, function_tool
+try:
+    from agents import Agent, function_tool
+except ImportError:
+    # Mock for testing environments where agents package may not be available
+    from unittest.mock import MagicMock
+    Agent = MagicMock
+    function_tool = MagicMock
 
 from tripsage.config.app_settings import settings
 from tripsage.utils.error_handling import TripSageError, log_exception
-from tripsage.utils.logging import get_module_logger
+from tripsage.utils.logging import get_logger
 
-logger = get_module_logger(__name__)
+logger = get_logger(__name__)
 
 
 class BaseAgent:

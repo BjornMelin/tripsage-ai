@@ -11,10 +11,10 @@ from typing import Any, Dict, List, Optional
 
 from tripsage.agents.accommodation import AccommodationAgent
 from tripsage.agents.base import BaseAgent
-from tripsage.agents.budget import BudgetAgent
+from tripsage.agents.budget import Budget as BudgetAgent
 from tripsage.agents.destination_research import DestinationResearchAgent
 from tripsage.agents.flight import FlightAgent
-from tripsage.agents.itinerary import ItineraryAgent
+from tripsage.agents.itinerary import Itinerary as ItineraryAgent
 from tripsage.agents.travel import TravelAgent
 from tripsage.config.app_settings import settings
 from tripsage.mcp_abstraction.manager import MCPManager
@@ -26,9 +26,9 @@ from tripsage.utils.error_handling import (
     log_exception,
     with_error_handling,
 )
-from tripsage.utils.logging import get_module_logger
+from tripsage.utils.logging import get_logger
 
-logger = get_module_logger(__name__)
+logger = get_logger(__name__)
 
 
 class ChatAgentError(TripSageError):

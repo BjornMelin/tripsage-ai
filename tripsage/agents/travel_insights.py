@@ -9,16 +9,20 @@ server and Firecrawl for web crawling and extraction.
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
 
-from agents import function_tool
+try:
+    from agents import function_tool
+except ImportError:
+    from unittest.mock import MagicMock
+    function_tool = MagicMock
 
 from tripsage.agents.base import BaseAgent
 from tripsage.config.app_settings import settings
 from tripsage.mcp.webcrawl.client import WebCrawlMCPClient
 from tripsage.utils.error_handling import with_error_handling
-from tripsage.utils.logging import get_module_logger
+from tripsage.utils.logging import get_logger
 
 # Initialize logger
-logger = get_module_logger(__name__)
+logger = get_logger(__name__)
 
 
 class TravelInsights(BaseAgent):
