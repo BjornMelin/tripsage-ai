@@ -134,7 +134,13 @@ def ensure_memory_client_initialized(func: F) -> F:
         """Wrapper function that initializes memory client."""
         try:
             # Import here to avoid circular imports
-            from tripsage.clients.memory import memory_client
+            # TODO: Update to use direct Neo4j integration in Week 2 migration
+            # from tripsage.clients.memory import memory_client
+
+            # Temporary: Use MCP memory tools directly until Neo4j migration
+            from tripsage.mcp_abstraction.manager import MCPManager
+
+            memory_client = MCPManager()
 
             # Initialize the memory client once
             await memory_client.initialize()
