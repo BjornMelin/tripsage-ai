@@ -47,8 +47,6 @@ os.environ.update(
         "CALENDAR_MCP_GOOGLE_CLIENT_ID": "test-client-id",
         "CALENDAR_MCP_GOOGLE_CLIENT_SECRET": "test-client-secret",
         "CALENDAR_MCP_GOOGLE_REDIRECT_URI": "http://localhost:3000/callback",
-        "NEON_MCP_ENDPOINT": "http://localhost:3015",
-        "NEON_MCP_API_KEY": "test-neon-key",
         "SUPABASE_MCP_ENDPOINT": "http://localhost:3016",
         # Additional environment variables for compatibility
         "ENVIRONMENT": "testing",

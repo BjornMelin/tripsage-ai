@@ -75,16 +75,6 @@ class AccommodationsMCPSettings(MCPSettings):
     endpoint: str = Field(..., description="Accommodations MCP server endpoint")
 
 
-class NeonMCPSettings(MCPSettings):
-    """Neon MCP settings."""
-
-    endpoint: str = Field(..., description="Neon MCP server endpoint")
-    project_id: Optional[str] = Field(None, description="Neon project ID")
-    connection_string: Optional[SecretStr] = Field(
-        None, description="Neon connection string"
-    )
-
-
 class SupabaseMCPSettings(MCPSettings):
     """Supabase MCP settings."""
 
@@ -96,7 +86,6 @@ class SupabaseMCPSettings(MCPSettings):
 class DatabaseMCPSettings(BaseModel):
     """Database MCP settings."""
 
-    neon: NeonMCPSettings
     supabase: SupabaseMCPSettings
 
 
