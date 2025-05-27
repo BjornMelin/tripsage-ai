@@ -41,12 +41,14 @@ async def validate_duffel_http_client():
         await client._check_rate_limit()
         print("  ✅ Rate limiting check passed")
 
-        # Test health check endpoint (this will fail without real API key but validates the HTTP structure)
+        # Test health check endpoint (this will fail without real API key
+        # but validates the HTTP structure)
         try:
             await client.health_check()
         except Exception as e:
             print(
-                f"  ℹ️  Health check failed as expected (no real API key): {type(e).__name__}"
+                f"  ℹ️  Health check failed as expected (no real API key): "
+                f"{type(e).__name__}"
             )
 
         # Close client
@@ -106,9 +108,8 @@ def validate_configuration():
     try:
         # Test that the environment variables are properly set for Duffel
         duffel_key = os.environ.get("DUFFEL_API_KEY")
-        print(
-            f"  ✅ DUFFEL_API_KEY environment variable: {'Set' if duffel_key else 'Not set'}"
-        )
+        status = "Set" if duffel_key else "Not set"
+        print(f"  ✅ DUFFEL_API_KEY environment variable: {status}")
 
         # Test that the client can access configuration
         from tripsage.services.duffel_http_client import DuffelHTTPClient
@@ -121,7 +122,8 @@ def validate_configuration():
 
         # Test with environment variable (skip to avoid config validation issues)
         print(
-            "  ℹ️  Environment variable configuration working (validated via explicit key test)"
+            "  ℹ️  Environment variable configuration working "
+            "(validated via explicit key test)"
         )
 
         print("  ✅ Configuration validation passed")

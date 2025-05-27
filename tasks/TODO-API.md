@@ -97,7 +97,7 @@ This file tracks tasks related to API development, middleware, and external serv
       - [x] Time MCP for timezone and clock operations
       - [x] Weather MCP for trip planning data
       - [x] Google Maps MCP for location services
-      - [x] Duffel Flights MCP for flight search
+      - [x] Duffel Flights integration (MCP + Direct HTTP) for flight search
       - [x] Airbnb MCP for accommodation search
       - [x] Neo4j Memory MCP for knowledge graph
       - [x] Hybrid Web Crawling with Crawl4AI and Firecrawl
@@ -184,7 +184,7 @@ This file tracks tasks related to API development, middleware, and external serv
       - ✅ Developed unified abstraction layer via MCPManager
       - ✅ Implemented error handling and monitoring infrastructure
       - ✅ Integrated Neo4j Memory MCP
-      - ✅ Integrated Duffel Flights MCP for flight search
+      - ✅ Integrated Duffel Flights with Direct HTTP client for enhanced performance
       - ✅ Integrated Airbnb MCP for accommodation search
     - [ ] Current Focus (Next 2 Weeks):
       - Continue developing the Unified Travel Search Wrapper
@@ -220,7 +220,7 @@ This file tracks tasks related to API development, middleware, and external serv
       - Map specific correspondences:
         - `tripsage/clients/weather/` → Weather MCP
         - `tripsage/clients/accommodations.py` → Airbnb MCP
-        - `tripsage/clients/flights.py` → Duffel Flights MCP  
+        - `tripsage/clients/flights.py` → Duffel Direct HTTP + MCP (completed)  
         - `tripsage/clients/webcrawl/` → Hybrid Crawl4AI/Firecrawl MCP
         - `tripsage/utils/cache.py` → Redis MCP
     - [ ] Implement Redis MCP for standardized caching:
