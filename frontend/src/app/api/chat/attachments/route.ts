@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
     // Get form data to check file count and basic validation
     const formData = await req.formData();
     const files: File[] = [];
-    
+
     // Extract files from form data
     for (const entry of Array.from(formData.entries())) {
       const [key, value] = entry;
@@ -85,17 +85,20 @@ export async function POST(req: NextRequest) {
     }
 
     // Determine upload endpoint based on file count
-    const endpoint = files.length === 1 ? "/api/attachments/upload" : "/api/attachments/upload/batch";
-    
+    const endpoint =
+      files.length === 1
+        ? "/api/attachments/upload"
+        : "/api/attachments/upload/batch";
+
     // Forward request to backend API
     const backendUrl = `${BACKEND_API_URL}${endpoint}`;
-    
+
     // Get authentication token from request headers
     const authHeader = req.headers.get("authorization");
-    
+
     // Create new FormData for backend request
     const backendFormData = new FormData();
-    
+
     if (files.length === 1) {
       // Single file upload
       backendFormData.append("file", files[0]);
@@ -136,14 +139,16 @@ export async function POST(req: NextRequest) {
           const fileData = responseData;
           return new Response(
             JSON.stringify({
-              files: [{
-                id: fileData.file_id,
-                name: fileData.filename,
-                size: fileData.file_size,
-                type: fileData.mime_type,
-                url: `/api/attachments/${fileData.file_id}/download`, // Backend download endpoint
-                status: fileData.processing_status, // Use processing_status instead of upload_status
-              }],
+              files: [
+                {
+                  id: fileData.file_id,
+                  name: fileData.filename,
+                  size: fileData.file_size,
+                  type: fileData.mime_type,
+                  url: `/api/attachments/${fileData.file_id}/download`, // Backend download endpoint
+                  status: fileData.processing_status, // Use processing_status instead of upload_status
+                },
+              ],
               urls: [`/api/attachments/${fileData.file_id}/download`], // Backward compatibility
             }),
             {
@@ -154,14 +159,16 @@ export async function POST(req: NextRequest) {
         } else {
           // Batch upload response
           const batchData = responseData;
-          const transformedFiles = batchData.successful_uploads.map((file: any) => ({
-            id: file.file_id,
-            name: file.filename,
-            size: file.file_size,
-            type: file.mime_type,
-            url: `/api/attachments/${file.file_id}/download`,
-            status: file.processing_status, // Use processing_status instead of upload_status
-          }));
+          const transformedFiles = batchData.successful_uploads.map(
+            (file: any) => ({
+              id: file.file_id,
+              name: file.filename,
+              size: file.file_size,
+              type: file.mime_type,
+              url: `/api/attachments/${file.file_id}/download`,
+              status: file.processing_status, // Use processing_status instead of upload_status
+            })
+          );
 
           return new Response(
             JSON.stringify({
@@ -172,7 +179,7 @@ export async function POST(req: NextRequest) {
                 successful: batchData.successful_count,
                 failed: batchData.failed_count,
                 errors: batchData.failed_uploads,
-              }
+              },
             }),
             {
               status: 200,
@@ -196,7 +203,7 @@ export async function POST(req: NextRequest) {
       }
     } catch (fetchError) {
       clearTimeout(timeoutId);
-      
+
       if (fetchError instanceof Error && fetchError.name === "AbortError") {
         return new Response(
           JSON.stringify({
@@ -209,10 +216,9 @@ export async function POST(req: NextRequest) {
           }
         );
       }
-      
+
       throw fetchError;
     }
-
   } catch (error) {
     console.error("Error proxying file upload to backend:", error);
     return new Response(
@@ -254,7 +260,7 @@ export async function GET(req: NextRequest) {
     // Forward to backend
     const backendUrl = `${BACKEND_API_URL}/api/attachments/${fileId}`;
     const authHeader = req.headers.get("authorization");
-    
+
     const backendHeaders: HeadersInit = {};
     if (authHeader) {
       backendHeaders["Authorization"] = authHeader;

@@ -140,7 +140,7 @@ async def login(
     )
 
     # Calculate expiration time
-    expires_at = datetime.utcnow() + access_token_expires
+    expires_at = datetime.now(datetime.UTC) + access_token_expires
 
     return {
         "access_token": access_token,
@@ -200,7 +200,7 @@ async def refresh_token(
     )
 
     # Calculate expiration time
-    expires_at = datetime.utcnow() + access_token_expires
+    expires_at = datetime.now(datetime.UTC) + access_token_expires
 
     return {
         "access_token": access_token,

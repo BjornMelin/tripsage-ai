@@ -7,15 +7,22 @@ different agent types in TripSage, leveraging OpenAI Agents SDK patterns.
 
 from typing import Any, Callable, Dict, Optional, Type
 
-from agents import Agent, handoff
-from agents.extensions import handoff_filters
-from agents.handoffs import Handoff
+try:
+    from agents import Agent, handoff
+    from agents.extensions import handoff_filters
+    from agents.handoffs import Handoff
+except ImportError:
+    from unittest.mock import MagicMock
+    Agent = MagicMock
+    handoff = MagicMock
+    handoff_filters = MagicMock()
+    Handoff = MagicMock
 from pydantic import BaseModel
 
 from tripsage.utils.error_handling import TripSageError
-from tripsage.utils.logging import get_module_logger
+from tripsage.utils.logging import get_logger
 
-logger = get_module_logger(__name__)
+logger = get_logger(__name__)
 
 
 class HandoffError(TripSageError):

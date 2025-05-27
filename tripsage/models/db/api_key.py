@@ -96,7 +96,7 @@ class ApiKeyDB(BaseModel):
     @classmethod
     def validate_expires_at(cls, v: Optional[datetime]) -> Optional[datetime]:
         """Validate expiration date is in the future."""
-        if v is not None and v <= datetime.utcnow():
+        if v is not None and v <= datetime.now(datetime.UTC):
             raise ValueError("Expiration date must be in the future")
         return v
 
@@ -104,7 +104,7 @@ class ApiKeyDB(BaseModel):
         """Check if the API key is expired."""
         if self.expires_at is None:
             return False
-        return datetime.utcnow() > self.expires_at
+        return datetime.now(datetime.UTC) > self.expires_at
 
     def is_usable(self) -> bool:
         """Check if the API key can be used."""
@@ -169,7 +169,7 @@ class ApiKeyCreate(BaseModel):
     @classmethod
     def validate_expires_at(cls, v: Optional[datetime]) -> Optional[datetime]:
         """Validate expiration date is in the future."""
-        if v is not None and v <= datetime.utcnow():
+        if v is not None and v <= datetime.now(datetime.UTC):
             raise ValueError("Expiration date must be in the future")
         return v
 
@@ -220,6 +220,6 @@ class ApiKeyUpdate(BaseModel):
     @classmethod
     def validate_expires_at(cls, v: Optional[datetime]) -> Optional[datetime]:
         """Validate expiration date is in the future."""
-        if v is not None and v <= datetime.utcnow():
+        if v is not None and v <= datetime.now(datetime.UTC):
             raise ValueError("Expiration date must be in the future")
         return v

@@ -1,7 +1,12 @@
 "use client";
 
 import React from "react";
-import { type Message, MessageRole, ToolCall, ToolResult } from "@/types/chat";
+import {
+  type Message,
+  MessageRole,
+  type ToolCall,
+  type ToolResult,
+} from "@/types/chat";
 import { cn } from "@/lib/utils";
 import { Avatar } from "@/components/ui/avatar";
 import { Bot, User, Info, Server } from "lucide-react";
@@ -17,12 +22,12 @@ interface MessageItemProps {
   onCancelToolCall?: (toolCallId: string) => void;
 }
 
-export default function MessageItem({ 
-  message, 
-  activeToolCalls, 
-  toolResults, 
-  onRetryToolCall, 
-  onCancelToolCall 
+export default function MessageItem({
+  message,
+  activeToolCalls,
+  toolResults,
+  onRetryToolCall,
+  onCancelToolCall,
 }: MessageItemProps) {
   const isUser = message.role === "USER";
   const isAssistant = message.role === "ASSISTANT";

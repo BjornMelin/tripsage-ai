@@ -135,8 +135,8 @@ export default function MessageList({
         ) : (
           <>
             {messages.map((message) => (
-              <MessageItem 
-                key={message.id} 
+              <MessageItem
+                key={message.id}
                 message={message}
                 activeToolCalls={activeToolCalls}
                 toolResults={toolResults}

@@ -123,7 +123,7 @@ class UserService:
             hashed_password = pwd_context.hash(password)
 
             # Current time
-            now = datetime.utcnow()
+            now = datetime.now(datetime.UTC)
 
             # Use Supabase MCP to create the user
             supabase_mcp = await self.mcp_manager.initialize_mcp("supabase")

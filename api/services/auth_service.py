@@ -147,8 +147,8 @@ class AuthService:
             "full_name": full_name,
             "is_active": True,
             "is_verified": False,
-            "created_at": datetime.utcnow().isoformat(),
-            "updated_at": datetime.utcnow().isoformat(),
+            "created_at": datetime.now(datetime.UTC).isoformat(),
+            "updated_at": datetime.now(datetime.UTC).isoformat(),
             "preferences": {},
         }
 
@@ -179,9 +179,9 @@ class AuthService:
 
         # Set expiration time
         if expires_delta:
-            expire = datetime.utcnow() + expires_delta
+            expire = datetime.now(datetime.UTC) + expires_delta
         else:
-            expire = datetime.utcnow() + timedelta(minutes=15)
+            expire = datetime.now(datetime.UTC) + timedelta(minutes=15)
 
         to_encode.update({"exp": expire, "type": "access"})
 
@@ -212,9 +212,9 @@ class AuthService:
 
         # Set expiration time
         if expires_delta:
-            expire = datetime.utcnow() + expires_delta
+            expire = datetime.now(datetime.UTC) + expires_delta
         else:
-            expire = datetime.utcnow() + timedelta(days=7)
+            expire = datetime.now(datetime.UTC) + timedelta(days=7)
 
         to_encode.update({"exp": expire, "type": "refresh"})
 
@@ -385,7 +385,7 @@ class AuthService:
             Reset token
         """
         # Set expiration time (1 hour)
-        expire = datetime.utcnow() + timedelta(hours=1)
+        expire = datetime.now(datetime.UTC) + timedelta(hours=1)
 
         # Create token payload
         to_encode = {

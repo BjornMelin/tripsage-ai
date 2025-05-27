@@ -5,8 +5,9 @@ This module provides standardized error handling functionality for the TripSage
 application, including custom exception classes and error processing functions.
 """
 
+import functools
 import traceback
-from typing import Any, Callable, Dict, Optional, TypeVar, cast
+from typing import Any, Awaitable, Callable, Dict, Optional, TypeVar, Union, cast
 
 from .logging import get_logger
 
@@ -256,3 +257,58 @@ def safe_execute(
     except Exception as e:
         log_exception(e)
         return cast(T, fallback)
+
+
+def with_error_handling(
+    func: Callable[..., Union[T, Awaitable[T]]]
+) -> Callable[..., Union[T, Awaitable[T]]]:
+    """Decorator to add error handling to functions.
+
+    Args:
+        func: The function to wrap with error handling
+
+    Returns:
+        Wrapped function with error handling
+    """
+    
+    @functools.wraps(func)
+    def sync_wrapper(*args: Any, **kwargs: Any) -> T:
+        try:
+            return func(*args, **kwargs)
+        except Exception as e:
+            log_exception(e)
+            # Return a default error response for sync functions
+            if hasattr(func, '__annotations__') and func.__annotations__.get('return'):
+                # Return empty dict for dict returns, empty list for list returns
+                return_type = func.__annotations__['return']
+                if 'Dict' in str(return_type):
+                    return cast(T, {"status": "error", "error": str(e)})
+                elif 'List' in str(return_type):
+                    return cast(T, [])
+            return cast(T, {"status": "error", "error": str(e)})
+    
+    @functools.wraps(func)
+    async def async_wrapper(*args: Any, **kwargs: Any) -> T:
+        try:
+            return await func(*args, **kwargs)
+        except Exception as e:
+            log_exception(e)
+            # Return a default error response for async functions
+            if hasattr(func, '__annotations__') and func.__annotations__.get('return'):
+                # Return empty dict for dict returns, empty list for list returns
+                return_type = func.__annotations__['return']
+                if 'Dict' in str(return_type):
+                    return cast(T, {"status": "error", "error": str(e)})
+                elif 'List' in str(return_type):
+                    return cast(T, [])
+            return cast(T, {"status": "error", "error": str(e)})
+    
+    # Check if the function is a coroutine function
+    if hasattr(func, '__code__') and func.__code__.co_flags & 0x80:  # CO_COROUTINE
+        return async_wrapper
+    else:
+        # Check if function returns an awaitable
+        return_annotation = getattr(func, '__annotations__', {}).get('return')
+        if return_annotation and 'Awaitable' in str(return_annotation):
+            return async_wrapper
+        return sync_wrapper

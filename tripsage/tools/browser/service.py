@@ -340,7 +340,7 @@ class BrowserService:
                 currency = "USD"
 
             # Calculate next check time based on frequency
-            now = datetime.utcnow()
+            now = datetime.now(datetime.UTC)
 
             if params.check_frequency == "hourly":
                 next_check = now + timedelta(hours=1)

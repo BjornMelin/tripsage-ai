@@ -64,7 +64,7 @@ class RouterNode(BaseAgentNode):
         state["handoff_context"] = {
             "routing_confidence": classification["confidence"],
             "routing_reasoning": classification["reasoning"],
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(datetime.UTC).isoformat(),
             "message_analyzed": last_message[:100] + "..."
             if len(last_message) > 100
             else last_message,

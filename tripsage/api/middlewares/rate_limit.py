@@ -199,10 +199,11 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         # Add rate limit headers
         response.headers["X-RateLimit-Limit"] = str(self.settings.rate_limit_requests)
         response.headers["X-RateLimit-Remaining"] = str(
-            self.settings.rate_limit_requests - 1  # Simplified, should be actual count
-        )
+            self.settings.rate_limit_requests - 1
+        )  # Simplified, should be actual count
         response.headers["X-RateLimit-Reset"] = str(
-            int(datetime.now().timestamp()) + self.settings.rate_limit_timeframe
+            int(datetime.now(datetime.UTC).timestamp())
+            + self.settings.rate_limit_timeframe
         )
 
         return response

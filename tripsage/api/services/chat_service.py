@@ -367,7 +367,7 @@ class ChatService:
                 session_id=session_id,
                 role=role,
                 content=content,
-                created_at=datetime.utcnow(),
+                created_at=datetime.now(datetime.UTC),
                 metadata=metadata,
             )
         except ValueError as e:
@@ -455,7 +455,7 @@ class ChatService:
                     session_id=session_id,
                     role=role,
                     content=sanitized_content,
-                    created_at=datetime.utcnow(),
+                    created_at=datetime.now(datetime.UTC),
                     metadata=validated_metadata,
                 )
             except ValueError as e:
@@ -697,10 +697,12 @@ class ChatService:
             tool_id="",
             tool_name="",
             status=status,
-            created_at=datetime.utcnow(),
+            created_at=datetime.now(datetime.UTC),
         )
 
-        completed_at = datetime.utcnow() if status in {"completed", "failed"} else None
+        completed_at = (
+            datetime.now(datetime.UTC) if status in {"completed", "failed"} else None
+        )
 
         query = text(
             """

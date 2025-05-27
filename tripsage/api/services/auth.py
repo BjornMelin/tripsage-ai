@@ -77,7 +77,10 @@ class AuthService:
                 return None
 
             # Check if token is expired
-            if "exp" in payload and datetime.utcnow().timestamp() > payload["exp"]:
+            if (
+                "exp" in payload
+                and datetime.now(datetime.UTC).timestamp() > payload["exp"]
+            ):
                 return None
 
             # Get the user ID

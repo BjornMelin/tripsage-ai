@@ -42,6 +42,10 @@ class FeatureFlags(BaseSettings):
         default=IntegrationMode.MCP,
         description="Neo4j memory/knowledge graph integration mode",
     )
+    memory_integration: IntegrationMode = Field(
+        default=IntegrationMode.DIRECT,
+        description="Memory system integration mode (Mem0 direct SDK)",
+    )
 
     # Web Crawling Services (Week 3) - Already completed per docs
     crawl4ai_integration: IntegrationMode = Field(

@@ -524,7 +524,7 @@ async def process_customer_request(customer_id, request):
         metadata={
             "customer_id": customer_id,
             "request_type": determine_request_type(request),
-            "timestamp": datetime.now().isoformat(),
+            "timestamp": datetime.now(datetime.UTC).isoformat(),
             "critical": is_critical_customer(customer_id)
         }
     ):

@@ -1998,7 +1998,7 @@ class CircuitBreaker:
     def _should_attempt_reset(self) -> bool:
         return (
             self.last_failure_time and
-            datetime.now() - self.last_failure_time > timedelta(seconds=self.recovery_timeout)
+            datetime.now(datetime.UTC) - self.last_failure_time > timedelta(seconds=self.recovery_timeout)
         )
         
     def _on_success(self):
@@ -2007,7 +2007,7 @@ class CircuitBreaker:
         
     def _on_failure(self):
         self.failure_count += 1
-        self.last_failure_time = datetime.now()
+        self.last_failure_time = datetime.now(datetime.UTC)
         
         if self.failure_count >= self.failure_threshold:
             self.state = CircuitState.OPEN

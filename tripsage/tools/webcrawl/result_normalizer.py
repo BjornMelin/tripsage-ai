@@ -41,7 +41,7 @@ class ResultNormalizer:
                 error_message=raw_output.get("error"),
                 metadata={
                     "source_crawler": "firecrawl",
-                    "crawl_timestamp": datetime.utcnow().isoformat(),
+                    "crawl_timestamp": datetime.now(datetime.UTC).isoformat(),
                 },
             )
 
@@ -73,7 +73,7 @@ class ResultNormalizer:
             structured_data=structured_data if structured_data else None,
             metadata={
                 "source_crawler": "firecrawl",
-                "crawl_timestamp": datetime.utcnow().isoformat(),
+                "crawl_timestamp": datetime.now(datetime.UTC).isoformat(),
                 "content_length": len(markdown_content or ""),
                 "has_screenshot": raw_output.get("screenshot") is not None,
                 "original_metadata": raw_output.get("metadata", {}),
@@ -101,7 +101,7 @@ class ResultNormalizer:
                 error_message=raw_output.get("error"),
                 metadata={
                     "source_crawler": "crawl4ai",
-                    "crawl_timestamp": datetime.utcnow().isoformat(),
+                    "crawl_timestamp": datetime.now(datetime.UTC).isoformat(),
                 },
             )
 
@@ -123,7 +123,7 @@ class ResultNormalizer:
         # Extract additional fields if available
         metadata = {
             "source_crawler": "crawl4ai",
-            "crawl_timestamp": datetime.utcnow().isoformat(),
+            "crawl_timestamp": datetime.now(datetime.UTC).isoformat(),
             "content_length": len(markdown_content or text_content or ""),
             "has_screenshot": result_data.get("screenshot") is not None,
             "extraction_method": result_data.get("extraction_method", "default"),
@@ -170,7 +170,7 @@ class ResultNormalizer:
                     "source_crawler": source,
                     "search_query": query,
                     "result_position": idx + 1,
-                    "crawl_timestamp": datetime.utcnow().isoformat(),
+                    "crawl_timestamp": datetime.now(datetime.UTC).isoformat(),
                 },
                 status="success",
             )
@@ -199,7 +199,7 @@ class ResultNormalizer:
                 or raw_output.get("error_message"),
                 metadata={
                     "source_crawler": "playwright_mcp",
-                    "crawl_timestamp": datetime.utcnow().isoformat(),
+                    "crawl_timestamp": datetime.now(datetime.UTC).isoformat(),
                 },
             )
 
@@ -212,7 +212,7 @@ class ResultNormalizer:
         # Extract any metadata from the response
         metadata = {
             "source_crawler": "playwright_mcp",
-            "crawl_timestamp": datetime.utcnow().isoformat(),
+            "crawl_timestamp": datetime.now(datetime.UTC).isoformat(),
             "content_length": len(text_content or ""),
             "browser_type": raw_output.get("browser_type", "chromium"),
         }

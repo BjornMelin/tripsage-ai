@@ -56,7 +56,7 @@ class TripMember(BaseModel):
 class TripDay(BaseModel):
     """Model for a day in a trip."""
 
-    date: date = Field(description="Date of this trip day")
+    day_date: date = Field(description="Date of this trip day")
     location: Optional[str] = Field(default=None, description="Location on this day")
     notes: Optional[str] = Field(default=None, description="Notes for this day")
 

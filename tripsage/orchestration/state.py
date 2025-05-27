@@ -70,14 +70,14 @@ def create_initial_state(
     Returns:
         Initial TravelPlanningState with default values
     """
-    now = datetime.utcnow().isoformat()
+    now = datetime.now(datetime.UTC).isoformat()
 
     return TravelPlanningState(
         # Core conversation data
         messages=[{"role": "user", "content": message}],
         user_id=user_id,
         session_id=session_id
-        or f"session_{user_id}_{int(datetime.utcnow().timestamp())}",
+        or f"session_{user_id}_{int(datetime.now(datetime.UTC).timestamp())}",
         # User context (initialized as None, populated during conversation)
         user_preferences=None,
         budget_constraints=None,
@@ -115,5 +115,5 @@ def update_state_timestamp(state: TravelPlanningState) -> TravelPlanningState:
     Returns:
         State with updated timestamp
     """
-    state["updated_at"] = datetime.utcnow().isoformat()
+    state["updated_at"] = datetime.now(datetime.UTC).isoformat()
     return state

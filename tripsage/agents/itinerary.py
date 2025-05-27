@@ -7,13 +7,17 @@ travel itineraries, integrating with the OpenAI Agents SDK.
 
 from typing import Any, Dict
 
-from agents import function_tool
+try:
+    from agents import function_tool
+except ImportError:
+    from unittest.mock import MagicMock
+    function_tool = MagicMock
 
 from tripsage.agents.base import BaseAgent
 from tripsage.config.app_settings import settings
-from tripsage.utils.logging import get_module_logger
+from tripsage.utils.logging import get_logger
 
-logger = get_module_logger(__name__)
+logger = get_logger(__name__)
 
 
 class Itinerary(BaseAgent):

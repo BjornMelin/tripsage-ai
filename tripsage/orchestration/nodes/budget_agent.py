@@ -86,7 +86,7 @@ class BudgetAgentNode(BaseAgentNode):
 
             # Update state with results
             budget_record = {
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(datetime.UTC).isoformat(),
                 "operation": operation_type,
                 "parameters": budget_params,
                 "analysis": budget_analysis,
@@ -291,7 +291,9 @@ class BudgetAgentNode(BaseAgentNode):
             Expense tracking analysis
         """
         expenses = params.get("expenses", [])
-        trip_id = params.get("trip_id", f"trip_{datetime.utcnow().strftime('%Y%m%d')}")
+        trip_id = params.get(
+            "trip_id", f"trip_{datetime.now(datetime.UTC).strftime('%Y%m%d')}"
+        )
 
         # Categorize and sum expenses
         categories = {

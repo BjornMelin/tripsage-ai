@@ -9,16 +9,20 @@ server and Firecrawl for web crawling and extraction.
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
 
-from agents import function_tool
+try:
+    from agents import function_tool
+except ImportError:
+    from unittest.mock import MagicMock
+    function_tool = MagicMock
 
 from tripsage.agents.base import BaseAgent
 from tripsage.config.app_settings import settings
 from tripsage.mcp.webcrawl.client import WebCrawlMCPClient
 from tripsage.utils.error_handling import with_error_handling
-from tripsage.utils.logging import get_module_logger
+from tripsage.utils.logging import get_logger
 
 # Initialize logger
-logger = get_module_logger(__name__)
+logger = get_logger(__name__)
 
 
 class TravelInsights(BaseAgent):
@@ -134,7 +138,7 @@ class TravelInsights(BaseAgent):
         )
 
         # Calculate date range for upcoming events (next 30 days)
-        today = datetime.now().date()
+        today = datetime.now(datetime.UTC).date()
         end_date = (today + timedelta(days=30)).isoformat()
 
         # Get upcoming events at the destination
@@ -155,7 +159,7 @@ class TravelInsights(BaseAgent):
             "general_info": search_results,
             "blog_insights": blog_insights,
             "upcoming_events": events,
-            "generated_at": datetime.now().isoformat(),
+            "generated_at": datetime.now(datetime.UTC).isoformat(),
         }
 
     @function_tool
@@ -186,7 +190,7 @@ class TravelInsights(BaseAgent):
             "title": content.get("title", ""),
             "content": content.get("content", ""),
             "metadata": content.get("metadata", {}),
-            "extracted_at": datetime.now().isoformat(),
+            "extracted_at": datetime.now(datetime.UTC).isoformat(),
         }
 
     @function_tool

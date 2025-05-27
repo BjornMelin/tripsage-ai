@@ -27,6 +27,7 @@ from tripsage.api.routers import (
     health,
     itineraries,
     keys,
+    memory,
     trips,
 )
 from tripsage.api.services.key_monitoring import (
@@ -189,6 +190,7 @@ def create_app() -> FastAPI:
     app.include_router(
         itineraries.router, prefix="/api/itineraries", tags=["itineraries"]
     )
+    app.include_router(memory.router, prefix="/api", tags=["memory"])
 
     # TODO: Include additional routers as they are implemented
     # app.include_router(users.router, prefix="/api/users", tags=["users"])

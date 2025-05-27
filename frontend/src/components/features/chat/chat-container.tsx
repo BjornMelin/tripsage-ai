@@ -123,8 +123,8 @@ export default function ChatContainer({
     <div className={cn("flex flex-col h-full relative", className)}>
       {/* Main chat area */}
       <div className="flex-1 overflow-hidden flex flex-col">
-        <MessageList 
-          messages={messages} 
+        <MessageList
+          messages={messages}
           isStreaming={isStreaming}
           activeToolCalls={activeToolCalls}
           toolResults={toolResults}

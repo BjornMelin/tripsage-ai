@@ -114,7 +114,7 @@ async def login(
         )
 
         # Set the refresh token as an HTTP-only cookie
-        expires = datetime.utcnow() + refresh_token_expires
+        expires = datetime.now(datetime.UTC) + refresh_token_expires
         response.set_cookie(
             key="refresh_token",
             value=refresh_token,
@@ -195,7 +195,7 @@ async def refresh_token(
         )
 
         # Set the new refresh token as an HTTP-only cookie
-        expires = datetime.utcnow() + refresh_token_expires
+        expires = datetime.now(datetime.UTC) + refresh_token_expires
         response.set_cookie(
             key="refresh_token",
             value=new_refresh_token,

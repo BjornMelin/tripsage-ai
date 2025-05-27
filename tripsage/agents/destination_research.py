@@ -7,9 +7,9 @@ attractions, activities, and local information using the OpenAI Agents SDK.
 
 from tripsage.agents.base import BaseAgent
 from tripsage.config.app_settings import settings
-from tripsage.utils.logging import get_module_logger
+from tripsage.utils.logging import get_logger
 
-logger = get_module_logger(__name__)
+logger = get_logger(__name__)
 
 
 class DestinationResearchAgent(BaseAgent):

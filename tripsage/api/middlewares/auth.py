@@ -171,7 +171,10 @@ class AuthMiddleware(BaseHTTPMiddleware):
                 raise AuthenticationError("Invalid token payload")
 
             # Check if token is expired
-            if "exp" in payload and datetime.utcnow().timestamp() > payload["exp"]:
+            if (
+                "exp" in payload
+                and datetime.now(datetime.UTC).timestamp() > payload["exp"]
+            ):
                 raise AuthenticationError("Token expired")
 
             return TokenData(**payload)
@@ -198,9 +201,9 @@ def create_access_token(
 
     # Set expiration
     if expires_delta:
-        expire = datetime.utcnow() + expires_delta
+        expire = datetime.now(datetime.UTC) + expires_delta
     else:
-        expire = datetime.utcnow() + timedelta(
+        expire = datetime.now(datetime.UTC) + timedelta(
             minutes=settings.token_expiration_minutes
         )
 
@@ -208,7 +211,7 @@ def create_access_token(
     to_encode.update(
         {
             "exp": expire.timestamp(),
-            "iat": datetime.utcnow().timestamp(),
+            "iat": datetime.now(datetime.UTC).timestamp(),
         }
     )
 
