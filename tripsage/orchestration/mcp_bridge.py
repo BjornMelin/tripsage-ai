@@ -1,8 +1,8 @@
 """
 LangGraph-MCP Bridge Layer
 
-This module provides integration between LangGraph and the TripSage MCP 
-abstraction layer, allowing LangGraph agents to use MCP tools while 
+This module provides integration between LangGraph and the TripSage MCP
+abstraction layer, allowing LangGraph agents to use MCP tools while
 maintaining compatibility with the existing MCPManager architecture.
 """
 

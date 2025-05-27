@@ -19,17 +19,17 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
   - Missing personalized recommendations from memory system
   - No timezone-aware scheduling with time-mcp
   - Weather data not integrated into trip planning
-  - No automated price monitoring with browser automation
+  - [x] ~~No automated price monitoring with browser automation~~ → **COMPLETED: Native Playwright SDK available (PR #173)**
   - Missing version control for itineraries
   - [x] Agent status monitoring implemented (needs backend integration)
 
 - [ ] **Backend Gaps - Missing Integrations**
 
   - Incomplete memory implementation for learning → **SOLUTION: Mem0 Integration (see below)**
-  - No browser automation for price tracking → **SOLUTION: Native Playwright SDK**
+  - [x] ~~No browser automation for price tracking~~ → **COMPLETED: Native Playwright SDK integrated (PR #173)**
   - Missing GitHub integration for itinerary versioning
   - Limited use of perplexity-mcp for research
-  - No Crawl4AI implementation → **SOLUTION: Direct SDK Integration**
+  - [x] ~~No Crawl4AI implementation~~ → **COMPLETED: Direct SDK Integration with Playwright fallback (PR #173)**
 
 - [ ] **Database Gaps - Required Tables**
   - Missing user_preferences for personalization → **SOLUTION: Mem0 handles this**

@@ -7,8 +7,6 @@ different providers using the TripSage MCP Abstraction Layer.
 
 from typing import Any, Dict, List, Optional
 
-from agents import function_tool
-
 from tripsage.mcp_abstraction.exceptions import TripSageMCPError
 from tripsage.mcp_abstraction.manager import mcp_manager
 from tripsage.tools.schemas.accommodations import (
@@ -26,7 +24,6 @@ from tripsage.utils.logging import get_logger
 logger = get_logger(__name__)
 
 
-@function_tool
 @with_error_handling
 async def search_airbnb_rentals_tool(
     location: str,
@@ -207,7 +204,6 @@ async def search_airbnb_rentals_tool(
         raise
 
 
-@function_tool
 @with_error_handling
 async def get_airbnb_listing_details_tool(
     listing_id: str,
@@ -319,7 +315,6 @@ async def get_airbnb_listing_details_tool(
         raise
 
 
-@function_tool
 @with_error_handling
 async def search_accommodations_tool(
     location: str,

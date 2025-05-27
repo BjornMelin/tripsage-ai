@@ -6,7 +6,7 @@ tool calling system, enabling seamless use of the existing tool ecosystem.
 """
 
 import json
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 from langchain_core.tools import BaseTool
 from langchain_core.tools.base import ToolException
@@ -114,7 +114,7 @@ class MCPToolRegistry:
 
     def __init__(self):
         """Initialize the tool registry and register all available tools."""
-        self.tools: Dict[str, MCPToolWrapper] = {}
+        self.tools: Dict[str, Union[MCPToolWrapper, BaseTool]] = {}
         self._register_all_tools()
         logger.info(f"Initialized MCP tool registry with {len(self.tools)} tools")
 
@@ -248,23 +248,22 @@ class MCPToolRegistry:
             {"timezone": {"type": "string", "description": "IANA timezone name"}},
         )
 
-        # Web crawling tools
-        self.tools["crawl_website"] = MCPToolWrapper(
-            "webcrawl",
-            "crawl_page",
-            "Extract information from web pages",
-            {
-                "url": {"type": "string", "description": "URL to crawl"},
-                "extract_type": {
-                    "type": "string",
-                    "description": "Type of information to extract",
-                },
-            },
+        # Web crawling tools - Direct SDK integration only
+        from tripsage.orchestration.tools.webcrawl_integration import (
+            BookingSiteCrawlTool,
+            EventListingCrawlTool,
+            TravelBlogCrawlTool,
+            WebCrawlTool,
         )
+
+        self.tools["crawl_website_content"] = WebCrawlTool()
+        self.tools["crawl_travel_blog"] = TravelBlogCrawlTool()
+        self.tools["crawl_booking_site"] = BookingSiteCrawlTool()
+        self.tools["crawl_event_listing"] = EventListingCrawlTool()
 
         logger.info("All MCP tools registered successfully")
 
-    def get_tool(self, tool_name: str) -> Optional[MCPToolWrapper]:
+    def get_tool(self, tool_name: str) -> Optional[Union[MCPToolWrapper, BaseTool]]:
         """
         Get a specific tool by name.
 
@@ -272,20 +271,22 @@ class MCPToolRegistry:
             tool_name: Name of the tool to retrieve
 
         Returns:
-            MCPToolWrapper instance or None if not found
+            Tool instance or None if not found
         """
         return self.tools.get(tool_name)
 
-    def get_all_tools(self) -> List[MCPToolWrapper]:
+    def get_all_tools(self) -> List[Union[MCPToolWrapper, BaseTool]]:
         """
         Get all available tools.
 
         Returns:
-            List of all registered MCPToolWrapper instances
+            List of all registered tool instances
         """
         return list(self.tools.values())
 
-    def get_tools_for_agent(self, agent_name: str) -> List[MCPToolWrapper]:
+    def get_tools_for_agent(
+        self, agent_name: str
+    ) -> List[Union[MCPToolWrapper, BaseTool]]:
         """
         Get tools relevant to a specific agent.
 
@@ -293,7 +294,7 @@ class MCPToolRegistry:
             agent_name: Name of the agent to get tools for
 
         Returns:
-            List of relevant MCPToolWrapper instances
+            List of relevant tool instances
         """
         # Define which tools each agent should have access to
         agent_tool_mapping = {
@@ -315,7 +316,8 @@ class MCPToolRegistry:
                 "geocode_location",
                 "search_places",
                 "get_weather",
-                "crawl_website",
+                "crawl_website_content",
+                "crawl_travel_blog",
                 "search_memory",
             ],
             "budget_agent": ["search_memory", "get_current_time"],
@@ -324,6 +326,9 @@ class MCPToolRegistry:
                 "search_places",
                 "get_weather",
                 "get_current_time",
+                "crawl_website_content",
+                "crawl_booking_site",
+                "crawl_event_listing",
                 "search_memory",
             ],
             "travel_agent": [
@@ -331,19 +336,20 @@ class MCPToolRegistry:
                 "geocode_location",
                 "get_current_time",
                 "get_weather",
-                "crawl_website",
+                "crawl_website_content",
+                "crawl_travel_blog",
             ],
         }
 
         tool_names = agent_tool_mapping.get(agent_name, [])
         return [self.tools[name] for name in tool_names if name in self.tools]
 
-    def register_custom_tool(self, tool: MCPToolWrapper) -> None:
+    def register_custom_tool(self, tool: Union[MCPToolWrapper, BaseTool]) -> None:
         """
         Register a custom tool.
 
         Args:
-            tool: Custom MCPToolWrapper to register
+            tool: Custom tool to register
         """
         self.tools[tool.name] = tool
         logger.info(f"Registered custom tool: {tool.name}")

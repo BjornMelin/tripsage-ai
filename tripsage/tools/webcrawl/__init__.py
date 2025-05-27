@@ -3,19 +3,18 @@ Web crawling tools package for TripSage.
 
 This package provides interfaces for web crawling, search, and content extraction
 tools that interact with external web services via MCPs.
+
+Note: This module has been updated to support direct Crawl4AI SDK integration
+      instead of MCP-based approach for performance improvements.
 """
 
-from .crawl4ai_client import Crawl4AIClient
-from .firecrawl_client import FirecrawlClient
-from .persistence import WebcrawlPersistenceManager
+# Import only the components that don't depend on legacy MCP clients
+from .models import UnifiedCrawlResult
 from .result_normalizer import ResultNormalizer
-from .source_selector import SourceSelector, SourceType
+from .source_selector import WebCrawlSourceSelector
 
 __all__ = [
-    "Crawl4AIClient",
-    "FirecrawlClient",
-    "WebcrawlPersistenceManager",
+    "UnifiedCrawlResult",
     "ResultNormalizer",
-    "SourceSelector",
-    "SourceType",
+    "WebCrawlSourceSelector",
 ]

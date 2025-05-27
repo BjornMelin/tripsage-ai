@@ -8,8 +8,6 @@ It also includes Playwright MCP tools for general browser automation.
 
 from typing import Any, Dict, Literal, Optional
 
-from agents import function_tool
-
 from tripsage.mcp_abstraction.exceptions import TripSageMCPError
 from tripsage.mcp_abstraction.manager import mcp_manager
 from tripsage.tools.browser.playwright_mcp_client import (
@@ -26,7 +24,6 @@ from tripsage.utils.logging import get_logger
 logger = get_logger(__name__)
 
 
-@function_tool
 async def check_flight_status(
     airline: str, flight_number: str, date: str, session_id: Optional[str] = None
 ) -> Dict[str, Any]:
@@ -52,7 +49,6 @@ async def check_flight_status(
     )
 
 
-@function_tool
 async def verify_booking(
     booking_type: Literal["flight", "hotel", "car"],
     provider: str,
@@ -90,7 +86,6 @@ async def verify_booking(
     )
 
 
-@function_tool
 async def monitor_price(
     url: str,
     selector: str,
@@ -127,7 +122,6 @@ async def monitor_price(
 # Playwright MCP Tools
 
 
-@function_tool
 async def navigate_to_url(
     url: str,
     browser_type: Literal["chromium", "firefox", "webkit"] = "chromium",
@@ -192,7 +186,6 @@ async def navigate_to_url(
         }
 
 
-@function_tool
 async def take_webpage_screenshot(
     url: str,
     name: str = "screenshot",
@@ -251,7 +244,6 @@ async def take_webpage_screenshot(
         }
 
 
-@function_tool
 async def extract_webpage_content(
     url: str,
     format: Literal["text", "html"] = "text",
@@ -303,7 +295,6 @@ async def extract_webpage_content(
         }
 
 
-@function_tool
 async def fill_web_form(
     url: str,
     form_fields: Dict[str, str],
