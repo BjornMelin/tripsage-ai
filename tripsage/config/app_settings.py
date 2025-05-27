@@ -304,6 +304,12 @@ class AppSettings(BaseSettings):
     duffel_max_retries: int = Field(
         default=3, description="Maximum retry attempts for Duffel API requests"
     )
+    duffel_rate_limit_window: float = Field(
+        default=60.0, description="Rate limit window in seconds for Duffel API"
+    )
+    duffel_max_requests_per_minute: int = Field(
+        default=100, description="Maximum requests per minute for Duffel API"
+    )
 
     # Storage
     database: DatabaseConfig = DatabaseConfig()
