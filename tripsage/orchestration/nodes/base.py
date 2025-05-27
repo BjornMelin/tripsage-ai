@@ -102,10 +102,7 @@ class BaseAgentNode(ABC):
 
         except Exception as e:
             self.logger.error(f"Error in {self.node_name} node: {str(e)}")
-            log_exception(
-                e,
-                context={"node": self.node_name, "session_id": state.get("session_id")},
-            )
+            log_exception(e, logger_name=f"orchestration.{self.node_name}")
             return self._handle_error(state, e)
 
     def _handle_error(

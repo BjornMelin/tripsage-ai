@@ -57,9 +57,7 @@ class RouterNode(BaseAgentNode):
         conversation_context = self._build_conversation_context(state)
 
         # Perform semantic classification
-        classification = await self._classify_intent(
-            last_message, conversation_context
-        )
+        classification = await self._classify_intent(last_message, conversation_context)
 
         # Update state with routing decision
         state["current_agent"] = classification["agent"]

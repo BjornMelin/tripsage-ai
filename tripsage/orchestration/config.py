@@ -145,7 +145,7 @@ class LangGraphConfig:
             default_model=settings.agent.model_name,
             temperature=settings.agent.temperature,
             max_tokens=settings.agent.max_tokens,
-            # Use OpenAI API key from settings  
+            # Use OpenAI API key from settings
             langsmith_api_key=settings.openai_api_key.get_secret_value(),
             # Database connection for checkpointing
             checkpoint_storage=CheckpointStorage.POSTGRES

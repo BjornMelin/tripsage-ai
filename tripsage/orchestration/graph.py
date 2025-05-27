@@ -73,9 +73,7 @@ class TripSageOrchestrator:
         )
         graph.add_node("budget_agent", self._create_stub_node("budget_agent"))
         graph.add_node("itinerary_agent", self._create_stub_node("itinerary_agent"))
-        graph.add_node(
-            "destination_agent", self._create_stub_node("destination_agent")
-        )
+        graph.add_node("destination_agent", self._create_stub_node("destination_agent"))
         graph.add_node("travel_agent", self._create_stub_node("travel_agent"))
 
         # Add utility nodes
