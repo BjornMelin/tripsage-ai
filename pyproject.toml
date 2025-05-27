@@ -9,15 +9,29 @@ authors = [{ name = "TripSage Team" }]
 # Only include core shared dependencies here
 # Subprojects maintain their own requirements.txt files
 dependencies = [
-    "pydantic>=2.11.5",
+    "pydantic>=2.11.5,<3.0.0",
+    "pydantic-settings>=2.9.1",
     "sqlalchemy[asyncio]>=2.0.41",
     "greenlet>=3.1.1",
-    "pydantic-settings>=2.9.1",
     "pytest>=8.3.5",
+    "pytest-cov>=6.1.1",
+    "langgraph>=0.4.4",
+    "langchain-core>=0.3.61",
+    "langchain-openai>=0.3.18",
+    "langsmith>=0.3.42",
+    "typing-extensions>=4.13.2",
+    "redis>=6.1.0",
+    "pytest-asyncio>=1.0.0",
 ]
 
 [project.optional-dependencies]
-dev = ["ruff>=0.11.9", "pytest>=8.3.5"]
+dev = [
+    "ruff>=0.11.9", 
+    "pytest>=8.3.5", 
+    "pytest-cov>=6.1.1",
+    "pytest-asyncio>=0.25.1",
+    "coverage[toml]>=7.6.9"
+]
 
 [tool.ruff]
 line-length = 88
