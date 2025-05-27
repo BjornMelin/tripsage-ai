@@ -609,29 +609,30 @@ For remaining API, MCP, and Middleware related tasks, see [tasks/TODO-API.md](./
       - ✅ Implemented batch_web_search for optimized performance
       - ✅ Added performance monitoring hooks for cache hit rate analysis
 
-- [ ] **Agent Orchestration Migration to LangGraph**
+- [ ] **Agent Orchestration Migration to LangGraph** ✅ **Phase 1-2 COMPLETED** (2025-05-26)
 
   - **Target:** Replace current ChatAgent with LangGraph orchestration
   - **Goal:** 40-60% performance improvement, better maintainability
   - **Strategy:** Based on [docs/REFACTOR/AGENTS/PLAN_MIGRATE_TO_LANGGRAPH.md](./docs/REFACTOR/AGENTS/PLAN_MIGRATE_TO_LANGGRAPH.md)
   - **Implementation Phases:**
-    - [ ] **Phase 1: Foundation (Weeks 1-2)**
-      - [ ] Install LangGraph dependencies
-      - [ ] Create state schema (TravelPlanningState)
-      - [ ] Implement base node class
-      - [ ] Build core orchestrator graph
-      - [ ] Set up checkpointing
-    - [ ] **Phase 2: Agent Migration (Weeks 3-4)**
-      - [ ] Migrate FlightAgent to FlightAgentNode
-      - [ ] Migrate AccommodationAgent to AccommodationAgentNode
-      - [ ] Migrate BudgetAgent to BudgetAgentNode
-      - [ ] Migrate remaining agents to nodes
-      - [ ] Create memory and error recovery nodes
+    - [x] **Phase 1: Foundation (Weeks 1-2)** ✅ **COMPLETED** (PR #170)
+      - [x] Install LangGraph dependencies
+      - [x] Create state schema (TravelPlanningState)
+      - [x] Implement base node class
+      - [x] Build core orchestrator graph
+      - [x] Set up checkpointing
+    - [x] **Phase 2: Agent Migration (Weeks 3-4)** ✅ **COMPLETED** (2025-05-26)
+      - [x] Migrate FlightAgent to FlightAgentNode
+      - [x] Migrate AccommodationAgent to AccommodationAgentNode
+      - [x] Migrate BudgetAgent to BudgetAgentNode
+      - [x] Migrate DestinationResearchAgent to DestinationResearchAgentNode
+      - [x] Migrate ItineraryAgent to ItineraryAgentNode
+      - [x] Create comprehensive test suite for all migrated agents
     - [ ] **Phase 3: Integration (Weeks 5-6)**
       - [ ] Integrate with MCP abstraction layer
       - [ ] Update session memory utilities
       - [ ] Implement PostgreSQL checkpointing
-      - [ ] Create comprehensive test suite
+      - [ ] Implement comprehensive inter-agent handoff system
     - [ ] **Phase 4: Production (Weeks 7-8)**
       - [ ] Set up LangSmith monitoring
       - [ ] Implement gradual rollout
