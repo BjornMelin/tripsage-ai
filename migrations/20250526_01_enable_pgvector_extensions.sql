@@ -18,7 +18,16 @@
 
 -- Enable pgvector extension (if not already enabled)
 -- Note: This may require superuser privileges in some environments
-CREATE EXTENSION IF NOT EXISTS vector;
+DO $$
+BEGIN
+    CREATE EXTENSION IF NOT EXISTS vector;
+    RAISE NOTICE 'Successfully enabled pgvector extension';
+EXCEPTION 
+    WHEN insufficient_privilege THEN
+        RAISE WARNING 'Insufficient privileges to enable pgvector extension. Please enable via Supabase Dashboard: Database > Extensions > vector';
+    WHEN OTHERS THEN
+        RAISE WARNING 'Failed to enable pgvector extension: %. Please enable manually via Supabase Dashboard.', SQLERRM;
+END $$;
 
 -- Enable vectorscale extension for performance improvements  
 -- Note: This extension may not be available in all Supabase environments
