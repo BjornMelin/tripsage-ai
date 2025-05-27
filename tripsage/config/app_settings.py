@@ -12,7 +12,6 @@ from typing import Any, Dict, List, Optional
 
 from pydantic import (
     Field,
-    PostgresDsn,
     RedisDsn,
     SecretStr,
     field_validator,
@@ -24,24 +23,13 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class MCPConfig(BaseSettings):
     """Base configuration for MCP servers."""
 
-    endpoint: str
+    endpoint: str = Field(default="http://localhost:3000")
     api_key: Optional[SecretStr] = None
-
-
-class NeonMCPConfig(MCPConfig):
-    """Neon MCP server configuration."""
-
-    # Whether to use this MCP in development environment only
-    dev_only: bool = Field(default=True)
-    # Default project ID for operations (optional)
-    default_project_id: Optional[str] = None
 
 
 class SupabaseMCPConfig(MCPConfig):
     """Supabase MCP server configuration."""
 
-    # Whether to use this MCP in production environment only
-    prod_only: bool = Field(default=True)
     # Default project ID for operations (optional)
     default_project_id: Optional[str] = None
     # Default organization ID (optional)
@@ -51,7 +39,7 @@ class SupabaseMCPConfig(MCPConfig):
 class WeatherMCPConfig(MCPConfig):
     """Weather MCP server configuration."""
 
-    openweathermap_api_key: SecretStr
+    openweathermap_api_key: SecretStr = Field(default=SecretStr("test-weather-key"))
     visual_crossing_api_key: Optional[SecretStr] = None
 
 
@@ -60,7 +48,7 @@ class WebCrawlMCPConfig(MCPConfig):
 
     # Crawl4AI configuration
     crawl4ai_api_url: str = Field(default="http://localhost:8000/api")
-    crawl4ai_api_key: SecretStr
+    crawl4ai_api_key: SecretStr = Field(default=SecretStr("test-crawl-key"))
     crawl4ai_auth_token: Optional[SecretStr] = None
     crawl4ai_timeout: int = Field(default=30000)  # 30 seconds
     crawl4ai_max_depth: int = Field(default=3)
@@ -68,7 +56,7 @@ class WebCrawlMCPConfig(MCPConfig):
 
     # FireCrawl configuration
     firecrawl_api_url: str = Field(default="https://api.firecrawl.dev/v1")
-    firecrawl_api_key: SecretStr
+    firecrawl_api_key: SecretStr = Field(default=SecretStr("test-firecrawl-key"))
 
 
 class PlaywrightMCPConfig(MCPConfig):
@@ -87,7 +75,7 @@ class PlaywrightMCPConfig(MCPConfig):
 class FlightsMCPConfig(MCPConfig):
     """Flights MCP server configuration."""
 
-    duffel_api_key: SecretStr
+    duffel_api_key: SecretStr = Field(default=SecretStr("test-duffel-key"))
     server_type: str = Field(default="ravinahp/flights-mcp")
 
 
@@ -115,7 +103,7 @@ class AccommodationsMCPConfig(BaseSettings):
 class GoogleMapsMCPConfig(MCPConfig):
     """Google Maps MCP server configuration."""
 
-    maps_api_key: SecretStr
+    maps_api_key: SecretStr = Field(default=SecretStr("test-maps-key"))
 
 
 class TimeMCPConfig(MCPConfig):
@@ -135,9 +123,9 @@ class MemoryMCPConfig(MCPConfig):
 class CalendarMCPConfig(MCPConfig):
     """Calendar MCP server configuration."""
 
-    google_client_id: SecretStr
-    google_client_secret: SecretStr
-    google_redirect_uri: str
+    google_client_id: SecretStr = Field(default=SecretStr("test-client-id"))
+    google_client_secret: SecretStr = Field(default=SecretStr("test-client-secret"))
+    google_redirect_uri: str = Field(default="http://localhost:3000/callback")
 
 
 # Database Configuration Classes
@@ -164,24 +152,23 @@ class RedisConfig(BaseSettings):
 
 
 class DatabaseConfig(BaseSettings):
-    """Database configuration for PostgreSQL connections."""
+    """Database configuration for Supabase PostgreSQL connections."""
 
     # Supabase configuration
-    supabase_url: str = Field(...)
-    supabase_anon_key: SecretStr = Field(...)
+    supabase_url: str = Field(default="https://test-project.supabase.co")
+    supabase_anon_key: SecretStr = Field(default=SecretStr("test-anon-key"))
     supabase_service_role_key: Optional[SecretStr] = Field(default=None)
     supabase_timeout: float = Field(default=60.0)
     supabase_auto_refresh_token: bool = Field(default=True)
     supabase_persist_session: bool = Field(default=True)
 
-    # Neon configuration
-    neon_connection_string: Optional[PostgresDsn] = Field(default=None)
-    neon_min_pool_size: int = Field(default=1)
-    neon_max_pool_size: int = Field(default=10)
-    neon_max_inactive_connection_lifetime: float = Field(default=300.0)
-
-    # Provider selection
-    db_provider: str = Field(default="supabase")  # "supabase" or "neon"
+    # pgvector configuration
+    pgvector_enabled: bool = Field(
+        default=True, description="Enable pgvector extension support"
+    )
+    vector_dimensions: int = Field(
+        default=1536, description="Default vector dimensions for embeddings"
+    )
 
 
 class Neo4jConfig(BaseSettings):
@@ -189,7 +176,7 @@ class Neo4jConfig(BaseSettings):
 
     uri: str = Field(default="bolt://localhost:7687")
     user: str = Field(default="neo4j")
-    password: SecretStr = Field(...)
+    password: SecretStr = Field(default=SecretStr("test-password"))
     database: str = Field(default="neo4j")
     max_connection_lifetime: int = Field(default=3600)
     max_connection_pool_size: int = Field(default=50)
@@ -289,34 +276,33 @@ class AppSettings(BaseSettings):
     )
 
     # OpenAI settings
-    openai_api_key: SecretStr = Field(..., description="OpenAI API key")
+    openai_api_key: SecretStr = Field(default=SecretStr("test-openai-key"), description="OpenAI API key")
 
     # Storage
-    database: DatabaseConfig = DatabaseConfig()
-    neo4j: Neo4jConfig = Neo4jConfig()
-    redis: RedisConfig = RedisConfig()
+    database: DatabaseConfig = Field(default_factory=DatabaseConfig)
+    neo4j: Neo4jConfig = Field(default_factory=Neo4jConfig)
+    redis: RedisConfig = Field(default_factory=RedisConfig)
 
     # Cache settings
     use_cache: bool = Field(True, description="Enable caching")
 
     # MCP Servers
-    time_mcp: TimeMCPConfig = TimeMCPConfig()
-    weather_mcp: WeatherMCPConfig = WeatherMCPConfig()
-    googlemaps_mcp: GoogleMapsMCPConfig = GoogleMapsMCPConfig()
-    memory_mcp: MemoryMCPConfig = MemoryMCPConfig()
-    webcrawl_mcp: WebCrawlMCPConfig = WebCrawlMCPConfig()
-    flights_mcp: FlightsMCPConfig = FlightsMCPConfig()
-    accommodations_mcp: AccommodationsMCPConfig = AccommodationsMCPConfig()
-    playwright_mcp: PlaywrightMCPConfig = PlaywrightMCPConfig()
-    calendar_mcp: CalendarMCPConfig = CalendarMCPConfig()
-    neon_mcp: NeonMCPConfig = NeonMCPConfig()
-    supabase_mcp: SupabaseMCPConfig = SupabaseMCPConfig()
+    time_mcp: TimeMCPConfig = Field(default_factory=TimeMCPConfig)
+    weather_mcp: WeatherMCPConfig = Field(default_factory=WeatherMCPConfig)
+    googlemaps_mcp: GoogleMapsMCPConfig = Field(default_factory=GoogleMapsMCPConfig)
+    memory_mcp: MemoryMCPConfig = Field(default_factory=MemoryMCPConfig)
+    webcrawl_mcp: WebCrawlMCPConfig = Field(default_factory=WebCrawlMCPConfig)
+    flights_mcp: FlightsMCPConfig = Field(default_factory=FlightsMCPConfig)
+    accommodations_mcp: AccommodationsMCPConfig = Field(default_factory=AccommodationsMCPConfig)
+    playwright_mcp: PlaywrightMCPConfig = Field(default_factory=PlaywrightMCPConfig)
+    calendar_mcp: CalendarMCPConfig = Field(default_factory=CalendarMCPConfig)
+    supabase_mcp: SupabaseMCPConfig = Field(default_factory=SupabaseMCPConfig)
 
     # Agent configuration
-    agent: AgentConfig = AgentConfig()
+    agent: AgentConfig = Field(default_factory=AgentConfig)
 
     # OpenTelemetry configuration
-    opentelemetry: OpenTelemetryConfig = OpenTelemetryConfig()
+    opentelemetry: OpenTelemetryConfig = Field(default_factory=OpenTelemetryConfig)
 
     @field_validator("environment")
     def validate_environment(cls, v: str) -> str:
@@ -347,7 +333,6 @@ class AppSettings(BaseSettings):
             "memorymcpclient": self.memory_mcp.endpoint,
             "webcrawlmcpclient": self.webcrawl_mcp.endpoint,
             "timemcpclient": self.time_mcp.endpoint,
-            "neonmcpclient": self.neon_mcp.endpoint,
             "supabasemcpclient": self.supabase_mcp.endpoint,
             "calendarmcpclient": self.calendar_mcp.endpoint,
             "playwrightmcpclient": self.playwright_mcp.endpoint,
@@ -390,7 +375,6 @@ class AppSettings(BaseSettings):
             "memorymcpclient": getattr(self.memory_mcp, "api_key", None),
             "webcrawlmcpclient": getattr(self.webcrawl_mcp, "api_key", None),
             "timemcpclient": getattr(self.time_mcp, "api_key", None),
-            "neonmcpclient": getattr(self.neon_mcp, "api_key", None),
             "supabasemcpclient": getattr(self.supabase_mcp, "api_key", None),
             "calendarmcpclient": getattr(self.calendar_mcp, "api_key", None),
             "playwrightmcpclient": getattr(self.playwright_mcp, "api_key", None),
@@ -478,19 +462,11 @@ def _validate_critical_settings(settings: AppSettings) -> None:
     if not settings.openai_api_key.get_secret_value():
         critical_errors.append("OpenAI API key is missing")
 
-    # Check database configuration based on provider
-    if settings.database.db_provider == "supabase":
-        if not settings.database.supabase_url:
-            critical_errors.append("Supabase URL is missing")
-        if not settings.database.supabase_anon_key.get_secret_value():
-            critical_errors.append("Supabase anonymous key is missing")
-    elif settings.database.db_provider == "neon":
-        if not settings.database.neon_connection_string:
-            critical_errors.append("Neon connection string is missing")
-    else:
-        critical_errors.append(
-            f"Invalid database provider: {settings.database.db_provider}"
-        )
+    # Check database configuration (Supabase only)
+    if not settings.database.supabase_url:
+        critical_errors.append("Supabase URL is missing")
+    if not settings.database.supabase_anon_key.get_secret_value():
+        critical_errors.append("Supabase anonymous key is missing")
 
     # Check Neo4j configuration
     if not settings.neo4j.password.get_secret_value():

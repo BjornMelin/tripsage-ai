@@ -50,8 +50,6 @@ test_env_vars = {
     "TRIPSAGE_MCP_CALENDAR_GOOGLE_CLIENT_ID": "test-client-id",
     "TRIPSAGE_MCP_CALENDAR_GOOGLE_CLIENT_SECRET": "test-client-secret",
     "TRIPSAGE_MCP_CALENDAR_GOOGLE_REDIRECT_URI": "http://localhost:3000/callback",
-    "TRIPSAGE_MCP_NEON_ENDPOINT": "http://localhost:3015",
-    "TRIPSAGE_MCP_NEON_API_KEY": "test-neon-key",
     "TRIPSAGE_MCP_SUPABASE_ENDPOINT": "http://localhost:3016",
     # Additional environment variables for compatibility
     "ENVIRONMENT": "testing",
