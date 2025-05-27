@@ -63,7 +63,9 @@ class HandoffContext(BaseModel):
     to_agent: str = Field(description="Target agent")
     trigger: HandoffTrigger = Field(description="Handoff trigger")
     reason: str = Field(description="Reason for handoff")
-    timestamp: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
+    timestamp: str = Field(
+        default_factory=lambda: datetime.now(datetime.UTC).isoformat()
+    )
     preserved_context: Dict[str, Any] = Field(
         default_factory=dict, description="Context to preserve"
     )

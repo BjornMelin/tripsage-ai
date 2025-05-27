@@ -71,7 +71,8 @@ class ChatAgent(BaseAgent):
         3. Execute travel tools directly for simple queries (weather, maps, time)
         4. Coordinate multi-step travel planning workflows
         5. Maintain conversation context and user preferences
-        6. Provide personalized recommendations based on user's travel history and preferences
+        6. Provide personalized recommendations based on user's travel history and
+        preferences
         
         AGENT ROUTING STRATEGY:
         - Flight-focused queries → FlightAgent
@@ -199,17 +200,17 @@ class ChatAgent(BaseAgent):
 
     async def _get_user_context(self, user_id: str) -> Dict[str, Any]:
         """Get user context from memory for personalization.
-        
+
         Args:
             user_id: User identifier
-            
+
         Returns:
             User context including preferences and history
         """
         try:
             await self._ensure_memory_initialized()
             context = await self.memory_service.get_user_context(user_id)
-            
+
             # Extract key personalization data
             user_context = {
                 "preferences": context.get("preferences", []),
@@ -217,25 +218,28 @@ class ChatAgent(BaseAgent):
                 "budget_patterns": context.get("budget_patterns", []),
                 "travel_style": context.get("travel_style", []),
                 "insights": context.get("insights", {}),
-                "summary": context.get("summary", "")
+                "summary": context.get("summary", ""),
             }
-            
-            logger.debug(f"Retrieved user context for {user_id}: {len(context.get('preferences', []))} preferences")
+
+            logger.debug(
+                f"Retrieved user context for {user_id}: "
+                f"{len(context.get('preferences', []))} preferences"
+            )
             return user_context
-            
+
         except Exception as e:
             logger.warning(f"Failed to get user context for {user_id}: {e}")
             return {}
 
     async def _store_conversation_memory(
-        self, 
-        user_message: str, 
-        assistant_response: str, 
-        user_id: str, 
-        session_id: Optional[str] = None
+        self,
+        user_message: str,
+        assistant_response: str,
+        user_id: str,
+        session_id: Optional[str] = None,
     ) -> None:
         """Store conversation in memory for future personalization.
-        
+
         Args:
             user_message: User's message
             assistant_response: Assistant's response
@@ -244,26 +248,23 @@ class ChatAgent(BaseAgent):
         """
         try:
             await self._ensure_memory_initialized()
-            
+
             # Create conversation messages
             messages = [
                 ConversationMessage(role="user", content=user_message),
-                ConversationMessage(role="assistant", content=assistant_response)
+                ConversationMessage(role="assistant", content=assistant_response),
             ]
-            
+
             # Store in memory with travel context
             await self.memory_service.add_conversation_memory(
                 messages=messages,
                 user_id=user_id,
                 session_id=session_id,
-                metadata={
-                    "source": "chat_agent",
-                    "agent_type": "travel_coordinator"
-                }
+                metadata={"source": "chat_agent", "agent_type": "travel_coordinator"},
             )
-            
+
             logger.debug(f"Stored conversation memory for user {user_id}")
-            
+
         except Exception as e:
             logger.warning(f"Failed to store conversation memory for {user_id}: {e}")
 
@@ -607,11 +608,13 @@ class ChatAgent(BaseAgent):
         if user_id != "anonymous":
             user_context = await self._get_user_context(user_id)
             context["user_memory"] = user_context
-            
+
             # Enhance instructions with user context if available
             if user_context.get("summary"):
                 context["user_summary"] = user_context["summary"]
-                logger.debug(f"Added user context summary for personalization: {user_id}")
+                logger.debug(
+                    f"Added user context summary for personalization: {user_id}"
+                )
 
         # Detect intent
         intent = await self.detect_intent(message)
@@ -669,7 +672,7 @@ class ChatAgent(BaseAgent):
                     user_message=message,
                     assistant_response=response.get("content", ""),
                     user_id=user_id,
-                    session_id=session_id
+                    session_id=session_id,
                 )
             except Exception as e:
                 logger.warning(f"Failed to store conversation memory: {e}")

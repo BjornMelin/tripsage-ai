@@ -91,7 +91,7 @@ class ItineraryAgentNode(BaseAgentNode):
 
             # Update state with results
             itinerary_record = {
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(datetime.UTC).isoformat(),
                 "operation": operation_type,
                 "parameters": itinerary_params,
                 "result": itinerary_result,
@@ -254,7 +254,9 @@ class ItineraryAgentNode(BaseAgentNode):
                 daily_schedule, destination
             )
 
-            itinerary_id = f"itinerary_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}"
+            itinerary_id = (
+                f"itinerary_{datetime.now(datetime.UTC).strftime('%Y%m%d_%H%M%S')}"
+            )
 
             return {
                 "itinerary_id": itinerary_id,
@@ -323,7 +325,9 @@ class ItineraryAgentNode(BaseAgentNode):
 
         # Generate daily schedules
         current_date = (
-            datetime.strptime(start_date, "%Y-%m-%d") if start_date else datetime.now()
+            datetime.strptime(start_date, "%Y-%m-%d")
+            if start_date
+            else datetime.now(datetime.UTC)
         )
 
         for day in range(duration):
@@ -346,9 +350,9 @@ class ItineraryAgentNode(BaseAgentNode):
                     "description": option.get("description", ""),
                     "type": option.get("type", option.get("category", "activity")),
                     "duration": "2-3 hours",
-                    "estimated_cost": budget_per_day / activities_per_day
-                    if budget_per_day > 0
-                    else 0,
+                    "estimated_cost": (
+                        budget_per_day / activities_per_day if budget_per_day > 0 else 0
+                    ),
                 }
                 day_activities.append(activity)
 
@@ -361,7 +365,9 @@ class ItineraryAgentNode(BaseAgentNode):
                     "description": f"Local cuisine in {destination}",
                     "type": "meal",
                     "duration": "1 hour",
-                    "estimated_cost": budget_per_day * 0.3 if budget_per_day > 0 else 0,
+                    "estimated_cost": (
+                        budget_per_day * 0.3 if budget_per_day > 0 else 0
+                    ),
                 },
             )
 
@@ -412,9 +418,9 @@ class ItineraryAgentNode(BaseAgentNode):
 
         return {
             "total_estimated_cost": round(total_cost, 2),
-            "average_daily_cost": round(total_cost / len(daily_schedule), 2)
-            if daily_schedule
-            else 0,
+            "average_daily_cost": (
+                round(total_cost / len(daily_schedule), 2) if daily_schedule else 0
+            ),
             "daily_costs": [round(cost, 2) for cost in daily_costs],
         }
 
@@ -471,7 +477,7 @@ class ItineraryAgentNode(BaseAgentNode):
                 **existing_itinerary,
                 "daily_schedule": optimized_schedule,
                 "optimization_applied": True,
-                "optimization_timestamp": datetime.utcnow().isoformat(),
+                "optimization_timestamp": datetime.now(datetime.UTC).isoformat(),
             }
 
         except Exception as e:
@@ -544,7 +550,7 @@ class ItineraryAgentNode(BaseAgentNode):
                 "daily_schedule": daily_schedule,
                 "modification_applied": True,
                 "modification_type": modification_type,
-                "modification_timestamp": datetime.utcnow().isoformat(),
+                "modification_timestamp": datetime.now(datetime.UTC).isoformat(),
             }
 
         except Exception as e:
@@ -598,7 +604,7 @@ class ItineraryAgentNode(BaseAgentNode):
                 "itinerary_id": itinerary_id,
                 "calendar_events": calendar_events,
                 "events_count": len(calendar_events),
-                "creation_timestamp": datetime.utcnow().isoformat(),
+                "creation_timestamp": datetime.now(datetime.UTC).isoformat(),
             }
 
         except Exception as e:
@@ -783,8 +789,8 @@ class ItineraryAgentNode(BaseAgentNode):
         """
         # Use LLM to generate helpful response for general itinerary questions
         response_prompt = f"""
-        The user is asking about itinerary planning but hasn't provided enough specific 
-        information for planning.
+        The user is asking about itinerary planning but hasn't provided enough 
+        specific information for planning.
         
         User message: "{message}"
         

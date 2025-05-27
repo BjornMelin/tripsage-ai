@@ -134,7 +134,7 @@ class BaseAgentNode(ABC):
             ),
             "agent": self.node_name,
             "error": True,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(datetime.UTC).isoformat(),
         }
         state["messages"].append(error_message)
 
@@ -158,7 +158,7 @@ class BaseAgentNode(ABC):
         """
         return {
             "message": message,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(datetime.UTC).isoformat(),
             "node": self.node_name,
         }
 
@@ -179,7 +179,7 @@ class BaseAgentNode(ABC):
             "role": "assistant",
             "content": content,
             "agent": self.node_name,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(datetime.UTC).isoformat(),
         }
 
         if additional_data:

@@ -134,7 +134,7 @@ class TravelInsights(BaseAgent):
         )
 
         # Calculate date range for upcoming events (next 30 days)
-        today = datetime.now().date()
+        today = datetime.now(datetime.UTC).date()
         end_date = (today + timedelta(days=30)).isoformat()
 
         # Get upcoming events at the destination
@@ -155,7 +155,7 @@ class TravelInsights(BaseAgent):
             "general_info": search_results,
             "blog_insights": blog_insights,
             "upcoming_events": events,
-            "generated_at": datetime.now().isoformat(),
+            "generated_at": datetime.now(datetime.UTC).isoformat(),
         }
 
     @function_tool
@@ -186,7 +186,7 @@ class TravelInsights(BaseAgent):
             "title": content.get("title", ""),
             "content": content.get("content", ""),
             "metadata": content.get("metadata", {}),
-            "extracted_at": datetime.now().isoformat(),
+            "extracted_at": datetime.now(datetime.UTC).isoformat(),
         }
 
     @function_tool
