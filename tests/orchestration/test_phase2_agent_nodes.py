@@ -22,7 +22,13 @@ from tripsage.orchestration.state import TravelPlanningState
 def mock_state():
     """Create a mock travel planning state for testing."""
     return TravelPlanningState(
-        messages=[{"role": "user", "content": "Test message", "timestamp": "2024-01-01T00:00:00Z"}],
+        messages=[
+            {
+                "role": "user",
+                "content": "Test message",
+                "timestamp": "2024-01-01T00:00:00Z",
+            }
+        ],
         user_preferences={},
         flight_searches=[],
         accommodation_searches=[],
@@ -46,16 +52,20 @@ class TestAccommodationAgentNode:
     async def test_extract_accommodation_parameters(self, mock_state, monkeypatch):
         """Test parameter extraction for accommodation searches."""
         agent = AccommodationAgentNode()
-        
+
         # Mock the LLM response
         mock_response = MagicMock()
-        mock_response.content = '{"location": "Paris", "check_in_date": "2024-03-15", "guests": 2}'
+        mock_response.content = (
+            '{"location": "Paris", "check_in_date": "2024-03-15", "guests": 2}'
+        )
         mock_llm = MagicMock()
         mock_llm.ainvoke = AsyncMock(return_value=mock_response)
         monkeypatch.setattr(agent, "llm", mock_llm)
-        
-        params = await agent._extract_accommodation_parameters("Find hotels in Paris", mock_state)
-        
+
+        params = await agent._extract_accommodation_parameters(
+            "Find hotels in Paris", mock_state
+        )
+
         assert params is not None
         assert params["location"] == "Paris"
         assert params["check_in_date"] == "2024-03-15"
@@ -65,16 +75,18 @@ class TestAccommodationAgentNode:
     async def test_handle_general_inquiry(self, mock_state, monkeypatch):
         """Test handling of general accommodation inquiries."""
         agent = AccommodationAgentNode()
-        
+
         # Mock the LLM response
         mock_response = MagicMock()
         mock_response.content = "I'd be happy to help you find accommodations!"
         mock_llm = MagicMock()
         mock_llm.ainvoke = AsyncMock(return_value=mock_response)
         monkeypatch.setattr(agent, "llm", mock_llm)
-        
-        response = await agent._handle_general_accommodation_inquiry("Tell me about hotels", mock_state)
-        
+
+        response = await agent._handle_general_accommodation_inquiry(
+            "Tell me about hotels", mock_state
+        )
+
         assert response["role"] == "assistant"
         assert "accommodations" in response["content"]
 
@@ -92,16 +104,16 @@ class TestBudgetAgentNode:
     async def test_optimize_budget(self, mock_state):
         """Test budget optimization functionality."""
         agent = BudgetAgentNode()
-        
+
         params = {
             "total_budget": 5000,
             "trip_length": 10,
             "travelers": 2,
-            "destination": "Paris"
+            "destination": "Paris",
         }
-        
+
         result = await agent._optimize_budget(params, mock_state)
-        
+
         assert result["total_budget"] == 5000
         assert result["trip_length"] == 10
         assert result["travelers"] == 2
@@ -113,16 +125,16 @@ class TestBudgetAgentNode:
     async def test_track_expenses(self, mock_state):
         """Test expense tracking functionality."""
         agent = BudgetAgentNode()
-        
+
         params = {
             "expenses": [
                 {"category": "food", "amount": 50},
-                {"category": "transportation", "amount": 30}
+                {"category": "transportation", "amount": 30},
             ]
         }
-        
+
         result = await agent._track_expenses(params, mock_state)
-        
+
         assert result["expenses_count"] == 2
         assert result["total_spent"] == 80
         assert result["categories"]["food"] == 50
@@ -142,16 +154,20 @@ class TestDestinationResearchAgentNode:
     async def test_extract_research_parameters(self, mock_state, monkeypatch):
         """Test parameter extraction for destination research."""
         agent = DestinationResearchAgentNode()
-        
+
         # Mock the LLM response
         mock_response = MagicMock()
-        mock_response.content = '{"destination": "Tokyo", "research_type": "attractions"}'
+        mock_response.content = (
+            '{"destination": "Tokyo", "research_type": "attractions"}'
+        )
         mock_llm = MagicMock()
         mock_llm.ainvoke = AsyncMock(return_value=mock_response)
         monkeypatch.setattr(agent, "llm", mock_llm)
-        
-        params = await agent._extract_research_parameters("Tell me about Tokyo attractions", mock_state)
-        
+
+        params = await agent._extract_research_parameters(
+            "Tell me about Tokyo attractions", mock_state
+        )
+
         assert params is not None
         assert params["destination"] == "Tokyo"
         assert params["research_type"] == "attractions"
@@ -160,9 +176,9 @@ class TestDestinationResearchAgentNode:
     async def test_research_overview(self):
         """Test overview research functionality."""
         agent = DestinationResearchAgentNode()
-        
+
         result = await agent._research_overview("Paris")
-        
+
         assert "overview_data" in result
         assert "sources" in result
 
@@ -180,17 +196,17 @@ class TestItineraryAgentNode:
     async def test_create_itinerary(self, mock_state):
         """Test itinerary creation functionality."""
         agent = ItineraryAgentNode()
-        
+
         params = {
             "destination": "Paris",
             "start_date": "2024-03-15",
             "end_date": "2024-03-20",
             "interests": ["museums", "food"],
-            "pace": "moderate"
+            "pace": "moderate",
         }
-        
+
         result = await agent._create_itinerary(params, mock_state)
-        
+
         assert "itinerary_id" in result
         assert result["destination"] == "Paris"
         assert result["duration"] == 6  # 5 nights, 6 days
@@ -201,11 +217,11 @@ class TestItineraryAgentNode:
     async def test_generate_daily_schedule(self):
         """Test daily schedule generation."""
         agent = ItineraryAgentNode()
-        
+
         schedule = await agent._generate_daily_schedule(
             "Paris", 3, "2024-03-15", [], [], ["museums"], "moderate", 100
         )
-        
+
         assert len(schedule) == 3  # 3 days
         assert all("day" in day for day in schedule)
         assert all("date" in day for day in schedule)
@@ -214,23 +230,14 @@ class TestItineraryAgentNode:
     def test_calculate_estimated_cost(self):
         """Test cost calculation functionality."""
         agent = ItineraryAgentNode()
-        
+
         daily_schedule = [
-            {
-                "activities": [
-                    {"estimated_cost": 20},
-                    {"estimated_cost": 30}
-                ]
-            },
-            {
-                "activities": [
-                    {"estimated_cost": 25}
-                ]
-            }
+            {"activities": [{"estimated_cost": 20}, {"estimated_cost": 30}]},
+            {"activities": [{"estimated_cost": 25}]},
         ]
-        
+
         result = agent._calculate_estimated_cost(daily_schedule, 50)
-        
+
         assert result["total_estimated_cost"] == 75
         assert result["average_daily_cost"] == 37.5
         assert len(result["daily_costs"]) == 2

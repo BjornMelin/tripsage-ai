@@ -7,24 +7,6 @@ client for use with the OpenAI Agents SDK through the MCPManager abstraction lay
 
 from typing import Any, Dict, List, Optional
 
-try:
-    from agents import function_tool
-except ImportError:
-    # Mock function_tool decorator for testing
-    def function_tool(func_or_name=None, description=None):
-        def decorator(func):
-            if hasattr(func, '__name__'):
-                func._tool_name = getattr(func, '__name__', 'unknown_tool')
-                func._tool_description = getattr(func, '__doc__', 'No description')
-            return func
-        
-        # Handle both @function_tool and @function_tool(name, description)
-        if callable(func_or_name):
-            # Direct usage: @function_tool
-            return decorator(func_or_name)
-        else:
-            # Parametrized usage: @function_tool(name, description)
-            return decorator
 from pydantic import BaseModel, Field
 
 from tripsage.mcp_abstraction.exceptions import TripSageMCPError
@@ -57,7 +39,6 @@ class DeletionRequest(BaseModel):
     observations: List[str] = Field(..., description="Observations to delete")
 
 
-@function_tool
 @with_error_handling
 async def get_knowledge_graph() -> Dict[str, Any]:
     """Retrieve the entire knowledge graph.
@@ -92,7 +73,6 @@ async def get_knowledge_graph() -> Dict[str, Any]:
         raise
 
 
-@function_tool
 @with_error_handling
 async def search_knowledge_graph(query: str) -> Dict[str, Any]:
     """Search the knowledge graph for entities matching a query.
@@ -126,7 +106,6 @@ async def search_knowledge_graph(query: str) -> Dict[str, Any]:
         raise
 
 
-@function_tool
 @with_error_handling
 async def get_entity_details(names: List[str]) -> Dict[str, Any]:
     """Get detailed information about specific entities.
@@ -160,7 +139,6 @@ async def get_entity_details(names: List[str]) -> Dict[str, Any]:
         raise
 
 
-@function_tool
 @with_error_handling
 async def create_knowledge_entities(entities: List[Entity]) -> Dict[str, Any]:
     """Create new entities in the knowledge graph.
@@ -197,7 +175,6 @@ async def create_knowledge_entities(entities: List[Entity]) -> Dict[str, Any]:
         raise
 
 
-@function_tool
 @with_error_handling
 async def create_knowledge_relations(relations: List[Relation]) -> Dict[str, Any]:
     """Create new relations between entities in the knowledge graph.
@@ -234,7 +211,6 @@ async def create_knowledge_relations(relations: List[Relation]) -> Dict[str, Any
         raise
 
 
-@function_tool
 @with_error_handling
 async def add_entity_observations(
     observations: List[Observation],
@@ -273,7 +249,6 @@ async def add_entity_observations(
         raise
 
 
-@function_tool
 @with_error_handling
 async def delete_knowledge_entities(entity_names: List[str]) -> Dict[str, Any]:
     """Delete entities from the knowledge graph.
@@ -307,7 +282,6 @@ async def delete_knowledge_entities(entity_names: List[str]) -> Dict[str, Any]:
         raise
 
 
-@function_tool
 @with_error_handling
 async def delete_knowledge_relations(relations: List[Relation]) -> Dict[str, Any]:
     """Delete relations from the knowledge graph.
@@ -344,7 +318,6 @@ async def delete_knowledge_relations(relations: List[Relation]) -> Dict[str, Any
         raise
 
 
-@function_tool
 @with_error_handling
 async def delete_entity_observations(
     deletions: List[DeletionRequest],
@@ -383,7 +356,6 @@ async def delete_entity_observations(
         raise
 
 
-@function_tool
 @with_error_handling
 async def initialize_agent_memory(
     user_id: Optional[str] = None,
@@ -465,7 +437,6 @@ async def initialize_agent_memory(
         raise
 
 
-@function_tool
 @with_error_handling
 async def update_agent_memory(user_id: str, updates: dict) -> dict:
     """Update agent memory with new knowledge.
@@ -599,7 +570,6 @@ async def _create_fact_relationships(
             result["relations_created"] += 1
 
 
-@function_tool
 @with_error_handling
 async def save_session_summary(
     user_id: str, summary: str, session_id: str
@@ -655,7 +625,6 @@ async def save_session_summary(
 # Domain-specific operations for TripSage
 
 
-@function_tool
 @with_error_handling
 async def find_destinations_by_country(country: str) -> Dict[str, Any]:
     """Find destinations in a specific country using the knowledge graph.
@@ -687,7 +656,6 @@ async def find_destinations_by_country(country: str) -> Dict[str, Any]:
     return {"destinations": filtered_destinations, "count": len(filtered_destinations)}
 
 
-@function_tool
 @with_error_handling
 async def find_nearby_destinations(
     latitude: float, longitude: float, radius_km: float = 50
@@ -747,7 +715,6 @@ async def find_nearby_destinations(
     return {"destinations": nearby_destinations, "count": len(nearby_destinations)}
 
 
-@function_tool
 @with_error_handling
 async def find_accommodations_in_destination(destination_name: str) -> Dict[str, Any]:
     """Find accommodations in a specific destination.
@@ -781,7 +748,6 @@ async def find_accommodations_in_destination(destination_name: str) -> Dict[str,
     }
 
 
-@function_tool
 @with_error_handling
 async def create_trip_entities(
     trip_id: str,
@@ -849,7 +815,6 @@ async def create_trip_entities(
     }
 
 
-@function_tool
 @with_error_handling
 async def find_popular_destinations(limit: int = 10) -> Dict[str, Any]:
     """Find the most popular destinations based on trip relationships.

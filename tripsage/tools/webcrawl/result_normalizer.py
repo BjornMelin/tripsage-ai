@@ -5,9 +5,11 @@ This module provides functionality to normalize results from different web crawl
 sources (Crawl4AI and Firecrawl) into a consistent UnifiedCrawlResult format.
 """
 
+import re
 from datetime import datetime
 from typing import Any, Dict, List
 
+from tripsage.services.webcrawl_service import WebCrawlResult
 from tripsage.tools.webcrawl.models import UnifiedCrawlResult
 from tripsage.utils.logging import get_logger
 
@@ -227,14 +229,121 @@ class ResultNormalizer:
         if "metadata" in raw_output:
             metadata["browser_metadata"] = raw_output["metadata"]
 
-        return UnifiedCrawlResult(
+        result = UnifiedCrawlResult(
             url=original_url,
             title=title,
             main_content_text=text_content,
             html_content=html_content,
             metadata=metadata,
             status="success",
+            source_crawler="playwright_mcp",
         )
+
+        logger.debug(f"Normalized Playwright MCP output for {original_url}")
+        return result
+
+    async def normalize_direct_crawl4ai_output(
+        self, crawl_result: WebCrawlResult, url: str
+    ) -> UnifiedCrawlResult:
+        """
+        Normalize direct Crawl4AI SDK output to UnifiedCrawlResult format.
+
+        Args:
+            crawl_result: Result from direct Crawl4AI SDK
+            url: The original URL
+
+        Returns:
+            UnifiedCrawlResult with normalized content
+        """
+        try:
+            if not crawl_result.success:
+                return UnifiedCrawlResult(
+                    url=url,
+                    status="error",
+                    error_message=crawl_result.error_message
+                    or "Direct Crawl4AI failed",
+                    metadata={
+                        "source_crawler": "crawl4ai_direct",
+                        **crawl_result.metadata,
+                        "performance_metrics": crawl_result.performance_metrics,
+                    },
+                )
+
+            # Extract main content
+            main_content_markdown = crawl_result.markdown or ""
+            main_content_text = self._markdown_to_text(main_content_markdown)
+
+            # Build metadata
+            metadata = {
+                "source_crawler": "crawl4ai_direct",
+                "word_count": len(main_content_text.split())
+                if main_content_text
+                else 0,
+                "html_length": len(crawl_result.html) if crawl_result.html else 0,
+                "status_code": crawl_result.status_code or 200,
+                "has_screenshot": bool(crawl_result.screenshot),
+                "has_pdf": bool(crawl_result.pdf),
+                "crawler_type": "crawl4ai_direct",
+                "performance_metrics": crawl_result.performance_metrics,
+                **crawl_result.metadata,
+            }
+
+            # Performance metrics are included in metadata above
+
+            result = UnifiedCrawlResult(
+                url=url,
+                title=crawl_result.title,
+                main_content_markdown=main_content_markdown,
+                main_content_text=main_content_text,
+                html_content=crawl_result.html,
+                structured_data=crawl_result.structured_data,
+                metadata=metadata,
+                status="success",
+            )
+
+            logger.debug(f"Normalized direct Crawl4AI output for {url}")
+            return result
+
+        except Exception as e:
+            logger.error(
+                f"Error normalizing direct Crawl4AI output for {url}: {str(e)}"
+            )
+            return UnifiedCrawlResult(
+                url=url,
+                status="error",
+                error_message=f"Normalization error: {str(e)}",
+                metadata={
+                    "source_crawler": "crawl4ai_direct",
+                    "error_type": type(e).__name__,
+                },
+            )
+
+    def _markdown_to_text(self, markdown: str) -> str:
+        """
+        Convert markdown to plain text by removing markdown formatting.
+
+        Args:
+            markdown: Markdown content
+
+        Returns:
+            Plain text content
+        """
+        if not markdown:
+            return ""
+
+        # Simple markdown to text conversion
+        # Remove markdown headers
+        text = re.sub(r"^#+\s+", "", markdown, flags=re.MULTILINE)
+        # Remove bold and italic
+        text = re.sub(r"\*\*([^*]+)\*\*", r"\1", text)
+        text = re.sub(r"\*([^*]+)\*", r"\1", text)
+        # Remove links but keep text
+        text = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", text)
+        # Remove code blocks
+        text = re.sub(r"```[^`]*```", "", text, flags=re.DOTALL)
+        text = re.sub(r"`([^`]+)`", r"\1", text)
+
+        return text.strip()
 
 
 # Singleton instance

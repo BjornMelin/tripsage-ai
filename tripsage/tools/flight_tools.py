@@ -8,8 +8,6 @@ Duffel Flights MCP client via the MCPManager abstraction layer.
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
 
-from agents import function_tool
-
 from tripsage.mcp_abstraction.exceptions import TripSageMCPError
 from tripsage.mcp_abstraction.manager import mcp_manager
 from tripsage.tools.schemas.flights import (
@@ -33,7 +31,6 @@ from tripsage.utils.logging import get_logger
 logger = get_logger(__name__)
 
 
-@function_tool
 @with_error_handling
 async def search_flights_tool(
     origin: str,
@@ -235,7 +232,6 @@ async def search_flights_tool(
         raise
 
 
-@function_tool
 @with_error_handling
 async def search_airports_tool(
     search_term: Optional[str] = None,
@@ -304,7 +300,6 @@ async def search_airports_tool(
         raise
 
 
-@function_tool
 @with_error_handling
 async def get_flight_prices_tool(
     origin: str,
@@ -390,7 +385,6 @@ async def get_flight_prices_tool(
         raise
 
 
-@function_tool
 @with_error_handling
 async def get_offer_details_tool(
     offer_id: str,
@@ -441,7 +435,6 @@ async def get_offer_details_tool(
         raise
 
 
-@function_tool
 @with_error_handling
 async def track_flight_prices_tool(
     origin: str,
@@ -519,7 +512,6 @@ async def track_flight_prices_tool(
         raise
 
 
-@function_tool
 @with_error_handling
 async def search_flexible_dates_tool(
     origin: str,
@@ -678,7 +670,6 @@ async def search_flexible_dates_tool(
         raise
 
 
-@function_tool
 @with_error_handling
 async def search_multi_city_flights_tool(
     segments: List[Dict[str, Any]],
