@@ -113,10 +113,16 @@ async def create_travel_plan(params: Dict[str, Any]) -> Dict[str, Any]:
         await cache.set(cache_key, travel_plan, ttl=86400 * 7)  # 7 days
 
         # Create memory entities for the plan
+        # TODO: Update to use direct Neo4j integration in Week 2 migration
         try:
-            from tripsage.clients.memory import get_client as get_memory_client
+            # from tripsage.clients.memory import get_client as get_memory_client
+            # memory_client = get_memory_client()
 
-            memory_client = get_memory_client()
+            # Temporary: Use MCP memory tools directly until Neo4j migration
+            from tripsage.mcp_abstraction.manager import MCPManager
+
+            mcp_manager = MCPManager()
+            memory_client = mcp_manager
 
             # Create plan entity
             plan_entity = {
@@ -222,10 +228,16 @@ async def update_travel_plan(params: Dict[str, Any]) -> Dict[str, Any]:
         await cache.set(cache_key, travel_plan, ttl=86400 * 7)  # 7 days
 
         # Update memory entity
+        # TODO: Update to use direct Neo4j integration in Week 2 migration
         try:
-            from tripsage.clients.memory import get_client as get_memory_client
+            # from tripsage.clients.memory import get_client as get_memory_client
+            # memory_client = get_memory_client()
 
-            memory_client = get_memory_client()
+            # Temporary: Use MCP memory tools directly until Neo4j migration
+            from tripsage.mcp_abstraction.manager import MCPManager
+
+            mcp_manager = MCPManager()
+            memory_client = mcp_manager
 
             # Add new observations
             observations = []
@@ -615,10 +627,16 @@ async def save_travel_plan(params: Dict[str, Any]) -> Dict[str, Any]:
         await cache.set(cache_key, travel_plan, ttl=86400 * 30)  # 30 days
 
         # Update knowledge graph
+        # TODO: Update to use direct Neo4j integration in Week 2 migration
         try:
-            from tripsage.clients.memory import get_client as get_memory_client
+            # from tripsage.clients.memory import get_client as get_memory_client
+            # memory_client = get_memory_client()
 
-            memory_client = get_memory_client()
+            # Temporary: Use MCP memory tools directly until Neo4j migration
+            from tripsage.mcp_abstraction.manager import MCPManager
+
+            mcp_manager = MCPManager()
+            memory_client = mcp_manager
 
             # Add finalization observation if finalized
             if finalize:

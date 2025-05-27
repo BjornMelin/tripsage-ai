@@ -1,8 +1,8 @@
 """
-Chat Orchestration Service using MCP Tool Integration.
+Chat Orchestration Service using direct database integration.
 
-This service demonstrates Phase 5 patterns for database operations via MCP tools
-and provides chat orchestration with tool calling capabilities.
+This service provides chat orchestration with direct database operations
+for improved performance and simplified architecture.
 """
 
 import asyncio
@@ -10,7 +10,7 @@ import json
 import time
 from typing import Any, Dict, List, Optional
 
-from tripsage.mcp_abstraction.manager import MCPManager
+from tripsage.services.database_service import database_service
 from tripsage.services.tool_calling_service import (
     ToolCallRequest,
     ToolCallResponse,
@@ -30,16 +30,12 @@ class ChatOrchestrationError(TripSageError):
 
 
 class ChatOrchestrationService:
-    """Orchestrate chat interactions with MCP tool calling."""
+    """Orchestrate chat interactions with direct database operations."""
 
-    def __init__(self, mcp_manager: Optional[MCPManager] = None):
-        """Initialize the chat orchestration service.
-
-        Args:
-            mcp_manager: Optional MCP manager instance. If None, uses global instance.
-        """
-        self.mcp_manager = mcp_manager or MCPManager()
-        self.tool_call_service = ToolCallService(self.mcp_manager)
+    def __init__(self):
+        """Initialize the chat orchestration service."""
+        self.database = database_service
+        self.tool_call_service = ToolCallService()
         self.logger = logger
 
     def _sanitize_sql_value(self, value: Any) -> str:
