@@ -190,7 +190,7 @@ class TestSpecificCoverageLines:
             MemorySearchResult(
                 id="test",
                 memory="test memory",
-                created_at=datetime.now(datetime.UTC),
+                created_at=datetime.now(timezone.utc),
                 user_id="test_user",
             )
         ]
@@ -317,7 +317,7 @@ class TestSpecificCoverageLines:
                 metadata={"category": "activity_preference"},
                 categories=["travel", "activity"],
                 similarity=0.9,
-                created_at=datetime.now(datetime.UTC),
+                created_at=datetime.now(timezone.utc),
                 user_id="test_user",
             ),
             MemorySearchResult(
@@ -326,7 +326,7 @@ class TestSpecificCoverageLines:
                 metadata={"category": "accommodation"},
                 categories=["travel", "accommodation"],
                 similarity=0.85,
-                created_at=datetime.now(datetime.UTC),
+                created_at=datetime.now(timezone.utc),
                 user_id="test_user",
             ),
         ]

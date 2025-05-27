@@ -226,7 +226,8 @@ class MemorySearchQuery(BaseModel):
     category_filter: Optional[MemoryCategory] = Field(
         default=None,
         description=(
-            "Filter memories by category (e.g., 'travel', 'preferences', 'destinations')"
+            "Filter memories by category "
+            "(e.g., 'travel', 'preferences', 'destinations')"
         ),
     )
 

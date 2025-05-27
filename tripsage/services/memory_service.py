@@ -16,7 +16,7 @@ import asyncio
 import hashlib
 import json
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
 from mem0 import Memory
@@ -194,7 +194,7 @@ class TripSageMemoryService(ServiceProtocol):
             enhanced_metadata = {
                 "domain": "travel_planning",
                 "session_id": session_id,
-                "timestamp": datetime.now(datetime.UTC).isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
                 "source": "conversation",
             }
             if metadata:
@@ -282,7 +282,7 @@ class TripSageMemoryService(ServiceProtocol):
                     categories=result.get("categories", []),
                     similarity=result.get("score", 0.0),
                     created_at=datetime.fromisoformat(
-                        result.get("created_at", datetime.now(datetime.UTC).isoformat())
+                        result.get("created_at", datetime.now(timezone.utc).isoformat())
                     ),
                     user_id=user_id,
                 )

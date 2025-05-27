@@ -10,7 +10,7 @@ Tests the complete memory service functionality including:
 """
 
 import asyncio
-from datetime import datetime
+from datetime import datetime, timezone
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -47,7 +47,7 @@ class TestTripSageMemoryService:
                         "metadata": {"category": "travel_preference"},
                         "categories": ["travel"],
                         "score": 0.85,
-                        "created_at": datetime.now(datetime.UTC).isoformat(),
+                        "created_at": datetime.now(timezone.utc).isoformat(),
                     }
                 ]
             }
@@ -60,7 +60,7 @@ class TestTripSageMemoryService:
                         "memory": "User prefers beach destinations",
                         "metadata": {"category": "travel_preference"},
                         "categories": ["travel"],
-                        "created_at": datetime.now(datetime.UTC).isoformat(),
+                        "created_at": datetime.now(timezone.utc).isoformat(),
                     }
                 ]
             }
@@ -73,7 +73,7 @@ class TestTripSageMemoryService:
                         "memory": "User prefers beach destinations",
                         "metadata": {"category": "travel_preference"},
                         "categories": ["travel"],
-                        "created_at": datetime.now(datetime.UTC).isoformat(),
+                        "created_at": datetime.now(timezone.utc).isoformat(),
                     }
                 ]
             }
@@ -272,7 +272,7 @@ class TestTripSageMemoryService:
             metadata={"category": "travel_preference"},
             categories=["travel", "preference"],
             similarity=0.85,
-            created_at=datetime.now(datetime.UTC),
+            created_at=datetime.now(timezone.utc),
             user_id="user_123",
         )
 
@@ -404,7 +404,7 @@ class TestMemoryServiceIntegration:
                     "metadata": {"category": "trip_planning"},
                     "categories": ["travel", "planning"],
                     "score": 0.9,
-                    "created_at": datetime.now(datetime.UTC).isoformat(),
+                    "created_at": datetime.now(timezone.utc).isoformat(),
                 }
             ]
         }
@@ -416,7 +416,7 @@ class TestMemoryServiceIntegration:
                     "memory": "User is planning a Japan trip for cherry blossoms",
                     "metadata": {"category": "trip_planning"},
                     "categories": ["travel", "planning"],
-                    "created_at": datetime.now(datetime.UTC).isoformat(),
+                    "created_at": datetime.now(timezone.utc).isoformat(),
                 }
             ]
         }

@@ -5,7 +5,7 @@ This file focuses on testing edge cases, error paths, and internal methods
 that weren't covered in the main test suite.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -40,7 +40,7 @@ class TestMemoryServiceCoverage:
                     "metadata": {"category": "test"},
                     "categories": ["travel"],
                     "score": 0.8,
-                    "created_at": datetime.now(datetime.UTC).isoformat(),
+                    "created_at": datetime.now(timezone.utc).isoformat(),
                 }
             ]
         }
@@ -51,21 +51,21 @@ class TestMemoryServiceCoverage:
                     "memory": "User prefers luxury hotels",
                     "metadata": {"category": "accommodation"},
                     "categories": ["travel", "accommodation"],
-                    "created_at": datetime.now(datetime.UTC).isoformat(),
+                    "created_at": datetime.now(timezone.utc).isoformat(),
                 },
                 {
                     "id": "mem-2",
                     "memory": "Budget range is $2000-3000",
                     "metadata": {"category": "budget"},
                     "categories": ["travel", "budget"],
-                    "created_at": datetime.now(datetime.UTC).isoformat(),
+                    "created_at": datetime.now(timezone.utc).isoformat(),
                 },
                 {
                     "id": "mem-3",
                     "memory": "Visited Japan 3 times",
                     "metadata": {"category": "destination"},
                     "categories": ["travel", "destination"],
-                    "created_at": datetime.now(datetime.UTC).isoformat(),
+                    "created_at": datetime.now(timezone.utc).isoformat(),
                 },
             ]
         }
@@ -90,7 +90,7 @@ class TestMemoryServiceCoverage:
                 metadata={},
                 categories=["test"],
                 similarity=0.9,
-                created_at=datetime.now(datetime.UTC),
+                created_at=datetime.now(timezone.utc),
                 user_id="user_123",
             )
         ]
@@ -197,7 +197,7 @@ class TestMemoryServiceCoverage:
                 metadata={"category": "travel_preference"},
                 categories=["travel"],
                 similarity=0.85,
-                created_at=datetime.now(datetime.UTC),
+                created_at=datetime.now(timezone.utc),
                 user_id="user_123",
             )
         ]
@@ -334,7 +334,7 @@ class TestMemoryServiceCoverage:
         result = MemorySearchResult(
             id="test",
             memory="minimal memory",
-            created_at=datetime.now(datetime.UTC),
+            created_at=datetime.now(timezone.utc),
             user_id="test_user",
         )
         assert result.metadata == {}
@@ -348,7 +348,7 @@ class TestMemoryServiceCoverage:
             metadata={"key1": "value1", "key2": ["item1", "item2"]},
             categories=["travel", "accommodation", "luxury"],
             similarity=0.99,
-            created_at=datetime.now(datetime.UTC),
+            created_at=datetime.now(timezone.utc),
             user_id="test_user",
         )
         assert len(result.metadata) == 2
@@ -421,7 +421,7 @@ class TestPerformanceAndScaling:
                     "metadata": {"index": i},
                     "categories": ["test"],
                     "score": 0.8,
-                    "created_at": datetime.now(datetime.UTC).isoformat(),
+                    "created_at": datetime.now(timezone.utc).isoformat(),
                 }
                 for i in range(100)  # 100 memories
             ]
@@ -445,7 +445,7 @@ class TestPerformanceAndScaling:
                 metadata={"index": i},
                 categories=["performance_test"],
                 similarity=0.8,
-                created_at=datetime.now(datetime.UTC),
+                created_at=datetime.now(timezone.utc),
                 user_id="performance_user",
             )
             for i in range(50)
@@ -454,13 +454,13 @@ class TestPerformanceAndScaling:
         # Test cache operations with large dataset
         cache_key = "performance_test_key"
 
-        start_time = datetime.now(datetime.UTC)
+        start_time = datetime.now(timezone.utc)
         service._cache_result(cache_key, large_results)
-        cache_time = (datetime.now(datetime.UTC) - start_time).total_seconds()
+        cache_time = (datetime.now(timezone.utc) - start_time).total_seconds()
 
-        start_time = datetime.now(datetime.UTC)
+        start_time = datetime.now(timezone.utc)
         cached_results = service._get_cached_result(cache_key)
-        retrieve_time = (datetime.now(datetime.UTC) - start_time).total_seconds()
+        retrieve_time = (datetime.now(timezone.utc) - start_time).total_seconds()
 
         # Verify performance is reasonable
         assert cache_time < 1.0  # Should cache in under 1 second
