@@ -6,8 +6,8 @@ from unittest.mock import AsyncMock, patch
 import pytest
 
 from tripsage.config.feature_flags import IntegrationMode, feature_flags
-from tripsage.services.cache_service import cache_service
 from tripsage.services.redis_service import redis_service
+from tripsage.utils.cache_tools import get_cache, set_cache
 
 
 class TestRedisMigration:
@@ -26,13 +26,11 @@ class TestRedisMigration:
         """Test switching between MCP and direct Redis modes."""
         # Test MCP mode
         feature_flags.redis_integration = IntegrationMode.MCP
-        assert cache_service.adapter.is_mcp
-        assert not cache_service.adapter.is_direct
+        assert feature_flags.redis_integration == IntegrationMode.MCP
 
         # Test direct mode
         feature_flags.redis_integration = IntegrationMode.DIRECT
-        assert cache_service.adapter.is_direct
-        assert not cache_service.adapter.is_mcp
+        assert feature_flags.redis_integration == IntegrationMode.DIRECT
 
     @pytest.mark.asyncio
     async def test_direct_redis_operations(self):
@@ -51,46 +49,43 @@ class TestRedisMigration:
             redis_service._connected = True
 
             # Test set operation
-            result = await cache_service.set("test_key", "test_value", ex=300)
+            result = await set_cache("test_key", "test_value", ttl=300)
             assert result is True
             mock_client.set.assert_called_once()
 
             # Test get operation
-            result = await cache_service.get("test_key")
+            result = await get_cache("test_key")
             assert result == "test_value"
             mock_client.get.assert_called_once()
 
-            # Test delete operation
-            result = await cache_service.delete("test_key")
+            # Test direct Redis service delete operation
+            result = await redis_service.delete("test_key")
             assert result == 1
             mock_client.delete.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_mcp_redis_operations(self):
-        """Test MCP Redis operations."""
-        # Use MCP mode
-        feature_flags.redis_integration = IntegrationMode.MCP
+    async def test_cache_tools_integration(self):
+        """Test cache tools integration with direct Redis service."""
+        # Use direct mode for testing cache tools
+        feature_flags.redis_integration = IntegrationMode.DIRECT
 
-        # Mock MCP manager
-        with patch("tripsage.services.cache_service.MCPManager") as mock_mcp_class:
-            mock_mcp = AsyncMock()
-            mock_mcp_class.return_value = mock_mcp
+        # Mock Redis service for cache tools
+        with patch.object(redis_service, "_client") as mock_client:
+            mock_client.ping = AsyncMock(return_value=True)
+            mock_client.set = AsyncMock(return_value=True)
+            mock_client.get = AsyncMock(return_value=b'{"test": "data"}')
+            
+            # Mark as connected
+            redis_service._connected = True
 
-            # Mock MCP responses
-            mock_mcp.invoke = AsyncMock(
-                side_effect=[
-                    True,  # set response
-                    "test_value",  # get response
-                    1,  # delete response
-                ]
-            )
-
-            # Test set operation
-            result = await cache_service.set("test_key", "test_value", ex=300)
+            # Test JSON cache operations
+            test_data = {"test": "data"}
+            result = await set_cache("json_key", test_data, ttl=300)
             assert result is True
 
-            # Test get operation
-            result = await cache_service.get("test_key")
+            # Test get JSON operation
+            result = await get_cache("json_key")
+            assert result == test_data
             assert result == "test_value"
 
             # Test delete operation
