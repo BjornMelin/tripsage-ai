@@ -5,12 +5,15 @@ This test module verifies that all Phase 2 agent nodes can be instantiated
 and their basic methods work properly.
 """
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock
+
+import pytest
 
 from tripsage.orchestration.nodes.accommodation_agent import AccommodationAgentNode
 from tripsage.orchestration.nodes.budget_agent import BudgetAgentNode
-from tripsage.orchestration.nodes.destination_research_agent import DestinationResearchAgentNode
+from tripsage.orchestration.nodes.destination_research_agent import (
+    DestinationResearchAgentNode,
+)
 from tripsage.orchestration.nodes.itinerary_agent import ItineraryAgentNode
 from tripsage.orchestration.state import TravelPlanningState
 

@@ -14,9 +14,9 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
 
 from tripsage.config.app_settings import settings
+from tripsage.orchestration.mcp_bridge import get_mcp_bridge
 from tripsage.orchestration.nodes.base import BaseAgentNode
 from tripsage.orchestration.state import TravelPlanningState
-from tripsage.orchestration.mcp_bridge import get_mcp_bridge
 from tripsage.utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -40,7 +40,7 @@ class AccommodationAgentNode(BaseAgentNode):
             temperature=settings.agent.temperature,
             api_key=settings.openai_api_key.get_secret_value(),
         )
-        
+
         # MCP bridge will be initialized async
         self.mcp_bridge = None
 
@@ -48,7 +48,7 @@ class AccommodationAgentNode(BaseAgentNode):
         """Initialize accommodation-specific tools and MCP integrations."""
         if not self.mcp_bridge:
             self.mcp_bridge = await get_mcp_bridge()
-            
+
         self.available_tools = await self.mcp_bridge.get_tools()
 
         logger.info(
@@ -67,7 +67,7 @@ class AccommodationAgentNode(BaseAgentNode):
         """
         # Ensure tools are initialized
         await self._initialize_tools()
-        
+
         user_message = state["messages"][-1]["content"] if state["messages"] else ""
 
         # Extract accommodation search parameters from user message and context
@@ -110,7 +110,7 @@ class AccommodationAgentNode(BaseAgentNode):
         self, message: str, state: TravelPlanningState
     ) -> Optional[Dict[str, Any]]:
         """
-        Extract accommodation search parameters from user message and conversation context.
+        Extract accommodation search parameters from user message and context.
 
         Args:
             message: User message to analyze
@@ -126,7 +126,7 @@ class AccommodationAgentNode(BaseAgentNode):
         User message: "{message}"
         
         Context from conversation:
-        - Previous accommodation searches: {len(state.get("accommodation_searches", []))}
+        - Previous searches: {len(state.get("accommodation_searches", []))}
         - User preferences: {state.get("user_preferences", "None")}
         - Travel dates mentioned: {state.get("travel_dates", "None")}
         - Destination info: {state.get("destination_info", "None")}
@@ -148,13 +148,13 @@ class AccommodationAgentNode(BaseAgentNode):
         search, return null.
         
         Example: {{"location": "Paris", "check_in_date": "2024-03-15", 
-                   "check_out_date": "2024-03-20", "guests": 2, "property_type": "hotel"}}
+                   "check_out_date": "2024-03-20", "guests": 2}}
         """
 
         try:
             messages = [
                 SystemMessage(
-                    content="You are an accommodation search parameter extraction assistant."
+                    content="You are an accommodation parameter extraction assistant."
                 ),
                 HumanMessage(content=extraction_prompt),
             ]
@@ -196,11 +196,11 @@ class AccommodationAgentNode(BaseAgentNode):
                 "airbnb_search_accommodations", search_params
             )
 
-            logger.info(
-                f"Accommodation search completed: "
-                f"{len(result.get('accommodations', []) if isinstance(result, dict) else [])} properties found"
+            properties_found = len(
+                result.get("accommodations", []) if isinstance(result, dict) else []
             )
-            
+            logger.info(f"Search completed: {properties_found} properties found")
+
             # Ensure result is in expected format
             if isinstance(result, str):
                 try:
@@ -209,7 +209,7 @@ class AccommodationAgentNode(BaseAgentNode):
                     result = {"error": "Invalid response format from search service"}
             elif not isinstance(result, dict):
                 result = {"error": "Unexpected response format from search service"}
-                
+
             return result
 
         except Exception as e:
@@ -235,7 +235,7 @@ class AccommodationAgentNode(BaseAgentNode):
         """
         if search_results.get("error"):
             content = (
-                f"I apologize, but I encountered an issue searching for accommodations: "
+                f"I apologize, but I encountered an issue searching: "
                 f"{search_results['error']}. Let me help you try a different approach."
             )
         else:
@@ -280,15 +280,15 @@ class AccommodationAgentNode(BaseAgentNode):
                     )
 
                 content += (
-                    "Would you like me to show more details about any of these properties "
+                    "Would you like details about any properties "
                     "or search with different criteria?"
                 )
             else:
                 location = search_params.get("location", "the specified location")
                 content = (
                     f"I couldn't find any accommodations in {location} "
-                    f"for the specified dates and criteria. "
-                    f"Would you like to try different dates, location, or adjust your preferences?"
+                    f"for the specified dates. "
+                    f"Would you like to try different dates or adjust preferences?"
                 )
 
         return self._create_response_message(
@@ -342,10 +342,9 @@ class AccommodationAgentNode(BaseAgentNode):
         except Exception as e:
             logger.error(f"Error generating accommodation response: {str(e)}")
             content = (
-                "I'd be happy to help you find accommodations! To get started, I'll need "
-                "to know your destination, check-in and check-out dates, and any preferences "
-                "for property type (hotel, apartment, house) or amenities. "
-                "What kind of stay are you looking for?"
+                "I'd be happy to help you find accommodations! I'll need "
+                "your destination, check-in/check-out dates, and preferences "
+                "for property type or amenities. What are you looking for?"
             )
 
         return self._create_response_message(content)

@@ -85,7 +85,7 @@ class SupabaseCheckpointManager:
                 "?sslmode=require"
             )
 
-            logger.debug(f"Built connection string for project: {project_ref}")
+            logger.debug("Built connection string for Supabase project")
             return self._connection_string
 
         except Exception as e:

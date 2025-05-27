@@ -687,7 +687,6 @@ class ItineraryAgentNode(BaseAgentNode):
         self, result: Dict[str, Any], params: Dict[str, Any]
     ) -> str:
         """Format itinerary optimization response."""
-        itinerary_id = result.get("itinerary_id", "")
         destination = result.get("destination", "")
 
         content = f"I've optimized your itinerary for {destination}!\n\n"
