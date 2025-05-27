@@ -177,7 +177,7 @@ class KeyService:
 
             # Convert to API key response models
             keys = []
-            now = datetime.utcnow()
+            now = datetime.now(datetime.UTC)
 
             for key_data in result["data"]:
                 # Check if the key is expired
@@ -260,7 +260,7 @@ class KeyService:
             encrypted_key = self._encrypt_api_key(key_data.key)
 
             # Current time
-            now = datetime.utcnow()
+            now = datetime.now(datetime.UTC)
 
             # Use Supabase MCP to create the key
             supabase_mcp = await self.mcp_manager.initialize_mcp("supabase")
@@ -355,7 +355,7 @@ class KeyService:
             encrypted_key = self._encrypt_api_key(new_key)
 
             # Current time
-            now = datetime.utcnow()
+            now = datetime.now(datetime.UTC)
 
             # Use Supabase MCP to update the key
             supabase_mcp = await self.mcp_manager.initialize_mcp("supabase")
@@ -485,7 +485,7 @@ class KeyService:
             key_data = result["data"][0]
 
             # Check if the key is expired
-            now = datetime.utcnow()
+            now = datetime.now(datetime.UTC)
             if (
                 key_data.get("expires_at")
                 and datetime.fromisoformat(

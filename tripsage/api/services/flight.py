@@ -571,7 +571,7 @@ class FlightService:
             user_id=user_id,
             trip_id=request.trip_id,
             offer=offer,
-            saved_at=datetime.now(),
+            saved_at=datetime.now(datetime.UTC),
             notes=request.notes,
         )
 

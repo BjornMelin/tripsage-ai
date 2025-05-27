@@ -70,7 +70,7 @@ class ItineraryService:
             )
             current_date += timedelta(days=1)
 
-        now = datetime.now().isoformat()
+        now = datetime.now(datetime.UTC).isoformat()
 
         # Create the itinerary object
         itinerary = Itinerary(
@@ -143,7 +143,7 @@ class ItineraryService:
             itinerary.share_settings = request.share_settings
 
         # Update the 'updated_at' timestamp
-        itinerary.updated_at = datetime.now().isoformat()
+        itinerary.updated_at = datetime.now(datetime.UTC).isoformat()
 
         # If dates have changed, we need to update the days array
         if request.start_date is not None or request.end_date is not None:
@@ -353,7 +353,7 @@ class ItineraryService:
             raise ValueError(msg)
 
         # Update the itinerary's updated_at timestamp
-        itinerary.updated_at = datetime.now().isoformat()
+        itinerary.updated_at = datetime.now(datetime.UTC).isoformat()
 
         # Store the updated itinerary
         self._itineraries[user_id][itinerary_id] = itinerary
@@ -492,7 +492,7 @@ class ItineraryService:
                 setattr(found_item, key, value)
 
         # Update the itinerary's updated_at timestamp
-        itinerary.updated_at = datetime.now().isoformat()
+        itinerary.updated_at = datetime.now(datetime.UTC).isoformat()
 
         # Store the updated itinerary
         self._itineraries[user_id][itinerary_id] = itinerary
@@ -538,7 +538,7 @@ class ItineraryService:
         found_day.items = [item for item in found_day.items if item.id != item_id]
 
         # Update the itinerary's updated_at timestamp
-        itinerary.updated_at = datetime.now().isoformat()
+        itinerary.updated_at = datetime.now(datetime.UTC).isoformat()
 
         # Store the updated itinerary
         self._itineraries[user_id][itinerary_id] = itinerary
@@ -786,7 +786,7 @@ class ItineraryService:
             day.items = items_with_time + items_without_time
 
         # Update the itinerary's updated_at timestamp
-        optimized_itinerary.updated_at = datetime.now().isoformat()
+        optimized_itinerary.updated_at = datetime.now(datetime.UTC).isoformat()
 
         # Calculate an optimization score (placeholder)
         optimization_score = 0.75  # In a real implementation, this would be calculated
