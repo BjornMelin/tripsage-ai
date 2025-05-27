@@ -112,7 +112,8 @@ class DuffelHTTPClient:
             headers=self._get_default_headers(),
         )
 
-        # Configure rate limiting (use settings if available, otherwise use provided values or defaults)
+        # Configure rate limiting (use settings if available,
+        # otherwise use provided values or defaults)
         if self._settings and self._is_direct_mode:
             self._rate_limit_window = self._settings.duffel_rate_limit_window
             self._max_requests_per_minute = (
@@ -292,7 +293,9 @@ class DuffelHTTPClient:
                     )
                     return response_data
                 except Exception as e:
-                    raise DuffelAPIError(f"Failed to parse response JSON: {str(e)}") from e
+                    raise DuffelAPIError(
+                        f"Failed to parse response JSON: {str(e)}"
+                    ) from e
 
             except (
                 httpx.TimeoutException,
@@ -344,7 +347,8 @@ class DuffelHTTPClient:
             },
         )
         raise DuffelAPIError(
-            f"Request failed after {self.max_retries + 1} attempts. Last error: {str(last_exception)}"
+            f"Request failed after {self.max_retries + 1} attempts. "
+            f"Last error: {str(last_exception)}"
         )
 
     @with_error_handling
@@ -363,7 +367,8 @@ class DuffelHTTPClient:
             DuffelAPIError: When the search request fails
         """
         logger.info(
-            f"Searching flights from {search_params.origin} to {search_params.destination}"
+            f"Searching flights from {search_params.origin} to "
+            f"{search_params.destination}"
         )
 
         # Convert search params to Duffel API format

@@ -79,7 +79,9 @@ class FlightService:
             try:
                 departure_date = datetime.fromisoformat(departure_date).date()
             except ValueError as e:
-                raise ValueError(f"Invalid departure date format: {departure_date}") from e
+                raise ValueError(
+                    f"Invalid departure date format: {departure_date}"
+                ) from e
 
         if departure_date < today:
             raise ValueError("Departure date cannot be in the past")
@@ -93,7 +95,9 @@ class FlightService:
                 try:
                     return_date = datetime.fromisoformat(return_date).date()
                 except ValueError as e:
-                    raise ValueError(f"Invalid return date format: {return_date}") from e
+                    raise ValueError(
+                        f"Invalid return date format: {return_date}"
+                    ) from e
 
             if return_date < departure_date:
                 raise ValueError("Return date cannot be before departure date")
@@ -238,7 +242,8 @@ class FlightService:
         """
         logger.info(
             f"Searching for flights from {request.origin} to {request.destination} "
-            f"on {request.departure_date} using {feature_flags.flights_integration.value} integration"
+            f"on {request.departure_date} using "
+            f"{feature_flags.flights_integration.value} integration"
         )
 
         # Validate request parameters
