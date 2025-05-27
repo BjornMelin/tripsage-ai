@@ -16,6 +16,7 @@ try:
 except ImportError:
     # Mock for testing environments where agents package may not be available
     from unittest.mock import MagicMock
+
     Agent = MagicMock
     function_tool = MagicMock
 
