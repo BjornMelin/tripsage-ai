@@ -30,6 +30,23 @@ class SupabaseService(BaseService):
             return
 
         try:
+            # Validate Supabase configuration
+            supabase_url = self.settings.database.supabase_url
+            supabase_key = self.settings.database.supabase_anon_key.get_secret_value()
+
+            if not supabase_url or not supabase_url.startswith("https://"):
+                raise ValueError(
+                    f"Invalid Supabase URL format: {supabase_url}. "
+                    "Must be a valid HTTPS URL"
+                )
+
+            if not supabase_key or len(supabase_key) < 20:
+                raise ValueError(
+                    "Invalid Supabase API key: key is missing or too short"
+                )
+
+            logger.info(f"Connecting to Supabase at {supabase_url}")
+
             # Client options for better performance
             options = ClientOptions(
                 auto_refresh_token=self.settings.database.supabase_auto_refresh_token,
@@ -39,8 +56,8 @@ class SupabaseService(BaseService):
 
             # Create Supabase client
             self._client = create_client(
-                self.settings.database.supabase_url,
-                self.settings.database.supabase_anon_key.get_secret_value(),
+                supabase_url,
+                supabase_key,
                 options=options,
             )
 
@@ -494,7 +511,8 @@ class SupabaseService(BaseService):
 
             # Get connection info
             connection_stats = await self.execute_sql(
-                "SELECT count(*) as active_connections FROM pg_stat_activity WHERE state = 'active'"
+                "SELECT count(*) as active_connections FROM pg_stat_activity "
+                "WHERE state = 'active'"
             )
             stats["connections"] = connection_stats
 

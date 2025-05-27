@@ -125,7 +125,7 @@ class FeatureFlags(BaseSettings):
         direct_count = 0
         mcp_count = 0
 
-        for field_name in self.__fields__:
+        for field_name in self.__class__.model_fields:
             if field_name.endswith("_integration"):
                 service_name = field_name.replace("_integration", "")
                 mode = getattr(self, field_name)

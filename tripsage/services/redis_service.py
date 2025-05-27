@@ -30,8 +30,17 @@ class RedisService(BaseService):
             return
 
         try:
-            # Parse Redis URL from settings
+            # Parse and validate Redis URL from settings
             redis_url = str(self.settings.redis.url)
+
+            # Validate Redis URL format
+            if not redis_url or not redis_url.startswith(("redis://", "rediss://")):
+                raise ValueError(
+                    f"Invalid Redis URL format: {redis_url}. "
+                    "Must start with redis:// or rediss://"
+                )
+
+            logger.info(f"Connecting to Redis at {redis_url}")
 
             # Create connection pool for better performance
             self._connection_pool = redis.ConnectionPool.from_url(
