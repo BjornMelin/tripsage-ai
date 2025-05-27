@@ -1,5 +1,6 @@
 """
 Tests for the WebCrawl service with direct Crawl4AI SDK integration.
+Fixed version with proper mocking to eliminate real HTTP calls.
 """
 
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -77,7 +78,7 @@ class TestWebCrawlResult:
 
 
 class TestWebCrawlService:
-    """Test WebCrawlService class."""
+    """Test WebCrawlService class with proper mocking."""
 
     @pytest.fixture
     def service(self):
@@ -166,26 +167,41 @@ class TestWebCrawlService:
         assert config.excluded_tags == ["script", "style"]
 
     @pytest.mark.asyncio
-    async def test_crawl_url_success(self, service, mock_crawl_result):
-        """Test successful URL crawling."""
+    async def test_crawl_url_success_with_proper_mocking(
+        self, service, mock_crawl_result
+    ):
+        """Test successful URL crawling with proper AsyncWebCrawler mocking."""
         url = "https://example.com"
         params = WebCrawlParams()
 
-        with patch("crawl4ai.AsyncWebCrawler") as mock_crawler_class:
+        # Mock the entire crawl4ai module at import level
+        with patch(
+            "tripsage.services.webcrawl_service.AsyncWebCrawler"
+        ) as mock_crawler_class:
+            # Create a proper async context manager mock
             mock_crawler = AsyncMock()
+            mock_crawler.arun = AsyncMock(return_value=mock_crawl_result)
+
+            # Set up the async context manager protocol
             mock_crawler.__aenter__ = AsyncMock(return_value=mock_crawler)
             mock_crawler.__aexit__ = AsyncMock(return_value=None)
-            mock_crawler.arun = AsyncMock(return_value=mock_crawl_result)
+
+            # Make the class return our mock instance
             mock_crawler_class.return_value = mock_crawler
 
             result = await service.crawl_url(url, params)
 
+            # Verify the result
             assert result.success is True
             assert result.url == url
             assert result.title == "Example Page"
             assert "Example Content" in result.markdown
             assert result.performance_metrics["crawler_type"] == "crawl4ai_direct"
             assert "duration_ms" in result.performance_metrics
+
+            # Verify the crawler was called correctly
+            mock_crawler_class.assert_called_once()
+            mock_crawler.arun.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_crawl_url_crawl4ai_failure(self, service):
@@ -197,11 +213,13 @@ class TestWebCrawlService:
         mock_crawl_result.success = False
         mock_crawl_result.error_message = "Page not found"
 
-        with patch("crawl4ai.AsyncWebCrawler") as mock_crawler_class:
+        with patch(
+            "tripsage.services.webcrawl_service.AsyncWebCrawler"
+        ) as mock_crawler_class:
             mock_crawler = AsyncMock()
+            mock_crawler.arun = AsyncMock(return_value=mock_crawl_result)
             mock_crawler.__aenter__ = AsyncMock(return_value=mock_crawler)
             mock_crawler.__aexit__ = AsyncMock(return_value=None)
-            mock_crawler.arun = AsyncMock(return_value=mock_crawl_result)
             mock_crawler_class.return_value = mock_crawler
 
             result = await service.crawl_url(url, params)
@@ -216,7 +234,10 @@ class TestWebCrawlService:
         url = "https://example.com"
         params = WebCrawlParams()
 
-        with patch("crawl4ai.AsyncWebCrawler") as mock_crawler_class:
+        # Mock the AsyncWebCrawler to raise an exception
+        with patch(
+            "tripsage.services.webcrawl_service.AsyncWebCrawler"
+        ) as mock_crawler_class:
             mock_crawler_class.side_effect = Exception("Network timeout")
 
             result = await service.crawl_url(url, params)
@@ -311,34 +332,70 @@ class TestSingletonService:
 
 @pytest.mark.integration
 class TestWebCrawlServiceIntegration:
-    """Integration tests for WebCrawlService."""
+    """Integration tests for WebCrawlService with mocked network calls."""
 
     @pytest.mark.asyncio
-    async def test_real_crawl_httpbin(self):
-        """Test real crawling with httpbin (requires internet)."""
+    async def test_mocked_integration_test(self):
+        """Test integration workflow with mocked responses."""
         service = WebCrawlService()
         params = WebCrawlParams(
             javascript_enabled=False,
             use_cache=False,
         )
 
-        result = await service.crawl_url("https://httpbin.org/html", params)
+        # Mock a realistic response for integration testing
+        mock_result = MagicMock()
+        mock_result.success = True
+        mock_result.markdown = "# Test Page\n\nThis is a test page with content."
+        mock_result.html = (
+            "<html><head><title>Test Page</title></head>"
+            "<body><h1>Test Page</h1><p>This is a test page with content.</p></body></html>"
+        )
+        mock_result.metadata = {"title": "Test Page"}
+        mock_result.status_code = 200
+        mock_result.screenshot = None
+        mock_result.pdf = None
+        mock_result.extracted_content = None
 
-        # httpbin should return successful result
-        assert result.success is True
-        assert "httpbin.org" in result.url
-        assert result.markdown is not None
-        assert len(result.markdown) > 0
-        assert result.performance_metrics["crawler_type"] == "crawl4ai_direct"
-        assert result.performance_metrics["duration_ms"] > 0
+        with patch(
+            "tripsage.services.webcrawl_service.AsyncWebCrawler"
+        ) as mock_crawler_class:
+            mock_crawler = AsyncMock()
+            mock_crawler.arun = AsyncMock(return_value=mock_result)
+            mock_crawler.__aenter__ = AsyncMock(return_value=mock_crawler)
+            mock_crawler.__aexit__ = AsyncMock(return_value=None)
+            mock_crawler_class.return_value = mock_crawler
+
+            result = await service.crawl_url("https://example.com", params)
+
+            # Verify the integration result
+            assert result.success is True
+            assert result.url == "https://example.com"
+            assert result.markdown is not None
+            assert len(result.markdown) > 0
+            assert result.performance_metrics["crawler_type"] == "crawl4ai_direct"
+            assert result.performance_metrics["duration_ms"] > 0
 
     @pytest.mark.asyncio
-    async def test_real_health_check(self):
-        """Test real health check (requires internet)."""
+    async def test_mocked_health_check_integration(self):
+        """Test health check integration with mocked response."""
         service = WebCrawlService()
 
-        result = await service.health_check()
+        # Mock the crawl_url method to simulate a health check
+        with patch.object(service, "crawl_url") as mock_crawl:
+            mock_crawl.return_value = WebCrawlResult(
+                success=True,
+                url="https://httpbin.org/html",
+                title="httpbin",
+                markdown="# httpbin\nA simple HTTP request and response service.",
+                performance_metrics={
+                    "duration_ms": 800,
+                    "crawler_type": "crawl4ai_direct",
+                },
+            )
 
-        # Should pass if httpbin is accessible
-        assert isinstance(result, bool)
-        # Note: May fail if no internet connection, that's expected
+            result = await service.health_check()
+
+            # Should pass with mocked response
+            assert result is True
+            mock_crawl.assert_called_once()

@@ -239,7 +239,7 @@ class ResultNormalizer:
             source_crawler="playwright_mcp",
         )
 
-        logger.debug(f"Normalized Playwright MCP output for {url}")
+        logger.debug(f"Normalized Playwright MCP output for {original_url}")
         return result
 
     async def normalize_direct_crawl4ai_output(

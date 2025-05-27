@@ -15,6 +15,6 @@ from .source_selector import WebCrawlSourceSelector
 
 __all__ = [
     "UnifiedCrawlResult",
-    "ResultNormalizer", 
+    "ResultNormalizer",
     "WebCrawlSourceSelector",
 ]

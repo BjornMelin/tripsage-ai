@@ -7,6 +7,26 @@ with Playwright MCP as a fallback for JavaScript-heavy sites.
 
 from typing import Optional
 
+try:
+    from agents import function_tool
+except ImportError:
+    # Mock function_tool decorator when agents module is not available
+    def function_tool(func_or_name=None, description=None):
+        def decorator(func):
+            if hasattr(func, "__name__"):
+                func._tool_name = getattr(func, "__name__", "unknown_tool")
+                func._tool_description = getattr(func, "__doc__", "No description")
+            return func
+
+        # Handle both @function_tool and @function_tool(name, description)
+        if callable(func_or_name):
+            # Direct usage: @function_tool
+            return decorator(func_or_name)
+        else:
+            # Parametrized usage: @function_tool(name, description)
+            return decorator
+
+
 from tripsage.config.webcrawl_feature_flags import (
     WebCrawlFeatureFlags,
     get_performance_metrics,
@@ -17,22 +37,6 @@ from tripsage.tools.webcrawl.models import UnifiedCrawlResult
 from tripsage.tools.webcrawl.result_normalizer import ResultNormalizer
 from tripsage.tools.webcrawl.source_selector import WebCrawlSourceSelector
 from tripsage.utils.decorators import with_error_handling
-
-# Mock function_tool decorator for testing
-try:
-    from agents import function_tool
-except ImportError:
-
-    def function_tool(func_or_name=None, description=None):
-        def decorator(func):
-            return func
-
-        if callable(func_or_name):
-            return decorator(func_or_name)
-        else:
-            return decorator
-
-
 from tripsage.utils.logging import get_logger
 
 logger = get_logger(__name__)
