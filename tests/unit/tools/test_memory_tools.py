@@ -5,7 +5,7 @@ Tests all memory tool functions, integration with memory service, and error hand
 
 import asyncio
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -79,7 +79,7 @@ class TestMemoryTools:
         message = ConversationMessage(
             role="user",
             content="Test message content",
-            timestamp=datetime.now(datetime.UTC),
+            timestamp=datetime.now(timezone.utc),
         )
 
         assert message.role == "user"
@@ -93,13 +93,13 @@ class TestMemoryTools:
             ConversationMessage(
                 role="invalid_role",
                 content="Test",
-                timestamp=datetime.now(datetime.UTC),
+                timestamp=datetime.now(timezone.utc),
             )
 
         # Test empty content
         with pytest.raises(ValueError):
             ConversationMessage(
-                role="user", content="", timestamp=datetime.now(datetime.UTC)
+                role="user", content="", timestamp=datetime.now(timezone.utc)
             )
 
     def test_memory_search_query_model(self):
@@ -120,7 +120,7 @@ class TestMemoryTools:
         """Test MemorySearchQuery default values."""
         query = MemorySearchQuery(user_id="user-123", query="test query")
 
-        assert query.limit == 20  # Default limit
+        assert query.limit == 5  # Default limit
         assert query.category_filter is None
 
     def test_user_preferences_model(self):
@@ -135,7 +135,7 @@ class TestMemoryTools:
         )
 
         assert preferences.user_id == "user-123"
-        assert preferences.accommodation == "luxury"
+        assert preferences.accommodation_type == "luxury"
         assert "Europe" in preferences.destinations
         assert "vegetarian" in preferences.dietary_restrictions
 
@@ -144,7 +144,7 @@ class TestMemoryTools:
         self, mock_memory_service, sample_messages
     ):
         """Test adding conversation memory successfully."""
-        with patch("tripsage.tools.memory_tools.memory_service", mock_memory_service):
+        with patch("tripsage.tools.memory_tools.get_memory_service", return_value=mock_memory_service):
             result = await add_conversation_memory(
                 messages=sample_messages, user_id="user-123", session_id="session-456"
             )
@@ -165,7 +165,7 @@ class TestMemoryTools:
         """Test adding conversation memory with additional metadata."""
         metadata = {"trip_type": "honeymoon", "destination": "Paris"}
 
-        with patch("tripsage.tools.memory_tools.memory_service", mock_memory_service):
+        with patch("tripsage.tools.memory_tools.get_memory_service", return_value=mock_memory_service):
             await add_conversation_memory(
                 messages=sample_messages, user_id="user-123", metadata=metadata
             )
@@ -177,7 +177,7 @@ class TestMemoryTools:
     @pytest.mark.asyncio
     async def test_add_conversation_memory_empty_messages(self, mock_memory_service):
         """Test adding conversation memory with empty messages."""
-        with patch("tripsage.tools.memory_tools.memory_service", mock_memory_service):
+        with patch("tripsage.tools.memory_tools.get_memory_service", return_value=mock_memory_service):
             with pytest.raises(ValueError, match="Messages cannot be empty"):
                 await add_conversation_memory(messages=[], user_id="user-123")
 
@@ -186,14 +186,14 @@ class TestMemoryTools:
         self, mock_memory_service, sample_messages
     ):
         """Test adding conversation memory with invalid user ID."""
-        with patch("tripsage.tools.memory_tools.memory_service", mock_memory_service):
+        with patch("tripsage.tools.memory_tools.get_memory_service", return_value=mock_memory_service):
             with pytest.raises(ValueError, match="User ID cannot be empty"):
                 await add_conversation_memory(messages=sample_messages, user_id="")
 
     @pytest.mark.asyncio
     async def test_get_user_context_success(self, mock_memory_service):
         """Test getting user context successfully."""
-        with patch("tripsage.tools.memory_tools.memory_service", mock_memory_service):
+        with patch("tripsage.tools.memory_tools.get_memory_service", return_value=mock_memory_service):
             result = await get_user_context("user-123")
 
             assert "memories" in result
@@ -207,7 +207,7 @@ class TestMemoryTools:
     @pytest.mark.asyncio
     async def test_get_user_context_invalid_user_id(self, mock_memory_service):
         """Test getting user context with invalid user ID."""
-        with patch("tripsage.tools.memory_tools.memory_service", mock_memory_service):
+        with patch("tripsage.tools.memory_tools.get_memory_service", return_value=mock_memory_service):
             with pytest.raises(ValueError, match="User ID cannot be empty"):
                 await get_user_context("")
 
@@ -221,7 +221,7 @@ class TestMemoryTools:
             category_filter="accommodation",
         )
 
-        with patch("tripsage.tools.memory_tools.memory_service", mock_memory_service):
+        with patch("tripsage.tools.memory_tools.get_memory_service", return_value=mock_memory_service):
             result = await search_user_memories(query)
 
             assert len(result) == 1
@@ -241,7 +241,7 @@ class TestMemoryTools:
         """Test searching user memories without category filter."""
         query = MemorySearchQuery(user_id="user-123", query="travel plans")
 
-        with patch("tripsage.tools.memory_tools.memory_service", mock_memory_service):
+        with patch("tripsage.tools.memory_tools.get_memory_service", return_value=mock_memory_service):
             await search_user_memories(query)
 
             call_args = mock_memory_service.search_memories.call_args[1]
@@ -258,10 +258,10 @@ class TestMemoryTools:
             accommodation="luxury",
             budget="high",
             destinations=["Europe", "Asia"],
-            travel_style="comfort",
+            travel_style="luxury",
         )
 
-        with patch("tripsage.tools.memory_tools.memory_service", mock_memory_service):
+        with patch("tripsage.tools.memory_tools.get_memory_service", return_value=mock_memory_service):
             result = await update_user_preferences(preferences)
 
             assert result["status"] == "success"
@@ -280,7 +280,7 @@ class TestMemoryTools:
             accommodation="budget",  # Only updating accommodation
         )
 
-        with patch("tripsage.tools.memory_tools.memory_service", mock_memory_service):
+        with patch("tripsage.tools.memory_tools.get_memory_service", return_value=mock_memory_service):
             await update_user_preferences(preferences)
 
             call_args = mock_memory_service.update_user_preferences.call_args[1]
@@ -297,7 +297,7 @@ class TestMemoryTools:
             "Service unavailable"
         )
 
-        with patch("tripsage.tools.memory_tools.memory_service", mock_memory_service):
+        with patch("tripsage.tools.memory_tools.get_memory_service", return_value=mock_memory_service):
             # The @with_error_handling decorator should handle this gracefully
             result = await add_conversation_memory(
                 messages=sample_messages, user_id="user-123"
@@ -314,7 +314,7 @@ class TestMemoryTools:
             "Service timeout"
         )
 
-        with patch("tripsage.tools.memory_tools.memory_service", mock_memory_service):
+        with patch("tripsage.tools.memory_tools.get_memory_service", return_value=mock_memory_service):
             # Should handle timeout gracefully
             result = await get_user_context("user-123")
             assert result is not None
@@ -322,7 +322,7 @@ class TestMemoryTools:
     @pytest.mark.asyncio
     async def test_concurrent_memory_operations(self, mock_memory_service):
         """Test concurrent memory operations."""
-        with patch("tripsage.tools.memory_tools.memory_service", mock_memory_service):
+        with patch("tripsage.tools.memory_tools.get_memory_service", return_value=mock_memory_service):
             # Create multiple concurrent operations
             tasks = []
             for i in range(5):
@@ -369,7 +369,7 @@ class TestMemoryTools:
             user_id="user-123", accommodation="luxury", destinations=["Europe"]
         )
 
-        data = preferences.model_dump(exclude_unset=True)
+        data = preferences.model_dump(exclude_unset=True, by_alias=True)
         assert data["accommodation"] == "luxury"
         assert "Europe" in data["destinations"]
         # Fields not set should be excluded
@@ -378,13 +378,13 @@ class TestMemoryTools:
     @pytest.mark.asyncio
     async def test_memory_tools_integration_workflow(self, mock_memory_service):
         """Test complete memory tools integration workflow."""
-        with patch("tripsage.tools.memory_tools.memory_service", mock_memory_service):
+        with patch("tripsage.tools.memory_tools.get_memory_service", return_value=mock_memory_service):
             # Step 1: Add conversation memory
             messages = [
                 ConversationMessage(
                     role="user",
                     content="Plan trip to Tokyo",
-                    timestamp=datetime.now(datetime.UTC),
+                    timestamp=datetime.now(timezone.utc),
                 )
             ]
 
@@ -417,7 +417,7 @@ class TestMemoryTools:
         # Test invalid message role
         with pytest.raises(ValueError):
             ConversationMessage(
-                role="invalid", content="test", timestamp=datetime.now(datetime.UTC)
+                role="invalid", content="test", timestamp=datetime.now(timezone.utc)
             )
 
         # Test empty query
@@ -433,7 +433,7 @@ class TestMemoryTools:
         """Test memory tools performance characteristics."""
         import time
 
-        with patch("tripsage.tools.memory_tools.memory_service", mock_memory_service):
+        with patch("tripsage.tools.memory_tools.get_memory_service", return_value=mock_memory_service):
             # Measure search performance
             start_time = time.time()
 
@@ -451,14 +451,14 @@ class TestMemoryTools:
     @pytest.mark.asyncio
     async def test_memory_tools_edge_cases(self, mock_memory_service):
         """Test memory tools edge cases."""
-        with patch("tripsage.tools.memory_tools.memory_service", mock_memory_service):
+        with patch("tripsage.tools.memory_tools.get_memory_service", return_value=mock_memory_service):
             # Test with very long content
             long_content = "A" * 10000  # 10K characters
             messages = [
                 ConversationMessage(
                     role="user",
                     content=long_content,
-                    timestamp=datetime.now(datetime.UTC),
+                    timestamp=datetime.now(timezone.utc),
                 )
             ]
 
@@ -474,7 +474,7 @@ class TestMemoryTools:
                 ConversationMessage(
                     role="user",
                     content=special_content,
-                    timestamp=datetime.now(datetime.UTC),
+                    timestamp=datetime.now(timezone.utc),
                 )
             ]
 
@@ -504,13 +504,13 @@ class TestMemoryToolsIntegration:
             "travel_patterns": {"avg_trip_duration": 10},
         }
 
-        with patch("tripsage.tools.memory_tools.memory_service", mock_service):
+        with patch("tripsage.tools.memory_tools.get_memory_service", return_value=mock_service):
             # Simulate travel planning conversation
             messages = [
                 ConversationMessage(
                     role="user",
                     content="I want to plan a 10-day trip to Japan in spring 2024",
-                    timestamp=datetime.now(datetime.UTC),
+                    timestamp=datetime.now(timezone.utc),
                 ),
                 ConversationMessage(
                     role="assistant",
@@ -518,7 +518,7 @@ class TestMemoryToolsIntegration:
                         "Japan in spring is beautiful! "
                         "I'll help you plan your cherry blossom trip."
                     ),
-                    timestamp=datetime.now(datetime.UTC),
+                    timestamp=datetime.now(timezone.utc),
                 ),
             ]
 
@@ -541,7 +541,7 @@ class TestMemoryToolsIntegration:
         mock_service = AsyncMock()
         mock_service.update_user_preferences.return_value = {"status": "success"}
 
-        with patch("tripsage.tools.memory_tools.memory_service", mock_service):
+        with patch("tripsage.tools.memory_tools.get_memory_service", return_value=mock_service):
             # User reveals preferences through conversation
             preferences = UserPreferences(
                 user_id="learner-123",
