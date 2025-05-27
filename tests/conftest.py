@@ -11,7 +11,12 @@ from typing import Any, Dict, List, Optional
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
+
+# Load test environment variables FIRST
+from dotenv import load_dotenv
 from pydantic import BaseModel
+
+load_dotenv(".env.test", override=True)
 
 # Add the project root directory to the path so tests can import modules directly
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
