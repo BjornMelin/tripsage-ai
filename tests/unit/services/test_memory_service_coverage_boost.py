@@ -7,7 +7,7 @@ Based on coverage report, targeting lines:
 569, 602-603, 621, 672, 695, 700, 705-706, 735-736, 743-744, 754-758
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest

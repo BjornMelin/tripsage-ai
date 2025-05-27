@@ -13,6 +13,7 @@ try:
     from agents.handoffs import Handoff
 except ImportError:
     from unittest.mock import MagicMock
+
     Agent = MagicMock
     handoff = MagicMock
     handoff_filters = MagicMock()
