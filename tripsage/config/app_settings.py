@@ -291,6 +291,20 @@ class AppSettings(BaseSettings):
     # OpenAI settings
     openai_api_key: SecretStr = Field(..., description="OpenAI API key")
 
+    # Direct API integrations (used when feature flags are set to 'direct' mode)
+    duffel_api_key: Optional[SecretStr] = Field(
+        default=None, description="Duffel API key for direct HTTP integration"
+    )
+    duffel_base_url: str = Field(
+        default="https://api.duffel.com", description="Duffel API base URL"
+    )
+    duffel_timeout: float = Field(
+        default=30.0, description="Duffel API request timeout in seconds"
+    )
+    duffel_max_retries: int = Field(
+        default=3, description="Maximum retry attempts for Duffel API requests"
+    )
+
     # Storage
     database: DatabaseConfig = DatabaseConfig()
     neo4j: Neo4jConfig = Neo4jConfig()
