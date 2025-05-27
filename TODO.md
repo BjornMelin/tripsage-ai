@@ -238,12 +238,20 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
   - [x] Integrate memory service with ChatAgent for personalized responses
   - [x] Implement Crawl4AI memory extraction for web content
   - [x] Remove old Neo4j memory implementations and tests
+  - [x] **NEW: Modularize Pydantic models with SOTA 2.0 patterns** ✅ **COMPLETED (2025-05-27)**
+    - [x] Create dedicated models module at `tripsage/tools/models/`
+    - [x] Implement modern Pydantic 2.0 patterns: ConfigDict, Annotated types, Literal validation
+    - [x] Add constrained type aliases for reusability and validation
+    - [x] Maintain backward compatibility through field aliases
+    - [x] Remove model definitions from memory_tools.py for cleaner separation
+    - [x] Update all tests to work with modularized structure
   - **Impact Achieved:**
     - **91% faster** performance vs previous Neo4j implementation
     - **26% better accuracy** than OpenAI memory
     - **90% token savings** through optimized extraction
     - **Cost reduction** from $1000+/month to $60-120/month
     - **Complete migration** from complex Neo4j/MCP to unified Mem0 + pgvector
+    - **Enhanced maintainability** through proper model modularization and SOTA Pydantic patterns
 
 - [ ] **Phase 6: DragonflyDB Migration** (Issue #140)
   - [ ] Deploy DragonflyDB alongside Redis
@@ -766,11 +774,11 @@ For remaining API, MCP, and Middleware related tasks, see [tasks/TODO-API.md](./
       - [ ] Add performance benchmarks
       - [ ] Set up integration test suite
 
-- [x] **Ensure Proper Pydantic V2 Implementation** ✅ COMPLETED (January 21, 2025)
+- [x] **Ensure Proper Pydantic V2 Implementation** ✅ COMPLETED (Updated: 2025-05-27)
 
   - **Target:** Throughout codebase
-  - **Goal:** Ensure all models use Pydantic V2 patterns
-  - **Status:** ✅ VERIFIED AND IMPLEMENTED
+  - **Goal:** Ensure all models use Pydantic V2 patterns with best practices
+  - **Status:** ✅ VERIFIED, IMPLEMENTED AND ENHANCED
   - **Tasks:**
     - [x] ✅ Audit and update method usage:
       - [x] Replace `dict()` with `model_dump()` (verified no remaining deprecated usage)
@@ -791,6 +799,13 @@ For remaining API, MCP, and Middleware related tasks, see [tasks/TODO-API.md](./
       - [x] Use proper field validators with @classmethod (implemented)
       - [x] Implement proper model dumping and validation (verified)
     - [x] ✅ Verified base model uses Pydantic V2 patterns correctly
+    - [x] **✅ NEW: Memory Tools Pydantic 2.0 Enhancement (2025-05-27)**
+      - [x] Modularized models into dedicated `tripsage/tools/models/` structure
+      - [x] Implemented SOTA Pydantic 2.0 patterns: ConfigDict, Annotated types, Literal validation
+      - [x] Created constrained type aliases for reusability and validation
+      - [x] Added comprehensive field examples and documentation
+      - [x] Maintained backward compatibility through field aliases
+      - [x] All tests passing with enhanced validation
 
 - [x] **Ensure Proper OpenAI Agents SDK Implementation** ✅ COMPLETED (January 21, 2025)
 
