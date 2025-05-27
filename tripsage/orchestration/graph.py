@@ -10,9 +10,21 @@ from typing import Any, Dict, Optional
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, StateGraph
 
+from tripsage.orchestration.checkpoint_manager import get_checkpoint_manager
 from tripsage.orchestration.config import get_default_config
+from tripsage.orchestration.handoff_coordinator import (
+    HandoffTrigger,
+    get_handoff_coordinator,
+)
+from tripsage.orchestration.memory_bridge import get_memory_bridge
+from tripsage.orchestration.nodes.accommodation_agent import AccommodationAgentNode
+from tripsage.orchestration.nodes.budget_agent import BudgetAgentNode
+from tripsage.orchestration.nodes.destination_research_agent import (
+    DestinationResearchAgentNode,
+)
 from tripsage.orchestration.nodes.error_recovery import ErrorRecoveryNode
 from tripsage.orchestration.nodes.flight_agent import FlightAgentNode
+from tripsage.orchestration.nodes.itinerary_agent import ItineraryAgentNode
 from tripsage.orchestration.nodes.memory_update import MemoryUpdateNode
 from tripsage.orchestration.routing import RouterNode
 from tripsage.orchestration.state import TravelPlanningState, create_initial_state
@@ -42,8 +54,35 @@ class TripSageOrchestrator:
         """
         self.config = config or get_default_config()
         self.checkpointer = checkpointer or MemorySaver()
+        self.memory_bridge = get_memory_bridge()
+        self.handoff_coordinator = get_handoff_coordinator()
         self.graph = self._build_graph()
+        self.compiled_graph = None  # Will be set in async initialize
+        self._initialized = False
+
+    async def initialize(self) -> None:
+        """
+        Async initialization for PostgreSQL checkpointer and other components.
+        """
+        if self._initialized:
+            return
+
+        # Initialize checkpointer if using PostgreSQL
+        if self.checkpointer is None or isinstance(self.checkpointer, MemorySaver):
+            try:
+                checkpoint_manager = get_checkpoint_manager()
+                self.checkpointer = await checkpoint_manager.get_async_checkpointer()
+                logger.info("Initialized PostgreSQL checkpointer")
+            except Exception as e:
+                logger.warning(
+                    f"Failed to initialize PostgreSQL checkpointer, "
+                    f"using MemorySaver: {e}"
+                )
+                self.checkpointer = MemorySaver()
+
+        # Compile graph with checkpointer
         self.compiled_graph = self.graph.compile(checkpointer=self.checkpointer)
+        self._initialized = True
 
         logger.info("TripSage LangGraph orchestrator initialized successfully")
 
@@ -63,18 +102,21 @@ class TripSageOrchestrator:
         router_node = RouterNode()
         graph.add_node("router", router_node)
 
-        # Add specialized agent nodes
+        # Add specialized agent nodes (Phase 2 complete implementations)
         flight_agent_node = FlightAgentNode()
-        graph.add_node("flight_agent", flight_agent_node)
+        accommodation_agent_node = AccommodationAgentNode()
+        budget_agent_node = BudgetAgentNode()
+        destination_research_agent_node = DestinationResearchAgentNode()
+        itinerary_agent_node = ItineraryAgentNode()
 
-        # Stub nodes for Phase 2 migration (to be replaced)
-        graph.add_node(
-            "accommodation_agent", self._create_stub_node("accommodation_agent")
-        )
-        graph.add_node("budget_agent", self._create_stub_node("budget_agent"))
-        graph.add_node("itinerary_agent", self._create_stub_node("itinerary_agent"))
-        graph.add_node("destination_agent", self._create_stub_node("destination_agent"))
-        graph.add_node("travel_agent", self._create_stub_node("travel_agent"))
+        graph.add_node("flight_agent", flight_agent_node)
+        graph.add_node("accommodation_agent", accommodation_agent_node)
+        graph.add_node("budget_agent", budget_agent_node)
+        graph.add_node("destination_research_agent", destination_research_agent_node)
+        graph.add_node("itinerary_agent", itinerary_agent_node)
+
+        # General purpose agent for unrouted requests
+        graph.add_node("general_agent", self._create_general_agent())
 
         # Add utility nodes
         memory_update_node = MemoryUpdateNode()
@@ -94,8 +136,8 @@ class TripSageOrchestrator:
                 "accommodation_agent": "accommodation_agent",
                 "budget_agent": "budget_agent",
                 "itinerary_agent": "itinerary_agent",
-                "destination_agent": "destination_agent",
-                "travel_agent": "travel_agent",
+                "destination_research_agent": "destination_research_agent",
+                "general_agent": "general_agent",
                 "error_recovery": "error_recovery",
                 "end": END,
             },
@@ -107,8 +149,8 @@ class TripSageOrchestrator:
             "accommodation_agent",
             "budget_agent",
             "itinerary_agent",
-            "destination_agent",
-            "travel_agent",
+            "destination_research_agent",
+            "general_agent",
         ]:
             graph.add_conditional_edges(
                 agent,
@@ -148,8 +190,8 @@ class TripSageOrchestrator:
             "accommodation_agent",
             "budget_agent",
             "itinerary_agent",
-            "destination_agent",
-            "travel_agent",
+            "destination_research_agent",
+            "general_agent",
         ]:
             return current_agent
 
@@ -159,7 +201,7 @@ class TripSageOrchestrator:
             return "error_recovery"
 
         # Default fallback
-        return "travel_agent"
+        return "general_agent"
 
     def _determine_next_step(self, state: TravelPlanningState) -> str:
         """
@@ -174,6 +216,19 @@ class TripSageOrchestrator:
         # Check for errors
         if state.get("error_count", 0) > 0:
             return "error"
+
+        # Check for handoff using handoff coordinator
+        current_agent = state.get("current_agent", "general_agent")
+        handoff_result = self.handoff_coordinator.determine_next_agent(
+            current_agent, state, HandoffTrigger.TASK_COMPLETION
+        )
+
+        if handoff_result:
+            next_agent, handoff_context = handoff_result
+            # Update state with handoff information
+            state["next_agent"] = next_agent
+            state["handoff_context"] = handoff_context.model_dump()
+            return "continue"  # Continue to router for handoff
 
         # Check if we should update memory (e.g., learned something about user)
         if (
@@ -242,6 +297,41 @@ class TripSageOrchestrator:
 
         return stub_node
 
+    def _create_general_agent(self):
+        """
+        Create a general-purpose agent for handling unrouted requests.
+
+        Returns:
+            General agent function
+        """
+
+        async def general_agent(state: TravelPlanningState) -> TravelPlanningState:
+            logger.info("Executing general agent")
+
+            # Generate helpful response for general travel inquiries
+            response_message = {
+                "role": "assistant",
+                "content": (
+                    "I'm here to help with your travel planning! "
+                    "I can assist you with:\n\n"
+                    "🛫 Flight searches and bookings\n"
+                    "🏨 Hotel and accommodation searches\n"
+                    "💰 Budget planning and optimization\n"
+                    "🗺️ Destination research and recommendations\n"
+                    "📅 Itinerary planning and scheduling\n\n"
+                    "What would you like to help you with today? Just let me know your "
+                    "destination, travel dates, or any specific travel needs!"
+                ),
+                "agent": "general_agent",
+            }
+
+            state["messages"].append(response_message)
+            state["current_agent"] = "general_agent"
+
+            return state
+
+        return general_agent
+
     async def process_message(
         self, user_id: str, message: str, session_id: Optional[str] = None
     ) -> Dict[str, Any]:
@@ -257,6 +347,9 @@ class TripSageOrchestrator:
             Dictionary containing response and session information
         """
         try:
+            # Ensure async initialization is complete
+            await self.initialize()
+
             # Create initial state if new conversation
             if not session_id:
                 initial_state = create_initial_state(user_id, message)
@@ -266,11 +359,25 @@ class TripSageOrchestrator:
                 # (In production, this would load from checkpointer)
                 initial_state = create_initial_state(user_id, message, session_id)
 
+            # Hydrate state with user context and preferences from memory
+            try:
+                initial_state = await self.memory_bridge.hydrate_state(initial_state)
+                logger.debug(f"Hydrated state with user context for user {user_id}")
+            except Exception as e:
+                logger.warning(f"Failed to hydrate state from memory: {e}")
+
             # Configure for session-based persistence
             config = {"configurable": {"thread_id": session_id}}
 
             # Process through the graph
             result = await self.compiled_graph.ainvoke(initial_state, config=config)
+
+            # Extract and persist insights from the conversation
+            try:
+                insights = await self.memory_bridge.extract_and_persist_insights(result)
+                logger.debug(f"Persisted conversation insights: {insights}")
+            except Exception as e:
+                logger.warning(f"Failed to persist insights to memory: {e}")
 
             # Extract response from the last assistant message
             response_content = "I'm ready to help with your travel planning!"
