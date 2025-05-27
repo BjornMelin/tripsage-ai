@@ -146,11 +146,65 @@ To enable pgvector extensions in your Supabase project:
 ### New Files
 - `migrations/20250526_01_enable_pgvector_extensions.sql` - pgvector setup migration
 
+## Environment Variable Cleanup Guide
+
+### Variables to Remove from Production
+The following environment variables are no longer needed and should be removed from all environments:
+
+```bash
+# Neon-specific variables (REMOVE THESE)
+TRIPSAGE_MCP_NEON_ENDPOINT
+TRIPSAGE_MCP_NEON_API_KEY
+NEON_MCP_ENDPOINT
+NEON_MCP_API_KEY
+NEON_CONNECTION_STRING
+NEON_PROJECT_ID
+NEON_MIN_POOL_SIZE
+NEON_MAX_POOL_SIZE
+NEON_MAX_INACTIVE_CONNECTION_LIFETIME
+```
+
+### Required Supabase Variables
+Ensure these Supabase variables are properly configured:
+
+```bash
+# Required Supabase variables
+TRIPSAGE_DATABASE_SUPABASE_URL=https://your-project.supabase.co
+TRIPSAGE_DATABASE_SUPABASE_ANON_KEY=your-anon-key
+TRIPSAGE_DATABASE_SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+
+# Optional pgvector configuration (defaults provided)
+TRIPSAGE_DATABASE_PGVECTOR_ENABLED=true
+TRIPSAGE_DATABASE_VECTOR_DIMENSIONS=1536
+```
+
+### Deployment Environment Updates
+For each deployment environment (staging, production), execute:
+
+1. **Remove old variables:**
+   ```bash
+   # In your deployment system (Kubernetes, Docker, etc.)
+   kubectl delete secret neon-credentials
+   kubectl delete configmap neon-config
+   ```
+
+2. **Validate new configuration:**
+   ```bash
+   # Test configuration loading
+   python -c "from tripsage.config.app_settings import settings; print('Config loaded successfully')"
+   ```
+
+3. **Monitor logs for warnings:**
+   ```bash
+   # Check for any remaining Neon references
+   grep -r "neon\|Neon\|NEON" /var/log/application/
+   ```
+
 ## Next Steps
 
 1. **Production Deployment:**
    - Apply pgvector migration to production Supabase instance
-   - Update environment variables to remove Neon configurations
+   - Update environment variables per cleanup guide above
    - Monitor performance metrics
 
 2. **Performance Optimization:**

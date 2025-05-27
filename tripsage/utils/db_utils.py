@@ -8,8 +8,9 @@ cost savings, and simplified architecture.
 
 from typing import Dict
 
-from .logging import get_logger
 from tripsage.config.app_settings import settings
+
+from .logging import get_logger
 
 logger = get_logger(__name__)
 

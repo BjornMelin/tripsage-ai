@@ -276,7 +276,9 @@ class AppSettings(BaseSettings):
     )
 
     # OpenAI settings
-    openai_api_key: SecretStr = Field(default=SecretStr("test-openai-key"), description="OpenAI API key")
+    openai_api_key: SecretStr = Field(
+        default=SecretStr("test-openai-key"), description="OpenAI API key"
+    )
 
     # Storage
     database: DatabaseConfig = Field(default_factory=DatabaseConfig)
@@ -293,7 +295,9 @@ class AppSettings(BaseSettings):
     memory_mcp: MemoryMCPConfig = Field(default_factory=MemoryMCPConfig)
     webcrawl_mcp: WebCrawlMCPConfig = Field(default_factory=WebCrawlMCPConfig)
     flights_mcp: FlightsMCPConfig = Field(default_factory=FlightsMCPConfig)
-    accommodations_mcp: AccommodationsMCPConfig = Field(default_factory=AccommodationsMCPConfig)
+    accommodations_mcp: AccommodationsMCPConfig = Field(
+        default_factory=AccommodationsMCPConfig
+    )
     playwright_mcp: PlaywrightMCPConfig = Field(default_factory=PlaywrightMCPConfig)
     calendar_mcp: CalendarMCPConfig = Field(default_factory=CalendarMCPConfig)
     supabase_mcp: SupabaseMCPConfig = Field(default_factory=SupabaseMCPConfig)
