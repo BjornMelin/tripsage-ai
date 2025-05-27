@@ -6,7 +6,7 @@ pydantic-settings>=2.9.1
 python-dotenv>=1.1.0
 supabase>=2.13.0
 httpx>=0.28.1
-redis>=5.2.0
+redis>=6.1.0
 
 # Database dependencies
 sqlalchemy[asyncio]>=2.0.41
@@ -31,8 +31,9 @@ tenacity>=9.1.2
 # Testing dependencies
 pytest>=8.3.5
 pytest-cov>=6.1.1
-pytest-asyncio>=0.25.1
+pytest-asyncio>=1.0.0
 coverage[toml]>=7.6.9
+nest-asyncio>=1.6.0
 
 # Development tools
 ruff>=0.11.9

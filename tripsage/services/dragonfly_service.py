@@ -36,9 +36,8 @@ class DragonflyDBService(RedisService):
             if self._connected:
                 info = await self.info("server")
                 if info and "dragonfly_version" in str(info):
-                    logger.info(
-                        f"Connected to DragonflyDB: {info.get('dragonfly_version', 'unknown')}"
-                    )
+                    version = info.get("dragonfly_version", "unknown")
+                    logger.info(f"Connected to DragonflyDB: {version}")
                 else:
                     logger.info("Connected to Redis-compatible cache service")
 
