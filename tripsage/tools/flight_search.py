@@ -356,8 +356,10 @@ class TripSageFlightSearch:
             history = await db_client.get_flight_price_history(
                 origin=origin,
                 destination=destination,
-                date_from=(datetime.now() - timedelta(days=90)).strftime("%Y-%m-%d"),
-                date_to=datetime.now().strftime("%Y-%m-%d"),
+                date_from=(datetime.now(datetime.UTC) - timedelta(days=90)).strftime(
+                    "%Y-%m-%d"
+                ),
+                date_to=datetime.now(datetime.UTC).strftime("%Y-%m-%d"),
             )
 
             # Format history data
@@ -396,13 +398,17 @@ class TripSageFlightSearch:
         great_deal_threshold = avg_price * 0.8  # 20% below average
 
         if current_price <= min_price * 1.05:  # Within 5% of historical minimum
-            return "book_now"  # Book now - this is among the lowest prices we've seen
+            # Book now - this is among the lowest prices we've seen
+            return "book_now"
         elif current_price <= great_deal_threshold:
-            return "great_deal"  # Great deal - price significantly below average
+            # Great deal - price significantly below average
+            return "great_deal"
         elif current_price <= good_deal_threshold:
-            return "good_deal"  # Good deal - price below average
+            # Good deal - price below average
+            return "good_deal"
         elif current_price <= avg_price * 1.1:  # Within 10% of average
-            return "fair_price"  # Fair price - close to typical prices for this route
+            # Fair price - close to typical prices for this route
+            return "fair_price"
         else:
             # Price higher than average - consider monitoring for better deals
             return "monitor"

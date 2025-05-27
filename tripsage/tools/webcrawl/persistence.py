@@ -150,7 +150,7 @@ class WebCrawlPersistence:
             # Prepare data for storage
             data = {
                 "result_data": json.dumps(result),
-                "created_at": datetime.utcnow().isoformat(),
+                "created_at": datetime.now(datetime.UTC).isoformat(),
                 "success": result.get("success", False),
                 "session_id": session_id,
             }
@@ -192,13 +192,16 @@ class WebCrawlPersistence:
         """
         try:
             # Import conversation message for memory storage
-            from tripsage.tools.memory_tools import ConversationMessage, add_conversation_memory
-            
+            from tripsage.tools.memory_tools import (
+                ConversationMessage,
+                add_conversation_memory,
+            )
+
             # Extract content for memory storage
             url = result.get("url", "")
             query = result.get("query", "")
-            source = result.get("source", "webcrawl")
-            
+            # source = result.get("source", "webcrawl")
+
             # Collect all content from items
             content_items = []
             for item in result.get("items", []):
@@ -210,37 +213,44 @@ class WebCrawlPersistence:
                     content_items.append(content)
                 elif title:
                     content_items.append(title)
-            
+
             if not content_items:
                 logger.warning("No content found to store in memory")
                 return True  # Not an error, just nothing to store
-                
+
             # Create conversation for memory extraction
             content_text = "\n".join(content_items[:5])  # Limit to first 5 items
             memory_messages = [
                 ConversationMessage(
                     role="system",
-                    content="Extract travel-related information from web crawl results."
+                    content=(
+                        "Extract travel-related information from web crawl results."
+                    ),
                 ),
                 ConversationMessage(
                     role="user",
-                    content=f"Web content from {url or query}: {content_text}"
-                )
+                    content=f"Web content from {url or query}: {content_text}",
+                ),
             ]
-            
+
             # Store in memory using system user ID for web crawl results
             memory_result = await add_conversation_memory(
                 messages=memory_messages,
                 user_id="system",  # Use system user for general web crawl data
-                context_type="web_crawl"
+                context_type="web_crawl",
             )
-            
+
             if memory_result.get("status") == "success":
-                logger.info(f"Successfully stored web crawl result in memory: "
-                           f"{memory_result.get('memories_extracted', 0)} memories extracted")
+                logger.info(
+                    f"Successfully stored web crawl result in memory: "
+                    f"{memory_result.get('memories_extracted', 0)} memories extracted"
+                )
                 return True
             else:
-                logger.warning(f"Memory storage completed with issues: {memory_result.get('error', 'Unknown')}")
+                logger.warning(
+                    f"Memory storage completed with issues: "
+                    f"{memory_result.get('error', 'Unknown')}"
+                )
                 return False
 
         except Exception as e:
@@ -257,8 +267,11 @@ class WebCrawlPersistence:
             True if storage was successful, False otherwise
         """
         try:
-            from tripsage.tools.memory_tools import ConversationMessage, add_conversation_memory
-            
+            from tripsage.tools.memory_tools import (
+                ConversationMessage,
+                add_conversation_memory,
+            )
+
             destination_name = result.get("destination", "")
             if not destination_name:
                 return await self._store_in_memory(result)
@@ -277,40 +290,46 @@ class WebCrawlPersistence:
                     event_info.append(f"Venue: {item['venue']}")
                 if item.get("event_type"):
                     event_info.append(f"Type: {item['event_type']}")
-                    
+
                 if event_info:
                     event_descriptions.append(" | ".join(event_info))
-            
+
             if not event_descriptions:
                 logger.warning("No event information found to store in memory")
                 return True
-                
+
             # Create conversation for memory extraction
             events_text = "\n".join(event_descriptions)
             memory_messages = [
                 ConversationMessage(
                     role="system",
-                    content="Extract event and destination information from event search results."
+                    content=(
+                        "Extract event and destination information from event search "
+                        "results."
+                    ),
                 ),
                 ConversationMessage(
                     role="user",
-                    content=f"Events found in {destination_name}: {events_text}"
-                )
+                    content=f"Events found in {destination_name}: {events_text}",
+                ),
             ]
-            
+
             # Store in memory
             memory_result = await add_conversation_memory(
-                messages=memory_messages,
-                user_id="system",
-                context_type="events_crawl"
+                messages=memory_messages, user_id="system", context_type="events_crawl"
             )
-            
+
             if memory_result.get("status") == "success":
-                logger.info(f"Successfully stored events in memory for {destination_name}: "
-                           f"{memory_result.get('memories_extracted', 0)} memories extracted")
+                logger.info(
+                    f"Successfully stored events in memory for {destination_name}: "
+                    f"{memory_result.get('memories_extracted', 0)} memories extracted"
+                )
                 return True
             else:
-                logger.warning(f"Events memory storage had issues: {memory_result.get('error', 'Unknown')}")
+                logger.warning(
+                    f"Events memory storage had issues: "
+                    f"{memory_result.get('error', 'Unknown')}"
+                )
                 return False
 
         except Exception as e:
@@ -327,8 +346,11 @@ class WebCrawlPersistence:
             True if storage was successful, False otherwise
         """
         try:
-            from tripsage.tools.memory_tools import ConversationMessage, add_conversation_memory
-            
+            from tripsage.tools.memory_tools import (
+                ConversationMessage,
+                add_conversation_memory,
+            )
+
             # Extract basic information
             url = result.get("url", "")
             extract_type = result.get("extract_type", "")
@@ -365,37 +387,46 @@ class WebCrawlPersistence:
                     content = item.get("content", "")
                     if content:
                         blog_content.append(content[:500])  # Limit content size
-            
+
             if not blog_content:
                 logger.warning("No blog content found to store in memory")
                 return True
-                
+
             # Create conversation for memory extraction
             content_text = "\n".join(blog_content)
             memory_messages = [
                 ConversationMessage(
                     role="system",
-                    content="Extract travel insights, tips, and destination information from travel blog content."
+                    content=(
+                        "Extract travel insights, tips, and destination information "
+                        "from travel blog content."
+                    ),
                 ),
                 ConversationMessage(
                     role="user",
-                    content=f"Travel blog content from {url} ({extract_type}): {content_text}"
-                )
+                    content=(
+                        f"Travel blog content from {url} ({extract_type}): "
+                        f"{content_text}"
+                    ),
+                ),
             ]
-            
+
             # Store in memory
             memory_result = await add_conversation_memory(
-                messages=memory_messages,
-                user_id="system",
-                context_type="blog_crawl"
+                messages=memory_messages, user_id="system", context_type="blog_crawl"
             )
-            
+
             if memory_result.get("status") == "success":
-                logger.info(f"Successfully stored blog in memory from {url}: "
-                           f"{memory_result.get('memories_extracted', 0)} memories extracted")
+                logger.info(
+                    f"Successfully stored blog in memory from {url}: "
+                    f"{memory_result.get('memories_extracted', 0)} memories extracted"
+                )
                 return True
             else:
-                logger.warning(f"Blog memory storage had issues: {memory_result.get('error', 'Unknown')}")
+                logger.warning(
+                    f"Blog memory storage had issues: "
+                    f"{memory_result.get('error', 'Unknown')}"
+                )
                 return False
 
         except Exception as e:
@@ -421,7 +452,9 @@ class WebCrawlPersistence:
                 "title": item.get("title", ""),
                 "price": item.get("price", 0),
                 "currency": item.get("currency", "USD"),
-                "timestamp": item.get("price_timestamp", datetime.utcnow().isoformat()),
+                "timestamp": item.get(
+                    "price_timestamp", datetime.now(datetime.UTC).isoformat()
+                ),
                 "product_type": product_type,
                 "availability": item.get("availability", ""),
             }

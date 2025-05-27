@@ -107,7 +107,7 @@ class DocumentAnalyzer:
         Returns:
             DocumentAnalysisResult with extracted information
         """
-        start_time = datetime.utcnow()
+        start_time = datetime.now(datetime.UTC)
 
         try:
             # Extract text content based on file type
@@ -123,7 +123,7 @@ class DocumentAnalyzer:
 
             # Calculate processing time
             processing_time = int(
-                (datetime.utcnow() - start_time).total_seconds() * 1000
+                (datetime.now(datetime.UTC) - start_time).total_seconds() * 1000
             )
 
             # Extract travel-specific information
@@ -145,7 +145,7 @@ class DocumentAnalyzer:
 
         except Exception as e:
             processing_time = int(
-                (datetime.utcnow() - start_time).total_seconds() * 1000
+                (datetime.now(datetime.UTC) - start_time).total_seconds() * 1000
             )
 
             return DocumentAnalysisResult(

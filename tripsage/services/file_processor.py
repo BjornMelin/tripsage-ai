@@ -29,7 +29,8 @@ class ProcessedFile(BaseModel):
     file_hash: str = Field(..., description="SHA256 hash for deduplication")
     storage_path: str = Field(..., description="Relative storage path")
     upload_timestamp: datetime = Field(
-        default_factory=datetime.utcnow, description="Upload timestamp"
+        default_factory=lambda: datetime.now(datetime.UTC),
+        description="Upload timestamp",
     )
     processing_status: str = Field(default="pending", description="Processing status")
     metadata: Dict[str, Any] = Field(
@@ -295,7 +296,7 @@ class FileProcessor:
         """
         metadata = {
             "file_extension": file_path.suffix,
-            "storage_timestamp": datetime.utcnow().isoformat(),
+            "storage_timestamp": datetime.now(datetime.UTC).isoformat(),
         }
 
         try:
