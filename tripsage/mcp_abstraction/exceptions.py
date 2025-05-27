@@ -14,6 +14,10 @@ class TripSageMCPError(Exception):
     pass
 
 
+# Alias for compatibility
+MCPError = TripSageMCPError
+
+
 class MCPClientError(TripSageMCPError):
     """Exception raised when an MCP client operation fails."""
 

@@ -19,9 +19,9 @@ TripSage is an intelligent travel planning platform that seamlessly integrates f
 
 - **Backend**: Python, FastAPI
 - **Database**: PostgreSQL (via Supabase)
-- **AI/ML**: OpenAI Agents SDK, Knowledge Graph
-- **Frontend**: Streamlit
-- **Integrations**: Flight APIs, Hotel APIs, Activity APIs
+- **AI/ML**: LangGraph, OpenAI API, Knowledge Graph (Neo4j)
+- **Frontend**: Next.js, Streamlit
+- **Integrations**: MCP Servers, Flight APIs, Hotel APIs, Activity APIs
 
 ## Architecture
 
