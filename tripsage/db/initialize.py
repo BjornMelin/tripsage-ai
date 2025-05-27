@@ -10,6 +10,7 @@ from typing import Any, Dict, Optional
 
 from tripsage.config.mcp_settings import mcp_settings
 from tripsage.db.migrations import run_migrations, run_neo4j_migrations
+from tripsage.db.migrations.neo4j_runner import initialize_neo4j_schema
 from tripsage.mcp_abstraction.manager import MCPManager
 from tripsage.utils.logging import configure_logging
 
@@ -78,7 +79,6 @@ async def initialize_databases(
         # Initialize Neo4j schema if requested
         if init_neo4j_schema:
             logger.info("Initializing Neo4j schema...")
-            from tripsage.db.migrations.neo4j_runner import initialize_neo4j_schema
 
             await initialize_neo4j_schema(mcp_manager)
 

@@ -7,6 +7,7 @@ functionality, including the new direct Crawl4AI SDK integration.
 
 import json
 
+import nest_asyncio
 from langchain_core.tools import BaseTool
 from langchain_core.tools.base import ToolException
 
@@ -31,9 +32,10 @@ class WebCrawlTool(BaseTool):
 
     name: str = "crawl_website_content"
     description: str = (
-        "Crawl a website using optimized Crawl4AI primary engine with Playwright fallback. "
-        "Provides 2-3x performance improvement through direct SDK integration. "
-        "Automatically falls back to Playwright for complex JavaScript sites when needed."
+        "Crawl a website using optimized Crawl4AI primary engine with Playwright "
+        "fallback. Provides 2-3x performance improvement through direct SDK "
+        "integration. Automatically falls back to Playwright for complex "
+        "JavaScript sites when needed."
     )
 
     def _run(self, **kwargs) -> str:
@@ -60,7 +62,6 @@ class WebCrawlTool(BaseTool):
                     logger.warning(
                         "Running async webcrawl in sync context with active event loop"
                     )
-                    import nest_asyncio
 
                     nest_asyncio.apply()
                     result = loop.run_until_complete(crawl_website_content(**kwargs))

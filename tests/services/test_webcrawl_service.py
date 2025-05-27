@@ -349,7 +349,8 @@ class TestWebCrawlServiceIntegration:
         mock_result.markdown = "# Test Page\n\nThis is a test page with content."
         mock_result.html = (
             "<html><head><title>Test Page</title></head>"
-            "<body><h1>Test Page</h1><p>This is a test page with content.</p></body></html>"
+            "<body><h1>Test Page</h1><p>This is a test page with content.</p>"
+            "</body></html>"
         )
         mock_result.metadata = {"title": "Test Page"}
         mock_result.status_code = 200

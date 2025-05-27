@@ -132,8 +132,8 @@ class ItineraryAgentNode(BaseAgentNode):
         """
         # Use LLM to extract parameters and determine operation type
         extraction_prompt = f"""
-        Extract itinerary-related parameters from this message and context, and determine
-        the type of itinerary operation requested.
+        Extract itinerary-related parameters from this message and context, and
+        determine the type of itinerary operation requested.
         
         User message: "{message}"
         
@@ -167,14 +167,16 @@ class ItineraryAgentNode(BaseAgentNode):
         
         Respond with JSON only. If this doesn't seem itinerary-related, return null.
         
-        Example: {{"operation": "create", "destination": "Paris", "start_date": "2024-03-15", 
-                   "end_date": "2024-03-20", "interests": ["museums", "food"], "pace": "moderate"}}
+        Example: {{"operation": "create", "destination": "Paris", 
+                   "start_date": "2024-03-15", "end_date": "2024-03-20", 
+                   "interests": ["museums", "food"], "pace": "moderate"}}
         """
 
         try:
             messages = [
                 SystemMessage(
-                    content="You are an itinerary planning parameter extraction assistant."
+                    content="You are an itinerary planning parameter extraction "
+                    "assistant."
                 ),
                 HumanMessage(content=extraction_prompt),
             ]
@@ -459,7 +461,9 @@ class ItineraryAgentNode(BaseAgentNode):
                 optimized_day = {
                     **day,
                     "activities": optimized_activities,
-                    "optimization_notes": "Optimized for better flow and reduced travel time",
+                    "optimization_notes": (
+                        "Optimized for better flow and reduced travel time"
+                    ),
                 }
                 optimized_schedule.append(optimized_day)
 
@@ -621,7 +625,10 @@ class ItineraryAgentNode(BaseAgentNode):
             Formatted response message
         """
         if result.get("error"):
-            content = f"I apologize, but I encountered an issue with your itinerary: {result['error']}"
+            content = (
+                f"I apologize, but I encountered an issue with your itinerary: "
+                f"{result['error']}"
+            )
         else:
             if operation_type == "create":
                 content = self._format_create_response(result, params)
@@ -651,7 +658,10 @@ class ItineraryAgentNode(BaseAgentNode):
         total_activities = result.get("total_activities", 0)
         daily_schedule = result.get("daily_schedule", [])
 
-        content = f"I've created a {duration}-day itinerary for {destination} with {total_activities} activities!\n\n"
+        content = (
+            f"I've created a {duration}-day itinerary for {destination} with "
+            f"{total_activities} activities!\n\n"
+        )
 
         for day in daily_schedule[:3]:  # Show first 3 days
             day_num = day.get("day", 1)
@@ -676,10 +686,15 @@ class ItineraryAgentNode(BaseAgentNode):
 
         estimated_cost = result.get("estimated_cost", {})
         if estimated_cost.get("total_estimated_cost", 0) > 0:
-            content += f"**Estimated Cost:** ${estimated_cost['total_estimated_cost']:.0f} total "
-            content += f"(${estimated_cost['average_daily_cost']:.0f}/day)\n\n"
+            content += (
+                f"**Estimated Cost:** ${estimated_cost['total_estimated_cost']:.0f} "
+                f"total (${estimated_cost['average_daily_cost']:.0f}/day)\n\n"
+            )
 
-        content += "Would you like me to optimize this itinerary, add calendar events, or make any modifications?"
+        content += (
+            "Would you like me to optimize this itinerary, add calendar events, or "
+            "make any modifications?"
+        )
 
         return content
 
@@ -694,7 +709,10 @@ class ItineraryAgentNode(BaseAgentNode):
         content += "• Improved activity flow and timing\n"
         content += "• Reduced travel time between locations\n"
         content += "• Better grouped nearby activities\n\n"
-        content += "The optimized schedule maintains all your original activities while improving efficiency. "
+        content += (
+            "The optimized schedule maintains all your original activities while "
+            "improving efficiency. "
+        )
         content += (
             "Would you like to see the updated schedule or make any other changes?"
         )
@@ -709,14 +727,23 @@ class ItineraryAgentNode(BaseAgentNode):
         destination = result.get("destination", "")
 
         if modification_type == "add":
-            content = f"I've successfully added the new activity to your {destination} itinerary!\n\n"
+            content = (
+                f"I've successfully added the new activity to your {destination} "
+                "itinerary!\n\n"
+            )
         elif modification_type == "remove":
-            content = f"I've successfully removed the activity from your {destination} itinerary!\n\n"
+            content = (
+                f"I've successfully removed the activity from your {destination} "
+                "itinerary!\n\n"
+            )
         else:
             content = f"I've successfully modified your {destination} itinerary!\n\n"
 
         content += "Your itinerary has been updated with the changes. "
-        content += "Would you like to make any other modifications or see the full updated schedule?"
+        content += (
+            "Would you like to make any other modifications or see the full updated "
+            "schedule?"
+        )
 
         return content
 
@@ -734,7 +761,10 @@ class ItineraryAgentNode(BaseAgentNode):
         content += "• Location information\n"
         content += "• Activity descriptions\n"
         content += "• Estimated durations\n\n"
-        content += "You can now import these events into your calendar app for easy reference during your trip!"
+        content += (
+            "You can now import these events into your calendar app for easy "
+            "reference during your trip!"
+        )
 
         return content
 
@@ -761,7 +791,8 @@ class ItineraryAgentNode(BaseAgentNode):
         Provide a helpful response that:
         1. Acknowledges their interest in itinerary planning
         2. Asks for specific information needed (destination, dates, interests, pace)
-        3. Explains what itinerary services you can provide (creation, optimization, modification)
+        3. Explains what itinerary services you can provide (creation, optimization, 
+           modification)
         4. Offers to help once they provide details
         
         Keep the response friendly and concise.
@@ -782,9 +813,10 @@ class ItineraryAgentNode(BaseAgentNode):
             logger.error(f"Error generating itinerary response: {str(e)}")
             content = (
                 "I'd be happy to help you create a detailed itinerary! To get started, "
-                "I'll need to know your destination, travel dates, interests, and preferred "
-                "pace (relaxed, moderate, or busy). I can create day-by-day schedules, "
-                "optimize existing itineraries, and even create calendar events for your trip. "
+                "I'll need to know your destination, travel dates, interests, and "
+                "preferred pace (relaxed, moderate, or busy). I can create day-by-day "
+                "schedules, optimize existing itineraries, and even create calendar "
+                "events for your trip. "
                 "What destination are you planning to visit?"
             )
 
