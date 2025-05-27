@@ -16,7 +16,7 @@ from langchain_openai import ChatOpenAI
 from tripsage.config.app_settings import settings
 from tripsage.orchestration.nodes.base import BaseAgentNode
 from tripsage.orchestration.state import TravelPlanningState
-from tripsage.orchestration.tools.mcp_integration import MCPToolRegistry
+from tripsage.orchestration.mcp_bridge import get_mcp_bridge
 from tripsage.utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -40,13 +40,16 @@ class AccommodationAgentNode(BaseAgentNode):
             temperature=settings.agent.temperature,
             api_key=settings.openai_api_key.get_secret_value(),
         )
+        
+        # MCP bridge will be initialized async
+        self.mcp_bridge = None
 
-    def _initialize_tools(self) -> None:
+    async def _initialize_tools(self) -> None:
         """Initialize accommodation-specific tools and MCP integrations."""
-        self.tool_registry = MCPToolRegistry()
-        self.available_tools = self.tool_registry.get_tools_for_agent(
-            "accommodation_agent"
-        )
+        if not self.mcp_bridge:
+            self.mcp_bridge = await get_mcp_bridge()
+            
+        self.available_tools = await self.mcp_bridge.get_tools()
 
         logger.info(
             f"Initialized accommodation agent with {len(self.available_tools)} tools"
@@ -62,6 +65,9 @@ class AccommodationAgentNode(BaseAgentNode):
         Returns:
             Updated state with accommodation search results and response
         """
+        # Ensure tools are initialized
+        await self._initialize_tools()
+        
         user_message = state["messages"][-1]["content"] if state["messages"] else ""
 
         # Extract accommodation search parameters from user message and context
@@ -184,22 +190,27 @@ class AccommodationAgentNode(BaseAgentNode):
             Accommodation search results
         """
         try:
-            # Get the accommodation search tool
-            search_tool = self.tool_registry.get_tool("search_accommodations")
+            # Use MCP bridge to invoke accommodation search
+            # This assumes airbnb MCP server with search_accommodations method
+            result = await self.mcp_bridge.invoke_tool_direct(
+                "airbnb_search_accommodations", search_params
+            )
 
-            if search_tool:
-                # Execute accommodation search
-                result_json = await search_tool._arun(**search_params)
-                result = json.loads(result_json)
-
-                logger.info(
-                    f"Accommodation search completed: "
-                    f"{len(result.get('accommodations', []))} properties found"
-                )
-                return result
-            else:
-                logger.error("Accommodation search tool not available")
-                return {"error": "Accommodation search service unavailable"}
+            logger.info(
+                f"Accommodation search completed: "
+                f"{len(result.get('accommodations', []) if isinstance(result, dict) else [])} properties found"
+            )
+            
+            # Ensure result is in expected format
+            if isinstance(result, str):
+                try:
+                    result = json.loads(result)
+                except json.JSONDecodeError:
+                    result = {"error": "Invalid response format from search service"}
+            elif not isinstance(result, dict):
+                result = {"error": "Unexpected response format from search service"}
+                
+            return result
 
         except Exception as e:
             logger.error(f"Accommodation search failed: {str(e)}")
