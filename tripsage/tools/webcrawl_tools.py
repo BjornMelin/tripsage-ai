@@ -7,12 +7,32 @@ with Playwright MCP as a fallback for JavaScript-heavy sites.
 
 from typing import Optional
 
+from tripsage.config.webcrawl_feature_flags import (
+    WebCrawlFeatureFlags,
+    get_performance_metrics,
+)
 from tripsage.mcp_abstraction.manager import mcp_manager
+from tripsage.services.webcrawl_service import WebCrawlParams, get_webcrawl_service
 from tripsage.tools.webcrawl.models import UnifiedCrawlResult
-from tripsage.tools.webcrawl.result_normalizer import get_normalizer
-from tripsage.tools.webcrawl.source_selector import get_source_selector
-from tripsage.utils.error_handling import with_error_handling
-from tripsage.utils.function_tools import function_tool
+from tripsage.tools.webcrawl.result_normalizer import ResultNormalizer
+from tripsage.tools.webcrawl.source_selector import WebCrawlSourceSelector
+from tripsage.utils.decorators import with_error_handling
+
+# Mock function_tool decorator for testing
+try:
+    from agents import function_tool
+except ImportError:
+
+    def function_tool(func_or_name=None, description=None):
+        def decorator(func):
+            return func
+
+        if callable(func_or_name):
+            return decorator(func_or_name)
+        else:
+            return decorator
+
+
 from tripsage.utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -47,7 +67,7 @@ async def crawl_website_content(
         UnifiedCrawlResult with normalized content from the appropriate crawler
     """
     # Get the source selector
-    selector = get_source_selector()
+    selector = WebCrawlSourceSelector()
 
     # Determine extraction complexity based on parameters
     extraction_complexity = "simple"
@@ -55,6 +75,9 @@ async def crawl_website_content(
         extraction_complexity = "complex"
     elif extract_structured_data or requires_javascript:
         extraction_complexity = "moderate"
+
+    # Get feature flags for migration control
+    feature_flags = WebCrawlFeatureFlags()
 
     # Get the appropriate client for this URL
     client = selector.get_client_for_url(
@@ -65,8 +88,16 @@ async def crawl_website_content(
         extraction_complexity=extraction_complexity,
     )
 
+    # Check if we should use direct SDK
+    use_direct = (
+        feature_flags.use_direct_crawl4ai
+        and client == "direct"
+        and feature_flags.direct_crawl4ai_percentage
+        >= 100  # For now, use 100% when enabled
+    )
+
     # Get the normalizer
-    normalizer = get_normalizer()
+    normalizer = ResultNormalizer()
 
     # Helper function to check if a result needs fallback
     def needs_fallback(result: UnifiedCrawlResult) -> bool:
@@ -104,117 +135,186 @@ async def crawl_website_content(
         return False
 
     primary_result = None
-    try:
-        # Determine which client we're using
-        client_name = client.__class__.__name__
-        logger.debug(f"Using {client_name} for {url}")
 
-        if client_name == "FirecrawlMCPClient":
-            # Use Firecrawl client
-            from tripsage.clients.webcrawl.firecrawl_mcp_client import (
-                FirecrawlScrapeParams,
-            )
+    # Try direct Crawl4AI SDK first if enabled
+    if use_direct:
+        try:
+            logger.info(f"Using direct Crawl4AI SDK for {url}")
 
-            params = FirecrawlScrapeParams(
-                formats=["markdown", "html"]
-                if extract_structured_data
-                else ["markdown"],
-                actions=[],
-                mobile=requires_javascript,  # Mobile view can help with JS content
-            )
-
-            raw_result = await mcp_manager.invoke(
-                mcp_name="firecrawl",
-                method_name="scrape_url",
-                params={"url": url, "params": params, "use_cache": use_cache},
-            )
-            primary_result = await normalizer.normalize_firecrawl_output(
-                raw_result, url
-            )
-
-        elif client_name == "PlaywrightMCPClient":
-            # Use Playwright directly (selected by source selector)
-            from tripsage.tools.browser.playwright_mcp_client import (
-                PlaywrightNavigateOptions,
-            )
-
-            # Navigate to the URL
-            navigate_options = PlaywrightNavigateOptions(
-                browser_type="chromium",
-                headless=True,
-                width=1280,
-                height=720,
-                timeout=30000,
-                wait_until="networkidle",
-            )
-
-            navigation_result = await mcp_manager.invoke(
-                mcp_name="playwright",
-                method_name="navigate",
-                params={"url": url, "options": navigate_options},
-            )
-
-            # Get the page content
-            visible_text = await mcp_manager.invoke(
-                mcp_name="playwright", method_name="get_visible_text", params={}
-            )
-
-            visible_html = await mcp_manager.invoke(
-                mcp_name="playwright", method_name="get_visible_html", params={}
-            )
-
-            # Close the browser
-            await mcp_manager.invoke(
-                mcp_name="playwright", method_name="close", params={}
-            )
-
-            # Create the raw output for normalizer
-            playwright_output = {
-                "visible_text": visible_text,
-                "visible_html": visible_html,
-                "title": navigation_result.get("title"),
-                "browser_type": navigate_options.browser_type,
-                "status": "success",
-            }
-
-            # Normalize the Playwright output
-            primary_result = await normalizer.normalize_playwright_mcp_output(
-                playwright_output, url
-            )
-
-        else:
-            # Use Crawl4AI client
-            from tripsage.clients.webcrawl.crawl4ai_mcp_client import (
-                Crawl4AICrawlParams,
-            )
-
-            params = Crawl4AICrawlParams(
+            # Build parameters for the direct service
+            crawl_params = WebCrawlParams(
                 javascript_enabled=requires_javascript,
                 extract_markdown=True,
                 extract_html=extract_structured_data,
                 extract_structured_data=extract_structured_data,
+                use_cache=use_cache,
+                screenshot=False,  # Can be enabled if needed
+                pdf=False,  # Can be enabled if needed
             )
 
-            raw_result = await mcp_manager.invoke(
-                mcp_name="crawl4ai",
-                method_name="crawl_url",
-                params={"url": url, "params": params, "use_cache": use_cache},
-            )
-            primary_result = await normalizer.normalize_crawl4ai_output(raw_result, url)
+            # Use the direct service
+            webcrawl_service = get_webcrawl_service()
+            direct_result = await webcrawl_service.crawl_url(url, crawl_params)
 
-    except Exception as e:
-        logger.error(f"Primary crawl failed for {url}: {str(e)}")
-        primary_result = UnifiedCrawlResult(
-            url=url,
-            status="error",
-            error_message=str(e),
-            metadata={
-                "source_crawler": client.__class__.__name__.replace(
-                    "MCPClient", ""
-                ).lower(),
-                "error_type": type(e).__name__,
-            },
-        )
+            # Convert to UnifiedCrawlResult
+            primary_result = await normalizer.normalize_direct_crawl4ai_output(
+                direct_result, url
+            )
+
+            # Record performance metrics
+            metrics = get_performance_metrics()
+            metrics.add_direct_sdk_result(
+                direct_result.performance_metrics.get("duration_ms", 0),
+                direct_result.success,
+            )
+
+            logger.info(
+                f"Direct Crawl4AI completed for {url} - Success: {direct_result.success}"
+            )
+
+        except Exception as e:
+            logger.error(f"Direct Crawl4AI failed for {url}: {str(e)}")
+
+            # If fallback is enabled, continue to MCP implementation
+            if not feature_flags.fallback_to_mcp_on_error:
+                return UnifiedCrawlResult(
+                    url=url,
+                    status="error",
+                    error_message=f"Direct Crawl4AI failed: {str(e)}",
+                    source_crawler="crawl4ai_direct",
+                    metadata={"error_type": type(e).__name__},
+                )
+
+            logger.info(f"Falling back to MCP implementation for {url}")
+            use_direct = False  # Disable direct for fallback
+
+    # Fallback to MCP implementation or direct MCP usage
+    if not use_direct or primary_result is None or not primary_result.has_content():
+        try:
+            # Determine which client we're using
+            if isinstance(client, str):
+                # This shouldn't happen if use_direct was properly handled above
+                logger.warning(f"Unexpected string client type: {client}")
+                # Get a real MCP client as fallback
+                from tripsage.clients.webcrawl.crawl4ai_mcp_client import (
+                    Crawl4AIMCPClient,
+                )
+
+                client = Crawl4AIMCPClient()
+
+            client_name = client.__class__.__name__
+            logger.debug(f"Using {client_name} for {url}")
+
+            if client_name == "FirecrawlMCPClient":
+                # Use Firecrawl client
+                from tripsage.clients.webcrawl.firecrawl_mcp_client import (
+                    FirecrawlScrapeParams,
+                )
+
+                params = FirecrawlScrapeParams(
+                    formats=["markdown", "html"]
+                    if extract_structured_data
+                    else ["markdown"],
+                    actions=[],
+                    mobile=requires_javascript,  # Mobile view can help with JS content
+                )
+
+                raw_result = await mcp_manager.invoke(
+                    mcp_name="firecrawl",
+                    method_name="scrape_url",
+                    params={"url": url, "params": params, "use_cache": use_cache},
+                )
+                primary_result = await normalizer.normalize_firecrawl_output(
+                    raw_result, url
+                )
+
+            elif client_name == "PlaywrightMCPClient":
+                # Use Playwright directly (selected by source selector)
+                from tripsage.tools.browser.playwright_mcp_client import (
+                    PlaywrightNavigateOptions,
+                )
+
+                # Navigate to the URL
+                navigate_options = PlaywrightNavigateOptions(
+                    browser_type="chromium",
+                    headless=True,
+                    width=1280,
+                    height=720,
+                    timeout=30000,
+                    wait_until="networkidle",
+                )
+
+                navigation_result = await mcp_manager.invoke(
+                    mcp_name="playwright",
+                    method_name="navigate",
+                    params={"url": url, "options": navigate_options},
+                )
+
+                # Get the page content
+                visible_text = await mcp_manager.invoke(
+                    mcp_name="playwright", method_name="get_visible_text", params={}
+                )
+
+                visible_html = await mcp_manager.invoke(
+                    mcp_name="playwright", method_name="get_visible_html", params={}
+                )
+
+                # Close the browser
+                await mcp_manager.invoke(
+                    mcp_name="playwright", method_name="close", params={}
+                )
+
+                # Create the raw output for normalizer
+                playwright_output = {
+                    "visible_text": visible_text,
+                    "visible_html": visible_html,
+                    "title": navigation_result.get("title"),
+                    "browser_type": navigate_options.browser_type,
+                    "status": "success",
+                }
+
+                # Normalize the Playwright output
+                primary_result = await normalizer.normalize_playwright_mcp_output(
+                    playwright_output, url
+                )
+
+            else:
+                # Use Crawl4AI client
+                from tripsage.clients.webcrawl.crawl4ai_mcp_client import (
+                    Crawl4AICrawlParams,
+                )
+
+                params = Crawl4AICrawlParams(
+                    javascript_enabled=requires_javascript,
+                    extract_markdown=True,
+                    extract_html=extract_structured_data,
+                    extract_structured_data=extract_structured_data,
+                )
+
+                raw_result = await mcp_manager.invoke(
+                    mcp_name="crawl4ai",
+                    method_name="crawl_url",
+                    params={"url": url, "params": params, "use_cache": use_cache},
+                )
+                primary_result = await normalizer.normalize_crawl4ai_output(
+                    raw_result, url
+                )
+
+        except Exception as e:
+            logger.error(f"Primary crawl failed for {url}: {str(e)}")
+            primary_result = UnifiedCrawlResult(
+                url=url,
+                status="error",
+                error_message=str(e),
+                metadata={
+                    "source_crawler": client.__class__.__name__.replace(
+                        "MCPClient", ""
+                    ).lower()
+                    if hasattr(client, "__class__")
+                    else "unknown",
+                    "error_type": type(e).__name__,
+                },
+            )
 
     # Check if we need fallback to Playwright
     if enable_playwright_fallback and needs_fallback(primary_result):

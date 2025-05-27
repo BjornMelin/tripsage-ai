@@ -13,11 +13,11 @@ except ImportError:
     # Mock function_tool decorator for testing
     def function_tool(func_or_name=None, description=None):
         def decorator(func):
-            if hasattr(func, '__name__'):
-                func._tool_name = getattr(func, '__name__', 'unknown_tool')
-                func._tool_description = getattr(func, '__doc__', 'No description')
+            if hasattr(func, "__name__"):
+                func._tool_name = getattr(func, "__name__", "unknown_tool")
+                func._tool_description = getattr(func, "__doc__", "No description")
             return func
-        
+
         # Handle both @function_tool and @function_tool(name, description)
         if callable(func_or_name):
             # Direct usage: @function_tool
@@ -25,6 +25,8 @@ except ImportError:
         else:
             # Parametrized usage: @function_tool(name, description)
             return decorator
+
+
 from pydantic import BaseModel, Field
 
 from tripsage.mcp_abstraction.exceptions import TripSageMCPError

@@ -25,6 +25,7 @@ class CrawlerType(str, Enum):
     """Enumeration of available web crawling sources."""
 
     CRAWL4AI = "crawl4ai"
+    CRAWL4AI_DIRECT = "crawl4ai_direct"  # Direct SDK integration
     FIRECRAWL = "firecrawl"
     PLAYWRIGHT = "playwright"  # For direct Playwright usage
 
@@ -88,11 +89,11 @@ class WebCrawlSourceSelector:
     # Content type to crawler mapping
     CONTENT_TYPE_MAPPING: Dict[str, CrawlerType] = {
         "price_monitor": CrawlerType.FIRECRAWL,  # Better at dynamic price data
-        "travel_blog": CrawlerType.CRAWL4AI,  # Better at blog content extraction
+        "travel_blog": CrawlerType.CRAWL4AI_DIRECT,  # Better at blog content extraction
         "events": CrawlerType.FIRECRAWL,  # Better at event listings
-        "destination_info": CrawlerType.CRAWL4AI,  # Better at general travel info
+        "destination_info": CrawlerType.CRAWL4AI_DIRECT,  # Better at general travel info
         "booking": CrawlerType.FIRECRAWL,  # Better at booking site data
-        "reviews": CrawlerType.CRAWL4AI,  # Better at review content
+        "reviews": CrawlerType.CRAWL4AI_DIRECT,  # Better at review content
     }
 
     def __init__(self):
@@ -164,8 +165,8 @@ class WebCrawlSourceSelector:
             )
             return CrawlerType.PLAYWRIGHT
 
-        # Default to Crawl4AI for general content
-        selected_crawler = CrawlerType.CRAWL4AI
+        # Default to direct Crawl4AI for general content
+        selected_crawler = CrawlerType.CRAWL4AI_DIRECT
 
         # 1. Check content type mapping
         if content_type and content_type in self.CONTENT_TYPE_MAPPING:
@@ -185,7 +186,7 @@ class WebCrawlSourceSelector:
                 )
                 return selected_crawler
             elif any(domain.endswith(cd) for cd in self.crawl4ai_domains):
-                selected_crawler = CrawlerType.CRAWL4AI
+                selected_crawler = CrawlerType.CRAWL4AI_DIRECT
                 logger.debug(
                     f"Selected {selected_crawler} based on optimized domain: {domain}"
                 )
@@ -232,7 +233,7 @@ class WebCrawlSourceSelector:
 
     def get_client_for_url(
         self, url: str, **kwargs
-    ) -> Union["FirecrawlMCPClient", "Crawl4AIMCPClient", "PlaywrightMCPClient"]:
+    ) -> Union["FirecrawlMCPClient", "Crawl4AIMCPClient", "PlaywrightMCPClient", str]:
         """Get the appropriate client instance for a given URL.
 
         Args:
@@ -240,11 +241,14 @@ class WebCrawlSourceSelector:
             **kwargs: Additional arguments for crawler selection
 
         Returns:
-            Either FirecrawlMCPClient, Crawl4AIMCPClient or PlaywrightMCPClient instance
+            Either FirecrawlMCPClient, Crawl4AIMCPClient, PlaywrightMCPClient instance, or "direct" for direct SDK
         """
         crawler_type = self.select_crawler(url, **kwargs)
 
-        if crawler_type == CrawlerType.FIRECRAWL:
+        if crawler_type == CrawlerType.CRAWL4AI_DIRECT:
+            # Return a special marker for direct SDK usage
+            return "direct"
+        elif crawler_type == CrawlerType.FIRECRAWL:
             from tripsage.clients.webcrawl.firecrawl_mcp_client import (
                 FirecrawlMCPClient,
             )
