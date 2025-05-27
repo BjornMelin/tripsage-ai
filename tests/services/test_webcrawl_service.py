@@ -310,7 +310,7 @@ class TestWebCrawlService:
 
         assert result.success is False
         assert "Result conversion error" in result.error_message
-        assert result.performance_metrics["error_type"] == "AttributeError"
+        assert result.performance_metrics["error_type"] == "ValidationError"
 
 
 class TestSingletonService:

@@ -262,8 +262,8 @@ class ResultNormalizer:
                     status="error",
                     error_message=crawl_result.error_message
                     or "Direct Crawl4AI failed",
-                    source_crawler="crawl4ai_direct",
                     metadata={
+                        "source_crawler": "crawl4ai_direct",
                         **crawl_result.metadata,
                         "performance_metrics": crawl_result.performance_metrics,
                     },
@@ -275,6 +275,7 @@ class ResultNormalizer:
 
             # Build metadata
             metadata = {
+                "source_crawler": "crawl4ai_direct",
                 "word_count": len(main_content_text.split())
                 if main_content_text
                 else 0,
@@ -287,15 +288,7 @@ class ResultNormalizer:
                 **crawl_result.metadata,
             }
 
-            # Build performance metrics
-            performance_metrics = {
-                "extraction_time_ms": crawl_result.performance_metrics.get(
-                    "duration_ms", 0
-                ),
-                "content_size_chars": len(main_content_markdown),
-                "source": "crawl4ai_direct",
-                **crawl_result.performance_metrics,
-            }
+            # Performance metrics are included in metadata above
 
             result = UnifiedCrawlResult(
                 url=url,
@@ -306,10 +299,6 @@ class ResultNormalizer:
                 structured_data=crawl_result.structured_data,
                 metadata=metadata,
                 status="success",
-                source_crawler="crawl4ai_direct",
-                performance_metrics=performance_metrics,
-                screenshot_data=crawl_result.screenshot,
-                pdf_data=crawl_result.pdf,
             )
 
             logger.debug(f"Normalized direct Crawl4AI output for {url}")
@@ -323,8 +312,10 @@ class ResultNormalizer:
                 url=url,
                 status="error",
                 error_message=f"Normalization error: {str(e)}",
-                source_crawler="crawl4ai_direct",
-                metadata={"error_type": type(e).__name__},
+                metadata={
+                    "source_crawler": "crawl4ai_direct",
+                    "error_type": type(e).__name__,
+                },
             )
 
     def _markdown_to_text(self, markdown: str) -> str:

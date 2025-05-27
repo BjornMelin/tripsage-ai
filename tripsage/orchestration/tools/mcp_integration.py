@@ -248,7 +248,7 @@ class MCPToolRegistry:
             {"timezone": {"type": "string", "description": "IANA timezone name"}},
         )
 
-        # Web crawling tools - Using direct LangGraph integration
+        # Web crawling tools - Direct SDK integration only
         from tripsage.orchestration.tools.webcrawl_integration import (
             BookingSiteCrawlTool,
             EventListingCrawlTool,
@@ -260,9 +260,6 @@ class MCPToolRegistry:
         self.tools["crawl_travel_blog"] = TravelBlogCrawlTool()
         self.tools["crawl_booking_site"] = BookingSiteCrawlTool()
         self.tools["crawl_event_listing"] = EventListingCrawlTool()
-
-        # Keep legacy name for backward compatibility
-        self.tools["crawl_website"] = WebCrawlTool()
 
         logger.info("All MCP tools registered successfully")
 

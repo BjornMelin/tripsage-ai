@@ -39,3 +39,4 @@ ruff>=0.11.9
 
 # Web crawling dependencies
 crawl4ai>=0.6.0
+playwright>=1.42.0
