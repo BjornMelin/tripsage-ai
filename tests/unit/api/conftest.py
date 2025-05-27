@@ -4,10 +4,7 @@ Pytest configuration for API unit tests.
 This module provides fixtures for testing FastAPI endpoints.
 """
 
-import asyncio
-from datetime import datetime, timedelta
-from typing import Any, Dict, Optional
-from unittest.mock import AsyncMock, MagicMock, patch
+from datetime import datetime
 
 import pytest
 from fastapi import FastAPI
@@ -19,7 +16,7 @@ from httpx import AsyncClient
 def mock_app():
     """Create a simple FastAPI app for testing."""
     app = FastAPI()
-    
+
     @app.get("/api/health")
     def health_check():
         return {
@@ -27,9 +24,9 @@ def mock_app():
             "application": "TripSage API",
             "version": "1.0.0",
             "environment": "test",
-            "timestamp": datetime.now().isoformat()
+            "timestamp": datetime.now().isoformat(),
         }
-    
+
     @app.get("/api/health/async")
     async def health_check_async():
         return {
@@ -38,9 +35,9 @@ def mock_app():
             "version": "1.0.0",
             "environment": "test",
             "async": True,
-            "timestamp": datetime.now().isoformat()
+            "timestamp": datetime.now().isoformat(),
         }
-    
+
     @app.get("/api/health/mcp")
     def mcp_health_check():
         return {
@@ -48,9 +45,9 @@ def mock_app():
             "mcp_status": "connected",
             "available_mcps": ["weather", "flights", "memory"],
             "enabled_mcps": ["weather", "flights"],
-            "timestamp": datetime.now().isoformat()
+            "timestamp": datetime.now().isoformat(),
         }
-    
+
     return app
 
 
@@ -85,10 +82,10 @@ def test_user():
     """Test user data."""
     return {
         "user_id": "test-user-123",
-        "email": "test@example.com", 
+        "email": "test@example.com",
         "username": "testuser",
         "created_at": datetime.now().isoformat(),
-        "is_active": True
+        "is_active": True,
     }
 
 
@@ -102,10 +99,7 @@ def sample_trip_request():
         "end_date": "2024-06-07",
         "travelers": 2,
         "budget": 2500.00,
-        "preferences": {
-            "accommodation_type": "hotel",
-            "travel_style": "leisure"
-        }
+        "preferences": {"accommodation_type": "hotel", "travel_style": "leisure"},
     }
 
 
@@ -115,7 +109,7 @@ def sample_api_key_request():
     return {
         "service": "openai",
         "api_key": "sk-test-api-key-12345",
-        "description": "Test API key for development"
+        "description": "Test API key for development",
     }
 
 
@@ -136,5 +130,7 @@ def assert_auth_required(response):
     """Helper to assert authentication is required."""
     assert response.status_code == 401
     data = response.json()
-    assert "unauthorized" in data.get("detail", "").lower() or \
-           "authentication" in data.get("detail", "").lower()
+    assert (
+        "unauthorized" in data.get("detail", "").lower()
+        or "authentication" in data.get("detail", "").lower()
+    )
