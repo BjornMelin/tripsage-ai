@@ -10,12 +10,10 @@ __all__ = [
     "supabase_service",
     "database_service",
     "cache_service",
-    
     # Web crawling services
     "crawl4ai_service",
     "playwright_service",
     "crawler_router",
-    
     # Utility services
     "weather_service",
     "time_service",
