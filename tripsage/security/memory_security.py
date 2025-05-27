@@ -285,7 +285,7 @@ class AuditLogger:
             operation: Current operation
         """
         # Get recent operations
-        pattern = f"audit:{user_id}:*"
+        # Pattern would be f"audit:{user_id}:*"
         # Implement pattern checking logic here
 
         # Example: Check for rapid operations
@@ -299,7 +299,8 @@ class AuditLogger:
 
         if count > 20:  # More than 20 operations in a minute
             logger.warning(
-                f"Suspicious activity detected for user {user_id}: {count} operations in 60s"
+                f"Suspicious activity detected for user {user_id}: "
+                f"{count} operations in 60s"
             )
             telemetry.record_memory_operation(
                 operation="suspicious_activity",
@@ -493,7 +494,7 @@ def secure_memory_operation(operation: str):
 
             # Execute with security
             return await security.secure_operation(
-                operation=operation, user_id=user_id, func=func, *args, **kwargs
+                operation, user_id, func, *args, **kwargs
             )
 
         return wrapper

@@ -150,7 +150,7 @@ class TestServiceRegistry:
 
         # Get services to initialize them
         service1 = await registry.get_service("test1")
-        service2 = await registry.get_service("test2")
+        await registry.get_service("test2")
 
         # Close all
         await registry.close_all()
