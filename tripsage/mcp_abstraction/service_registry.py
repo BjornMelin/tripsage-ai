@@ -141,7 +141,7 @@ class MCPServiceRegistry:
 
             service.status = ServiceStatus.HEALTHY
             service.error_count = 0
-            service.last_health_check = datetime.now()
+            service.last_health_check = datetime.now(datetime.UTC)
             return True
 
         except Exception as e:
@@ -153,7 +153,7 @@ class MCPServiceRegistry:
             else:
                 service.status = ServiceStatus.ERROR
 
-            service.last_health_check = datetime.now()
+            service.last_health_check = datetime.now(datetime.UTC)
             return False
 
     async def get_healthy_services(self) -> List[str]:

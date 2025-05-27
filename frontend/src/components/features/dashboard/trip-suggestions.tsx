@@ -1,7 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { MapPin, Star, Clock, DollarSign, Sparkles } from "lucide-react";
+import {
+  MapPin,
+  Star,
+  Clock,
+  DollarSign,
+  Sparkles,
+  Brain,
+  TrendingUp,
+} from "lucide-react";
 import {
   Card,
   CardContent,
@@ -13,8 +21,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Separator } from "@/components/ui/separator";
 import { useDealsStore } from "@/stores/deals-store";
 import { useBudgetStore } from "@/stores/budget-store";
+import { useMemoryContext, useMemoryInsights } from "@/lib/hooks/use-memory";
 
 interface TripSuggestion {
   id: string;
@@ -43,6 +53,8 @@ interface TripSuggestion {
 interface TripSuggestionsProps {
   limit?: number;
   showEmpty?: boolean;
+  userId?: string;
+  showMemoryBased?: boolean;
 }
 
 const mockSuggestions: TripSuggestion[] = [
@@ -305,12 +317,92 @@ function EmptyState() {
 export function TripSuggestions({
   limit = 4,
   showEmpty = true,
+  userId,
+  showMemoryBased = true,
 }: TripSuggestionsProps) {
   const { budget } = useBudgetStore();
   const isLoading = false; // Mock loading state
 
+  // Memory-based recommendations
+  const { data: memoryContext, isLoading: memoryLoading } = useMemoryContext(
+    userId || "",
+    !!userId && showMemoryBased
+  );
+
+  const { data: insights, isLoading: insightsLoading } = useMemoryInsights(
+    userId || "",
+    !!userId && showMemoryBased
+  );
+
+  // Generate memory-based suggestions
+  const generateMemoryBasedSuggestions = (): TripSuggestion[] => {
+    if (!memoryContext?.context || !insights?.insights) return [];
+
+    const { userPreferences, travelPatterns } = memoryContext.context;
+    const { recommendations, budgetPatterns, travelPersonality } =
+      insights.insights;
+
+    const memoryBasedSuggestions: TripSuggestion[] = [];
+
+    // Add suggestions based on user preferences
+    if (userPreferences.destinations) {
+      userPreferences.destinations.slice(0, 2).forEach((dest, idx) => {
+        memoryBasedSuggestions.push({
+          id: `memory-dest-${idx}`,
+          title: `Return to ${dest}`,
+          destination: dest,
+          description: `Based on your previous love for ${dest}, here's a personalized return trip.`,
+          estimatedPrice:
+            budgetPatterns?.averageSpending?.accommodation || 2000,
+          currency: "USD",
+          duration: 7,
+          rating: 4.7,
+          category:
+            userPreferences.travel_style === "luxury"
+              ? "relaxation"
+              : "culture",
+          bestTimeToVisit: "Year-round",
+          highlights: userPreferences.activities?.slice(0, 3) || [
+            "Sightseeing",
+          ],
+          trending: true,
+        });
+      });
+    }
+
+    // Add suggestions based on AI recommendations
+    if (recommendations) {
+      recommendations.slice(0, 2).forEach((rec, idx) => {
+        if (rec.type === "destination") {
+          memoryBasedSuggestions.push({
+            id: `memory-ai-${idx}`,
+            title: rec.recommendation,
+            destination:
+              rec.recommendation.split(" ")[0] || "Somewhere Amazing",
+            description: rec.reasoning,
+            estimatedPrice: budgetPatterns?.averageSpending?.total || 2500,
+            currency: "USD",
+            duration: 5,
+            rating: 4.6,
+            category: "adventure",
+            bestTimeToVisit: "Spring/Fall",
+            highlights: ["AI Recommended", "Personalized"],
+            trending: true,
+          });
+        }
+      });
+    }
+
+    return memoryBasedSuggestions.slice(0, 2);
+  };
+
+  const memoryBasedSuggestions = generateMemoryBasedSuggestions();
+
+  // Combine memory-based and regular suggestions
+  const allSuggestions = [...memoryBasedSuggestions, ...mockSuggestions];
+
   // Filter suggestions based on budget if available
-  const filteredSuggestions = mockSuggestions
+  const filteredSuggestions = allSuggestions
     .filter((suggestion) => {
       if (!budget?.totalBudget) return true;
       return suggestion.estimatedPrice <= budget.totalBudget;
@@ -339,8 +431,17 @@ export function TripSuggestions({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Trip Suggestions</CardTitle>
-        <CardDescription>AI-powered travel recommendations</CardDescription>
+        <CardTitle className="flex items-center gap-2">
+          {showMemoryBased && memoryBasedSuggestions.length > 0 && (
+            <Brain className="h-5 w-5 text-purple-500" />
+          )}
+          Trip Suggestions
+        </CardTitle>
+        <CardDescription>
+          {showMemoryBased && memoryBasedSuggestions.length > 0
+            ? "Personalized recommendations based on your travel history"
+            : "AI-powered travel recommendations"}
+        </CardDescription>
       </CardHeader>
       <CardContent>
         {filteredSuggestions.length === 0 ? (
@@ -353,17 +454,54 @@ export function TripSuggestions({
           )
         ) : (
           <div className="space-y-4">
-            {filteredSuggestions.map((suggestion) => (
-              <SuggestionCard key={suggestion.id} suggestion={suggestion} />
-            ))}
+            {/* Memory-based suggestions with special styling */}
+            {memoryBasedSuggestions.length > 0 && (
+              <>
+                <div className="flex items-center gap-2 text-sm font-medium text-purple-600">
+                  <Brain className="h-4 w-4" />
+                  Personalized for You
+                </div>
+                {memoryBasedSuggestions.slice(0, 2).map((suggestion) => (
+                  <div key={suggestion.id} className="relative">
+                    <div className="absolute -top-2 -right-2 z-10">
+                      <Badge className="bg-purple-100 text-purple-700 border-purple-200">
+                        <Sparkles className="h-3 w-3 mr-1" />
+                        AI Match
+                      </Badge>
+                    </div>
+                    <div className="border border-purple-200 rounded-lg bg-purple-50/30">
+                      <SuggestionCard suggestion={suggestion} />
+                    </div>
+                  </div>
+                ))}
+                {filteredSuggestions.length > memoryBasedSuggestions.length && (
+                  <Separator className="my-4" />
+                )}
+              </>
+            )}
+
+            {/* Regular suggestions */}
+            {filteredSuggestions
+              .filter((s) => !s.id.startsWith("memory-"))
+              .map((suggestion) => (
+                <SuggestionCard key={suggestion.id} suggestion={suggestion} />
+              ))}
           </div>
         )}
       </CardContent>
       {filteredSuggestions.length > 0 && (
-        <CardFooter>
-          <Button className="w-full" variant="outline" asChild>
+        <CardFooter className="flex gap-2">
+          <Button className="flex-1" variant="outline" asChild>
             <Link href="/dashboard/chat">Get More Suggestions</Link>
           </Button>
+          {showMemoryBased && (
+            <Button className="flex-1" variant="outline" asChild>
+              <Link href="/profile">
+                <TrendingUp className="h-4 w-4 mr-2" />
+                View Insights
+              </Link>
+            </Button>
+          )}
         </CardFooter>
       )}
     </Card>

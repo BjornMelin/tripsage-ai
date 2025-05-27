@@ -84,7 +84,7 @@ async def create_travel_plan(params: Dict[str, Any]) -> Dict[str, Any]:
         plan_input = TravelPlanInput(**params)
 
         # Generate plan ID
-        plan_id = f"plan_{datetime.now().strftime('%Y%m%d%H%M%S')}"
+        plan_id = f"plan_{datetime.now(datetime.UTC).strftime('%Y%m%d%H%M%S')}"
 
         # Create travel plan object
         travel_plan = {
@@ -97,8 +97,8 @@ async def create_travel_plan(params: Dict[str, Any]) -> Dict[str, Any]:
             "travelers": plan_input.travelers,
             "budget": plan_input.budget,
             "preferences": plan_input.preferences or {},
-            "created_at": datetime.now().isoformat(),
-            "updated_at": datetime.now().isoformat(),
+            "created_at": datetime.now(datetime.UTC).isoformat(),
+            "updated_at": datetime.now(datetime.UTC).isoformat(),
             "components": {
                 "flights": [],
                 "accommodations": [],
@@ -222,7 +222,7 @@ async def update_travel_plan(params: Dict[str, Any]) -> Dict[str, Any]:
                 travel_plan[key] = value
 
         # Update the modification timestamp
-        travel_plan["updated_at"] = datetime.now().isoformat()
+        travel_plan["updated_at"] = datetime.now(datetime.UTC).isoformat()
 
         # Save the updated plan
         await cache.set(cache_key, travel_plan, ttl=86400 * 7)  # 7 days
@@ -616,10 +616,10 @@ async def save_travel_plan(params: Dict[str, Any]) -> Dict[str, Any]:
         # Mark as finalized if requested
         if finalize:
             travel_plan["status"] = "finalized"
-            travel_plan["finalized_at"] = datetime.now().isoformat()
+            travel_plan["finalized_at"] = datetime.now(datetime.UTC).isoformat()
 
         # Update the modification timestamp
-        travel_plan["updated_at"] = datetime.now().isoformat()
+        travel_plan["updated_at"] = datetime.now(datetime.UTC).isoformat()
 
         # Save to persistent storage (database)
         # This would interface with the database in a real implementation
@@ -640,13 +640,12 @@ async def save_travel_plan(params: Dict[str, Any]) -> Dict[str, Any]:
 
             # Add finalization observation if finalized
             if finalize:
+                finalization_time = datetime.now(datetime.UTC).isoformat()
                 await memory_client.add_observations(
                     [
                         {
                             "entityName": f"TravelPlan_{plan_id}",
-                            "contents": [
-                                f"Plan finalized on {datetime.now().isoformat()}"
-                            ],
+                            "contents": [f"Plan finalized on {finalization_time}"],
                         }
                     ]
                 )

@@ -69,7 +69,7 @@ class FlightAgentNode(BaseAgentNode):
 
             # Update state with results
             flight_search_record = {
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(datetime.UTC).isoformat(),
                 "parameters": search_params,
                 "results": search_results,
                 "agent": "flight_agent",

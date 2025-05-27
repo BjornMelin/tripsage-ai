@@ -104,7 +104,7 @@ class KeyMonitoringService:
 
         # Create a log entry
         log_data = {
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(datetime.UTC).isoformat(),
             "operation": operation,
             "user_id": user_id,
             "key_id": key_id,
@@ -163,7 +163,7 @@ class KeyMonitoringService:
             "list_push",
             params={
                 "key": key,
-                "value": datetime.utcnow().isoformat(),
+                "value": datetime.now(datetime.UTC).isoformat(),
                 "ttl": self.pattern_timeframe,  # 10 minutes
             },
         )
@@ -230,7 +230,7 @@ class KeyMonitoringService:
             params={
                 "key": "key_alerts",
                 "value": {
-                    "timestamp": datetime.utcnow().isoformat(),
+                    "timestamp": datetime.now(datetime.UTC).isoformat(),
                     "message": alert_message,
                     "operation": operation,
                     "user_id": user_id,
@@ -584,7 +584,7 @@ async def check_key_expiration(
     await monitoring_service.initialize()
 
     # Get date threshold
-    threshold = datetime.utcnow() + timedelta(days=days_before)
+    threshold = datetime.now(datetime.UTC) + timedelta(days=days_before)
 
     # Use Supabase MCP to get expiring keys
     supabase_mcp = await mcp_manager.initialize_mcp("supabase")
@@ -638,21 +638,22 @@ async def get_key_health_metrics() -> Dict[str, Any]:
         params={
             "table": "api_keys",
             "query": {
-                "expires_at": f"lte.{datetime.utcnow().isoformat()}",
+                "expires_at": f"lte.{datetime.now(datetime.UTC).isoformat()}",
                 "count": "exact",
             },
         },
     )
 
     # Get count of keys expiring in next 30 days
+    now = datetime.now(datetime.UTC)
+    future_date = now + timedelta(days=30)
     expiring_count = await supabase_mcp.invoke_method(
         "query",
         params={
             "table": "api_keys",
             "query": {
                 "expires_at": (
-                    f"gt.{datetime.utcnow().isoformat()} and "
-                    f"lte.{(datetime.utcnow() + timedelta(days=30)).isoformat()}"
+                    f"gt.{now.isoformat()} and lte.{future_date.isoformat()}"
                 ),
                 "count": "exact",
             },

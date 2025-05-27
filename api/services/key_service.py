@@ -41,8 +41,8 @@ class KeyService:
                 "user_id": user_id,
                 "service": service,
                 "api_key": api_key,  # In a real implementation, encrypt this value
-                "created_at": datetime.utcnow().isoformat(),
-                "last_validated": datetime.utcnow().isoformat(),
+                "created_at": datetime.now(datetime.UTC).isoformat(),
+                "last_validated": datetime.now(datetime.UTC).isoformat(),
                 "is_valid": True,
             }
 

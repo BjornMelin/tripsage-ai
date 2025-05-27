@@ -9,6 +9,8 @@ from typing import Any, Dict, Optional
 
 import httpx
 
+from tripsage.services.memory_service import TripSageMemoryService
+from tripsage.tools.memory_tools import ConversationMessage
 from tripsage.utils.logging import get_logger
 from tripsage.utils.settings import settings
 
@@ -31,6 +33,10 @@ class Crawl4AIClient:
             # Use default MCP base URL if not specified
             self.base_url = "http://localhost:11235"
             logger.info(f"Using default Crawl4AI MCP base URL: {self.base_url}")
+
+        # Initialize memory service for content extraction
+        self.memory_service = TripSageMemoryService()
+        self._memory_initialized = False
 
     async def scrape_url(
         self,
@@ -274,6 +280,216 @@ class Crawl4AIClient:
         # This would be expanded in a real implementation to handle
         # different extract_types appropriately
         return self._format_result(result, url)
+
+    async def _ensure_memory_initialized(self) -> None:
+        """Ensure memory service is connected for content extraction."""
+        if not self._memory_initialized:
+            try:
+                await self.memory_service.connect()
+                self._memory_initialized = True
+                logger.debug("Memory service initialized for Crawl4AI client")
+            except Exception as e:
+                logger.warning(f"Failed to initialize memory service: {e}")
+
+    async def extract_travel_insights(
+        self,
+        content: str,
+        url: str,
+        user_id: Optional[str] = None,
+        content_type: str = "web_content",
+    ) -> Dict[str, Any]:
+        """Extract travel-related insights from web content using Mem0.
+
+        Args:
+            content: Text content to analyze
+            url: Source URL
+            user_id: Optional user ID for personalized extraction
+            content_type: Type of content (web_content, blog, review, etc.)
+
+        Returns:
+            Extracted insights and memory storage result
+        """
+        try:
+            await self._ensure_memory_initialized()
+
+            # Create conversation messages for memory extraction
+            system_prompt = (
+                "Extract travel-related information from web content. "
+                "Focus on destinations, activities, tips, recommendations, "
+                f"and practical travel advice. Source: {url}"
+            )
+
+            messages = [
+                ConversationMessage(role="system", content=system_prompt),
+                ConversationMessage(
+                    role="user",
+                    content=f"Web content from {url}:\n\n{content[:2000]}...",
+                ),
+            ]
+
+            # Extract memories using Mem0
+            memory_result = await self.memory_service.add_conversation_memory(
+                messages=messages,
+                user_id=user_id or "web_crawler",
+                metadata={
+                    "source_url": url,
+                    "content_type": content_type,
+                    "extraction_type": "travel_insights",
+                    "domain": "travel_planning",
+                },
+            )
+
+            # Parse extracted insights
+            insights = self._parse_travel_insights(memory_result, content, url)
+
+            insight_count = len(insights.get("insights", []))
+            logger.info(
+                f"Extracted travel insights from {url}", insights_count=insight_count
+            )
+
+            return {
+                "success": True,
+                "url": url,
+                "insights": insights,
+                "memory_result": memory_result,
+                "extracted_count": len(memory_result.get("results", [])),
+            }
+
+        except Exception as e:
+            logger.error(f"Failed to extract travel insights: {e}")
+            return {"success": False, "url": url, "error": str(e), "insights": {}}
+
+    def _parse_travel_insights(
+        self, memory_result: Dict[str, Any], content: str, url: str
+    ) -> Dict[str, Any]:
+        """Parse and categorize travel insights from memory extraction result.
+
+        Args:
+            memory_result: Result from memory service
+            content: Original content
+            url: Source URL
+
+        Returns:
+            Categorized travel insights
+        """
+        insights = {
+            "destinations": [],
+            "activities": [],
+            "tips": [],
+            "recommendations": [],
+            "practical_info": [],
+            "budget_info": [],
+            "timing": [],
+        }
+
+        # Extract memories and categorize them
+        for memory in memory_result.get("results", []):
+            memory_text = memory.get("memory", "")
+            memory_lower = memory_text.lower()
+
+            # Categorize based on content keywords
+            destination_words = ["visit", "destination", "city", "country", "place"]
+            activity_words = ["activity", "do", "experience", "tour", "attraction"]
+            tip_words = ["tip", "advice", "recommend", "suggest", "should"]
+            recommendation_words = ["restaurant", "hotel", "stay", "eat", "food"]
+            practical_words = [
+                "transport",
+                "flight",
+                "train",
+                "bus",
+                "visa",
+                "passport",
+            ]
+            budget_words = ["cost", "price", "budget", "money", "expensive", "cheap"]
+            timing_words = ["time", "season", "weather", "month", "when"]
+
+            if any(word in memory_lower for word in destination_words):
+                insights["destinations"].append(memory_text)
+            elif any(word in memory_lower for word in activity_words):
+                insights["activities"].append(memory_text)
+            elif any(word in memory_lower for word in tip_words):
+                insights["tips"].append(memory_text)
+            elif any(word in memory_lower for word in recommendation_words):
+                insights["recommendations"].append(memory_text)
+            elif any(word in memory_lower for word in practical_words):
+                insights["practical_info"].append(memory_text)
+            elif any(word in memory_lower for word in budget_words):
+                insights["budget_info"].append(memory_text)
+            elif any(word in memory_lower for word in timing_words):
+                insights["timing"].append(memory_text)
+
+        # Add content statistics
+        insights["metadata"] = {
+            "url": url,
+            "content_length": len(content),
+            "total_memories": len(memory_result.get("results", [])),
+            "extraction_successful": memory_result.get("success", False),
+        }
+
+        return insights
+
+    async def scrape_with_memory_extraction(
+        self,
+        url: str,
+        user_id: Optional[str] = None,
+        full_page: bool = False,
+        extract_images: bool = False,
+        extract_links: bool = False,
+        specific_selector: Optional[str] = None,
+        js_enabled: bool = True,
+    ) -> Dict[str, Any]:
+        """Scrape URL and extract travel insights to memory.
+
+        This method combines web scraping with automatic travel insight extraction
+        and storage in the user's memory for future personalization.
+
+        Args:
+            url: The URL to scrape
+            user_id: User ID for personalized memory storage
+            full_page: Whether to get the full page content
+            extract_images: Whether to extract image data
+            extract_links: Whether to extract links
+            specific_selector: CSS selector to target specific content
+            js_enabled: Whether to enable JavaScript execution
+
+        Returns:
+            Combined scraping and memory extraction result
+        """
+        # First, scrape the content
+        scrape_result = await self.scrape_url(
+            url=url,
+            full_page=full_page,
+            extract_images=extract_images,
+            extract_links=extract_links,
+            specific_selector=specific_selector,
+            js_enabled=js_enabled,
+        )
+
+        if not scrape_result.get("success"):
+            return scrape_result
+
+        # Extract content for memory processing
+        content = ""
+        items = scrape_result.get("items", [])
+        if items:
+            content = items[0].get("content", "")
+
+        # Extract travel insights if content is available
+        insights_result = {}
+        if content and len(content.strip()) > 50:  # Only process substantial content
+            insights_result = await self.extract_travel_insights(
+                content=content, url=url, user_id=user_id, content_type="web_scrape"
+            )
+
+        # Combine results
+        combined_result = {
+            **scrape_result,
+            "memory_extraction": insights_result,
+            "has_insights": insights_result.get("success", False),
+            "insights_count": insights_result.get("extracted_count", 0),
+        }
+
+        return combined_result
 
 
 # Singleton instance

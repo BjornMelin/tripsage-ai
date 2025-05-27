@@ -488,7 +488,8 @@ class TripSageFlightBooking:
                             "entityName": f"Booking:{booking_id}",
                             "contents": [
                                 "Status: cancelled",
-                                f"Cancelled at: {datetime.now().isoformat()}",
+                                f"Cancelled at: "
+                                f"{datetime.now(datetime.UTC).isoformat()}",
                             ],
                         }
                     ]

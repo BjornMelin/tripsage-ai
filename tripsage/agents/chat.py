@@ -11,22 +11,24 @@ from typing import Any, Dict, List, Optional
 
 from tripsage.agents.accommodation import AccommodationAgent
 from tripsage.agents.base import BaseAgent
-from tripsage.agents.budget import BudgetAgent
+from tripsage.agents.budget import Budget as BudgetAgent
 from tripsage.agents.destination_research import DestinationResearchAgent
 from tripsage.agents.flight import FlightAgent
-from tripsage.agents.itinerary import ItineraryAgent
+from tripsage.agents.itinerary import Itinerary as ItineraryAgent
 from tripsage.agents.travel import TravelAgent
 from tripsage.config.app_settings import settings
 from tripsage.mcp_abstraction.manager import MCPManager
 from tripsage.services.chat_orchestration import ChatOrchestrationService
+from tripsage.services.memory_service import TripSageMemoryService
+from tripsage.tools.memory_tools import ConversationMessage
 from tripsage.utils.error_handling import (
     TripSageError,
     log_exception,
     with_error_handling,
 )
-from tripsage.utils.logging import get_module_logger
+from tripsage.utils.logging import get_logger
 
-logger = get_module_logger(__name__)
+logger = get_logger(__name__)
 
 
 class ChatAgentError(TripSageError):
@@ -69,6 +71,8 @@ class ChatAgent(BaseAgent):
         3. Execute travel tools directly for simple queries (weather, maps, time)
         4. Coordinate multi-step travel planning workflows
         5. Maintain conversation context and user preferences
+        6. Provide personalized recommendations based on user's travel history and
+        preferences
         
         AGENT ROUTING STRATEGY:
         - Flight-focused queries → FlightAgent
@@ -93,12 +97,20 @@ class ChatAgent(BaseAgent):
         - Handle tool failures gracefully with clear error messages
         - Respect rate limits (5 tool calls per minute per user)
         
+        PERSONALIZATION:
+        - If user context is available in the session, use it to personalize responses
+        - Reference previous trips, preferences, and travel style when relevant
+        - Suggest options that align with the user's budget patterns and preferences
+        - Adapt communication style based on user's travel experience level
+        - Remember dietary restrictions, accessibility needs, and special requirements
+        
         RESPONSE FORMAT:
         - Be conversational but informative
         - Use structured data when presenting options
         - Include relevant details without overwhelming
         - Ask clarifying questions when intent is unclear
         - Provide next steps or actionable recommendations
+        - When available, reference user's previous preferences and travel history
         
         TOOL EXECUTION:
         When executing tools, always:
@@ -126,6 +138,10 @@ class ChatAgent(BaseAgent):
         # Initialize MCP integration (Phase 5 pattern)
         self.mcp_manager = mcp_manager or MCPManager()
         self.chat_service = ChatOrchestrationService(self.mcp_manager)
+
+        # Initialize memory service for personalization
+        self.memory_service = TripSageMemoryService()
+        self._memory_initialized = False
 
         # Initialize specialized agents
         self._initialize_specialized_agents()
@@ -171,6 +187,86 @@ class ChatAgent(BaseAgent):
                 self.register_tool_group(module)
             except Exception as e:
                 logger.warning(f"Could not register tool module {module}: {str(e)}")
+
+    async def _ensure_memory_initialized(self) -> None:
+        """Ensure memory service is connected and ready."""
+        if not self._memory_initialized:
+            try:
+                await self.memory_service.connect()
+                self._memory_initialized = True
+                logger.info("Memory service initialized for ChatAgent")
+            except Exception as e:
+                logger.warning(f"Failed to initialize memory service: {e}")
+
+    async def _get_user_context(self, user_id: str) -> Dict[str, Any]:
+        """Get user context from memory for personalization.
+
+        Args:
+            user_id: User identifier
+
+        Returns:
+            User context including preferences and history
+        """
+        try:
+            await self._ensure_memory_initialized()
+            context = await self.memory_service.get_user_context(user_id)
+
+            # Extract key personalization data
+            user_context = {
+                "preferences": context.get("preferences", []),
+                "past_trips": context.get("past_trips", []),
+                "budget_patterns": context.get("budget_patterns", []),
+                "travel_style": context.get("travel_style", []),
+                "insights": context.get("insights", {}),
+                "summary": context.get("summary", ""),
+            }
+
+            logger.debug(
+                f"Retrieved user context for {user_id}: "
+                f"{len(context.get('preferences', []))} preferences"
+            )
+            return user_context
+
+        except Exception as e:
+            logger.warning(f"Failed to get user context for {user_id}: {e}")
+            return {}
+
+    async def _store_conversation_memory(
+        self,
+        user_message: str,
+        assistant_response: str,
+        user_id: str,
+        session_id: Optional[str] = None,
+    ) -> None:
+        """Store conversation in memory for future personalization.
+
+        Args:
+            user_message: User's message
+            assistant_response: Assistant's response
+            user_id: User identifier
+            session_id: Optional session identifier
+        """
+        try:
+            await self._ensure_memory_initialized()
+
+            # Create conversation messages
+            messages = [
+                ConversationMessage(role="user", content=user_message),
+                ConversationMessage(role="assistant", content=assistant_response),
+            ]
+
+            # Store in memory with travel context
+            await self.memory_service.add_conversation_memory(
+                messages=messages,
+                user_id=user_id,
+                session_id=session_id,
+                metadata={"source": "chat_agent", "agent_type": "travel_coordinator"},
+            )
+
+            logger.debug(f"Stored conversation memory for user {user_id}")
+
+        except Exception as e:
+            logger.warning(f"Failed to store conversation memory for {user_id}: {e}")
 
     async def detect_intent(self, message: str) -> Dict[str, Any]:
         """Detect user intent from message content.
@@ -507,6 +603,19 @@ class ChatAgent(BaseAgent):
             except Exception as e:
                 logger.warning(f"Failed to save user message: {e}")
 
+        # Get user context from memory for personalization
+        user_context = {}
+        if user_id != "anonymous":
+            user_context = await self._get_user_context(user_id)
+            context["user_memory"] = user_context
+
+            # Enhance instructions with user context if available
+            if user_context.get("summary"):
+                context["user_summary"] = user_context["summary"]
+                logger.debug(
+                    f"Added user context summary for personalization: {user_id}"
+                )
+
         # Detect intent
         intent = await self.detect_intent(message)
 
@@ -555,6 +664,18 @@ class ChatAgent(BaseAgent):
                 )
             except Exception as e:
                 logger.warning(f"Failed to save assistant message: {e}")
+
+        # Store conversation in memory for future personalization
+        if user_id != "anonymous" and response.get("content"):
+            try:
+                await self._store_conversation_memory(
+                    user_message=message,
+                    assistant_response=response.get("content", ""),
+                    user_id=user_id,
+                    session_id=session_id,
+                )
+            except Exception as e:
+                logger.warning(f"Failed to store conversation memory: {e}")
 
         # Add session_id to response
         response["session_id"] = session_id

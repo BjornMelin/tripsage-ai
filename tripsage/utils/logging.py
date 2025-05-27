@@ -86,9 +86,8 @@ def configure_logging(
         os.makedirs(log_dir, exist_ok=True)
 
         # Create a log file with timestamp
-        log_filename = (
-            f"{name.replace('.', '_')}_{datetime.now().strftime('%Y%m%d')}.log"
-        )
+        timestamp = datetime.now(datetime.UTC).strftime("%Y%m%d")
+        log_filename = f"{name.replace('.', '_')}_{timestamp}.log"
         log_path = Path(log_dir) / log_filename
 
         file_handler = logging.FileHandler(log_path)

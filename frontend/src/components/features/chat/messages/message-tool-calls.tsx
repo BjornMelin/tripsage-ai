@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import type React from "react";
+import { useState, useEffect } from "react";
 import type { ToolCall, ToolResult } from "@/types/chat";
 import { cn } from "@/lib/utils";
 import {
@@ -40,38 +41,40 @@ const getToolIcon = (toolName: string) => {
     get_weather: CloudSun,
     search_places: MapPin,
     get_directions: MapPin,
-    
+
     // General tools
     web_search: Search,
     get_calendar: Calendar,
     time_tools: Clock,
-    
+
     // Default
     default: TerminalSquare,
   };
-  
+
   return iconMap[toolName] || iconMap.default;
 };
 
 // Get tool category for styling
 const getToolCategory = (toolName: string): string => {
-  if (toolName.includes('flight') || toolName.includes('Plane')) return 'flight';
-  if (toolName.includes('accommodation') || toolName.includes('hotel')) return 'accommodation';
-  if (toolName.includes('weather')) return 'weather';
-  if (toolName.includes('map') || toolName.includes('place')) return 'location';
-  if (toolName.includes('calendar') || toolName.includes('time')) return 'time';
-  return 'general';
+  if (toolName.includes("flight") || toolName.includes("Plane"))
+    return "flight";
+  if (toolName.includes("accommodation") || toolName.includes("hotel"))
+    return "accommodation";
+  if (toolName.includes("weather")) return "weather";
+  if (toolName.includes("map") || toolName.includes("place")) return "location";
+  if (toolName.includes("calendar") || toolName.includes("time")) return "time";
+  return "general";
 };
 
 // Get category color
 const getCategoryColor = (category: string): string => {
   const colorMap: Record<string, string> = {
-    flight: 'bg-blue-100 text-blue-800 border-blue-200',
-    accommodation: 'bg-green-100 text-green-800 border-green-200',
-    weather: 'bg-orange-100 text-orange-800 border-orange-200',
-    location: 'bg-purple-100 text-purple-800 border-purple-200',
-    time: 'bg-indigo-100 text-indigo-800 border-indigo-200',
-    general: 'bg-gray-100 text-gray-800 border-gray-200',
+    flight: "bg-blue-100 text-blue-800 border-blue-200",
+    accommodation: "bg-green-100 text-green-800 border-green-200",
+    weather: "bg-orange-100 text-orange-800 border-orange-200",
+    location: "bg-purple-100 text-purple-800 border-purple-200",
+    time: "bg-indigo-100 text-indigo-800 border-indigo-200",
+    general: "bg-gray-100 text-gray-800 border-gray-200",
   };
   return colorMap[category] || colorMap.general;
 };
@@ -112,7 +115,12 @@ interface ToolCallItemProps {
   onCancel?: (toolCallId: string) => void;
 }
 
-function ToolCallItem({ toolCall, result, onRetry, onCancel }: ToolCallItemProps) {
+function ToolCallItem({
+  toolCall,
+  result,
+  onRetry,
+  onCancel,
+}: ToolCallItemProps) {
   const [expanded, setExpanded] = useState(false);
   const [localStatus, setLocalStatus] = useState(toolCall.status || "pending");
   const { addToolResult } = useChatStore();
@@ -146,12 +154,12 @@ function ToolCallItem({ toolCall, result, onRetry, onCancel }: ToolCallItemProps
   const formatToolResult = (result: any) => {
     if (!result) return null;
 
-    if (typeof result === 'object' && result.status === 'success') {
+    if (typeof result === "object" && result.status === "success") {
       return result.result || result.data || result;
     }
 
-    if (typeof result === 'object' && result.status === 'error') {
-      return { error: result.error || result.message || 'Unknown error' };
+    if (typeof result === "object" && result.status === "error") {
+      return { error: result.error || result.message || "Unknown error" };
     }
 
     return result;
@@ -161,7 +169,7 @@ function ToolCallItem({ toolCall, result, onRetry, onCancel }: ToolCallItemProps
     if (!toolCall.sessionId) return;
 
     setLocalStatus("executing");
-    
+
     // Simulate execution delay
     setTimeout(() => {
       setLocalStatus("completed");
@@ -193,48 +201,65 @@ function ToolCallItem({ toolCall, result, onRetry, onCancel }: ToolCallItemProps
   // Get status badge
   const getStatusBadge = () => {
     if (isExecuting) {
-      return <Badge variant="secondary" className="text-xs flex items-center gap-1">
-        <Loader2 className="h-3 w-3 animate-spin" />
-        Executing...
-      </Badge>;
+      return (
+        <Badge variant="secondary" className="text-xs flex items-center gap-1">
+          <Loader2 className="h-3 w-3 animate-spin" />
+          Executing...
+        </Badge>
+      );
     }
-    
+
     if (isCompleted) {
-      return <Badge variant="secondary" className="text-xs bg-green-100 text-green-800 flex items-center gap-1">
-        <Check className="h-3 w-3" />
-        Completed
-      </Badge>;
+      return (
+        <Badge
+          variant="secondary"
+          className="text-xs bg-green-100 text-green-800 flex items-center gap-1"
+        >
+          <Check className="h-3 w-3" />
+          Completed
+        </Badge>
+      );
     }
-    
+
     if (hasError) {
-      return <Badge variant="destructive" className="text-xs flex items-center gap-1">
-        <AlertCircle className="h-3 w-3" />
-        Error
-      </Badge>;
+      return (
+        <Badge
+          variant="destructive"
+          className="text-xs flex items-center gap-1"
+        >
+          <AlertCircle className="h-3 w-3" />
+          Error
+        </Badge>
+      );
     }
-    
+
     if (isPending) {
-      return <Badge variant="outline" className="text-xs flex items-center gap-1">
-        <Clock className="h-3 w-3" />
-        Pending
-      </Badge>;
+      return (
+        <Badge variant="outline" className="text-xs flex items-center gap-1">
+          <Clock className="h-3 w-3" />
+          Pending
+        </Badge>
+      );
     }
 
     return null;
   };
 
   // Execution time display
-  const executionTime = toolCall.executionTime || 
-    (isCompleted && result?.executionTime) ? 
-    ` (${(toolCall.executionTime || result.executionTime).toFixed(2)}s)` : '';
+  const executionTime =
+    toolCall.executionTime || (isCompleted && result?.executionTime)
+      ? ` (${(toolCall.executionTime || result.executionTime).toFixed(2)}s)`
+      : "";
 
   return (
-    <div className={cn(
-      "border rounded-lg overflow-hidden transition-all duration-200",
-      hasError && "border-red-200 bg-red-50/50",
-      isCompleted && "border-green-200 bg-green-50/50",
-      isExecuting && "border-blue-200 bg-blue-50/50"
-    )}>
+    <div
+      className={cn(
+        "border rounded-lg overflow-hidden transition-all duration-200",
+        hasError && "border-red-200 bg-red-50/50",
+        isCompleted && "border-green-200 bg-green-50/50",
+        isExecuting && "border-blue-200 bg-blue-50/50"
+      )}
+    >
       <div
         className={cn(
           "p-3 flex items-center justify-between cursor-pointer hover:bg-secondary/30 transition-colors",
@@ -258,7 +283,7 @@ function ToolCallItem({ toolCall, result, onRetry, onCancel }: ToolCallItemProps
             )}
           </div>
         </div>
-        
+
         <div className="flex items-center gap-2">
           {/* Action buttons */}
           {hasError && onRetry && (
@@ -272,7 +297,7 @@ function ToolCallItem({ toolCall, result, onRetry, onCancel }: ToolCallItemProps
               Retry
             </Button>
           )}
-          
+
           {isExecuting && onCancel && (
             <Button
               variant="ghost"
@@ -284,7 +309,7 @@ function ToolCallItem({ toolCall, result, onRetry, onCancel }: ToolCallItemProps
               Cancel
             </Button>
           )}
-          
+
           {isPending && (
             <Button
               variant="ghost"
@@ -312,7 +337,9 @@ function ToolCallItem({ toolCall, result, onRetry, onCancel }: ToolCallItemProps
           {/* Tool Arguments */}
           {toolCall.arguments && Object.keys(toolCall.arguments).length > 0 && (
             <div className="mb-3">
-              <div className="text-xs font-medium text-muted-foreground mb-2">Parameters:</div>
+              <div className="text-xs font-medium text-muted-foreground mb-2">
+                Parameters:
+              </div>
               <div className="font-mono text-xs bg-background rounded border p-2 overflow-x-auto">
                 <pre className="whitespace-pre-wrap">
                   {formatJSON(toolCall.arguments)}
@@ -324,7 +351,9 @@ function ToolCallItem({ toolCall, result, onRetry, onCancel }: ToolCallItemProps
           {/* Tool Result */}
           {(result || toolCall.result) && (
             <div className="mb-3">
-              <div className="text-xs font-medium text-muted-foreground mb-2">Result:</div>
+              <div className="text-xs font-medium text-muted-foreground mb-2">
+                Result:
+              </div>
               <div className="font-mono text-xs bg-background rounded border p-2 overflow-x-auto">
                 <pre className="whitespace-pre-wrap">
                   {formatJSON(formatToolResult(result || toolCall.result))}
@@ -336,7 +365,9 @@ function ToolCallItem({ toolCall, result, onRetry, onCancel }: ToolCallItemProps
           {/* Error Display */}
           {toolCall.error && (
             <div className="mb-3">
-              <div className="text-xs font-medium text-red-600 mb-2">Error:</div>
+              <div className="text-xs font-medium text-red-600 mb-2">
+                Error:
+              </div>
               <div className="text-xs bg-red-50 text-red-800 rounded border border-red-200 p-2">
                 {toolCall.error}
               </div>

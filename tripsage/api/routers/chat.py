@@ -642,7 +642,7 @@ async def export_chat_data(
 
     export_data = {
         "user_id": current_user.id,
-        "exported_at": datetime.utcnow().isoformat(),
+        "exported_at": datetime.now(datetime.UTC).isoformat(),
         "sessions": [],
     }
 

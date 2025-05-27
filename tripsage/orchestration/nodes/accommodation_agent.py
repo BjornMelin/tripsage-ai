@@ -81,7 +81,7 @@ class AccommodationAgentNode(BaseAgentNode):
 
             # Update state with results
             accommodation_search_record = {
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(datetime.UTC).isoformat(),
                 "parameters": search_params,
                 "results": search_results,
                 "agent": "accommodation_agent",

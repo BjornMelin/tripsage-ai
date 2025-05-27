@@ -20,11 +20,11 @@ class WebCrawlPersistence:
     def __init__(self):
         """Initialize the web crawl persistence manager."""
         # Import dynamically to avoid circular imports
-        from tripsage.tools.memory_tools import get_memory_client
+        from tripsage.tools.memory_tools import get_memory_service
         from tripsage.tools.supabase_tools import get_supabase_client
 
         self.supabase = get_supabase_client()
-        self.memory_client = get_memory_client()
+        self.memory_service = get_memory_service()
 
     async def store_crawl_result(
         self, result: Dict[str, Any], session_id: Optional[str] = None
@@ -150,7 +150,7 @@ class WebCrawlPersistence:
             # Prepare data for storage
             data = {
                 "result_data": json.dumps(result),
-                "created_at": datetime.utcnow().isoformat(),
+                "created_at": datetime.now(datetime.UTC).isoformat(),
                 "success": result.get("success", False),
                 "session_id": session_id,
             }
@@ -182,7 +182,7 @@ class WebCrawlPersistence:
             return False
 
     async def _store_in_memory(self, result: Dict[str, Any]) -> bool:
-        """Store a result in the Memory MCP knowledge graph.
+        """Store a result in the Mem0 memory system.
 
         Args:
             result: The result to store
@@ -191,61 +191,74 @@ class WebCrawlPersistence:
             True if storage was successful, False otherwise
         """
         try:
-            # Extract basic information for entity creation
+            # Import conversation message for memory storage
+            from tripsage.tools.memory_tools import (
+                ConversationMessage,
+                add_conversation_memory,
+            )
+
+            # Extract content for memory storage
             url = result.get("url", "")
             query = result.get("query", "")
-            entity_name = url or query or f"WebCrawl_{datetime.utcnow().isoformat()}"
+            # source = result.get("source", "webcrawl")
 
-            # Determine entity type
-            entity_type = "WebPage" if url else "WebSearch"
-            if "product_type" in result:
-                entity_type = f"{result['product_type'].capitalize()}Product"
-
-            # Create observations from the content
-            observations = []
+            # Collect all content from items
+            content_items = []
             for item in result.get("items", []):
-                # Include title in observation if present
                 title = item.get("title", "")
                 content = item.get("content", "")
                 if title and content:
-                    observations.append(f"{title}: {content}")
+                    content_items.append(f"{title}: {content}")
                 elif content:
-                    observations.append(content)
+                    content_items.append(content)
                 elif title:
-                    observations.append(title)
+                    content_items.append(title)
 
-            # Add metadata as observations
-            observations.append(f"Source: {result.get('source', 'Unknown')}")
-            observations.append(
-                f"Timestamp: {result.get('timestamp', datetime.utcnow().isoformat())}"
+            if not content_items:
+                logger.warning("No content found to store in memory")
+                return True  # Not an error, just nothing to store
+
+            # Create conversation for memory extraction
+            content_text = "\n".join(content_items[:5])  # Limit to first 5 items
+            memory_messages = [
+                ConversationMessage(
+                    role="system",
+                    content=(
+                        "Extract travel-related information from web crawl results."
+                    ),
+                ),
+                ConversationMessage(
+                    role="user",
+                    content=f"Web content from {url or query}: {content_text}",
+                ),
+            ]
+
+            # Store in memory using system user ID for web crawl results
+            memory_result = await add_conversation_memory(
+                messages=memory_messages,
+                user_id="system",  # Use system user for general web crawl data
+                context_type="web_crawl",
             )
 
-            # Filter out empty observations
-            observations = [obs for obs in observations if obs]
-
-            # Create entity in knowledge graph
-            await self.memory_client.create_entities(
-                [
-                    {
-                        "name": entity_name,
-                        "entityType": entity_type,
-                        "observations": observations,
-                    }
-                ]
-            )
-
-            logger.info(
-                f"Successfully stored result in Memory MCP knowledge graph: "
-                f"{entity_name}"
-            )
-            return True
+            if memory_result.get("status") == "success":
+                logger.info(
+                    f"Successfully stored web crawl result in memory: "
+                    f"{memory_result.get('memories_extracted', 0)} memories extracted"
+                )
+                return True
+            else:
+                logger.warning(
+                    f"Memory storage completed with issues: "
+                    f"{memory_result.get('error', 'Unknown')}"
+                )
+                return False
 
         except Exception as e:
-            logger.error(f"Error storing result in Memory MCP: {str(e)}")
+            logger.error(f"Error storing result in memory: {str(e)}")
             return False
 
     async def _store_events_in_memory(self, result: Dict[str, Any]) -> bool:
-        """Store an events result in the Memory MCP knowledge graph.
+        """Store an events result in the memory system.
 
         Args:
             result: The result to store
@@ -254,69 +267,77 @@ class WebCrawlPersistence:
             True if storage was successful, False otherwise
         """
         try:
-            # Create destination entity
+            from tripsage.tools.memory_tools import (
+                ConversationMessage,
+                add_conversation_memory,
+            )
+
             destination_name = result.get("destination", "")
             if not destination_name:
                 return await self._store_in_memory(result)
 
-            # Create destination entity
-            await self.memory_client.create_entities(
-                [
-                    {
-                        "name": destination_name,
-                        "entityType": "Destination",
-                        "observations": [
-                            f"Events were searched for this destination on "
-                            f"{datetime.now().isoformat()}"
-                        ],
-                    }
-                ]
-            )
-
-            # Create event entities and relations
+            # Collect event information
+            event_descriptions = []
             for item in result.get("items", []):
-                event_name = item.get("title", f"Event_{datetime.utcnow().isoformat()}")
+                event_info = []
+                if item.get("title"):
+                    event_info.append(f"Event: {item['title']}")
+                if item.get("description"):
+                    event_info.append(f"Description: {item['description']}")
+                if item.get("start_date"):
+                    event_info.append(f"Start: {item['start_date']}")
+                if item.get("venue"):
+                    event_info.append(f"Venue: {item['venue']}")
+                if item.get("event_type"):
+                    event_info.append(f"Type: {item['event_type']}")
 
-                # Create event entity
-                await self.memory_client.create_entities(
-                    [
-                        {
-                            "name": event_name,
-                            "entityType": "Event",
-                            "observations": [
-                                item.get("description", ""),
-                                f"Start date: {item.get('start_date', 'Unknown')}",
-                                f"End date: {item.get('end_date', 'Unknown')}",
-                                f"Venue: {item.get('venue', 'Unknown')}",
-                                f"Event type: {item.get('event_type', 'Unknown')}",
-                            ],
-                        }
-                    ]
-                )
+                if event_info:
+                    event_descriptions.append(" | ".join(event_info))
 
-                # Create relation between event and destination
-                await self.memory_client.create_relations(
-                    [
-                        {
-                            "from": event_name,
-                            "relationType": "takes_place_in",
-                            "to": destination_name,
-                        }
-                    ]
-                )
+            if not event_descriptions:
+                logger.warning("No event information found to store in memory")
+                return True
 
-            logger.info(
-                f"Successfully stored events in Memory MCP knowledge graph for "
-                f"{destination_name}"
+            # Create conversation for memory extraction
+            events_text = "\n".join(event_descriptions)
+            memory_messages = [
+                ConversationMessage(
+                    role="system",
+                    content=(
+                        "Extract event and destination information from event search "
+                        "results."
+                    ),
+                ),
+                ConversationMessage(
+                    role="user",
+                    content=f"Events found in {destination_name}: {events_text}",
+                ),
+            ]
+
+            # Store in memory
+            memory_result = await add_conversation_memory(
+                messages=memory_messages, user_id="system", context_type="events_crawl"
             )
-            return True
+
+            if memory_result.get("status") == "success":
+                logger.info(
+                    f"Successfully stored events in memory for {destination_name}: "
+                    f"{memory_result.get('memories_extracted', 0)} memories extracted"
+                )
+                return True
+            else:
+                logger.warning(
+                    f"Events memory storage had issues: "
+                    f"{memory_result.get('error', 'Unknown')}"
+                )
+                return False
 
         except Exception as e:
-            logger.error(f"Error storing events in Memory MCP: {str(e)}")
+            logger.error(f"Error storing events in memory: {str(e)}")
             return False
 
     async def _store_blog_in_memory(self, result: Dict[str, Any]) -> bool:
-        """Store a blog crawl result in the Memory MCP knowledge graph.
+        """Store a blog crawl result in the memory system.
 
         Args:
             result: The result to store
@@ -325,6 +346,11 @@ class WebCrawlPersistence:
             True if storage was successful, False otherwise
         """
         try:
+            from tripsage.tools.memory_tools import (
+                ConversationMessage,
+                add_conversation_memory,
+            )
+
             # Extract basic information
             url = result.get("url", "")
             extract_type = result.get("extract_type", "")
@@ -332,81 +358,79 @@ class WebCrawlPersistence:
             if not url:
                 return await self._store_in_memory(result)
 
-            # Create blog entity
-            blog_name = f"TravelBlog_{url.split('//')[1].split('/')[0]}"
-
-            # Create observations based on extract_type
-            observations = []
+            # Collect blog content based on extract_type
+            blog_content = []
             for item in result.get("items", []):
                 title = item.get("title", "")
                 if title:
-                    observations.append(f"Title: {title}")
+                    blog_content.append(f"Title: {title}")
 
                 # Add specific extracted data based on extract_type
                 if extract_type == "insights":
-                    for insight in item.get("insights", []):
-                        observations.append(f"Insight: {insight}")
+                    insights = item.get("insights", [])
+                    if insights:
+                        blog_content.append(f"Insights: {'; '.join(insights)}")
                 elif extract_type == "itinerary":
-                    for day in item.get("itinerary", []):
-                        observations.append(f"Itinerary: {day}")
+                    itinerary = item.get("itinerary", [])
+                    if itinerary:
+                        blog_content.append(f"Itinerary: {'; '.join(itinerary)}")
                 elif extract_type == "tips":
-                    for tip in item.get("tips", []):
-                        observations.append(f"Tip: {tip}")
+                    tips = item.get("tips", [])
+                    if tips:
+                        blog_content.append(f"Travel Tips: {'; '.join(tips)}")
                 elif extract_type == "places":
-                    for place in item.get("places", []):
-                        observations.append(f"Place: {place}")
+                    places = item.get("places", [])
+                    if places:
+                        blog_content.append(f"Places Mentioned: {'; '.join(places)}")
                 else:
                     # Fallback to content if no specific extracted data
                     content = item.get("content", "")
                     if content:
-                        observations.append(content[:1000])  # Limit content size
+                        blog_content.append(content[:500])  # Limit content size
 
-            # Create blog entity
-            await self.memory_client.create_entities(
-                [
-                    {
-                        "name": blog_name,
-                        "entityType": "TravelBlog",
-                        "observations": observations,
-                    }
-                ]
+            if not blog_content:
+                logger.warning("No blog content found to store in memory")
+                return True
+
+            # Create conversation for memory extraction
+            content_text = "\n".join(blog_content)
+            memory_messages = [
+                ConversationMessage(
+                    role="system",
+                    content=(
+                        "Extract travel insights, tips, and destination information "
+                        "from travel blog content."
+                    ),
+                ),
+                ConversationMessage(
+                    role="user",
+                    content=(
+                        f"Travel blog content from {url} ({extract_type}): "
+                        f"{content_text}"
+                    ),
+                ),
+            ]
+
+            # Store in memory
+            memory_result = await add_conversation_memory(
+                messages=memory_messages, user_id="system", context_type="blog_crawl"
             )
 
-            # Create places mentioned as separate entities
-            if extract_type == "places":
-                for item in result.get("items", []):
-                    for place in item.get("places", []):
-                        # Create place entity
-                        await self.memory_client.create_entities(
-                            [
-                                {
-                                    "name": place,
-                                    "entityType": "Destination",
-                                    "observations": [
-                                        f"Mentioned in travel blog: {blog_name}"
-                                    ],
-                                }
-                            ]
-                        )
-
-                        # Create relation between place and blog
-                        await self.memory_client.create_relations(
-                            [
-                                {
-                                    "from": blog_name,
-                                    "relationType": "mentions",
-                                    "to": place,
-                                }
-                            ]
-                        )
-
-            logger.info(
-                f"Successfully stored blog in Memory MCP knowledge graph: {blog_name}"
-            )
-            return True
+            if memory_result.get("status") == "success":
+                logger.info(
+                    f"Successfully stored blog in memory from {url}: "
+                    f"{memory_result.get('memories_extracted', 0)} memories extracted"
+                )
+                return True
+            else:
+                logger.warning(
+                    f"Blog memory storage had issues: "
+                    f"{memory_result.get('error', 'Unknown')}"
+                )
+                return False
 
         except Exception as e:
-            logger.error(f"Error storing blog in Memory MCP: {str(e)}")
+            logger.error(f"Error storing blog in memory: {str(e)}")
             return False
 
     async def _store_price_history(
@@ -428,7 +452,9 @@ class WebCrawlPersistence:
                 "title": item.get("title", ""),
                 "price": item.get("price", 0),
                 "currency": item.get("currency", "USD"),
-                "timestamp": item.get("price_timestamp", datetime.utcnow().isoformat()),
+                "timestamp": item.get(
+                    "price_timestamp", datetime.now(datetime.UTC).isoformat()
+                ),
                 "product_type": product_type,
                 "availability": item.get("availability", ""),
             }

@@ -76,7 +76,7 @@ class DestinationResearchAgentNode(BaseAgentNode):
 
             # Update state with results
             research_record = {
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(datetime.UTC).isoformat(),
                 "parameters": research_params,
                 "results": research_results,
                 "agent": "destination_research_agent",

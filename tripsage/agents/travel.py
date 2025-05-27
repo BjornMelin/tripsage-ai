@@ -10,16 +10,16 @@ from typing import Any, Dict, Optional
 
 from tripsage.agents.accommodation import AccommodationAgent
 from tripsage.agents.base import BaseAgent
-from tripsage.agents.budget import BudgetAgent
+from tripsage.agents.budget import Budget as BudgetAgent
 from tripsage.agents.destination_research import DestinationResearchAgent
 
 # Import specialized agents for handoffs
 from tripsage.agents.flight import FlightAgent
-from tripsage.agents.itinerary import ItineraryAgent
+from tripsage.agents.itinerary import Itinerary as ItineraryAgent
 from tripsage.config.app_settings import settings
-from tripsage.utils.logging import get_module_logger
+from tripsage.utils.logging import get_logger
 
-logger = get_module_logger(__name__)
+logger = get_logger(__name__)
 
 
 class TravelAgent(BaseAgent):

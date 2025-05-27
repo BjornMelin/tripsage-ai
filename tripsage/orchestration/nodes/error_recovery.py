@@ -84,7 +84,7 @@ class ErrorRecoveryNode(BaseAgentNode):
             ),
             "agent": "error_recovery",
             "retry_attempt": retry_count + 1,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(datetime.UTC).isoformat(),
         }
         state["messages"].append(retry_message)
 
@@ -98,7 +98,7 @@ class ErrorRecoveryNode(BaseAgentNode):
                 "retry_attempt": retry_count + 1,
                 "original_error": state.get("last_error", "Unknown error"),
             },
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(datetime.UTC).isoformat(),
         }
 
         return state
@@ -127,7 +127,7 @@ class ErrorRecoveryNode(BaseAgentNode):
             "content": self._generate_fallback_message(current_agent, fallback_agent),
             "agent": "error_recovery",
             "fallback_strategy": True,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(datetime.UTC).isoformat(),
         }
         state["messages"].append(fallback_message)
 
@@ -141,7 +141,7 @@ class ErrorRecoveryNode(BaseAgentNode):
                 "fallback_agent": fallback_agent,
                 "reason": "Multiple errors in original agent",
             },
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(datetime.UTC).isoformat(),
         }
 
         return state
@@ -167,7 +167,7 @@ class ErrorRecoveryNode(BaseAgentNode):
             "content": self._generate_escalation_message(),
             "agent": "error_recovery",
             "escalation": True,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(datetime.UTC).isoformat(),
         }
         state["messages"].append(escalation_message)
 
@@ -181,7 +181,7 @@ class ErrorRecoveryNode(BaseAgentNode):
                 "error_count": state.get("error_count", 0),
                 "session_id": state.get("session_id"),
                 "user_id": state.get("user_id"),
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(datetime.UTC).isoformat(),
             }
         }
 
@@ -279,7 +279,7 @@ class ErrorRecoveryNode(BaseAgentNode):
             "last_error": state.get("last_error"),
             "agent_history": state.get("agent_history", []),
             "retry_attempts": state.get("retry_attempts", {}),
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(datetime.UTC).isoformat(),
             "conversation_length": len(state.get("messages", [])),
         }
 
