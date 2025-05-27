@@ -11,10 +11,10 @@ export type ToolCallState = z.infer<typeof ToolCallStateSchema>;
 // Tool call status schema for execution tracking
 export const ToolCallStatusSchema = z.enum([
   "pending",
-  "executing", 
+  "executing",
   "completed",
   "error",
-  "cancelled"
+  "cancelled",
 ]);
 export type ToolCallStatus = z.infer<typeof ToolCallStatusSchema>;
 

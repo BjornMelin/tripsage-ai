@@ -23,6 +23,9 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { Clock, Star, TrendingUp, MapPin } from "lucide-react";
+import { useMemoryContext } from "@/lib/hooks/use-memory";
 import type { DestinationSearchParams } from "@/types/search";
 
 const destinationSearchFormSchema = z.object({
@@ -50,6 +53,8 @@ interface DestinationSuggestion {
 interface DestinationSearchFormProps {
   onSearch?: (data: DestinationSearchParams) => void;
   initialValues?: Partial<DestinationSearchFormValues>;
+  userId?: string;
+  showMemoryRecommendations?: boolean;
 }
 
 const DESTINATION_TYPES = [
@@ -92,8 +97,16 @@ export function DestinationSearchForm({
     types: ["locality", "country"],
     limit: 10,
   },
+  userId,
+  showMemoryRecommendations = true,
 }: DestinationSearchFormProps) {
   const [suggestions, setSuggestions] = useState<DestinationSuggestion[]>([]);
+
+  // Memory-based recommendations
+  const { data: memoryContext, isLoading: memoryLoading } = useMemoryContext(
+    userId || "",
+    !!userId && showMemoryRecommendations
+  );
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
   const suggestionsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -259,9 +272,111 @@ export function DestinationSearchForm({
                 )}
               />
 
+              {/* Memory-based Recommendations */}
+              {showMemoryRecommendations && memoryContext?.context && (
+                <div className="space-y-3">
+                  <FormLabel className="text-sm font-medium flex items-center gap-2">
+                    <Star className="h-4 w-4 text-yellow-500" />
+                    Your Favorite Destinations
+                  </FormLabel>
+                  <div className="flex flex-wrap gap-2">
+                    {memoryContext.context.userPreferences.destinations
+                      ?.slice(0, 6)
+                      .map((destination, idx) => (
+                        <Badge
+                          key={idx}
+                          variant="outline"
+                          className="cursor-pointer hover:bg-yellow-50 hover:border-yellow-300 transition-colors border-yellow-200 text-yellow-700"
+                          onClick={() =>
+                            handlePopularDestinationClick(destination)
+                          }
+                        >
+                          <Star className="h-3 w-3 mr-1" />
+                          {destination}
+                        </Badge>
+                      ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Trending from Travel Patterns */}
+              {showMemoryRecommendations &&
+                memoryContext?.context?.travelPatterns
+                  ?.frequentDestinations && (
+                  <div className="space-y-3">
+                    <FormLabel className="text-sm font-medium flex items-center gap-2">
+                      <TrendingUp className="h-4 w-4 text-blue-500" />
+                      Your Travel Patterns
+                    </FormLabel>
+                    <div className="flex flex-wrap gap-2">
+                      {memoryContext.context.travelPatterns.frequentDestinations
+                        .slice(0, 4)
+                        .map((destination, idx) => (
+                          <Badge
+                            key={idx}
+                            variant="outline"
+                            className="cursor-pointer hover:bg-blue-50 hover:border-blue-300 transition-colors border-blue-200 text-blue-700"
+                            onClick={() =>
+                              handlePopularDestinationClick(destination)
+                            }
+                          >
+                            <TrendingUp className="h-3 w-3 mr-1" />
+                            {destination}
+                          </Badge>
+                        ))}
+                    </div>
+                  </div>
+                )}
+
+              {/* Recent Memories */}
+              {showMemoryRecommendations &&
+                memoryContext?.context?.recentMemories && (
+                  <div className="space-y-3">
+                    <FormLabel className="text-sm font-medium flex items-center gap-2">
+                      <Clock className="h-4 w-4 text-green-500" />
+                      Recent Memories
+                    </FormLabel>
+                    <div className="flex flex-wrap gap-2">
+                      {memoryContext.context.recentMemories
+                        .filter(
+                          (memory) =>
+                            memory.type === "destination" ||
+                            memory.content.toLowerCase().includes("visit")
+                        )
+                        .slice(0, 3)
+                        .map((memory, idx) => {
+                          // Extract destination names from memory content
+                          const matches = memory.content.match(
+                            /\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\b/g
+                          );
+                          const destination =
+                            matches?.[0] || memory.content.slice(0, 20);
+                          return (
+                            <Badge
+                              key={idx}
+                              variant="outline"
+                              className="cursor-pointer hover:bg-green-50 hover:border-green-300 transition-colors border-green-200 text-green-700"
+                              onClick={() =>
+                                handlePopularDestinationClick(destination)
+                              }
+                            >
+                              <Clock className="h-3 w-3 mr-1" />
+                              {destination}
+                            </Badge>
+                          );
+                        })}
+                    </div>
+                  </div>
+                )}
+
+              {showMemoryRecommendations && memoryContext?.context && (
+                <Separator />
+              )}
+
               {/* Popular Destinations Quick Select */}
               <div className="space-y-3">
-                <FormLabel className="text-sm font-medium">
+                <FormLabel className="text-sm font-medium flex items-center gap-2">
+                  <MapPin className="h-4 w-4 text-gray-500" />
                   Popular Destinations
                 </FormLabel>
                 <div className="flex flex-wrap gap-2">

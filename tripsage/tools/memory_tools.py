@@ -1,887 +1,667 @@
 """
-Memory tools for TripSage agents.
+Modern memory tools for TripSage agents using Mem0.
 
-This module provides function tools that wrap the Neo4j Memory MCP
-client for use with the OpenAI Agents SDK through the MCPManager abstraction layer.
+This module provides memory management tools that wrap the TripSageMemoryService
+for use with agents. This is a complete replacement of the old Neo4j-based 
+memory system with the new Mem0-based implementation.
+
+Key Features:
+- User-specific memory isolation
+- Automatic conversation memory extraction
+- Travel preference tracking
+- Session-based memory management
+- Fast semantic search (91% faster than baseline)
+- 26% better accuracy than OpenAI memory
 """
 
+import json
+from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
-from tripsage.mcp_abstraction.exceptions import TripSageMCPError
-from tripsage.mcp_abstraction.manager import mcp_manager
-from tripsage.tools.schemas.memory import (
-    AddObservationsResponse,
-    CreateEntitiesResponse,
-    CreateRelationsResponse,
-    DeleteEntitiesResponse,
-    DeleteObservationsResponse,
-    DeleteRelationsResponse,
-    Entity,
-    GraphResponse,
-    Observation,
-    OpenNodesResponse,
-    Relation,
-    SearchNodesResponse,
-)
+from tripsage.config.feature_flags import feature_flags, IntegrationMode
+from tripsage.services.memory_service import TripSageMemoryService
 from tripsage.utils.decorators import with_error_handling
 from tripsage.utils.logging import get_logger
 
 # Set up logger
 logger = get_logger(__name__)
 
+# Global memory service instance
+_memory_service: Optional[TripSageMemoryService] = None
 
-class DeletionRequest(BaseModel):
-    """Deletion request model for Memory MCP."""
 
-    entityName: str = Field(..., description="Entity name")
-    observations: List[str] = Field(..., description="Observations to delete")
+def get_memory_service() -> TripSageMemoryService:
+    """Get the global memory service instance."""
+    global _memory_service
+    if _memory_service is None:
+        _memory_service = TripSageMemoryService()
+    return _memory_service
+
+
+class ConversationMessage(BaseModel):
+    """Message model for conversation memory."""
+    
+    role: str = Field(..., description="Message role (user, assistant, system)")
+    content: str = Field(..., description="Message content")
+
+
+class UserPreferences(BaseModel):
+    """User travel preferences model."""
+    
+    budget_range: Optional[str] = Field(None, description="Preferred budget range")
+    accommodation_type: Optional[str] = Field(None, description="Preferred accommodation type")
+    travel_style: Optional[str] = Field(None, description="Travel style (luxury, budget, adventure, etc.)")
+    destinations: Optional[List[str]] = Field(None, description="Preferred destinations")
+    activities: Optional[List[str]] = Field(None, description="Preferred activities")
+    dietary_restrictions: Optional[List[str]] = Field(None, description="Dietary restrictions")
+    accessibility_needs: Optional[List[str]] = Field(None, description="Accessibility requirements")
+
+
+class TravelMemoryQuery(BaseModel):
+    """Query model for travel memory search."""
+    
+    query: str = Field(..., description="Search query")
+    user_id: str = Field(..., description="User ID")
+    limit: int = Field(default=5, description="Maximum number of results")
+    category: Optional[str] = Field(None, description="Memory category filter")
+    
+    
+class SessionSummary(BaseModel):
+    """Session summary for memory storage."""
+    
+    user_id: str = Field(..., description="User ID")
+    session_id: str = Field(..., description="Session ID")
+    summary: str = Field(..., description="Session summary")
+    key_insights: Optional[List[str]] = Field(None, description="Key insights from session")
+    decisions_made: Optional[List[str]] = Field(None, description="Decisions made during session")
 
 
 @with_error_handling
-async def get_knowledge_graph() -> Dict[str, Any]:
-    """Retrieve the entire knowledge graph.
-
+async def add_conversation_memory(
+    messages: List[ConversationMessage],
+    user_id: str,
+    session_id: Optional[str] = None,
+    context_type: str = "travel_planning"
+) -> Dict[str, Any]:
+    """Add conversation messages to user memory.
+    
+    This extracts meaningful information from conversations and stores it
+    as searchable memories for future reference.
+    
+    Args:
+        messages: List of conversation messages
+        user_id: User identifier
+        session_id: Optional session identifier
+        context_type: Type of conversation context
+        
     Returns:
-        The knowledge graph with entities and relations.
+        Dictionary with extraction results and metadata
     """
     try:
-        logger.info("Reading knowledge graph")
-
-        # Call the MCP via MCPManager
-        result = await mcp_manager.invoke(
-            mcp_name="neo4j_memory",
-            method_name="read_graph",
-            params={},
+        logger.info(f"Adding conversation memory for user {user_id}")
+        
+        memory_service = get_memory_service()
+        
+        # Convert to the format expected by Mem0
+        message_dicts = [
+            {"role": msg.role, "content": msg.content} 
+            for msg in messages
+        ]
+        
+        # Add travel-specific metadata
+        metadata = {
+            "domain": "travel_planning",
+            "context_type": context_type,
+            "session_id": session_id,
+            "timestamp": datetime.utcnow().isoformat(),
+            "user_id": user_id
+        }
+        
+        result = await memory_service.add_conversation_memory(
+            messages=message_dicts,
+            user_id=user_id,
+            session_id=session_id,
+            metadata=metadata
         )
-
-        # Convert the result to the expected response model
-        result = GraphResponse.model_validate(result)
-
+        
+        logger.info(
+            f"Successfully extracted {len(result.get('results', []))} memories for user {user_id}"
+        )
+        
         return {
-            "entities": result.entities,
-            "relations": result.relations,
-            "statistics": getattr(result, "statistics", {}),
+            "status": "success",
+            "memories_extracted": len(result.get("results", [])),
+            "tokens_used": result.get("usage", {}).get("total_tokens", 0),
+            "extraction_time": result.get("processing_time", 0),
+            "memories": result.get("results", [])
+        }
+        
+    except Exception as e:
+        logger.error(f"Error adding conversation memory: {str(e)}")
+        return {
+            "status": "error",
+            "error": str(e),
+            "memories_extracted": 0
         }
 
-    except TripSageMCPError as e:
-        logger.error(f"MCP error reading knowledge graph: {str(e)}")
-        raise
-    except Exception as e:
-        logger.error(f"Error reading knowledge graph: {str(e)}")
-        raise
-
 
 @with_error_handling
-async def search_knowledge_graph(query: str) -> Dict[str, Any]:
-    """Search the knowledge graph for entities matching a query.
-
-    Args:
-        query: Search query string
-
-    Returns:
-        List of matching entities
-    """
-    try:
-        logger.info(f"Searching knowledge graph with query: {query}")
-
-        # Call the MCP via MCPManager
-        result = await mcp_manager.invoke(
-            mcp_name="neo4j_memory",
-            method_name="search_nodes",
-            params={"query": query},
-        )
-
-        # Convert the result to the expected response model
-        result = SearchNodesResponse.model_validate(result)
-
-        return {"nodes": result.results, "count": result.count}
-
-    except TripSageMCPError as e:
-        logger.error(f"MCP error searching knowledge graph: {str(e)}")
-        raise
-    except Exception as e:
-        logger.error(f"Error searching knowledge graph: {str(e)}")
-        raise
-
-
-@with_error_handling
-async def get_entity_details(names: List[str]) -> Dict[str, Any]:
-    """Get detailed information about specific entities.
-
-    Args:
-        names: List of entity names
-
-    Returns:
-        Dictionary with entity details
-    """
-    try:
-        logger.info(f"Getting entity details for: {names}")
-
-        # Call the MCP via MCPManager
-        result = await mcp_manager.invoke(
-            mcp_name="neo4j_memory",
-            method_name="open_nodes",
-            params={"names": names},
-        )
-
-        # Convert the result to the expected response model
-        result = OpenNodesResponse.model_validate(result)
-
-        return {"entities": result.entities, "count": result.count}
-
-    except TripSageMCPError as e:
-        logger.error(f"MCP error getting entity details: {str(e)}")
-        raise
-    except Exception as e:
-        logger.error(f"Error getting entity details: {str(e)}")
-        raise
-
-
-@with_error_handling
-async def create_knowledge_entities(entities: List[Entity]) -> Dict[str, Any]:
-    """Create new entities in the knowledge graph.
-
-    Args:
-        entities: List of entities to create
-
-    Returns:
-        List of created entities
-    """
-    try:
-        logger.info(f"Creating {len(entities)} entities")
-
-        # Convert to dictionary format
-        entity_dicts = [entity.model_dump(by_alias=True) for entity in entities]
-
-        # Call the MCP via MCPManager
-        result = await mcp_manager.invoke(
-            mcp_name="neo4j_memory",
-            method_name="create_entities",
-            params={"entities": entity_dicts},
-        )
-
-        # Convert the result to the expected response model
-        result = CreateEntitiesResponse.model_validate(result)
-
-        return {"entities": result.entities, "message": result.message}
-
-    except TripSageMCPError as e:
-        logger.error(f"MCP error creating entities: {str(e)}")
-        raise
-    except Exception as e:
-        logger.error(f"Error creating entities: {str(e)}")
-        raise
-
-
-@with_error_handling
-async def create_knowledge_relations(relations: List[Relation]) -> Dict[str, Any]:
-    """Create new relations between entities in the knowledge graph.
-
-    Args:
-        relations: List of relations to create
-
-    Returns:
-        List of created relations
-    """
-    try:
-        logger.info(f"Creating {len(relations)} relations")
-
-        # Convert to dictionary format
-        relation_dicts = [relation.model_dump(by_alias=True) for relation in relations]
-
-        # Call the MCP via MCPManager
-        result = await mcp_manager.invoke(
-            mcp_name="neo4j_memory",
-            method_name="create_relations",
-            params={"relations": relation_dicts},
-        )
-
-        # Convert the result to the expected response model
-        result = CreateRelationsResponse.model_validate(result)
-
-        return {"relations": result.relations, "message": result.message}
-
-    except TripSageMCPError as e:
-        logger.error(f"MCP error creating relations: {str(e)}")
-        raise
-    except Exception as e:
-        logger.error(f"Error creating relations: {str(e)}")
-        raise
-
-
-@with_error_handling
-async def add_entity_observations(
-    observations: List[Observation],
+async def search_user_memories(
+    query: str,
+    user_id: str,
+    limit: int = 5,
+    category: Optional[str] = None
 ) -> Dict[str, Any]:
-    """Add observations to existing entities in the knowledge graph.
-
+    """Search user memories with semantic similarity.
+    
     Args:
-        observations: List of observations to add
-
+        query: Search query
+        user_id: User identifier
+        limit: Maximum number of results
+        category: Optional category filter
+        
     Returns:
-        List of updated entities
+        Dictionary with search results
     """
     try:
-        logger.info(f"Adding observations to {len(observations)} entities")
-
-        # Convert to dictionary format
-        observation_dicts = [obs.model_dump() for obs in observations]
-
-        # Call the MCP via MCPManager
-        result = await mcp_manager.invoke(
-            mcp_name="neo4j_memory",
-            method_name="add_observations",
-            params={"observations": observation_dicts},
+        logger.info(f"Searching memories for user {user_id} with query: {query}")
+        
+        memory_service = get_memory_service()
+        
+        # Build filters
+        filters = {}
+        if category:
+            filters["category"] = category
+            
+        results = await memory_service.search_memories(
+            query=query,
+            user_id=user_id,
+            limit=limit,
+            filters=filters
         )
-
-        # Convert the result to the expected response model
-        result = AddObservationsResponse.model_validate(result)
-
-        return {"entities": result.updated_entities, "message": result.message}
-
-    except TripSageMCPError as e:
-        logger.error(f"MCP error adding observations: {str(e)}")
-        raise
+        
+        return {
+            "status": "success",
+            "query": query,
+            "results_count": len(results),
+            "memories": results
+        }
+        
     except Exception as e:
-        logger.error(f"Error adding observations: {str(e)}")
-        raise
-
-
-@with_error_handling
-async def delete_knowledge_entities(entity_names: List[str]) -> Dict[str, Any]:
-    """Delete entities from the knowledge graph.
-
-    Args:
-        entity_names: List of entity names to delete
-
-    Returns:
-        Number of deleted entities
-    """
-    try:
-        logger.info(f"Deleting {len(entity_names)} entities")
-
-        # Call the MCP via MCPManager
-        result = await mcp_manager.invoke(
-            mcp_name="neo4j_memory",
-            method_name="delete_entities",
-            params={"entityNames": entity_names},
-        )
-
-        # Convert the result to the expected response model
-        result = DeleteEntitiesResponse.model_validate(result)
-
-        return {"deleted": result.deleted_count, "message": result.message}
-
-    except TripSageMCPError as e:
-        logger.error(f"MCP error deleting entities: {str(e)}")
-        raise
-    except Exception as e:
-        logger.error(f"Error deleting entities: {str(e)}")
-        raise
-
-
-@with_error_handling
-async def delete_knowledge_relations(relations: List[Relation]) -> Dict[str, Any]:
-    """Delete relations from the knowledge graph.
-
-    Args:
-        relations: List of relations to delete
-
-    Returns:
-        Number of deleted relations
-    """
-    try:
-        logger.info(f"Deleting {len(relations)} relations")
-
-        # Convert to dictionary format
-        relation_dicts = [relation.model_dump(by_alias=True) for relation in relations]
-
-        # Call the MCP via MCPManager
-        result = await mcp_manager.invoke(
-            mcp_name="neo4j_memory",
-            method_name="delete_relations",
-            params={"relations": relation_dicts},
-        )
-
-        # Convert the result to the expected response model
-        result = DeleteRelationsResponse.model_validate(result)
-
-        return {"deleted": result.deleted_count, "message": result.message}
-
-    except TripSageMCPError as e:
-        logger.error(f"MCP error deleting relations: {str(e)}")
-        raise
-    except Exception as e:
-        logger.error(f"Error deleting relations: {str(e)}")
-        raise
-
-
-@with_error_handling
-async def delete_entity_observations(
-    deletions: List[DeletionRequest],
-) -> Dict[str, Any]:
-    """Delete specific observations from entities in the knowledge graph.
-
-    Args:
-        deletions: List of deletion requests
-
-    Returns:
-        List of updated entities
-    """
-    try:
-        logger.info(f"Deleting observations from {len(deletions)} entities")
-
-        # Convert to dictionary format
-        deletion_dicts = [deletion.model_dump() for deletion in deletions]
-
-        # Call the MCP via MCPManager
-        result = await mcp_manager.invoke(
-            mcp_name="neo4j_memory",
-            method_name="delete_observations",
-            params={"deletions": deletion_dicts},
-        )
-
-        # Convert the result to the expected response model
-        result = DeleteObservationsResponse.model_validate(result)
-
-        return {"entities": result.updated_entities, "message": result.message}
-
-    except TripSageMCPError as e:
-        logger.error(f"MCP error deleting observations: {str(e)}")
-        raise
-    except Exception as e:
-        logger.error(f"Error deleting observations: {str(e)}")
-        raise
-
-
-@with_error_handling
-async def initialize_agent_memory(
-    user_id: Optional[str] = None,
-) -> dict:
-    """Initialize agent memory by retrieving relevant knowledge.
-
-    Args:
-        user_id: Optional user ID
-
-    Returns:
-        Dictionary with session memory data
-    """
-    try:
-        logger.info(f"Initializing agent memory for user: {user_id}")
-
-        session_data = {
-            "user": None,
-            "preferences": {},
-            "recent_trips": [],
-            "popular_destinations": [],
+        logger.error(f"Error searching user memories: {str(e)}")
+        return {
+            "status": "error",
+            "error": str(e),
+            "memories": []
         }
 
-        # Retrieve user information if available
-        if user_id:
-            # Get user entity details
-            user_nodes_result = await get_entity_details([f"User:{user_id}"])
-            user_nodes = user_nodes_result.get("entities", [])
 
-            if user_nodes:
-                session_data["user"] = user_nodes[0]
-
-                # Extract user preferences from observations
-                preferences = {}
-                for observation in user_nodes[0].get("observations", []):
-                    if observation.startswith("Prefers "):
-                        parts = observation.replace("Prefers ", "").split(" for ")
-                        if len(parts) == 2:
-                            preference_value, category = parts
-                            preferences[category] = preference_value
-
-                session_data["preferences"] = preferences
-
-                # Find user's recent trips
-                trip_search_result = await search_knowledge_graph(
-                    f"User:{user_id} PLANS"
-                )
-                trip_search = trip_search_result.get("nodes", [])
-
-                if trip_search:
-                    # Get trip IDs
-                    trip_names = [
-                        node.get("name")
-                        for node in trip_search
-                        if node.get("name", "").startswith("Trip:")
-                    ]
-
-                    # Get trip details
-                    if trip_names:
-                        trips_result = await get_entity_details(trip_names)
-                        session_data["recent_trips"] = trips_result.get("entities", [])
-
-        # Get popular destinations
-        try:
-            # This is a special endpoint that doesn't follow the standard MCP pattern
-            # We'll handle it differently or implement a custom MCP tool for it
-            # For now we'll skip it to avoid errors
-            pass
-
-        except Exception as e:
-            logger.warning(f"Failed to retrieve popular destinations: {str(e)}")
-
-        return session_data
-
-    except TripSageMCPError as e:
-        logger.error(f"MCP error initializing agent memory: {str(e)}")
-        raise
+@with_error_handling
+async def get_user_context(
+    user_id: str,
+    context_type: Optional[str] = None
+) -> Dict[str, Any]:
+    """Get comprehensive user context for personalization.
+    
+    Args:
+        user_id: User identifier
+        context_type: Optional context type filter
+        
+    Returns:
+        Dictionary with user context including preferences, history, and insights
+    """
+    try:
+        logger.info(f"Getting user context for user {user_id}")
+        
+        memory_service = get_memory_service()
+        
+        context = await memory_service.get_user_context(
+            user_id=user_id,
+            context_type=context_type
+        )
+        
+        return {
+            "status": "success",
+            "user_id": user_id,
+            "context": context
+        }
+        
     except Exception as e:
-        logger.error(f"Error initializing agent memory: {str(e)}")
-        raise
+        logger.error(f"Error getting user context: {str(e)}")
+        return {
+            "status": "error",
+            "error": str(e),
+            "context": {}
+        }
 
 
 @with_error_handling
-async def update_agent_memory(user_id: str, updates: dict) -> dict:
-    """Update agent memory with new knowledge.
-
+async def update_user_preferences(
+    user_id: str,
+    preferences: UserPreferences
+) -> Dict[str, Any]:
+    """Update user travel preferences.
+    
     Args:
-        user_id: User ID
-        updates: Dictionary with updates
-
+        user_id: User identifier
+        preferences: User preferences object
+        
     Returns:
         Dictionary with update status
     """
     try:
-        logger.info(f"Updating agent memory for user: {user_id}")
-
-        result = {
-            "entities_created": 0,
-            "relations_created": 0,
-            "observations_added": 0,
+        logger.info(f"Updating preferences for user {user_id}")
+        
+        memory_service = get_memory_service()
+        
+        # Convert preferences to dictionary
+        preferences_dict = preferences.model_dump(exclude_none=True)
+        
+        await memory_service.update_user_preferences(
+            user_id=user_id,
+            preferences=preferences_dict
+        )
+        
+        return {
+            "status": "success",
+            "message": "User preferences updated successfully",
+            "preferences_updated": len(preferences_dict)
         }
-
-        # Process user preferences
-        if "preferences" in updates:
-            await _update_user_preferences(user_id, updates["preferences"], result)
-
-        # Process learned facts
-        if "learned_facts" in updates:
-            await _create_fact_relationships(user_id, updates["learned_facts"], result)
-
-        return result
-
-    except TripSageMCPError as e:
-        logger.error(f"MCP error updating agent memory: {str(e)}")
-        raise
+        
     except Exception as e:
-        logger.error(f"Error updating agent memory: {str(e)}")
-        raise
-
-
-async def _update_user_preferences(
-    user_id: str, preferences: Dict[str, str], result: Dict[str, int]
-) -> None:
-    """Update user preferences in the knowledge graph.
-
-    Args:
-        user_id: User ID
-        preferences: Dictionary of preferences
-        result: Result dictionary to update
-    """
-    # Get or create user entity
-    user_nodes_result = await get_entity_details([f"User:{user_id}"])
-    user_nodes = user_nodes_result.get("entities", [])
-
-    if not user_nodes:
-        # Create user entity
-        await create_knowledge_entities(
-            [
-                Entity(
-                    name=f"User:{user_id}",
-                    entityType="User",
-                    observations=["TripSage user"],
-                )
-            ]
-        )
-        result["entities_created"] += 1
-
-    # Add preference observations
-    preference_observations = []
-    for category, preference in preferences.items():
-        preference_observations.append(f"Prefers {preference} for {category}")
-
-    if preference_observations:
-        await add_entity_observations(
-            [
-                Observation(
-                    entityName=f"User:{user_id}",
-                    contents=preference_observations,
-                )
-            ]
-        )
-        result["observations_added"] += len(preference_observations)
-
-
-async def _create_fact_relationships(
-    user_id: str, facts: List[Dict[str, str]], result: Dict[str, int]
-) -> None:
-    """Create relationships for new facts in the knowledge graph.
-
-    Args:
-        user_id: User ID
-        facts: List of fact dictionaries
-        result: Result dictionary to update
-    """
-    for fact in facts:
-        if "from" in fact and "to" in fact and "relationType" in fact:
-            # Create entities if they don't exist
-            for entity_name in [fact["from"], fact["to"]]:
-                if ":" not in entity_name:  # Not a prefixed entity like User:123
-                    # Check if entity exists
-                    existing_result = await get_entity_details([entity_name])
-                    existing = existing_result.get("entities", [])
-
-                    if not existing:
-                        # Create entity with a generic type
-                        entity_type = fact.get(
-                            "fromType" if entity_name == fact["from"] else "toType",
-                            "Entity",
-                        )
-                        await create_knowledge_entities(
-                            [
-                                Entity(
-                                    name=entity_name,
-                                    entityType=entity_type,
-                                    observations=[
-                                        f"Learned during session with user {user_id}"
-                                    ],
-                                )
-                            ]
-                        )
-                        result["entities_created"] += 1
-
-            # Create relationship
-            await create_knowledge_relations(
-                [
-                    Relation(
-                        from_=fact["from"],
-                        relationType=fact["relationType"],
-                        to=fact["to"],
-                    )
-                ]
-            )
-            result["relations_created"] += 1
+        logger.error(f"Error updating user preferences: {str(e)}")
+        return {
+            "status": "error",
+            "error": str(e)
+        }
 
 
 @with_error_handling
 async def save_session_summary(
-    user_id: str, summary: str, session_id: str
+    session_summary: SessionSummary
 ) -> Dict[str, Any]:
-    """Save a summary of the current session.
-
+    """Save a summary of the conversation session.
+    
     Args:
-        user_id: User ID
-        summary: Session summary text
-        session_id: Session ID
-
+        session_summary: Session summary object
+        
     Returns:
         Dictionary with save status
     """
     try:
-        logger.info(f"Saving session summary for user: {user_id}")
-
-        # Create session entity
-        session_entity_result = await create_knowledge_entities(
-            [
-                Entity(
-                    name=f"Session:{session_id}",
-                    entityType="Session",
-                    observations=[summary],
-                )
-            ]
+        logger.info(f"Saving session summary for user {session_summary.user_id}")
+        
+        memory_service = get_memory_service()
+        
+        # Create conversation for the summary
+        summary_messages = [
+            {
+                "role": "system",
+                "content": "Extract key insights and decisions from this session summary."
+            },
+            {
+                "role": "user",
+                "content": f"Session Summary: {session_summary.summary}"
+            }
+        ]
+        
+        if session_summary.key_insights:
+            summary_messages.append({
+                "role": "user", 
+                "content": f"Key Insights: {', '.join(session_summary.key_insights)}"
+            })
+            
+        if session_summary.decisions_made:
+            summary_messages.append({
+                "role": "user",
+                "content": f"Decisions Made: {', '.join(session_summary.decisions_made)}"
+            })
+        
+        result = await memory_service.add_conversation_memory(
+            messages=summary_messages,
+            user_id=session_summary.user_id,
+            session_id=session_summary.session_id,
+            metadata={
+                "type": "session_summary",
+                "category": "travel_planning",
+                "session_end": datetime.utcnow().isoformat()
+            }
         )
-
-        # Create relationship between user and session
-        session_relation_result = await create_knowledge_relations(
-            [
-                Relation(
-                    from_=f"User:{user_id}",
-                    relationType="PARTICIPATED_IN",
-                    to=f"Session:{session_id}",
-                )
-            ]
-        )
-
+        
         return {
-            "session_entity": session_entity_result.get("entities", [None])[0],
-            "session_relation": session_relation_result.get("relations", [None])[0],
+            "status": "success",
+            "message": "Session summary saved successfully",
+            "memories_created": len(result.get("results", []))
         }
-
-    except TripSageMCPError as e:
-        logger.error(f"MCP error saving session summary: {str(e)}")
-        raise
+        
     except Exception as e:
         logger.error(f"Error saving session summary: {str(e)}")
-        raise
-
-
-# Domain-specific operations for TripSage
-
-
-@with_error_handling
-async def find_destinations_by_country(country: str) -> Dict[str, Any]:
-    """Find destinations in a specific country using the knowledge graph.
-
-    Args:
-        country: The country to search for
-
-    Returns:
-        Dictionary with list of destinations in the country
-    """
-    logger.info(f"Finding destinations in country: {country}")
-
-    # Search for destinations with country in their observations
-    # The Memory MCP uses simple search, so we need to construct appropriate queries
-    search_result = await search_knowledge_graph(f"Destination {country}")
-    destinations = search_result.get("nodes", [])
-
-    # Filter to ensure they are actual destination entities
-    filtered_destinations = []
-    for node in destinations:
-        if node.get("entityType") == "Destination":
-            # Check if country is mentioned in observations
-            observations = node.get("observations", [])
-            for obs in observations:
-                if country.lower() in obs.lower():
-                    filtered_destinations.append(node)
-                    break
-
-    return {"destinations": filtered_destinations, "count": len(filtered_destinations)}
+        return {
+            "status": "error",
+            "error": str(e)
+        }
 
 
 @with_error_handling
-async def find_nearby_destinations(
-    latitude: float, longitude: float, radius_km: float = 50
-) -> Dict[str, Any]:
-    """Find destinations near a geographic location.
-
-    Args:
-        latitude: Latitude of the location
-        longitude: Longitude of the location
-        radius_km: Search radius in kilometers (default 50)
-
-    Returns:
-        Dictionary with list of nearby destinations
-    """
-    logger.info(
-        f"Finding destinations near ({latitude}, {longitude}) within {radius_km}km"
-    )
-
-    # Get all destinations
-    graph_result = await get_knowledge_graph()
-    all_entities = graph_result.get("entities", [])
-
-    nearby_destinations = []
-
-    for entity in all_entities:
-        if entity.get("entityType") == "Destination":
-            # Look for coordinates in observations
-            observations = entity.get("observations", [])
-            for obs in observations:
-                # Simple pattern matching for coordinates
-                if "coordinates" in obs.lower() or "lat" in obs.lower():
-                    try:
-                        # This is a simplified approach - in production, we'd have
-                        # structured coordinate data in the graph
-                        import re
-
-                        coord_pattern = r"[-+]?\d*\.\d+|[-+]?\d+"
-                        coords = re.findall(coord_pattern, obs)
-                        if len(coords) >= 2:
-                            dest_lat, dest_lon = float(coords[0]), float(coords[1])
-
-                            # Calculate distance using Haversine formula
-                            distance = calculate_distance(
-                                latitude, longitude, dest_lat, dest_lon
-                            )
-
-                            if distance <= radius_km:
-                                nearby_destinations.append(
-                                    {**entity, "distance_km": distance}
-                                )
-                    except (ValueError, IndexError):
-                        continue
-
-    # Sort by distance
-    nearby_destinations.sort(key=lambda x: x.get("distance_km", float("inf")))
-
-    return {"destinations": nearby_destinations, "count": len(nearby_destinations)}
-
-
-@with_error_handling
-async def find_accommodations_in_destination(destination_name: str) -> Dict[str, Any]:
-    """Find accommodations in a specific destination.
-
-    Args:
-        destination_name: Name of the destination
-
-    Returns:
-        Dictionary with list of accommodations
-    """
-    logger.info(f"Finding accommodations in destination: {destination_name}")
-
-    # Search for accommodations related to the destination
-    search_result = await search_knowledge_graph(f"Accommodation {destination_name}")
-    accommodations = search_result.get("nodes", [])
-
-    # Filter for actual accommodation entities
-    filtered_accommodations = []
-    for node in accommodations:
-        if node.get("entityType") == "Accommodation":
-            # Check if destination is mentioned
-            observations = node.get("observations", [])
-            for obs in observations:
-                if destination_name.lower() in obs.lower():
-                    filtered_accommodations.append(node)
-                    break
-
-    return {
-        "accommodations": filtered_accommodations,
-        "count": len(filtered_accommodations),
-    }
-
-
-@with_error_handling
-async def create_trip_entities(
-    trip_id: str,
+async def get_travel_insights(
     user_id: str,
-    destination: str,
-    start_date: str,
-    end_date: str,
-    details: Dict[str, Any],
+    insight_type: Optional[str] = None
 ) -> Dict[str, Any]:
-    """Create trip entities and relationships in the knowledge graph.
-
+    """Get travel insights based on user's memory.
+    
     Args:
-        trip_id: Unique trip identifier
         user_id: User identifier
-        destination: Trip destination
-        start_date: Trip start date
-        end_date: Trip end date
-        details: Additional trip details
-
+        insight_type: Type of insights to retrieve
+        
     Returns:
-        Dictionary with created entities and relationships
+        Dictionary with travel insights
     """
-    logger.info(f"Creating trip entities for trip {trip_id}")
+    try:
+        logger.info(f"Getting travel insights for user {user_id}")
+        
+        # Get user context first
+        context_result = await get_user_context(user_id)
+        
+        if context_result["status"] != "success":
+            return context_result
+            
+        context = context_result["context"]
+        insights = context.get("insights", {})
+        
+        if insight_type and insight_type in insights:
+            return {
+                "status": "success",
+                "insight_type": insight_type,
+                "insights": {insight_type: insights[insight_type]}
+            }
+        
+        return {
+            "status": "success",
+            "insights": insights
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting travel insights: {str(e)}")
+        return {
+            "status": "error",
+            "error": str(e),
+            "insights": {}
+        }
 
-    # Create trip entity
-    trip_observations = [
-        f"Trip to {destination}",
-        f"From {start_date} to {end_date}",
-        f"Budget: {details.get('budget', 'Not specified')}",
-        f"Travelers: {details.get('travelers', 1)}",
-        f"Status: {details.get('status', 'planning')}",
-        f"Type: {details.get('trip_type', 'leisure')}",
-    ]
 
-    entities_result = await create_knowledge_entities(
-        [
-            Entity(
-                name=f"Trip:{trip_id}",
-                entityType="Trip",
-                observations=trip_observations,
+@with_error_handling
+async def find_similar_travelers(
+    user_id: str,
+    similarity_threshold: float = 0.8
+) -> Dict[str, Any]:
+    """Find users with similar travel preferences and history.
+    
+    Args:
+        user_id: User identifier
+        similarity_threshold: Minimum similarity threshold
+        
+    Returns:
+        Dictionary with similar travelers
+    """
+    try:
+        logger.info(f"Finding similar travelers for user {user_id}")
+        
+        # Get user's preferences
+        context_result = await get_user_context(user_id)
+        
+        if context_result["status"] != "success":
+            return context_result
+        
+        user_context = context_result["context"]
+        
+        # Search for users with similar preferences
+        preference_query = ""
+        if user_context.get("preferences"):
+            prefs = []
+            for category, value in user_context["preferences"].items():
+                prefs.append(f"{category}: {value}")
+            preference_query = ", ".join(prefs)
+        
+        # Note: This is a simplified implementation
+        # In a full implementation, we'd have more sophisticated similarity matching
+        similar_memories = await search_user_memories(
+            query=preference_query,
+            user_id="*",  # Search across all users (if supported)
+            limit=10
+        )
+        
+        return {
+            "status": "success",
+            "similar_travelers_count": 0,  # Placeholder - needs cross-user search
+            "message": "Similar traveler search requires cross-user memory access"
+        }
+        
+    except Exception as e:
+        logger.error(f"Error finding similar travelers: {str(e)}")
+        return {
+            "status": "error",
+            "error": str(e),
+            "similar_travelers": []
+        }
+
+
+@with_error_handling
+async def get_destination_memories(
+    destination: str,
+    user_id: Optional[str] = None
+) -> Dict[str, Any]:
+    """Get memories related to a specific destination.
+    
+    Args:
+        destination: Destination name
+        user_id: Optional user ID for personalized results
+        
+    Returns:
+        Dictionary with destination memories
+    """
+    try:
+        logger.info(f"Getting destination memories for: {destination}")
+        
+        if user_id:
+            # Get user-specific destination memories
+            memories = await search_user_memories(
+                query=destination,
+                user_id=user_id,
+                limit=10,
+                category="destinations"
             )
+        else:
+            # This would require system-wide search capability
+            # For now, return empty results
+            memories = {"memories": []}
+        
+        return {
+            "status": "success",
+            "destination": destination,
+            "memories": memories.get("memories", [])
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting destination memories: {str(e)}")
+        return {
+            "status": "error",
+            "error": str(e),
+            "memories": []
+        }
+
+
+@with_error_handling
+async def track_user_activity(
+    user_id: str,
+    activity_type: str,
+    activity_data: Dict[str, Any]
+) -> Dict[str, Any]:
+    """Track user activity for behavior analysis.
+    
+    Args:
+        user_id: User identifier
+        activity_type: Type of activity (search, booking, view, etc.)
+        activity_data: Activity data
+        
+    Returns:
+        Dictionary with tracking status
+    """
+    try:
+        logger.info(f"Tracking activity for user {user_id}: {activity_type}")
+        
+        # Create activity memory
+        activity_messages = [
+            {
+                "role": "system",
+                "content": "Track user activity for behavior analysis."
+            },
+            {
+                "role": "user",
+                "content": f"User performed {activity_type} activity: {json.dumps(activity_data)}"
+            }
         ]
-    )
+        
+        result = await add_conversation_memory(
+            messages=[ConversationMessage(**msg) for msg in activity_messages],
+            user_id=user_id,
+            context_type="user_activity"
+        )
+        
+        return {
+            "status": "success",
+            "activity_tracked": activity_type,
+            "memories_created": result.get("memories_extracted", 0)
+        }
+        
+    except Exception as e:
+        logger.error(f"Error tracking user activity: {str(e)}")
+        return {
+            "status": "error",
+            "error": str(e)
+        }
 
-    # Create user-trip relationship
-    user_trip_relation = await create_knowledge_relations(
-        [Relation(from_=f"User:{user_id}", relationType="PLANS", to=f"Trip:{trip_id}")]
-    )
 
-    # Create trip-destination relationship
-    trip_dest_relation = await create_knowledge_relations(
-        [
-            Relation(
-                from_=f"Trip:{trip_id}",
-                relationType="TO",
-                to=f"Destination:{destination}",
-            )
-        ]
-    )
+# Legacy compatibility functions (for gradual migration)
 
+@with_error_handling
+async def initialize_agent_memory(user_id: Optional[str] = None) -> Dict[str, Any]:
+    """Initialize agent memory (legacy compatibility).
+    
+    Args:
+        user_id: Optional user ID
+        
+    Returns:
+        Dictionary with session memory data
+    """
+    logger.info(f"Initializing agent memory for user: {user_id}")
+    
+    if not user_id:
+        return {
+            "user": None,
+            "preferences": {},
+            "recent_trips": [],
+            "popular_destinations": []
+        }
+    
+    # Get user context using new memory system
+    context_result = await get_user_context(user_id)
+    
+    if context_result["status"] == "success":
+        context = context_result["context"]
+        
+        return {
+            "user": {"id": user_id, "name": f"User {user_id}"},
+            "preferences": context.get("preferences", {}),
+            "recent_trips": context.get("past_trips", [])[:5],
+            "popular_destinations": []  # Would need system-wide data
+        }
+    
     return {
-        "trip_entity": entities_result.get("entities", [None])[0],
-        "user_trip_relation": user_trip_relation.get("relations", [None])[0],
-        "trip_destination_relation": trip_dest_relation.get("relations", [None])[0],
+        "user": None,
+        "preferences": {},
+        "recent_trips": [],
+        "popular_destinations": []
     }
 
 
 @with_error_handling
-async def find_popular_destinations(limit: int = 10) -> Dict[str, Any]:
-    """Find the most popular destinations based on trip relationships.
-
+async def update_agent_memory(user_id: str, updates: Dict[str, Any]) -> Dict[str, Any]:
+    """Update agent memory (legacy compatibility).
+    
     Args:
-        limit: Maximum number of destinations to return
-
+        user_id: User ID
+        updates: Dictionary with updates
+        
     Returns:
-        Dictionary with popular destinations
+        Dictionary with update status
     """
-    logger.info(f"Finding top {limit} popular destinations")
+    logger.info(f"Updating agent memory for user: {user_id}")
+    
+    result = {
+        "entities_created": 0,
+        "relations_created": 0,
+        "observations_added": 0
+    }
+    
+    try:
+        # Handle preferences
+        if "preferences" in updates:
+            prefs = UserPreferences(**updates["preferences"])
+            await update_user_preferences(user_id, prefs)
+            result["observations_added"] += len(updates["preferences"])
+        
+        # Handle learned facts as conversation memory
+        if "learned_facts" in updates:
+            facts_messages = [
+                {
+                    "role": "system",
+                    "content": "Extract learned facts about travel."
+                },
+                {
+                    "role": "user",
+                    "content": f"Learned facts: {json.dumps(updates['learned_facts'])}"
+                }
+            ]
+            
+            await add_conversation_memory(
+                messages=[ConversationMessage(**msg) for msg in facts_messages],
+                user_id=user_id,
+                context_type="learned_facts"
+            )
+            result["entities_created"] += len(updates["learned_facts"])
+        
+        return result
+        
+    except Exception as e:
+        logger.error(f"Error updating agent memory: {str(e)}")
+        return result
 
-    # Get the full graph to analyze relationships
-    graph_result = await get_knowledge_graph()
-    all_entities = graph_result.get("entities", [])
-    all_relations = graph_result.get("relations", [])
 
-    # Count trips to each destination
-    destination_counts = {}
-
-    for relation in all_relations:
-        if relation.get("relationType") == "TO" and "Trip:" in relation.get("from", ""):
-            destination = relation.get("to")
-            if destination and destination.startswith("Destination:"):
-                destination_counts[destination] = (
-                    destination_counts.get(destination, 0) + 1
-                )
-
-    # Sort destinations by popularity
-    popular_destinations = []
-    for dest_name, count in sorted(
-        destination_counts.items(), key=lambda x: x[1], reverse=True
-    )[:limit]:
-        # Find the actual destination entity
-        for entity in all_entities:
-            if entity.get("name") == dest_name:
-                popular_destinations.append({**entity, "trip_count": count})
-                break
-
-    return {"destinations": popular_destinations, "count": len(popular_destinations)}
-
-
-# Helper function for distance calculation
-def calculate_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
-    """Calculate distance between two coordinates using Haversine formula.
-
-    Args:
-        lat1: Latitude of first point
-        lon1: Longitude of first point
-        lat2: Latitude of second point
-        lon2: Longitude of second point
-
+# Health check function
+@with_error_handling
+async def memory_health_check() -> Dict[str, Any]:
+    """Check memory service health.
+    
     Returns:
-        Distance in kilometers
+        Dictionary with health status
     """
-    import math
-
-    R = 6371  # Earth's radius in kilometers
-
-    dlat = math.radians(lat2 - lat1)
-    dlon = math.radians(lon2 - lon1)
-    lat1_rad = math.radians(lat1)
-    lat2_rad = math.radians(lat2)
-
-    a = math.sin(dlat / 2) * math.sin(dlat / 2) + math.cos(lat1_rad) * math.cos(
-        lat2_rad
-    ) * math.sin(dlon / 2) * math.sin(dlon / 2)
-    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
-
-    return R * c
+    try:
+        memory_service = get_memory_service()
+        is_healthy = await memory_service.health_check()
+        
+        return {
+            "status": "healthy" if is_healthy else "unhealthy",
+            "service": "Mem0 Memory Service",
+            "timestamp": datetime.utcnow().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Memory health check failed: {str(e)}")
+        return {
+            "status": "unhealthy",
+            "service": "Mem0 Memory Service",
+            "error": str(e),
+            "timestamp": datetime.utcnow().isoformat()
+        }

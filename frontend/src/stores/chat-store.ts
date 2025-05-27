@@ -1,6 +1,12 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { z } from "zod";
+import type {
+  MemoryContextResponse,
+  UserPreferences,
+  Memory,
+  ConversationMessage,
+} from "@/types/memory";
 
 // Enhanced Message type with support for tool calls and attachments
 export interface Message {
@@ -43,6 +49,11 @@ export interface ChatSession {
   createdAt: string;
   updatedAt: string;
   agentStatus?: AgentStatus;
+
+  // Memory integration
+  memoryContext?: MemoryContextResponse;
+  userId?: string;
+  lastMemorySync?: string;
 }
 
 export interface AgentStatus {
@@ -70,8 +81,12 @@ interface ChatState {
   // Computed
   currentSession: ChatSession | null;
 
+  // Memory integration
+  memoryEnabled: boolean;
+  autoSyncMemory: boolean;
+
   // Actions
-  createSession: (title?: string) => string;
+  createSession: (title?: string, userId?: string) => string;
   setCurrentSession: (sessionId: string) => void;
   deleteSession: (sessionId: string) => void;
   renameSession: (sessionId: string, title: string) => void;
@@ -101,6 +116,19 @@ interface ChatState {
   clearError: () => void;
   exportSessionData: (sessionId: string) => string;
   importSessionData: (jsonData: string) => string | null;
+
+  // Memory actions
+  updateSessionMemoryContext: (
+    sessionId: string,
+    memoryContext: MemoryContextResponse
+  ) => void;
+  syncMemoryToSession: (sessionId: string) => Promise<void>;
+  storeConversationMemory: (
+    sessionId: string,
+    messages?: Message[]
+  ) => Promise<void>;
+  setMemoryEnabled: (enabled: boolean) => void;
+  setAutoSyncMemory: (enabled: boolean) => void;
 }
 
 // Zod schema for session data validation when importing
@@ -151,6 +179,10 @@ export const useChatStore = create<ChatState>()(
       isStreaming: false,
       error: null,
 
+      // Memory integration defaults
+      memoryEnabled: true,
+      autoSyncMemory: true,
+
       get currentSession() {
         const { sessions, currentSessionId } = get();
         if (!currentSessionId) return null;
@@ -159,7 +191,7 @@ export const useChatStore = create<ChatState>()(
         );
       },
 
-      createSession: (title) => {
+      createSession: (title, userId) => {
         const timestamp = new Date().toISOString();
         const sessionId = Date.now().toString();
 
@@ -173,6 +205,9 @@ export const useChatStore = create<ChatState>()(
             isActive: false,
             progress: 0,
           },
+          userId: userId,
+          memoryContext: undefined,
+          lastMemorySync: undefined,
         };
 
         set((state) => ({
@@ -586,12 +621,97 @@ export const useChatStore = create<ChatState>()(
           return null;
         }
       },
+
+      // Memory actions
+      updateSessionMemoryContext: (sessionId, memoryContext) => {
+        set((state) => ({
+          sessions: state.sessions.map((session) =>
+            session.id === sessionId
+              ? {
+                  ...session,
+                  memoryContext,
+                  lastMemorySync: new Date().toISOString(),
+                  updatedAt: new Date().toISOString(),
+                }
+              : session
+          ),
+        }));
+      },
+
+      syncMemoryToSession: async (sessionId) => {
+        const session = get().sessions.find((s) => s.id === sessionId);
+        if (!session?.userId || !get().memoryEnabled) return;
+
+        try {
+          // Import memory hooks here to avoid circular dependencies
+          const { useMemoryContext } = await import("@/lib/hooks/use-memory");
+
+          // Note: This would typically be handled by the component using the hook
+          // This is a placeholder for the actual implementation
+          console.log(
+            "Memory sync would fetch context for user:",
+            session.userId
+          );
+        } catch (error) {
+          console.error("Failed to sync memory to session:", error);
+          set({ error: "Failed to sync memory context" });
+        }
+      },
+
+      storeConversationMemory: async (sessionId, messages) => {
+        const session = get().sessions.find((s) => s.id === sessionId);
+        if (!session?.userId || !get().memoryEnabled || !get().autoSyncMemory)
+          return;
+
+        try {
+          const messagesToStore = messages || session.messages;
+
+          // Convert messages to conversation format
+          const conversationMessages: ConversationMessage[] =
+            messagesToStore.map((msg) => ({
+              role: msg.role,
+              content: msg.content,
+              timestamp: msg.timestamp,
+              metadata: {
+                toolCalls: msg.toolCalls,
+                toolResults: msg.toolResults,
+                attachments: msg.attachments,
+              },
+            }));
+
+          // Import memory hooks here to avoid circular dependencies
+          const { useAddConversationMemory } = await import(
+            "@/lib/hooks/use-memory"
+          );
+
+          // Note: This would typically be handled by the component using the hook
+          // This is a placeholder for the actual implementation
+          console.log(
+            "Would store conversation memory for session:",
+            sessionId,
+            "messages:",
+            conversationMessages.length
+          );
+        } catch (error) {
+          console.error("Failed to store conversation memory:", error);
+        }
+      },
+
+      setMemoryEnabled: (enabled) => {
+        set({ memoryEnabled: enabled });
+      },
+
+      setAutoSyncMemory: (enabled) => {
+        set({ autoSyncMemory: enabled });
+      },
     }),
     {
       name: "chat-storage",
       partialize: (state) => ({
         sessions: state.sessions,
         currentSessionId: state.currentSessionId,
+        memoryEnabled: state.memoryEnabled,
+        autoSyncMemory: state.autoSyncMemory,
       }),
     }
   )
