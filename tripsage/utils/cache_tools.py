@@ -1,7 +1,8 @@
 """
 Direct Redis caching functionality for TripSage.
 
-This module provides direct Redis SDK caching utilities, replacing the MCP implementation
+This module provides direct Redis SDK caching utilities,
+replacing the MCP implementation
 with a clean, high-performance direct integration.
 
 Features:
@@ -282,7 +283,8 @@ def cached(
                     namespace=namespace,
                 )
                 logger.debug(
-                    f"Cached result for {function_name} in {execution_time:.2f}s (key: {cache_key})"
+                    f"Cached result for {function_name} in {execution_time:.2f}s "
+                    f"(key: {cache_key})"
                 )
 
             return result

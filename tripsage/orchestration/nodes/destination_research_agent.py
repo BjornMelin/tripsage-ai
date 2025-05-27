@@ -26,13 +26,14 @@ class DestinationResearchAgentNode(BaseAgentNode):
     """
     Destination research agent node.
 
-    This node handles all destination research requests including destination information,
-    attractions, activities, cultural insights, and practical travel information using
-    MCP tool integration.
+    This node handles all destination research requests including destination
+    information, attractions, activities, cultural insights, and practical travel
+    information using MCP tool integration.
     """
 
     def __init__(self):
-        """Initialize the destination research agent node with tools and language model."""
+        """Initialize the destination research agent node with tools and
+        language model."""
         super().__init__("destination_research_agent")
 
         # Initialize LLM for destination research tasks
@@ -50,7 +51,8 @@ class DestinationResearchAgentNode(BaseAgentNode):
         )
 
         logger.info(
-            f"Initialized destination research agent with {len(self.available_tools)} tools"
+            f"Initialized destination research agent with {len(self.available_tools)} "
+            "tools"
         )
 
     async def process(self, state: TravelPlanningState) -> TravelPlanningState:
@@ -111,7 +113,8 @@ class DestinationResearchAgentNode(BaseAgentNode):
         self, message: str, state: TravelPlanningState
     ) -> Optional[Dict[str, Any]]:
         """
-        Extract destination research parameters from user message and conversation context.
+        Extract destination research parameters from user message and conversation
+        context.
 
         Args:
             message: User message to analyze
@@ -149,7 +152,8 @@ class DestinationResearchAgentNode(BaseAgentNode):
         - travel_style: Type of travel (luxury, budget, adventure, family, etc.)
         - duration: Length of stay
         
-        Respond with JSON only. If this doesn't seem destination-research related, return null.
+        Respond with JSON only. If this doesn't seem destination-research related,
+        return null.
         
         Example: {{"destination": "Paris", "research_type": "attractions", 
                    "specific_interests": ["museums", "architecture"], "duration": 5}}
@@ -158,7 +162,8 @@ class DestinationResearchAgentNode(BaseAgentNode):
         try:
             messages = [
                 SystemMessage(
-                    content="You are a destination research parameter extraction assistant."
+                    content="You are a destination research parameter extraction "
+                    "assistant."
                 ),
                 HumanMessage(content=extraction_prompt),
             ]
@@ -283,7 +288,8 @@ class DestinationResearchAgentNode(BaseAgentNode):
                 # Parse attractions from results
                 attractions = []
                 if isinstance(result, str):
-                    # Simple parsing - in real implementation this would be more sophisticated
+                    # Simple parsing - in real implementation this would be
+                    # more sophisticated
                     attractions = [
                         {
                             "name": f"Attraction in {destination}",
@@ -323,7 +329,8 @@ class DestinationResearchAgentNode(BaseAgentNode):
                 # Parse activities from results
                 activities = []
                 if isinstance(result, str):
-                    # Simple parsing - in real implementation this would be more sophisticated
+                    # Simple parsing - in real implementation this would be
+                    # more sophisticated
                     activities = [
                         {
                             "name": f"Activity in {destination}",
@@ -352,7 +359,10 @@ class DestinationResearchAgentNode(BaseAgentNode):
             # Use web crawling for practical information
             webcrawl_tool = self.tool_registry.get_tool("webcrawl_search")
             if webcrawl_tool:
-                query = f"{destination} travel practical information currency transportation visa requirements"
+                query = (
+                    f"{destination} travel practical information currency "
+                    "transportation visa requirements"
+                )
                 result = await webcrawl_tool._arun(query=query, max_results=3)
                 return {"practical_data": result, "sources": "web_research"}
             else:
@@ -373,7 +383,10 @@ class DestinationResearchAgentNode(BaseAgentNode):
             # Use web crawling for cultural information
             webcrawl_tool = self.tool_registry.get_tool("webcrawl_search")
             if webcrawl_tool:
-                query = f"{destination} culture customs etiquette local traditions social norms"
+                query = (
+                    f"{destination} culture customs etiquette local traditions "
+                    "social norms"
+                )
                 result = await webcrawl_tool._arun(query=query, max_results=3)
                 return {"cultural_data": result, "sources": "web_research"}
             else:
@@ -445,7 +458,8 @@ class DestinationResearchAgentNode(BaseAgentNode):
         """
         if research_results.get("error"):
             content = (
-                f"I apologize, but I encountered an issue researching {params.get('destination', 'the destination')}: "
+                f"I apologize, but I encountered an issue researching "
+                f"{params.get('destination', 'the destination')}: "
                 f"{research_results['error']}. Let me try a different approach."
             )
         else:
@@ -458,7 +472,10 @@ class DestinationResearchAgentNode(BaseAgentNode):
                 content += "**Overview:**\n"
                 overview = research_results.get("overview", {})
                 if overview.get("overview_data"):
-                    content += f"Based on my research, {destination} offers a rich travel experience. "
+                    content += (
+                        f"Based on my research, {destination} offers a rich travel "
+                        "experience. "
+                    )
                 content += "\n"
 
             if research_type == "attractions" or research_type == "all":
@@ -510,7 +527,10 @@ class DestinationResearchAgentNode(BaseAgentNode):
                         content += f"For your travel dates: {weather['travel_dates']}\n"
                     content += "Weather and seasonal recommendations.\n\n"
 
-            content += "Would you like me to provide more detailed information about any specific aspect of your trip?"
+            content += (
+                "Would you like me to provide more detailed information about any "
+                "specific aspect of your trip?"
+            )
 
         return self._create_response_message(
             content,
@@ -536,15 +556,16 @@ class DestinationResearchAgentNode(BaseAgentNode):
         """
         # Use LLM to generate helpful response for general research questions
         response_prompt = f"""
-        The user is asking about destination research but hasn't provided enough specific 
-        information for targeted research.
+        The user is asking about destination research but hasn't provided enough
+        specific information for targeted research.
         
         User message: "{message}"
         
         Provide a helpful response that:
         1. Acknowledges their interest in destination information
         2. Asks for the specific destination they want to research
-        3. Mentions the types of information you can provide (attractions, activities, culture, practical info)
+        3. Mentions the types of information you can provide (attractions, activities, 
+           culture, practical info)
         4. Offers to help once they specify a destination
         
         Keep the response friendly and concise.
@@ -564,10 +585,11 @@ class DestinationResearchAgentNode(BaseAgentNode):
         except Exception as e:
             logger.error(f"Error generating research response: {str(e)}")
             content = (
-                "I'd be happy to help you research destinations! Please let me know which "
-                "destination you're interested in, and I can provide information about "
-                "attractions, activities, cultural insights, practical travel tips, weather, "
-                "and much more. What destination would you like to explore?"
+                "I'd be happy to help you research destinations! Please let me know "
+                "which destination you're interested in, and I can provide information "
+                "about attractions, activities, cultural insights, practical travel "
+                "tips, weather, and much more. What destination would you like to "
+                "explore?"
             )
 
         return self._create_response_message(content)

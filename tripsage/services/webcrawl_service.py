@@ -166,7 +166,8 @@ class WebCrawlService:
             # Basic JavaScript for dynamic content loading
             config.js_code = [
                 "window.scrollTo(0, document.body.scrollHeight);",
-                "await new Promise(resolve => setTimeout(resolve, 1000));",  # Wait for content
+                "await new Promise(resolve => "
+                "setTimeout(resolve, 1000));",  # Wait for content
             ]
 
         # Add wait condition

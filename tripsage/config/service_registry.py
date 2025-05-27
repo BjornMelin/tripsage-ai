@@ -162,7 +162,7 @@ class ServiceRegistry:
 
     async def close_all(self) -> None:
         """Close all service connections."""
-        for name, instance in self._instances.items():
+        for _name, instance in self._instances.items():
             if hasattr(instance, "close"):
                 try:
                     await instance.close()

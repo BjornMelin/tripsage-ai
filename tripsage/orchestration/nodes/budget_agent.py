@@ -26,8 +26,9 @@ class BudgetAgentNode(BaseAgentNode):
     """
     Budget optimization agent node.
 
-    This node handles all budget-related requests including optimization, expense tracking,
-    cost comparisons, and savings recommendations using MCP tool integration.
+    This node handles all budget-related requests including optimization,
+    expense tracking, cost comparisons, and savings recommendations using MCP tool
+    integration.
     """
 
     def __init__(self):
@@ -210,7 +211,8 @@ class BudgetAgentNode(BaseAgentNode):
         destination = params.get("destination", "")
 
         # Enhanced allocation logic based on destination and preferences
-        # These percentages can be adjusted based on destination type, user preferences, etc.
+        # These percentages can be adjusted based on destination type, user
+        # preferences, etc.
         if destination.lower() in ["paris", "london", "tokyo", "new york"]:
             # Expensive cities - allocate more to accommodation and food
             transportation_pct = 0.25
@@ -519,7 +521,10 @@ class BudgetAgentNode(BaseAgentNode):
         allocations = analysis.get("allocations", {})
         daily_budget = analysis.get("daily_budget", {})
 
-        content = f"I've optimized your ${total_budget:,.0f} budget for {trip_length} days in {destination}:\n\n"
+        content = (
+            f"I've optimized your ${total_budget:,.0f} budget for {trip_length} days "
+            f"in {destination}:\n\n"
+        )
 
         content += "**Budget Allocation:**\n"
         for category, amount in allocations.items():
@@ -527,14 +532,21 @@ class BudgetAgentNode(BaseAgentNode):
             content += f"• {category.title()}: ${amount:,.0f} ({pct:.0f}%)\n"
 
         content += "\n**Daily Budget Breakdown:**\n"
-        content += f"• Accommodation: ${daily_budget.get('accommodation_per_night', 0):.0f}/night\n"
-        content += f"• Food: ${daily_budget.get('food_per_day', 0):.0f}/day (${daily_budget.get('food_per_meal', 0):.0f}/meal)\n"
+        content += (
+            f"• Accommodation: "
+            f"${daily_budget.get('accommodation_per_night', 0):.0f}/night\n"
+        )
+        content += (
+            f"• Food: ${daily_budget.get('food_per_day', 0):.0f}/day "
+            f"(${daily_budget.get('food_per_meal', 0):.0f}/meal)\n"
+        )
         content += (
             f"• Activities: ${daily_budget.get('activities_per_day', 0):.0f}/day\n"
         )
         content += f"• Daily Total: ${daily_budget.get('daily_total', 0):.0f}/day\n"
 
-        content += "\nWould you like me to help you find flights and accommodations within this budget?"
+        content += "\nWould you like me to help you find flights and "
+        "accommodations within this budget?"
 
         return content
 
@@ -571,11 +583,17 @@ class BudgetAgentNode(BaseAgentNode):
         content = f"I've compared {options_count} {category} options:\n\n"
 
         if best_option:
-            content += f"**Best Value:** {best_option.get('name', 'Option')} - ${best_option.get('cost', 0):,.0f}\n"
+            content += (
+                f"**Best Value:** {best_option.get('name', 'Option')} - "
+                f"${best_option.get('cost', 0):,.0f}\n"
+            )
             content += f"Value Score: {best_option.get('value_score', 0):.1f}\n\n"
 
         if cheapest_option and cheapest_option != best_option:
-            content += f"**Cheapest Option:** {cheapest_option.get('name', 'Option')} - ${cheapest_option.get('cost', 0):,.0f}\n\n"
+            content += (
+                f"**Cheapest Option:** {cheapest_option.get('name', 'Option')} "
+                f"- ${cheapest_option.get('cost', 0):,.0f}\n\n"
+            )
 
         content += "Would you like more details about any of these options?"
 
@@ -600,7 +618,10 @@ class BudgetAgentNode(BaseAgentNode):
         content += "**Category Breakdown:**\n"
         for category, data in variance_analysis.items():
             status_emoji = "⚠️" if data["status"] == "over" else "✅"
-            content += f"{status_emoji} {category.title()}: ${data['actual']:,.2f} vs ${data['planned']:,.2f} "
+            content += (
+                f"{status_emoji} {category.title()}: ${data['actual']:,.2f} vs "
+                f"${data['planned']:,.2f} "
+            )
             content += (
                 f"({data['variance']:+,.2f}, {data['variance_percentage']:+.1f}%)\n"
             )
@@ -629,8 +650,10 @@ class BudgetAgentNode(BaseAgentNode):
         
         Provide a helpful response that:
         1. Acknowledges their budget interest
-        2. Asks for specific information needed (total budget, trip length, destination, travelers)
-        3. Explains what budget services you can provide (optimization, tracking, analysis)
+        2. Asks for specific information needed (total budget, trip length,
+        destination, travelers)
+        3. Explains what budget services you can provide (optimization, tracking,
+        analysis)
         4. Offers to help once they provide details
         
         Keep the response friendly and concise.
@@ -651,9 +674,10 @@ class BudgetAgentNode(BaseAgentNode):
             logger.error(f"Error generating budget response: {str(e)}")
             content = (
                 "I'd be happy to help you optimize your travel budget! To get started, "
-                "I'll need to know your total budget, trip length, destination, and number "
-                "of travelers. I can help with budget allocation, expense tracking, cost "
-                "comparisons, and spending analysis. What aspect of budgeting would you like help with?"
+                "I'll need to know your total budget, trip length, destination, and "
+                "number of travelers. I can help with budget allocation, expense "
+                "tracking, cost comparisons, and spending analysis. What aspect of "
+                "budgeting would you like help with?"
             )
 
         return self._create_response_message(content)
