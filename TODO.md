@@ -142,6 +142,8 @@ This TODO list outlines refactoring opportunities to simplify the TripSage AI co
 
 **GitHub Issue:** #159 - MCP to SDK migration (major performance gains)
 
+**Note:** Issues #188 (Neon asyncpg migration) and #178 (Neo4j direct driver migration) were closed as obsolete on 2025-05-27. These migrations were superseded by the Supabase-only architecture and Mem0 memory system implementations which achieved superior performance targets.
+
 ### ✅ Week 1 Completed (Redis/DragonflyDB & Supabase Migration)
 
 - [x] **Infrastructure Setup** ✅ **COMPLETED**
@@ -1012,6 +1014,11 @@ For remaining API, MCP, and Middleware related tasks, see [tasks/TODO-API.md](./
 - **Qdrant Vector DB**: pgvector + pgvectorscale is 11x faster
 - **Custom MCP Servers**: Using external MCPs + direct SDKs only
 - **Knowledge Graphs**: Simplified to Mem0 for MVP
+
+### Obsolete GitHub Issues (Closed 2025-05-27)
+
+- **Issue #188**: Neon asyncpg migration - Superseded by Supabase-only architecture
+- **Issue #178**: Neo4j direct driver migration - Superseded by Mem0 + pgvector implementation
 
 ### Migration Paths
 
