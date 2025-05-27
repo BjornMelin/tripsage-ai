@@ -13,6 +13,7 @@ try:
     from agents import function_tool
 except ImportError:
     from unittest.mock import MagicMock
+
     function_tool = MagicMock
 
 from tripsage.agents.base import BaseAgent

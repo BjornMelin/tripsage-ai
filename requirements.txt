@@ -43,3 +43,12 @@ playwright>=1.42.0
 
 # Memory system dependencies
 mem0ai>=0.1.0
+
+# OpenTelemetry and Security dependencies
+opentelemetry-api>=1.21.0
+opentelemetry-sdk>=1.21.0
+opentelemetry-instrumentation-redis>=0.42b0
+opentelemetry-exporter-otlp>=1.21.0
+psutil>=5.9.0
+cryptography>=41.0.0
+pytest-benchmark>=4.0.0
