@@ -12,8 +12,42 @@ import traceback
 from typing import Any, Dict, Optional
 
 import httpx
-from opentelemetry import trace
-from opentelemetry.trace import Status, StatusCode
+
+# Optional OpenTelemetry support
+try:
+    from opentelemetry import trace
+    from opentelemetry.trace import Status, StatusCode
+    HAS_OPENTELEMETRY = True
+except ImportError:
+    # Create dummy classes for when OpenTelemetry is not available
+    class DummySpan:
+        def set_status(self, status, description=None):
+            pass
+        def set_attribute(self, key, value):
+            pass
+        def record_exception(self, exception):
+            pass
+    
+    class DummyTracer:
+        def start_span(self, name, **kwargs):
+            return DummySpan()
+    
+    class DummyTrace:
+        def get_tracer(self, name):
+            return DummyTracer()
+    
+    class DummyStatus:
+        ERROR = "ERROR"
+        OK = "OK"
+    
+    class DummyStatusCode:
+        ERROR = "ERROR"
+        OK = "OK"
+    
+    trace = DummyTrace()
+    Status = DummyStatus()
+    StatusCode = DummyStatusCode()
+    HAS_OPENTELEMETRY = False
 
 from .base_wrapper import BaseMCPWrapper
 from .exceptions import (
