@@ -2,8 +2,8 @@
 TripSage Travel Insights Agent.
 
 This module implements an agent for extracting travel-related information
-using the WebCrawl MCP client. It demonstrates how to use the Crawl4AI MCP
-server and Firecrawl for web crawling and extraction.
+using the direct WebCrawl service. It demonstrates how to use the Crawl4AI
+direct SDK integration for web crawling and extraction.
 """
 
 from datetime import datetime, timedelta
@@ -18,7 +18,7 @@ except ImportError:
 
 from tripsage.agents.base import BaseAgent
 from tripsage.config.app_settings import settings
-from tripsage.mcp.webcrawl.client import WebCrawlMCPClient
+from tripsage.services.webcrawl_service import WebCrawlService
 from tripsage.utils.error_handling import with_error_handling
 from tripsage.utils.logging import get_logger
 
@@ -28,9 +28,9 @@ logger = get_logger(__name__)
 
 class TravelInsights(BaseAgent):
     """
-    Travel insights agent that uses WebCrawl MCP for destination research.
+    Travel insights agent that uses direct WebCrawl service for destination research.
 
-    This agent demonstrates how to leverage the Crawl4AI MCP server and Firecrawl
+    This agent demonstrates how to leverage the Crawl4AI direct SDK integration
     for extracting travel-related information from the web.
     """
 
@@ -75,8 +75,8 @@ class TravelInsights(BaseAgent):
             metadata={"agent_type": "travel_insights", "version": "1.0.0"},
         )
 
-        # Initialize WebCrawl MCP client
-        self.webcrawl_client = WebCrawlMCPClient()
+        # Initialize WebCrawl service (direct SDK integration)
+        self.webcrawl_client = WebCrawlService()
         logger.info("Travel insights agent initialized")
 
         # Register travel insights tools
@@ -117,7 +117,7 @@ class TravelInsights(BaseAgent):
         """
         logger.info(f"Getting destination insights for {destination}")
 
-        # Use WebCrawl MCP to search for destination information
+        # Use WebCrawl service to search for destination information
         search_results = await self.webcrawl_client.search_destination_info(
             destination=destination,
             topics=topics
@@ -177,7 +177,7 @@ class TravelInsights(BaseAgent):
         """
         logger.info(f"Extracting content from {url}")
 
-        # Extract content using the WebCrawl MCP client
+        # Extract content using the WebCrawl service
         # The source selection (Crawl4AI, Firecrawl, or Playwright)
         # is automatically handled by the intelligent source selector
         content = await self.webcrawl_client.extract_page_content(
@@ -211,7 +211,7 @@ class TravelInsights(BaseAgent):
         """
         logger.info(f"Setting up price monitoring for {url}")
 
-        # Use WebCrawl MCP to monitor price changes
+        # Use WebCrawl service to monitor price changes
         monitoring_config = await self.webcrawl_client.monitor_price_changes(
             url=url,
             price_selector=price_selector,
@@ -247,7 +247,7 @@ class TravelInsights(BaseAgent):
             f"Searching for events in {destination} from {start_date} to {end_date}"
         )
 
-        # Use WebCrawl MCP to search for events
+        # Use WebCrawl service to search for events
         events = await self.webcrawl_client.get_latest_events(
             destination=destination,
             start_date=start_date,
