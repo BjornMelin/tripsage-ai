@@ -10,21 +10,36 @@ Services are organized into categories:
 - external: External API integration services
 """
 
-# Re-export all services from subdirectories
-from .api import *
-from .core import *
-from .infrastructure import *
-from .external import *
+# Re-export all services from subdirectories  
+from .core import *  # noqa: F403, F401
+from .external import *  # noqa: F403, F401
+from .infrastructure import *  # noqa: F403, F401
 
-# For backwards compatibility, also export specific services
-from .infrastructure import DragonflyService as redis_service  # DragonflyDB replaces Redis
-from .infrastructure import SupabaseService as supabase_service
-from .infrastructure import DatabaseService as database_service
-from .infrastructure import DragonflyService as cache_service
-from .external import WebCrawlService as crawl4ai_service
-from .external import PlaywrightService as playwright_service
-from .external import WeatherService as weather_service
-from .core import TimeService as time_service
-from .external import FlightsService as flights_service
-from .external import GoogleMapsService as maps_service
-from .external import CalendarService as calendar_service
+__all__ = [
+    # From core
+    "ChatOrchestrationService",  # noqa: F405
+    "ChatService",  # noqa: F405
+    "ErrorHandlingService",  # noqa: F405
+    "LocationService",  # noqa: F405
+    "MemoryService",  # noqa: F405
+    "TimeService",  # noqa: F405
+    "ToolCallingService",  # noqa: F405
+    # From external
+    "CalendarService",  # noqa: F405
+    "DocumentAnalyzer",  # noqa: F405
+    "DuffelHTTPClient",  # noqa: F405
+    "FileProcessor",  # noqa: F405
+    "FlightsService",  # noqa: F405
+    "GoogleMapsService",  # noqa: F405
+    "PlaywrightService",  # noqa: F405
+    "WeatherService",  # noqa: F405
+    "WebCrawlService",  # noqa: F405
+    # From infrastructure
+    "DatabaseService",  # noqa: F405
+    "DragonflyService",  # noqa: F405
+    "KeyMCPIntegration",  # noqa: F405
+    "KeyMonitoringService",  # noqa: F405
+    "SupabaseService",  # noqa: F405
+    "WebSocketBroadcaster",  # noqa: F405
+    "WebSocketManager",  # noqa: F405
+]

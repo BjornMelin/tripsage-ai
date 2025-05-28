@@ -7,37 +7,26 @@ API key operations in TripSage.
 import inspect
 import secrets
 import time
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from enum import Enum
 from functools import wraps
 from typing import Any, Callable, Dict, List, Optional, Set, TypeVar, cast
 
-import structlog
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.status import HTTP_429_TOO_MANY_REQUESTS
 from starlette.types import ASGIApp
 
 from tripsage.api.core.config import Settings, get_settings
+from tripsage.db.initialize import get_supabase_client
 from tripsage.services.infrastructure.dragonfly_service import DragonflyService
+from tripsage.utils.logging import get_logger
 
 # Type hints
 F = TypeVar("F", bound=Callable[..., Any])
 
-# Configure structlog
-structlog.configure(
-    processors=[
-        structlog.stdlib.add_log_level,
-        structlog.stdlib.PositionalArgumentsFormatter(),
-        structlog.processors.TimeStamper(fmt="iso"),
-        structlog.processors.JSONRenderer(),
-    ],
-    context_class=dict,
-    logger_factory=structlog.stdlib.LoggerFactory(),
-)
-
 # Create logger
-logger = structlog.get_logger("key_operations")
+logger = get_logger("key_operations")
 
 
 class KeyOperation(str, Enum):
@@ -141,7 +130,9 @@ class KeyMonitoringService:
         # Append new log
         existing_logs.append(log_data)
         # Store back with TTL
-        await self.dragonfly_service.set_json(log_key, existing_logs, ex=2592000)  # 30 days
+        await self.dragonfly_service.set_json(
+            log_key, existing_logs, ex=2592000
+        )  # 30 days
 
         # If this is a suspicious pattern, send an alert
         if suspicious:
@@ -163,10 +154,16 @@ class KeyMonitoringService:
         # Add new timestamp
         existing_ops.append(datetime.now(datetime.UTC).isoformat())
         # Keep only recent operations within timeframe
-        cutoff_time = datetime.now(datetime.UTC) - timedelta(seconds=self.pattern_timeframe)
-        existing_ops = [op for op in existing_ops if datetime.fromisoformat(op) > cutoff_time]
+        cutoff_time = datetime.now(datetime.UTC) - timedelta(
+            seconds=self.pattern_timeframe
+        )
+        existing_ops = [
+            op for op in existing_ops if datetime.fromisoformat(op) > cutoff_time
+        ]
         # Store back
-        await self.dragonfly_service.set_json(key, existing_ops, ex=self.pattern_timeframe)
+        await self.dragonfly_service.set_json(
+            key, existing_ops, ex=self.pattern_timeframe
+        )
 
     async def _check_suspicious_patterns(
         self, operation: KeyOperation, user_id: str
@@ -223,14 +220,18 @@ class KeyMonitoringService:
         # Store the alert in DragonflyDB
         alert_key = "key_alerts"
         existing_alerts = await self.dragonfly_service.get_json(alert_key) or []
-        existing_alerts.append({
-            "timestamp": datetime.now(datetime.UTC).isoformat(),
-            "message": alert_message,
-            "operation": operation,
-            "user_id": user_id,
-            "data": log_data,
-        })
-        await self.dragonfly_service.set_json(alert_key, existing_alerts, ex=2592000)  # 30 days
+        existing_alerts.append(
+            {
+                "timestamp": datetime.now(datetime.UTC).isoformat(),
+                "message": alert_message,
+                "operation": operation,
+                "user_id": user_id,
+                "data": log_data,
+            }
+        )
+        await self.dragonfly_service.set_json(
+            alert_key, existing_alerts, ex=2592000
+        )  # 30 days
 
     async def get_user_operations(
         self, user_id: str, limit: int = 100
@@ -285,19 +286,21 @@ class KeyMonitoringService:
 
         # Create a DragonflyDB key
         rate_limit_key = f"rate_limit:key_ops:{user_id}:{operation}"
-        
+
         # Get current count
         current_count = await self.dragonfly_service.get(rate_limit_key)
         if current_count is None:
             # First operation
-            await self.dragonfly_service.set(rate_limit_key, "1", ex=60)  # 1 minute window
+            await self.dragonfly_service.set(
+                rate_limit_key, "1", ex=60
+            )  # 1 minute window
             return False
-        
+
         # Check if over limit
         count = int(current_count)
         if count >= 10:  # 10 operations per minute
             return True
-        
+
         # Increment counter
         await self.dragonfly_service.incr(rate_limit_key)
         return False
@@ -577,23 +580,19 @@ async def check_key_expiration(
     # Get date threshold
     threshold = datetime.now(datetime.UTC) + timedelta(days=days_before)
 
-    # Use Supabase MCP to get expiring keys
-    supabase_mcp = await mcp_manager.initialize_mcp("supabase")
-    result = await supabase_mcp.invoke_method(
-        "query",
-        params={
-            "table": "api_keys",
-            "query": {
-                "expires_at": f"lte.{threshold.isoformat()}",
-                "select": "*",
-            },
-        },
+    # Use direct Supabase client to get expiring keys
+    supabase = get_supabase_client()
+    result = (
+        supabase.table("api_keys")
+        .select("*")
+        .lte("expires_at", threshold.isoformat())
+        .execute()
     )
 
-    if not result or not result.get("data"):
+    if not result or not result.data:
         return []
 
-    return result["data"]
+    return result.data
 
 
 async def get_key_health_metrics() -> Dict[str, Any]:
@@ -602,68 +601,54 @@ async def get_key_health_metrics() -> Dict[str, Any]:
     Returns:
         Dictionary with key health metrics
     """
-    # Use Supabase MCP to get key metrics
-    supabase_mcp = await mcp_manager.initialize_mcp("supabase")
+    # Use direct Supabase client to get key metrics
+    supabase = get_supabase_client()
 
     # Get total count of keys
-    total_count = await supabase_mcp.invoke_method(
-        "query",
-        params={
-            "table": "api_keys",
-            "query": {"count": "exact"},
-        },
-    )
+    total_result = supabase.table("api_keys").select("*", count="exact").execute()
+    total_count = total_result.count if total_result else 0
 
     # Get count of keys by service
-    service_count = await supabase_mcp.invoke_method(
-        "query",
-        params={
-            "table": "api_keys",
-            "query": {"select": "service", "count": "exact", "group_by": "service"},
-        },
-    )
+    service_result = supabase.table("api_keys").select("service").execute()
+    service_count = {}
+    if service_result and service_result.data:
+        for row in service_result.data:
+            service = row.get("service", "unknown")
+            service_count[service] = service_count.get(service, 0) + 1
 
     # Get count of expired keys
-    expired_count = await supabase_mcp.invoke_method(
-        "query",
-        params={
-            "table": "api_keys",
-            "query": {
-                "expires_at": f"lte.{datetime.now(datetime.UTC).isoformat()}",
-                "count": "exact",
-            },
-        },
+    now = datetime.now(datetime.UTC)
+    expired_result = (
+        supabase.table("api_keys")
+        .select("*", count="exact")
+        .lte("expires_at", now.isoformat())
+        .execute()
     )
+    expired_count = expired_result.count if expired_result else 0
 
     # Get count of keys expiring in next 30 days
-    now = datetime.now(datetime.UTC)
     future_date = now + timedelta(days=30)
-    expiring_count = await supabase_mcp.invoke_method(
-        "query",
-        params={
-            "table": "api_keys",
-            "query": {
-                "expires_at": (
-                    f"gt.{now.isoformat()} and lte.{future_date.isoformat()}"
-                ),
-                "count": "exact",
-            },
-        },
+    expiring_result = (
+        supabase.table("api_keys")
+        .select("*", count="exact")
+        .gt("expires_at", now.isoformat())
+        .lte("expires_at", future_date.isoformat())
+        .execute()
     )
+    expiring_count = expiring_result.count if expiring_result else 0
 
     # Get count of keys by user
-    user_count = await supabase_mcp.invoke_method(
-        "query",
-        params={
-            "table": "api_keys",
-            "query": {"select": "user_id", "count": "exact", "group_by": "user_id"},
-        },
-    )
+    user_result = supabase.table("api_keys").select("user_id").execute()
+    user_count = {}
+    if user_result and user_result.data:
+        for row in user_result.data:
+            user_id = row.get("user_id", "unknown")
+            user_count[user_id] = user_count.get(user_id, 0) + 1
 
     return {
-        "total_count": total_count.get("count", 0) if total_count else 0,
-        "service_count": service_count.get("data", []) if service_count else [],
-        "expired_count": expired_count.get("count", 0) if expired_count else 0,
-        "expiring_count": expiring_count.get("count", 0) if expiring_count else 0,
-        "user_count": user_count.get("data", []) if user_count else [],
+        "total_count": total_count,
+        "service_count": [{"service": k, "count": v} for k, v in service_count.items()],
+        "expired_count": expired_count,
+        "expiring_count": expiring_count,
+        "user_count": [{"user_id": k, "count": v} for k, v in user_count.items()],
     }

@@ -32,7 +32,7 @@ from tripsage.models.api.calendar_models import (
     FreeBusyResponse,
     UpdateEventRequest,
 )
-from tripsage.services.dragonfly_service import get_cache_service
+from tripsage.services.infrastructure.dragonfly_service import get_cache_service
 from tripsage.utils.error_handling import with_error_handling
 from tripsage.utils.logging import get_logger
 
@@ -115,7 +115,7 @@ class GoogleCalendarService:
     async def initialize(self) -> None:
         """Initialize the service and authenticate."""
         await self._authenticate()
-        
+
         # Initialize cache service if not provided
         if self.cache_service is None:
             try:

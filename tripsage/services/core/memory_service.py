@@ -699,9 +699,11 @@ class TripSageMemoryService(ServiceProtocol):
 
         return {
             "preferred_activities": list(set(activities)),
-            "activity_style": "Cultural"
-            if "museum" in activities or "culture" in activities
-            else "Adventure",
+            "activity_style": (
+                "Cultural"
+                if "museum" in activities or "culture" in activities
+                else "Adventure"
+            ),
         }
 
     def _analyze_travel_style(self, context: Dict[str, List]) -> Dict[str, Any]:

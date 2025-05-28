@@ -9,7 +9,7 @@ including geocoding, place search, directions, distance calculations, and timezo
 import logging
 from typing import Any, Dict, List, Optional
 
-from tripsage.services.google_maps_service import (
+from tripsage.services.external.google_maps_service import (
     GoogleMapsServiceError,
     get_google_maps_service,
 )

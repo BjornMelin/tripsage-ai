@@ -7,7 +7,7 @@ for 30-40% performance improvement and full API coverage.
 
 from typing import Any, Dict, List, Optional
 
-from tripsage.services.supabase_service import supabase_service
+from tripsage.services.infrastructure.supabase_service import supabase_service
 from tripsage.utils.logging import get_logger
 
 logger = get_logger(__name__)

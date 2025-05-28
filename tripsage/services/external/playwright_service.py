@@ -6,15 +6,12 @@ JavaScript execution, complex interactions, or sophisticated browser automation.
 """
 
 import asyncio
-import json
 import time
 from typing import Any, Dict, List, Optional, Union
-from urllib.parse import urljoin, urlparse
 
 from playwright.async_api import (
     Browser,
     BrowserContext,
-    Page,
     Playwright,
     async_playwright,
 )
@@ -216,11 +213,15 @@ class PlaywrightService:
             if self.config.disable_javascript:
                 await page.set_extra_http_headers(
                     {
-                        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
+                        "Accept": (
+                            "text/html,application/xhtml+xml,"
+                            "application/xml;q=0.9,*/*;q=0.8"
+                        )
                     }
                 )
                 await page.add_init_script(
-                    "Object.defineProperty(navigator, 'webdriver', {get: () => undefined})"
+                    "Object.defineProperty(navigator, 'webdriver', "
+                    "{get: () => undefined})"
                 )
 
             # Navigate to URL
@@ -229,7 +230,10 @@ class PlaywrightService:
             nav_time = time.time() - nav_start
 
             if not response or not response.ok:
-                error_msg = f"Failed to load page: {response.status if response else 'No response'}"
+                error_msg = (
+                    f"Failed to load page: "
+                    f"{response.status if response else 'No response'}"
+                )
                 return ScrapingResult(
                     url=url,
                     content="",
@@ -261,11 +265,15 @@ class PlaywrightService:
                 """
                 () => {
                     // Remove script and style elements
-                    const scripts = document.querySelectorAll('script, style, noscript');
+                    const scripts = document.querySelectorAll(
+                        'script, style, noscript'
+                    );
                     scripts.forEach(el => el.remove());
                     
                     // Get text content and clean it up
-                    const text = document.body ? document.body.innerText : document.documentElement.innerText;
+                    const text = document.body
+                        ? document.body.innerText
+                        : document.documentElement.innerText;
                     
                     // Clean up whitespace
                     return text.replace(/\\s+/g, ' ').trim();
@@ -283,7 +291,9 @@ class PlaywrightService:
                     """
                     () => {
                         const linkElements = document.querySelectorAll('a[href]');
-                        return Array.from(linkElements).map(a => a.href).filter(href => href.startsWith('http'));
+                        return Array.from(linkElements)
+                            .map(a => a.href)
+                            .filter(href => href.startsWith('http'));
                     }
                 """
                 )
@@ -295,7 +305,9 @@ class PlaywrightService:
                     """
                     () => {
                         const imgElements = document.querySelectorAll('img[src]');
-                        return Array.from(imgElements).map(img => img.src).filter(src => src.startsWith('http'));
+                        return Array.from(imgElements)
+                            .map(img => img.src)
+                            .filter(src => src.startsWith('http'));
                     }
                 """
                 )

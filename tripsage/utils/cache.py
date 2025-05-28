@@ -11,11 +11,21 @@ import hashlib
 import json
 import time
 from contextlib import asynccontextmanager
-from typing import Any, AsyncIterator, Callable, Dict, List, Optional, TypeVar, Union, cast
+from typing import (
+    Any,
+    AsyncIterator,
+    Callable,
+    Dict,
+    List,
+    Optional,
+    TypeVar,
+    Union,
+    cast,
+)
 
 from pydantic import BaseModel, Field
 
-from tripsage.services.dragonfly_service import get_cache_service
+from tripsage.services.infrastructure.dragonfly_service import get_cache_service
 from tripsage.utils.content_types import ContentType
 from tripsage.utils.logging import get_logger
 from tripsage.utils.settings import settings
@@ -121,11 +131,17 @@ class DragonflyCache:
         """Ensure DragonflyDB is connected."""
         if self._cache_service is None:
             self._cache_service = await get_cache_instance()
-        
+
         # Additional connection check if the service has an is_connected property
-        if hasattr(self._cache_service, 'adapter') and hasattr(self._cache_service.adapter, '_direct_service'):
+        if hasattr(self._cache_service, "adapter") and hasattr(
+            self._cache_service.adapter, "_direct_service"
+        ):
             direct_service = self._cache_service.adapter._direct_service
-            if direct_service and hasattr(direct_service, '_connected') and not direct_service._connected:
+            if (
+                direct_service
+                and hasattr(direct_service, "_connected")
+                and not direct_service._connected
+            ):
                 await direct_service.connect()
 
     def _make_key(self, key: str) -> str:
@@ -139,40 +155,40 @@ class DragonflyCache:
         try:
             await self._ensure_connected()
             full_key = self._make_key(key)
-            
+
             # Use the unified cache service
             result = await self._cache_service.get(full_key)
             if result is not None:
                 await self._increment_stat("hits")
                 return result
-                
+
             await self._increment_stat("misses")
             return None
-            
+
         except Exception as e:
             logger.error(f"Error getting cache value: {e}")
             return None
 
     async def set(
-        self, 
-        key: str, 
-        value: Any, 
+        self,
+        key: str,
+        value: Any,
         ttl: Optional[int] = None,
         nx: bool = False,
-        xx: bool = False
+        xx: bool = False,
     ) -> bool:
         """Set a value in the cache."""
         try:
             await self._ensure_connected()
             full_key = self._make_key(key)
-            
+
             # Use the unified cache service
             result = await self._cache_service.set(full_key, value, ex=ttl)
-                
+
             if result:
                 await self._increment_stat("sets")
             return bool(result)
-            
+
         except Exception as e:
             logger.error(f"Error setting cache value: {e}")
             return False
@@ -182,13 +198,13 @@ class DragonflyCache:
         try:
             await self._ensure_connected()
             full_key = self._make_key(key)
-            
+
             result = await self._cache_service.delete(full_key)
             if result > 0:
                 await self._increment_stat("deletes")
                 return True
             return False
-            
+
         except Exception as e:
             logger.error(f"Error deleting cache value: {e}")
             return False
@@ -198,30 +214,34 @@ class DragonflyCache:
         try:
             await self._ensure_connected()
             full_pattern = self._make_key(pattern)
-            
+
             # Get all matching keys - note: scan_iter might not be available in unified cache
             # Fall back to basic pattern matching if needed
             try:
                 keys = []
                 # If scan_iter is available on the cache service
-                if hasattr(self._cache_service, 'scan_iter'):
+                if hasattr(self._cache_service, "scan_iter"):
                     async for key in self._cache_service.scan_iter(match=full_pattern):
                         keys.append(key)
                 else:
                     # Alternative approach if scan_iter not available
-                    logger.warning("scan_iter not available, pattern invalidation limited")
+                    logger.warning(
+                        "scan_iter not available, pattern invalidation limited"
+                    )
                     return 0
-                
+
                 if keys:
                     count = await self._cache_service.delete(*keys)
-                    logger.info(f"Invalidated {count} keys matching pattern {full_pattern}")
+                    logger.info(
+                        f"Invalidated {count} keys matching pattern {full_pattern}"
+                    )
                     return count
                 return 0
-                
+
             except Exception as scan_error:
                 logger.warning(f"Pattern scan failed: {scan_error}")
                 return 0
-                
+
         except Exception as e:
             logger.error(f"Error invalidating pattern: {e}")
             return 0
@@ -231,7 +251,7 @@ class DragonflyCache:
         try:
             await self._ensure_connected()
             # Use basic operations if hincrby not available
-            if hasattr(self._cache_service, 'hincrby'):
+            if hasattr(self._cache_service, "hincrby"):
                 await self._cache_service.hincrby(self._stats_key, stat, 1)
                 await self._cache_service.expire(self._stats_key, 86400)  # 24h expiry
             else:
@@ -250,12 +270,12 @@ class DragonflyCache:
         """Get cache statistics."""
         try:
             await self._ensure_connected()
-            
+
             stats = CacheStats()
-            
+
             # Try to get stats from hash first, then fallback to individual keys
             try:
-                if hasattr(self._cache_service, 'hgetall'):
+                if hasattr(self._cache_service, "hgetall"):
                     stats_data = await self._cache_service.hgetall(self._stats_key)
                     if stats_data:
                         stats.hits = int(stats_data.get("hits", 0))
@@ -274,55 +294,52 @@ class DragonflyCache:
             except Exception:
                 # Use default values if stats retrieval fails
                 pass
-            
+
             # Calculate hit ratio
             total = stats.hits + stats.misses
             stats.hit_ratio = stats.hits / total if total > 0 else 0.0
-            
+
             return stats
-            
+
         except Exception as e:
             logger.error(f"Error getting cache stats: {e}")
             return CacheStats()
 
 
 def generate_cache_key(
-    prefix: str, 
-    query: str, 
-    args: Optional[List[Any]] = None, 
-    **kwargs: Any
+    prefix: str, query: str, args: Optional[List[Any]] = None, **kwargs: Any
 ) -> str:
     """Generate a deterministic cache key."""
     # Normalize the query
     normalized_query = query.lower().strip()
-    
+
     # Convert args to string
     args_str = ""
     if args:
         args_str = json.dumps([str(arg) for arg in args], sort_keys=True)
-    
+
     # Sort kwargs for deterministic key generation
     kwargs_str = ""
     if kwargs:
         sorted_items = sorted(kwargs.items())
         kwargs_str = json.dumps(sorted_items, sort_keys=True)
-    
+
     # Create hash of combined parameters
     combined = f"{prefix}:{normalized_query}:{args_str}:{kwargs_str}"
     hash_obj = hashlib.md5(combined.encode())
     query_hash = hash_obj.hexdigest()
-    
+
     return f"{prefix}:{query_hash}"
 
 
 def get_ttl_for_content_type(content_type: ContentType) -> int:
     """Get the appropriate TTL for a content type."""
     ttl_map = {
-        ContentType.REALTIME: 60,        # 1 minute
+        ContentType.REALTIME: 60,  # 1 minute
         ContentType.TIME_SENSITIVE: 300,  # 5 minutes
-        ContentType.DAILY: 3600,         # 1 hour
+        ContentType.DAILY: 3600,  # 1 hour
         ContentType.SEMI_STATIC: 28800,  # 8 hours
-        ContentType.STATIC: 86400,       # 24 hours
+        ContentType.STATIC: 86400,  # 24 hours
     }
     return ttl_map.get(content_type, 3600)  # Default 1 hour
 
@@ -332,55 +349,57 @@ def cached(
     ttl: Optional[int] = None,
     namespace: str = "tripsage",
     skip_args: Optional[List[str]] = None,
-    use_redis: bool = True
+    use_redis: bool = True,
 ) -> Callable[[F], F]:
     """Decorator for caching async function results."""
-    
+
     def decorator(func: F) -> F:
         @functools.wraps(func)
         async def wrapper(*args: Any, **kwargs: Any) -> Any:
             # Check if caching is enabled
             if not settings.use_cache:
                 return await func(*args, **kwargs)
-            
+
             # Check for skip_cache parameter
             skip_cache = kwargs.pop("skip_cache", False)
             if skip_cache:
                 return await func(*args, **kwargs)
-            
+
             # Select cache backend
             cache = redis_cache if use_redis else memory_cache
-            
+
             # Filter out args to skip from key generation
             key_kwargs = kwargs.copy()
             if skip_args:
                 for arg in skip_args:
                     key_kwargs.pop(arg, None)
-            
+
             # Generate cache key
             function_name = func.__name__
             module_name = func.__module__
             cache_prefix = f"{module_name}.{function_name}"
-            
+
             # Join string args for query
             query_components = []
             for arg in args:
                 if isinstance(arg, str):
                     query_components.append(arg)
-            
+
             query = ":".join(query_components) if query_components else function_name
-            cache_key = generate_cache_key(cache_prefix, query, list(args), **key_kwargs)
-            
+            cache_key = generate_cache_key(
+                cache_prefix, query, list(args), **key_kwargs
+            )
+
             # Try to get from cache
             cached_result = await cache.get(cache_key)
             if cached_result is not None:
                 logger.debug(f"Cache hit for {function_name}")
                 return cached_result
-            
+
             # Call the function
             logger.debug(f"Cache miss for {function_name}")
             result = await func(*args, **kwargs)
-            
+
             # Determine TTL
             if ttl is None and content_type is not None:
                 if isinstance(content_type, str):
@@ -388,15 +407,15 @@ def cached(
                 else:
                     content_type_enum = content_type
                 ttl = get_ttl_for_content_type(content_type_enum)
-            
+
             # Cache the result if not None
             if result is not None:
                 await cache.set(cache_key, result, ttl=ttl)
-            
+
             return result
-        
+
         return cast(F, wrapper)
-    
+
     return decorator
 
 
@@ -427,18 +446,16 @@ def cached_static(ttl: Optional[int] = None, **kwargs: Any) -> Callable[[F], F]:
 
 
 async def batch_cache_set(
-    items: List[Dict[str, Any]], 
-    namespace: str = "tripsage",
-    use_redis: bool = True
+    items: List[Dict[str, Any]], namespace: str = "tripsage", use_redis: bool = True
 ) -> List[bool]:
     """
     Set multiple cache entries in batch for improved performance.
-    
+
     Args:
         items: List of cache items with 'key', 'value', and optional 'ttl' fields
         namespace: Cache namespace
         use_redis: Use DragonflyDB/Redis vs in-memory cache
-        
+
     Returns:
         List of success/failure booleans for each item
     """
@@ -446,57 +463,63 @@ async def batch_cache_set(
         results = []
         for item in items:
             success = await memory_cache.set(
-                item["key"], 
-                item["value"], 
-                ttl=item.get("ttl")
+                item["key"], item["value"], ttl=item.get("ttl")
             )
             results.append(success)
         return results
-    
+
     # DragonflyDB batch operations
     try:
         cache_service = await get_cache_instance()
-        
+
         # Use batch operations if available
-        if hasattr(cache_service, 'batch_set'):
+        if hasattr(cache_service, "batch_set"):
             # Convert to format expected by batch_set
             batch_items = {}
             ttl = None
             for item in items:
-                key = f"{namespace}:{item['key']}" if not item['key'].startswith(f"{namespace}:") else item['key']
-                batch_items[key] = item['value']
-                if 'ttl' in item:
-                    ttl = item['ttl']  # Use last TTL found - limitation of batch operation
-            
+                key = (
+                    f"{namespace}:{item['key']}"
+                    if not item["key"].startswith(f"{namespace}:")
+                    else item["key"]
+                )
+                batch_items[key] = item["value"]
+                if "ttl" in item:
+                    ttl = item[
+                        "ttl"
+                    ]  # Use last TTL found - limitation of batch operation
+
             success = await cache_service.batch_set(batch_items, ex=ttl)
             return [success] * len(items)  # Return same result for all items
-        
+
         # Fallback to individual operations
         results = []
         for item in items:
-            key = f"{namespace}:{item['key']}" if not item['key'].startswith(f"{namespace}:") else item['key']
-            success = await cache_service.set(key, item['value'], ex=item.get('ttl'))
+            key = (
+                f"{namespace}:{item['key']}"
+                if not item["key"].startswith(f"{namespace}:")
+                else item["key"]
+            )
+            success = await cache_service.set(key, item["value"], ex=item.get("ttl"))
             results.append(bool(success))
         return results
-        
+
     except Exception as e:
         logger.error(f"Batch cache set failed: {e}")
         return [False] * len(items)
 
 
 async def batch_cache_get(
-    keys: List[str], 
-    namespace: str = "tripsage",
-    use_redis: bool = True
+    keys: List[str], namespace: str = "tripsage", use_redis: bool = True
 ) -> List[Optional[Any]]:
     """
     Get multiple cache entries in batch for improved performance.
-    
+
     Args:
         keys: List of cache keys to retrieve
         namespace: Cache namespace
         use_redis: Use DragonflyDB/Redis vs in-memory cache
-        
+
     Returns:
         List of values (None for missing keys)
     """
@@ -506,26 +529,29 @@ async def batch_cache_get(
             value = await memory_cache.get(key)
             results.append(value)
         return results
-    
-    # DragonflyDB batch operations  
+
+    # DragonflyDB batch operations
     try:
         cache_service = await get_cache_instance()
-        
+
         # Prepare namespaced keys
-        full_keys = [f"{namespace}:{key}" if not key.startswith(f"{namespace}:") else key for key in keys]
-        
+        full_keys = [
+            f"{namespace}:{key}" if not key.startswith(f"{namespace}:") else key
+            for key in keys
+        ]
+
         # Use batch operations if available
-        if hasattr(cache_service, 'batch_get'):
+        if hasattr(cache_service, "batch_get"):
             result_dict = await cache_service.batch_get(full_keys)
             return [result_dict.get(key) for key in full_keys]
-        
+
         # Fallback to individual operations
         results = []
         for key in full_keys:
             value = await cache_service.get(key)
             results.append(value)
         return results
-        
+
     except Exception as e:
         logger.error(f"Batch cache get failed: {e}")
         return [None] * len(keys)
@@ -537,18 +563,18 @@ async def cache_lock(
     timeout: int = 60,
     retry_delay: float = 0.1,
     retry_count: int = 50,
-    namespace: str = "tripsage"
+    namespace: str = "tripsage",
 ) -> AsyncIterator[bool]:
     """
     Distributed lock using DragonflyDB/Redis for synchronization.
-    
+
     Args:
         lock_name: Name of the lock
         timeout: Lock timeout in seconds
         retry_delay: Delay between lock acquisition attempts
         retry_count: Maximum number of retry attempts
         namespace: Lock namespace
-        
+
     Yields:
         True if lock was acquired, False otherwise
     """
@@ -556,12 +582,12 @@ async def cache_lock(
         # Simple local lock for development
         yield True
         return
-        
+
     cache_service = await get_cache_instance()
-    
+
     lock_key = f"{namespace}:lock:{lock_name}"
     lock_value = f"{time.time()}:{id(asyncio.current_task())}"
-    
+
     acquired = False
     for _ in range(retry_count):
         success = await cache_service.set(lock_key, lock_value, ex=timeout, nx=True)
@@ -569,7 +595,7 @@ async def cache_lock(
             acquired = True
             break
         await asyncio.sleep(retry_delay)
-    
+
     try:
         yield acquired
     finally:
@@ -587,6 +613,7 @@ RedisCache = DragonflyCache
 memory_cache = InMemoryCache()
 redis_cache = DragonflyCache()
 
+
 # Export convenience functions using DragonflyDB by default
 async def get_cache(key: str, namespace: str = "tripsage") -> Optional[Any]:
     """Get a value from the cache (DragonflyDB by default)."""
@@ -598,7 +625,7 @@ async def set_cache(
     value: Any,
     ttl: Optional[int] = None,
     content_type: Optional[Union[ContentType, str]] = None,
-    namespace: str = "tripsage"
+    namespace: str = "tripsage",
 ) -> bool:
     """Set a value in the cache (DragonflyDB by default)."""
     if ttl is None and content_type is not None:
@@ -624,7 +651,7 @@ __all__ = [
     "redis_cache",
     # Basic operations
     "get_cache",
-    "set_cache", 
+    "set_cache",
     "delete_cache",
     "get_cache_stats",
     # Utility functions

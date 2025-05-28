@@ -12,7 +12,7 @@ from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, Field, field_validator
 
 from tripsage.mcp_abstraction.manager import MCPManager
-from tripsage.services.error_handling_service import (
+from tripsage.services.core.error_handling_service import (
     ErrorRecoveryService,
 )
 from tripsage.utils.decorators import with_error_handling

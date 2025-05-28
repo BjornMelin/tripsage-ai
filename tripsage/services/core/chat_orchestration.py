@@ -10,12 +10,12 @@ import json
 import time
 from typing import Any, Dict, List, Optional
 
-from tripsage.services.database_service import database_service
-from tripsage.services.tool_calling_service import (
+from tripsage.services.core.tool_calling_service import (
     ToolCallRequest,
     ToolCallResponse,
     ToolCallService,
 )
+from tripsage.services.infrastructure.database_service import database_service
 from tripsage.utils.decorators import with_error_handling
 from tripsage.utils.error_handling import TripSageError
 from tripsage.utils.logging import get_logger

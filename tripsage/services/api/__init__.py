@@ -1,27 +1,9 @@
 """API-specific services for handling HTTP API operations.
 
-These services are imported from tripsage.api.services for convenience.
+Note: API services are located in tripsage.api.services.
+This directory is reserved for future API-related service consolidation.
 """
 
-# Re-export API services from tripsage.api.services
-from tripsage.api.services import (
-    AccommodationService,
-    AuthService,
-    DestinationService,
-    FlightService,
-    ItineraryService,
-    APIKeyService,
-    TripService,
-    UserService,
-)
+# This module is intentionally empty as API services are in tripsage.api.services
+__all__ = []
 
-__all__ = [
-    "AccommodationService",
-    "AuthService",
-    "DestinationService",
-    "FlightService",
-    "ItineraryService",
-    "APIKeyService",
-    "TripService",
-    "UserService",
-]

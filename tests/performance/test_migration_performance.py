@@ -12,13 +12,9 @@ from typing import Dict, List
 import pytest
 
 from tripsage.config.feature_flags import FeatureFlags, IntegrationMode
-from tripsage.services.supabase_service import SupabaseService
+from tripsage.services.infrastructure.dragonfly_service import get_cache_service
+from tripsage.services.infrastructure.supabase_service import SupabaseService
 from tripsage.utils.cache import web_cache
-from tripsage.clients.duffel_http_client import DuffelHTTPClient
-from tripsage.clients.supabase_client import get_supabase_client
-from tripsage.mcp_abstraction.mcp_manager import MCPManager
-from tripsage.services.dragonfly_service import DragonflyService, get_cache_service
-from tripsage.services.webcrawl_service import WebcrawlService
 
 
 class PerformanceBenchmark:
@@ -74,7 +70,7 @@ async def dragonfly_service():
     service = await get_cache_service()
     yield service
     # Cleanup if needed
-    if hasattr(service, 'disconnect'):
+    if hasattr(service, "disconnect"):
         try:
             await service.disconnect()
         except Exception:
@@ -99,14 +95,20 @@ def benchmark():
 class TestDragonflyMigrationPerformance:
     """Test performance improvements from DragonflyDB migration."""
 
-    async def test_dragonfly_set_operations_performance(self, dragonfly_service, benchmark):
+    async def test_dragonfly_set_operations_performance(
+        self, dragonfly_service, benchmark
+    ):
         """Test DragonflyDB SET operation performance."""
         test_key = "benchmark:test:set"
         test_value = {"message": "performance test", "timestamp": time.time()}
 
         # Benchmark direct SDK operation
         direct_stats = await benchmark.benchmark_operation(
-            "dragonfly_direct_set", dragonfly_service.set_json, test_key, test_value, ex=300
+            "dragonfly_direct_set",
+            dragonfly_service.set_json,
+            test_key,
+            test_value,
+            ex=300,
         )
 
         # Benchmark current cache_tools (using direct SDK)
@@ -116,12 +118,12 @@ class TestDragonflyMigrationPerformance:
 
         print("\nDragonflyDB SET Performance Comparison:")
         print(
-            f"Direct SDK - Mean: {direct_stats['mean']:.2f}ms, Median: "
-            f"{direct_stats['median']:.2f}ms"
+            f"Direct SDK - Mean: {direct_stats['mean']:.2f}ms, "
+            f"Median: {direct_stats['median']:.2f}ms"
         )
         print(
-            f"Cache Tools - Mean: {cache_stats['mean']:.2f}ms, Median: "
-            f"{cache_stats['median']:.2f}ms"
+            f"Cache Tools - Mean: {cache_stats['mean']:.2f}ms, "
+            f"Median: {cache_stats['median']:.2f}ms"
         )
 
         # Verify both operations are performing well (under 50ms for local DragonflyDB)
@@ -138,7 +140,9 @@ class TestDragonflyMigrationPerformance:
             f"Cache tools overhead too high: {performance_ratio:.2f}x"
         )
 
-    async def test_dragonfly_get_operations_performance(self, dragonfly_service, benchmark):
+    async def test_dragonfly_get_operations_performance(
+        self, dragonfly_service, benchmark
+    ):
         """Test DragonflyDB GET operation performance."""
         test_key = "benchmark:test:get"
         test_value = {"message": "performance test", "data": list(range(100))}
@@ -158,12 +162,12 @@ class TestDragonflyMigrationPerformance:
 
         print("\nDragonflyDB GET Performance Comparison:")
         print(
-            f"Direct SDK - Mean: {direct_stats['mean']:.2f}ms, Median: "
-            f"{direct_stats['median']:.2f}ms"
+            f"Direct SDK - Mean: {direct_stats['mean']:.2f}ms, "
+            f"Median: {direct_stats['median']:.2f}ms"
         )
         print(
-            f"Cache Tools - Mean: {cache_stats['mean']:.2f}ms, Median: "
-            f"{cache_stats['median']:.2f}ms"
+            f"Cache Tools - Mean: {cache_stats['mean']:.2f}ms, "
+            f"Median: {cache_stats['median']:.2f}ms"
         )
 
         # Verify both operations are performing well
@@ -187,8 +191,8 @@ class TestSupabaseMigrationPerformance:
 
         print("\nSupabase Connection Performance:")
         print(
-            f"Direct SDK - Mean: {connection_stats['mean']:.2f}ms, Median: "
-            f"{connection_stats['median']:.2f}ms"
+            f"Direct SDK - Mean: {connection_stats['mean']:.2f}ms, "
+            f"Median: {connection_stats['median']:.2f}ms"
         )
 
         # Connection should be fast (under 100ms for already established connections)
@@ -246,9 +250,10 @@ class TestOverallMigrationImpact:
     async def test_performance_improvement_validation(self, benchmark):
         """Validate that we've achieved meaningful performance improvements."""
         # This test validates that our direct SDK implementations are performant
-        
+
         # Test DragonflyDB pipeline operations (batch performance)
         import redis.asyncio as redis
+
         dragonfly_url = "redis://localhost:6379/0"
         direct_dragonfly = redis.from_url(dragonfly_url)
 
@@ -312,7 +317,7 @@ async def run_comprehensive_benchmark():
         )
 
     finally:
-        if hasattr(dragonfly_service, 'disconnect'):
+        if hasattr(dragonfly_service, "disconnect"):
             await dragonfly_service.disconnect()
 
     # Test Supabase performance
