@@ -13,15 +13,22 @@ from uuid import UUID, uuid4
 import pytest
 from pydantic import ValidationError
 
-# Test constants
-TEST_JWT_TOKEN = os.getenv("TEST_JWT_TOKEN", "mock-jwt-token-for-models-test")
-
 from tripsage.api.models.websocket import (
+    ChatMessageChunkEvent,
+    ConnectionEvent,
+    ConnectionStatus,
+    ErrorEvent,
+    MessageRole,
+    WebSocketAgentStatus,
     WebSocketAuthRequest,
     WebSocketAuthResponse,
     WebSocketEvent,
     WebSocketEventType,
+    WebSocketMessage,
 )
+
+# Test constants
+TEST_JWT_TOKEN = os.getenv("TEST_JWT_TOKEN", "mock-jwt-token-for-models-test")
 
 
 class TestWebSocketEventType:
@@ -167,232 +174,221 @@ class TestWebSocketAuthResponse:
         assert response.message == "Invalid token"
 
 
-class TestWebSocketChatMessage:
-    """Test WebSocket chat message model."""
+class TestWebSocketMessage:
+    """Test WebSocket message model."""
 
     def test_create_chat_message(self):
         """Test creating a chat message."""
-        session_id = str(uuid4())
-        message_id = str(uuid4())
+        session_id = uuid4()
+        user_id = uuid4()
 
-        chat_message = WebSocketChatMessage(
-            sessionId=session_id,
-            messageId=message_id,
-            role="user",
+        chat_message = WebSocketMessage(
+            role=MessageRole.USER,
             content="Hello, how can you help me?",
+            session_id=session_id,
+            user_id=user_id,
         )
 
-        assert chat_message.sessionId == session_id
-        assert chat_message.messageId == message_id
-        assert chat_message.role == "user"
+        assert chat_message.session_id == session_id
+        assert chat_message.user_id == user_id
+        assert chat_message.role == MessageRole.USER
         assert chat_message.content == "Hello, how can you help me?"
-
-    def test_chat_message_with_attachments(self):
-        """Test chat message with attachments."""
-        attachments = [
-            {
-                "id": str(uuid4()),
-                "name": "document.pdf",
-                "contentType": "application/pdf",
-                "size": 1024,
-            }
-        ]
-
-        chat_message = WebSocketChatMessage(
-            sessionId=str(uuid4()),
-            messageId=str(uuid4()),
-            role="user",
-            content="Please review this document",
-            attachments=attachments,
-        )
-
-        assert len(chat_message.attachments) == 1
-        assert chat_message.attachments[0]["name"] == "document.pdf"
+        assert isinstance(chat_message.id, str)
+        assert isinstance(chat_message.timestamp, datetime)
 
     def test_chat_message_with_tool_calls(self):
         """Test chat message with tool calls."""
-        tool_calls = [
-            {
-                "id": str(uuid4()),
-                "name": "get_weather",
-                "arguments": {"location": "New York"},
-            }
-        ]
+        from tripsage.api.models.websocket import WebSocketToolCall
 
-        chat_message = WebSocketChatMessage(
-            sessionId=str(uuid4()),
-            messageId=str(uuid4()),
-            role="assistant",
-            content="Let me check the weather for you.",
-            toolCalls=tool_calls,
+        tool_call = WebSocketToolCall(
+            name="get_weather",
+            arguments={"location": "New York"},
         )
 
-        assert len(chat_message.toolCalls) == 1
-        assert chat_message.toolCalls[0]["name"] == "get_weather"
+        chat_message = WebSocketMessage(
+            role=MessageRole.ASSISTANT,
+            content="Let me check the weather for you.",
+            tool_calls=[tool_call],
+        )
+
+        assert len(chat_message.tool_calls) == 1
+        assert chat_message.tool_calls[0].name == "get_weather"
+        assert chat_message.tool_calls[0].arguments["location"] == "New York"
 
     def test_invalid_role(self):
         """Test validation with invalid role."""
         with pytest.raises(ValidationError):
-            WebSocketChatMessage(
-                sessionId=str(uuid4()),
-                messageId=str(uuid4()),
-                role="invalid_role",
+            WebSocketMessage(
+                role="invalid_role",  # type: ignore
                 content="Test message",
             )
 
 
-class TestWebSocketChatMessageChunk:
-    """Test WebSocket chat message chunk model."""
+class TestChatMessageChunkEvent:
+    """Test chat message chunk event model."""
 
     def test_create_message_chunk(self):
-        """Test creating a message chunk."""
-        session_id = str(uuid4())
-        message_id = str(uuid4())
+        """Test creating a message chunk event."""
+        session_id = uuid4()
+        user_id = uuid4()
 
-        chunk = WebSocketChatMessageChunk(
-            sessionId=session_id,
-            messageId=message_id,
+        chunk = ChatMessageChunkEvent(
+            session_id=session_id,
+            user_id=user_id,
             content="This is a ",
-            isComplete=False,
+            chunk_index=0,
+            is_final=False,
         )
 
-        assert chunk.sessionId == session_id
-        assert chunk.messageId == message_id
+        assert chunk.session_id == session_id
+        assert chunk.user_id == user_id
         assert chunk.content == "This is a "
-        assert chunk.isComplete is False
+        assert chunk.chunk_index == 0
+        assert chunk.is_final is False
+        assert chunk.type == WebSocketEventType.CHAT_MESSAGE_CHUNK
 
     def test_final_chunk(self):
         """Test creating a final message chunk."""
-        chunk = WebSocketChatMessageChunk(
-            sessionId=str(uuid4()),
-            messageId=str(uuid4()),
+        chunk = ChatMessageChunkEvent(
+            session_id=uuid4(),
             content="complete message.",
-            isComplete=True,
+            chunk_index=5,
+            is_final=True,
         )
 
-        assert chunk.isComplete is True
+        assert chunk.is_final is True
+        assert chunk.chunk_index == 5
 
 
-class TestWebSocketAgentStatusUpdate:
-    """Test WebSocket agent status update model."""
+class TestWebSocketAgentStatus:
+    """Test WebSocket agent status model."""
 
     def test_create_status_update(self):
-        """Test creating an agent status update."""
-        session_id = str(uuid4())
-
-        status_update = WebSocketAgentStatusUpdate(
-            sessionId=session_id,
-            isActive=True,
-            currentTask="Searching for flights",
+        """Test creating an agent status."""
+        agent_status = WebSocketAgentStatus(
+            agent_id="flight-agent",
+            is_active=True,
+            current_task="Searching for flights",
             progress=75,
-            statusMessage="Found 10 flights matching your criteria",
+            status_message="Found 10 flights matching your criteria",
         )
 
-        assert status_update.sessionId == session_id
-        assert status_update.isActive is True
-        assert status_update.currentTask == "Searching for flights"
-        assert status_update.progress == 75
-        assert status_update.statusMessage == "Found 10 flights matching your criteria"
+        assert agent_status.agent_id == "flight-agent"
+        assert agent_status.is_active is True
+        assert agent_status.current_task == "Searching for flights"
+        assert agent_status.progress == 75
+        assert agent_status.status_message == "Found 10 flights matching your criteria"
+        assert isinstance(agent_status.last_activity, datetime)
 
     def test_inactive_status(self):
         """Test inactive agent status."""
-        status_update = WebSocketAgentStatusUpdate(
-            sessionId=str(uuid4()), isActive=False
-        )
+        agent_status = WebSocketAgentStatus(agent_id="idle-agent", is_active=False)
 
-        assert status_update.isActive is False
-        assert status_update.currentTask is None
-        assert status_update.progress == 0
+        assert agent_status.is_active is False
+        assert agent_status.current_task is None
+        assert agent_status.progress == 0
 
     def test_progress_validation(self):
         """Test progress validation."""
         # Test negative progress
         with pytest.raises(ValidationError):
-            WebSocketAgentStatusUpdate(
-                sessionId=str(uuid4()), isActive=True, progress=-1
-            )
+            WebSocketAgentStatus(agent_id="test-agent", is_active=True, progress=-1)
 
         # Test progress over 100
         with pytest.raises(ValidationError):
-            WebSocketAgentStatusUpdate(
-                sessionId=str(uuid4()), isActive=True, progress=101
-            )
+            WebSocketAgentStatus(agent_id="test-agent", is_active=True, progress=101)
 
 
-class TestWebSocketUserTyping:
-    """Test WebSocket user typing model."""
+class TestWebSocketTypingEvent:
+    """Test WebSocket typing events."""
 
-    def test_create_typing_event(self):
-        """Test creating a typing event."""
-        session_id = str(uuid4())
-        user_id = str(uuid4())
+    def test_create_typing_start_event(self):
+        """Test creating a typing start event."""
+        session_id = uuid4()
+        user_id = uuid4()
 
-        typing_event = WebSocketUserTyping(
-            sessionId=session_id, userId=user_id, username="john_doe"
+        typing_event = WebSocketEvent(
+            type=WebSocketEventType.CHAT_TYPING_START,
+            session_id=session_id,
+            user_id=user_id,
+            payload={"username": "john_doe"},
         )
 
-        assert typing_event.sessionId == session_id
-        assert typing_event.userId == user_id
-        assert typing_event.username == "john_doe"
+        assert typing_event.session_id == session_id
+        assert typing_event.user_id == user_id
+        assert typing_event.type == WebSocketEventType.CHAT_TYPING_START
+        assert typing_event.payload["username"] == "john_doe"
 
-    def test_typing_without_username(self):
-        """Test typing event without username."""
-        typing_event = WebSocketUserTyping(sessionId=str(uuid4()), userId=str(uuid4()))
-
-        assert typing_event.username is None
-
-
-class TestWebSocketConnectionStatus:
-    """Test WebSocket connection status model."""
-
-    def test_create_connection_status(self):
-        """Test creating connection status."""
-        status = WebSocketConnectionStatus(
-            state=ConnectionState.CONNECTED,
-            message="Successfully connected to real-time messaging",
-            connectedUsers=5,
+    def test_typing_stop_event(self):
+        """Test creating a typing stop event."""
+        typing_event = WebSocketEvent(
+            type=WebSocketEventType.CHAT_TYPING_STOP,
+            session_id=uuid4(),
+            user_id=uuid4(),
         )
 
-        assert status.state == ConnectionState.CONNECTED
-        assert status.message == "Successfully connected to real-time messaging"
-        assert status.connectedUsers == 5
+        assert typing_event.type == WebSocketEventType.CHAT_TYPING_STOP
+
+
+class TestConnectionEvent:
+    """Test WebSocket connection event model."""
+
+    def test_create_connection_event(self):
+        """Test creating connection event."""
+        connection_id = str(uuid4())
+
+        event = ConnectionEvent(
+            status=ConnectionStatus.CONNECTED,
+            connection_id=connection_id,
+            user_id=uuid4(),
+        )
+
+        assert event.status == ConnectionStatus.CONNECTED
+        assert event.connection_id == connection_id
+        assert event.type == WebSocketEventType.CONNECTION_ESTABLISHED
 
     def test_connection_states(self):
         """Test all connection states."""
         states = [
-            ConnectionState.CONNECTING,
-            ConnectionState.CONNECTED,
-            ConnectionState.DISCONNECTED,
-            ConnectionState.ERROR,
+            ConnectionStatus.CONNECTING,
+            ConnectionStatus.CONNECTED,
+            ConnectionStatus.DISCONNECTED,
+            ConnectionStatus.ERROR,
         ]
 
         for state in states:
-            status = WebSocketConnectionStatus(state=state)
-            assert status.state == state
+            event = ConnectionEvent(
+                status=state,
+                connection_id=str(uuid4()),
+                user_id=uuid4(),
+            )
+            assert event.status == state
 
 
-class TestWebSocketError:
-    """Test WebSocket error model."""
+class TestErrorEvent:
+    """Test WebSocket error event model."""
 
     def test_create_error(self):
-        """Test creating WebSocket error."""
-        error = WebSocketError(
-            code="AUTH_FAILED",
-            message="Authentication failed: Invalid token",
+        """Test creating WebSocket error event."""
+        error = ErrorEvent(
+            error_code="AUTH_FAILED",
+            error_message="Authentication failed: Invalid token",
             details={"token_expired": True},
+            user_id=uuid4(),
         )
 
-        assert error.code == "AUTH_FAILED"
-        assert error.message == "Authentication failed: Invalid token"
+        assert error.error_code == "AUTH_FAILED"
+        assert error.error_message == "Authentication failed: Invalid token"
         assert error.details["token_expired"] is True
+        assert error.type == WebSocketEventType.ERROR
 
     def test_error_without_details(self):
         """Test error without details."""
-        error = WebSocketError(
-            code="CONNECTION_LOST", message="Connection to server lost"
+        error = ErrorEvent(
+            error_code="CONNECTION_LOST", error_message="Connection to server lost"
         )
 
-        assert error.code == "CONNECTION_LOST"
+        assert error.error_code == "CONNECTION_LOST"
         assert error.details is None
 
 
@@ -401,55 +397,60 @@ class TestModelIntegration:
 
     def test_full_event_workflow(self):
         """Test a complete event workflow."""
-        session_id = str(uuid4())
-        user_id = str(uuid4())
-        message_id = str(uuid4())
+        session_id = uuid4()
+        user_id = uuid4()
+        connection_id = str(uuid4())
 
         # Auth request
-        auth_request = WebSocketAuthRequest(token=TEST_JWT_TOKEN, sessionId=session_id)
+        auth_request = WebSocketAuthRequest(token=TEST_JWT_TOKEN, session_id=session_id)
 
         # Auth response
         auth_response = WebSocketAuthResponse(
-            success=True, userId=user_id, message="Authentication successful"
+            success=True,
+            connection_id=connection_id,
+            user_id=user_id,
+            session_id=session_id,
         )
 
         # Chat message
-        chat_message = WebSocketChatMessage(
-            sessionId=session_id,
-            messageId=message_id,
-            role="user",
+        chat_message = WebSocketMessage(
+            role=MessageRole.USER,
             content="Plan a trip to Tokyo",
+            session_id=session_id,
+            user_id=user_id,
         )
 
-        # Agent status update
-        status_update = WebSocketAgentStatusUpdate(
-            sessionId=session_id,
-            isActive=True,
-            currentTask="Researching Tokyo travel options",
+        # Agent status
+        agent_status = WebSocketAgentStatus(
+            agent_id="travel-agent",
+            is_active=True,
+            current_task="Researching Tokyo travel options",
             progress=25,
-            statusMessage="Gathering information about Tokyo attractions",
+            status_message="Gathering information about Tokyo attractions",
         )
 
         # Verify all models work together
-        assert auth_request.sessionId == session_id
-        assert auth_response.userId == user_id
-        assert chat_message.sessionId == session_id
-        assert status_update.sessionId == session_id
+        assert auth_request.session_id == session_id
+        assert auth_response.user_id == user_id
+        assert chat_message.session_id == session_id
+        assert agent_status.agent_id == "travel-agent"
 
     def test_json_round_trip(self):
         """Test JSON serialization and deserialization."""
-        original_message = WebSocketChatMessage(
-            sessionId=str(uuid4()),
-            messageId=str(uuid4()),
-            role="assistant",
+        original_message = WebSocketMessage(
+            role=MessageRole.ASSISTANT,
             content="I can help you plan your trip to Tokyo!",
-            attachments=[
-                {
-                    "id": str(uuid4()),
-                    "name": "tokyo_guide.pdf",
-                    "contentType": "application/pdf",
-                }
-            ],
+            session_id=uuid4(),
+            user_id=uuid4(),
+            metadata={
+                "attachments": [
+                    {
+                        "id": str(uuid4()),
+                        "name": "tokyo_guide.pdf",
+                        "contentType": "application/pdf",
+                    }
+                ]
+            },
         )
 
         # Serialize to JSON
@@ -457,13 +458,11 @@ class TestModelIntegration:
 
         # Deserialize from JSON
         data = json.loads(json_str)
-        reconstructed_message = WebSocketChatMessage(**data)
+        reconstructed_message = WebSocketMessage(**data)
 
         # Verify they match
-        assert reconstructed_message.sessionId == original_message.sessionId
-        assert reconstructed_message.messageId == original_message.messageId
+        assert reconstructed_message.session_id == original_message.session_id
+        assert reconstructed_message.user_id == original_message.user_id
         assert reconstructed_message.role == original_message.role
         assert reconstructed_message.content == original_message.content
-        assert len(reconstructed_message.attachments) == len(
-            original_message.attachments
-        )
+        assert reconstructed_message.metadata == original_message.metadata

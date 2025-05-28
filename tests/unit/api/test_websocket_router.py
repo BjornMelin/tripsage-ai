@@ -12,10 +12,10 @@ from uuid import uuid4
 import pytest
 from fastapi.testclient import TestClient
 
+from tripsage.api.main import app
+
 # Test constants
 TEST_JWT_TOKEN = os.getenv("TEST_JWT_TOKEN", "mock-valid-jwt-token-for-router")
-
-from tripsage.api.main import app
 
 
 @pytest.fixture
@@ -158,7 +158,10 @@ class TestWebSocketChatEndpoint:
             # Mock chat service response
             mock_chat_service.process_message = AsyncMock(
                 return_value={
-                    "content": "I'd be happy to help you plan your trip! Where would you like to go?",
+                    "content": (
+                        "I'd be happy to help you plan your trip! "
+                        "Where would you like to go?"
+                    ),
                     "role": "assistant",
                 }
             )
@@ -490,7 +493,7 @@ class TestWebSocketRouterIntegration:
 
             # Simulate multiple connections (would be more complex in real testing)
             connection_count = 3
-            for i in range(connection_count):
+            for _ in range(connection_count):
                 with test_client.websocket_connect(
                     f"/ws/chat/{session_id}"
                 ) as websocket:
@@ -592,7 +595,7 @@ class TestWebSocketRouterIntegration:
                 websocket.send_json(auth_request)
 
                 # Should receive connection limit error
-                response = websocket.receive_json()
+                _ = websocket.receive_json()
                 # Implementation would check for rate limiting/connection limits
 
     @pytest.mark.asyncio

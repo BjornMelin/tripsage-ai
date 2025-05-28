@@ -12,12 +12,10 @@ from uuid import UUID
 
 from fastapi import (
     APIRouter,
-    Depends,
     WebSocket,
     WebSocketDisconnect,
 )
 from pydantic import ValidationError
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from tripsage.agents.chat import ChatAgent
 from tripsage.api.core.dependencies import get_db
@@ -56,14 +54,12 @@ def get_chat_agent() -> ChatAgent:
 async def chat_websocket(
     websocket: WebSocket,
     session_id: UUID,
-    db: AsyncSession = Depends(get_db),
 ):
     """WebSocket endpoint for real-time chat communication.
 
     Args:
         websocket: WebSocket connection
         session_id: Chat session ID
-        db: Database session
     """
     connection_id = None
 
@@ -122,12 +118,15 @@ async def chat_websocket(
         )
         await websocket_manager.send_to_connection(connection_id, connection_event)
 
-        # Create chat service
+        # Create chat service with database session
+        db_session = get_db()
+        db = await db_session.__anext__()
         chat_service = ChatService(db)
         chat_agent = get_chat_agent()
 
         logger.info(
-            f"Chat WebSocket authenticated: connection_id={connection_id}, user_id={user_id}"
+            f"Chat WebSocket authenticated: connection_id={connection_id}, "
+            f"user_id={user_id}"
         )
 
         # Message handling loop
@@ -226,6 +225,11 @@ async def chat_websocket(
         # Clean up connection
         if connection_id:
             await websocket_manager.disconnect_connection(connection_id)
+        # Close database session
+        try:
+            await db_session.aclose()
+        except Exception:
+            pass
 
 
 @router.websocket("/ws/agent-status/{user_id}")
@@ -305,7 +309,8 @@ async def agent_status_websocket(
         await websocket_manager.send_to_connection(connection_id, connection_event)
 
         logger.info(
-            f"Agent status WebSocket authenticated: connection_id={connection_id}, user_id={user_id}"
+            f"Agent status WebSocket authenticated: connection_id={connection_id}, "
+            f"user_id={user_id}"
         )
 
         # Message handling loop (mainly for heartbeats and subscription changes)
@@ -358,16 +363,19 @@ async def agent_status_websocket(
 
             except WebSocketDisconnect:
                 logger.info(
-                    f"Agent status WebSocket disconnected: connection_id={connection_id}"
+                    f"Agent status WebSocket disconnected: "
+                    f"connection_id={connection_id}"
                 )
                 break
             except json.JSONDecodeError:
                 logger.error(
-                    f"Invalid JSON received from agent status connection {connection_id}"
+                    f"Invalid JSON received from agent status connection "
+                    f"{connection_id}"
                 )
             except Exception as e:
                 logger.error(
-                    f"Error handling agent status message from connection {connection_id}: {e}"
+                    f"Error handling agent status message from connection "
+                    f"{connection_id}: {e}"
                 )
 
     except Exception as e:
@@ -582,7 +590,7 @@ async def list_websocket_connections():
     # This would typically require admin authentication
     connections = []
 
-    for connection_id, connection in websocket_manager.connections.items():
+    for _connection_id, connection in websocket_manager.connections.items():
         connections.append(connection.get_info().model_dump())
 
     return {

@@ -462,7 +462,7 @@ class WebSocketBroadcaster:
                     continue
 
                 # Process messages
-                for message_json, score in messages:
+                for message_json, _score in messages:
                     try:
                         message_data = json.loads(message_json)
                         await self._process_broadcast_message(message_data)
@@ -492,7 +492,7 @@ class WebSocketBroadcaster:
         try:
             target_type = message_data["target_type"]
             target_id = message_data.get("target_id")
-            event_data = message_data["event"]
+            _event_data = message_data["event"]
 
             # Publish to Redis channel for the WebSocket manager to pick up
             channel_name = f"tripsage:websocket:broadcast:{target_type}"
@@ -546,7 +546,8 @@ class WebSocketBroadcaster:
                 )
             except Exception as e:
                 logger.error(
-                    f"Failed to subscribe connection {connection_id} to channel {channel}: {e}"
+                    f"Failed to subscribe connection {connection_id} to channel "
+                    f"{channel}: {e}"
                 )
 
     async def _unsubscribe_connection_from_channel(
@@ -570,7 +571,8 @@ class WebSocketBroadcaster:
                 )
             except Exception as e:
                 logger.error(
-                    f"Failed to unsubscribe connection {connection_id} from channel {channel}: {e}"
+                    f"Failed to unsubscribe connection {connection_id} from channel "
+                    f"{channel}: {e}"
                 )
 
 
