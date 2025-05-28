@@ -1,27 +1,46 @@
 """
-Database initialization module for TripSage using MCP-based approach.
+Database initialization module for TripSage.
 
 This module provides functionality to initialize both SQL and Neo4j databases
-using the appropriate MCP servers (Supabase MCP and Memory MCP).
+using direct SDK connections for optimal performance.
 """
 
 import asyncio
 from typing import Any, Dict, Optional
 
-from tripsage.config.mcp_settings import mcp_settings
+from neo4j import GraphDatabase
+from supabase import Client, create_client
+
+from tripsage.config.app_settings import settings
 from tripsage.db.migrations import run_migrations, run_neo4j_migrations
-from tripsage.db.migrations.neo4j_runner import initialize_neo4j_schema
-from tripsage.mcp_abstraction.manager import MCPManager
 from tripsage.utils.logging import configure_logging
 
 logger = configure_logging(__name__)
+
+
+def get_supabase_client() -> Client:
+    """Get a Supabase client instance."""
+    return create_client(
+        settings.database.supabase_url,
+        settings.database.supabase_anon_key.get_secret_value()
+    )
+
+
+def get_neo4j_driver():
+    """Get a Neo4j driver instance."""
+    return GraphDatabase.driver(
+        settings.neo4j.uri,
+        auth=(settings.neo4j.user, settings.neo4j.password.get_secret_value()),
+        max_connection_lifetime=settings.neo4j.max_connection_lifetime,
+        max_connection_pool_size=settings.neo4j.max_connection_pool_size,
+        connection_acquisition_timeout=settings.neo4j.connection_acquisition_timeout,
+    )
 
 
 async def initialize_databases(
     run_migrations_on_startup: bool = False,
     verify_connections: bool = True,
     init_neo4j_schema: bool = False,
-    project_id: Optional[str] = None,
 ) -> bool:
     """
     Initialize database connections and ensure databases are properly set up.
@@ -30,64 +49,52 @@ async def initialize_databases(
         run_migrations_on_startup: Whether to run migrations on startup.
         verify_connections: Whether to verify database connections.
         init_neo4j_schema: Whether to initialize Neo4j schema.
-        project_id: Supabase project ID (uses settings if not provided).
 
     Returns:
         True if databases were successfully initialized, False otherwise.
     """
-    logger.info("Initializing database connections via MCP")
-
-    # Get project ID from settings if not provided
-    if not project_id:
-        project_id = mcp_settings.SUPABASE_PROJECT_ID
-        if not project_id:
-            logger.error("Supabase project ID not provided and not found in settings")
-            return False
-
-    # Initialize MCP manager
-    mcp_manager = await MCPManager.get_instance(mcp_settings.model_dump())
+    logger.info("Initializing database connections")
 
     try:
         # Verify SQL connection
         if verify_connections:
             logger.info("Verifying SQL database connection...")
-            result = await mcp_manager.call_tool(
-                integration_name="supabase",
-                tool_name="execute_sql",
-                tool_args={"project_id": project_id, "sql": "SELECT version();"},
-            )
-
-            if result.error:
-                logger.error(f"SQL connection verification failed: {result.error}")
+            supabase = get_supabase_client()
+            
+            # Test connection with a simple query
+            result = supabase.rpc("version").execute()
+            if result.data:
+                logger.info(f"SQL database connection verified: PostgreSQL {result.data}")
+            else:
+                logger.error("SQL connection verification failed")
                 return False
-
-            logger.info("SQL database connection verified")
 
         # Verify Neo4j connection
         if verify_connections:
             logger.info("Verifying Neo4j database connection...")
-            result = await mcp_manager.call_tool(
-                integration_name="memory", tool_name="read_graph", tool_args={}
-            )
-
-            if result.error:
-                logger.error(f"Neo4j connection verification failed: {result.error}")
-                return False
-
-            logger.info("Neo4j database connection verified")
+            driver = get_neo4j_driver()
+            
+            with driver.session() as session:
+                result = session.run("RETURN 1 as test")
+                if result.single()["test"] == 1:
+                    logger.info("Neo4j database connection verified")
+                else:
+                    logger.error("Neo4j connection verification failed")
+                    return False
+            
+            driver.close()
 
         # Initialize Neo4j schema if requested
         if init_neo4j_schema:
             logger.info("Initializing Neo4j schema...")
-
-            await initialize_neo4j_schema(mcp_manager)
+            await initialize_neo4j_schema()
 
         # Run migrations if requested
         if run_migrations_on_startup:
             logger.info("Running database migrations...")
 
             # Run SQL migrations
-            sql_succeeded, sql_failed = await run_migrations(project_id=project_id)
+            sql_succeeded, sql_failed = await run_migrations()
             logger.info(
                 f"SQL migrations: {sql_succeeded} succeeded, {sql_failed} failed"
             )
@@ -108,153 +115,172 @@ async def initialize_databases(
     except Exception as e:
         logger.error(f"Error initializing databases: {e}")
         return False
+
+
+async def initialize_neo4j_schema() -> bool:
+    """Initialize Neo4j schema with indexes and constraints."""
+    driver = get_neo4j_driver()
+    
+    try:
+        with driver.session() as session:
+            # Create indexes for better performance
+            indexes = [
+                "CREATE INDEX entity_name IF NOT EXISTS FOR (e:Entity) ON (e.name)",
+                "CREATE INDEX entity_type IF NOT EXISTS FOR (e:Entity) ON (e.entityType)",
+                "CREATE INDEX entity_created IF NOT EXISTS FOR (e:Entity) ON (e.created_at)",
+                "CREATE INDEX relation_type IF NOT EXISTS FOR ()-[r:RELATES_TO]-() ON (r.relation)",
+            ]
+            
+            for index_query in indexes:
+                session.run(index_query)
+                logger.info(f"Created index: {index_query}")
+            
+            # Create constraints if needed
+            constraints = [
+                "CREATE CONSTRAINT entity_id IF NOT EXISTS FOR (e:Entity) REQUIRE e.id IS UNIQUE",
+            ]
+            
+            for constraint_query in constraints:
+                try:
+                    session.run(constraint_query)
+                    logger.info(f"Created constraint: {constraint_query}")
+                except Exception as e:
+                    # Constraint might already exist
+                    logger.debug(f"Constraint creation skipped: {e}")
+            
+            return True
+            
+    except Exception as e:
+        logger.error(f"Error initializing Neo4j schema: {e}")
+        return False
     finally:
-        await mcp_manager.cleanup()
+        driver.close()
 
 
-async def verify_database_schema(project_id: Optional[str] = None) -> Dict[str, Any]:
+async def verify_database_schema() -> Dict[str, Any]:
     """
     Verify that the database schema is correctly set up.
-
-    Args:
-        project_id: Supabase project ID (uses settings if not provided).
 
     Returns:
         Dictionary with verification results for each database.
     """
-    if not project_id:
-        project_id = mcp_settings.SUPABASE_PROJECT_ID
-
-    mcp_manager = await MCPManager.get_instance(mcp_settings.model_dump())
     results = {"sql": {}, "neo4j": {}}
 
     try:
         # Check SQL tables
+        supabase = get_supabase_client()
+        
+        # Get list of tables
         table_query = """
         SELECT tablename 
         FROM pg_tables 
         WHERE schemaname = 'public' 
         AND tablename IN ('users', 'trips', 'migrations');
         """
-
-        result = await mcp_manager.call_tool(
-            integration_name="supabase",
-            tool_name="execute_sql",
-            tool_args={"project_id": project_id, "sql": table_query},
-        )
-
-        if result.result and "rows" in result.result:
-            existing_tables = [row["tablename"] for row in result.result["rows"]]
+        
+        result = supabase.rpc("execute_sql", {"query": table_query}).execute()
+        
+        if result.data:
+            existing_tables = [row["tablename"] for row in result.data]
             results["sql"]["tables"] = existing_tables
             results["sql"]["missing_tables"] = [
                 t for t in ["users", "trips", "migrations"] if t not in existing_tables
             ]
 
         # Check Neo4j entities
-        result = await mcp_manager.call_tool(
-            integration_name="memory",
-            tool_name="search_nodes",
-            tool_args={"query": "SchemaDefinition"},
-        )
-
-        if result.result and "entities" in result.result:
-            schema_entities = [
-                e["name"]
-                for e in result.result["entities"]
-                if e.get("entityType") == "SchemaDefinition"
-            ]
-            results["neo4j"]["schema_entities"] = schema_entities
-            results["neo4j"]["initialized"] = len(schema_entities) > 0
-
+        driver = get_neo4j_driver()
+        
+        with driver.session() as session:
+            # Count nodes and relationships
+            node_count = session.run("MATCH (n) RETURN count(n) as count").single()["count"]
+            rel_count = session.run("MATCH ()-[r]->() RETURN count(r) as count").single()["count"]
+            
+            # Get node labels
+            labels = session.run("CALL db.labels()").values()
+            
+            results["neo4j"]["node_count"] = node_count
+            results["neo4j"]["relationship_count"] = rel_count
+            results["neo4j"]["labels"] = [label[0] for label in labels]
+            results["neo4j"]["initialized"] = node_count > 0 or len(labels) > 0
+        
+        driver.close()
         return results
 
     except Exception as e:
         logger.error(f"Error verifying database schema: {e}")
         return {"error": str(e)}
-    finally:
-        await mcp_manager.cleanup()
 
 
-async def create_sample_data(project_id: Optional[str] = None) -> bool:
+async def create_sample_data() -> bool:
     """
     Create sample data in both databases for testing.
-
-    Args:
-        project_id: Supabase project ID (uses settings if not provided).
 
     Returns:
         True if sample data was created successfully.
     """
-    if not project_id:
-        project_id = mcp_settings.SUPABASE_PROJECT_ID
-
-    mcp_manager = await MCPManager.get_instance(mcp_settings.model_dump())
-
     try:
         # Create sample user in SQL
-        user_sql = """
-        INSERT INTO users (email, username, full_name, preferences)
-        VALUES ('test@example.com', 'test_user', 'Test User', '{"theme": "light"}')
-        ON CONFLICT (email) DO UPDATE SET updated_at = NOW()
-        RETURNING id;
-        """
-
-        result = await mcp_manager.call_tool(
-            integration_name="supabase",
-            tool_name="execute_sql",
-            tool_args={"project_id": project_id, "sql": user_sql},
-        )
-
-        if result.error:
-            logger.error(f"Failed to create sample user: {result.error}")
+        supabase = get_supabase_client()
+        
+        user_data = {
+            "email": "test@example.com",
+            "username": "test_user",
+            "full_name": "Test User",
+            "preferences": {"theme": "light"}
+        }
+        
+        result = supabase.table("users").upsert(user_data).execute()
+        
+        if not result.data:
+            logger.error("Failed to create sample user")
             return False
 
         # Create sample destinations in Neo4j
-        destinations = [
-            {
-                "name": "London",
-                "entityType": "Destination",
-                "observations": [
-                    "country:UK",
-                    "latitude:51.5074",
-                    "longitude:-0.1278",
-                    "timezone:Europe/London",
-                    "currency:GBP",
-                    "description:Historic capital of the United Kingdom",
-                ],
-            },
-            {
-                "name": "Sydney",
-                "entityType": "Destination",
-                "observations": [
-                    "country:Australia",
-                    "latitude:-33.8688",
-                    "longitude:151.2093",
-                    "timezone:Australia/Sydney",
-                    "currency:AUD",
-                    "description:Australia's largest city and economic hub",
-                ],
-            },
-        ]
-
-        result = await mcp_manager.call_tool(
-            integration_name="memory",
-            tool_name="create_entities",
-            tool_args={"entities": destinations},
-        )
-
-        if result.error:
-            logger.error(f"Failed to create sample destinations: {result.error}")
-            return False
-
+        driver = get_neo4j_driver()
+        
+        with driver.session() as session:
+            destinations = [
+                {
+                    "name": "London",
+                    "entityType": "Destination",
+                    "country": "UK",
+                    "latitude": 51.5074,
+                    "longitude": -0.1278,
+                    "timezone": "Europe/London",
+                    "currency": "GBP",
+                    "description": "Historic capital of the United Kingdom",
+                },
+                {
+                    "name": "Sydney",
+                    "entityType": "Destination",
+                    "country": "Australia",
+                    "latitude": -33.8688,
+                    "longitude": 151.2093,
+                    "timezone": "Australia/Sydney",
+                    "currency": "AUD",
+                    "description": "Australia's largest city and economic hub",
+                },
+            ]
+            
+            for dest in destinations:
+                session.run(
+                    """
+                    MERGE (d:Entity:Destination {name: $name})
+                    SET d += $properties
+                    """,
+                    name=dest["name"],
+                    properties=dest
+                )
+            
+            logger.info("Sample destinations created in Neo4j")
+        
+        driver.close()
         logger.info("Sample data created successfully")
         return True
 
     except Exception as e:
         logger.error(f"Error creating sample data: {e}")
         return False
-    finally:
-        await mcp_manager.cleanup()
 
 
 if __name__ == "__main__":
@@ -279,18 +305,17 @@ if __name__ == "__main__":
     parser.add_argument(
         "--create-sample-data", action="store_true", help="Create sample data"
     )
-    parser.add_argument("--project-id", help="Supabase project ID")
     args = parser.parse_args()
 
     async def main():
         if args.verify_schema:
-            results = await verify_database_schema(project_id=args.project_id)
+            results = await verify_database_schema()
             print("Schema verification results:")
             print(results)
             return
 
         if args.create_sample_data:
-            success = await create_sample_data(project_id=args.project_id)
+            success = await create_sample_data()
             if success:
                 print("Sample data created successfully")
             else:
@@ -301,7 +326,6 @@ if __name__ == "__main__":
         result = await initialize_databases(
             run_migrations_on_startup=args.run_migrations,
             init_neo4j_schema=args.init_neo4j,
-            project_id=args.project_id,
         )
 
         if result:
