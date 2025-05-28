@@ -42,7 +42,7 @@ Centralized dependency injection provides:
 - Singleton services
 - Request-scoped resources
 - Authentication dependencies
-- MCP client access
+- Direct SDK client access
 
 This approach ensures:
 
@@ -111,7 +111,8 @@ Services implement business logic and are organized by domain:
 Services interact with:
 
 - Storage services for data persistence
-- MCP clients for external integrations
+- Direct SDK clients for external integrations (Duffel, Google Maps, etc.)
+- Airbnb MCP client (the only remaining MCP integration)
 - Other services for cross-domain functionality
 
 ### 7. Authentication System
@@ -171,7 +172,8 @@ The application includes:
 
 The API integrates with:
 
-- **MCP Clients** - For accessing Model Context Protocol services
+- **Direct SDK Clients** - For most external services (Duffel Flights, Google Maps, Google Calendar, OpenWeatherMap, Crawl4AI)
+- **Airbnb MCP Client** - The only remaining MCP integration (no official Airbnb SDK available)
 - **DualStorageService** - For data persistence (SQL + Neo4j)
 - **SessionMemory** - For maintaining context across requests
 
