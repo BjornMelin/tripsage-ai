@@ -5,6 +5,7 @@
 ## Philosophy
 
 This document captures features that:
+
 - Add complexity without proportional value for MVP
 - Require extensive infrastructure for marginal gains  
 - Are "nice-to-have" rather than "must-have"
@@ -306,6 +307,7 @@ Before moving items from V2.0 to main TODO:
 ## Frontend V2 Features (From Main TODO)
 
 ### Advanced Agent Visualization (Beyond Current Implementation)
+
 - Build agent flow diagrams with React Flow (visual graph representation)
 - Create execution timeline visualization with dependencies
 - Add WebSocket connection for real-time updates
@@ -314,6 +316,7 @@ Before moving items from V2.0 to main TODO:
 - Create visual workflow builder
 
 ### LLM Configuration UI (Phase 6 replacement)
+
 - Build model selection UI with providers
 - Add cost estimation per query
 - Create custom parameter controls
@@ -324,6 +327,7 @@ Before moving items from V2.0 to main TODO:
 - Add model switching capabilities
 
 ### Advanced Testing Infrastructure (Beyond MVP)
+
 - Add Storybook for component documentation
 - Add visual regression testing
 - Property-based testing for UI components
@@ -333,6 +337,7 @@ Before moving items from V2.0 to main TODO:
 - Contract testing between frontend/backend
 
 ### Advanced Performance Features  
+
 - Complex code splitting strategies
 - Advanced lazy loading patterns
 - Service worker optimizations
@@ -347,6 +352,7 @@ Before moving items from V2.0 to main TODO:
 These were originally considered for MVP but moved to V2:
 
 #### Frontend Development
+
 - **Advanced Agent Visualization** (Beyond current implementation)
   - Current implementation includes status monitoring and tracking
   - V2 would add visual flow diagrams and timeline views
@@ -372,6 +378,7 @@ These were originally considered for MVP but moved to V2:
   - Advanced data visualization
 
 #### Advanced Testing (Beyond Current 90% Coverage)
+
 - Property-based testing frameworks
 - Mutation testing systems  
 - Visual regression testing
@@ -381,6 +388,7 @@ These were originally considered for MVP but moved to V2:
 - Load testing for frontend
 
 #### Database Features  
+
 - user_preferences table (handled by Mem0 for MVP)
 - search_history table (handled by Mem0 for MVP)
 - price_alerts table
@@ -391,6 +399,7 @@ These were originally considered for MVP but moved to V2:
 ## V2+ Enterprise Enhancement Features (From Enhancement Sprints Research)
 
 ### Enterprise Observability Stack
+
 - [ ] **Full OpenTelemetry OTLP Export**
   - Jaeger for distributed tracing with complex service maps
   - Prometheus for metrics with advanced queries
@@ -408,6 +417,7 @@ These were originally considered for MVP but moved to V2:
   - Advanced cardinality management
   
 ### Enterprise Event-Driven Architecture
+
 - [ ] **Redis Streams Event Bus**
   - Consumer groups with acknowledgments
   - Message persistence and replay
@@ -430,6 +440,7 @@ These were originally considered for MVP but moved to V2:
   - Saga orchestration
   
 ### Enterprise Error Handling
+
 - [ ] **SAGA Pattern Implementation**
   - Distributed transaction coordination
   - Compensating transactions
@@ -452,6 +463,7 @@ These were originally considered for MVP but moved to V2:
   - Game day simulations
   
 ### Enterprise Integration Patterns
+
 - [ ] **Service Mesh Architecture**
   - Istio/Linkerd integration
   - Advanced traffic management
@@ -467,6 +479,7 @@ These were originally considered for MVP but moved to V2:
   - Developer portal with documentation
   
 ### Enterprise Data Platform
+
 - [ ] **Event Data Lake**
   - S3/MinIO for event storage
   - Parquet format for analytics
@@ -482,6 +495,7 @@ These were originally considered for MVP but moved to V2:
   - Stateful stream processing
   
 ### Enterprise Security & Compliance
+
 - [ ] **Advanced Audit Logging**
   - Immutable audit trails
   - Compliance reporting (SOC2, ISO27001)
@@ -497,6 +511,7 @@ These were originally considered for MVP but moved to V2:
   - Microsegmentation
   
 ### Enterprise Performance Features
+
 - [ ] **Advanced Caching Strategies**
   - Multi-region cache replication
   - Cache warming pipelines
@@ -512,6 +527,7 @@ These were originally considered for MVP but moved to V2:
   - Partitioning strategies
   
 ### Migration Path from MVP to V2+
+
 When considering V2+ upgrades:
 
 1. **Gradual Enhancement**: Start with monitoring, then events, then advanced patterns
@@ -521,6 +537,7 @@ When considering V2+ upgrades:
 5. **Feature Flags**: Progressive rollout of V2+ features
 
 ### Technology Stack for V2+
+
 - **Observability**: Jaeger, Prometheus, Grafana, OpenTelemetry Collector
 - **Event Streaming**: Redis Streams → NATS JetStream
 - **Service Mesh**: Istio or Linkerd

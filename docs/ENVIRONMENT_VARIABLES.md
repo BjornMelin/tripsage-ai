@@ -5,6 +5,7 @@ This document describes all environment variables used by TripSage, including th
 ## Core Application Settings
 
 ### Database Configuration
+
 ```bash
 # Supabase Database
 SUPABASE_URL=https://your-project.supabase.co
@@ -18,6 +19,7 @@ DATABASE_URL=postgresql://user:password@host:port/database
 ```
 
 ### Redis/Cache Configuration
+
 ```bash
 # Redis URL for caching
 REDIS_URL=redis://localhost:6379/0
@@ -34,6 +36,7 @@ REDIS_URL=rediss://username:password@host:port/database
 The following environment variables control the gradual migration from MCP wrappers to direct SDK integration. Each service can be independently switched between `mcp` and `direct` modes.
 
 ### Week 1 Services (Redis/DragonflyDB & Supabase)
+
 ```bash
 # Redis/DragonflyDB integration mode
 FEATURE_REDIS_INTEGRATION=direct  # Options: mcp, direct
@@ -43,12 +46,14 @@ FEATURE_SUPABASE_INTEGRATION=direct  # Options: mcp, direct
 ```
 
 ### Week 2 Services (Memory & Neo4j)
+
 ```bash
 # Neo4j memory/knowledge graph integration mode
 FEATURE_NEO4J_INTEGRATION=mcp  # Options: mcp, direct
 ```
 
 ### Week 3-4 Services (External APIs)
+
 ```bash
 # Weather API integration mode
 FEATURE_WEATHER_INTEGRATION=mcp  # Options: mcp, direct
@@ -67,6 +72,7 @@ FEATURE_TIME_INTEGRATION=mcp  # Options: mcp, direct
 ```
 
 ### Web Crawling Services (Already Migrated)
+
 ```bash
 # Crawl4AI web crawling integration mode (completed)
 FEATURE_CRAWL4AI_INTEGRATION=direct  # Options: mcp, direct
@@ -76,6 +82,7 @@ FEATURE_PLAYWRIGHT_INTEGRATION=direct  # Options: mcp, direct
 ```
 
 ### Services Remaining on MCP
+
 ```bash
 # Airbnb integration mode (stays MCP due to unofficial API)
 FEATURE_AIRBNB_INTEGRATION=mcp  # Options: mcp, direct
@@ -84,6 +91,7 @@ FEATURE_AIRBNB_INTEGRATION=mcp  # Options: mcp, direct
 ## Migration Strategy
 
 ### Safe Rollout
+
 1. **Default to MCP**: All services default to `mcp` mode for safety
 2. **Gradual Migration**: Enable `direct` mode per service as migration completes
 3. **Instant Rollback**: Switch back to `mcp` mode if issues arise
@@ -92,6 +100,7 @@ FEATURE_AIRBNB_INTEGRATION=mcp  # Options: mcp, direct
 ### Environment Examples
 
 **Development Environment (Week 1 Complete):**
+
 ```bash
 FEATURE_REDIS_INTEGRATION=direct
 FEATURE_SUPABASE_INTEGRATION=direct
@@ -107,6 +116,7 @@ FEATURE_AIRBNB_INTEGRATION=mcp
 ```
 
 **Production Environment (Conservative):**
+
 ```bash
 FEATURE_REDIS_INTEGRATION=mcp
 FEATURE_SUPABASE_INTEGRATION=mcp
@@ -114,6 +124,7 @@ FEATURE_SUPABASE_INTEGRATION=mcp
 ```
 
 **Full Migration Complete (Target State):**
+
 ```bash
 FEATURE_REDIS_INTEGRATION=direct
 FEATURE_SUPABASE_INTEGRATION=direct
@@ -131,6 +142,7 @@ FEATURE_AIRBNB_INTEGRATION=mcp  # Only service remaining on MCP
 ## Performance Impact
 
 ### Expected Improvements by Service
+
 - **Redis → Direct**: 25x performance improvement with DragonflyDB
 - **Supabase → Direct**: 30-40% latency reduction, full API coverage
 - **Neo4j → Direct**: 50-70% latency reduction
@@ -139,6 +151,7 @@ FEATURE_AIRBNB_INTEGRATION=mcp  # Only service remaining on MCP
 - **Playwright → Direct**: 25-40% performance improvement (completed)
 
 ### Overall Impact
+
 - **Combined Performance**: 5-10x faster operations
 - **Cost Savings**: $1,500-2,000/month through MCP elimination
 - **Latency Reduction**: 50-70% across the stack
@@ -149,15 +162,18 @@ FEATURE_AIRBNB_INTEGRATION=mcp  # Only service remaining on MCP
 The system validates configuration at startup:
 
 ### Redis URL Validation
+
 - Must start with `redis://` or `rediss://` (SSL)
 - Format: `redis://[username:password@]host:port[/database]`
 
 ### Supabase Validation  
+
 - URL must start with `https://`
 - API key must be at least 20 characters
 - Connection tested with simple query
 
 ### Error Handling
+
 - Invalid configurations log detailed error messages
 - Services fail fast with clear error descriptions
 - Validation errors prevent startup (fail-fast principle)
@@ -165,6 +181,7 @@ The system validates configuration at startup:
 ## Migration Monitoring
 
 ### Feature Flag Status
+
 ```python
 from tripsage.config.feature_flags import feature_flags
 
@@ -174,6 +191,7 @@ print(f"Migration progress: {status['summary']['migration_percentage']}%")
 ```
 
 ### Service Mode Checking
+
 ```python
 from tripsage.config.feature_flags import is_direct_integration
 
@@ -187,16 +205,19 @@ else:
 ## Security Considerations
 
 ### Secrets Management
+
 - Use `.env` files for development
 - Use secure secret management (AWS Secrets Manager, etc.) for production
 - Never commit API keys or passwords to version control
 
 ### Redis Security
+
 - Use `rediss://` (SSL/TLS) for production Redis connections
 - Configure Redis authentication with strong passwords
 - Restrict Redis network access with firewall rules
 
 ### Supabase Security
+
 - Use Row Level Security (RLS) policies
 - Rotate API keys regularly
 - Monitor API usage for anomalies
@@ -206,6 +227,7 @@ else:
 ### Common Issues
 
 **Redis Connection Failed:**
+
 ```bash
 # Check Redis URL format
 REDIS_URL=redis://localhost:6379/0
@@ -218,6 +240,7 @@ REDIS_URL=rediss://username:password@host:port/database
 ```
 
 **Supabase Connection Failed:**
+
 ```bash
 # Check URL format (must be HTTPS)
 SUPABASE_URL=https://your-project.supabase.co
@@ -227,6 +250,7 @@ SUPABASE_ANON_KEY=your-full-anon-key-here
 ```
 
 **Feature Flag Not Working:**
+
 ```bash
 # Check case sensitivity (should be lowercase)
 FEATURE_REDIS_INTEGRATION=direct  # ✓ Correct
@@ -240,6 +264,7 @@ FEATURE_REDIS_INTEGRATION=sdk     # ✗ Invalid (use 'direct')
 ### Debug Commands
 
 **Check Feature Flag Status:**
+
 ```bash
 # Python console
 from tripsage.config.feature_flags import feature_flags
@@ -247,6 +272,7 @@ print(feature_flags.get_migration_status())
 ```
 
 **Test Service Connection:**
+
 ```bash
 # Redis connection test
 from tripsage.services.redis_service import redis_service

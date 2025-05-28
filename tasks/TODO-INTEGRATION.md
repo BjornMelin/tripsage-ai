@@ -8,6 +8,7 @@
 This document outlines the remaining integration tasks to complete the AI chat feature implementation, connecting the frontend chat interface with the FastAPI backend and MCP server ecosystem.
 
 ## Completed Phases
+
 - ✅ **Phase 1.1**: Chat API Endpoint Enhancement (PR #118)
 - ✅ **Phase 1.2**: Chat Session Management (PR #122)
 
@@ -18,6 +19,7 @@ The AI chat interface frontend components have been successfully implemented wit
 ## Phase 1: Backend API Integration 🔧
 
 ### 1.1 Chat API Endpoint Enhancement
+
 - [x] **Replace simulated streaming in `/api/chat` route** ✅ COMPLETED
   - Current: Mock streaming responses
   - Target: Connect to FastAPI backend `/chat` endpoint
@@ -38,6 +40,7 @@ The AI chat interface frontend components have been successfully implemented wit
   - Use: Zod schemas for request validation
 
 ### 1.2 FastAPI Chat Endpoint
+
 - [x] **Create `/api/v1/chat` endpoint in FastAPI** ✅ COMPLETED
   - Location: `api/routers/chat.py` (created)
   - Features: Streaming responses, tool calling, message history
@@ -66,6 +69,7 @@ The AI chat interface frontend components have been successfully implemented wit
 **Status**: ✅ **Completed** - All authentication and BYOK integration features implemented
 
 ### 2.1 Frontend Authentication Flow ✅
+
 - [x] **Integrate with existing BYOK system**
   - ✅ Connected to `/api/keys` endpoint for API key management
   - ✅ Updated `useChatAi` hook to handle auth states
@@ -85,6 +89,7 @@ The AI chat interface frontend components have been successfully implemented wit
   - Integration: Extended Zustand store with comprehensive auth state management
 
 ### 2.2 Security Implementation ✅
+
 - [x] **Add request authentication**
   - [x] ✅ JWT token validation for chat endpoints via dependency injection
   - [x] ✅ API key verification middleware integrated into chat routes
@@ -98,6 +103,7 @@ The AI chat interface frontend components have been successfully implemented wit
   - [x] ✅ Integration and unit tests for auth flow
 
 ### 2.3 Additional Security Features ✅
+
 - [x] ✅ **Authentication headers in API client**
   - Automatic JWT token inclusion in all chat requests
   - Implementation: `frontend/src/lib/api/chat-api.ts`
@@ -114,6 +120,7 @@ The AI chat interface frontend components have been successfully implemented wit
 ## Phase 3: Tool Calling & MCP Integration 🛠️ ✅ TESTING INFRASTRUCTURE COMPLETE
 
 ### 3.1 Agent Orchestration ✅ Testing Foundation Complete
+
 - [x] ✅ **Testing Infrastructure Established (May 23, 2025)**
   - ✅ Comprehensive testing solution for pydantic settings isolation
   - ✅ Test environment configuration in `tests/.env.test`
@@ -143,6 +150,7 @@ The AI chat interface frontend components have been successfully implemented wit
   - Integration: Connect to existing trip management system
 
 ### 3.2 Real-time Features
+
 - [ ] **Implement agent status updates**
   - [ ] Show "searching for flights", "checking availability" states
   - [ ] Progress indicators for long-running operations
@@ -156,6 +164,7 @@ The AI chat interface frontend components have been successfully implemented wit
 ## Phase 4: File Handling & Attachments 📎
 
 ### 4.1 Upload System Integration ✅
+
 - [x] **Connect attachment API to storage**
   - ✅ Created backend file upload system with FastAPI
   - ✅ Integrated frontend proxy to backend API
@@ -175,6 +184,7 @@ The AI chat interface frontend components have been successfully implemented wit
   - [x] User isolation for file storage
 
 ### 4.2 Attachment Processing ✅
+
 - [x] **Create AI analysis pipeline**
   - [x] Document analyzer service with travel-specific extraction
   - [x] Entity extraction for travel-relevant information
@@ -182,6 +192,7 @@ The AI chat interface frontend components have been successfully implemented wit
   - [x] Framework for storing processed data in trip context
 
 ### 4.3 Implementation Details ✅
+
 - [x] **Backend Components**
   - [x] `/tripsage/api/routers/attachments.py` - File upload router
   - [x] `/tripsage/utils/file_validation.py` - Security validation
@@ -197,6 +208,7 @@ The AI chat interface frontend components have been successfully implemented wit
 ## Phase 5: Testing & Quality Assurance 🧪
 
 ### 5.1 Frontend Testing
+
 - [ ] **Unit tests for chat components**
   - [ ] Test MessageList rendering with various message types
   - [ ] Test MessageInput validation and submission
@@ -210,6 +222,7 @@ The AI chat interface frontend components have been successfully implemented wit
   - Tool: Playwright for E2E tests
 
 ### 5.2 Backend Testing
+
 - [ ] **API endpoint tests**
   - [ ] Chat endpoint streaming responses
   - [ ] Authentication middleware
@@ -222,6 +235,7 @@ The AI chat interface frontend components have been successfully implemented wit
   - [ ] MCP server integration under load
 
 ### 5.3 Performance Optimization
+
 - [ ] **Frontend optimizations**
   - [ ] Message virtualization for long conversations
   - [ ] Optimize re-renders in chat components
@@ -235,6 +249,7 @@ The AI chat interface frontend components have been successfully implemented wit
 ## Phase 6: Advanced Features 🚀
 
 ### 6.1 Voice Input/Output
+
 - [ ] **Add speech-to-text capability**
   - [ ] Integrate Web Speech API
   - [ ] Add voice input button to MessageInput
@@ -246,6 +261,7 @@ The AI chat interface frontend components have been successfully implemented wit
   - [ ] Support multiple voice options
 
 ### 6.2 Export & Sharing
+
 - [ ] **Add conversation export**
   - [ ] Export to PDF/Markdown formats
   - [ ] Include tool call results and attachments
@@ -257,6 +273,7 @@ The AI chat interface frontend components have been successfully implemented wit
   - [ ] Integration with trip sharing features
 
 ### 6.3 Personalization
+
 - [ ] **Add chat preferences**
   - [ ] Custom AI response tone/style
   - [ ] Preferred tool integrations
@@ -270,12 +287,14 @@ The AI chat interface frontend components have been successfully implemented wit
 ## Dependencies & Blockers
 
 ### Required Before Starting
+
 - [x] Frontend chat interface implementation (completed)
 - [x] BYOK API system (completed)
 - [x] MCP server integrations (flights, accommodations, maps)
 - [ ] Agent handoff system refinement
 
 ### External Dependencies
+
 - Vercel AI SDK v4.3.16 (installed)
 - FastAPI streaming response capabilities
 - Existing MCP client infrastructure
@@ -284,6 +303,7 @@ The AI chat interface frontend components have been successfully implemented wit
 ## Success Criteria
 
 ### Minimum Viable Product (MVP)
+
 - [ ] Real AI responses replacing mock data
 - [ ] Basic authentication integration
 - [ ] Simple tool calling (flight/hotel search)
@@ -291,6 +311,7 @@ The AI chat interface frontend components have been successfully implemented wit
 - [ ] Basic error handling
 
 ### Full Feature Set
+
 - [ ] Complete MCP server integration
 - [ ] Advanced file processing
 - [ ] Voice input/output

@@ -1,6 +1,6 @@
 # TripSage Service Integration Guide (MCP → SDK Migration)
 
-**🚨 MAJOR ARCHITECTURE CHANGE 🚨**
+## 🚨 MAJOR ARCHITECTURE CHANGE 🚨
 
 TripSage is **migrating from MCP servers to direct SDK integration** for dramatically improved performance and simplified architecture. This section documents both legacy MCP implementations and the new unified SDK approach.
 
@@ -50,6 +50,7 @@ This section contains detailed guides for each MCP server, covering:
   - **[Browser Automation Tools (via MCPs)](./BrowserAutomation_MCP.md)**: Details the integration with external Playwright and Stagehand MCPs for tasks requiring browser interaction.
 
 Each specific MCP server document typically includes:
+
 - An overview of its purpose and functionality.
 - The MCP tools it exposes (schemas and descriptions).
 - Details of any underlying API integrations.
