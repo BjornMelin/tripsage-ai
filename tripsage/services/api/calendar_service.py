@@ -32,7 +32,7 @@ from tripsage.models.api.calendar_models import (
     FreeBusyResponse,
     UpdateEventRequest,
 )
-from tripsage.services.redis_service import RedisService
+from tripsage.services.dragonfly_service import get_cache_service
 from tripsage.utils.error_handling import with_error_handling
 from tripsage.utils.logging import get_logger
 
@@ -85,7 +85,7 @@ class GoogleCalendarService:
         self,
         credentials_file: Optional[str] = None,
         token_file: Optional[str] = None,
-        redis_service: Optional[RedisService] = None,
+        cache_service: Optional[Any] = None,
     ):
         """
         Initialize the Google Calendar service.
@@ -93,7 +93,7 @@ class GoogleCalendarService:
         Args:
             credentials_file: Path to OAuth2 credentials JSON file
             token_file: Path to store user tokens
-            redis_service: Optional Redis service for caching
+            cache_service: Optional DragonflyDB cache service for caching
         """
         self.credentials_file = credentials_file or os.getenv(
             "GOOGLE_CALENDAR_CREDENTIALS_FILE", "credentials.json"
@@ -101,7 +101,7 @@ class GoogleCalendarService:
         self.token_file = token_file or os.getenv(
             "GOOGLE_CALENDAR_TOKEN_FILE", "token.json"
         )
-        self.redis = redis_service
+        self.cache_service = cache_service
         self._service: Optional[Resource] = None
         self._credentials: Optional[Credentials] = None
 
@@ -115,6 +115,14 @@ class GoogleCalendarService:
     async def initialize(self) -> None:
         """Initialize the service and authenticate."""
         await self._authenticate()
+        
+        # Initialize cache service if not provided
+        if self.cache_service is None:
+            try:
+                self.cache_service = await get_cache_service()
+            except Exception as e:
+                logger.warning(f"Failed to initialize cache service: {e}")
+                self.cache_service = None
 
     async def _authenticate(self) -> None:
         """Authenticate with Google Calendar API."""
@@ -165,11 +173,11 @@ class GoogleCalendarService:
 
     async def _get_from_cache(self, key: str) -> Optional[Any]:
         """Get data from cache."""
-        if not self.redis:
+        if not self.cache_service:
             return None
 
         try:
-            data = await self.redis.get(key)
+            data = await self.cache_service.get(key)
             if data:
                 return json.loads(data)
         except Exception as e:
@@ -178,11 +186,11 @@ class GoogleCalendarService:
 
     async def _set_cache(self, key: str, value: Any, ttl: int) -> None:
         """Set data in cache."""
-        if not self.redis:
+        if not self.cache_service:
             return
 
         try:
-            await self.redis.set(key, json.dumps(value), expire=ttl)
+            await self.cache_service.set(key, json.dumps(value), expire=ttl)
         except Exception as e:
             logger.warning(f"Cache set error: {e}")
 
@@ -691,13 +699,13 @@ class GoogleCalendarService:
 
     async def _clear_events_cache(self, calendar_id: str) -> None:
         """Clear events cache for a calendar."""
-        if not self.redis:
+        if not self.cache_service:
             return
 
         try:
             # Clear all event-related cache keys for this calendar
             pattern = f"events:{calendar_id}:*"
-            await self.redis.delete_pattern(pattern)
+            await self.cache_service.delete_pattern(pattern)
         except Exception as e:
             logger.warning(f"Error clearing events cache: {e}")
 

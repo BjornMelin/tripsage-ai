@@ -28,7 +28,7 @@ from tripsage.models.api.flights_models import (
     SliceRequest,
 )
 from tripsage.services.base import BaseService
-from tripsage.utils.cache_tools import cached
+from tripsage.utils.cache import cached
 from tripsage.utils.decorators import with_retry
 from tripsage.utils.logging import get_logger
 
