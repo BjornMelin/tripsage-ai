@@ -7,7 +7,6 @@ google-api-python-client library, replacing the previous MCP server abstraction.
 
 import asyncio
 import json
-import logging
 import os
 from datetime import datetime, timedelta
 from functools import wraps

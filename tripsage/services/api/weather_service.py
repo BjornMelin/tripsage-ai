@@ -5,12 +5,10 @@ forecasts, current conditions, and travel-specific weather analysis.
 """
 
 import asyncio
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
-from urllib.parse import urlencode
 
 import httpx
-from pydantic import ValidationError
 
 from tripsage.core.config import settings
 from tripsage.models.api.weather_models import (
@@ -560,7 +558,7 @@ class OpenWeatherMapService(BaseService):
             results = await asyncio.gather(*tasks, return_exceptions=True)
 
             weather_data = {}
-            for (lat, lon, name), result in zip(cities, results):
+            for (lat, lon, name), result in zip(cities, results, strict=False):
                 if isinstance(result, Exception):
                     logger.warning(f"Failed to get weather for {name}: {result}")
                     continue
@@ -593,7 +591,7 @@ class OpenWeatherMapService(BaseService):
             results = await asyncio.gather(*tasks, return_exceptions=True)
 
             weather_data = {}
-            for (lat, lon, name), result in zip(cities, results):
+            for (lat, lon, name), result in zip(cities, results, strict=False):
                 if isinstance(result, Exception):
                     logger.warning(f"Failed to get weather for {name}: {result}")
                     continue

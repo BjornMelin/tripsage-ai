@@ -8,7 +8,6 @@ import asyncio
 from datetime import datetime, timedelta
 from decimal import Decimal
 from typing import Any, Dict, List, Optional, Set
-from urllib.parse import urlencode
 
 import httpx
 from pydantic import ValidationError
@@ -20,7 +19,6 @@ from tripsage.models.api.flights_models import (
     CreateOrderRequest,
     FlightOffer,
     FlightOrder,
-    FlightSearchRequest,
     OfferRequest,
     OrderCancellation,
     Passenger,
@@ -425,7 +423,7 @@ class DuffelFlightsService(BaseService):
 
         # Build results dictionary
         flexible_results = {}
-        for date, result in zip(date_range, results):
+        for date, result in zip(date_range, results, strict=False):
             if isinstance(result, Exception):
                 logger.warning(f"Search failed for {date}: {result}")
                 flexible_results[date.isoformat()] = []
