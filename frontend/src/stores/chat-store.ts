@@ -7,6 +7,11 @@ import type {
   Memory,
   ConversationMessage,
 } from "@/types/memory";
+import type {
+  WebSocketClient,
+  WebSocketEventType,
+  ConnectionStatus,
+} from "@/lib/websocket/websocket-client";
 
 // Enhanced Message type with support for tool calls and attachments
 export interface Message {
@@ -25,13 +30,13 @@ export interface Message {
 export interface ToolCall {
   id: string;
   name: string;
-  arguments: Record<string, any>;
+  arguments: Record<string, unknown>;
   state: "call" | "partial-call" | "result";
 }
 
 export interface ToolResult {
   callId: string;
-  result: any;
+  result: unknown;
 }
 
 export interface Attachment {
@@ -68,7 +73,28 @@ export interface SendMessageOptions {
   attachments?: File[];
   systemPrompt?: string;
   temperature?: number;
-  tools?: any[];
+  tools?: Record<string, unknown>[];
+}
+
+// WebSocket event types
+export interface WebSocketMessageEvent {
+  type: "chat_message" | "chat_message_chunk";
+  sessionId: string;
+  messageId?: string;
+  content: string;
+  role?: "user" | "assistant" | "system";
+  toolCalls?: ToolCall[];
+  attachments?: Attachment[];
+  isComplete?: boolean;
+}
+
+export interface WebSocketAgentStatusEvent {
+  type: "agent_status_update";
+  sessionId: string;
+  isActive: boolean;
+  currentTask?: string;
+  progress: number;
+  statusMessage?: string;
 }
 
 interface ChatState {
@@ -84,6 +110,16 @@ interface ChatState {
   // Memory integration
   memoryEnabled: boolean;
   autoSyncMemory: boolean;
+
+  // WebSocket integration
+  websocketClient: WebSocketClient | null;
+  connectionStatus: ConnectionStatus;
+  isRealtimeEnabled: boolean;
+  typingUsers: Record<
+    string,
+    { userId: string; username?: string; timestamp: string }
+  >;
+  pendingMessages: Message[];
 
   // Actions
   createSession: (title?: string, userId?: string) => string;
@@ -109,7 +145,7 @@ interface ChatState {
     sessionId: string,
     messageId: string,
     callId: string,
-    result: any
+    result: unknown
   ) => void;
   updateAgentStatus: (sessionId: string, status: Partial<AgentStatus>) => void;
   clearMessages: (sessionId: string) => void;
@@ -129,6 +165,18 @@ interface ChatState {
   ) => Promise<void>;
   setMemoryEnabled: (enabled: boolean) => void;
   setAutoSyncMemory: (enabled: boolean) => void;
+
+  // WebSocket actions
+  connectWebSocket: (sessionId: string, token: string) => Promise<void>;
+  disconnectWebSocket: () => void;
+  setRealtimeEnabled: (enabled: boolean) => void;
+  handleRealtimeMessage: (event: WebSocketMessageEvent) => void;
+  handleAgentStatusUpdate: (event: WebSocketAgentStatusEvent) => void;
+  setUserTyping: (sessionId: string, userId: string, username?: string) => void;
+  removeUserTyping: (sessionId: string, userId: string) => void;
+  clearTypingUsers: (sessionId: string) => void;
+  addPendingMessage: (message: Message) => void;
+  removePendingMessage: (messageId: string) => void;
 }
 
 // Zod schema for session data validation when importing
@@ -146,7 +194,7 @@ const sessionDataSchema = z.object({
           z.object({
             id: z.string(),
             name: z.string(),
-            arguments: z.record(z.any()),
+            arguments: z.record(z.unknown()),
             state: z.enum(["call", "partial-call", "result"]),
           })
         )
@@ -182,6 +230,13 @@ export const useChatStore = create<ChatState>()(
       // Memory integration defaults
       memoryEnabled: true,
       autoSyncMemory: true,
+
+      // WebSocket integration defaults
+      websocketClient: null,
+      connectionStatus: "disconnected",
+      isRealtimeEnabled: true,
+      typingUsers: {},
+      pendingMessages: [],
 
       get currentSession() {
         const { sessions, currentSessionId } = get();
@@ -294,7 +349,13 @@ export const useChatStore = create<ChatState>()(
       },
 
       sendMessage: async (content, options = {}) => {
-        const { currentSessionId, currentSession } = get();
+        const {
+          currentSessionId,
+          currentSession,
+          websocketClient,
+          isRealtimeEnabled,
+          connectionStatus,
+        } = get();
 
         // Create a new session if none exists
         let sessionId = currentSessionId;
@@ -303,7 +364,7 @@ export const useChatStore = create<ChatState>()(
         }
 
         // Add user message
-        get().addMessage(sessionId, {
+        const userMessageId = get().addMessage(sessionId, {
           role: "user",
           content,
           attachments: options.attachments?.map((file) => ({
@@ -316,6 +377,35 @@ export const useChatStore = create<ChatState>()(
         });
 
         set({ isLoading: true, error: null });
+
+        // Use WebSocket if available and connected
+        if (
+          isRealtimeEnabled &&
+          websocketClient &&
+          connectionStatus === "connected"
+        ) {
+          try {
+            await websocketClient.send("chat_message", {
+              content,
+              sessionId,
+              attachments: options.attachments?.map((file) => ({
+                name: file.name,
+                contentType: file.type,
+                size: file.size,
+              })),
+              systemPrompt: options.systemPrompt,
+              temperature: options.temperature,
+              tools: options.tools,
+            });
+
+            // WebSocket will handle the response via event handlers
+            set({ isLoading: false });
+            return;
+          } catch (error) {
+            console.warn("WebSocket send failed, falling back to HTTP:", error);
+            // Fall through to HTTP implementation
+          }
+        }
 
         try {
           // Update agent status to show it's processing
@@ -704,6 +794,211 @@ export const useChatStore = create<ChatState>()(
       setAutoSyncMemory: (enabled) => {
         set({ autoSyncMemory: enabled });
       },
+
+      // WebSocket actions
+      connectWebSocket: async (sessionId, token) => {
+        const { websocketClient } = get();
+
+        // Disconnect existing connection if any
+        if (websocketClient) {
+          websocketClient.disconnect();
+        }
+
+        try {
+          // Import WebSocketClient dynamically to avoid SSR issues
+          const { WebSocketClient } = await import(
+            "@/lib/websocket/websocket-client"
+          );
+
+          const newClient = new WebSocketClient({
+            url: `${process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:8000"}/ws/chat/${sessionId}`,
+            reconnect: true,
+            maxReconnectAttempts: 5,
+            reconnectInterval: 1000,
+          });
+
+          // Set up event handlers
+          newClient.on("open", () => {
+            set({ connectionStatus: "connected" });
+          });
+
+          newClient.on("close", () => {
+            set({ connectionStatus: "disconnected" });
+          });
+
+          newClient.on("connecting", () => {
+            set({ connectionStatus: "connecting" });
+          });
+
+          newClient.on("error", (error) => {
+            set({
+              connectionStatus: "error",
+              error: error.message || "WebSocket connection error",
+            });
+          });
+
+          // Handle incoming messages
+          newClient.on("chat_message", (data) => {
+            get().handleRealtimeMessage(data);
+          });
+
+          newClient.on("chat_message_chunk", (data) => {
+            get().handleRealtimeMessage(data);
+          });
+
+          newClient.on("agent_status_update", (data) => {
+            get().handleAgentStatusUpdate(data);
+          });
+
+          newClient.on("user_typing", (data) => {
+            get().setUserTyping(data.sessionId, data.userId, data.username);
+          });
+
+          newClient.on("user_stop_typing", (data) => {
+            get().removeUserTyping(data.sessionId, data.userId);
+          });
+
+          // Authenticate and connect
+          set({ websocketClient: newClient, connectionStatus: "connecting" });
+          await newClient.connect();
+
+          // Send auth message
+          await newClient.send("auth", { token, sessionId });
+        } catch (error) {
+          set({
+            connectionStatus: "error",
+            error:
+              error instanceof Error
+                ? error.message
+                : "Failed to connect WebSocket",
+          });
+        }
+      },
+
+      disconnectWebSocket: () => {
+        const { websocketClient } = get();
+        if (websocketClient) {
+          websocketClient.disconnect();
+          set({
+            websocketClient: null,
+            connectionStatus: "disconnected",
+            typingUsers: {},
+            pendingMessages: [],
+          });
+        }
+      },
+
+      setRealtimeEnabled: (enabled) => {
+        set({ isRealtimeEnabled: enabled });
+
+        if (!enabled) {
+          get().disconnectWebSocket();
+        }
+      },
+
+      handleRealtimeMessage: (event) => {
+        const { currentSessionId } = get();
+        if (!currentSessionId || event.sessionId !== currentSessionId) return;
+
+        if (event.type === "chat_message") {
+          // Add complete message
+          get().addMessage(currentSessionId, {
+            role: event.role || "assistant",
+            content: event.content,
+            toolCalls: event.toolCalls,
+            attachments: event.attachments,
+          });
+        } else if (event.type === "chat_message_chunk") {
+          // Handle streaming message chunks
+          const existingMessage = get()
+            .sessions.find((s) => s.id === currentSessionId)
+            ?.messages.find((m) => m.id === event.messageId);
+
+          if (existingMessage) {
+            // Update existing streaming message
+            get().updateMessage(currentSessionId, event.messageId, {
+              content: existingMessage.content + event.content,
+              isStreaming: !event.isComplete,
+            });
+          } else {
+            // Create new streaming message
+            const messageId = get().addMessage(currentSessionId, {
+              role: "assistant",
+              content: event.content,
+              isStreaming: !event.isComplete,
+            });
+
+            // Store the mapping for future chunks
+            if (event.messageId && messageId !== event.messageId) {
+              // Handle message ID mapping if needed
+            }
+          }
+        }
+      },
+
+      handleAgentStatusUpdate: (event) => {
+        const { currentSessionId } = get();
+        if (!currentSessionId || event.sessionId !== currentSessionId) return;
+
+        get().updateAgentStatus(currentSessionId, {
+          isActive: event.isActive,
+          currentTask: event.currentTask,
+          progress: event.progress,
+          statusMessage: event.statusMessage,
+        });
+      },
+
+      setUserTyping: (sessionId, userId, username) => {
+        set((state) => ({
+          typingUsers: {
+            ...state.typingUsers,
+            [`${sessionId}_${userId}`]: {
+              userId,
+              username,
+              timestamp: new Date().toISOString(),
+            },
+          },
+        }));
+
+        // Auto-remove typing indicator after 3 seconds
+        setTimeout(() => {
+          get().removeUserTyping(sessionId, userId);
+        }, 3000);
+      },
+
+      removeUserTyping: (sessionId, userId) => {
+        set((state) => {
+          const newTypingUsers = { ...state.typingUsers };
+          delete newTypingUsers[`${sessionId}_${userId}`];
+          return { typingUsers: newTypingUsers };
+        });
+      },
+
+      clearTypingUsers: (sessionId) => {
+        set((state) => {
+          const newTypingUsers = { ...state.typingUsers };
+          for (const key of Object.keys(newTypingUsers)) {
+            if (key.startsWith(`${sessionId}_`)) {
+              delete newTypingUsers[key];
+            }
+          }
+          return { typingUsers: newTypingUsers };
+        });
+      },
+
+      addPendingMessage: (message) => {
+        set((state) => ({
+          pendingMessages: [...state.pendingMessages, message],
+        }));
+      },
+
+      removePendingMessage: (messageId) => {
+        set((state) => ({
+          pendingMessages: state.pendingMessages.filter(
+            (m) => m.id !== messageId
+          ),
+        }));
+      },
     }),
     {
       name: "chat-storage",
@@ -712,6 +1007,7 @@ export const useChatStore = create<ChatState>()(
         currentSessionId: state.currentSessionId,
         memoryEnabled: state.memoryEnabled,
         autoSyncMemory: state.autoSyncMemory,
+        isRealtimeEnabled: state.isRealtimeEnabled,
       }),
     }
   )

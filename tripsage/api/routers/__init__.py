@@ -12,5 +12,7 @@ __all__ = [
     "health",
     "itineraries",
     "keys",
+    "memory",
     "trips",
+    "websocket",
 ]

@@ -5,7 +5,8 @@ import { useChatStore } from "@/stores";
 import MessageList from "./messages/message-list";
 import MessageInput from "./message-input";
 import AgentStatusPanel from "./agent-status-panel";
-import { PanelRightOpen, AlertCircle, Key } from "lucide-react";
+import ConnectionStatus from "./connection-status";
+import { PanelRightOpen, AlertCircle, Key, Wifi } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
@@ -50,11 +51,25 @@ export default function ChatContainer({
     initialMessages,
   });
 
-  // Get streaming status from chat store
-  const { agentStatus, isStreaming } = useChatStore((state) => ({
-    agentStatus: state.getAgentStatus(chatSessionId),
-    isStreaming: state.isStreaming(chatSessionId),
+  // Get chat store state including WebSocket status
+  const {
+    connectionStatus,
+    isRealtimeEnabled,
+    connectWebSocket,
+    disconnectWebSocket,
+    setRealtimeEnabled,
+    isStreaming,
+  } = useChatStore((state) => ({
+    connectionStatus: state.connectionStatus,
+    isRealtimeEnabled: state.isRealtimeEnabled,
+    connectWebSocket: state.connectWebSocket,
+    disconnectWebSocket: state.disconnectWebSocket,
+    setRealtimeEnabled: state.setRealtimeEnabled,
+    isStreaming: state.isStreaming,
   }));
+
+  // Track connection toggle state
+  const [showConnectionStatus, setShowConnectionStatus] = React.useState(false);
 
   // Handle sending messages
   const handleSendMessage = useCallback(
@@ -68,6 +83,44 @@ export default function ChatContainer({
   const handleCancel = useCallback(() => {
     stopGeneration();
   }, [stopGeneration]);
+
+  // Handle WebSocket connection
+  const handleConnectWebSocket = useCallback(async () => {
+    if (chatSessionId && isAuthenticated) {
+      try {
+        // Get auth token from storage or state
+        const token = localStorage.getItem("auth_token") || ""; // Adjust based on your auth implementation
+        await connectWebSocket(chatSessionId, token);
+      } catch (error) {
+        console.error("Failed to connect WebSocket:", error);
+      }
+    }
+  }, [chatSessionId, isAuthenticated, connectWebSocket]);
+
+  // Auto-connect WebSocket when session is ready
+  useEffect(() => {
+    if (
+      isRealtimeEnabled &&
+      chatSessionId &&
+      isAuthenticated &&
+      connectionStatus === "disconnected"
+    ) {
+      handleConnectWebSocket();
+    }
+  }, [
+    isRealtimeEnabled,
+    chatSessionId,
+    isAuthenticated,
+    connectionStatus,
+    handleConnectWebSocket,
+  ]);
+
+  // Cleanup WebSocket on unmount
+  useEffect(() => {
+    return () => {
+      disconnectWebSocket();
+    };
+  }, [disconnectWebSocket]);
 
   // Show authentication required UI
   if (!isAuthenticated) {
@@ -126,6 +179,7 @@ export default function ChatContainer({
         <MessageList
           messages={messages}
           isStreaming={isStreaming}
+          sessionId={chatSessionId}
           activeToolCalls={activeToolCalls}
           toolResults={toolResults}
           onRetryToolCall={retryToolCall}
@@ -143,6 +197,29 @@ export default function ChatContainer({
         />
       </div>
 
+      {/* Connection status toggle */}
+      <Button
+        variant="outline"
+        size="icon"
+        className={cn(
+          "absolute bottom-32 right-4 h-8 w-8 rounded-full shadow-md",
+          connectionStatus === "connected" &&
+            "bg-green-500/10 border-green-500/20",
+          connectionStatus === "error" && "bg-red-500/10 border-red-500/20"
+        )}
+        onClick={() => setShowConnectionStatus(!showConnectionStatus)}
+        title={`Connection: ${connectionStatus}`}
+      >
+        <Wifi
+          className={cn(
+            "h-4 w-4",
+            connectionStatus === "connected" && "text-green-500",
+            connectionStatus === "error" && "text-red-500",
+            connectionStatus === "connecting" && "text-blue-500 animate-pulse"
+          )}
+        />
+      </Button>
+
       {/* Agent status panel toggle */}
       <Button
         variant="outline"
@@ -157,6 +234,35 @@ export default function ChatContainer({
           )}
         />
       </Button>
+
+      {/* Connection status panel */}
+      {showConnectionStatus && (
+        <div className="absolute bottom-32 right-16 w-80">
+          <ConnectionStatus
+            status={connectionStatus}
+            onReconnect={handleConnectWebSocket}
+          />
+
+          {/* Real-time toggle */}
+          <div className="mt-2 p-3 bg-background border rounded-lg">
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="text-sm font-medium">Real-time messaging</span>
+                <p className="text-xs text-muted-foreground">
+                  Enable for instant typing indicators and live updates
+                </p>
+              </div>
+              <Button
+                variant={isRealtimeEnabled ? "default" : "outline"}
+                size="sm"
+                onClick={() => setRealtimeEnabled(!isRealtimeEnabled)}
+              >
+                {isRealtimeEnabled ? "On" : "Off"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Agent status panel */}
       {showAgentPanel && (
