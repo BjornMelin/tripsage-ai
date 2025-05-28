@@ -3,6 +3,13 @@ Application settings module for TripSage.
 
 This module provides the main application settings class using Pydantic
 for validation and loading from environment variables.
+
+Architecture Updates (V2):
+- Replaced Redis with DragonflyDB for improved performance
+- Removed Neo4j (deferred to V2) in favor of Mem0 for memory management
+- Added LangGraph for agent orchestration
+- Added Crawl4AI for web crawling (replacing WebCrawl MCP)
+- Only Airbnb MCP remains as the sole MCP integration
 """
 
 import logging
@@ -12,7 +19,6 @@ from typing import Any, Dict, List, Optional
 
 from pydantic import (
     Field,
-    RedisDsn,
     SecretStr,
     field_validator,
 )
@@ -25,58 +31,6 @@ class MCPConfig(BaseSettings):
 
     endpoint: str = Field(default="http://localhost:3000")
     api_key: Optional[SecretStr] = None
-
-
-class SupabaseMCPConfig(MCPConfig):
-    """Supabase MCP server configuration."""
-
-    # Default project ID for operations (optional)
-    default_project_id: Optional[str] = None
-    # Default organization ID (optional)
-    default_organization_id: Optional[str] = None
-
-
-class WeatherMCPConfig(MCPConfig):
-    """Weather MCP server configuration."""
-
-    openweathermap_api_key: SecretStr = Field(default=SecretStr("test-weather-key"))
-    visual_crossing_api_key: Optional[SecretStr] = None
-
-
-class WebCrawlMCPConfig(MCPConfig):
-    """Web crawling MCP server configuration."""
-
-    # Crawl4AI configuration
-    crawl4ai_api_url: str = Field(default="http://localhost:8000/api")
-    crawl4ai_api_key: SecretStr = Field(default=SecretStr("test-crawl-key"))
-    crawl4ai_auth_token: Optional[SecretStr] = None
-    crawl4ai_timeout: int = Field(default=30000)  # 30 seconds
-    crawl4ai_max_depth: int = Field(default=3)
-    crawl4ai_default_format: str = Field(default="markdown")
-
-    # FireCrawl configuration
-    firecrawl_api_url: str = Field(default="https://api.firecrawl.dev/v1")
-    firecrawl_api_key: SecretStr = Field(default=SecretStr("test-firecrawl-key"))
-
-
-class PlaywrightMCPConfig(MCPConfig):
-    """Playwright MCP server configuration."""
-
-    headless: bool = Field(default=True)
-    browser_type: str = Field(default="chromium")  # chromium, firefox, webkit
-    slow_mo: int = Field(default=50)  # milliseconds
-    viewport_width: int = Field(default=1280)
-    viewport_height: int = Field(default=720)
-    ignore_https_errors: bool = Field(default=False)
-    timeout: int = Field(default=30000)  # 30 seconds
-    navigation_timeout: int = Field(default=60000)  # 60 seconds
-
-
-class FlightsMCPConfig(MCPConfig):
-    """Flights MCP server configuration."""
-
-    duffel_api_key: SecretStr = Field(default=SecretStr("test-duffel-key"))
-    server_type: str = Field(default="ravinahp/flights-mcp")
 
 
 class AirbnbMCPConfig(MCPConfig):
@@ -95,37 +49,9 @@ class AirbnbMCPConfig(MCPConfig):
 
 
 class AccommodationsMCPConfig(BaseSettings):
-    """Accommodations MCP server configuration."""
+    """Accommodations MCP server configuration (Airbnb only)."""
 
     airbnb: AirbnbMCPConfig = AirbnbMCPConfig()
-
-
-class GoogleMapsMCPConfig(MCPConfig):
-    """Google Maps MCP server configuration."""
-
-    maps_api_key: SecretStr = Field(default=SecretStr("test-maps-key"))
-
-
-class TimeMCPConfig(MCPConfig):
-    """Time MCP server configuration."""
-
-    default_timezone: Optional[str] = None  # IANA timezone name (e.g., "America/LA")
-    use_system_timezone: bool = Field(default=True)
-    format_24_hour: bool = Field(default=False)
-
-
-class MemoryMCPConfig(MCPConfig):
-    """Memory MCP server configuration."""
-
-    pass
-
-
-class CalendarMCPConfig(MCPConfig):
-    """Calendar MCP server configuration."""
-
-    google_client_id: SecretStr = Field(default=SecretStr("test-client-id"))
-    google_client_secret: SecretStr = Field(default=SecretStr("test-client-secret"))
-    google_redirect_uri: str = Field(default="http://localhost:3000/callback")
 
 
 # Database Configuration Classes
@@ -141,14 +67,19 @@ class WebCacheTTLConfig(BaseSettings):
     static: int = Field(default=86400, description="TTL for static data (24h)")
 
 
-class RedisConfig(BaseSettings):
-    """Redis configuration settings."""
+class DragonflyConfig(BaseSettings):
+    """DragonflyDB configuration settings (Redis-compatible with better performance)."""
 
-    url: RedisDsn = Field(default="redis://localhost:6379/0")
+    url: str = Field(default="redis://localhost:6379/0", description="DragonflyDB connection URL")
     ttl_short: int = Field(default=300)  # 5 minutes
     ttl_medium: int = Field(default=3600)  # 1 hour
     ttl_long: int = Field(default=86400)  # 24 hours
     web_cache: WebCacheTTLConfig = WebCacheTTLConfig()
+    
+    # DragonflyDB specific optimizations
+    max_memory_policy: str = Field(default="allkeys-lru", description="Memory eviction policy")
+    max_connections: int = Field(default=10000, description="Maximum concurrent connections")
+    thread_count: int = Field(default=4, description="Number of worker threads")
 
 
 class DatabaseConfig(BaseSettings):
@@ -171,17 +102,76 @@ class DatabaseConfig(BaseSettings):
     )
 
 
-class Neo4jConfig(BaseSettings):
-    """Neo4j database configuration."""
+class Mem0Config(BaseSettings):
+    """Mem0 memory system configuration."""
 
-    uri: str = Field(default="bolt://localhost:7687")
-    user: str = Field(default="neo4j")
-    password: SecretStr = Field(default=SecretStr("test-password"))
-    database: str = Field(default="neo4j")
-    max_connection_lifetime: int = Field(default=3600)
-    max_connection_pool_size: int = Field(default=50)
-    connection_acquisition_timeout: int = Field(default=60)
-    default_query_timeout: int = Field(default=60)
+    # Core configuration
+    vector_store_type: str = Field(default="pgvector", description="Vector store backend (pgvector)")
+    embedding_model: str = Field(default="text-embedding-3-small", description="OpenAI embedding model")
+    embedding_dimensions: int = Field(default=1536, description="Embedding vector dimensions")
+    
+    # Memory configuration
+    memory_types: List[str] = Field(
+        default=["user_preferences", "trip_history", "search_patterns", "conversation_context"],
+        description="Types of memories to track"
+    )
+    max_memories_per_user: int = Field(default=1000, description="Maximum memories per user")
+    memory_ttl_days: int = Field(default=365, description="Memory retention period in days")
+    
+    # Search configuration
+    similarity_threshold: float = Field(default=0.7, description="Minimum similarity score for memory retrieval")
+    max_search_results: int = Field(default=10, description="Maximum memories to return in search")
+    
+    # Performance settings
+    batch_size: int = Field(default=100, description="Batch size for bulk operations")
+    async_processing: bool = Field(default=True, description="Enable async memory processing")
+
+
+class LangGraphConfig(BaseSettings):
+    """LangGraph agent orchestration configuration."""
+
+    # Graph configuration
+    checkpoint_storage: str = Field(default="postgresql", description="Checkpoint storage backend")
+    enable_streaming: bool = Field(default=True, description="Enable streaming responses")
+    max_graph_depth: int = Field(default=20, description="Maximum depth of agent graph execution")
+    
+    # Agent coordination
+    default_agent_timeout: int = Field(default=300, description="Default timeout for agent execution (seconds)")
+    enable_parallel_execution: bool = Field(default=True, description="Enable parallel agent execution")
+    max_parallel_agents: int = Field(default=5, description="Maximum number of parallel agent executions")
+    
+    # Error handling
+    max_retries: int = Field(default=3, description="Maximum retries for failed agent nodes")
+    retry_delay: float = Field(default=1.0, description="Delay between retries in seconds")
+    enable_error_recovery: bool = Field(default=True, description="Enable automatic error recovery")
+    
+    # Performance monitoring
+    enable_tracing: bool = Field(default=True, description="Enable execution tracing")
+    trace_storage_days: int = Field(default=7, description="How long to keep execution traces")
+
+
+class Crawl4AIConfig(BaseSettings):
+    """Crawl4AI web crawling configuration (replacing WebCrawl MCP)."""
+
+    # API configuration
+    api_url: str = Field(default="http://localhost:8000/api", description="Crawl4AI API URL")
+    api_key: Optional[SecretStr] = Field(default=None, description="Crawl4AI API key")
+    
+    # Crawling settings
+    timeout: int = Field(default=30000, description="Request timeout in milliseconds")
+    max_depth: int = Field(default=3, description="Maximum crawling depth")
+    max_pages: int = Field(default=100, description="Maximum pages to crawl per session")
+    
+    # Content extraction
+    default_format: str = Field(default="markdown", description="Default content format")
+    extract_metadata: bool = Field(default=True, description="Extract page metadata")
+    preserve_links: bool = Field(default=True, description="Preserve links in content")
+    
+    # Performance settings
+    concurrent_requests: int = Field(default=5, description="Number of concurrent requests")
+    rate_limit_delay: float = Field(default=0.5, description="Delay between requests in seconds")
+    cache_enabled: bool = Field(default=True, description="Enable crawl result caching")
+    cache_ttl: int = Field(default=3600, description="Cache TTL in seconds")
 
 
 # Agent Configuration Classes
@@ -248,6 +238,13 @@ class AppSettings(BaseSettings):
 
     This class centralizes all configuration across the application.
     Settings are loaded from environment variables or a .env file.
+
+    Architecture (V2):
+    - DragonflyDB replaces Redis for caching
+    - Mem0 replaces Neo4j for memory management
+    - LangGraph handles agent orchestration
+    - Crawl4AI handles web crawling (replacing WebCrawl MCP)
+    - Only Airbnb MCP remains as the sole MCP integration
     """
 
     model_config = SettingsConfigDict(
@@ -280,7 +277,7 @@ class AppSettings(BaseSettings):
         default=SecretStr("test-openai-key"), description="OpenAI API key"
     )
 
-    # Direct API integrations (used when feature flags are set to 'direct' mode)
+    # Duffel Flights API
     duffel_api_key: Optional[SecretStr] = Field(
         default=None, description="Duffel API key for direct HTTP integration"
     )
@@ -314,27 +311,43 @@ class AppSettings(BaseSettings):
         default=10, description="Google Maps API queries per second limit"
     )
 
-    # Storage
+    # Weather API Direct integration
+    openweathermap_api_key: Optional[SecretStr] = Field(
+        default=None, description="OpenWeatherMap API key for direct integration"
+    )
+    visual_crossing_api_key: Optional[SecretStr] = Field(
+        default=None, description="Visual Crossing Weather API key"
+    )
+
+
+    # Google Calendar Direct integration
+    google_client_id: Optional[SecretStr] = Field(
+        default=None, description="Google OAuth client ID"
+    )
+    google_client_secret: Optional[SecretStr] = Field(
+        default=None, description="Google OAuth client secret"
+    )
+    google_redirect_uri: str = Field(
+        default="http://localhost:3000/callback",
+        description="Google OAuth redirect URI",
+    )
+
+    # Storage & Infrastructure
     database: DatabaseConfig = Field(default_factory=DatabaseConfig)
-    neo4j: Neo4jConfig = Field(default_factory=Neo4jConfig)
-    redis: RedisConfig = Field(default_factory=RedisConfig)
+    dragonfly: DragonflyConfig = Field(default_factory=DragonflyConfig)
+    mem0: Mem0Config = Field(default_factory=Mem0Config)
+    
+    # Agent Orchestration & Tools
+    langgraph: LangGraphConfig = Field(default_factory=LangGraphConfig)
+    crawl4ai: Crawl4AIConfig = Field(default_factory=Crawl4AIConfig)
 
     # Cache settings
     use_cache: bool = Field(True, description="Enable caching")
 
-    # MCP Servers
-    time_mcp: TimeMCPConfig = Field(default_factory=TimeMCPConfig)
-    weather_mcp: WeatherMCPConfig = Field(default_factory=WeatherMCPConfig)
-    googlemaps_mcp: GoogleMapsMCPConfig = Field(default_factory=GoogleMapsMCPConfig)
-    memory_mcp: MemoryMCPConfig = Field(default_factory=MemoryMCPConfig)
-    webcrawl_mcp: WebCrawlMCPConfig = Field(default_factory=WebCrawlMCPConfig)
-    flights_mcp: FlightsMCPConfig = Field(default_factory=FlightsMCPConfig)
+    # Remaining MCP Server (Airbnb only)
     accommodations_mcp: AccommodationsMCPConfig = Field(
         default_factory=AccommodationsMCPConfig
     )
-    playwright_mcp: PlaywrightMCPConfig = Field(default_factory=PlaywrightMCPConfig)
-    calendar_mcp: CalendarMCPConfig = Field(default_factory=CalendarMCPConfig)
-    supabase_mcp: SupabaseMCPConfig = Field(default_factory=SupabaseMCPConfig)
 
     # Agent configuration
     agent: AgentConfig = Field(default_factory=AgentConfig)
@@ -352,86 +365,22 @@ class AppSettings(BaseSettings):
             )
         return v
 
-    def get_mcp_url_for_type(self, client_type: str) -> str:
-        """Get the MCP endpoint URL for a given client type.
-
-        Args:
-            client_type: The client type name (e.g., 'FlightMCPClient')
+    def get_airbnb_mcp_url(self) -> str:
+        """Get the Airbnb MCP endpoint URL.
 
         Returns:
-            The MCP endpoint URL.
+            The Airbnb MCP endpoint URL.
         """
-        client_type_lower = client_type.lower()
+        return self.accommodations_mcp.airbnb.endpoint
 
-        # Map client types to MCP config attributes
-        mcp_map = {
-            "flightmcpclient": self.flights_mcp.endpoint,
-            "accommodationmcpclient": self.accommodations_mcp.airbnb.endpoint,
-            "googlemapsmcpclient": self.googlemaps_mcp.endpoint,
-            "memorymcpclient": self.memory_mcp.endpoint,
-            "webcrawlmcpclient": self.webcrawl_mcp.endpoint,
-            "timemcpclient": self.time_mcp.endpoint,
-            "supabasemcpclient": self.supabase_mcp.endpoint,
-            "calendarmcpclient": self.calendar_mcp.endpoint,
-            "playwrightmcpclient": self.playwright_mcp.endpoint,
-        }
-
-        # Remove "client" suffix if present
-        if client_type_lower.endswith("client"):
-            client_type_lower = client_type_lower[:-6]
-
-        # Remove "mcp" if present
-        if client_type_lower.endswith("mcp"):
-            client_type_lower = client_type_lower[:-3]
-
-        for key, url in mcp_map.items():
-            if client_type_lower in key:
-                return url
-
-        # Default fallback
-        logging.warning(f"No MCP URL mapping found for client type: {client_type}")
-        return "http://localhost:8000"
-
-    def get_api_key_for_type(self, client_type: str) -> Optional[str]:
-        """Get the API key for a given client type.
-
-        Args:
-            client_type: The client type name (e.g., 'FlightMCPClient')
+    def get_airbnb_mcp_api_key(self) -> Optional[str]:
+        """Get the Airbnb MCP API key.
 
         Returns:
             The API key or None if not available.
         """
-        client_type_lower = client_type.lower()
-
-        # Map client types to MCP config attributes for API keys
-        mcp_map = {
-            "flightmcpclient": getattr(self.flights_mcp, "api_key", None),
-            "accommodationmcpclient": getattr(
-                self.accommodations_mcp.airbnb, "api_key", None
-            ),
-            "googlemapsmcpclient": getattr(self.googlemaps_mcp, "api_key", None),
-            "memorymcpclient": getattr(self.memory_mcp, "api_key", None),
-            "webcrawlmcpclient": getattr(self.webcrawl_mcp, "api_key", None),
-            "timemcpclient": getattr(self.time_mcp, "api_key", None),
-            "supabasemcpclient": getattr(self.supabase_mcp, "api_key", None),
-            "calendarmcpclient": getattr(self.calendar_mcp, "api_key", None),
-            "playwrightmcpclient": getattr(self.playwright_mcp, "api_key", None),
-        }
-
-        # Remove "client" suffix if present
-        if client_type_lower.endswith("client"):
-            client_type_lower = client_type_lower[:-6]
-
-        # Remove "mcp" if present
-        if client_type_lower.endswith("mcp"):
-            client_type_lower = client_type_lower[:-3]
-
-        for key, api_key in mcp_map.items():
-            if client_type_lower in key and api_key is not None:
-                return api_key.get_secret_value()
-
-        # Default fallback
-        return None
+        api_key = self.accommodations_mcp.airbnb.api_key
+        return api_key.get_secret_value() if api_key else None
 
 
 @lru_cache()
@@ -506,10 +455,6 @@ def _validate_critical_settings(settings: AppSettings) -> None:
     if not settings.database.supabase_anon_key.get_secret_value():
         critical_errors.append("Supabase anonymous key is missing")
 
-    # Check Neo4j configuration
-    if not settings.neo4j.password.get_secret_value():
-        critical_errors.append("Neo4j password is missing")
-
     # Raise an error with all validation issues if any were found
     if critical_errors:
         error_message = "Critical settings validation failed:\n- " + "\n- ".join(
@@ -535,50 +480,58 @@ def _validate_production_settings(settings: AppSettings) -> None:
     if settings.debug:
         production_errors.append("Debug mode should be disabled in production")
 
-    # In production, most MCP servers should have API keys configured
-    for server_name in [
-        "weather_mcp",
-        "webcrawl_mcp",
-        "flights_mcp",
-        "googlemaps_mcp",
-        "playwright_mcp",
-        "time_mcp",
-    ]:
-        server_config = getattr(settings, server_name)
-        if hasattr(server_config, "api_key") and server_config.api_key is None:
-            production_errors.append(f"{server_name.upper()} API key is missing")
+    # Validate direct API keys for production
+    if not settings.duffel_api_key or not settings.duffel_api_key.get_secret_value():
+        production_errors.append("Duffel API key is missing for flights integration")
+
+    if (
+        not settings.google_maps_api_key
+        or not settings.google_maps_api_key.get_secret_value()
+    ):
+        production_errors.append("Google Maps API key is missing")
+
+    if (
+        not settings.openweathermap_api_key
+        or not settings.openweathermap_api_key.get_secret_value()
+    ):
+        production_errors.append("OpenWeatherMap API key is missing")
+
+    # Validate new architecture components
+    if settings.dragonfly.url == "redis://localhost:6379/0":
+        production_errors.append(
+            "DragonflyDB is using localhost in production. "
+            "Should be set to deployed DragonflyDB URL."
+        )
+    
+    if settings.crawl4ai.api_url == "http://localhost:8000/api":
+        production_errors.append(
+            "Crawl4AI is using localhost in production. "
+            "Should be set to deployed Crawl4AI API URL."
+        )
+    
+    if not settings.crawl4ai.api_key or not settings.crawl4ai.api_key.get_secret_value():
+        production_errors.append("Crawl4AI API key is missing for production")
+
+    if (
+        not settings.google_client_id
+        or not settings.google_client_id.get_secret_value()
+    ):
+        production_errors.append("Google Client ID is missing for calendar integration")
+
+    if (
+        not settings.google_client_secret
+        or not settings.google_client_secret.get_secret_value()
+    ):
+        production_errors.append(
+            "Google Client Secret is missing for calendar integration"
+        )
 
     # Validate Airbnb MCP configuration
     if settings.accommodations_mcp.airbnb.endpoint == "http://localhost:3000":
         production_errors.append(
-            "DEFAULT_AIRBNB_MCP_ENDPOINT is using localhost in production. "
+            "Airbnb MCP endpoint is using localhost in production. "
             "Should be set to deployed OpenBnB MCP server URL."
         )
-
-    # Validate Calendar MCP configuration
-    if settings.calendar_mcp.endpoint == "http://localhost:3003":
-        production_errors.append(
-            "DEFAULT_CALENDAR_MCP_ENDPOINT is using localhost in production. "
-            "Should be set to deployed Google Calendar MCP server URL."
-        )
-
-    # Validate Google Calendar credentials
-    if not settings.calendar_mcp.google_client_id.get_secret_value():
-        production_errors.append("GOOGLE_CLIENT_ID is missing for calendar_mcp")
-
-    if not settings.calendar_mcp.google_client_secret.get_secret_value():
-        production_errors.append("GOOGLE_CLIENT_SECRET is missing for calendar_mcp")
-
-    if not settings.calendar_mcp.google_redirect_uri:
-        production_errors.append("GOOGLE_REDIRECT_URI is missing for calendar_mcp")
-
-    # Validate Duffel API key for Flights MCP
-    if not settings.flights_mcp.duffel_api_key.get_secret_value():
-        production_errors.append("DUFFEL_API_KEY is missing for flights_mcp")
-
-    # Validate Crawl4AI API key for WebCrawl MCP
-    if not settings.webcrawl_mcp.crawl4ai_api_key.get_secret_value():
-        production_errors.append("CRAWL4AI_API_KEY is missing for webcrawl_mcp")
 
     # Additional production-specific validations
     if production_errors:

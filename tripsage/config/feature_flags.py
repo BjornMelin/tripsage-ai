@@ -1,7 +1,8 @@
-"""Feature flags for gradual MCP to SDK migration rollout.
+"""Feature flags for service integrations.
 
-This module provides feature flag management for safely migrating from MCP wrappers
-to direct SDK integration with zero-downtime deployment and instant rollback capability.
+This module provides feature flag management for controlling how services are integrated.
+Most services have been migrated to direct SDK integration, with only Airbnb remaining
+as an MCP integration due to lack of official API.
 """
 
 from enum import Enum
@@ -29,17 +30,17 @@ class FeatureFlags(BaseSettings):
         export FEATURE_SUPABASE_INTEGRATION=mcp
     """
 
-    # Infrastructure Services (Week 1)
+    # Infrastructure Services (All migrated to direct SDK)
     redis_integration: IntegrationMode = Field(
-        default=IntegrationMode.MCP, description="Redis/DragonflyDB integration mode"
+        default=IntegrationMode.DIRECT, description="Redis/DragonflyDB integration mode"
     )
 
-    # Database Services (Week 2)
+    # Database Services (All migrated to direct SDK)
     supabase_integration: IntegrationMode = Field(
-        default=IntegrationMode.MCP, description="Supabase database integration mode"
+        default=IntegrationMode.DIRECT, description="Supabase database integration mode"
     )
     neo4j_integration: IntegrationMode = Field(
-        default=IntegrationMode.MCP,
+        default=IntegrationMode.DIRECT,
         description="Neo4j memory/knowledge graph integration mode",
     )
     memory_integration: IntegrationMode = Field(
@@ -47,7 +48,7 @@ class FeatureFlags(BaseSettings):
         description="Memory system integration mode (Mem0 direct SDK)",
     )
 
-    # Web Crawling Services (Week 3) - Already completed per docs
+    # Web Crawling Services (All migrated to direct SDK)
     crawl4ai_integration: IntegrationMode = Field(
         default=IntegrationMode.DIRECT,
         description="Crawl4AI web crawling integration mode",
@@ -57,28 +58,16 @@ class FeatureFlags(BaseSettings):
         description="Playwright browser automation integration mode",
     )
 
-    # External API Services (Week 4)
-    weather_integration: IntegrationMode = Field(
-        default=IntegrationMode.MCP, description="Weather API integration mode"
-    )
+    # External API Services (All migrated to direct SDK)
     maps_integration: IntegrationMode = Field(
         default=IntegrationMode.DIRECT,
         description="Google Maps integration mode (Direct SDK only)",
     )
-    flights_integration: IntegrationMode = Field(
-        default=IntegrationMode.MCP, description="Duffel Flights integration mode"
-    )
-    calendar_integration: IntegrationMode = Field(
-        default=IntegrationMode.MCP, description="Google Calendar integration mode"
-    )
-    time_integration: IntegrationMode = Field(
-        default=IntegrationMode.MCP, description="Time service integration mode"
-    )
 
-    # Services keeping MCP (according to migration plan)
+    # Services keeping MCP (Only Airbnb due to no official API)
     airbnb_integration: IntegrationMode = Field(
         default=IntegrationMode.MCP,
-        description="Airbnb integration mode (stays MCP due to unofficial API)",
+        description="Airbnb integration mode (stays MCP due to no official API)",
     )
 
     class Config:

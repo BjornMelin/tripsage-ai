@@ -1,7 +1,7 @@
 """Service Registry for unified service discovery and configuration.
 
-This module provides a lightweight registry pattern to replace the complex MCP Manager
-with direct SDK integration while maintaining backward compatibility during migration.
+This module provides a lightweight registry pattern for managing service instances
+with support for different integration modes (direct SDK, API, etc).
 """
 
 import asyncio
@@ -49,12 +49,11 @@ class BaseService(ABC):
 
 
 class ServiceAdapter(ABC):
-    """Abstract adapter for services supporting both MCP and direct integration."""
+    """Abstract adapter for services supporting different integration modes."""
 
     def __init__(self, service_name: str):
         self.service_name = service_name
-        self._mcp_client = None
-        self._direct_service = None
+        self._service_instance = None
 
     @property
     def integration_mode(self) -> IntegrationMode:
@@ -66,27 +65,14 @@ class ServiceAdapter(ABC):
         """Check if using direct SDK integration."""
         return self.integration_mode == IntegrationMode.DIRECT
 
-    @property
-    def is_mcp(self) -> bool:
-        """Check if using MCP wrapper."""
-        return self.integration_mode == IntegrationMode.MCP
-
     @abstractmethod
-    async def get_mcp_client(self):
-        """Get MCP client instance."""
-        pass
-
-    @abstractmethod
-    async def get_direct_service(self):
-        """Get direct service instance."""
+    async def get_service_instance(self):
+        """Get service instance."""
         pass
 
     async def get_service(self):
-        """Get appropriate service based on integration mode."""
-        if self.is_direct:
-            return await self.get_direct_service()
-        else:
-            return await self.get_mcp_client()
+        """Get appropriate service instance."""
+        return await self.get_service_instance()
 
 
 class ServiceRegistry:
