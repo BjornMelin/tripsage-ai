@@ -10,7 +10,7 @@ trends and solutions, this plan has been revised to adopt a phased MVP-to-V2
 approach, reducing initial complexity by 60-70% while maintaining core
 functionality.
 
-**2025-05-25 Deep Dive Update:** Further research into Neo4j, Mem0, and 
+**2025-05-25 Deep Dive Update:** Further research into Neo4j, Mem0, and
 Letta-AI has led to a final recommendation: **Mem0 for MVP**, eliminating
 Neo4j/Graphiti entirely from the initial release.
 
@@ -79,7 +79,7 @@ Neo4j/Graphiti entirely from the initial release.
 
 ### MVP Phase (Weeks 1-6): Simplified Architecture
 
-**Goal:** Deploy a production-ready system with 80% functionality at 30% 
+**Goal:** Deploy a production-ready system with 80% functionality at 30%
 complexity.
 
 #### Phase 1: DragonflyDB Migration (Week 1)
@@ -128,6 +128,7 @@ complexity.
 **Impact:** Unified storage + vector search
 
 **Simplified Steps:**
+
 1. Enable PGVector extension in Supabase
 2. Create basic embeddings table
 3. Implement simple semantic search
@@ -141,7 +142,8 @@ complexity.
 
 **Detailed Implementation Plan:**
 
-**Days 1-2: Foundation Setup**
+##### Days 1-2: Foundation Setup
+
 ```python
 # Core Mem0 configuration with Supabase + pgvector
 from mem0 import Memory
@@ -187,38 +189,44 @@ class TripSageMemoryService(ServiceProtocol):
 registry.register("memory", TripSageMemoryService())
 ```
 
-**Days 3-4: Agent Integration**
+##### Days 3-4: Agent Integration
+
 - Integrate memory service with ChatAgent
 - Implement conversation memory extraction
 - Add user preference tracking
 - Create memory-aware response generation
 
-**Day 5: Advanced Features**
+##### Day 5: Advanced Features
+
 - Session memory management
 - Memory search and retrieval APIs
 - User context aggregation
 - Memory enrichment with travel data
 
-**Days 6-7: Testing Suite**
+##### Days 6-7: Testing Suite
+
 - Unit tests (90% coverage target)
 - Integration tests with mocked MCPs
 - Performance benchmarks
 - Memory accuracy validation
 
-**Days 8: Production Preparation**
+##### Days 8: Production Preparation
+
 - Security hardening
 - Performance optimization
 - Monitoring setup
 - Documentation
 
-**Key Implementation Files:**
+##### Key Implementation Files
+
 1. `tripsage/services/memory_service.py` - Core memory service
 2. `tripsage/agents/chat.py` - Updated chat agent with memory
 3. `migrations/20250530_01_add_memories_table.sql` - Database schema
 4. `tests/services/test_memory_service.py` - Comprehensive tests
 5. `docs/memory_integration_guide.md` - Integration documentation
 
-**Why Mem0 is the optimal choice:**
+##### Why Mem0 is the optimal choice
+
 - **Performance:** 91% lower latency than full-context approaches
 - **Accuracy:** 26% better than OpenAI's memory implementation
 - **Cost:** 90% token savings, ~$60-120/month total
@@ -591,6 +599,7 @@ assumptions about vector databases. Key findings:
 **Replace Qdrant references with pgvector + pgvectorscale throughout this plan.**
 
 The simplified MVP architecture becomes even simpler:
+
 - PostgreSQL (Supabase) with pgvector + pgvectorscale for ALL vector needs
 - DragonflyDB for caching
 - Mem0 for memory extraction
@@ -607,6 +616,7 @@ See Phase 9 in RESEARCH_DB_MEMORY_SEARCH.md for complete analysis and benchmarks
 ### Architecture Overview
 
 **Simplified MVP Stack:**
+
 1. **PostgreSQL (Supabase)** with pgvector + pgvectorscale
    - All relational data + vector search in one place
    - 11x faster than Qdrant, $0 additional cost
@@ -619,6 +629,7 @@ See Phase 9 in RESEARCH_DB_MEMORY_SEARCH.md for complete analysis and benchmarks
    - Native pgvector integration
 
 **What We're NOT Using (Deferred to V2):**
+
 - Neo4j (graph database)
 - Graphiti (temporal graphs)
 - Qdrant (vector database)
@@ -630,15 +641,15 @@ See Phase 9 in RESEARCH_DB_MEMORY_SEARCH.md for complete analysis and benchmarks
 
 | Phase | Duration | Description | Status |
 |-------|----------|-------------|--------|
-| **Week 1: Infrastructure** |
+| **Week 1: Infrastructure** | | | |
 | DragonflyDB Setup | 2 days | Replace Redis with DragonflyDB | Ready |
 | PGVector Setup | 1 day | Enable in Supabase | Ready |
 | Database Schema | 2 days | Create optimized tables | Ready |
-| **Week 2: Mem0 Integration** |
+| **Week 2: Mem0 Integration** | | | |
 | Memory Service | 2 days | Core TripSageMemoryService | Planned |
 | Agent Integration | 2 days | Update ChatAgent with memory | Planned |
 | Advanced Features | 1 day | Session management, search | Planned |
-| **Week 3: Production** |
+| **Week 3: Production** | | | |
 | Testing Suite | 2 days | 90% coverage requirement | Planned |
 | Production Prep | 2 days | Security, monitoring, docs | Planned |
 | Deployment | 1 day | Production rollout | Planned |

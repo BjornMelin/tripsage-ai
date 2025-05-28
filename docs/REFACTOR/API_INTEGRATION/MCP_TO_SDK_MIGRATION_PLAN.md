@@ -2,7 +2,7 @@
 
 ## Executive Summary
 
-**Objective**: Migrate 11 of 12 MCP services to direct SDK integration, deprecate 
+**Objective**: Migrate 11 of 12 MCP services to direct SDK integration, deprecate
 Firecrawl in favor of Crawl4AI, and consolidate database services  
 **Timeline**: 8 weeks including testing and deployment  
 **Expected Impact**: 50-70% latency reduction, 6-10x crawling improvement, 3000+ lines code reduction  
@@ -627,6 +627,7 @@ Similar pattern with official Google client libraries and OAuth2 flows.
 ### Firecrawl Deprecation and Crawl4AI Migration
 
 **Important**: Firecrawl is being completely deprecated in favor of Crawl4AI, which provides:
+
 - 6x performance improvement
 - Zero licensing costs ($700-1200/year savings)
 - LLM-optimized output formats
@@ -979,8 +980,8 @@ feature_flags.redis_integration = IntegrationMode.MCP
 
 ## Conclusion
 
-This updated migration plan incorporates findings from crawling and database 
-architecture research, providing a comprehensive approach to modernizing TripSage's 
+This updated migration plan incorporates findings from crawling and database
+architecture research, providing a comprehensive approach to modernizing TripSage's
 integration layer. Key changes include:
 
 - **Firecrawl deprecation** in favor of Crawl4AI (6x performance, $700-1200/year savings)
@@ -989,8 +990,8 @@ integration layer. Key changes include:
 - **Infrastructure modernization** with DragonflyDB and pgvector
 - **Unified async patterns** throughout the architecture
 
-The phased approach with comprehensive testing and feature flag rollback strategies 
-ensures successful delivery of dramatic performance improvements while maintaining 
+The phased approach with comprehensive testing and feature flag rollback strategies
+ensures successful delivery of dramatic performance improvements while maintaining
 system reliability.
 
 **Next Actions:**

@@ -22,8 +22,8 @@ integration for all 12 external services used by TripSage.
   Thinking tools
 - Final recommendations for each service
 
-**Key Finding**: After cross-analysis with crawling and database research, 11 of 12 
-services should migrate to direct SDK integration (only Airbnb remains MCP). 
+**Key Finding**: After cross-analysis with crawling and database research, 11 of 12
+services should migrate to direct SDK integration (only Airbnb remains MCP).
 Expected 50-70% latency reduction and 3000+ lines code reduction.
 
 ### 2. [MCP_TO_SDK_MIGRATION_PLAN.md](./MCP_TO_SDK_MIGRATION_PLAN.md)
@@ -52,6 +52,7 @@ rollback strategies for migrating from MCP to direct SDKs.
 ### Final Architecture (Post All Research)
 
 **Service Count Evolution**:
+
 - Original: 12 services (all MCP)
 - After API research: 8 direct SDK, 4 MCP
 - After DB research: Eliminated Neon, Qdrant, Neo4j for MVP
