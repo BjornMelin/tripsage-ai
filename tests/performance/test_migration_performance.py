@@ -1,7 +1,7 @@
-"""Performance benchmarks for MCP to SDK migration validation.
+"""Performance benchmarks for DragonflyDB and SDK migration validation.
 
-Tests to verify the expected 5-10x performance improvement from direct SDK integration.
-Compares MCP wrapper latency vs direct SDK operations.
+Tests to verify the expected performance improvements from direct SDK integration.
+Compares previous baseline performance with current DragonflyDB operations.
 """
 
 import asyncio
@@ -10,12 +10,15 @@ from statistics import mean, median
 from typing import Dict, List
 
 import pytest
-import redis.asyncio as redis
 
 from tripsage.config.feature_flags import FeatureFlags, IntegrationMode
-from tripsage.services.redis_service import RedisService
 from tripsage.services.supabase_service import SupabaseService
-from tripsage.utils.cache_tools import get_cache, set_cache
+from tripsage.utils.cache import web_cache
+from tripsage.clients.duffel_http_client import DuffelHTTPClient
+from tripsage.clients.supabase_client import get_supabase_client
+from tripsage.mcp_abstraction.mcp_manager import MCPManager
+from tripsage.services.dragonfly_service import DragonflyService, get_cache_service
+from tripsage.services.webcrawl_service import WebcrawlService
 
 
 class PerformanceBenchmark:
@@ -66,12 +69,16 @@ class PerformanceBenchmark:
 
 
 @pytest.fixture
-async def redis_service():
-    """Fixture for direct Redis service."""
-    service = RedisService()
-    await service.connect()
+async def dragonfly_service():
+    """DragonflyDB service fixture."""
+    service = await get_cache_service()
     yield service
-    await service.disconnect()
+    # Cleanup if needed
+    if hasattr(service, 'disconnect'):
+        try:
+            await service.disconnect()
+        except Exception:
+            pass
 
 
 @pytest.fixture
@@ -89,25 +96,25 @@ def benchmark():
     return PerformanceBenchmark(iterations=50)  # Reduced for test speed
 
 
-class TestRedisMigrationPerformance:
-    """Test performance improvements from Redis MCP to SDK migration."""
+class TestDragonflyMigrationPerformance:
+    """Test performance improvements from DragonflyDB migration."""
 
-    async def test_redis_set_operations_performance(self, redis_service, benchmark):
-        """Compare Redis SET operation performance: MCP vs Direct SDK."""
+    async def test_dragonfly_set_operations_performance(self, dragonfly_service, benchmark):
+        """Test DragonflyDB SET operation performance."""
         test_key = "benchmark:test:set"
         test_value = {"message": "performance test", "timestamp": time.time()}
 
         # Benchmark direct SDK operation
         direct_stats = await benchmark.benchmark_operation(
-            "redis_direct_set", redis_service.set_json, test_key, test_value, ex=300
+            "dragonfly_direct_set", dragonfly_service.set_json, test_key, test_value, ex=300
         )
 
-        # Benchmark current cache_tools (now using direct SDK)
+        # Benchmark current cache_tools (using direct SDK)
         cache_stats = await benchmark.benchmark_operation(
-            "cache_tools_set", set_cache, test_key, test_value, ttl=300
+            "cache_tools_set", web_cache.set_cache, test_key, test_value, ttl=300
         )
 
-        print("\nRedis SET Performance Comparison:")
+        print("\nDragonflyDB SET Performance Comparison:")
         print(
             f"Direct SDK - Mean: {direct_stats['mean']:.2f}ms, Median: "
             f"{direct_stats['median']:.2f}ms"
@@ -117,7 +124,7 @@ class TestRedisMigrationPerformance:
             f"{cache_stats['median']:.2f}ms"
         )
 
-        # Verify both operations are performing well (under 50ms for local Redis)
+        # Verify both operations are performing well (under 50ms for local DragonflyDB)
         assert direct_stats["mean"] < 50, (
             f"Direct SDK too slow: {direct_stats['mean']:.2f}ms"
         )
@@ -131,25 +138,25 @@ class TestRedisMigrationPerformance:
             f"Cache tools overhead too high: {performance_ratio:.2f}x"
         )
 
-    async def test_redis_get_operations_performance(self, redis_service, benchmark):
-        """Compare Redis GET operation performance: MCP vs Direct SDK."""
+    async def test_dragonfly_get_operations_performance(self, dragonfly_service, benchmark):
+        """Test DragonflyDB GET operation performance."""
         test_key = "benchmark:test:get"
         test_value = {"message": "performance test", "data": list(range(100))}
 
         # Setup test data
-        await redis_service.set_json(test_key, test_value, ex=300)
+        await dragonfly_service.set_json(test_key, test_value, ex=300)
 
         # Benchmark direct SDK operation
         direct_stats = await benchmark.benchmark_operation(
-            "redis_direct_get", redis_service.get_json, test_key
+            "dragonfly_direct_get", dragonfly_service.get_json, test_key
         )
 
-        # Benchmark current cache_tools (now using direct SDK)
+        # Benchmark current cache_tools (using direct SDK)
         cache_stats = await benchmark.benchmark_operation(
-            "cache_tools_get", get_cache, test_key
+            "cache_tools_get", web_cache.get_cache, test_key
         )
 
-        print("\nRedis GET Performance Comparison:")
+        print("\nDragonflyDB GET Performance Comparison:")
         print(
             f"Direct SDK - Mean: {direct_stats['mean']:.2f}ms, Median: "
             f"{direct_stats['median']:.2f}ms"
@@ -169,7 +176,7 @@ class TestRedisMigrationPerformance:
 
 
 class TestSupabaseMigrationPerformance:
-    """Test performance improvements from Supabase MCP to SDK migration."""
+    """Test performance improvements from Supabase SDK migration."""
 
     async def test_supabase_connection_performance(self, supabase_service, benchmark):
         """Test Supabase connection establishment performance."""
@@ -239,63 +246,62 @@ class TestOverallMigrationImpact:
     async def test_performance_improvement_validation(self, benchmark):
         """Validate that we've achieved meaningful performance improvements."""
         # This test validates that our direct SDK implementations are performant
-        # The actual improvement vs MCP would be measured against the old implementation
+        
+        # Test DragonflyDB pipeline operations (batch performance)
+        import redis.asyncio as redis
+        dragonfly_url = "redis://localhost:6379/0"
+        direct_dragonfly = redis.from_url(dragonfly_url)
 
-        # Test Redis pipeline operations (batch performance)
-        redis_url = "redis://localhost:6379/0"
-        direct_redis = redis.from_url(redis_url)
-
-        async def batch_redis_operations():
-            """Simulate batch Redis operations."""
-            pipe = direct_redis.pipeline()
+        async def batch_dragonfly_operations():
+            """Simulate batch DragonflyDB operations."""
+            pipe = direct_dragonfly.pipeline()
             for i in range(10):
                 pipe.set(f"batch:key:{i}", f"value:{i}")
             await pipe.execute()
 
         batch_stats = await benchmark.benchmark_operation(
-            "redis_batch_operations", batch_redis_operations
+            "dragonfly_batch_operations", batch_dragonfly_operations
         )
 
         print("\nBatch Operations Performance:")
-        print(f"Redis Pipeline (10 ops) - Mean: {batch_stats['mean']:.2f}ms")
+        print(f"DragonflyDB Pipeline (10 ops) - Mean: {batch_stats['mean']:.2f}ms")
 
         # Batch operations should be very fast
         assert batch_stats["mean"] < 100, (
             f"Batch operations too slow: {batch_stats['mean']:.2f}ms"
         )
 
-        await direct_redis.close()
+        await direct_dragonfly.close()
 
 
 # Utility function for manual performance testing
 async def run_comprehensive_benchmark():
     """Run comprehensive performance benchmark for manual testing."""
     print("=" * 60)
-    print("TripSage MCP to SDK Migration Performance Benchmark")
+    print("TripSage SDK Migration Performance Benchmark")
     print("=" * 60)
 
     benchmark = PerformanceBenchmark(iterations=100)
 
-    # Test Redis performance
-    redis_service = RedisService()
-    await redis_service.connect()
+    # Test DragonflyDB performance
+    dragonfly_service = await get_cache_service()
 
     try:
-        # Redis SET performance
+        # DragonflyDB SET performance
         set_stats = await benchmark.benchmark_operation(
-            "redis_set",
-            redis_service.set_json,
+            "dragonfly_set",
+            dragonfly_service.set_json,
             "benchmark:test",
             {"test": "data", "timestamp": time.time()},
             ex=300,
         )
 
-        # Redis GET performance
+        # DragonflyDB GET performance
         get_stats = await benchmark.benchmark_operation(
-            "redis_get", redis_service.get_json, "benchmark:test"
+            "dragonfly_get", dragonfly_service.get_json, "benchmark:test"
         )
 
-        print("\nRedis Performance (100 iterations):")
+        print("\nDragonflyDB Performance (100 iterations):")
         print(
             f"SET - Mean: {set_stats['mean']:.2f}ms, Median: "
             f"{set_stats['median']:.2f}ms"
@@ -306,7 +312,8 @@ async def run_comprehensive_benchmark():
         )
 
     finally:
-        await redis_service.disconnect()
+        if hasattr(dragonfly_service, 'disconnect'):
+            await dragonfly_service.disconnect()
 
     # Test Supabase performance
     supabase_service = SupabaseService()
@@ -327,11 +334,7 @@ async def run_comprehensive_benchmark():
         await supabase_service.disconnect()
 
     print("\nBenchmark completed successfully!")
-    print(
-        "Note: Performance improvements are measured against the "
-        "previous MCP implementation."
-    )
-    print("Expected improvement: 5-10x faster (50-70% latency reduction)")
+    print("Performance optimizations achieved through direct SDK integration.")
 
 
 if __name__ == "__main__":

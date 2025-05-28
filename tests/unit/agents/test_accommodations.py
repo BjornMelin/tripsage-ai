@@ -15,7 +15,10 @@ from tripsage.agents.accommodations import (
     search_accommodations,
     search_airbnb_rentals,
 )
-from tripsage.mcp.accommodations.models import AirbnbListingDetails, AirbnbSearchResult
+from tripsage.models.accommodation import (
+    AccommodationListing,
+    AccommodationSearchResponse,
+)
 
 # Test data
 TEST_LOCATION = "San Francisco, CA"
@@ -94,7 +97,9 @@ class TestAccommodationTool:
         mock_cache_get.return_value = None
         mock_client = MagicMock()
         mock_client.search_accommodations = AsyncMock(
-            return_value=AirbnbSearchResult.model_validate(mock_airbnb_search_results)
+            return_value=AccommodationSearchResponse.model_validate(
+                mock_airbnb_search_results
+            )
         )
         mock_create_client.return_value = mock_client
 
@@ -135,7 +140,7 @@ class TestAccommodationTool:
         mock_cache_get.return_value = None
         mock_client = MagicMock()
         mock_client.get_listing_details = AsyncMock(
-            return_value=AirbnbListingDetails.model_validate(
+            return_value=AccommodationListing.model_validate(
                 mock_airbnb_listing_details
             )
         )
