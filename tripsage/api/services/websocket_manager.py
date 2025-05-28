@@ -7,8 +7,10 @@ connection pooling, message broadcasting, and health monitoring.
 import asyncio
 import json
 import logging
+import time
+from collections import defaultdict, deque
 from datetime import datetime
-from typing import Dict, List, Optional, Set
+from typing import Deque, Dict, List, Optional, Set
 from uuid import UUID, uuid4
 
 from fastapi import WebSocket
@@ -48,6 +50,11 @@ class WebSocketConnection:
         self.status = ConnectionStatus.CONNECTED
         self.subscribed_channels: Set[str] = set()
         self.client_ip: Optional[str] = None
+        self.message_queue: Deque[WebSocketEvent] = deque(maxlen=100)
+        self.last_activity = time.time()
+        self.bytes_sent = 0
+        self.bytes_received = 0
+        self.message_count = 0
         self.user_agent: Optional[str] = None
         self._send_lock = asyncio.Lock()
 
@@ -71,7 +78,14 @@ class WebSocketConnection:
                     "payload": event.payload,
                 }
 
-                await self.websocket.send_text(json.dumps(message))
+                data = json.dumps(message)
+                await self.websocket.send_text(data)
+
+                # Update performance metrics
+                self.last_activity = time.time()
+                self.bytes_sent += len(data.encode("utf-8"))
+                self.message_count += 1
+
                 return True
 
             except Exception as e:
@@ -90,7 +104,14 @@ class WebSocketConnection:
         """
         async with self._send_lock:
             try:
-                await self.websocket.send_text(json.dumps(message))
+                data = json.dumps(message)
+                await self.websocket.send_text(data)
+
+                # Update performance metrics
+                self.last_activity = time.time()
+                self.bytes_sent += len(data.encode("utf-8"))
+                self.message_count += 1
+
                 return True
 
             except Exception as e:
@@ -154,9 +175,22 @@ class WebSocketManager:
         self.session_connections: Dict[UUID, Set[str]] = {}
         self.channel_connections: Dict[str, Set[str]] = {}
 
+        # Performance monitoring
+        self.performance_metrics = {
+            "total_messages_sent": 0,
+            "total_bytes_sent": 0,
+            "active_connections": 0,
+            "peak_connections": 0,
+            "connection_pool_hits": 0,
+            "message_queue_size": 0,
+        }
+        self.message_batches: Dict[str, List[WebSocketEvent]] = defaultdict(list)
+        self.batch_timer: Optional[asyncio.Task] = None
+
         # Background tasks
         self._cleanup_task: Optional[asyncio.Task] = None
         self._heartbeat_task: Optional[asyncio.Task] = None
+        self._performance_task: Optional[asyncio.Task] = None
         self._running = False
 
     async def start(self) -> None:
@@ -169,6 +203,7 @@ class WebSocketManager:
         # Start background tasks
         self._cleanup_task = asyncio.create_task(self._cleanup_stale_connections())
         self._heartbeat_task = asyncio.create_task(self._heartbeat_monitor())
+        self._performance_task = asyncio.create_task(self._performance_monitor())
 
         logger.info("WebSocket manager started")
 
@@ -181,6 +216,10 @@ class WebSocketManager:
             self._cleanup_task.cancel()
         if self._heartbeat_task:
             self._heartbeat_task.cancel()
+        if self._performance_task:
+            self._performance_task.cancel()
+        if self.batch_timer:
+            self.batch_timer.cancel()
 
         # Close all connections
         await self.disconnect_all()
@@ -525,7 +564,7 @@ class WebSocketManager:
                     payload={"timestamp": datetime.utcnow().isoformat()},
                 )
 
-                for connection_id, connection in self.connections.items():
+                for connection in self.connections.values():
                     await connection.send(heartbeat_event)
                     connection.update_heartbeat()
 
@@ -534,6 +573,135 @@ class WebSocketManager:
             except Exception as e:
                 logger.error(f"Error in heartbeat task: {e}")
                 await asyncio.sleep(30)
+
+    async def _performance_monitor(self) -> None:
+        """Background task to monitor and log performance metrics."""
+        while self._running:
+            try:
+                # Update active connections count
+                active_count = len(self.connections)
+                self.performance_metrics["active_connections"] = active_count
+
+                if active_count > self.performance_metrics["peak_connections"]:
+                    self.performance_metrics["peak_connections"] = active_count
+
+                # Calculate message queue size
+                queue_size = sum(
+                    len(conn.message_queue) for conn in self.connections.values()
+                )
+                self.performance_metrics["message_queue_size"] = queue_size
+
+                # Log performance metrics every 5 minutes
+                if int(time.time()) % 300 == 0:
+                    logger.info(
+                        f"WebSocket Performance Metrics: {self.performance_metrics}"
+                    )
+
+                await asyncio.sleep(30)  # Check every 30 seconds
+
+            except Exception as e:
+                logger.error(f"Error in performance monitor: {e}")
+                await asyncio.sleep(30)
+
+    async def send_batched(
+        self, connection_id: str, events: List[WebSocketEvent]
+    ) -> bool:
+        """Send multiple events in an optimized batch to improve throughput."""
+        connection = self.connections.get(connection_id)
+        if not connection:
+            return False
+
+        try:
+            # Create batch message
+            batch_payload = {
+                "type": "batch",
+                "events": [
+                    {
+                        "id": event.id,
+                        "type": event.type.value,
+                        "timestamp": event.timestamp.isoformat(),
+                        "payload": event.payload,
+                    }
+                    for event in events
+                ],
+            }
+
+            success = await connection.send_raw(batch_payload)
+            if success:
+                self.performance_metrics["total_messages_sent"] += len(events)
+
+            return success
+
+        except Exception as e:
+            logger.error(f"Failed to send batched events to {connection_id}: {e}")
+            return False
+
+    async def broadcast_optimized(
+        self,
+        event: WebSocketEvent,
+        channel: Optional[str] = None,
+        exclude_connection: Optional[str] = None,
+    ) -> int:
+        """Optimized broadcast with connection pooling and async batching."""
+        sent_count = 0
+
+        # Determine target connections
+        target_connections = []
+        if channel:
+            connection_ids = self.channel_connections.get(channel, set())
+            target_connections = [
+                conn
+                for conn_id, conn in self.connections.items()
+                if conn_id in connection_ids and conn_id != exclude_connection
+            ]
+        else:
+            target_connections = [
+                conn
+                for conn_id, conn in self.connections.items()
+                if conn_id != exclude_connection
+            ]
+
+        # Send to all connections concurrently
+        tasks = []
+        for connection in target_connections:
+            if connection.status == ConnectionStatus.CONNECTED:
+                tasks.append(connection.send(event))
+
+        # Execute all sends concurrently
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+
+        # Count successful sends
+        sent_count = sum(1 for result in results if result is True)
+
+        # Update metrics
+        self.performance_metrics["total_messages_sent"] += sent_count
+        self.performance_metrics["connection_pool_hits"] += len(target_connections)
+
+        return sent_count
+
+    def get_performance_metrics(self) -> Dict:
+        """Get current performance metrics."""
+        # Calculate additional metrics
+        total_bytes = sum(conn.bytes_sent for conn in self.connections.values())
+        total_messages = sum(conn.message_count for conn in self.connections.values())
+
+        return {
+            **self.performance_metrics,
+            "total_bytes_sent": total_bytes,
+            "total_messages_sent": total_messages,
+            "connections_by_status": {
+                status.value: sum(
+                    1 for conn in self.connections.values() if conn.status == status
+                )
+                for status in ConnectionStatus
+            },
+            "average_bytes_per_connection": (
+                total_bytes / len(self.connections) if self.connections else 0
+            ),
+            "average_messages_per_connection": (
+                total_messages / len(self.connections) if self.connections else 0
+            ),
+        }
 
 
 # Global WebSocket manager instance
