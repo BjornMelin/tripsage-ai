@@ -70,15 +70,21 @@ class WebCacheTTLConfig(BaseSettings):
 class DragonflyConfig(BaseSettings):
     """DragonflyDB configuration settings (Redis-compatible with better performance)."""
 
-    url: str = Field(default="redis://localhost:6379/0", description="DragonflyDB connection URL")
+    url: str = Field(
+        default="redis://localhost:6379/0", description="DragonflyDB connection URL"
+    )
     ttl_short: int = Field(default=300)  # 5 minutes
     ttl_medium: int = Field(default=3600)  # 1 hour
     ttl_long: int = Field(default=86400)  # 24 hours
     web_cache: WebCacheTTLConfig = WebCacheTTLConfig()
-    
+
     # DragonflyDB specific optimizations
-    max_memory_policy: str = Field(default="allkeys-lru", description="Memory eviction policy")
-    max_connections: int = Field(default=10000, description="Maximum concurrent connections")
+    max_memory_policy: str = Field(
+        default="allkeys-lru", description="Memory eviction policy"
+    )
+    max_connections: int = Field(
+        default=10000, description="Maximum concurrent connections"
+    )
     thread_count: int = Field(default=4, description="Number of worker threads")
 
 
@@ -106,70 +112,121 @@ class Mem0Config(BaseSettings):
     """Mem0 memory system configuration."""
 
     # Core configuration
-    vector_store_type: str = Field(default="pgvector", description="Vector store backend (pgvector)")
-    embedding_model: str = Field(default="text-embedding-3-small", description="OpenAI embedding model")
-    embedding_dimensions: int = Field(default=1536, description="Embedding vector dimensions")
-    
+    vector_store_type: str = Field(
+        default="pgvector", description="Vector store backend (pgvector)"
+    )
+    embedding_model: str = Field(
+        default="text-embedding-3-small", description="OpenAI embedding model"
+    )
+    embedding_dimensions: int = Field(
+        default=1536, description="Embedding vector dimensions"
+    )
+
     # Memory configuration
     memory_types: List[str] = Field(
-        default=["user_preferences", "trip_history", "search_patterns", "conversation_context"],
-        description="Types of memories to track"
+        default=[
+            "user_preferences",
+            "trip_history",
+            "search_patterns",
+            "conversation_context",
+        ],
+        description="Types of memories to track",
     )
-    max_memories_per_user: int = Field(default=1000, description="Maximum memories per user")
-    memory_ttl_days: int = Field(default=365, description="Memory retention period in days")
-    
+    max_memories_per_user: int = Field(
+        default=1000, description="Maximum memories per user"
+    )
+    memory_ttl_days: int = Field(
+        default=365, description="Memory retention period in days"
+    )
+
     # Search configuration
-    similarity_threshold: float = Field(default=0.7, description="Minimum similarity score for memory retrieval")
-    max_search_results: int = Field(default=10, description="Maximum memories to return in search")
-    
+    similarity_threshold: float = Field(
+        default=0.7, description="Minimum similarity score for memory retrieval"
+    )
+    max_search_results: int = Field(
+        default=10, description="Maximum memories to return in search"
+    )
+
     # Performance settings
     batch_size: int = Field(default=100, description="Batch size for bulk operations")
-    async_processing: bool = Field(default=True, description="Enable async memory processing")
+    async_processing: bool = Field(
+        default=True, description="Enable async memory processing"
+    )
 
 
 class LangGraphConfig(BaseSettings):
     """LangGraph agent orchestration configuration."""
 
     # Graph configuration
-    checkpoint_storage: str = Field(default="postgresql", description="Checkpoint storage backend")
-    enable_streaming: bool = Field(default=True, description="Enable streaming responses")
-    max_graph_depth: int = Field(default=20, description="Maximum depth of agent graph execution")
-    
+    checkpoint_storage: str = Field(
+        default="postgresql", description="Checkpoint storage backend"
+    )
+    enable_streaming: bool = Field(
+        default=True, description="Enable streaming responses"
+    )
+    max_graph_depth: int = Field(
+        default=20, description="Maximum depth of agent graph execution"
+    )
+
     # Agent coordination
-    default_agent_timeout: int = Field(default=300, description="Default timeout for agent execution (seconds)")
-    enable_parallel_execution: bool = Field(default=True, description="Enable parallel agent execution")
-    max_parallel_agents: int = Field(default=5, description="Maximum number of parallel agent executions")
-    
+    default_agent_timeout: int = Field(
+        default=300, description="Default timeout for agent execution (seconds)"
+    )
+    enable_parallel_execution: bool = Field(
+        default=True, description="Enable parallel agent execution"
+    )
+    max_parallel_agents: int = Field(
+        default=5, description="Maximum number of parallel agent executions"
+    )
+
     # Error handling
-    max_retries: int = Field(default=3, description="Maximum retries for failed agent nodes")
-    retry_delay: float = Field(default=1.0, description="Delay between retries in seconds")
-    enable_error_recovery: bool = Field(default=True, description="Enable automatic error recovery")
-    
+    max_retries: int = Field(
+        default=3, description="Maximum retries for failed agent nodes"
+    )
+    retry_delay: float = Field(
+        default=1.0, description="Delay between retries in seconds"
+    )
+    enable_error_recovery: bool = Field(
+        default=True, description="Enable automatic error recovery"
+    )
+
     # Performance monitoring
     enable_tracing: bool = Field(default=True, description="Enable execution tracing")
-    trace_storage_days: int = Field(default=7, description="How long to keep execution traces")
+    trace_storage_days: int = Field(
+        default=7, description="How long to keep execution traces"
+    )
 
 
 class Crawl4AIConfig(BaseSettings):
     """Crawl4AI web crawling configuration (replacing WebCrawl MCP)."""
 
     # API configuration
-    api_url: str = Field(default="http://localhost:8000/api", description="Crawl4AI API URL")
+    api_url: str = Field(
+        default="http://localhost:8000/api", description="Crawl4AI API URL"
+    )
     api_key: Optional[SecretStr] = Field(default=None, description="Crawl4AI API key")
-    
+
     # Crawling settings
     timeout: int = Field(default=30000, description="Request timeout in milliseconds")
     max_depth: int = Field(default=3, description="Maximum crawling depth")
-    max_pages: int = Field(default=100, description="Maximum pages to crawl per session")
-    
+    max_pages: int = Field(
+        default=100, description="Maximum pages to crawl per session"
+    )
+
     # Content extraction
-    default_format: str = Field(default="markdown", description="Default content format")
+    default_format: str = Field(
+        default="markdown", description="Default content format"
+    )
     extract_metadata: bool = Field(default=True, description="Extract page metadata")
     preserve_links: bool = Field(default=True, description="Preserve links in content")
-    
+
     # Performance settings
-    concurrent_requests: int = Field(default=5, description="Number of concurrent requests")
-    rate_limit_delay: float = Field(default=0.5, description="Delay between requests in seconds")
+    concurrent_requests: int = Field(
+        default=5, description="Number of concurrent requests"
+    )
+    rate_limit_delay: float = Field(
+        default=0.5, description="Delay between requests in seconds"
+    )
     cache_enabled: bool = Field(default=True, description="Enable crawl result caching")
     cache_ttl: int = Field(default=3600, description="Cache TTL in seconds")
 
@@ -319,7 +376,6 @@ class AppSettings(BaseSettings):
         default=None, description="Visual Crossing Weather API key"
     )
 
-
     # Google Calendar Direct integration
     google_client_id: Optional[SecretStr] = Field(
         default=None, description="Google OAuth client ID"
@@ -336,7 +392,7 @@ class AppSettings(BaseSettings):
     database: DatabaseConfig = Field(default_factory=DatabaseConfig)
     dragonfly: DragonflyConfig = Field(default_factory=DragonflyConfig)
     mem0: Mem0Config = Field(default_factory=Mem0Config)
-    
+
     # Agent Orchestration & Tools
     langgraph: LangGraphConfig = Field(default_factory=LangGraphConfig)
     crawl4ai: Crawl4AIConfig = Field(default_factory=Crawl4AIConfig)
@@ -502,14 +558,17 @@ def _validate_production_settings(settings: AppSettings) -> None:
             "DragonflyDB is using localhost in production. "
             "Should be set to deployed DragonflyDB URL."
         )
-    
+
     if settings.crawl4ai.api_url == "http://localhost:8000/api":
         production_errors.append(
             "Crawl4AI is using localhost in production. "
             "Should be set to deployed Crawl4AI API URL."
         )
-    
-    if not settings.crawl4ai.api_key or not settings.crawl4ai.api_key.get_secret_value():
+
+    if (
+        not settings.crawl4ai.api_key
+        or not settings.crawl4ai.api_key.get_secret_value()
+    ):
         production_errors.append("Crawl4AI API key is missing for production")
 
     if (
