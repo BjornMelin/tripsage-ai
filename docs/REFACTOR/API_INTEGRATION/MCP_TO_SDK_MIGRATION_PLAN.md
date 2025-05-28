@@ -781,33 +781,22 @@ crawler_router = SmartCrawlerRouter()
 
 ### Weather Service Migration (1-2 days)
 
+**Note**: Comprehensive OpenWeatherMapService already implemented in `tripsage/services/api/weather_service.py`
+
 ```python
-# File: tripsage/services/weather_service.py
-import httpx
-from typing import Dict, Any
+# File: tripsage/services/api/weather_service.py
+# Using the existing comprehensive OpenWeatherMapService implementation
+# Features include:
+# - Current weather, forecasts, air quality, UV index
+# - Travel weather summaries
+# - Multiple location support
+# - Comprehensive error handling and caching
+# - Pydantic models for type safety
 
-class WeatherService:
-    """Direct weather API integration"""
-    
-    def __init__(self):
-        self.api_key = settings.weather_api_key
-        self.base_url = "https://api.openweathermap.org/data/2.5"
-    
-    async def get_weather(self, location: str) -> Dict[str, Any]:
-        """Get weather data for location"""
-        async with httpx.AsyncClient() as client:
-            response = await client.get(
-                f"{self.base_url}/weather",
-                params={
-                    "q": location,
-                    "appid": self.api_key,
-                    "units": "metric"
-                }
-            )
-            response.raise_for_status()
-            return response.json()
+from tripsage.services.api.weather_service import OpenWeatherMapService
 
-weather_service = WeatherService()
+# Direct usage through dependency injection
+weather_service = OpenWeatherMapService()
 ```
 
 ## Testing Strategy
