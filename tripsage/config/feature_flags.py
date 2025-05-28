@@ -1,8 +1,9 @@
 """Feature flags for service integrations.
 
-This module provides feature flag management for controlling how services are integrated.
-Most services have been migrated to direct SDK integration, with only Airbnb remaining
-as an MCP integration due to lack of official API.
+This module provides feature flag management for controlling how
+services are integrated. The system has migrated to direct SDK
+integration for optimal performance, with only Airbnb remaining as an MCP
+integration due to lack of an official API.
 """
 
 from enum import Enum
@@ -20,14 +21,15 @@ class IntegrationMode(str, Enum):
 
 
 class FeatureFlags(BaseSettings):
-    """Feature flags for MCP to SDK migration.
+    """Feature flags for service integration management.
 
-    Each service can be independently switched between MCP wrapper and direct SDK
-    integration using environment variables prefixed with FEATURE_.
+    Each service can be independently configured for integration mode using
+    environment variables prefixed with FEATURE_. Most services use direct SDK
+    integration for optimal performance.
 
     Example usage:
         export FEATURE_REDIS_INTEGRATION=direct
-        export FEATURE_SUPABASE_INTEGRATION=mcp
+        export FEATURE_MEMORY_INTEGRATION=direct
     """
 
     # Infrastructure Services (All migrated to direct SDK)
@@ -39,13 +41,9 @@ class FeatureFlags(BaseSettings):
     supabase_integration: IntegrationMode = Field(
         default=IntegrationMode.DIRECT, description="Supabase database integration mode"
     )
-    neo4j_integration: IntegrationMode = Field(
-        default=IntegrationMode.DIRECT,
-        description="Neo4j memory/knowledge graph integration mode",
-    )
     memory_integration: IntegrationMode = Field(
         default=IntegrationMode.DIRECT,
-        description="Memory system integration mode (Mem0 direct SDK)",
+        description="Memory system integration mode (Mem0 with pgvector backend)",
     )
 
     # Web Crawling Services (All migrated to direct SDK)
