@@ -9,6 +9,7 @@ TripSage implements a multi-level caching strategy to reduce latency, minimize A
 ### Migration from Redis to DragonflyDB
 
 **Performance Benefits**:
+
 - **25x faster operations** compared to Redis
 - **Lower memory usage** with better compression
 - **Higher throughput** for concurrent operations
