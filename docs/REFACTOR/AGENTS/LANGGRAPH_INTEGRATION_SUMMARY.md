@@ -119,7 +119,7 @@ emerges as the optimal solution for TripSage-AI's agent refactoring needs with:
 
 ### Before (Complex, Manual)
 
-```
+```plaintext
 User → ChatAgent (862 lines) → Manual Routing → Individual Agents
          ↓
     Complex State Management
@@ -129,7 +129,7 @@ User → ChatAgent (862 lines) → Manual Routing → Individual Agents
 
 ### After (Simple, Automated)
 
-```
+```plaintext
 User → LangGraph Supervisor → Automatic Routing → Agent Teams
          ↓
     Automatic Checkpointing
