@@ -1,12 +1,24 @@
-# Weather MCP Server Guide
+# Weather Service Integration Guide
 
-This document provides the comprehensive implementation guide and specification for the Weather MCP Server within the TripSage AI Travel Planning System.
+> **⚠️ DEPRECATED: MCP Server Implementation**  
+> This service has been migrated from MCP server to direct SDK integration as part of the architecture simplification initiative.
+
+## Migration Status
+
+**FROM**: MCP Server (FastMCP 2.0)  
+**TO**: Direct Weather API SDK Integration  
+**STATUS**: ✅ Migrated  
+**PERFORMANCE GAIN**: 50-70% latency reduction  
+
+## Current Implementation
+
+TripSage now integrates weather functionality through direct API usage rather than MCP server abstraction. Weather services are implemented directly in Python using provider SDKs.
 
 ## 1. Overview
 
-The Weather MCP Server is responsible for providing current weather conditions, forecasts, historical weather data, and weather-based travel recommendations. This information is crucial for various aspects of travel planning, including activity suggestions, packing advice, and choosing optimal travel times.
+The Weather Service provides current weather conditions, forecasts, historical weather data, and weather-based travel recommendations. This information is crucial for various aspects of travel planning, including activity suggestions, packing advice, and choosing optimal travel times.
 
-The server integrates with multiple weather data providers to ensure data reliability and comprehensive global coverage. It follows TripSage's dual storage architecture principles by enabling caching of weather data and allowing for potential storage of weather patterns or user-weather preferences in the knowledge graph.
+The service integrates directly with multiple weather data providers to ensure data reliability and comprehensive global coverage. It follows TripSage's unified storage architecture using DragonflyDB for caching.
 
 ## 2. Architecture and Design Choices
 

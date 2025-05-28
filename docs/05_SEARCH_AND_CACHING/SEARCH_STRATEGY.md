@@ -26,8 +26,9 @@ TripSage implements a hierarchical and federated search strategy. The AI Travel 
                                 │ (Aggregated & Normalized Results)
                                 ▼
 ┌──────────────────────────────────────────────────────────────────────┐
-│                      Dual Storage Architecture                       │
-│   (Supabase for structured cache, Memory MCP for knowledge graph)    │
+│                      Unified Storage Architecture                     │
+│     (Supabase with pgvector for structured cache + vector search,    │
+│              Memory MCP for knowledge graph operations)             │
 └──────────────────────────────────────────────────────────────────────┘
 ```
 

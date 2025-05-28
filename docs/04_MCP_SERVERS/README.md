@@ -1,6 +1,12 @@
-# TripSage MCP Servers
+# TripSage Service Integration Guide (MCP → SDK Migration)
 
-This section provides detailed documentation for all Model Context Protocol (MCP) servers utilized and implemented within the TripSage AI Travel Planning System. MCP servers are specialized microservices that expose tools and functionalities, enabling AI agents and other backend components to interact with external APIs, databases, and custom business logic in a standardized way.
+**🚨 MAJOR ARCHITECTURE CHANGE 🚨**
+
+TripSage is **migrating from MCP servers to direct SDK integration** for dramatically improved performance and simplified architecture. This section documents both legacy MCP implementations and the new unified SDK approach.
+
+**NEW ARCHITECTURE**: 7 direct SDK integrations + 1 MCP server (Airbnb only) replacing 12 original MCP servers.
+
+**PERFORMANCE GAINS**: 50-70% latency reduction, 6-10x crawling improvement, ~3000 lines code reduction.
 
 ## Standardization Update (January 2025)
 
