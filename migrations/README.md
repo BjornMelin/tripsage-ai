@@ -2,6 +2,12 @@
 
 This directory contains SQL migration files that define the database schema for the TripSage application.
 
+## Directory Structure
+
+- **Main migrations/**: Active migration files that modify the database schema
+- **examples/**: Example SQL queries and demonstration code (not run as migrations)
+- **rollbacks/**: Rollback migration files for undoing changes
+
 ## Migration Files
 
 Migrations are applied in the order of their filenames. The naming convention is:
@@ -16,6 +22,8 @@ Where:
 - `NN` is a two-digit sequence number for that day (starting at 01)
 - `description` is a brief description of the migration
 
+**Important**: Only files in the main `migrations/` directory are considered active migrations. Files in subdirectories (`examples/`, `rollbacks/`) are for reference and documentation only.
+
 ## Migration Structure
 
 Each migration file should:
@@ -25,6 +33,14 @@ Each migration file should:
 3. Use `IF NOT EXISTS` and `IF EXISTS` clauses to prevent errors on repeated runs
 4. Include comments for tables and columns
 5. Define constraints, indexes, and relationships as needed
+
+## Rollback Files
+
+Rollback migrations are stored in the `rollbacks/` directory. These provide SQL statements to undo the changes made by corresponding forward migrations. They are not automatically applied and should be run manually when needed.
+
+## Example Files
+
+The `examples/` directory contains sample SQL queries and demonstration code that show how to use the database schema. These files are for reference only and are not executed as part of the migration process.
 
 ## Running Migrations
 

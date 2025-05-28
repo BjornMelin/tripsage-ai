@@ -1,6 +1,7 @@
 -- Migration: Add API Keys Table
 -- Description: Creates the api_keys table for BYOK (Bring Your Own Key) functionality
--- Created: 2025-01-22
+-- Created: 2025-05-22 (Originally misnamed as 20250122, corrected during cleanup)
+-- Note: This migration was created on 2025-05-22 but originally had an incorrect date in filename
 
 -- Create api_keys table
 CREATE TABLE IF NOT EXISTS api_keys (

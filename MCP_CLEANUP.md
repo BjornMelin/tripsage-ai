@@ -138,15 +138,132 @@ This document tracks the comprehensive cleanup of obsolete MCP configurations an
 - **Maintenance**: Significantly reduced complexity
 - **Reliability**: Direct SDK integrations are more stable
 
+## Phase 3 Tasks - Service Implementation & Structure
+
+### 1. Time Service Implementation ✅
+- **Status**: Already implemented at `tripsage/services/time_service.py`
+- **Features**: Direct Python datetime/pytz implementation
+- **No additional work needed**
+
+### 2. Web Search Implementation ✅
+- **Status**: Already implemented via OpenAI WebSearchTool in `tripsage/tools/web_tools.py`
+- **Features**: Direct OpenAI API integration
+- **No additional work needed**
+
+### 3. Service Directory Restructuring 🔄
+
+The services directory needs restructuring per REFACTOR specifications:
+
+**Current Structure** (needs organization):
+```
+tripsage/services/
+├── __init__.py
+├── accommodation.py
+├── auth.py
+├── chat_orchestration.py
+├── chat_service.py
+├── database_service.py
+├── destination.py
+├── document_analyzer.py
+├── dragonfly_service.py
+├── duffel_http_client.py
+├── error_handling_service.py
+├── file_processor.py
+├── flight.py
+├── google_maps_service.py
+├── itinerary.py
+├── key.py
+├── key_mcp_integration.py
+├── key_monitoring.py
+├── location_service.py
+├── memory_service.py
+├── redis_service.py
+├── supabase_service.py
+├── time_service.py
+├── tool_calling_service.py
+├── trip.py
+├── user.py
+├── webcrawl_service.py
+├── websocket_broadcaster.py
+└── websocket_manager.py
+```
+
+**Target Structure** (per REFACTOR specs):
+```
+tripsage/services/
+├── __init__.py
+├── api/                    # API-specific services
+│   ├── __init__.py
+│   ├── accommodation.py
+│   ├── auth.py
+│   ├── destination.py
+│   ├── flight.py
+│   ├── itinerary.py
+│   ├── trip.py
+│   ├── user.py
+│   └── key.py
+├── core/                   # Core business logic services
+│   ├── __init__.py
+│   ├── chat_service.py
+│   ├── chat_orchestration.py
+│   ├── location_service.py
+│   ├── memory_service.py
+│   ├── time_service.py
+│   ├── tool_calling_service.py
+│   └── error_handling_service.py
+├── infrastructure/         # Infrastructure services
+│   ├── __init__.py
+│   ├── database_service.py
+│   ├── dragonfly_service.py
+│   ├── supabase_service.py
+│   ├── redis_service.py
+│   ├── websocket_broadcaster.py
+│   ├── websocket_manager.py
+│   ├── key_monitoring.py
+│   └── key_mcp_integration.py
+└── external/              # External API integrations
+    ├── __init__.py
+    ├── duffel_http_client.py
+    ├── google_maps_service.py
+    ├── webcrawl_service.py
+    ├── document_analyzer.py
+    └── file_processor.py
+```
+
+### 4. Service Implementation Verification 🔄
+
+Services to verify against REFACTOR specifications:
+
+1. **Memory Service**: Ensure full Mem0 integration
+2. **DragonflyDB Service**: Verify 25x performance improvement
+3. **WebCrawl Service**: Confirm Crawl4AI integration
+4. **Chat Orchestration**: Verify LangGraph integration
+5. **Location Service**: Ensure proper Google Maps SDK usage
+
+### 5. Integration Testing Requirements 📋
+
+1. **End-to-End Tests**: Full user journey from search to booking
+2. **Performance Benchmarks**: Compare against old MCP architecture
+3. **Load Testing**: Verify DragonflyDB performance under load
+4. **Memory Integration**: Test Mem0 context persistence
+5. **Agent Handoffs**: Verify LangGraph orchestration
+
+### 6. Deployment Preparation 📋
+
+1. **Docker Updates**: Update docker-compose.yml for new services
+2. **Environment Variables**: Clean up obsolete MCP variables
+3. **Monitoring Setup**: Configure for direct SDK services
+4. **Documentation**: Update deployment guides
+
 ## Next Steps
 
-1. Continue with rate limiting and key monitoring service updates
-2. Run comprehensive integration tests
-3. Update deployment configurations
-4. Monitor performance improvements in production
+1. **Immediate**: Restructure services directory as specified above
+2. **Today**: Verify all services implement REFACTOR specifications
+3. **Tomorrow**: Run full integration test suite
+4. **This Week**: Deploy to staging environment
 
 ---
 
-**Last Updated**: 2025-01-16 12:59 PM
+**Last Updated**: 2025-01-28 (Session 3)
 **Migration Progress**: 85.7% Complete (6/7 services migrated to direct SDK)
-**Status**: Core functionality verified, critical import errors resolved
+**Status**: Time & Web Search confirmed implemented, Service restructuring needed
