@@ -7,7 +7,7 @@ API key operations in TripSage.
 import inspect
 import secrets
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 from functools import wraps
 from typing import Any, Callable, Dict, List, Optional, Set, TypeVar, cast
@@ -19,7 +19,7 @@ from starlette.status import HTTP_429_TOO_MANY_REQUESTS
 from starlette.types import ASGIApp
 
 from tripsage.api.core.config import Settings, get_settings
-from tripsage.mcp_abstraction import mcp_manager
+from tripsage.services.infrastructure.dragonfly_service import DragonflyService
 
 # Type hints
 F = TypeVar("F", bound=Callable[..., Any])
@@ -65,7 +65,7 @@ class KeyMonitoringService:
             settings: Application settings or None to use defaults
         """
         self.settings = settings or get_settings()
-        self.redis_mcp = None
+        self.dragonfly_service = DragonflyService()
         self.suspicious_patterns: Set[str] = set()
         self.alert_threshold = {
             KeyOperation.CREATE: 5,  # 5 creates in 10 minutes
@@ -76,9 +76,9 @@ class KeyMonitoringService:
         self.pattern_timeframe = 600  # 10 minutes
 
     async def initialize(self):
-        """Initialize the Redis MCP client."""
-        if not self.redis_mcp:
-            self.redis_mcp = await mcp_manager.initialize_mcp("redis")
+        """Initialize the DragonflyDB service."""
+        if not self.dragonfly_service.is_connected:
+            await self.dragonfly_service.connect()
 
     async def log_operation(
         self,
@@ -99,7 +99,7 @@ class KeyMonitoringService:
             success: Whether the operation succeeded
             metadata: Additional metadata for the log
         """
-        # Initialize Redis MCP
+        # Initialize DragonflyDB
         await self.initialize()
 
         # Create a log entry
@@ -113,7 +113,7 @@ class KeyMonitoringService:
             "metadata": metadata or {},
         }
 
-        # Store operation in Redis for pattern detection
+        # Store operation in DragonflyDB for pattern detection
         await self._store_operation_for_pattern_detection(operation, user_id)
 
         # Check for suspicious patterns
@@ -134,15 +134,14 @@ class KeyMonitoringService:
                 **log_data,
             )
 
-        # Store the log in Redis for persistence
-        await self.redis_mcp.invoke_method(
-            "list_push",
-            params={
-                "key": f"key_logs:{user_id}",
-                "value": log_data,
-                "ttl": 2592000,  # 30 days
-            },
-        )
+        # Store the log in DragonflyDB for persistence
+        log_key = f"key_logs:{user_id}"
+        # Get existing logs
+        existing_logs = await self.dragonfly_service.get_json(log_key) or []
+        # Append new log
+        existing_logs.append(log_data)
+        # Store back with TTL
+        await self.dragonfly_service.set_json(log_key, existing_logs, ex=2592000)  # 30 days
 
         # If this is a suspicious pattern, send an alert
         if suspicious:
@@ -151,22 +150,23 @@ class KeyMonitoringService:
     async def _store_operation_for_pattern_detection(
         self, operation: KeyOperation, user_id: str
     ) -> None:
-        """Store an operation in Redis for pattern detection.
+        """Store an operation in DragonflyDB for pattern detection.
 
         Args:
             operation: The operation performed
             user_id: The user ID
         """
-        # Store operation in Redis with expiration
+        # Store operation in DragonflyDB with expiration
         key = f"key_ops:{user_id}:{operation}"
-        await self.redis_mcp.invoke_method(
-            "list_push",
-            params={
-                "key": key,
-                "value": datetime.now(datetime.UTC).isoformat(),
-                "ttl": self.pattern_timeframe,  # 10 minutes
-            },
-        )
+        # Get existing operations
+        existing_ops = await self.dragonfly_service.get_json(key) or []
+        # Add new timestamp
+        existing_ops.append(datetime.now(datetime.UTC).isoformat())
+        # Keep only recent operations within timeframe
+        cutoff_time = datetime.now(datetime.UTC) - timedelta(seconds=self.pattern_timeframe)
+        existing_ops = [op for op in existing_ops if datetime.fromisoformat(op) > cutoff_time]
+        # Store back
+        await self.dragonfly_service.set_json(key, existing_ops, ex=self.pattern_timeframe)
 
     async def _check_suspicious_patterns(
         self, operation: KeyOperation, user_id: str
@@ -184,15 +184,11 @@ class KeyMonitoringService:
         if operation == KeyOperation.LIST:
             return False
 
-        # Get recent operations from Redis
+        # Get recent operations from DragonflyDB
         key = f"key_ops:{user_id}:{operation}"
-        result = await self.redis_mcp.invoke_method(
-            "list_get",
-            params={"key": key},
-        )
+        operations = await self.dragonfly_service.get_json(key) or []
 
         # Count operations
-        operations = result.get("data", [])
         count = len(operations)
 
         # Check against threshold
@@ -224,21 +220,17 @@ class KeyMonitoringService:
             timeframe=self.pattern_timeframe,
         )
 
-        # Store the alert in Redis
-        await self.redis_mcp.invoke_method(
-            "list_push",
-            params={
-                "key": "key_alerts",
-                "value": {
-                    "timestamp": datetime.now(datetime.UTC).isoformat(),
-                    "message": alert_message,
-                    "operation": operation,
-                    "user_id": user_id,
-                    "data": log_data,
-                },
-                "ttl": 2592000,  # 30 days
-            },
-        )
+        # Store the alert in DragonflyDB
+        alert_key = "key_alerts"
+        existing_alerts = await self.dragonfly_service.get_json(alert_key) or []
+        existing_alerts.append({
+            "timestamp": datetime.now(datetime.UTC).isoformat(),
+            "message": alert_message,
+            "operation": operation,
+            "user_id": user_id,
+            "data": log_data,
+        })
+        await self.dragonfly_service.set_json(alert_key, existing_alerts, ex=2592000)  # 30 days
 
     async def get_user_operations(
         self, user_id: str, limit: int = 100
@@ -252,16 +244,14 @@ class KeyMonitoringService:
         Returns:
             List of recent key operations
         """
-        # Initialize Redis MCP
+        # Initialize DragonflyDB
         await self.initialize()
 
-        # Get operations from Redis
-        result = await self.redis_mcp.invoke_method(
-            "list_get",
-            params={"key": f"key_logs:{user_id}", "limit": limit},
-        )
-
-        return result.get("data", [])
+        # Get operations from DragonflyDB
+        log_key = f"key_logs:{user_id}"
+        logs = await self.dragonfly_service.get_json(log_key) or []
+        # Return limited results
+        return logs[-limit:] if len(logs) > limit else logs
 
     async def get_alerts(self, limit: int = 100) -> List[Dict[str, Any]]:
         """Get recent key operation alerts.
@@ -272,16 +262,13 @@ class KeyMonitoringService:
         Returns:
             List of recent alerts
         """
-        # Initialize Redis MCP
+        # Initialize DragonflyDB
         await self.initialize()
 
-        # Get alerts from Redis
-        result = await self.redis_mcp.invoke_method(
-            "list_get",
-            params={"key": "key_alerts", "limit": limit},
-        )
-
-        return result.get("data", [])
+        # Get alerts from DragonflyDB
+        alerts = await self.dragonfly_service.get_json("key_alerts") or []
+        # Return limited results
+        return alerts[-limit:] if len(alerts) > limit else alerts
 
     async def is_rate_limited(self, user_id: str, operation: KeyOperation) -> bool:
         """Check if a user is rate limited for an operation.
@@ -293,23 +280,27 @@ class KeyMonitoringService:
         Returns:
             True if rate limited, False otherwise
         """
-        # Initialize Redis MCP
+        # Initialize DragonflyDB
         await self.initialize()
 
-        # Create a Redis key
-        redis_key = f"rate_limit:key_ops:{user_id}:{operation}"
-
-        # Use Redis MCP to check and update rate limit
-        result = await self.redis_mcp.invoke_method(
-            "rate_limit",
-            params={
-                "key": redis_key,
-                "limit": 10,  # 10 operations per minute
-                "window": 60,  # 1 minute
-            },
-        )
-
-        return result.get("limited", False)
+        # Create a DragonflyDB key
+        rate_limit_key = f"rate_limit:key_ops:{user_id}:{operation}"
+        
+        # Get current count
+        current_count = await self.dragonfly_service.get(rate_limit_key)
+        if current_count is None:
+            # First operation
+            await self.dragonfly_service.set(rate_limit_key, "1", ex=60)  # 1 minute window
+            return False
+        
+        # Check if over limit
+        count = int(current_count)
+        if count >= 10:  # 10 operations per minute
+            return True
+        
+        # Increment counter
+        await self.dragonfly_service.incr(rate_limit_key)
+        return False
 
 
 class KeyOperationRateLimitMiddleware(BaseHTTPMiddleware):
@@ -580,7 +571,7 @@ async def check_key_expiration(
     Returns:
         List of keys that are about to expire
     """
-    # Initialize Redis MCP
+    # Initialize DragonflyDB
     await monitoring_service.initialize()
 
     # Get date threshold

@@ -189,6 +189,66 @@ class DragonflyService:
             logger.error(f"Failed to set expiration for key {key}: {e}")
             return False
 
+    async def get(self, key: str) -> Optional[str]:
+        """
+        Get a string value from DragonflyDB.
+
+        Args:
+            key: Cache key
+
+        Returns:
+            The value as string or None if not found
+        """
+        await self.ensure_connected()
+
+        try:
+            value = await self._client.get(key)
+            return value.decode("utf-8") if value else None
+        except Exception as e:
+            logger.error(f"Failed to get key {key}: {e}")
+            return None
+
+    async def set(self, key: str, value: str, ex: Optional[int] = None) -> bool:
+        """
+        Set a string value in DragonflyDB.
+
+        Args:
+            key: Cache key
+            value: String value to store
+            ex: Expiration time in seconds
+
+        Returns:
+            True if successful, False otherwise
+        """
+        await self.ensure_connected()
+
+        try:
+            if ex:
+                return await self._client.setex(key, ex, value)
+            else:
+                return await self._client.set(key, value)
+        except Exception as e:
+            logger.error(f"Failed to set key {key}: {e}")
+            return False
+
+    async def incr(self, key: str) -> Optional[int]:
+        """
+        Increment a counter in DragonflyDB.
+
+        Args:
+            key: Counter key
+
+        Returns:
+            The new counter value or None if failed
+        """
+        await self.ensure_connected()
+
+        try:
+            return await self._client.incr(key)
+        except Exception as e:
+            logger.error(f"Failed to increment key {key}: {e}")
+            return None
+
     async def ttl(self, key: str) -> int:
         """
         Get time to live for a key.

@@ -11,6 +11,7 @@ This directory contains rollback SQL files that can undo the changes made by cor
 ## Purpose
 
 Rollback files provide SQL statements to:
+
 - Undo schema changes made by migrations
 - Remove tables, indexes, and constraints added by migrations
 - Restore the database to a previous state when needed
@@ -30,17 +31,20 @@ To rollback a migration:
 1. **Backup your database first**
 2. Review the rollback script to understand what will be undone
 3. Run the rollback script manually:
+
    ```sql
    \i migrations/rollbacks/filename_rollback.sql
    ```
+
 4. Verify the rollback was successful
 5. Update your migration tracking if needed
 
 ## Naming Convention
 
 Rollback files follow the pattern:
-```
+
+```plaintext
 YYYYMMDD_NN_description_rollback.sql
 ```
 
-This matches the corresponding forward migration filename with `_rollback` suffix. 
+This matches the corresponding forward migration filename with `_rollback` suffix.

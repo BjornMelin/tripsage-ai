@@ -80,7 +80,7 @@ curl -X POST "http://localhost:8000/api/admin/migrations/run" \
 ### 3. Programmatically
 
 ```python
-from src.db.migrations import run_migrations
+from tripsage.db.migrations import run_migrations
 
 # Run all pending migrations
 succeeded, failed = run_migrations()
@@ -98,7 +98,7 @@ succeeded, failed = run_migrations(up_to="20250508_03_complex_relationship_table
 2. Include a header comment with name, description, and date
 3. Write your SQL statements
 4. Test the migration with `--dry-run` before applying
-5. Consider adding a corresponding rollback statement to `20250508_06_rollback.sql`
+5. Consider adding a corresponding rollback script to `rollbacks/` directory
 
 ## Migration Tracking
 

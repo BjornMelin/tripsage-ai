@@ -105,17 +105,25 @@ class MigrationRunner:
             return False
 
     def get_migration_files(self) -> List[Path]:
-        """Get all migration files, sorted by filename."""
+        """Get all migration files, sorted by filename.
+        
+        Only scans the main migrations directory, excluding subdirectories like
+        examples/ and rollbacks/ per the new directory structure.
+        """
         if not MIGRATIONS_DIR.exists():
             logger.error(f"Migrations directory not found: {MIGRATIONS_DIR}")
             raise FileNotFoundError(f"Migrations directory not found: {MIGRATIONS_DIR}")
 
+        # Only get SQL files directly in the migrations directory
+        # (not in subdirectories)
         migration_files = sorted([
             f for f in MIGRATIONS_DIR.glob("*.sql")
-            if re.match(r"\d{8}_\d{2}_.*\.sql", f.name)
+            if (f.is_file() and 
+                re.match(r"\d{8}_\d{2}_.*\.sql", f.name) and
+                f.parent == MIGRATIONS_DIR)  # Ensure file is directly in migrations dir
         ])
 
-        logger.info(f"Found {len(migration_files)} migration files")
+        logger.info(f"Found {len(migration_files)} migration files in main directory")
         return migration_files
 
     async def apply_migration(self, filepath: Path) -> bool:
