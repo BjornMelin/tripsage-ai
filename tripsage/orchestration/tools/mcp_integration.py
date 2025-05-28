@@ -177,31 +177,26 @@ class MCPToolRegistry:
             },
         )
 
-        # Maps tools
-        self.tools["geocode_location"] = MCPToolWrapper(
-            "google_maps",
-            "geocode",
-            "Convert address to coordinates or get location details",
-            {"address": {"type": "string", "description": "Address to geocode"}},
+        # Maps tools - Use unified LocationService supporting both MCP and direct modes
+        from tripsage.orchestration.tools.location_tools import (
+            DirectionsTool,
+            DistanceMatrixTool,
+            ElevationTool,
+            GeocodeTool,
+            PlaceDetailsTool,
+            ReverseGeocodeTool,
+            SearchPlacesTool,
+            TimezoneTool,
         )
 
-        self.tools["search_places"] = MCPToolWrapper(
-            "google_maps",
-            "search_places",
-            "Search for places and points of interest",
-            {
-                "query": {"type": "string", "description": "Search query for places"},
-                "location": {
-                    "type": "string",
-                    "description": "Location to search around",
-                },
-                "radius": {
-                    "type": "integer",
-                    "description": "Search radius in meters",
-                    "default": 5000,
-                },
-            },
-        )
+        self.tools["geocode_location"] = GeocodeTool()
+        self.tools["reverse_geocode_location"] = ReverseGeocodeTool()
+        self.tools["search_places"] = SearchPlacesTool()
+        self.tools["get_place_details"] = PlaceDetailsTool()
+        self.tools["get_directions"] = DirectionsTool()
+        self.tools["distance_matrix"] = DistanceMatrixTool()
+        self.tools["get_elevation"] = ElevationTool()
+        self.tools["get_timezone"] = TimezoneTool()
 
         # Weather tools
         self.tools["get_weather"] = MCPToolWrapper(
@@ -301,6 +296,9 @@ class MCPToolRegistry:
             "flight_agent": [
                 "search_flights",
                 "geocode_location",
+                "reverse_geocode_location",
+                "get_directions",
+                "distance_matrix",
                 "get_weather",
                 "get_current_time",
                 "search_memory",
@@ -308,13 +306,32 @@ class MCPToolRegistry:
             "accommodation_agent": [
                 "search_accommodations",
                 "geocode_location",
+                "reverse_geocode_location",
                 "search_places",
+                "get_place_details",
+                "get_directions",
+                "distance_matrix",
                 "get_weather",
+                "search_memory",
+            ],
+            "destination_research_agent": [
+                "geocode_location",
+                "reverse_geocode_location",
+                "search_places",
+                "get_place_details",
+                "get_directions",
+                "get_elevation",
+                "get_timezone",
+                "get_weather",
+                "crawl_website_content",
+                "crawl_travel_blog",
                 "search_memory",
             ],
             "destination_agent": [
                 "geocode_location",
+                "reverse_geocode_location",
                 "search_places",
+                "get_place_details",
                 "get_weather",
                 "crawl_website_content",
                 "crawl_travel_blog",
@@ -323,7 +340,13 @@ class MCPToolRegistry:
             "budget_agent": ["search_memory", "get_current_time"],
             "itinerary_agent": [
                 "geocode_location",
+                "reverse_geocode_location",
                 "search_places",
+                "get_place_details",
+                "get_directions",
+                "distance_matrix",
+                "get_elevation",
+                "get_timezone",
                 "get_weather",
                 "get_current_time",
                 "crawl_website_content",
@@ -334,6 +357,10 @@ class MCPToolRegistry:
             "travel_agent": [
                 "search_memory",
                 "geocode_location",
+                "reverse_geocode_location",
+                "search_places",
+                "get_place_details",
+                "get_directions",
                 "get_current_time",
                 "get_weather",
                 "crawl_website_content",

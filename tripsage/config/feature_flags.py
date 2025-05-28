@@ -62,7 +62,8 @@ class FeatureFlags(BaseSettings):
         default=IntegrationMode.MCP, description="Weather API integration mode"
     )
     maps_integration: IntegrationMode = Field(
-        default=IntegrationMode.MCP, description="Google Maps integration mode"
+        default=IntegrationMode.DIRECT,
+        description="Google Maps integration mode (Direct SDK only)",
     )
     flights_integration: IntegrationMode = Field(
         default=IntegrationMode.MCP, description="Duffel Flights integration mode"

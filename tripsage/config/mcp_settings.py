@@ -191,14 +191,7 @@ class PlaywrightMCPConfig(BrowserMCPConfig):
     model_config = ConfigDict(env_prefix="TRIPSAGE_MCP_PLAYWRIGHT_")
 
 
-class GoogleMapsMCPConfig(RestMCPConfig):
-    """Configuration for Google Maps MCP server."""
-
-    map_type: Literal["roadmap", "satellite", "hybrid", "terrain"] = "roadmap"
-    language: str = "en"
-    region: str = "US"
-
-    model_config = ConfigDict(env_prefix="TRIPSAGE_MCP_GOOGLEMAPS_")
+# GoogleMapsMCPConfig removed - migrated to direct SDK integration
 
 
 class WeatherMCPConfig(RestMCPConfig):
@@ -408,7 +401,6 @@ class MCPSettings(BaseModel):
     firecrawl: FirecrawlMCPConfig = Field(default_factory=FirecrawlMCPConfig)
 
     # Utility MCPs
-    google_maps: GoogleMapsMCPConfig = Field(default_factory=GoogleMapsMCPConfig)
     time: TimeMCPConfig = Field(default_factory=TimeMCPConfig)
     weather: WeatherMCPConfig = Field(default_factory=WeatherMCPConfig)
     google_calendar: GoogleCalendarMCPConfig = Field(

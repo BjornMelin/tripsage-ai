@@ -45,6 +45,9 @@ playwright>=1.42.0
 # Memory system dependencies
 mem0ai>=0.1.0
 
+# Maps and location dependencies
+googlemaps>=4.10.0
+
 # OpenTelemetry and Security dependencies
 opentelemetry-api>=1.21.0
 opentelemetry-sdk>=1.21.0

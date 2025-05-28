@@ -300,6 +300,20 @@ class AppSettings(BaseSettings):
         default=100, description="Maximum requests per minute for Duffel API"
     )
 
+    # Google Maps Direct API integration
+    google_maps_api_key: Optional[SecretStr] = Field(
+        default=None, description="Google Maps API key for direct SDK integration"
+    )
+    google_maps_timeout: float = Field(
+        default=30.0, description="Google Maps API request timeout in seconds"
+    )
+    google_maps_retry_timeout: int = Field(
+        default=60, description="Google Maps API retry timeout in seconds"
+    )
+    google_maps_queries_per_second: int = Field(
+        default=10, description="Google Maps API queries per second limit"
+    )
+
     # Storage
     database: DatabaseConfig = Field(default_factory=DatabaseConfig)
     neo4j: Neo4jConfig = Field(default_factory=Neo4jConfig)
