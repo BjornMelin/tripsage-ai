@@ -5,11 +5,14 @@ import type { Message, ToolCall, ToolResult } from "@/types/chat";
 import { cn } from "@/lib/utils";
 import MessageItem from "./message-item";
 import { Loader2 } from "lucide-react";
+import TypingIndicator from "../typing-indicator";
+import { useChatStore } from "@/stores/chat-store";
 
 interface MessageListProps {
   messages: Message[];
   isStreaming?: boolean;
   className?: string;
+  sessionId?: string;
   activeToolCalls?: ToolCall[];
   toolResults?: ToolResult[];
   onRetryToolCall?: (toolCallId: string) => void;
@@ -20,6 +23,7 @@ export default function MessageList({
   messages,
   isStreaming,
   className,
+  sessionId,
   activeToolCalls,
   toolResults,
   onRetryToolCall,
@@ -30,6 +34,18 @@ export default function MessageList({
 
   // Track if the user has scrolled up (not at the bottom)
   const [userScrolledUp, setUserScrolledUp] = React.useState(false);
+
+  // Get typing users from the store
+  const { typingUsers } = useChatStore((state) => ({
+    typingUsers: sessionId
+      ? Object.values(state.typingUsers).filter((user) =>
+          Object.keys(state.typingUsers).find(
+            (key) =>
+              key.startsWith(`${sessionId}_`) && state.typingUsers[key] === user
+          )
+        )
+      : [],
+  }));
 
   // Scroll to bottom when new messages arrive or content streams
   useEffect(() => {
@@ -88,9 +104,9 @@ export default function MessageList({
               </h3>
 
               <div className="space-y-4">
-                {emptyStateMessages.map((msg, i) => (
+                {emptyStateMessages.map((msg) => (
                   <div
-                    key={i}
+                    key={msg}
                     className="p-4 rounded-lg bg-secondary/20 text-muted-foreground"
                   >
                     {msg}
@@ -104,9 +120,10 @@ export default function MessageList({
                   "Plan a 7-day trip to Japan in spring.",
                   "What are the best hiking trails in Colorado?",
                   "Find me family-friendly activities in Barcelona.",
-                ].map((suggestion, i) => (
+                ].map((suggestion) => (
                   <button
-                    key={i}
+                    key={suggestion}
+                    type="button"
                     className="p-3 text-sm rounded-lg border bg-card hover:bg-secondary text-left"
                     onClick={() => {
                       const input = document.querySelector("textarea");
@@ -145,6 +162,15 @@ export default function MessageList({
               />
             ))}
           </>
+        )}
+
+        {/* Typing indicator */}
+        {sessionId && typingUsers.length > 0 && (
+          <TypingIndicator
+            typingUsers={typingUsers}
+            sessionId={sessionId}
+            className="mx-4"
+          />
         )}
 
         {isStreaming && (

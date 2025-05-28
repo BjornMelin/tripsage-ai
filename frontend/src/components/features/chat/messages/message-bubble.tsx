@@ -9,11 +9,13 @@ import ReactMarkdown from "react-markdown";
 interface MessageBubbleProps {
   message: Message;
   isStreaming?: boolean;
+  isRealtime?: boolean;
 }
 
 export default function MessageBubble({
   message,
   isStreaming = false,
+  isRealtime = false,
 }: MessageBubbleProps) {
   const isUser = message.role === "USER";
   const isAssistant = message.role === "ASSISTANT";
@@ -31,7 +33,8 @@ export default function MessageBubble({
         isAssistant && "bg-card border",
         isSystem && "bg-yellow-500/20 border border-yellow-500/50",
         isTool && "bg-blue-500/10 border border-blue-500/30",
-        isStreaming && "animate-pulse"
+        isStreaming && "animate-pulse",
+        isRealtime && !isStreaming && "ring-1 ring-green-500/20 shadow-sm"
       )}
     >
       {isStreaming && (

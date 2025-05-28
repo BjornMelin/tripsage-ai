@@ -9,13 +9,13 @@ import {
   Loader2,
   BarChart,
   FileSearch,
-  Map,
+  Map as MapIcon,
   Plane,
   Circle,
   AlertTriangle,
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
-import { AgentStatus, AgentStatusState } from "@/types/chat";
+import type { AgentStatus } from "@/stores/chat-store";
 
 interface AgentStatusPanelProps {
   sessionId?: string;
@@ -28,70 +28,73 @@ export default function AgentStatusPanel({
   className,
   showHeader = true,
 }: AgentStatusPanelProps) {
-  const { getAgentStatus } = useChatStore();
+  // Get agent status for the specified session from store
+  const session = useChatStore((state) =>
+    sessionId ? state.sessions.find((s) => s.id === sessionId) : null
+  );
 
-  // Get agent status for the specified session
-  const agentStatus = getAgentStatus(sessionId || "");
+  const agentStatus = session?.agentStatus;
 
-  // If no status or idle with no message, don't render
-  if (!agentStatus || (agentStatus.status === "idle" && !agentStatus.message)) {
+  // If no status or not active, don't render
+  if (!agentStatus || (!agentStatus.isActive && !agentStatus.statusMessage)) {
     return null;
   }
 
-  const { status, task, progress, message } = agentStatus;
+  const { isActive, currentTask, progress, statusMessage } = agentStatus;
 
   // Determine the appropriate icon based on the current task
   const getTaskIcon = () => {
-    if (!task) return <Bot className="h-4 w-4" />;
+    if (!currentTask) return <Bot className="h-4 w-4" />;
 
-    const taskLower = task.toLowerCase();
+    const taskLower = currentTask.toLowerCase();
 
     if (taskLower.includes("search") || taskLower.includes("find")) {
       return <FileSearch className="h-4 w-4" />;
-    } else if (taskLower.includes("map") || taskLower.includes("location")) {
-      return <Map className="h-4 w-4" />;
-    } else if (taskLower.includes("flight") || taskLower.includes("travel")) {
-      return <Plane className="h-4 w-4" />;
-    } else if (taskLower.includes("analyze") || taskLower.includes("process")) {
-      return <BarChart className="h-4 w-4" />;
-    } else {
-      return <Activity className="h-4 w-4" />;
     }
+    if (taskLower.includes("map") || taskLower.includes("location")) {
+      return <MapIcon className="h-4 w-4" />;
+    }
+    if (taskLower.includes("flight") || taskLower.includes("travel")) {
+      return <Plane className="h-4 w-4" />;
+    }
+    if (taskLower.includes("analyze") || taskLower.includes("process")) {
+      return <BarChart className="h-4 w-4" />;
+    }
+    return <Activity className="h-4 w-4" />;
   };
 
-  // Get status color and icon
+  // Get status color and icon based on activity and message
   const getStatusIndicator = () => {
-    switch (status) {
-      case "thinking":
-        return {
-          color: "text-amber-500",
-          bgColor: "bg-amber-500/20",
-          icon: <Loader2 className="h-3 w-3 animate-spin" />,
-          label: "Thinking",
-        };
-      case "processing":
-        return {
-          color: "text-blue-500",
-          bgColor: "bg-blue-500/20",
-          icon: <Loader2 className="h-3 w-3 animate-spin" />,
-          label: "Processing",
-        };
-      case "error":
-        return {
-          color: "text-destructive",
-          bgColor: "bg-destructive/20",
-          icon: <AlertTriangle className="h-3 w-3" />,
-          label: "Error",
-        };
-      case "idle":
-      default:
-        return {
-          color: "text-green-500",
-          bgColor: "bg-green-500/20",
-          icon: <Circle className="h-3 w-3 fill-current" />,
-          label: "Idle",
-        };
+    if (!isActive) {
+      return {
+        color: "text-green-500",
+        bgColor: "bg-green-500/20",
+        icon: <Circle className="h-3 w-3 fill-current" />,
+        label: "Idle",
+      };
     }
+
+    // Check for error in status message
+    const hasError =
+      statusMessage?.toLowerCase().includes("error") ||
+      statusMessage?.toLowerCase().includes("failed");
+
+    if (hasError) {
+      return {
+        color: "text-destructive",
+        bgColor: "bg-destructive/20",
+        icon: <AlertTriangle className="h-3 w-3" />,
+        label: "Error",
+      };
+    }
+
+    // Active status
+    return {
+      color: "text-blue-500",
+      bgColor: "bg-blue-500/20",
+      icon: <Loader2 className="h-3 w-3 animate-spin" />,
+      label: "Active",
+    };
   };
 
   const statusIndicator = getStatusIndicator();
@@ -123,19 +126,21 @@ export default function AgentStatusPanel({
         </div>
       )}
 
-      {task && (
+      {currentTask && (
         <div className="mb-2">
           <div className="flex items-center gap-2 mb-1">
             {getTaskIcon()}
-            <span className="text-sm font-medium">{task}</span>
+            <span className="text-sm font-medium">{currentTask}</span>
           </div>
 
           <Progress value={progress || 0} className="h-1" />
         </div>
       )}
 
-      {message && (
-        <div className="text-xs text-muted-foreground mt-2">{message}</div>
+      {statusMessage && (
+        <div className="text-xs text-muted-foreground mt-2">
+          {statusMessage}
+        </div>
       )}
     </div>
   );

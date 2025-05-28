@@ -78,15 +78,15 @@ export default function MessageItem({
 
       <div className={cn("flex flex-col max-w-[85%]", isUser && "items-end")}>
         <div className="flex flex-col gap-2">
-          {hasAttachments && (
-            <MessageAttachments attachments={message.attachments!} />
+          {hasAttachments && message.attachments && (
+            <MessageAttachments attachments={message.attachments} />
           )}
 
           <MessageBubble message={message} />
 
-          {hasToolCalls && (
+          {hasToolCalls && message.toolCalls && (
             <MessageToolCalls
-              toolCalls={message.toolCalls!}
+              toolCalls={message.toolCalls}
               toolResults={message.toolResults || toolResults}
               onRetryToolCall={onRetryToolCall}
               onCancelToolCall={onCancelToolCall}
