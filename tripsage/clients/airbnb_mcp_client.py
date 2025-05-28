@@ -11,9 +11,9 @@ from typing import Any, Dict, List, Optional
 import httpx
 from pydantic import BaseModel, Field
 
-from tripsage.utils.logging import get_module_logger
+from tripsage.utils.logging import get_logger
 
-logger = get_module_logger(__name__)
+logger = get_logger(__name__)
 
 
 class AirbnbSearchParams(BaseModel):
