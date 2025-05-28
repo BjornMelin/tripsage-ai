@@ -7,6 +7,9 @@ import type {
   Message 
 } from "../chat-store";
 
+// Test constants
+const TEST_TOKEN = process.env.TEST_JWT_TOKEN || "mock-test-token-for-store";
+
 // Mock WebSocketClient
 const mockWebSocket = {
   connect: vi.fn(),
@@ -56,7 +59,7 @@ describe("Chat Store WebSocket Integration", () => {
     it("should connect WebSocket with correct configuration", async () => {
       // Arrange
       const sessionId = "test-session-123";
-      const token = "test-token-456";
+      const token = TEST_TOKEN;
 
       // Act
       await act(async () => {
@@ -76,7 +79,7 @@ describe("Chat Store WebSocket Integration", () => {
     it("should setup WebSocket event handlers on connection", async () => {
       // Arrange
       const sessionId = "test-session-123";
-      const token = "test-token-456";
+      const token = TEST_TOKEN;
 
       // Act
       await act(async () => {
@@ -98,7 +101,7 @@ describe("Chat Store WebSocket Integration", () => {
     it("should send authentication message after connection", async () => {
       // Arrange
       const sessionId = "test-session-123";
-      const token = "test-token-456";
+      const token = TEST_TOKEN;
 
       // Act
       await act(async () => {
@@ -135,7 +138,7 @@ describe("Chat Store WebSocket Integration", () => {
     it("should handle connection errors gracefully", async () => {
       // Arrange
       const sessionId = "test-session";
-      const token = "test-token";
+      const token = TEST_TOKEN;
       const error = new Error("Connection failed");
 
       mockWebSocket.connect.mockRejectedValueOnce(error);
@@ -189,7 +192,7 @@ describe("Chat Store WebSocket Integration", () => {
   describe("WebSocket Connection Status Updates", () => {
     beforeEach(async () => {
       await act(async () => {
-        await store.connectWebSocket("test-session", "test-token");
+        await store.connectWebSocket("test-session", TEST_TOKEN);
       });
     });
 
@@ -666,7 +669,7 @@ describe("Chat Store WebSocket Integration", () => {
       });
 
       await act(async () => {
-        await store.connectWebSocket(sessionId, "test-token");
+        await store.connectWebSocket(sessionId, TEST_TOKEN);
       });
 
       // Simulate connected state
@@ -777,7 +780,7 @@ describe("Chat Store WebSocket Integration", () => {
       });
 
       await act(async () => {
-        await store.connectWebSocket(sessionId, "test-token");
+        await store.connectWebSocket(sessionId, TEST_TOKEN);
       });
     });
 

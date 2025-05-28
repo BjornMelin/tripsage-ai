@@ -8,6 +8,9 @@ import {
   useAgentStatus,
   type UseWebSocketConfig 
 } from "../use-websocket";
+
+// Test constants
+const TEST_TOKEN = process.env.TEST_JWT_TOKEN || "mock-test-token-for-hooks";
 import { 
   WebSocketClient, 
   WebSocketClientFactory,
@@ -72,7 +75,7 @@ describe("useWebSocket", () => {
     
     config = {
       url: "ws://localhost:8000/ws/chat/test-session",
-      token: "test-token",
+      token: TEST_TOKEN,
       sessionId: "test-session",
       autoConnect: false,
     };
@@ -392,7 +395,7 @@ describe("useChatWebSocket", () => {
   it("should create chat client with correct parameters", () => {
     // Arrange
     const sessionId = "test-session";
-    const token = "test-token";
+    const token = TEST_TOKEN;
     const config = { autoConnect: false };
 
     // Act
@@ -438,7 +441,7 @@ describe("useAgentStatusWebSocket", () => {
   it("should create agent status client with correct parameters", () => {
     // Arrange
     const userId = "test-user";
-    const token = "test-token";
+    const token = TEST_TOKEN;
     const config = { autoConnect: false };
 
     // Act

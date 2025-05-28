@@ -14,6 +14,9 @@ import { WebSocketClient, ConnectionStatus } from "@/lib/websocket/websocket-cli
 // Mock environment variables
 vi.stubEnv("NEXT_PUBLIC_WS_URL", "ws://localhost:8000");
 
+// Test constants
+const TEST_TOKEN = process.env.TEST_JWT_TOKEN || "mock-test-token-for-integration";
+
 // Mock WebSocket for integration testing
 class MockWebSocketServer {
   private clients: Set<MockWebSocket> = new Set();
@@ -107,7 +110,7 @@ describe("WebSocket Integration Tests", () => {
   describe("End-to-End Chat Flow", () => {
     it("should establish connection and exchange messages", async () => {
       const sessionId = "test-session-123";
-      const token = "test-token-456";
+      const token = TEST_TOKEN;
       
       // Setup chat store
       const { result: storeResult } = renderHook(() => useChatStore());
@@ -172,7 +175,7 @@ describe("WebSocket Integration Tests", () => {
 
     it("should handle message streaming", async () => {
       const sessionId = "streaming-session";
-      const token = "test-token";
+      const token = TEST_TOKEN;
       
       const { result: storeResult } = renderHook(() => useChatStore());
       const store = storeResult.current;
@@ -229,7 +232,7 @@ describe("WebSocket Integration Tests", () => {
 
     it("should handle agent status updates", async () => {
       const sessionId = "agent-status-session";
-      const token = "test-token";
+      const token = TEST_TOKEN;
       
       const { result: storeResult } = renderHook(() => useChatStore());
       const store = storeResult.current;
@@ -282,7 +285,7 @@ describe("WebSocket Integration Tests", () => {
 
     it("should handle typing indicators", async () => {
       const sessionId = "typing-session";
-      const token = "test-token";
+      const token = TEST_TOKEN;
       
       const { result: storeResult } = renderHook(() => useChatStore());
       const store = storeResult.current;
@@ -328,7 +331,7 @@ describe("WebSocket Integration Tests", () => {
 
     it("should handle connection failures and reconnection", async () => {
       const sessionId = "reconnect-session";
-      const token = "test-token";
+      const token = TEST_TOKEN;
       
       const { result: hookResult } = renderHook(() => 
         useWebSocket({
@@ -432,7 +435,7 @@ describe("WebSocket Integration Tests", () => {
 
     it("should handle client disconnections gracefully", async () => {
       const sessionId = "disconnect-session";
-      const token = "test-token";
+      const token = TEST_TOKEN;
       
       const { result: storeResult } = renderHook(() => useChatStore());
       const store = storeResult.current;
@@ -493,7 +496,7 @@ describe("WebSocket Integration Tests", () => {
 
     it("should handle malformed messages gracefully", async () => {
       const sessionId = "malformed-session";
-      const token = "test-token";
+      const token = TEST_TOKEN;
       
       const { result: storeResult } = renderHook(() => useChatStore());
       const store = storeResult.current;
@@ -523,7 +526,7 @@ describe("WebSocket Integration Tests", () => {
 
     it("should handle network interruptions", async () => {
       const sessionId = "network-session";
-      const token = "test-token";
+      const token = TEST_TOKEN;
       
       const { result: storeResult } = renderHook(() => useChatStore());
       const store = storeResult.current;
@@ -559,7 +562,7 @@ describe("WebSocket Integration Tests", () => {
   describe("Performance and Reliability", () => {
     it("should handle high-frequency messages", async () => {
       const sessionId = "performance-session";
-      const token = "test-token";
+      const token = TEST_TOKEN;
       
       const { result: storeResult } = renderHook(() => useChatStore());
       const store = storeResult.current;
@@ -607,7 +610,7 @@ describe("WebSocket Integration Tests", () => {
 
     it("should maintain connection stability", async () => {
       const sessionId = "stability-session";
-      const token = "test-token";
+      const token = TEST_TOKEN;
       
       const { result: storeResult } = renderHook(() => useChatStore());
       const store = storeResult.current;

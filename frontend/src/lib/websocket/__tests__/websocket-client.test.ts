@@ -48,9 +48,12 @@ global.WebSocket = MockWebSocket as any;
 describe("WebSocketClient", () => {
   let client: WebSocketClient;
   let mockWebSocketInstance: MockWebSocket;
+  // Test constants
+  const TEST_TOKEN = process.env.TEST_JWT_TOKEN || "mock-test-token-for-websocket-client";
+  
   const config: WebSocketClientConfig = {
     url: "ws://localhost:8000/ws/test",
-    token: "test-token",
+    token: TEST_TOKEN,
     sessionId: "test-session",
     debug: false,
   };
