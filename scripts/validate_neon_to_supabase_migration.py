@@ -88,15 +88,16 @@ class MigrationValidator:
             print(
                 f"✅ Neon Dependencies Removed: {results['neon_dependencies_removed']}"
             )
-            print(
-                f"{'✅' if results['pgvector_enabled'] else '❌'} pgvector Enabled: {results['pgvector_enabled']}"
-            )
-            print(
-                f"{'✅' if results['memory_schema_ready'] else '❌'} Memory Schema Ready: {results['memory_schema_ready']}"
-            )
-            print(
-                f"{'✅' if results['performance_targets_met'] else '❌'} Performance Targets Met: {results['performance_targets_met']}"
-            )
+            pgvector_status = "✅" if results["pgvector_enabled"] else "❌"
+            print(f"{pgvector_status} pgvector Enabled: {results['pgvector_enabled']}")
+
+            schema_status = "✅" if results["memory_schema_ready"] else "❌"
+            schema_ready = results["memory_schema_ready"]
+            print(f"{schema_status} Memory Schema Ready: {schema_ready}")
+
+            perf_status = "✅" if results["performance_targets_met"] else "❌"
+            perf_met = results["performance_targets_met"]
+            print(f"{perf_status} Performance Targets Met: {perf_met}")
 
             if results["performance_metrics"]:
                 print("\n📈 Performance Metrics:")
@@ -144,7 +145,8 @@ class MigrationValidator:
 
             if "vectorscale" in extensions:
                 print(
-                    f"   ✅ vectorscale v{extensions['vectorscale']} enabled (11x performance)"
+                    f"   ✅ vectorscale v{extensions['vectorscale']} enabled "
+                    f"(11x performance)"
                 )
             else:
                 print("   ⚠️  vectorscale not available (using HNSW index)")
@@ -156,7 +158,9 @@ class MigrationValidator:
             test_response = self.supabase.rpc(
                 "execute_sql",
                 {
-                    "query": "SELECT '[1,2,3]'::vector <-> '[3,2,1]'::vector as distance;"
+                    "query": (
+                        "SELECT '[1,2,3]'::vector <-> '[3,2,1]'::vector as distance;"
+                    )
                 },
             ).execute()
 
@@ -251,10 +255,11 @@ class MigrationValidator:
 
             start_time = time.time()
             for i in range(10):
+                memory_text = f"Test memory {i}: I love traveling to destination {i}"
                 self.supabase.from_("memories").insert(
                     {
                         "user_id": self.test_user_id,
-                        "memory": f"Test memory {i}: I love traveling to destination {i}",
+                        "memory": memory_text,
                         "embedding": test_embedding,
                         "metadata": {"test_index": i, "destination": f"place_{i}"},
                         "categories": ["test", "travel_preferences"],
@@ -276,7 +281,7 @@ class MigrationValidator:
                 start_time = time.time()
 
                 # Use RPC to call search function directly
-                search_response = self.supabase.rpc(
+                self.supabase.rpc(
                     "search_memories",
                     {
                         "query_embedding": test_embedding,
@@ -319,9 +324,8 @@ class MigrationValidator:
             )
 
             if memories_response.data:
-                print(
-                    f"   ✅ Memory storage working ({len(memories_response.data)} memories)"
-                )
+                count = len(memories_response.data)
+                print(f"   ✅ Memory storage working ({count} memories)")
                 results["test_results"]["memory_count"] = len(memories_response.data)
             else:
                 results["errors"].append("No memories found")
@@ -376,7 +380,8 @@ class MigrationValidator:
                 )
 
                 print(
-                    f"   ✅ Vector search working (avg similarity: {avg_similarity:.3f})"
+                    f"   ✅ Vector search working "
+                    f"(avg similarity: {avg_similarity:.3f})"
                 )
                 results["test_results"]["search_results_count"] = len(
                     search_response.data
@@ -429,9 +434,8 @@ async def main():
         # Generate report
         print("\n📄 MIGRATION REPORT")
         print("=" * 40)
-        print(
-            f"Migration Status: {'COMPLETE ✅' if results['migration_complete'] else 'INCOMPLETE ❌'}"
-        )
+        status = "COMPLETE ✅" if results["migration_complete"] else "INCOMPLETE ❌"
+        print(f"Migration Status: {status}")
         print(f"Total Errors: {len(results['errors'])}")
 
         if results["migration_complete"]:

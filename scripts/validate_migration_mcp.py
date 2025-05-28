@@ -188,12 +188,14 @@ class MCPMigrationValidator:
         # Check if vectorscale could be beneficial
         if not results["validation_summary"]["pgvector_setup"]["vectorscale_available"]:
             recommendations.append(
-                "Consider requesting vectorscale extension from Supabase for 11x performance boost when available"
+                "Consider requesting vectorscale extension from Supabase for 11x "
+                "performance boost when available"
             )
 
         # Performance monitoring
         recommendations.append(
-            "Set up monitoring for vector search performance to ensure <100ms latency targets"
+            "Set up monitoring for vector search performance to ensure "
+            "<100ms latency targets"
         )
 
         # Memory management
