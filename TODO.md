@@ -12,6 +12,7 @@ This streamlined TODO list tracks current development priorities for TripSage AI
 - **MCP to SDK Migration**: Week 1 completed (Redis/DragonflyDB & Supabase)
 - **Frontend Foundation**: Core components and error boundaries implemented
 - **API Key Management**: Complete BYOK implementation
+- **WebSocket Infrastructure**: Real-time communication system with DragonflyDB integration (Issue #192)
 
 ### Coding Standards
 
