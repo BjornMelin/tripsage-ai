@@ -9,9 +9,11 @@ import logging
 from datetime import datetime
 from typing import Any, Dict, Optional
 
+from supabase import Client, create_client
+
+from api.core.config import settings
 from api.core.exceptions import KeyValidationError
 from tripsage.mcp_abstraction import mcp_manager
-from tripsage.storage.dual_storage import DualStorageService
 
 logger = logging.getLogger(__name__)
 
@@ -21,8 +23,16 @@ class KeyService:
 
     def __init__(self):
         """Initialize the key service."""
-        self.storage = DualStorageService()
+        self.supabase: Optional[Client] = None
         self.mcp_manager = mcp_manager
+
+    async def _get_supabase_client(self) -> Client:
+        """Get or create Supabase client."""
+        if self.supabase is None:
+            self.supabase = create_client(
+                settings.supabase_url, settings.supabase_anon_key
+            )
+        return self.supabase
 
     async def save_key(self, user_id: str, service: str, api_key: str) -> bool:
         """Save an API key for a user.
@@ -47,8 +57,8 @@ class KeyService:
             }
 
             # Use the storage service to save the key
-            await self.storage.initialize()
-            result = await self.storage.save_api_key(key_data)
+            await self._get_supabase_client()
+            result = await self.supabase.table("api_keys").insert(key_data).execute()
 
             return result is not None
 
@@ -70,19 +80,25 @@ class KeyService:
         """
         try:
             # Retrieve the key from the database
-            await self.storage.initialize()
-            key_data = await self.storage.get_api_key(user_id, service)
+            await self._get_supabase_client()
+            key_data = (
+                await self.supabase.table("api_keys")
+                .select("*")
+                .eq("user_id", user_id)
+                .eq("service", service)
+                .execute()
+            )
 
-            if not key_data:
+            if not key_data["data"]:
                 return None
 
             # Return key information (without the actual key)
             return {
                 "service": service,
                 "has_key": True,
-                "is_valid": key_data.get("is_valid", False),
-                "last_validated": key_data.get("last_validated"),
-                "last_used": key_data.get("last_used"),
+                "is_valid": key_data["data"][0]["is_valid"],
+                "last_validated": key_data["data"][0]["last_validated"],
+                "last_used": key_data["data"][0]["last_used"],
             }
 
         except Exception as e:
@@ -103,18 +119,23 @@ class KeyService:
         """
         try:
             # Retrieve all keys from the database
-            await self.storage.initialize()
-            keys = await self.storage.get_all_api_keys(user_id)
+            await self._get_supabase_client()
+            keys = (
+                await self.supabase.table("api_keys")
+                .select("*")
+                .eq("user_id", user_id)
+                .execute()
+            )
 
             result = {}
-            for key in keys:
-                service = key.get("service")
+            for key in keys["data"]:
+                service = key["service"]
                 result[service] = {
                     "service": service,
                     "has_key": True,
-                    "is_valid": key.get("is_valid", False),
-                    "last_validated": key.get("last_validated"),
-                    "last_used": key.get("last_used"),
+                    "is_valid": key["is_valid"],
+                    "last_validated": key["last_validated"],
+                    "last_used": key["last_used"],
                 }
 
             return result
@@ -135,10 +156,16 @@ class KeyService:
         """
         try:
             # Delete the key from the database
-            await self.storage.initialize()
-            result = await self.storage.delete_api_key(user_id, service)
+            await self._get_supabase_client()
+            result = (
+                await self.supabase.table("api_keys")
+                .delete()
+                .eq("user_id", user_id)
+                .eq("service", service)
+                .execute()
+            )
 
-            return result
+            return result is not None
 
         except Exception as e:
             logger.error(

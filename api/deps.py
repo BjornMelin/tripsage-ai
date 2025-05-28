@@ -4,7 +4,7 @@ Dependency injection for TripSage API.
 This module centralizes all FastAPI dependencies for the TripSage API.
 """
 
-from typing import AsyncGenerator, Optional
+from typing import Optional
 
 from fastapi import Depends, Request, Security
 from fastapi.security import APIKeyHeader, APIKeyQuery, OAuth2PasswordBearer
@@ -12,7 +12,7 @@ from fastapi.security import APIKeyHeader, APIKeyQuery, OAuth2PasswordBearer
 from api.core.config import settings
 from api.core.exceptions import AuthenticationError
 from tripsage.mcp_abstraction import MCPManager, mcp_manager
-from tripsage.storage.dual_storage import DualStorageService
+from tripsage.services.dragonfly_service import get_cache_service
 from tripsage.utils.session_memory import SessionMemory
 
 # OAuth2 setup
@@ -31,23 +31,6 @@ def get_mcp_manager_dep() -> MCPManager:
         The singleton MCP manager instance
     """
     return mcp_manager
-
-
-# Storage dependency
-async def get_storage_service() -> AsyncGenerator[DualStorageService, None]:
-    """Get the dual storage service as a dependency.
-
-    Yields:
-        DualStorageService instance
-    """
-    from tripsage.storage.dual_storage import get_dual_storage
-
-    service = get_dual_storage()
-    await service.initialize()
-    try:
-        yield service
-    finally:
-        await service.close()
 
 
 # Session memory dependency
@@ -178,29 +161,7 @@ async def verify_api_key(
     return True
 
 
-# Weather MCP dependency
-def get_weather_mcp_dep():
-    """Get the weather MCP wrapper as a dependency."""
-    mcp_manager_dependency = Depends(get_mcp_manager_dep)
-
-    async def _get_weather_mcp(mcp_manager=mcp_manager_dependency):
-        return await mcp_manager.initialize_mcp("weather")
-
-    return _get_weather_mcp
-
-
-# Flights MCP dependency
-def get_flights_mcp_dep():
-    """Get the flights MCP wrapper as a dependency."""
-    mcp_manager_dependency = Depends(get_mcp_manager_dep)
-
-    async def _get_flights_mcp(mcp_manager=mcp_manager_dependency):
-        return await mcp_manager.initialize_mcp("flights")
-
-    return _get_flights_mcp
-
-
-# Accommodations MCP dependency
+# Accommodations MCP dependency (only remaining MCP service)
 def get_accommodations_mcp_dep():
     """Get the accommodations MCP wrapper as a dependency."""
     mcp_manager_dependency = Depends(get_mcp_manager_dep)
@@ -211,56 +172,73 @@ def get_accommodations_mcp_dep():
     return _get_accommodations_mcp
 
 
-# Google Maps MCP dependency
-def get_googlemaps_mcp_dep():
-    """Get the Google Maps MCP wrapper as a dependency."""
-    mcp_manager_dependency = Depends(get_mcp_manager_dep)
-
-    async def _get_googlemaps_mcp(mcp_manager=mcp_manager_dependency):
-        return await mcp_manager.initialize_mcp("googlemaps")
-
-    return _get_googlemaps_mcp
+# Direct service dependencies (using comprehensive API implementations)
+async def get_webcrawl_service():
+    """Get the direct WebCrawl service."""
+    from tripsage.services.webcrawl_service import WebCrawlService
+    return WebCrawlService()
 
 
-# Memory MCP dependency
-def get_memory_mcp_dep():
-    """Get the memory MCP wrapper as a dependency."""
-    mcp_manager_dependency = Depends(get_mcp_manager_dep)
-
-    async def _get_memory_mcp(mcp_manager=mcp_manager_dependency):
-        return await mcp_manager.initialize_mcp("memory")
-
-    return _get_memory_mcp
+async def get_memory_service():
+    """Get the direct Memory service (Mem0)."""
+    from tripsage.services.memory_service import TripSageMemoryService
+    return TripSageMemoryService()
 
 
-# WebCrawl MCP dependency
-def get_webcrawl_mcp_dep():
-    """Get the webcrawl MCP wrapper as a dependency."""
-    mcp_manager_dependency = Depends(get_mcp_manager_dep)
-
-    async def _get_webcrawl_mcp(mcp_manager=mcp_manager_dependency):
-        return await mcp_manager.initialize_mcp("webcrawl")
-
-    return _get_webcrawl_mcp
+async def get_dragonfly_service():
+    """Get the DragonflyDB cache service."""
+    return await get_cache_service()
 
 
-# Time MCP dependency
-def get_time_mcp_dep():
-    """Get the time MCP wrapper as a dependency."""
-    mcp_manager_dependency = Depends(get_mcp_manager_dep)
+async def get_google_maps_service():
+    """Get the direct Google Maps service."""
+    from tripsage.services.google_maps_service import GoogleMapsService
+    return GoogleMapsService()
 
-    async def _get_time_mcp(mcp_manager=mcp_manager_dependency):
-        return await mcp_manager.initialize_mcp("time")
 
-    return _get_time_mcp
+async def get_playwright_service():
+    """Get the direct Playwright service for complex web scraping."""
+    from tripsage.services.playwright_service import PlaywrightService
+    return PlaywrightService()
+
+
+async def get_weather_service():
+    """Get the comprehensive OpenWeatherMap API service."""
+    from tripsage.services.api.weather_service import OpenWeatherMapService
+    return OpenWeatherMapService()
+
+
+async def get_calendar_service():
+    """Get the comprehensive Google Calendar API service."""
+    from tripsage.services.api.calendar_service import GoogleCalendarService
+    service = GoogleCalendarService()
+    await service.initialize()
+    return service
+
+
+async def get_flights_service():
+    """Get the comprehensive Duffel Flights API service."""
+    from tripsage.services.api.flights_service import DuffelFlightsService
+    return DuffelFlightsService()
+
+
+async def get_time_service():
+    """Get the direct Time service using Python datetime."""
+    from tripsage.services.time_service import TimeService
+    return TimeService()
 
 
 # Define singleton dependencies
 mcp_manager_dependency = Depends(get_mcp_manager_dep)
-weather_mcp_dependency = Depends(get_weather_mcp_dep())
-flights_mcp_dependency = Depends(get_flights_mcp_dep())
 accommodations_mcp_dependency = Depends(get_accommodations_mcp_dep())
-googlemaps_mcp_dependency = Depends(get_googlemaps_mcp_dep())
-memory_mcp_dependency = Depends(get_memory_mcp_dep())
-webcrawl_mcp_dependency = Depends(get_webcrawl_mcp_dep())
-time_mcp_dependency = Depends(get_time_mcp_dep())
+
+# Direct service dependencies
+webcrawl_service_dependency = Depends(get_webcrawl_service)
+memory_service_dependency = Depends(get_memory_service)
+dragonfly_service_dependency = Depends(get_dragonfly_service)
+google_maps_service_dependency = Depends(get_google_maps_service)
+playwright_service_dependency = Depends(get_playwright_service)
+weather_service_dependency = Depends(get_weather_service)
+calendar_service_dependency = Depends(get_calendar_service)
+flights_service_dependency = Depends(get_flights_service)
+time_service_dependency = Depends(get_time_service)

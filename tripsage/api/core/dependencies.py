@@ -1,22 +1,29 @@
-"""Dependency injection utilities for FastAPI.
+"""
+TripSage API Dependencies
 
-This module provides dependency functions that can be used with FastAPI's
-Depends() function to inject services and components into endpoint handlers.
+Centralized dependency injection for the TripSage FastAPI application.
 """
 
 import os
-from typing import Any, AsyncGenerator, Dict
+from typing import Annotated, Any, AsyncGenerator, Dict, Optional
 
-from fastapi import Depends
+from fastapi import Depends, HTTPException, Request, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from tripsage.api.core.config import get_settings
-from tripsage.mcp_abstraction import mcp_manager
+from tripsage.mcp_abstraction import MCPManager, mcp_manager
+from tripsage.services.database_service import DatabaseService
+from tripsage.services.dragonfly_service import get_cache_service
+from tripsage.services.supabase_service import SupabaseService
 from tripsage.utils.session_memory import initialize_session_memory
 
 # Database configuration
 _engine = None
 _async_session_maker = None
+
+# Security schemes
+security = HTTPBearer()
 
 
 def get_database_url() -> str:
@@ -128,106 +135,80 @@ settings_dependency = Depends(get_settings)
 session_memory_dependency = Depends(get_session_memory)
 
 
-# Weather MCP dependency
-def get_weather_mcp_dep():
-    """Get the weather MCP wrapper as a dependency."""
+# Direct service dependencies (using comprehensive API implementations)
+async def get_webcrawl_service():
+    """Get the direct WebCrawl service."""
+    from tripsage.services.webcrawl_service import WebCrawlService
 
-    async def _get_weather_mcp(mcp_manager=mcp_manager_dependency):
-        return await mcp_manager.initialize_mcp("weather")
-
-    return _get_weather_mcp
+    return WebCrawlService()
 
 
-# First create the functions that will be wrapped with Depends
-weather_mcp_dep_fn = get_weather_mcp_dep()
+async def get_memory_service():
+    """Get the direct Memory service (Mem0)."""
+    from tripsage.services.memory_service import TripSageMemoryService
 
-# Create MCP dependencies
-weather_mcp_dependency = Depends(weather_mcp_dep_fn)
-
-
-# Google Maps MCP dependency
-def get_google_maps_mcp_dep():
-    """Get the Google Maps MCP wrapper as a dependency."""
-
-    async def _get_google_maps_mcp(mcp_manager=mcp_manager_dependency):
-        return await mcp_manager.initialize_mcp("googlemaps")
-
-    return _get_google_maps_mcp
+    return TripSageMemoryService()
 
 
-# Create the Google Maps function
-google_maps_mcp_dep_fn = get_google_maps_mcp_dep()
-
-# Create Google Maps dependency
-google_maps_mcp_dependency = Depends(google_maps_mcp_dep_fn)
+async def get_dragonfly_service():
+    """Get DragonflyDB cache service."""
+    return await get_cache_service()
 
 
-# Time MCP dependency
-def get_time_mcp_dep():
-    """Get the time MCP wrapper as a dependency."""
+async def get_google_maps_service():
+    """Get the direct Google Maps service."""
+    from tripsage.services.google_maps_service import GoogleMapsService
 
-    async def _get_time_mcp(mcp_manager=mcp_manager_dependency):
-        return await mcp_manager.initialize_mcp("time")
-
-    return _get_time_mcp
+    return GoogleMapsService()
 
 
-# Create the time function
-time_mcp_dep_fn = get_time_mcp_dep()
+async def get_playwright_service():
+    """Get the direct Playwright service for complex web scraping."""
+    from tripsage.services.playwright_service import PlaywrightService
 
-# Create time dependency
-time_mcp_dependency = Depends(time_mcp_dep_fn)
-
-
-# Firecrawl MCP dependency
-def get_firecrawl_mcp_dep():
-    """Get the Firecrawl MCP wrapper as a dependency."""
-
-    async def _get_firecrawl_mcp(mcp_manager=mcp_manager_dependency):
-        return await mcp_manager.initialize_mcp("firecrawl")
-
-    return _get_firecrawl_mcp
+    return PlaywrightService()
 
 
-# Create the firecrawl function
-firecrawl_mcp_dep_fn = get_firecrawl_mcp_dep()
+async def get_weather_service():
+    """Get the comprehensive OpenWeatherMap API service."""
+    from tripsage.services.api.weather_service import OpenWeatherMapService
 
-# Create firecrawl dependency
-firecrawl_mcp_dependency = Depends(firecrawl_mcp_dep_fn)
-
-
-# Memory MCP dependency
-def get_memory_mcp_dep():
-    """Get the memory MCP wrapper as a dependency."""
-
-    async def _get_memory_mcp(mcp_manager=mcp_manager_dependency):
-        return await mcp_manager.initialize_mcp("memory")
-
-    return _get_memory_mcp
+    return OpenWeatherMapService()
 
 
-# Create the memory function
-memory_mcp_dep_fn = get_memory_mcp_dep()
+async def get_calendar_service():
+    """Get the comprehensive Google Calendar API service."""
+    from tripsage.services.api.calendar_service import GoogleCalendarService
 
-# Create memory dependency
-memory_mcp_dependency = Depends(memory_mcp_dep_fn)
-
-
-# Redis MCP dependency
-def get_redis_mcp_dep():
-    """Get the Redis MCP wrapper as a dependency."""
-
-    async def _get_redis_mcp(mcp_manager=mcp_manager_dependency):
-        return await mcp_manager.initialize_mcp("redis")
-
-    return _get_redis_mcp
+    service = GoogleCalendarService()
+    await service.initialize()
+    return service
 
 
-# Create the redis function
-redis_mcp_dep_fn = get_redis_mcp_dep()
+async def get_flights_service():
+    """Get the comprehensive Duffel Flights API service."""
+    from tripsage.services.api.flights_service import DuffelFlightsService
 
-# Create redis dependency
-redis_mcp_dependency = Depends(redis_mcp_dep_fn)
+    return DuffelFlightsService()
+
+
+async def get_time_service():
+    """Get the direct Time service using Python datetime."""
+    from tripsage.services.time_service import TimeService
+
+    return TimeService()
+
+
+# Direct service dependencies
+webcrawl_service_dependency = Depends(get_webcrawl_service)
+memory_service_dependency = Depends(get_memory_service)
+dragonfly_service_dependency = Depends(get_dragonfly_service)
+google_maps_service_dependency = Depends(get_google_maps_service)
+playwright_service_dependency = Depends(get_playwright_service)
+weather_service_dependency = Depends(get_weather_service)
+calendar_service_dependency = Depends(get_calendar_service)
+flights_service_dependency = Depends(get_flights_service)
+time_service_dependency = Depends(get_time_service)
 
 
 # Authentication helper functions
@@ -246,3 +227,94 @@ async def verify_api_key(current_user=None) -> bool:
     # For now, assume all users have valid API keys
     # This will be enhanced when the full BYOK system is integrated
     return True
+
+
+async def get_supabase_service():
+    """Get Supabase service."""
+    service = SupabaseService()
+    await service.connect()
+    return service
+
+
+async def get_database_service():
+    """Get database service."""
+    service = DatabaseService()
+    await service.connect()
+    return service
+
+
+async def get_mcp_manager():
+    """Get MCP manager for remaining MCP-based services."""
+    return mcp_manager
+
+
+# Type annotations for dependency injection
+CacheService = Annotated[object, Depends(get_dragonfly_service)]
+DatabaseDep = Annotated[DatabaseService, Depends(get_database_service)]
+SupabaseDep = Annotated[SupabaseService, Depends(get_supabase_service)]
+MCPManagerDep = Annotated[MCPManager, Depends(get_mcp_manager)]
+
+
+async def get_current_user(
+    credentials: Annotated[HTTPAuthorizationCredentials, Depends(security)],
+) -> dict:
+    """
+    Get current authenticated user from JWT token.
+
+    Args:
+        credentials: HTTP Bearer token credentials
+
+    Returns:
+        User information dictionary
+
+    Raises:
+        HTTPException: If token is invalid or user not found
+    """
+    try:
+        # TODO: Implement JWT token validation
+        # For now, return a mock user for development
+        token = credentials.credentials
+        if not token:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Missing authentication token",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+
+        # Mock user for development
+        return {"id": "user_123", "email": "user@example.com", "is_active": True}
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid authentication credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        ) from e
+
+
+async def get_optional_user(
+    request: Request,
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),  # noqa: B008
+) -> Optional[dict]:
+    """
+    Get current user if authenticated, None otherwise.
+
+    Args:
+        request: FastAPI request object
+        credentials: Optional HTTP Bearer token credentials
+
+    Returns:
+        User information dictionary or None if not authenticated
+    """
+    if not credentials:
+        return None
+
+    try:
+        return await get_current_user(credentials)
+    except HTTPException:
+        return None
+
+
+# Type annotations for user dependencies
+CurrentUser = Annotated[dict, Depends(get_current_user)]
+OptionalUser = Annotated[Optional[dict], Depends(get_optional_user)]

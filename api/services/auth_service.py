@@ -10,10 +10,10 @@ from typing import Any, Dict, Optional
 
 import jwt
 from passlib.context import CryptContext
+from supabase import Client, create_client
 
 from api.core.config import settings
 from api.core.exceptions import AuthenticationError
-from tripsage.storage.dual_storage import DualStorageService
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +24,15 @@ class AuthService:
     def __init__(self):
         """Initialize the authentication service."""
         self.pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-        self.storage = DualStorageService()
+        self.supabase: Optional[Client] = None
+
+    async def _get_supabase_client(self) -> Client:
+        """Get or create Supabase client."""
+        if self.supabase is None:
+            self.supabase = create_client(
+                settings.supabase_url, settings.supabase_anon_key
+            )
+        return self.supabase
 
     def verify_password(self, plain_password: str, hashed_password: str) -> bool:
         """Verify a password against a hash.
@@ -58,8 +66,10 @@ class AuthService:
         Returns:
             User information or None if not found
         """
-        await self.storage.initialize()
-        return await self.storage.get_user_by_username(username)
+        supabase = await self._get_supabase_client()
+        return (
+            await supabase.table("users").select("*").eq("username", username).execute()
+        )
 
     async def get_user_by_email(self, email: str) -> Optional[Dict[str, Any]]:
         """Get a user by email.
@@ -70,8 +80,8 @@ class AuthService:
         Returns:
             User information or None if not found
         """
-        await self.storage.initialize()
-        return await self.storage.get_user_by_email(email)
+        supabase = await self._get_supabase_client()
+        return await supabase.table("users").select("*").eq("email", email).execute()
 
     async def get_user_by_id(self, user_id: str) -> Optional[Dict[str, Any]]:
         """Get a user by ID.
@@ -82,8 +92,8 @@ class AuthService:
         Returns:
             User information or None if not found
         """
-        await self.storage.initialize()
-        return await self.storage.get_user_by_id(user_id)
+        supabase = await self._get_supabase_client()
+        return await supabase.table("users").select("*").eq("id", user_id).execute()
 
     async def authenticate_user(self, username: str, password: str) -> Dict[str, Any]:
         """Authenticate a user.
@@ -153,15 +163,15 @@ class AuthService:
         }
 
         # Save the user
-        await self.storage.initialize()
-        user = await self.storage.create_user(user_data)
+        supabase = await self._get_supabase_client()
+        user = await supabase.table("users").insert(user_data).execute()
 
         # Remove password from user info
         user_info = {k: v for k, v in user.items() if k != "password"}
 
         return user_info
 
-    def create_access_token(
+    async def create_access_token(
         self,
         data: Dict[str, Any],
         expires_delta: Optional[timedelta] = None,
@@ -194,7 +204,7 @@ class AuthService:
 
         return encoded_jwt
 
-    def create_refresh_token(
+    async def create_refresh_token(
         self,
         data: Dict[str, Any],
         expires_delta: Optional[timedelta] = None,
@@ -227,7 +237,7 @@ class AuthService:
 
         return encoded_jwt
 
-    def validate_access_token(self, token: str) -> Dict[str, Any]:
+    async def validate_access_token(self, token: str) -> Dict[str, Any]:
         """Validate a JWT access token.
 
         Args:
@@ -237,7 +247,7 @@ class AuthService:
             Token payload
 
         Raises:
-            AuthenticationError: If the token is invalid
+            AuthenticationError: If token is invalid
         """
         try:
             # Decode the token
@@ -252,12 +262,13 @@ class AuthService:
                 raise AuthenticationError("Invalid token type")
 
             return payload
-        except jwt.ExpiredSignatureError as err:
-            raise AuthenticationError("Token has expired") from err
-        except jwt.InvalidTokenError as err:
-            raise AuthenticationError("Invalid token") from err
 
-    def validate_refresh_token(self, token: str) -> Dict[str, Any]:
+        except jwt.ExpiredSignatureError as e:
+            raise AuthenticationError("Token has expired") from e
+        except jwt.InvalidTokenError as e:
+            raise AuthenticationError("Invalid token") from e
+
+    async def validate_refresh_token(self, token: str) -> Dict[str, Any]:
         """Validate a JWT refresh token.
 
         Args:
@@ -267,7 +278,7 @@ class AuthService:
             Token payload
 
         Raises:
-            AuthenticationError: If the token is invalid
+            AuthenticationError: If token is invalid
         """
         try:
             # Decode the token
@@ -282,10 +293,35 @@ class AuthService:
                 raise AuthenticationError("Invalid token type")
 
             return payload
-        except jwt.ExpiredSignatureError as err:
-            raise AuthenticationError("Token has expired") from err
-        except jwt.InvalidTokenError as err:
-            raise AuthenticationError("Invalid token") from err
+
+        except jwt.ExpiredSignatureError as e:
+            raise AuthenticationError("Token has expired") from e
+        except jwt.InvalidTokenError as e:
+            raise AuthenticationError("Invalid token") from e
+
+    async def create_password_reset_token(self, user_id: str) -> str:
+        """Create a password reset token.
+
+        Args:
+            user_id: User ID
+
+        Returns:
+            Password reset token
+        """
+        to_encode = {
+            "user_id": user_id,
+            "type": "password_reset",
+            "exp": datetime.now(datetime.UTC) + timedelta(hours=1),
+        }
+
+        # Encode the token
+        encoded_jwt = jwt.encode(
+            to_encode,
+            settings.secret_key.get_secret_value(),
+            algorithm=settings.algorithm,
+        )
+
+        return encoded_jwt
 
     async def change_password(
         self,
@@ -319,10 +355,12 @@ class AuthService:
         hashed_password = self.get_password_hash(new_password)
 
         # Update the user
-        await self.storage.initialize()
-        result = await self.storage.update_user(
-            user_id=user_id,
-            update_data={"password": hashed_password},
+        supabase = await self._get_supabase_client()
+        result = (
+            await supabase.table("users")
+            .update({"password": hashed_password})
+            .eq("id", user_id)
+            .execute()
         )
 
         return result is not None
@@ -362,43 +400,17 @@ class AuthService:
             hashed_password = self.get_password_hash(new_password)
 
             # Update the user
-            await self.storage.initialize()
-            result = await self.storage.update_user(
-                user_id=user_id,
-                update_data={"password": hashed_password},
+            supabase = await self._get_supabase_client()
+            result = (
+                await supabase.table("users")
+                .update({"password": hashed_password})
+                .eq("id", user_id)
+                .execute()
             )
 
             return result is not None
 
-        except jwt.ExpiredSignatureError as err:
-            raise AuthenticationError("Token has expired") from err
-        except jwt.InvalidTokenError as err:
-            raise AuthenticationError("Invalid token") from err
-
-    def create_password_reset_token(self, user_id: str) -> str:
-        """Create a password reset token.
-
-        Args:
-            user_id: User ID
-
-        Returns:
-            Reset token
-        """
-        # Set expiration time (1 hour)
-        expire = datetime.now(datetime.UTC) + timedelta(hours=1)
-
-        # Create token payload
-        to_encode = {
-            "sub": user_id,
-            "exp": expire,
-            "type": "reset",
-        }
-
-        # Encode the token
-        encoded_jwt = jwt.encode(
-            to_encode,
-            settings.secret_key.get_secret_value(),
-            algorithm=settings.algorithm,
-        )
-
-        return encoded_jwt
+        except jwt.ExpiredSignatureError as e:
+            raise AuthenticationError("Token has expired") from e
+        except jwt.InvalidTokenError as e:
+            raise AuthenticationError("Invalid token") from e

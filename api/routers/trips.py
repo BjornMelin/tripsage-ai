@@ -10,7 +10,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Query, status
 
 from api.core.exceptions import ResourceNotFoundError
-from api.deps import get_current_user, get_session_memory, get_storage_service
+from api.deps import get_current_user, get_session_memory
 from api.models.requests.trips import (
     CreateTripRequest,
     TripPreferencesRequest,
@@ -22,8 +22,6 @@ from api.models.responses.trips import (
     TripSummaryResponse,
 )
 from api.services.trip_service import TripService
-from tripsage.storage.dual_storage import DualStorageService
-from tripsage.utils.session_memory import SessionMemory
 
 logger = logging.getLogger(__name__)
 
@@ -40,8 +38,6 @@ def get_trip_service() -> TripService:
 # Module-level dependency singletons to avoid B008 linting errors
 get_current_user_dep = Depends(get_current_user)
 get_trip_service_dep = Depends(get_trip_service)
-get_storage_service_dep = Depends(get_storage_service)
-get_session_memory_dep = Depends(get_session_memory)
 
 
 @router.post("/", response_model=TripResponse, status_code=status.HTTP_201_CREATED)
@@ -49,8 +45,6 @@ async def create_trip(
     trip_request: CreateTripRequest,
     current_user: dict = get_current_user_dep,
     trip_service: TripService = get_trip_service_dep,
-    storage: DualStorageService = get_storage_service_dep,
-    session_memory: SessionMemory = get_session_memory_dep,
 ):
     """Create a new trip.
 
@@ -61,9 +55,6 @@ async def create_trip(
         Created trip
     """
     user_id = current_user["id"]
-
-    # Store trip planning request in session memory
-    session_memory.add("trip_request", trip_request.model_dump())
 
     # Create the trip
     trip = await trip_service.create_trip(
@@ -119,7 +110,6 @@ async def get_trip(
     trip_id: UUID,
     current_user: dict = get_current_user_dep,
     trip_service: TripService = get_trip_service_dep,
-    session_memory: SessionMemory = get_session_memory_dep,
 ):
     """Get a trip by ID.
 
@@ -142,9 +132,6 @@ async def get_trip(
             message=f"Trip with ID {trip_id} not found",
             details={"trip_id": str(trip_id)},
         )
-
-    # Store trip in session memory for context
-    session_memory.add("current_trip", trip)
 
     return trip
 
