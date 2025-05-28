@@ -15,6 +15,7 @@ All other services have been migrated to direct SDK integration:
 """
 
 from tripsage.clients.accommodations import AccommodationMCPClient
+from tripsage.clients.airbnb_mcp_client import AirbnbMCPClient
 from tripsage.clients.factory import MCPClientFactory
 
-__all__ = ["AccommodationMCPClient", "MCPClientFactory"]
+__all__ = ["AccommodationMCPClient", "AirbnbMCPClient", "MCPClientFactory"]
