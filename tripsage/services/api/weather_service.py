@@ -492,7 +492,7 @@ class OpenWeatherMapService(BaseService):
         best_days = []
         worst_days = []
 
-        for i, forecast in enumerate(daily_forecasts):
+        for _i, forecast in enumerate(daily_forecasts):
             day_score = 0
 
             # Score based on conditions
@@ -552,13 +552,13 @@ class OpenWeatherMapService(BaseService):
         if date and date > datetime.now():
             # Future date - use forecast
             tasks = []
-            for lat, lon, name in cities:
+            for lat, lon, _name in cities:
                 tasks.append(self.get_forecast(lat, lon, 1, False, units))
 
             results = await asyncio.gather(*tasks, return_exceptions=True)
 
             weather_data = {}
-            for (lat, lon, name), result in zip(cities, results, strict=False):
+            for (_lat, _lon, name), result in zip(cities, results, strict=False):
                 if isinstance(result, Exception):
                     logger.warning(f"Failed to get weather for {name}: {result}")
                     continue
@@ -585,13 +585,13 @@ class OpenWeatherMapService(BaseService):
         else:
             # Current weather
             tasks = []
-            for lat, lon, name in cities:
+            for lat, lon, _name in cities:
                 tasks.append(self.get_current_weather(lat, lon, units))
 
             results = await asyncio.gather(*tasks, return_exceptions=True)
 
             weather_data = {}
-            for (lat, lon, name), result in zip(cities, results, strict=False):
+            for (_lat, _lon, name), result in zip(cities, results, strict=False):
                 if isinstance(result, Exception):
                     logger.warning(f"Failed to get weather for {name}: {result}")
                     continue

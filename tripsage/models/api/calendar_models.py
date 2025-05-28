@@ -76,7 +76,7 @@ class EventDateTime(BaseModel):
             try:
                 datetime.strptime(v, "%Y-%m-%d")
             except ValueError:
-                raise ValueError("Date must be in YYYY-MM-DD format")
+                raise ValueError("Date must be in YYYY-MM-DD format") from None
         return v
 
 

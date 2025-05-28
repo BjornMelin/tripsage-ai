@@ -215,11 +215,11 @@ class GoogleCalendarService:
                 # Execute synchronously in thread pool
                 result = await asyncio.get_event_loop().run_in_executor(
                     None,
-                    lambda: service.calendarList()
+                    lambda pt=page_token: service.calendarList()
                     .list(
                         showHidden=show_hidden,
                         showDeleted=show_deleted,
-                        pageToken=page_token,
+                        pageToken=pt,
                     )
                     .execute(),
                 )
@@ -459,7 +459,7 @@ class GoogleCalendarService:
 
                 result = await asyncio.get_event_loop().run_in_executor(
                     None,
-                    lambda: service.events().list(**request_params).execute(),
+                    lambda rp=request_params: service.events().list(**rp).execute(),
                 )
 
                 items = result.get("items", [])
@@ -622,7 +622,10 @@ class GoogleCalendarService:
                 start=datetime.fromisoformat(flight["departure"]),
                 end=datetime.fromisoformat(flight["arrival"]),
                 location=f"{flight['from_airport']} to {flight['to_airport']}",
-                description=f"Flight {flight['flight_number']}\nBooking: {flight.get('booking_reference', 'N/A')}",
+                description=(
+                    f"Flight {flight['flight_number']}\n"
+                    f"Booking: {flight.get('booking_reference', 'N/A')}"
+                ),
                 travel_type="flight",
                 booking_reference=flight.get("booking_reference"),
                 reminders=[
