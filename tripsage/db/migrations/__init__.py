@@ -1,5 +1,5 @@
-"""Database migration utilities using MCP-based approach."""
+"""Database migration utilities for SQL databases."""
 
 from .runner import run_migrations
 
-__all__ = ["run_migrations", "run_neo4j_migrations"]
+__all__ = ["run_migrations"]
