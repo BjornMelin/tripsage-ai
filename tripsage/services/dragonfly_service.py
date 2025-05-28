@@ -1,295 +1,290 @@
-"""DragonflyDB service implementation with ServiceProtocol compliance.
+"""
+DragonflyDB Service for TripSage
 
-This module provides DragonflyDB integration using the Redis-compatible SDK,
-offering 25x performance improvement over standard Redis with feature flag support.
+High-performance cache service using DragonflyDB (Redis-compatible).
+Provides 25x performance improvement over traditional Redis implementations.
 """
 
-from typing import Optional
+import json
+import logging
+from typing import Any, Dict, Optional
 
-from tripsage.config.feature_flags import IntegrationMode, feature_flags
-from tripsage.config.service_registry import ServiceAdapter, register_service
-from tripsage.mcp_abstraction.manager import MCPManager
-from tripsage.services.redis_service import RedisService, get_redis_service
-from tripsage.utils.logging import get_logger
+import redis.asyncio as redis
 
-logger = get_logger(__name__)
+from tripsage.api.core.config import get_settings
+
+logger = logging.getLogger(__name__)
 
 
-class DragonflyDBService(RedisService):
-    """DragonflyDB service extending RedisService for compatibility.
-
-    DragonflyDB is Redis-compatible, so we extend RedisService and add
-    DragonflyDB-specific optimizations and monitoring.
-    """
+class DragonflyService:
+    """DragonflyDB cache service for high-performance caching operations."""
 
     def __init__(self):
-        super().__init__()
-        self.service_name = "dragonfly"
+        """Initialize the DragonflyDB service."""
+        self._client: Optional[redis.Redis] = None
+        self._connection_pool: Optional[redis.ConnectionPool] = None
+        self._settings = get_settings()
+        self._is_connected = False
+
+    @property
+    def is_connected(self) -> bool:
+        """Check if the service is connected to DragonflyDB."""
+        return self._is_connected and self._client is not None
 
     async def connect(self) -> None:
-        """Initialize DragonflyDB connection with optimizations."""
-        try:
-            # Use parent class connection logic
-            await super().connect()
+        """Establish connection to DragonflyDB server."""
+        if self._is_connected:
+            return
 
-            # Log DragonflyDB-specific info
-            if self._connected:
-                info = await self.info("server")
-                if info and "dragonfly_version" in str(info):
-                    version = info.get("dragonfly_version", "unknown")
-                    logger.info(f"Connected to DragonflyDB: {version}")
-                else:
-                    logger.info("Connected to Redis-compatible cache service")
+        try:
+            # DragonflyDB uses Redis protocol, so we use redis.Redis client
+            # For production, you would use the DragonflyDB server endpoint
+            redis_url = getattr(
+                self._settings, "dragonfly_url", "redis://localhost:6379/0"
+            )
+
+            # Create connection pool for better performance
+            self._connection_pool = redis.ConnectionPool.from_url(
+                redis_url,
+                max_connections=20,
+                retry_on_timeout=True,
+                decode_responses=False,  # We handle JSON encoding/decoding manually
+            )
+
+            self._client = redis.Redis(connection_pool=self._connection_pool)
+
+            # Test the connection
+            await self._client.ping()
+            self._is_connected = True
+
+            logger.info("Successfully connected to DragonflyDB")
 
         except Exception as e:
             logger.error(f"Failed to connect to DragonflyDB: {e}")
-            self._connected = False
+            self._is_connected = False
             raise
 
-    async def health_check(self) -> bool:
-        """Health check required by ServiceProtocol."""
-        return await self.ping()
+    async def disconnect(self) -> None:
+        """Close connection to DragonflyDB server."""
+        if self._client:
+            try:
+                await self._client.close()
+            except Exception as e:
+                logger.warning(f"Error closing DragonflyDB connection: {e}")
+            finally:
+                self._client = None
+                self._is_connected = False
 
-    # DragonflyDB-specific optimizations
+        if self._connection_pool:
+            try:
+                await self._connection_pool.disconnect()
+            except Exception as e:
+                logger.warning(f"Error closing DragonflyDB connection pool: {e}")
+            finally:
+                self._connection_pool = None
 
-    async def batch_get(self, keys: list[str]) -> dict[str, Optional[str]]:
-        """Optimized batch get for DragonflyDB.
+        logger.info("Disconnected from DragonflyDB")
 
-        DragonflyDB handles pipeline operations more efficiently than Redis.
+    async def ensure_connected(self) -> None:
+        """Ensure the service is connected, reconnect if necessary."""
+        if not self.is_connected:
+            await self.connect()
+
+    async def set_json(self, key: str, value: Any, ex: Optional[int] = None) -> bool:
+        """
+        Store a JSON-serializable value in DragonflyDB.
 
         Args:
-            keys: List of keys to fetch
+            key: Cache key
+            value: Value to store (must be JSON-serializable)
+            ex: Expiration time in seconds
 
         Returns:
-            Dictionary mapping keys to values
+            True if successful, False otherwise
         """
+        await self.ensure_connected()
+
         try:
-            async with self.pipeline() as pipe:
-                for key in keys:
-                    pipe.get(key)
-                values = await pipe.execute()
-
-            return {
-                key: value.decode("utf-8") if value else None
-                for key, value in zip(keys, values, strict=False)
-            }
+            json_value = json.dumps(value, default=str)
+            result = await self._client.set(key, json_value, ex=ex)
+            return result is True
         except Exception as e:
-            logger.error(f"DragonflyDB batch_get error: {e}")
-            raise
+            logger.error(f"Failed to set JSON value for key {key}: {e}")
+            return False
 
-    async def batch_set(self, items: dict[str, str], ex: Optional[int] = None) -> bool:
-        """Optimized batch set for DragonflyDB.
+    async def get_json(self, key: str, default: Any = None) -> Any:
+        """
+        Retrieve and deserialize a JSON value from DragonflyDB.
 
         Args:
-            items: Dictionary of key-value pairs
-            ex: Optional expiration in seconds
+            key: Cache key
+            default: Default value if key doesn't exist
 
         Returns:
-            True if all operations succeeded
+            Deserialized value or default
         """
+        await self.ensure_connected()
+
         try:
-            async with self.pipeline() as pipe:
-                for key, value in items.items():
-                    pipe.set(key, value, ex=ex)
-                results = await pipe.execute()
-
-            return all(results)
+            value = await self._client.get(key)
+            if value is None:
+                return default
+            return json.loads(value)
         except Exception as e:
-            logger.error(f"DragonflyDB batch_set error: {e}")
-            raise
-
-    async def memory_usage(self, key: str) -> Optional[int]:
-        """Get memory usage of a key (DragonflyDB optimized).
-
-        Args:
-            key: Key to check
-
-        Returns:
-            Memory usage in bytes or None if key doesn't exist
-        """
-        try:
-            result = await self.client.memory_usage(key)
-            return result
-        except Exception as e:
-            logger.warning(f"Memory usage command failed (might be Redis): {e}")
-            return None
-
-
-class DragonflyAdapter(ServiceAdapter):
-    """Service adapter for DragonflyDB with MCP fallback support."""
-
-    def __init__(self):
-        super().__init__("cache")  # Use "cache" as service name for compatibility
-        self._dragonfly_service = None
-
-    async def get_mcp_client(self):
-        """Get MCP client for Redis compatibility."""
-        if not self._mcp_client:
-            self._mcp_client = MCPManager()
-        return self._mcp_client
-
-    async def get_direct_service(self):
-        """Get direct DragonflyDB service."""
-        if not self._direct_service:
-            # Check if we should use DragonflyDB or fall back to Redis
-            if feature_flags.redis_integration == IntegrationMode.DIRECT:
-                # Use DragonflyDB for performance
-                self._direct_service = DragonflyDBService()
-                await self._direct_service.connect()
-                logger.info("Using DragonflyDB service for caching")
-            else:
-                # Fall back to standard Redis service
-                self._direct_service = await get_redis_service()
-                logger.info("Using Redis service for caching")
-
-        return self._direct_service
-
-
-class CacheService:
-    """Unified cache interface supporting both MCP and direct DragonflyDB/Redis.
-
-    This provides a consistent API regardless of whether we're using MCP wrappers
-    or direct SDK integration.
-    """
-
-    def __init__(self):
-        self.adapter = DragonflyAdapter()
-
-    async def get(self, key: str) -> Optional[str]:
-        """Get value from cache."""
-        if self.adapter.is_direct:
-            service = await self.adapter.get_direct_service()
-            return await service.get(key)
-        else:
-            # MCP fallback
-            mcp = await self.adapter.get_mcp_client()
-            result = await mcp.invoke("redis", "get", {"key": key})
-            return result.get("value") if result else None
-
-    async def set(self, key: str, value: str, ex: Optional[int] = None) -> bool:
-        """Set value in cache with optional expiration."""
-        if self.adapter.is_direct:
-            service = await self.adapter.get_direct_service()
-            return await service.set(key, value, ex=ex)
-        else:
-            # MCP fallback
-            mcp = await self.adapter.get_mcp_client()
-            params = {"key": key, "value": value}
-            if ex:
-                params["ex"] = ex
-            result = await mcp.invoke("redis", "set", params)
-            return bool(result)
+            logger.error(f"Failed to get JSON value for key {key}: {e}")
+            return default
 
     async def delete(self, *keys: str) -> int:
-        """Delete keys from cache."""
-        if self.adapter.is_direct:
-            service = await self.adapter.get_direct_service()
-            return await service.delete(*keys)
-        else:
-            # MCP fallback
-            mcp = await self.adapter.get_mcp_client()
-            deleted = 0
-            for key in keys:
-                result = await mcp.invoke("redis", "del", {"key": key})
-                if result:
-                    deleted += 1
-            return deleted
+        """
+        Delete one or more keys from DragonflyDB.
 
-    async def exists(self, key: str) -> bool:
-        """Check if key exists in cache."""
-        if self.adapter.is_direct:
-            service = await self.adapter.get_direct_service()
-            return bool(await service.exists(key))
-        else:
-            # MCP fallback
-            mcp = await self.adapter.get_mcp_client()
-            result = await mcp.invoke("redis", "exists", {"key": key})
-            return bool(result.get("exists", False))
+        Args:
+            keys: Keys to delete
+
+        Returns:
+            Number of keys deleted
+        """
+        await self.ensure_connected()
+
+        try:
+            return await self._client.delete(*keys)
+        except Exception as e:
+            logger.error(f"Failed to delete keys {keys}: {e}")
+            return 0
+
+    async def exists(self, *keys: str) -> int:
+        """
+        Check if keys exist in DragonflyDB.
+
+        Args:
+            keys: Keys to check
+
+        Returns:
+            Number of existing keys
+        """
+        await self.ensure_connected()
+
+        try:
+            return await self._client.exists(*keys)
+        except Exception as e:
+            logger.error(f"Failed to check existence of keys {keys}: {e}")
+            return 0
 
     async def expire(self, key: str, seconds: int) -> bool:
-        """Set expiration for a key."""
-        if self.adapter.is_direct:
-            service = await self.adapter.get_direct_service()
-            return await service.expire(key, seconds)
-        else:
-            # MCP fallback
-            mcp = await self.adapter.get_mcp_client()
-            result = await mcp.invoke(
-                "redis", "expire", {"key": key, "seconds": seconds}
-            )
-            return bool(result)
+        """
+        Set expiration time for a key.
+
+        Args:
+            key: Cache key
+            seconds: Expiration time in seconds
+
+        Returns:
+            True if successful, False otherwise
+        """
+        await self.ensure_connected()
+
+        try:
+            return await self._client.expire(key, seconds)
+        except Exception as e:
+            logger.error(f"Failed to set expiration for key {key}: {e}")
+            return False
 
     async def ttl(self, key: str) -> int:
-        """Get time to live for a key."""
-        if self.adapter.is_direct:
-            service = await self.adapter.get_direct_service()
-            return await service.ttl(key)
-        else:
-            # MCP fallback
-            mcp = await self.adapter.get_mcp_client()
-            result = await mcp.invoke("redis", "ttl", {"key": key})
-            return result.get("ttl", -2)
+        """
+        Get time to live for a key.
 
-    # Batch operations for performance
+        Args:
+            key: Cache key
 
-    async def batch_get(self, keys: list[str]) -> dict[str, Optional[str]]:
-        """Batch get multiple keys (optimized for DragonflyDB)."""
-        if self.adapter.is_direct:
-            service = await self.adapter.get_direct_service()
-            if hasattr(service, "batch_get"):
-                return await service.batch_get(keys)
-            else:
-                # Fallback to individual gets
-                results = {}
-                for key in keys:
-                    results[key] = await service.get(key)
-                return results
-        else:
-            # MCP doesn't support batch operations efficiently
-            results = {}
-            mcp = await self.adapter.get_mcp_client()
-            for key in keys:
-                result = await mcp.invoke("redis", "get", {"key": key})
-                results[key] = result.get("value") if result else None
-            return results
+        Returns:
+            TTL in seconds, -1 if no expiration, -2 if key doesn't exist
+        """
+        await self.ensure_connected()
 
-    async def batch_set(self, items: dict[str, str], ex: Optional[int] = None) -> bool:
-        """Batch set multiple key-value pairs."""
-        if self.adapter.is_direct:
-            service = await self.adapter.get_direct_service()
-            if hasattr(service, "batch_set"):
-                return await service.batch_set(items, ex=ex)
-            else:
-                # Fallback to pipeline
-                async with service.pipeline() as pipe:
-                    for key, value in items.items():
-                        pipe.set(key, value, ex=ex)
-                    results = await pipe.execute()
-                return all(results)
-        else:
-            # MCP fallback with individual sets
-            mcp = await self.adapter.get_mcp_client()
-            success = True
-            for key, value in items.items():
-                params = {"key": key, "value": value}
-                if ex:
-                    params["ex"] = ex
-                result = await mcp.invoke("redis", "set", params)
-                success = success and bool(result)
-            return success
+        try:
+            return await self._client.ttl(key)
+        except Exception as e:
+            logger.error(f"Failed to get TTL for key {key}: {e}")
+            return -2
+
+    def pipeline(self):
+        """
+        Create a pipeline for batch operations.
+
+        Returns:
+            Redis pipeline object for batching commands
+        """
+        if not self._client:
+            raise RuntimeError("DragonflyDB service not connected")
+        return self._client.pipeline()
+
+    async def flushdb(self) -> bool:
+        """
+        Clear all data from the current database.
+        WARNING: This will delete all data!
+
+        Returns:
+            True if successful, False otherwise
+        """
+        await self.ensure_connected()
+
+        try:
+            result = await self._client.flushdb()
+            return result is True
+        except Exception as e:
+            logger.error(f"Failed to flush database: {e}")
+            return False
+
+    async def info(self, section: Optional[str] = None) -> Dict[str, Any]:
+        """
+        Get DragonflyDB server information.
+
+        Args:
+            section: Specific info section to retrieve
+
+        Returns:
+            Server information dictionary
+        """
+        await self.ensure_connected()
+
+        try:
+            info_str = await self._client.info(section)
+            # Parse the info string into a dictionary
+            info_dict = {}
+            for line in info_str.split("\n"):
+                if ":" in line and not line.startswith("#"):
+                    key, value = line.split(":", 1)
+                    info_dict[key] = value
+            return info_dict
+        except Exception as e:
+            logger.error(f"Failed to get server info: {e}")
+            return {}
 
 
-# Global cache service instance
-cache_service = CacheService()
-
-# Register with service registry
-register_service("cache", DragonflyAdapter())
+# Global service instance
+_dragonfly_service: Optional[DragonflyService] = None
 
 
-async def get_cache_service() -> CacheService:
-    """Get the global cache service instance.
+async def get_cache_service() -> DragonflyService:
+    """
+    Get the global DragonflyDB service instance.
 
     Returns:
-        CacheService instance
+        Connected DragonflyDB service instance
     """
-    return cache_service
+    global _dragonfly_service
+
+    if _dragonfly_service is None:
+        _dragonfly_service = DragonflyService()
+        await _dragonfly_service.connect()
+
+    return _dragonfly_service
+
+
+async def close_cache_service() -> None:
+    """Close the global DragonflyDB service instance."""
+    global _dragonfly_service
+
+    if _dragonfly_service:
+        await _dragonfly_service.disconnect()
+        _dragonfly_service = None

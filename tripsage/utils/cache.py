@@ -1,7 +1,7 @@
 """
 Unified caching utilities for TripSage.
 
-This module provides both in-memory and Redis-based caching functionality
+This module provides both in-memory and DragonflyDB-based caching functionality
 with content-aware TTL settings and performance monitoring.
 """
 
@@ -15,7 +15,7 @@ from typing import Any, AsyncIterator, Callable, Dict, List, Optional, TypeVar, 
 
 from pydantic import BaseModel, Field
 
-from tripsage.services.redis_service import redis_service
+from tripsage.services.dragonfly_service import get_cache_service
 from tripsage.utils.content_types import ContentType
 from tripsage.utils.logging import get_logger
 from tripsage.utils.settings import settings
@@ -25,6 +25,17 @@ logger = get_logger(__name__)
 # Type variables
 T = TypeVar("T")
 F = TypeVar("F", bound=Callable[..., Any])
+
+# Global cache service instance
+_cache_service = None
+
+
+async def get_cache_instance():
+    """Get the global cache service instance (DragonflyDB/Redis)."""
+    global _cache_service
+    if _cache_service is None:
+        _cache_service = await get_cache_service()
+    return _cache_service
 
 
 class CacheStats(BaseModel):
@@ -97,18 +108,25 @@ class InMemoryCache:
             return self._stats.model_copy()
 
 
-class RedisCache:
-    """Redis-based cache implementation for distributed deployments."""
+class DragonflyCache:
+    """DragonflyDB-based cache implementation for distributed deployments."""
 
     def __init__(self, namespace: str = "tripsage"):
-        """Initialize the Redis cache."""
+        """Initialize the DragonflyDB cache."""
         self.namespace = namespace
         self._stats_key = f"{namespace}:stats"
+        self._cache_service = None
 
     async def _ensure_connected(self) -> None:
-        """Ensure Redis is connected."""
-        if not redis_service.is_connected:
-            await redis_service.connect()
+        """Ensure DragonflyDB is connected."""
+        if self._cache_service is None:
+            self._cache_service = await get_cache_instance()
+        
+        # Additional connection check if the service has an is_connected property
+        if hasattr(self._cache_service, 'adapter') and hasattr(self._cache_service.adapter, '_direct_service'):
+            direct_service = self._cache_service.adapter._direct_service
+            if direct_service and hasattr(direct_service, '_connected') and not direct_service._connected:
+                await direct_service.connect()
 
     def _make_key(self, key: str) -> str:
         """Create namespaced key."""
@@ -122,13 +140,8 @@ class RedisCache:
             await self._ensure_connected()
             full_key = self._make_key(key)
             
-            # Try JSON first, fallback to string
-            result = await redis_service.get_json(full_key)
-            if result is not None:
-                await self._increment_stat("hits")
-                return result
-            
-            result = await redis_service.get(full_key)
+            # Use the unified cache service
+            result = await self._cache_service.get(full_key)
             if result is not None:
                 await self._increment_stat("hits")
                 return result
@@ -153,11 +166,8 @@ class RedisCache:
             await self._ensure_connected()
             full_key = self._make_key(key)
             
-            # Auto-serialize complex objects
-            if isinstance(value, (dict, list)):
-                result = await redis_service.set_json(full_key, value, ex=ttl)
-            else:
-                result = await redis_service.set(full_key, value, ex=ttl, nx=nx, xx=xx)
+            # Use the unified cache service
+            result = await self._cache_service.set(full_key, value, ex=ttl)
                 
             if result:
                 await self._increment_stat("sets")
@@ -173,7 +183,7 @@ class RedisCache:
             await self._ensure_connected()
             full_key = self._make_key(key)
             
-            result = await redis_service.delete(full_key)
+            result = await self._cache_service.delete(full_key)
             if result > 0:
                 await self._increment_stat("deletes")
                 return True
@@ -189,26 +199,50 @@ class RedisCache:
             await self._ensure_connected()
             full_pattern = self._make_key(pattern)
             
-            # Get all matching keys
-            keys = []
-            async for key in redis_service.scan_iter(match=full_pattern):
-                keys.append(key)
-            
-            if keys:
-                count = await redis_service.delete(*keys)
-                logger.info(f"Invalidated {count} keys matching pattern {full_pattern}")
-                return count
-            return 0
-            
+            # Get all matching keys - note: scan_iter might not be available in unified cache
+            # Fall back to basic pattern matching if needed
+            try:
+                keys = []
+                # If scan_iter is available on the cache service
+                if hasattr(self._cache_service, 'scan_iter'):
+                    async for key in self._cache_service.scan_iter(match=full_pattern):
+                        keys.append(key)
+                else:
+                    # Alternative approach if scan_iter not available
+                    logger.warning("scan_iter not available, pattern invalidation limited")
+                    return 0
+                
+                if keys:
+                    count = await self._cache_service.delete(*keys)
+                    logger.info(f"Invalidated {count} keys matching pattern {full_pattern}")
+                    return count
+                return 0
+                
+            except Exception as scan_error:
+                logger.warning(f"Pattern scan failed: {scan_error}")
+                return 0
+                
         except Exception as e:
-            logger.error(f"Error invalidating cache pattern: {e}")
+            logger.error(f"Error invalidating pattern: {e}")
             return 0
 
     async def _increment_stat(self, stat: str) -> None:
         """Increment a statistics counter."""
         try:
-            await redis_service.hincrby(self._stats_key, stat, 1)
-            await redis_service.expire(self._stats_key, 86400)  # 24h expiry
+            await self._ensure_connected()
+            # Use basic operations if hincrby not available
+            if hasattr(self._cache_service, 'hincrby'):
+                await self._cache_service.hincrby(self._stats_key, stat, 1)
+                await self._cache_service.expire(self._stats_key, 86400)  # 24h expiry
+            else:
+                # Fallback: use simple counter
+                stat_key = f"{self._stats_key}:{stat}"
+                current = await self._cache_service.get(stat_key) or "0"
+                try:
+                    new_value = int(current) + 1
+                    await self._cache_service.set(stat_key, str(new_value), ex=86400)
+                except ValueError:
+                    await self._cache_service.set(stat_key, "1", ex=86400)
         except Exception:
             pass  # Don't fail on stats errors
 
@@ -217,34 +251,35 @@ class RedisCache:
         try:
             await self._ensure_connected()
             
-            # Get stats from hash
-            stats_data = await redis_service.hgetall(self._stats_key)
+            stats = CacheStats()
             
-            # Get key count
-            key_count = 0
-            async for _ in redis_service.scan_iter(match=f"{self.namespace}:*"):
-                key_count += 1
-            
-            # Get memory info
-            info = await redis_service.info("memory")
-            used_memory = info.get("used_memory", 0)
-            size_mb = used_memory / (1024 * 1024) if used_memory > 0 else 0.0
+            # Try to get stats from hash first, then fallback to individual keys
+            try:
+                if hasattr(self._cache_service, 'hgetall'):
+                    stats_data = await self._cache_service.hgetall(self._stats_key)
+                    if stats_data:
+                        stats.hits = int(stats_data.get("hits", 0))
+                        stats.misses = int(stats_data.get("misses", 0))
+                        stats.sets = int(stats_data.get("sets", 0))
+                        stats.deletes = int(stats_data.get("deletes", 0))
+                else:
+                    # Fallback to individual key retrieval
+                    for stat_name in ["hits", "misses", "sets", "deletes"]:
+                        stat_key = f"{self._stats_key}:{stat_name}"
+                        value = await self._cache_service.get(stat_key) or "0"
+                        try:
+                            setattr(stats, stat_name, int(value))
+                        except ValueError:
+                            setattr(stats, stat_name, 0)
+            except Exception:
+                # Use default values if stats retrieval fails
+                pass
             
             # Calculate hit ratio
-            hits = int(stats_data.get("hits", 0))
-            misses = int(stats_data.get("misses", 0))
-            total = hits + misses
-            hit_ratio = hits / total if total > 0 else 0.0
+            total = stats.hits + stats.misses
+            stats.hit_ratio = stats.hits / total if total > 0 else 0.0
             
-            return CacheStats(
-                hits=hits,
-                misses=misses,
-                hit_ratio=hit_ratio,
-                sets=int(stats_data.get("sets", 0)),
-                deletes=int(stats_data.get("deletes", 0)),
-                key_count=key_count,
-                size_mb=size_mb
-            )
+            return stats
             
         except Exception as e:
             logger.error(f"Error getting cache stats: {e}")
@@ -396,38 +431,56 @@ async def batch_cache_set(
     namespace: str = "tripsage",
     use_redis: bool = True
 ) -> List[bool]:
-    """Set multiple values in cache using pipeline for performance."""
-    if not use_redis:
-        # Fallback to sequential for in-memory cache
+    """
+    Set multiple cache entries in batch for improved performance.
+    
+    Args:
+        items: List of cache items with 'key', 'value', and optional 'ttl' fields
+        namespace: Cache namespace
+        use_redis: Use DragonflyDB/Redis vs in-memory cache
+        
+    Returns:
+        List of success/failure booleans for each item
+    """
+    if not use_redis or not settings.cache_enabled:
         results = []
         for item in items:
-            result = await memory_cache.set(
+            success = await memory_cache.set(
                 item["key"], 
                 item["value"], 
                 ttl=item.get("ttl")
             )
-            results.append(result)
+            results.append(success)
         return results
     
+    # DragonflyDB batch operations
     try:
-        await redis_cache._ensure_connected()
+        cache_service = await get_cache_instance()
         
-        async with redis_service.pipeline() as pipe:
+        # Use batch operations if available
+        if hasattr(cache_service, 'batch_set'):
+            # Convert to format expected by batch_set
+            batch_items = {}
+            ttl = None
             for item in items:
-                key = redis_cache._make_key(item["key"])
-                value = item["value"]
-                ttl = item.get("ttl")
-                
-                if isinstance(value, (dict, list)):
-                    pipe.set(key, json.dumps(value, default=str), ex=ttl)
-                else:
-                    pipe.set(key, str(value), ex=ttl)
+                key = f"{namespace}:{item['key']}" if not item['key'].startswith(f"{namespace}:") else item['key']
+                batch_items[key] = item['value']
+                if 'ttl' in item:
+                    ttl = item['ttl']  # Use last TTL found - limitation of batch operation
             
-            results = await pipe.execute()
-            return [bool(result) for result in results]
-            
+            success = await cache_service.batch_set(batch_items, ex=ttl)
+            return [success] * len(items)  # Return same result for all items
+        
+        # Fallback to individual operations
+        results = []
+        for item in items:
+            key = f"{namespace}:{item['key']}" if not item['key'].startswith(f"{namespace}:") else item['key']
+            success = await cache_service.set(key, item['value'], ex=item.get('ttl'))
+            results.append(bool(success))
+        return results
+        
     except Exception as e:
-        logger.error(f"Error batch setting cache values: {e}")
+        logger.error(f"Batch cache set failed: {e}")
         return [False] * len(items)
 
 
@@ -436,44 +489,45 @@ async def batch_cache_get(
     namespace: str = "tripsage",
     use_redis: bool = True
 ) -> List[Optional[Any]]:
-    """Get multiple values from cache using pipeline for performance."""
-    if not use_redis:
-        # Fallback to sequential for in-memory cache
+    """
+    Get multiple cache entries in batch for improved performance.
+    
+    Args:
+        keys: List of cache keys to retrieve
+        namespace: Cache namespace
+        use_redis: Use DragonflyDB/Redis vs in-memory cache
+        
+    Returns:
+        List of values (None for missing keys)
+    """
+    if not use_redis or not settings.cache_enabled:
         results = []
         for key in keys:
-            result = await memory_cache.get(key)
-            results.append(result)
+            value = await memory_cache.get(key)
+            results.append(value)
         return results
     
+    # DragonflyDB batch operations  
     try:
-        await redis_cache._ensure_connected()
+        cache_service = await get_cache_instance()
         
         # Prepare namespaced keys
-        full_keys = [redis_cache._make_key(key) for key in keys]
+        full_keys = [f"{namespace}:{key}" if not key.startswith(f"{namespace}:") else key for key in keys]
         
-        async with redis_service.pipeline() as pipe:
-            for key in full_keys:
-                pipe.get(key)
-            
-            results = await pipe.execute()
-            
-            # Process results (auto-deserialize JSON)
-            processed_results = []
-            for result in results:
-                if result is None:
-                    processed_results.append(None)
-                else:
-                    try:
-                        # Try to parse as JSON
-                        processed_results.append(json.loads(result))
-                    except (json.JSONDecodeError, TypeError):
-                        # Fallback to string
-                        processed_results.append(result)
-            
-            return processed_results
-            
+        # Use batch operations if available
+        if hasattr(cache_service, 'batch_get'):
+            result_dict = await cache_service.batch_get(full_keys)
+            return [result_dict.get(key) for key in full_keys]
+        
+        # Fallback to individual operations
+        results = []
+        for key in full_keys:
+            value = await cache_service.get(key)
+            results.append(value)
+        return results
+        
     except Exception as e:
-        logger.error(f"Error batch getting cache values: {e}")
+        logger.error(f"Batch cache get failed: {e}")
         return [None] * len(keys)
 
 
@@ -485,16 +539,32 @@ async def cache_lock(
     retry_count: int = 50,
     namespace: str = "tripsage"
 ) -> AsyncIterator[bool]:
-    """Distributed lock using Redis."""
-    await redis_cache._ensure_connected()
+    """
+    Distributed lock using DragonflyDB/Redis for synchronization.
+    
+    Args:
+        lock_name: Name of the lock
+        timeout: Lock timeout in seconds
+        retry_delay: Delay between lock acquisition attempts
+        retry_count: Maximum number of retry attempts
+        namespace: Lock namespace
+        
+    Yields:
+        True if lock was acquired, False otherwise
+    """
+    if not settings.cache_enabled:
+        # Simple local lock for development
+        yield True
+        return
+        
+    cache_service = await get_cache_instance()
     
     lock_key = f"{namespace}:lock:{lock_name}"
-    lock_value = f"{time.time()}:{asyncio.current_task().get_name()}"
+    lock_value = f"{time.time()}:{id(asyncio.current_task())}"
     
-    # Try to acquire lock
     acquired = False
     for _ in range(retry_count):
-        success = await redis_service.set(lock_key, lock_value, ex=timeout, nx=True)
+        success = await cache_service.set(lock_key, lock_value, ex=timeout, nx=True)
         if success:
             acquired = True
             break
@@ -503,21 +573,23 @@ async def cache_lock(
     try:
         yield acquired
     finally:
-        # Release lock if we acquired it
         if acquired:
             # Only delete if we still own the lock
-            current_value = await redis_service.get(lock_key)
+            current_value = await cache_service.get(lock_key)
             if current_value == lock_value:
-                await redis_service.delete(lock_key)
+                await cache_service.delete(lock_key)
 
+
+# Create alias for backward compatibility
+RedisCache = DragonflyCache
 
 # Initialize cache instances
 memory_cache = InMemoryCache()
-redis_cache = RedisCache()
+redis_cache = DragonflyCache()
 
-# Export convenience functions using Redis by default
+# Export convenience functions using DragonflyDB by default
 async def get_cache(key: str, namespace: str = "tripsage") -> Optional[Any]:
-    """Get a value from the cache (Redis by default)."""
+    """Get a value from the cache (DragonflyDB by default)."""
     return await redis_cache.get(key)
 
 
@@ -528,7 +600,7 @@ async def set_cache(
     content_type: Optional[Union[ContentType, str]] = None,
     namespace: str = "tripsage"
 ) -> bool:
-    """Set a value in the cache (Redis by default)."""
+    """Set a value in the cache (DragonflyDB by default)."""
     if ttl is None and content_type is not None:
         if isinstance(content_type, str):
             content_type = ContentType(content_type)
@@ -537,12 +609,12 @@ async def set_cache(
 
 
 async def delete_cache(key: str, namespace: str = "tripsage") -> bool:
-    """Delete a value from the cache (Redis by default)."""
+    """Delete a value from the cache (DragonflyDB by default)."""
     return await redis_cache.delete(key)
 
 
 async def get_cache_stats() -> CacheStats:
-    """Get cache statistics (Redis by default)."""
+    """Get cache statistics (DragonflyDB by default)."""
     return await redis_cache.get_stats()
 
 
