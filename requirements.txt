@@ -48,6 +48,13 @@ mem0ai>=0.1.0
 # Maps and location dependencies
 googlemaps>=4.10.0
 
+# API integrations
+google-api-python-client>=2.134.0
+google-auth>=2.30.0
+google-auth-httplib2>=0.2.0
+google-auth-oauthlib>=1.2.0
+duffel-api>=0.6.2
+
 # OpenTelemetry and Security dependencies
 opentelemetry-api>=1.21.0
 opentelemetry-sdk>=1.21.0
@@ -56,3 +63,5 @@ opentelemetry-exporter-otlp>=1.21.0
 psutil>=5.9.0
 cryptography>=41.0.0
 pytest-benchmark>=4.0.0
+pytest-httpx>=0.35.0
+fakeredis>=2.29.0
