@@ -254,13 +254,14 @@ class MCPMigrationRunner:
             MCPMigrationError: If migration run fails
         """
         try:
-            # Get list of migration files from main directory only (exclude subdirectories)
+            # Get list of migration files from main directory only
+            # (exclude subdirectories)
             all_files = [
                 f for f in os.listdir(self.migrations_dir) if f.endswith(".sql")
             ]
 
-            # Filter to only include files directly in migrations directory (not subdirectories)
-            # and exclude rollback files
+            # Filter to only include files directly in migrations directory
+            # (not subdirectories) and exclude rollback files
             migration_files = []
             for f in all_files:
                 file_path = os.path.join(self.migrations_dir, f)
