@@ -267,8 +267,9 @@ def mock_settings_and_redis(monkeypatch):
     mock_settings.database.supabase_anon_key = "test_anon_key"
     
     # Mock memory service (Mem0)
-    mock_settings.memory.service_type = "mem0"
-    mock_settings.memory.api_key = "test_mem0_key"
+    # Note: AppSettings no longer has memory attribute after refactoring
+    # mock_settings.memory.service_type = "mem0"
+    # mock_settings.memory.api_key = "test_mem0_key"
 
     # Mock Redis client
     mock_redis_client = MagicMock()
@@ -286,9 +287,6 @@ def mock_settings_and_redis(monkeypatch):
     with (
         patch("tripsage.config.app_settings.AppSettings", return_value=mock_settings),
         patch("tripsage.config.app_settings.settings", mock_settings),
-        patch("tripsage.utils.settings.AppSettings", return_value=mock_settings),
-        patch("tripsage.utils.settings.get_settings", return_value=mock_settings),
-        patch("tripsage.utils.settings.settings", mock_settings),
         patch("redis.asyncio.from_url", mock_from_url),
         patch("redis.from_url", mock_from_url),
         patch("tripsage.utils.cache.redis", redis_mock),

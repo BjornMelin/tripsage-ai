@@ -1,0 +1,1 @@
+"""Custom exceptions for TripSage."""

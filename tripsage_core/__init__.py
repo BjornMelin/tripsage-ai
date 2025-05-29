@@ -1,0 +1,1 @@
+"""TripSage Core - Shared utilities, services, and models."""
