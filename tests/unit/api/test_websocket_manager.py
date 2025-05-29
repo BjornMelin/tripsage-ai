@@ -21,7 +21,7 @@ from tripsage.api.models.websocket import (
     WebSocketEvent,
     WebSocketEventType,
 )
-from tripsage.api.services.websocket_manager import WebSocketManager
+from tripsage_core.services.infrastructure.websocket_manager import WebSocketManager
 
 
 @pytest.fixture

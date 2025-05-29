@@ -15,7 +15,9 @@ from tripsage.api.models.websocket import (
     WebSocketEvent,
     WebSocketEventType,
 )
-from tripsage.api.services.websocket_broadcaster import WebSocketBroadcaster
+from tripsage_core.services.infrastructure.websocket_broadcaster import (
+    WebSocketBroadcaster,
+)
 
 
 @pytest.fixture
@@ -41,7 +43,7 @@ def mock_redis():
 def broadcaster(mock_redis):
     """Create a WebSocketBroadcaster instance with mocked Redis."""
     with patch(
-        "tripsage.api.services.websocket_broadcaster.redis.asyncio.from_url",
+        "tripsage_core.services.infrastructure.websocket_broadcaster.redis.asyncio.from_url",
         return_value=mock_redis,
     ):
         broadcaster = WebSocketBroadcaster()

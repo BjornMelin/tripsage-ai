@@ -12,9 +12,11 @@ from typing import Dict, List
 import pytest
 
 from tripsage.config.feature_flags import FeatureFlags, IntegrationMode
-from tripsage.services.infrastructure.dragonfly_service import get_cache_service
-from tripsage.services.infrastructure.supabase_service import SupabaseService
 from tripsage.utils.cache import web_cache
+from tripsage_core.services.infrastructure import (
+    get_cache_service,
+    get_database_service,
+)
 
 
 class PerformanceBenchmark:
@@ -72,7 +74,7 @@ async def dragonfly_service():
     # Cleanup if needed
     if hasattr(service, "disconnect"):
         try:
-            await service.disconnect()
+            await service.close()
         except Exception:
             pass
 
@@ -80,10 +82,9 @@ async def dragonfly_service():
 @pytest.fixture
 async def supabase_service():
     """Fixture for direct Supabase service."""
-    service = SupabaseService()
-    await service.connect()
+    service = await get_database_service()
     yield service
-    await service.disconnect()
+    await service.close()
 
 
 @pytest.fixture
@@ -321,8 +322,8 @@ async def run_comprehensive_benchmark():
             await dragonfly_service.disconnect()
 
     # Test Supabase performance
-    supabase_service = SupabaseService()
-    await supabase_service.connect()
+    supabase_service = await get_database_service()
+    # Core database service auto-connects
 
     try:
         connection_stats = await benchmark.benchmark_operation(

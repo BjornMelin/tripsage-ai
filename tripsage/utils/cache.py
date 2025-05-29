@@ -25,10 +25,10 @@ from typing import (
 
 from pydantic import BaseModel, Field
 
-from tripsage.services.infrastructure.dragonfly_service import get_cache_service
 from tripsage.utils.content_types import ContentType
 from tripsage.utils.logging import get_logger
 from tripsage.utils.settings import settings
+from tripsage_core.services.infrastructure import get_cache_service
 
 logger = get_logger(__name__)
 

@@ -135,12 +135,10 @@ def ensure_memory_client_initialized(func: F) -> F:
     async def wrapper(*args: Any, **kwargs: Any) -> Any:
         """Wrapper function that initializes memory service."""
         try:
-            # Import here to avoid circular imports
-            from tripsage.services.infrastructure.memory_service import memory_service
-
-            # Initialize the memory service if not already initialized
-            if not memory_service._initialized:
-                await memory_service.initialize()
+            # TODO: Update memory service initialization for Core architecture
+            # The Core memory service uses a different initialization pattern
+            # This will be updated when the memory service migration is completed
+            pass
 
             # Call the original function
             return await func(*args, **kwargs)

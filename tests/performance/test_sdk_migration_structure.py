@@ -8,8 +8,12 @@ from pathlib import Path
 
 from tripsage.config.feature_flags import FeatureFlags, IntegrationMode
 from tripsage.config.service_registry import ServiceRegistry
-from tripsage.services.dragonfly_service import DragonflyService
-from tripsage.services.supabase_service import SupabaseService
+from tripsage_core.services.infrastructure import (
+    CacheService as DragonflyService,
+)
+from tripsage_core.services.infrastructure import (
+    DatabaseService as SupabaseService,
+)
 
 
 class TestMigrationStructure:
