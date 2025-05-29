@@ -14,7 +14,7 @@ from tripsage.api.core.dependencies import get_current_user
 from tripsage.config.file_config import (
     MAX_SESSION_SIZE,
 )
-from tripsage.models.db.user import UserDB
+from tripsage_core.models.db.user import UserDB
 from tripsage.services.file_processor import FileProcessor
 from tripsage.utils.file_validation import validate_file
 

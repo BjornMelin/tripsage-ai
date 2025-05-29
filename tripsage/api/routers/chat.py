@@ -21,7 +21,7 @@ from tripsage.api.core.dependencies import get_db, get_session_memory, verify_ap
 from tripsage.api.middlewares.auth import get_current_user
 from tripsage.api.models.chat import ToolCall
 from tripsage.api.services.chat_service import ChatService, RateLimiter
-from tripsage.models.db.user import UserDB
+from tripsage_core.models.db.user import UserDB
 
 logger = logging.getLogger(__name__)
 

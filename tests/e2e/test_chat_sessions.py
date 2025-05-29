@@ -8,7 +8,7 @@ import pytest
 from fastapi import status
 from fastapi.testclient import TestClient
 
-from tripsage.models.db.chat import (
+from tripsage_core.models.db.chat import (
     ChatMessageDB,
     ChatSessionDB,
     ChatSessionWithStats,

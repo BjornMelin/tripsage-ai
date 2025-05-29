@@ -2,7 +2,7 @@
 
 from datetime import datetime
 
-from tripsage.models.db.search_parameters import SearchParameters
+from tripsage_core.models.db.search_parameters import SearchParameters
 
 
 def test_search_parameters_creation(sample_search_parameters_dict):

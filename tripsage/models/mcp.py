@@ -15,7 +15,7 @@ from pydantic import (
     model_validator,
 )
 
-from tripsage.models.base import TripSageModel
+from tripsage_core.models.base import TripSageModel
 
 
 class MCPRequestBase(TripSageModel):

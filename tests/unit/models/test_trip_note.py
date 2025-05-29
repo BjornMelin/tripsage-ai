@@ -5,7 +5,7 @@ from datetime import datetime
 import pytest
 from pydantic import ValidationError
 
-from tripsage.models.db.trip_note import TripNote
+from tripsage_core.models.db.trip_note import TripNote
 
 
 def test_trip_note_creation(sample_trip_note_dict):

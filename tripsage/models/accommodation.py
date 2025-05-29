@@ -12,7 +12,7 @@ from typing import List, Optional
 
 from pydantic import Field, field_validator, model_validator
 
-from tripsage.models.base import TripSageModel
+from tripsage_core.models.base import TripSageModel
 from tripsage.models.mcp import MCPRequestBase, MCPResponseBase
 
 

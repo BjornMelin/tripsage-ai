@@ -5,19 +5,19 @@ from typing import Any, Dict
 
 import pytest
 
-from tripsage.models.db.accommodation import (
+from tripsage_core.models.db.accommodation import (
     AccommodationType,
     CancellationPolicy,
 )
-from tripsage.models.db.flight import AirlineProvider, BookingStatus, DataSource
-from tripsage.models.db.price_history import EntityType
-from tripsage.models.db.saved_option import OptionType
-from tripsage.models.db.transportation import TransportationType
-from tripsage.models.db.trip import TripStatus, TripVisibility
-from tripsage.models.db.user import UserRole
+from tripsage_core.models.db.flight import AirlineProvider, BookingStatus, DataSource
+from tripsage_core.models.db.price_history import EntityType
+from tripsage_core.models.db.saved_option import OptionType
+from tripsage_core.models.db.transportation import TransportationType
+from tripsage_core.models.db.trip import TripStatus, TripType
+from tripsage_core.models.db.user import UserRole
 
 # Temporarily commented out until fixed
-# from tripsage.models.db.itinerary_item import ItineraryItem, ItemType
+# from tripsage_core.models.db.itinerary_item import ItineraryItem, ItemType
 
 
 @pytest.fixture
@@ -46,7 +46,7 @@ def sample_trip_dict() -> Dict[str, Any]:
         "title": "Sample Trip",
         "description": "A test trip",
         "status": TripStatus.PLANNING,
-        "visibility": TripVisibility.PRIVATE,
+        "trip_type": TripType.LEISURE,
         "start_date": date.today() + timedelta(days=10),
         "end_date": date.today() + timedelta(days=17),
         "destination": "Tokyo, Japan",
