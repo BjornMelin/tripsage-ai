@@ -9,11 +9,11 @@ including geocoding, place search, directions, distance calculations, and timezo
 import logging
 from typing import Any, Dict, List, Optional
 
-from tripsage.utils.decorators import with_error_handling
 from tripsage_core.services.external_apis.google_maps_service import (
     GoogleMapsServiceError,
     get_google_maps_service,
 )
+from tripsage_core.utils.decorator_utils import with_error_handling
 
 logger = logging.getLogger(__name__)
 

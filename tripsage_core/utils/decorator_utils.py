@@ -1,5 +1,5 @@
 """
-Utility decorators for TripSage.
+Utility decorators for TripSage Core.
 
 This module provides decorators used across the TripSage codebase for standardized
 error handling and client initialization patterns.
@@ -10,8 +10,9 @@ import functools
 import inspect
 from typing import Any, Callable, TypeVar, cast
 
-from tripsage.utils.error_handling import log_exception
-from tripsage.utils.logging import get_logger
+from tripsage_core.utils.logging_utils import get_logger
+
+from .error_handling_utils import log_exception
 
 logger = get_logger(__name__)
 
@@ -120,8 +121,12 @@ def ensure_memory_client_initialized(func: F) -> F:
         @ensure_memory_client_initialized
         async def add_memory() -> Dict[str, Any]:
             # Memory service is already initialized here
-            from tripsage.services.memory_service import memory_service
-            result = await memory_service.add("user-123", "Trip preference")
+            from tripsage_core.services.business.memory_service import MemoryService
+            memory_service = MemoryService()
+            result = await memory_service.add_memory(
+                user_id="user-123",
+                content="Trip preference"
+            )
             return {"memory_id": result}
         ```
     """
@@ -135,10 +140,9 @@ def ensure_memory_client_initialized(func: F) -> F:
     async def wrapper(*args: Any, **kwargs: Any) -> Any:
         """Wrapper function that initializes memory service."""
         try:
-            # TODO: Update memory service initialization for Core architecture
-            # The Core memory service uses a different initialization pattern
-            # This will be updated when the memory service migration is completed
-            pass
+            # Note: The Core memory service has automatic initialization
+            # via dependency injection in the service layer, so explicit
+            # initialization is no longer needed here.
 
             # Call the original function
             return await func(*args, **kwargs)

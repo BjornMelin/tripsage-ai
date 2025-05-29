@@ -21,7 +21,7 @@ except ImportError:
 from pydantic import BaseModel
 
 from tripsage.utils.error_handling import TripSageError
-from tripsage.utils.logging import get_logger
+from tripsage_core.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)
 

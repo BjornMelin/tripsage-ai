@@ -1,7 +1,8 @@
 """
-File validation utilities for secure file upload handling.
+File handling utilities for TripSage Core.
 
-This module implements comprehensive file validation including type checking,
+This module combines file validation and configuration functionality,
+implementing comprehensive file validation including type checking,
 size limits, and security scanning following KISS principles.
 """
 
@@ -13,28 +14,66 @@ from typing import Optional, Set, Tuple
 from fastapi import UploadFile
 from pydantic import BaseModel, Field
 
-from tripsage.config.file_config import ALLOWED_EXTENSIONS as CONFIG_ALLOWED_EXTENSIONS
-from tripsage.config.file_config import ALLOWED_MIME_TYPES as CONFIG_ALLOWED_MIME_TYPES
-from tripsage.config.file_config import MAX_FILE_SIZE, MAX_SESSION_SIZE
+# ===== File Configuration Constants =====
 
+# File size limits
+MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB per file
+MAX_FILES_PER_REQUEST = 5
+MAX_SESSION_SIZE = 50 * 1024 * 1024  # 50MB total per session
 
-class ValidationResult(BaseModel):
-    """Result of file validation."""
+# Allowed file extensions
+ALLOWED_EXTENSIONS = {
+    ".pdf",
+    ".txt",
+    ".csv",
+    ".json",  # Documents
+    ".jpg",
+    ".jpeg",
+    ".png",
+    ".webp",
+    ".gif",  # Images
+    ".docx",  # Office documents
+    ".zip",  # Archives
+}
 
-    is_valid: bool = Field(..., description="Whether the file passed validation")
-    error_message: Optional[str] = Field(
-        None, description="Error message if validation failed"
-    )
-    file_size: int = Field(..., description="File size in bytes")
-    detected_type: Optional[str] = Field(None, description="Detected MIME type")
-    file_hash: Optional[str] = Field(None, description="SHA256 hash of file content")
+# Allowed MIME types
+ALLOWED_MIME_TYPES = {
+    "application/pdf",
+    "text/plain",
+    "text/csv",
+    "application/json",
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+    "image/gif",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "application/zip",
+}
 
+# File type categorization
+FILE_TYPE_MAPPING = {
+    # Images
+    "image/jpeg": "image",
+    "image/png": "image",
+    "image/webp": "image",
+    "image/gif": "image",
+    # Documents
+    "application/pdf": "document",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": (
+        "document"
+    ),
+    # Text files
+    "text/plain": "text",
+    "text/csv": "spreadsheet",
+    "application/json": "text",
+    # Archives
+    "application/zip": "archive",
+}
 
-# Use centralized configuration
-ALLOWED_MIME_TYPES: Set[str] = CONFIG_ALLOWED_MIME_TYPES
-ALLOWED_EXTENSIONS: Set[str] = CONFIG_ALLOWED_EXTENSIONS
-
-# File size limits now imported from config
+# Storage configuration
+DEFAULT_STORAGE_ROOT = "uploads"
+TEMP_UPLOAD_DIR = "temp"
+PROCESSED_DIR = "processed"
 
 # Security patterns to detect in filenames
 SUSPICIOUS_PATTERNS = {
@@ -55,6 +94,21 @@ SUSPICIOUS_PATTERNS = {
     ".pif",
     ".jar",
 }
+
+
+# ===== File Validation Classes and Functions =====
+
+
+class ValidationResult(BaseModel):
+    """Result of file validation."""
+
+    is_valid: bool = Field(..., description="Whether the file passed validation")
+    error_message: Optional[str] = Field(
+        None, description="Error message if validation failed"
+    )
+    file_size: int = Field(..., description="File size in bytes")
+    detected_type: Optional[str] = Field(None, description="Detected MIME type")
+    file_hash: Optional[str] = Field(None, description="SHA256 hash of file content")
 
 
 async def validate_file(
@@ -341,3 +395,22 @@ def generate_safe_filename(original_filename: str, user_id: str) -> str:
     safe_name = f"{user_id}_{filename_hash}{extension}"
 
     return safe_name
+
+
+__all__ = [
+    # Configuration constants
+    "MAX_FILE_SIZE",
+    "MAX_FILES_PER_REQUEST",
+    "MAX_SESSION_SIZE",
+    "ALLOWED_EXTENSIONS",
+    "ALLOWED_MIME_TYPES",
+    "FILE_TYPE_MAPPING",
+    "DEFAULT_STORAGE_ROOT",
+    "TEMP_UPLOAD_DIR",
+    "PROCESSED_DIR",
+    # Validation functions and classes
+    "ValidationResult",
+    "validate_file",
+    "validate_batch_upload",
+    "generate_safe_filename",
+]

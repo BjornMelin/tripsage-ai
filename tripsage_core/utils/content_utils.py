@@ -1,5 +1,5 @@
 """
-Content type definitions for TripSage caching utilities.
+Content type definitions for TripSage Core caching utilities.
 
 This module provides content type enums without dependencies on settings
 or other complex modules to avoid circular import issues.
@@ -30,3 +30,15 @@ class ContentType(str, Enum):
     HTML = "html"
     # Binary data (images, PDFs, etc.)
     BINARY = "binary"
+
+
+def get_ttl_for_content_type(content_type: ContentType) -> int:
+    """Get the appropriate TTL for a content type."""
+    ttl_map = {
+        ContentType.REALTIME: 60,  # 1 minute
+        ContentType.TIME_SENSITIVE: 300,  # 5 minutes
+        ContentType.DAILY: 3600,  # 1 hour
+        ContentType.SEMI_STATIC: 28800,  # 8 hours
+        ContentType.STATIC: 86400,  # 24 hours
+    }
+    return ttl_map.get(content_type, 3600)  # Default 1 hour

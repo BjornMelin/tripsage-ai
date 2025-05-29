@@ -26,7 +26,7 @@ from tripsage.utils.error_handling import (
     log_exception,
     with_error_handling,
 )
-from tripsage.utils.logging import get_logger
+from tripsage_core.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)
 

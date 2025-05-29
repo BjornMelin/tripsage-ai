@@ -28,7 +28,7 @@ from tripsage.orchestration.nodes.itinerary_agent import ItineraryAgentNode
 from tripsage.orchestration.nodes.memory_update import MemoryUpdateNode
 from tripsage.orchestration.routing import RouterNode
 from tripsage.orchestration.state import TravelPlanningState, create_initial_state
-from tripsage.utils.logging import get_logger
+from tripsage_core.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)
 

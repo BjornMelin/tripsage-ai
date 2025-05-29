@@ -12,11 +12,11 @@ from typing import Dict, List
 import pytest
 
 from tripsage.config.feature_flags import FeatureFlags, IntegrationMode
-from tripsage.utils.cache import web_cache
 from tripsage_core.services.infrastructure import (
     get_cache_service,
     get_database_service,
 )
+from tripsage_core.utils.cache_utils import redis_cache as web_cache
 
 
 class PerformanceBenchmark:

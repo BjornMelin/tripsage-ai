@@ -17,7 +17,7 @@ from pydantic import BaseModel, Field
 
 from tripsage.config.app_settings import get_settings
 from tripsage.monitoring.telemetry import get_telemetry
-from tripsage.utils.logging import get_logger
+from tripsage_core.utils.logging_utils import get_logger
 from tripsage_core.services.infrastructure import get_cache_service
 
 logger = get_logger(__name__)

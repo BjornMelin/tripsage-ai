@@ -8,7 +8,7 @@ MCP wrapper. All other services use direct SDK integration.
 import threading
 from typing import Callable, Dict, Optional, Type
 
-from tripsage.utils.logging import get_logger
+from tripsage_core.utils.logging_utils import get_logger
 
 from .base_wrapper import BaseMCPWrapper
 

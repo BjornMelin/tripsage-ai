@@ -1,5 +1,5 @@
 """
-Database utilities for TripSage.
+Database utilities for TripSage Core.
 
 This module provides utilities for working with Supabase database via MCP clients.
 Consolidated to use Supabase only for all environments for improved performance,
@@ -8,9 +8,8 @@ cost savings, and simplified architecture.
 
 from typing import Dict
 
-from tripsage.config.app_settings import settings
-
-from .logging import get_logger
+from tripsage_core.config.base_app_settings import get_settings
+from tripsage_core.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)
 
@@ -21,6 +20,7 @@ def get_supabase_settings() -> Dict[str, str]:
     Returns:
         Dictionary with Supabase connection parameters
     """
+    settings = get_settings()
     logger.info("Using Supabase database (consolidated architecture)")
     return {
         "supabase_url": settings.database.supabase_url,
@@ -59,6 +59,7 @@ class DatabaseConnectionFactory:
         Returns:
             Dictionary with pgvector configuration
         """
+        settings = get_settings()
         return {
             "enabled": settings.database.pgvector_enabled,
             "dimensions": settings.database.vector_dimensions,

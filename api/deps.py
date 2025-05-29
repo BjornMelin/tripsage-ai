@@ -12,7 +12,7 @@ from fastapi.security import APIKeyHeader, APIKeyQuery, OAuth2PasswordBearer
 from api.core.config import settings
 from api.core.exceptions import AuthenticationError
 from tripsage.mcp_abstraction import MCPManager, mcp_manager
-from tripsage.utils.session_memory import SessionMemory
+from tripsage_core.utils.session_utils import SessionMemory
 from tripsage_core.services.infrastructure import get_cache_service
 
 # OAuth2 setup

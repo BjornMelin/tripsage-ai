@@ -1,9 +1,8 @@
 """
-Error handling utilities for TripSage.
+Error handling utilities for TripSage Core.
 
 This module provides standardized error handling functionality for the TripSage
-application. It now uses the centralized exception system from tripsage_core.exceptions
-for consistency across the entire application.
+application, building on top of the core exception system.
 """
 
 from typing import Any, Callable, Dict, Optional, TypeVar, Union
@@ -25,7 +24,6 @@ from tripsage_core.exceptions import (
 from tripsage_core.exceptions import (
     with_error_handling as core_with_error_handling,
 )
-
 from tripsage_core.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)
@@ -34,28 +32,6 @@ logger = get_logger(__name__)
 T = TypeVar("T")
 R = TypeVar("R")
 F = TypeVar("F", bound=Callable[..., Any])
-
-# Backwards compatibility aliases - these point to the core exceptions
-TripSageError = CoreTripSageError
-MCPError = CoreMCPError
-APIError = CoreExternalAPIError
-ValidationError = CoreValidationError
-DatabaseError = CoreDatabaseError
-
-
-def format_exception(exc: Exception) -> Dict[str, Any]:
-    """Format an exception into a standardized structure.
-
-    This function now delegates to the core exception formatting system
-    for consistency across the application.
-
-    Args:
-        exc: The exception to format
-
-    Returns:
-        A dictionary with exception information
-    """
-    return core_format_exception(exc)
 
 
 def log_exception(exc: Exception, logger_name: Optional[str] = None) -> None:
@@ -107,13 +83,10 @@ def log_exception(exc: Exception, logger_name: Optional[str] = None) -> None:
         )
 
 
-def safe_execute(
+def safe_execute_with_logging(
     func: Callable[..., T], *args: Any, fallback: R = None, **kwargs: Any
 ) -> Union[T, R]:
-    """Execute a function with error handling.
-
-    This function now uses the core safe_execute implementation
-    with enhanced logging through the TripSage logger.
+    """Execute a function with error handling and TripSage logging.
 
     Args:
         func: The function to execute
@@ -127,15 +100,12 @@ def safe_execute(
     return core_safe_execute(func, *args, fallback=fallback, logger=logger, **kwargs)
 
 
-def with_error_handling(
+def with_error_handling_and_logging(
     fallback: Any = None,
     logger_instance: Optional[Any] = None,
     re_raise: bool = False,
 ):
-    """Decorator to add error handling to functions.
-
-    This function now uses the core error handling decorator
-    with TripSage-specific logging configuration.
+    """Decorator to add error handling with TripSage logging to functions.
 
     Args:
         fallback: Default value to return on error
@@ -338,3 +308,15 @@ class TripSageErrorContext:
 
         # Don't suppress the exception
         return False
+
+
+__all__ = [
+    "log_exception",
+    "safe_execute_with_logging",
+    "with_error_handling_and_logging",
+    "create_mcp_error",
+    "create_api_error",
+    "create_validation_error",
+    "create_database_error",
+    "TripSageErrorContext",
+]

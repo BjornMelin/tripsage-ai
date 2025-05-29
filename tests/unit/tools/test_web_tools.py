@@ -13,13 +13,14 @@ from tripsage.tools.web_tools import (
     invalidate_web_cache_for_query,
     web_cached,
 )
-from tripsage.utils.cache import ContentType, WebOperationsCache
+from tripsage_core.utils.cache_utils import DragonflyCache
+from tripsage_core.utils.content_utils import ContentType
 
 
 @pytest.fixture
 def mock_cache():
-    """Create a mock WebOperationsCache."""
-    mock = AsyncMock(spec=WebOperationsCache)
+    """Create a mock DragonflyCache."""
+    mock = AsyncMock(spec=DragonflyCache)
     mock.get.return_value = None
     mock.set.return_value = True
     mock.generate_cache_key.return_value = "test-key"
@@ -222,5 +223,5 @@ class TestWebToolsUtilities:
 
             # Execute
             # Just verify it's callable, the actual caching behavior is
-            # tested in the WebOperationsCache tests
+            # tested in the DragonflyCache tests
             assert callable(test_func)

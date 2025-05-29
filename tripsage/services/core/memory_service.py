@@ -25,8 +25,8 @@ from pydantic import BaseModel, Field
 from tripsage.config.app_settings import get_settings
 from tripsage.config.feature_flags import IntegrationMode, feature_flags
 from tripsage.config.service_registry import ServiceAdapter, ServiceProtocol
-from tripsage.utils.decorators import with_error_handling
-from tripsage.utils.logging import get_logger
+from tripsage_core.utils.logging_utils import get_logger
+from tripsage_core.utils.decorator_utils import with_error_handling
 
 logger = get_logger(__name__)
 settings = get_settings()

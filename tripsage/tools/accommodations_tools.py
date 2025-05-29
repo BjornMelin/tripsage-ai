@@ -16,9 +16,9 @@ from tripsage.tools.schemas.accommodations import (
     AirbnbSearchParams,
     AirbnbSearchResult,
 )
-from tripsage.utils.cache import web_cache
-from tripsage.utils.error_handling import with_error_handling
-from tripsage.utils.logging import get_logger
+from tripsage_core.utils.logging_utils import get_logger
+from tripsage_core.utils.cache_utils import redis_cache
+from tripsage_core.utils.decorator_utils import with_error_handling
 
 # Set up logger
 logger = get_logger(__name__)
@@ -116,7 +116,7 @@ async def search_airbnb_rentals_tool(
         )
 
         # Check cache first
-        cached_result = await web_cache.get(cache_key)
+        cached_result = await redis_cache.get(cache_key)
         if cached_result:
             logger.info("Using cached Airbnb search results")
             result = AirbnbSearchResult.model_validate(cached_result)
@@ -133,7 +133,7 @@ async def search_airbnb_rentals_tool(
             result = AirbnbSearchResult.model_validate(result)
 
             # Cache the result for 1 hour
-            await web_cache.set(cache_key, result.model_dump(), ttl=3600)
+            await redis_cache.set(cache_key, result.model_dump(), ttl=3600)
             cache_hit = False
 
         # Apply post-search filtering for min_rating (if provided)
@@ -244,7 +244,7 @@ async def get_airbnb_listing_details_tool(
         )
 
         # Check cache first
-        cached_result = await web_cache.get(cache_key)
+        cached_result = await redis_cache.get(cache_key)
         if cached_result:
             logger.info("Using cached Airbnb listing details")
             result = AirbnbListingDetails.model_validate(cached_result)
@@ -261,7 +261,7 @@ async def get_airbnb_listing_details_tool(
             result = AirbnbListingDetails.model_validate(result)
 
             # Cache the result for 24 hours
-            await web_cache.set(cache_key, result.model_dump(), ttl=3600 * 24)
+            await redis_cache.set(cache_key, result.model_dump(), ttl=3600 * 24)
             cache_hit = False
 
         # Format results for agent consumption
