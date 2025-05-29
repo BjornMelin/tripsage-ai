@@ -280,9 +280,9 @@ class TestModelInteraction:
         assert isinstance(response, TripSageModel)
 
         # But should be distinct types
-        assert type(domain) != type(db)
-        assert type(db) != type(response)
-        assert type(domain) != type(response)
+        assert type(domain) is not type(db)
+        assert type(db) is not type(response)
+        assert type(domain) is not type(response)
 
     def test_model_config_inheritance(self):
         """Test that model configuration is properly inherited."""

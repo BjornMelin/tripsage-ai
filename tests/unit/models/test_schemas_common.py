@@ -12,13 +12,13 @@ from pathlib import Path
 project_root = Path(__file__).parents[3]
 sys.path.insert(0, str(project_root))
 
-from datetime import date, datetime, time
-from decimal import Decimal
+from datetime import date, datetime, time  # noqa: E402
+from decimal import Decimal  # noqa: E402
 
-import pytest
-from pydantic import ValidationError
+import pytest  # noqa: E402
+from pydantic import ValidationError  # noqa: E402
 
-from tripsage_core.models.schemas_common import (
+from tripsage_core.models.schemas_common import (  # noqa: E402
     # Enums
     AccommodationType,
     # Geographic
