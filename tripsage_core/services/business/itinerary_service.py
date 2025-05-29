@@ -414,7 +414,9 @@ class ItineraryService:
 
         if external_calendar_service is None:
             try:
-                from tripsage.services.external.calendar_service import CalendarService
+                from tripsage_core.services.external_apis.calendar_service import (
+                    GoogleCalendarService as CalendarService,
+                )
 
                 external_calendar_service = CalendarService()
             except ImportError:

@@ -138,7 +138,7 @@ session_memory_dependency = Depends(get_session_memory)
 # Direct service dependencies (using comprehensive API implementations)
 async def get_webcrawl_service():
     """Get the direct WebCrawl service."""
-    from tripsage.services.external.webcrawl_service import WebCrawlService
+    from tripsage_core.services.external_apis.webcrawl_service import WebCrawlService
 
     return WebCrawlService()
 
@@ -157,28 +157,36 @@ async def get_dragonfly_service():
 
 async def get_google_maps_service():
     """Get the direct Google Maps service."""
-    from tripsage.services.external.google_maps_service import GoogleMapsService
+    from tripsage_core.services.external_apis.google_maps_service import (
+        GoogleMapsService,
+    )
 
     return GoogleMapsService()
 
 
 async def get_playwright_service():
     """Get the direct Playwright service for complex web scraping."""
-    from tripsage.services.external.playwright_service import PlaywrightService
+    from tripsage_core.services.external_apis.playwright_service import (
+        PlaywrightService,
+    )
 
     return PlaywrightService()
 
 
 async def get_weather_service():
     """Get the comprehensive OpenWeatherMap API service."""
-    from tripsage.services.external.weather_service import OpenWeatherMapService
+    from tripsage_core.services.external_apis.weather_service import (
+        WeatherService as OpenWeatherMapService,
+    )
 
     return OpenWeatherMapService()
 
 
 async def get_calendar_service():
     """Get the comprehensive Google Calendar API service."""
-    from tripsage.services.external.calendar_service import GoogleCalendarService
+    from tripsage_core.services.external_apis.calendar_service import (
+        GoogleCalendarService,
+    )
 
     service = GoogleCalendarService()
     await service.initialize()
@@ -187,14 +195,16 @@ async def get_calendar_service():
 
 async def get_flights_service():
     """Get the comprehensive Duffel Flights API service."""
-    from tripsage.services.external.flights_service import DuffelFlightsService
+    from tripsage_core.services.external_apis.duffel_http_client import (
+        DuffelHTTPClient as DuffelFlightsService,
+    )
 
     return DuffelFlightsService()
 
 
 async def get_time_service():
     """Get the direct Time service using Python datetime."""
-    from tripsage.services.core.time_service import TimeService
+    from tripsage_core.services.external_apis.time_service import TimeService
 
     return TimeService()
 
