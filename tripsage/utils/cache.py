@@ -183,7 +183,7 @@ class DragonflyCache:
             full_key = self._make_key(key)
 
             # Use the unified cache service
-            result = await self._cache_service.set(full_key, value, ex=ttl)
+            result = await self._cache_service.set(full_key, value, ttl=ttl)
 
             if result:
                 await self._increment_stat("sets")
@@ -260,9 +260,9 @@ class DragonflyCache:
                 current = await self._cache_service.get(stat_key) or "0"
                 try:
                     new_value = int(current) + 1
-                    await self._cache_service.set(stat_key, str(new_value), ex=86400)
+                    await self._cache_service.set(stat_key, str(new_value), ttl=86400)
                 except ValueError:
-                    await self._cache_service.set(stat_key, "1", ex=86400)
+                    await self._cache_service.set(stat_key, "1", ttl=86400)
         except Exception:
             pass  # Don't fail on stats errors
 
@@ -501,7 +501,7 @@ async def batch_cache_set(
                 if not item["key"].startswith(f"{namespace}:")
                 else item["key"]
             )
-            success = await cache_service.set(key, item["value"], ex=item.get("ttl"))
+            success = await cache_service.set(key, item["value"], ttl=item.get("ttl"))
             results.append(bool(success))
         return results
 
@@ -591,10 +591,17 @@ async def cache_lock(
 
     acquired = False
     for _ in range(retry_count):
-        success = await cache_service.set(lock_key, lock_value, ex=timeout, nx=True)
-        if success:
-            acquired = True
-            break
+        # Check if lock exists
+        existing = await cache_service.get(lock_key)
+        if existing is None:
+            # Try to acquire lock
+            success = await cache_service.set(lock_key, lock_value, ttl=timeout)
+            if success:
+                # Verify we got the lock (handle race condition)
+                check_value = await cache_service.get(lock_key)
+                if check_value == lock_value:
+                    acquired = True
+                    break
         await asyncio.sleep(retry_delay)
 
     try:

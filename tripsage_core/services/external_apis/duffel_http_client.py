@@ -142,7 +142,7 @@ class DuffelHTTPClient:
                 code="CONNECTION_FAILED",
                 service="DuffelHTTPClient",
                 details={"error": str(e)},
-            )
+            ) from e
 
     async def disconnect(self) -> None:
         """Close HTTP client connection."""

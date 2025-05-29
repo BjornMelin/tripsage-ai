@@ -75,7 +75,10 @@ class DatabaseService:
 
             if not supabase_url or not supabase_url.startswith("https://"):
                 raise CoreDatabaseError(
-                    message=f"Invalid Supabase URL format: {supabase_url}. Must be a valid HTTPS URL",
+                    message=(
+                        f"Invalid Supabase URL format: {supabase_url}. "
+                        f"Must be a valid HTTPS URL"
+                    ),
                     code="INVALID_DATABASE_URL",
                 )
 
@@ -112,7 +115,7 @@ class DatabaseService:
                 message=f"Failed to connect to database: {str(e)}",
                 code="DATABASE_CONNECTION_FAILED",
                 details={"error": str(e)},
-            )
+            ) from e
 
     async def close(self) -> None:
         """Close database connection and cleanup resources."""
@@ -163,7 +166,7 @@ class DatabaseService:
                 operation="INSERT",
                 table=table,
                 details={"error": str(e)},
-            )
+            ) from e
 
     async def select(
         self,
@@ -228,7 +231,7 @@ class DatabaseService:
                 operation="SELECT",
                 table=table,
                 details={"error": str(e)},
-            )
+            ) from e
 
     async def update(
         self, table: str, data: Dict[str, Any], filters: Dict[str, Any]
@@ -265,7 +268,7 @@ class DatabaseService:
                 operation="UPDATE",
                 table=table,
                 details={"error": str(e)},
-            )
+            ) from e
 
     async def upsert(
         self,
@@ -304,7 +307,7 @@ class DatabaseService:
                 operation="UPSERT",
                 table=table,
                 details={"error": str(e)},
-            )
+            ) from e
 
     async def delete(self, table: str, filters: Dict[str, Any]) -> List[Dict[str, Any]]:
         """Delete data from table.
@@ -338,7 +341,7 @@ class DatabaseService:
                 operation="DELETE",
                 table=table,
                 details={"error": str(e)},
-            )
+            ) from e
 
     async def count(self, table: str, filters: Optional[Dict[str, Any]] = None) -> int:
         """Count records in table.
@@ -373,7 +376,7 @@ class DatabaseService:
                 operation="COUNT",
                 table=table,
                 details={"error": str(e)},
-            )
+            ) from e
 
     # High-level business operations
 
@@ -600,7 +603,7 @@ class DatabaseService:
                 operation="VECTOR_SEARCH",
                 table=table,
                 details={"error": str(e)},
-            )
+            ) from e
 
     async def vector_search_destinations(
         self,
@@ -656,7 +659,7 @@ class DatabaseService:
                 code="SQL_EXECUTION_FAILED",
                 operation="EXECUTE_SQL",
                 details={"error": str(e), "sql": sql},
-            )
+            ) from e
 
     async def call_function(
         self, function_name: str, params: Optional[Dict[str, Any]] = None
@@ -684,7 +687,7 @@ class DatabaseService:
                 code="FUNCTION_CALL_FAILED",
                 operation="CALL_FUNCTION",
                 details={"error": str(e), "function": function_name},
-            )
+            ) from e
 
     # Transaction support
     @asynccontextmanager
@@ -804,7 +807,7 @@ class DatabaseService:
                 code="TABLE_INFO_FAILED",
                 table=table,
                 details={"error": str(e)},
-            )
+            ) from e
 
     async def get_database_stats(self) -> Dict[str, Any]:
         """Get database statistics."""
@@ -835,7 +838,7 @@ class DatabaseService:
                 message="Failed to get database statistics",
                 code="STATS_FAILED",
                 details={"error": str(e)},
-            )
+            ) from e
 
 
 # Global database service instance

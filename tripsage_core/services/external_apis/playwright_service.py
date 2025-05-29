@@ -1,5 +1,6 @@
 """
-Playwright Service for complex web scraping and browser automation with TripSage Core integration.
+Playwright Service for complex web scraping and browser automation
+with TripSage Core integration.
 
 This service provides direct Playwright SDK integration for scenarios requiring
 JavaScript execution, complex interactions, or sophisticated browser automation.
@@ -170,7 +171,7 @@ class PlaywrightService:
 
             self._connected = True
 
-            connection_time = time.time() - start_time
+            _connection_time = time.time() - start_time
 
         except Exception as e:
             await self.disconnect()
@@ -179,7 +180,7 @@ class PlaywrightService:
                 code="CONNECTION_FAILED",
                 service="PlaywrightService",
                 details={"error": str(e)},
-            )
+            ) from e
 
     async def _handle_route(self, route, request):
         """Handle resource blocking."""
@@ -221,7 +222,7 @@ class PlaywrightService:
                 code="DISCONNECT_FAILED",
                 service="PlaywrightService",
                 details={"error": str(e)},
-            )
+            ) from e
 
     async def ensure_connected(self) -> None:
         """Ensure service is connected."""
@@ -561,7 +562,8 @@ class PlaywrightService:
 
         Args:
             url: URL to scrape
-            content_type: Type of travel content (hotels, flights, activities, restaurants)
+            content_type: Type of travel content
+                (hotels, flights, activities, restaurants)
             wait_time: Time to wait for dynamic content
 
         Returns:

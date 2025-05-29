@@ -1,5 +1,6 @@
 """
-AI-powered document analysis service for travel-related document processing with TripSage Core integration.
+AI-powered document analysis service for travel-related document processing
+with TripSage Core integration.
 
 This service analyzes uploaded documents to extract travel-relevant information
 using AI models while following KISS principles and Core integration patterns.
@@ -157,7 +158,7 @@ class DocumentAnalyzer:
                 code="CONNECTION_FAILED",
                 service="DocumentAnalyzer",
                 details={"error": str(e)},
-            )
+            ) from e
 
     async def disconnect(self) -> None:
         """Clean up resources."""
@@ -254,7 +255,10 @@ class DocumentAnalyzer:
                 if self.pdf_extraction_enabled:
                     return await self._extract_text_from_pdf(context.file_path)
                 else:
-                    return f"PDF text extraction disabled in settings for {context.file_path.name}"
+                    return (
+                        f"PDF text extraction disabled in settings for "
+                        f"{context.file_path.name}"
+                    )
             elif context.mime_type == "application/json":
                 return await self._extract_text_from_json(context.file_path)
             elif context.mime_type == "text/csv":
@@ -263,7 +267,10 @@ class DocumentAnalyzer:
                 if self.ocr_enabled:
                     return await self._extract_text_from_image(context.file_path)
                 else:
-                    return f"OCR text extraction disabled in settings for {context.file_path.name}"
+                    return (
+                        f"OCR text extraction disabled in settings for "
+                        f"{context.file_path.name}"
+                    )
             elif "officedocument" in context.mime_type:
                 # TODO: Implement Office document parsing when needed
                 return await self._extract_text_from_office_doc(context.file_path)

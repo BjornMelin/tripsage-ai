@@ -1,8 +1,9 @@
 """
 Cache service for TripSage Core using DragonflyDB.
 
-This module provides high-performance caching capabilities using DragonflyDB (Redis-compatible)
-with 25x performance improvement over traditional Redis implementations.
+This module provides high-performance caching capabilities
+using DragonflyDB (Redis-compatible) with 25x performance improvement
+over traditional Redis implementations.
 """
 
 import json
@@ -81,7 +82,7 @@ class CacheService:
                 code="CACHE_CONNECTION_FAILED",
                 service="CacheService",
                 details={"error": str(e)},
-            )
+            ) from e
 
     async def disconnect(self) -> None:
         """Close connection to DragonflyDB server."""
@@ -139,7 +140,7 @@ class CacheService:
                 code="CACHE_SET_FAILED",
                 service="CacheService",
                 details={"key": key, "error": str(e)},
-            )
+            ) from e
 
     async def get_json(self, key: str, default: Any = None) -> Any:
         """Retrieve and deserialize a JSON value from cache.
@@ -168,7 +169,7 @@ class CacheService:
                 code="CACHE_GET_FAILED",
                 service="CacheService",
                 details={"key": key, "error": str(e)},
-            )
+            ) from e
 
     # String operations
 
@@ -197,7 +198,7 @@ class CacheService:
                 code="CACHE_SET_FAILED",
                 service="CacheService",
                 details={"key": key, "error": str(e)},
-            )
+            ) from e
 
     async def get(self, key: str) -> Optional[str]:
         """Get a string value from cache.
@@ -220,7 +221,7 @@ class CacheService:
                 code="CACHE_GET_FAILED",
                 service="CacheService",
                 details={"key": key, "error": str(e)},
-            )
+            ) from e
 
     # Key operations
 
@@ -244,7 +245,7 @@ class CacheService:
                 code="CACHE_DELETE_FAILED",
                 service="CacheService",
                 details={"keys": keys, "error": str(e)},
-            )
+            ) from e
 
     async def exists(self, *keys: str) -> int:
         """Check if keys exist in cache.
@@ -266,7 +267,7 @@ class CacheService:
                 code="CACHE_EXISTS_FAILED",
                 service="CacheService",
                 details={"keys": keys, "error": str(e)},
-            )
+            ) from e
 
     async def expire(self, key: str, seconds: int) -> bool:
         """Set expiration time for a key.
@@ -289,7 +290,7 @@ class CacheService:
                 code="CACHE_EXPIRE_FAILED",
                 service="CacheService",
                 details={"key": key, "seconds": seconds, "error": str(e)},
-            )
+            ) from e
 
     async def ttl(self, key: str) -> int:
         """Get time to live for a key.
@@ -384,7 +385,7 @@ class CacheService:
                 code="CACHE_MGET_FAILED",
                 service="CacheService",
                 details={"error": str(e)},
-            )
+            ) from e
 
     async def mset(self, mapping: Dict[str, str]) -> bool:
         """Set multiple key-value pairs at once.
@@ -406,7 +407,7 @@ class CacheService:
                 code="CACHE_MSET_FAILED",
                 service="CacheService",
                 details={"error": str(e)},
-            )
+            ) from e
 
     # Pattern-based operations
 
