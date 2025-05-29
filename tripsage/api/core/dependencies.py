@@ -13,10 +13,15 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 
 from tripsage.api.core.config import get_settings
 from tripsage.mcp_abstraction import MCPManager, mcp_manager
-from tripsage.services.infrastructure.database_service import DatabaseService
-from tripsage.services.infrastructure.dragonfly_service import get_cache_service
-from tripsage.services.infrastructure.supabase_service import SupabaseService
 from tripsage.utils.session_memory import initialize_session_memory
+from tripsage_core.services.infrastructure import (
+    CacheService,
+    DatabaseService,
+    get_cache_service,
+)
+from tripsage_core.services.infrastructure import (
+    get_database_service as get_core_database_service,
+)
 
 # Database configuration
 _engine = None
@@ -151,7 +156,7 @@ async def get_memory_service():
 
 
 async def get_dragonfly_service():
-    """Get DragonflyDB cache service."""
+    """Get DragonflyDB cache service (Core implementation)."""
     return await get_cache_service()
 
 
@@ -240,17 +245,13 @@ async def verify_api_key(current_user=None) -> bool:
 
 
 async def get_supabase_service():
-    """Get Supabase service."""
-    service = SupabaseService()
-    await service.connect()
-    return service
+    """Get database service (Core implementation with Supabase SDK)."""
+    return await get_core_database_service()
 
 
 async def get_database_service():
-    """Get database service."""
-    service = DatabaseService()
-    await service.connect()
-    return service
+    """Get database service (Core implementation)."""
+    return await get_core_database_service()
 
 
 async def get_mcp_manager():
@@ -259,9 +260,9 @@ async def get_mcp_manager():
 
 
 # Type annotations for dependency injection
-CacheService = Annotated[object, Depends(get_dragonfly_service)]
+CacheServiceDep = Annotated[CacheService, Depends(get_dragonfly_service)]
 DatabaseDep = Annotated[DatabaseService, Depends(get_database_service)]
-SupabaseDep = Annotated[SupabaseService, Depends(get_supabase_service)]
+SupabaseDep = Annotated[DatabaseService, Depends(get_supabase_service)]
 MCPManagerDep = Annotated[MCPManager, Depends(get_mcp_manager)]
 
 

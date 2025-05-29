@@ -12,8 +12,8 @@ from fastapi.security import APIKeyHeader, APIKeyQuery, OAuth2PasswordBearer
 from api.core.config import settings
 from api.core.exceptions import AuthenticationError
 from tripsage.mcp_abstraction import MCPManager, mcp_manager
-from tripsage.services.dragonfly_service import get_cache_service
 from tripsage.utils.session_memory import SessionMemory
+from tripsage_core.services.infrastructure import get_cache_service
 
 # OAuth2 setup
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/v1/auth/token", auto_error=False)
