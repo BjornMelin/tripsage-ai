@@ -15,6 +15,7 @@ This streamlined TODO list tracks current development priorities for TripSage AI
 - **API Key Management**: Complete BYOK implementation
 - **WebSocket Infrastructure**: Complete production-ready system with FastAPI/React integration (Issue #192)
 - **Issue Management**: Split Issue #167 into focused V1/V2 releases (Issues #195, #196)
+- **Centralized Exception System**: Complete tripsage_core.exceptions module with hierarchical error handling, structured details, and backwards compatibility (Issue #179)
 
 ### Coding Standards
 
