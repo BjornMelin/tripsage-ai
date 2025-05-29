@@ -287,7 +287,9 @@ class FileProcessingService:
 
         if storage_service is None:
             try:
-                from tripsage.services.external.storage_service import StorageService
+                from tripsage_core.services.external_apis.storage_service import (
+                    StorageService,
+                )
 
                 storage_service = StorageService()
             except ImportError:
@@ -298,8 +300,8 @@ class FileProcessingService:
 
         if ai_analysis_service is None:
             try:
-                from tripsage.services.external.ai_analysis_service import (
-                    AIAnalysisService,
+                from tripsage_core.services.external_apis.document_analyzer import (
+                    DocumentAnalyzer as AIAnalysisService,
                 )
 
                 ai_analysis_service = AIAnalysisService()
@@ -309,7 +311,9 @@ class FileProcessingService:
 
         if virus_scanner is None:
             try:
-                from tripsage.services.external.virus_scanner import VirusScanner
+                from tripsage_core.services.external_apis.virus_scanner import (
+                    VirusScanner,
+                )
 
                 virus_scanner = VirusScanner()
             except ImportError:

@@ -1,11 +1,15 @@
-"""Core business logic services."""
+"""
+Core business logic services.
+
+NOTE: TimeService has been migrated to tripsage_core.services.external_apis
+for better integration with Core settings and exception handling.
+"""
 
 from .chat_orchestration import ChatOrchestrationService
 from .chat_service import ChatService
 from .error_handling_service import ErrorHandlingService
 from .location_service import LocationService
 from .memory_service import MemoryService
-from .time_service import TimeService
 from .tool_calling_service import ToolCallingService
 
 __all__ = [
@@ -14,6 +18,5 @@ __all__ = [
     "ErrorHandlingService",
     "LocationService",
     "MemoryService",
-    "TimeService",
     "ToolCallingService",
 ]

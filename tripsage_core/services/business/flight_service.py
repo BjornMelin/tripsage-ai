@@ -304,8 +304,8 @@ class FlightService:
         if external_flight_service is None:
             # Import external service dynamically
             try:
-                from tripsage.services.external.flights_service import (
-                    DuffelFlightsService,
+                from tripsage_core.services.external_apis.duffel_http_client import (
+                    DuffelHTTPClient as DuffelFlightsService,
                 )
 
                 external_flight_service = DuffelFlightsService()

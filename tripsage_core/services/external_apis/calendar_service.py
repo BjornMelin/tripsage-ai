@@ -1,5 +1,5 @@
 """
-Google Calendar API service implementation.
+Google Calendar API service implementation with TripSage Core integration.
 
 This module provides direct integration with Google Calendar API using the
 google-api-python-client library, replacing the previous MCP server abstraction.
@@ -18,25 +18,9 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import Resource, build
 from googleapiclient.errors import HttpError
 
-from tripsage.models.api.calendar_models import (
-    CalendarEvent,
-    CalendarList,
-    CalendarListEntry,
-    CreateEventRequest,
-    EventAttendee,
-    EventDateTime,
-    EventReminder,
-    EventsListRequest,
-    EventsListResponse,
-    FreeBusyRequest,
-    FreeBusyResponse,
-    UpdateEventRequest,
-)
-from tripsage.services.infrastructure.dragonfly_service import get_cache_service
-from tripsage.utils.error_handling import with_error_handling
-from tripsage.utils.logging import get_logger
-
-logger = get_logger(__name__)
+from tripsage_core.config.base_app_settings import CoreAppSettings, get_settings
+from tripsage_core.exceptions.exceptions import CoreAPIError, CoreServiceError
+from tripsage_core.services.infrastructure.cache_service import get_cache_service
 
 # If modifying these scopes, delete the token file
 SCOPES = [
@@ -64,13 +48,14 @@ def async_retry(
                     last_exception = e
                     if attempt < max_attempts - 1:
                         wait_time = delay * (backoff**attempt)
-                        logger.warning(
-                            f"Attempt {attempt + 1}/{max_attempts} failed: {e}. "
-                            f"Retrying in {wait_time}s..."
-                        )
                         await asyncio.sleep(wait_time)
                     else:
-                        logger.error(f"All {max_attempts} attempts failed: {e}")
+                        raise CoreAPIError(
+                            message=f"Google Calendar API failed after {max_attempts} attempts: {e}",
+                            code="CALENDAR_API_ERROR",
+                            service="GoogleCalendarService",
+                            details={"attempts": max_attempts, "error": str(e)},
+                        ) from e
             raise last_exception
 
         return wrapper
@@ -78,14 +63,27 @@ def async_retry(
     return decorator
 
 
+class GoogleCalendarServiceError(CoreAPIError):
+    """Exception raised for Google Calendar service errors."""
+
+    def __init__(self, message: str, original_error: Optional[Exception] = None):
+        super().__init__(
+            message=message,
+            code="CALENDAR_SERVICE_ERROR",
+            service="GoogleCalendarService",
+            details={"original_error": str(original_error) if original_error else None},
+        )
+        self.original_error = original_error
+
+
 class GoogleCalendarService:
-    """Service for Google Calendar API operations."""
+    """Service for Google Calendar API operations with Core integration."""
 
     def __init__(
         self,
         credentials_file: Optional[str] = None,
         token_file: Optional[str] = None,
-        cache_service: Optional[Any] = None,
+        settings: Optional[CoreAppSettings] = None,
     ):
         """
         Initialize the Google Calendar service.
@@ -93,17 +91,26 @@ class GoogleCalendarService:
         Args:
             credentials_file: Path to OAuth2 credentials JSON file
             token_file: Path to store user tokens
-            cache_service: Optional DragonflyDB cache service for caching
+            settings: Core application settings
         """
-        self.credentials_file = credentials_file or os.getenv(
-            "GOOGLE_CALENDAR_CREDENTIALS_FILE", "credentials.json"
+        self.settings = settings or get_settings()
+
+        # Get credentials paths from settings or environment
+        self.credentials_file = (
+            credentials_file
+            or getattr(self.settings, "google_calendar_credentials_file", None)
+            or os.getenv("GOOGLE_CALENDAR_CREDENTIALS_FILE", "credentials.json")
         )
-        self.token_file = token_file or os.getenv(
-            "GOOGLE_CALENDAR_TOKEN_FILE", "token.json"
+        self.token_file = (
+            token_file
+            or getattr(self.settings, "google_calendar_token_file", None)
+            or os.getenv("GOOGLE_CALENDAR_TOKEN_FILE", "token.json")
         )
-        self.cache_service = cache_service
+
+        self.cache_service = None
         self._service: Optional[Resource] = None
         self._credentials: Optional[Credentials] = None
+        self._connected = False
 
         # Cache settings
         self.cache_ttl = {
@@ -112,17 +119,42 @@ class GoogleCalendarService:
             "free_busy": 60,  # 1 minute
         }
 
-    async def initialize(self) -> None:
+    async def connect(self) -> None:
         """Initialize the service and authenticate."""
-        await self._authenticate()
+        if self._connected:
+            return
 
-        # Initialize cache service if not provided
-        if self.cache_service is None:
-            try:
-                self.cache_service = await get_cache_service()
-            except Exception as e:
-                logger.warning(f"Failed to initialize cache service: {e}")
-                self.cache_service = None
+        try:
+            await self._authenticate()
+
+            # Initialize cache service if not provided
+            if self.cache_service is None:
+                try:
+                    self.cache_service = await get_cache_service()
+                except Exception:
+                    # Log warning but continue without cache
+                    pass
+
+            self._connected = True
+
+        except Exception as e:
+            raise CoreServiceError(
+                message=f"Failed to connect to Google Calendar API: {str(e)}",
+                code="CONNECTION_FAILED",
+                service="GoogleCalendarService",
+                details={"error": str(e)},
+            )
+
+    async def disconnect(self) -> None:
+        """Clean up resources."""
+        self._service = None
+        self._credentials = None
+        self._connected = False
+
+    async def ensure_connected(self) -> None:
+        """Ensure service is connected."""
+        if not self._connected:
+            await self.connect()
 
     async def _authenticate(self) -> None:
         """Authenticate with Google Calendar API."""
@@ -132,23 +164,24 @@ class GoogleCalendarService:
         if os.path.exists(self.token_file):
             try:
                 creds = Credentials.from_authorized_user_file(self.token_file, SCOPES)
-                logger.info("Loaded credentials from token file")
             except Exception as e:
-                logger.error(f"Error loading credentials: {e}")
+                raise GoogleCalendarServiceError(
+                    f"Error loading credentials: {e}", original_error=e
+                )
 
         # If there are no (valid) credentials available, let the user log in
         if not creds or not creds.valid:
             if creds and creds.expired and creds.refresh_token:
                 try:
                     creds.refresh(Request())
-                    logger.info("Refreshed expired credentials")
                 except Exception as e:
-                    logger.error(f"Error refreshing credentials: {e}")
-                    creds = None
+                    raise GoogleCalendarServiceError(
+                        f"Error refreshing credentials: {e}", original_error=e
+                    )
 
             if not creds:
                 if not os.path.exists(self.credentials_file):
-                    raise FileNotFoundError(
+                    raise GoogleCalendarServiceError(
                         f"Credentials file not found: {self.credentials_file}"
                     )
 
@@ -156,7 +189,6 @@ class GoogleCalendarService:
                     self.credentials_file, SCOPES
                 )
                 creds = flow.run_local_server(port=0)
-                logger.info("Obtained new credentials via OAuth flow")
 
             # Save the credentials for next run
             with open(self.token_file, "w") as token:
@@ -168,7 +200,11 @@ class GoogleCalendarService:
     def _get_service(self) -> Resource:
         """Get the Google Calendar service instance."""
         if not self._service:
-            raise RuntimeError("Service not initialized. Call initialize() first.")
+            raise CoreServiceError(
+                message="Service not initialized. Call connect() first.",
+                code="SERVICE_NOT_INITIALIZED",
+                service="GoogleCalendarService",
+            )
         return self._service
 
     async def _get_from_cache(self, key: str) -> Optional[Any]:
@@ -180,8 +216,8 @@ class GoogleCalendarService:
             data = await self.cache_service.get(key)
             if data:
                 return json.loads(data)
-        except Exception as e:
-            logger.warning(f"Cache get error: {e}")
+        except Exception:
+            pass  # Cache errors are non-fatal
         return None
 
     async def _set_cache(self, key: str, value: Any, ttl: int) -> None:
@@ -190,15 +226,14 @@ class GoogleCalendarService:
             return
 
         try:
-            await self.cache_service.set(key, json.dumps(value), expire=ttl)
-        except Exception as e:
-            logger.warning(f"Cache set error: {e}")
+            await self.cache_service.set(key, json.dumps(value), ttl=ttl)
+        except Exception:
+            pass  # Cache errors are non-fatal
 
-    @with_error_handling
     @async_retry()
     async def list_calendars(
         self, show_hidden: bool = False, show_deleted: bool = False
-    ) -> CalendarList:
+    ) -> Dict[str, Any]:
         """
         List all calendars accessible by the user.
 
@@ -207,12 +242,14 @@ class GoogleCalendarService:
             show_deleted: Include deleted calendars
 
         Returns:
-            CalendarList with all accessible calendars
+            Dictionary with calendar list
         """
+        await self.ensure_connected()
+
         cache_key = f"calendar_list:{show_hidden}:{show_deleted}"
         cached_data = await self._get_from_cache(cache_key)
         if cached_data:
-            return CalendarList(**cached_data)
+            return cached_data
 
         service = self._get_service()
         calendar_list = []
@@ -233,52 +270,45 @@ class GoogleCalendarService:
                 )
 
                 items = result.get("items", [])
-                calendar_list.extend([CalendarListEntry(**item) for item in items])
+                calendar_list.extend(items)
 
                 page_token = result.get("nextPageToken")
                 if not page_token:
                     break
 
             except HttpError as e:
-                logger.error(f"Error listing calendars: {e}")
-                raise
+                raise GoogleCalendarServiceError(
+                    f"Error listing calendars: {e}", original_error=e
+                )
 
-        response = CalendarList(items=calendar_list)
-        await self._set_cache(
-            cache_key,
-            response.model_dump(by_alias=True),
-            self.cache_ttl["calendar_list"],
-        )
+        response = {"items": calendar_list}
+        await self._set_cache(cache_key, response, self.cache_ttl["calendar_list"])
 
         return response
 
-    @with_error_handling
     @async_retry()
     async def create_event(
         self,
         calendar_id: str,
-        event: CreateEventRequest,
+        event_data: Dict[str, Any],
         send_notifications: bool = True,
         conference_data_version: Optional[int] = None,
-    ) -> CalendarEvent:
+    ) -> Dict[str, Any]:
         """
         Create a new calendar event.
 
         Args:
             calendar_id: Calendar ID (use 'primary' for main calendar)
-            event: Event creation request
+            event_data: Event data dictionary
             send_notifications: Send notifications to attendees
             conference_data_version: Version for conference data
 
         Returns:
             Created calendar event
         """
-        service = self._get_service()
-        event_data = event.to_google_format()
+        await self.ensure_connected()
 
-        # Add travel metadata if provided
-        if event.travel_metadata:
-            self._add_travel_metadata(event_data, event.travel_metadata)
+        service = self._get_service()
 
         try:
             result = await asyncio.get_event_loop().run_in_executor(
@@ -293,46 +323,36 @@ class GoogleCalendarService:
                 .execute(),
             )
 
-            return CalendarEvent(**result)
+            return result
 
         except HttpError as e:
-            logger.error(f"Error creating event: {e}")
-            raise
+            raise GoogleCalendarServiceError(
+                f"Error creating event: {e}", original_error=e
+            )
 
-    @with_error_handling
     @async_retry()
     async def update_event(
         self,
         calendar_id: str,
         event_id: str,
-        event: UpdateEventRequest,
+        event_data: Dict[str, Any],
         send_notifications: bool = True,
-    ) -> CalendarEvent:
+    ) -> Dict[str, Any]:
         """
         Update an existing calendar event.
 
         Args:
             calendar_id: Calendar ID
             event_id: Event ID to update
-            event: Event update request
+            event_data: Event update data
             send_notifications: Send notifications to attendees
 
         Returns:
             Updated calendar event
         """
+        await self.ensure_connected()
+
         service = self._get_service()
-
-        # Get current event first
-        current_event = await self.get_event(calendar_id, event_id)
-
-        # Convert to dict and update with new data
-        event_data = current_event.model_dump(by_alias=True, exclude_none=True)
-        update_data = event.to_google_format()
-        event_data.update(update_data)
-
-        # Add travel metadata if provided
-        if event.travel_metadata:
-            self._add_travel_metadata(event_data, event.travel_metadata)
 
         try:
             result = await asyncio.get_event_loop().run_in_executor(
@@ -347,13 +367,13 @@ class GoogleCalendarService:
                 .execute(),
             )
 
-            return CalendarEvent(**result)
+            return result
 
         except HttpError as e:
-            logger.error(f"Error updating event: {e}")
-            raise
+            raise GoogleCalendarServiceError(
+                f"Error updating event: {e}", original_error=e
+            )
 
-    @with_error_handling
     @async_retry()
     async def delete_event(
         self,
@@ -372,6 +392,8 @@ class GoogleCalendarService:
         Returns:
             True if successful
         """
+        await self.ensure_connected()
+
         service = self._get_service()
 
         try:
@@ -392,19 +414,18 @@ class GoogleCalendarService:
 
         except HttpError as e:
             if e.resp.status == 404:
-                logger.warning(f"Event not found: {event_id}")
                 return False
-            logger.error(f"Error deleting event: {e}")
-            raise
+            raise GoogleCalendarServiceError(
+                f"Error deleting event: {e}", original_error=e
+            )
 
-    @with_error_handling
     @async_retry()
     async def get_event(
         self,
         calendar_id: str,
         event_id: str,
         time_zone: Optional[str] = None,
-    ) -> CalendarEvent:
+    ) -> Dict[str, Any]:
         """
         Get a specific calendar event.
 
@@ -416,6 +437,8 @@ class GoogleCalendarService:
         Returns:
             Calendar event
         """
+        await self.ensure_connected()
+
         service = self._get_service()
 
         try:
@@ -430,40 +453,66 @@ class GoogleCalendarService:
                 .execute(),
             )
 
-            return CalendarEvent(**result)
+            return result
 
         except HttpError as e:
-            logger.error(f"Error getting event: {e}")
-            raise
+            raise GoogleCalendarServiceError(
+                f"Error getting event: {e}", original_error=e
+            )
 
-    @with_error_handling
     @async_retry()
     async def list_events(
         self,
-        params: EventsListRequest,
-    ) -> EventsListResponse:
+        calendar_id: str,
+        time_min: Optional[str] = None,
+        time_max: Optional[str] = None,
+        max_results: int = 250,
+        single_events: bool = True,
+        order_by: str = "startTime",
+        **kwargs,
+    ) -> Dict[str, Any]:
         """
         List calendar events with various filters.
 
         Args:
-            params: Event listing parameters
+            calendar_id: Calendar ID
+            time_min: Lower bound for event start time (RFC3339 timestamp)
+            time_max: Upper bound for event start time (RFC3339 timestamp)
+            max_results: Maximum number of events to return
+            single_events: Expand recurring events into instances
+            order_by: Order of events returned
+            **kwargs: Additional parameters
 
         Returns:
-            List of calendar events
+            Dictionary with events list and metadata
         """
-        cache_key = f"events:{params.calendar_id}:{params.model_dump_json()}"
+        await self.ensure_connected()
+
+        cache_key = f"events:{calendar_id}:{hash(str(sorted(kwargs.items())))}"
         cached_data = await self._get_from_cache(cache_key)
         if cached_data:
-            return EventsListResponse(**cached_data)
+            return cached_data
 
         service = self._get_service()
         events = []
-        page_token = params.page_token
+        page_token = None
 
-        while True:
-            try:
-                request_params = params.model_dump(by_alias=True, exclude_none=True)
-                request_params["pageToken"] = page_token
+        try:
+            while True:
+                request_params = {
+                    "calendarId": calendar_id,
+                    "maxResults": min(max_results - len(events), 250),
+                    "singleEvents": single_events,
+                    "orderBy": order_by,
+                    "pageToken": page_token,
+                }
+
+                if time_min:
+                    request_params["timeMin"] = time_min
+                if time_max:
+                    request_params["timeMax"] = time_max
+
+                request_params.update(kwargs)
 
                 result = await asyncio.get_event_loop().run_in_executor(
                     None,
@@ -471,55 +520,63 @@ class GoogleCalendarService:
                 )
 
                 items = result.get("items", [])
-                events.extend([CalendarEvent(**item) for item in items])
+                events.extend(items)
 
                 page_token = result.get("nextPageToken")
-                if not page_token or len(events) >= params.max_results:
+                if not page_token or len(events) >= max_results:
                     break
 
-            except HttpError as e:
-                logger.error(f"Error listing events: {e}")
-                raise
+            response = {
+                "items": events[:max_results],
+                "summary": result.get("summary", ""),
+                "timeZone": result.get("timeZone", "UTC"),
+                "accessRole": result.get("accessRole", "reader"),
+                "updated": result.get("updated", datetime.now().isoformat()),
+                "nextPageToken": page_token,
+            }
 
-        response = EventsListResponse(
-            items=events[: params.max_results],
-            summary=result.get("summary", ""),
-            time_zone=result.get("timeZone", "UTC"),
-            access_role=result.get("accessRole", "reader"),
-            updated=datetime.fromisoformat(
-                result.get("updated", datetime.now().isoformat())
-            ),
-            next_page_token=page_token,
-        )
+            await self._set_cache(cache_key, response, self.cache_ttl["events"])
+            return response
 
-        await self._set_cache(
-            cache_key, response.model_dump(by_alias=True), self.cache_ttl["events"]
-        )
+        except HttpError as e:
+            raise GoogleCalendarServiceError(
+                f"Error listing events: {e}", original_error=e
+            )
 
-        return response
-
-    @with_error_handling
     @async_retry()
     async def get_free_busy(
         self,
-        request: FreeBusyRequest,
-    ) -> FreeBusyResponse:
+        calendars: List[str],
+        time_min: str,
+        time_max: str,
+        time_zone: str = "UTC",
+    ) -> Dict[str, Any]:
         """
         Query free/busy information for calendars.
 
         Args:
-            request: Free/busy query parameters
+            calendars: List of calendar IDs to query
+            time_min: Start time (RFC3339 timestamp)
+            time_max: End time (RFC3339 timestamp)
+            time_zone: Time zone for the query
 
         Returns:
             Free/busy information
         """
-        cache_key = f"free_busy:{request.model_dump_json()}"
+        await self.ensure_connected()
+
+        cache_key = f"free_busy:{hash(str(sorted(calendars)))}:{time_min}:{time_max}"
         cached_data = await self._get_from_cache(cache_key)
         if cached_data:
-            return FreeBusyResponse(**cached_data)
+            return cached_data
 
         service = self._get_service()
-        request_data = request.model_dump(by_alias=True)
+        request_data = {
+            "timeMin": time_min,
+            "timeMax": time_max,
+            "timeZone": time_zone,
+            "items": [{"id": cal_id} for cal_id in calendars],
+        }
 
         try:
             result = await asyncio.get_event_loop().run_in_executor(
@@ -527,18 +584,13 @@ class GoogleCalendarService:
                 lambda: service.freebusy().query(body=request_data).execute(),
             )
 
-            response = FreeBusyResponse(**result)
-            await self._set_cache(
-                cache_key,
-                response.model_dump(by_alias=True),
-                self.cache_ttl["free_busy"],
-            )
-
-            return response
+            await self._set_cache(cache_key, result, self.cache_ttl["free_busy"])
+            return result
 
         except HttpError as e:
-            logger.error(f"Error querying free/busy: {e}")
-            raise
+            raise GoogleCalendarServiceError(
+                f"Error querying free/busy: {e}", original_error=e
+            )
 
     # Travel-specific methods
 
@@ -553,8 +605,7 @@ class GoogleCalendarService:
         travel_type: str = "flight",
         booking_reference: Optional[str] = None,
         attendees: Optional[List[str]] = None,
-        reminders: Optional[List[EventReminder]] = None,
-    ) -> CalendarEvent:
+    ) -> Dict[str, Any]:
         """
         Create a travel-specific calendar event with metadata.
 
@@ -568,7 +619,6 @@ class GoogleCalendarService:
             travel_type: Type of travel (flight, hotel, activity)
             booking_reference: Booking/confirmation number
             attendees: List of attendee emails
-            reminders: Event reminders
 
         Returns:
             Created calendar event
@@ -577,38 +627,33 @@ class GoogleCalendarService:
         travel_metadata = {
             "type": travel_type,
             "booking_reference": booking_reference,
-            "created_by": "tripsage",
+            "created_by": "tripsage-core",
             "created_at": datetime.now().isoformat(),
         }
 
-        # Create event request
-        event_request = CreateEventRequest(
-            summary=title,
-            description=description,
-            location=location,
-            start=EventDateTime(date_time=start),
-            end=EventDateTime(date_time=end),
-            attendees=[EventAttendee(email=email) for email in (attendees or [])],
-            reminders={
-                "useDefault": False,
-                "overrides": [
-                    {"method": r.method.value, "minutes": r.minutes}
-                    for r in (reminders or [])
-                ],
-            }
-            if reminders
-            else {"useDefault": True},
-            travel_metadata=travel_metadata,
-        )
+        # Create event data
+        event_data = {
+            "summary": title,
+            "description": description or "",
+            "location": location,
+            "start": {"dateTime": start.isoformat(), "timeZone": "UTC"},
+            "end": {"dateTime": end.isoformat(), "timeZone": "UTC"},
+            "extendedProperties": {
+                "private": {"tripsage_metadata": json.dumps(travel_metadata)}
+            },
+        }
 
-        return await self.create_event(calendar_id, event_request)
+        if attendees:
+            event_data["attendees"] = [{"email": email} for email in attendees]
+
+        return await self.create_event(calendar_id, event_data)
 
     async def sync_trip_to_calendar(
         self,
         calendar_id: str,
         trip_id: str,
         trip_data: Dict[str, Any],
-    ) -> List[CalendarEvent]:
+    ) -> List[Dict[str, Any]]:
         """
         Sync an entire trip itinerary to calendar.
 
@@ -636,10 +681,6 @@ class GoogleCalendarService:
                 ),
                 travel_type="flight",
                 booking_reference=flight.get("booking_reference"),
-                reminders=[
-                    EventReminder(method="popup", minutes=180),  # 3 hours
-                    EventReminder(method="email", minutes=1440),  # 24 hours
-                ],
             )
             events.append(event)
 
@@ -686,17 +727,6 @@ class GoogleCalendarService:
 
         return events
 
-    async def _add_travel_metadata(
-        self, event_data: Dict[str, Any], metadata: Dict[str, Any]
-    ) -> None:
-        """Add TripSage travel metadata to event data."""
-        if "extendedProperties" not in event_data:
-            event_data["extendedProperties"] = {"private": {}}
-
-        event_data["extendedProperties"]["private"]["tripsage_metadata"] = json.dumps(
-            metadata
-        )
-
     async def _clear_events_cache(self, calendar_id: str) -> None:
         """Clear events cache for a calendar."""
         if not self.cache_service:
@@ -706,10 +736,53 @@ class GoogleCalendarService:
             # Clear all event-related cache keys for this calendar
             pattern = f"events:{calendar_id}:*"
             await self.cache_service.delete_pattern(pattern)
-        except Exception as e:
-            logger.warning(f"Error clearing events cache: {e}")
+        except Exception:
+            pass  # Cache errors are non-fatal
+
+    async def health_check(self) -> bool:
+        """
+        Check if the Google Calendar API is accessible.
+
+        Returns:
+            True if API is accessible, False otherwise
+        """
+        try:
+            await self.ensure_connected()
+            # Simple test request
+            await self.list_calendars()
+            return True
+        except Exception:
+            return False
 
     async def close(self) -> None:
         """Clean up resources."""
-        # Google API client doesn't need explicit cleanup
-        pass
+        await self.disconnect()
+
+
+# Global service instance
+_calendar_service: Optional[GoogleCalendarService] = None
+
+
+async def get_calendar_service() -> GoogleCalendarService:
+    """
+    Get the global Google Calendar service instance.
+
+    Returns:
+        GoogleCalendarService instance
+    """
+    global _calendar_service
+
+    if _calendar_service is None:
+        _calendar_service = GoogleCalendarService()
+        await _calendar_service.connect()
+
+    return _calendar_service
+
+
+async def close_calendar_service() -> None:
+    """Close the global Google Calendar service instance."""
+    global _calendar_service
+
+    if _calendar_service:
+        await _calendar_service.close()
+        _calendar_service = None
