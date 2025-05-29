@@ -5,6 +5,7 @@ This module provides full test coverage for authentication operations
 including JWT token management, token validation, and refresh mechanisms.
 """
 
+import os
 from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock, patch
 from uuid import uuid4
@@ -42,7 +43,9 @@ class TestAuthenticationService:
         """Create AuthenticationService instance with mocked dependencies."""
         return AuthenticationService(
             user_service=mock_user_service,
-            secret_key="test_secret_key_123",
+            secret_key=os.getenv(
+                "TEST_JWT_SECRET_KEY", "dummy_test_secret_for_unit_tests"
+            ),
             access_token_expire_minutes=30,
             refresh_token_expire_days=7,
         )

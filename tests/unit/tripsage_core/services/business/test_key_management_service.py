@@ -76,7 +76,7 @@ class TestKeyManagementService:
             name="OpenAI API Key",
             provider=APIKeyProvider.OPENAI,
             key_type=APIKeyType.API_KEY,
-            key_value="sk-1234567890abcdef",
+            key_value="test_api_key_for_unit_tests",
             description="Key for GPT-4 access",
             expires_at=datetime.now(timezone.utc) + timedelta(days=365),
         )
@@ -381,7 +381,7 @@ class TestKeyManagementService:
         )
 
         rotation_request = KeyRotationRequest(
-            new_key_value="sk-new_key_value_123", reason="Security rotation"
+            new_key_value="test_new_key_for_rotation", reason="Security rotation"
         )
 
         result = await key_management_service.rotate_api_key(
@@ -584,7 +584,7 @@ class TestKeyManagementService:
 
     def test_hash_key_value(self, key_management_service):
         """Test key value hashing."""
-        key_value = "sk-1234567890abcdef"
+        key_value = "test_key_rotation"
         hashed = key_management_service._hash_key_value(key_value)
 
         assert hashed != key_value
@@ -596,7 +596,7 @@ class TestKeyManagementService:
 
     def test_mask_key_value(self, key_management_service):
         """Test key value masking for display."""
-        key_value = "sk-1234567890abcdef1234567890abcdef"
+        key_value = "test_key_validation_for_unit_tests"
         masked = key_management_service._mask_key_value(key_value)
 
         assert masked.startswith("sk-")
