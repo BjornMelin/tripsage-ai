@@ -10,27 +10,14 @@ from typing import Any, Dict, List, Optional
 
 from pydantic import Field
 
-from tripsage_core.models.base import TripSageModel
 from tripsage.models.mcp import MCPRequestBase, MCPResponseBase
+from tripsage_core.models.domain.memory import (
+    Entity,
+    Relation,
+    SessionMemory,
+)
 
-
-class Entity(TripSageModel):
-    """An entity in the knowledge graph."""
-
-    name: str = Field(..., description="Entity name")
-    entity_type: str = Field(..., description="Entity type")
-    observations: List[str] = Field([], description="Observations about the entity")
-    created_at: Optional[datetime] = Field(None, description="Creation timestamp")
-    updated_at: Optional[datetime] = Field(None, description="Last update timestamp")
-
-
-class Relation(TripSageModel):
-    """A relation between entities in the knowledge graph."""
-
-    from_entity: str = Field(..., description="Source entity name")
-    to_entity: str = Field(..., description="Target entity name")
-    relation_type: str = Field(..., description="Relation type")
-    created_at: Optional[datetime] = Field(None, description="Creation timestamp")
+# Entity and Relation moved to tripsage_core.models.domain.memory
 
 
 class CreateEntitiesRequest(MCPRequestBase):
@@ -122,17 +109,7 @@ class ReadGraphResponse(MCPResponseBase):
     relation_count: int = Field(0, description="Number of relations")
 
 
-class SessionMemory(TripSageModel):
-    """Session memory for an agent."""
-
-    user_id: Optional[str] = Field(None, description="User ID")
-    session_id: str = Field(..., description="Session ID")
-    memory_type: str = Field(..., description="Memory type")
-    content: Dict[str, Any] = Field(..., description="Memory content")
-    created_at: datetime = Field(
-        default_factory=datetime.utcnow, description="Creation timestamp"
-    )
-    expires_at: Optional[datetime] = Field(None, description="Expiration timestamp")
+# SessionMemory moved to tripsage_core.models.domain.memory
 
 
 class StoreSessionMemoryRequest(MCPRequestBase):

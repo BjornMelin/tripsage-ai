@@ -11,15 +11,7 @@ from typing import Any, Dict, Optional
 from pydantic import Field, field_validator, model_validator
 
 from tripsage_core.models.base import TripSageModel
-
-
-class TripStatus(str, Enum):
-    """Enum for trip status values."""
-
-    PLANNING = "planning"
-    BOOKED = "booked"
-    COMPLETED = "completed"
-    CANCELED = "canceled"
+from tripsage_core.models.schemas_common import TripStatus
 
 
 class TripType(str, Enum):
@@ -122,7 +114,11 @@ class Trip(TripSageModel):
     @property
     def is_active(self) -> bool:
         """Check if the trip is in an active state."""
-        return self.status in [TripStatus.PLANNING, TripStatus.BOOKED]
+        return self.status in [
+            TripStatus.PLANNING,
+            TripStatus.BOOKED,
+            TripStatus.IN_PROGRESS,
+        ]
 
     @property
     def is_completed(self) -> bool:
@@ -132,16 +128,27 @@ class Trip(TripSageModel):
     @property
     def is_cancelable(self) -> bool:
         """Check if the trip can be canceled."""
-        return self.status in [TripStatus.PLANNING, TripStatus.BOOKED]
+        return self.status in [
+            TripStatus.PLANNING,
+            TripStatus.BOOKED,
+            TripStatus.IN_PROGRESS,
+        ]
 
     def can_modify(self) -> bool:
         """Check if the trip can be modified."""
         # Trips can be modified if they're in planning or booked status
-        # and haven't started yet
-        if self.status not in [TripStatus.PLANNING, TripStatus.BOOKED]:
+        # and haven't started yet. In-progress trips have limited modification options.
+        if self.status not in [
+            TripStatus.PLANNING,
+            TripStatus.BOOKED,
+            TripStatus.IN_PROGRESS,
+        ]:
             return False
         from datetime import date as date_type
 
+        # In-progress trips can still be modified but with restrictions
+        if self.status == TripStatus.IN_PROGRESS:
+            return True  # Allow modifications during trip
         return date_type.today() < self.start_date
 
     def update_status(self, new_status: TripStatus) -> bool:
@@ -156,7 +163,12 @@ class Trip(TripSageModel):
         # Define valid status transitions
         valid_transitions = {
             TripStatus.PLANNING: [TripStatus.BOOKED, TripStatus.CANCELED],
-            TripStatus.BOOKED: [TripStatus.COMPLETED, TripStatus.CANCELED],
+            TripStatus.BOOKED: [
+                TripStatus.IN_PROGRESS,
+                TripStatus.COMPLETED,
+                TripStatus.CANCELED,
+            ],
+            TripStatus.IN_PROGRESS: [TripStatus.COMPLETED, TripStatus.CANCELED],
             TripStatus.COMPLETED: [],  # Cannot change from completed
             TripStatus.CANCELED: [],  # Cannot change from canceled
         }

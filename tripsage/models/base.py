@@ -1,28 +1,34 @@
 """
-Base model classes for TripSage.
+Base model classes for TripSage (DEPRECATED).
 
-This module provides the base model classes used throughout the TripSage application,
-establishing common behaviors and configurations.
+This module is deprecated. Please use tripsage_core.models.base_core_model instead.
+The models here are kept for backwards compatibility but will be removed in a future
+version.
 """
 
-from pydantic import BaseModel, ConfigDict
+import warnings
+
+from tripsage_core.models.base_core_model import (
+    TripSageBaseResponse as _TripSageBaseResponse,
+)
+from tripsage_core.models.base_core_model import (
+    TripSageModel as _TripSageModel,
+)
+
+# Backwards compatibility - issue deprecation warnings
+warnings.warn(
+    "tripsage.models.base is deprecated. "
+    "Use tripsage_core.models.base_core_model or tripsage_core.models instead.",
+    DeprecationWarning,
+    stacklevel=2
+)
 
 
-class TripSageModel(BaseModel):
-    """Base model for all TripSage models."""
-
-    model_config = ConfigDict(
-        populate_by_name=True,
-        validate_assignment=True,
-        extra="ignore",
-    )
+class TripSageModel(_TripSageModel):
+    """Base model for all TripSage models (DEPRECATED)."""
+    pass
 
 
-class TripSageBaseResponse(TripSageModel):
-    """Base model for all TripSage API responses."""
-
-    model_config = ConfigDict(
-        populate_by_name=True,
-        validate_assignment=True,
-        extra="allow",
-    )
+class TripSageBaseResponse(_TripSageBaseResponse):
+    """Base model for all TripSage API responses (DEPRECATED)."""
+    pass

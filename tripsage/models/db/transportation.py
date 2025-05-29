@@ -11,6 +11,7 @@ from typing import Optional
 from pydantic import Field, field_validator, model_validator
 
 from tripsage_core.models.base import TripSageModel
+from tripsage_core.models.schemas_common import BookingStatus
 
 
 class TransportationType(str, Enum):
@@ -24,15 +25,6 @@ class TransportationType(str, Enum):
     TRAIN = "train"
     BUS = "bus"
     OTHER = "other"
-
-
-class BookingStatus(str, Enum):
-    """Enum for booking status values."""
-
-    VIEWED = "viewed"
-    SAVED = "saved"
-    BOOKED = "booked"
-    CANCELED = "canceled"
 
 
 class Transportation(TripSageModel):
