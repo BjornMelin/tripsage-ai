@@ -1,13 +1,7 @@
 """Simple test for the centralized exception system."""
 
-import os
-import sys
-
-# Ensure we can import from the project root
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../..")))
-
 # Now import our exceptions
-from tripsage_core.exceptions.exceptions import (
+from tripsage_core.exceptions import (
     CoreAuthenticationError,
     CoreTripSageError,
     ErrorDetails,

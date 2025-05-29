@@ -215,7 +215,7 @@ class DragonflyCache:
             await self._ensure_connected()
             full_pattern = self._make_key(pattern)
 
-            # Get all matching keys - note: scan_iter might not be available in unified cache
+            # Get all matching keys - scan_iter might not be available in unified cache
             # Fall back to basic pattern matching if needed
             try:
                 keys = []
@@ -401,16 +401,17 @@ def cached(
             result = await func(*args, **kwargs)
 
             # Determine TTL
-            if ttl is None and content_type is not None:
+            effective_ttl = ttl
+            if effective_ttl is None and content_type is not None:
                 if isinstance(content_type, str):
                     content_type_enum = ContentType(content_type)
                 else:
                     content_type_enum = content_type
-                ttl = get_ttl_for_content_type(content_type_enum)
+                effective_ttl = get_ttl_for_content_type(content_type_enum)
 
             # Cache the result if not None
             if result is not None:
-                await cache.set(cache_key, result, ttl=ttl)
+                await cache.set(cache_key, result, ttl=effective_ttl)
 
             return result
 
