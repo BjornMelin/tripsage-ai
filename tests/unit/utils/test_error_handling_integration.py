@@ -56,7 +56,7 @@ class TestBackwardsCompatibility:
         assert alias_exc.message == core_exc.message
         assert alias_exc.code == core_exc.code
         assert alias_exc.status_code == core_exc.status_code
-        assert type(alias_exc) == type(core_exc)
+        assert type(alias_exc) is type(core_exc)
 
 
 class TestUpdatedUtilityFunctions:
@@ -270,9 +270,9 @@ class TestTripSageErrorContext:
             user_id="user123",
             request_id="req456",
             logger_instance=mock_logger,
-        ) as context:
+        ):
             # Simulate successful operation
-            result = "success"
+            pass
 
         # Should log start and completion
         assert mock_logger.debug.call_count == 2
@@ -333,7 +333,7 @@ class TestTripSageErrorContext:
 
         with TripSageErrorContext(
             operation="minimal_test", logger_instance=mock_logger
-        ) as context:
+        ):
             pass
 
         # Should work with just operation name

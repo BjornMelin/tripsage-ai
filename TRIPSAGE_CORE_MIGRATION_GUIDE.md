@@ -7,7 +7,8 @@ This guide helps you migrate from the old scattered configuration and model stru
 ## What Changed
 
 ### New Structure
-```
+
+```plaintext
 tripsage_core/
 ├── __init__.py
 ├── config/
@@ -41,11 +42,13 @@ tripsage_core/
 ### 1. Configuration (High Priority)
 
 #### Old Way
+
 ```python
 from tripsage.config.app_settings import AppSettings, settings
 ```
 
 #### New Way
+
 ```python
 from tripsage_core.config.base_app_settings import CoreAppSettings, get_settings
 
@@ -56,11 +59,13 @@ settings = get_settings()
 ### 2. Exception Handling (High Priority)
 
 #### Old Way
+
 ```python
 from tripsage.utils.error_handling import TripSageError, ValidationError
 ```
 
 #### New Way
+
 ```python
 from tripsage_core.exceptions.exceptions import (
     CoreTripSageError,
@@ -72,11 +77,13 @@ from tripsage_core.exceptions.exceptions import (
 ### 3. Base Models (Medium Priority)
 
 #### Old Way
+
 ```python
 from tripsage.models.base import TripSageModel
 ```
 
 #### New Way
+
 ```python
 from tripsage_core.models.base_core_model import (
     TripSageModel,           # For general use
@@ -88,6 +95,7 @@ from tripsage_core.models.base_core_model import (
 ### 4. Domain Models (Medium Priority)
 
 #### Old Way
+
 ```python
 from tripsage.models.accommodation import AccommodationListing
 from tripsage.models.flight import FlightOffer
@@ -95,6 +103,7 @@ from tripsage.models.memory import TravelMemory
 ```
 
 #### New Way
+
 ```python
 from tripsage_core.models.domain import (
     AccommodationListing,
@@ -108,6 +117,7 @@ from tripsage_core.models.domain import (
 Database models have moved but backwards compatibility is maintained.
 
 #### New Location
+
 ```python
 from tripsage_core.models.db import User, Trip, ApiKeyDB
 ```
@@ -177,6 +187,7 @@ The new system maintains full backwards compatibility:
 ### Deprecation Warnings
 
 You'll see warnings like:
+
 ```
 DeprecationWarning: tripsage.models.base is deprecated. 
 Use tripsage_core.models.base_core_model instead.
@@ -206,6 +217,7 @@ There's currently a pytest configuration issue with importing `tripsage_core` mo
 ### Validation
 
 Run this before deployment:
+
 ```python
 from tripsage_core.config.base_app_settings import CoreAppSettings
 
@@ -219,12 +231,14 @@ if settings.is_production():
 ## Benefits of Migration
 
 ### Immediate Benefits
+
 - **Centralized configuration** - All settings in one place
 - **Enhanced security** - Proper secret management
 - **Better validation** - Environment-specific checks
 - **Improved organization** - Clear separation of concerns
 
 ### Long-term Benefits
+
 - **Scalability** - Easier to add new configuration options
 - **Maintainability** - Centralized error handling and models
 - **Testing** - Better isolation and mocking capabilities
