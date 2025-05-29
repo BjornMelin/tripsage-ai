@@ -8,7 +8,8 @@ while maintaining proper data relationships.
 """
 
 import logging
-from datetime import date, datetime, timedelta, timezone
+from datetime import date as DateType
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 from typing import Any, Dict, List, Optional
 from uuid import uuid4
@@ -138,7 +139,7 @@ class ItineraryItem(TripSageModel):
     item_type: ItineraryItemType = Field(..., description="Item type")
     title: str = Field(..., description="Item title")
     description: Optional[str] = Field(None, description="Item description")
-    item_date: date = Field(..., description="Item date")
+    item_date: DateType = Field(..., description="Item date")
     time_slot: Optional[TimeSlot] = Field(None, description="Time slot")
     location: Optional[Location] = Field(None, description="Location")
     cost: Optional[float] = Field(None, ge=0, description="Item cost")
@@ -172,7 +173,7 @@ class ItineraryConflict(TripSageModel):
 class ItineraryDay(TripSageModel):
     """Itinerary day model."""
 
-    date: date = Field(..., description="Day date")
+    date: DateType = Field(..., description="Day date")
     items: List[ItineraryItem] = Field(default_factory=list, description="Day items")
     notes: Optional[str] = Field(None, description="Day notes")
     budget_allocated: Optional[float] = Field(
@@ -218,8 +219,8 @@ class ItineraryCreateRequest(TripSageModel):
 
     title: str = Field(..., min_length=1, max_length=200, description="Itinerary title")
     description: Optional[str] = Field(None, description="Itinerary description")
-    start_date: date = Field(..., description="Start date")
-    end_date: date = Field(..., description="End date")
+    start_date: DateType = Field(..., description="Start date")
+    end_date: DateType = Field(..., description="End date")
     destinations: List[str] = Field(default_factory=list, description="Destination IDs")
     total_budget: Optional[float] = Field(None, ge=0, description="Total budget")
     currency: Optional[str] = Field(None, description="Currency code")
@@ -229,7 +230,7 @@ class ItineraryCreateRequest(TripSageModel):
 
     @field_validator("end_date")
     @classmethod
-    def validate_end_date(cls, v: date, info) -> date:
+    def validate_end_date(cls, v: DateType, info) -> DateType:
         """Validate end date is after start date."""
         if info.data.get("start_date") and v < info.data["start_date"]:
             raise ValueError("End date must be after or equal to start date")
@@ -244,8 +245,8 @@ class ItineraryUpdateRequest(TripSageModel):
     )
     description: Optional[str] = Field(None, description="Itinerary description")
     status: Optional[ItineraryStatus] = Field(None, description="Itinerary status")
-    start_date: Optional[date] = Field(None, description="Start date")
-    end_date: Optional[date] = Field(None, description="End date")
+    start_date: Optional[DateType] = Field(None, description="Start date")
+    end_date: Optional[DateType] = Field(None, description="End date")
     destinations: Optional[List[str]] = Field(None, description="Destination IDs")
     total_budget: Optional[float] = Field(None, ge=0, description="Total budget")
     currency: Optional[str] = Field(None, description="Currency code")
@@ -265,8 +266,8 @@ class Itinerary(TripSageModel):
     description: Optional[str] = Field(None, description="Itinerary description")
     status: ItineraryStatus = Field(default=ItineraryStatus.DRAFT, description="Status")
 
-    start_date: date = Field(..., description="Start date")
-    end_date: date = Field(..., description="End date")
+    start_date: DateType = Field(..., description="Start date")
+    end_date: DateType = Field(..., description="End date")
 
     days: List[ItineraryDay] = Field(default_factory=list, description="Itinerary days")
     destinations: List[str] = Field(default_factory=list, description="Destination IDs")
@@ -303,7 +304,7 @@ class ItineraryItemCreateRequest(TripSageModel):
     item_type: ItineraryItemType = Field(..., description="Item type")
     title: str = Field(..., min_length=1, max_length=200, description="Item title")
     description: Optional[str] = Field(None, description="Item description")
-    item_date: date = Field(..., description="Item date")
+    item_date: DateType = Field(..., description="Item date")
     time_slot: Optional[TimeSlot] = Field(None, description="Time slot")
     location: Optional[Location] = Field(None, description="Location")
     cost: Optional[float] = Field(None, ge=0, description="Item cost")
@@ -361,10 +362,12 @@ class ItinerarySearchRequest(TripSageModel):
 
     query: Optional[str] = Field(None, description="Search query")
     status: Optional[ItineraryStatus] = Field(None, description="Status filter")
-    start_date_from: Optional[date] = Field(
+    start_date_from: Optional[DateType] = Field(
         None, description="Start date filter (from)"
     )
-    start_date_to: Optional[date] = Field(None, description="Start date filter (to)")
+    start_date_to: Optional[DateType] = Field(
+        None, description="Start date filter (to)"
+    )
     destinations: Optional[List[str]] = Field(None, description="Destination filters")
     tags: Optional[List[str]] = Field(None, description="Tag filters")
     shared_only: bool = Field(default=False, description="Only shared itineraries")
@@ -419,15 +422,13 @@ class ItineraryService:
                 external_calendar_service = None
 
         if optimization_engine is None:
-            try:
-                from tripsage.services.external.optimization_engine import (
-                    OptimizationEngine,
-                )
-
-                optimization_engine = OptimizationEngine()
-            except ImportError:
-                logger.warning("Optimization engine not available")
-                optimization_engine = None
+            # TODO: Implement external optimization engine
+            # from tripsage.services.external.optimization_engine import (
+            #     OptimizationEngine
+            # )
+            # optimization_engine = OptimizationEngine()
+            # Optimization engine is optional - will use basic optimization
+            optimization_engine = None
 
         self.db = database_service
         self.calendar_service = external_calendar_service
@@ -461,7 +462,7 @@ class ItineraryService:
 
             # Create empty days for the date range
             days = []
-            current_date = create_request.start_date
+            current_date: DateType = create_request.start_date
             while current_date <= create_request.end_date:
                 days.append(ItineraryDay(date=current_date))
                 current_date += timedelta(days=1)
@@ -1037,7 +1038,7 @@ class ItineraryService:
             return None
 
     async def _adjust_days(
-        self, current_days: List[ItineraryDay], new_start: date, new_end: date
+        self, current_days: List[ItineraryDay], new_start: DateType, new_end: DateType
     ) -> List[ItineraryDay]:
         """Adjust days list for new date range."""
         # Create a dict of existing days by date
@@ -1045,7 +1046,7 @@ class ItineraryService:
 
         # Create new days list
         new_days = []
-        current_date = new_start
+        current_date: DateType = new_start
         while current_date <= new_end:
             if current_date in existing_days:
                 new_days.append(existing_days[current_date])
