@@ -133,7 +133,7 @@ class WebCrawlService:
                 code="CONNECTION_FAILED",
                 service="WebCrawlService",
                 details={"error": str(e)},
-            )
+            ) from e
 
     async def disconnect(self) -> None:
         """Clean up resources."""
@@ -280,10 +280,10 @@ class WebCrawlService:
 
         # Add JavaScript if needed
         if params.javascript_enabled:
-            # Basic JavaScript for dynamic content loading
+            # Basic JavaScript for dynamic content loading - Wait for content
             config.js_code = [
                 "window.scrollTo(0, document.body.scrollHeight);",
-                "await new Promise(resolve => setTimeout(resolve, 1000));",  # Wait for content
+                "await new Promise(resolve => setTimeout(resolve, 1000));",
             ]
 
         # Add wait condition
@@ -411,7 +411,8 @@ class WebCrawlService:
 
         Args:
             url: URL to crawl
-            content_type: Type of travel content (hotels, flights, activities, restaurants)
+            content_type: Type of travel content
+                (hotels, flights, activities, restaurants)
 
         Returns:
             WebCrawlResult with travel-focused extraction

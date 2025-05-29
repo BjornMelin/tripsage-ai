@@ -51,7 +51,10 @@ def async_retry(
                         await asyncio.sleep(wait_time)
                     else:
                         raise CoreAPIError(
-                            message=f"Google Calendar API failed after {max_attempts} attempts: {e}",
+                            message=(
+                                f"Google Calendar API failed after {max_attempts} "
+                                f"attempts: {e}"
+                            ),
                             code="CALENDAR_API_ERROR",
                             service="GoogleCalendarService",
                             details={"attempts": max_attempts, "error": str(e)},
@@ -143,7 +146,7 @@ class GoogleCalendarService:
                 code="CONNECTION_FAILED",
                 service="GoogleCalendarService",
                 details={"error": str(e)},
-            )
+            ) from e
 
     async def disconnect(self) -> None:
         """Clean up resources."""
@@ -167,7 +170,7 @@ class GoogleCalendarService:
             except Exception as e:
                 raise GoogleCalendarServiceError(
                     f"Error loading credentials: {e}", original_error=e
-                )
+                ) from e
 
         # If there are no (valid) credentials available, let the user log in
         if not creds or not creds.valid:
@@ -177,7 +180,7 @@ class GoogleCalendarService:
                 except Exception as e:
                     raise GoogleCalendarServiceError(
                         f"Error refreshing credentials: {e}", original_error=e
-                    )
+                    ) from e
 
             if not creds:
                 if not os.path.exists(self.credentials_file):
@@ -279,7 +282,7 @@ class GoogleCalendarService:
             except HttpError as e:
                 raise GoogleCalendarServiceError(
                     f"Error listing calendars: {e}", original_error=e
-                )
+                ) from e
 
         response = {"items": calendar_list}
         await self._set_cache(cache_key, response, self.cache_ttl["calendar_list"])
@@ -328,7 +331,7 @@ class GoogleCalendarService:
         except HttpError as e:
             raise GoogleCalendarServiceError(
                 f"Error creating event: {e}", original_error=e
-            )
+            ) from e
 
     @async_retry()
     async def update_event(
@@ -372,7 +375,7 @@ class GoogleCalendarService:
         except HttpError as e:
             raise GoogleCalendarServiceError(
                 f"Error updating event: {e}", original_error=e
-            )
+            ) from e
 
     @async_retry()
     async def delete_event(
@@ -417,7 +420,7 @@ class GoogleCalendarService:
                 return False
             raise GoogleCalendarServiceError(
                 f"Error deleting event: {e}", original_error=e
-            )
+            ) from e
 
     @async_retry()
     async def get_event(
@@ -458,7 +461,7 @@ class GoogleCalendarService:
         except HttpError as e:
             raise GoogleCalendarServiceError(
                 f"Error getting event: {e}", original_error=e
-            )
+            ) from e
 
     @async_retry()
     async def list_events(
@@ -541,7 +544,7 @@ class GoogleCalendarService:
         except HttpError as e:
             raise GoogleCalendarServiceError(
                 f"Error listing events: {e}", original_error=e
-            )
+            ) from e
 
     @async_retry()
     async def get_free_busy(
@@ -590,7 +593,7 @@ class GoogleCalendarService:
         except HttpError as e:
             raise GoogleCalendarServiceError(
                 f"Error querying free/busy: {e}", original_error=e
-            )
+            ) from e
 
     # Travel-specific methods
 

@@ -107,7 +107,7 @@ class WebSocketBroadcaster:
                 code="BROADCASTER_START_FAILED",
                 service="WebSocketBroadcaster",
                 details={"error": str(e)},
-            )
+            ) from e
 
     async def stop(self) -> None:
         """Stop the broadcaster service."""

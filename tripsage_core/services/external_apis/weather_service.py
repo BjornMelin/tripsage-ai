@@ -76,7 +76,7 @@ class WeatherService:
                 code="CONNECTION_FAILED",
                 service="WeatherService",
                 details={"error": str(e)},
-            )
+            ) from e
 
     async def disconnect(self) -> None:
         """Close HTTP client."""

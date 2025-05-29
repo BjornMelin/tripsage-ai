@@ -132,7 +132,7 @@ class TimeService:
                 code="CONNECTION_FAILED",
                 service="TimeService",
                 details={"error": str(e)},
-            )
+            ) from e
 
     async def disconnect(self) -> None:
         """Clean up resources."""
@@ -327,7 +327,8 @@ class TimeService:
 
         except Exception as e:
             raise TimeServiceError(
-                f"Error converting time from {source_timezone} to {target_timezone}: {str(e)}",
+                f"Error converting time from {source_timezone} to "
+                f"{target_timezone}: {str(e)}",
                 original_error=e,
             ) from e
 
