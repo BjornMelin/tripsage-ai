@@ -6,12 +6,10 @@ Tests to verify the migration structure and code organization improvements.
 import inspect
 from pathlib import Path
 
-from tripsage.clients.duffel_http_client import DuffelHTTPClient
 from tripsage.config.feature_flags import FeatureFlags, IntegrationMode
 from tripsage.config.service_registry import ServiceRegistry
-from tripsage.services.dragonfly_service import DragonflyService, get_cache_service
+from tripsage.services.dragonfly_service import DragonflyService
 from tripsage.services.supabase_service import SupabaseService
-from tripsage.services.webcrawl_service import WebcrawlService
 
 
 class TestMigrationStructure:

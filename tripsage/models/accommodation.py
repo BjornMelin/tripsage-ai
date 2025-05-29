@@ -79,7 +79,7 @@ class AccommodationSearchRequest(MCPRequestBase):
         return self
 
 
-# AccommodationAmenity, AccommodationImage, AccommodationLocation, AccommodationListing 
+# AccommodationAmenity, AccommodationImage, AccommodationLocation, AccommodationListing
 # moved to tripsage_core.models.domain.accommodation
 
 

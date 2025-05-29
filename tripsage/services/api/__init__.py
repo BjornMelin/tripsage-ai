@@ -6,4 +6,3 @@ This directory is reserved for future API-related service consolidation.
 
 # This module is intentionally empty as API services are in tripsage.api.services
 __all__ = []
-

@@ -199,9 +199,7 @@ def record_api_request(api_name: str, duration_ms: float, success: bool) -> None
     get_performance_metrics().record_request(f"api_{api_name}", duration_ms, success)
 
 
-def record_database_request(
-    operation: str, duration_ms: float, success: bool
-) -> None:
+def record_database_request(operation: str, duration_ms: float, success: bool) -> None:
     """Record a database request.
 
     Args:

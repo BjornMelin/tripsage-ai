@@ -5,7 +5,12 @@ from datetime import datetime, timedelta
 import pytest
 from pydantic import ValidationError
 
-from tripsage_core.models.db.flight import AirlineProvider, BookingStatus, DataSource, Flight
+from tripsage_core.models.db.flight import (
+    AirlineProvider,
+    BookingStatus,
+    DataSource,
+    Flight,
+)
 
 
 def test_flight_creation(sample_flight_dict):

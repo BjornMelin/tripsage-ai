@@ -1,7 +1,6 @@
 """Tests for base_app_settings module."""
 
 import os
-from pathlib import Path
 from unittest.mock import patch
 
 import pytest
@@ -16,24 +15,24 @@ class TestCoreAppSettings:
     def test_default_settings(self):
         """Test default settings initialization."""
         settings = CoreAppSettings(_env_file=None)
-        
+
         # Application metadata
         assert settings.app_name == "TripSage"
         assert settings.environment == "development"
         assert settings.debug is False
         assert settings.log_level == "INFO"
-        
+
         # Database connections
         assert settings.database.supabase_url == "https://test-project.supabase.co"
         assert settings.database.supabase_anon_key.get_secret_value() == "test-anon-key"
         assert settings.database.supabase_service_role_key is None
         assert settings.dragonfly.url == "redis://localhost:6379/0"
-        
+
         # External services
         assert settings.openai_api_key.get_secret_value() == "test-openai-key"
         assert settings.google_maps_api_key is None
         assert settings.crawl4ai.api_url == "http://localhost:8000/api"
-        
+
         # Feature flags
         assert settings.feature_flags.enable_agent_memory is True
         assert settings.feature_flags.enable_caching is True
@@ -44,11 +43,11 @@ class TestCoreAppSettings:
         for env in ["development", "testing", "staging", "production"]:
             settings = CoreAppSettings(_env_file=None, environment=env)
             assert settings.environment == env
-        
+
         # Invalid environment
         with pytest.raises(ValidationError) as exc_info:
             CoreAppSettings(_env_file=None, environment="invalid")
-        
+
         errors = exc_info.value.errors()
         assert len(errors) == 1
         assert "Environment must be one of" in str(errors[0]["ctx"]["error"])
@@ -59,11 +58,11 @@ class TestCoreAppSettings:
         for level in ["debug", "INFO", "Warning", "ERROR", "CRITICAL"]:
             settings = CoreAppSettings(_env_file=None, log_level=level)
             assert settings.log_level == level.upper()
-        
+
         # Invalid log level
         with pytest.raises(ValidationError) as exc_info:
             CoreAppSettings(_env_file=None, log_level="INVALID")
-        
+
         errors = exc_info.value.errors()
         assert len(errors) == 1
         assert "Log level must be one of" in str(errors[0]["ctx"]["error"])
@@ -75,13 +74,13 @@ class TestCoreAppSettings:
         assert settings.is_development() is True
         assert settings.is_production() is False
         assert settings.is_testing() is False
-        
+
         # Production
         settings = CoreAppSettings(_env_file=None, environment="production")
         assert settings.is_development() is False
         assert settings.is_production() is True
         assert settings.is_testing() is False
-        
+
         # Testing
         settings = CoreAppSettings(_env_file=None, environment="testing")
         assert settings.is_development() is False
@@ -93,16 +92,16 @@ class TestCoreAppSettings:
         settings = CoreAppSettings(
             _env_file=None,
             openai_api_key=SecretStr("my-secret-key"),
-            google_maps_api_key=SecretStr("google-key")
+            google_maps_api_key=SecretStr("google-key"),
         )
-        
+
         # Existing secret
         assert settings.get_secret_value("openai_api_key") == "my-secret-key"
         assert settings.get_secret_value("google_maps_api_key") == "google-key"
-        
+
         # Non-existent attribute
         assert settings.get_secret_value("non_existent") is None
-        
+
         # Non-secret attribute
         assert settings.get_secret_value("app_name") is None
 
@@ -112,12 +111,12 @@ class TestCoreAppSettings:
         settings = CoreAppSettings(_env_file=None, environment="development")
         errors = settings.validate_critical_settings()
         assert errors == []
-        
+
         # Missing critical settings
         settings = CoreAppSettings(
             _env_file=None,
             openai_api_key=SecretStr(""),
-            database={"supabase_anon_key": SecretStr("")}
+            database={"supabase_anon_key": SecretStr("")},
         )
         errors = settings.validate_critical_settings()
         assert "OpenAI API key is missing" in errors
@@ -126,21 +125,17 @@ class TestCoreAppSettings:
     def test_production_validation(self):
         """Test production-specific validations."""
         # Production with debug enabled
-        settings = CoreAppSettings(
-            _env_file=None,
-            environment="production",
-            debug=True
-        )
+        settings = CoreAppSettings(_env_file=None, environment="production", debug=True)
         errors = settings.validate_critical_settings()
         assert "Debug mode should be disabled in production" in errors
-        
+
         # Production with default secrets
         settings = CoreAppSettings(
             _env_file=None,
             environment="production",
             debug=False,
             jwt_secret_key=SecretStr("your-secret-key-here-change-in-production"),
-            api_key_master_secret=SecretStr("master-secret-for-byok-encryption")
+            api_key_master_secret=SecretStr("master-secret-for-byok-encryption"),
         )
         errors = settings.validate_critical_settings()
         assert "JWT secret key must be changed in production" in errors
@@ -149,19 +144,19 @@ class TestCoreAppSettings:
     def test_nested_configurations(self):
         """Test nested configuration objects."""
         settings = CoreAppSettings(_env_file=None)
-        
+
         # Database config
         assert hasattr(settings.database, "supabase_url")
         assert hasattr(settings.database, "pgvector_enabled")
-        
+
         # Dragonfly config
         assert hasattr(settings.dragonfly, "url")
         assert hasattr(settings.dragonfly, "ttl_short")
-        
+
         # Agent config
         assert hasattr(settings.agent, "model_name")
         assert hasattr(settings.agent, "max_tokens")
-        
+
         # Feature flags
         assert hasattr(settings.feature_flags, "enable_agent_memory")
         assert hasattr(settings.feature_flags, "enable_caching")
@@ -176,10 +171,10 @@ class TestCoreAppSettings:
             "OPENAI_API_KEY": "test-key-123",
             "JWT_SECRET_KEY": "my-jwt-secret",
         }
-        
+
         with patch.dict(os.environ, env_vars, clear=False):
             settings = CoreAppSettings(_env_file=None)
-            
+
             assert settings.app_name == "TestApp"
             assert settings.environment == "staging"
             assert settings.debug is True
@@ -191,15 +186,15 @@ class TestCoreAppSettings:
         """Test that get_settings returns cached instance."""
         # Clear cache first
         get_settings.cache_clear()
-        
+
         # Test with clean environment
         with patch.dict(os.environ, {}, clear=True):
             settings1 = get_settings()
             settings2 = get_settings()
-            
+
             # Should be the same instance due to lru_cache
             assert settings1 is settings2
-            
+
             # Clear cache and verify new instance
             get_settings.cache_clear()
             settings3 = get_settings()
@@ -208,7 +203,7 @@ class TestCoreAppSettings:
     def test_feature_flags(self):
         """Test feature flags configuration."""
         settings = CoreAppSettings(_env_file=None)
-        
+
         # Default feature flags
         assert settings.feature_flags.enable_agent_memory is True
         assert settings.feature_flags.enable_parallel_agents is True
@@ -231,16 +226,16 @@ class TestCoreAppSettings:
             openweathermap_api_key=SecretStr("prod-weather-key"),
             database={
                 "supabase_url": "https://prod.supabase.co",
-                "supabase_anon_key": SecretStr("prod-anon-key")
+                "supabase_anon_key": SecretStr("prod-anon-key"),
             },
             dragonfly={"url": "redis://prod-cache:6379/0"},
-            crawl4ai={"api_url": "https://crawl4ai.prod/api"}
+            crawl4ai={"api_url": "https://crawl4ai.prod/api"},
         )
-        
+
         # Should have no validation errors
         errors = settings.validate_critical_settings()
         assert errors == []
-        
+
         # All secrets should be accessible
         assert settings.get_secret_value("openai_api_key") == "prod-openai-key"
         assert settings.get_secret_value("google_maps_api_key") == "prod-google-key"

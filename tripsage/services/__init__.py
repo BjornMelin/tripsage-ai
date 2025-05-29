@@ -10,7 +10,7 @@ Services are organized into categories:
 - external: External API integration services
 """
 
-# Re-export all services from subdirectories  
+# Re-export all services from subdirectories
 from .core import *  # noqa: F403, F401
 from .external import *  # noqa: F403, F401
 from .infrastructure import *  # noqa: F403, F401

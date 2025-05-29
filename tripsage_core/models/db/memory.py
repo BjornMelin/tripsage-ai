@@ -39,7 +39,7 @@ class Memory(BaseModel):
     memory: str = Field(description="The actual memory content")
     embedding: Optional[List[float]] = Field(
         None,
-        description="Vector embedding (1536 dimensions for OpenAI text-embedding-3-small)",
+        description="Vector embedding (1536 dims for OpenAI text-embedding-3-small)",
     )
     metadata: dict[str, Any] = Field(
         default_factory=dict, description="Additional metadata for the memory"

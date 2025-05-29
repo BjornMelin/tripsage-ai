@@ -1,15 +1,15 @@
 """Simple test for the centralized exception system."""
 
-import sys
 import os
+import sys
 
 # Ensure we can import from the project root
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../..")))
 
 # Now import our exceptions
 from tripsage_core.exceptions.exceptions import (
-    CoreTripSageError,
     CoreAuthenticationError,
+    CoreTripSageError,
     ErrorDetails,
     format_exception,
 )
@@ -42,7 +42,7 @@ def test_format_exception():
     """Test format_exception utility."""
     exc = CoreTripSageError("Test error", "TEST_ERROR")
     result = format_exception(exc)
-    
+
     assert result["error"] == "CoreTripSageError"
     assert result["message"] == "Test error"
     assert result["code"] == "TEST_ERROR"

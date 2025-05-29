@@ -29,7 +29,6 @@ os.environ.update(
         "SUPABASE_URL": "https://test.supabase.co",
         "SUPABASE_ANON_KEY": "test-anon-key",
         "SUPABASE_SERVICE_ROLE_KEY": "test-service-key",
-        
         # API Keys
         "ANTHROPIC_API_KEY": "test-key",
         "OPENAI_API_KEY": "test-key",
@@ -248,15 +247,16 @@ def mock_settings_and_redis(monkeypatch):
     # Set environment variables for testing
     monkeypatch.setenv("SUPABASE_URL", "https://test.supabase.co")
     monkeypatch.setenv("SUPABASE_ANON_KEY", "test_anon_key")
-    
+
     # Set API keys
     monkeypatch.setenv("OPENAI_API_KEY", "test_openai_key")
     monkeypatch.setenv("ANTHROPIC_API_KEY", "test_anthropic_key")
 
     # Create a comprehensive mock settings object
     from tripsage.config.app_settings import AppSettings
+
     mock_settings = AppSettings()
-    
+
     # Mock basic settings
     mock_settings.environment = "test"
     mock_settings.debug = True
@@ -265,7 +265,7 @@ def mock_settings_and_redis(monkeypatch):
     # Mock database settings
     mock_settings.database.supabase_url = "https://test.supabase.co"
     mock_settings.database.supabase_anon_key = "test_anon_key"
-    
+
     # Mock memory service (Mem0)
     mock_settings.memory.service_type = "mem0"
     mock_settings.memory.api_key = "test_mem0_key"

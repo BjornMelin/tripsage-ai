@@ -19,7 +19,7 @@ class APISettings(BaseSettings):
     # JWT authentication settings
     secret_key: SecretStr = Field(
         default=SecretStr("your-secret-key-here-change-in-production"),
-        description="Secret key for signing JWT tokens"
+        description="Secret key for signing JWT tokens",
     )
     algorithm: str = Field(default="HS256", description="Algorithm for JWT encoding")
     access_token_expire_minutes: int = Field(

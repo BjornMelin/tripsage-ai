@@ -10,7 +10,7 @@ Features include:
 - Batch caching operations for improved performance
 - Web cache statistics and management
 
-This module uses the direct Redis/DragonflyDB service for persistent caching, 
+This module uses the direct Redis/DragonflyDB service for persistent caching,
 allowing sharing of cached web search results across multiple application instances.
 """
 
@@ -31,7 +31,6 @@ from tripsage.utils.cache import (
     invalidate_pattern,
     prefetch_cache_keys,
     set_cache,
-    web_cache,
 )
 from tripsage.utils.content_types import ContentType
 from tripsage.utils.error_handling import log_exception

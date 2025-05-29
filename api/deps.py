@@ -176,12 +176,14 @@ def get_accommodations_mcp_dep():
 async def get_webcrawl_service():
     """Get the direct WebCrawl service."""
     from tripsage.services.webcrawl_service import WebCrawlService
+
     return WebCrawlService()
 
 
 async def get_memory_service():
     """Get the direct Memory service (Mem0)."""
     from tripsage.services.memory_service import TripSageMemoryService
+
     return TripSageMemoryService()
 
 
@@ -193,24 +195,28 @@ async def get_dragonfly_service():
 async def get_google_maps_service():
     """Get the direct Google Maps service."""
     from tripsage.services.google_maps_service import GoogleMapsService
+
     return GoogleMapsService()
 
 
 async def get_playwright_service():
     """Get the direct Playwright service for complex web scraping."""
     from tripsage.services.playwright_service import PlaywrightService
+
     return PlaywrightService()
 
 
 async def get_weather_service():
     """Get the comprehensive OpenWeatherMap API service."""
     from tripsage.services.api.weather_service import OpenWeatherMapService
+
     return OpenWeatherMapService()
 
 
 async def get_calendar_service():
     """Get the comprehensive Google Calendar API service."""
     from tripsage.services.api.calendar_service import GoogleCalendarService
+
     service = GoogleCalendarService()
     await service.initialize()
     return service
@@ -219,12 +225,14 @@ async def get_calendar_service():
 async def get_flights_service():
     """Get the comprehensive Duffel Flights API service."""
     from tripsage.services.api.flights_service import DuffelFlightsService
+
     return DuffelFlightsService()
 
 
 async def get_time_service():
     """Get the direct Time service using Python datetime."""
     from tripsage.services.time_service import TimeService
+
     return TimeService()
 
 

@@ -2,7 +2,8 @@
 Base model classes for TripSage (DEPRECATED).
 
 This module is deprecated. Please use tripsage_core.models.base_core_model instead.
-The models here are kept for backwards compatibility but will be removed in a future version.
+The models here are kept for backwards compatibility but will be removed in a
+future version.
 """
 
 import warnings

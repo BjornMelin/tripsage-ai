@@ -280,9 +280,7 @@ class CoreAppSettings(BaseSettings):
     environment: Literal["development", "testing", "staging", "production"] = Field(
         default="development", description="Runtime environment"
     )
-    log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = Field(
-        default="INFO", description="Logging level"
-    )
+    log_level: str = Field(default="INFO", description="Logging level")
 
     # Base paths
     base_dir: Path = Field(

@@ -46,7 +46,7 @@ class MCPServiceInfo(BaseModel):
 class MCPServiceRegistry:
     """
     Simplified MCP service registry for remaining MCP services.
-    
+
     Currently only manages Airbnb MCP integration since all other services
     have been migrated to direct SDK integration.
     """
@@ -58,15 +58,14 @@ class MCPServiceRegistry:
         self.logger = logging.getLogger(__name__)
         self._health_check_task: Optional[asyncio.Task] = None
         self._registry = MCPClientRegistry()
-        
+
         # Only register Airbnb MCP service
         self._register_airbnb_service()
 
     def _register_airbnb_service(self):
         """Register the Airbnb MCP service."""
         service = MCPServiceInfo(
-            name="accommodations",
-            wrapper_class="AirbnbMCPWrapper"
+            name="accommodations", wrapper_class="AirbnbMCPWrapper"
         )
         self.services["accommodations"] = service
 
@@ -88,7 +87,7 @@ class MCPServiceRegistry:
         """Register a new MCP service (only Airbnb supported)"""
         if name != "accommodations":
             raise TripSageMCPError(f"Only Airbnb MCP service is supported, got: {name}")
-            
+
         if name in self.services:
             self.logger.warning(f"Service {name} already registered")
             return self.services[name]

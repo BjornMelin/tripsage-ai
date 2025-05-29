@@ -6,7 +6,8 @@ core entities and concepts in the TripSage travel planning system.
 These models are independent of storage implementation and API specifics.
 
 Domain Models:
-- Accommodation: AccommodationListing, AccommodationLocation, AccommodationAmenity, AccommodationImage, PropertyType
+- Accommodation: AccommodationListing, AccommodationLocation, AccommodationAmenity,
+  AccommodationImage, PropertyType
 - Flight: FlightOffer, Airport, FlightSegment, CabinClass
 - Memory: Entity, Relation, TravelMemory, SessionMemory
 

@@ -10,7 +10,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Query, status
 
 from api.core.exceptions import ResourceNotFoundError
-from api.deps import get_current_user, get_session_memory
+from api.deps import get_current_user
 from api.models.requests.trips import (
     CreateTripRequest,
     TripPreferencesRequest,

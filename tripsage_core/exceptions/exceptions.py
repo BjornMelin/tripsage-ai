@@ -642,6 +642,35 @@ def get_core_exception(exception_name: str) -> type:
     return EXCEPTION_MAPPING.get(exception_name, CoreTripSageError)
 
 
+# Factory functions for common exceptions
+def create_authentication_error(
+    message: str = "Authentication failed", details: Optional[Dict[str, Any]] = None
+) -> CoreAuthenticationError:
+    """Create an authentication error with standard parameters."""
+    return CoreAuthenticationError(message=message, details=details)
+
+
+def create_authorization_error(
+    message: str = "Access denied", details: Optional[Dict[str, Any]] = None
+) -> CoreAuthorizationError:
+    """Create an authorization error with standard parameters."""
+    return CoreAuthorizationError(message=message, details=details)
+
+
+def create_validation_error(
+    message: str = "Validation failed", details: Optional[Dict[str, Any]] = None
+) -> CoreValidationError:
+    """Create a validation error with standard parameters."""
+    return CoreValidationError(message=message, details=details)
+
+
+def create_not_found_error(
+    message: str = "Resource not found", details: Optional[Dict[str, Any]] = None
+) -> CoreResourceNotFoundError:
+    """Create a not found error with standard parameters."""
+    return CoreResourceNotFoundError(message=message, details=details)
+
+
 # Export all exception classes and utilities
 __all__ = [
     # Base exception
@@ -669,4 +698,9 @@ __all__ = [
     "with_error_handling",
     "get_core_exception",
     "EXCEPTION_MAPPING",
+    # Factory functions
+    "create_authentication_error",
+    "create_authorization_error",
+    "create_validation_error",
+    "create_not_found_error",
 ]

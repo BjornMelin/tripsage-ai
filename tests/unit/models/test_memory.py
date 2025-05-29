@@ -1,18 +1,17 @@
 """Tests for memory database models."""
 
-import pytest
 from datetime import datetime, timedelta
 from uuid import uuid4
-from typing import List
 
+import pytest
 from pydantic import ValidationError
 
 from tripsage_core.models.db.memory import (
     Memory,
-    SessionMemory,
-    MemorySearchResult,
     MemoryCreate,
+    MemorySearchResult,
     MemoryUpdate,
+    SessionMemory,
 )
 
 
@@ -35,7 +34,7 @@ class TestMemory:
             "relevance_score": 1.0,
         }
         memory = Memory(**memory_data)
-        
+
         assert memory.user_id == "user_123"
         assert memory.memory == "User prefers window seats on flights"
         assert memory.is_active is True
@@ -110,7 +109,7 @@ class TestMemory:
             created_at=datetime.now(),
             updated_at=datetime.now(),
         )
-        
+
         # Should remove duplicates, empty strings, and normalize to lowercase
         assert memory.categories == ["travel", "flights"]
 
@@ -136,10 +135,10 @@ class TestMemory:
             created_at=datetime.now(),
             updated_at=datetime.now(),
         )
-        
+
         memory.add_category("flights")
         assert "flights" in memory.categories
-        
+
         # Adding duplicate should not duplicate
         memory.add_category("flights")
         assert memory.categories.count("flights") == 1
@@ -154,7 +153,7 @@ class TestMemory:
             created_at=datetime.now(),
             updated_at=datetime.now(),
         )
-        
+
         memory.remove_category("flights")
         assert "flights" not in memory.categories
         assert "travel" in memory.categories
@@ -169,7 +168,7 @@ class TestMemory:
             created_at=datetime.now(),
             updated_at=datetime.now(),
         )
-        
+
         memory.update_metadata({"key2": "value2", "key1": "updated_value1"})
         assert memory.metadata["key1"] == "updated_value1"
         assert memory.metadata["key2"] == "value2"
@@ -185,7 +184,7 @@ class TestMemory:
             updated_at=datetime.now(),
         )
         assert memory.is_active is True
-        
+
         memory.is_deleted = True
         assert memory.is_active is False
 
@@ -208,7 +207,7 @@ class TestSessionMemory:
             "expires_at": now + timedelta(hours=24),
         }
         session_memory = SessionMemory(**session_memory_data)
-        
+
         assert session_memory.session_id == "session_123"
         assert session_memory.user_id == "user_123"
         assert session_memory.message_index == 5
@@ -273,7 +272,7 @@ class TestSessionMemory:
             expires_at=now + timedelta(hours=1),  # Expires in 1 hour
         )
         assert session_memory.is_expired is False
-        
+
         # Test with past expiry
         session_memory.expires_at = now - timedelta(hours=1)  # Expired 1 hour ago
         assert session_memory.is_expired is True
@@ -291,10 +290,10 @@ class TestSessionMemory:
             created_at=now,
             expires_at=now + timedelta(hours=1),
         )
-        
+
         original_expiry = session_memory.expires_at
         session_memory.extend_expiry(24)
-        
+
         # Should extend by 24 hours from now, not from original expiry
         assert session_memory.expires_at > original_expiry
 
@@ -311,13 +310,13 @@ class TestMemorySearchResult:
             created_at=datetime.now(),
             updated_at=datetime.now(),
         )
-        
+
         search_result = MemorySearchResult(
             memory=memory,
             similarity=0.85,
             rank=1,
         )
-        
+
         assert search_result.memory == memory
         assert search_result.similarity == 0.85
         assert search_result.rank == 1
@@ -331,7 +330,7 @@ class TestMemorySearchResult:
             created_at=datetime.now(),
             updated_at=datetime.now(),
         )
-        
+
         with pytest.raises(ValidationError) as exc_info:
             MemorySearchResult(
                 memory=memory,
@@ -349,7 +348,7 @@ class TestMemorySearchResult:
             created_at=datetime.now(),
             updated_at=datetime.now(),
         )
-        
+
         with pytest.raises(ValidationError) as exc_info:
             MemorySearchResult(
                 memory=memory,
@@ -371,7 +370,7 @@ class TestMemoryCreate:
             categories=["travel_preferences"],
             relevance_score=0.9,
         )
-        
+
         assert memory_create.user_id == "user_123"
         assert memory_create.memory == "User prefers window seats"
         assert memory_create.relevance_score == 0.9
@@ -382,7 +381,7 @@ class TestMemoryCreate:
             user_id="user_123",
             memory="Test memory",
         )
-        
+
         assert memory_create.metadata == {}
         assert memory_create.categories == []
         assert memory_create.relevance_score == 1.0
@@ -399,14 +398,14 @@ class TestMemoryUpdate:
             categories=["updated_category"],
             relevance_score=0.8,
         )
-        
+
         assert memory_update.memory == "Updated memory content"
         assert memory_update.relevance_score == 0.8
 
     def test_optional_fields(self):
         """Test that all fields are optional."""
         memory_update = MemoryUpdate()
-        
+
         assert memory_update.memory is None
         assert memory_update.metadata is None
         assert memory_update.categories is None
@@ -417,7 +416,7 @@ class TestMemoryUpdate:
         memory_update = MemoryUpdate(
             memory="Updated memory content",
         )
-        
+
         assert memory_update.memory == "Updated memory content"
         assert memory_update.metadata is None
         assert memory_update.categories is None
