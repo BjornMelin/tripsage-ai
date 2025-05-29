@@ -6,22 +6,19 @@ TripSage application for representing flight search requests, offers, and bookin
 """
 
 from datetime import datetime
-from enum import Enum
 from typing import Any, Dict, List, Optional
 
 from pydantic import Field, field_validator, model_validator
 
-from tripsage.models.base import TripSageModel
 from tripsage.models.mcp import MCPRequestBase, MCPResponseBase
+from tripsage_core.models.domain.flight import (
+    Airport,
+    CabinClass,
+    FlightOffer,
+    FlightSegment,
+)
 
-
-class CabinClass(str, Enum):
-    """Cabin class options for flights."""
-
-    ECONOMY = "economy"
-    PREMIUM_ECONOMY = "premium_economy"
-    BUSINESS = "business"
-    FIRST = "first"
+# CabinClass moved to tripsage_core.models.domain.flight
 
 
 class FlightSearchRequest(MCPRequestBase):
@@ -76,26 +73,7 @@ class FlightSearchRequest(MCPRequestBase):
         return self
 
 
-class FlightSegment(TripSageModel):
-    """A segment of a flight (one leg of the journey)."""
-
-    origin: str = Field(..., description="Origin airport code")
-    destination: str = Field(..., description="Destination airport code")
-    departure_date: str = Field(..., description="Departure date (YYYY-MM-DD)")
-    departure_time: Optional[str] = Field(None, description="Departure time (HH:MM)")
-    arrival_date: Optional[str] = Field(None, description="Arrival date (YYYY-MM-DD)")
-    arrival_time: Optional[str] = Field(None, description="Arrival time (HH:MM)")
-    carrier: Optional[str] = Field(None, description="Carrier code")
-    flight_number: Optional[str] = Field(None, description="Flight number")
-    duration_minutes: Optional[int] = Field(None, description="Duration in minutes")
-
-    @field_validator("origin", "destination")
-    @classmethod
-    def validate_airport_code(cls, v: str) -> str:
-        """Validate and standardize airport codes."""
-        if len(v) != 3:
-            raise ValueError("Airport code must be 3 characters (IATA code)")
-        return v.upper()
+# FlightSegment moved to tripsage_core.models.domain.flight
 
 
 class MultiCityFlightSearchRequest(MCPRequestBase):
@@ -115,16 +93,7 @@ class MultiCityFlightSearchRequest(MCPRequestBase):
         return self
 
 
-class FlightOffer(TripSageModel):
-    """Flight offer information."""
-
-    id: str = Field(..., description="Offer ID")
-    total_amount: float = Field(..., description="Total price")
-    total_currency: str = Field(..., description="Currency code")
-    base_amount: Optional[float] = Field(None, description="Base fare amount")
-    tax_amount: Optional[float] = Field(None, description="Tax amount")
-    slices: List[Dict[str, Any]] = Field(..., description="Flight slices (legs)")
-    passenger_count: int = Field(..., description="Number of passengers")
+# FlightOffer moved to tripsage_core.models.domain.flight
 
 
 class FlightSearchResponse(MCPResponseBase):
@@ -137,24 +106,7 @@ class FlightSearchResponse(MCPResponseBase):
     cheapest_price: Optional[float] = Field(None, description="Cheapest price found")
 
 
-class Airport(TripSageModel):
-    """Airport information."""
-
-    iata_code: str = Field(..., description="IATA code")
-    name: str = Field(..., description="Airport name")
-    city: str = Field(..., description="City name")
-    country: str = Field(..., description="Country name")
-    latitude: Optional[float] = Field(None, description="Latitude coordinate")
-    longitude: Optional[float] = Field(None, description="Longitude coordinate")
-    timezone: Optional[str] = Field(None, description="Timezone")
-
-    @field_validator("iata_code")
-    @classmethod
-    def validate_airport_code(cls, v: str) -> str:
-        """Validate and standardize airport codes."""
-        if len(v) != 3:
-            raise ValueError("Airport code must be 3 characters (IATA code)")
-        return v.upper()
+# Airport moved to tripsage_core.models.domain.flight
 
 
 class AirportSearchRequest(MCPRequestBase):

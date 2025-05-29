@@ -2,7 +2,7 @@
 
 import importlib
 
-from tripsage.models.db import (
+from tripsage_core.models.db import (
     Accommodation,
     AccommodationType,
     AirlineProvider,
@@ -60,7 +60,7 @@ def test_enum_imports():
 
 def test_model_inheritance():
     """Test that all models inherit from TripSageModel."""
-    from tripsage.models.base import TripSageModel
+    from tripsage_core.models.base import TripSageModel
 
     assert issubclass(User, TripSageModel)
     assert issubclass(Trip, TripSageModel)

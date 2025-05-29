@@ -7,27 +7,17 @@ requests, listings, and bookings.
 """
 
 from datetime import datetime
-from enum import Enum
 from typing import List, Optional
 
 from pydantic import Field, field_validator, model_validator
 
-from tripsage.models.base import TripSageModel
 from tripsage.models.mcp import MCPRequestBase, MCPResponseBase
+from tripsage_core.models.domain.accommodation import (
+    AccommodationListing,
+    PropertyType,
+)
 
-
-class PropertyType(str, Enum):
-    """Property type options for accommodations."""
-
-    HOTEL = "hotel"
-    APARTMENT = "apartment"
-    HOUSE = "house"
-    VILLA = "villa"
-    RESORT = "resort"
-    HOSTEL = "hostel"
-    BED_AND_BREAKFAST = "bed_and_breakfast"
-    GUEST_HOUSE = "guest_house"
-    OTHER = "other"
+# PropertyType moved to tripsage_core.models.domain.accommodation
 
 
 class AccommodationSearchRequest(MCPRequestBase):
@@ -89,66 +79,8 @@ class AccommodationSearchRequest(MCPRequestBase):
         return self
 
 
-class AccommodationAmenity(TripSageModel):
-    """Amenity offered by an accommodation."""
-
-    name: str = Field(..., description="Amenity name")
-    category: Optional[str] = Field(None, description="Amenity category")
-    description: Optional[str] = Field(None, description="Amenity description")
-
-
-class AccommodationImage(TripSageModel):
-    """Image of an accommodation."""
-
-    url: str = Field(..., description="Image URL")
-    caption: Optional[str] = Field(None, description="Image caption")
-    is_primary: bool = Field(False, description="Whether this is the primary image")
-
-
-class AccommodationLocation(TripSageModel):
-    """Location information for an accommodation."""
-
-    address: Optional[str] = Field(None, description="Full address")
-    city: str = Field(..., description="City")
-    state: Optional[str] = Field(None, description="State/province")
-    country: str = Field(..., description="Country")
-    postal_code: Optional[str] = Field(None, description="Postal/zip code")
-    latitude: Optional[float] = Field(None, description="Latitude coordinate")
-    longitude: Optional[float] = Field(None, description="Longitude coordinate")
-    neighborhood: Optional[str] = Field(None, description="Neighborhood name")
-
-
-class AccommodationListing(TripSageModel):
-    """Accommodation listing information."""
-
-    id: str = Field(..., description="Listing ID")
-    name: str = Field(..., description="Listing name")
-    description: Optional[str] = Field(None, description="Listing description")
-    property_type: PropertyType = Field(..., description="Property type")
-    location: AccommodationLocation = Field(..., description="Location information")
-    price_per_night: float = Field(..., description="Price per night")
-    currency: str = Field(..., description="Currency code")
-    rating: Optional[float] = Field(None, description="Guest rating (0-5)")
-    review_count: Optional[int] = Field(None, description="Number of reviews")
-    amenities: List[AccommodationAmenity] = Field([], description="Available amenities")
-    images: List[AccommodationImage] = Field([], description="Property images")
-    max_guests: int = Field(..., description="Maximum number of guests")
-    bedrooms: Optional[int] = Field(None, description="Number of bedrooms")
-    beds: Optional[int] = Field(None, description="Number of beds")
-    bathrooms: Optional[float] = Field(None, description="Number of bathrooms")
-    check_in_time: Optional[str] = Field(None, description="Check-in time")
-    check_out_time: Optional[str] = Field(None, description="Check-out time")
-    cancellation_policy: Optional[str] = Field(None, description="Cancellation policy")
-    host_id: Optional[str] = Field(None, description="Host ID")
-    host_name: Optional[str] = Field(None, description="Host name")
-    host_rating: Optional[float] = Field(None, description="Host rating")
-    total_price: Optional[float] = Field(
-        None, description="Total price for the stay (if dates provided)"
-    )
-    url: Optional[str] = Field(None, description="URL to the listing")
-    source: Optional[str] = Field(
-        None, description="Source of the listing (e.g., 'airbnb', 'booking')"
-    )
+# AccommodationAmenity, AccommodationImage, AccommodationLocation, AccommodationListing
+# moved to tripsage_core.models.domain.accommodation
 
 
 class AccommodationSearchResponse(MCPResponseBase):
@@ -221,3 +153,8 @@ class AccommodationBookingResponse(MCPResponseBase):
     host_instructions: Optional[str] = Field(
         None, description="Instructions from the host"
     )
+
+
+# Note: Core accommodation domain models (AccommodationListing,
+# AccommodationAmenity, etc.) have moved to tripsage_core.models.domain.accommodation
+# but are imported above for use in this file's MCP request/response models.

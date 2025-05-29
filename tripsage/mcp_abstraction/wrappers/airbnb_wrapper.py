@@ -7,8 +7,8 @@ mapping user-friendly method names to actual Airbnb MCP client methods.
 
 from typing import Dict, List
 
-from tripsage.config.mcp_settings import mcp_settings
-from tripsage.mcp.accommodations.client import AirbnbMCPClient
+from tripsage.clients.airbnb_mcp_client import AirbnbMCPClient
+from tripsage.config.app_settings import settings
 from tripsage.mcp_abstraction.base_wrapper import BaseMCPWrapper
 
 
@@ -25,7 +25,7 @@ class AirbnbMCPWrapper(BaseMCPWrapper):
         """
         if client is None:
             # Create client from configuration
-            config = mcp_settings.airbnb
+            config = settings.airbnb
             if config.enabled:
                 client = AirbnbMCPClient(
                     endpoint=str(config.url),

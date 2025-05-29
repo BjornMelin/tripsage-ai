@@ -5,7 +5,7 @@ from datetime import datetime
 import pytest
 from pydantic import ValidationError
 
-from tripsage.models.db.price_history import EntityType, PriceHistory
+from tripsage_core.models.db.price_history import EntityType, PriceHistory
 
 
 def test_price_history_creation(sample_price_history_dict):

@@ -4,46 +4,18 @@ This module defines Pydantic models for accommodation-related requests and respo
 """
 
 from datetime import date
-from enum import Enum
 from typing import List, Optional
 from uuid import UUID
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
-
-class PropertyType(str, Enum):
-    """Property type options for accommodations."""
-
-    HOTEL = "hotel"
-    APARTMENT = "apartment"
-    HOUSE = "house"
-    VILLA = "villa"
-    RESORT = "resort"
-    HOSTEL = "hostel"
-    BED_AND_BREAKFAST = "bed_and_breakfast"
-    GUEST_HOUSE = "guest_house"
-    OTHER = "other"
-
-
-class BookingStatus(str, Enum):
-    """Booking status options for accommodations."""
-
-    VIEWED = "viewed"
-    SAVED = "saved"
-    BOOKED = "booked"
-    CANCELED = "canceled"
-
-
-class CancellationPolicy(str, Enum):
-    """Cancellation policy options for accommodations."""
-
-    FREE = "free"
-    PARTIAL_REFUND = "partial_refund"
-    NO_REFUND = "no_refund"
-    FLEXIBLE = "flexible"
-    MODERATE = "moderate"
-    STRICT = "strict"
-    UNKNOWN = "unknown"
+from tripsage_core.models.schemas_common import (
+    AccommodationType as PropertyType,  # Alias for API compatibility
+)
+from tripsage_core.models.schemas_common import (
+    BookingStatus,
+    CancellationPolicy,
+)
 
 
 class AccommodationSearchRequest(BaseModel):

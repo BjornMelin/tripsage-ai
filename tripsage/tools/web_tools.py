@@ -5,13 +5,13 @@ This module provides wrappers and utilities for web-based operations,
 including caching for WebSearchTool from the OpenAI Agents SDK.
 
 Features include:
-- CachedWebSearchTool - A WebSearchTool with Redis MCP-based caching
+- CachedWebSearchTool - A WebSearchTool with direct Redis/DragonflyDB caching
 - Content-aware caching based on query characteristics
 - Batch caching operations for improved performance
 - Web cache statistics and management
 
-This module uses the Redis MCP client for persistent caching, allowing sharing
-of cached web search results across multiple application instances.
+This module uses the direct Redis/DragonflyDB service for persistent caching,
+allowing sharing of cached web search results across multiple application instances.
 """
 
 import time
@@ -19,7 +19,7 @@ from typing import Any, Dict, List, Optional
 
 from agents import WebSearchTool
 
-from tripsage.utils.cache_tools import (
+from tripsage.utils.cache import (
     CacheStats,
     batch_cache_get,
     cache_lock,
@@ -43,10 +43,10 @@ WEB_CACHE_NAMESPACE = "web-search"
 
 
 class CachedWebSearchTool(WebSearchTool):
-    """Wrapper for WebSearchTool with Redis MCP-based caching.
+    """Wrapper for WebSearchTool with direct Redis/DragonflyDB caching.
 
     This class extends the OpenAI WebSearchTool to provide content-aware
-    caching based on the query and search parameters using Redis MCP.
+    caching based on the query and search parameters using direct Redis/DragonflyDB.
 
     Features:
     - Content type detection for optimal TTL settings

@@ -5,6 +5,7 @@ This module provides decorators used across the TripSage codebase for standardiz
 error handling and client initialization patterns.
 """
 
+import asyncio
 import functools
 import inspect
 from typing import Any, Callable, TypeVar, cast
@@ -101,49 +102,45 @@ def with_error_handling(func: F) -> F:
 
 
 def ensure_memory_client_initialized(func: F) -> F:
-    """Decorator to ensure memory client is initialized.
+    """Decorator to ensure memory service is initialized.
 
-    This decorator ensures that the memory client is initialized before
+    This decorator ensures that the memory service is initialized before
     the decorated function is called. This avoids redundant initialization
-    calls in each function that uses the memory client.
+    calls in each function that uses the memory service.
 
     Args:
         func: Function to decorate (must be async)
 
     Returns:
-        Decorated function with memory client initialization
+        Decorated function with memory service initialization
 
     Example:
         ```python
         @function_tool
         @ensure_memory_client_initialized
-        async def get_knowledge_graph() -> Dict[str, Any]:
-            # Client is already initialized here
-            graph_data = await memory_client.read_graph()
-            return {"entities": graph_data.get("entities", [])}
+        async def add_memory() -> Dict[str, Any]:
+            # Memory service is already initialized here
+            from tripsage.services.memory_service import memory_service
+            result = await memory_service.add("user-123", "Trip preference")
+            return {"memory_id": result}
         ```
     """
     if not inspect.iscoroutinefunction(func):
         raise TypeError(
-            f"ensure_memory_client_initialized can only be used with async functions. "
-            f"{func.__name__} is not async."
+            f"ensure_memory_client_initialized can only be used with async "
+            f"functions. {func.__name__} is not async."
         )
 
     @functools.wraps(func)
     async def wrapper(*args: Any, **kwargs: Any) -> Any:
-        """Wrapper function that initializes memory client."""
+        """Wrapper function that initializes memory service."""
         try:
             # Import here to avoid circular imports
-            # TODO: Update to use direct Neo4j integration in Week 2 migration
-            # from tripsage.clients.memory import memory_client
+            from tripsage.services.infrastructure.memory_service import memory_service
 
-            # Temporary: Use MCP memory tools directly until Neo4j migration
-            from tripsage.mcp_abstraction.manager import MCPManager
-
-            memory_client = MCPManager()
-
-            # Initialize the memory client once
-            await memory_client.initialize()
+            # Initialize the memory service if not already initialized
+            if not memory_service._initialized:
+                await memory_service.initialize()
 
             # Call the original function
             return await func(*args, **kwargs)
@@ -164,4 +161,92 @@ def ensure_memory_client_initialized(func: F) -> F:
     return cast(F, wrapper)
 
 
-__all__ = ["ensure_memory_client_initialized", "with_error_handling"]
+# Retry decorator for network operations
+def retry_on_failure(
+    max_attempts: int = 3,
+    delay: float = 1.0,
+    backoff_factor: float = 2.0,
+    exceptions: tuple = (Exception,),
+) -> Callable[[F], F]:
+    """Decorator to retry failed operations with exponential backoff.
+
+    Args:
+        max_attempts: Maximum number of retry attempts
+        delay: Initial delay between retries in seconds
+        backoff_factor: Factor to multiply delay by after each retry
+        exceptions: Tuple of exceptions to catch and retry
+
+    Returns:
+        Decorated function with retry logic
+    """
+
+    def decorator(func: F) -> F:
+        if inspect.iscoroutinefunction(func):
+
+            @functools.wraps(func)
+            async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
+                last_exception = None
+                current_delay = delay
+
+                for attempt in range(max_attempts):
+                    try:
+                        return await func(*args, **kwargs)
+                    except exceptions as e:
+                        last_exception = e
+                        if attempt < max_attempts - 1:
+                            logger.warning(
+                                f"{func.__name__} failed (attempt {attempt + 1}/"
+                                f"{max_attempts}): {e}"
+                            )
+                            await asyncio.sleep(current_delay)
+                            current_delay *= backoff_factor
+                        else:
+                            logger.error(
+                                f"{func.__name__} failed after {max_attempts} attempts"
+                            )
+                            raise
+
+                if last_exception:
+                    raise last_exception
+
+            return cast(F, async_wrapper)
+        else:
+
+            @functools.wraps(func)
+            def sync_wrapper(*args: Any, **kwargs: Any) -> Any:
+                last_exception = None
+                current_delay = delay
+
+                for attempt in range(max_attempts):
+                    try:
+                        return func(*args, **kwargs)
+                    except exceptions as e:
+                        last_exception = e
+                        if attempt < max_attempts - 1:
+                            logger.warning(
+                                f"{func.__name__} failed (attempt {attempt + 1}/"
+                                f"{max_attempts}): {e}"
+                            )
+                            import time
+
+                            time.sleep(current_delay)
+                            current_delay *= backoff_factor
+                        else:
+                            logger.error(
+                                f"{func.__name__} failed after {max_attempts} attempts"
+                            )
+                            raise
+
+                if last_exception:
+                    raise last_exception
+
+            return cast(F, sync_wrapper)
+
+    return decorator
+
+
+__all__ = [
+    "ensure_memory_client_initialized",
+    "with_error_handling",
+    "retry_on_failure",
+]

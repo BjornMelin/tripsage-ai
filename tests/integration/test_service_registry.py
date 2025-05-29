@@ -290,18 +290,18 @@ class TestGlobalRegistry:
         # Set different modes for different services
         feature_flags.set_integration_mode("redis", IntegrationMode.DIRECT)
         feature_flags.set_integration_mode("supabase", IntegrationMode.DIRECT)
-        feature_flags.set_integration_mode("neo4j", IntegrationMode.MCP)
+        feature_flags.set_integration_mode("memory", IntegrationMode.DIRECT)  # Mem0
         feature_flags.set_integration_mode("airbnb", IntegrationMode.MCP)
 
         status = feature_flags.get_migration_status()
 
         assert status["summary"]["total_services"] > 0
-        assert status["summary"]["direct_sdk"] >= 2
-        assert status["summary"]["mcp_wrapper"] >= 2
+        assert status["summary"]["direct_sdk"] >= 3  # redis, supabase, memory
+        assert status["summary"]["mcp_wrapper"] >= 1  # airbnb only
         assert status["summary"]["migration_percentage"] > 0
 
         # Check specific services
         assert status["services"]["redis"] == "direct"
         assert status["services"]["supabase"] == "direct"
-        assert status["services"]["neo4j"] == "mcp"
+        assert status["services"]["memory"] == "direct"  # Mem0
         assert status["services"]["airbnb"] == "mcp"

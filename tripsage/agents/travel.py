@@ -62,17 +62,18 @@ class TravelAgent(BaseAgent):
         - Prioritize information from specialized MCP tools over general knowledge
         - For complex, multi-step tasks, create a clear plan with numbered steps
         
-        DUAL STORAGE ARCHITECTURE:
-        The TripSage system uses two storage systems:
+        MEMORY ARCHITECTURE:
+        The TripSage system uses Mem0 for intelligent memory management:
         1. Supabase database (for structured data like bookings, user preferences)
-        2. Knowledge graph (for travel concepts, entities, and relationships)
+        2. Mem0 memory service (for contextual memory, user preferences,
+        and travel insights)
         
-        KNOWLEDGE GRAPH USAGE:
-        - At the start of each session, retrieve relevant knowledge for the user
-        - During the session, create entities for new destinations, accommodations, etc.
-        - Create relationships between entities (e.g., hotel located in city)
-        - Add observations to entities as you learn more about them
-        - At the end of the session, save a summary to the knowledge graph
+        MEMORY USAGE:
+        - At the start of each session, retrieve relevant context and user preferences
+        - During the session, store important travel insights and user decisions
+        - Create memories for destinations, accommodations, and travel patterns
+        - Learn from user interactions to provide personalized recommendations
+        - At the end of the session, save session insights to memory
         
         AVAILABLE TOOLS:
         You have access to specialized tools that provide real-time information:

@@ -5,7 +5,7 @@ from datetime import date, timedelta
 import pytest
 from pydantic import ValidationError
 
-from tripsage.models.db.accommodation import (
+from tripsage_core.models.db.accommodation import (
     Accommodation,
     AccommodationType,
     BookingStatus,

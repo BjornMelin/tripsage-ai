@@ -10,15 +10,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field, model_validator
 
-
-class TripStatus(str, Enum):
-    """Status options for trips."""
-
-    PLANNING = "planning"
-    BOOKED = "booked"
-    IN_PROGRESS = "in_progress"
-    COMPLETED = "completed"
-    CANCELLED = "cancelled"
+from tripsage_core.models.schemas_common import Coordinates, TripStatus
 
 
 class TripVisibility(str, Enum):
@@ -98,9 +90,9 @@ class TripDestination(BaseModel):
     name: str = Field(description="Destination name")
     country: Optional[str] = Field(default=None, description="Country")
     city: Optional[str] = Field(default=None, description="City")
-    coordinates: Optional[Dict[str, float]] = Field(
+    coordinates: Optional[Coordinates] = Field(
         default=None,
-        description="Coordinates (latitude, longitude)",
+        description="Geographic coordinates",
     )
     arrival_date: Optional[date] = Field(default=None, description="Date of arrival")
     departure_date: Optional[date] = Field(

@@ -1,7 +1,7 @@
 """Flight service for TripSage API.
 
-This module provides the FlightService class for flight-related operations.
-Supports both MCP and direct HTTP integration via feature flags (Issue #163).
+This module provides the FlightService class for flight-related operations
+using direct HTTP integration with the Duffel API.
 """
 
 import logging
@@ -21,8 +21,6 @@ from tripsage.api.models.flights import (
     SavedFlightRequest,
     SavedFlightResponse,
 )
-from tripsage.config.feature_flags import IntegrationMode, feature_flags
-from tripsage.mcp_abstraction.manager import mcp_manager
 from tripsage.models.flight import CabinClass
 from tripsage.services.duffel_http_client import DuffelHTTPClient
 from tripsage.tools.schemas.flights import FlightSearchParams
@@ -32,30 +30,17 @@ logger = logging.getLogger(__name__)
 
 
 class FlightService:
-    """Service for flight-related operations.
-
-    Supports both MCP and direct HTTP integration based on feature flags.
-    When flights_integration is DIRECT, uses DuffelHTTPClient for direct API calls.
-    When flights_integration is set to MCP, uses MCPManager for MCP-based integration.
-    """
+    """Service for flight-related operations using direct Duffel API integration."""
 
     def __init__(self):
         """Initialize the FlightService."""
-        self.duffel_client: Optional[DuffelHTTPClient] = None
-        self._initialize_clients()
-
-    def _initialize_clients(self) -> None:
-        """Initialize the appropriate client based on feature flags."""
-        if feature_flags.flights_integration == IntegrationMode.DIRECT:
-            try:
-                self.duffel_client = DuffelHTTPClient()
-                logger.info("FlightService initialized with direct HTTP client")
-            except Exception as e:
-                logger.warning(f"Failed to initialize DuffelHTTPClient: {str(e)}")
-                logger.info("FlightService will fall back to MCP or mock data")
-                self.duffel_client = None
-        else:
-            logger.info("FlightService initialized with MCP integration")
+        try:
+            self.duffel_client = DuffelHTTPClient()
+            logger.info("FlightService initialized with direct HTTP client")
+        except Exception as e:
+            logger.warning(f"Failed to initialize DuffelHTTPClient: {str(e)}")
+            logger.info("FlightService will fall back to mock data")
+            self.duffel_client = None
 
     def _validate_flight_search_request(self, request: FlightSearchRequest) -> None:
         """Validate flight search request parameters.
@@ -242,8 +227,7 @@ class FlightService:
         """
         logger.info(
             f"Searching for flights from {request.origin} to {request.destination} "
-            f"on {request.departure_date} using "
-            f"{feature_flags.flights_integration.value} integration"
+            f"on {request.departure_date}"
         )
 
         # Validate request parameters
@@ -263,56 +247,32 @@ class FlightService:
                 search_request=request,
             )
 
-        if feature_flags.flights_integration == IntegrationMode.DIRECT:
-            # Use direct HTTP client
-            if self.duffel_client is None:
-                try:
-                    self.duffel_client = DuffelHTTPClient()
-                except Exception as e:
-                    logger.error(f"Failed to initialize DuffelHTTPClient: {str(e)}")
-                    return await self._get_mock_flight_response(request)
-
+        # Use direct HTTP client
+        if self.duffel_client is None:
             try:
-                # Convert to internal format
-                search_params = await self._convert_api_models_to_flight_search_params(
-                    request
-                )
-
-                # Make direct API call
-                duffel_response = await self.duffel_client.search_flights(search_params)
-
-                # Convert back to API format
-                return await self._convert_duffel_response_to_api_models(
-                    duffel_response, request
-                )
-
+                self.duffel_client = DuffelHTTPClient()
             except Exception as e:
-                logger.error(f"Direct API flight search failed: {str(e)}")
-                # Fall back to mock data
+                logger.error(f"Failed to initialize DuffelHTTPClient: {str(e)}")
                 return await self._get_mock_flight_response(request)
 
-        else:
-            # Use MCP integration (fallback)
-            try:
-                search_params = await self._convert_api_models_to_flight_search_params(
-                    request
-                )
+        try:
+            # Convert to internal format
+            search_params = await self._convert_api_models_to_flight_search_params(
+                request
+            )
 
-                result = await mcp_manager.invoke(
-                    mcp_name="duffel_flights",
-                    method_name="search_flights",
-                    params=search_params.model_dump(by_alias=True),
-                )
+            # Make direct API call
+            duffel_response = await self.duffel_client.search_flights(search_params)
 
-                # Convert MCP result to API format
-                return await self._convert_duffel_response_to_api_models(
-                    result, request
-                )
+            # Convert back to API format
+            return await self._convert_duffel_response_to_api_models(
+                duffel_response, request
+            )
 
-            except Exception as e:
-                logger.error(f"MCP flight search failed: {str(e)}")
-                # Fall back to mock data
-                return await self._get_mock_flight_response(request)
+        except Exception as e:
+            logger.error(f"Direct API flight search failed: {str(e)}")
+            # Fall back to mock data
+            return await self._get_mock_flight_response(request)
 
     async def _get_mock_flight_response(
         self, request: FlightSearchRequest
@@ -616,20 +576,12 @@ class FlightService:
         Returns:
             True if service is operational, False otherwise
         """
-        if feature_flags.flights_integration == IntegrationMode.DIRECT:
-            if self.duffel_client is None:
-                try:
-                    self.duffel_client = DuffelHTTPClient()
-                except Exception:
-                    return False
-            return await self.duffel_client.health_check()
-        else:
-            # For MCP, we could check MCP manager availability
+        if self.duffel_client is None:
             try:
-                # Basic health check - try to access MCP manager
-                return mcp_manager is not None
+                self.duffel_client = DuffelHTTPClient()
             except Exception:
                 return False
+        return await self.duffel_client.health_check()
 
     async def close(self) -> None:
         """Close any open connections."""

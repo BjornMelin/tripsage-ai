@@ -5,9 +5,9 @@ architecture for TripSage AI, prioritizing clear, maintainable, efficient
 code and organization while delivering robust, fully featured, and
 best-practice solutions.
 
-**2025-05-26 Update:** Aligned with broader API Integration strategy for 
-direct SDK migration. Memory implementation uses Mem0 direct SDK with service 
-registry integration and feature flags. Total infrastructure savings increased 
+**2025-05-26 Update:** Aligned with broader API Integration strategy for
+direct SDK migration. Memory implementation uses Mem0 direct SDK with service
+registry integration and feature flags. Total infrastructure savings increased
 to $1,500-2,000/month including Firecrawl elimination.
 
 ## Research Methodology
@@ -212,7 +212,7 @@ in both performance and cost.
 
 #### Timestamp: 2025-05-25 10:00 UTC
 
-**Research Batch 1: Latest Graph Database & Memory Solutions**
+##### Research Batch 1: Latest Graph Database & Memory Solutions
 
 Using parallel MCP tools (firecrawl, tavily, linkup, exa) to gather latest
 information:
@@ -242,21 +242,24 @@ information:
 
 #### Timestamp: 2025-05-25 10:30 UTC
 
-**Research Batch 2: MVP vs V2 Architecture Analysis**
+##### Research Batch 2: MVP vs V2 Architecture Analysis
 
 **MVP Architecture Benefits:**
+
 - 60-70% reduction in initial complexity
 - 50% faster time to market
 - $200-300/month vs $1000+ for full stack
 - Achieves 80%+ core functionality
 
 **Recommended MVP Stack:**
+
 1. PostgreSQL + PGVector (unified storage + vector search)
 2. DragonflyDB (high-performance caching)
 3. Mem0-style memory extraction (simple key-value pairs)
 4. No knowledge graph initially
 
 **V2 Enhancements:**
+
 1. Add Graphiti or Mem0g for temporal reasoning
 2. Implement relationship tracking
 3. Add complex multi-session memory
@@ -264,7 +267,7 @@ information:
 
 #### Timestamp: 2025-05-25 11:00 UTC
 
-**Research Batch 3: Performance Comparisons**
+##### Research Batch 3: Performance Comparisons
 
 | Solution | Complexity | Performance | Cost | Best For |
 |----------|------------|-------------|------|----------|
@@ -293,11 +296,13 @@ core functionality.
 #### MVP Architecture (Weeks 1-8)
 
 **Core Components:**
+
 1. **PostgreSQL (Supabase) + PGVector** - Unified storage and vector search
 2. **DragonflyDB** - High-performance caching
 3. **Mem0-style Memory** - Simple key-value extraction (no graph)
 
 **Benefits:**
+
 - 60-70% complexity reduction
 - $200-300/month operational cost
 - 4-6 week implementation timeline
@@ -307,12 +312,14 @@ core functionality.
 #### V2 Architecture (Weeks 9-16)
 
 **Enhanced Components:**
+
 1. **Graphiti Integration** - Add temporal knowledge graphs
 2. **Relationship Tracking** - Complex entity relationships
 3. **Advanced Memory** - Multi-session context awareness
 4. **Cross-Entity Queries** - Deep relationship analysis
 
 **When to Upgrade:**
+
 - After validating core product-market fit
 - When users require complex multi-trip planning
 - When temporal reasoning becomes critical
@@ -336,12 +343,14 @@ core functionality.
 ### Implementation Priority Changes
 
 **Immediate Actions:**
+
 1. Implement DragonflyDB (1 week)
 2. Add PGVector to PostgreSQL (1 week)
 3. Build Mem0-style memory extraction (2 weeks)
 4. Defer Neo4j/Graphiti to V2
 
 **Deferred to V2:**
+
 1. Neo4j implementation
 2. Graphiti temporal graphs
 3. Complex relationship queries
@@ -350,11 +359,13 @@ core functionality.
 ### Risk Mitigation
 
 **MVP Risks:**
+
 - Limited temporal reasoning → Mitigate with timestamp tracking
 - No complex relationships → Mitigate with structured JSON storage
 - Simpler memory → Mitigate with good session management
 
 **Benefits Outweigh Risks:**
+
 - 50% faster deployment
 - 70% lower initial costs
 - Easier debugging and maintenance
@@ -388,17 +399,18 @@ to meet future needs without over-engineering the initial release.
 4. Compare simplicity, maintainability, and performance
 5. Determine optimal MVP memory solution
 
-### Research Execution Log
+### Research Execution Log (2025-05-25 11:45 UTC)
 
 #### Timestamp: 2025-05-25 11:45 UTC
 
-**Research Batch 1: Neo4j, Mem0, and Letta-AI Deep Analysis**
+##### Research Batch 1: Neo4j, Mem0, and Letta-AI Deep Analysis
 
 Using parallel MCP tools to evaluate three MVP memory solutions:
 
 #### Plain Neo4j (Without Graphiti)
 
 **Findings:**
+
 - Still requires graph expertise (Cypher queries, relationship modeling)
 - 2-3 week implementation timeline for basic setup
 - $500-800/month operational costs
@@ -411,6 +423,7 @@ Using parallel MCP tools to evaluate three MVP memory solutions:
 #### Mem0 Deep Dive
 
 **Key Findings from Research:**
+
 - **Performance:** 26% higher accuracy than OpenAI's memory implementation
 - **Latency:** P95 200ms (91% lower than full-context approaches)
 - **Cost:** 90% token savings, ~$100-200/month
@@ -420,6 +433,7 @@ Using parallel MCP tools to evaluate three MVP memory solutions:
 - **Integration:** Works seamlessly with PostgreSQL + vector search
 
 **Implementation Details:**
+
 ```python
 # Mem0 integration is remarkably simple
 class SimpleMemoryService:
@@ -441,6 +455,7 @@ class SimpleMemoryService:
 #### Letta-AI (formerly MemGPT) Analysis
 
 **Key Findings:**
+
 - UC Berkeley research project, Y Combinator backed
 - More complex framework with "agents-as-a-service" approach
 - Self-editing memory via LLM tool calls
@@ -477,7 +492,8 @@ class SimpleMemoryService:
 6. **Production Ready:** Battle-tested at scale by Zep and others
 
 **Implementation Strategy:**
-```
+
+```plaintext
 MVP Stack (Revised):
 - PostgreSQL + PGVector (storage + vector search)
 - DragonflyDB (caching)  
@@ -486,6 +502,7 @@ MVP Stack (Revised):
 ```
 
 **What This Enables:**
+
 - User preference tracking ("prefers window seats")
 - Trip history and context
 - Conversation continuity
@@ -493,6 +510,7 @@ MVP Stack (Revised):
 - All core travel planning features
 
 **What's Deferred to V2:**
+
 - Complex entity relationships
 - Temporal reasoning
 - Multi-hop queries
@@ -500,7 +518,7 @@ MVP Stack (Revised):
 
 #### Timestamp: 2025-05-25 12:30 UTC
 
-**Migration Path Analysis**
+##### Migration Path Analysis
 
 **MVP to V2 Evolution with Mem0:**
 
@@ -523,6 +541,7 @@ MVP Stack (Revised):
    - For advanced AI agent features
 
 **Industry Validation:**
+
 - "Mem0 achieves better results than MemGPT, OpenAI Memory" - Reddit r/aiagents
 - "Most production AI systems use simple memory" - Multiple sources
 - "Graph databases often premature optimization" - Industry consensus 2025
@@ -537,16 +556,19 @@ Based on comprehensive research across all phases, the optimal MVP architecture 
 TripSage-AI is:
 
 **Core Components:**
+
 1. **PostgreSQL (Supabase) + PGVector** - Unified storage and vector search
 2. **DragonflyDB** - 25x faster caching replacement for Redis
 3. **Mem0** - Simple, production-proven memory extraction (NOT Neo4j/Graphiti)
 
 **Key Changes from Original Plan:**
+
 - **Remove Neo4j entirely from MVP** - Unnecessary complexity
 - **Replace complex memory with Mem0** - 3-5 days vs 3-4 weeks
 - **Defer all graph functionality to V2** - Not needed for core features
 
 **Benefits of Revised Approach:**
+
 - **Implementation:** 3-4 weeks total (vs 8-12 weeks)
 - **Cost:** $150-250/month (vs $1000+)
 - **Complexity:** 70% reduction
@@ -556,12 +578,14 @@ TripSage-AI is:
 ### Implementation Roadmap (Revised)
 
 #### MVP Phase (Weeks 1-4)
+
 1. **Week 1:** DragonflyDB setup and migration
 2. **Week 1:** PGVector enable in existing PostgreSQL
 3. **Weeks 2-3:** Mem0 integration for memory
 4. **Week 4:** Testing and optimization
 
 #### V2 Phase (Post-MVP Validation)
+
 - **Option A:** Upgrade Mem0 → Mem0g (easy path)
 - **Option B:** Add Graphiti for temporal graphs (complex path)
 - **Option C:** Stay with enhanced Mem0 (sufficient for many use cases)
@@ -593,22 +617,22 @@ consider graph solutions only if specific use cases demand them.
 4. Determine optimal vector search solution for TripSage-AI
 5. Consider hybrid search capabilities and RAG integration
 
-### Research Execution Log
+### Research Execution Log (2025-05-25 14:30 UTC)
 
 #### Timestamp: 2025-05-25 14:30 UTC
 
-**Research Batch 1: Comprehensive Vector Database Analysis**
+##### Research Batch 1: Comprehensive Vector Database Analysis
 
 Using parallel MCP tools (firecrawl deep research, tavily, exa, linkup) to gather
 latest benchmarks and industry insights.
 
-**Major Finding: PGVector Disrupts the Market**
+##### Major Finding: PGVector Disrupts the Market
 
 The most significant finding from 2025 research is that PGVector with pgvectorscale
 has fundamentally challenged the assumption that specialized vector databases are
 necessary for high-performance vector search.
 
-**Key Benchmark Results (50M embeddings, 768 dimensions):**
+##### Key Benchmark Results (50M embeddings, 768 dimensions)
 
 1. **PGVector + pgvectorscale:**
    - **471 QPS at 99% recall** - 11x higher than Qdrant
@@ -629,41 +653,41 @@ necessary for high-performance vector search.
 
 #### Timestamp: 2025-05-25 15:00 UTC
 
-**Research Batch 2: Comprehensive Feature Comparison**
+##### Research Batch 2: Comprehensive Feature Comparison
 
 ### Vector Database Comparison Matrix 2025
 
 | Feature | PGVector + pgvectorscale | Qdrant | Pinecone | Weaviate | Milvus |
 |---------|-------------------------|---------|-----------|-----------|---------|
-| **Performance** |
+| **Performance** | | | | | |
 | QPS @ 99% recall | **471** | 41 | ~200 | ~150 | ~300 |
 | P99 Latency | **<100ms** | <50ms | 2ms | <200ms | <150ms |
 | Index Build Speed | Good | **Excellent** | N/A | Good | Good |
-| **Cost** |
+| **Cost** | | | | | |
 | Monthly (50M vectors) | **$410** | $500-800 | $2000+ | $600-900 | $500-1000 |
 | Operational Overhead | **Low** | Medium | **None** | Medium | High |
-| **Scalability** |
+| **Scalability** | | | | | |
 | Max Vectors | Billions | Billions | **Unlimited** | Billions | **10B+** |
 | Horizontal Scaling | Via PostgreSQL | **Native** | **Managed** | Native | Excellent |
-| **Developer Experience** |
+| **Developer Experience** | | | | | |
 | Learning Curve | **Minimal** | Moderate | Low | Moderate | Steep |
 | SQL Integration | **Native** | No | No | GraphQL | No |
 | Existing Stack Fit | **Perfect** | New System | New System | New System | New System |
-| **Production Features** |
+| **Production Features** | | | | | |
 | ACID Compliance | **Yes** | No | No | No | No |
 | Backup/Recovery | **Mature** | Good | Managed | Good | Good |
 | Monitoring | **PostgreSQL** | Custom | Managed | Custom | Custom |
-| **Hybrid Search** |
+| **Hybrid Search** | | | | | |
 | Keyword + Vector | **Native** | Yes | Limited | **Excellent** | Good |
 | Metadata Filtering | **SQL WHERE** | Good | Good | GraphQL | Good |
-| **Special Features** |
+| **Special Features** | | | | | |
 | Transactional | **Yes** | No | No | No | No |
 | JSON/JSONB | **Native** | Limited | No | Yes | Limited |
 | Geospatial | **PostGIS** | No | No | Limited | No |
 
 #### Timestamp: 2025-05-25 15:30 UTC
 
-**Research Batch 3: Emerging Solutions and Trends**
+##### Research Batch 3: Emerging Solutions and Trends
 
 **Emerging Vector Solutions 2025:**
 
@@ -710,7 +734,7 @@ necessary for high-performance vector search.
 After comprehensive analysis of the 2025 vector database landscape, the clear
 recommendation for TripSage-AI is:
 
-**PGVector with pgvectorscale on existing Supabase infrastructure**
+#### PGVector with pgvectorscale on existing Supabase infrastructure
 
 **Why This Solution Wins:**
 
@@ -742,6 +766,7 @@ recommendation for TripSage-AI is:
 **Implementation Strategy:**
 
 1. **Phase 1: Enable pgvector + pgvectorscale**
+
    ```sql
    CREATE EXTENSION vector;
    CREATE EXTENSION vectorscale CASCADE;
@@ -798,11 +823,11 @@ industry has spoken: for most use cases, PostgreSQL is all you need.
 4. Establish production-ready best practices
 5. Define clear migration path from current system
 
-### Research Execution Log
+### Research Execution Log (2025-05-25 16:30 UTC)
 
 #### Timestamp: 2025-05-25 16:30 UTC
 
-**Research Batch 1: Mem0 Production Architecture Analysis**
+##### Research Batch 1: Mem0 Production Architecture Analysis
 
 Using comprehensive research from GitHub, documentation, and production implementations.
 
@@ -816,6 +841,7 @@ Using comprehensive research from GitHub, documentation, and production implemen
    - Simple API that abstracts complexity
 
 2. **Integration Patterns:**
+
    ```python
    # Optimal Mem0 + Supabase + pgvector configuration
    from mem0 import Memory
@@ -856,7 +882,7 @@ Using comprehensive research from GitHub, documentation, and production implemen
 
 #### Timestamp: 2025-05-25 17:00 UTC
 
-**Research Batch 2: TripSage-Specific Implementation Design**
+##### Research Batch 2: TripSage-Specific Implementation Design
 
 ### Comprehensive Mem0 Architecture for TripSage-AI
 
@@ -1481,6 +1507,7 @@ async def benchmark_memory_operations():
 ### Production Deployment Checklist
 
 #### 1. Infrastructure Setup
+
 - [ ] Enable pgvector and pgvectorscale extensions in Supabase
 - [ ] Create memories table with optimized schema
 - [ ] Configure connection pooling (20 connections, 10 overflow)
@@ -1488,6 +1515,7 @@ async def benchmark_memory_operations():
 - [ ] Configure memory-specific indexes
 
 #### 2. Security & Access Control
+
 - [ ] Implement user-level memory isolation
 - [ ] Add API rate limiting for memory operations (10 req/min)
 - [ ] Encrypt sensitive memory metadata
@@ -1495,6 +1523,7 @@ async def benchmark_memory_operations():
 - [ ] GDPR compliance for memory deletion
 
 #### 3. Performance Optimization
+
 - [ ] Batch memory operations where possible
 - [ ] Implement memory prefetching for active users
 - [ ] Cache frequently accessed memories (5 min TTL)
@@ -1502,6 +1531,7 @@ async def benchmark_memory_operations():
 - [ ] Set up query performance monitoring
 
 #### 4. Monitoring & Alerts
+
 - [ ] OpenTelemetry traces for memory operations
 - [ ] Metrics: extraction time, search latency, hit rates
 - [ ] Alerts for high latency (>1s) or errors
@@ -1509,6 +1539,7 @@ async def benchmark_memory_operations():
 - [ ] Cost tracking for LLM operations
 
 #### 5. Testing & Validation
+
 - [ ] Unit tests with 90%+ coverage
 - [ ] Integration tests with real pgvector
 - [ ] Performance benchmarks vs baseline
@@ -1517,32 +1548,38 @@ async def benchmark_memory_operations():
 
 ### Implementation Timeline (10 Days)
 
-**Days 1-2: Foundation**
+#### Days 1-2: Foundation
+
 - Set up Mem0 with pgvector configuration
 - Create database schema and migrations
 - Implement core MemoryService class
 
-**Days 3-4: Integration**
+##### Days 3-4: Integration
+
 - Integrate with ChatAgent
 - Add memory extraction from conversations
 - Implement user preference tracking
 
-**Day 5: Advanced Features**
+##### Day 5: Advanced Features
+
 - Add session memory management
 - Implement memory search and retrieval
 - Create memory management API endpoints
 
-**Days 6-7: Testing**
+##### Days 6-7: Testing
+
 - Comprehensive unit test suite
 - Integration tests with mocked MCPs
 - Performance benchmarking
 
-**Days 8-9: Production Prep**
+##### Days 8-9: Production Prep
+
 - Security hardening
 - Performance optimization
 - Monitoring setup
 
-**Day 10: Documentation & Deployment**
+##### Day 10: Documentation & Deployment
+
 - API documentation
 - Integration guides
 - Production deployment
@@ -1550,6 +1587,7 @@ async def benchmark_memory_operations():
 ### Cost Analysis
 
 **Monthly Costs (Estimated):**
+
 - LLM (gpt-4o-mini): ~$50-100 for memory extraction
 - Embeddings (text-embedding-3-small): ~$10-20
 - Supabase (existing): No additional cost
@@ -1600,9 +1638,10 @@ async def benchmark_memory_operations():
    - Can be developed in parallel with other SDK migrations
 
 ### Migration Path
+
 1. Week 1: Implement Mem0 with MCP fallback
 2. Week 2: Add Crawl4AI memory extraction
 3. Week 3: Testing and feature flag rollout
 4. Post-MVP: Consider Mem0g or Graphiti for advanced features
 
-*API Integration Update: 2025-05-26*
+## API Integration Update: 2025-05-26

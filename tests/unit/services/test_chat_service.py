@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from tripsage.api.core.exceptions import NotFoundError, ValidationError
 from tripsage.api.services.chat_service import ChatService, RateLimiter
-from tripsage.models.db.chat import (
+from tripsage_core.models.db.chat import (
     ChatMessageDB,
     ChatSessionDB,
     ChatSessionWithStats,

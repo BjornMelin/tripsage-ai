@@ -45,11 +45,11 @@ FEATURE_REDIS_INTEGRATION=direct  # Options: mcp, direct
 FEATURE_SUPABASE_INTEGRATION=direct  # Options: mcp, direct
 ```
 
-### Week 2 Services (Memory & Neo4j)
+### Week 2 Services (Memory & Mem0)
 
 ```bash
-# Neo4j memory/knowledge graph integration mode
-FEATURE_NEO4J_INTEGRATION=mcp  # Options: mcp, direct
+# Memory service now uses Mem0 + pgvector (Neo4j removed from MVP)
+FEATURE_MEMORY_INTEGRATION=direct  # Options: mcp, direct (Mem0 implementation)
 ```
 
 ### Week 3-4 Services (External APIs)
@@ -104,7 +104,7 @@ FEATURE_AIRBNB_INTEGRATION=mcp  # Options: mcp, direct
 ```bash
 FEATURE_REDIS_INTEGRATION=direct
 FEATURE_SUPABASE_INTEGRATION=direct
-FEATURE_NEO4J_INTEGRATION=mcp
+FEATURE_MEMORY_INTEGRATION=direct
 FEATURE_WEATHER_INTEGRATION=mcp
 FEATURE_MAPS_INTEGRATION=mcp
 FEATURE_FLIGHTS_INTEGRATION=mcp
@@ -120,6 +120,7 @@ FEATURE_AIRBNB_INTEGRATION=mcp
 ```bash
 FEATURE_REDIS_INTEGRATION=mcp
 FEATURE_SUPABASE_INTEGRATION=mcp
+FEATURE_MEMORY_INTEGRATION=mcp
 # ... all other services default to mcp
 ```
 
@@ -128,7 +129,7 @@ FEATURE_SUPABASE_INTEGRATION=mcp
 ```bash
 FEATURE_REDIS_INTEGRATION=direct
 FEATURE_SUPABASE_INTEGRATION=direct
-FEATURE_NEO4J_INTEGRATION=direct
+FEATURE_MEMORY_INTEGRATION=direct
 FEATURE_WEATHER_INTEGRATION=direct
 FEATURE_MAPS_INTEGRATION=direct
 FEATURE_FLIGHTS_INTEGRATION=direct
@@ -145,7 +146,7 @@ FEATURE_AIRBNB_INTEGRATION=mcp  # Only service remaining on MCP
 
 - **Redis → Direct**: 25x performance improvement with DragonflyDB
 - **Supabase → Direct**: 30-40% latency reduction, full API coverage
-- **Neo4j → Direct**: 50-70% latency reduction
+- **Memory → Direct**: 50-70% latency reduction
 - **Weather/Maps/Flights → Direct**: 40-60% latency reduction
 - **Crawl4AI → Direct**: 6x performance improvement (completed)
 - **Playwright → Direct**: 25-40% performance improvement (completed)

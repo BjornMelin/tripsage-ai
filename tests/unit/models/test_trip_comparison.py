@@ -2,7 +2,7 @@
 
 from datetime import datetime
 
-from tripsage.models.db.trip_comparison import TripComparison
+from tripsage_core.models.db.trip_comparison import TripComparison
 
 
 def test_trip_comparison_creation(sample_trip_comparison_dict):

@@ -17,7 +17,10 @@ class APISettings(BaseSettings):
     """API-specific settings extending the main application settings."""
 
     # JWT authentication settings
-    secret_key: SecretStr = Field(..., description="Secret key for signing JWT tokens")
+    secret_key: SecretStr = Field(
+        default=SecretStr("your-secret-key-here-change-in-production"),
+        description="Secret key for signing JWT tokens",
+    )
     algorithm: str = Field(default="HS256", description="Algorithm for JWT encoding")
     access_token_expire_minutes: int = Field(
         default=30, description="Minutes until access token expires"
@@ -70,13 +73,11 @@ class APISettings(BaseSettings):
     )
 
     class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-        case_sensitive = False
-        env_prefix = "API_"
+        # Don't read from .env file since we get settings from app_settings
+        extra = "allow"  # Allow extra fields from environment
 
 
-# Create settings instance
+# Create settings instance without reading from .env
 settings = APISettings()
 
 # Augment with main application settings

@@ -1,30 +1,30 @@
 #!/usr/bin/env python
 """
-Initialize TripSage databases using MCP-based approach.
+Database initialization script for TripSage.
 
-This script initializes both SQL and Neo4j databases with:
-- Tables and schema (SQL)
-- Constraints and indexes (Neo4j)
-- Sample data (optional)
+This script initializes the SQL database with:
+- Basic schema and tables
+- Sample data for testing
+
+Note: Memory management has been migrated from Neo4j to Mem0 direct SDK integration.
 """
 
-import argparse
 import asyncio
+import os
 import sys
 from pathlib import Path
 
-# Add project root to path
-script_dir = Path(__file__).resolve().parent
-project_root = script_dir.parent
+# Add the project root to the Python path
+project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
 # These imports rely on the path adjustments above
-from tripsage.config.mcp_settings import mcp_settings  # noqa: E402
+from tripsage.config.app_settings import settings  # noqa: E402
 from tripsage.mcp_abstraction.manager import MCPManager  # noqa: E402
 from tripsage.utils.logging import configure_logging  # noqa: E402
 
 # Configure logging
-logger = configure_logging("init_database")
+logger = configure_logging(__name__)
 
 
 async def check_sql_connection(mcp_manager: MCPManager, project_id: str) -> bool:
@@ -33,12 +33,11 @@ async def check_sql_connection(mcp_manager: MCPManager, project_id: str) -> bool
         result = await mcp_manager.call_tool(
             integration_name="supabase",
             tool_name="execute_sql",
-            tool_args={"project_id": project_id, "sql": "SELECT version();"},
+            tool_args={"project_id": project_id, "sql": "SELECT 1 as test;"},
         )
 
-        if result.result and "rows" in result.result:
-            version = result.result["rows"][0]["version"]
-            logger.info(f"Connected to SQL database: {version}")
+        if result.result:
+            logger.info("Connected to SQL database successfully")
             return True
 
         logger.error("Failed to connect to SQL database")
@@ -46,26 +45,6 @@ async def check_sql_connection(mcp_manager: MCPManager, project_id: str) -> bool
 
     except Exception as e:
         logger.error(f"SQL connection check failed: {e}")
-        return False
-
-
-async def check_neo4j_connection(mcp_manager: MCPManager) -> bool:
-    """Check Neo4j database connection."""
-    try:
-        result = await mcp_manager.call_tool(
-            integration_name="memory", tool_name="read_graph", tool_args={}
-        )
-
-        if result.result:
-            node_count = len(result.result.get("entities", []))
-            logger.info(f"Connected to Neo4j database: {node_count} entities found")
-            return True
-
-        logger.error("Failed to connect to Neo4j database")
-        return False
-
-    except Exception as e:
-        logger.error(f"Neo4j connection check failed: {e}")
         return False
 
 
@@ -134,42 +113,8 @@ async def init_sql_database(mcp_manager: MCPManager, project_id: str) -> bool:
         return False
 
 
-async def init_neo4j_database(mcp_manager: MCPManager) -> bool:
-    """Initialize Neo4j database with basic schema."""
-    logger.info("Initializing Neo4j database...")
-
-    try:
-        # Create root entity to ensure graph exists
-        root_entity = {
-            "name": "TripSage_Root",
-            "entityType": "System",
-            "observations": [
-                "version:1.0",
-                "description:TripSage travel planning knowledge graph",
-                "created_at:" + str(asyncio.get_event_loop().time()),
-            ],
-        }
-
-        result = await mcp_manager.call_tool(
-            integration_name="memory",
-            tool_name="create_entities",
-            tool_args={"entities": [root_entity]},
-        )
-
-        if result.error:
-            logger.error(f"Failed to create root entity: {result.error}")
-            return False
-
-        logger.info("Neo4j database initialized successfully")
-        return True
-
-    except Exception as e:
-        logger.error(f"Neo4j initialization failed: {e}")
-        return False
-
-
 async def load_sample_data(mcp_manager: MCPManager, project_id: str) -> bool:
-    """Load sample data into databases."""
+    """Load sample data into SQL database."""
     logger.info("Loading sample data...")
 
     try:
@@ -191,46 +136,6 @@ async def load_sample_data(mcp_manager: MCPManager, project_id: str) -> bool:
         if result.error:
             logger.warning(f"Sample user creation error: {result.error}")
 
-        # Add sample destinations to Neo4j
-        sample_destinations = [
-            {
-                "name": "Tokyo",
-                "entityType": "Destination",
-                "observations": [
-                    "country:Japan",
-                    "latitude:35.6762",
-                    "longitude:139.6503",
-                    "timezone:Asia/Tokyo",
-                    "currency:JPY",
-                    "language:Japanese",
-                    "description:Japan's capital, blending traditional and "
-                    "modern culture",
-                ],
-            },
-            {
-                "name": "New York City",
-                "entityType": "Destination",
-                "observations": [
-                    "country:USA",
-                    "latitude:40.7128",
-                    "longitude:-74.0060",
-                    "timezone:America/New_York",
-                    "currency:USD",
-                    "language:English",
-                    "description:The Big Apple, a global hub of culture and commerce",
-                ],
-            },
-        ]
-
-        result = await mcp_manager.call_tool(
-            integration_name="memory",
-            tool_name="create_entities",
-            tool_args={"entities": sample_destinations},
-        )
-
-        if result.error:
-            logger.warning(f"Sample destinations creation error: {result.error}")
-
         logger.info("Sample data loaded successfully")
         return True
 
@@ -241,84 +146,55 @@ async def load_sample_data(mcp_manager: MCPManager, project_id: str) -> bool:
 
 async def main():
     """Main database initialization function."""
-    parser = argparse.ArgumentParser(description="Initialize TripSage databases")
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Initialize TripSage database")
     parser.add_argument(
         "--project-id",
-        help="Supabase project ID (will use environment variable if not provided)",
+        default=os.getenv("SUPABASE_PROJECT_ID", "default"),
+        help="Supabase project ID",
     )
-    parser.add_argument(
-        "--skip-sql", action="store_true", help="Skip SQL database initialization"
-    )
-    parser.add_argument(
-        "--skip-neo4j", action="store_true", help="Skip Neo4j database initialization"
-    )
-    parser.add_argument(
-        "--load-sample-data",
-        action="store_true",
-        help="Load sample data into databases",
-    )
-    parser.add_argument(
-        "--check-only",
-        action="store_true",
-        help="Only check database connections, don't initialize",
-    )
+    parser.add_argument("--sample-data", action="store_true", help="Load sample data")
+
     args = parser.parse_args()
 
-    # Get project ID
-    project_id = args.project_id or mcp_settings.SUPABASE_PROJECT_ID
-    if not project_id and not args.skip_sql:
-        logger.error("Supabase project ID not provided and not found in settings")
-        sys.exit(1)
-
-    # Initialize MCP manager
-    mcp_manager = await MCPManager.get_instance(mcp_settings.model_dump())
+    logger.info("Starting database initialization...")
 
     try:
-        # Check connections
-        sql_connected = False
-        neo4j_connected = False
+        # Initialize MCP manager
+        mcp_manager = await MCPManager.get_instance(settings.model_dump())
 
-        if not args.skip_sql:
-            sql_connected = await check_sql_connection(mcp_manager, project_id)
-            if not sql_connected:
-                logger.error("Failed to connect to SQL database")
-                if not args.check_only:
-                    sys.exit(1)
+        # Check SQL connection
+        sql_connected = await check_sql_connection(mcp_manager, args.project_id)
+        if not sql_connected:
+            logger.error("Failed to connect to SQL database")
+            return False
 
-        if not args.skip_neo4j:
-            neo4j_connected = await check_neo4j_connection(mcp_manager)
-            if not neo4j_connected:
-                logger.error("Failed to connect to Neo4j database")
-                if not args.check_only:
-                    sys.exit(1)
-
-        if args.check_only:
-            logger.info("Connection check completed")
-            return
-
-        # Initialize databases
-        if not args.skip_sql and sql_connected:
-            success = await init_sql_database(mcp_manager, project_id)
-            if not success:
-                logger.error("SQL database initialization failed")
-                sys.exit(1)
-
-        if not args.skip_neo4j and neo4j_connected:
-            success = await init_neo4j_database(mcp_manager)
-            if not success:
-                logger.error("Neo4j database initialization failed")
-                sys.exit(1)
+        # Initialize SQL database
+        success = await init_sql_database(mcp_manager, args.project_id)
+        if not success:
+            logger.error("SQL database initialization failed")
+            return False
 
         # Load sample data if requested
-        if args.load_sample_data:
-            await load_sample_data(mcp_manager, project_id)
+        if args.sample_data:
+            success = await load_sample_data(mcp_manager, args.project_id)
+            if not success:
+                logger.warning("Sample data loading failed, but continuing...")
 
-        logger.info("Database initialization completed successfully")
+        logger.info("Database initialization completed successfully!")
+        return True
+
+    except Exception as e:
+        logger.error(f"Database initialization failed: {e}")
+        return False
 
     finally:
-        # Cleanup MCP manager
-        await mcp_manager.cleanup()
+        # Clean up MCP manager
+        if "mcp_manager" in locals():
+            await mcp_manager.cleanup()
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    success = asyncio.run(main())
+    sys.exit(0 if success else 1)

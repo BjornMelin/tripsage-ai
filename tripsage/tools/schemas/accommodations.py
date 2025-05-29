@@ -5,26 +5,11 @@ This module defines the Pydantic models used for accommodation search and result
 """
 
 from datetime import date
-from enum import Enum
 from typing import Any, Dict, List, Optional, Union
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-
-class AccommodationType(str, Enum):
-    """Type of accommodation."""
-
-    ALL = "all"
-    APARTMENT = "apartment"
-    HOUSE = "house"
-    HOTEL = "hotel"
-    GUESTHOUSE = "guesthouse"
-    BED_AND_BREAKFAST = "bed_and_breakfast"
-    BOUTIQUE_HOTEL = "boutique_hotel"
-    VILLA = "villa"
-    CABIN = "cabin"
-    COTTAGE = "cottage"
-    OTHER = "other"
+from tripsage_core.models.schemas_common import AccommodationType, Coordinates
 
 
 class AirbnbSearchParams(BaseModel):
@@ -149,7 +134,7 @@ class AirbnbListingDetails(BaseModel):
     host: AirbnbHost = Field(..., description="Host details")
     property_type: str = Field(..., description="Type of property")
     location: str = Field(..., description="Location description")
-    coordinates: Optional[Dict[str, float]] = Field(
+    coordinates: Optional[Coordinates] = Field(
         None, description="Geographical coordinates"
     )
     amenities: List[str] = Field([], description="List of amenities")

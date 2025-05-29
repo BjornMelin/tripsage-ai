@@ -1,8 +1,9 @@
 """
-MCP Manager for orchestrating all MCP operations.
+MCP Manager for Airbnb accommodation operations.
 
-This module provides a singleton manager that handles configuration loading,
-client initialization, and method routing for all MCP clients.
+This module provides a simplified manager that handles the single remaining
+MCP integration for Airbnb accommodations. All other services have been
+migrated to direct SDK integration.
 """
 
 import logging

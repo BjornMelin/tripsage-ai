@@ -25,13 +25,15 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 # Set up test environment before any imports
 os.environ.update(
     {
-        # Basic API keys
-        "OPENAI_API_KEY": "test-openai-key",
-        "ANTHROPIC_API_KEY": "test-anthropic-key",
-        # Database configuration - Core required fields
-        "SUPABASE_URL": "https://test-supabase-url.com",
+        # Core API
+        "SUPABASE_URL": "https://test.supabase.co",
         "SUPABASE_ANON_KEY": "test-anon-key",
-        "NEO4J_PASSWORD": "test-password",
+        "SUPABASE_SERVICE_ROLE_KEY": "test-service-key",
+        # API Keys
+        "ANTHROPIC_API_KEY": "test-key",
+        "OPENAI_API_KEY": "test-key",
+        "WEBCRAWL_CRAWL4AI_API_KEY": "test-crawl-key",
+        "WEBCRAWL_FIRECRAWL_API_KEY": "test-firecrawl-key",
         # Redis configuration
         "REDIS_URL": "redis://localhost:6379/0",
         # MCP Endpoints - All required MCP configurations
@@ -42,8 +44,6 @@ os.environ.update(
         "GOOGLEMAPS_MCP_MAPS_API_KEY": "test-maps-api-key",
         "MEMORY_MCP_ENDPOINT": "http://localhost:3009",
         "WEBCRAWL_MCP_ENDPOINT": "http://localhost:3010",
-        "WEBCRAWL_MCP_CRAWL4AI_API_KEY": "test-crawl-key",
-        "WEBCRAWL_MCP_FIRECRAWL_API_KEY": "test-firecrawl-key",
         "FLIGHTS_MCP_ENDPOINT": "http://localhost:3011",
         "FLIGHTS_MCP_DUFFEL_API_KEY": "test-duffel-key",
         "ACCOMMODATIONS_MCP_AIRBNB_ENDPOINT": "http://localhost:3012",
@@ -244,23 +244,32 @@ def mock_web_operations_cache():
 def mock_settings_and_redis(monkeypatch):
     """Mock settings and Redis client to avoid actual connections and
     validation errors."""
-    # First set environment variables to satisfy Pydantic validation
-    monkeypatch.setenv("NEO4J_PASSWORD", "test_password")
-    monkeypatch.setenv("NEO4J_USER", "neo4j")
+    # Set environment variables for testing
+    monkeypatch.setenv("SUPABASE_URL", "https://test.supabase.co")
+    monkeypatch.setenv("SUPABASE_ANON_KEY", "test_anon_key")
+
+    # Set API keys
+    monkeypatch.setenv("OPENAI_API_KEY", "test_openai_key")
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "test_anthropic_key")
 
     # Create a comprehensive mock settings object
-    mock_settings = MagicMock()
-    mock_settings.agent.model_name = "gpt-4"
-    mock_settings.agent.temperature = 0.7
-    mock_settings.agent.max_tokens = 4096
-    mock_settings.agent.timeout = 120
+    from tripsage.config.app_settings import AppSettings
+
+    mock_settings = AppSettings()
+
+    # Mock basic settings
+    mock_settings.environment = "test"
+    mock_settings.debug = True
     mock_settings.agent.max_retries = 3
 
-    # Mock Neo4j settings
-    mock_settings.neo4j.uri = "bolt://localhost:7687"
-    mock_settings.neo4j.user = "neo4j"
-    mock_settings.neo4j.password = "test_password"
-    mock_settings.neo4j.database = "neo4j"
+    # Mock database settings
+    mock_settings.database.supabase_url = "https://test.supabase.co"
+    mock_settings.database.supabase_anon_key = "test_anon_key"
+
+    # Mock memory service (Mem0)
+    # Note: AppSettings no longer has memory attribute after refactoring
+    # mock_settings.memory.service_type = "mem0"
+    # mock_settings.memory.api_key = "test_mem0_key"
 
     # Mock Redis client
     mock_redis_client = MagicMock()
@@ -278,9 +287,6 @@ def mock_settings_and_redis(monkeypatch):
     with (
         patch("tripsage.config.app_settings.AppSettings", return_value=mock_settings),
         patch("tripsage.config.app_settings.settings", mock_settings),
-        patch("tripsage.utils.settings.AppSettings", return_value=mock_settings),
-        patch("tripsage.utils.settings.get_settings", return_value=mock_settings),
-        patch("tripsage.utils.settings.settings", mock_settings),
         patch("redis.asyncio.from_url", mock_from_url),
         patch("redis.from_url", mock_from_url),
         patch("tripsage.utils.cache.redis", redis_mock),

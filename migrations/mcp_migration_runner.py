@@ -7,6 +7,7 @@ patterns.
 """
 
 import os
+import re
 from pathlib import Path
 from typing import Dict, List, Optional
 
@@ -253,17 +254,29 @@ class MCPMigrationRunner:
             MCPMigrationError: If migration run fails
         """
         try:
-            # Get list of migration files
-            migration_files = sorted(
-                [f for f in os.listdir(self.migrations_dir) if f.endswith(".sql")]
-            )
-
-            # Filter out rollback files
-            migration_files = [
-                f for f in migration_files if "rollback" not in f.lower()
+            # Get list of migration files from main directory only
+            # (exclude subdirectories)
+            all_files = [
+                f for f in os.listdir(self.migrations_dir) if f.endswith(".sql")
             ]
 
-            self.logger.info(f"Found {len(migration_files)} migration files")
+            # Filter to only include files directly in migrations directory
+            # (not subdirectories) and exclude rollback files
+            migration_files = []
+            for f in all_files:
+                file_path = os.path.join(self.migrations_dir, f)
+                if (
+                    os.path.isfile(file_path)
+                    and "rollback" not in f.lower()
+                    and re.match(r"\d{8}_\d{2}_.*\.sql", f)
+                ):
+                    migration_files.append(f)
+
+            migration_files = sorted(migration_files)
+
+            self.logger.info(
+                f"Found {len(migration_files)} migration files in main directory"
+            )
 
             if dry_run:
                 self.logger.info("DRY RUN: Would run the following migrations:")
