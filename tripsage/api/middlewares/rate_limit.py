@@ -1,7 +1,7 @@
 """Rate limiting middleware for FastAPI.
 
 This module provides middleware for rate limiting in FastAPI,
-supporting both in-memory and Redis-based rate limiters.
+supporting both in-memory and DragonflyDB-based rate limiters.
 """
 
 import logging
@@ -15,7 +15,6 @@ from starlette.status import HTTP_429_TOO_MANY_REQUESTS
 from starlette.types import ASGIApp
 
 from tripsage.api.core.config import Settings, get_settings
-from tripsage.mcp_abstraction import mcp_manager
 
 logger = logging.getLogger(__name__)
 
@@ -68,11 +67,11 @@ class InMemoryRateLimiter:
         return False
 
 
-class RedisRateLimiter:
-    """Redis-based rate limiter.
+class DragonflyRateLimiter:
+    """DragonflyDB-based rate limiter.
 
-    This class provides a Redis-based rate limiter for production use.
-    It uses Redis MCP to store and retrieve rate limiting data.
+    This class provides a DragonflyDB-based rate limiter for production use.
+    It uses the direct DragonflyDB service for optimal performance.
     """
 
     def __init__(self, rate_limit: int, timeframe: int):
@@ -84,12 +83,14 @@ class RedisRateLimiter:
         """
         self.rate_limit = rate_limit
         self.timeframe = timeframe
-        self.redis_mcp = None
+        self.cache_service = None
 
     async def initialize(self):
-        """Initialize the Redis MCP client."""
-        if not self.redis_mcp:
-            self.redis_mcp = await mcp_manager.initialize_mcp("redis")
+        """Initialize the direct DragonflyDB service."""
+        if not self.cache_service:
+            from tripsage.services.dragonfly_service import get_cache_service
+
+            self.cache_service = await get_cache_service()
 
     async def is_rate_limited(self, key: str) -> bool:
         """Check if a key is rate limited.
@@ -102,20 +103,75 @@ class RedisRateLimiter:
         """
         await self.initialize()
 
-        # Create a Redis key
-        redis_key = f"rate_limit:{key}"
+        # Create a cache key
+        cache_key = f"rate_limit:{key}"
 
-        # Use Redis MCP to check and update rate limit
-        result = await self.redis_mcp.invoke_method(
-            "rate_limit",
-            params={
-                "key": redis_key,
-                "limit": self.rate_limit,
-                "window": self.timeframe,
-            },
-        )
+        # Use direct DragonflyDB service to check and update rate limit
+        current_time = int(time.time())
+        window_start = current_time - self.timeframe
 
-        return result.get("limited", False)
+        try:
+            # Check if DragonflyDB service supports sorted sets (Redis commands)
+            if hasattr(self.cache_service, "zremrangebyscore"):
+                # Use Redis-like sorted set commands for precise rate limiting
+                # Remove expired entries
+                await self.cache_service.zremrangebyscore(cache_key, 0, window_start)
+                # Count current requests in window
+                current_count = await self.cache_service.zcard(cache_key)
+                # Add current request
+                await self.cache_service.zadd(
+                    cache_key, {str(current_time): current_time}
+                )
+                # Set expiration
+                await self.cache_service.expire(cache_key, self.timeframe)
+
+                return current_count >= self.rate_limit
+            else:
+                # Fallback to simple counting approach
+                return await self._simple_rate_limit(cache_key, current_time)
+
+        except Exception as e:
+            logger.warning(
+                f"DragonflyDB rate limiting failed, falling back to simple method: {e}"
+            )
+            return await self._simple_rate_limit(cache_key, current_time)
+
+    async def _simple_rate_limit(self, cache_key: str, current_time: int) -> bool:
+        """Simple rate limiting using basic cache operations."""
+        # Get current count
+        count_key = f"{cache_key}:count"
+        window_key = f"{cache_key}:window"
+
+        # Check if we're in a new window
+        last_window = await self.cache_service.get(window_key)
+        current_window = current_time // self.timeframe
+
+        if last_window is None or int(last_window) != current_window:
+            # New window, reset count
+            await self.cache_service.set(count_key, "1", ex=self.timeframe)
+            await self.cache_service.set(
+                window_key, str(current_window), ex=self.timeframe
+            )
+            return False
+
+        # Increment count in current window
+        try:
+            if hasattr(self.cache_service, "incr"):
+                current_count = await self.cache_service.incr(count_key)
+            else:
+                # Manual increment
+                current_count_str = await self.cache_service.get(count_key) or "0"
+                current_count = int(current_count_str) + 1
+                await self.cache_service.set(
+                    count_key, str(current_count), ex=self.timeframe
+                )
+
+            return current_count > self.rate_limit
+
+        except Exception:
+            # If increment fails, allow the request
+            logger.warning("Rate limit increment failed, allowing request")
+            return False
 
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
@@ -128,21 +184,21 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         self,
         app: ASGIApp,
         settings: Optional[Settings] = None,
-        use_redis: bool = False,
+        use_dragonfly: bool = False,
     ):
         """Initialize RateLimitMiddleware.
 
         Args:
             app: The ASGI application
             settings: API settings or None to use the default
-            use_redis: Whether to use Redis for rate limiting
+            use_dragonfly: Whether to use DragonflyDB for rate limiting
         """
         super().__init__(app)
         self.settings = settings or get_settings()
 
         # Create rate limiter
-        if use_redis:
-            self.rate_limiter = RedisRateLimiter(
+        if use_dragonfly:
+            self.rate_limiter = DragonflyRateLimiter(
                 rate_limit=self.settings.rate_limit_requests,
                 timeframe=self.settings.rate_limit_timeframe,
             )
@@ -174,7 +230,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         # Check if the key is rate limited
         is_limited = (
             await self.rate_limiter.is_rate_limited(key)
-            if isinstance(self.rate_limiter, RedisRateLimiter)
+            if isinstance(self.rate_limiter, DragonflyRateLimiter)
             else self.rate_limiter.is_rate_limited(key)
         )
 

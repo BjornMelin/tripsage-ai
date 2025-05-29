@@ -1,8 +1,8 @@
 """
-MCP Client Registry for managing MCP wrapper registrations.
+MCP Client Registry for Airbnb MCP wrapper.
 
-This module provides a singleton registry for registering and retrieving
-MCP wrapper classes.
+This module provides a simplified registry that only handles the Airbnb
+MCP wrapper. All other services use direct SDK integration.
 """
 
 import threading
@@ -123,25 +123,20 @@ class MCPClientRegistry:
         )
 
     def _auto_register(self):
-        """Auto-register default wrappers."""
+        """Auto-register the Airbnb wrapper."""
         if self._auto_register_called:
             return
 
         self._auto_register_called = True
 
-        # Import and run registration
+        # Auto-register Airbnb wrapper
         try:
-            from . import registration
+            from .wrappers import AirbnbMCPWrapper
 
-            registration.register_default_wrappers()
+            self.register("airbnb", AirbnbMCPWrapper)
         except ImportError as e:
-            # Registration module not available, skip
-            import traceback
-
             logger = get_logger(__name__)
-            logger.debug(f"Failed to auto-register: {e}")
-            logger.debug(traceback.format_exc())
-            pass
+            logger.error(f"Failed to auto-register Airbnb wrapper: {e}")
 
     def is_registered(self, mcp_name: str) -> bool:
         """

@@ -1,7 +1,9 @@
-"""Feature flags for gradual MCP to SDK migration rollout.
+"""Feature flags for service integrations.
 
-This module provides feature flag management for safely migrating from MCP wrappers
-to direct SDK integration with zero-downtime deployment and instant rollback capability.
+This module provides feature flag management for controlling how
+services are integrated. The system has migrated to direct SDK
+integration for optimal performance, with only Airbnb remaining as an MCP
+integration due to lack of an official API.
 """
 
 from enum import Enum
@@ -19,35 +21,32 @@ class IntegrationMode(str, Enum):
 
 
 class FeatureFlags(BaseSettings):
-    """Feature flags for MCP to SDK migration.
+    """Feature flags for service integration management.
 
-    Each service can be independently switched between MCP wrapper and direct SDK
-    integration using environment variables prefixed with FEATURE_.
+    Each service can be independently configured for integration mode using
+    environment variables prefixed with FEATURE_. Most services use direct SDK
+    integration for optimal performance.
 
     Example usage:
         export FEATURE_REDIS_INTEGRATION=direct
-        export FEATURE_SUPABASE_INTEGRATION=mcp
+        export FEATURE_MEMORY_INTEGRATION=direct
     """
 
-    # Infrastructure Services (Week 1)
+    # Infrastructure Services (All migrated to direct SDK)
     redis_integration: IntegrationMode = Field(
-        default=IntegrationMode.MCP, description="Redis/DragonflyDB integration mode"
+        default=IntegrationMode.DIRECT, description="Redis/DragonflyDB integration mode"
     )
 
-    # Database Services (Week 2)
+    # Database Services (All migrated to direct SDK)
     supabase_integration: IntegrationMode = Field(
-        default=IntegrationMode.MCP, description="Supabase database integration mode"
-    )
-    neo4j_integration: IntegrationMode = Field(
-        default=IntegrationMode.MCP,
-        description="Neo4j memory/knowledge graph integration mode",
+        default=IntegrationMode.DIRECT, description="Supabase database integration mode"
     )
     memory_integration: IntegrationMode = Field(
         default=IntegrationMode.DIRECT,
-        description="Memory system integration mode (Mem0 direct SDK)",
+        description="Memory system integration mode (Mem0 with pgvector backend)",
     )
 
-    # Web Crawling Services (Week 3) - Already completed per docs
+    # Web Crawling Services (All migrated to direct SDK)
     crawl4ai_integration: IntegrationMode = Field(
         default=IntegrationMode.DIRECT,
         description="Crawl4AI web crawling integration mode",
@@ -57,27 +56,16 @@ class FeatureFlags(BaseSettings):
         description="Playwright browser automation integration mode",
     )
 
-    # External API Services (Week 4)
-    weather_integration: IntegrationMode = Field(
-        default=IntegrationMode.MCP, description="Weather API integration mode"
-    )
+    # External API Services (All migrated to direct SDK)
     maps_integration: IntegrationMode = Field(
-        default=IntegrationMode.MCP, description="Google Maps integration mode"
-    )
-    flights_integration: IntegrationMode = Field(
-        default=IntegrationMode.MCP, description="Duffel Flights integration mode"
-    )
-    calendar_integration: IntegrationMode = Field(
-        default=IntegrationMode.MCP, description="Google Calendar integration mode"
-    )
-    time_integration: IntegrationMode = Field(
-        default=IntegrationMode.MCP, description="Time service integration mode"
+        default=IntegrationMode.DIRECT,
+        description="Google Maps integration mode (Direct SDK only)",
     )
 
-    # Services keeping MCP (according to migration plan)
+    # Services keeping MCP (Only Airbnb due to no official API)
     airbnb_integration: IntegrationMode = Field(
         default=IntegrationMode.MCP,
-        description="Airbnb integration mode (stays MCP due to unofficial API)",
+        description="Airbnb integration mode (stays MCP due to no official API)",
     )
 
     class Config:

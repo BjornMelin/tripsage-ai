@@ -10,7 +10,8 @@ from typing import Optional
 
 from pydantic import Field, field_validator, model_validator
 
-from tripsage.models.base import TripSageModel
+from tripsage_core.models.base import TripSageModel
+from tripsage_core.models.schemas_common import BookingStatus
 
 
 class AirlineProvider(str, Enum):
@@ -28,15 +29,6 @@ class AirlineProvider(str, Enum):
     AIR_FRANCE = "air_france"
     BRITISH_AIRWAYS = "british_airways"
     OTHER = "other"
-
-
-class BookingStatus(str, Enum):
-    """Enum for booking status values."""
-
-    VIEWED = "viewed"
-    SAVED = "saved"
-    BOOKED = "booked"
-    CANCELED = "canceled"
 
 
 class DataSource(str, Enum):

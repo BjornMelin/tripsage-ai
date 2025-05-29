@@ -113,56 +113,39 @@ async def create_travel_plan(params: Dict[str, Any]) -> Dict[str, Any]:
         await cache.set(cache_key, travel_plan, ttl=86400 * 7)  # 7 days
 
         # Create memory entities for the plan
-        # TODO: Update to use direct Neo4j integration in Week 2 migration
+        # Using Mem0 direct SDK integration for memory management
         try:
-            # from tripsage.clients.memory import get_client as get_memory_client
-            # memory_client = get_memory_client()
+            from tripsage.services.memory_service import TripSageMemoryService
 
-            # Temporary: Use MCP memory tools directly until Neo4j migration
-            from tripsage.mcp_abstraction.manager import MCPManager
+            # Initialize direct Mem0 service
+            memory_service = TripSageMemoryService()
+            await memory_service.connect()
 
-            mcp_manager = MCPManager()
-            memory_client = mcp_manager
-
-            # Create plan entity
-            plan_entity = {
-                "name": f"TravelPlan_{plan_id}",
-                "entityType": "TravelPlan",
-                "observations": [
-                    f"Title: {plan_input.title}",
-                    f"Destinations: {', '.join(plan_input.destinations)}",
-                    f"Dates: {plan_input.start_date} to {plan_input.end_date}",
-                    f"Travelers: {plan_input.travelers}",
-                ],
-            }
+            # Create memory for the travel plan
+            plan_memory = (
+                f"Travel plan '{plan_input.title}' created for user "
+                f"{plan_input.user_id}"
+            )
+            plan_memory += f" with destinations: {', '.join(plan_input.destinations)}"
+            plan_memory += f" from {plan_input.start_date} to {plan_input.end_date}"
+            plan_memory += f" for {plan_input.travelers} travelers"
 
             if plan_input.budget:
-                plan_entity["observations"].append(f"Budget: ${plan_input.budget}")
+                plan_memory += f" with budget ${plan_input.budget}"
 
-            # Create the entity
-            await memory_client.create_entities([plan_entity])
-
-            # Create user-plan relationship
-            user_plan_relation = {
-                "from": f"User_{plan_input.user_id}",
-                "relationType": "plans",
-                "to": f"TravelPlan_{plan_id}",
-            }
-
-            # Create destination relationships
-            destination_relations = []
-            for destination in plan_input.destinations:
-                destination_relations.append(
-                    {
-                        "from": f"TravelPlan_{plan_id}",
-                        "relationType": "includes",
-                        "to": f"Destination_{destination}",
-                    }
-                )
-
-            # Create all relations
-            await memory_client.create_relations(
-                [user_plan_relation] + destination_relations
+            # Add the memory using Mem0
+            await memory_service.add_memory(
+                message=plan_memory,
+                user_id=plan_input.user_id,
+                metadata={
+                    "plan_id": plan_id,
+                    "type": "travel_plan",
+                    "destinations": plan_input.destinations,
+                    "start_date": plan_input.start_date,
+                    "end_date": plan_input.end_date,
+                    "travelers": plan_input.travelers,
+                    "budget": plan_input.budget,
+                },
             )
 
         except Exception as e:
@@ -228,37 +211,42 @@ async def update_travel_plan(params: Dict[str, Any]) -> Dict[str, Any]:
         await cache.set(cache_key, travel_plan, ttl=86400 * 7)  # 7 days
 
         # Update memory entity
-        # TODO: Update to use direct Neo4j integration in Week 2 migration
+        # Using Mem0 direct SDK integration for memory management
         try:
-            # from tripsage.clients.memory import get_client as get_memory_client
-            # memory_client = get_memory_client()
+            from tripsage.services.memory_service import TripSageMemoryService
 
-            # Temporary: Use MCP memory tools directly until Neo4j migration
-            from tripsage.mcp_abstraction.manager import MCPManager
+            # Initialize direct Mem0 service
+            memory_service = TripSageMemoryService()
+            await memory_service.connect()
 
-            mcp_manager = MCPManager()
-            memory_client = mcp_manager
+            # Create update memory
+            update_memory = (
+                f"Travel plan '{travel_plan.get('title', 'Untitled')}' updated"
+            )
+            update_details = []
 
-            # Add new observations
-            observations = []
             for key, value in update_input.updates.items():
                 if key == "destinations":
-                    observations.append(f"Updated destinations: {', '.join(value)}")
+                    update_details.append(f"destinations changed to {', '.join(value)}")
                 elif key == "start_date" or key == "end_date":
-                    observations.append(f"Updated {key}: {value}")
+                    update_details.append(f"{key} changed to {value}")
                 elif key == "budget":
-                    observations.append(f"Updated budget: ${value}")
+                    update_details.append(f"budget changed to ${value}")
                 elif key == "title":
-                    observations.append(f"Updated title: {value}")
+                    update_details.append(f"title changed to {value}")
 
-            if observations:
-                await memory_client.add_observations(
-                    [
-                        {
-                            "entityName": f"TravelPlan_{update_input.plan_id}",
-                            "contents": observations,
-                        }
-                    ]
+            if update_details:
+                update_memory += f" with changes: {', '.join(update_details)}"
+
+                # Add the memory update using Mem0
+                await memory_service.add_memory(
+                    message=update_memory,
+                    user_id=update_input.user_id,
+                    metadata={
+                        "plan_id": update_input.plan_id,
+                        "type": "travel_plan_update",
+                        "changes": update_input.updates,
+                    },
                 )
 
         except Exception as e:
@@ -627,55 +615,58 @@ async def save_travel_plan(params: Dict[str, Any]) -> Dict[str, Any]:
         await cache.set(cache_key, travel_plan, ttl=86400 * 30)  # 30 days
 
         # Update knowledge graph
-        # TODO: Update to use direct Neo4j integration in Week 2 migration
+        # Using Mem0 direct SDK integration for memory management
         try:
-            # from tripsage.clients.memory import get_client as get_memory_client
-            # memory_client = get_memory_client()
+            from tripsage.services.memory_service import TripSageMemoryService
 
-            # Temporary: Use MCP memory tools directly until Neo4j migration
-            from tripsage.mcp_abstraction.manager import MCPManager
+            # Initialize direct Mem0 service
+            memory_service = TripSageMemoryService()
+            await memory_service.connect()
 
-            mcp_manager = MCPManager()
-            memory_client = mcp_manager
-
-            # Add finalization observation if finalized
+            # Add finalization memory if finalized
             if finalize:
                 finalization_time = datetime.now(datetime.UTC).isoformat()
-                await memory_client.add_observations(
-                    [
-                        {
-                            "entityName": f"TravelPlan_{plan_id}",
-                            "contents": [f"Plan finalized on {finalization_time}"],
-                        }
-                    ]
+                finalize_memory = (
+                    f"Travel plan '{travel_plan.get('title', 'Untitled')}' "
+                    f"finalized on {finalization_time}"
                 )
 
-            # Update components in knowledge graph
-            components = travel_plan.get("components", {})
-            for component_type, items in components.items():
-                # Skip empty component types
-                if not items:
-                    continue
+                await memory_service.add_memory(
+                    message=finalize_memory,
+                    user_id=user_id,
+                    metadata={
+                        "plan_id": plan_id,
+                        "type": "travel_plan_finalization",
+                        "finalized_at": finalization_time,
+                    },
+                )
 
-                # Create entity relationships for components
-                relations = []
-                for item in items:
-                    item_id = item.get("id")
-                    if not item_id:
+            # Create memory for plan components
+            components = travel_plan.get("components", {})
+            if components:
+                component_memories = []
+
+                for component_type, items in components.items():
+                    if not items:
                         continue
 
-                    # Create the component relationship
-                    relations.append(
-                        {
-                            "from": f"TravelPlan_{plan_id}",
-                            "relationType": "includes",
-                            "to": f"{component_type.title()}_{item_id}",
-                        }
+                    component_count = len(items)
+                    component_memories.append(f"{component_count} {component_type}")
+
+                if component_memories:
+                    components_memory = (
+                        f"Travel plan includes: {', '.join(component_memories)}"
                     )
 
-                # Create the relations if any
-                if relations:
-                    await memory_client.create_relations(relations)
+                    await memory_service.add_memory(
+                        message=components_memory,
+                        user_id=user_id,
+                        metadata={
+                            "plan_id": plan_id,
+                            "type": "travel_plan_components",
+                            "components": components,
+                        },
+                    )
 
         except Exception as e:
             logger.warning(f"Error updating memory entity: {str(e)}")

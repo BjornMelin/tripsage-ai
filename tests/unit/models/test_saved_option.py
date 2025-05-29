@@ -2,7 +2,7 @@
 
 from datetime import datetime
 
-from tripsage.models.db.saved_option import OptionType, SavedOption
+from tripsage_core.models.db.saved_option import OptionType, SavedOption
 
 
 def test_saved_option_creation(sample_saved_option_dict):

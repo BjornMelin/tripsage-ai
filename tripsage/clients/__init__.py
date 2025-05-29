@@ -5,7 +5,7 @@ After the MCP to SDK migration, this module only contains:
 - MCPClientFactory: Factory for creating Airbnb MCP clients
 
 All other services have been migrated to direct SDK integration:
-- Redis → Direct redis-py SDK (tripsage.services.redis_service)
+- Redis → DragonflyDB direct SDK (tripsage.services.infrastructure.dragonfly_service)
 - Supabase → Direct supabase-py SDK (tripsage.services.supabase_service)
 - Weather → Weather API direct integration (Week 4)
 - Maps → Google Maps Python client (Week 4)
@@ -15,6 +15,7 @@ All other services have been migrated to direct SDK integration:
 """
 
 from tripsage.clients.accommodations import AccommodationMCPClient
+from tripsage.clients.airbnb_mcp_client import AirbnbMCPClient
 from tripsage.clients.factory import MCPClientFactory
 
-__all__ = ["AccommodationMCPClient", "MCPClientFactory"]
+__all__ = ["AccommodationMCPClient", "AirbnbMCPClient", "MCPClientFactory"]

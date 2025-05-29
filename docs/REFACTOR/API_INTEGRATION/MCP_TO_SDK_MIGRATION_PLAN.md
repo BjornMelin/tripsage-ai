@@ -2,7 +2,7 @@
 
 ## Executive Summary
 
-**Objective**: Migrate 11 of 12 MCP services to direct SDK integration, deprecate 
+**Objective**: Migrate 11 of 12 MCP services to direct SDK integration, deprecate
 Firecrawl in favor of Crawl4AI, and consolidate database services  
 **Timeline**: 8 weeks including testing and deployment  
 **Expected Impact**: 50-70% latency reduction, 6-10x crawling improvement, 3000+ lines code reduction  
@@ -627,6 +627,7 @@ Similar pattern with official Google client libraries and OAuth2 flows.
 ### Firecrawl Deprecation and Crawl4AI Migration
 
 **Important**: Firecrawl is being completely deprecated in favor of Crawl4AI, which provides:
+
 - 6x performance improvement
 - Zero licensing costs ($700-1200/year savings)
 - LLM-optimized output formats
@@ -780,33 +781,22 @@ crawler_router = SmartCrawlerRouter()
 
 ### Weather Service Migration (1-2 days)
 
+**Note**: Comprehensive OpenWeatherMapService already implemented in `tripsage/services/api/weather_service.py`
+
 ```python
-# File: tripsage/services/weather_service.py
-import httpx
-from typing import Dict, Any
+# File: tripsage/services/api/weather_service.py
+# Using the existing comprehensive OpenWeatherMapService implementation
+# Features include:
+# - Current weather, forecasts, air quality, UV index
+# - Travel weather summaries
+# - Multiple location support
+# - Comprehensive error handling and caching
+# - Pydantic models for type safety
 
-class WeatherService:
-    """Direct weather API integration"""
-    
-    def __init__(self):
-        self.api_key = settings.weather_api_key
-        self.base_url = "https://api.openweathermap.org/data/2.5"
-    
-    async def get_weather(self, location: str) -> Dict[str, Any]:
-        """Get weather data for location"""
-        async with httpx.AsyncClient() as client:
-            response = await client.get(
-                f"{self.base_url}/weather",
-                params={
-                    "q": location,
-                    "appid": self.api_key,
-                    "units": "metric"
-                }
-            )
-            response.raise_for_status()
-            return response.json()
+from tripsage.services.api.weather_service import OpenWeatherMapService
 
-weather_service = WeatherService()
+# Direct usage through dependency injection
+weather_service = OpenWeatherMapService()
 ```
 
 ## Testing Strategy
@@ -979,8 +969,8 @@ feature_flags.redis_integration = IntegrationMode.MCP
 
 ## Conclusion
 
-This updated migration plan incorporates findings from crawling and database 
-architecture research, providing a comprehensive approach to modernizing TripSage's 
+This updated migration plan incorporates findings from crawling and database
+architecture research, providing a comprehensive approach to modernizing TripSage's
 integration layer. Key changes include:
 
 - **Firecrawl deprecation** in favor of Crawl4AI (6x performance, $700-1200/year savings)
@@ -989,8 +979,8 @@ integration layer. Key changes include:
 - **Infrastructure modernization** with DragonflyDB and pgvector
 - **Unified async patterns** throughout the architecture
 
-The phased approach with comprehensive testing and feature flag rollback strategies 
-ensures successful delivery of dramatic performance improvements while maintaining 
+The phased approach with comprehensive testing and feature flag rollback strategies
+ensures successful delivery of dramatic performance improvements while maintaining
 system reliability.
 
 **Next Actions:**

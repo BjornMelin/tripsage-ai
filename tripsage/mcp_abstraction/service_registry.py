@@ -1,8 +1,8 @@
 """
 MCP Service Registry
 
-Dynamic MCP server management with health checking, auto-discovery,
-and lifecycle management.
+Simplified registry for remaining MCP services (Airbnb only).
+All other services have been migrated to direct SDK integration.
 """
 
 import asyncio
@@ -15,7 +15,6 @@ from typing import Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
-from tripsage.config.mcp_settings import MCPSettings
 from tripsage.mcp_abstraction.exceptions import TripSageMCPError
 from tripsage.mcp_abstraction.registry import MCPClientRegistry
 
@@ -46,20 +45,29 @@ class MCPServiceInfo(BaseModel):
 
 class MCPServiceRegistry:
     """
-    Dynamic MCP server management registry.
+    Simplified MCP service registry for remaining MCP services.
 
-    Handles service discovery, health checking, and lifecycle management
-    for all MCP servers in the TripSage ecosystem.
+    Currently only manages Airbnb MCP integration since all other services
+    have been migrated to direct SDK integration.
     """
 
-    def __init__(self, settings: Optional[MCPSettings] = None):
-        self.settings = settings or MCPSettings()
+    def __init__(self):
         self.services: Dict[str, MCPServiceInfo] = {}
         self.health_check_interval = 60  # seconds
         self.max_error_count = 3
         self.logger = logging.getLogger(__name__)
         self._health_check_task: Optional[asyncio.Task] = None
         self._registry = MCPClientRegistry()
+
+        # Only register Airbnb MCP service
+        self._register_airbnb_service()
+
+    def _register_airbnb_service(self):
+        """Register the Airbnb MCP service."""
+        service = MCPServiceInfo(
+            name="accommodations", wrapper_class="AirbnbMCPWrapper"
+        )
+        self.services["accommodations"] = service
 
     async def initialize(self):
         """Initialize the service registry"""
@@ -76,7 +84,10 @@ class MCPServiceRegistry:
                 pass
 
     async def register_service(self, name: str, wrapper_class: str) -> MCPServiceInfo:
-        """Register a new MCP service"""
+        """Register a new MCP service (only Airbnb supported)"""
+        if name != "accommodations":
+            raise TripSageMCPError(f"Only Airbnb MCP service is supported, got: {name}")
+
         if name in self.services:
             self.logger.warning(f"Service {name} already registered")
             return self.services[name]
@@ -100,16 +111,16 @@ class MCPServiceRegistry:
         return True
 
     async def discover_services(self) -> List[str]:
-        """Auto-discover available MCP servers"""
+        """Auto-discover available MCP servers (only Airbnb)"""
         discovered = []
 
-        # Discover from registered wrappers
+        # Only discover Airbnb wrapper
         for wrapper_name, wrapper_class in self._registry.registry.items():
-            if wrapper_name not in self.services:
+            if wrapper_name == "accommodations" and wrapper_name not in self.services:
                 await self.register_service(wrapper_name, wrapper_class.__name__)
                 discovered.append(wrapper_name)
 
-        self.logger.info(f"Discovered {len(discovered)} new services")
+        self.logger.info(f"Discovered {len(discovered)} MCP services")
         return discovered
 
     async def health_check(self, service_name: str) -> bool:
@@ -198,14 +209,13 @@ class MCPServiceRegistry:
         for name, service in self.services.items():
             export[name] = {
                 "wrapper_class": service.wrapper_class,
-                "status": service.status,
+                "status": service.status.value,
+                "error_count": str(service.error_count),
                 "last_health_check": (
                     service.last_health_check.isoformat()
                     if service.last_health_check
                     else None
                 ),
-                "error_count": str(service.error_count),
-                **service.metadata,
             }
         return export
 
@@ -221,50 +231,28 @@ class MCPServiceRegistry:
     def load_state(self, filepath: Path):
         """Load registry state from file"""
         if not filepath.exists():
-            self.logger.warning(f"State file not found: {filepath}")
             return
 
-        try:
-            with open(filepath, "r") as f:
-                data = json.load(f)
+        with open(filepath, "r") as f:
+            data = json.load(f)
 
-            for name, info in data.items():
-                service = MCPServiceInfo(
-                    name=name,
-                    wrapper_class=info["wrapper_class"],
-                    status=ServiceStatus(info["status"]),
-                    last_health_check=(
-                        datetime.fromisoformat(info["last_health_check"])
-                        if info["last_health_check"]
-                        else None
-                    ),
-                    error_count=int(info.get("error_count", 0)),
-                    metadata={
-                        k: v
-                        for k, v in info.items()
-                        if k
-                        not in [
-                            "wrapper_class",
-                            "status",
-                            "last_health_check",
-                            "error_count",
-                        ]
-                    },
-                )
-                self.services[name] = service
-
-            self.logger.info(f"Loaded state for {len(self.services)} services")
-
-        except Exception as e:
-            self.logger.error(f"Failed to load state from {filepath}: {e}")
+        for name, service_data in data.items():
+            if name in self.services:
+                service = self.services[name]
+                service.status = ServiceStatus(service_data["status"])
+                service.error_count = int(service_data["error_count"])
+                if service_data["last_health_check"]:
+                    service.last_health_check = datetime.fromisoformat(
+                        service_data["last_health_check"]
+                    )
 
 
-# Global service registry instance
+# Global registry instance
 service_registry = MCPServiceRegistry()
 
 
 async def get_service_registry() -> MCPServiceRegistry:
-    """Get the global service registry instance"""
+    """Get the global MCP service registry instance."""
     if not service_registry._health_check_task:
         await service_registry.initialize()
     return service_registry

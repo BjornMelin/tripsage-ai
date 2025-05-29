@@ -10,9 +10,13 @@ This streamlined TODO list tracks current development priorities for TripSage AI
 - **Database Consolidation**: Migrated to Supabase-only with pgvector (Issue #146)
 - **LangGraph Migration**: Phases 1-3 completed (Issues #170, #171)
 - **MCP to SDK Migration**: Week 1 completed (Redis/DragonflyDB & Supabase)
+- **DragonflyDB Infrastructure**: 95% complete - DragonflyDB service, OpenTelemetry monitoring, security hardening (Issue #140)
 - **Frontend Foundation**: Core components and error boundaries implemented
 - **API Key Management**: Complete BYOK implementation
-- **WebSocket Infrastructure**: Real-time communication system with DragonflyDB integration (Issue #192)
+- **WebSocket Infrastructure**: Complete production-ready system with FastAPI/React integration (Issue #192)
+- **Issue Management**: Split Issue #167 into focused V1/V2 releases (Issues #195, #196)
+- **Centralized Exception System**: Complete tripsage_core.exceptions module with hierarchical error handling, structured details, and backwards compatibility (Issue #179)
+- **TripSage Core Module**: Complete centralized foundation with CoreAppSettings, domain models, and comprehensive architecture (PR #198)
 
 ### Coding Standards
 
@@ -22,16 +26,41 @@ This streamlined TODO list tracks current development priorities for TripSage AI
 
 ## High Priority Tasks
 
-### 1. DragonflyDB Migration (Issue #140)
+### 1. Complete Supabase Database Implementation (Issue #197) ⭐ **HIGH PRIORITY**
 
-- [ ] Deploy DragonflyDB container alongside Redis
-- [ ] Update cache wrapper for DragonflyDB compatibility  
-- [ ] Run parallel testing with 10% traffic
-- [ ] Monitor performance (target: 6.43M ops/sec)
-- [ ] Complete migration and decommission Redis
-- **Expected Impact**: 25x performance improvement
+- [ ] **Memory System Integration** (2-3 days)
+  - [ ] Implement Mem0 memory storage tables with pgvector
+  - [ ] Create vector similarity search with <100ms latency
+  - [ ] Set up memory retrieval and context management
+  - [ ] Add memory persistence and session handling
+- [ ] **Chat Session Management** (2 days)
+  - [ ] Complete WebSocket real-time communication
+  - [ ] Implement chat history persistence
+  - [ ] Add session state management and recovery
+  - [ ] Create conversation threading and context preservation
+- [ ] **BYOK Security & Encryption** (1-2 days)
+  - [ ] Implement Row Level Security (RLS) policies
+  - [ ] Add API key encryption and secure storage
+  - [ ] Create user access controls and permissions
+  - [ ] Set up audit logging and security monitoring
+- [ ] **Performance & Testing** (2 days)
+  - [ ] Optimize database queries for <500ms response times
+  - [ ] Create comprehensive test suite with ≥90% coverage
+  - [ ] Performance benchmarking and SLA validation
+  - [ ] Integration testing with all database operations
+- **Expected Impact**: Complete unified database system with 91% faster memory operations
 
-### 2. MCP to SDK Migration Completion (Issue #159)
+### 2. DragonflyDB Infrastructure Completion (Issue #140)
+
+- [ ] **Minor Operational Tasks** (1 day remaining)
+  - [ ] Create missing validation script for DragonflyDB password
+  - [ ] Add Grafana dashboard configurations
+  - [ ] Complete infrastructure troubleshooting guide
+  - [ ] Add integration tests for security components
+- **Status**: 95% complete - core functionality fully implemented
+- **Expected Impact**: 25x performance improvement (already achieved)
+
+### 3. MCP to SDK Migration Completion (Issue #159)
 
 - [ ] **Week 2-4: Remaining Services Migration**
   - [ ] Neo4j direct driver integration
@@ -44,7 +73,7 @@ This streamlined TODO list tracks current development priorities for TripSage AI
   - [ ] Playwright native SDK
 - **Expected Impact**: 50-70% latency reduction
 
-### 3. LangGraph Production Deployment (Issue #172)
+### 4. LangGraph Production Deployment (Issue #172)
 
 - [ ] Set up LangSmith monitoring and observability
 - [ ] Implement feature flags for gradual rollout
@@ -53,7 +82,7 @@ This streamlined TODO list tracks current development priorities for TripSage AI
 - [ ] Documentation and team training
 - **Status**: Phases 1-3 completed (foundation, migration, MCP integration)
 
-### 4. Frontend Core Setup
+### 5. Frontend Core Setup
 
 - [ ] Complete Next.js 15 with App Router initialization
 - [ ] Implement missing React Query patterns

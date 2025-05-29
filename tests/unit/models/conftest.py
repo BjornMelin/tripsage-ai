@@ -5,19 +5,21 @@ from typing import Any, Dict
 
 import pytest
 
-from tripsage.models.db.accommodation import (
+from tripsage_core.models.db.flight import AirlineProvider, DataSource
+from tripsage_core.models.db.price_history import EntityType
+from tripsage_core.models.db.saved_option import OptionType
+from tripsage_core.models.db.transportation import TransportationType
+from tripsage_core.models.db.trip import TripType
+from tripsage_core.models.schemas_common import (
     AccommodationType,
+    BookingStatus,
     CancellationPolicy,
+    TripStatus,
+    UserRole,
 )
-from tripsage.models.db.flight import AirlineProvider, BookingStatus, DataSource
-from tripsage.models.db.price_history import EntityType
-from tripsage.models.db.saved_option import OptionType
-from tripsage.models.db.transportation import TransportationType
-from tripsage.models.db.trip import TripStatus, TripVisibility
-from tripsage.models.db.user import UserRole
 
 # Temporarily commented out until fixed
-# from tripsage.models.db.itinerary_item import ItineraryItem, ItemType
+# from tripsage_core.models.db.itinerary_item import ItineraryItem, ItemType
 
 
 @pytest.fixture
@@ -46,7 +48,7 @@ def sample_trip_dict() -> Dict[str, Any]:
         "title": "Sample Trip",
         "description": "A test trip",
         "status": TripStatus.PLANNING,
-        "visibility": TripVisibility.PRIVATE,
+        "trip_type": TripType.LEISURE,
         "start_date": date.today() + timedelta(days=10),
         "end_date": date.today() + timedelta(days=17),
         "destination": "Tokyo, Japan",
@@ -68,7 +70,7 @@ def sample_flight_dict() -> Dict[str, Any]:
         "trip_id": 1,
         "origin": "LAX",
         "destination": "NRT",
-        "airline": AirlineProvider.JAPAN_AIRLINES,
+        "airline": AirlineProvider.OTHER,
         "departure_time": now + timedelta(days=10),
         "arrival_time": now + timedelta(days=10, hours=12),
         "price": 1200.00,
@@ -76,7 +78,7 @@ def sample_flight_dict() -> Dict[str, Any]:
         "segment_number": 1,
         "search_timestamp": now,
         "booking_status": BookingStatus.VIEWED,
-        "data_source": DataSource.DUFFEL,
+        "data_source": DataSource.OTHER,
         "flight_number": "JL123",
         "cabin_class": "economy",
     }

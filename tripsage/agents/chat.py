@@ -135,9 +135,9 @@ class ChatAgent(BaseAgent):
             metadata={"agent_type": "chat_coordinator", "version": "1.0.0"},
         )
 
-        # Initialize MCP integration (Phase 5 pattern)
+        # Initialize MCP integration (only needed for Airbnb accommodations)
         self.mcp_manager = mcp_manager or MCPManager()
-        self.chat_service = ChatOrchestrationService(self.mcp_manager)
+        self.chat_service = ChatOrchestrationService()
 
         # Initialize memory service for personalization
         self.memory_service = TripSageMemoryService()

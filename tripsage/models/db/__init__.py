@@ -5,40 +5,40 @@ core domain entities with validation logic, used across
 different storage backends (Supabase SQL, Neo4j).
 """
 
-from tripsage.models.db.accommodation import (
+from tripsage_core.models.db.accommodation import (
     Accommodation,
     AccommodationType,
     CancellationPolicy,
 )
-from tripsage.models.db.accommodation import (
+from tripsage_core.models.db.accommodation import (
     BookingStatus as AccommodationBookingStatus,
 )
-from tripsage.models.db.api_key import ApiKeyCreate, ApiKeyDB, ApiKeyUpdate
-from tripsage.models.db.flight import (
+from tripsage_core.models.db.api_key import ApiKeyCreate, ApiKeyDB, ApiKeyUpdate
+from tripsage_core.models.db.flight import (
     AirlineProvider,
     DataSource,
     Flight,
 )
-from tripsage.models.db.flight import (
+from tripsage_core.models.db.flight import (
     BookingStatus as FlightBookingStatus,
 )
 
 # Temporarily commented out until fixed
-# from tripsage.models.db.itinerary_item import ItemType, ItineraryItem
-from tripsage.models.db.price_history import EntityType, PriceHistory
-from tripsage.models.db.saved_option import OptionType, SavedOption
-from tripsage.models.db.search_parameters import SearchParameters
-from tripsage.models.db.transportation import (
+# from tripsage_core.models.db.itinerary_item import ItemType, ItineraryItem
+from tripsage_core.models.db.price_history import EntityType, PriceHistory
+from tripsage_core.models.db.saved_option import OptionType, SavedOption
+from tripsage_core.models.db.search_parameters import SearchParameters
+from tripsage_core.models.db.transportation import (
     BookingStatus as TransportationBookingStatus,
 )
-from tripsage.models.db.transportation import (
+from tripsage_core.models.db.transportation import (
     Transportation,
     TransportationType,
 )
-from tripsage.models.db.trip import Trip, TripStatus, TripType
-from tripsage.models.db.trip_comparison import TripComparison
-from tripsage.models.db.trip_note import TripNote
-from tripsage.models.db.user import User
+from tripsage_core.models.db.trip import Trip, TripStatus, TripType
+from tripsage_core.models.db.trip_comparison import TripComparison
+from tripsage_core.models.db.trip_note import TripNote
+from tripsage_core.models.db.user import User
 
 __all__ = [
     # User
