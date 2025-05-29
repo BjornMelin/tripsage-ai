@@ -12,7 +12,7 @@ from typing import Any, Dict, List, Optional
 
 from tripsage.mcp_abstraction.manager import MCPManager
 from tripsage.orchestration.state import TravelPlanningState
-from tripsage.utils.session_memory import (
+from tripsage_core.utils.session_utils import (
     initialize_session_memory,
     update_session_memory,
 )

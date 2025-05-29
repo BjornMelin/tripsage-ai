@@ -3,7 +3,7 @@
 from functools import lru_cache
 from typing import Dict, Optional, Type
 
-from tripsage.utils.logging import get_module_logger
+from tripsage_core.utils.logging_utils import get_module_logger
 
 from .base_wrapper import BaseMCPWrapper
 from .exceptions import MCPRegistrationError

@@ -10,9 +10,10 @@ from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
-from tripsage.utils.cache import cache
-from tripsage.utils.error_handling import log_exception, with_error_handling
-from tripsage.utils.logging import get_logger
+from tripsage.utils.error_handling import log_exception
+from tripsage_core.utils.logging_utils import get_logger
+from tripsage_core.utils.cache_utils import redis_cache
+from tripsage_core.utils.decorator_utils import with_error_handling
 
 logger = get_logger(__name__)
 
@@ -110,7 +111,7 @@ async def create_travel_plan(params: Dict[str, Any]) -> Dict[str, Any]:
 
         # Cache the travel plan
         cache_key = f"travel_plan:{plan_id}"
-        await cache.set(cache_key, travel_plan, ttl=86400 * 7)  # 7 days
+        await redis_cache.set(cache_key, travel_plan, ttl=86400 * 7)  # 7 days
 
         # Create memory entities for the plan
         # Using Mem0 direct SDK integration for memory management
@@ -187,7 +188,7 @@ async def update_travel_plan(params: Dict[str, Any]) -> Dict[str, Any]:
 
         # Get the existing plan
         cache_key = f"travel_plan:{update_input.plan_id}"
-        travel_plan = await cache.get(cache_key)
+        travel_plan = await redis_cache.get(cache_key)
 
         if not travel_plan:
             return {
@@ -208,7 +209,7 @@ async def update_travel_plan(params: Dict[str, Any]) -> Dict[str, Any]:
         travel_plan["updated_at"] = datetime.now(datetime.UTC).isoformat()
 
         # Save the updated plan
-        await cache.set(cache_key, travel_plan, ttl=86400 * 7)  # 7 days
+        await redis_cache.set(cache_key, travel_plan, ttl=86400 * 7)  # 7 days
 
         # Update memory entity
         # Using Mem0 direct SDK integration for memory management
@@ -418,7 +419,7 @@ async def generate_travel_summary(params: Dict[str, Any]) -> Dict[str, Any]:
 
         # Get the travel plan
         cache_key = f"travel_plan:{plan_id}"
-        travel_plan = await cache.get(cache_key)
+        travel_plan = await redis_cache.get(cache_key)
 
         if not travel_plan:
             return {"success": False, "error": f"Travel plan {plan_id} not found"}
@@ -592,7 +593,7 @@ async def save_travel_plan(params: Dict[str, Any]) -> Dict[str, Any]:
 
         # Get the travel plan from cache
         cache_key = f"travel_plan:{plan_id}"
-        travel_plan = await cache.get(cache_key)
+        travel_plan = await redis_cache.get(cache_key)
 
         if not travel_plan:
             return {"success": False, "error": f"Travel plan {plan_id} not found"}
@@ -612,7 +613,7 @@ async def save_travel_plan(params: Dict[str, Any]) -> Dict[str, Any]:
         # Save to persistent storage (database)
         # This would interface with the database in a real implementation
         # For now, we just update the cache with a longer TTL
-        await cache.set(cache_key, travel_plan, ttl=86400 * 30)  # 30 days
+        await redis_cache.set(cache_key, travel_plan, ttl=86400 * 30)  # 30 days
 
         # Update knowledge graph
         # Using Mem0 direct SDK integration for memory management

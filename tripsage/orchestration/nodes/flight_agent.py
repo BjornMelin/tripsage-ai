@@ -17,7 +17,7 @@ from tripsage.config.app_settings import settings
 from tripsage.orchestration.nodes.base import BaseAgentNode
 from tripsage.orchestration.state import TravelPlanningState
 from tripsage.orchestration.tools.mcp_integration import MCPToolRegistry
-from tripsage.utils.logging import get_logger
+from tripsage_core.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)
 

@@ -216,7 +216,7 @@ def create_mock_tool_response(data: Any, error: Optional[str] = None):
 @pytest.fixture
 def mock_web_operations_cache():
     """Create a mock WebOperationsCache for testing."""
-    from tripsage.utils.cache import ContentType
+    from tripsage_core.utils.content_utils import ContentType
 
     cache = MagicMock()
     cache.get = AsyncMock(return_value=None)

@@ -28,9 +28,9 @@ from tripsage.models.api.flights_models import (
     SliceRequest,
 )
 from tripsage.services.base import BaseService
-from tripsage.utils.cache import cached
-from tripsage.utils.decorators import with_retry
-from tripsage.utils.logging import get_logger
+from tripsage_core.utils.logging_utils import get_logger
+from tripsage_core.utils.cache_utils import cached
+from tripsage_core.utils.decorator_utils import retry_on_failure
 
 logger = get_logger(__name__)
 
@@ -68,7 +68,7 @@ class DuffelFlightsService(BaseService):
         """Async context manager exit."""
         await self.client.aclose()
 
-    @with_retry(max_attempts=3, backoff_factor=2)
+    @retry_on_failure(max_attempts=3, backoff_factor=2)
     async def _make_request(
         self,
         method: str,

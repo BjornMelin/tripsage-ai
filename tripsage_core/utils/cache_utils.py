@@ -1,5 +1,5 @@
 """
-Unified caching utilities for TripSage.
+Unified caching utilities for TripSage Core.
 
 This module provides both in-memory and DragonflyDB-based caching functionality
 with content-aware TTL settings and performance monitoring.
@@ -9,6 +9,7 @@ import asyncio
 import functools
 import hashlib
 import json
+import logging
 import time
 from contextlib import asynccontextmanager
 from typing import (
@@ -25,12 +26,11 @@ from typing import (
 
 from pydantic import BaseModel, Field
 
-from tripsage_core.utils.logging_utils import get_logger
 from tripsage_core.config.base_app_settings import get_settings
 from tripsage_core.services.infrastructure import get_cache_service
 from tripsage_core.utils.content_utils import ContentType, get_ttl_for_content_type
 
-logger = get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 # Type variables
 T = TypeVar("T")
@@ -344,8 +344,10 @@ def cached(
     def decorator(func: F) -> F:
         @functools.wraps(func)
         async def wrapper(*args: Any, **kwargs: Any) -> Any:
-            # Check if caching is enabled
+            # Get settings
             settings = get_settings()
+
+            # Check if caching is enabled
             if not settings.feature_flags.enable_caching:
                 return await func(*args, **kwargs)
 
@@ -397,6 +399,10 @@ def cached(
                 else:
                     content_type_enum = content_type
                 effective_ttl = get_ttl_for_content_type(content_type_enum)
+            elif effective_ttl is None:
+                # Use default medium TTL from settings
+                settings = get_settings()
+                effective_ttl = settings.dragonfly.ttl_medium
 
             # Cache the result if not None
             if result is not None:
@@ -624,14 +630,9 @@ async def set_cache(
     key: str,
     value: Any,
     ttl: Optional[int] = None,
-    content_type: Optional[Union[ContentType, str]] = None,
     namespace: str = "tripsage",
 ) -> bool:
     """Set a value in the cache (DragonflyDB by default)."""
-    if ttl is None and content_type is not None:
-        if isinstance(content_type, str):
-            content_type = ContentType(content_type)
-        ttl = get_ttl_for_content_type(content_type)
     return await redis_cache.set(key, value, ttl=ttl)
 
 
@@ -643,6 +644,76 @@ async def delete_cache(key: str, namespace: str = "tripsage") -> bool:
 async def get_cache_stats() -> CacheStats:
     """Get cache statistics (DragonflyDB by default)."""
     return await redis_cache.get_stats()
+
+
+async def invalidate_pattern(pattern: str, namespace: str = "tripsage") -> int:
+    """Invalidate all cache keys matching the pattern."""
+    return await redis_cache.invalidate_pattern(pattern)
+
+
+def determine_content_type(
+    query: str, domains: Optional[List[str]] = None
+) -> ContentType:
+    """Determine content type based on query and domains."""
+    # Simple heuristic-based content type determination
+    query_lower = query.lower()
+
+    # Check for time-sensitive keywords
+    time_keywords = ["news", "latest", "breaking", "current"]
+    if any(keyword in query_lower for keyword in time_keywords):
+        return ContentType.TIME_SENSITIVE
+
+    # Check for realtime keywords
+    if any(keyword in query_lower for keyword in ["live", "real-time", "now", "price"]):
+        return ContentType.REALTIME
+
+    # Check for static content keywords
+    static_keywords = ["history", "documentation", "guide", "tutorial"]
+    if any(keyword in query_lower for keyword in static_keywords):
+        return ContentType.STATIC
+
+    # Check domains if provided
+    if domains:
+        # News domains are time-sensitive
+        news_domains = ["cnn.com", "bbc.com", "reuters.com", "ap.org", "nytimes.com"]
+        if any(domain in domains for domain in news_domains):
+            return ContentType.TIME_SENSITIVE
+
+        # Documentation domains are static
+        doc_domains = ["wikipedia.org", "docs.", "github.io", "readthedocs.io"]
+        for domain in domains:
+            if any(doc_domain in domain for doc_domain in doc_domains):
+                return ContentType.STATIC
+
+    # Default to daily for most travel-related content
+    return ContentType.DAILY
+
+
+async def prefetch_cache_keys(pattern: str, namespace: str = "tripsage") -> List[str]:
+    """Prefetch cache keys matching a pattern for batch operations."""
+    try:
+        cache_service = await get_cache_instance()
+
+        # Build the full pattern
+        full_pattern = (
+            f"{namespace}:{pattern}"
+            if not pattern.startswith(f"{namespace}:")
+            else pattern
+        )
+
+        keys = []
+        # If scan_iter is available on the cache service
+        if hasattr(cache_service, "scan_iter"):
+            async for key in cache_service.scan_iter(match=full_pattern):
+                keys.append(key)
+        else:
+            logger.warning("scan_iter not available, prefetch operation limited")
+
+        return keys
+
+    except Exception as e:
+        logger.error(f"Error prefetching cache keys: {e}")
+        return []
 
 
 __all__ = [
@@ -657,6 +728,9 @@ __all__ = [
     # Utility functions
     "generate_cache_key",
     "get_ttl_for_content_type",
+    "determine_content_type",
+    "invalidate_pattern",
+    "prefetch_cache_keys",
     # Batch operations
     "batch_cache_set",
     "batch_cache_get",

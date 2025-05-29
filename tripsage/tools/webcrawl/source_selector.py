@@ -7,7 +7,7 @@ focusing on performance and specialized extraction patterns.
 
 from typing import Dict, Optional
 
-from tripsage.utils.logging import get_logger
+from tripsage_core.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)
 

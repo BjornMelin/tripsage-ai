@@ -11,7 +11,7 @@ import httpx
 
 from tripsage.services.memory_service import TripSageMemoryService
 from tripsage.tools.memory_tools import ConversationMessage
-from tripsage.utils.logging import get_logger
+from tripsage_core.utils.logging_utils import get_logger
 from tripsage.utils.settings import settings
 
 logger = get_logger(__name__)

@@ -10,7 +10,7 @@ import logging
 from typing import Any, Dict, List
 
 from tripsage.agents.travel import TravelAgent
-from tripsage.utils.logging import setup_logging
+from tripsage_core.utils.logging_utils import setup_logging
 
 # Set up logging
 setup_logging()

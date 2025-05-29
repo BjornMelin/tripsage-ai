@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 
 from tripsage.api.core.config import get_settings
 from tripsage.mcp_abstraction import MCPManager, mcp_manager
-from tripsage.utils.session_memory import initialize_session_memory
+from tripsage_core.utils.session_utils import initialize_session_memory
 from tripsage_core.services.infrastructure import (
     CacheService,
     DatabaseService,

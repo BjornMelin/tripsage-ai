@@ -14,7 +14,7 @@ from uuid import uuid4
 from fastapi import HTTPException, UploadFile
 from pydantic import BaseModel, Field
 
-from tripsage.utils.file_validation import validate_file
+from tripsage_core.utils.file_utils import validate_file
 
 
 class ProcessedFile(BaseModel):

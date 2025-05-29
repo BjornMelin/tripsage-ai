@@ -16,7 +16,7 @@ from tripsage.services.location_service import (
     LocationServiceError,
     get_location_service,
 )
-from tripsage.utils.logging import get_logger
+from tripsage_core.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)
 

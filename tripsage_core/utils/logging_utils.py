@@ -1,5 +1,5 @@
 """
-Logging utilities for TripSage.
+Logging utilities for TripSage Core.
 
 This module provides standardized logging setup for the TripSage application.
 It configures loggers with appropriate handlers and formatters, and provides
@@ -13,8 +13,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Optional, Union
 
-# Define log levels
-DEFAULT_LOG_LEVEL = logging.INFO
+from tripsage_core.config.base_app_settings import get_settings
 
 # Cache of loggers to avoid creating multiple loggers for the same module
 _loggers: Dict[str, logging.Logger] = {}
@@ -46,9 +45,22 @@ class ContextAdapter(logging.LoggerAdapter):
         return msg, kwargs
 
 
+def _get_log_level() -> int:
+    """Get the log level from settings."""
+    settings = get_settings()
+    level_map = {
+        "DEBUG": logging.DEBUG,
+        "INFO": logging.INFO,
+        "WARNING": logging.WARNING,
+        "ERROR": logging.ERROR,
+        "CRITICAL": logging.CRITICAL,
+    }
+    return level_map.get(settings.log_level.upper(), logging.INFO)
+
+
 def configure_logging(
     name: str,
-    level: int = DEFAULT_LOG_LEVEL,
+    level: Optional[int] = None,
     log_to_file: bool = True,
     log_dir: str = "logs",
     context: Optional[Dict[str, Any]] = None,
@@ -57,7 +69,7 @@ def configure_logging(
 
     Args:
         name: The name of the logger, typically __name__
-        level: The logging level to set
+        level: The logging level to set (defaults to settings)
         log_to_file: Whether to log to a file in addition to console
         log_dir: Directory to store log files
         context: Optional context information to include in logs
@@ -65,6 +77,9 @@ def configure_logging(
     Returns:
         A configured logger adapter instance
     """
+    if level is None:
+        level = _get_log_level()
+
     logger = logging.getLogger(name)
     logger.setLevel(level)
 
@@ -80,8 +95,9 @@ def configure_logging(
     console_handler.setFormatter(console_formatter)
     logger.addHandler(console_handler)
 
-    # Add file handler if requested
-    if log_to_file:
+    # Add file handler if requested and not in testing
+    settings = get_settings()
+    if log_to_file and not settings.is_testing():
         # Create logs directory if it doesn't exist
         os.makedirs(log_dir, exist_ok=True)
 
@@ -109,7 +125,7 @@ def get_logger(
     This is a convenience function that should be used in each module:
 
     ```python
-    from tripsage.utils.logging import get_logger
+    from tripsage_core.utils.logging_utils import get_logger
     logger = get_logger(__name__)
     ```
 
@@ -127,13 +143,14 @@ def get_logger(
     Returns:
         A configured logger or logger adapter instance
     """
+    if level is None:
+        level = _get_log_level()
+
     if context:
         # Always create a new adapter when context is provided
         logger = logging.getLogger(name)
-        if level is not None:
+        if logger.level == logging.NOTSET:
             logger.setLevel(level)
-        elif logger.level == logging.NOTSET:
-            logger.setLevel(DEFAULT_LOG_LEVEL)
 
         return ContextAdapter(logger, {"context": context})
 
@@ -141,22 +158,23 @@ def get_logger(
     if name not in _loggers:
         logger = logging.getLogger(name)
 
-        if level is not None:
+        if logger.level == logging.NOTSET:
             logger.setLevel(level)
-        elif logger.level == logging.NOTSET:
-            logger.setLevel(DEFAULT_LOG_LEVEL)
 
         _loggers[name] = logger
 
     return _loggers[name]
 
 
-def configure_root_logger(level: int = DEFAULT_LOG_LEVEL) -> None:
+def configure_root_logger(level: Optional[int] = None) -> None:
     """Configure the root logger.
 
     Args:
-        level: The log level to use
+        level: The log level to use (defaults to settings)
     """
+    if level is None:
+        level = _get_log_level()
+
     # Clear any existing handlers
     root_logger = logging.getLogger()
     for handler in root_logger.handlers[:]:
@@ -177,3 +195,50 @@ def configure_root_logger(level: int = DEFAULT_LOG_LEVEL) -> None:
 
     # Add handler to root logger
     root_logger.addHandler(console_handler)
+
+
+# Utility function for structured logging
+def log_exception(
+    logger: logging.Logger,
+    exception: Exception,
+    context: Optional[Dict[str, Any]] = None,
+) -> None:
+    """Log an exception with context.
+
+    Args:
+        logger: The logger instance
+        exception: The exception to log
+        context: Optional context information
+    """
+    extra = {"exception_type": type(exception).__name__}
+    if context:
+        extra.update(context)
+
+    logger.error(
+        f"Exception occurred: {str(exception)}",
+        exc_info=True,
+        extra=extra,
+    )
+
+
+# Legacy aliases for backward compatibility
+def get_module_logger(name: str, level: Optional[int] = None) -> Union[logging.Logger, logging.LoggerAdapter]:
+    """Legacy alias for get_logger.
+    
+    Args:
+        name: The name of the module, typically __name__
+        level: Optional log level to set
+        
+    Returns:
+        A configured logger instance
+    """
+    return get_logger(name, level)
+
+
+def setup_logging(level: Optional[int] = None) -> None:
+    """Legacy alias for configure_root_logger.
+    
+    Args:
+        level: The log level to use (defaults to settings)
+    """
+    configure_root_logger(level)
