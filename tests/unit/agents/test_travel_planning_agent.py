@@ -8,8 +8,6 @@ registers tools, and can execute successful handoffs to specialized agents.
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from agents import RunContextWrapper as RunContext
-from agents import RunResult
 
 from tripsage.agents.planning import TravelPlanningAgent
 

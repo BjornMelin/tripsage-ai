@@ -10,12 +10,12 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Query, status
 
 from api.deps import get_current_user
-from api.models.requests.trips import (
+from api.schemas.requests.trips import (
     CreateTripRequest,
     TripPreferencesRequest,
     UpdateTripRequest,
 )
-from api.models.responses.trips import (
+from api.schemas.responses.trips import (
     TripListResponse,
     TripResponse,
     TripSummaryResponse,

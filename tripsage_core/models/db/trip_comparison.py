@@ -9,7 +9,7 @@ from typing import Any, Dict, Optional
 
 from pydantic import Field
 
-from tripsage_core.models.base import TripSageModel
+from tripsage_core.models.base_core_model import TripSageModel
 
 
 class TripComparison(TripSageModel):

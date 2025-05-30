@@ -446,7 +446,7 @@ class BaseAgent:
             log_exception(e)
 
             error_message = "An error occurred while processing your request."
-            if isinstance(e, TripSageError):
+            if isinstance(e, CoreTripSageError):
                 error_message = e.message
 
             # Add error to message history

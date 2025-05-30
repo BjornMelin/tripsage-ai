@@ -10,7 +10,7 @@ from typing import Optional
 
 from pydantic import Field, field_validator, model_validator
 
-from tripsage_core.models.base import TripSageModel
+from tripsage_core.models.base_core_model import TripSageModel
 
 
 class TransportationType(str, Enum):
