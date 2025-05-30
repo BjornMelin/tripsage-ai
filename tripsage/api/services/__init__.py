@@ -8,8 +8,7 @@ from .accommodation import AccommodationService
 from .auth import AuthService
 from .destination import DestinationService
 from .flight import FlightService
-
-# from .itinerary import ItineraryService  # Temporarily disabled due to Pydantic recursion issues
+from .itinerary import ItineraryService
 from .key import KeyService as APIKeyService
 from .trip import TripService
 from .user import UserService
@@ -19,7 +18,7 @@ __all__ = [
     "AuthService",
     "DestinationService",
     "FlightService",
-    # "ItineraryService",  # Temporarily disabled
+    "ItineraryService",
     "APIKeyService",
     "TripService",
     "UserService",

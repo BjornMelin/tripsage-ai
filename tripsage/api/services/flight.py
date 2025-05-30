@@ -21,11 +21,10 @@ from tripsage.api.models.flights import (
     SavedFlightRequest,
     SavedFlightResponse,
 )
-from tripsage.models.flight import CabinClass
-
-# FlightSearchParams removed - using dict directly for DuffelHTTPClient
-from tripsage_core.exceptions import with_error_handling
-from tripsage_core.services.external_apis.duffel_http_client import DuffelHTTPClient
+from tripsage_core.services.external_apis import DuffelHTTPClient
+# from tripsage.tools.schemas.flights import FlightSearchParams  # TODO: Missing schema
+from tripsage_core.models.domain.flight import CabinClass
+from tripsage_core.utils.decorator_utils import with_error_handling
 
 logger = logging.getLogger(__name__)
 

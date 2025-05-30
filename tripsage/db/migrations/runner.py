@@ -13,6 +13,7 @@ from supabase import Client, create_client
 from tripsage_core.config.base_app_settings import get_settings
 
 logger = logging.getLogger(__name__)
+settings = get_settings()
 
 # Migration directory
 MIGRATIONS_DIR = Path(__file__).parent.parent.parent.parent / "migrations"

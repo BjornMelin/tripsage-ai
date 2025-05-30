@@ -22,7 +22,7 @@ from tripsage.api.models.api_key import (
     ApiKeyValidateResponse,
 )
 from tripsage.mcp_abstraction import mcp_manager
-from tripsage.services.infrastructure.key_monitoring import (
+from tripsage_core.services.infrastructure.key_monitoring_service import (
     KeyMonitoringService,
     KeyOperation,
     constant_time_compare,
