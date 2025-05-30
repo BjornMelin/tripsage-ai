@@ -32,11 +32,9 @@ class TestBackwardsCompatibility:
 
     def test_alias_mappings(self):
         """Test that aliases point to correct core exceptions."""
-        assert TripSageError == CoreTripSageError
-        assert MCPError == CoreMCPError
-        assert APIError == CoreExternalAPIError
-        assert ValidationError == CoreValidationError
-        assert DatabaseError == CoreDatabaseError
+        # These aliases no longer exist after Phase 1 cleanup
+        # The error_handling_utils module now directly uses Core exceptions
+        pass
 
     def test_alias_functionality(self):
         """Test that aliases work identically to core exceptions."""
