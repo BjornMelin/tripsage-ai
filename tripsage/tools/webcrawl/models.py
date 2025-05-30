@@ -39,10 +39,8 @@ class UnifiedCrawlResult(BaseModel):
     )
     status: str = Field("success", description="Status of the crawl operation")
 
-    class Config:
-        """Pydantic configuration."""
-
-        json_schema_extra = {
+    model_config = {
+        "json_schema_extra": {
             "example": {
                 "url": "https://example.com/page",
                 "title": "Example Page",
@@ -58,6 +56,7 @@ class UnifiedCrawlResult(BaseModel):
                 "status": "success",
             }
         }
+    }
 
     @property
     def crawl_timestamp(self) -> Optional[datetime]:

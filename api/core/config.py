@@ -75,9 +75,9 @@ class APISettings(BaseSettings):
         description="Services that support Bring Your Own Key",
     )
 
-    class Config:
-        # Don't read from .env file since we get settings from app_settings
-        extra = "allow"  # Allow extra fields from environment
+    model_config = {
+        "extra": "allow"  # Allow extra fields from environment
+    }
 
 
 # Create settings instance without reading from .env
