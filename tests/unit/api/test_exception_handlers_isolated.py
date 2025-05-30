@@ -5,13 +5,10 @@ This module tests exception handler functionality without requiring
 full application dependencies.
 """
 
-import asyncio
-import json
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import Mock
 
 import pytest
-from fastapi import FastAPI, Request, status
-from fastapi.exceptions import RequestValidationError
+from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.testclient import TestClient
 
@@ -26,7 +23,6 @@ from tripsage_core.exceptions.exceptions import (
     CoreRateLimitError,
     CoreResourceNotFoundError,
     CoreServiceError,
-    CoreTripSageError,
     CoreValidationError,
     ErrorDetails,
     format_exception,
@@ -43,7 +39,7 @@ class TestCoreExceptionHandlers:
             code="INVALID_CREDENTIALS",
             details=ErrorDetails(user_id="user123"),
         )
-        
+
         assert error.status_code == 401
         assert error.code == "INVALID_CREDENTIALS"
         assert error.message == "Invalid credentials"
@@ -55,7 +51,7 @@ class TestCoreExceptionHandlers:
             "Access denied",
             details=ErrorDetails(resource_id="resource123"),
         )
-        
+
         assert error.status_code == 403
         assert error.code == "AUTHORIZATION_ERROR"
         assert error.message == "Access denied"
@@ -67,7 +63,7 @@ class TestCoreExceptionHandlers:
             "Trip not found",
             details=ErrorDetails(resource_id="trip123"),
         )
-        
+
         assert error.status_code == 404
         assert error.code == "RESOURCE_NOT_FOUND"
         assert error.message == "Trip not found"
@@ -81,7 +77,7 @@ class TestCoreExceptionHandlers:
             value="invalid-email",
             constraint="valid email format",
         )
-        
+
         assert error.status_code == 422
         assert error.code == "VALIDATION_ERROR"
         assert error.message == "Invalid email"
@@ -94,7 +90,7 @@ class TestCoreExceptionHandlers:
             "Service unavailable",
             service="database",
         )
-        
+
         assert error.status_code == 502
         assert error.code == "SERVICE_ERROR"
         assert error.message == "Service unavailable"
@@ -106,7 +102,7 @@ class TestCoreExceptionHandlers:
             "Rate limit exceeded",
             retry_after=60,
         )
-        
+
         assert error.status_code == 429
         assert error.code == "RATE_LIMIT_EXCEEDED"
         assert error.message == "Rate limit exceeded"
@@ -118,7 +114,7 @@ class TestCoreExceptionHandlers:
             "Invalid API key",
             key_service="openai",
         )
-        
+
         assert error.status_code == 400
         assert error.code == "INVALID_API_KEY"
         assert error.message == "Invalid API key"
@@ -131,7 +127,7 @@ class TestCoreExceptionHandlers:
             operation="SELECT",
             table="users",
         )
-        
+
         assert error.status_code == 500
         assert error.code == "DATABASE_ERROR"
         assert error.message == "Connection failed"
@@ -146,7 +142,7 @@ class TestCoreExceptionHandlers:
             api_status_code=503,
             api_response={"error": "Service unavailable"},
         )
-        
+
         assert error.status_code == 502
         assert error.code == "EXTERNAL_API_ERROR"
         assert error.message == "API call failed"
@@ -161,7 +157,7 @@ class TestCoreExceptionHandlers:
             tool="search_flights",
             params={"origin": "LAX", "destination": "JFK"},
         )
-        
+
         assert error.status_code == 502
         assert error.code == "MCP_ERROR"
         assert error.message == "MCP server failed"
@@ -175,7 +171,7 @@ class TestCoreExceptionHandlers:
             agent_type="travel_agent",
             operation="plan_trip",
         )
-        
+
         assert error.status_code == 502
         assert error.code == "AGENT_ERROR"
         assert error.message == "Agent failed"
@@ -186,7 +182,7 @@ class TestCoreExceptionHandlers:
         """Test format_exception utility with core error."""
         error = CoreAuthenticationError("Test error")
         formatted = format_exception(error)
-        
+
         assert formatted["error"] == "CoreAuthenticationError"
         assert formatted["message"] == "Test error"
         assert formatted["code"] == "AUTHENTICATION_ERROR"
@@ -196,7 +192,7 @@ class TestCoreExceptionHandlers:
         """Test format_exception utility with generic error."""
         error = ValueError("Generic error")
         formatted = format_exception(error)
-        
+
         assert formatted["error"] == "ValueError"
         assert formatted["message"] == "Generic error"
         assert formatted["code"] == "SYSTEM_ERROR"
@@ -217,7 +213,7 @@ class TestExceptionHandlerLogic:
     def test_format_details_helper_with_details(self):
         """Test _format_details helper logic."""
         details = ErrorDetails(user_id="user123", service="test")
-        
+
         # Simulate the helper function logic
         def _format_details(details, include_debug=True):
             if not details:
@@ -225,58 +221,59 @@ class TestExceptionHandlerLogic:
             if not include_debug:
                 return None
             return details.model_dump(exclude_none=True)
-        
+
         result = _format_details(details, True)
         assert result["user_id"] == "user123"
         assert result["service"] == "test"
 
     def test_format_details_helper_no_details(self):
         """Test _format_details helper with no details."""
+
         def _format_details(details, include_debug=True):
             if not details:
                 return None
             if not include_debug:
                 return None
             return details.model_dump(exclude_none=True)
-        
+
         result = _format_details(None, True)
         assert result is None
 
     def test_format_details_helper_debug_disabled(self):
         """Test _format_details helper with debug disabled."""
         details = ErrorDetails(user_id="user123")
-        
+
         def _format_details(details, include_debug=True):
             if not details:
                 return None
             if not include_debug:
                 return None
             return details.model_dump(exclude_none=True)
-        
+
         result = _format_details(details, False)
         assert result is None
 
     def test_retry_after_header_logic(self):
         """Test Retry-After header logic."""
         details = ErrorDetails(additional_context={"retry_after": 120})
-        
+
         # Simulate the header logic from rate limit handler
         headers = {}
         if details and details.additional_context.get("retry_after"):
             retry_after = details.additional_context["retry_after"]
             headers["Retry-After"] = str(retry_after)
-        
+
         assert headers["Retry-After"] == "120"
 
     def test_retry_after_header_logic_missing(self):
         """Test Retry-After header logic when retry_after is missing."""
         details = ErrorDetails(additional_context={})
-        
+
         headers = {}
         if details and details.additional_context.get("retry_after"):
             retry_after = details.additional_context["retry_after"]
             headers["Retry-After"] = str(retry_after)
-        
+
         assert "Retry-After" not in headers
 
 
@@ -287,11 +284,11 @@ class TestMinimalFastAPIExceptionHandlers:
     def minimal_app(self):
         """Create minimal FastAPI app with just exception handlers."""
         app = FastAPI()
-        
+
         # Mock settings for debug mode
         mock_settings = Mock()
         mock_settings.debug = True
-        
+
         def _format_details(details, include_debug=True):
             """Helper to format exception details."""
             if not details:
@@ -364,7 +361,7 @@ class TestMinimalFastAPIExceptionHandlers:
             request: Request, exc: Exception
         ) -> JSONResponse:
             error_data = format_exception(exc)
-            
+
             if not mock_settings.debug:
                 error_data = {
                     "error": "INTERNAL_ERROR",
@@ -373,13 +370,17 @@ class TestMinimalFastAPIExceptionHandlers:
                     "status_code": 500,
                     "details": None,
                 }
-            
+
             return JSONResponse(
                 status_code=error_data.get("status_code", 500),
                 content={
                     "error": error_data.get("code", "INTERNAL_ERROR"),
-                    "message": error_data.get("message", "An unexpected error occurred"),
-                    "details": error_data.get("details") if mock_settings.debug else None,
+                    "message": error_data.get(
+                        "message", "An unexpected error occurred"
+                    ),
+                    "details": error_data.get("details")
+                    if mock_settings.debug
+                    else None,
                 },
             )
 
@@ -417,7 +418,7 @@ class TestMinimalFastAPIExceptionHandlers:
     def test_authentication_error_handler(self, client):
         """Test authentication error handler."""
         response = client.get("/test/auth-error")
-        
+
         assert response.status_code == 401
         data = response.json()
         assert data["error"] == "AUTHENTICATION_ERROR"
@@ -426,7 +427,7 @@ class TestMinimalFastAPIExceptionHandlers:
     def test_not_found_error_handler(self, client):
         """Test not found error handler."""
         response = client.get("/test/not-found")
-        
+
         assert response.status_code == 404
         data = response.json()
         assert data["error"] == "RESOURCE_NOT_FOUND"
@@ -435,11 +436,11 @@ class TestMinimalFastAPIExceptionHandlers:
     def test_rate_limit_error_handler(self, client):
         """Test rate limit error handler with Retry-After header."""
         response = client.get("/test/rate-limit")
-        
+
         assert response.status_code == 429
         assert "Retry-After" in response.headers
         assert response.headers["Retry-After"] == "60"
-        
+
         data = response.json()
         assert data["error"] == "RATE_LIMIT_EXCEEDED"
         assert data["message"] == "Rate limit exceeded"
@@ -447,7 +448,7 @@ class TestMinimalFastAPIExceptionHandlers:
     def test_database_error_handler(self, client):
         """Test database error handler with user-friendly message."""
         response = client.get("/test/database-error")
-        
+
         assert response.status_code == 500
         data = response.json()
         assert data["error"] == "DATABASE_ERROR"
@@ -456,7 +457,7 @@ class TestMinimalFastAPIExceptionHandlers:
     def test_generic_exception_handler(self, client):
         """Test generic exception handler."""
         response = client.get("/test/generic-error")
-        
+
         assert response.status_code == 500
         data = response.json()
         assert data["error"] == "SYSTEM_ERROR"
@@ -482,7 +483,7 @@ class TestExceptionHandlerEdgeCases:
             "Test error",
             details=ErrorDetails(user_id="123"),
         )
-        
+
         error_dict = error.to_dict()
         assert error_dict["error"] == "CoreAuthenticationError"
         assert error_dict["message"] == "Test error"
@@ -507,11 +508,9 @@ class TestExceptionHandlerEdgeCases:
     def test_error_details_exclude_none(self):
         """Test ErrorDetails exclude_none functionality."""
         details = ErrorDetails(
-            user_id="123",
-            service=None,
-            additional_context={"key": "value"}
+            user_id="123", service=None, additional_context={"key": "value"}
         )
-        
+
         dumped = details.model_dump(exclude_none=True)
         assert "user_id" in dumped
         assert "service" not in dumped
@@ -521,7 +520,7 @@ class TestExceptionHandlerEdgeCases:
         """Test handling of large additional context."""
         large_context = {f"key_{i}": f"value_{i}" for i in range(100)}
         details = ErrorDetails(additional_context=large_context)
-        
+
         error = CoreServiceError("Test", details=details)
         # Should not crash with large context
         assert len(error.details.additional_context) == 100
@@ -530,7 +529,7 @@ class TestExceptionHandlerEdgeCases:
         """Test unicode characters in error messages."""
         unicode_message = "Error with unicode: 测试 🚀 Ñoño"
         error = CoreAuthenticationError(unicode_message)
-        
+
         assert error.message == unicode_message
         assert str(error) == f"AUTHENTICATION_ERROR: {unicode_message}"
 
@@ -538,7 +537,7 @@ class TestExceptionHandlerEdgeCases:
         """Test very long error messages."""
         long_message = "Error: " + "X" * 10000
         error = CoreValidationError(long_message)
-        
+
         assert error.message == long_message
         assert len(str(error)) > 10000
 
@@ -549,21 +548,23 @@ class TestAsyncExceptionHandling:
 
     async def test_async_exception_creation(self):
         """Test creating exceptions in async context."""
+
         async def async_function():
             raise CoreAuthenticationError("Async error")
-        
+
         with pytest.raises(CoreAuthenticationError) as exc_info:
             await async_function()
-        
+
         assert exc_info.value.message == "Async error"
         assert exc_info.value.status_code == 401
 
     async def test_async_error_formatting(self):
         """Test formatting exceptions in async context."""
+
         async def async_function():
             error = CoreServiceError("Async service error")
             return format_exception(error)
-        
+
         formatted = await async_function()
         assert formatted["error"] == "CoreServiceError"
         assert formatted["message"] == "Async service error"

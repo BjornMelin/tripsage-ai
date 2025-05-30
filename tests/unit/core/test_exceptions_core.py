@@ -12,6 +12,7 @@ from unittest.mock import Mock
 import pytest
 
 from tripsage_core.exceptions.exceptions import (
+    EXCEPTION_MAPPING,
     CoreAgentError,
     CoreAuthenticationError,
     CoreAuthorizationError,
@@ -25,16 +26,15 @@ from tripsage_core.exceptions.exceptions import (
     CoreTripSageError,
     CoreValidationError,
     ErrorDetails,
-    format_exception,
-    create_error_response,
-    safe_execute,
-    with_error_handling,
-    get_core_exception,
-    EXCEPTION_MAPPING,
     create_authentication_error,
     create_authorization_error,
-    create_validation_error,
+    create_error_response,
     create_not_found_error,
+    create_validation_error,
+    format_exception,
+    get_core_exception,
+    safe_execute,
+    with_error_handling,
 )
 
 
@@ -51,7 +51,7 @@ class TestErrorDetails:
             request_id="req789",
             additional_context={"key": "value", "number": 42},
         )
-        
+
         assert details.service == "test_service"
         assert details.operation == "test_operation"
         assert details.resource_id == "resource123"
@@ -63,7 +63,7 @@ class TestErrorDetails:
     def test_error_details_minimal(self):
         """Test ErrorDetails creation with minimal fields."""
         details = ErrorDetails()
-        
+
         assert details.service is None
         assert details.operation is None
         assert details.resource_id is None
@@ -78,12 +78,12 @@ class TestErrorDetails:
             operation=None,
             additional_context={"key": "value"},
         )
-        
+
         dumped = details.model_dump(exclude_none=True)
         assert "service" in dumped
         assert "operation" not in dumped
         assert "additional_context" in dumped
-        
+
         dumped_with_none = details.model_dump(exclude_none=False)
         assert "service" in dumped_with_none
         assert "operation" in dumped_with_none
@@ -100,7 +100,7 @@ class TestCoreExceptions:
             code="INVALID_CREDENTIALS",
             details=ErrorDetails(user_id="user123"),
         )
-        
+
         assert error.status_code == 401
         assert error.code == "INVALID_CREDENTIALS"
         assert error.message == "Invalid credentials"
@@ -110,7 +110,7 @@ class TestCoreExceptions:
     def test_core_authentication_error_defaults(self):
         """Test CoreAuthenticationError with default values."""
         error = CoreAuthenticationError()
-        
+
         assert error.status_code == 401
         assert error.code == "AUTHENTICATION_ERROR"
         assert error.message == "Authentication failed"
@@ -122,7 +122,7 @@ class TestCoreExceptions:
             message="Access denied",
             details=ErrorDetails(resource_id="resource123"),
         )
-        
+
         assert error.status_code == 403
         assert error.code == "AUTHORIZATION_ERROR"
         assert error.message == "Access denied"
@@ -134,7 +134,7 @@ class TestCoreExceptions:
             message="Trip not found",
             details=ErrorDetails(resource_id="trip123"),
         )
-        
+
         assert error.status_code == 404
         assert error.code == "RESOURCE_NOT_FOUND"
         assert error.message == "Trip not found"
@@ -148,7 +148,7 @@ class TestCoreExceptions:
             value="invalid-email",
             constraint="valid email format",
         )
-        
+
         assert error.status_code == 422
         assert error.code == "VALIDATION_ERROR"
         assert error.message == "Invalid email"
@@ -162,7 +162,7 @@ class TestCoreExceptions:
             message="Service unavailable",
             service="database",
         )
-        
+
         assert error.status_code == 502
         assert error.code == "SERVICE_ERROR"
         assert error.message == "Service unavailable"
@@ -174,7 +174,7 @@ class TestCoreExceptions:
             message="Rate limit exceeded",
             retry_after=60,
         )
-        
+
         assert error.status_code == 429
         assert error.code == "RATE_LIMIT_EXCEEDED"
         assert error.message == "Rate limit exceeded"
@@ -186,7 +186,7 @@ class TestCoreExceptions:
             message="Invalid API key",
             key_service="openai",
         )
-        
+
         assert error.status_code == 400
         assert error.code == "INVALID_API_KEY"
         assert error.message == "Invalid API key"
@@ -199,7 +199,7 @@ class TestCoreExceptions:
             operation="SELECT",
             table="users",
         )
-        
+
         assert error.status_code == 500
         assert error.code == "DATABASE_ERROR"
         assert error.message == "Connection failed"
@@ -214,13 +214,16 @@ class TestCoreExceptions:
             api_status_code=503,
             api_response={"error": "Service unavailable"},
         )
-        
+
         assert error.status_code == 502
         assert error.code == "EXTERNAL_API_ERROR"
         assert error.message == "API call failed"
         assert error.details.service == "duffel"
         assert error.details.additional_context["api_status_code"] == 503
-        assert error.details.additional_context["api_response"]["error"] == "Service unavailable"
+        assert (
+            error.details.additional_context["api_response"]["error"]
+            == "Service unavailable"
+        )
 
     def test_core_mcp_error(self):
         """Test CoreMCPError."""
@@ -230,7 +233,7 @@ class TestCoreExceptions:
             tool="search_flights",
             params={"origin": "LAX", "destination": "JFK"},
         )
-        
+
         assert error.status_code == 502
         assert error.code == "MCP_ERROR"
         assert error.message == "MCP server failed"
@@ -246,7 +249,7 @@ class TestCoreExceptions:
             agent_type="travel_agent",
             operation="plan_trip",
         )
-        
+
         assert error.status_code == 502
         assert error.code == "AGENT_ERROR"
         assert error.message == "Agent failed"
@@ -261,7 +264,7 @@ class TestCoreExceptions:
             code="GENERIC_ERROR",
             status_code=500,
         )
-        
+
         assert error.status_code == 500
         assert error.code == "GENERIC_ERROR"
         assert error.message == "Generic error"
@@ -270,7 +273,7 @@ class TestCoreExceptions:
     def test_core_tripsage_error_defaults(self):
         """Test CoreTripSageError with defaults."""
         error = CoreTripSageError()
-        
+
         assert error.status_code == 500
         assert error.code == "INTERNAL_ERROR"
         assert error.message == "An unexpected error occurred"
@@ -285,7 +288,7 @@ class TestExceptionMethods:
             "Test error",
             details=ErrorDetails(user_id="123"),
         )
-        
+
         error_dict = error.to_dict()
         assert error_dict["error"] == "CoreAuthenticationError"
         assert error_dict["message"] == "Test error"
@@ -313,7 +316,7 @@ class TestExceptionMethods:
             "Service error",
             details={"service": "database", "operation": "connect"},
         )
-        
+
         assert isinstance(error.details, ErrorDetails)
         assert error.details.service == "database"
         assert error.details.operation == "connect"
@@ -331,7 +334,7 @@ class TestUtilityFunctions:
         """Test format_exception with core error."""
         error = CoreAuthenticationError("Test error")
         formatted = format_exception(error)
-        
+
         assert formatted["error"] == "CoreAuthenticationError"
         assert formatted["message"] == "Test error"
         assert formatted["code"] == "AUTHENTICATION_ERROR"
@@ -341,7 +344,7 @@ class TestUtilityFunctions:
         """Test format_exception with generic error."""
         error = ValueError("Generic error")
         formatted = format_exception(error)
-        
+
         assert formatted["error"] == "ValueError"
         assert formatted["message"] == "Generic error"
         assert formatted["code"] == "SYSTEM_ERROR"
@@ -352,89 +355,96 @@ class TestUtilityFunctions:
         """Test create_error_response with traceback."""
         error = ValueError("Test error")
         response = create_error_response(error, include_traceback=True)
-        
+
         assert "traceback" in response["details"]
 
     def test_create_error_response_without_traceback(self):
         """Test create_error_response without traceback."""
         error = ValueError("Test error")
         response = create_error_response(error, include_traceback=False)
-        
+
         assert "traceback" not in response.get("details", {})
 
     def test_safe_execute_success(self):
         """Test safe_execute with successful function."""
+
         def successful_function(x, y):
             return x + y
-        
+
         result = safe_execute(successful_function, 2, 3)
         assert result == 5
 
     def test_safe_execute_failure_with_fallback(self):
         """Test safe_execute with failing function and fallback."""
+
         def failing_function():
             raise ValueError("Function failed")
-        
+
         result = safe_execute(failing_function, fallback="fallback_value")
         assert result == "fallback_value"
 
     def test_safe_execute_with_logger(self):
         """Test safe_execute with logger."""
         logger = Mock()
-        
+
         def failing_function():
             raise ValueError("Function failed")
-        
+
         result = safe_execute(failing_function, fallback="fallback", logger=logger)
         assert result == "fallback"
         logger.error.assert_called_once()
 
     def test_with_error_handling_decorator_success(self):
         """Test with_error_handling decorator with successful function."""
+
         @with_error_handling(fallback="fallback")
         def successful_function(x):
             return x * 2
-        
+
         result = successful_function(5)
         assert result == 10
 
     def test_with_error_handling_decorator_failure(self):
         """Test with_error_handling decorator with failing function."""
+
         @with_error_handling(fallback="fallback")
         def failing_function():
             raise ValueError("Function failed")
-        
+
         result = failing_function()
         assert result == "fallback"
 
     def test_with_error_handling_decorator_re_raise(self):
         """Test with_error_handling decorator with re_raise=True."""
+
         @with_error_handling(re_raise=True)
         def failing_function():
             raise ValueError("Function failed")
-        
+
         with pytest.raises(ValueError):
             failing_function()
 
     @pytest.mark.asyncio
     async def test_with_error_handling_async_success(self):
         """Test with_error_handling decorator with async function."""
+
         @with_error_handling(fallback="async_fallback")
         async def async_successful_function(x):
             await asyncio.sleep(0.001)
             return x * 3
-        
+
         result = await async_successful_function(4)
         assert result == 12
 
     @pytest.mark.asyncio
     async def test_with_error_handling_async_failure(self):
         """Test with_error_handling decorator with failing async function."""
+
         @with_error_handling(fallback="async_fallback")
         async def async_failing_function():
             await asyncio.sleep(0.001)
             raise ValueError("Async function failed")
-        
+
         result = await async_failing_function()
         assert result == "async_fallback"
 
@@ -501,7 +511,7 @@ class TestEdgeCases:
         """Test exception with very long message."""
         long_message = "Error: " + "X" * 10000
         error = CoreValidationError(long_message)
-        
+
         assert error.message == long_message
         assert len(str(error)) > 10000
 
@@ -509,7 +519,7 @@ class TestEdgeCases:
         """Test exception with unicode characters."""
         unicode_message = "Error with unicode: 测试 🚀 Ñoño"
         error = CoreAuthenticationError(unicode_message)
-        
+
         assert error.message == unicode_message
         assert "测试" in str(error)
         assert "🚀" in str(error)
@@ -520,7 +530,7 @@ class TestEdgeCases:
         large_context = {f"key_{i}": f"value_{i}" for i in range(1000)}
         details = ErrorDetails(additional_context=large_context)
         error = CoreServiceError("Large context", details=details)
-        
+
         assert len(error.details.additional_context) == 1000
         # Should not crash when converting to dict
         error_dict = error.to_dict()
@@ -529,18 +539,19 @@ class TestEdgeCases:
     def test_exception_with_nested_objects_in_context(self):
         """Test exception with nested objects in context."""
         nested_context = {
-            "level1": {
-                "level2": {
-                    "level3": ["item1", "item2", {"key": "value"}]
-                }
-            }
+            "level1": {"level2": {"level3": ["item1", "item2", {"key": "value"}]}}
         }
         details = ErrorDetails(additional_context=nested_context)
         error = CoreMCPError("Nested context", details=details)
-        
+
         # Should handle nested structures
         error_dict = error.to_dict()
-        assert error_dict["details"]["additional_context"]["level1"]["level2"]["level3"][2]["key"] == "value"
+        assert (
+            error_dict["details"]["additional_context"]["level1"]["level2"]["level3"][
+                2
+            ]["key"]
+            == "value"
+        )
 
     def test_exception_serialization(self):
         """Test exception serialization to JSON."""
@@ -548,10 +559,10 @@ class TestEdgeCases:
             "Serialization test",
             details=ErrorDetails(
                 user_id="user123",
-                additional_context={"timestamp": "2024-01-01T00:00:00Z"}
+                additional_context={"timestamp": "2024-01-01T00:00:00Z"},
             ),
         )
-        
+
         error_dict = error.to_dict()
         # Should be JSON serializable
         json_str = json.dumps(error_dict)
@@ -569,7 +580,7 @@ class TestEdgeCases:
         auth_error = CoreAuthenticationError()
         assert isinstance(auth_error, CoreTripSageError)
         assert isinstance(auth_error, Exception)
-        
+
         mcp_error = CoreMCPError()
         assert isinstance(mcp_error, CoreServiceError)
         assert isinstance(mcp_error, CoreTripSageError)
@@ -579,7 +590,7 @@ class TestEdgeCases:
         """Test exception with completely empty details."""
         details = ErrorDetails()
         error = CoreServiceError("Empty details", details=details)
-        
+
         error_dict = error.to_dict()
         # All detail fields should be None or empty
         detail_values = list(error_dict["details"].values())
@@ -592,19 +603,21 @@ class TestAsyncExceptionHandling:
 
     async def test_async_exception_creation(self):
         """Test creating exceptions in async context."""
+
         async def async_function():
             raise CoreAuthenticationError("Async error")
-        
+
         with pytest.raises(CoreAuthenticationError) as exc_info:
             await async_function()
-        
+
         assert exc_info.value.message == "Async error"
 
     async def test_async_safe_execute(self):
         """Test safe_execute with async function simulation."""
+
         async def async_failing_function():
             raise ValueError("Async failure")
-        
+
         # Note: safe_execute doesn't handle async functions directly
         # but we can test the pattern
         def sync_wrapper():
@@ -613,16 +626,17 @@ class TestAsyncExceptionHandling:
                 raise ValueError("Async failure")
             except Exception:
                 return "fallback"
-        
+
         result = safe_execute(sync_wrapper)
         assert result == "fallback"
 
     async def test_async_format_exception(self):
         """Test format_exception in async context."""
+
         async def async_error_formatter():
             error = CoreServiceError("Async service error")
             return format_exception(error)
-        
+
         formatted = await async_error_formatter()
         assert formatted["error"] == "CoreServiceError"
         assert formatted["message"] == "Async service error"

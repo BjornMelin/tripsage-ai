@@ -5,15 +5,12 @@ This module tests all exception handlers implemented in the main FastAPI applica
 ensuring proper error formatting, status codes, and response structures.
 """
 
-import json
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import Mock, patch
 
 import pytest
-from fastapi import Request, status
+from fastapi import Request
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
 from fastapi.testclient import TestClient
-from pydantic import ValidationError
 
 from api.main import create_application
 from tripsage_core.exceptions.exceptions import (
@@ -66,7 +63,10 @@ class TestExceptionHandlers:
         # Get the handler from the app
         handler = None
         for exception_handler in app.exception_handlers.values():
-            if hasattr(exception_handler, "__name__") and "authentication" in exception_handler.__name__:
+            if (
+                hasattr(exception_handler, "__name__")
+                and "authentication" in exception_handler.__name__
+            ):
                 handler = exception_handler
                 break
 
@@ -143,7 +143,9 @@ class TestExceptionHandlers:
         error = CoreDatabaseError(
             message="Connection timeout",
             code="DB_TIMEOUT",
-            details=ErrorDetails(operation="SELECT", additional_context={"table": "users"}),
+            details=ErrorDetails(
+                operation="SELECT", additional_context={"table": "users"}
+            ),
         )
 
         # Test that the handler exists
@@ -290,7 +292,7 @@ class TestExceptionHandlersIntegration:
     def test_authentication_error_response(self, client):
         """Test authentication error response format."""
         response = client.get("/test/auth-error")
-        
+
         assert response.status_code == 401
         data = response.json()
         assert data["error"] == "AUTHENTICATION_ERROR"
@@ -300,7 +302,7 @@ class TestExceptionHandlersIntegration:
     def test_authentication_error_with_details_response(self, client):
         """Test authentication error response with details."""
         response = client.get("/test/auth-error-with-details")
-        
+
         assert response.status_code == 401
         data = response.json()
         assert data["error"] == "AUTHENTICATION_ERROR"
@@ -310,7 +312,7 @@ class TestExceptionHandlersIntegration:
     def test_authorization_error_response(self, client):
         """Test authorization error response format."""
         response = client.get("/test/authorization-error")
-        
+
         assert response.status_code == 403
         data = response.json()
         assert data["error"] == "AUTHORIZATION_ERROR"
@@ -319,7 +321,7 @@ class TestExceptionHandlersIntegration:
     def test_not_found_error_response(self, client):
         """Test not found error response format."""
         response = client.get("/test/not-found")
-        
+
         assert response.status_code == 404
         data = response.json()
         assert data["error"] == "RESOURCE_NOT_FOUND"
@@ -328,7 +330,7 @@ class TestExceptionHandlersIntegration:
     def test_validation_error_response(self, client):
         """Test validation error response format."""
         response = client.get("/test/validation-error")
-        
+
         assert response.status_code == 422
         data = response.json()
         assert data["error"] == "VALIDATION_ERROR"
@@ -337,7 +339,7 @@ class TestExceptionHandlersIntegration:
     def test_service_error_response(self, client):
         """Test service error response format."""
         response = client.get("/test/service-error")
-        
+
         assert response.status_code == 502
         data = response.json()
         assert data["error"] == "SERVICE_ERROR"
@@ -346,11 +348,11 @@ class TestExceptionHandlersIntegration:
     def test_rate_limit_error_response(self, client):
         """Test rate limit error response format."""
         response = client.get("/test/rate-limit")
-        
+
         assert response.status_code == 429
         assert "Retry-After" in response.headers
         assert response.headers["Retry-After"] == "60"
-        
+
         data = response.json()
         assert data["error"] == "RATE_LIMIT_EXCEEDED"
         assert data["message"] == "Rate limit exceeded"
@@ -358,7 +360,7 @@ class TestExceptionHandlersIntegration:
     def test_key_validation_error_response(self, client):
         """Test key validation error response format."""
         response = client.get("/test/key-validation")
-        
+
         assert response.status_code == 400
         data = response.json()
         assert data["error"] == "INVALID_API_KEY"
@@ -367,7 +369,7 @@ class TestExceptionHandlersIntegration:
     def test_database_error_response(self, client):
         """Test database error response format."""
         response = client.get("/test/database-error")
-        
+
         assert response.status_code == 500
         data = response.json()
         assert data["error"] == "DATABASE_ERROR"
@@ -376,7 +378,7 @@ class TestExceptionHandlersIntegration:
     def test_external_api_error_response(self, client):
         """Test external API error response format."""
         response = client.get("/test/external-api-error")
-        
+
         assert response.status_code == 502
         data = response.json()
         assert data["error"] == "EXTERNAL_API_ERROR"
@@ -385,7 +387,7 @@ class TestExceptionHandlersIntegration:
     def test_mcp_error_response(self, client):
         """Test MCP error response format."""
         response = client.get("/test/mcp-error")
-        
+
         assert response.status_code == 502
         data = response.json()
         assert data["error"] == "MCP_ERROR"
@@ -394,7 +396,7 @@ class TestExceptionHandlersIntegration:
     def test_agent_error_response(self, client):
         """Test agent error response format."""
         response = client.get("/test/agent-error")
-        
+
         assert response.status_code == 502
         data = response.json()
         assert data["error"] == "AGENT_ERROR"
@@ -403,7 +405,7 @@ class TestExceptionHandlersIntegration:
     def test_core_error_response(self, client):
         """Test core TripSage error response format."""
         response = client.get("/test/core-error")
-        
+
         assert response.status_code == 500
         data = response.json()
         assert data["error"] == "INTERNAL_ERROR"
@@ -412,7 +414,7 @@ class TestExceptionHandlersIntegration:
     def test_generic_error_response(self, client):
         """Test generic exception response format."""
         response = client.get("/test/generic-error")
-        
+
         assert response.status_code == 500
         data = response.json()
         assert data["error"] == "SYSTEM_ERROR"
@@ -423,7 +425,7 @@ class TestExceptionHandlersIntegration:
     def test_generic_error_response_production(self, client):
         """Test generic exception response in production mode."""
         response = client.get("/test/generic-error")
-        
+
         assert response.status_code == 500
         data = response.json()
         assert data["error"] == "INTERNAL_ERROR"
@@ -434,7 +436,7 @@ class TestExceptionHandlersIntegration:
         """Test FastAPI request validation error response."""
         # Send invalid JSON to trigger validation error
         response = client.post("/test/validation-error", json="invalid")
-        
+
         assert response.status_code == 422
         data = response.json()
         assert data["error"] == "VALIDATION_ERROR"
@@ -446,7 +448,7 @@ class TestExceptionHandlersIntegration:
     def test_health_endpoint_still_works(self, client):
         """Test that health endpoint works normally."""
         response = client.get("/health")
-        
+
         assert response.status_code == 200
         data = response.json()
         assert data["status"] == "ok"
@@ -465,20 +467,20 @@ class TestExceptionHandlerHelpers:
         # We need to access the helper function from within the handler
         # This tests the logic by testing the actual behavior
         details = ErrorDetails(user_id="user123", service="test")
-        
+
         # Test that details are properly formatted by checking a response
         test_app = create_application()
-        
+
         @test_app.get("/test/details")
         async def test_details():
             raise CoreAuthenticationError(
                 "Test error",
                 details=details,
             )
-        
+
         client = TestClient(test_app)
         response = client.get("/test/details")
-        
+
         assert response.status_code == 401
         data = response.json()
         assert data["details"]["user_id"] == "user123"
@@ -487,14 +489,14 @@ class TestExceptionHandlerHelpers:
     def test_format_details_helper_no_details(self, app):
         """Test _format_details helper with no details."""
         test_app = create_application()
-        
+
         @test_app.get("/test/no-details")
         async def test_no_details():
             raise CoreAuthenticationError("Test error")
-        
+
         client = TestClient(test_app)
         response = client.get("/test/no-details")
-        
+
         assert response.status_code == 401
         data = response.json()
         # Details should be None when no details provided
@@ -504,17 +506,17 @@ class TestExceptionHandlerHelpers:
     def test_format_details_helper_debug_disabled(self, app):
         """Test _format_details helper with debug disabled."""
         test_app = create_application()
-        
+
         @test_app.get("/test/debug-disabled")
         async def test_debug_disabled():
             raise CoreDatabaseError(
                 "Database error",
                 details=ErrorDetails(operation="SELECT"),
             )
-        
+
         client = TestClient(test_app)
         response = client.get("/test/debug-disabled")
-        
+
         assert response.status_code == 500
         data = response.json()
         # In production mode with debug disabled, sensitive details should be hidden
@@ -528,15 +530,15 @@ class TestAsyncExceptionHandlers:
     async def test_async_handler_execution(self):
         """Test that exception handlers work with async endpoints."""
         app = create_application()
-        
+
         @app.get("/test/async-error")
         async def async_error_endpoint():
             await asyncio.sleep(0.001)  # Small async operation
             raise CoreAuthenticationError("Async auth error")
-        
+
         client = TestClient(app)
         response = client.get("/test/async-error")
-        
+
         assert response.status_code == 401
         data = response.json()
         assert data["error"] == "AUTHENTICATION_ERROR"
@@ -551,7 +553,7 @@ class TestExceptionHandlerEdgeCases:
         """Create a test FastAPI application."""
         return create_application()
 
-    @pytest.fixture  
+    @pytest.fixture
     def client(self, app):
         """Create a test client."""
         return TestClient(app)
@@ -559,14 +561,14 @@ class TestExceptionHandlerEdgeCases:
     def test_exception_with_none_details(self, client):
         """Test exception with explicitly None details."""
         app = create_application()
-        
+
         @app.get("/test/none-details")
         async def test_none_details():
             raise CoreAuthenticationError("Error", details=None)
-        
+
         client = TestClient(app)
         response = client.get("/test/none-details")
-        
+
         assert response.status_code == 401
         data = response.json()
         assert data["details"] is None or data["details"] == {}
@@ -574,15 +576,15 @@ class TestExceptionHandlerEdgeCases:
     def test_exception_with_empty_additional_context(self, client):
         """Test exception with empty additional context."""
         app = create_application()
-        
+
         @app.get("/test/empty-context")
         async def test_empty_context():
             details = ErrorDetails(additional_context={})
             raise CoreRateLimitError("Rate limit", details=details)
-        
+
         client = TestClient(app)
         response = client.get("/test/empty-context")
-        
+
         assert response.status_code == 429
         # Should not have Retry-After header since retry_after not in context
         assert "Retry-After" not in response.headers
@@ -590,15 +592,15 @@ class TestExceptionHandlerEdgeCases:
     def test_malformed_validation_errors(self, client):
         """Test handling of malformed validation errors."""
         app = create_application()
-        
+
         @app.post("/test/malformed")
         async def test_malformed(item: dict):
             pass
-        
+
         client = TestClient(app)
         # Send completely invalid data
         response = client.post("/test/malformed", data="not json")
-        
+
         assert response.status_code == 422
         data = response.json()
         assert data["error"] == "VALIDATION_ERROR"
@@ -607,16 +609,16 @@ class TestExceptionHandlerEdgeCases:
     def test_large_error_details(self, client):
         """Test handling of large error details."""
         app = create_application()
-        
+
         @app.get("/test/large-details")
         async def test_large_details():
             large_context = {f"key_{i}": f"value_{i}" * 100 for i in range(50)}
             details = ErrorDetails(additional_context=large_context)
             raise CoreServiceError("Large details", details=details)
-        
+
         client = TestClient(app)
         response = client.get("/test/large-details")
-        
+
         assert response.status_code == 502
         data = response.json()
         assert data["error"] == "SERVICE_ERROR"
