@@ -14,7 +14,6 @@ from fastapi.responses import JSONResponse
 from fastapi.routing import APIRouter
 
 from api.middlewares.authentication import AuthenticationMiddleware
-from api.middlewares.error_handling import ErrorHandlingMiddleware
 from api.middlewares.logging import LoggingMiddleware
 from api.middlewares.metrics import MetricsMiddleware
 from api.routers import (
@@ -28,7 +27,22 @@ from api.routers import (
 )
 from tripsage.api.dependencies import shutdown_event, startup_event
 from tripsage_core.config.base_app_settings import settings
-from tripsage_core.exceptions.exceptions import CoreTripSageError as TripSageError
+from tripsage_core.exceptions.exceptions import (
+    CoreAgentError,
+    CoreAuthenticationError,
+    CoreAuthorizationError,
+    CoreDatabaseError,
+    CoreExternalAPIError,
+    CoreKeyValidationError,
+    CoreMCPError,
+    CoreRateLimitError,
+    CoreResourceNotFoundError,
+    CoreServiceError,
+    CoreTripSageError,
+    CoreTripSageError as TripSageError,
+    CoreValidationError,
+    format_exception,
+)
 
 # Configure root logger
 logging.basicConfig(
@@ -76,31 +90,273 @@ def register_exception_handlers(app: FastAPI) -> None:
         app: FastAPI application
     """
 
-    @app.exception_handler(TripSageError)
-    async def tripsage_error_handler(
-        request: Request, exc: TripSageError
+    def _format_details(details, include_debug: bool = True):
+        """Helper to format exception details."""
+        if not details:
+            return None
+        if not include_debug:
+            return None
+        return details.model_dump(exclude_none=True)
+
+    # Authentication and Authorization Errors
+    @app.exception_handler(CoreAuthenticationError)
+    async def authentication_error_handler(
+        request: Request, exc: CoreAuthenticationError
     ) -> JSONResponse:
-        """Handle TripSage-specific errors."""
+        """Handle authentication errors."""
+        logger.warning(f"Authentication error: {exc.message} [code={exc.code}]")
         return JSONResponse(
             status_code=exc.status_code,
-            content={"error": exc.code, "message": exc.message, "details": exc.details},
+            content={
+                "error": exc.code,
+                "message": exc.message,
+                "details": _format_details(exc.details),
+            },
         )
 
+    @app.exception_handler(CoreAuthorizationError)
+    async def authorization_error_handler(
+        request: Request, exc: CoreAuthorizationError
+    ) -> JSONResponse:
+        """Handle authorization errors."""
+        logger.warning(f"Authorization error: {exc.message} [code={exc.code}]")
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={
+                "error": exc.code,
+                "message": exc.message,
+                "details": _format_details(exc.details),
+            },
+        )
+
+    # Resource and Validation Errors
+    @app.exception_handler(CoreResourceNotFoundError)
+    async def resource_not_found_error_handler(
+        request: Request, exc: CoreResourceNotFoundError
+    ) -> JSONResponse:
+        """Handle resource not found errors."""
+        logger.info(f"Resource not found: {exc.message} [code={exc.code}]")
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={
+                "error": exc.code,
+                "message": exc.message,
+                "details": _format_details(exc.details),
+            },
+        )
+
+    @app.exception_handler(CoreValidationError)
+    async def core_validation_error_handler(
+        request: Request, exc: CoreValidationError
+    ) -> JSONResponse:
+        """Handle core validation errors."""
+        logger.warning(f"Validation error: {exc.message} [code={exc.code}]")
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={
+                "error": exc.code,
+                "message": exc.message,
+                "details": _format_details(exc.details),
+            },
+        )
+
+    # Service and Infrastructure Errors
+    @app.exception_handler(CoreServiceError)
+    async def service_error_handler(
+        request: Request, exc: CoreServiceError
+    ) -> JSONResponse:
+        """Handle service errors."""
+        logger.error(f"Service error: {exc.message} [code={exc.code}]")
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={
+                "error": exc.code,
+                "message": exc.message,
+                "details": _format_details(exc.details),
+            },
+        )
+
+    @app.exception_handler(CoreRateLimitError)
+    async def rate_limit_error_handler(
+        request: Request, exc: CoreRateLimitError
+    ) -> JSONResponse:
+        """Handle rate limit errors."""
+        logger.warning(f"Rate limit exceeded: {exc.message} [code={exc.code}]")
+
+        # Add Retry-After header if specified in details
+        headers = {}
+        if exc.details and exc.details.additional_context.get("retry_after"):
+            retry_after = exc.details.additional_context["retry_after"]
+            headers["Retry-After"] = str(retry_after)
+
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={
+                "error": exc.code,
+                "message": exc.message,
+                "details": _format_details(exc.details),
+            },
+            headers=headers,
+        )
+
+    @app.exception_handler(CoreKeyValidationError)
+    async def key_validation_error_handler(
+        request: Request, exc: CoreKeyValidationError
+    ) -> JSONResponse:
+        """Handle API key validation errors."""
+        logger.warning(f"API key validation error: {exc.message} [code={exc.code}]")
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={
+                "error": exc.code,
+                "message": exc.message,
+                "details": _format_details(exc.details),
+            },
+        )
+
+    @app.exception_handler(CoreDatabaseError)
+    async def database_error_handler(
+        request: Request, exc: CoreDatabaseError
+    ) -> JSONResponse:
+        """Handle database errors."""
+        logger.error(f"Database error: {exc.message} [code={exc.code}]")
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={
+                "error": exc.code,
+                "message": "A database error occurred. Please try again later.",
+                "details": _format_details(exc.details, settings.debug),
+            },
+        )
+
+    @app.exception_handler(CoreExternalAPIError)
+    async def external_api_error_handler(
+        request: Request, exc: CoreExternalAPIError
+    ) -> JSONResponse:
+        """Handle external API errors."""
+        logger.error(f"External API error: {exc.message} [code={exc.code}]")
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={
+                "error": exc.code,
+                "message": (
+                    "An external service is currently unavailable. "
+                    "Please try again later."
+                ),
+                "details": _format_details(exc.details, settings.debug),
+            },
+        )
+
+    @app.exception_handler(CoreMCPError)
+    async def mcp_error_handler(request: Request, exc: CoreMCPError) -> JSONResponse:
+        """Handle MCP server errors."""
+        logger.error(f"MCP error: {exc.message} [code={exc.code}]")
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={
+                "error": exc.code,
+                "message": (
+                    "A service component is currently unavailable. "
+                    "Please try again later."
+                ),
+                "details": _format_details(exc.details, settings.debug),
+            },
+        )
+
+    @app.exception_handler(CoreAgentError)
+    async def agent_error_handler(
+        request: Request, exc: CoreAgentError
+    ) -> JSONResponse:
+        """Handle agent errors."""
+        logger.error(f"Agent error: {exc.message} [code={exc.code}]")
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={
+                "error": exc.code,
+                "message": (
+                    "The AI agent encountered an error processing your request. "
+                    "Please try again."
+                ),
+                "details": _format_details(exc.details, settings.debug),
+            },
+        )
+
+    # General Core TripSage Error (catch-all for any core exception not handled above)
+    @app.exception_handler(CoreTripSageError)
+    async def core_tripsage_error_handler(
+        request: Request, exc: CoreTripSageError
+    ) -> JSONResponse:
+        """Handle general TripSage core errors."""
+        logger.error(f"Core TripSage error: {exc.message} [code={exc.code}]")
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={
+                "error": exc.code,
+                "message": exc.message,
+                "details": _format_details(exc.details),
+            },
+        )
+
+    # FastAPI Request Validation Errors
     @app.exception_handler(RequestValidationError)
     async def validation_error_handler(
         request: Request, exc: RequestValidationError
     ) -> JSONResponse:
-        """Handle request validation errors."""
-        errors = [
-            {"loc": err["loc"], "msg": err["msg"], "type": err["type"]}
-            for err in exc.errors()
-        ]
+        """Handle FastAPI request validation errors."""
+        logger.warning(f"Request validation error: {exc.errors()}")
+
+        # Format validation errors in a user-friendly way
+        formatted_errors = []
+        for error in exc.errors():
+            field_path = " -> ".join(str(loc) for loc in error["loc"])
+            formatted_errors.append(
+                {
+                    "field": field_path,
+                    "message": error["msg"],
+                    "type": error["type"],
+                    "input": error.get("input"),
+                }
+            )
+
         return JSONResponse(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             content={
                 "error": "VALIDATION_ERROR",
-                "message": "Validation error",
-                "details": errors,
+                "message": "Request validation failed. Please check your input data.",
+                "details": {
+                    "errors": formatted_errors,
+                    "error_count": len(formatted_errors),
+                },
+            },
+        )
+
+    # Generic Exception Handler (catch-all for any unhandled exceptions)
+    @app.exception_handler(Exception)
+    async def generic_exception_handler(
+        request: Request, exc: Exception
+    ) -> JSONResponse:
+        """Handle any unhandled exceptions."""
+        logger.exception(f"Unhandled exception: {str(exc)}")
+
+        # Use the format_exception utility to create a standardized response
+        error_data = format_exception(exc)
+
+        # In production, don't expose internal error details
+        if not settings.debug:
+            error_data = {
+                "error": "INTERNAL_ERROR",
+                "message": "An unexpected error occurred. Please try again later.",
+                "code": "INTERNAL_ERROR",
+                "status_code": 500,
+                "details": None,
+            }
+
+        return JSONResponse(
+            status_code=error_data.get("status_code", 500),
+            content={
+                "error": error_data.get("code", "INTERNAL_ERROR"),
+                "message": error_data.get("message", "An unexpected error occurred"),
+                "details": error_data.get("details") if settings.debug else None,
             },
         )
 
@@ -125,7 +381,6 @@ def register_middleware(app: FastAPI) -> None:
     # Add custom middleware
     app.add_middleware(MetricsMiddleware)
     app.add_middleware(LoggingMiddleware)
-    app.add_middleware(ErrorHandlingMiddleware)
 
     # Add authentication middleware (conditionally)
     if not settings.debug:

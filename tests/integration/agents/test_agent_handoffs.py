@@ -10,12 +10,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from tripsage.agents.base import BaseAgent
-from tripsage.agents.handoffs import (
-    create_delegation_tool,
-    create_handoff_tool,
-    register_delegation_tools,
-    register_handoff_tools,
-)
 from tripsage.agents.travel import TravelAgent
 
 

@@ -9,7 +9,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from tripsage.agents.accommodations import (
+from tripsage.agents.accommodation import (
     AccommodationSearchTool,
     get_airbnb_listing_details,
     search_accommodations,

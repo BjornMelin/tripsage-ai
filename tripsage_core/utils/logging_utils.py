@@ -102,7 +102,9 @@ def configure_logging(
         os.makedirs(log_dir, exist_ok=True)
 
         # Create a log file with timestamp
-        timestamp = datetime.now(datetime.UTC).strftime("%Y%m%d")
+        from datetime import timezone
+
+        timestamp = datetime.now(timezone.utc).strftime("%Y%m%d")
         log_filename = f"{name.replace('.', '_')}_{timestamp}.log"
         log_path = Path(log_dir) / log_filename
 

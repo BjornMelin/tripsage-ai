@@ -15,6 +15,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 
 from tripsage.config.feature_flags import IntegrationMode, feature_flags
+from tripsage.services.core.memory_service import TripSageMemoryService
 from tripsage.tools.memory_tools import (
     ConversationMessage,
     add_conversation_memory,

@@ -7,7 +7,7 @@ using direct HTTP integration with the Duffel API.
 import logging
 import uuid
 from datetime import date, datetime
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 from uuid import UUID
 
 from tripsage.api.models.flights import (
@@ -21,10 +21,11 @@ from tripsage.api.models.flights import (
     SavedFlightRequest,
     SavedFlightResponse,
 )
-from tripsage_core.services.external_apis import DuffelHTTPClient
-# from tripsage.tools.schemas.flights import FlightSearchParams  # TODO: Missing schema
-from tripsage_core.models.domain.flight import CabinClass
-from tripsage_core.utils.decorator_utils import with_error_handling
+from tripsage.models.flight import CabinClass
+
+# FlightSearchParams removed - using dict directly for DuffelHTTPClient
+from tripsage_core.exceptions import with_error_handling
+from tripsage_core.services.external_apis.duffel_http_client import DuffelHTTPClient
 
 logger = logging.getLogger(__name__)
 
@@ -125,7 +126,7 @@ class FlightService:
 
     async def _convert_api_models_to_flight_search_params(
         self, request: FlightSearchRequest
-    ) -> dict:
+    ) -> Dict[str, Any]:
         """Convert API models to internal flight search params."""
         return {
             "origin": request.origin,

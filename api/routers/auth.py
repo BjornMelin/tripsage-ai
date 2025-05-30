@@ -13,8 +13,8 @@ from fastapi import APIRouter, Depends, HTTPException, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
 
 from api.deps import get_current_user
-from api.models.requests.auth import RefreshTokenRequest, RegisterUserRequest
-from api.models.responses.auth import TokenResponse, UserResponse
+from api.schemas.requests.auth import RefreshTokenRequest, RegisterUserRequest
+from api.schemas.responses.auth import TokenResponse, UserResponse
 from api.services.auth_service import AuthService
 from tripsage_core.config.base_app_settings import settings
 from tripsage_core.exceptions.exceptions import (

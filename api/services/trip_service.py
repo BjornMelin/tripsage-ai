@@ -29,9 +29,9 @@ class TripService:
                 self._core_service = CoreTripService()
             except Exception as e:
                 logger.warning(f"Could not initialize CoreTripService: {e}")
-                # For now, we'll create a mock service that raises
-                # NotImplementedError. This allows the application to start
-                # even if the database isn't configured
+                # For now, we'll create a mock service that raises NotImplementedError
+                # This allows the application to start even if the database isn't
+                # configured
                 self._core_service = MockTripService()
         return self._core_service
 
