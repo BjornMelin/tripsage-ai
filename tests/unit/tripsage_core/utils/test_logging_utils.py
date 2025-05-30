@@ -14,7 +14,10 @@ import pytest
 
 from tripsage_core.utils.logging_utils import (
     ContextAdapter,
+    configure_logging,
+    configure_root_logger,
     get_logger,
+    get_module_logger,
     log_exception,
     setup_logging,
 )
@@ -322,3 +325,224 @@ class TestLoggingUtils:
         # Run async function
         result = asyncio.run(async_function())
         assert result is True
+
+    def test_configure_logging_function(self, temp_log_dir):
+        """Test the configure_logging function."""
+        log_file_path = temp_log_dir / "configure_test.log"
+
+        adapter = configure_logging(
+            "test.configure",
+            level=logging.DEBUG,
+            log_to_file=True,
+            log_dir=str(temp_log_dir),
+            context={"service": "test"},
+        )
+
+        assert isinstance(adapter, ContextAdapter)
+        assert adapter.logger.name == "test.configure"
+        assert adapter.logger.level == logging.DEBUG
+
+    def test_configure_logging_no_file_in_testing(self):
+        """Test configure_logging doesn't create file handlers in testing."""
+        with patch.dict(os.environ, {"TESTING": "true"}):
+            adapter = configure_logging("test.no_file", log_to_file=True)
+
+            # Should only have console handler
+            handlers = adapter.logger.handlers
+            console_handlers = [
+                h for h in handlers if isinstance(h, logging.StreamHandler)
+            ]
+            file_handlers = [h for h in handlers if isinstance(h, logging.FileHandler)]
+
+            assert len(console_handlers) == 1
+            assert len(file_handlers) == 0
+
+    def test_configure_root_logger(self):
+        """Test configure_root_logger function."""
+        configure_root_logger(level=logging.WARNING)
+
+        root_logger = logging.getLogger()
+        assert root_logger.level == logging.WARNING
+        assert len(root_logger.handlers) == 1
+        assert isinstance(root_logger.handlers[0], logging.StreamHandler)
+
+    def test_get_module_logger_legacy(self):
+        """Test legacy get_module_logger function."""
+        logger = get_module_logger("test.legacy")
+        assert isinstance(logger, logging.Logger)
+        assert logger.name == "test.legacy"
+
+    def test_setup_logging_legacy(self):
+        """Test legacy setup_logging function."""
+        setup_logging(level=logging.INFO)
+
+        root_logger = logging.getLogger()
+        assert root_logger.level == logging.INFO
+
+    def test_log_exception_without_traceback(self, caplog):
+        """Test log_exception without traceback."""
+        logger = get_logger("test.exceptions")
+
+        exception = ValueError("Test error without traceback")
+        log_exception(logger, exception)
+
+        assert "Exception occurred: Test error without traceback" in caplog.text
+
+    def test_context_adapter_process_method(self):
+        """Test ContextAdapter process method directly."""
+        base_logger = logging.getLogger("test.process")
+        context = {"request_id": "123", "user_id": "456"}
+        adapter = ContextAdapter(base_logger, {"context": context})
+
+        # Test process method
+        msg, kwargs = adapter.process("Test message", {})
+
+        assert msg == "Test message"
+        assert "extra" in kwargs
+        assert kwargs["extra"]["request_id"] == "123"
+        assert kwargs["extra"]["user_id"] == "456"
+
+    def test_context_adapter_with_existing_extra(self):
+        """Test ContextAdapter when extra already exists in kwargs."""
+        base_logger = logging.getLogger("test.existing_extra")
+        adapter = ContextAdapter(base_logger, {"context": {"service": "test"}})
+
+        # Process with existing extra
+        msg, kwargs = adapter.process("Test", {"extra": {"user_id": "123"}})
+
+        assert kwargs["extra"]["service"] == "test"
+        assert kwargs["extra"]["user_id"] == "123"
+
+    def test_logger_caching(self):
+        """Test that loggers are properly cached."""
+        logger1 = get_logger("test.caching")
+        logger2 = get_logger("test.caching")
+        logger3 = get_logger("test.different")
+
+        # Same name should return same instance
+        assert logger1 is logger2
+        # Different name should return different instance
+        assert logger1 is not logger3
+
+    def test_logger_with_context_not_cached(self):
+        """Test that loggers with context are not cached."""
+        logger1 = get_logger("test.context", context={"id": "1"})
+        logger2 = get_logger("test.context", context={"id": "2"})
+
+        # Should be different instances due to different context
+        assert logger1 is not logger2
+        assert isinstance(logger1, ContextAdapter)
+        assert isinstance(logger2, ContextAdapter)
+
+    def test_log_levels_from_settings(self):
+        """Test log level determination from settings."""
+        with patch("tripsage_core.utils.logging_utils.get_settings") as mock_settings:
+            mock_settings.return_value.log_level = "WARNING"
+
+            logger = get_logger("test.settings_level")
+            # The logger level should be set according to settings
+            assert logger.isEnabledFor(logging.WARNING)
+
+    def test_file_handler_creation(self, temp_log_dir):
+        """Test file handler creation with proper naming."""
+        adapter = configure_logging(
+            "test.file.handler", log_to_file=True, log_dir=str(temp_log_dir)
+        )
+
+        # Log a message to ensure file is created
+        adapter.info("Test file message")
+
+        # Check that log file was created with proper naming
+        log_files = list(temp_log_dir.glob("*.log"))
+        assert len(log_files) >= 1
+
+        # Verify filename format
+        log_file = log_files[0]
+        assert "test_file_handler" in log_file.name
+        assert log_file.name.endswith(".log")
+
+    def test_logger_hierarchy_propagation(self):
+        """Test that logger settings propagate through hierarchy."""
+        # Set parent logger level
+        parent = get_logger("tripsage.parent")
+        if hasattr(parent, "logger"):
+            parent.logger.setLevel(logging.ERROR)
+        else:
+            parent.setLevel(logging.ERROR)
+
+        # Child should inherit parent's level
+        child = get_logger("tripsage.parent.child")
+        assert not child.isEnabledFor(logging.WARNING)
+        assert child.isEnabledFor(logging.ERROR)
+
+    def test_concurrent_logging(self):
+        """Test logging under concurrent conditions."""
+        import threading
+        import time
+
+        logger = get_logger("test.concurrent")
+        messages = []
+
+        def log_messages(thread_id):
+            for i in range(10):
+                message = f"Thread {thread_id} message {i}"
+                logger.info(message)
+                messages.append(message)
+                time.sleep(0.001)  # Small delay to encourage interleaving
+
+        # Run multiple threads
+        threads = []
+        for i in range(3):
+            thread = threading.Thread(target=log_messages, args=(i,))
+            threads.append(thread)
+            thread.start()
+
+        # Wait for completion
+        for thread in threads:
+            thread.join()
+
+        # Should have all messages
+        assert len(messages) == 30
+
+    @pytest.mark.parametrize(
+        "log_level_str,expected_level",
+        [
+            ("DEBUG", logging.DEBUG),
+            ("INFO", logging.INFO),
+            ("WARNING", logging.WARNING),
+            ("ERROR", logging.ERROR),
+            ("CRITICAL", logging.CRITICAL),
+            ("debug", logging.DEBUG),  # Test case insensitivity
+            ("invalid", logging.INFO),  # Test default fallback
+        ],
+    )
+    def test_log_level_mapping(self, log_level_str, expected_level):
+        """Test log level string to int mapping."""
+        with patch("tripsage_core.utils.logging_utils.get_settings") as mock_settings:
+            mock_settings.return_value.log_level = log_level_str
+
+            from tripsage_core.utils.logging_utils import _get_log_level
+
+            level = _get_log_level()
+            assert level == expected_level
+
+    def test_memory_usage_with_large_context(self):
+        """Test memory behavior with large context objects."""
+        import sys
+
+        # Create large context
+        large_context = {f"key_{i}": "x" * 1000 for i in range(100)}
+
+        # Get initial memory usage
+        initial_size = sys.getsizeof(large_context)
+
+        # Create logger with large context
+        logger = get_logger("test.memory", context=large_context)
+
+        # Log multiple messages
+        for i in range(10):
+            logger.info(f"Message {i}")
+
+        # Context should still be reasonable size
+        adapter_size = sys.getsizeof(logger.extra)
+        assert adapter_size <= initial_size * 2  # Allow some overhead
