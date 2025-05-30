@@ -13,11 +13,12 @@ from .exceptions import (
     MCPNotFoundError,
     TripSageMCPError,
 )
-from .manager import mcp_manager
+from .manager import MCPManager, mcp_manager
 from .registry import registry
 
 __all__ = [
     # Manager
+    "MCPManager",
     "mcp_manager",
     # Registry
     "registry",

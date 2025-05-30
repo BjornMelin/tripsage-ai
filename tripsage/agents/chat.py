@@ -16,12 +16,11 @@ from tripsage.agents.destination_research import DestinationResearchAgent
 from tripsage.agents.flight import FlightAgent
 from tripsage.agents.itinerary import Itinerary as ItineraryAgent
 from tripsage.agents.travel import TravelAgent
-from tripsage.config.app_settings import settings
 from tripsage.mcp_abstraction.manager import MCPManager
 from tripsage.services.chat_orchestration import ChatOrchestrationService
 from tripsage.services.memory_service import TripSageMemoryService
 from tripsage.tools.memory_tools import ConversationMessage
-from tripsage.utils.error_handling import (
+from tripsage_core.utils.error_handling_utils import (
     TripSageError,
     log_exception,
     with_error_handling,

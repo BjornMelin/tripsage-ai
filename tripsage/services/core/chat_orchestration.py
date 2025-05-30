@@ -15,10 +15,10 @@ from tripsage.services.core.tool_calling_service import (
     ToolCallResponse,
     ToolCallService,
 )
-from tripsage.utils.error_handling import TripSageError
-from tripsage_core.utils.logging_utils import get_logger
 from tripsage_core.services.infrastructure import get_database_service
 from tripsage_core.utils.decorator_utils import with_error_handling
+from tripsage_core.utils.error_handling_utils import TripSageError
+from tripsage_core.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)
 

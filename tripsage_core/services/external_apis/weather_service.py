@@ -12,7 +12,8 @@ from typing import Any, Dict, List, Optional, Tuple
 import httpx
 
 from tripsage_core.config.base_app_settings import CoreAppSettings, get_settings
-from tripsage_core.exceptions.exceptions import CoreAPIError, CoreServiceError
+from tripsage_core.exceptions.exceptions import CoreExternalAPIError as CoreAPIError
+from tripsage_core.exceptions.exceptions import CoreServiceError
 
 
 class WeatherServiceError(CoreAPIError):

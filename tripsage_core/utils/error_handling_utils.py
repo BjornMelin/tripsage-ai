@@ -16,9 +16,6 @@ from tripsage_core.exceptions import (
     ErrorDetails,
 )
 from tripsage_core.exceptions import (
-    format_exception as core_format_exception,
-)
-from tripsage_core.exceptions import (
     safe_execute as core_safe_execute,
 )
 from tripsage_core.exceptions import (

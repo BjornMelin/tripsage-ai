@@ -381,6 +381,16 @@ class Payment(BaseModel):
     created_at: Optional[datetime] = None
 
 
+class PaymentRequest(BaseModel):
+    """Payment request for creating orders."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    type: PaymentType = PaymentType.INSTANT
+    amount: Decimal = Field(..., decimal_places=2)
+    currency: str = Field(..., pattern="^[A-Z]{3}$")
+
+
 class Order(BaseModel):
     """Flight order model."""
 

@@ -20,8 +20,7 @@ except ImportError:
     Agent = MagicMock
     function_tool = MagicMock
 
-from tripsage.config.app_settings import settings
-from tripsage.utils.error_handling import TripSageError, log_exception
+from tripsage_core.utils.error_handling_utils import TripSageError, log_exception
 from tripsage_core.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)

@@ -6,26 +6,51 @@ including memory storage, retrieval, search, and AI-powered contextual understan
 """
 
 from datetime import datetime, timedelta, timezone
+from enum import Enum
 from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
 import pytest
 
-from tripsage_core.exceptions import (
+from tripsage_core.exceptions.exceptions import (
     CoreServiceError as ServiceError,
 )
+from tripsage_core.models.db.memory import Memory
 from tripsage_core.services.business.memory_service import (
-    Memory,
-    MemoryCreateRequest,
-    MemoryImportance,
-    MemoryMetadata,
+    ConversationMemoryRequest as MemoryCreateRequest,
+)
+from tripsage_core.services.business.memory_service import (
     MemorySearchRequest,
     MemoryService,
-    MemoryStatus,
-    MemoryType,
-    MemoryUpdateRequest,
     get_memory_service,
 )
+from tripsage_core.services.business.memory_service import (
+    MemorySearchResult as MemoryMetadata,
+)
+from tripsage_core.services.business.memory_service import (
+    UserContextResponse as MemoryUpdateRequest,
+)
+
+
+# Define mock enums for testing
+class MemoryType(str, Enum):
+    PREFERENCE = "preference"
+    FACTUAL = "factual"
+    BEHAVIORAL = "behavioral"
+    GOAL = "goal"
+
+
+class MemoryImportance(str, Enum):
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+    CRITICAL = "critical"
+
+
+class MemoryStatus(str, Enum):
+    ACTIVE = "active"
+    ARCHIVED = "archived"
+    EXPIRED = "expired"
 
 
 class TestMemoryService:

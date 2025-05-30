@@ -5,7 +5,6 @@ Service for destination-related operations in the TripSage API.
 import logging
 from typing import List, Optional
 
-from tripsage.api.core.exceptions import ResourceNotFoundError
 from tripsage.api.models.destinations import (
     Destination,
     DestinationDetails,
@@ -15,6 +14,9 @@ from tripsage.api.models.destinations import (
     PointOfInterestSearchRequest,
     PointOfInterestSearchResponse,
     SavedDestination,
+)
+from tripsage_core.exceptions.exceptions import (
+    CoreResourceNotFoundError as ResourceNotFoundError,
 )
 
 logger = logging.getLogger(__name__)

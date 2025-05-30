@@ -13,7 +13,7 @@ from uuid import uuid4
 import jwt
 import pytest
 
-from tripsage_core.exceptions import (
+from tripsage_core.exceptions.exceptions import (
     CoreAuthenticationError as AuthenticationError,
 )
 from tripsage_core.services.business.auth_service import (

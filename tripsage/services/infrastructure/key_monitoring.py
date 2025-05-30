@@ -19,8 +19,8 @@ from starlette.types import ASGIApp
 
 from tripsage.api.core.config import Settings, get_settings
 from tripsage.db.initialize import get_supabase_client
-from tripsage_core.utils.logging_utils import get_logger
 from tripsage_core.services.infrastructure import CacheService
+from tripsage_core.utils.logging_utils import get_logger
 
 # Type hints
 F = TypeVar("F", bound=Callable[..., Any])

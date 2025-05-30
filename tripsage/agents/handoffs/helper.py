@@ -20,7 +20,7 @@ except ImportError:
     Handoff = MagicMock
 from pydantic import BaseModel
 
-from tripsage.utils.error_handling import TripSageError
+from tripsage_core.utils.error_handling_utils import TripSageError
 from tripsage_core.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)

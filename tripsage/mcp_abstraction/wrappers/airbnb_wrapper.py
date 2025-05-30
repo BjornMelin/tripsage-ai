@@ -8,7 +8,6 @@ mapping user-friendly method names to actual Airbnb MCP client methods.
 from typing import Dict, List
 
 from tripsage.clients.airbnb_mcp_client import AirbnbMCPClient
-from tripsage.config.app_settings import settings
 from tripsage.mcp_abstraction.base_wrapper import BaseMCPWrapper
 
 

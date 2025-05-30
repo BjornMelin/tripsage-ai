@@ -253,9 +253,9 @@ def mock_settings_and_redis(monkeypatch):
     monkeypatch.setenv("ANTHROPIC_API_KEY", "test_anthropic_key")
 
     # Create a comprehensive mock settings object
-    from tripsage.config.app_settings import AppSettings
+    from tripsage_core.config.base_app_settings import CoreAppSettings
 
-    mock_settings = AppSettings()
+    mock_settings = CoreAppSettings()
 
     # Mock basic settings
     mock_settings.environment = "test"
@@ -285,12 +285,18 @@ def mock_settings_and_redis(monkeypatch):
 
     # Apply all the patches we need
     with (
-        patch("tripsage.config.app_settings.AppSettings", return_value=mock_settings),
+        patch(
+            "tripsage_core.config.base_app_settings.CoreAppSettings",
+            return_value=mock_settings,
+        ),
+        patch(
+            "tripsage_core.config.base_app_settings.get_settings",
+            return_value=mock_settings,
+        ),
         patch("tripsage.config.app_settings.settings", mock_settings),
         patch("redis.asyncio.from_url", mock_from_url),
         patch("redis.from_url", mock_from_url),
-        patch("tripsage.utils.cache.redis", redis_mock),
-        patch("tripsage.utils.cache.settings", mock_settings),
+        # patch("tripsage_core.utils.cache_utils.redis", redis_mock),  # Not needed - cache_utils doesn't import redis
     ):
         yield {
             "settings": mock_settings,

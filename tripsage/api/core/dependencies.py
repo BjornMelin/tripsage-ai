@@ -13,7 +13,6 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 
 from tripsage.api.core.config import get_settings
 from tripsage.mcp_abstraction import MCPManager, mcp_manager
-from tripsage_core.utils.session_utils import initialize_session_memory
 from tripsage_core.services.infrastructure import (
     CacheService,
     DatabaseService,
@@ -22,6 +21,7 @@ from tripsage_core.services.infrastructure import (
 from tripsage_core.services.infrastructure import (
     get_database_service as get_core_database_service,
 )
+from tripsage_core.utils.session_utils import initialize_session_memory
 
 # Database configuration
 _engine = None

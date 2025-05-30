@@ -13,7 +13,6 @@ from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from tripsage.api.core.config import get_settings
-from tripsage.api.core.exceptions import TripSageException
 from tripsage.api.core.openapi import custom_openapi
 from tripsage.api.middlewares.auth import AuthMiddleware
 from tripsage.api.middlewares.logging import LoggingMiddleware
@@ -36,6 +35,7 @@ from tripsage.api.services.key_monitoring import (
     KeyOperationRateLimitMiddleware,
 )
 from tripsage.mcp_abstraction import mcp_manager
+from tripsage_core.exceptions.exceptions import CoreTripSageError as TripSageException
 
 logger = logging.getLogger(__name__)
 

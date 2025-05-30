@@ -27,7 +27,6 @@ except ImportError:
     AsyncConnectionPool = None
     POSTGRES_AVAILABLE = False
 
-from tripsage.config.app_settings import settings
 
 logger = logging.getLogger(__name__)
 

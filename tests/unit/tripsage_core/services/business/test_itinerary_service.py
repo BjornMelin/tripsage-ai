@@ -12,19 +12,19 @@ from uuid import uuid4
 
 import pytest
 
-from tripsage_core.exceptions import (
+from tripsage_core.exceptions.exceptions import (
     CoreServiceError as ServiceError,
 )
-from tripsage_core.exceptions import (
+from tripsage_core.exceptions.exceptions import (
     CoreValidationError as ValidationError,
 )
 from tripsage_core.services.business.itinerary_service import (
-    ActivityType,
     ConflictType,
     Itinerary,
     ItineraryCreateRequest,
     ItineraryDay,
     ItineraryItem,
+    ItineraryItemType,
     ItineraryService,
     ItineraryStatus,
     ItineraryUpdateRequest,
@@ -113,7 +113,7 @@ class TestItineraryService:
             id=str(uuid4()),
             title="Visit Eiffel Tower",
             description="Iconic iron tower and symbol of Paris",
-            activity_type=ActivityType.SIGHTSEEING,
+            activity_type=ItineraryItemType.SIGHTSEEING,
             location={
                 "name": "Eiffel Tower",
                 "address": "Champ de Mars, 5 Avenue Anatole France, 75007 Paris",
@@ -429,7 +429,7 @@ class TestItineraryService:
         overlapping_item = ItineraryItem(
             id=str(uuid4()),
             title="Overlapping Activity",
-            activity_type=ActivityType.DINING,
+            activity_type=ItineraryItemType.DINING,
             start_time=sample_itinerary.days[0].items[0].start_time,
             end_time=sample_itinerary.days[0].items[0].end_time + timedelta(hours=1),
             duration=timedelta(hours=3),
