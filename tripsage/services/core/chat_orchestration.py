@@ -10,20 +10,21 @@ import json
 import time
 from typing import Any, Dict, List, Optional
 
+from tripsage.mcp_abstraction.manager import MCPManager
 from tripsage.services.core.tool_calling_service import (
     ToolCallRequest,
     ToolCallResponse,
     ToolCallService,
 )
+from tripsage_core.exceptions import CoreTripSageError
 from tripsage_core.services.infrastructure import get_database_service
 from tripsage_core.utils.decorator_utils import with_error_handling
-from tripsage_core.utils.error_handling_utils import TripSageError
 from tripsage_core.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)
 
 
-class ChatOrchestrationError(TripSageError):
+class ChatOrchestrationError(CoreTripSageError):
     """Error raised when chat orchestration operations fail."""
 
     pass
@@ -36,6 +37,7 @@ class ChatOrchestrationService:
         """Initialize the chat orchestration service."""
         self.database = None  # Will be initialized async
         self.tool_call_service = ToolCallService()
+        self.mcp_manager = MCPManager()
         self.logger = logger
 
     async def _ensure_database(self):

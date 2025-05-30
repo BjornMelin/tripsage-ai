@@ -24,17 +24,17 @@ from tripsage.api.routers import (
     destinations,
     flights,
     health,
-    itineraries,
+    # itineraries,  # Temporarily disabled due to model recursion issues
     keys,
     memory,
     trips,
     websocket,
 )
-from tripsage.api.services.key_monitoring import (
+from tripsage.mcp_abstraction import mcp_manager
+from tripsage.services.infrastructure.key_monitoring import (
     KeyMonitoringService,
     KeyOperationRateLimitMiddleware,
 )
-from tripsage.mcp_abstraction import mcp_manager
 from tripsage_core.exceptions.exceptions import CoreTripSageError as TripSageException
 
 logger = logging.getLogger(__name__)
@@ -188,9 +188,9 @@ def create_app() -> FastAPI:
     app.include_router(
         destinations.router, prefix="/api/destinations", tags=["destinations"]
     )
-    app.include_router(
-        itineraries.router, prefix="/api/itineraries", tags=["itineraries"]
-    )
+    # app.include_router(
+    #     itineraries.router, prefix="/api/itineraries", tags=["itineraries"]
+    # )  # Temporarily disabled
     app.include_router(memory.router, prefix="/api", tags=["memory"])
     app.include_router(websocket.router, prefix="/api", tags=["websocket"])
 

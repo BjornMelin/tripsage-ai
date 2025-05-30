@@ -12,8 +12,10 @@ from typing import Dict, List
 
 import pytest
 
-from tripsage.services.google_maps_service import get_google_maps_service
-from tripsage.services.location_service import get_location_service
+from tripsage.services.core.location_service import get_location_service
+from tripsage_core.services.external_apis.google_maps_service import (
+    get_google_maps_service,
+)
 
 
 class TestGoogleMapsPerformance:

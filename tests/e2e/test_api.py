@@ -17,8 +17,9 @@ import httpx
 import uvicorn
 from dotenv import load_dotenv
 from pydantic import BaseModel
-from src.api.main import app
-from src.db.initialize import initialize_database
+
+from tripsage.api.main import app
+from tripsage.db.initialize import initialize_databases
 
 # Add the project root to the path so we can import from src
 script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -66,7 +67,7 @@ class TestFlight(BaseModel):
 async def initialize_db():
     """Initialize the database connection."""
     print("Initializing database...")
-    success = await initialize_database(run_migrations_on_startup=False)
+    success = await initialize_databases(run_migrations_on_startup=False)
     if not success:
         print("Failed to initialize database")
         sys.exit(1)

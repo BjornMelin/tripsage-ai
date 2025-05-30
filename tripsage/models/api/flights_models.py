@@ -386,7 +386,7 @@ class PaymentRequest(BaseModel):
 
     model_config = ConfigDict(populate_by_name=True)
 
-    type: PaymentType = PaymentType.INSTANT
+    type: PaymentType = PaymentType.CARD
     amount: Decimal = Field(..., decimal_places=2)
     currency: str = Field(..., pattern="^[A-Z]{3}$")
 

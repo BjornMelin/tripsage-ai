@@ -20,8 +20,8 @@ from tripsage.agents.chat import ChatAgent
 from tripsage.api.core.dependencies import get_db, get_session_memory, verify_api_key
 from tripsage.api.middlewares.auth import get_current_user
 from tripsage.api.models.chat import ToolCall
-from tripsage.api.services.chat_service import ChatService, RateLimiter
-from tripsage_core.models.db.user import UserDB
+from tripsage.services.core.chat_service import ChatService, RateLimiter
+from tripsage_core.models.db.user import User as UserDB
 
 logger = logging.getLogger(__name__)
 

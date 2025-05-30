@@ -116,7 +116,7 @@ async def create_travel_plan(params: Dict[str, Any]) -> Dict[str, Any]:
         # Create memory entities for the plan
         # Using Mem0 direct SDK integration for memory management
         try:
-            from tripsage.services.memory_service import TripSageMemoryService
+            from tripsage.services.core.memory_service import TripSageMemoryService
 
             # Initialize direct Mem0 service
             memory_service = TripSageMemoryService()
@@ -135,8 +135,11 @@ async def create_travel_plan(params: Dict[str, Any]) -> Dict[str, Any]:
                 plan_memory += f" with budget ${plan_input.budget}"
 
             # Add the memory using Mem0
-            await memory_service.add_memory(
-                message=plan_memory,
+            await memory_service.add_conversation_memory(
+                messages=[
+                    {"role": "system", "content": "Travel plan created"},
+                    {"role": "user", "content": plan_memory}
+                ],
                 user_id=plan_input.user_id,
                 metadata={
                     "plan_id": plan_id,
@@ -214,7 +217,7 @@ async def update_travel_plan(params: Dict[str, Any]) -> Dict[str, Any]:
         # Update memory entity
         # Using Mem0 direct SDK integration for memory management
         try:
-            from tripsage.services.memory_service import TripSageMemoryService
+            from tripsage.services.core.memory_service import TripSageMemoryService
 
             # Initialize direct Mem0 service
             memory_service = TripSageMemoryService()
@@ -240,8 +243,11 @@ async def update_travel_plan(params: Dict[str, Any]) -> Dict[str, Any]:
                 update_memory += f" with changes: {', '.join(update_details)}"
 
                 # Add the memory update using Mem0
-                await memory_service.add_memory(
-                    message=update_memory,
+                await memory_service.add_conversation_memory(
+                    messages=[
+                        {"role": "system", "content": "Travel plan updated"},
+                        {"role": "user", "content": update_memory}
+                    ],
                     user_id=update_input.user_id,
                     metadata={
                         "plan_id": update_input.plan_id,
@@ -618,7 +624,7 @@ async def save_travel_plan(params: Dict[str, Any]) -> Dict[str, Any]:
         # Update knowledge graph
         # Using Mem0 direct SDK integration for memory management
         try:
-            from tripsage.services.memory_service import TripSageMemoryService
+            from tripsage.services.core.memory_service import TripSageMemoryService
 
             # Initialize direct Mem0 service
             memory_service = TripSageMemoryService()
@@ -632,8 +638,11 @@ async def save_travel_plan(params: Dict[str, Any]) -> Dict[str, Any]:
                     f"finalized on {finalization_time}"
                 )
 
-                await memory_service.add_memory(
-                    message=finalize_memory,
+                await memory_service.add_conversation_memory(
+                    messages=[
+                        {"role": "system", "content": "Travel plan finalized"},
+                        {"role": "user", "content": finalize_memory}
+                    ],
                     user_id=user_id,
                     metadata={
                         "plan_id": plan_id,
@@ -659,8 +668,11 @@ async def save_travel_plan(params: Dict[str, Any]) -> Dict[str, Any]:
                         f"Travel plan includes: {', '.join(component_memories)}"
                     )
 
-                    await memory_service.add_memory(
-                        message=components_memory,
+                    await memory_service.add_conversation_memory(
+                        messages=[
+                            {"role": "system", "content": "Travel plan components saved"},
+                            {"role": "user", "content": components_memory}
+                        ],
                         user_id=user_id,
                         metadata={
                             "plan_id": plan_id,
