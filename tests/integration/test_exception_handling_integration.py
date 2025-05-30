@@ -16,7 +16,9 @@ from tripsage_core.exceptions.exceptions import (
     CoreAuthenticationError,
     CoreDatabaseError,
     CoreExternalAPIError,
+    CoreResourceNotFoundError,
     CoreServiceError,
+    CoreValidationError,
 )
 
 

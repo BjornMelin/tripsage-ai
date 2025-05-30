@@ -15,7 +15,6 @@ import pytest
 from tripsage_core.services.business.memory_service import (
     MemorySearchResult,
     MemoryService,
-    MemoryServiceAdapter,
 )
 
 
@@ -30,7 +29,7 @@ class TestSpecificCoverageLines:
         service.memory = MagicMock()
 
         # Should return early without calling Memory.from_config
-        with patch("tripsage.services.memory_service.Memory") as mock_memory:
+        with patch("mem0.Memory") as mock_memory:
             await service.connect()
             mock_memory.from_config.assert_not_called()
 
@@ -114,13 +113,10 @@ class TestSpecificCoverageLines:
         # Mock MCP fallback method
         service._search_via_mcp = AsyncMock(return_value=[])
 
-        with patch("tripsage.services.memory_service.feature_flags") as mock_flags:
-            from tripsage_core.config.feature_flags import IntegrationMode
-
-            mock_flags.get_integration_mode.return_value = IntegrationMode.MCP
-
-            await service.search_memories("test", "user_123")
-            service._search_via_mcp.assert_called_once()
+        # Test direct memory search instead of MCP fallback
+        await service.search_memories("test", "user_123")
+        # Should use direct memory search
+        service.memory.search.assert_called()
 
     @pytest.mark.asyncio
     async def test_delete_memories_with_ids(self):
@@ -205,25 +201,19 @@ class TestSpecificCoverageLines:
         assert cache_key not in service._cache  # Should be cleaned up
 
     @pytest.mark.asyncio
-    async def test_memory_service_adapter_get_mcp_client(self):
-        """Test MemoryServiceAdapter MCP client retrieval."""
-        adapter = MemoryServiceAdapter()
+    async def test_memory_service_direct_functionality(self):
+        """Test direct memory service functionality."""
+        service = MemoryService()
+        service._connected = True
+        service.memory = MagicMock()
+        service.memory.search.return_value = {"results": []}
 
-        # Mock the MCP client retrieval
-        with patch("tripsage.services.memory_service.get_memory_service") as mock_get:
-            mock_service = MagicMock()
-            mock_get.return_value = mock_service
+        # Test direct service usage
+        from tripsage_core.services.business.memory_service import MemorySearchRequest
 
-            client = await adapter.get_mcp_client()
-            assert client is mock_service
-
-    @pytest.mark.asyncio
-    async def test_memory_service_adapter_get_direct_service(self):
-        """Test MemoryServiceAdapter direct service retrieval."""
-        adapter = MemoryServiceAdapter()
-
-        service = await adapter.get_direct_service()
-        assert isinstance(service, MemoryService)
+        search_request = MemorySearchRequest(query="test", limit=5)
+        results = await service.search_memories("user_123", search_request)
+        assert isinstance(results, list)
 
     def test_analysis_methods_with_empty_data(self):
         """Test analysis methods with empty context data."""

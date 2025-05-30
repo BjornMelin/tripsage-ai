@@ -21,6 +21,7 @@ except ImportError:
     function_tool = MagicMock
 
 from tripsage_core.config.base_app_settings import get_settings
+from tripsage_core.exceptions.exceptions import CoreTripSageError
 from tripsage_core.utils.error_handling_utils import log_exception
 from tripsage_core.utils.logging_utils import get_logger
 

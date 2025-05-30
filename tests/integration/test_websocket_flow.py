@@ -339,7 +339,8 @@ class TestWebSocketFlow:
                     websocket.send_text(subscribe_message.model_dump_json())
                     websocket.receive_text()  # Consume subscribe response
 
-                    # Trigger a broadcast (this would normally come from another part of the system)
+                    # Trigger a broadcast (this would normally come from another part
+                    # of the system)
                     broadcast_message = WebSocketMessage(
                         type=WebSocketEventType.CHAT_MESSAGE,
                         data=ChatMessageEvent(
@@ -352,8 +353,10 @@ class TestWebSocketFlow:
                     # Send broadcast message
                     websocket.send_text(broadcast_message.model_dump_json())
 
-                    # In a real scenario, this would trigger broadcasts to all connected clients
-                    # For testing, we verify the manager's broadcast method would be called
+                    # In a real scenario, this would trigger broadcasts to all
+                    # connected clients
+                    # For testing, we verify the manager's broadcast method would be
+                    # called
 
     def test_websocket_error_handling(self, client, mock_user, mock_websocket_manager):
         """Test WebSocket error handling and recovery."""

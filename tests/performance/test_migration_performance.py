@@ -11,7 +11,7 @@ from typing import Dict, List
 
 import pytest
 
-from tripsage_core.config.feature_flags import FeatureFlags, IntegrationMode
+from tripsage.config.feature_flags import FeatureFlags, IntegrationMode
 from tripsage_core.services.infrastructure import (
     get_cache_service,
     get_database_service,

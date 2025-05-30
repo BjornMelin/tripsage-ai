@@ -7,7 +7,7 @@ from pathlib import Path
 tripsage_core_path = Path("tripsage_core")
 core_modules = set()
 
-for root, dirs, files in os.walk(tripsage_core_path):
+for root, _dirs, files in os.walk(tripsage_core_path):
     # Convert path to module format (tripsage_core.module.submodule)
     rel_path = Path(root).relative_to(tripsage_core_path)
     module_path = "tripsage_core." + ".".join(rel_path.parts)

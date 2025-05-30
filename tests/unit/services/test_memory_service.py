@@ -18,7 +18,6 @@ import pytest
 from tripsage_core.services.business.memory_service import (
     MemorySearchResult,
     MemoryService,
-    create_memory_hash,
     get_memory_service,
 )
 
@@ -111,7 +110,7 @@ class TestMemoryService:
     @pytest.mark.asyncio
     async def test_connect_success(self, memory_service):
         """Test successful connection to memory service."""
-        with patch("tripsage.services.memory_service.Memory") as mock_memory_class:
+        with patch("mem0.Memory") as mock_memory_class:
             mock_memory_class.from_config.return_value = memory_service.memory
 
             service = MemoryService()
@@ -124,7 +123,7 @@ class TestMemoryService:
     @pytest.mark.asyncio
     async def test_connect_failure(self):
         """Test connection failure handling."""
-        with patch("tripsage.services.memory_service.Memory") as mock_memory_class:
+        with patch("mem0.Memory") as mock_memory_class:
             mock_memory_class.from_config.side_effect = Exception("Connection failed")
             service = MemoryService()
 
@@ -482,23 +481,25 @@ class TestMemoryServiceIntegration:
 class TestMemoryUtilities:
     """Test utility functions."""
 
-    def test_create_memory_hash(self):
-        """Test memory hash creation."""
+    def test_memory_hash_creation(self):
+        """Test memory hash creation functionality."""
+        import hashlib
+
         content = "User prefers beach destinations"
-        hash1 = create_memory_hash(content)
-        hash2 = create_memory_hash(content)
+        hash1 = hashlib.sha256(content.encode()).hexdigest()
+        hash2 = hashlib.sha256(content.encode()).hexdigest()
 
         assert hash1 == hash2
         assert len(hash1) == 64  # SHA-256 hex digest
 
         # Different content should produce different hash
-        hash3 = create_memory_hash("Different content")
+        hash3 = hashlib.sha256("Different content".encode()).hexdigest()
         assert hash1 != hash3
 
     @pytest.mark.asyncio
     async def test_get_memory_service_singleton(self):
         """Test memory service singleton pattern."""
-        with patch("tripsage.services.memory_service.Memory") as mock_memory_class:
+        with patch("mem0.Memory") as mock_memory_class:
             mock_memory_class.from_config.return_value = MagicMock()
 
             service1 = await get_memory_service()

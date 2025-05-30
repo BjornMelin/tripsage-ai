@@ -18,7 +18,7 @@ from tripsage.api.models.api_key import (
     ApiKeyValidateResponse,
 )
 from tripsage.api.services.key import KeyService
-from tripsage_core.services.infrastructure.key_monitoring import (
+from tripsage_core.services.infrastructure.key_monitoring_service import (
     KeyMonitoringService,
     check_key_expiration,
     get_key_health_metrics,

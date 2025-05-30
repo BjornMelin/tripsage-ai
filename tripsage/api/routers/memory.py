@@ -14,6 +14,7 @@ from typing import Dict, List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 
+from tripsage.config.feature_flags import IntegrationMode, feature_flags
 from tripsage.tools.memory_tools import (
     ConversationMessage,
     add_conversation_memory,
@@ -21,7 +22,6 @@ from tripsage.tools.memory_tools import (
     search_user_memories,
     update_user_preferences,
 )
-from tripsage_core.config.feature_flags import IntegrationMode, feature_flags
 from tripsage_core.services.business.memory_service import MemoryService
 
 router = APIRouter(prefix="/memory", tags=["memory"])

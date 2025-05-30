@@ -11,7 +11,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from tripsage_core.services.business.memory_service import (
-    ConversationMemory,
+    ConversationMemoryRequest,
     MemorySearchResult,
     MemoryService,
 )
@@ -286,19 +286,17 @@ class TestMemoryServiceCoverage:
             mock_connect.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_feature_flag_integration(self, service_with_mocks):
-        """Test feature flag switching between MCP and direct SDK."""
-        # Test direct SDK path (default)
-        with patch("tripsage.services.memory_service.feature_flags") as mock_flags:
-            from tripsage_core.config.feature_flags import IntegrationMode
+    async def test_memory_service_direct_integration(self, service_with_mocks):
+        """Test direct memory service integration."""
+        # Test direct memory search functionality
+        from tripsage_core.services.business.memory_service import MemorySearchRequest
 
-            mock_flags.get_integration_mode.return_value = IntegrationMode.DIRECT
+        search_request = MemorySearchRequest(query="test", limit=5)
+        results = await service_with_mocks.search_memories("user_123", search_request)
+        assert isinstance(results, list)
 
-            results = await service_with_mocks.search_memories("test", "user_123")
-            assert isinstance(results, list)
-
-            # Verify direct memory search was called
-            service_with_mocks.memory.search.assert_called()
+        # Verify direct memory search was called
+        service_with_mocks.memory.search.assert_called()
 
     @pytest.mark.asyncio
     async def test_metadata_enhancement(self, service_with_mocks):
@@ -357,23 +355,21 @@ class TestMemoryServiceCoverage:
 
     @pytest.mark.asyncio
     async def test_conversation_memory_model(self):
-        """Test ConversationMemory model validation."""
+        """Test ConversationMemoryRequest model validation."""
         # Test valid conversation
-        conv = ConversationMemory(
+        conv = ConversationMemoryRequest(
             messages=[
                 {"role": "user", "content": "Hello"},
                 {"role": "assistant", "content": "Hi there!"},
-            ],
-            user_id="test_user",
+            ]
         )
         assert len(conv.messages) == 2
         assert conv.session_id is None
         assert conv.metadata is None
 
         # Test with full data
-        conv = ConversationMemory(
+        conv = ConversationMemoryRequest(
             messages=[{"role": "user", "content": "Test"}],
-            user_id="test_user",
             session_id="session_123",
             metadata={"source": "chat_ui"},
         )

@@ -103,7 +103,10 @@ class TestMemoryService:
                 },
                 {
                     "role": "assistant",
-                    "content": "I'll remember your preference for boutique hotels in historic areas.",
+                    "content": (
+                        "I'll remember your preference for boutique hotels "
+                        "in historic areas."
+                    ),
                 },
             ],
             session_id=str(uuid4()),

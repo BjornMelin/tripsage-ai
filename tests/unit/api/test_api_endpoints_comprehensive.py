@@ -66,7 +66,9 @@ class TestAuthEndpoints:
     def test_user_create_model_email_validation(self):
         """Test UserCreate email validation."""
         # Test invalid email format
-        with pytest.raises(Exception):  # Pydantic validation error
+        from pydantic import ValidationError
+
+        with pytest.raises(ValidationError):  # Pydantic validation error
             UserCreate(
                 email="invalid-email", password="password123", full_name="Test User"
             )
@@ -74,7 +76,9 @@ class TestAuthEndpoints:
     def test_user_create_model_password_requirements(self):
         """Test UserCreate password requirements."""
         # Test minimum password length
-        with pytest.raises(Exception):  # Pydantic validation error
+        from pydantic import ValidationError
+
+        with pytest.raises(ValidationError):  # Pydantic validation error
             UserCreate(
                 email="test@example.com", password="short", full_name="Test User"
             )
@@ -234,7 +238,9 @@ class TestTripEndpoints:
         past_date = today - timedelta(days=30)
 
         # Test past start date
-        with pytest.raises(Exception):  # Should raise validation error
+        from pydantic import ValidationError
+
+        with pytest.raises(ValidationError):  # Should raise validation error
             TripCreate(
                 name="Past Trip",
                 start_date=past_date,
@@ -249,7 +255,9 @@ class TestTripEndpoints:
         start_date = today + timedelta(days=30)
         end_date = start_date - timedelta(days=5)  # End before start
 
-        with pytest.raises(Exception):  # Should raise validation error
+        from pydantic import ValidationError
+
+        with pytest.raises(ValidationError):  # Should raise validation error
             TripCreate(
                 name="Invalid Trip",
                 start_date=start_date,
@@ -619,7 +627,10 @@ class TestChatEndpoints:
         mock_response = {
             "message_id": "msg_456",
             "session_id": "chat_session_123",
-            "content": "I'd be happy to help you plan your trip to Japan! What's your budget and preferred travel dates?",
+            "content": (
+                "I'd be happy to help you plan your trip to Japan! "
+                "What's your budget and preferred travel dates?"
+            ),
             "message_type": "assistant",
             "created_at": datetime.now(),
             "intent": {"primary_intent": "trip_planning", "confidence": 0.95},
@@ -683,7 +694,10 @@ class TestChatEndpoints:
             },
             {
                 "message_id": "msg_2",
-                "content": "I'd be happy to help you plan your trip! Where would you like to go?",
+                "content": (
+                    "I'd be happy to help you plan your trip! "
+                    "Where would you like to go?"
+                ),
                 "message_type": "assistant",
                 "created_at": datetime.now() - timedelta(minutes=9),
             },

@@ -12,7 +12,7 @@ from typing import List
 import pytest
 from pytest_benchmark.fixture import BenchmarkFixture
 
-from tripsage_core.config.feature_flags import IntegrationMode, feature_flags
+from tripsage.config.feature_flags import IntegrationMode, feature_flags
 from tripsage_core.services.infrastructure import get_cache_service
 
 

@@ -590,9 +590,10 @@ class TestBaseAgent:
         base_agent.register_tool({})
         assert len(base_agent._tools) == 0
 
-        # Test registering lambda
-        lambda_tool = lambda x: x * 2
-        lambda_tool.__name__ = "lambda_tool"
+        # Test registering lambda (converted to def)
+        def lambda_tool(x):
+            return x * 2
+
         base_agent.register_tool(lambda_tool)
         assert len(base_agent._tools) == 1
 
