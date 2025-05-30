@@ -18,7 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from tripsage.agents.chat import ChatAgent
 from tripsage.api.main import app
 from tripsage_core.models.db.chat import ChatMessageDB, ChatSessionDB
-from tripsage_core.models.db.user import UserDB
+from tripsage_core.models.db.user import User
 from tripsage_core.services.business.chat_service import ChatService as CoreChatService
 
 
@@ -33,7 +33,7 @@ class TestChatSessionFlow:
     @pytest.fixture
     def mock_user(self):
         """Mock user for testing."""
-        return UserDB(
+        return User(
             id=uuid4(),
             email="test@example.com",
             username="testuser",

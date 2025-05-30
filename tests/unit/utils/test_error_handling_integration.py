@@ -12,14 +12,8 @@ from tripsage_core.exceptions import (
     CoreValidationError,
 )
 from tripsage_core.utils.error_handling_utils import (
-    APIError,
-    DatabaseError,
-    MCPError,
-    # Backwards compatibility aliases
-    TripSageError,
     # Error context manager
     TripSageErrorContext,
-    ValidationError,
     create_api_error,
     create_database_error,
     # Factory functions
@@ -47,7 +41,7 @@ class TestBackwardsCompatibility:
     def test_alias_functionality(self):
         """Test that aliases work identically to core exceptions."""
         # Test with alias
-        alias_exc = TripSageError("Test message", "TEST_CODE")
+        alias_exc = CoreTripSageError("Test message", "TEST_CODE")
 
         # Test with core exception
         core_exc = CoreTripSageError("Test message", "TEST_CODE")
