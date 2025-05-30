@@ -244,6 +244,10 @@ async def run_migrations_cli(
     return await runner.run_migrations(up_to=up_to, dry_run=dry_run)
 
 
+# Alias for backward compatibility
+run_migrations = run_migrations_cli
+
+
 if __name__ == "__main__":
     """Run migrations when executed directly."""
     import argparse
