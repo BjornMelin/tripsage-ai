@@ -267,8 +267,8 @@ def mock_settings_and_redis(monkeypatch):
     mock_settings.database.supabase_anon_key = "test_anon_key"
 
     # Mock memory service (Mem0)
-    mock_settings.memory.service_type = "mem0"
-    mock_settings.memory.api_key = "test_mem0_key"
+    mock_settings.mem0.vector_store_type = "pgvector"
+    mock_settings.mem0.embedding_model = "text-embedding-3-small"
 
     # Mock Redis client
     mock_redis_client = MagicMock()

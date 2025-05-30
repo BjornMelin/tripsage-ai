@@ -10,9 +10,8 @@ import pytest_asyncio
 
 from tripsage.models.api.weather_models import (
     AirQualityIndex,
-    WeatherUnits,
 )
-from tripsage_core.services.api.weather_service import OpenWeatherMapService
+from tripsage_core.services.external_apis.weather_service import WeatherService
 
 
 @pytest.fixture
@@ -36,8 +35,10 @@ def mock_redis():
 @pytest_asyncio.fixture
 async def weather_service(mock_settings, mock_redis):
     """Create weather service instance for testing."""
-    with patch("tripsage.services.api.weather_service.settings", mock_settings):
-        service = OpenWeatherMapService()
+    with patch(
+        "tripsage_core.services.external_apis.weather_service.settings", mock_settings
+    ):
+        service = WeatherService()
         service.redis = mock_redis
         return service
 
@@ -50,14 +51,17 @@ async def test_weather_service_context_manager(weather_service):
         assert hasattr(service, "client")
 
 
-class TestOpenWeatherMapService:
+class TestWeatherService:
     """Test cases for OpenWeatherMap service."""
 
     @pytest.mark.asyncio
     async def test_init_with_api_key(self, mock_settings):
         """Test service initialization with API key."""
-        with patch("tripsage.services.api.weather_service.settings", mock_settings):
-            service = OpenWeatherMapService()
+        with patch(
+            "tripsage_core.services.external_apis.weather_service.settings",
+            mock_settings,
+        ):
+            service = WeatherService()
             assert service.api_key == "test_api_key"
             assert service.base_url == "https://api.openweathermap.org/data/2.5"
             assert service.base_url_v3 == "https://api.openweathermap.org/data/3.0"
@@ -65,12 +69,14 @@ class TestOpenWeatherMapService:
     @pytest.mark.asyncio
     async def test_init_without_api_key(self):
         """Test service initialization without API key."""
-        with patch("tripsage.services.api.weather_service.settings") as mock_settings:
+        with patch(
+            "tripsage_core.services.external_apis.weather_service.settings"
+        ) as mock_settings:
             mock_settings.OPENWEATHERMAP_API_KEY = None
             with pytest.raises(
                 ValueError, match="OPENWEATHERMAP_API_KEY not configured"
             ):
-                OpenWeatherMapService()
+                WeatherService()
 
     @pytest.mark.asyncio
     async def test_get_current_weather(self, weather_service, httpx_mock):
@@ -1029,7 +1035,7 @@ class TestOpenWeatherMapService:
         )
 
         weather = await weather_service.get_current_weather(
-            40.0, -74.0, units=WeatherUnits.imperial
+            40.0, -74.0, units="imperial"
         )
 
         assert weather.temperature == 68.0  # Fahrenheit
