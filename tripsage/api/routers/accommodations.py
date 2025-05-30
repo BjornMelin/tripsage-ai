@@ -20,6 +20,9 @@ from tripsage.api.models.accommodations import (
     SavedAccommodationRequest,
     SavedAccommodationResponse,
 )
+
+# Note: AccommodationService needs to be refactored to use the new pattern
+# For now, keeping the old import until it's refactored
 from tripsage.api.services.accommodation import AccommodationService
 from tripsage_core.exceptions.exceptions import (
     CoreResourceNotFoundError as ResourceNotFoundError,

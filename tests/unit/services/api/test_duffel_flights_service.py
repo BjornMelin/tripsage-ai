@@ -13,13 +13,13 @@ from tripsage.models.api.flights_models import (
     Airline,
     CabinClass,
     FlightOffer,
-    FlightSegment,
-    FlightSlice,
     Passenger,
     PassengerType,
     PaymentRequest,
+    Segment,
+    Slice,
 )
-from tripsage_core.services.api.flights_service import DuffelFlightsService
+from tripsage_core.services.external_apis.duffel_http_client import DuffelHTTPClient
 
 
 @pytest.fixture
@@ -46,8 +46,11 @@ def mock_redis():
 @pytest_asyncio.fixture
 async def flights_service(mock_settings, mock_redis):
     """Create flights service instance for testing."""
-    with patch("tripsage.services.api.flights_service.settings", mock_settings):
-        service = DuffelFlightsService()
+    with patch(
+        "tripsage_core.services.external_apis.duffel_http_client.settings",
+        mock_settings,
+    ):
+        service = DuffelHTTPClient()
         service.redis = mock_redis
         return service
 
@@ -60,14 +63,17 @@ async def test_duffel_service_context_manager(flights_service):
         assert hasattr(service, "client")
 
 
-class TestDuffelFlightsService:
+class TestDuffelHTTPClient:
     """Test cases for Duffel Flights service."""
 
     @pytest.mark.asyncio
     async def test_init_with_token(self, mock_settings):
         """Test service initialization with API token."""
-        with patch("tripsage.services.api.flights_service.settings", mock_settings):
-            service = DuffelFlightsService()
+        with patch(
+            "tripsage_core.services.external_apis.duffel_http_client.settings",
+            mock_settings,
+        ):
+            service = DuffelHTTPClient()
             assert service.api_token == "test_api_token"
             assert service.test_mode is True
             assert service.base_url == "https://api.duffel.com"
@@ -75,10 +81,12 @@ class TestDuffelFlightsService:
     @pytest.mark.asyncio
     async def test_init_without_token(self):
         """Test service initialization without API token."""
-        with patch("tripsage.services.api.flights_service.settings") as mock_settings:
+        with patch(
+            "tripsage_core.services.external_apis.duffel_http_client.settings"
+        ) as mock_settings:
             mock_settings.DUFFEL_API_TOKEN = None
             with pytest.raises(ValueError, match="DUFFEL_API_TOKEN not configured"):
-                DuffelFlightsService()
+                DuffelHTTPClient()
 
     @pytest.mark.asyncio
     async def test_search_airports(self, flights_service, httpx_mock):
@@ -647,10 +655,10 @@ class TestDuffelFlightsService:
                 total_currency="USD",
                 owner=Airline(id="arl_1", iata_code="AA", name="American"),
                 slices=[
-                    FlightSlice(
+                    Slice(
                         id="sli_1",
                         segments=[
-                            FlightSegment(
+                            Segment(
                                 id="seg_1",
                                 departing_at=(
                                     datetime.now() + timedelta(hours=1)
@@ -672,10 +680,10 @@ class TestDuffelFlightsService:
                 total_currency="USD",
                 owner=Airline(id="arl_2", iata_code="UA", name="United"),
                 slices=[
-                    FlightSlice(
+                    Slice(
                         id="sli_2",
                         segments=[
-                            FlightSegment(
+                            Segment(
                                 id="seg_2",
                                 departing_at=(
                                     datetime.now() + timedelta(hours=2)
@@ -697,10 +705,10 @@ class TestDuffelFlightsService:
                 total_currency="USD",
                 owner=Airline(id="arl_3", iata_code="DL", name="Delta"),
                 slices=[
-                    FlightSlice(
+                    Slice(
                         id="sli_3",
                         segments=[
-                            FlightSegment(
+                            Segment(
                                 id="seg_3",
                                 departing_at=(
                                     datetime.now() + timedelta(hours=3)
@@ -711,7 +719,7 @@ class TestDuffelFlightsService:
                                 ).isoformat()
                                 + "Z",
                             ),
-                            FlightSegment(
+                            Segment(
                                 id="seg_4",
                                 departing_at=(
                                     datetime.now() + timedelta(hours=7)
@@ -754,10 +762,10 @@ class TestDuffelFlightsService:
                 total_currency="USD",
                 owner=Airline(id="arl_1", iata_code="AA", name="American"),
                 slices=[
-                    FlightSlice(
+                    Slice(
                         id="sli_1",
                         segments=[
-                            FlightSegment(
+                            Segment(
                                 id="seg_1",
                                 operating_carrier=Airline(
                                     id="arl_1", iata_code="AA", name="American"
@@ -782,10 +790,10 @@ class TestDuffelFlightsService:
                 total_currency="USD",
                 owner=Airline(id="arl_2", iata_code="UA", name="United"),
                 slices=[
-                    FlightSlice(
+                    Slice(
                         id="sli_2",
                         segments=[
-                            FlightSegment(
+                            Segment(
                                 id="seg_2",
                                 operating_carrier=Airline(
                                     id="arl_2", iata_code="UA", name="United"

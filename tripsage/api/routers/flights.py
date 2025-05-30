@@ -21,6 +21,9 @@ from tripsage.api.models.flights import (
     SavedFlightRequest,
     SavedFlightResponse,
 )
+
+# Note: FlightService needs to be refactored to use the new pattern
+# For now, keeping the old import until it's refactored
 from tripsage.api.services.flight import FlightService
 from tripsage_core.exceptions.exceptions import (
     CoreResourceNotFoundError as ResourceNotFoundError,

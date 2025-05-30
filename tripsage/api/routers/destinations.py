@@ -17,10 +17,21 @@ from tripsage.api.models.destinations import (
     PointOfInterestSearchResponse,
     SavedDestination,
 )
-from tripsage.api.services.destination import get_destination_service
+
+# Note: DestinationService needs to be refactored to use the new pattern
+# For now, keeping the old import until it's refactored
+from tripsage.api.services.destination import DestinationService
 from tripsage_core.exceptions.exceptions import (
     CoreResourceNotFoundError as ResourceNotFoundError,
 )
+
+_destination_service_singleton = DestinationService()
+
+
+def get_destination_service() -> DestinationService:
+    """Dependency provider for the DestinationService singleton."""
+    return _destination_service_singleton
+
 
 router = APIRouter()
 logger = logging.getLogger(__name__)

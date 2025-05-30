@@ -7,7 +7,7 @@ enabling dynamic injection of user-provided API keys into MCP operations.
 import logging
 from typing import Any, Dict, Optional
 
-from tripsage.api.services.key import KeyService
+from api.services.key_service import KeyService
 from tripsage.mcp_abstraction import mcp_manager
 from tripsage.mcp_abstraction.exceptions import MCPAuthenticationError
 
