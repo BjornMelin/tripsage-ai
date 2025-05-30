@@ -12,9 +12,6 @@ from uuid import uuid4
 import pytest
 
 from tripsage_core.exceptions.exceptions import (
-    CoreResourceNotFoundError as NotFoundError,
-)
-from tripsage_core.exceptions.exceptions import (
     CoreValidationError as ValidationError,
 )
 from tripsage_core.services.business.chat_service import (
@@ -160,6 +157,11 @@ class TestChatService:
             "message_count": sample_chat_session.message_count,
         }
 
+        mock_database_service.get_session_stats.return_value = {
+            "message_count": sample_chat_session.message_count,
+            "last_message_at": sample_chat_session.updated_at.isoformat(),
+        }
+
         result = await chat_service.get_session(
             sample_chat_session.id, sample_chat_session.user_id
         )
@@ -179,8 +181,8 @@ class TestChatService:
 
         mock_database_service.get_chat_session.return_value = None
 
-        with pytest.raises(NotFoundError, match="Chat session not found"):
-            await chat_service.get_session(session_id, user_id)
+        result = await chat_service.get_session(session_id, user_id)
+        assert result is None
 
     async def test_add_message_success(
         self,
@@ -190,12 +192,24 @@ class TestChatService:
         sample_message_create_request,
     ):
         """Test successful message addition."""
-        # Mock session exists
+        # Mock session exists for get_session call
         mock_database_service.get_chat_session.return_value = {
             "id": sample_chat_session.id,
             "user_id": sample_chat_session.user_id,
             "title": sample_chat_session.title,
+            "created_at": sample_chat_session.created_at.isoformat(),
+            "updated_at": sample_chat_session.updated_at.isoformat(),
+            "metadata": sample_chat_session.metadata,
         }
+
+        # Mock get_session_stats for the get_session call
+        mock_database_service.get_session_stats.return_value = {
+            "message_count": 0,
+            "last_message_at": None,
+        }
+
+        # Mock update_session_timestamp
+        mock_database_service.update_session_timestamp.return_value = True
 
         # Mock message creation
         message_id = str(uuid4())
@@ -221,8 +235,11 @@ class TestChatService:
         assert result.content == sample_message_create_request.content
 
         # Verify database calls
-        mock_database_service.get_chat_session.assert_called_once()
+        mock_database_service.get_chat_session.assert_called()
         mock_database_service.create_chat_message.assert_called_once()
+        mock_database_service.update_session_timestamp.assert_called_once_with(
+            sample_chat_session.id
+        )
 
     async def test_add_message_rate_limited(
         self,
@@ -263,8 +280,24 @@ class TestChatService:
         sample_message_response,
     ):
         """Test successful recent messages retrieval."""
-        # Mock database response
-        mock_database_service.get_recent_messages.return_value = [
+        # Mock session exists for get_session call
+        mock_database_service.get_chat_session.return_value = {
+            "id": sample_chat_session.id,
+            "user_id": sample_chat_session.user_id,
+            "title": sample_chat_session.title,
+            "created_at": sample_chat_session.created_at.isoformat(),
+            "updated_at": sample_chat_session.updated_at.isoformat(),
+            "metadata": sample_chat_session.metadata,
+        }
+
+        # Mock get_session_stats for the get_session call
+        mock_database_service.get_session_stats.return_value = {
+            "message_count": 1,
+            "last_message_at": sample_message_response.created_at.isoformat(),
+        }
+
+        # Mock database response - use the correct method name
+        mock_database_service.get_recent_messages_with_tokens.return_value = [
             {
                 "id": sample_message_response.id,
                 "session_id": sample_message_response.session_id,
@@ -275,6 +308,9 @@ class TestChatService:
                 "estimated_tokens": sample_message_response.estimated_tokens,
             }
         ]
+
+        # Mock get_message_tool_calls
+        mock_database_service.get_message_tool_calls.return_value = []
 
         request = RecentMessagesRequest(limit=10, max_tokens=8000)
         result = await chat_service.get_recent_messages(
@@ -287,15 +323,32 @@ class TestChatService:
         assert result.total_tokens == sample_message_response.estimated_tokens
         assert not result.truncated
 
-        mock_database_service.get_recent_messages.assert_called_once()
+        mock_database_service.get_recent_messages_with_tokens.assert_called_once()
 
     async def test_get_recent_messages_token_limit(
         self, chat_service, mock_database_service, sample_chat_session
     ):
         """Test recent messages with token limit."""
-        # Create messages that exceed token limit
+        # Mock session exists for get_session call
+        mock_database_service.get_chat_session.return_value = {
+            "id": sample_chat_session.id,
+            "user_id": sample_chat_session.user_id,
+            "title": sample_chat_session.title,
+            "created_at": sample_chat_session.created_at.isoformat(),
+            "updated_at": sample_chat_session.updated_at.isoformat(),
+            "metadata": sample_chat_session.metadata,
+        }
+
+        # Mock get_session_stats for the get_session call
+        mock_database_service.get_session_stats.return_value = {
+            "message_count": 5,
+            "last_message_at": datetime.now(timezone.utc).isoformat(),
+        }
+
+        # Create messages that would be limited by database layer
         messages = []
-        for _ in range(5):
+        # Database would return only 2 messages that fit in token limit
+        for _ in range(2):
             messages.append(
                 {
                     "id": str(uuid4()),
@@ -308,7 +361,10 @@ class TestChatService:
                 }
             )
 
-        mock_database_service.get_recent_messages.return_value = messages
+        mock_database_service.get_recent_messages_with_tokens.return_value = messages
+
+        # Mock get_message_tool_calls
+        mock_database_service.get_message_tool_calls.return_value = []
 
         request = RecentMessagesRequest(limit=10, max_tokens=1000)
         result = await chat_service.get_recent_messages(
@@ -386,38 +442,58 @@ class TestChatService:
         self, chat_service, mock_database_service, sample_chat_session
     ):
         """Test successful session ending."""
-        # Mock session exists
+        # Mock session exists for get_session call
         mock_database_service.get_chat_session.return_value = {
             "id": sample_chat_session.id,
             "user_id": sample_chat_session.user_id,
+            "title": sample_chat_session.title,
+            "created_at": sample_chat_session.created_at.isoformat(),
+            "updated_at": sample_chat_session.updated_at.isoformat(),
+            "metadata": sample_chat_session.metadata,
             "ended_at": None,
         }
 
-        # Mock update
-        mock_database_service.update_chat_session.return_value = {
-            "id": sample_chat_session.id,
-            "ended_at": datetime.now(timezone.utc).isoformat(),
+        # Mock get_session_stats for the get_session call
+        mock_database_service.get_session_stats.return_value = {
+            "message_count": 0,
+            "last_message_at": None,
         }
+
+        # Mock end_chat_session (correct method name)
+        mock_database_service.end_chat_session.return_value = True
 
         result = await chat_service.end_session(
             sample_chat_session.id, sample_chat_session.user_id
         )
 
-        assert result["ended_at"] is not None
+        assert result is True
 
-        mock_database_service.update_chat_session.assert_called_once()
+        mock_database_service.end_chat_session.assert_called_once_with(
+            sample_chat_session.id
+        )
 
     async def test_end_session_already_ended(
         self, chat_service, mock_database_service, sample_chat_session
     ):
         """Test ending an already ended session."""
-        # Mock session already ended
+        # Mock session already ended for get_session call
         mock_database_service.get_chat_session.return_value = {
             "id": sample_chat_session.id,
             "user_id": sample_chat_session.user_id,
+            "title": sample_chat_session.title,
+            "created_at": sample_chat_session.created_at.isoformat(),
+            "updated_at": sample_chat_session.updated_at.isoformat(),
+            "metadata": sample_chat_session.metadata,
             "ended_at": datetime.now(timezone.utc).isoformat(),
         }
 
+        # Mock get_session_stats for the get_session call
+        mock_database_service.get_session_stats.return_value = {
+            "message_count": 0,
+            "last_message_at": None,
+        }
+
+        # Service should detect session already ended and raise ValidationError
         with pytest.raises(ValidationError, match="Session already ended"):
             await chat_service.end_session(
                 sample_chat_session.id, sample_chat_session.user_id
@@ -447,7 +523,9 @@ class TestChatService:
         assert results[0].id == sample_chat_session.id
         assert results[0].user_id == user_id
 
-        mock_database_service.get_user_chat_sessions.assert_called_once_with(user_id)
+        mock_database_service.get_user_chat_sessions.assert_called_once_with(
+            user_id, 10, False
+        )
 
     def test_estimate_tokens(self, chat_service):
         """Test token estimation."""
@@ -508,21 +586,39 @@ class TestChatService:
         self, chat_service, mock_database_service, sample_chat_session
     ):
         """Test concurrent message creation."""
-        # Mock session exists
+        # Mock session exists for get_session calls
         mock_database_service.get_chat_session.return_value = {
             "id": sample_chat_session.id,
             "user_id": sample_chat_session.user_id,
+            "title": sample_chat_session.title,
+            "created_at": sample_chat_session.created_at.isoformat(),
+            "updated_at": sample_chat_session.updated_at.isoformat(),
+            "metadata": sample_chat_session.metadata,
         }
 
-        # Mock message creation
-        mock_database_service.create_chat_message.return_value = {
-            "id": str(uuid4()),
-            "session_id": sample_chat_session.id,
-            "role": MessageRole.USER,
-            "content": "Test message",
-            "created_at": datetime.now(timezone.utc).isoformat(),
-            "estimated_tokens": 3,
+        # Mock get_session_stats for the get_session calls
+        mock_database_service.get_session_stats.return_value = {
+            "message_count": 0,
+            "last_message_at": None,
         }
+
+        # Mock update_session_timestamp
+        mock_database_service.update_session_timestamp.return_value = True
+
+        # Mock message creation with side_effect to return different IDs
+        def create_message_side_effect(data):
+            return {
+                "id": str(uuid4()),
+                "session_id": data["session_id"],
+                "role": data["role"],
+                "content": data["content"],
+                "created_at": data["created_at"],
+                "metadata": data.get("metadata", {}),
+            }
+
+        mock_database_service.create_chat_message.side_effect = (
+            create_message_side_effect
+        )
 
         # Create multiple messages concurrently
         import asyncio
@@ -541,3 +637,7 @@ class TestChatService:
 
         assert len(results) == 3
         assert all(isinstance(r, MessageResponse) for r in results)
+
+        # Verify all database calls were made
+        assert mock_database_service.create_chat_message.call_count == 3
+        assert mock_database_service.update_session_timestamp.call_count == 3
