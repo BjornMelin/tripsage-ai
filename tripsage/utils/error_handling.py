@@ -9,9 +9,13 @@ for consistency across the entire application.
 from typing import Any, Callable, Dict, Optional, TypeVar, Union
 
 from tripsage_core.exceptions import (
+    CoreAuthenticationError,
+    CoreAuthorizationError,
     CoreDatabaseError,
     CoreExternalAPIError,
+    CoreKeyValidationError,
     CoreMCPError,
+    CoreResourceNotFoundError,
     CoreTripSageError,
     CoreValidationError,
     ErrorDetails,
@@ -25,7 +29,6 @@ from tripsage_core.exceptions import (
 from tripsage_core.exceptions import (
     with_error_handling as core_with_error_handling,
 )
-
 from tripsage_core.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)
@@ -36,11 +39,18 @@ R = TypeVar("R")
 F = TypeVar("F", bound=Callable[..., Any])
 
 # Backwards compatibility aliases - these point to the core exceptions
+# These aliases ensure existing code continues to work while using new core exceptions
 TripSageError = CoreTripSageError
+TripSageException = CoreTripSageError  # Alternative name for backwards compatibility
 MCPError = CoreMCPError
 APIError = CoreExternalAPIError
 ValidationError = CoreValidationError
 DatabaseError = CoreDatabaseError
+AuthenticationError = CoreAuthenticationError
+AuthorizationError = CoreAuthorizationError
+ResourceNotFoundError = CoreResourceNotFoundError
+NotFoundError = CoreResourceNotFoundError  # Common alias
+KeyValidationError = CoreKeyValidationError
 
 
 def format_exception(exc: Exception) -> Dict[str, Any]:

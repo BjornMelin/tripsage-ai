@@ -7,10 +7,10 @@ for better integration with Core settings and exception handling.
 
 from .chat_orchestration import ChatOrchestrationService
 from .chat_service import ChatService
-from .error_handling_service import ErrorHandlingService
+from .error_handling_service import ErrorRecoveryService as ErrorHandlingService
 from .location_service import LocationService
-from .memory_service import MemoryService
-from .tool_calling_service import ToolCallingService
+from .memory_service import TripSageMemoryService as MemoryService
+from .tool_calling_service import ToolCallService as ToolCallingService
 
 __all__ = [
     "ChatOrchestrationService",

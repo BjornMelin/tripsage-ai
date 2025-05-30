@@ -9,7 +9,6 @@ import pytest
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from tripsage.api.core.exceptions import NotFoundError, ValidationError
 from tripsage.api.services.chat_service import ChatService, RateLimiter
 from tripsage_core.models.db.chat import (
     ChatMessageDB,
@@ -18,6 +17,7 @@ from tripsage_core.models.db.chat import (
     ChatToolCallDB,
     RecentMessagesResponse,
 )
+from tripsage_core.utils.error_handling_utils import NotFoundError, ValidationError
 
 
 @pytest.fixture

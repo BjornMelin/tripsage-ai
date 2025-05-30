@@ -24,7 +24,7 @@ from tripsage.api.models.flights import (
 from tripsage.models.flight import CabinClass
 from tripsage.services.duffel_http_client import DuffelHTTPClient
 from tripsage.tools.schemas.flights import FlightSearchParams
-from tripsage.utils.error_handling import with_error_handling
+from tripsage_core.utils.error_handling_utils import with_error_handling
 
 logger = logging.getLogger(__name__)
 

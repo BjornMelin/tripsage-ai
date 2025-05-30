@@ -10,7 +10,10 @@ from typing import List
 from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings
 
-from tripsage.config.app_settings import settings as app_settings
+from tripsage_core.config.base_app_settings import get_settings
+
+# Get the core settings instance
+app_settings = get_settings()
 
 
 class APISettings(BaseSettings):

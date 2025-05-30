@@ -4,7 +4,14 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from tripsage.utils.error_handling import (
+from tripsage_core.exceptions import (
+    CoreDatabaseError,
+    CoreExternalAPIError,
+    CoreMCPError,
+    CoreTripSageError,
+    CoreValidationError,
+)
+from tripsage_core.utils.error_handling_utils import (
     APIError,
     DatabaseError,
     MCPError,
@@ -23,13 +30,6 @@ from tripsage.utils.error_handling import (
     log_exception,
     safe_execute,
     with_error_handling,
-)
-from tripsage_core.exceptions import (
-    CoreDatabaseError,
-    CoreExternalAPIError,
-    CoreMCPError,
-    CoreTripSageError,
-    CoreValidationError,
 )
 
 

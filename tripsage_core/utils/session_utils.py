@@ -372,14 +372,14 @@ async def _process_conversation_context(
 # Simple SessionMemory utility class for API dependencies
 class SessionMemory:
     """Simple session memory utility class for compatibility with existing API code.
-    
+
     This is a lightweight utility class that provides a simple interface for
     session memory operations while the full domain models handle the data storage.
     """
-    
+
     def __init__(self, session_id: str, user_id: Optional[str] = None):
         """Initialize session memory utility.
-        
+
         Args:
             session_id: Session identifier
             user_id: Optional user identifier
@@ -387,43 +387,43 @@ class SessionMemory:
         self.session_id = session_id
         self.user_id = user_id
         self._memory_data: Dict[str, Any] = {}
-    
+
     def get(self, key: str, default: Any = None) -> Any:
         """Get a value from session memory.
-        
+
         Args:
             key: Memory key
             default: Default value if key not found
-            
+
         Returns:
             Value from memory or default
         """
         return self._memory_data.get(key, default)
-    
+
     def set(self, key: str, value: Any) -> None:
         """Set a value in session memory.
-        
+
         Args:
             key: Memory key
             value: Value to store
         """
         self._memory_data[key] = value
-    
+
     def update(self, data: Dict[str, Any]) -> None:
         """Update session memory with multiple values.
-        
+
         Args:
             data: Dictionary of key-value pairs to update
         """
         self._memory_data.update(data)
-    
+
     def clear(self) -> None:
         """Clear all session memory data."""
         self._memory_data.clear()
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert session memory to dictionary.
-        
+
         Returns:
             Dictionary representation of session memory
         """

@@ -7,7 +7,6 @@ import uuid
 from datetime import datetime, timedelta
 from typing import List
 
-from tripsage.api.core.exceptions import ResourceNotFoundError
 from tripsage.api.models.itineraries import (
     Itinerary,
     ItineraryConflictCheckResponse,
@@ -25,6 +24,7 @@ from tripsage.api.models.itineraries import (
     ItineraryUpdateRequest,
     TimeSlot,
 )
+from tripsage_core.utils.error_handling_utils import ResourceNotFoundError
 
 logger = logging.getLogger(__name__)
 

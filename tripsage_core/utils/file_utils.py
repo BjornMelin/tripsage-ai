@@ -9,7 +9,7 @@ size limits, and security scanning following KISS principles.
 import hashlib
 import mimetypes
 from pathlib import Path
-from typing import Optional, Set, Tuple
+from typing import Optional, Tuple
 
 from fastapi import UploadFile
 from pydantic import BaseModel, Field

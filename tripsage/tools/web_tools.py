@@ -19,8 +19,6 @@ from typing import Any, Dict, List, Optional
 
 from agents import WebSearchTool
 
-from tripsage.utils.error_handling import log_exception
-from tripsage_core.utils.logging_utils import get_logger
 from tripsage_core.utils.cache_utils import (
     CacheStats,
     batch_cache_get,
@@ -35,6 +33,8 @@ from tripsage_core.utils.cache_utils import (
     set_cache,
 )
 from tripsage_core.utils.content_utils import ContentType
+from tripsage_core.utils.error_handling_utils import log_exception
+from tripsage_core.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)
 

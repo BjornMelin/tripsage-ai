@@ -7,35 +7,95 @@ including trip creation, itinerary management, sharing, and optimization.
 
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
+from enum import Enum
+from typing import Optional
 from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
 import pytest
 
-from tripsage_core.exceptions import (
+from tripsage_core.exceptions.exceptions import (
     CoreResourceNotFoundError as NotFoundError,
 )
-from tripsage_core.exceptions import (
+from tripsage_core.exceptions.exceptions import (
     CoreServiceError as ServiceError,
 )
-from tripsage_core.exceptions import (
+from tripsage_core.exceptions.exceptions import (
     CoreValidationError as ValidationError,
 )
 from tripsage_core.services.business.trip_service import (
-    BudgetCategory,
-    ParticipantRole,
-    Trip,
     TripBudget,
     TripCreateRequest,
-    TripItinerary,
-    TripParticipant,
-    TripPrivacy,
-    TripSearchRequest,
     TripService,
     TripStatus,
     TripUpdateRequest,
     get_trip_service,
 )
+from tripsage_core.services.business.trip_service import (
+    TripVisibility as TripPrivacy,
+)
+
+
+# Define mock classes for testing
+class BudgetCategory(str, Enum):
+    ACCOMMODATION = "accommodation"
+    TRANSPORTATION = "transportation"
+    FOOD = "food"
+    ACTIVITIES = "activities"
+
+
+class ParticipantRole(str, Enum):
+    ORGANIZER = "organizer"
+    MEMBER = "member"
+    VIEWER = "viewer"
+
+
+# Mock data classes
+from tripsage_core.models.base_core_model import TripSageModel
+
+
+class Trip(TripSageModel):
+    id: str
+    user_id: str
+    title: str
+    description: str
+    start_date: datetime
+    end_date: datetime
+    destination: str
+    status: TripStatus
+    privacy: TripPrivacy
+    created_at: datetime
+    updated_at: datetime
+    tags: list[str]
+    itinerary: "TripItinerary"
+    budget: TripBudget
+    participants: list["TripParticipant"]
+    metadata: dict
+
+
+class TripItinerary(TripSageModel):
+    trip_id: str
+    days: list
+    accommodations: list
+    flights: list
+    activities: list
+    notes: list
+
+
+class TripParticipant(TripSageModel):
+    trip_id: str
+    user_id: str
+    role: ParticipantRole
+    joined_at: datetime
+    permissions: list[str]
+
+
+class TripSearchRequest(TripSageModel):
+    query: Optional[str] = None
+    destinations: Optional[list[str]] = None
+    tags: Optional[list[str]] = None
+    status: Optional[list[TripStatus]] = None
+    limit: int = 10
 
 
 class TestTripService:
