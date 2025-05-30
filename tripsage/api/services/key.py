@@ -21,6 +21,7 @@ from tripsage.api.models.api_key import (
     ApiKeyResponse,
     ApiKeyValidateResponse,
 )
+from tripsage.mcp_abstraction import mcp_manager
 from tripsage_core.services.infrastructure.key_monitoring_service import (
     KeyMonitoringService,
     KeyOperation,
@@ -28,7 +29,6 @@ from tripsage_core.services.infrastructure.key_monitoring_service import (
     monitor_key_operation,
     secure_random_token,
 )
-from tripsage.mcp_abstraction import mcp_manager
 
 logger = logging.getLogger(__name__)
 

@@ -4,7 +4,7 @@ This module defines the database model for API keys used in the BYOK
 (Bring Your Own Key) functionality.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 from uuid import UUID
 
@@ -96,15 +96,24 @@ class ApiKeyDB(BaseModel):
     @classmethod
     def validate_expires_at(cls, v: Optional[datetime]) -> Optional[datetime]:
         """Validate expiration date is in the future."""
-        if v is not None and v <= datetime.now(datetime.UTC):
-            raise ValueError("Expiration date must be in the future")
+        if v is not None:
+            # Handle timezone-aware and timezone-naive datetime comparison
+            now = datetime.now(timezone.utc) if v.tzinfo is not None else datetime.now()
+            if v <= now:
+                raise ValueError("Expiration date must be in the future")
         return v
 
     def is_expired(self) -> bool:
         """Check if the API key is expired."""
         if self.expires_at is None:
             return False
-        return datetime.now(datetime.UTC) > self.expires_at
+        # Handle timezone-aware and timezone-naive datetime comparison
+        now = (
+            datetime.now(timezone.utc)
+            if self.expires_at.tzinfo is not None
+            else datetime.now()
+        )
+        return now > self.expires_at
 
     def is_usable(self) -> bool:
         """Check if the API key can be used."""
@@ -169,8 +178,11 @@ class ApiKeyCreate(BaseModel):
     @classmethod
     def validate_expires_at(cls, v: Optional[datetime]) -> Optional[datetime]:
         """Validate expiration date is in the future."""
-        if v is not None and v <= datetime.now(datetime.UTC):
-            raise ValueError("Expiration date must be in the future")
+        if v is not None:
+            # Handle timezone-aware and timezone-naive datetime comparison
+            now = datetime.now(timezone.utc) if v.tzinfo is not None else datetime.now()
+            if v <= now:
+                raise ValueError("Expiration date must be in the future")
         return v
 
 
@@ -220,6 +232,9 @@ class ApiKeyUpdate(BaseModel):
     @classmethod
     def validate_expires_at(cls, v: Optional[datetime]) -> Optional[datetime]:
         """Validate expiration date is in the future."""
-        if v is not None and v <= datetime.now(datetime.UTC):
-            raise ValueError("Expiration date must be in the future")
+        if v is not None:
+            # Handle timezone-aware and timezone-naive datetime comparison
+            now = datetime.now(timezone.utc) if v.tzinfo is not None else datetime.now()
+            if v <= now:
+                raise ValueError("Expiration date must be in the future")
         return v

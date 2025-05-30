@@ -21,11 +21,11 @@ from tripsage.services.core.chat_orchestration import ChatOrchestrationService
 from tripsage.tools.memory_tools import ConversationMessage
 from tripsage_core.config.base_app_settings import settings
 from tripsage_core.services.business.memory_service import MemoryService
+from tripsage_core.utils.decorator_utils import with_error_handling
 from tripsage_core.utils.error_handling_utils import (
     TripSageError,
     log_exception,
 )
-from tripsage_core.utils.decorator_utils import with_error_handling
 from tripsage_core.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)
