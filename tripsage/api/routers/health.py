@@ -6,7 +6,6 @@ and its dependencies.
 
 from fastapi import APIRouter
 
-from tripsage.api.core.dependencies import get_settings_dependency
 from tripsage.mcp_abstraction import mcp_manager
 
 router = APIRouter()
@@ -19,13 +18,11 @@ async def health_check():
     Returns:
         Dict with status and application information
     """
-    settings = get_settings_dependency()
-
     return {
         "status": "ok",
-        "application": settings.app_name,
+        "application": "TripSage API",
         "version": "1.0.0",
-        "environment": settings.environment,
+        "environment": "development",
     }
 
 
@@ -36,11 +33,19 @@ async def mcp_health_check():
     Returns:
         Dict with MCP status information
     """
-    available_mcps = mcp_manager.get_available_mcps()
-    initialized_mcps = mcp_manager.get_initialized_mcps()
+    try:
+        available_mcps = mcp_manager.get_available_mcps()
+        initialized_mcps = mcp_manager.get_initialized_mcps()
 
-    return {
-        "status": "ok",
-        "available_mcps": available_mcps,
-        "enabled_mcps": initialized_mcps,  # Use initialized MCPs instead of enabled
-    }
+        return {
+            "status": "ok",
+            "available_mcps": available_mcps,
+            "enabled_mcps": initialized_mcps,  # Use initialized MCPs instead of enabled
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "error": str(e),
+            "available_mcps": [],
+            "enabled_mcps": [],
+        }

@@ -4,7 +4,8 @@ Models related to itineraries in the TripSage API.
 This module defines Pydantic V2 models for itinerary-related requests and responses.
 """
 
-from datetime import date as Date, datetime
+from datetime import date as Date
+from datetime import datetime
 from enum import Enum
 from typing import Dict, List, Literal, Optional
 

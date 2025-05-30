@@ -111,7 +111,7 @@ class AuthenticationService:
             from tripsage_core.config.base_app_settings import get_settings
 
             settings = get_settings()
-            secret_key = settings.secret_key
+            secret_key = settings.jwt_secret_key
 
         self.user_service = user_service
         self.secret_key = secret_key
@@ -526,4 +526,11 @@ async def get_auth_service() -> AuthenticationService:
     Returns:
         AuthenticationService instance
     """
-    return AuthenticationService()
+    from tripsage_core.services.business.user_service import UserService
+    from tripsage_core.services.infrastructure.database_service import (
+        get_database_service,
+    )
+
+    database_service = await get_database_service()
+    user_service = UserService(database_service=database_service)
+    return AuthenticationService(user_service=user_service)

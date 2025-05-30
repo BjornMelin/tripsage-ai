@@ -441,8 +441,8 @@ if __name__ == "__main__":
     # Run the application with uvicorn when executed directly
     uvicorn.run(
         "api.main:app",
-        host=getattr(settings, "api_host", "0.0.0.0"),
-        port=getattr(settings, "port", 8000),
-        reload=getattr(settings, "debug", False),
-        log_level=getattr(settings, "log_level", "INFO").lower(),
+        host="0.0.0.0",
+        port=8000,
+        reload=settings.debug,
+        log_level=settings.log_level.lower(),
     )

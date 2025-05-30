@@ -96,15 +96,24 @@ class ApiKeyDB(BaseModel):
     @classmethod
     def validate_expires_at(cls, v: Optional[datetime]) -> Optional[datetime]:
         """Validate expiration date is in the future."""
-        if v is not None and v <= datetime.now(timezone.utc):
-            raise ValueError("Expiration date must be in the future")
+        if v is not None:
+            # Handle timezone-aware and timezone-naive datetime comparison
+            now = datetime.now(timezone.utc) if v.tzinfo is not None else datetime.now()
+            if v <= now:
+                raise ValueError("Expiration date must be in the future")
         return v
 
     def is_expired(self) -> bool:
         """Check if the API key is expired."""
         if self.expires_at is None:
             return False
-        return datetime.now(timezone.utc) > self.expires_at
+        # Handle timezone-aware and timezone-naive datetime comparison
+        now = (
+            datetime.now(timezone.utc)
+            if self.expires_at.tzinfo is not None
+            else datetime.now()
+        )
+        return now > self.expires_at
 
     def is_usable(self) -> bool:
         """Check if the API key can be used."""
@@ -152,27 +161,6 @@ class ApiKeyCreate(BaseModel):
         description="Optional expiration timestamp for the API key",
     )
 
-    @field_validator("service")
-    @classmethod
-    def validate_service(cls, v: str) -> str:
-        """Validate service name format."""
-        import re
-
-        if not re.match(r"^[a-z0-9_-]+$", v):
-            raise ValueError(
-                "Service name must contain only lowercase letters, "
-                "numbers, underscores, and hyphens"
-            )
-        return v
-
-    @field_validator("expires_at")
-    @classmethod
-    def validate_expires_at(cls, v: Optional[datetime]) -> Optional[datetime]:
-        """Validate expiration date is in the future."""
-        if v is not None and v <= datetime.now(timezone.utc):
-            raise ValueError("Expiration date must be in the future")
-        return v
-
 
 class ApiKeyUpdate(BaseModel):
     """Model for updating an existing API key."""
@@ -182,11 +170,9 @@ class ApiKeyUpdate(BaseModel):
         json_schema_extra={
             "examples": [
                 {
-                    "name": "Updated OpenAI API Key",
+                    "name": "Updated OpenAI Key",
                     "description": "Updated description",
-                    "encrypted_key": "gAAAAABh...",
-                    "expires_at": None,
-                    "is_active": True,
+                    "is_active": False,
                 }
             ]
         },
@@ -196,30 +182,18 @@ class ApiKeyUpdate(BaseModel):
         default=None,
         min_length=1,
         max_length=255,
-        description="User-friendly name for the API key",
-    )
-    encrypted_key: Optional[str] = Field(
-        default=None,
-        description="Encrypted API key value",
+        description="Updated user-friendly name",
     )
     description: Optional[str] = Field(
         default=None,
         max_length=1000,
-        description="Optional description of the API key",
-    )
-    expires_at: Optional[datetime] = Field(
-        default=None,
-        description="Optional expiration timestamp for the API key",
+        description="Updated description",
     )
     is_active: Optional[bool] = Field(
         default=None,
-        description="Whether the API key is active and can be used",
+        description="Updated active status",
     )
-
-    @field_validator("expires_at")
-    @classmethod
-    def validate_expires_at(cls, v: Optional[datetime]) -> Optional[datetime]:
-        """Validate expiration date is in the future."""
-        if v is not None and v <= datetime.now(timezone.utc):
-            raise ValueError("Expiration date must be in the future")
-        return v
+    expires_at: Optional[datetime] = Field(
+        default=None,
+        description="Updated expiration timestamp",
+    )

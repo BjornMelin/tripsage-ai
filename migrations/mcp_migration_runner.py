@@ -237,7 +237,7 @@ class MCPMigrationRunner:
             self.logger.error(f"Failed to get migration status: {e}")
             raise MCPMigrationError(f"Failed to get migration status: {str(e)}") from e
 
-    @with_error_handling(logger=logger, raise_on_error=True)
+    @with_error_handling
     async def run_pending_migrations(
         self, project_id: Optional[str] = None, dry_run: bool = False
     ) -> List[str]:

@@ -30,10 +30,8 @@ class TripResponse(BaseModel):
     created_at: datetime = Field(..., description="Creation timestamp")
     updated_at: datetime = Field(..., description="Last update timestamp")
 
-    class Config:
-        """Pydantic config."""
-
-        json_schema_extra = {
+    model_config = {
+        "json_schema_extra": {
             "example": {
                 "id": "123e4567-e89b-12d3-a456-426614174000",
                 "user_id": "user123",
@@ -102,6 +100,7 @@ class TripResponse(BaseModel):
                 "updated_at": "2025-01-16T09:45:00Z",
             }
         }
+    }
 
 
 class TripListItem(BaseModel):
@@ -149,10 +148,8 @@ class TripSummaryResponse(BaseModel):
         le=100,
     )
 
-    class Config:
-        """Pydantic config."""
-
-        json_schema_extra = {
+    model_config = {
+        "json_schema_extra": {
             "example": {
                 "id": "123e4567-e89b-12d3-a456-426614174000",
                 "title": "Summer Vacation in Europe",
@@ -179,3 +176,4 @@ class TripSummaryResponse(BaseModel):
                 "completion_percentage": 60,
             }
         }
+    }
