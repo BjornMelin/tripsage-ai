@@ -11,10 +11,10 @@ from typing import Any, Dict, Optional
 
 from supabase import Client, create_client
 
-from api.core.config import settings
 from tripsage.mcp_abstraction import mcp_manager
+from tripsage_core.config.base_app_settings import settings
 from tripsage_core.exceptions.exceptions import (
-    CoreValidationError as KeyValidationError,
+    CoreKeyValidationError as KeyValidationError,
 )
 
 logger = logging.getLogger(__name__)

@@ -42,6 +42,9 @@ class DatabaseConfig(BaseSettings):
     supabase_url: str = Field(default="https://test-project.supabase.co")
     supabase_anon_key: SecretStr = Field(default=SecretStr("test-anon-key"))
     supabase_service_role_key: Optional[SecretStr] = Field(default=None)
+    supabase_project_id: Optional[str] = Field(
+        default=None, description="Supabase project ID"
+    )
     supabase_timeout: float = Field(default=60.0)
     supabase_auto_refresh_token: bool = Field(default=True)
     supabase_persist_session: bool = Field(default=True)

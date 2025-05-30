@@ -12,7 +12,7 @@ from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 
-from api.core.config import settings
+from tripsage_core.config.base_app_settings import settings
 from tripsage_core.exceptions.exceptions import CoreTripSageError as TripSageError
 
 logger = logging.getLogger(__name__)
