@@ -9,7 +9,6 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, status
 
-from api.core.exceptions import ResourceNotFoundError
 from api.deps import get_current_user
 from api.models.requests.trips import (
     CreateTripRequest,
@@ -22,6 +21,9 @@ from api.models.responses.trips import (
     TripSummaryResponse,
 )
 from api.services.trip_service import TripService
+from tripsage_core.exceptions.exceptions import (
+    CoreResourceNotFoundError as ResourceNotFoundError,
+)
 
 logger = logging.getLogger(__name__)
 

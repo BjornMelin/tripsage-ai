@@ -8,7 +8,6 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from tripsage.api.core.dependencies import get_current_user
-from tripsage.api.core.exceptions import ResourceNotFoundError
 from tripsage.api.models.destinations import (
     DestinationDetails,
     DestinationRecommendation,
@@ -19,6 +18,9 @@ from tripsage.api.models.destinations import (
     SavedDestination,
 )
 from tripsage.api.services.destination import get_destination_service
+from tripsage_core.exceptions.exceptions import (
+    CoreResourceNotFoundError as ResourceNotFoundError,
+)
 
 router = APIRouter()
 logger = logging.getLogger(__name__)

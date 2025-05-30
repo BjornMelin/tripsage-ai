@@ -10,7 +10,6 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, status
 
-from tripsage.api.core.exceptions import ResourceNotFoundError
 from tripsage.api.middlewares.auth import get_current_user
 from tripsage.api.models.flights import (
     AirportSearchRequest,
@@ -23,6 +22,9 @@ from tripsage.api.models.flights import (
     SavedFlightResponse,
 )
 from tripsage.api.services.flight import FlightService
+from tripsage_core.exceptions.exceptions import (
+    CoreResourceNotFoundError as ResourceNotFoundError,
+)
 
 logger = logging.getLogger(__name__)
 
