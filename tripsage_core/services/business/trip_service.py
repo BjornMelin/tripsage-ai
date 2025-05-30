@@ -743,4 +743,9 @@ async def get_trip_service() -> TripService:
     Returns:
         TripService instance
     """
-    return TripService()
+    from tripsage_core.services.infrastructure.database_service import get_database_service
+    from tripsage_core.services.business.user_service import UserService
+    
+    database_service = await get_database_service()
+    user_service = UserService(database_service=database_service)
+    return TripService(database_service=database_service, user_service=user_service)
