@@ -117,16 +117,14 @@ class TestTripService:
         notification = AsyncMock()
         return notification
 
-    @pytest.fixture  
+    @pytest.fixture
     def mock_user_service(self):
         """Mock user service."""
         user = AsyncMock()
         return user
 
     @pytest.fixture
-    def trip_service(
-        self, mock_database_service, mock_user_service
-    ):
+    def trip_service(self, mock_database_service, mock_user_service):
         """Create TripService instance with mocked dependencies."""
         return TripService(
             database_service=mock_database_service,
@@ -737,22 +735,28 @@ class TestTripService:
         with pytest.raises(ServiceError, match="Failed to create trip"):
             await trip_service.create_trip(user_id, sample_trip_create_request)
 
-    @patch('tripsage_core.services.infrastructure.database_service.get_database_service')
-    @patch('tripsage_core.services.business.user_service.UserService')
-    async def test_get_trip_service_dependency(self, mock_user_service_class, mock_get_db_service):
+    @patch(
+        "tripsage_core.services.infrastructure.database_service.get_database_service"
+    )
+    @patch("tripsage_core.services.business.user_service.UserService")
+    async def test_get_trip_service_dependency(
+        self, mock_user_service_class, mock_get_db_service
+    ):
         """Test the dependency injection function."""
         # Mock the dependencies
         mock_db_service = AsyncMock()
         mock_get_db_service.return_value = mock_db_service
         mock_user_service = AsyncMock()
         mock_user_service_class.return_value = mock_user_service
-        
+
         service = await get_trip_service()
         assert isinstance(service, TripService)
-        
+
         # Verify dependencies were called correctly
         mock_get_db_service.assert_called_once()
-        mock_user_service_class.assert_called_once_with(database_service=mock_db_service)
+        mock_user_service_class.assert_called_once_with(
+            database_service=mock_db_service
+        )
 
     async def test_trip_status_transitions(
         self, trip_service, mock_database_service, sample_trip

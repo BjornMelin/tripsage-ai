@@ -97,16 +97,22 @@ class TestMemoryService:
         """Sample memory creation request."""
         return MemoryCreateRequest(
             messages=[
-                {"role": "user", "content": "I prefer boutique hotels in historic city centers"},
-                {"role": "assistant", "content": "I'll remember your preference for boutique hotels in historic areas."}
+                {
+                    "role": "user",
+                    "content": "I prefer boutique hotels in historic city centers",
+                },
+                {
+                    "role": "assistant",
+                    "content": "I'll remember your preference for boutique hotels in historic areas.",
+                },
             ],
             session_id=str(uuid4()),
             trip_id=str(uuid4()),
             metadata={
                 "location": "Europe",
                 "category": "accommodation",
-                "tags": ["hotels", "boutique", "historic", "preferences"]
-            }
+                "tags": ["hotels", "boutique", "historic", "preferences"],
+            },
         )
 
     @pytest.fixture

@@ -526,9 +526,11 @@ async def get_auth_service() -> AuthenticationService:
     Returns:
         AuthenticationService instance
     """
-    from tripsage_core.services.infrastructure.database_service import get_database_service
     from tripsage_core.services.business.user_service import UserService
-    
+    from tripsage_core.services.infrastructure.database_service import (
+        get_database_service,
+    )
+
     database_service = await get_database_service()
     user_service = UserService(database_service=database_service)
     return AuthenticationService(user_service=user_service)
