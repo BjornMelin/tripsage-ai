@@ -74,7 +74,10 @@ class TestChatSessionFlow:
         """Mock chat agent."""
         agent = AsyncMock(spec=ChatAgent)
         agent.process_message.return_value = {
-            "response": "I'd be happy to help you plan your trip to Paris! What's your budget and preferred travel dates?",
+            "response": (
+                "I'd be happy to help you plan your trip to Paris! "
+                "What's your budget and preferred travel dates?"
+            ),
             "tool_calls": [],
             "session_id": "test-session-123",
         }
