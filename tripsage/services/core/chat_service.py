@@ -24,6 +24,7 @@ from tripsage_core.models.db.chat import (
     MessageWithTokenEstimate,
     RecentMessagesResponse,
 )
+from tripsage_core.exceptions import CoreResourceNotFoundError, CoreValidationError
 
 logger = logging.getLogger(__name__)
 
