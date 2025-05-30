@@ -111,7 +111,7 @@ def run_test_coverage() -> Dict[str, float]:
         for line in output.split("\n"):
             if "TOTAL" in line and "%" in line:
                 parts = line.split()
-                for i, part in enumerate(parts):
+                for _i, part in enumerate(parts):
                     if "%" in part:
                         coverage_data["overall"] = float(part.rstrip("%"))
                         break
@@ -182,7 +182,10 @@ def check_api_functionality() -> Dict[str, bool]:
                 cmd = [
                     "python",
                     "-c",
-                    f"import sys; sys.path.insert(0, '{project_root}'); from {api_path.replace('/', '.').rstrip('.py')} import app",
+                    (
+                        f"import sys; sys.path.insert(0, '{project_root}'); "
+                        f"from {api_path.replace('/', '.').rstrip('.py')} import app"
+                    ),
                 ]
                 result = subprocess.run(cmd, capture_output=True, text=True)
 
