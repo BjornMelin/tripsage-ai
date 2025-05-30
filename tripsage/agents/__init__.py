@@ -15,6 +15,8 @@ from tripsage.agents.planning import TravelPlanningAgent
 from tripsage.agents.travel import TravelAgent
 from tripsage_core.config.base_app_settings import get_settings
 
+settings = get_settings()
+
 
 def create_agent(
     agent_type: str,

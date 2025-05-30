@@ -15,6 +15,7 @@ except ImportError:
     function_tool = MagicMock
 
 from tripsage.agents.base import BaseAgent
+from tripsage_core.config.base_app_settings import settings
 from tripsage_core.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)

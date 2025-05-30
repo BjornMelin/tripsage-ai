@@ -17,14 +17,15 @@ from tripsage.agents.flight import FlightAgent
 from tripsage.agents.itinerary import Itinerary as ItineraryAgent
 from tripsage.agents.travel import TravelAgent
 from tripsage.mcp_abstraction.manager import MCPManager
-from tripsage.services.chat_orchestration import ChatOrchestrationService
-from tripsage.services.memory_service import TripSageMemoryService
+from tripsage.services.core.chat_orchestration import ChatOrchestrationService
 from tripsage.tools.memory_tools import ConversationMessage
+from tripsage_core.config.base_app_settings import settings
+from tripsage_core.services.business.memory_service import MemoryService
 from tripsage_core.utils.error_handling_utils import (
     TripSageError,
     log_exception,
-    with_error_handling,
 )
+from tripsage_core.utils.decorator_utils import with_error_handling
 from tripsage_core.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)
@@ -139,7 +140,7 @@ class ChatAgent(BaseAgent):
         self.chat_service = ChatOrchestrationService()
 
         # Initialize memory service for personalization
-        self.memory_service = TripSageMemoryService()
+        self.memory_service = MemoryService()
         self._memory_initialized = False
 
         # Initialize specialized agents
