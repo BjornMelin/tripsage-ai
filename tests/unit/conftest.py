@@ -293,7 +293,6 @@ def mock_settings_and_redis(monkeypatch):
             "tripsage_core.config.base_app_settings.get_settings",
             return_value=mock_settings,
         ),
-        patch("tripsage.config.app_settings.settings", mock_settings),
         patch("redis.asyncio.from_url", mock_from_url),
         patch("redis.from_url", mock_from_url),
         # patch("tripsage_core.utils.cache_utils.redis", redis_mock),  # Not needed - cache_utils doesn't import redis
