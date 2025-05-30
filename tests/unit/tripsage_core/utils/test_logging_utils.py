@@ -279,7 +279,7 @@ class TestLoggingUtils:
         logger = get_logger("test.exceptions")
 
         try:
-            1 / 0
+            _ = 1 / 0  # Intentionally cause a division by zero error
         except ZeroDivisionError:
             # Method 1: Using exc_info
             logger.error("Division error", exc_info=True)
@@ -295,7 +295,7 @@ class TestLoggingUtils:
 
     def test_child_logger_context(self):
         """Test that child loggers maintain their own context."""
-        parent = get_logger("parent", {"parent_id": "123"})
+        _parent = get_logger("parent", {"parent_id": "123"})
         child = get_logger("parent.child", {"child_id": "456"})
 
         # Mock handler

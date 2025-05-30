@@ -12,10 +12,10 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from tripsage.services.memory_service import (
+from tripsage_core.services.business.memory_service import (
     MemorySearchResult,
+    MemoryService,
     MemoryServiceAdapter,
-    TripSageMemoryService,
 )
 
 
@@ -25,7 +25,7 @@ class TestSpecificCoverageLines:
     @pytest.mark.asyncio
     async def test_connect_early_return(self):
         """Test connect method early return when already connected."""
-        service = TripSageMemoryService()
+        service = MemoryService()
         service._connected = True
         service.memory = MagicMock()
 
@@ -37,7 +37,7 @@ class TestSpecificCoverageLines:
     @pytest.mark.asyncio
     async def test_close_early_return(self):
         """Test close method early return when not connected."""
-        service = TripSageMemoryService()
+        service = MemoryService()
         service._connected = False
 
         # Should return early
@@ -47,7 +47,7 @@ class TestSpecificCoverageLines:
     @pytest.mark.asyncio
     async def test_close_with_exception(self):
         """Test close method with exception during cleanup."""
-        service = TripSageMemoryService()
+        service = MemoryService()
         service._connected = True
         service._cache = {"test": "data"}
 
@@ -62,7 +62,7 @@ class TestSpecificCoverageLines:
     @pytest.mark.asyncio
     async def test_add_conversation_early_return(self):
         """Test add_conversation_memory early return when not connected."""
-        service = TripSageMemoryService()
+        service = MemoryService()
         service._connected = False
 
         with patch.object(service, "connect") as mock_connect:
@@ -79,7 +79,7 @@ class TestSpecificCoverageLines:
     @pytest.mark.asyncio
     async def test_search_memories_early_return(self):
         """Test search_memories early return when not connected."""
-        service = TripSageMemoryService()
+        service = MemoryService()
         service._connected = False
 
         with patch.object(service, "connect") as mock_connect:
@@ -93,7 +93,7 @@ class TestSpecificCoverageLines:
     @pytest.mark.asyncio
     async def test_get_user_context_early_return(self):
         """Test get_user_context early return when not connected."""
-        service = TripSageMemoryService()
+        service = MemoryService()
         service._connected = False
 
         with patch.object(service, "connect") as mock_connect:
@@ -107,7 +107,7 @@ class TestSpecificCoverageLines:
     @pytest.mark.asyncio
     async def test_search_with_mcp_fallback(self):
         """Test MCP fallback path in search_memories."""
-        service = TripSageMemoryService()
+        service = MemoryService()
         service._connected = True
         service.memory = MagicMock()
 
@@ -125,7 +125,7 @@ class TestSpecificCoverageLines:
     @pytest.mark.asyncio
     async def test_delete_memories_with_ids(self):
         """Test delete_user_memories with specific memory IDs."""
-        service = TripSageMemoryService()
+        service = MemoryService()
         service._connected = True
         service.memory = MagicMock()
         service.memory.delete.return_value = {"success": True}
@@ -140,7 +140,7 @@ class TestSpecificCoverageLines:
     @pytest.mark.asyncio
     async def test_delete_memories_all_user_memories(self):
         """Test delete_user_memories without specific IDs (delete all)."""
-        service = TripSageMemoryService()
+        service = MemoryService()
         service._connected = True
         service.memory = MagicMock()
 
@@ -163,7 +163,7 @@ class TestSpecificCoverageLines:
     @pytest.mark.asyncio
     async def test_delete_with_partial_failures(self):
         """Test deletion with some failures."""
-        service = TripSageMemoryService()
+        service = MemoryService()
         service._connected = True
         service.memory = MagicMock()
 
@@ -180,7 +180,7 @@ class TestSpecificCoverageLines:
 
     def test_cache_expiration_logic(self):
         """Test cache expiration logic in _get_cached_result."""
-        service = TripSageMemoryService()
+        service = MemoryService()
 
         # Create expired cache entry
         import time
@@ -223,11 +223,11 @@ class TestSpecificCoverageLines:
         adapter = MemoryServiceAdapter()
 
         service = await adapter.get_direct_service()
-        assert isinstance(service, TripSageMemoryService)
+        assert isinstance(service, MemoryService)
 
     def test_analysis_methods_with_empty_data(self):
         """Test analysis methods with empty context data."""
-        service = TripSageMemoryService()
+        service = MemoryService()
 
         empty_context = {
             "preferences": [],
@@ -258,7 +258,7 @@ class TestSpecificCoverageLines:
 
     def test_analysis_methods_with_rich_data(self):
         """Test analysis methods with rich context data."""
-        service = TripSageMemoryService()
+        service = MemoryService()
 
         rich_context = {
             "preferences": [
@@ -307,7 +307,7 @@ class TestSpecificCoverageLines:
     @pytest.mark.asyncio
     async def test_enrich_travel_memories_with_data(self):
         """Test memory enrichment with actual data."""
-        service = TripSageMemoryService()
+        service = MemoryService()
 
         # Create test memories with travel-related content
         memories = [
@@ -337,7 +337,7 @@ class TestSpecificCoverageLines:
 
     def test_context_summary_generation_variations(self):
         """Test context summary with different context variations."""
-        service = TripSageMemoryService()
+        service = MemoryService()
 
         # Test high-activity user context
         active_context = {

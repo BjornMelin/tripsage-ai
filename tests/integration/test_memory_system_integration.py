@@ -10,8 +10,8 @@ import pytest
 from fastapi.testclient import TestClient
 
 from tripsage.api.main import app
-from tripsage.services.memory_service import TripSageMemoryService
 from tripsage_core.models.db.user import User
+from tripsage_core.services.business.memory_service import MemoryService
 
 
 class TestMemorySystemIntegration:
@@ -25,7 +25,7 @@ class TestMemorySystemIntegration:
     @pytest.fixture
     def mock_memory_service(self):
         """Mock memory service for testing."""
-        service = AsyncMock(spec=TripSageMemoryService)
+        service = AsyncMock(spec=MemoryService)
         service.store_conversation_memory.return_value = {
             "status": "success",
             "memory_id": "test-123",
@@ -253,11 +253,11 @@ class TestMemorySystemIntegration:
         # This structure should match frontend types/memory.ts interfaces
         assert expected_memory_response is not None
 
-    @patch("tripsage.services.memory_service.TripSageMemoryService")
+    @patch("tripsage.services.memory_service.MemoryService")
     def test_memory_service_initialization(self, mock_service_class):
         """Test memory service proper initialization."""
         # Verify service can be instantiated
-        service = TripSageMemoryService()
+        service = MemoryService()
         assert service is not None
 
         # Test that required methods exist

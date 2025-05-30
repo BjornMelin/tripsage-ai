@@ -23,6 +23,7 @@ from tripsage_core.exceptions.exceptions import (
 from tripsage_core.exceptions.exceptions import (
     CoreValidationError as ValidationError,
 )
+from tripsage_core.models.base_core_model import TripSageModel
 from tripsage_core.services.business.trip_service import (
     TripBudget,
     TripCreateRequest,
@@ -51,9 +52,6 @@ class ParticipantRole(str, Enum):
 
 
 # Mock data classes
-from tripsage_core.models.base_core_model import TripSageModel
-
-
 class Trip(TripSageModel):
     id: str
     user_id: str
