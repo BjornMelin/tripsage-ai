@@ -54,7 +54,7 @@ class TripService:
             except Exception as e:
                 logger.warning(f"Could not initialize CoreTripService: {e}")
                 # For now, we'll create a mock service that raises NotImplementedError
-                # This allows the application to start even if the database isn't configured
+                # This allows the app to start even if database isn't configured
                 self.core_trip_service = MockTripService()
         return self.core_trip_service
 
@@ -288,7 +288,7 @@ class TripService:
             else:
                 # Fallback to get_user_trips if search not implemented
                 logger.warning(
-                    "Core service doesn't support search, falling back to get_user_trips"
+                    "Core service doesn't support search, using get_user_trips"
                 )
                 result = await core_service.get_user_trips(user_id=user_id, limit=limit)
 
@@ -336,9 +336,13 @@ class MockTripService:
         raise ServiceError("Trip service not available - database not configured")
 
 
+# Module-level dependency annotation
+_core_trip_service_dep = Depends(get_core_trip_service)
+
+
 # Dependency function for FastAPI
 async def get_trip_service(
-    core_trip_service: CoreTripService = Depends(get_core_trip_service),
+    core_trip_service: CoreTripService = _core_trip_service_dep,
 ) -> TripService:
     """
     Get trip service instance for dependency injection.

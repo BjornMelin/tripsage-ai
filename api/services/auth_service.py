@@ -115,7 +115,7 @@ class AuthService:
 
             # Create user via core service
             user_service = await self._get_user_service()
-            user = await user_service.create_user(core_request)
+            await user_service.create_user(core_request)
 
             # Authenticate the newly created user
             login_request = CoreLoginRequest(
@@ -272,7 +272,7 @@ class AuthService:
 
             # Initiate reset via core service
             core_auth_service = await self._get_core_auth_service()
-            success = await core_auth_service.initiate_password_reset(core_request)
+            await core_auth_service.initiate_password_reset(core_request)
 
             # Always return success for security (don't reveal if email exists)
             return PasswordResetResponse(
@@ -393,10 +393,15 @@ class AuthService:
         )
 
 
+# Module-level dependency annotations
+_core_auth_service_dep = Depends(get_core_auth_service)
+_user_service_dep = Depends(get_user_service)
+
+
 # Dependency function for FastAPI
 async def get_auth_service(
-    core_auth_service: CoreAuthService = Depends(get_core_auth_service),
-    user_service: UserService = Depends(get_user_service),
+    core_auth_service: CoreAuthService = _core_auth_service_dep,
+    user_service: UserService = _user_service_dep,
 ) -> AuthService:
     """
     Get auth service instance for dependency injection.

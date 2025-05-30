@@ -441,11 +441,13 @@ class KeyService:
         )
 
 
+# Module-level dependency annotation
+_core_key_service_dep = Depends(get_core_key_management_service)
+
+
 # Dependency function for FastAPI
 async def get_key_service(
-    core_key_service: CoreKeyManagementService = Depends(
-        get_core_key_management_service
-    ),
+    core_key_service: CoreKeyManagementService = _core_key_service_dep,
 ) -> KeyService:
     """
     Get key service instance for dependency injection.
