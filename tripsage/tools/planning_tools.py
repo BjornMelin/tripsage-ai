@@ -138,7 +138,7 @@ async def create_travel_plan(params: Dict[str, Any]) -> Dict[str, Any]:
             await memory_service.add_conversation_memory(
                 messages=[
                     {"role": "system", "content": "Travel plan created"},
-                    {"role": "user", "content": plan_memory}
+                    {"role": "user", "content": plan_memory},
                 ],
                 user_id=plan_input.user_id,
                 metadata={
@@ -246,7 +246,7 @@ async def update_travel_plan(params: Dict[str, Any]) -> Dict[str, Any]:
                 await memory_service.add_conversation_memory(
                     messages=[
                         {"role": "system", "content": "Travel plan updated"},
-                        {"role": "user", "content": update_memory}
+                        {"role": "user", "content": update_memory},
                     ],
                     user_id=update_input.user_id,
                     metadata={
@@ -641,7 +641,7 @@ async def save_travel_plan(params: Dict[str, Any]) -> Dict[str, Any]:
                 await memory_service.add_conversation_memory(
                     messages=[
                         {"role": "system", "content": "Travel plan finalized"},
-                        {"role": "user", "content": finalize_memory}
+                        {"role": "user", "content": finalize_memory},
                     ],
                     user_id=user_id,
                     metadata={
@@ -670,8 +670,11 @@ async def save_travel_plan(params: Dict[str, Any]) -> Dict[str, Any]:
 
                     await memory_service.add_conversation_memory(
                         messages=[
-                            {"role": "system", "content": "Travel plan components saved"},
-                            {"role": "user", "content": components_memory}
+                            {
+                                "role": "system",
+                                "content": "Travel plan components saved",
+                            },
+                            {"role": "user", "content": components_memory},
                         ],
                         user_id=user_id,
                         metadata={
