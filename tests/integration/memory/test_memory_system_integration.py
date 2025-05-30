@@ -10,7 +10,6 @@ import pytest
 from fastapi.testclient import TestClient
 
 from tripsage.api.main import app
-from tripsage.services.core.memory_service import TripSageMemoryService
 from tripsage_core.models.db.user import User
 from tripsage_core.services.business.memory_service import MemoryService
 

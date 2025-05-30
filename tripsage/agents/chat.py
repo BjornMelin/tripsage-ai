@@ -17,12 +17,11 @@ from tripsage.agents.flight import FlightAgent
 from tripsage.agents.itinerary import Itinerary as ItineraryAgent
 from tripsage.agents.travel import TravelAgent
 from tripsage.mcp_abstraction.manager import MCPManager
-from tripsage.services.core.chat_orchestration import ChatOrchestrationService
-from tripsage.services.core.memory_service import TripSageMemoryService
 from tripsage.tools.memory_tools import ConversationMessage
 from tripsage_core.config.base_app_settings import get_settings
 from tripsage_core.exceptions import CoreTripSageError, with_error_handling
 from tripsage_core.services.business.memory_service import MemoryService
+from tripsage_core.services.core.chat_orchestration import ChatOrchestrationService
 from tripsage_core.utils.decorator_utils import with_error_handling
 from tripsage_core.utils.error_handling_utils import (
     log_exception,

@@ -8,11 +8,11 @@ import httpx
 import pytest
 import pytest_asyncio
 
-from tripsage.models.api.weather_models import (
+from tripsage_core.models.api.weather_models import (
     AirQualityIndex,
     WeatherUnits,
 )
-from tripsage.services.api.weather_service import OpenWeatherMapService
+from tripsage_core.services.api.weather_service import OpenWeatherMapService
 
 
 @pytest.fixture

@@ -9,7 +9,7 @@ import pytest
 import pytest_asyncio
 from pydantic import ValidationError
 
-from tripsage.models.api.flights_models import (
+from tripsage_core.models.api.flights_models import (
     Airline,
     CabinClass,
     FlightOffer,
@@ -19,7 +19,7 @@ from tripsage.models.api.flights_models import (
     PassengerType,
     PaymentRequest,
 )
-from tripsage.services.api.flights_service import DuffelFlightsService
+from tripsage_core.services.api.flights_service import DuffelFlightsService
 
 
 @pytest.fixture
