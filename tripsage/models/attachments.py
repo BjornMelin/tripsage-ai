@@ -10,7 +10,7 @@ from enum import Enum
 from typing import Any, Dict, List, Optional
 from uuid import UUID
 
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 
 
 class FileType(str, Enum):
@@ -49,7 +49,8 @@ class AttachmentCreate(AttachmentBase):
 
     content_hash: str = Field(..., description="SHA256 hash of file content")
 
-    @validator("mime_type")
+    @field_validator("mime_type")
+    @classmethod
     def validate_mime_type(cls, v):
         """Validate MIME type format."""
         if not v or "/" not in v:
@@ -93,11 +94,10 @@ class AttachmentDB(AttachmentBase):
         default_factory=datetime.utcnow, description="Last update timestamp"
     )
 
-    class Config:
-        """Pydantic configuration."""
-
-        from_attributes = True
-        json_encoders = {datetime: lambda v: v.isoformat(), UUID: lambda v: str(v)}
+    model_config = {
+        "from_attributes": True,
+        "json_encoders": {datetime: lambda v: v.isoformat(), UUID: lambda v: str(v)},
+    }
 
 
 class AttachmentResponse(AttachmentDB):
@@ -282,7 +282,4 @@ class MessageWithAttachments(BaseModel):
         default_factory=datetime.utcnow, description="Message timestamp"
     )
 
-    class Config:
-        """Pydantic configuration."""
-
-        json_encoders = {datetime: lambda v: v.isoformat()}
+    model_config = {"json_encoders": {datetime: lambda v: v.isoformat()}}
