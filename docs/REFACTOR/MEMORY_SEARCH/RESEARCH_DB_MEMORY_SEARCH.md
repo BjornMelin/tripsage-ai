@@ -899,7 +899,7 @@ import structlog
 
 logger = structlog.get_logger()
 
-class TripSageMemoryService(ServiceProtocol):
+class MemoryService(ServiceProtocol):
     """Production-ready memory service using Mem0 with pgvector backend."""
     
     def __init__(self, config: Optional[Dict[str, Any]] = None):
@@ -1131,7 +1131,7 @@ class TripSageMemoryService(ServiceProtocol):
         return []
 
 # Register with service registry
-registry.register("memory", TripSageMemoryService())
+registry.register("memory", MemoryService())
 ```
 
 #### 2. Crawl4AI Integration for Memory Extraction
@@ -1139,13 +1139,13 @@ registry.register("memory", TripSageMemoryService())
 ```python
 # tripsage/services/memory_extraction.py
 from crawl4ai import AsyncWebCrawler
-from tripsage.services.memory_service import TripSageMemoryService
+from tripsage_core.services.business.memory_service import MemoryService
 
 class WebMemoryExtractor:
     """Extract memories from web content using Crawl4AI direct SDK."""
     
     def __init__(self):
-        self.memory_service = TripSageMemoryService()
+        self.memory_service = MemoryService()
         self.crawler = AsyncWebCrawler(verbose=False)
     
     async def extract_from_url(
@@ -1202,7 +1202,7 @@ class WebMemoryExtractor:
 class ChatAgent(BaseAgent):
     def __init__(self):
         super().__init__()
-        self.memory_service = TripSageMemoryService()
+        self.memory_service = MemoryService()
     
     async def process_message(
         self,
@@ -1346,13 +1346,13 @@ EXECUTE FUNCTION deduplicate_memories();
 # tests/services/test_memory_service.py
 import pytest
 from unittest.mock import Mock, patch
-from tripsage.services.memory_service import TripSageMemoryService
+from tripsage_core.services.business.memory_service import MemoryService
 
 @pytest.fixture
 def memory_service():
     """Create memory service with mocked dependencies."""
     with patch('tripsage.services.memory_service.Memory') as mock_mem0:
-        service = TripSageMemoryService()
+        service = MemoryService()
         service.memory = mock_mem0.from_config.return_value
         return service
 
@@ -1469,7 +1469,7 @@ from statistics import mean, stdev
 
 async def benchmark_memory_operations():
     """Benchmark memory operations for performance validation."""
-    service = TripSageMemoryService()
+    service = MemoryService()
     
     # Benchmark 1: Memory extraction speed
     extraction_times = []
@@ -1613,7 +1613,7 @@ async def benchmark_memory_operations():
 ### Key Updates for Direct SDK Migration
 
 1. **ServiceProtocol Compliance**
-   - TripSageMemoryService now inherits from ServiceProtocol
+   - MemoryService now inherits from ServiceProtocol
    - Implements required health_check() and close() methods
    - Registers with unified service registry
 

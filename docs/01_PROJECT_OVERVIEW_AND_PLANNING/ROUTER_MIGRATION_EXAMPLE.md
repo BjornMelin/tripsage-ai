@@ -20,12 +20,12 @@ from fastapi import APIRouter, Query, status
 
 from api.core.exceptions import ResourceNotFoundError
 from api.deps import get_current_user, get_session_memory
-from api.models.requests.trips import (
+from api.schemas.requests.trips import (
     CreateTripRequest,
     TripPreferencesRequest,
     UpdateTripRequest,
 )
-from api.models.responses.trips import (
+from api.schemas.responses.trips import (
     TripListResponse,
     TripResponse,
     TripSummaryResponse,
@@ -100,12 +100,12 @@ from fastapi import APIRouter, Depends, Query, status
 from tripsage.api.core.dependencies import get_settings_dependency
 from tripsage.api.core.exceptions import ResourceNotFoundError
 from tripsage.api.middlewares.auth import get_current_user, get_session_memory
-from tripsage.api.models.requests.trips import (
+from tripsage.api.schemas.requests.trips import (
     CreateTripRequest,
     TripPreferencesRequest,
     UpdateTripRequest,
 )
-from tripsage.api.models.responses.trips import (
+from tripsage.api.schemas.responses.trips import (
     TripListResponse,
     TripResponse,
     TripSummaryResponse,
@@ -206,7 +206,7 @@ from datetime import date
 from typing import Dict, List, Optional, Tuple, Union
 from uuid import UUID
 
-from tripsage.api.models.requests.trips import TripDestination, TripPreferences
+from tripsage_core.models.schemas_common.travel import TripDestination, TripPreferences
 from tripsage.storage.dual_storage import get_dual_storage
 
 logger = logging.getLogger(__name__)
@@ -311,7 +311,8 @@ Finally, ensure that a test for the trips router exists in `/tests/api/test_trip
 import pytest
 from fastapi.testclient import TestClient
 
-from tripsage.api.models.requests.trips import CreateTripRequest, TripDestination
+from tripsage.api.schemas.requests.trips import CreateTripRequest
+from tripsage_core.models.schemas_common.travel import TripDestination
 
 
 @pytest.fixture

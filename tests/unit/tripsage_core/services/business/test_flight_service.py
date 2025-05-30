@@ -11,10 +11,10 @@ from uuid import uuid4
 
 import pytest
 
-from tripsage_core.exceptions import (
+from tripsage_core.exceptions.exceptions import (
     CoreServiceError as ServiceError,
 )
-from tripsage_core.exceptions import (
+from tripsage_core.exceptions.exceptions import (
     CoreValidationError as ValidationError,
 )
 from tripsage_core.services.business.flight_service import (

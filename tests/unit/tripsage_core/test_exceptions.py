@@ -5,7 +5,7 @@ from unittest.mock import Mock
 import pytest
 from fastapi import status
 
-from tripsage_core.exceptions import (
+from tripsage_core.exceptions.exceptions import (
     EXCEPTION_MAPPING,
     CoreAgentError,
     # Authentication and authorization

@@ -86,7 +86,7 @@ CREATE EXTENSION IF NOT EXISTS vectorscale CASCADE;
 
 ### Issue 3: Implement Mem0 Memory Service
 
-**Title:** `feat(memory): implement TripSageMemoryService with Mem0 + pgvector`
+**Title:** `feat(memory): implement MemoryService with Mem0 + pgvector`
 
 **Labels:** `enhancement`, `feature`, `ai-memory`, `priority:high`
 

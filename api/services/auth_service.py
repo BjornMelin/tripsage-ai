@@ -1,416 +1,419 @@
 """
 Authentication service for the TripSage API.
 
-This service handles user registration, authentication, and token management.
+This service acts as a thin wrapper around the core authentication service,
+handling API-specific concerns like model adaptation and FastAPI integration.
 """
 
 import logging
-from datetime import datetime, timedelta
-from typing import Any, Dict, Optional
+from typing import Optional
 
-import jwt
-from passlib.context import CryptContext
-from supabase import Client, create_client
+from fastapi import Depends
 
-from api.core.config import settings
-from api.core.exceptions import AuthenticationError
+from api.schemas.requests.auth import (
+    ChangePasswordRequest,
+    ForgotPasswordRequest,
+    LoginRequest,
+    RefreshTokenRequest,
+    RegisterUserRequest,
+    ResetPasswordRequest,
+)
+from api.schemas.responses.auth import (
+    MessageResponse,
+    PasswordResetResponse,
+    TokenResponse,
+    UserResponse,
+)
+from tripsage_core.exceptions.exceptions import (
+    CoreAuthenticationError as AuthenticationError,
+)
+from tripsage_core.services.business.auth_service import (
+    AuthenticationService as CoreAuthService,
+)
+from tripsage_core.services.business.auth_service import (
+    LoginRequest as CoreLoginRequest,
+)
+from tripsage_core.services.business.auth_service import (
+    PasswordResetConfirmRequest as CorePasswordResetConfirmRequest,
+)
+from tripsage_core.services.business.auth_service import (
+    PasswordResetRequest as CorePasswordResetRequest,
+)
+from tripsage_core.services.business.auth_service import (
+    RefreshTokenRequest as CoreRefreshTokenRequest,
+)
+from tripsage_core.services.business.auth_service import (
+    get_auth_service as get_core_auth_service,
+)
+from tripsage_core.services.business.user_service import (
+    UserCreateRequest,
+    UserService,
+    get_user_service,
+)
 
 logger = logging.getLogger(__name__)
 
 
 class AuthService:
-    """Service for authentication and user management."""
+    """
+    API authentication service that delegates to core business services.
 
-    def __init__(self):
-        """Initialize the authentication service."""
-        self.pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-        self.supabase: Optional[Client] = None
+    This service acts as a façade, handling:
+    - Model adaptation between API and core models
+    - API-specific error handling
+    - FastAPI dependency integration
+    """
 
-    async def _get_supabase_client(self) -> Client:
-        """Get or create Supabase client."""
-        if self.supabase is None:
-            self.supabase = create_client(
-                settings.supabase_url, settings.supabase_anon_key
+    def __init__(
+        self,
+        core_auth_service: Optional[CoreAuthService] = None,
+        user_service: Optional[UserService] = None,
+    ):
+        """
+        Initialize the API auth service.
+
+        Args:
+            core_auth_service: Core authentication service
+            user_service: Core user service
+        """
+        self.core_auth_service = core_auth_service
+        self.user_service = user_service
+
+    async def _get_core_auth_service(self) -> CoreAuthService:
+        """Get or create core auth service instance."""
+        if self.core_auth_service is None:
+            self.core_auth_service = await get_core_auth_service()
+        return self.core_auth_service
+
+    async def _get_user_service(self) -> UserService:
+        """Get or create user service instance."""
+        if self.user_service is None:
+            self.user_service = await get_user_service()
+        return self.user_service
+
+    async def register_user(self, request: RegisterUserRequest) -> TokenResponse:
+        """
+        Register a new user.
+
+        Args:
+            request: User registration request
+
+        Returns:
+            Authentication tokens and user information
+
+        Raises:
+            AuthenticationError: If registration fails
+        """
+        try:
+            # Adapt API request to core model
+            core_request = UserCreateRequest(
+                username=request.username,
+                email=request.email,
+                password=request.password,
+                full_name=request.full_name,
             )
-        return self.supabase
 
-    def verify_password(self, plain_password: str, hashed_password: str) -> bool:
-        """Verify a password against a hash.
+            # Create user via core service
+            user_service = await self._get_user_service()
+            await user_service.create_user(core_request)
 
-        Args:
-            plain_password: Plain password
-            hashed_password: Hashed password
+            # Authenticate the newly created user
+            login_request = CoreLoginRequest(
+                identifier=request.username,
+                password=request.password,
+            )
 
-        Returns:
-            True if the password matches the hash, False otherwise
+            core_auth_service = await self._get_core_auth_service()
+            token_response = await core_auth_service.authenticate_user(login_request)
+
+            # Adapt core response to API model
+            return self._adapt_token_response(token_response)
+
+        except Exception as e:
+            logger.error(f"User registration failed: {str(e)}")
+            raise AuthenticationError("Registration failed") from e
+
+    async def login_user(self, request: LoginRequest) -> TokenResponse:
         """
-        return self.pwd_context.verify(plain_password, hashed_password)
-
-    def get_password_hash(self, password: str) -> str:
-        """Hash a password.
+        Authenticate user and generate tokens.
 
         Args:
-            password: Plain password
+            request: Login request
 
         Returns:
-            Hashed password
-        """
-        return self.pwd_context.hash(password)
-
-    async def get_user_by_username(self, username: str) -> Optional[Dict[str, Any]]:
-        """Get a user by username.
-
-        Args:
-            username: Username
-
-        Returns:
-            User information or None if not found
-        """
-        supabase = await self._get_supabase_client()
-        return (
-            await supabase.table("users").select("*").eq("username", username).execute()
-        )
-
-    async def get_user_by_email(self, email: str) -> Optional[Dict[str, Any]]:
-        """Get a user by email.
-
-        Args:
-            email: Email address
-
-        Returns:
-            User information or None if not found
-        """
-        supabase = await self._get_supabase_client()
-        return await supabase.table("users").select("*").eq("email", email).execute()
-
-    async def get_user_by_id(self, user_id: str) -> Optional[Dict[str, Any]]:
-        """Get a user by ID.
-
-        Args:
-            user_id: User ID
-
-        Returns:
-            User information or None if not found
-        """
-        supabase = await self._get_supabase_client()
-        return await supabase.table("users").select("*").eq("id", user_id).execute()
-
-    async def authenticate_user(self, username: str, password: str) -> Dict[str, Any]:
-        """Authenticate a user.
-
-        Args:
-            username: Username or email
-            password: Password
-
-        Returns:
-            User information if authentication is successful
+            Authentication tokens and user information
 
         Raises:
             AuthenticationError: If authentication fails
         """
-        # Check if username is an email
-        if "@" in username:
-            user = await self.get_user_by_email(username)
-        else:
-            user = await self.get_user_by_username(username)
+        try:
+            # Adapt API request to core model
+            core_request = CoreLoginRequest(
+                identifier=request.username,
+                password=request.password,
+            )
 
-        if not user:
-            raise AuthenticationError("Invalid username or password")
+            # Authenticate via core service
+            core_auth_service = await self._get_core_auth_service()
+            token_response = await core_auth_service.authenticate_user(core_request)
 
-        if not self.verify_password(password, user["password"]):
-            raise AuthenticationError("Invalid username or password")
+            # Adapt core response to API model
+            return self._adapt_token_response(token_response)
 
-        if not user["is_active"]:
-            raise AuthenticationError("User is inactive")
+        except Exception as e:
+            logger.error(f"User login failed: {str(e)}")
+            raise AuthenticationError("Authentication failed") from e
 
-        # Remove password from user info
-        user_info = {k: v for k, v in user.items() if k != "password"}
-
-        return user_info
-
-    async def create_user(
-        self,
-        username: str,
-        email: str,
-        password: str,
-        full_name: str,
-    ) -> Dict[str, Any]:
-        """Create a new user.
-
-        Args:
-            username: Username
-            email: Email address
-            password: Password
-            full_name: Full name
-
-        Returns:
-            Created user information
+    async def refresh_token(self, request: RefreshTokenRequest) -> TokenResponse:
         """
-        # Hash the password
-        hashed_password = self.get_password_hash(password)
-
-        # Create user data
-        user_data = {
-            "username": username,
-            "email": email,
-            "password": hashed_password,
-            "full_name": full_name,
-            "is_active": True,
-            "is_verified": False,
-            "created_at": datetime.now(datetime.UTC).isoformat(),
-            "updated_at": datetime.now(datetime.UTC).isoformat(),
-            "preferences": {},
-        }
-
-        # Save the user
-        supabase = await self._get_supabase_client()
-        user = await supabase.table("users").insert(user_data).execute()
-
-        # Remove password from user info
-        user_info = {k: v for k, v in user.items() if k != "password"}
-
-        return user_info
-
-    async def create_access_token(
-        self,
-        data: Dict[str, Any],
-        expires_delta: Optional[timedelta] = None,
-    ) -> str:
-        """Create a JWT access token.
+        Refresh access token using refresh token.
 
         Args:
-            data: Token payload
-            expires_delta: Token expiration time
+            request: Token refresh request
 
         Returns:
-            JWT token
+            New authentication tokens
+
+        Raises:
+            AuthenticationError: If refresh fails
         """
-        to_encode = data.copy()
+        try:
+            # Adapt API request to core model
+            core_request = CoreRefreshTokenRequest(refresh_token=request.refresh_token)
 
-        # Set expiration time
-        if expires_delta:
-            expire = datetime.now(datetime.UTC) + expires_delta
-        else:
-            expire = datetime.now(datetime.UTC) + timedelta(minutes=15)
+            # Refresh via core service
+            core_auth_service = await self._get_core_auth_service()
+            token_response = await core_auth_service.refresh_token(core_request)
 
-        to_encode.update({"exp": expire, "type": "access"})
+            # Adapt core response to API model
+            return self._adapt_token_response(token_response)
 
-        # Encode the token
-        encoded_jwt = jwt.encode(
-            to_encode,
-            settings.secret_key.get_secret_value(),
-            algorithm=settings.algorithm,
-        )
+        except Exception as e:
+            logger.error(f"Token refresh failed: {str(e)}")
+            raise AuthenticationError("Token refresh failed") from e
 
-        return encoded_jwt
-
-    async def create_refresh_token(
-        self,
-        data: Dict[str, Any],
-        expires_delta: Optional[timedelta] = None,
-    ) -> str:
-        """Create a JWT refresh token.
-
-        Args:
-            data: Token payload
-            expires_delta: Token expiration time
-
-        Returns:
-            JWT token
+    async def get_current_user(self, token: str) -> UserResponse:
         """
-        to_encode = data.copy()
-
-        # Set expiration time
-        if expires_delta:
-            expire = datetime.now(datetime.UTC) + expires_delta
-        else:
-            expire = datetime.now(datetime.UTC) + timedelta(days=7)
-
-        to_encode.update({"exp": expire, "type": "refresh"})
-
-        # Encode the token
-        encoded_jwt = jwt.encode(
-            to_encode,
-            settings.secret_key.get_secret_value(),
-            algorithm=settings.algorithm,
-        )
-
-        return encoded_jwt
-
-    async def validate_access_token(self, token: str) -> Dict[str, Any]:
-        """Validate a JWT access token.
+        Get current user from access token.
 
         Args:
-            token: JWT token
+            token: JWT access token
 
         Returns:
-            Token payload
+            Current user information
 
         Raises:
             AuthenticationError: If token is invalid
         """
         try:
-            # Decode the token
-            payload = jwt.decode(
-                token,
-                settings.secret_key.get_secret_value(),
-                algorithms=[settings.algorithm],
-            )
+            # Get user via core service
+            core_auth_service = await self._get_core_auth_service()
+            user = await core_auth_service.get_current_user(token)
 
-            # Check token type
-            if payload.get("type") != "access":
-                raise AuthenticationError("Invalid token type")
+            # Adapt core response to API model
+            return self._adapt_user_response(user)
 
-            return payload
-
-        except jwt.ExpiredSignatureError as e:
-            raise AuthenticationError("Token has expired") from e
-        except jwt.InvalidTokenError as e:
+        except Exception as e:
+            logger.error(f"Failed to get current user: {str(e)}")
             raise AuthenticationError("Invalid token") from e
-
-    async def validate_refresh_token(self, token: str) -> Dict[str, Any]:
-        """Validate a JWT refresh token.
-
-        Args:
-            token: JWT token
-
-        Returns:
-            Token payload
-
-        Raises:
-            AuthenticationError: If token is invalid
-        """
-        try:
-            # Decode the token
-            payload = jwt.decode(
-                token,
-                settings.secret_key.get_secret_value(),
-                algorithms=[settings.algorithm],
-            )
-
-            # Check token type
-            if payload.get("type") != "refresh":
-                raise AuthenticationError("Invalid token type")
-
-            return payload
-
-        except jwt.ExpiredSignatureError as e:
-            raise AuthenticationError("Token has expired") from e
-        except jwt.InvalidTokenError as e:
-            raise AuthenticationError("Invalid token") from e
-
-    async def create_password_reset_token(self, user_id: str) -> str:
-        """Create a password reset token.
-
-        Args:
-            user_id: User ID
-
-        Returns:
-            Password reset token
-        """
-        to_encode = {
-            "user_id": user_id,
-            "type": "password_reset",
-            "exp": datetime.now(datetime.UTC) + timedelta(hours=1),
-        }
-
-        # Encode the token
-        encoded_jwt = jwt.encode(
-            to_encode,
-            settings.secret_key.get_secret_value(),
-            algorithm=settings.algorithm,
-        )
-
-        return encoded_jwt
 
     async def change_password(
-        self,
-        user_id: str,
-        current_password: str,
-        new_password: str,
-    ) -> bool:
-        """Change a user's password.
+        self, user_id: str, request: ChangePasswordRequest
+    ) -> MessageResponse:
+        """
+        Change user password.
 
         Args:
             user_id: User ID
-            current_password: Current password
-            new_password: New password
+            request: Password change request
 
         Returns:
-            True if successful, False otherwise
+            Success message
 
         Raises:
-            AuthenticationError: If current password is incorrect
-        """
-        # Get the user
-        user = await self.get_user_by_id(user_id)
-        if not user:
-            raise AuthenticationError("User not found")
-
-        # Verify current password
-        if not self.verify_password(current_password, user["password"]):
-            raise AuthenticationError("Current password is incorrect")
-
-        # Hash the new password
-        hashed_password = self.get_password_hash(new_password)
-
-        # Update the user
-        supabase = await self._get_supabase_client()
-        result = (
-            await supabase.table("users")
-            .update({"password": hashed_password})
-            .eq("id", user_id)
-            .execute()
-        )
-
-        return result is not None
-
-    async def reset_password(self, token: str, new_password: str) -> bool:
-        """Reset a user's password.
-
-        Args:
-            token: Reset token
-            new_password: New password
-
-        Returns:
-            True if successful, False otherwise
-
-        Raises:
-            AuthenticationError: If the token is invalid
+            AuthenticationError: If password change fails
         """
         try:
-            # Decode the token
-            payload = jwt.decode(
-                token,
-                settings.secret_key.get_secret_value(),
-                algorithms=[settings.algorithm],
+            # Change password via core service
+            user_service = await self._get_user_service()
+            success = await user_service.change_password(
+                user_id=user_id,
+                current_password=request.current_password,
+                new_password=request.new_password,
             )
 
-            # Check token type
-            if payload.get("type") != "reset":
-                raise AuthenticationError("Invalid token type")
+            if not success:
+                raise AuthenticationError("Password change failed")
 
-            # Get the user
-            user_id = payload.get("sub")
-            user = await self.get_user_by_id(user_id)
-            if not user:
-                raise AuthenticationError("User not found")
-
-            # Hash the new password
-            hashed_password = self.get_password_hash(new_password)
-
-            # Update the user
-            supabase = await self._get_supabase_client()
-            result = (
-                await supabase.table("users")
-                .update({"password": hashed_password})
-                .eq("id", user_id)
-                .execute()
+            return MessageResponse(
+                message="Password changed successfully",
+                success=True,
             )
 
-            return result is not None
+        except Exception as e:
+            logger.error(f"Password change failed: {str(e)}")
+            raise AuthenticationError("Password change failed") from e
 
-        except jwt.ExpiredSignatureError as e:
-            raise AuthenticationError("Token has expired") from e
-        except jwt.InvalidTokenError as e:
-            raise AuthenticationError("Invalid token") from e
+    async def forgot_password(
+        self, request: ForgotPasswordRequest
+    ) -> PasswordResetResponse:
+        """
+        Initiate password reset process.
+
+        Args:
+            request: Forgot password request
+
+        Returns:
+            Password reset response
+        """
+        try:
+            # Adapt API request to core model
+            core_request = CorePasswordResetRequest(email=request.email)
+
+            # Initiate reset via core service
+            core_auth_service = await self._get_core_auth_service()
+            await core_auth_service.initiate_password_reset(core_request)
+
+            # Always return success for security (don't reveal if email exists)
+            return PasswordResetResponse(
+                message="If the email exists, a password reset link has been sent",
+                email=request.email,
+                success=True,
+            )
+
+        except Exception as e:
+            logger.error(f"Password reset initiation failed: {str(e)}")
+            # Still return success for security
+            return PasswordResetResponse(
+                message="If the email exists, a password reset link has been sent",
+                email=request.email,
+                success=True,
+            )
+
+    async def reset_password(self, request: ResetPasswordRequest) -> MessageResponse:
+        """
+        Reset password using reset token.
+
+        Args:
+            request: Password reset request
+
+        Returns:
+            Success message
+
+        Raises:
+            AuthenticationError: If reset fails
+        """
+        try:
+            # Adapt API request to core model
+            core_request = CorePasswordResetConfirmRequest(
+                token=request.token,
+                new_password=request.new_password,
+            )
+
+            # Reset password via core service
+            core_auth_service = await self._get_core_auth_service()
+            success = await core_auth_service.confirm_password_reset(core_request)
+
+            if not success:
+                raise AuthenticationError("Password reset failed")
+
+            return MessageResponse(
+                message="Password reset successfully",
+                success=True,
+            )
+
+        except Exception as e:
+            logger.error(f"Password reset failed: {str(e)}")
+            raise AuthenticationError("Password reset failed") from e
+
+    async def logout_user(self, token: str) -> MessageResponse:
+        """
+        Logout user by invalidating token.
+
+        Args:
+            token: Access token to invalidate
+
+        Returns:
+            Success message
+        """
+        try:
+            # Logout via core service
+            core_auth_service = await self._get_core_auth_service()
+            success = await core_auth_service.logout_user(token)
+
+            return MessageResponse(
+                message="Logged out successfully",
+                success=success,
+            )
+
+        except Exception as e:
+            logger.error(f"Logout failed: {str(e)}")
+            return MessageResponse(
+                message="Logout completed",
+                success=True,  # Always return success for logout
+            )
+
+    def _adapt_token_response(self, core_response) -> TokenResponse:
+        """
+        Adapt core token response to API model.
+
+        Args:
+            core_response: Core token response
+
+        Returns:
+            API token response
+        """
+        return TokenResponse(
+            access_token=core_response.access_token,
+            refresh_token=core_response.refresh_token,
+            token_type=core_response.token_type,
+            expires_in=core_response.expires_in,
+        )
+
+    def _adapt_user_response(self, core_user) -> UserResponse:
+        """
+        Adapt core user response to API model.
+
+        Args:
+            core_user: Core user response
+
+        Returns:
+            API user response
+        """
+        return UserResponse(
+            id=core_user.id,
+            username=core_user.username,
+            email=core_user.email,
+            full_name=core_user.full_name,
+            is_active=core_user.is_active,
+            is_verified=core_user.is_verified,
+            created_at=core_user.created_at,
+            updated_at=core_user.updated_at,
+            preferences=core_user.preferences,
+        )
+
+
+# Module-level dependency annotations
+_core_auth_service_dep = Depends(get_core_auth_service)
+_user_service_dep = Depends(get_user_service)
+
+
+# Dependency function for FastAPI
+async def get_auth_service(
+    core_auth_service: CoreAuthService = _core_auth_service_dep,
+    user_service: UserService = _user_service_dep,
+) -> AuthService:
+    """
+    Get auth service instance for dependency injection.
+
+    Args:
+        core_auth_service: Core authentication service
+        user_service: Core user service
+
+    Returns:
+        AuthService instance
+    """
+    return AuthService(
+        core_auth_service=core_auth_service,
+        user_service=user_service,
+    )

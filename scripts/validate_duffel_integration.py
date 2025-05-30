@@ -28,7 +28,9 @@ async def validate_duffel_http_client():
     print("🔍 Testing DuffelHTTPClient...")
 
     try:
-        from tripsage.services.duffel_http_client import DuffelHTTPClient
+        from tripsage_core.services.external_apis.duffel_http_client import (
+            DuffelHTTPClient,
+        )
 
         # Test initialization
         client = DuffelHTTPClient(api_key="test_key")
@@ -112,7 +114,9 @@ def validate_configuration():
         print(f"  ✅ DUFFEL_API_KEY environment variable: {status}")
 
         # Test that the client can access configuration
-        from tripsage.services.duffel_http_client import DuffelHTTPClient
+        from tripsage_core.services.external_apis.duffel_http_client import (
+            DuffelHTTPClient,
+        )
 
         # Test with explicit API key
         client_explicit = DuffelHTTPClient(api_key="explicit_test_key")

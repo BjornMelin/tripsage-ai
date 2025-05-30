@@ -13,17 +13,23 @@ import pytest
 from pytest_benchmark.fixture import BenchmarkFixture
 
 from tripsage.config.feature_flags import IntegrationMode, feature_flags
-from tripsage.services.dragonfly_service import cache_service
+from tripsage_core.services.infrastructure import get_cache_service
 
 
 class TestDragonflyPerformance:
     """Performance tests for DragonflyDB migration."""
 
+    @pytest.fixture
+    async def cache_service(self):
+        """Get cache service for testing."""
+        return await get_cache_service()
+
     @pytest.fixture(autouse=True)
-    async def setup(self):
+    async def setup(self, cache_service):
         """Set up test environment."""
         # Store original integration mode
         self.original_mode = feature_flags.redis_integration
+        self.cache_service = cache_service
 
         # Clear any existing test data
         await self._clear_test_data()
@@ -39,7 +45,7 @@ class TestDragonflyPerformance:
         try:
             # Get all test keys and delete them
             for i in range(1000):
-                await cache_service.delete(f"perf_test_key_{i}")
+                await self.cache_service.delete(f"perf_test_key_{i}")
         except Exception:
             pass
 
@@ -75,7 +81,7 @@ class TestDragonflyPerformance:
 
         async def mcp_set():
             for i in range(10):
-                await cache_service.set(f"perf_test_key_{i}", test_value)
+                await self.cache_service.set(f"perf_test_key_{i}", test_value)
 
         mcp_times = await self._measure_operation_time(mcp_set, 10)
 
@@ -84,7 +90,7 @@ class TestDragonflyPerformance:
 
         async def direct_set():
             for i in range(10):
-                await cache_service.set(f"perf_test_key_{i}", test_value)
+                await self.cache_service.set(f"perf_test_key_{i}", test_value)
 
         direct_times = await self._measure_operation_time(direct_set, 10)
 
@@ -107,14 +113,14 @@ class TestDragonflyPerformance:
         # Pre-populate test data
         test_value = "x" * 1024  # 1KB value
         for i in range(100):
-            await cache_service.set(f"perf_test_key_{i}", test_value)
+            await self.cache_service.set(f"perf_test_key_{i}", test_value)
 
         # Test MCP performance
         feature_flags.redis_integration = IntegrationMode.MCP
 
         async def mcp_get():
             for i in range(10):
-                await cache_service.get(f"perf_test_key_{i}")
+                await self.cache_service.get(f"perf_test_key_{i}")
 
         mcp_times = await self._measure_operation_time(mcp_get, 10)
 
@@ -123,7 +129,7 @@ class TestDragonflyPerformance:
 
         async def direct_get():
             for i in range(10):
-                await cache_service.get(f"perf_test_key_{i}")
+                await self.cache_service.get(f"perf_test_key_{i}")
 
         direct_times = await self._measure_operation_time(direct_get, 10)
 
@@ -150,7 +156,7 @@ class TestDragonflyPerformance:
 
         async def mcp_batch():
             for key, value in test_data.items():
-                await cache_service.set(key, value)
+                await self.cache_service.set(key, value)
 
         start = time.perf_counter()
         await mcp_batch()
@@ -158,13 +164,13 @@ class TestDragonflyPerformance:
 
         # Clear data
         for key in test_data:
-            await cache_service.delete(key)
+            await self.cache_service.delete(key)
 
         # Test Direct DragonflyDB performance with batch
         feature_flags.redis_integration = IntegrationMode.DIRECT
 
         start = time.perf_counter()
-        await cache_service.batch_set(test_data)
+        await self.cache_service.batch_set(test_data)
         direct_time = (time.perf_counter() - start) * 1000
 
         improvement = ((mcp_time - direct_time) / mcp_time) * 100
@@ -188,14 +194,14 @@ class TestDragonflyPerformance:
         # Test individual operations
         async def individual_ops():
             for i in range(50):
-                await cache_service.set(f"pipeline_key_{i}", f"value_{i}")
-                await cache_service.expire(f"pipeline_key_{i}", 3600)
+                await self.cache_service.set(f"pipeline_key_{i}", f"value_{i}")
+                await self.cache_service.expire(f"pipeline_key_{i}", 3600)
 
         individual_times = await self._measure_operation_time(individual_ops, 5)
 
         # Test pipeline operations
         async def pipeline_ops():
-            service = await cache_service.adapter.get_direct_service()
+            service = await self.cache_service.adapter.get_direct_service()
             async with service.pipeline() as pipe:
                 for i in range(50):
                     pipe.set(f"pipeline_key_{i}", f"value_{i}")
@@ -231,10 +237,10 @@ class TestDragonflyPerformance:
                 key = f"concurrent_{worker_id}_{i}"
                 value = f"value_{worker_id}_{i}" * 10
 
-                await cache_service.set(key, value, ex=60)
-                result = await cache_service.get(key)
+                await self.cache_service.set(key, value, ex=60)
+                result = await self.cache_service.get(key)
                 assert result == value
-                await cache_service.delete(key)
+                await self.cache_service.delete(key)
 
         # Test with different concurrency levels
         for workers in [10, 50, 100]:
@@ -265,14 +271,14 @@ class TestDragonflyPerformance:
         feature_flags.redis_integration = IntegrationMode.DIRECT
 
         # Get initial memory info
-        service = await cache_service.adapter.get_direct_service()
+        service = await self.cache_service.adapter.get_direct_service()
         initial_info = await service.info("memory")
         initial_memory = initial_info.get("used_memory", 0)
 
         # Store large dataset
         large_value = "x" * 10240  # 10KB
         for i in range(1000):
-            await cache_service.set(f"memory_test_{i}", large_value)
+            await self.cache_service.set(f"memory_test_{i}", large_value)
 
         # Get memory after storing
         after_info = await service.info("memory")
@@ -308,12 +314,12 @@ class TestDragonflyPerformance:
 
             # SET operation
             start = time.perf_counter()
-            await cache_service.set(key, value)
+            await self.cache_service.set(key, value)
             operation_times.append((time.perf_counter() - start) * 1000)
 
             # GET operation
             start = time.perf_counter()
-            await cache_service.get(key)
+            await self.cache_service.get(key)
             operation_times.append((time.perf_counter() - start) * 1000)
 
         # Calculate percentiles

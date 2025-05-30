@@ -10,8 +10,9 @@ from datetime import datetime
 from typing import Any, Dict, Optional
 
 from tripsage.orchestration.state import TravelPlanningState, update_state_timestamp
-from tripsage.utils.error_handling import TripSageError, log_exception
-from tripsage.utils.logging import get_logger
+from tripsage_core.exceptions.exceptions import CoreTripSageError as TripSageError
+from tripsage_core.utils.error_handling_utils import log_exception
+from tripsage_core.utils.logging_utils import get_logger
 
 
 class BaseAgentNodeError(TripSageError):

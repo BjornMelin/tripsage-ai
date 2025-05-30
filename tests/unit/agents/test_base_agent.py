@@ -8,9 +8,19 @@ for all TripSage agents, including its integration with the OpenAI Agents SDK.
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from agents import RunContext, RunResult
 
-from tripsage.agents.base_agent import BaseAgent
+from tripsage.agents.base import BaseAgent
+
+# Import OpenAI Agents SDK types
+try:
+    from openai.agents import RunContext, RunResult
+except ImportError:
+    # Fallback for testing - create mock classes
+    class RunContext:
+        pass
+
+    class RunResult:
+        pass
 
 
 @pytest.fixture

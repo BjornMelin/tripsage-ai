@@ -11,16 +11,16 @@ from uuid import uuid4
 
 import pytest
 
-from tripsage_core.exceptions import (
+from tripsage_core.exceptions.exceptions import (
     CoreResourceNotFoundError as NotFoundError,
 )
-from tripsage_core.exceptions import (
+from tripsage_core.exceptions.exceptions import (
     CoreServiceError as ServiceError,
 )
 from tripsage_core.services.business.destination_service import (
     ClimateType,
+    Destination,
     DestinationCategory,
-    DestinationDetails,
     DestinationImage,
     DestinationSearchRequest,
     DestinationSearchResponse,
@@ -190,7 +190,7 @@ class TestDestinationService:
         """Sample destination details."""
         destination_id = str(uuid4())
 
-        return DestinationDetails(
+        return Destination(
             id=destination_id,
             name="Paris",
             country="France",

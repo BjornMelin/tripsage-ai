@@ -10,27 +10,34 @@ from decimal import Decimal
 from typing import Any, Dict, List, Optional, Set
 
 import httpx
-from pydantic import ValidationError
+from pydantic import ValidationError as PydanticValidationError
 
-from tripsage.core.config import settings
+from tripsage.config.service_registry import BaseService
 from tripsage.models.api.flights_models import (
     Airport,
     CabinClass,
-    CreateOrderRequest,
     FlightOffer,
-    FlightOrder,
-    OfferRequest,
     OrderCancellation,
     Passenger,
     PassengerType,
     PaymentRequest,
     SeatMap,
-    SliceRequest,
 )
-from tripsage.services.base import BaseService
-from tripsage.utils.cache import cached
-from tripsage.utils.decorators import with_retry
-from tripsage.utils.logging import get_logger
+from tripsage.models.api.flights_models import (
+    FlightOfferRequest as OfferRequest,
+)
+from tripsage.models.api.flights_models import (
+    Order as FlightOrder,
+)
+from tripsage.models.api.flights_models import (
+    OrderCreateRequest as CreateOrderRequest,
+)
+from tripsage_core.config.base_app_settings import get_settings
+from tripsage_core.utils.cache_utils import cached
+from tripsage_core.utils.decorator_utils import retry_on_failure
+from tripsage_core.utils.logging_utils import get_logger
+
+settings = get_settings()
 
 logger = get_logger(__name__)
 
@@ -68,7 +75,7 @@ class DuffelFlightsService(BaseService):
         """Async context manager exit."""
         await self.client.aclose()
 
-    @with_retry(max_attempts=3, backoff_factor=2)
+    @retry_on_failure(max_attempts=3, backoff_factor=2)
     async def _make_request(
         self,
         method: str,
@@ -175,20 +182,20 @@ class DuffelFlightsService(BaseService):
 
         # Build slices
         slices = [
-            SliceRequest(
-                origin=origin,
-                destination=destination,
-                departure_date=departure_date.date(),
-            )
+            {
+                "origin": origin,
+                "destination": destination,
+                "departure_date": departure_date.date().isoformat(),
+            }
         ]
 
         if return_date:
             slices.append(
-                SliceRequest(
-                    origin=destination,
-                    destination=origin,
-                    departure_date=return_date.date(),
-                )
+                {
+                    "origin": destination,
+                    "destination": origin,
+                    "departure_date": return_date.date().isoformat(),
+                }
             )
 
         # Create offer request
@@ -213,7 +220,7 @@ class DuffelFlightsService(BaseService):
             try:
                 offer = FlightOffer(**offer_data)
                 offers.append(offer)
-            except ValidationError as e:
+            except PydanticValidationError as e:
                 logger.warning(f"Failed to parse offer: {e}")
                 continue
 
@@ -316,7 +323,7 @@ class DuffelFlightsService(BaseService):
         for order_data in response.get("data", []):
             try:
                 orders.append(FlightOrder(**order_data))
-            except ValidationError as e:
+            except PydanticValidationError as e:
                 logger.warning(f"Failed to parse order: {e}")
                 continue
 
@@ -358,7 +365,7 @@ class DuffelFlightsService(BaseService):
         for seat_map_data in response.get("data", []):
             try:
                 seat_maps.append(SeatMap(**seat_map_data))
-            except ValidationError as e:
+            except PydanticValidationError as e:
                 logger.warning(f"Failed to parse seat map: {e}")
                 continue
 

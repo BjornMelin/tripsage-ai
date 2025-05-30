@@ -88,7 +88,7 @@ class DragonflyRateLimiter:
     async def initialize(self):
         """Initialize the direct DragonflyDB service."""
         if not self.cache_service:
-            from tripsage.services.dragonfly_service import get_cache_service
+            from tripsage_core.services.infrastructure import get_cache_service
 
             self.cache_service = await get_cache_service()
 

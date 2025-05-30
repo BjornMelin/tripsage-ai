@@ -1,12 +1,17 @@
 """Simple test for the centralized exception system."""
 
+import pytest
+
 # Now import our exceptions
-from tripsage_core.exceptions import (
+from tripsage_core.exceptions.exceptions import (
     CoreAuthenticationError,
     CoreTripSageError,
     ErrorDetails,
     format_exception,
 )
+
+# Disable the parent conftest's fixture
+pytestmark = pytest.mark.usefixtures("mock_core_settings")
 
 
 def test_core_exception_basic():

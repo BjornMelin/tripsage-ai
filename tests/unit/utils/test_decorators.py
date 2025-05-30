@@ -9,7 +9,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from tripsage.utils.decorators import (
+from tripsage_core.utils.decorator_utils import (
     ensure_memory_client_initialized,
     with_error_handling,
 )

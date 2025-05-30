@@ -10,7 +10,7 @@ from typing import List, Optional, Tuple
 
 from supabase import Client, create_client
 
-from tripsage.config.app_settings import get_settings
+from tripsage_core.config.base_app_settings import get_settings
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -243,6 +243,10 @@ async def run_migrations_cli(
     """CLI entry point for running migrations."""
     runner = MigrationRunner(project_id)
     return await runner.run_migrations(up_to=up_to, dry_run=dry_run)
+
+
+# Alias for backward compatibility
+run_migrations = run_migrations_cli
 
 
 if __name__ == "__main__":

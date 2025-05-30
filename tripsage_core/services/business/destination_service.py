@@ -379,7 +379,9 @@ class DestinationService:
 
         if weather_service is None:
             try:
-                from tripsage.services.external.weather_service import WeatherService
+                from tripsage_core.services.external_apis.weather_service import (
+                    WeatherService,
+                )
 
                 weather_service = WeatherService()
             except ImportError:
@@ -388,7 +390,7 @@ class DestinationService:
 
         if external_destination_service is None:
             try:
-                from tripsage.services.external.destination_service import (
+                from tripsage_core.services.external.destination_service import (
                     ExternalDestinationService,
                 )
 

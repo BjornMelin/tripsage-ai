@@ -280,3 +280,11 @@ class DestinationSuggestionResponse(BaseModel):
         default=None,
         description="Reasoning for each suggestion (destination_id -> explanation)",
     )
+
+
+# Aliases for backward compatibility with existing service imports
+DestinationDetails = DestinationDetailsResponse
+DestinationRecommendation = DestinationSuggestionResponse
+PointOfInterestSearchRequest = DestinationSearchRequest
+PointOfInterestSearchResponse = DestinationSearchResponse
+SavedDestination = SavedDestinationResponse

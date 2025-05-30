@@ -11,7 +11,7 @@ from typing import Optional
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from api.core.config import settings
+from tripsage_core.config.base_app_settings import settings
 
 logger = logging.getLogger(__name__)
 

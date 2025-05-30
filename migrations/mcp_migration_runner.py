@@ -12,9 +12,9 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 from tripsage.mcp_abstraction.manager import MCPManager
-from tripsage.utils.decorators import with_error_handling
-from tripsage.utils.error_handling import TripSageError
-from tripsage.utils.logging import get_logger
+from tripsage_core.exceptions.exceptions import CoreTripSageError as TripSageError
+from tripsage_core.utils.decorator_utils import with_error_handling
+from tripsage_core.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)
 
@@ -237,7 +237,7 @@ class MCPMigrationRunner:
             self.logger.error(f"Failed to get migration status: {e}")
             raise MCPMigrationError(f"Failed to get migration status: {str(e)}") from e
 
-    @with_error_handling(logger=logger, raise_on_error=True)
+    @with_error_handling
     async def run_pending_migrations(
         self, project_id: Optional[str] = None, dry_run: bool = False
     ) -> List[str]:

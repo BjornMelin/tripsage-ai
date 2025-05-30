@@ -7,13 +7,13 @@ including JWT token management, token validation, and refresh mechanisms.
 
 import os
 from datetime import datetime, timedelta, timezone
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, Mock, patch
 from uuid import uuid4
 
 import jwt
 import pytest
 
-from tripsage_core.exceptions import (
+from tripsage_core.exceptions.exceptions import (
     CoreAuthenticationError as AuthenticationError,
 )
 from tripsage_core.services.business.auth_service import (
@@ -450,10 +450,29 @@ class TestAuthenticationService:
         iat_time = datetime.fromtimestamp(decoded["iat"], tz=timezone.utc)
         assert (exp_time - iat_time).total_seconds() == 3600  # 1 hour
 
-    async def test_get_auth_service_dependency(self):
+    @pytest.mark.asyncio
+    @patch(
+        "tripsage_core.services.infrastructure.database_service.get_database_service"
+    )
+    @patch("tripsage_core.services.business.user_service.UserService")
+    async def test_get_auth_service_dependency(
+        self, mock_user_service_class, mock_get_db_service
+    ):
         """Test the dependency injection function."""
+        # Mock the dependencies
+        mock_db_service = Mock()
+        mock_get_db_service.return_value = mock_db_service
+        mock_user_service = Mock()
+        mock_user_service_class.return_value = mock_user_service
+
         service = await get_auth_service()
         assert isinstance(service, AuthenticationService)
+
+        # Verify dependencies were called correctly
+        mock_get_db_service.assert_called_once()
+        mock_user_service_class.assert_called_once_with(
+            database_service=mock_db_service
+        )
 
     async def test_authenticate_user_exception_handling(
         self, auth_service, mock_user_service, sample_login_request

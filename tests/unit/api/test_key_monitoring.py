@@ -8,7 +8,7 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from httpx import AsyncClient
 
-from tripsage.api.services.key_monitoring import KeyOperation
+from tripsage_core.services.infrastructure.key_monitoring_service import KeyOperation
 
 
 @pytest.mark.asyncio

@@ -10,15 +10,16 @@ import json
 import time
 from typing import Any, Dict, List, Optional
 
+from tripsage.mcp_abstraction.manager import MCPManager
 from tripsage.services.core.tool_calling_service import (
     ToolCallRequest,
     ToolCallResponse,
     ToolCallService,
 )
-from tripsage.services.infrastructure.database_service import database_service
-from tripsage.utils.decorators import with_error_handling
-from tripsage.utils.error_handling import TripSageError
-from tripsage.utils.logging import get_logger
+from tripsage_core.exceptions.exceptions import CoreTripSageError as TripSageError
+from tripsage_core.services.infrastructure import get_database_service
+from tripsage_core.utils.decorator_utils import with_error_handling
+from tripsage_core.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)
 
@@ -34,9 +35,15 @@ class ChatOrchestrationService:
 
     def __init__(self):
         """Initialize the chat orchestration service."""
-        self.database = database_service
+        self.database = None  # Will be initialized async
         self.tool_call_service = ToolCallService()
+        self.mcp_manager = MCPManager()
         self.logger = logger
+
+    async def _ensure_database(self):
+        """Ensure database service is initialized."""
+        if self.database is None:
+            self.database = await get_database_service()
 
     def _sanitize_sql_value(self, value: Any) -> str:
         """Sanitize SQL values to prevent injection attacks.

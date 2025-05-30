@@ -31,8 +31,8 @@ from tripsage.api.models.websocket import (
     WebSocketMessage,
     WebSocketSubscribeRequest,
 )
-from tripsage.api.services.chat_service import ChatService
-from tripsage.api.services.websocket_manager import websocket_manager
+from tripsage.services.core.chat_service import ChatService
+from tripsage_core.services.infrastructure.websocket_manager import websocket_manager
 
 logger = logging.getLogger(__name__)
 

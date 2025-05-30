@@ -11,10 +11,12 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 
-from api.core.config import settings
-from api.core.exceptions import KeyValidationError
 from api.deps import get_current_user
 from api.services.key_service import KeyService
+from tripsage_core.config.base_app_settings import settings
+from tripsage_core.exceptions.exceptions import (
+    CoreKeyValidationError as KeyValidationError,
+)
 
 logger = logging.getLogger(__name__)
 

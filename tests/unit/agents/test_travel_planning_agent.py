@@ -8,10 +8,19 @@ registers tools, and can execute successful handoffs to specialized agents.
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from agents import RunContextWrapper as RunContext
-from agents import RunResult
 
 from tripsage.agents.planning import TravelPlanningAgent
+
+# Import OpenAI Agents SDK types
+try:
+    from openai.agents import RunContext, RunResult
+except ImportError:
+    # Fallback for testing - create mock classes
+    class RunContext:
+        pass
+
+    class RunResult:
+        pass
 
 
 @pytest.fixture

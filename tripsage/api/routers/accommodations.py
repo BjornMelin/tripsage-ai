@@ -10,7 +10,6 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, status
 
-from tripsage.api.core.exceptions import ResourceNotFoundError
 from tripsage.api.middlewares.auth import get_current_user
 from tripsage.api.models.accommodations import (
     AccommodationDetailsRequest,
@@ -21,7 +20,13 @@ from tripsage.api.models.accommodations import (
     SavedAccommodationRequest,
     SavedAccommodationResponse,
 )
+
+# Note: AccommodationService needs to be refactored to use the new pattern
+# For now, keeping the old import until it's refactored
 from tripsage.api.services.accommodation import AccommodationService
+from tripsage_core.exceptions.exceptions import (
+    CoreResourceNotFoundError as ResourceNotFoundError,
+)
 
 logger = logging.getLogger(__name__)
 

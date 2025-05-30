@@ -9,6 +9,7 @@ from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
 
+from api.services.key_service import get_key_service
 from tripsage.api.middlewares.auth import get_current_user
 from tripsage.api.models.api_key import (
     ApiKeyCreate,
@@ -17,8 +18,7 @@ from tripsage.api.models.api_key import (
     ApiKeyValidateRequest,
     ApiKeyValidateResponse,
 )
-from tripsage.api.services.key import KeyService
-from tripsage.api.services.key_monitoring import (
+from tripsage_core.services.infrastructure.key_monitoring_service import (
     KeyMonitoringService,
     check_key_expiration,
     get_key_health_metrics,
@@ -29,17 +29,11 @@ logger = logging.getLogger(__name__)
 
 # Create singleton instances
 _key_monitoring_service_singleton = KeyMonitoringService()
-_key_service_singleton = KeyService()
 
 
 def get_monitoring_service() -> KeyMonitoringService:
     """Dependency provider for the KeyMonitoringService singleton."""
     return _key_monitoring_service_singleton
-
-
-def get_key_service() -> KeyService:
-    """Dependency provider for the KeyService."""
-    return _key_service_singleton
 
 
 @router.get(

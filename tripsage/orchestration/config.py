@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Dict, Optional
 
-from tripsage.config.app_settings import settings
+from tripsage_core.config.base_app_settings import settings
 
 
 class CheckpointStorage(Enum):
