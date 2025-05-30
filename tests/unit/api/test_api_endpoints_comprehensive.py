@@ -5,21 +5,21 @@ This module provides extensive testing for various API endpoints including
 auth, trips, accommodations, and chat functionality.
 """
 
-import json
 from datetime import date, datetime, timedelta
-from typing import Dict
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi import HTTPException, status
-from fastapi.testclient import TestClient
 
 # Mock the problematic imports to avoid configuration errors
-with patch.dict('sys.modules', {
-    'tripsage.api.main': MagicMock(),
-    'tripsage.api.core.config': MagicMock(),
-    'tripsage_core.config.base_app_settings': MagicMock(),
-}):
+with patch.dict(
+    "sys.modules",
+    {
+        "tripsage.api.main": MagicMock(),
+        "tripsage.api.core.config": MagicMock(),
+        "tripsage_core.config.base_app_settings": MagicMock(),
+    },
+):
     from tripsage.api.models.requests.auth import UserCreate, UserLogin
     from tripsage.api.models.requests.trips import TripCreate
     from tripsage.api.models.responses.auth import Token, UserResponse
@@ -42,11 +42,12 @@ class TestAuthEndpoints:
     def mock_app(self, mock_auth_service):
         """Mock FastAPI application with auth endpoints."""
         from fastapi import FastAPI
+
         app = FastAPI()
-        
+
         # Mock the auth service dependency
         app.dependency_overrides = {}
-        
+
         return app
 
     def test_user_create_model_validation(self):
@@ -55,9 +56,9 @@ class TestAuthEndpoints:
         valid_user = UserCreate(
             email="test@example.com",
             password="securepassword123",
-            full_name="Test User"
+            full_name="Test User",
         )
-        
+
         assert valid_user.email == "test@example.com"
         assert valid_user.password == "securepassword123"
         assert valid_user.full_name == "Test User"
@@ -67,9 +68,7 @@ class TestAuthEndpoints:
         # Test invalid email format
         with pytest.raises(Exception):  # Pydantic validation error
             UserCreate(
-                email="invalid-email",
-                password="password123",
-                full_name="Test User"
+                email="invalid-email", password="password123", full_name="Test User"
             )
 
     def test_user_create_model_password_requirements(self):
@@ -77,18 +76,13 @@ class TestAuthEndpoints:
         # Test minimum password length
         with pytest.raises(Exception):  # Pydantic validation error
             UserCreate(
-                email="test@example.com",
-                password="short",
-                full_name="Test User"
+                email="test@example.com", password="short", full_name="Test User"
             )
 
     def test_user_login_model_validation(self):
         """Test UserLogin model validation."""
-        valid_login = UserLogin(
-            email="test@example.com",
-            password="password123"
-        )
-        
+        valid_login = UserLogin(email="test@example.com", password="password123")
+
         assert valid_login.email == "test@example.com"
         assert valid_login.password == "password123"
 
@@ -97,9 +91,9 @@ class TestAuthEndpoints:
         token = Token(
             access_token="eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
             token_type="bearer",
-            expires_in=3600
+            expires_in=3600,
         )
-        
+
         assert token.access_token.startswith("eyJ")
         assert token.token_type == "bearer"
         assert token.expires_in == 3600
@@ -111,9 +105,9 @@ class TestAuthEndpoints:
             email="test@example.com",
             full_name="Test User",
             is_active=True,
-            created_at=datetime.now()
+            created_at=datetime.now(),
         )
-        
+
         assert user_response.id == 1
         assert user_response.email == "test@example.com"
         assert user_response.is_active is True
@@ -126,17 +120,17 @@ class TestAuthEndpoints:
             "email": "test@example.com",
             "full_name": "Test User",
             "is_active": True,
-            "created_at": datetime.now()
+            "created_at": datetime.now(),
         }
-        
+
         user_data = {
             "email": "test@example.com",
             "password": "securepassword123",
-            "full_name": "Test User"
+            "full_name": "Test User",
         }
-        
+
         result = await mock_auth_service.register_user(user_data)
-        
+
         assert result["email"] == "test@example.com"
         assert result["id"] == 1
         mock_auth_service.register_user.assert_called_once_with(user_data)
@@ -145,19 +139,18 @@ class TestAuthEndpoints:
     async def test_register_user_duplicate_email(self, mock_auth_service):
         """Test user registration with duplicate email."""
         mock_auth_service.register_user.side_effect = HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Email already registered"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered"
         )
-        
+
         user_data = {
             "email": "existing@example.com",
             "password": "password123",
-            "full_name": "Test User"
+            "full_name": "Test User",
         }
-        
+
         with pytest.raises(HTTPException) as exc_info:
             await mock_auth_service.register_user(user_data)
-        
+
         assert exc_info.value.status_code == status.HTTP_400_BAD_REQUEST
         assert "already registered" in exc_info.value.detail
 
@@ -167,22 +160,21 @@ class TestAuthEndpoints:
         mock_auth_service.authenticate_user.return_value = {
             "id": 1,
             "email": "test@example.com",
-            "full_name": "Test User"
+            "full_name": "Test User",
         }
         mock_auth_service.create_access_token.return_value = {
             "access_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
             "token_type": "bearer",
-            "expires_in": 3600
+            "expires_in": 3600,
         }
-        
-        login_data = {
-            "email": "test@example.com",
-            "password": "password123"
-        }
-        
-        user = await mock_auth_service.authenticate_user(login_data["email"], login_data["password"])
+
+        login_data = {"email": "test@example.com", "password": "password123"}
+
+        user = await mock_auth_service.authenticate_user(
+            login_data["email"], login_data["password"]
+        )
         token = mock_auth_service.create_access_token({"sub": user["email"]})
-        
+
         assert user["email"] == "test@example.com"
         assert token["token_type"] == "bearer"
 
@@ -190,13 +182,14 @@ class TestAuthEndpoints:
     async def test_login_user_invalid_credentials(self, mock_auth_service):
         """Test login with invalid credentials."""
         mock_auth_service.authenticate_user.side_effect = HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid credentials"
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials"
         )
-        
+
         with pytest.raises(HTTPException) as exc_info:
-            await mock_auth_service.authenticate_user("test@example.com", "wrongpassword")
-        
+            await mock_auth_service.authenticate_user(
+                "test@example.com", "wrongpassword"
+            )
+
         assert exc_info.value.status_code == status.HTTP_401_UNAUTHORIZED
         assert "Invalid credentials" in exc_info.value.detail
 
@@ -220,16 +213,16 @@ class TestTripEndpoints:
         today = date.today()
         future_date = today + timedelta(days=30)
         end_date = future_date + timedelta(days=7)
-        
+
         valid_trip = TripCreate(
             name="Tokyo Adventure",
             start_date=future_date,
             end_date=end_date,
             destination="Tokyo, Japan",
             budget=3000.0,
-            travelers=2
+            travelers=2,
         )
-        
+
         assert valid_trip.name == "Tokyo Adventure"
         assert valid_trip.destination == "Tokyo, Japan"
         assert valid_trip.budget == 3000.0
@@ -239,7 +232,7 @@ class TestTripEndpoints:
         """Test TripCreate date validation."""
         today = date.today()
         past_date = today - timedelta(days=30)
-        
+
         # Test past start date
         with pytest.raises(Exception):  # Should raise validation error
             TripCreate(
@@ -247,7 +240,7 @@ class TestTripEndpoints:
                 start_date=past_date,
                 end_date=today,
                 destination="Test Destination",
-                budget=1000.0
+                budget=1000.0,
             )
 
     def test_trip_create_model_end_before_start(self):
@@ -255,14 +248,14 @@ class TestTripEndpoints:
         today = date.today()
         start_date = today + timedelta(days=30)
         end_date = start_date - timedelta(days=5)  # End before start
-        
+
         with pytest.raises(Exception):  # Should raise validation error
             TripCreate(
                 name="Invalid Trip",
                 start_date=start_date,
                 end_date=end_date,
                 destination="Test Destination",
-                budget=1000.0
+                budget=1000.0,
             )
 
     @pytest.mark.asyncio
@@ -274,18 +267,18 @@ class TestTripEndpoints:
             "end_date": date.today() + timedelta(days=75),
             "destination": "Paris, France",
             "budget": 5000.0,
-            "travelers": 2
+            "travelers": 2,
         }
-        
+
         mock_trip_service.create_trip.return_value = {
             "id": "trip_123",
             "user_id": 1,
             **trip_data,
-            "created_at": datetime.now()
+            "created_at": datetime.now(),
         }
-        
+
         result = await mock_trip_service.create_trip(trip_data, user_id=1)
-        
+
         assert result["id"] == "trip_123"
         assert result["name"] == "European Adventure"
         assert result["user_id"] == 1
@@ -300,21 +293,21 @@ class TestTripEndpoints:
                 "name": "Tokyo Trip",
                 "destination": "Tokyo, Japan",
                 "start_date": date.today() + timedelta(days=30),
-                "end_date": date.today() + timedelta(days=37)
+                "end_date": date.today() + timedelta(days=37),
             },
             {
-                "id": "trip_2", 
+                "id": "trip_2",
                 "name": "Paris Trip",
                 "destination": "Paris, France",
                 "start_date": date.today() + timedelta(days=60),
-                "end_date": date.today() + timedelta(days=67)
-            }
+                "end_date": date.today() + timedelta(days=67),
+            },
         ]
-        
+
         mock_trip_service.get_user_trips.return_value = mock_trips
-        
+
         result = await mock_trip_service.get_user_trips(user_id=1)
-        
+
         assert len(result) == 2
         assert result[0]["name"] == "Tokyo Trip"
         assert result[1]["name"] == "Paris Trip"
@@ -324,19 +317,19 @@ class TestTripEndpoints:
         """Test successful retrieval of specific trip."""
         mock_trip = {
             "id": "trip_123",
-            "name": "Bali Adventure", 
+            "name": "Bali Adventure",
             "destination": "Bali, Indonesia",
             "start_date": date.today() + timedelta(days=45),
             "end_date": date.today() + timedelta(days=52),
             "budget": 2500.0,
             "travelers": 2,
-            "user_id": 1
+            "user_id": 1,
         }
-        
+
         mock_trip_service.get_trip.return_value = mock_trip
-        
+
         result = await mock_trip_service.get_trip("trip_123", user_id=1)
-        
+
         assert result["id"] == "trip_123"
         assert result["name"] == "Bali Adventure"
         assert result["user_id"] == 1
@@ -345,44 +338,42 @@ class TestTripEndpoints:
     async def test_get_trip_not_found(self, mock_trip_service):
         """Test retrieval of non-existent trip."""
         mock_trip_service.get_trip.side_effect = HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Trip not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail="Trip not found"
         )
-        
+
         with pytest.raises(HTTPException) as exc_info:
             await mock_trip_service.get_trip("nonexistent_trip", user_id=1)
-        
+
         assert exc_info.value.status_code == status.HTTP_404_NOT_FOUND
         assert "not found" in exc_info.value.detail
 
     @pytest.mark.asyncio
     async def test_update_trip_success(self, mock_trip_service):
         """Test successful trip update."""
-        update_data = {
-            "name": "Updated Trip Name",
-            "budget": 4000.0
-        }
-        
+        update_data = {"name": "Updated Trip Name", "budget": 4000.0}
+
         mock_trip_service.update_trip.return_value = {
             "id": "trip_123",
             "name": "Updated Trip Name",
             "budget": 4000.0,
             "destination": "Tokyo, Japan",  # Unchanged
-            "user_id": 1
+            "user_id": 1,
         }
-        
+
         result = await mock_trip_service.update_trip("trip_123", update_data, user_id=1)
-        
+
         assert result["name"] == "Updated Trip Name"
         assert result["budget"] == 4000.0
 
     @pytest.mark.asyncio
     async def test_delete_trip_success(self, mock_trip_service):
         """Test successful trip deletion."""
-        mock_trip_service.delete_trip.return_value = {"message": "Trip deleted successfully"}
-        
+        mock_trip_service.delete_trip.return_value = {
+            "message": "Trip deleted successfully"
+        }
+
         result = await mock_trip_service.delete_trip("trip_123", user_id=1)
-        
+
         assert "deleted" in result["message"].lower()
         mock_trip_service.delete_trip.assert_called_once_with("trip_123", user_id=1)
 
@@ -408,9 +399,9 @@ class TestAccommodationEndpoints:
             "check_out": "2024-06-05",
             "guests": 2,
             "max_price": 300,
-            "property_type": "hotel"
+            "property_type": "hotel",
         }
-        
+
         mock_results = {
             "results": [
                 {
@@ -420,7 +411,7 @@ class TestAccommodationEndpoints:
                     "price_per_night": 250,
                     "total_price": 1000,
                     "rating": 4.5,
-                    "amenities": ["WiFi", "Pool", "Gym"]
+                    "amenities": ["WiFi", "Pool", "Gym"],
                 },
                 {
                     "id": "hotel_2",
@@ -429,16 +420,16 @@ class TestAccommodationEndpoints:
                     "price_per_night": 180,
                     "total_price": 720,
                     "rating": 4.0,
-                    "amenities": ["WiFi", "Breakfast"]
-                }
+                    "amenities": ["WiFi", "Breakfast"],
+                },
             ],
-            "total_count": 2
+            "total_count": 2,
         }
-        
+
         mock_accommodation_service.search_accommodations.return_value = mock_results
-        
+
         result = await mock_accommodation_service.search_accommodations(search_params)
-        
+
         assert "results" in result
         assert len(result["results"]) == 2
         assert result["results"][0]["name"] == "Grand Hotel SF"
@@ -452,17 +443,17 @@ class TestAccommodationEndpoints:
             "check_in": "2024-12-25",
             "check_out": "2024-12-26",
             "guests": 10,
-            "max_price": 50
+            "max_price": 50,
         }
-        
+
         mock_accommodation_service.search_accommodations.return_value = {
             "results": [],
             "total_count": 0,
-            "message": "No accommodations found matching your criteria"
+            "message": "No accommodations found matching your criteria",
         }
-        
+
         result = await mock_accommodation_service.search_accommodations(search_params)
-        
+
         assert result["results"] == []
         assert result["total_count"] == 0
 
@@ -470,7 +461,7 @@ class TestAccommodationEndpoints:
     async def test_get_accommodation_details_success(self, mock_accommodation_service):
         """Test successful accommodation details retrieval."""
         accommodation_id = "hotel_123"
-        
+
         mock_details = {
             "id": "hotel_123",
             "name": "Luxury Resort",
@@ -480,7 +471,7 @@ class TestAccommodationEndpoints:
                 "city": "Miami",
                 "state": "FL",
                 "country": "USA",
-                "coordinates": {"lat": 25.7617, "lng": -80.1918}
+                "coordinates": {"lat": 25.7617, "lng": -80.1918},
             },
             "amenities": ["Beach Access", "Spa", "Pool", "WiFi", "Restaurant"],
             "rooms": [
@@ -488,38 +479,43 @@ class TestAccommodationEndpoints:
                     "type": "Standard Room",
                     "price_per_night": 300,
                     "max_guests": 2,
-                    "amenities": ["Ocean View", "WiFi", "Air Conditioning"]
+                    "amenities": ["Ocean View", "WiFi", "Air Conditioning"],
                 }
             ],
             "policies": {
                 "check_in": "15:00",
                 "check_out": "11:00",
-                "cancellation": "Free cancellation up to 24 hours before check-in"
+                "cancellation": "Free cancellation up to 24 hours before check-in",
             },
             "rating": 4.8,
-            "review_count": 1250
+            "review_count": 1250,
         }
-        
+
         mock_accommodation_service.get_accommodation_details.return_value = mock_details
-        
-        result = await mock_accommodation_service.get_accommodation_details(accommodation_id)
-        
+
+        result = await mock_accommodation_service.get_accommodation_details(
+            accommodation_id
+        )
+
         assert result["id"] == "hotel_123"
         assert result["name"] == "Luxury Resort"
         assert result["rating"] == 4.8
         assert "Beach Access" in result["amenities"]
 
     @pytest.mark.asyncio
-    async def test_get_accommodation_details_not_found(self, mock_accommodation_service):
+    async def test_get_accommodation_details_not_found(
+        self, mock_accommodation_service
+    ):
         """Test accommodation details retrieval for non-existent property."""
-        mock_accommodation_service.get_accommodation_details.side_effect = HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Accommodation not found"
+        mock_accommodation_service.get_accommodation_details.side_effect = (
+            HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Accommodation not found"
+            )
         )
-        
+
         with pytest.raises(HTTPException) as exc_info:
             await mock_accommodation_service.get_accommodation_details("nonexistent_id")
-        
+
         assert exc_info.value.status_code == status.HTTP_404_NOT_FOUND
 
     @pytest.mark.asyncio
@@ -535,35 +531,28 @@ class TestAccommodationEndpoints:
                 "primary_guest": {
                     "name": "John Doe",
                     "email": "john@example.com",
-                    "phone": "+1234567890"
+                    "phone": "+1234567890",
                 }
             },
-            "payment_info": {
-                "method": "credit_card",
-                "card_token": "tok_visa_4242"
-            }
+            "payment_info": {"method": "credit_card", "card_token": "tok_visa_4242"},
         }
-        
+
         mock_booking_result = {
             "booking_id": "booking_789",
             "status": "confirmed",
             "confirmation_number": "CONF123456",
             "total_price": 1200.00,
-            "accommodation": {
-                "id": "hotel_123",
-                "name": "Luxury Resort"
-            },
-            "dates": {
-                "check_in": "2024-07-01",
-                "check_out": "2024-07-05"
-            },
-            "guest_count": 2
+            "accommodation": {"id": "hotel_123", "name": "Luxury Resort"},
+            "dates": {"check_in": "2024-07-01", "check_out": "2024-07-05"},
+            "guest_count": 2,
         }
-        
+
         mock_accommodation_service.book_accommodation.return_value = mock_booking_result
-        
-        result = await mock_accommodation_service.book_accommodation(booking_data, user_id=1)
-        
+
+        result = await mock_accommodation_service.book_accommodation(
+            booking_data, user_id=1
+        )
+
         assert result["booking_id"] == "booking_789"
         assert result["status"] == "confirmed"
         assert result["total_price"] == 1200.00
@@ -574,17 +563,17 @@ class TestAccommodationEndpoints:
         booking_data = {
             "accommodation_id": "hotel_123",
             "check_in": "2024-12-31",
-            "check_out": "2025-01-02"
+            "check_out": "2025-01-02",
         }
-        
+
         mock_accommodation_service.book_accommodation.side_effect = HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Accommodation not available for selected dates"
+            detail="Accommodation not available for selected dates",
         )
-        
+
         with pytest.raises(HTTPException) as exc_info:
             await mock_accommodation_service.book_accommodation(booking_data, user_id=1)
-        
+
         assert exc_info.value.status_code == status.HTTP_409_CONFLICT
         assert "not available" in exc_info.value.detail
 
@@ -609,11 +598,11 @@ class TestChatEndpoints:
             "session_id": "chat_session_123",
             "user_id": 1,
             "created_at": datetime.now(),
-            "status": "active"
+            "status": "active",
         }
-        
+
         result = await mock_chat_service.create_chat_session(user_id=1)
-        
+
         assert result["session_id"] == "chat_session_123"
         assert result["user_id"] == 1
         assert result["status"] == "active"
@@ -624,26 +613,23 @@ class TestChatEndpoints:
         message_data = {
             "session_id": "chat_session_123",
             "content": "I want to plan a trip to Japan",
-            "message_type": "user"
+            "message_type": "user",
         }
-        
+
         mock_response = {
             "message_id": "msg_456",
             "session_id": "chat_session_123",
             "content": "I'd be happy to help you plan your trip to Japan! What's your budget and preferred travel dates?",
             "message_type": "assistant",
             "created_at": datetime.now(),
-            "intent": {
-                "primary_intent": "trip_planning",
-                "confidence": 0.95
-            },
-            "tool_calls": []
+            "intent": {"primary_intent": "trip_planning", "confidence": 0.95},
+            "tool_calls": [],
         }
-        
+
         mock_chat_service.send_message.return_value = mock_response
-        
+
         result = await mock_chat_service.send_message(message_data, user_id=1)
-        
+
         assert result["message_id"] == "msg_456"
         assert "Japan" in result["content"]
         assert result["intent"]["primary_intent"] == "trip_planning"
@@ -654,19 +640,16 @@ class TestChatEndpoints:
         message_data = {
             "session_id": "chat_session_123",
             "content": "What's the weather like in Tokyo right now?",
-            "message_type": "user"
+            "message_type": "user",
         }
-        
+
         mock_response = {
             "message_id": "msg_789",
             "session_id": "chat_session_123",
             "content": "Let me check the current weather in Tokyo for you.",
             "message_type": "assistant",
             "created_at": datetime.now(),
-            "intent": {
-                "primary_intent": "weather",
-                "confidence": 0.92
-            },
+            "intent": {"primary_intent": "weather", "confidence": 0.92},
             "tool_calls": [
                 {
                     "name": "get_weather",
@@ -674,16 +657,16 @@ class TestChatEndpoints:
                     "result": {
                         "temperature": 22,
                         "condition": "Partly Cloudy",
-                        "humidity": 65
-                    }
+                        "humidity": 65,
+                    },
                 }
-            ]
+            ],
         }
-        
+
         mock_chat_service.send_message.return_value = mock_response
-        
+
         result = await mock_chat_service.send_message(message_data, user_id=1)
-        
+
         assert result["intent"]["primary_intent"] == "weather"
         assert len(result["tool_calls"]) == 1
         assert result["tool_calls"][0]["name"] == "get_weather"
@@ -696,26 +679,26 @@ class TestChatEndpoints:
                 "message_id": "msg_1",
                 "content": "Hello, I want to plan a trip",
                 "message_type": "user",
-                "created_at": datetime.now() - timedelta(minutes=10)
+                "created_at": datetime.now() - timedelta(minutes=10),
             },
             {
                 "message_id": "msg_2",
                 "content": "I'd be happy to help you plan your trip! Where would you like to go?",
                 "message_type": "assistant",
-                "created_at": datetime.now() - timedelta(minutes=9)
+                "created_at": datetime.now() - timedelta(minutes=9),
             },
             {
                 "message_id": "msg_3",
                 "content": "I'm thinking about Japan",
                 "message_type": "user",
-                "created_at": datetime.now() - timedelta(minutes=8)
-            }
+                "created_at": datetime.now() - timedelta(minutes=8),
+            },
         ]
-        
+
         mock_chat_service.get_chat_history.return_value = mock_history
-        
+
         result = await mock_chat_service.get_chat_history("chat_session_123", limit=10)
-        
+
         assert len(result) == 3
         assert result[0]["content"] == "Hello, I want to plan a trip"
         assert result[1]["message_type"] == "assistant"
@@ -729,11 +712,11 @@ class TestChatEndpoints:
             "status": "ended",
             "ended_at": datetime.now(),
             "message_count": 5,
-            "duration_minutes": 15
+            "duration_minutes": 15,
         }
-        
+
         result = await mock_chat_service.end_chat_session("chat_session_123", user_id=1)
-        
+
         assert result["session_id"] == "chat_session_123"
         assert result["status"] == "ended"
         assert result["message_count"] == 5
@@ -747,9 +730,9 @@ class TestAPIErrorHandling:
         exception = HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid request data",
-            headers={"X-Error-Code": "VALIDATION_ERROR"}
+            headers={"X-Error-Code": "VALIDATION_ERROR"},
         )
-        
+
         assert exception.status_code == 400
         assert exception.detail == "Invalid request data"
         assert exception.headers["X-Error-Code"] == "VALIDATION_ERROR"
@@ -760,12 +743,12 @@ class TestAPIErrorHandling:
         mock_service = MagicMock()
         mock_service.method.side_effect = HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Service temporarily unavailable"
+            detail="Service temporarily unavailable",
         )
-        
+
         with pytest.raises(HTTPException) as exc_info:
             await mock_service.method()
-        
+
         assert exc_info.value.status_code == 503
         assert "unavailable" in exc_info.value.detail
 
@@ -776,12 +759,12 @@ class TestAPIErrorHandling:
         mock_service.method.side_effect = HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             detail="Rate limit exceeded",
-            headers={"Retry-After": "60"}
+            headers={"Retry-After": "60"},
         )
-        
+
         with pytest.raises(HTTPException) as exc_info:
             await mock_service.method()
-        
+
         assert exc_info.value.status_code == 429
         assert "rate limit" in exc_info.value.detail.lower()
         assert exc_info.value.headers["Retry-After"] == "60"
@@ -794,16 +777,16 @@ class TestAPIErrorHandling:
                 {
                     "loc": ["body", "email"],
                     "msg": "field required",
-                    "type": "value_error.missing"
+                    "type": "value_error.missing",
                 },
                 {
                     "loc": ["body", "password"],
                     "msg": "ensure this value has at least 8 characters",
-                    "type": "value_error.any_str.min_length"
-                }
+                    "type": "value_error.any_str.min_length",
+                },
             ]
         }
-        
+
         assert len(validation_error["detail"]) == 2
         assert validation_error["detail"][0]["loc"] == ["body", "email"]
         assert "required" in validation_error["detail"][0]["msg"]
@@ -813,11 +796,11 @@ class TestAPIErrorHandling:
         """Test handling of internal server errors."""
         mock_service = MagicMock()
         mock_service.method.side_effect = Exception("Unexpected database error")
-        
+
         # In a real API, this would be caught and converted to HTTP 500
         with pytest.raises(Exception) as exc_info:
             await mock_service.method()
-        
+
         assert "database error" in str(exc_info.value)
 
     def test_cors_headers_structure(self):
@@ -826,9 +809,9 @@ class TestAPIErrorHandling:
             "Access-Control-Allow-Origin": "*",
             "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
             "Access-Control-Allow-Headers": "Content-Type, Authorization",
-            "Access-Control-Max-Age": "86400"
+            "Access-Control-Max-Age": "86400",
         }
-        
+
         assert cors_headers["Access-Control-Allow-Origin"] == "*"
         assert "POST" in cors_headers["Access-Control-Allow-Methods"]
         assert "Authorization" in cors_headers["Access-Control-Allow-Headers"]

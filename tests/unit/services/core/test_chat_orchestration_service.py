@@ -5,9 +5,6 @@ This module provides extensive testing for the chat orchestration service
 including all methods, error handling, and edge cases.
 """
 
-import asyncio
-import json
-import time
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -16,7 +13,7 @@ from tripsage.services.core.chat_orchestration import (
     ChatOrchestrationError,
     ChatOrchestrationService,
 )
-from tripsage.services.core.tool_calling_service import ToolCallRequest, ToolCallResponse
+from tripsage.services.core.tool_calling_service import ToolCallResponse
 
 
 class TestChatOrchestrationService:
@@ -85,13 +82,10 @@ class TestChatOrchestrationService:
         mock_mcp_manager.invoke.return_value = {
             "id": "session_123",
             "created_at": "2023-01-01T00:00:00Z",
-            "updated_at": "2023-01-01T00:00:00Z"
+            "updated_at": "2023-01-01T00:00:00Z",
         }
 
-        result = await service.create_chat_session(
-            user_id=1,
-            metadata={"test": "data"}
-        )
+        result = await service.create_chat_session(user_id=1, metadata={"test": "data"})
 
         assert result["session_id"] == "session_123"
         assert result["user_id"] == 1
@@ -114,7 +108,9 @@ class TestChatOrchestrationService:
         service.mcp_manager = mock_mcp_manager
         mock_mcp_manager.invoke.side_effect = Exception("Database error")
 
-        with pytest.raises(ChatOrchestrationError, match="Failed to create chat session"):
+        with pytest.raises(
+            ChatOrchestrationError, match="Failed to create chat session"
+        ):
             await service.create_chat_session(user_id=1)
 
     @pytest.mark.asyncio
@@ -123,14 +119,14 @@ class TestChatOrchestrationService:
         service.mcp_manager = mock_mcp_manager
         mock_mcp_manager.invoke.return_value = {
             "id": "msg_123",
-            "created_at": "2023-01-01T00:00:00Z"
+            "created_at": "2023-01-01T00:00:00Z",
         }
 
         result = await service.save_message(
             session_id="session_123",
             role="user",
             content="Hello world",
-            metadata={"test": "data"}
+            metadata={"test": "data"},
         )
 
         assert result["message_id"] == "msg_123"
@@ -146,9 +142,7 @@ class TestChatOrchestrationService:
 
         with pytest.raises(ChatOrchestrationError, match="Invalid role"):
             await service.save_message(
-                session_id="session_123",
-                role="invalid_role",
-                content="Hello world"
+                session_id="session_123", role="invalid_role", content="Hello world"
             )
 
     @pytest.mark.asyncio
@@ -159,9 +153,7 @@ class TestChatOrchestrationService:
 
         with pytest.raises(ChatOrchestrationError, match="Failed to save message"):
             await service.save_message(
-                session_id="session_123",
-                role="user",
-                content="Hello world"
+                session_id="session_123", role="user", content="Hello world"
             )
 
     @pytest.mark.asyncio
@@ -171,12 +163,10 @@ class TestChatOrchestrationService:
         mock_flight_data = {"offers": [{"id": "flight_123", "price": 500}]}
         mock_mcp_manager.invoke.return_value = mock_flight_data
 
-        with patch.object(service, '_store_search_result') as mock_store:
-            result = await service.search_flights({
-                "origin": "NYC",
-                "destination": "LAX",
-                "departure_date": "2023-06-01"
-            })
+        with patch.object(service, "_store_search_result") as mock_store:
+            result = await service.search_flights(
+                {"origin": "NYC", "destination": "LAX", "departure_date": "2023-06-01"}
+            )
 
             assert result["search_type"] == "flights"
             assert result["results"] == mock_flight_data
@@ -200,12 +190,14 @@ class TestChatOrchestrationService:
         mock_accommodation_data = {"properties": [{"id": "prop_123", "price": 200}]}
         mock_mcp_manager.invoke.return_value = mock_accommodation_data
 
-        with patch.object(service, '_store_search_result') as mock_store:
-            result = await service.search_accommodations({
-                "location": "San Francisco",
-                "check_in": "2023-06-01",
-                "check_out": "2023-06-05"
-            })
+        with patch.object(service, "_store_search_result") as mock_store:
+            result = await service.search_accommodations(
+                {
+                    "location": "San Francisco",
+                    "check_in": "2023-06-01",
+                    "check_out": "2023-06-05",
+                }
+            )
 
             assert result["search_type"] == "accommodations"
             assert result["results"] == mock_accommodation_data
@@ -229,7 +221,7 @@ class TestChatOrchestrationService:
         mock_location_data = {"lat": 37.7749, "lng": -122.4194}
         mock_mcp_manager.invoke.return_value = mock_location_data
 
-        with patch.object(service, '_store_location_data') as mock_store:
+        with patch.object(service, "_store_location_data") as mock_store:
             result = await service.get_location_info("San Francisco")
 
             assert result["location"] == "San Francisco"
@@ -250,7 +242,7 @@ class TestChatOrchestrationService:
     async def test_execute_parallel_tools_success(self, service, mock_tool_service):
         """Test successful parallel tool execution."""
         service.tool_call_service = mock_tool_service
-        
+
         mock_responses = [
             ToolCallResponse(
                 id="tool_1",
@@ -258,7 +250,7 @@ class TestChatOrchestrationService:
                 method="test_method",
                 status="success",
                 result={"data": "result1"},
-                execution_time=0.5
+                execution_time=0.5,
             ),
             ToolCallResponse(
                 id="tool_2",
@@ -266,14 +258,24 @@ class TestChatOrchestrationService:
                 method="test_method",
                 status="success",
                 result={"data": "result2"},
-                execution_time=0.3
-            )
+                execution_time=0.3,
+            ),
         ]
         mock_tool_service.execute_parallel_tool_calls.return_value = mock_responses
 
         tool_calls = [
-            {"id": "tool_1", "service": "test_service", "method": "test_method", "params": {}},
-            {"id": "tool_2", "service": "test_service", "method": "test_method", "params": {}}
+            {
+                "id": "tool_1",
+                "service": "test_service",
+                "method": "test_method",
+                "params": {},
+            },
+            {
+                "id": "tool_2",
+                "service": "test_service",
+                "method": "test_method",
+                "params": {},
+            },
         ]
 
         result = await service.execute_parallel_tools(tool_calls)
@@ -286,10 +288,12 @@ class TestChatOrchestrationService:
         assert result["execution_summary"]["average_time"] == 0.4
 
     @pytest.mark.asyncio
-    async def test_execute_parallel_tools_with_failures(self, service, mock_tool_service):
+    async def test_execute_parallel_tools_with_failures(
+        self, service, mock_tool_service
+    ):
         """Test parallel tool execution with some failures."""
         service.tool_call_service = mock_tool_service
-        
+
         mock_responses = [
             ToolCallResponse(
                 id="tool_1",
@@ -297,7 +301,7 @@ class TestChatOrchestrationService:
                 method="test_method",
                 status="success",
                 result={"data": "result1"},
-                execution_time=0.5
+                execution_time=0.5,
             ),
             ToolCallResponse(
                 id="tool_2",
@@ -305,14 +309,14 @@ class TestChatOrchestrationService:
                 method="test_method",
                 status="failed",
                 error="Test error",
-                execution_time=0.2
-            )
+                execution_time=0.2,
+            ),
         ]
         mock_tool_service.execute_parallel_tool_calls.return_value = mock_responses
 
         tool_calls = [
             {"id": "tool_1", "service": "test_service", "method": "test_method"},
-            {"id": "tool_2", "service": "test_service", "method": "test_method"}
+            {"id": "tool_2", "service": "test_service", "method": "test_method"},
         ]
 
         result = await service.execute_parallel_tools(tool_calls)
@@ -326,23 +330,29 @@ class TestChatOrchestrationService:
     async def test_execute_parallel_tools_exception(self, service, mock_tool_service):
         """Test parallel tool execution with exception."""
         service.tool_call_service = mock_tool_service
-        mock_tool_service.execute_parallel_tool_calls.side_effect = Exception("Tool error")
+        mock_tool_service.execute_parallel_tool_calls.side_effect = Exception(
+            "Tool error"
+        )
 
-        with pytest.raises(ChatOrchestrationError, match="Parallel tool execution failed"):
+        with pytest.raises(
+            ChatOrchestrationError, match="Parallel tool execution failed"
+        ):
             await service.execute_parallel_tools([])
 
     @pytest.mark.asyncio
-    async def test_execute_structured_tool_call_success(self, service, mock_tool_service):
+    async def test_execute_structured_tool_call_success(
+        self, service, mock_tool_service
+    ):
         """Test successful structured tool call."""
         service.tool_call_service = mock_tool_service
-        
+
         mock_response = ToolCallResponse(
             id="test_call",
             service="test_service",
             method="test_method",
             status="success",
             result={"data": "test_result"},
-            execution_time=0.3
+            execution_time=0.3,
         )
         mock_tool_service.execute_tool_call.return_value = mock_response
 
@@ -350,7 +360,7 @@ class TestChatOrchestrationService:
             service="test_service",
             method="test_method",
             params={"param": "value"},
-            call_id="test_call"
+            call_id="test_call",
         )
 
         assert result.id == "test_call"
@@ -358,32 +368,34 @@ class TestChatOrchestrationService:
         assert result.result == {"data": "test_result"}
 
     @pytest.mark.asyncio
-    async def test_execute_structured_tool_call_exception(self, service, mock_tool_service):
+    async def test_execute_structured_tool_call_exception(
+        self, service, mock_tool_service
+    ):
         """Test structured tool call with exception."""
         service.tool_call_service = mock_tool_service
         mock_tool_service.execute_tool_call.side_effect = Exception("Tool error")
 
         with pytest.raises(ChatOrchestrationError, match="Structured tool call failed"):
             await service.execute_structured_tool_call(
-                service="test_service",
-                method="test_method",
-                params={}
+                service="test_service", method="test_method", params={}
             )
 
     @pytest.mark.asyncio
-    async def test_format_tool_response_for_chat_success(self, service, mock_tool_service):
+    async def test_format_tool_response_for_chat_success(
+        self, service, mock_tool_service
+    ):
         """Test successful tool response formatting."""
         service.tool_call_service = mock_tool_service
-        
+
         mock_response = ToolCallResponse(
             id="test_call",
             service="test_service",
             method="test_method",
             status="success",
             result={"data": "test_result"},
-            execution_time=0.3
+            execution_time=0.3,
         )
-        
+
         mock_formatted = {"formatted": "response", "display": "formatted data"}
         mock_tool_service.format_tool_result_for_chat.return_value = mock_formatted
 
@@ -397,21 +409,27 @@ class TestChatOrchestrationService:
         assert result["orchestration_metadata"]["method_called"] == "test_method"
 
     @pytest.mark.asyncio
-    async def test_format_tool_response_for_chat_exception(self, service, mock_tool_service):
+    async def test_format_tool_response_for_chat_exception(
+        self, service, mock_tool_service
+    ):
         """Test tool response formatting with exception."""
         service.tool_call_service = mock_tool_service
-        mock_tool_service.format_tool_result_for_chat.side_effect = Exception("Format error")
-        
+        mock_tool_service.format_tool_result_for_chat.side_effect = Exception(
+            "Format error"
+        )
+
         mock_response = ToolCallResponse(
             id="test_call",
             service="test_service",
             method="test_method",
             status="success",
             result={},
-            execution_time=0.1
+            execution_time=0.1,
         )
 
-        with pytest.raises(ChatOrchestrationError, match="Tool response formatting failed"):
+        with pytest.raises(
+            ChatOrchestrationError, match="Tool response formatting failed"
+        ):
             await service.format_tool_response_for_chat(mock_response)
 
     @pytest.mark.asyncio
@@ -420,7 +438,7 @@ class TestChatOrchestrationService:
         service.mcp_manager = mock_mcp_manager
         mock_messages = [
             {"id": "msg_1", "role": "user", "content": "Hello"},
-            {"id": "msg_2", "role": "assistant", "content": "Hi there!"}
+            {"id": "msg_2", "role": "assistant", "content": "Hi there!"},
         ]
         mock_mcp_manager.invoke.return_value = mock_messages
 
@@ -432,10 +450,14 @@ class TestChatOrchestrationService:
     @pytest.mark.asyncio
     async def test_get_chat_history_invalid_limit(self, service):
         """Test chat history retrieval with invalid limit."""
-        with pytest.raises(ChatOrchestrationError, match="Limit must be between 1 and 100"):
+        with pytest.raises(
+            ChatOrchestrationError, match="Limit must be between 1 and 100"
+        ):
             await service.get_chat_history("session_123", limit=0)
 
-        with pytest.raises(ChatOrchestrationError, match="Limit must be between 1 and 100"):
+        with pytest.raises(
+            ChatOrchestrationError, match="Limit must be between 1 and 100"
+        ):
             await service.get_chat_history("session_123", limit=101)
 
     @pytest.mark.asyncio
@@ -470,7 +492,9 @@ class TestChatOrchestrationService:
         service.mcp_manager = mock_mcp_manager
         mock_mcp_manager.invoke.return_value = None
 
-        with pytest.raises(ChatOrchestrationError, match="Session session_123 not found"):
+        with pytest.raises(
+            ChatOrchestrationError, match="Session session_123 not found"
+        ):
             await service.end_chat_session("session_123")
 
     @pytest.mark.asyncio
@@ -490,13 +514,13 @@ class TestChatOrchestrationService:
         await service._store_search_result(
             search_type="flight",
             params={"origin": "NYC", "destination": "LAX"},
-            results=[{"id": "flight_123"}]
+            results=[{"id": "flight_123"}],
         )
 
         mock_mcp_manager.invoke.assert_called_once_with(
             mcp_name="memory",
             method_name="create_entities",
-            params={"entities": [pytest.any]}
+            params={"entities": [pytest.any]},
         )
 
     @pytest.mark.asyncio
@@ -507,9 +531,7 @@ class TestChatOrchestrationService:
 
         # Should not raise exception, just log warning
         await service._store_search_result(
-            search_type="flight",
-            params={"origin": "NYC"},
-            results=[]
+            search_type="flight", params={"origin": "NYC"}, results=[]
         )
 
     @pytest.mark.asyncio
@@ -518,14 +540,13 @@ class TestChatOrchestrationService:
         service.mcp_manager = mock_mcp_manager
 
         await service._store_location_data(
-            location="San Francisco",
-            data={"lat": 37.7749, "lng": -122.4194}
+            location="San Francisco", data={"lat": 37.7749, "lng": -122.4194}
         )
 
         mock_mcp_manager.invoke.assert_called_once_with(
             mcp_name="memory",
             method_name="create_entities",
-            params={"entities": [pytest.any]}
+            params={"entities": [pytest.any]},
         )
 
     @pytest.mark.asyncio
@@ -536,8 +557,7 @@ class TestChatOrchestrationService:
 
         # Should not raise exception, just log warning
         await service._store_location_data(
-            location="San Francisco",
-            data={"lat": 37.7749, "lng": -122.4194}
+            location="San Francisco", data={"lat": 37.7749, "lng": -122.4194}
         )
 
     @pytest.mark.asyncio
@@ -549,7 +569,7 @@ class TestChatOrchestrationService:
         tool_call = {
             "service": "test_service",
             "method": "test_method",
-            "params": {"param": "value"}
+            "params": {"param": "value"},
         }
 
         result = await service._execute_single_tool_call(tool_call)
@@ -558,5 +578,5 @@ class TestChatOrchestrationService:
         mock_mcp_manager.invoke.assert_called_once_with(
             mcp_name="test_service",
             method_name="test_method",
-            params={"param": "value"}
+            params={"param": "value"},
         )
