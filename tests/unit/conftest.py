@@ -236,7 +236,7 @@ def mock_web_operations_cache():
 
     cache.set_cached_response = set_cached_response
 
-    with patch("tripsage.utils.cache.web_cache", cache):
+    with patch("tripsage.tools.web_tools.web_cache", cache):
         yield cache
 
 
@@ -286,17 +286,12 @@ def mock_settings_and_redis(monkeypatch):
     # Apply all the patches we need
     with (
         patch(
-            "tripsage_core.config.base_app_settings.CoreAppSettings",
-            return_value=mock_settings,
-        ),
-        patch(
             "tripsage_core.config.base_app_settings.get_settings",
             return_value=mock_settings,
         ),
-        patch("tripsage.config.app_settings.settings", mock_settings),
+        patch("tripsage_core.config.base_app_settings.settings", mock_settings),
         patch("redis.asyncio.from_url", mock_from_url),
         patch("redis.from_url", mock_from_url),
-        # patch("tripsage_core.utils.cache_utils.redis", redis_mock),  # Not needed - cache_utils doesn't import redis
     ):
         yield {
             "settings": mock_settings,

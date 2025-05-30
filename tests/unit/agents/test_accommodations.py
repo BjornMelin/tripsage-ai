@@ -15,8 +15,8 @@ from tripsage.agents.accommodations import (
     search_accommodations,
     search_airbnb_rentals,
 )
-from tripsage.models.accommodation import (
-    AccommodationListing,
+from tripsage_core.models.domain.accommodation import AccommodationListing
+from tripsage_core.services.business.accommodation_service import (
     AccommodationSearchResponse,
 )
 

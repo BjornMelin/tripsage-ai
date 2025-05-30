@@ -12,7 +12,7 @@ import jwt
 from passlib.context import CryptContext
 from supabase import Client, create_client
 
-from api.core.config import settings
+from tripsage_core.config.base_app_settings import settings
 from tripsage_core.exceptions.exceptions import (
     CoreAuthenticationError as AuthenticationError,
 )

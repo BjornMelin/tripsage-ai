@@ -13,7 +13,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.routing import APIRouter
 
-from api.core.config import settings
 from api.middlewares.authentication import AuthenticationMiddleware
 from api.middlewares.error_handling import ErrorHandlingMiddleware
 from api.middlewares.logging import LoggingMiddleware
@@ -28,6 +27,7 @@ from api.routers import (
     trips,
 )
 from tripsage.api.dependencies import shutdown_event, startup_event
+from tripsage_core.config.base_app_settings import settings
 from tripsage_core.exceptions.exceptions import CoreTripSageError as TripSageError
 
 # Configure root logger
