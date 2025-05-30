@@ -15,7 +15,6 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 
 from tripsage.config.feature_flags import IntegrationMode, feature_flags
-from tripsage.services.memory_service import TripSageMemoryService
 from tripsage.tools.memory_tools import (
     ConversationMessage,
     add_conversation_memory,
@@ -23,6 +22,7 @@ from tripsage.tools.memory_tools import (
     search_user_memories,
     update_user_preferences,
 )
+from tripsage_core.services.business.memory_service import MemoryService
 
 router = APIRouter(prefix="/memory", tags=["memory"])
 
@@ -78,7 +78,7 @@ class UpdatePreferencesResponse(BaseModel):
     status: str = "success"
 
 
-async def get_memory_service() -> TripSageMemoryService:
+async def get_memory_service() -> MemoryService:
     """Dependency to get memory service instance."""
     mode = feature_flags.memory_integration_mode
     if mode == IntegrationMode.DISABLED:
@@ -87,13 +87,13 @@ async def get_memory_service() -> TripSageMemoryService:
             detail="Memory service is currently disabled",
         )
 
-    return TripSageMemoryService()
+    return MemoryService()
 
 
 @router.post("/conversations", response_model=Dict)
 async def add_conversation(
     request: ConversationMemoryRequest,
-    memory_service: TripSageMemoryService = Depends(get_memory_service),
+    memory_service: MemoryService = Depends(get_memory_service),
 ) -> Dict:
     """
     Add conversation messages to user memory.
@@ -128,7 +128,7 @@ async def add_conversation(
 
 @router.get("/context/{user_id}", response_model=UserContextResponse)
 async def get_user_memory_context(
-    user_id: str, memory_service: TripSageMemoryService = Depends(get_memory_service)
+    user_id: str, memory_service: MemoryService = Depends(get_memory_service)
 ) -> UserContextResponse:
     """
     Get comprehensive user context including preferences and insights.
@@ -165,7 +165,7 @@ async def get_user_memory_context(
 @router.post("/search", response_model=SearchMemoryResponse)
 async def search_memories(
     request: SearchMemoryRequest,
-    memory_service: TripSageMemoryService = Depends(get_memory_service),
+    memory_service: MemoryService = Depends(get_memory_service),
 ) -> SearchMemoryResponse:
     """
     Search through user's conversation and travel memories.
@@ -204,7 +204,7 @@ async def search_memories(
 async def update_preferences(
     user_id: str,
     request: UpdatePreferencesRequest,
-    memory_service: TripSageMemoryService = Depends(get_memory_service),
+    memory_service: MemoryService = Depends(get_memory_service),
 ) -> UpdatePreferencesResponse:
     """
     Update user travel preferences.
@@ -240,7 +240,7 @@ async def update_preferences(
 
 @router.delete("/user/{user_id}")
 async def delete_user_memories(
-    user_id: str, memory_service: TripSageMemoryService = Depends(get_memory_service)
+    user_id: str, memory_service: MemoryService = Depends(get_memory_service)
 ) -> Dict:
     """
     Delete all memories for a specific user.
@@ -268,7 +268,7 @@ async def delete_user_memories(
 
 @router.get("/health")
 async def memory_health_check(
-    memory_service: TripSageMemoryService = Depends(get_memory_service),
+    memory_service: MemoryService = Depends(get_memory_service),
 ) -> Dict:
     """
     Health check endpoint for memory service.

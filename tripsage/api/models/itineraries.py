@@ -4,7 +4,7 @@ Models related to itineraries in the TripSage API.
 This module defines Pydantic V2 models for itinerary-related requests and responses.
 """
 
-from datetime import date, datetime
+from datetime import date as Date, datetime
 from enum import Enum
 from typing import Dict, List, Literal, Optional
 
@@ -139,7 +139,7 @@ class ItineraryItem(BaseModel):
         default=None,
         description="Description of the item",
     )
-    item_date: date = Field(description="Date of the itinerary item")
+    item_date: Date = Field(description="Date of the itinerary item")
     time_slot: Optional[TimeSlot] = Field(
         default=None,
         description="Time slot for the item, if applicable",
@@ -208,13 +208,12 @@ class FlightItineraryItem(ItineraryItem):
 class AccommodationItineraryItem(ItineraryItem):
     """Model for an accommodation item in an itinerary."""
 
-    item_type: ItineraryItemType = Field(
-        ItineraryItemType.ACCOMMODATION,
-        const=True,
+    item_type: Literal[ItineraryItemType.ACCOMMODATION] = Field(
+        default=ItineraryItemType.ACCOMMODATION,
         description="Type is always 'accommodation' for this model",
     )
-    check_in_date: date = Field(description="Check-in date")
-    check_out_date: date = Field(description="Check-out date")
+    check_in_date: Date = Field(description="Check-in date")
+    check_out_date: Date = Field(description="Check-out date")
     accommodation_type: str = Field(
         description="Type of accommodation (hotel, apartment, etc.)"
     )
@@ -239,9 +238,8 @@ class AccommodationItineraryItem(ItineraryItem):
 class ActivityItineraryItem(ItineraryItem):
     """Model for an activity item in an itinerary."""
 
-    item_type: ItineraryItemType = Field(
-        ItineraryItemType.ACTIVITY,
-        const=True,
+    item_type: Literal[ItineraryItemType.ACTIVITY] = Field(
+        default=ItineraryItemType.ACTIVITY,
         description="Type is always 'activity' for this model",
     )
     activity_type: str = Field(description="Type of activity (tour, attraction, etc.)")
@@ -266,9 +264,8 @@ class ActivityItineraryItem(ItineraryItem):
 class TransportationItineraryItem(ItineraryItem):
     """Model for a transportation item in an itinerary."""
 
-    item_type: ItineraryItemType = Field(
-        ItineraryItemType.TRANSPORTATION,
-        const=True,
+    item_type: Literal[ItineraryItemType.TRANSPORTATION] = Field(
+        default=ItineraryItemType.TRANSPORTATION,
         description="Type is always 'transportation' for this model",
     )
     transportation_type: str = Field(
@@ -295,7 +292,7 @@ class TransportationItineraryItem(ItineraryItem):
 class ItineraryDay(BaseModel):
     """Model for a day in an itinerary."""
 
-    date: date = Field(description="Date of this itinerary day")
+    date: Date = Field(description="Date of this itinerary day")
     items: List[ItineraryItem] = Field(
         default=[],
         description="List of items scheduled for this day",
@@ -333,8 +330,8 @@ class Itinerary(BaseModel):
         default=ItineraryStatus.DRAFT,
         description="Current status of the itinerary",
     )
-    start_date: date = Field(description="Start date of the itinerary")
-    end_date: date = Field(description="End date of the itinerary")
+    start_date: Date = Field(description="Start date of the itinerary")
+    end_date: Date = Field(description="End date of the itinerary")
     days: List[ItineraryDay] = Field(
         default=[],
         description="List of days in the itinerary",
@@ -395,8 +392,8 @@ class ItineraryCreateRequest(BaseModel):
         default=None,
         description="Description of the itinerary",
     )
-    start_date: date = Field(description="Start date of the itinerary")
-    end_date: date = Field(description="End date of the itinerary")
+    start_date: Date = Field(description="Start date of the itinerary")
+    end_date: Date = Field(description="End date of the itinerary")
     destinations: List[str] = Field(
         default=[],
         description="List of destination IDs to include in this itinerary",
@@ -440,11 +437,11 @@ class ItineraryUpdateRequest(BaseModel):
         default=None,
         description="Current status of the itinerary",
     )
-    start_date: Optional[date] = Field(
+    start_date: Optional[Date] = Field(
         default=None,
         description="Start date of the itinerary",
     )
-    end_date: Optional[date] = Field(
+    end_date: Optional[Date] = Field(
         default=None,
         description="End date of the itinerary",
     )
@@ -484,7 +481,7 @@ class ItineraryItemCreateRequest(BaseModel):
         default=None,
         description="Description of the item",
     )
-    item_date: date = Field(description="Date of the itinerary item")
+    item_date: Date = Field(description="Date of the itinerary item")
     time_slot: Optional[TimeSlot] = Field(
         default=None,
         description="Time slot for the item, if applicable",
@@ -565,7 +562,7 @@ class ItineraryItemUpdateRequest(BaseModel):
         default=None,
         description="Description of the item",
     )
-    date: Optional[date] = Field(
+    date: Optional[Date] = Field(
         default=None,
         description="Date of the itinerary item",
     )
@@ -624,19 +621,19 @@ class ItinerarySearchRequest(BaseModel):
         default=None,
         description="Search query for finding itineraries",
     )
-    start_date_from: Optional[date] = Field(
+    start_date_from: Optional[Date] = Field(
         default=None,
         description="Filter for itineraries starting from this date",
     )
-    start_date_to: Optional[date] = Field(
+    start_date_to: Optional[Date] = Field(
         default=None,
         description="Filter for itineraries starting before this date",
     )
-    end_date_from: Optional[date] = Field(
+    end_date_from: Optional[Date] = Field(
         default=None,
         description="Filter for itineraries ending from this date",
     )
-    end_date_to: Optional[date] = Field(
+    end_date_to: Optional[Date] = Field(
         default=None,
         description="Filter for itineraries ending before this date",
     )

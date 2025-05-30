@@ -14,6 +14,7 @@ from langchain_openai import ChatOpenAI
 
 from tripsage.orchestration.nodes.base import BaseAgentNode
 from tripsage.orchestration.state import TravelPlanningState
+from tripsage_core.config.base_app_settings import settings
 
 
 class RouterNode(BaseAgentNode):

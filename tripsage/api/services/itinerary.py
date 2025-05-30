@@ -24,7 +24,7 @@ from tripsage.api.models.itineraries import (
     ItineraryUpdateRequest,
     TimeSlot,
 )
-from tripsage_core.utils.error_handling_utils import ResourceNotFoundError
+from tripsage_core.exceptions import CoreResourceNotFoundError as ResourceNotFoundError
 
 logger = logging.getLogger(__name__)
 
