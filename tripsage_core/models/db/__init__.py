@@ -65,7 +65,7 @@ from .transportation import (
 )
 
 # Trip models
-from .trip import Trip, TripStatus, TripType
+from .trip import Trip, TripStatus, TripType, TripVisibility
 from .trip_comparison import TripComparison
 
 # Trip management models
@@ -84,6 +84,7 @@ __all__ = [
     "Trip",
     "TripStatus",
     "TripType",
+    "TripVisibility",
     # Flight
     "Flight",
     "AirlineProvider",

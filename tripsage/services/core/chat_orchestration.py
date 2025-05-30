@@ -16,7 +16,7 @@ from tripsage.services.core.tool_calling_service import (
     ToolCallResponse,
     ToolCallService,
 )
-from tripsage_core.exceptions import CoreTripSageError
+from tripsage_core.exceptions.exceptions import CoreTripSageError as TripSageError
 from tripsage_core.services.infrastructure import get_database_service
 from tripsage_core.utils.decorator_utils import with_error_handling
 from tripsage_core.utils.logging_utils import get_logger
@@ -24,7 +24,7 @@ from tripsage_core.utils.logging_utils import get_logger
 logger = get_logger(__name__)
 
 
-class ChatOrchestrationError(CoreTripSageError):
+class ChatOrchestrationError(TripSageError):
     """Error raised when chat orchestration operations fail."""
 
     pass
