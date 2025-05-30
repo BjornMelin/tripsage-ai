@@ -20,8 +20,8 @@ from tripsage.agents.chat import ChatAgent
 from tripsage.api.core.dependencies import get_db, get_session_memory, verify_api_key
 from tripsage.api.middlewares.auth import get_current_user
 from tripsage.api.models.chat import ToolCall
-from tripsage.api.services.chat_service import ChatService, RateLimiter
-from tripsage_core.models.db.user import UserDB
+from tripsage.services.core.chat_service import ChatService, RateLimiter
+from tripsage_core.models.db.user import User
 
 logger = logging.getLogger(__name__)
 
@@ -113,7 +113,7 @@ async def format_vercel_stream_chunk(chunk_type: str, content: str) -> str:
     return ""
 
 
-def get_user_available_tools(user: UserDB) -> List[str]:
+def get_user_available_tools(user: User) -> List[str]:
     """Get list of tools available to the user based on their API keys.
 
     Args:
@@ -257,7 +257,7 @@ async def stream_agent_response(
 @router.post("/")
 async def chat(
     request: ChatRequest,
-    current_user: UserDB = get_current_user_dep,
+    current_user: User = get_current_user_dep,
     session_memory: dict = get_session_memory_dep,
     chat_service: ChatService = get_chat_service_dep,
     api_key_valid: bool = verify_api_key_dep,
@@ -480,7 +480,7 @@ async def chat(
 async def continue_session(
     session_id: UUID,
     request: ChatRequest,
-    current_user: UserDB = get_current_user_dep,
+    current_user: User = get_current_user_dep,
     session_memory: dict = get_session_memory_dep,
     chat_service: ChatService = get_chat_service_dep,
     api_key_valid: bool = verify_api_key_dep,
@@ -507,7 +507,7 @@ async def continue_session(
 @router.get("/sessions/{session_id}/history")
 async def get_session_history(
     session_id: UUID,
-    current_user: UserDB = get_current_user_dep,
+    current_user: User = get_current_user_dep,
     chat_service: ChatService = get_chat_service_dep,
     limit: int = 100,
     offset: int = 0,
@@ -557,7 +557,7 @@ async def get_session_history(
 
 @router.get("/sessions")
 async def list_sessions(
-    current_user: UserDB = get_current_user_dep,
+    current_user: User = get_current_user_dep,
     chat_service: ChatService = get_chat_service_dep,
     limit: int = 20,
 ):
@@ -593,7 +593,7 @@ async def list_sessions(
 @router.post("/sessions/{session_id}/end")
 async def end_session(
     session_id: UUID,
-    current_user: UserDB = get_current_user_dep,
+    current_user: User = get_current_user_dep,
     chat_service: ChatService = get_chat_service_dep,
 ):
     """End a chat session.
@@ -623,7 +623,7 @@ async def end_session(
 
 @router.get("/export")
 async def export_chat_data(
-    current_user: UserDB = get_current_user_dep,
+    current_user: User = get_current_user_dep,
     chat_service: ChatService = get_chat_service_dep,
     format: str = "json",
 ):
@@ -717,7 +717,7 @@ async def export_chat_data(
 
 @router.delete("/data")
 async def delete_all_chat_data(
-    current_user: UserDB = get_current_user_dep,
+    current_user: User = get_current_user_dep,
     chat_service: ChatService = get_chat_service_dep,
     confirm: bool = False,
 ):
