@@ -99,7 +99,9 @@ class TestMemoryServiceIntegration:
                 },
                 {
                     "id": "mem_2",
-                    "content": "Prefers hotels near city center with good transport links",
+                    "content": (
+                        "Prefers hotels near city center with good transport links"
+                    ),
                     "category": "accommodation",
                     "confidence": 0.88,
                     "created_at": "2024-01-01T11:00:00Z",
@@ -152,7 +154,12 @@ class TestMemoryServiceIntegration:
         """Mock chat agent with memory integration."""
         agent = AsyncMock(spec=ChatAgent)
         agent.process_message.return_value = {
-            "response": "Based on your previous trips to Rome and Barcelona, I see you enjoy historic destinations. Paris would be perfect for you! Given your preference for luxury hotels near city centers, I recommend the Four Seasons Hotel George V.",
+            "response": (
+                "Based on your previous trips to Rome and Barcelona, I see you "
+                "enjoy historic destinations. Paris would be perfect for you! "
+                "Given your preference for luxury hotels near city centers, I "
+                "recommend the Four Seasons Hotel George V."
+            ),
             "tool_calls": [],
             "session_id": "test-session-123",
             "memory_context_used": True,
@@ -191,7 +198,11 @@ class TestMemoryServiceIntegration:
                                 "messages": [
                                     {
                                         "role": "user",
-                                        "content": "I'm planning a honeymoon trip to Paris. We love luxury hotels and historic sites. Our budget is around $3000.",
+                                        "content": (
+                                            "I'm planning a honeymoon trip to Paris. "
+                                            "We love luxury hotels and historic sites. "
+                                            "Our budget is around $3000."
+                                        ),
                                     }
                                 ],
                                 "session_id": session_id,
@@ -254,7 +265,10 @@ class TestMemoryServiceIntegration:
                                 "messages": [
                                     {
                                         "role": "user",
-                                        "content": "What destination would you recommend for my next trip?",
+                                        "content": (
+                                            "What destination would you recommend "
+                                            "for my next trip?"
+                                        ),
                                     }
                                 ],
                                 "session_id": session_id,
@@ -377,7 +391,10 @@ class TestMemoryServiceIntegration:
                             "messages": [
                                 {
                                     "role": "user",
-                                    "content": "I prefer luxury accommodations and have a high budget for travel",
+                                    "content": (
+                                        "I prefer luxury accommodations and have "
+                                        "a high budget for travel"
+                                    ),
                                 }
                             ],
                             "session_id": session_1,
@@ -503,13 +520,20 @@ class TestMemoryServiceIntegration:
         """Test memory integration with trip planning workflow."""
         # Configure agent to use memory for planning
         mock_chat_agent.process_message.return_value = {
-            "response": "Based on your travel history to Rome and Barcelona, and your preference for luxury hotels, I'll create a 7-day Paris itinerary focusing on historic sites and upscale accommodations.",
+            "response": (
+                "Based on your travel history to Rome and Barcelona, and your "
+                "preference for luxury hotels, I'll create a 7-day Paris "
+                "itinerary focusing on historic sites and upscale accommodations."
+            ),
             "tool_calls": [
                 {
                     "id": "tool_plan_123",
                     "function": {
                         "name": "create_itinerary",
-                        "arguments": '{"destination": "Paris", "duration": 7, "style": "luxury_cultural", "budget": 3000}',
+                        "arguments": (
+                            '{"destination": "Paris", "duration": 7, '
+                            '"style": "luxury_cultural", "budget": 3000}'
+                        ),
                     },
                 }
             ],
@@ -539,7 +563,10 @@ class TestMemoryServiceIntegration:
                             "messages": [
                                 {
                                     "role": "user",
-                                    "content": "Create a detailed itinerary for Paris based on my travel preferences",
+                                    "content": (
+                                        "Create a detailed itinerary for Paris "
+                                        "based on my travel preferences"
+                                    ),
                                 }
                             ],
                             "session_id": session_id,

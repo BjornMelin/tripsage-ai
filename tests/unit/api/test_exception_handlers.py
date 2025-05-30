@@ -5,6 +5,7 @@ This module tests all exception handlers implemented in the main FastAPI applica
 ensuring proper error formatting, status codes, and response structures.
 """
 
+import asyncio
 from unittest.mock import Mock, patch
 
 import pytest
@@ -54,7 +55,7 @@ class TestExceptionHandlers:
 
     def test_authentication_error_handler(self, app, mock_request):
         """Test authentication error handler."""
-        error = CoreAuthenticationError(
+        CoreAuthenticationError(
             message="Invalid credentials",
             code="INVALID_CREDENTIALS",
             details=ErrorDetails(user_id="user123"),
@@ -74,7 +75,7 @@ class TestExceptionHandlers:
 
     def test_authorization_error_handler(self, app, mock_request):
         """Test authorization error handler."""
-        error = CoreAuthorizationError(
+        CoreAuthorizationError(
             message="Access denied to resource",
             code="ACCESS_DENIED",
             details=ErrorDetails(user_id="user123", resource_id="resource456"),
@@ -85,7 +86,7 @@ class TestExceptionHandlers:
 
     def test_resource_not_found_error_handler(self, app, mock_request):
         """Test resource not found error handler."""
-        error = CoreResourceNotFoundError(
+        CoreResourceNotFoundError(
             message="Trip not found",
             code="TRIP_NOT_FOUND",
             details=ErrorDetails(resource_id="trip123"),
@@ -96,7 +97,7 @@ class TestExceptionHandlers:
 
     def test_validation_error_handler(self, app, mock_request):
         """Test core validation error handler."""
-        error = CoreValidationError(
+        CoreValidationError(
             message="Invalid email format",
             code="INVALID_EMAIL",
             details=ErrorDetails(additional_context={"field": "email"}),
@@ -107,7 +108,7 @@ class TestExceptionHandlers:
 
     def test_service_error_handler(self, app, mock_request):
         """Test service error handler."""
-        error = CoreServiceError(
+        CoreServiceError(
             message="Database connection failed",
             code="DB_CONNECTION_ERROR",
             details=ErrorDetails(service="database"),
@@ -118,7 +119,7 @@ class TestExceptionHandlers:
 
     def test_rate_limit_error_handler(self, app, mock_request):
         """Test rate limit error handler."""
-        error = CoreRateLimitError(
+        CoreRateLimitError(
             message="Too many requests",
             code="RATE_LIMIT_EXCEEDED",
             details=ErrorDetails(additional_context={"retry_after": 60}),
@@ -129,7 +130,7 @@ class TestExceptionHandlers:
 
     def test_key_validation_error_handler(self, app, mock_request):
         """Test API key validation error handler."""
-        error = CoreKeyValidationError(
+        CoreKeyValidationError(
             message="Invalid OpenAI API key",
             code="INVALID_OPENAI_KEY",
             details=ErrorDetails(service="openai"),
@@ -140,7 +141,7 @@ class TestExceptionHandlers:
 
     def test_database_error_handler(self, app, mock_request):
         """Test database error handler."""
-        error = CoreDatabaseError(
+        CoreDatabaseError(
             message="Connection timeout",
             code="DB_TIMEOUT",
             details=ErrorDetails(
@@ -153,7 +154,7 @@ class TestExceptionHandlers:
 
     def test_external_api_error_handler(self, app, mock_request):
         """Test external API error handler."""
-        error = CoreExternalAPIError(
+        CoreExternalAPIError(
             message="Duffel API error",
             code="DUFFEL_API_ERROR",
             details=ErrorDetails(service="duffel"),
@@ -164,7 +165,7 @@ class TestExceptionHandlers:
 
     def test_mcp_error_handler(self, app, mock_request):
         """Test MCP error handler."""
-        error = CoreMCPError(
+        CoreMCPError(
             message="MCP server unavailable",
             code="MCP_SERVER_ERROR",
             details=ErrorDetails(service="flights_mcp"),
@@ -175,7 +176,7 @@ class TestExceptionHandlers:
 
     def test_agent_error_handler(self, app, mock_request):
         """Test agent error handler."""
-        error = CoreAgentError(
+        CoreAgentError(
             message="Agent execution failed",
             code="AGENT_EXECUTION_ERROR",
             details=ErrorDetails(service="travel_agent", operation="plan_trip"),
@@ -186,7 +187,7 @@ class TestExceptionHandlers:
 
     def test_core_tripsage_error_handler(self, app, mock_request):
         """Test general core TripSage error handler."""
-        error = CoreTripSageError(
+        CoreTripSageError(
             message="Generic error",
             code="GENERIC_ERROR",
             status_code=500,

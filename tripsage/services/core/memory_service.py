@@ -22,9 +22,9 @@ from typing import Any, Dict, List, Optional, Tuple
 from mem0 import Memory
 from pydantic import BaseModel, Field
 
+from tripsage.config.feature_flags import IntegrationMode, feature_flags
+from tripsage.config.service_registry import ServiceAdapter, ServiceProtocol
 from tripsage_core.config.base_app_settings import get_settings
-from tripsage_core.config.feature_flags import IntegrationMode, feature_flags
-from tripsage_core.config.service_registry import ServiceAdapter, ServiceProtocol
 from tripsage_core.utils.decorator_utils import with_error_handling
 from tripsage_core.utils.logging_utils import get_logger
 

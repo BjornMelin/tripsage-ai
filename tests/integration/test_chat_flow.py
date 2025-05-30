@@ -334,7 +334,9 @@ class TestChatSessionFlow:
                             "messages": [
                                 {
                                     "role": "user",
-                                    "content": "Find flights from NYC to Paris on June 1st",
+                                    "content": (
+                                        "Find flights from NYC to Paris on June 1st"
+                                    ),
                                 }
                             ],
                             "session_id": session_id,
@@ -470,7 +472,10 @@ class TestChatSessionFlow:
         """Test chat session integration with memory service."""
         # Configure agent to use memory
         mock_chat_agent.process_message.return_value = {
-            "response": "Based on your previous trips to Europe, I recommend Paris. Would you like me to find flights?",
+            "response": (
+                "Based on your previous trips to Europe, I recommend Paris. "
+                "Would you like me to find flights?"
+            ),
             "tool_calls": [],
             "session_id": "test-session-123",
             "memory_used": True,
@@ -506,7 +511,9 @@ class TestChatSessionFlow:
                                 "messages": [
                                     {
                                         "role": "user",
-                                        "content": "Suggest a destination for my next trip",
+                                        "content": (
+                                            "Suggest a destination for my next trip"
+                                        ),
                                     }
                                 ],
                                 "session_id": session_id,

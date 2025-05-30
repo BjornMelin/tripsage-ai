@@ -28,7 +28,9 @@ async def validate_duffel_http_client():
     print("🔍 Testing DuffelHTTPClient...")
 
     try:
-        from tripsage_core.services.duffel_http_client import DuffelHTTPClient
+        from tripsage_core.services.external_apis.duffel_http_client import (
+            DuffelHTTPClient,
+        )
 
         # Test initialization
         client = DuffelHTTPClient(api_key="test_key")
@@ -67,7 +69,7 @@ def validate_feature_flags():
     print("🚩 Testing feature flags...")
 
     try:
-        from tripsage_core.config.feature_flags import IntegrationMode, feature_flags
+        from tripsage.config.feature_flags import IntegrationMode, feature_flags
 
         # Test current configuration
         print(f"  ✅ Current flights integration: {feature_flags.flights_integration}")
@@ -79,7 +81,7 @@ def validate_feature_flags():
         original_value = os.environ.get("FEATURE_FLIGHTS_INTEGRATION")
 
         os.environ["FEATURE_FLIGHTS_INTEGRATION"] = "direct"
-        from tripsage_core.config.feature_flags import FeatureFlags
+        from tripsage.config.feature_flags import FeatureFlags
 
         direct_flags = FeatureFlags()
         print(f"  ✅ Direct mode: {direct_flags.flights_integration}")
@@ -112,7 +114,9 @@ def validate_configuration():
         print(f"  ✅ DUFFEL_API_KEY environment variable: {status}")
 
         # Test that the client can access configuration
-        from tripsage_core.services.duffel_http_client import DuffelHTTPClient
+        from tripsage_core.services.external_apis.duffel_http_client import (
+            DuffelHTTPClient,
+        )
 
         # Test with explicit API key
         client_explicit = DuffelHTTPClient(api_key="explicit_test_key")

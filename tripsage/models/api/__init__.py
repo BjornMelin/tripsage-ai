@@ -5,7 +5,7 @@ This package contains data models for the direct API service implementations,
 replacing the previous MCP server abstraction layer.
 """
 
-from tripsage_core.models.api.calendar_models import (
+from tripsage.models.api.calendar_models import (
     CalendarEvent,
     CalendarList,
     CreateEventRequest,
@@ -13,7 +13,7 @@ from tripsage_core.models.api.calendar_models import (
     EventReminder,
     UpdateEventRequest,
 )
-from tripsage_core.models.api.flights_models import (
+from tripsage.models.api.flights_models import (
     Airport,
     FlightOffer,
     FlightOfferRequest,
@@ -21,10 +21,10 @@ from tripsage_core.models.api.flights_models import (
     PaymentRequest,
     PriceBreakdown,
 )
-from tripsage_core.models.api.flights_models import (
+from tripsage.models.api.flights_models import (
     Segment as FlightSegment,  # Import as FlightSegment for backwards compatibility
 )
-from tripsage_core.models.api.weather_models import (
+from tripsage.models.api.weather_models import (
     CurrentWeather,
     DailyForecast,
     HourlyForecast,

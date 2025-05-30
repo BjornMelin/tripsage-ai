@@ -32,7 +32,7 @@ from tripsage.api.routers import (
 )
 from tripsage.mcp_abstraction import mcp_manager
 from tripsage_core.exceptions.exceptions import CoreTripSageError as TripSageException
-from tripsage_core.services.infrastructure.key_monitoring import (
+from tripsage_core.services.infrastructure.key_monitoring_service import (
     KeyMonitoringService,
     KeyOperationRateLimitMiddleware,
 )

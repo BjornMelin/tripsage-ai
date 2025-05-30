@@ -32,7 +32,8 @@ class TestWithErrorHandling:
         assert result == {"result": "success"}
 
     async def test_async_function_with_exception_dict_return(self):
-        """Test error handling decorator with async function that fails and returns dict."""
+        """Test error handling decorator with async function that fails and
+        returns dict."""
 
         @with_error_handling
         async def async_fail_dict() -> dict:
@@ -43,7 +44,8 @@ class TestWithErrorHandling:
         assert "Test error" in result["error"]
 
     async def test_async_function_with_exception_reraise(self):
-        """Test error handling decorator with async function that fails and re-raises."""
+        """Test error handling decorator with async function that fails and
+        re-raises."""
 
         @with_error_handling
         async def async_fail_reraise() -> str:
@@ -63,7 +65,8 @@ class TestWithErrorHandling:
         assert result == {"result": "success"}
 
     def test_sync_function_with_exception_dict_return(self):
-        """Test error handling decorator with sync function that fails and returns dict."""
+        """Test error handling decorator with sync function that fails and
+        returns dict."""
 
         @with_error_handling
         def sync_fail_dict() -> dict:
@@ -74,7 +77,8 @@ class TestWithErrorHandling:
         assert "Test error" in result["error"]
 
     def test_sync_function_with_exception_reraise(self):
-        """Test error handling decorator with sync function that fails and re-raises."""
+        """Test error handling decorator with sync function that fails and
+        re-raises."""
 
         @with_error_handling
         def sync_fail_reraise() -> str:
@@ -253,7 +257,6 @@ class TestRetryOnFailure:
             call_times.append(time.time())
             raise RuntimeError("Test error")
 
-        start_time = time.time()
         with pytest.raises(RuntimeError):
             await failing_function()
 
@@ -454,7 +457,8 @@ class TestEnsureMemoryClientInitialized:
             assert result["memory_id"] == "memory_id_123"
 
     async def test_return_annotation_detection(self):
-        """Test that decorator correctly detects return type annotations for memory functions."""
+        """Test that decorator correctly detects return type annotations for
+        memory functions."""
 
         @ensure_memory_client_initialized
         async def dict_return() -> dict:
@@ -565,7 +569,7 @@ class TestDecoratorHelpers:
             yield {"item": 2}
 
         # This should work (though generators return generator objects)
-        gen = await async_generator()
+        await async_generator()
         # Note: This test verifies the decorator doesn't break the function,
         # though the actual generator behavior depends on the specific use case
 

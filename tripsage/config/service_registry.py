@@ -9,8 +9,8 @@ from abc import ABC, abstractmethod
 from contextlib import asynccontextmanager
 from typing import Any, Dict, Protocol
 
+from tripsage.config.feature_flags import IntegrationMode, feature_flags
 from tripsage_core.config.base_app_settings import get_settings
-from tripsage_core.config.feature_flags import IntegrationMode, feature_flags
 
 
 class ServiceProtocol(Protocol):

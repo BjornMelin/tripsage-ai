@@ -631,7 +631,7 @@ class TestUtilityFunctions:
         result = await set_cache("util_key", "util_value")
         assert result is True
 
-        value = await get_cache("util_key")
+        await get_cache("util_key")
         # Note: This tests the redis cache, which might not be available
         # In a real environment, this would need proper mocking
 

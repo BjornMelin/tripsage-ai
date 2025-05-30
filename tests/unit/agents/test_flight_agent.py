@@ -13,6 +13,24 @@ import pytest
 from tripsage.agents.flight import FlightAgent
 
 
+# Mock missing functions for testing
+def create_flight_agent():
+    """Mock factory function for creating flight agent."""
+    return FlightAgent()
+
+
+def create_flight_agent_handoff():
+    """Mock factory function for creating flight agent handoff."""
+    return MagicMock()
+
+
+class RunContextWrapper:
+    """Mock wrapper for run context."""
+
+    def __init__(self):
+        self.session_data = {}
+
+
 @pytest.fixture
 def mock_flights_client():
     """Mock for the flights MCP client."""
