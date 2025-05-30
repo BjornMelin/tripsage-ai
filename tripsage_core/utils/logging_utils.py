@@ -9,7 +9,7 @@ a function to get a configured logger for a module.
 import logging
 import os
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, Optional, Union
 
@@ -102,8 +102,6 @@ def configure_logging(
         os.makedirs(log_dir, exist_ok=True)
 
         # Create a log file with timestamp
-        from datetime import timezone
-
         timestamp = datetime.now(timezone.utc).strftime("%Y%m%d")
         log_filename = f"{name.replace('.', '_')}_{timestamp}.log"
         log_path = Path(log_dir) / log_filename

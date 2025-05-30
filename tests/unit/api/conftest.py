@@ -6,6 +6,7 @@ This module provides fixtures for testing FastAPI endpoints.
 
 from datetime import datetime
 
+import httpx
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -61,7 +62,9 @@ def test_client(mock_app):
 @pytest.fixture
 async def async_client(mock_app):
     """Create an async client for asynchronous API testing."""
-    async with AsyncClient(app=mock_app, base_url="http://test") as client:
+    # Use transport parameter for newer httpx versions
+    transport = httpx.ASGITransport(app=mock_app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
         yield client
 
 

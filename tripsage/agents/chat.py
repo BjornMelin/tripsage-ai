@@ -23,10 +23,10 @@ from tripsage.tools.memory_tools import ConversationMessage
 from tripsage_core.config.base_app_settings import get_settings
 from tripsage_core.exceptions import CoreTripSageError, with_error_handling
 from tripsage_core.services.business.memory_service import MemoryService
+from tripsage_core.utils.decorator_utils import with_error_handling
 from tripsage_core.utils.error_handling_utils import (
     log_exception,
 )
-from tripsage_core.utils.decorator_utils import with_error_handling
 from tripsage_core.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)

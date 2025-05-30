@@ -81,6 +81,10 @@ class APISettings(CoreAppSettings):
         """JWT algorithm for token encoding."""
         return "HS256"
 
+    model_config = {
+        "extra": "allow"  # Allow extra fields from environment
+    }
+
 
 # Create settings instance
 settings = APISettings()
