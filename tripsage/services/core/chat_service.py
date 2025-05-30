@@ -16,6 +16,7 @@ from sqlalchemy import text
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from tripsage_core.exceptions import CoreResourceNotFoundError, CoreValidationError
 from tripsage_core.models.db.chat import (
     ChatMessageDB,
     ChatSessionDB,
@@ -24,7 +25,6 @@ from tripsage_core.models.db.chat import (
     MessageWithTokenEstimate,
     RecentMessagesResponse,
 )
-from tripsage_core.exceptions import CoreResourceNotFoundError, CoreValidationError
 
 logger = logging.getLogger(__name__)
 

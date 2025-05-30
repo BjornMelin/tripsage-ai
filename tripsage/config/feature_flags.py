@@ -68,11 +68,7 @@ class FeatureFlags(BaseSettings):
         description="Airbnb integration mode (stays MCP due to no official API)",
     )
 
-    class Config:
-        """Pydantic configuration."""
-
-        env_prefix = "FEATURE_"
-        case_sensitive = False
+    model_config = {"env_prefix": "FEATURE_", "case_sensitive": False}
 
     def get_integration_mode(self, service_name: str) -> IntegrationMode:
         """Get integration mode for a specific service.
