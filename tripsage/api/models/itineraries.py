@@ -292,7 +292,7 @@ class TransportationItineraryItem(ItineraryItem):
 class ItineraryDay(BaseModel):
     """Model for a day in an itinerary."""
 
-    day_date: date = Field(description="Date of this itinerary day", alias="date")
+    day_date: Date = Field(description="Date of this itinerary day", alias="date")
     items: List[ItineraryItem] = Field(
         default=[],
         description="List of items scheduled for this day",
