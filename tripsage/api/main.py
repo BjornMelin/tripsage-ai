@@ -30,11 +30,11 @@ from tripsage.api.routers import (
     trips,
     websocket,
 )
+from tripsage.mcp_abstraction import mcp_manager
 from tripsage.services.infrastructure.key_monitoring import (
     KeyMonitoringService,
     KeyOperationRateLimitMiddleware,
 )
-from tripsage.mcp_abstraction import mcp_manager
 from tripsage_core.exceptions.exceptions import CoreTripSageError as TripSageException
 
 logger = logging.getLogger(__name__)
