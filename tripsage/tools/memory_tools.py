@@ -18,7 +18,7 @@ import json
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
-from tripsage.services.memory_service import TripSageMemoryService
+from tripsage.services.core.memory_service import TripSageMemoryService
 from tripsage.tools.models import (
     ConversationMessage,
     MemorySearchQuery,

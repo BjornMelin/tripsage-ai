@@ -7,7 +7,7 @@ covering all major location operations and error handling scenarios.
 
 import pytest
 
-from tripsage.services.location_service import (
+from tripsage.services.core.location_service import (
     LocationServiceError,
     get_location_service,
 )

@@ -208,9 +208,8 @@ class FlightItineraryItem(ItineraryItem):
 class AccommodationItineraryItem(ItineraryItem):
     """Model for an accommodation item in an itinerary."""
 
-    item_type: ItineraryItemType = Field(
+    item_type: Literal[ItineraryItemType.ACCOMMODATION] = Field(
         ItineraryItemType.ACCOMMODATION,
-        const=True,
         description="Type is always 'accommodation' for this model",
     )
     check_in_date: date = Field(description="Check-in date")
@@ -239,9 +238,8 @@ class AccommodationItineraryItem(ItineraryItem):
 class ActivityItineraryItem(ItineraryItem):
     """Model for an activity item in an itinerary."""
 
-    item_type: ItineraryItemType = Field(
+    item_type: Literal[ItineraryItemType.ACTIVITY] = Field(
         ItineraryItemType.ACTIVITY,
-        const=True,
         description="Type is always 'activity' for this model",
     )
     activity_type: str = Field(description="Type of activity (tour, attraction, etc.)")
@@ -266,9 +264,8 @@ class ActivityItineraryItem(ItineraryItem):
 class TransportationItineraryItem(ItineraryItem):
     """Model for a transportation item in an itinerary."""
 
-    item_type: ItineraryItemType = Field(
+    item_type: Literal[ItineraryItemType.TRANSPORTATION] = Field(
         ItineraryItemType.TRANSPORTATION,
-        const=True,
         description="Type is always 'transportation' for this model",
     )
     transportation_type: str = Field(
@@ -295,7 +292,7 @@ class TransportationItineraryItem(ItineraryItem):
 class ItineraryDay(BaseModel):
     """Model for a day in an itinerary."""
 
-    date: date = Field(description="Date of this itinerary day")
+    day_date: date = Field(description="Date of this itinerary day", alias="date")
     items: List[ItineraryItem] = Field(
         default=[],
         description="List of items scheduled for this day",

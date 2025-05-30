@@ -10,7 +10,7 @@ from typing import List, Optional, Tuple
 
 from supabase import Client, create_client
 
-from tripsage.config.app_settings import get_settings
+from tripsage_core.config.base_app_settings import get_settings
 
 logger = logging.getLogger(__name__)
 settings = get_settings()

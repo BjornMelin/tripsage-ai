@@ -6,7 +6,7 @@ for better integration with Core settings and exception handling.
 """
 
 from .file_processor import FileProcessor
-from .flights_service import FlightsService
+from .flights_service import DuffelFlightsService as FlightsService
 
 __all__ = [
     "FileProcessor",
