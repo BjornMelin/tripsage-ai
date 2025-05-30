@@ -11,7 +11,7 @@ from unittest.mock import AsyncMock, patch
 import pytest
 
 from tripsage.mcp_abstraction.manager import MCPManager
-from tripsage.services.error_handling_service import (
+from tripsage_core.services.error_handling_service import (
     ErrorRecoveryService,
     ErrorSeverity,
     FallbackStrategy,

@@ -10,11 +10,11 @@ from typing import Optional
 
 from playwright.async_api import async_playwright
 
-from tripsage.config.webcrawl_feature_flags import get_performance_metrics
-from tripsage.services.webcrawl_service import WebCrawlParams, get_webcrawl_service
 from tripsage.tools.webcrawl.models import UnifiedCrawlResult
 from tripsage.tools.webcrawl.result_normalizer import ResultNormalizer
 from tripsage.tools.webcrawl.source_selector import WebCrawlSourceSelector
+from tripsage_core.config.webcrawl_feature_flags import get_performance_metrics
+from tripsage_core.services.webcrawl_service import WebCrawlParams, get_webcrawl_service
 from tripsage_core.utils.decorator_utils import with_error_handling
 from tripsage_core.utils.logging_utils import get_logger
 

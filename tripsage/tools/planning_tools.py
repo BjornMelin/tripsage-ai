@@ -117,8 +117,6 @@ async def create_travel_plan(params: Dict[str, Any]) -> Dict[str, Any]:
         # Create memory entities for the plan
         # Using Mem0 direct SDK integration for memory management
         try:
-            from tripsage.services.core.memory_service import TripSageMemoryService
-
             # Initialize direct Mem0 service
             memory_service = MemoryService()
             await memory_service.connect()
@@ -218,8 +216,6 @@ async def update_travel_plan(params: Dict[str, Any]) -> Dict[str, Any]:
         # Update memory entity
         # Using Mem0 direct SDK integration for memory management
         try:
-            from tripsage.services.core.memory_service import TripSageMemoryService
-
             # Initialize direct Mem0 service
             memory_service = MemoryService()
             await memory_service.connect()
@@ -625,8 +621,6 @@ async def save_travel_plan(params: Dict[str, Any]) -> Dict[str, Any]:
         # Update knowledge graph
         # Using Mem0 direct SDK integration for memory management
         try:
-            from tripsage.services.core.memory_service import TripSageMemoryService
-
             # Initialize direct Mem0 service
             memory_service = MemoryService()
             await memory_service.connect()

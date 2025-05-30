@@ -761,7 +761,7 @@ class TestChatAgent:
         with patch.object(chat_agent, "process_message") as mock_process:
             mock_process.return_value = {"content": "Response", "status": "success"}
 
-            result = await chat_agent.run_with_tools(message, context, available_tools)
+            await chat_agent.run_with_tools(message, context, available_tools)
 
             mock_process.assert_called_once()
             call_args = mock_process.call_args[0]

@@ -17,8 +17,8 @@ except ImportError:
     function_tool = MagicMock
 
 from tripsage.agents.base import BaseAgent
-from tripsage.services.webcrawl_service import WebCrawlService
 from tripsage_core.config.base_app_settings import settings
+from tripsage_core.services.webcrawl_service import WebCrawlService
 from tripsage_core.utils.error_handling_utils import with_error_handling
 from tripsage_core.utils.logging_utils import get_logger
 

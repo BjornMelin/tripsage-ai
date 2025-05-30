@@ -66,6 +66,8 @@ class TestFlight(BaseModel):
 async def initialize_db():
     """Initialize the database connection."""
     print("Initializing database...")
+    from tripsage.db.initialize import initialize_databases
+
     success = await initialize_databases(run_migrations_on_startup=False)
     if not success:
         print("Failed to initialize database")

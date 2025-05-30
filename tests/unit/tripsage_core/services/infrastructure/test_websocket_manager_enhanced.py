@@ -833,9 +833,7 @@ class TestWebSocketManager:
         """Test heartbeat monitor background task."""
         # Create a connection
         auth_request = WebSocketAuthRequest(token=valid_jwt_token)
-        await websocket_manager.authenticate_connection(
-            mock_websocket, auth_request
-        )
+        await websocket_manager.authenticate_connection(mock_websocket, auth_request)
 
         # Mock the running state and sleep to control the loop
         websocket_manager._running = True

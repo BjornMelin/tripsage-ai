@@ -9,8 +9,8 @@ import re
 from datetime import datetime
 from typing import Any, Dict, List
 
-from tripsage.services.webcrawl_service import WebCrawlResult
 from tripsage.tools.webcrawl.models import UnifiedCrawlResult
+from tripsage_core.services.webcrawl_service import WebCrawlResult
 from tripsage_core.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)

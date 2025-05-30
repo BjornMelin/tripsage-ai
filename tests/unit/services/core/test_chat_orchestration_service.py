@@ -9,11 +9,11 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from tripsage.services.core.chat_orchestration import (
+from tripsage_core.services.core.chat_orchestration import (
     ChatOrchestrationError,
     ChatOrchestrationService,
 )
-from tripsage.services.core.tool_calling_service import ToolCallResponse
+from tripsage_core.services.core.tool_calling_service import ToolCallResponse
 
 
 class TestChatOrchestrationService:

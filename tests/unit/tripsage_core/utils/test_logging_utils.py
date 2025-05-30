@@ -328,7 +328,7 @@ class TestLoggingUtils:
 
     def test_configure_logging_function(self, temp_log_dir):
         """Test the configure_logging function."""
-        log_file_path = temp_log_dir / "configure_test.log"
+        _log_file_path = temp_log_dir / "configure_test.log"
 
         adapter = configure_logging(
             "test.configure",

@@ -6,8 +6,8 @@ Tests to verify the migration structure and code organization improvements.
 import inspect
 from pathlib import Path
 
-from tripsage.config.feature_flags import FeatureFlags, IntegrationMode
-from tripsage.config.service_registry import ServiceRegistry
+from tripsage_core.config.feature_flags import FeatureFlags, IntegrationMode
+from tripsage_core.config.service_registry import ServiceRegistry
 from tripsage_core.services.infrastructure import (
     CacheService as DragonflyService,
 )

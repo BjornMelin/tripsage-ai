@@ -8,8 +8,8 @@ import asyncio
 
 import pytest
 
-from tripsage.config.feature_flags import IntegrationMode, feature_flags
-from tripsage.config.service_registry import (
+from tripsage_core.config.feature_flags import IntegrationMode, feature_flags
+from tripsage_core.config.service_registry import (
     ServiceAdapter,
     ServiceProtocol,
     ServiceRegistry,

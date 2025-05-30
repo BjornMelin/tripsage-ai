@@ -11,11 +11,11 @@ from unittest.mock import AsyncMock
 import pytest
 
 from tripsage.mcp_abstraction.manager import MCPManager
-from tripsage.services.chat_orchestration import (
+from tripsage_core.services.chat_orchestration import (
     ChatOrchestrationError,
     ChatOrchestrationService,
 )
-from tripsage.services.tool_calling_service import (
+from tripsage_core.services.tool_calling_service import (
     ToolCallResponse,
     ToolCallService,
 )

@@ -11,7 +11,7 @@ from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
 
-from tripsage.services.core.memory_service import (
+from tripsage_core.services.core.memory_service import (
     ConversationMemory,
     MemorySearchResult,
     MemoryServiceAdapter,

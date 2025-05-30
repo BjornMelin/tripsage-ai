@@ -39,7 +39,6 @@ from tripsage_core.exceptions.exceptions import (
     CoreResourceNotFoundError,
     CoreServiceError,
     CoreTripSageError,
-    CoreTripSageError as TripSageError,
     CoreValidationError,
     format_exception,
 )

@@ -290,7 +290,7 @@ class TestMemoryServiceCoverage:
         """Test feature flag switching between MCP and direct SDK."""
         # Test direct SDK path (default)
         with patch("tripsage.services.memory_service.feature_flags") as mock_flags:
-            from tripsage.config.feature_flags import IntegrationMode
+            from tripsage_core.config.feature_flags import IntegrationMode
 
             mock_flags.get_integration_mode.return_value = IntegrationMode.DIRECT
 

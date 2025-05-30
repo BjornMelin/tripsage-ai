@@ -316,8 +316,9 @@ class TestAccommodationAgent:
         # Mock a typical accommodation search response
         mock_result = MagicMock()
         mock_result.final_output = (
-            "I found several great accommodation options for your stay in San Francisco. "
-            "Here are the top recommendations based on your preferences for a hotel under $200/night:"
+            "I found several great accommodation options for your stay in "
+            "San Francisco. Here are the top recommendations based on your "
+            "preferences for a hotel under $200/night:"
         )
         mock_result.tool_calls = [
             {
@@ -337,7 +338,10 @@ class TestAccommodationAgent:
         accommodation_agent.runner = mock_openai_runner
 
         # Simulate accommodation search request
-        message = "Find me a hotel in San Francisco for June 1-5 for 2 guests under $200/night"
+        message = (
+            "Find me a hotel in San Francisco for June 1-5 for 2 guests under "
+            "$200/night"
+        )
         context = {"user_id": "test_user", "preferences": {"property_type": "hotel"}}
 
         result = await accommodation_agent.run(message, context)

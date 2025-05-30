@@ -390,7 +390,7 @@ class DestinationService:
 
         if external_destination_service is None:
             try:
-                from tripsage.services.external.destination_service import (
+                from tripsage_core.services.external.destination_service import (
                     ExternalDestinationService,
                 )
 

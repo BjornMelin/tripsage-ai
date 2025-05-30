@@ -10,13 +10,13 @@ from google.auth.exceptions import RefreshError
 from google.oauth2.credentials import Credentials
 from googleapiclient.errors import HttpError
 
-from tripsage.models.api.calendar_models import (
+from tripsage_core.models.api.calendar_models import (
     CreateEventRequest,
     EventAttendee,
     EventReminder,
     UpdateEventRequest,
 )
-from tripsage.services.api.calendar_service import GoogleCalendarService
+from tripsage_core.services.api.calendar_service import GoogleCalendarService
 
 
 @pytest.fixture
