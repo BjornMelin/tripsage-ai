@@ -10,6 +10,8 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Dict, Optional
 
+from tripsage_core.config.base_app_settings import settings
+
 
 class CheckpointStorage(Enum):
     """Available checkpoint storage backends."""

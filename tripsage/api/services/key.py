@@ -21,7 +21,7 @@ from tripsage.api.models.api_key import (
     ApiKeyResponse,
     ApiKeyValidateResponse,
 )
-from tripsage.api.services.key_monitoring import (
+from tripsage_core.services.infrastructure.key_monitoring_service import (
     KeyMonitoringService,
     KeyOperation,
     constant_time_compare,

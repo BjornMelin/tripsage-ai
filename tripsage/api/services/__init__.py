@@ -9,7 +9,7 @@ from .auth import AuthService
 from .destination import DestinationService
 from .flight import FlightService
 from .itinerary import ItineraryService
-from .key import APIKeyService
+from .key import KeyService as APIKeyService
 from .trip import TripService
 from .user import UserService
 

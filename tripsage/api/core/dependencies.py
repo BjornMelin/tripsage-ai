@@ -150,9 +150,9 @@ async def get_webcrawl_service():
 
 async def get_memory_service():
     """Get the direct Memory service (Mem0)."""
-    from tripsage.services.core.memory_service import TripSageMemoryService
+    from tripsage.services.core.memory_service import MemoryService
 
-    return TripSageMemoryService()
+    return MemoryService()
 
 
 async def get_dragonfly_service():
