@@ -708,7 +708,7 @@ class ChatAgent(BaseAgent):
 
     # Phase 5: MCP Tool Integration Methods
 
-    @with_error_handling(logger=logger, re_raise=True)
+    @with_error_handling
     async def route_request(
         self, message: str, session_id: str, context: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
@@ -859,7 +859,7 @@ class ChatAgent(BaseAgent):
         # Use existing direct handling
         return await super().run(message, context)
 
-    @with_error_handling(logger=logger, re_raise=True)
+    @with_error_handling
     async def call_mcp_tools(self, tool_calls: List[Dict[str, Any]]) -> Dict[str, Any]:
         """Execute tool calls via MCP manager (Phase 5 pattern).
 
@@ -889,7 +889,7 @@ class ChatAgent(BaseAgent):
             self.logger.error(f"MCP tool calling failed: {e}")
             raise ChatAgentError(f"MCP tool calling failed: {str(e)}") from e
 
-    @with_error_handling(logger=logger, re_raise=True)
+    @with_error_handling
     async def create_chat_session_mcp(
         self, user_id: int, metadata: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
@@ -911,7 +911,7 @@ class ChatAgent(BaseAgent):
             self.logger.error(f"MCP session creation failed: {e}")
             raise ChatAgentError(f"Session creation failed: {str(e)}") from e
 
-    @with_error_handling(logger=logger, re_raise=True)
+    @with_error_handling
     async def save_message_mcp(
         self,
         session_id: str,
@@ -941,7 +941,7 @@ class ChatAgent(BaseAgent):
             self.logger.error(f"MCP message saving failed: {e}")
             raise ChatAgentError(f"Message saving failed: {str(e)}") from e
 
-    @with_error_handling(logger=logger, re_raise=True)
+    @with_error_handling
     async def get_chat_history_mcp(
         self, session_id: str, limit: int = 10, offset: int = 0
     ) -> List[Dict[str, Any]]:
@@ -964,7 +964,7 @@ class ChatAgent(BaseAgent):
             self.logger.error(f"MCP history retrieval failed: {e}")
             raise ChatAgentError(f"History retrieval failed: {str(e)}") from e
 
-    @with_error_handling(logger=logger, re_raise=True)
+    @with_error_handling
     async def end_chat_session_mcp(self, session_id: str) -> bool:
         """End a chat session using MCP database operations.
 
