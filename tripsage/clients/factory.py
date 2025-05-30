@@ -8,6 +8,7 @@ All other services have been migrated to direct SDK integration.
 from typing import Dict, Type
 
 from tripsage.clients.base import BaseMCPClient
+from tripsage_core.config.base_app_settings import settings
 
 
 class MCPClientFactory:

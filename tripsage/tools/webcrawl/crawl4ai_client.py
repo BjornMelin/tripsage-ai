@@ -9,12 +9,12 @@ from typing import Any, Dict, Optional
 
 import httpx
 
-from tripsage.services.memory_service import TripSageMemoryService
 from tripsage.tools.memory_tools import ConversationMessage
 from tripsage_core.config.base_app_settings import get_settings
+from tripsage_core.services.business.memory_service import MemoryService
+from tripsage_core.utils.logging_utils import get_logger
 
 settings = get_settings()
-from tripsage_core.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)
 
@@ -37,7 +37,7 @@ class Crawl4AIClient:
             logger.info(f"Using default Crawl4AI MCP base URL: {self.base_url}")
 
         # Initialize memory service for content extraction
-        self.memory_service = TripSageMemoryService()
+        self.memory_service = MemoryService()
         self._memory_initialized = False
 
     async def scrape_url(

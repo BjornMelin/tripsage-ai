@@ -168,7 +168,10 @@ def check_application_start() -> Tuple[bool, str]:
                     "run",
                     "python",
                     "-c",
-                    f"import sys; sys.path.insert(0, '{BASE_DIR}'); import {app.replace('/', '.').replace('.py', '')}",
+                    (
+                        f"import sys; sys.path.insert(0, '{BASE_DIR}'); "
+                        f"import {app.replace('/', '.').replace('.py', '')}"
+                    ),
                 ]
                 result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
 

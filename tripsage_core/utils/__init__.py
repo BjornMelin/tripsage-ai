@@ -40,6 +40,7 @@ from .decorator_utils import (
 
 # Error handling utilities
 from .error_handling_utils import (
+    TripSageError,
     TripSageErrorContext,
     create_api_error,
     create_database_error,
@@ -119,6 +120,7 @@ __all__ = [
     "ensure_memory_client_initialized",
     "retry_on_failure",
     # Error handling utilities
+    "TripSageError",
     "log_exception",
     "safe_execute_with_logging",
     "with_error_handling_and_logging",

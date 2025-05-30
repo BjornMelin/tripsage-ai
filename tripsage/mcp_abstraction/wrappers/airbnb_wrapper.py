@@ -9,6 +9,7 @@ from typing import Dict, List
 
 from tripsage.clients.airbnb_mcp_client import AirbnbMCPClient
 from tripsage.mcp_abstraction.base_wrapper import BaseMCPWrapper
+from tripsage_core.config.base_app_settings import settings
 
 
 class AirbnbMCPWrapper(BaseMCPWrapper):
