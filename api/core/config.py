@@ -1,30 +1,21 @@
 """
 API Configuration module.
 
-This module imports and extends the main application settings
-for API-specific configuration.
+This module extends the core application settings with frontend API-specific
+configuration.
 """
 
 from typing import List
 
-from pydantic import Field, SecretStr
-from pydantic_settings import BaseSettings
+from pydantic import Field, model_validator
 
-from tripsage_core.config.base_app_settings import get_settings
-
-# Get the core settings instance
-app_settings = get_settings()
+from tripsage_core.config.base_app_settings import CoreAppSettings
 
 
-class APISettings(BaseSettings):
-    """API-specific settings extending the main application settings."""
+class APISettings(CoreAppSettings):
+    """Frontend API-specific settings extending the core application settings."""
 
-    # JWT authentication settings
-    secret_key: SecretStr = Field(
-        default=SecretStr("your-secret-key-here-change-in-production"),
-        description="Secret key for signing JWT tokens",
-    )
-    algorithm: str = Field(default="HS256", description="Algorithm for JWT encoding")
+    # JWT token expiration settings (frontend API specific)
     access_token_expire_minutes: int = Field(
         default=30, description="Minutes until access token expires"
     )
@@ -32,11 +23,9 @@ class APISettings(BaseSettings):
         default=7, description="Days until refresh token expires"
     )
 
-    # CORS settings
+    # CORS settings (frontend specific)
     cors_origins: List[str] = Field(
-        default=["*"]
-        if app_settings.debug
-        else [
+        default=[
             "https://tripsage.ai",
             "https://app.tripsage.ai",
             "https://api.tripsage.ai",
@@ -53,13 +42,20 @@ class APISettings(BaseSettings):
         default=["*"], description="Allowed HTTP headers for CORS"
     )
 
-    # API Rate limiting
+    @model_validator(mode="after")
+    def set_cors_origins_for_debug(self) -> "APISettings":
+        """Set CORS origins to wildcard in debug mode."""
+        if self.debug:
+            self.cors_origins = ["*"]
+        return self
+
+    # API Rate limiting (frontend API specific)
     rate_limit_enabled: bool = Field(default=True, description="Enable rate limiting")
     rate_limit_requests: int = Field(
         default=60, description="Maximum requests per minute"
     )
 
-    # BYOK (Bring Your Own Key) settings
+    # BYOK (Bring Your Own Key) settings (frontend API specific)
     enable_byok: bool = Field(
         default=True, description="Enable Bring Your Own Key functionality"
     )
@@ -72,19 +68,19 @@ class APISettings(BaseSettings):
             "accommodation",
             "webCrawl",
         ],
-        description="Services that support Bring Your Own Key",
+        description="Services that support Bring Your Own Key in frontend API",
     )
 
-    class Config:
-        # Don't read from .env file since we get settings from app_settings
-        extra = "allow"  # Allow extra fields from environment
+    @property
+    def secret_key(self) -> str:
+        """Get JWT secret key from inherited core settings."""
+        return self.jwt_secret_key.get_secret_value()
+
+    @property
+    def algorithm(self) -> str:
+        """JWT algorithm for token encoding."""
+        return "HS256"
 
 
-# Create settings instance without reading from .env
+# Create settings instance
 settings = APISettings()
-
-# Augment with main application settings
-# This allows accessing both API and application settings through the same object
-for key, value in app_settings.model_dump().items():
-    if not hasattr(settings, key):
-        setattr(settings, key, value)
