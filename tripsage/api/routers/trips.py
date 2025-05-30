@@ -10,7 +10,6 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Query, status
 
 from tripsage.api.core.dependencies import get_session_memory
-from tripsage.api.core.exceptions import ResourceNotFoundError
 from tripsage.api.middlewares.auth import get_current_user
 from tripsage.api.models.trips import (
     CreateTripRequest,
@@ -21,6 +20,9 @@ from tripsage.api.models.trips import (
     UpdateTripRequest,
 )
 from tripsage.api.services.trip import TripService
+from tripsage_core.exceptions.exceptions import (
+    CoreResourceNotFoundError as ResourceNotFoundError,
+)
 
 logger = logging.getLogger(__name__)
 

@@ -13,11 +13,13 @@ from fastapi import APIRouter, Depends, HTTPException, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
 
 from api.core.config import settings
-from api.core.exceptions import AuthenticationError
 from api.deps import get_current_user
 from api.models.requests.auth import RefreshTokenRequest, RegisterUserRequest
 from api.models.responses.auth import TokenResponse, UserResponse
 from api.services.auth_service import AuthService
+from tripsage_core.exceptions.exceptions import (
+    CoreAuthenticationError as AuthenticationError,
+)
 
 logger = logging.getLogger(__name__)
 

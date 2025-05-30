@@ -13,7 +13,9 @@ from passlib.context import CryptContext
 from supabase import Client, create_client
 
 from api.core.config import settings
-from api.core.exceptions import AuthenticationError
+from tripsage_core.exceptions.exceptions import (
+    CoreAuthenticationError as AuthenticationError,
+)
 
 logger = logging.getLogger(__name__)
 

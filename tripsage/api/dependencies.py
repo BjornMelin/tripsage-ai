@@ -22,12 +22,8 @@ def get_mcp_manager_dep():
     return mcp_manager
 
 
-# Create the initialized variable to avoid function call in default parameter
-mcp_manager_dep_instance = get_mcp_manager_dep()
-
-
 # Create singleton dependencies
-mcp_manager_dependency = Depends(mcp_manager_dep_instance)
+mcp_manager_dependency = Depends(get_mcp_manager_dep)
 
 
 # Weather MCP dependency
