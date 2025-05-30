@@ -598,8 +598,13 @@ class ChatService:
                 messages.append(message)
                 total_tokens += message.estimated_tokens or 0
 
-            # Check if we got fewer messages than requested (indicating truncation)
-            truncated = len(messages) < request.limit
+            # Check if truncation occurred based on token limits
+            # The database should handle token limiting, so if we get results,
+            # we assume no truncation unless the database indicates otherwise
+            # For now, assume no truncation if we got any results within token limit
+            truncated = False
+            if messages and total_tokens >= request.max_tokens:
+                truncated = True
 
             return RecentMessagesResponse(
                 messages=messages, total_tokens=total_tokens, truncated=truncated
@@ -622,12 +627,20 @@ class ChatService:
 
         Returns:
             True if session ended successfully
+
+        Raises:
+            NotFoundError: If session not found
+            ValidationError: If session already ended
         """
         try:
             # Verify session access
             session = await self.get_session(session_id, user_id)
             if not session:
-                return False
+                raise NotFoundError("Chat session not found")
+
+            # Check if session is already ended
+            if session.ended_at is not None:
+                raise ValidationError("Session already ended")
 
             # End the session
             success = await self.db.end_chat_session(session_id)
@@ -640,6 +653,8 @@ class ChatService:
 
             return success
 
+        except (NotFoundError, ValidationError):
+            raise
         except Exception as e:
             logger.error(
                 "Failed to end session",
@@ -653,7 +668,7 @@ class ChatService:
         status: str,
         result: Optional[Dict[str, Any]] = None,
         error_message: Optional[str] = None,
-    ) -> bool:
+    ) -> Optional[Dict[str, Any]]:
         """
         Update tool call status and result.
 
@@ -664,7 +679,7 @@ class ChatService:
             error_message: Error message (if failed)
 
         Returns:
-            True if updated successfully
+            Updated tool call data if successful, None if failed
         """
         try:
             completed_at = None
@@ -678,25 +693,29 @@ class ChatService:
                 "completed_at": completed_at.isoformat() if completed_at else None,
             }
 
-            success = await self.db.update_tool_call(tool_call_id, update_data)
-
-            logger.info(
-                "Tool call status updated",
-                extra={
-                    "tool_call_id": tool_call_id,
-                    "status": status,
-                    "success": success,
-                },
+            updated_tool_call = await self.db.update_tool_call(
+                tool_call_id, update_data
             )
 
-            return success
+            if updated_tool_call:
+                logger.info(
+                    "Tool call status updated",
+                    extra={
+                        "tool_call_id": tool_call_id,
+                        "status": status,
+                        "success": True,
+                    },
+                )
+                return updated_tool_call
+            else:
+                return None
 
         except Exception as e:
             logger.error(
                 "Failed to update tool call status",
                 extra={"tool_call_id": tool_call_id, "status": status, "error": str(e)},
             )
-            return False
+            return None
 
     def _sanitize_content(self, content: str) -> str:
         """
@@ -714,8 +733,8 @@ class ChatService:
         # Remove null bytes
         content = content.replace("\x00", "")
 
-        # Limit consecutive whitespace
-        content = re.sub(r"\s{3,}", "  ", content)
+        # Normalize whitespace - replace multiple whitespace chars with single space
+        content = re.sub(r"\s+", " ", content)
 
         return content.strip()
 
@@ -755,9 +774,11 @@ class ChatService:
         Returns:
             Estimated token count
         """
+        if not content:
+            return 0
         return max(1, len(content) // self.chars_per_token)
 
-    async def _create_tool_call(
+    async def add_tool_call(
         self, message_id: str, tool_call_data: Dict[str, Any]
     ) -> ToolCallResponse:
         """
@@ -776,9 +797,13 @@ class ChatService:
         db_tool_call_data = {
             "id": tool_call_id,
             "message_id": message_id,
-            "tool_id": tool_call_data.get("id", ""),
-            "tool_name": tool_call_data.get("function", {}).get("name", ""),
-            "arguments": tool_call_data.get("function", {}).get("arguments", {}),
+            "tool_id": tool_call_data.get("tool_id", tool_call_data.get("id", "")),
+            "tool_name": tool_call_data.get(
+                "tool_name", tool_call_data.get("function", {}).get("name", "")
+            ),
+            "arguments": tool_call_data.get(
+                "arguments", tool_call_data.get("function", {}).get("arguments", {})
+            ),
             "status": ToolCallStatus.PENDING,
             "created_at": now.isoformat(),
         }
