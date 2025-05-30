@@ -9,8 +9,10 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from tripsage.api.services.key import KeyService
-from tripsage.api.services.key_monitoring import KeyOperation
+# Note: These tests need to be updated to test the new refactored services
+# Updated imports to use the correct refactored paths
+from api.services.key_service import KeyService
+from tripsage_core.services.infrastructure.key_monitoring_service import KeyOperation
 
 
 @pytest.fixture

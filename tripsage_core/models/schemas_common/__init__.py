@@ -50,6 +50,18 @@ from .temporal import (
     Duration,
     TimeRange,
 )
+from .travel import (
+    AccommodationPreferences,
+    TransportationPreferences,
+    TripDestination,
+    TripPreferences,
+    TripSummary,
+)
+from .validators import (
+    validate_password_strength,
+    validate_passwords_different,
+    validate_passwords_match,
+)
 
 __all__ = [
     # Base models
@@ -91,4 +103,14 @@ __all__ = [
     "DateTimeRange",
     "Duration",
     "TimeRange",
+    # Travel
+    "AccommodationPreferences",
+    "TransportationPreferences",
+    "TripDestination",
+    "TripPreferences",
+    "TripSummary",
+    # Validators
+    "validate_password_strength",
+    "validate_passwords_different",
+    "validate_passwords_match",
 ]

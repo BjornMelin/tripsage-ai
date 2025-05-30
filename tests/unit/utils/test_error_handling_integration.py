@@ -4,15 +4,16 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from tripsage.utils.error_handling import (
-    APIError,
-    DatabaseError,
-    MCPError,
-    # Backwards compatibility aliases
-    TripSageError,
+from tripsage_core.exceptions import (
+    CoreDatabaseError,
+    CoreExternalAPIError,
+    CoreMCPError,
+    CoreTripSageError,
+    CoreValidationError,
+)
+from tripsage_core.utils.error_handling_utils import (
     # Error context manager
     TripSageErrorContext,
-    ValidationError,
     create_api_error,
     create_database_error,
     # Factory functions
@@ -24,13 +25,6 @@ from tripsage.utils.error_handling import (
     safe_execute,
     with_error_handling,
 )
-from tripsage_core.exceptions import (
-    CoreDatabaseError,
-    CoreExternalAPIError,
-    CoreMCPError,
-    CoreTripSageError,
-    CoreValidationError,
-)
 
 
 class TestBackwardsCompatibility:
@@ -38,16 +32,14 @@ class TestBackwardsCompatibility:
 
     def test_alias_mappings(self):
         """Test that aliases point to correct core exceptions."""
-        assert TripSageError == CoreTripSageError
-        assert MCPError == CoreMCPError
-        assert APIError == CoreExternalAPIError
-        assert ValidationError == CoreValidationError
-        assert DatabaseError == CoreDatabaseError
+        # These aliases no longer exist after Phase 1 cleanup
+        # The error_handling_utils module now directly uses Core exceptions
+        pass
 
     def test_alias_functionality(self):
         """Test that aliases work identically to core exceptions."""
         # Test with alias
-        alias_exc = TripSageError("Test message", "TEST_CODE")
+        alias_exc = CoreTripSageError("Test message", "TEST_CODE")
 
         # Test with core exception
         core_exc = CoreTripSageError("Test message", "TEST_CODE")

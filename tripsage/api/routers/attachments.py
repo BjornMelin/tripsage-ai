@@ -11,12 +11,9 @@ from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from pydantic import BaseModel, Field
 
 from tripsage.api.core.dependencies import get_current_user
-from tripsage.config.file_config import (
-    MAX_SESSION_SIZE,
-)
-from tripsage.services.file_processor import FileProcessor
-from tripsage.utils.file_validation import validate_file
 from tripsage_core.models.db.user import UserDB
+from tripsage_core.services.file_processor import FileProcessor
+from tripsage_core.utils.file_utils import MAX_SESSION_SIZE, validate_file
 
 logger = logging.getLogger(__name__)
 

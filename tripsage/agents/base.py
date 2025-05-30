@@ -20,11 +20,13 @@ except ImportError:
     Agent = MagicMock
     function_tool = MagicMock
 
-from tripsage.config.app_settings import settings
-from tripsage.utils.error_handling import TripSageError, log_exception
-from tripsage.utils.logging import get_logger
+from tripsage_core.config.base_app_settings import get_settings
+from tripsage_core.exceptions.exceptions import CoreTripSageError
+from tripsage_core.utils.error_handling_utils import log_exception
+from tripsage_core.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)
+settings = get_settings()
 
 
 class BaseAgent:
@@ -446,7 +448,7 @@ class BaseAgent:
             log_exception(e)
 
             error_message = "An error occurred while processing your request."
-            if isinstance(e, TripSageError):
+            if isinstance(e, CoreTripSageError):
                 error_message = e.message
 
             # Add error to message history

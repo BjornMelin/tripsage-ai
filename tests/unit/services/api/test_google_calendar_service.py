@@ -16,7 +16,9 @@ from tripsage.models.api.calendar_models import (
     EventReminder,
     UpdateEventRequest,
 )
-from tripsage.services.api.calendar_service import GoogleCalendarService
+from tripsage_core.services.external_apis.calendar_service import (
+    GoogleCalendarService,
+)
 
 
 @pytest.fixture
@@ -58,7 +60,7 @@ def mock_redis():
 async def calendar_service(mock_settings, mock_credentials, mock_redis):
     """Create calendar service instance for testing."""
     with patch(
-        "tripsage.services.api.calendar_service.Credentials"
+        "tripsage_core.services.external_apis.calendar_service.Credentials"
     ) as mock_creds_class:
         mock_creds_class.from_authorized_user_info.return_value = mock_credentials
         service = GoogleCalendarService()
@@ -75,10 +77,12 @@ class TestGoogleCalendarService:
     async def test_init_with_credentials(self, mock_settings, mock_credentials):
         """Test service initialization with credentials."""
         with patch(
-            "tripsage.services.api.calendar_service.Credentials"
+            "tripsage_core.services.external_apis.calendar_service.Credentials"
         ) as mock_creds_class:
             mock_creds_class.from_authorized_user_info.return_value = mock_credentials
-            with patch("tripsage.services.api.calendar_service.build") as mock_build:
+            with patch(
+                "tripsage_core.services.external_apis.calendar_service.build"
+            ) as mock_build:
                 service = GoogleCalendarService()
                 assert service.credentials == mock_credentials
                 mock_build.assert_called_once()
@@ -86,7 +90,9 @@ class TestGoogleCalendarService:
     @pytest.mark.asyncio
     async def test_init_without_credentials(self):
         """Test service initialization without credentials."""
-        with patch("tripsage.services.api.calendar_service.settings") as mock_settings:
+        with patch(
+            "tripsage_core.services.external_apis.calendar_service.settings"
+        ) as mock_settings:
             mock_settings.GOOGLE_CALENDAR_CREDENTIALS = None
             with pytest.raises(
                 ValueError, match="Google Calendar credentials not configured"

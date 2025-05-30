@@ -9,7 +9,7 @@ import json
 from datetime import datetime
 from typing import Any, Dict, Optional
 
-from tripsage.utils.logging import get_logger
+from tripsage_core.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)
 

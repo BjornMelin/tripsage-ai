@@ -5,6 +5,15 @@ description = "AI-powered travel planning system with multi-source data integrat
 readme = "README.md"
 requires-python = ">=3.12"
 authors = [{ name = "TripSage Team" }]
+dependencies = [
+    "email-validator>=2.2.0",
+    "fastapi>=0.115.12",
+    "pydantic>=2.11.5",
+    "pydantic-settings>=2.9.1",
+    "pytest>=8.3.5",
+    "pytest-cov>=6.1.1",
+    "python-dotenv>=1.1.0",
+]
 
 [tool.setuptools.packages.find]
 where = ["."]
@@ -76,6 +85,31 @@ lint.select = ["E", "F", "B", "I"]
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3.5",
+    "pytest-asyncio>=1.0.0",
+    "pytest-cov>=6.1.1",
+]
+test = [
+    "email-validator>=2.2.0",
+    "fastapi>=0.115.12",
+    "httpx>=0.28.1",
+    "passlib>=1.7.4",
+    "pydantic>=2.11.5",
+    "pydantic-settings>=2.9.1",
+    "pytest>=8.3.5",
+    "pytest-asyncio>=1.0.0",
+    "pytest-mock>=3.14.1",
+    "python-dotenv>=1.1.0",
+    "python-jose>=3.5.0",
+    "python-multipart>=0.0.20",
+    "redis>=6.1.0",
+    "sqlalchemy>=2.0.41",
+    "supabase>=2.15.2",
+    "uvicorn>=0.34.2",
+]
 
 [tool.hatch.build.targets.wheel]
 packages = ["tripsage", "tripsage_core"]

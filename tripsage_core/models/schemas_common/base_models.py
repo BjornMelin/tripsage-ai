@@ -10,7 +10,7 @@ from typing import Any, Dict, Generic, List, Optional, TypeVar
 
 from pydantic import Field
 
-from tripsage_core.models.base import TripSageModel
+from tripsage_core.models.base_core_model import TripSageModel
 
 # Type variable for generic responses
 T = TypeVar("T")

@@ -16,22 +16,23 @@ from tripsage.agents.destination_research import DestinationResearchAgent
 from tripsage.agents.flight import FlightAgent
 from tripsage.agents.itinerary import Itinerary as ItineraryAgent
 from tripsage.agents.travel import TravelAgent
-from tripsage.config.app_settings import settings
 from tripsage.mcp_abstraction.manager import MCPManager
-from tripsage.services.chat_orchestration import ChatOrchestrationService
-from tripsage.services.memory_service import TripSageMemoryService
+from tripsage.services.core.chat_orchestration import ChatOrchestrationService
 from tripsage.tools.memory_tools import ConversationMessage
-from tripsage.utils.error_handling import (
-    TripSageError,
+from tripsage_core.config.base_app_settings import get_settings
+from tripsage_core.exceptions import CoreTripSageError
+from tripsage_core.services.business.memory_service import MemoryService
+from tripsage_core.utils.decorator_utils import with_error_handling
+from tripsage_core.utils.error_handling_utils import (
     log_exception,
-    with_error_handling,
 )
-from tripsage.utils.logging import get_logger
+from tripsage_core.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)
+settings = get_settings()
 
 
-class ChatAgentError(TripSageError):
+class ChatAgentError(CoreTripSageError):
     """Error raised when chat agent operations fail."""
 
     pass
@@ -140,7 +141,7 @@ class ChatAgent(BaseAgent):
         self.chat_service = ChatOrchestrationService()
 
         # Initialize memory service for personalization
-        self.memory_service = TripSageMemoryService()
+        self.memory_service = MemoryService()
         self._memory_initialized = False
 
         # Initialize specialized agents
@@ -706,7 +707,7 @@ class ChatAgent(BaseAgent):
 
     # Phase 5: MCP Tool Integration Methods
 
-    @with_error_handling(logger=logger, raise_on_error=True)
+    @with_error_handling
     async def route_request(
         self, message: str, session_id: str, context: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
@@ -857,7 +858,7 @@ class ChatAgent(BaseAgent):
         # Use existing direct handling
         return await super().run(message, context)
 
-    @with_error_handling(logger=logger, raise_on_error=True)
+    @with_error_handling
     async def call_mcp_tools(self, tool_calls: List[Dict[str, Any]]) -> Dict[str, Any]:
         """Execute tool calls via MCP manager (Phase 5 pattern).
 
@@ -887,7 +888,7 @@ class ChatAgent(BaseAgent):
             self.logger.error(f"MCP tool calling failed: {e}")
             raise ChatAgentError(f"MCP tool calling failed: {str(e)}") from e
 
-    @with_error_handling(logger=logger, raise_on_error=True)
+    @with_error_handling
     async def create_chat_session_mcp(
         self, user_id: int, metadata: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
@@ -909,7 +910,7 @@ class ChatAgent(BaseAgent):
             self.logger.error(f"MCP session creation failed: {e}")
             raise ChatAgentError(f"Session creation failed: {str(e)}") from e
 
-    @with_error_handling(logger=logger, raise_on_error=True)
+    @with_error_handling
     async def save_message_mcp(
         self,
         session_id: str,
@@ -939,7 +940,7 @@ class ChatAgent(BaseAgent):
             self.logger.error(f"MCP message saving failed: {e}")
             raise ChatAgentError(f"Message saving failed: {str(e)}") from e
 
-    @with_error_handling(logger=logger, raise_on_error=True)
+    @with_error_handling
     async def get_chat_history_mcp(
         self, session_id: str, limit: int = 10, offset: int = 0
     ) -> List[Dict[str, Any]]:
@@ -962,7 +963,7 @@ class ChatAgent(BaseAgent):
             self.logger.error(f"MCP history retrieval failed: {e}")
             raise ChatAgentError(f"History retrieval failed: {str(e)}") from e
 
-    @with_error_handling(logger=logger, raise_on_error=True)
+    @with_error_handling
     async def end_chat_session_mcp(self, session_id: str) -> bool:
         """End a chat session using MCP database operations.
 

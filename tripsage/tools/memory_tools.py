@@ -18,28 +18,28 @@ import json
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
-from tripsage.services.memory_service import TripSageMemoryService
 from tripsage.tools.models import (
     ConversationMessage,
     MemorySearchQuery,
     SessionSummary,
     UserPreferences,
 )
-from tripsage.utils.decorators import with_error_handling
-from tripsage.utils.logging import get_logger
+from tripsage_core.services.business.memory_service import MemoryService
+from tripsage_core.utils.decorator_utils import with_error_handling
+from tripsage_core.utils.logging_utils import get_logger
 
 # Set up logger
 logger = get_logger(__name__)
 
 # Global memory service instance
-_memory_service: Optional[TripSageMemoryService] = None
+_memory_service: Optional[MemoryService] = None
 
 
-def get_memory_service() -> TripSageMemoryService:
+def get_memory_service() -> MemoryService:
     """Get the global memory service instance."""
     global _memory_service
     if _memory_service is None:
-        _memory_service = TripSageMemoryService()
+        _memory_service = MemoryService()
     return _memory_service
 
 

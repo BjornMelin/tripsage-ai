@@ -16,7 +16,7 @@ from sqlalchemy import text
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from tripsage.api.core.exceptions import NotFoundError, ValidationError
+from tripsage_core.exceptions import CoreResourceNotFoundError, CoreValidationError
 from tripsage_core.models.db.chat import (
     ChatMessageDB,
     ChatSessionDB,
@@ -143,13 +143,13 @@ class ChatService:
             return {}
 
         if not isinstance(metadata, dict):
-            raise ValidationError("Metadata must be a dictionary")
+            raise CoreValidationError("Metadata must be a dictionary")
 
         # Remove None values and ensure all keys are strings
         cleaned = {}
         for key, value in metadata.items():
             if not isinstance(key, str):
-                raise ValidationError("Metadata keys must be strings")
+                raise CoreValidationError("Metadata keys must be strings")
             if value is not None:
                 cleaned[key] = value
 
@@ -217,7 +217,7 @@ class ChatService:
         row = result.fetchone()
 
         if not row:
-            raise ValidationError("Failed to create chat session")
+            raise CoreValidationError("Failed to create chat session")
 
         logger.info(f"Created chat session {session_id} for user {user_id}")
 
@@ -243,7 +243,7 @@ class ChatService:
             Chat session
 
         Raises:
-            NotFoundError: If session not found
+            CoreResourceNotFoundError: If session not found
         """
         query = text(
             """
@@ -262,7 +262,7 @@ class ChatService:
         row = result.fetchone()
 
         if not row:
-            raise NotFoundError(f"Chat session {session_id} not found")
+            raise CoreResourceNotFoundError(f"Chat session {session_id} not found")
 
         return ChatSessionDB(
             id=row.id,
@@ -344,12 +344,12 @@ class ChatService:
             Created message
 
         Raises:
-            ValidationError: If message validation fails or rate limit exceeded
+            CoreValidationError: If message validation fails or rate limit exceeded
         """
         # Check rate limit if user_id provided
         if user_id and role == "user":
             if not self.rate_limiter.check_rate_limit(user_id):
-                raise ValidationError(
+                raise CoreValidationError(
                     f"Rate limit exceeded. Maximum {self.rate_limiter.max_messages} "
                     f"messages per {self.rate_limiter.window_seconds} seconds."
                 )
@@ -371,7 +371,7 @@ class ChatService:
                 metadata=metadata,
             )
         except ValueError as e:
-            raise ValidationError(str(e)) from e
+            raise CoreValidationError(str(e)) from e
 
         # Insert message
         query = text(
@@ -394,7 +394,7 @@ class ChatService:
         row = result.fetchone()
 
         if not row:
-            raise ValidationError("Failed to create message")
+            raise CoreValidationError("Failed to create message")
 
         # Update session updated_at
         await self.db.execute(
@@ -428,7 +428,7 @@ class ChatService:
             List of created messages
 
         Raises:
-            ValidationError: If any message validation fails or rate limit exceeded
+            CoreValidationError: If any message validation fails or rate limit exceeded
         """
         # Count user messages for rate limiting
         if user_id:
@@ -436,7 +436,7 @@ class ChatService:
             if user_message_count > 0 and not self.rate_limiter.check_rate_limit(
                 user_id, count=user_message_count
             ):
-                raise ValidationError(
+                raise CoreValidationError(
                     f"Rate limit exceeded. Maximum {self.rate_limiter.max_messages} "
                     f"messages per {self.rate_limiter.window_seconds} seconds."
                 )
@@ -459,7 +459,7 @@ class ChatService:
                     metadata=validated_metadata,
                 )
             except ValueError as e:
-                raise ValidationError(f"Invalid message: {str(e)}") from e
+                raise CoreValidationError(f"Invalid message: {str(e)}") from e
 
             batch_data.append(
                 {
@@ -657,7 +657,7 @@ class ChatService:
         row = result.fetchone()
 
         if not row:
-            raise ValidationError("Failed to create tool call")
+            raise CoreValidationError("Failed to create tool call")
 
         return ChatToolCallDB(
             id=row.id,
@@ -730,7 +730,7 @@ class ChatService:
         row = result_row.fetchone()
 
         if not row:
-            raise NotFoundError(f"Tool call {tool_call_id} not found")
+            raise CoreResourceNotFoundError(f"Tool call {tool_call_id} not found")
 
         return ChatToolCallDB(
             id=row.id,
@@ -755,7 +755,7 @@ class ChatService:
             Updated session
 
         Raises:
-            NotFoundError: If session not found
+            CoreResourceNotFoundError: If session not found
         """
         query = text(
             """
@@ -770,7 +770,7 @@ class ChatService:
         row = result.fetchone()
 
         if not row:
-            raise NotFoundError(f"Chat session {session_id} not found")
+            raise CoreResourceNotFoundError(f"Chat session {session_id} not found")
 
         return ChatSessionDB(
             id=row.id,

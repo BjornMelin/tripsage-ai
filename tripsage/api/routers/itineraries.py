@@ -8,7 +8,6 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from tripsage.api.core.dependencies import get_current_user
-from tripsage.api.core.exceptions import ResourceNotFoundError
 from tripsage.api.models.itineraries import (
     Itinerary,
     ItineraryConflictCheckResponse,
@@ -22,7 +21,21 @@ from tripsage.api.models.itineraries import (
     ItinerarySearchResponse,
     ItineraryUpdateRequest,
 )
-from tripsage.api.services.itinerary import get_itinerary_service
+
+# Note: ItineraryService needs to be refactored to use the new pattern
+# For now, keeping the old import until it's refactored
+from tripsage.api.services.itinerary import ItineraryService
+from tripsage_core.exceptions.exceptions import (
+    CoreResourceNotFoundError as ResourceNotFoundError,
+)
+
+_itinerary_service_singleton = ItineraryService()
+
+
+def get_itinerary_service() -> ItineraryService:
+    """Dependency provider for the ItineraryService singleton."""
+    return _itinerary_service_singleton
+
 
 router = APIRouter()
 logger = logging.getLogger(__name__)

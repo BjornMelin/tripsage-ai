@@ -11,12 +11,14 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from tripsage.api.services.key_monitoring import (
-    KeyMonitoringService,
-    KeyOperation,
+from tripsage_core.services.infrastructure import (
     clear_sensitive_data,
     constant_time_compare,
     secure_random_token,
+)
+from tripsage_core.services.infrastructure.key_monitoring_service import (
+    KeyMonitoringService,
+    KeyOperation,
 )
 
 
@@ -55,7 +57,9 @@ async def test_initialize(monitoring_service, mock_redis_mcp):
     monitoring_service.redis_mcp = None
 
     # Mock MCP manager
-    with patch("tripsage.api.services.key_monitoring.mcp_manager") as mock_manager:
+    with patch(
+        "tripsage_core.services.infrastructure.key_monitoring_service.mcp_manager"
+    ) as mock_manager:
         mock_manager.initialize_mcp = AsyncMock(return_value=mock_redis_mcp)
 
         # Call initialize
@@ -169,7 +173,9 @@ async def test_check_suspicious_patterns_suspicious(monitoring_service, mock_red
 async def test_send_alert(monitoring_service, mock_redis_mcp):
     """Test sending an alert for suspicious activity."""
     # Mock the logger to avoid logging in tests
-    with patch("tripsage.api.services.key_monitoring.logger") as mock_logger:
+    with patch(
+        "tripsage_core.services.infrastructure.key_monitoring_service.logger"
+    ) as mock_logger:
         # Call send_alert
         await monitoring_service._send_alert(
             operation=KeyOperation.CREATE,
@@ -301,12 +307,14 @@ async def test_check_key_expiration(mock_supabase_mcp):
     monitoring_service.redis_mcp = AsyncMock()
 
     with patch(
-        "tripsage.api.services.key_monitoring.mcp_manager.initialize_mcp",
+        "tripsage_core.services.infrastructure.key_monitoring_service.mcp_manager.initialize_mcp",
         new_callable=AsyncMock,
         return_value=mock_supabase_mcp,
     ):
         # Call check_key_expiration
-        from tripsage.api.services.key_monitoring import check_key_expiration
+        from tripsage_core.services.infrastructure.key_monitoring_service import (
+            check_key_expiration,
+        )
 
         result = await check_key_expiration(monitoring_service, 7)
 
@@ -338,12 +346,14 @@ async def test_get_key_health_metrics(mock_supabase_mcp):
 
     # Mock dependencies
     with patch(
-        "tripsage.api.services.key_monitoring.mcp_manager.initialize_mcp",
+        "tripsage_core.services.infrastructure.key_monitoring_service.mcp_manager.initialize_mcp",
         new_callable=AsyncMock,
         return_value=mock_supabase_mcp,
     ):
         # Call get_key_health_metrics
-        from tripsage.api.services.key_monitoring import get_key_health_metrics
+        from tripsage_core.services.infrastructure.key_monitoring_service import (
+            get_key_health_metrics,
+        )
 
         result = await get_key_health_metrics()
 

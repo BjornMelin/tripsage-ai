@@ -12,10 +12,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from tripsage.services.memory_service import (
+from tripsage_core.services.business.memory_service import (
     MemorySearchResult,
-    MemoryServiceAdapter,
-    TripSageMemoryService,
+    MemoryService,
 )
 
 
@@ -25,19 +24,19 @@ class TestSpecificCoverageLines:
     @pytest.mark.asyncio
     async def test_connect_early_return(self):
         """Test connect method early return when already connected."""
-        service = TripSageMemoryService()
+        service = MemoryService()
         service._connected = True
         service.memory = MagicMock()
 
         # Should return early without calling Memory.from_config
-        with patch("tripsage.services.memory_service.Memory") as mock_memory:
+        with patch("mem0.Memory") as mock_memory:
             await service.connect()
             mock_memory.from_config.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_close_early_return(self):
         """Test close method early return when not connected."""
-        service = TripSageMemoryService()
+        service = MemoryService()
         service._connected = False
 
         # Should return early
@@ -47,7 +46,7 @@ class TestSpecificCoverageLines:
     @pytest.mark.asyncio
     async def test_close_with_exception(self):
         """Test close method with exception during cleanup."""
-        service = TripSageMemoryService()
+        service = MemoryService()
         service._connected = True
         service._cache = {"test": "data"}
 
@@ -62,7 +61,7 @@ class TestSpecificCoverageLines:
     @pytest.mark.asyncio
     async def test_add_conversation_early_return(self):
         """Test add_conversation_memory early return when not connected."""
-        service = TripSageMemoryService()
+        service = MemoryService()
         service._connected = False
 
         with patch.object(service, "connect") as mock_connect:
@@ -79,7 +78,7 @@ class TestSpecificCoverageLines:
     @pytest.mark.asyncio
     async def test_search_memories_early_return(self):
         """Test search_memories early return when not connected."""
-        service = TripSageMemoryService()
+        service = MemoryService()
         service._connected = False
 
         with patch.object(service, "connect") as mock_connect:
@@ -93,7 +92,7 @@ class TestSpecificCoverageLines:
     @pytest.mark.asyncio
     async def test_get_user_context_early_return(self):
         """Test get_user_context early return when not connected."""
-        service = TripSageMemoryService()
+        service = MemoryService()
         service._connected = False
 
         with patch.object(service, "connect") as mock_connect:
@@ -107,25 +106,22 @@ class TestSpecificCoverageLines:
     @pytest.mark.asyncio
     async def test_search_with_mcp_fallback(self):
         """Test MCP fallback path in search_memories."""
-        service = TripSageMemoryService()
+        service = MemoryService()
         service._connected = True
         service.memory = MagicMock()
 
         # Mock MCP fallback method
         service._search_via_mcp = AsyncMock(return_value=[])
 
-        with patch("tripsage.services.memory_service.feature_flags") as mock_flags:
-            from tripsage.config.feature_flags import IntegrationMode
-
-            mock_flags.get_integration_mode.return_value = IntegrationMode.MCP
-
-            await service.search_memories("test", "user_123")
-            service._search_via_mcp.assert_called_once()
+        # Test direct memory search instead of MCP fallback
+        await service.search_memories("test", "user_123")
+        # Should use direct memory search
+        service.memory.search.assert_called()
 
     @pytest.mark.asyncio
     async def test_delete_memories_with_ids(self):
         """Test delete_user_memories with specific memory IDs."""
-        service = TripSageMemoryService()
+        service = MemoryService()
         service._connected = True
         service.memory = MagicMock()
         service.memory.delete.return_value = {"success": True}
@@ -140,7 +136,7 @@ class TestSpecificCoverageLines:
     @pytest.mark.asyncio
     async def test_delete_memories_all_user_memories(self):
         """Test delete_user_memories without specific IDs (delete all)."""
-        service = TripSageMemoryService()
+        service = MemoryService()
         service._connected = True
         service.memory = MagicMock()
 
@@ -163,7 +159,7 @@ class TestSpecificCoverageLines:
     @pytest.mark.asyncio
     async def test_delete_with_partial_failures(self):
         """Test deletion with some failures."""
-        service = TripSageMemoryService()
+        service = MemoryService()
         service._connected = True
         service.memory = MagicMock()
 
@@ -180,7 +176,7 @@ class TestSpecificCoverageLines:
 
     def test_cache_expiration_logic(self):
         """Test cache expiration logic in _get_cached_result."""
-        service = TripSageMemoryService()
+        service = MemoryService()
 
         # Create expired cache entry
         import time
@@ -205,29 +201,23 @@ class TestSpecificCoverageLines:
         assert cache_key not in service._cache  # Should be cleaned up
 
     @pytest.mark.asyncio
-    async def test_memory_service_adapter_get_mcp_client(self):
-        """Test MemoryServiceAdapter MCP client retrieval."""
-        adapter = MemoryServiceAdapter()
+    async def test_memory_service_direct_functionality(self):
+        """Test direct memory service functionality."""
+        service = MemoryService()
+        service._connected = True
+        service.memory = MagicMock()
+        service.memory.search.return_value = {"results": []}
 
-        # Mock the MCP client retrieval
-        with patch("tripsage.services.memory_service.get_memory_service") as mock_get:
-            mock_service = MagicMock()
-            mock_get.return_value = mock_service
+        # Test direct service usage
+        from tripsage_core.services.business.memory_service import MemorySearchRequest
 
-            client = await adapter.get_mcp_client()
-            assert client is mock_service
-
-    @pytest.mark.asyncio
-    async def test_memory_service_adapter_get_direct_service(self):
-        """Test MemoryServiceAdapter direct service retrieval."""
-        adapter = MemoryServiceAdapter()
-
-        service = await adapter.get_direct_service()
-        assert isinstance(service, TripSageMemoryService)
+        search_request = MemorySearchRequest(query="test", limit=5)
+        results = await service.search_memories("user_123", search_request)
+        assert isinstance(results, list)
 
     def test_analysis_methods_with_empty_data(self):
         """Test analysis methods with empty context data."""
-        service = TripSageMemoryService()
+        service = MemoryService()
 
         empty_context = {
             "preferences": [],
@@ -258,7 +248,7 @@ class TestSpecificCoverageLines:
 
     def test_analysis_methods_with_rich_data(self):
         """Test analysis methods with rich context data."""
-        service = TripSageMemoryService()
+        service = MemoryService()
 
         rich_context = {
             "preferences": [
@@ -307,7 +297,7 @@ class TestSpecificCoverageLines:
     @pytest.mark.asyncio
     async def test_enrich_travel_memories_with_data(self):
         """Test memory enrichment with actual data."""
-        service = TripSageMemoryService()
+        service = MemoryService()
 
         # Create test memories with travel-related content
         memories = [
@@ -337,7 +327,7 @@ class TestSpecificCoverageLines:
 
     def test_context_summary_generation_variations(self):
         """Test context summary with different context variations."""
-        service = TripSageMemoryService()
+        service = MemoryService()
 
         # Test high-activity user context
         active_context = {

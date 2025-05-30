@@ -17,9 +17,12 @@ from tripsage.models.api.flights_models import (
     Airport,
     FlightOffer,
     FlightOfferRequest,
-    FlightSegment,
     Passenger,
+    PaymentRequest,
     PriceBreakdown,
+)
+from tripsage.models.api.flights_models import (
+    Segment as FlightSegment,  # Import as FlightSegment for backwards compatibility
 )
 from tripsage.models.api.weather_models import (
     CurrentWeather,
@@ -42,8 +45,9 @@ __all__ = [
     "Airport",
     "FlightOffer",
     "FlightOfferRequest",
-    "FlightSegment",
+    "FlightSegment",  # Exported as FlightSegment (alias for Segment)
     "Passenger",
+    "PaymentRequest",
     "PriceBreakdown",
     # Weather models
     "CurrentWeather",

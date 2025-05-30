@@ -18,7 +18,7 @@ from tripsage.orchestration.state import TravelPlanningState, create_initial_sta
 @pytest.fixture
 def mock_config():
     """Mock configuration for testing."""
-    with patch("tripsage.config.app_settings.settings") as mock_settings:
+    with patch("tripsage_core.config.base_app_settings.settings") as mock_settings:
         mock_settings.agent.model_name = "gpt-4"
         mock_settings.agent.temperature = 0.7
         mock_settings.agent.max_tokens = 4096

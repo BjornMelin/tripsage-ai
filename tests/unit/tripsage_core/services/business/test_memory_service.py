@@ -6,26 +6,51 @@ including memory storage, retrieval, search, and AI-powered contextual understan
 """
 
 from datetime import datetime, timedelta, timezone
+from enum import Enum
 from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
 import pytest
 
-from tripsage_core.exceptions import (
+from tripsage_core.exceptions.exceptions import (
     CoreServiceError as ServiceError,
 )
+from tripsage_core.models.db.memory import Memory
 from tripsage_core.services.business.memory_service import (
-    Memory,
-    MemoryCreateRequest,
-    MemoryImportance,
-    MemoryMetadata,
+    ConversationMemoryRequest as MemoryCreateRequest,
+)
+from tripsage_core.services.business.memory_service import (
     MemorySearchRequest,
     MemoryService,
-    MemoryStatus,
-    MemoryType,
-    MemoryUpdateRequest,
     get_memory_service,
 )
+from tripsage_core.services.business.memory_service import (
+    MemorySearchResult as MemoryMetadata,
+)
+from tripsage_core.services.business.memory_service import (
+    UserContextResponse as MemoryUpdateRequest,
+)
+
+
+# Define mock enums for testing
+class MemoryType(str, Enum):
+    PREFERENCE = "preference"
+    FACTUAL = "factual"
+    BEHAVIORAL = "behavioral"
+    GOAL = "goal"
+
+
+class MemoryImportance(str, Enum):
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+    CRITICAL = "critical"
+
+
+class MemoryStatus(str, Enum):
+    ACTIVE = "active"
+    ARCHIVED = "archived"
+    EXPIRED = "expired"
 
 
 class TestMemoryService:
@@ -59,33 +84,38 @@ class TestMemoryService:
     def memory_service(
         self,
         mock_database_service,
-        mock_mem0_client,
-        mock_vector_service,
-        mock_ai_service,
     ):
         """Create MemoryService instance with mocked dependencies."""
         return MemoryService(
             database_service=mock_database_service,
-            mem0_client=mock_mem0_client,
-            vector_service=mock_vector_service,
-            ai_service=mock_ai_service,
+            memory_backend_config={"type": "memory"},
+            cache_ttl=300,
         )
 
     @pytest.fixture
     def sample_memory_create_request(self):
         """Sample memory creation request."""
         return MemoryCreateRequest(
-            content="User prefers boutique hotels in historic city centers",
-            memory_type=MemoryType.PREFERENCE,
-            importance=MemoryImportance.HIGH,
-            context={
-                "trip_id": str(uuid4()),
-                "session_id": str(uuid4()),
+            messages=[
+                {
+                    "role": "user",
+                    "content": "I prefer boutique hotels in historic city centers",
+                },
+                {
+                    "role": "assistant",
+                    "content": (
+                        "I'll remember your preference for boutique hotels "
+                        "in historic areas."
+                    ),
+                },
+            ],
+            session_id=str(uuid4()),
+            trip_id=str(uuid4()),
+            metadata={
                 "location": "Europe",
                 "category": "accommodation",
+                "tags": ["hotels", "boutique", "historic", "preferences"],
             },
-            tags=["hotels", "boutique", "historic", "preferences"],
-            expires_at=datetime.now(timezone.utc) + timedelta(days=365),
         )
 
     @pytest.fixture
@@ -699,9 +729,9 @@ class TestMemoryService:
         with pytest.raises(ServiceError, match="Failed to create memory"):
             await memory_service.create_memory(user_id, sample_memory_create_request)
 
-    def test_get_memory_service_dependency(self):
+    async def test_get_memory_service_dependency(self):
         """Test the dependency injection function."""
-        service = get_memory_service()
+        service = await get_memory_service()
         assert isinstance(service, MemoryService)
 
     async def test_memory_privacy_controls(

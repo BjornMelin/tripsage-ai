@@ -84,7 +84,7 @@ class TravelPlanningState(TypedDict):
 from abc import ABC, abstractmethod
 from typing import Dict, Any
 from tripsage.orchestration.state import TravelPlanningState
-from tripsage.utils.logging import get_logger
+from tripsage_core.utils.logging_utils import get_logger
 
 class BaseAgentNode(ABC):
     """Base class for all LangGraph agent nodes"""
@@ -393,7 +393,7 @@ class FlightAgentNode(BaseAgentNode):
 
 ```python
 from tripsage.orchestration.nodes.base import BaseAgentNode
-from tripsage.utils.session_memory import SessionMemoryManager
+from tripsage_core.utils.session_utils import initialize_session_memory, update_session_memory
 from tripsage.mcp_abstraction.manager import MCPManager
 
 class MemoryUpdateNode(BaseAgentNode):
@@ -401,7 +401,6 @@ class MemoryUpdateNode(BaseAgentNode):
     
     def __init__(self):
         super().__init__("memory_update")
-        self.memory_manager = SessionMemoryManager()
         self.mcp_manager = MCPManager()
     
     def _initialize_tools(self):
@@ -812,7 +811,7 @@ from langsmith import trace, traceable
 from typing import Dict, Any
 import time
 import json
-from tripsage.utils.logging import get_logger
+from tripsage_core.utils.logging_utils import get_logger
 
 logger = get_logger("orchestration.monitoring")
 

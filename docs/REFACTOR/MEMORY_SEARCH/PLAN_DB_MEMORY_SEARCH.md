@@ -150,7 +150,7 @@ from mem0 import Memory
 from tripsage.config.settings import settings
 from tripsage.mcp_abstraction.registry import ServiceProtocol
 
-class TripSageMemoryService(ServiceProtocol):
+class MemoryService(ServiceProtocol):
     def __init__(self):
         self.config = {
             "vector_store": {
@@ -186,7 +186,7 @@ class TripSageMemoryService(ServiceProtocol):
         await self.memory.close()
 
 # Register with service registry
-registry.register("memory", TripSageMemoryService())
+registry.register("memory", MemoryService())
 ```
 
 ##### Days 3-4: Agent Integration
@@ -646,7 +646,7 @@ See Phase 9 in RESEARCH_DB_MEMORY_SEARCH.md for complete analysis and benchmarks
 | PGVector Setup | 1 day | Enable in Supabase | Ready |
 | Database Schema | 2 days | Create optimized tables | Ready |
 | **Week 2: Mem0 Integration** | | | |
-| Memory Service | 2 days | Core TripSageMemoryService | Planned |
+| Memory Service | 2 days | Core MemoryService | Planned |
 | Agent Integration | 2 days | Update ChatAgent with memory | Planned |
 | Advanced Features | 1 day | Session management, search | Planned |
 | **Week 3: Production** | | | |

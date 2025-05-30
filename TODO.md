@@ -2,7 +2,7 @@
 
 This streamlined TODO list tracks current development priorities for TripSage AI.
 
-## Current Status (2025-05-27)
+## Current Status (2025-05-30)
 
 ### ✅ Recently Completed
 
@@ -18,6 +18,8 @@ This streamlined TODO list tracks current development priorities for TripSage AI
 - **Centralized Exception System**: Complete tripsage_core.exceptions module with hierarchical error handling, structured details, and backwards compatibility (Issue #179)
 - **TripSage Core Module**: Complete centralized foundation with CoreAppSettings, domain models, and comprehensive architecture (PR #198)
 - **TripSage Core Business Services**: Implemented 11 business service modules with 256 unit tests and clean architecture patterns (PR #199)
+- **TripSage Core Utilities Migration**: Migrated all general utility functions from `tripsage/utils/` to `tripsage_core/utils/` with 79 files updated and 7 legacy files removed
+- **TripSage Core Phase 1 Complete**: Merged session/1.19 branch with all critical fixes, resolved import chain issues, both APIs starting successfully, test infrastructure in place
 
 ### Coding Standards
 

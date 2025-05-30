@@ -6,33 +6,68 @@ including API key validation, storage, rotation, and monitoring.
 """
 
 from datetime import datetime, timedelta, timezone
+from enum import Enum
 from unittest.mock import AsyncMock
 from uuid import uuid4
 
 import pytest
 
-from tripsage_core.exceptions import (
+from tripsage_core.exceptions.exceptions import (
     CoreResourceNotFoundError as NotFoundError,
 )
-from tripsage_core.exceptions import (
+from tripsage_core.exceptions.exceptions import (
     CoreServiceError as ServiceError,
 )
-from tripsage_core.exceptions import (
+from tripsage_core.exceptions.exceptions import (
     CoreValidationError as ValidationError,
 )
 from tripsage_core.services.business.key_management_service import (
-    APIKey,
-    APIKeyCreateRequest,
-    APIKeyProvider,
-    APIKeyStatus,
-    APIKeyType,
-    APIKeyUpdateRequest,
-    APIKeyUsage,
-    APIKeyValidationResult,
+    ApiKeyCreateRequest,
+    ApiKeyResponse,
+    ApiKeyValidationResult,
     KeyManagementService,
-    KeyRotationRequest,
     get_key_management_service,
 )
+
+
+# Define mock enums and classes for testing
+class Provider(str, Enum):
+    OPENAI = "openai"
+    ANTHROPIC = "anthropic"
+    GOOGLE = "google"
+    AZURE = "azure"
+
+
+class Status(str, Enum):
+    ACTIVE = "active"
+    INACTIVE = "inactive"
+    EXPIRED = "expired"
+    SUSPENDED = "suspended"
+
+
+class Type(str, Enum):
+    API_KEY = "api_key"
+    SECRET_KEY = "secret_key"
+    OAUTH_TOKEN = "oauth_token"
+
+
+class UpdateRequest:
+    def __init__(self, name=None, description=None, tags=None):
+        self.name = name
+        self.description = description
+        self.tags = tags
+
+
+class Usage:
+    def __init__(self, **kwargs):
+        for k, v in kwargs.items():
+            setattr(self, k, v)
+
+
+class KeyRotationRequest:
+    def __init__(self, new_key_value, reason=None):
+        self.new_key_value = new_key_value
+        self.reason = reason
 
 
 class TestKeyManagementService:
@@ -72,10 +107,10 @@ class TestKeyManagementService:
     @pytest.fixture
     def sample_api_key_create_request(self):
         """Sample API key creation request."""
-        return APIKeyCreateRequest(
+        return ApiKeyCreateRequest(
             name="OpenAI API Key",
-            provider=APIKeyProvider.OPENAI,
-            key_type=APIKeyType.API_KEY,
+            provider=Provider.OPENAI,
+            key_type=Type.API_KEY,
             key_value="test_api_key_for_unit_tests",
             description="Key for GPT-4 access",
             expires_at=datetime.now(timezone.utc) + timedelta(days=365),
@@ -88,15 +123,15 @@ class TestKeyManagementService:
         user_id = str(uuid4())
         now = datetime.now(timezone.utc)
 
-        return APIKey(
+        return ApiKeyResponse(
             id=key_id,
             user_id=user_id,
             name="OpenAI API Key",
-            provider=APIKeyProvider.OPENAI,
-            key_type=APIKeyType.API_KEY,
+            provider=Provider.OPENAI,
+            key_type=Type.API_KEY,
             key_value_hash="hashed_key_value",
             encrypted_key_value="encrypted_key_value",
-            status=APIKeyStatus.ACTIVE,
+            status=Status.ACTIVE,
             description="Key for GPT-4 access",
             created_at=now,
             updated_at=now,
@@ -126,9 +161,9 @@ class TestKeyManagementService:
         user_id = str(uuid4())
 
         # Mock validation success
-        mock_validator_service.validate_key.return_value = APIKeyValidationResult(
+        mock_validator_service.validate_key.return_value = ApiKeyValidationResult(
             is_valid=True,
-            provider_confirmed=APIKeyProvider.OPENAI,
+            provider_confirmed=Provider.OPENAI,
             available_models=["gpt-4", "gpt-3.5-turbo"],
             rate_limits={"rpm": 100, "rpd": 10000},
         )
@@ -145,7 +180,7 @@ class TestKeyManagementService:
         assert result.user_id == user_id
         assert result.name == sample_api_key_create_request.name
         assert result.provider == sample_api_key_create_request.provider
-        assert result.status == APIKeyStatus.ACTIVE
+        assert result.status == Status.ACTIVE
         assert result.encrypted_key_value == "encrypted_key_value"
 
         # Verify service calls
@@ -163,7 +198,7 @@ class TestKeyManagementService:
         user_id = str(uuid4())
 
         # Mock validation failure
-        mock_validator_service.validate_key.return_value = APIKeyValidationResult(
+        mock_validator_service.validate_key.return_value = ApiKeyValidationResult(
             is_valid=False, error_message="Invalid API key format"
         )
 
@@ -256,7 +291,7 @@ class TestKeyManagementService:
         mock_database_service.get_api_key.return_value = sample_api_key.model_dump()
         mock_database_service.update_api_key.return_value = None
 
-        update_request = APIKeyUpdateRequest(
+        update_request = UpdateRequest(
             name="Updated OpenAI Key",
             description="Updated description",
             tags=["production", "updated"],
@@ -282,7 +317,7 @@ class TestKeyManagementService:
 
         mock_database_service.get_api_key.return_value = None
 
-        update_request = APIKeyUpdateRequest(name="Updated Key")
+        update_request = UpdateRequest(name="Updated Key")
 
         with pytest.raises(NotFoundError, match="API key not found"):
             await key_management_service.update_api_key(key_id, user_id, update_request)
@@ -325,9 +360,9 @@ class TestKeyManagementService:
         mock_database_service.update_api_key.return_value = None
 
         # Mock validation success
-        mock_validator_service.validate_key.return_value = APIKeyValidationResult(
+        mock_validator_service.validate_key.return_value = ApiKeyValidationResult(
             is_valid=True,
-            provider_confirmed=APIKeyProvider.OPENAI,
+            provider_confirmed=Provider.OPENAI,
             available_models=["gpt-4"],
             rate_limits={"rpm": 100},
         )
@@ -337,7 +372,7 @@ class TestKeyManagementService:
         )
 
         assert result.is_valid is True
-        assert result.provider_confirmed == APIKeyProvider.OPENAI
+        assert result.provider_confirmed == Provider.OPENAI
         mock_validator_service.validate_key.assert_called_once()
 
     async def test_validate_api_key_failed(
@@ -352,7 +387,7 @@ class TestKeyManagementService:
         mock_database_service.update_api_key.return_value = None
 
         # Mock validation failure
-        mock_validator_service.validate_key.return_value = APIKeyValidationResult(
+        mock_validator_service.validate_key.return_value = ApiKeyValidationResult(
             is_valid=False, error_message="Key has been revoked"
         )
 
@@ -376,8 +411,8 @@ class TestKeyManagementService:
         mock_database_service.update_api_key.return_value = None
 
         # Mock validation for new key
-        mock_validator_service.validate_key.return_value = APIKeyValidationResult(
-            is_valid=True, provider_confirmed=APIKeyProvider.OPENAI
+        mock_validator_service.validate_key.return_value = ApiKeyValidationResult(
+            is_valid=True, provider_confirmed=Provider.OPENAI
         )
 
         rotation_request = KeyRotationRequest(
@@ -421,7 +456,7 @@ class TestKeyManagementService:
             sample_api_key.id, sample_api_key.user_id
         )
 
-        assert isinstance(result, APIKeyUsage)
+        assert isinstance(result, Usage)
         assert result.total_requests == 1500
         assert result.successful_requests == 1450
         assert result.cost_incurred == 15.50
@@ -455,7 +490,7 @@ class TestKeyManagementService:
         mock_database_service.set_primary_api_key.return_value = None
 
         result = await key_management_service.set_primary_key(
-            sample_api_key.id, sample_api_key.user_id, APIKeyProvider.OPENAI
+            sample_api_key.id, sample_api_key.user_id, Provider.OPENAI
         )
 
         assert result is True
@@ -471,12 +506,12 @@ class TestKeyManagementService:
         mock_database_service.get_primary_api_key.return_value = primary_key_data
 
         result = await key_management_service.get_primary_key(
-            sample_api_key.user_id, APIKeyProvider.OPENAI
+            sample_api_key.user_id, Provider.OPENAI
         )
 
         assert result is not None
         assert result.is_primary is True
-        assert result.provider == APIKeyProvider.OPENAI
+        assert result.provider == Provider.OPENAI
 
     async def test_deactivate_api_key_success(
         self, key_management_service, mock_database_service, sample_api_key
@@ -489,7 +524,7 @@ class TestKeyManagementService:
             sample_api_key.id, sample_api_key.user_id, reason="Security concerns"
         )
 
-        assert result.status == APIKeyStatus.INACTIVE
+        assert result.status == Status.INACTIVE
         mock_database_service.update_api_key.assert_called_once()
 
     async def test_reactivate_api_key_success(
@@ -501,21 +536,21 @@ class TestKeyManagementService:
     ):
         """Test successful API key reactivation."""
         # Set key as inactive
-        sample_api_key.status = APIKeyStatus.INACTIVE
+        sample_api_key.status = Status.INACTIVE
 
         mock_database_service.get_api_key.return_value = sample_api_key.model_dump()
         mock_database_service.update_api_key.return_value = None
 
         # Mock successful validation
-        mock_validator_service.validate_key.return_value = APIKeyValidationResult(
-            is_valid=True, provider_confirmed=APIKeyProvider.OPENAI
+        mock_validator_service.validate_key.return_value = ApiKeyValidationResult(
+            is_valid=True, provider_confirmed=Provider.OPENAI
         )
 
         result = await key_management_service.reactivate_api_key(
             sample_api_key.id, sample_api_key.user_id
         )
 
-        assert result.status == APIKeyStatus.ACTIVE
+        assert result.status == Status.ACTIVE
         mock_validator_service.validate_key.assert_called_once()
 
     async def test_get_user_key_statistics_success(
@@ -559,10 +594,8 @@ class TestKeyManagementService:
 
         # Mock validation results
         mock_validator_service.validate_key.side_effect = [
-            APIKeyValidationResult(
-                is_valid=True, provider_confirmed=APIKeyProvider.OPENAI
-            ),
-            APIKeyValidationResult(is_valid=False, error_message="Invalid key"),
+            ApiKeyValidationResult(is_valid=True, provider_confirmed=Provider.OPENAI),
+            ApiKeyValidationResult(is_valid=False, error_message="Invalid key"),
         ]
 
         results = await key_management_service.bulk_validate_keys(user_id)

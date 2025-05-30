@@ -309,7 +309,9 @@ class TestModelBehavior:
 
     def test_api_key_expiry_logic(self):
         """Test ApiKey expiry logic."""
-        now = datetime.now()
+        from datetime import timezone
+
+        now = datetime.now(timezone.utc)
 
         # Non-expiring key
         key_no_expiry = ApiKeyDB(

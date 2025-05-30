@@ -7,7 +7,7 @@ using direct HTTP integration with the Duffel API.
 import logging
 import uuid
 from datetime import date, datetime
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 from uuid import UUID
 
 from tripsage.api.models.flights import (
@@ -21,10 +21,11 @@ from tripsage.api.models.flights import (
     SavedFlightRequest,
     SavedFlightResponse,
 )
-from tripsage.models.flight import CabinClass
-from tripsage.services.duffel_http_client import DuffelHTTPClient
-from tripsage.tools.schemas.flights import FlightSearchParams
-from tripsage.utils.error_handling import with_error_handling
+
+# from tripsage.tools.schemas.flights import FlightSearchParams  # TODO: Missing schema
+from tripsage_core.models.domain.flight import CabinClass
+from tripsage_core.services.external_apis import DuffelHTTPClient
+from tripsage_core.utils.decorator_utils import with_error_handling
 
 logger = logging.getLogger(__name__)
 
@@ -125,27 +126,27 @@ class FlightService:
 
     async def _convert_api_models_to_flight_search_params(
         self, request: FlightSearchRequest
-    ) -> FlightSearchParams:
+    ) -> Dict[str, Any]:
         """Convert API models to internal flight search params."""
-        return FlightSearchParams(
-            origin=request.origin,
-            destination=request.destination,
-            departure_date=request.departure_date.isoformat()
+        return {
+            "origin": request.origin,
+            "destination": request.destination,
+            "departure_date": request.departure_date.isoformat()
             if hasattr(request.departure_date, "isoformat")
             else str(request.departure_date),
-            return_date=request.return_date.isoformat()
+            "return_date": request.return_date.isoformat()
             if request.return_date and hasattr(request.return_date, "isoformat")
             else str(request.return_date)
             if request.return_date
             else None,
-            adults=getattr(request, "adults", 1),
-            children=getattr(request, "children", 0),
-            infants=getattr(request, "infants", 0),
-            cabin_class=request.cabin_class,
-            max_stops=getattr(request, "max_stops", None),
-            max_price=getattr(request, "max_price", None),
-            preferred_airlines=getattr(request, "preferred_airlines", None),
-        )
+            "adults": getattr(request, "adults", 1),
+            "children": getattr(request, "children", 0),
+            "infants": getattr(request, "infants", 0),
+            "cabin_class": request.cabin_class,
+            "max_stops": getattr(request, "max_stops", None),
+            "max_price": getattr(request, "max_price", None),
+            "preferred_airlines": getattr(request, "preferred_airlines", None),
+        }
 
     async def _convert_duffel_response_to_api_models(
         self, duffel_response, request: FlightSearchRequest

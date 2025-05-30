@@ -26,8 +26,8 @@ from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from opentelemetry.semconv.resource import ResourceAttributes
 from opentelemetry.trace import Status, StatusCode
 
-from tripsage.config.app_settings import get_settings
-from tripsage.utils.logging import get_logger
+from tripsage_core.config.base_app_settings import get_settings
+from tripsage_core.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)
 settings = get_settings()

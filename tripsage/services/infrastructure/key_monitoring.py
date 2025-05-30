@@ -19,8 +19,8 @@ from starlette.types import ASGIApp
 
 from tripsage.api.core.config import Settings, get_settings
 from tripsage.db.initialize import get_supabase_client
-from tripsage.services.infrastructure.dragonfly_service import DragonflyService
-from tripsage.utils.logging import get_logger
+from tripsage_core.services.infrastructure import CacheService
+from tripsage_core.utils.logging_utils import get_logger
 
 # Type hints
 F = TypeVar("F", bound=Callable[..., Any])
@@ -54,7 +54,7 @@ class KeyMonitoringService:
             settings: Application settings or None to use defaults
         """
         self.settings = settings or get_settings()
-        self.dragonfly_service = DragonflyService()
+        self.cache_service = None  # Will be initialized async
         self.suspicious_patterns: Set[str] = set()
         self.alert_threshold = {
             KeyOperation.CREATE: 5,  # 5 creates in 10 minutes
@@ -62,12 +62,17 @@ class KeyMonitoringService:
             KeyOperation.VALIDATE: 10,  # 10 validations in 10 minutes
             KeyOperation.ROTATE: 3,  # 3 rotations in 10 minutes
         }
+
+    async def _ensure_cache_service(self):
+        """Ensure cache service is initialized."""
+        if self.cache_service is None:
+            self.cache_service = CacheService()
+            await self.cache_service.connect()
         self.pattern_timeframe = 600  # 10 minutes
 
     async def initialize(self):
-        """Initialize the DragonflyDB service."""
-        if not self.dragonfly_service.is_connected:
-            await self.dragonfly_service.connect()
+        """Initialize the cache service."""
+        await self._ensure_cache_service()
 
     async def log_operation(
         self,
@@ -126,12 +131,12 @@ class KeyMonitoringService:
         # Store the log in DragonflyDB for persistence
         log_key = f"key_logs:{user_id}"
         # Get existing logs
-        existing_logs = await self.dragonfly_service.get_json(log_key) or []
+        existing_logs = await self.cache_service.get_json(log_key) or []
         # Append new log
         existing_logs.append(log_data)
         # Store back with TTL
-        await self.dragonfly_service.set_json(
-            log_key, existing_logs, ex=2592000
+        await self.cache_service.set_json(
+            log_key, existing_logs, ttl=2592000
         )  # 30 days
 
         # If this is a suspicious pattern, send an alert
@@ -150,7 +155,7 @@ class KeyMonitoringService:
         # Store operation in DragonflyDB with expiration
         key = f"key_ops:{user_id}:{operation}"
         # Get existing operations
-        existing_ops = await self.dragonfly_service.get_json(key) or []
+        existing_ops = await self.cache_service.get_json(key) or []
         # Add new timestamp
         existing_ops.append(datetime.now(datetime.UTC).isoformat())
         # Keep only recent operations within timeframe
@@ -161,9 +166,7 @@ class KeyMonitoringService:
             op for op in existing_ops if datetime.fromisoformat(op) > cutoff_time
         ]
         # Store back
-        await self.dragonfly_service.set_json(
-            key, existing_ops, ex=self.pattern_timeframe
-        )
+        await self.cache_service.set_json(key, existing_ops, ttl=self.pattern_timeframe)
 
     async def _check_suspicious_patterns(
         self, operation: KeyOperation, user_id: str
@@ -183,7 +186,7 @@ class KeyMonitoringService:
 
         # Get recent operations from DragonflyDB
         key = f"key_ops:{user_id}:{operation}"
-        operations = await self.dragonfly_service.get_json(key) or []
+        operations = await self.cache_service.get_json(key) or []
 
         # Count operations
         count = len(operations)
@@ -219,7 +222,7 @@ class KeyMonitoringService:
 
         # Store the alert in DragonflyDB
         alert_key = "key_alerts"
-        existing_alerts = await self.dragonfly_service.get_json(alert_key) or []
+        existing_alerts = await self.cache_service.get_json(alert_key) or []
         existing_alerts.append(
             {
                 "timestamp": datetime.now(datetime.UTC).isoformat(),
@@ -229,8 +232,8 @@ class KeyMonitoringService:
                 "data": log_data,
             }
         )
-        await self.dragonfly_service.set_json(
-            alert_key, existing_alerts, ex=2592000
+        await self.cache_service.set_json(
+            alert_key, existing_alerts, ttl=2592000
         )  # 30 days
 
     async def get_user_operations(
@@ -250,7 +253,7 @@ class KeyMonitoringService:
 
         # Get operations from DragonflyDB
         log_key = f"key_logs:{user_id}"
-        logs = await self.dragonfly_service.get_json(log_key) or []
+        logs = await self.cache_service.get_json(log_key) or []
         # Return limited results
         return logs[-limit:] if len(logs) > limit else logs
 
@@ -267,7 +270,7 @@ class KeyMonitoringService:
         await self.initialize()
 
         # Get alerts from DragonflyDB
-        alerts = await self.dragonfly_service.get_json("key_alerts") or []
+        alerts = await self.cache_service.get_json("key_alerts") or []
         # Return limited results
         return alerts[-limit:] if len(alerts) > limit else alerts
 
@@ -288,12 +291,10 @@ class KeyMonitoringService:
         rate_limit_key = f"rate_limit:key_ops:{user_id}:{operation}"
 
         # Get current count
-        current_count = await self.dragonfly_service.get(rate_limit_key)
+        current_count = await self.cache_service.get(rate_limit_key)
         if current_count is None:
             # First operation
-            await self.dragonfly_service.set(
-                rate_limit_key, "1", ex=60
-            )  # 1 minute window
+            await self.cache_service.set(rate_limit_key, "1", ttl=60)  # 1 minute window
             return False
 
         # Check if over limit
@@ -302,7 +303,7 @@ class KeyMonitoringService:
             return True
 
         # Increment counter
-        await self.dragonfly_service.incr(rate_limit_key)
+        await self.cache_service.incr(rate_limit_key)
         return False
 
 

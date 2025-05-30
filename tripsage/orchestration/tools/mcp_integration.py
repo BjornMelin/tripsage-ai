@@ -13,7 +13,7 @@ from langchain_core.tools.base import ToolException
 from pydantic import Field
 
 from tripsage.mcp_abstraction.manager import MCPManager
-from tripsage.utils.logging import get_logger
+from tripsage_core.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)
 

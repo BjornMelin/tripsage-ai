@@ -10,6 +10,7 @@ from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
 
+from api.services.auth_service import get_auth_service
 from tripsage.api.core.dependencies import get_settings_dependency
 from tripsage.api.middlewares.auth import create_access_token, get_current_user
 from tripsage.api.models.auth import (
@@ -18,7 +19,6 @@ from tripsage.api.models.auth import (
     UserCreate,
     UserResponse,
 )
-from tripsage.api.services.auth import AuthService
 from tripsage.api.services.user import UserService
 
 router = APIRouter()
@@ -26,17 +26,11 @@ logger = logging.getLogger(__name__)
 
 
 _user_service_singleton = UserService()
-_auth_service_singleton = AuthService()
 
 
 def get_user_service() -> UserService:
     """Dependency provider for the UserService singleton."""
     return _user_service_singleton
-
-
-def get_auth_service() -> AuthService:
-    """Dependency provider for the AuthService singleton."""
-    return _auth_service_singleton
 
 
 @router.post(

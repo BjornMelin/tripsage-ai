@@ -14,9 +14,9 @@ from typing import Any, Dict
 
 from supabase import Client, create_client
 
-from tripsage.config.app_settings import settings
 from tripsage.db.migrations import run_migrations
-from tripsage.utils.logging import configure_logging
+from tripsage_core.config.base_app_settings import settings
+from tripsage_core.utils.logging_utils import configure_logging
 
 logger = configure_logging(__name__)
 

@@ -14,7 +14,7 @@ from openai.types.beta.thread import Thread
 
 from tripsage.agents.planning import TravelPlanningAgent
 from tripsage.agents.travel import TravelAgent
-from tripsage.utils.session_memory import SessionMemory
+from tripsage_core.utils.session_utils import SessionMemory
 
 
 @pytest.fixture

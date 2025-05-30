@@ -16,8 +16,8 @@ from tripsage.agents.destination_research import DestinationResearchAgent
 # Import specialized agents for handoffs
 from tripsage.agents.flight import FlightAgent
 from tripsage.agents.itinerary import Itinerary as ItineraryAgent
-from tripsage.config.app_settings import settings
-from tripsage.utils.logging import get_logger
+from tripsage_core.config.base_app_settings import settings
+from tripsage_core.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)
 

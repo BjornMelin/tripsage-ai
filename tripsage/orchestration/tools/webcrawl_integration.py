@@ -17,7 +17,7 @@ from tripsage.tools.webcrawl_tools import (
     crawl_travel_blog,
     crawl_website_content,
 )
-from tripsage.utils.logging import get_logger
+from tripsage_core.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)
 

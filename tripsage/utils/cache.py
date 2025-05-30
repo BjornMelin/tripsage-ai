@@ -25,10 +25,10 @@ from typing import (
 
 from pydantic import BaseModel, Field
 
-from tripsage.services.infrastructure.dragonfly_service import get_cache_service
-from tripsage.utils.content_types import ContentType
-from tripsage.utils.logging import get_logger
-from tripsage.utils.settings import settings
+from tripsage_core.config.base_app_settings import get_settings
+from tripsage_core.services.infrastructure import get_cache_service
+from tripsage_core.utils.content_utils import ContentType, get_ttl_for_content_type
+from tripsage_core.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)
 
@@ -183,7 +183,7 @@ class DragonflyCache:
             full_key = self._make_key(key)
 
             # Use the unified cache service
-            result = await self._cache_service.set(full_key, value, ex=ttl)
+            result = await self._cache_service.set(full_key, value, ttl=ttl)
 
             if result:
                 await self._increment_stat("sets")
@@ -260,9 +260,9 @@ class DragonflyCache:
                 current = await self._cache_service.get(stat_key) or "0"
                 try:
                     new_value = int(current) + 1
-                    await self._cache_service.set(stat_key, str(new_value), ex=86400)
+                    await self._cache_service.set(stat_key, str(new_value), ttl=86400)
                 except ValueError:
-                    await self._cache_service.set(stat_key, "1", ex=86400)
+                    await self._cache_service.set(stat_key, "1", ttl=86400)
         except Exception:
             pass  # Don't fail on stats errors
 
@@ -332,18 +332,6 @@ def generate_cache_key(
     return f"{prefix}:{query_hash}"
 
 
-def get_ttl_for_content_type(content_type: ContentType) -> int:
-    """Get the appropriate TTL for a content type."""
-    ttl_map = {
-        ContentType.REALTIME: 60,  # 1 minute
-        ContentType.TIME_SENSITIVE: 300,  # 5 minutes
-        ContentType.DAILY: 3600,  # 1 hour
-        ContentType.SEMI_STATIC: 28800,  # 8 hours
-        ContentType.STATIC: 86400,  # 24 hours
-    }
-    return ttl_map.get(content_type, 3600)  # Default 1 hour
-
-
 def cached(
     content_type: Optional[Union[ContentType, str]] = None,
     ttl: Optional[int] = None,
@@ -357,7 +345,8 @@ def cached(
         @functools.wraps(func)
         async def wrapper(*args: Any, **kwargs: Any) -> Any:
             # Check if caching is enabled
-            if not settings.use_cache:
+            settings = get_settings()
+            if not settings.feature_flags.enable_caching:
                 return await func(*args, **kwargs)
 
             # Check for skip_cache parameter
@@ -460,7 +449,8 @@ async def batch_cache_set(
     Returns:
         List of success/failure booleans for each item
     """
-    if not use_redis or not settings.cache_enabled:
+    settings = get_settings()
+    if not use_redis or not settings.feature_flags.enable_caching:
         results = []
         for item in items:
             success = await memory_cache.set(
@@ -501,7 +491,7 @@ async def batch_cache_set(
                 if not item["key"].startswith(f"{namespace}:")
                 else item["key"]
             )
-            success = await cache_service.set(key, item["value"], ex=item.get("ttl"))
+            success = await cache_service.set(key, item["value"], ttl=item.get("ttl"))
             results.append(bool(success))
         return results
 
@@ -524,7 +514,8 @@ async def batch_cache_get(
     Returns:
         List of values (None for missing keys)
     """
-    if not use_redis or not settings.cache_enabled:
+    settings = get_settings()
+    if not use_redis or not settings.feature_flags.enable_caching:
         results = []
         for key in keys:
             value = await memory_cache.get(key)
@@ -579,7 +570,8 @@ async def cache_lock(
     Yields:
         True if lock was acquired, False otherwise
     """
-    if not settings.cache_enabled:
+    settings = get_settings()
+    if not settings.feature_flags.enable_caching:
         # Simple local lock for development
         yield True
         return
@@ -591,10 +583,17 @@ async def cache_lock(
 
     acquired = False
     for _ in range(retry_count):
-        success = await cache_service.set(lock_key, lock_value, ex=timeout, nx=True)
-        if success:
-            acquired = True
-            break
+        # Check if lock exists
+        existing = await cache_service.get(lock_key)
+        if existing is None:
+            # Try to acquire lock
+            success = await cache_service.set(lock_key, lock_value, ttl=timeout)
+            if success:
+                # Verify we got the lock (handle race condition)
+                check_value = await cache_service.get(lock_key)
+                if check_value == lock_value:
+                    acquired = True
+                    break
         await asyncio.sleep(retry_delay)
 
     try:

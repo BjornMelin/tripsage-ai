@@ -10,9 +10,11 @@ from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
-from tripsage.utils.cache import cache
-from tripsage.utils.error_handling import log_exception, with_error_handling
-from tripsage.utils.logging import get_logger
+from tripsage_core.services.business.memory_service import MemoryService
+from tripsage_core.utils.cache_utils import redis_cache
+from tripsage_core.utils.decorator_utils import with_error_handling
+from tripsage_core.utils.error_handling_utils import log_exception
+from tripsage_core.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)
 
@@ -110,15 +112,13 @@ async def create_travel_plan(params: Dict[str, Any]) -> Dict[str, Any]:
 
         # Cache the travel plan
         cache_key = f"travel_plan:{plan_id}"
-        await cache.set(cache_key, travel_plan, ttl=86400 * 7)  # 7 days
+        await redis_cache.set(cache_key, travel_plan, ttl=86400 * 7)  # 7 days
 
         # Create memory entities for the plan
         # Using Mem0 direct SDK integration for memory management
         try:
-            from tripsage.services.memory_service import TripSageMemoryService
-
             # Initialize direct Mem0 service
-            memory_service = TripSageMemoryService()
+            memory_service = MemoryService()
             await memory_service.connect()
 
             # Create memory for the travel plan
@@ -134,8 +134,11 @@ async def create_travel_plan(params: Dict[str, Any]) -> Dict[str, Any]:
                 plan_memory += f" with budget ${plan_input.budget}"
 
             # Add the memory using Mem0
-            await memory_service.add_memory(
-                message=plan_memory,
+            await memory_service.add_conversation_memory(
+                messages=[
+                    {"role": "system", "content": "Travel plan created"},
+                    {"role": "user", "content": plan_memory},
+                ],
                 user_id=plan_input.user_id,
                 metadata={
                     "plan_id": plan_id,
@@ -187,7 +190,7 @@ async def update_travel_plan(params: Dict[str, Any]) -> Dict[str, Any]:
 
         # Get the existing plan
         cache_key = f"travel_plan:{update_input.plan_id}"
-        travel_plan = await cache.get(cache_key)
+        travel_plan = await redis_cache.get(cache_key)
 
         if not travel_plan:
             return {
@@ -208,15 +211,13 @@ async def update_travel_plan(params: Dict[str, Any]) -> Dict[str, Any]:
         travel_plan["updated_at"] = datetime.now(datetime.UTC).isoformat()
 
         # Save the updated plan
-        await cache.set(cache_key, travel_plan, ttl=86400 * 7)  # 7 days
+        await redis_cache.set(cache_key, travel_plan, ttl=86400 * 7)  # 7 days
 
         # Update memory entity
         # Using Mem0 direct SDK integration for memory management
         try:
-            from tripsage.services.memory_service import TripSageMemoryService
-
             # Initialize direct Mem0 service
-            memory_service = TripSageMemoryService()
+            memory_service = MemoryService()
             await memory_service.connect()
 
             # Create update memory
@@ -239,8 +240,11 @@ async def update_travel_plan(params: Dict[str, Any]) -> Dict[str, Any]:
                 update_memory += f" with changes: {', '.join(update_details)}"
 
                 # Add the memory update using Mem0
-                await memory_service.add_memory(
-                    message=update_memory,
+                await memory_service.add_conversation_memory(
+                    messages=[
+                        {"role": "system", "content": "Travel plan updated"},
+                        {"role": "user", "content": update_memory},
+                    ],
                     user_id=update_input.user_id,
                     metadata={
                         "plan_id": update_input.plan_id,
@@ -418,7 +422,7 @@ async def generate_travel_summary(params: Dict[str, Any]) -> Dict[str, Any]:
 
         # Get the travel plan
         cache_key = f"travel_plan:{plan_id}"
-        travel_plan = await cache.get(cache_key)
+        travel_plan = await redis_cache.get(cache_key)
 
         if not travel_plan:
             return {"success": False, "error": f"Travel plan {plan_id} not found"}
@@ -592,7 +596,7 @@ async def save_travel_plan(params: Dict[str, Any]) -> Dict[str, Any]:
 
         # Get the travel plan from cache
         cache_key = f"travel_plan:{plan_id}"
-        travel_plan = await cache.get(cache_key)
+        travel_plan = await redis_cache.get(cache_key)
 
         if not travel_plan:
             return {"success": False, "error": f"Travel plan {plan_id} not found"}
@@ -612,15 +616,13 @@ async def save_travel_plan(params: Dict[str, Any]) -> Dict[str, Any]:
         # Save to persistent storage (database)
         # This would interface with the database in a real implementation
         # For now, we just update the cache with a longer TTL
-        await cache.set(cache_key, travel_plan, ttl=86400 * 30)  # 30 days
+        await redis_cache.set(cache_key, travel_plan, ttl=86400 * 30)  # 30 days
 
         # Update knowledge graph
         # Using Mem0 direct SDK integration for memory management
         try:
-            from tripsage.services.memory_service import TripSageMemoryService
-
             # Initialize direct Mem0 service
-            memory_service = TripSageMemoryService()
+            memory_service = MemoryService()
             await memory_service.connect()
 
             # Add finalization memory if finalized
@@ -631,8 +633,11 @@ async def save_travel_plan(params: Dict[str, Any]) -> Dict[str, Any]:
                     f"finalized on {finalization_time}"
                 )
 
-                await memory_service.add_memory(
-                    message=finalize_memory,
+                await memory_service.add_conversation_memory(
+                    messages=[
+                        {"role": "system", "content": "Travel plan finalized"},
+                        {"role": "user", "content": finalize_memory},
+                    ],
                     user_id=user_id,
                     metadata={
                         "plan_id": plan_id,
@@ -658,8 +663,14 @@ async def save_travel_plan(params: Dict[str, Any]) -> Dict[str, Any]:
                         f"Travel plan includes: {', '.join(component_memories)}"
                     )
 
-                    await memory_service.add_memory(
-                        message=components_memory,
+                    await memory_service.add_conversation_memory(
+                        messages=[
+                            {
+                                "role": "system",
+                                "content": "Travel plan components saved",
+                            },
+                            {"role": "user", "content": components_memory},
+                        ],
                         user_id=user_id,
                         metadata={
                             "plan_id": plan_id,

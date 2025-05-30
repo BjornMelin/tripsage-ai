@@ -9,8 +9,8 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, status
 
+from api.services.trip_service import get_trip_service
 from tripsage.api.core.dependencies import get_session_memory
-from tripsage.api.core.exceptions import ResourceNotFoundError
 from tripsage.api.middlewares.auth import get_current_user
 from tripsage.api.models.trips import (
     CreateTripRequest,
@@ -20,18 +20,13 @@ from tripsage.api.models.trips import (
     TripSummaryResponse,
     UpdateTripRequest,
 )
-from tripsage.api.services.trip import TripService
+from tripsage_core.exceptions.exceptions import (
+    CoreResourceNotFoundError as ResourceNotFoundError,
+)
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
-
-_trip_service_singleton = TripService()
-
-
-def get_trip_service() -> TripService:
-    """Dependency provider for the TripService singleton."""
-    return _trip_service_singleton
 
 
 @router.post("/", response_model=TripResponse, status_code=status.HTTP_201_CREATED)

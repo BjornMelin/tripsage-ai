@@ -13,7 +13,9 @@ from tripsage.agents.destination_research import DestinationResearchAgent
 from tripsage.agents.flight import FlightAgent
 from tripsage.agents.planning import TravelPlanningAgent
 from tripsage.agents.travel import TravelAgent
-from tripsage.config.app_settings import settings
+from tripsage_core.config.base_app_settings import get_settings
+
+settings = get_settings()
 
 
 def create_agent(

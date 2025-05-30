@@ -1,19 +1,26 @@
-"""Infrastructure services for database, caching, and messaging."""
+"""Infrastructure services - migrated to tripsage_core.services.infrastructure."""
 
-from .database_service import DatabaseService
-from .dragonfly_service import DragonflyService
-from .key_mcp_integration import KeyMCPIntegration
-from .key_monitoring import KeyMonitoringService
-from .supabase_service import SupabaseService
-from .websocket_broadcaster import WebSocketBroadcaster
-from .websocket_manager import WebSocketManager
+# Re-export from Core for compatibility
+from tripsage_core.services.infrastructure import (
+    CacheService,
+    DatabaseService,
+    WebSocketBroadcaster,
+    WebSocketManager,
+    get_cache_service,
+    get_database_service,
+)
+
+# Legacy aliases
+DragonflyService = CacheService
+SupabaseService = DatabaseService
 
 __all__ = [
     "DatabaseService",
+    "CacheService",
     "DragonflyService",
-    "KeyMCPIntegration",
-    "KeyMonitoringService",
     "SupabaseService",
     "WebSocketBroadcaster",
     "WebSocketManager",
+    "get_database_service",
+    "get_cache_service",
 ]

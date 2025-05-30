@@ -17,7 +17,9 @@ from starlette.types import ASGIApp
 
 from tripsage.api.core.config import Settings, get_settings
 from tripsage.api.core.dependencies import get_settings_dependency
-from tripsage.api.core.exceptions import AuthenticationError
+from tripsage_core.exceptions.exceptions import (
+    CoreAuthenticationError as AuthenticationError,
+)
 
 logger = logging.getLogger(__name__)
 

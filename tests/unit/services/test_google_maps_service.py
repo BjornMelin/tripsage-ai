@@ -10,7 +10,7 @@ from unittest.mock import Mock, patch
 import pytest
 from googlemaps.exceptions import ApiError, HTTPError, Timeout, TransportError
 
-from tripsage.services.google_maps_service import (
+from tripsage_core.services.external_apis.google_maps_service import (
     GoogleMapsService,
     GoogleMapsServiceError,
     get_google_maps_service,
@@ -35,7 +35,7 @@ class TestGoogleMapsService:
     def google_maps_service(self, mock_settings):
         """Create GoogleMapsService instance with mocked settings."""
         with patch(
-            "tripsage.services.google_maps_service.get_settings",
+            "tripsage_core.services.external_apis.google_maps_service.get_settings",
             return_value=mock_settings,
         ):
             service = GoogleMapsService()
@@ -50,7 +50,7 @@ class TestGoogleMapsService:
     def test_client_initialization(self, google_maps_service, mock_settings):
         """Test that client is properly initialized with settings."""
         with patch(
-            "tripsage.services.google_maps_service.googlemaps.Client"
+            "tripsage_core.services.external_apis.google_maps_service.googlemaps.Client"
         ) as mock_client_class:
             mock_client = Mock()
             mock_client_class.return_value = mock_client
@@ -74,7 +74,7 @@ class TestGoogleMapsService:
         mock_settings.google_maps_api_key = None
 
         with patch(
-            "tripsage.services.google_maps_service.get_settings",
+            "tripsage_core.services.external_apis.google_maps_service.get_settings",
             return_value=mock_settings,
         ):
             service = GoogleMapsService()
@@ -403,10 +403,10 @@ class TestAsyncToThreadIntegration:
         # This is a basic integration test to ensure async wrapper works
         with (
             patch(
-                "tripsage.services.google_maps_service.get_settings"
+                "tripsage_core.services.external_apis.google_maps_service.get_settings"
             ) as mock_get_settings,
             patch(
-                "tripsage.services.google_maps_service.googlemaps.Client"
+                "tripsage_core.services.external_apis.google_maps_service.googlemaps.Client"
             ) as mock_client_class,
             patch("asyncio.to_thread") as mock_to_thread,
         ):
