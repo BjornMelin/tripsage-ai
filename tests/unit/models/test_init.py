@@ -4,18 +4,20 @@ import importlib
 
 from tripsage_core.models.db import (
     Accommodation,
+    AccommodationBookingStatus,
     AccommodationType,
     AirlineProvider,
-    BookingStatus,
     CancellationPolicy,
     DataSource,
     EntityType,
     Flight,
+    FlightBookingStatus,
     OptionType,
     PriceHistory,
     SavedOption,
     SearchParameters,
     Transportation,
+    TransportationBookingStatus,
     TransportationType,
     Trip,
     TripComparison,
@@ -49,7 +51,9 @@ def test_enum_imports():
     assert TripStatus.__name__ == "TripStatus"
     assert TripVisibility.__name__ == "TripVisibility"
     assert AirlineProvider.__name__ == "AirlineProvider"
-    assert BookingStatus.__name__ == "BookingStatus"
+    assert AccommodationBookingStatus.__name__ == "BookingStatus"
+    assert FlightBookingStatus.__name__ == "BookingStatus"
+    assert TransportationBookingStatus.__name__ == "BookingStatus"
     assert DataSource.__name__ == "DataSource"
     assert AccommodationType.__name__ == "AccommodationType"
     assert CancellationPolicy.__name__ == "CancellationPolicy"
@@ -60,7 +64,7 @@ def test_enum_imports():
 
 def test_model_inheritance():
     """Test that all models inherit from TripSageModel."""
-    from tripsage_core.models.base import TripSageModel
+    from tripsage_core.models.base_core_model import TripSageModel
 
     assert issubclass(User, TripSageModel)
     assert issubclass(Trip, TripSageModel)

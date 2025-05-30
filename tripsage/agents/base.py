@@ -20,7 +20,9 @@ except ImportError:
     Agent = MagicMock
     function_tool = MagicMock
 
-from tripsage_core.utils.error_handling_utils import TripSageError, log_exception
+from tripsage_core.config.base_app_settings import CoreAppSettings
+from tripsage_core.exceptions.exceptions import CoreTripSageError as TripSageError
+from tripsage_core.utils.error_handling_utils import log_exception
 from tripsage_core.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)
@@ -50,6 +52,7 @@ class BaseAgent:
         """
         self.name = name
         self.instructions = instructions
+        settings = CoreAppSettings()
         self.model = model or settings.agent.model_name
         self.temperature = temperature or settings.agent.temperature
         self.metadata = metadata or {"agent_type": "tripsage"}

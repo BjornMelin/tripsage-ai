@@ -17,8 +17,9 @@ import httpx
 import uvicorn
 from dotenv import load_dotenv
 from pydantic import BaseModel
-from src.api.main import app
-from src.db.initialize import initialize_database
+
+from api.main import app
+from tripsage.db.initialize import initialize_database
 
 # Add the project root to the path so we can import from src
 script_dir = os.path.dirname(os.path.abspath(__file__))
