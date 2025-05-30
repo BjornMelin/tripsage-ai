@@ -62,12 +62,13 @@ def with_error_handling(func: F) -> F:
                 # Get function name for better error logging
                 func_name = func.__name__
                 logger.error(f"Error in {func_name}: {str(e)}")
-                log_exception(e)
+                log_exception(e, func_name)
 
                 # Check if function returns Dict (for agent tools)
                 signature = inspect.signature(func)
                 return_type = signature.return_annotation
-                if "Dict" in str(return_type):
+                return_type_str = str(return_type)
+                if "dict" in return_type_str.lower() or return_type is dict:
                     # Return error response in the expected format for agent tools
                     return {"error": str(e)}
                 # Re-raise for non-dict returning functions
@@ -88,12 +89,13 @@ def with_error_handling(func: F) -> F:
                 # Get function name for better error logging
                 func_name = func.__name__
                 logger.error(f"Error in {func_name}: {str(e)}")
-                log_exception(e)
+                log_exception(e, func_name)
 
                 # Check if function returns Dict (for agent tools)
                 signature = inspect.signature(func)
                 return_type = signature.return_annotation
-                if "Dict" in str(return_type):
+                return_type_str = str(return_type)
+                if "dict" in return_type_str.lower() or return_type is dict:
                     # Return error response in the expected format for agent tools
                     return {"error": str(e)}
                 # Re-raise for non-dict returning functions
