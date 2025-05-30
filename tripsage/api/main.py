@@ -30,7 +30,7 @@ from tripsage.api.routers import (
     trips,
     websocket,
 )
-from tripsage.api.services.key_monitoring import (
+from tripsage.services.infrastructure.key_monitoring import (
     KeyMonitoringService,
     KeyOperationRateLimitMiddleware,
 )
@@ -213,6 +213,6 @@ if __name__ == "__main__":
     uvicorn.run(
         "tripsage.api.main:app",
         host="0.0.0.0",
-        port=8000,
+        port=8001,
         reload=True,
     )
