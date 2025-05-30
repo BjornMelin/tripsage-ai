@@ -79,7 +79,11 @@ class InMemoryCache:
             cache_item = self._cache[key]
 
             # Check if item has expired
-            if "expires_at" in cache_item and cache_item["expires_at"] < time.time():
+            if (
+                "expires_at" in cache_item
+                and cache_item["expires_at"] is not None
+                and cache_item["expires_at"] < time.time()
+            ):
                 del self._cache[key]
                 self._stats.misses += 1
                 return None
