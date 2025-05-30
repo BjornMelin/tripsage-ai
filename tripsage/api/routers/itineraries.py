@@ -25,6 +25,9 @@ from tripsage.api.models.itineraries import (
 # Note: ItineraryService needs to be refactored to use the new pattern
 # For now, keeping the old import until it's refactored
 from tripsage.api.services.itinerary import ItineraryService
+from tripsage_core.exceptions.exceptions import (
+    CoreResourceNotFoundError as ResourceNotFoundError,
+)
 
 _itinerary_service_singleton = ItineraryService()
 
@@ -33,10 +36,6 @@ def get_itinerary_service() -> ItineraryService:
     """Dependency provider for the ItineraryService singleton."""
     return _itinerary_service_singleton
 
-
-from tripsage_core.exceptions.exceptions import (
-    CoreResourceNotFoundError as ResourceNotFoundError,
-)
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
