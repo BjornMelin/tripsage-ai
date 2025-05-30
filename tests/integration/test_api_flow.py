@@ -14,9 +14,9 @@ from fastapi.testclient import TestClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from tripsage.api.main import app
-from tripsage_core.models.db.trip import TripDB
-from tripsage_core.models.db.user import UserDB
-from tripsage_core.services.business.auth_service import AuthService
+from tripsage_core.models.db.trip import Trip
+from tripsage_core.models.db.user import User
+from tripsage_core.services.business.auth_service import AuthenticationService
 from tripsage_core.services.business.trip_service import TripService
 from tripsage_core.services.infrastructure.database_service import DatabaseService
 
@@ -32,7 +32,7 @@ class TestApiDatabaseFlow:
     @pytest.fixture
     def mock_user(self):
         """Mock user for testing."""
-        return UserDB(
+        return User(
             id=uuid4(),
             email="test@example.com",
             username="testuser",
@@ -45,7 +45,7 @@ class TestApiDatabaseFlow:
     @pytest.fixture
     def mock_trip(self):
         """Mock trip for testing."""
-        return TripDB(
+        return Trip(
             id=uuid4(),
             user_id=uuid4(),
             title="Paris Adventure",
@@ -70,7 +70,7 @@ class TestApiDatabaseFlow:
     @pytest.fixture
     def mock_auth_service(self, mock_user):
         """Mock auth service."""
-        service = AsyncMock(spec=AuthService)
+        service = AsyncMock(spec=AuthenticationService)
         service.get_user_by_id.return_value = mock_user
         service.validate_api_key.return_value = mock_user
         service.create_user.return_value = mock_user
@@ -104,7 +104,7 @@ class TestApiDatabaseFlow:
     ):
         """Test complete user registration flow: API → Auth Service → Database."""
         with patch(
-            "tripsage.api.services.auth_service.AuthService"
+            "tripsage_core.services.business.auth_service.AuthenticationService"
         ) as mock_service_class:
             mock_service_class.return_value = mock_auth_service
 
