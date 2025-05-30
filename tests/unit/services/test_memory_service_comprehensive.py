@@ -10,10 +10,10 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from tripsage.services.memory_service import (
+from tripsage_core.services.business.memory_service import (
     ConversationMemory,
     MemorySearchResult,
-    TripSageMemoryService,
+    MemoryService,
 )
 
 
@@ -23,7 +23,7 @@ class TestMemoryServiceCoverage:
     @pytest.fixture
     def service_with_mocks(self):
         """Service with comprehensive mocks for internal methods."""
-        service = TripSageMemoryService()
+        service = MemoryService()
         service.memory = MagicMock()
         service._connected = True
 
@@ -268,7 +268,7 @@ class TestMemoryServiceCoverage:
     @pytest.mark.asyncio
     async def test_connection_state_management(self):
         """Test connection state handling."""
-        service = TripSageMemoryService()
+        service = MemoryService()
 
         # Test is_connected property
         assert not service.is_connected
@@ -387,7 +387,7 @@ class TestMemoryServiceAdapter:
     @pytest.mark.asyncio
     async def test_service_adapter_interface(self):
         """Test that memory service implements ServiceProtocol correctly."""
-        service = TripSageMemoryService()
+        service = MemoryService()
 
         # Test that required methods exist
         assert hasattr(service, "health_check")
@@ -408,7 +408,7 @@ class TestPerformanceAndScaling:
     @pytest.mark.asyncio
     async def test_large_memory_batch_operations(self):
         """Test handling of large batches of memories."""
-        service = TripSageMemoryService()
+        service = MemoryService()
         service.memory = MagicMock()
         service._connected = True
 
@@ -435,7 +435,7 @@ class TestPerformanceAndScaling:
     @pytest.mark.asyncio
     async def test_cache_performance_with_large_datasets(self):
         """Test cache performance with large result sets."""
-        service = TripSageMemoryService()
+        service = MemoryService()
 
         # Create large result set
         large_results = [

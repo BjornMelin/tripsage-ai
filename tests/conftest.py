@@ -278,7 +278,6 @@ def mock_settings_and_redis(monkeypatch):
     mock_redis_client.expire = AsyncMock(return_value=True)
 
     mock_from_url = MagicMock(return_value=mock_redis_client)
-    redis_mock = MagicMock(asyncio=MagicMock(from_url=mock_from_url))
 
     # Apply all the patches we need
     with (
