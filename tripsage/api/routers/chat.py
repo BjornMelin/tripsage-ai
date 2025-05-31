@@ -16,9 +16,13 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from api.deps import get_db, get_session_memory, verify_api_key
 from tripsage.agents.chat import ChatAgent
-from tripsage.api.middlewares.auth import get_current_user
+from tripsage.api.core.dependencies import (
+    get_current_user_dep,
+    get_db_dep,
+    get_session_memory_dep,
+    verify_api_key_dep,
+)
 from tripsage.api.models.common.chat import ToolCall
 from tripsage.services.core.chat_service import ChatService, RateLimiter
 from tripsage_core.models.db.user import User
@@ -31,11 +35,7 @@ router = APIRouter()
 _chat_agent = None
 _rate_limiter = None
 
-# Module-level dependency singletons to avoid B008 warnings
-get_current_user_dep = Depends(get_current_user)
-get_session_memory_dep = Depends(get_session_memory)
-verify_api_key_dep = Depends(verify_api_key)
-get_db_dep = Depends(get_db)
+# Module-level dependency singletons imported from deps module
 
 
 def get_chat_agent() -> ChatAgent:
@@ -77,15 +77,20 @@ class ChatRequest(BaseModel):
     session_id: Optional[UUID] = Field(None, description="Session ID for context")
     stream: bool = Field(True, description="Whether to stream the response")
     save_history: bool = Field(True, description="Whether to save chat history")
+    tools: Optional[list[str]] = Field(
+        None, description="List of specific tools to use"
+    )
 
 
 class ChatResponse(BaseModel):
     """Chat response model for non-streaming requests."""
 
     id: UUID = Field(default_factory=uuid4, description="Response ID")
+    session_id: Optional[UUID] = Field(None, description="Session ID")
     content: str = Field(..., description="Response content")
     tool_calls: Optional[list[dict]] = Field(None, description="Tool calls made")
     finish_reason: str = Field("stop", description="Finish reason")
+    usage: Optional[dict] = Field(None, description="Token usage information")
 
 
 async def format_vercel_stream_chunk(chunk_type: str, content: str) -> str:

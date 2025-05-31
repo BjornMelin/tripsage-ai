@@ -103,7 +103,7 @@ lint.select = ["E", "F", "B", "I"]
 # Per-file ignores: Allow FastAPI Depends() only in API router files
 [tool.ruff.lint.per-file-ignores]
 "tripsage/api/routers/*.py" = ["B008"]  # Allow Depends() in FastAPI routers
-"api/routers/*.py" = ["B008"]  # Allow Depends() in FastAPI routers
+"tripsage/api/core/*.py" = ["B008"]  # Allow Depends() in FastAPI dependencies
 
 [build-system]
 requires = ["hatchling"]

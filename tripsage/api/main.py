@@ -82,9 +82,9 @@ def create_app() -> FastAPI:
 
     # Create FastAPI app with OpenAPI configuration
     app = FastAPI(
-        title="TripSage API",
-        description="TripSage Travel Planning API",
-        version="1.0.0",
+        title=settings.api_title,
+        description=settings.api_description,
+        version=settings.api_version,
         docs_url="/api/docs" if settings.environment != "production" else None,
         redoc_url="/api/redoc" if settings.environment != "production" else None,
         openapi_url="/api/openapi.json"
@@ -94,12 +94,10 @@ def create_app() -> FastAPI:
     )
 
     # Configure CORS
+    cors_config = settings.get_cors_config()
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=settings.cors_origins,
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
+        **cors_config,
     )
 
     # Add custom middleware (order matters - first added is last executed)
