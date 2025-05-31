@@ -25,7 +25,8 @@ from api.routers import (
     keys,
     trips,
 )
-from tripsage.api.dependencies import shutdown_event, startup_event
+
+# Note: startup/shutdown events removed as they relied on obsolete MCP dependencies
 from tripsage_core.config.base_app_settings import settings
 from tripsage_core.exceptions.exceptions import (
     CoreAgentError,
@@ -426,8 +427,7 @@ def register_event_handlers(app: FastAPI) -> None:
     Args:
         app: FastAPI application
     """
-    app.add_event_handler("startup", startup_event)
-    app.add_event_handler("shutdown", shutdown_event)
+    # Note: Startup/shutdown events removed as they relied on obsolete MCP dependencies
 
 
 # Create application instance
