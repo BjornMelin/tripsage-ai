@@ -10,15 +10,17 @@ from uuid import UUID
 
 from fastapi import Depends
 
-from tripsage.api.models.flights import (
-    Airport,
+from tripsage.api.models.requests.flights import (
     AirportSearchRequest,
-    AirportSearchResponse,
-    FlightOffer,
     FlightSearchRequest,
-    FlightSearchResponse,
     MultiCityFlightSearchRequest,
     SavedFlightRequest,
+)
+from tripsage.api.models.responses.flights import (
+    Airport,
+    AirportSearchResponse,
+    FlightOffer,
+    FlightSearchResponse,
     SavedFlightResponse,
 )
 from tripsage_core.exceptions.exceptions import (

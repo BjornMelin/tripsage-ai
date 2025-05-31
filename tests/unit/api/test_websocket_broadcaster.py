@@ -11,7 +11,7 @@ from uuid import uuid4
 
 import pytest
 
-from tripsage.api.models.websocket import (
+from tripsage.api.models.common.websocket import (
     WebSocketEvent,
     WebSocketEventType,
 )

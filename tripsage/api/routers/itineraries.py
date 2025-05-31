@@ -8,18 +8,22 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from tripsage.api.middlewares.auth import get_current_user
-from tripsage.api.models.itineraries import (
+from tripsage.api.models.common.itineraries import (
     Itinerary,
-    ItineraryConflictCheckResponse,
-    ItineraryCreateRequest,
     ItineraryItem,
+)
+from tripsage.api.models.requests.itineraries import (
+    ItineraryCreateRequest,
     ItineraryItemCreateRequest,
     ItineraryItemUpdateRequest,
     ItineraryOptimizeRequest,
-    ItineraryOptimizeResponse,
     ItinerarySearchRequest,
-    ItinerarySearchResponse,
     ItineraryUpdateRequest,
+)
+from tripsage.api.models.responses.itineraries import (
+    ItineraryConflictCheckResponse,
+    ItineraryOptimizeResponse,
+    ItinerarySearchResponse,
 )
 from tripsage.api.services.itinerary import ItineraryService, get_itinerary_service
 from tripsage_core.exceptions.exceptions import (

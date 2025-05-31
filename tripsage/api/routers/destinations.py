@@ -8,14 +8,17 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from tripsage.api.middlewares.auth import get_current_user
-from tripsage.api.models.destinations import (
-    DestinationDetails,
-    DestinationRecommendation,
+from tripsage.api.models.common.destinations import (
+    Destination,
+    PointOfInterest,
+)
+from tripsage.api.models.requests.destinations import (
     DestinationSearchRequest,
+)
+from tripsage.api.models.responses.destinations import (
+    DestinationDetailsResponse,
     DestinationSearchResponse,
-    PointOfInterestSearchRequest,
-    PointOfInterestSearchResponse,
-    SavedDestination,
+    SavedDestinationResponse,
 )
 from tripsage.api.services.destination import (
     DestinationService,
@@ -41,7 +44,7 @@ async def search_destinations(
     return await destination_service.search_destinations(request)
 
 
-@router.get("/{destination_id}", response_model=DestinationDetails)
+@router.get("/{destination_id}", response_model=DestinationDetailsResponse)
 async def get_destination_details(
     destination_id: str,
     user_id: str = Depends(get_current_user),
@@ -60,7 +63,7 @@ async def get_destination_details(
         ) from e
 
 
-@router.post("/save/{destination_id}", response_model=SavedDestination)
+@router.post("/save/{destination_id}", response_model=SavedDestinationResponse)
 async def save_destination(
     destination_id: str,
     notes: Optional[str] = None,
@@ -82,7 +85,7 @@ async def save_destination(
         ) from e
 
 
-@router.get("/saved", response_model=List[SavedDestination])
+@router.get("/saved", response_model=List[SavedDestinationResponse])
 async def get_saved_destinations(
     user_id: str = Depends(get_current_user),
     destination_service: DestinationService = Depends(get_destination_service),
@@ -112,9 +115,9 @@ async def delete_saved_destination(
         ) from e
 
 
-@router.post("/points-of-interest", response_model=PointOfInterestSearchResponse)
+@router.post("/points-of-interest", response_model=List[PointOfInterest])
 async def search_points_of_interest(
-    request: PointOfInterestSearchRequest,
+    request: DestinationSearchRequest,
     user_id: str = Depends(get_current_user),
     destination_service: DestinationService = Depends(get_destination_service),
 ):
@@ -124,7 +127,7 @@ async def search_points_of_interest(
     return await destination_service.search_points_of_interest(request)
 
 
-@router.get("/recommendations", response_model=List[DestinationRecommendation])
+@router.get("/recommendations", response_model=List[Destination])
 async def get_destination_recommendations(
     user_id: str = Depends(get_current_user),
     destination_service: DestinationService = Depends(get_destination_service),
