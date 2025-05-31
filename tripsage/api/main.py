@@ -107,7 +107,7 @@ def create_app() -> FastAPI:
     app.add_middleware(LoggingMiddleware)
 
     # Rate limiting middleware
-    use_redis = bool(settings.redis_url)
+    use_redis = bool(settings.dragonfly.url)
     app.add_middleware(RateLimitMiddleware, settings=settings, use_redis=use_redis)
 
     # Authentication middleware

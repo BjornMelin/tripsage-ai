@@ -6,12 +6,20 @@ readme = "README.md"
 requires-python = ">=3.12"
 authors = [{ name = "TripSage Team" }]
 dependencies = [
+    "crawl4ai>=0.6.3",
     "cryptography>=45.0.3",
     "email-validator>=2.2.0",
     "fakeredis>=2.29.0",
     "fastapi>=0.115.12",
+    "google-api-python-client>=2.170.0",
+    "google-auth>=2.40.2",
+    "google-auth-httplib2>=0.2.0",
+    "google-auth-oauthlib>=1.2.2",
+    "googlemaps>=4.10.0",
     "httpx>=0.28.1",
+    "mem0ai>=0.1.102",
     "passlib[bcrypt]>=1.7.4",
+    "playwright>=1.52.0",
     "pydantic>=2.11.5",
     "pydantic-settings>=2.9.1",
     "pytest>=8.3.5",
