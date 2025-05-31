@@ -9,11 +9,11 @@ from uuid import uuid4
 
 import pytest
 
-from api.schemas.requests.auth import LoginRequest, RegisterUserRequest
-from api.schemas.requests.keys import CreateApiKeyRequest
-from api.services.auth_service import AuthService
-from api.services.key_service import KeyService
-from api.services.trip_service import TripService
+from tripsage.api.models.requests.api_keys import CreateApiKeyRequest
+from tripsage.api.models.requests.auth import LoginRequest, RegisterUserRequest
+from tripsage.api.services.auth_service import AuthService
+from tripsage.api.services.key_service import KeyService
+from tripsage.api.services.trip_service import TripService
 
 
 class TestApiServicesIntegration:

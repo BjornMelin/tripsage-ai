@@ -1,44 +1,55 @@
-"""Accommodation model for TripSage.
+"""Accommodation domain models.
 
-This module provides the Accommodation model with business logic validation,
-used across different storage backends.
+This module consolidates all accommodation-related models including domain logic
+and database representations following Pydantic v2 best practices.
 """
 
-from datetime import date
+from datetime import date, datetime
 from typing import Any, Dict, List, Optional
 
 from pydantic import Field, field_validator, model_validator
 
-from tripsage_core.models.base import TripSageModel
-from tripsage_core.models.schemas_common import (
+from tripsage_core.models.base_core_model import TripSageDomainModel, TripSageModel
+from tripsage_core.models.schemas_common.enums import (
     AccommodationType,
     BookingStatus,
     CancellationPolicy,
 )
 
 
-class Accommodation(TripSageModel):
-    """Accommodation model for TripSage.
+class AccommodationListing(TripSageDomainModel):
+    """Domain model for accommodation listings with business logic."""
 
-    Attributes:
-        id: Unique identifier for the accommodation
-        trip_id: Reference to the associated trip
-        name: Name of the accommodation
-        accommodation_type: Type of accommodation
-        check_in: Check-in date
-        check_out: Check-out date
-        price_per_night: Price per night in default currency
-        total_price: Total price for the stay in default currency
-        location: Address or location description
-        rating: Rating score out of 5
-        amenities: List of available amenities as JSON
-        booking_link: URL for booking this accommodation
-        search_timestamp: When this accommodation data was fetched
-        booking_status: Status of the accommodation booking
-        cancellation_policy: Cancellation policy for the booking
-        distance_to_center: Distance to city center in kilometers
-        neighborhood: Neighborhood or area name
-    """
+    name: str = Field(..., description="Accommodation name")
+    accommodation_type: AccommodationType = Field(
+        ..., description="Type of accommodation"
+    )
+    location: str = Field(..., description="Location description")
+    rating: Optional[float] = Field(None, description="Rating score out of 5")
+    price_per_night: float = Field(..., description="Price per night")
+    amenities: Optional[Dict[str, Any]] = Field(None, description="Available amenities")
+    description: Optional[str] = Field(None, description="Property description")
+    images: Optional[List[str]] = Field(None, description="Property image URLs")
+
+    @field_validator("rating")
+    @classmethod
+    def validate_rating(cls, v: Optional[float]) -> Optional[float]:
+        """Validate that rating is between 0 and 5 if provided."""
+        if v is not None and (v < 0 or v > 5):
+            raise ValueError("Rating must be between 0 and 5")
+        return v
+
+    @field_validator("price_per_night")
+    @classmethod
+    def validate_price(cls, v: float) -> float:
+        """Validate that price is positive."""
+        if v < 0:
+            raise ValueError("Price must be non-negative")
+        return v
+
+
+class Accommodation(TripSageModel):
+    """Database model for accommodation bookings and search results."""
 
     id: Optional[int] = Field(None, description="Unique identifier")
     trip_id: int = Field(..., description="Reference to the associated trip")
@@ -60,8 +71,8 @@ class Accommodation(TripSageModel):
     booking_link: Optional[str] = Field(
         None, description="URL for booking this accommodation"
     )
-    search_timestamp: date = Field(
-        ..., description="When this accommodation data was fetched"
+    search_timestamp: Optional[datetime] = Field(
+        None, description="When this accommodation data was fetched"
     )
     booking_status: BookingStatus = Field(
         BookingStatus.VIEWED, description="Status of the accommodation booking"

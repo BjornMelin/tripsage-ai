@@ -19,22 +19,45 @@ from pydantic import ValidationError
 
 from api.deps import get_db
 from tripsage.agents.chat import ChatAgent
-from tripsage.api.models.common.websocket import (
-    ChatMessageChunkEvent,
-    ChatMessageEvent,
-    ConnectionEvent,
-    ConnectionStatus,
-    ErrorEvent,
-    MessageRole,
-    WebSocketEventType,
-    WebSocketMessage,
-)
 from tripsage.api.models.requests.websocket import (
     WebSocketAuthRequest,
     WebSocketSubscribeRequest,
 )
 from tripsage.services.core.chat_service import ChatService
-from tripsage_core.services.infrastructure.websocket_manager import websocket_manager
+from tripsage_core.models.schemas_common.chat import (
+    ChatMessage as WebSocketMessage,
+)
+from tripsage_core.models.schemas_common.chat import (
+    MessageRole,
+)
+from tripsage_core.services.infrastructure.websocket_manager import (
+    ConnectionStatus,
+    WebSocketEvent,
+    WebSocketEventType,
+    websocket_manager,
+)
+
+
+# Create event classes here temporarily until they are properly organized
+class ChatMessageEvent(WebSocketEvent):
+    message: WebSocketMessage
+
+
+class ChatMessageChunkEvent(WebSocketEvent):
+    content: str
+    chunk_index: int = 0
+    is_final: bool = False
+
+
+class ConnectionEvent(WebSocketEvent):
+    status: ConnectionStatus
+    connection_id: str
+
+
+class ErrorEvent(WebSocketEvent):
+    error_code: str
+    error_message: str
+
 
 logger = logging.getLogger(__name__)
 

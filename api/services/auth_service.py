@@ -10,7 +10,7 @@ from typing import Optional
 
 from fastapi import Depends
 
-from api.schemas.requests.auth import (
+from tripsage.api.models.requests.auth import (
     ChangePasswordRequest,
     ForgotPasswordRequest,
     LoginRequest,
@@ -18,7 +18,7 @@ from api.schemas.requests.auth import (
     RegisterUserRequest,
     ResetPasswordRequest,
 )
-from api.schemas.responses.auth import (
+from tripsage.api.models.responses.auth import (
     MessageResponse,
     PasswordResetResponse,
     TokenResponse,

@@ -10,7 +10,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
-from ..common.trips import TripDestination, TripPreferences
+from tripsage_core.models.schemas_common.travel import TripDestination, TripPreferences
 
 
 class TripResponse(BaseModel):

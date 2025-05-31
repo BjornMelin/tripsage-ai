@@ -10,7 +10,7 @@ from datetime import datetime
 import pytest
 from pydantic import ValidationError
 
-from api.schemas.responses.auth import (
+from tripsage.api.models.responses.auth import (
     MessageResponse,
     PasswordResetResponse,
     TokenResponse,

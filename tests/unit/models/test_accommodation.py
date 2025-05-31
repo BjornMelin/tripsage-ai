@@ -5,8 +5,8 @@ from datetime import date, timedelta
 import pytest
 from pydantic import ValidationError
 
-from tripsage_core.models.db.accommodation import (
-    Accommodation,
+from tripsage_core.models.db.accommodation import Accommodation
+from tripsage_core.models.schemas_common.enums import (
     AccommodationType,
     BookingStatus,
     CancellationPolicy,

@@ -8,10 +8,6 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from tripsage.api.middlewares.auth import get_current_user
-from tripsage.api.models.common.destinations import (
-    Destination,
-    PointOfInterest,
-)
 from tripsage.api.models.requests.destinations import (
     DestinationSearchRequest,
 )
@@ -27,6 +23,8 @@ from tripsage.api.services.destination import (
 from tripsage_core.exceptions.exceptions import (
     CoreResourceNotFoundError as ResourceNotFoundError,
 )
+from tripsage_core.models.schemas_common.geographic import Place as Destination
+from tripsage_core.models.schemas_common.geographic import Place as PointOfInterest
 
 router = APIRouter()
 logger = logging.getLogger(__name__)

@@ -4,46 +4,17 @@ This module provides the Accommodation model with business logic validation,
 used across different storage backends.
 """
 
-from datetime import date
-from enum import Enum
+from datetime import date, datetime
 from typing import Any, Dict, List, Optional
 
 from pydantic import Field, field_validator, model_validator
 
 from tripsage_core.models.base_core_model import TripSageModel
-
-
-class AccommodationType(str, Enum):
-    """Enum for accommodation type values."""
-
-    HOTEL = "hotel"
-    APARTMENT = "apartment"
-    HOSTEL = "hostel"
-    RESORT = "resort"
-    VILLA = "villa"
-    HOUSE = "house"
-    OTHER = "other"
-
-
-class BookingStatus(str, Enum):
-    """Enum for booking status values."""
-
-    VIEWED = "viewed"
-    SAVED = "saved"
-    BOOKED = "booked"
-    CANCELED = "canceled"
-
-
-class CancellationPolicy(str, Enum):
-    """Enum for cancellation policy values."""
-
-    FREE = "free"
-    PARTIAL_REFUND = "partial_refund"
-    NO_REFUND = "no_refund"
-    FLEXIBLE = "flexible"
-    MODERATE = "moderate"
-    STRICT = "strict"
-    UNKNOWN = "unknown"
+from tripsage_core.models.schemas_common.enums import (
+    AccommodationType,
+    BookingStatus,
+    CancellationPolicy,
+)
 
 
 class Accommodation(TripSageModel):
@@ -89,8 +60,8 @@ class Accommodation(TripSageModel):
     booking_link: Optional[str] = Field(
         None, description="URL for booking this accommodation"
     )
-    search_timestamp: date = Field(
-        ..., description="When this accommodation data was fetched"
+    search_timestamp: Optional[datetime] = Field(
+        None, description="When this accommodation data was fetched"
     )
     booking_status: BookingStatus = Field(
         BookingStatus.VIEWED, description="Status of the accommodation booking"

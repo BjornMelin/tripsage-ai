@@ -10,12 +10,12 @@ from typing import Optional
 
 from fastapi import Depends
 
-from api.schemas.requests.keys import (
+from tripsage.api.models.requests.api_keys import (
     CreateApiKeyRequest,
     RotateApiKeyRequest,
     ValidateApiKeyRequest,
 )
-from api.schemas.responses.keys import (
+from tripsage.api.models.responses.api_keys import (
     ApiKeyListResponse,
     ApiKeyResponse,
     ApiKeyServicesStatusResponse,

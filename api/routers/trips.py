@@ -10,17 +10,17 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Query, status
 
 from api.deps import get_current_user
-from api.schemas.requests.trips import (
+from api.services.trip_service import TripService
+from tripsage.api.models.requests.trips import (
     CreateTripRequest,
     TripPreferencesRequest,
     UpdateTripRequest,
 )
-from api.schemas.responses.trips import (
+from tripsage.api.models.responses.trips import (
     TripListResponse,
     TripResponse,
     TripSummaryResponse,
 )
-from api.services.trip_service import TripService
 from tripsage_core.exceptions.exceptions import (
     CoreResourceNotFoundError as ResourceNotFoundError,
 )

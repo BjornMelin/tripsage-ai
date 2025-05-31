@@ -8,7 +8,7 @@ authentication requests from the Next.js frontend.
 import pytest
 from pydantic import ValidationError
 
-from api.schemas.requests.auth import (
+from tripsage.api.models.requests.auth import (
     ChangePasswordRequest,
     ForgotPasswordRequest,
     LoginRequest,

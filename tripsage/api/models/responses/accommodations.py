@@ -11,8 +11,52 @@ from pydantic import BaseModel, Field
 
 from tripsage_core.models.schemas_common import BookingStatus
 
-from ..common.accommodations import AccommodationListing
+# Create AccommodationListing model here
+from tripsage_core.models.schemas_common.enums import AccommodationType
+
 from ..requests.accommodations import AccommodationSearchRequest
+
+
+class AccommodationLocation(BaseModel):
+    city: str
+    country: str
+    latitude: float
+    longitude: float
+    neighborhood: Optional[str] = None
+    distance_to_center: Optional[float] = None
+
+
+class AccommodationAmenity(BaseModel):
+    name: str
+
+
+class AccommodationImage(BaseModel):
+    url: str
+    caption: Optional[str] = None
+    is_primary: bool = False
+
+
+class AccommodationListing(BaseModel):
+    id: str
+    name: str
+    description: str
+    property_type: AccommodationType
+    location: AccommodationLocation
+    price_per_night: float
+    currency: str = "USD"
+    rating: Optional[float] = None
+    review_count: Optional[int] = None
+    amenities: List[AccommodationAmenity] = []
+    images: List[AccommodationImage] = []
+    max_guests: int = 2
+    bedrooms: int = 1
+    beds: int = 1
+    bathrooms: float = 1.0
+    check_in_time: str = "15:00"
+    check_out_time: str = "11:00"
+    url: Optional[str] = None
+    source: Optional[str] = None
+    total_price: Optional[float] = None
 
 
 class AccommodationSearchResponse(BaseModel):

@@ -10,9 +10,6 @@ from typing import List, Optional
 
 from fastapi import Depends
 
-from tripsage.api.models.common.destinations import (
-    Destination,
-)
 from tripsage.api.models.requests.destinations import (
     DestinationSearchRequest,
     PointOfInterestSearchRequest,
@@ -39,6 +36,7 @@ from tripsage_core.exceptions.exceptions import (
 from tripsage_core.exceptions.exceptions import (
     CoreValidationError as ValidationError,
 )
+from tripsage_core.models.schemas_common.geographic import Place as Destination
 from tripsage_core.services.business.destination_service import (
     DestinationService as CoreDestinationService,
 )

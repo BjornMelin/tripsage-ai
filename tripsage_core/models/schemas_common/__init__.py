@@ -15,6 +15,12 @@ from .base_models import (
     ValidationErrorDetail,
     ValidationErrorResponse,
 )
+from .chat import (
+    ChatContext,
+    ChatMessage,
+    ChatSession,
+    ToolCall,
+)
 from .enums import (
     AccommodationType,
     BookingStatus,
@@ -22,7 +28,10 @@ from .enums import (
     CancellationPolicy,
     CurrencyCode,
     PaymentType,
+    TransportationType,
     TripStatus,
+    TripType,
+    TripVisibility,
     UserRole,
 )
 from .financial import (
@@ -72,6 +81,11 @@ __all__ = [
     "SuccessResponse",
     "ValidationErrorDetail",
     "ValidationErrorResponse",
+    # Chat models
+    "ChatContext",
+    "ChatMessage",
+    "ChatSession",
+    "ToolCall",
     # Enums
     "AccommodationType",
     "BookingStatus",
@@ -79,7 +93,10 @@ __all__ = [
     "CancellationPolicy",
     "CurrencyCode",
     "PaymentType",
+    "TransportationType",
     "TripStatus",
+    "TripType",
+    "TripVisibility",
     "UserRole",
     # Financial
     "Budget",

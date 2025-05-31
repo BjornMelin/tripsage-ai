@@ -11,12 +11,12 @@ from uuid import uuid4
 
 import pytest
 
-from tripsage.api.models.common.websocket import (
-    WebSocketEvent,
-    WebSocketEventType,
-)
 from tripsage_core.services.infrastructure.websocket_broadcaster import (
     WebSocketBroadcaster,
+)
+from tripsage_core.services.infrastructure.websocket_manager import (
+    WebSocketEvent,
+    WebSocketEventType,
 )
 
 

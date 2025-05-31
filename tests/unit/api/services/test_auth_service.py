@@ -10,7 +10,8 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from api.schemas.requests.auth import (
+from api.services.auth_service import AuthService
+from tripsage.api.models.requests.auth import (
     ChangePasswordRequest,
     ForgotPasswordRequest,
     LoginRequest,
@@ -18,13 +19,12 @@ from api.schemas.requests.auth import (
     RegisterUserRequest,
     ResetPasswordRequest,
 )
-from api.schemas.responses.auth import (
+from tripsage.api.models.responses.auth import (
     MessageResponse,
     PasswordResetResponse,
     TokenResponse,
     UserResponse,
 )
-from api.services.auth_service import AuthService
 from tripsage_core.exceptions.exceptions import (
     CoreAuthenticationError as AuthenticationError,
 )

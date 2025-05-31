@@ -9,7 +9,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
-from ..common.destinations import Destination, DestinationVisitSchedule
+from tripsage.api.models.requests.destinations import DestinationVisitSchedule
+from tripsage_core.models.schemas_common.geographic import Place as Destination
 
 
 class DestinationSearchResponse(BaseModel):

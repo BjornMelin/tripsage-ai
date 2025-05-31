@@ -9,7 +9,7 @@ from uuid import UUID, uuid4
 
 from pydantic import BaseModel, Field
 
-from ..common.chat import ChatMessage, ToolCall
+from tripsage_core.models.schemas_common.chat import ChatMessage, ToolCall
 
 
 class ChatResponse(BaseModel):

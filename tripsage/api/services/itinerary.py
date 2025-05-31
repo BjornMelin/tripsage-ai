@@ -6,16 +6,15 @@ handling API-specific concerns like model adaptation and FastAPI integration.
 """
 
 import logging
+from datetime import date
 from typing import List
+from typing import List as ListType
 
 from fastapi import Depends
 
-from tripsage.api.models.common.itineraries import (
-    Itinerary,
-    ItineraryDay,
-    ItineraryItem,
-    ItineraryStatus,
-)
+# Create simple models for missing classes
+from pydantic import BaseModel, Field
+
 from tripsage.api.models.requests.itineraries import (
     ItineraryCreateRequest,
     ItineraryItemCreateRequest,
@@ -25,6 +24,7 @@ from tripsage.api.models.requests.itineraries import (
     ItineraryUpdateRequest,
 )
 from tripsage.api.models.responses.itineraries import (
+    Itinerary,
     ItineraryConflictCheckResponse,
     ItineraryOptimizeResponse,
     ItinerarySearchResponse,
@@ -36,12 +36,20 @@ from tripsage_core.exceptions.exceptions import (
 from tripsage_core.exceptions.exceptions import (
     CoreValidationError as ValidationError,
 )
+from tripsage_core.models.db.itinerary_item import ItineraryItem
+from tripsage_core.models.schemas_common.enums import TripStatus as ItineraryStatus
 from tripsage_core.services.business.itinerary_service import (
     ItineraryService as CoreItineraryService,
 )
 from tripsage_core.services.business.itinerary_service import (
     get_itinerary_service as get_core_itinerary_service,
 )
+
+
+class ItineraryDay(BaseModel):
+    date: date = Field(..., description="Date of the itinerary day")
+    items: ListType[ItineraryItem] = Field(default=[], description="Items for this day")
+
 
 logger = logging.getLogger(__name__)
 

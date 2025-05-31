@@ -15,7 +15,7 @@ import redis.asyncio as redis
 from pydantic import BaseModel
 
 from tripsage.api.core.config import get_settings
-from tripsage.api.models.common.websocket import WebSocketEvent
+from tripsage_core.services.infrastructure.websocket_manager import WebSocketEvent
 
 logger = logging.getLogger(__name__)
 

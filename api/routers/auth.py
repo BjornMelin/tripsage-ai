@@ -13,9 +13,9 @@ from fastapi import APIRouter, Depends, HTTPException, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
 
 from api.deps import auth_service_dependency, get_current_user
-from api.schemas.requests.auth import RefreshTokenRequest, RegisterUserRequest
-from api.schemas.responses.auth import TokenResponse, UserResponse
 from api.services.auth_service import AuthService
+from tripsage.api.models.requests.auth import RefreshTokenRequest, RegisterUserRequest
+from tripsage.api.models.responses.auth import TokenResponse, UserResponse
 from tripsage_core.config.base_app_settings import settings
 from tripsage_core.exceptions.exceptions import (
     CoreAuthenticationError as AuthenticationError,
