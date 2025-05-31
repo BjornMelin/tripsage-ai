@@ -13,8 +13,6 @@ from uuid import UUID, uuid4
 import pytest
 from pydantic import ValidationError
 
-from tripsage.api.models.requests.websocket import WebSocketAuthRequest
-from tripsage.api.models.responses.websocket import WebSocketAuthResponse
 from tripsage.api.models.common.websocket import (
     ChatMessageChunkEvent,
     ConnectionEvent,
@@ -26,6 +24,8 @@ from tripsage.api.models.common.websocket import (
     WebSocketEventType,
     WebSocketMessage,
 )
+from tripsage.api.models.requests.websocket import WebSocketAuthRequest
+from tripsage.api.models.responses.websocket import WebSocketAuthResponse
 
 # Test constants
 TEST_JWT_TOKEN = os.getenv("TEST_JWT_TOKEN", "mock-jwt-token-for-models-test")

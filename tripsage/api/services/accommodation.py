@@ -373,11 +373,13 @@ class AccommodationService:
 
         # This is a simplified adaptation - real implementation would need
         # detailed mapping
-        from tripsage.api.models.accommodations import (
+        from tripsage.api.models.common.accommodations import (
             AccommodationAmenity,
             AccommodationImage,
             AccommodationLocation,
-            PropertyType,
+        )
+        from tripsage_core.models.schemas_common import (
+            AccommodationType as PropertyType,
         )
 
         return AccommodationListing(
@@ -426,7 +428,7 @@ class AccommodationService:
         self, core_response
     ) -> SavedAccommodationResponse:
         """Adapt core saved accommodation response to API model."""
-        from tripsage.api.models.accommodations import BookingStatus
+        from tripsage_core.models.schemas_common import BookingStatus
 
         return SavedAccommodationResponse(
             id=core_response.get("id"),
