@@ -41,16 +41,12 @@ class TestExceptionHandlerLogic:
         """Test authentication error handler response format."""
         # Test the response logic by creating expected response structure
         error_details = ErrorDetails(
-            user_id="test-user-id",
-            service="auth",
-            additional_context={}
+            user_id="test-user-id", service="auth", additional_context={}
         )
         exc = CoreAuthenticationError(
-            message="Authentication failed",
-            code="AUTH_001",
-            details=error_details
+            message="Authentication failed", code="AUTH_001", details=error_details
         )
-        
+
         # Test response creation logic
         expected_response = JSONResponse(
             status_code=exc.status_code,
@@ -65,7 +61,7 @@ class TestExceptionHandlerLogic:
                 ),
             },
         )
-        
+
         # Verify response structure
         assert expected_response.status_code == 401
         response_content = json.loads(expected_response.body.decode())
@@ -75,16 +71,11 @@ class TestExceptionHandlerLogic:
 
     async def test_key_validation_error_response_format(self, mock_request):
         """Test key validation error handler response format."""
-        error_details = ErrorDetails(
-            service="openai",
-            additional_context={}
-        )
+        error_details = ErrorDetails(service="openai", additional_context={})
         exc = CoreKeyValidationError(
-            message="Invalid API key",
-            code="KEY_001",
-            details=error_details
+            message="Invalid API key", code="KEY_001", details=error_details
         )
-        
+
         expected_response = JSONResponse(
             status_code=exc.status_code,
             content={
@@ -99,7 +90,7 @@ class TestExceptionHandlerLogic:
                 ),
             },
         )
-        
+
         assert expected_response.status_code == 400
         response_content = json.loads(expected_response.body.decode())
         assert response_content["error_type"] == "key_validation"
@@ -108,15 +99,12 @@ class TestExceptionHandlerLogic:
     async def test_rate_limit_error_response_format(self, mock_request):
         """Test rate limit error handler response format."""
         error_details = ErrorDetails(
-            service="api",
-            additional_context={"retry_after": 60}
+            service="api", additional_context={"retry_after": 60}
         )
         exc = CoreRateLimitError(
-            message="Rate limit exceeded",
-            code="RATE_001",
-            details=error_details
+            message="Rate limit exceeded", code="RATE_001", details=error_details
         )
-        
+
         retry_after = 60
         expected_response = JSONResponse(
             status_code=exc.status_code,
@@ -133,7 +121,7 @@ class TestExceptionHandlerLogic:
             },
             headers={"Retry-After": str(retry_after)},
         )
-        
+
         assert expected_response.status_code == 429
         response_content = json.loads(expected_response.body.decode())
         assert response_content["error_type"] == "rate_limit"
@@ -143,15 +131,12 @@ class TestExceptionHandlerLogic:
     async def test_mcp_error_response_format(self, mock_request):
         """Test MCP error handler response format."""
         error_details = ErrorDetails(
-            service="weather_mcp",
-            additional_context={"tool": "get_weather"}
+            service="weather_mcp", additional_context={"tool": "get_weather"}
         )
         exc = CoreMCPError(
-            message="MCP service unavailable",
-            code="MCP_001",
-            details=error_details
+            message="MCP service unavailable", code="MCP_001", details=error_details
         )
-        
+
         expected_response = JSONResponse(
             status_code=exc.status_code,
             content={
@@ -166,7 +151,7 @@ class TestExceptionHandlerLogic:
                 ),
             },
         )
-        
+
         assert expected_response.status_code == 502
         response_content = json.loads(expected_response.body.decode())
         assert response_content["error_type"] == "mcp_service"
@@ -175,15 +160,12 @@ class TestExceptionHandlerLogic:
     async def test_external_api_error_response_format(self, mock_request):
         """Test external API error handler response format."""
         error_details = ErrorDetails(
-            service="duffel_api",
-            additional_context={"api_status_code": 500}
+            service="duffel_api", additional_context={"api_status_code": 500}
         )
         exc = CoreExternalAPIError(
-            message="External API error",
-            code="API_001",
-            details=error_details
+            message="External API error", code="API_001", details=error_details
         )
-        
+
         expected_response = JSONResponse(
             status_code=exc.status_code,
             content={
@@ -197,7 +179,7 @@ class TestExceptionHandlerLogic:
                 ),
             },
         )
-        
+
         assert expected_response.status_code == 502
         response_content = json.loads(expected_response.body.decode())
         assert response_content["error_type"] == "external_api"
@@ -206,15 +188,12 @@ class TestExceptionHandlerLogic:
     async def test_validation_error_response_format(self, mock_request):
         """Test validation error handler response format."""
         error_details = ErrorDetails(
-            service="validation",
-            additional_context={"field": "email"}
+            service="validation", additional_context={"field": "email"}
         )
         exc = CoreValidationError(
-            message="Invalid email format",
-            code="VAL_001",
-            details=error_details
+            message="Invalid email format", code="VAL_001", details=error_details
         )
-        
+
         expected_response = JSONResponse(
             status_code=exc.status_code,
             content={
@@ -229,7 +208,7 @@ class TestExceptionHandlerLogic:
                 ),
             },
         )
-        
+
         assert expected_response.status_code == 422
         response_content = json.loads(expected_response.body.decode())
         assert response_content["error_type"] == "validation"
@@ -237,16 +216,11 @@ class TestExceptionHandlerLogic:
 
     async def test_core_tripsage_error_response_format(self, mock_request):
         """Test core TripSage error handler response format."""
-        error_details = ErrorDetails(
-            service="tripsage",
-            additional_context={}
-        )
+        error_details = ErrorDetails(service="tripsage", additional_context={})
         exc = CoreTripSageError(
-            message="Internal TripSage error",
-            code="TS_001",
-            details=error_details
+            message="Internal TripSage error", code="TS_001", details=error_details
         )
-        
+
         expected_response = JSONResponse(
             status_code=exc.status_code,
             content={
@@ -260,7 +234,7 @@ class TestExceptionHandlerLogic:
                 ),
             },
         )
-        
+
         assert expected_response.status_code == 500
         response_content = json.loads(expected_response.body.decode())
         assert response_content["error_type"] == "tripsage_error"
@@ -281,12 +255,12 @@ class TestExceptionHandlerLogic:
                 "msg": "ensure this value is greater than 0",
                 "type": "value_error.number.not_gt",
                 "input": -1,
-            }
+            },
         ]
-        
+
         exc = Mock(spec=RequestValidationError)
         exc.errors.return_value = validation_errors
-        
+
         error_details = []
         for error in validation_errors:
             error_details.append(
@@ -297,7 +271,7 @@ class TestExceptionHandlerLogic:
                     "input": error.get("input"),
                 }
             )
-        
+
         expected_response = JSONResponse(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             content={
@@ -314,7 +288,7 @@ class TestExceptionHandlerLogic:
                 ),
             },
         )
-        
+
         assert expected_response.status_code == 422
         response_content = json.loads(expected_response.body.decode())
         assert response_content["error_type"] == "validation"
@@ -324,7 +298,7 @@ class TestExceptionHandlerLogic:
     async def test_http_exception_response_format(self, mock_request):
         """Test HTTP exception handler response format."""
         exc = StarletteHTTPException(status_code=404, detail="Not found")
-        
+
         expected_response = JSONResponse(
             status_code=exc.status_code,
             content={
@@ -336,7 +310,7 @@ class TestExceptionHandlerLogic:
                 "retry_guidance": "Check the request URL and method",
             },
         )
-        
+
         assert expected_response.status_code == 404
         response_content = json.loads(expected_response.body.decode())
         assert response_content["error_type"] == "http"
@@ -346,11 +320,11 @@ class TestExceptionHandlerLogic:
     async def test_general_exception_response_format(self, mock_request):
         """Test general exception handler response format."""
         exc = ValueError("Something went wrong")
-        
+
         # Mock settings for debug mode test
         mock_settings = Mock()
         mock_settings.debug = False
-        
+
         expected_response = JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             content={
@@ -367,7 +341,7 @@ class TestExceptionHandlerLogic:
                 ),
             },
         )
-        
+
         assert expected_response.status_code == 500
         response_content = json.loads(expected_response.body.decode())
         assert response_content["error_type"] == "system"
@@ -377,18 +351,18 @@ class TestExceptionHandlerLogic:
 
 class TestResponseConsistency:
     """Test that all exception handlers return consistent response format."""
-    
+
     def test_all_responses_have_required_fields(self):
         """Test that all exception responses contain required fields."""
         required_fields = [
             "status",
-            "message", 
+            "message",
             "error_code",
             "error_type",
             "details",
-            "retry_guidance"
+            "retry_guidance",
         ]
-        
+
         # Sample response structure (this tests our expected format)
         sample_response = {
             "status": "error",
@@ -396,58 +370,63 @@ class TestResponseConsistency:
             "error_code": "TEST_001",
             "error_type": "test",
             "details": {},
-            "retry_guidance": "Test guidance"
+            "retry_guidance": "Test guidance",
         }
-        
+
         for field in required_fields:
             assert field in sample_response
-        
+
         # Verify status is always "error" for error responses
         assert sample_response["status"] == "error"
-    
+
     def test_error_types_are_consistent(self):
         """Test that error types match expected values."""
         expected_error_types = {
             "authentication",
-            "key_validation", 
+            "key_validation",
             "rate_limit",
             "mcp_service",
             "external_api",
             "validation",
             "tripsage_error",
             "http",
-            "system"
+            "system",
         }
-        
+
         # This validates our error type taxonomy
         for error_type in expected_error_types:
             assert isinstance(error_type, str)
             assert len(error_type) > 0
-            assert "_" in error_type or error_type in ["http", "system", "validation", "authentication"]
+            assert "_" in error_type or error_type in [
+                "http",
+                "system",
+                "validation",
+                "authentication",
+            ]
 
 
 class TestExceptionHandlerValidation:
     """Test that exception handlers properly validate inputs."""
-    
+
     async def test_error_details_serialization(self):
         """Test that ErrorDetails objects serialize properly."""
         error_details = ErrorDetails(
             service="test_service",
             user_id="test_user",
-            additional_context={"key": "value"}
+            additional_context={"key": "value"},
         )
-        
+
         serialized = error_details.model_dump(exclude_none=True)
-        
+
         assert isinstance(serialized, dict)
         assert serialized["service"] == "test_service"
         assert serialized["user_id"] == "test_user"
         assert serialized["additional_context"]["key"] == "value"
-    
+
     async def test_core_exception_status_codes(self):
         """Test that core exceptions have appropriate status codes."""
         error_details = ErrorDetails(service="test")
-        
+
         exceptions_and_codes = [
             (CoreAuthenticationError("test", "TEST", error_details), 401),
             (CoreKeyValidationError("test", "TEST", error_details), 400),
@@ -457,6 +436,6 @@ class TestExceptionHandlerValidation:
             (CoreValidationError("test", "TEST", error_details), 422),
             (CoreTripSageError("test", "TEST", 500, error_details), 500),
         ]
-        
+
         for exception, expected_code in exceptions_and_codes:
             assert exception.status_code == expected_code

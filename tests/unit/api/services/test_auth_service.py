@@ -5,9 +5,10 @@ Tests the thin wrapper functionality, model adaptation, error handling,
 and dependency injection patterns of the AuthService.
 """
 
-import pytest
 from datetime import datetime, timezone
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock
+
+import pytest
 
 from api.schemas.requests.auth import (
     ChangePasswordRequest,
@@ -29,10 +30,14 @@ from tripsage_core.exceptions.exceptions import (
 )
 from tripsage_core.services.business.auth_service import (
     AuthenticationService as CoreAuthService,
+)
+from tripsage_core.services.business.auth_service import (
     TokenResponse as CoreTokenResponse,
 )
 from tripsage_core.services.business.user_service import (
     UserResponse as CoreUserResponse,
+)
+from tripsage_core.services.business.user_service import (
     UserService,
 )
 
@@ -103,7 +108,9 @@ class TestAuthService:
         )
 
         mock_user_service.create_user.return_value = sample_core_token_response.user
-        mock_core_auth_service.authenticate_user.return_value = sample_core_token_response
+        mock_core_auth_service.authenticate_user.return_value = (
+            sample_core_token_response
+        )
 
         # Act
         result = await auth_service.register_user(request)
@@ -178,7 +185,9 @@ class TestAuthService:
         """Test successful user login."""
         # Arrange
         request = LoginRequest(username="testuser", password="password123")
-        mock_core_auth_service.authenticate_user.return_value = sample_core_token_response
+        mock_core_auth_service.authenticate_user.return_value = (
+            sample_core_token_response
+        )
 
         # Act
         result = await auth_service.login_user(request)
@@ -320,9 +329,7 @@ class TestAuthService:
         with pytest.raises(AuthenticationError, match="Password change failed"):
             await auth_service.change_password(user_id, request)
 
-    async def test_change_password_service_error(
-        self, auth_service, mock_user_service
-    ):
+    async def test_change_password_service_error(self, auth_service, mock_user_service):
         """Test password change with service error."""
         # Arrange
         user_id = "user_123"
@@ -447,9 +454,7 @@ class TestAuthService:
         assert result.success is True
 
     # Model Adaptation Tests
-    async def test_adapt_token_response(
-        self, auth_service, sample_core_token_response
-    ):
+    async def test_adapt_token_response(self, auth_service, sample_core_token_response):
         """Test token response model adaptation."""
         # Act
         api_token = auth_service._adapt_token_response(sample_core_token_response)
@@ -461,9 +466,7 @@ class TestAuthService:
         assert api_token.token_type == sample_core_token_response.token_type
         assert api_token.expires_in == sample_core_token_response.expires_in
 
-    async def test_adapt_user_response(
-        self, auth_service, sample_core_user_response
-    ):
+    async def test_adapt_user_response(self, auth_service, sample_core_user_response):
         """Test user response model adaptation."""
         # Act
         api_user = auth_service._adapt_user_response(sample_core_user_response)
@@ -498,23 +501,24 @@ class TestAuthService:
         """Test core auth service lazy initialization."""
         # Arrange
         auth_service = AuthService()
-        
+
         # Mock the lazy initialization
         mock_service = AsyncMock(spec=CoreAuthService)
-        
+
         # Mock the get_core_auth_service function
         async def mock_get_core_auth_service():
             return mock_service
-            
+
         # Replace the function
         import api.services.auth_service
+
         original_fn = api.services.auth_service.get_core_auth_service
         api.services.auth_service.get_core_auth_service = mock_get_core_auth_service
-        
+
         try:
             # Act
             result = await auth_service._get_core_auth_service()
-            
+
             # Assert
             assert result is mock_service
             assert auth_service.core_auth_service is mock_service
@@ -528,14 +532,14 @@ class TestAuthService:
         # Arrange
         mock_core_auth = AsyncMock(spec=CoreAuthService)
         mock_user = AsyncMock(spec=UserService)
-        
+
         auth_service.core_auth_service = mock_core_auth
         auth_service.user_service = mock_user
 
         # Act
         service1 = await auth_service._get_core_auth_service()
         service2 = await auth_service._get_core_auth_service()
-        
+
         user_service1 = await auth_service._get_user_service()
         user_service2 = await auth_service._get_user_service()
 
@@ -549,7 +553,7 @@ class TestAuthService:
         """Test that error handling preserves original error types when appropriate."""
         # Arrange
         request = LoginRequest(username="testuser", password="password")
-        
+
         # Create a specific authentication error
         original_error = AuthenticationError("Invalid credentials")
         mock_core_auth_service.authenticate_user.side_effect = original_error
@@ -557,7 +561,7 @@ class TestAuthService:
         # Act & Assert
         with pytest.raises(AuthenticationError) as exc_info:
             await auth_service.login_user(request)
-        
+
         # The exception should preserve the original error message
         assert "Authentication failed" in str(exc_info.value)
 
@@ -567,7 +571,9 @@ class TestAuthService:
         """Test that errors are properly logged."""
         # Arrange
         request = LoginRequest(username="testuser", password="password")
-        mock_core_auth_service.authenticate_user.side_effect = Exception("Database error")
+        mock_core_auth_service.authenticate_user.side_effect = Exception(
+            "Database error"
+        )
 
         # Act
         with pytest.raises(AuthenticationError):

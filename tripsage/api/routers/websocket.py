@@ -17,8 +17,8 @@ from fastapi import (
 )
 from pydantic import ValidationError
 
-from tripsage.agents.chat import ChatAgent
 from api.deps import get_db
+from tripsage.agents.chat import ChatAgent
 from tripsage.api.models.websocket import (
     ChatMessageChunkEvent,
     ChatMessageEvent,

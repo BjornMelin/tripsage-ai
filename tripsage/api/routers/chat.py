@@ -16,8 +16,8 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from tripsage.agents.chat import ChatAgent
 from api.deps import get_db, get_session_memory, verify_api_key
+from tripsage.agents.chat import ChatAgent
 from tripsage.api.middlewares.auth import get_current_user
 from tripsage.api.models.chat import ToolCall
 from tripsage.services.core.chat_service import ChatService, RateLimiter
