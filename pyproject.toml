@@ -7,12 +7,21 @@ requires-python = ">=3.12"
 authors = [{ name = "TripSage Team" }]
 dependencies = [
     "email-validator>=2.2.0",
+    "fakeredis>=2.29.0",
     "fastapi>=0.115.12",
+    "httpx>=0.28.1",
+    "passlib[bcrypt]>=1.7.4",
     "pydantic>=2.11.5",
     "pydantic-settings>=2.9.1",
     "pytest>=8.3.5",
     "pytest-cov>=6.1.1",
     "python-dotenv>=1.1.0",
+    "python-jose[cryptography]>=3.5.0",
+    "python-multipart>=0.0.20",
+    "redis>=6.2.0",
+    "sqlalchemy[asyncio]>=2.0.41",
+    "supabase>=2.15.2",
+    "uvicorn>=0.34.2",
 ]
 
 [tool.setuptools.packages.find]

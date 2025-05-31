@@ -8,6 +8,7 @@ import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request, status
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
@@ -31,7 +32,15 @@ from tripsage.api.routers import (
     websocket,
 )
 from tripsage.mcp_abstraction import mcp_manager
-from tripsage_core.exceptions.exceptions import CoreTripSageError as TripSageException
+from tripsage_core.exceptions.exceptions import (
+    CoreAuthenticationError,
+    CoreExternalAPIError,
+    CoreKeyValidationError,
+    CoreMCPError,
+    CoreRateLimitError,
+    CoreTripSageError,
+    CoreValidationError,
+)
 from tripsage_core.services.infrastructure.key_monitoring_service import (
     KeyMonitoringService,
     KeyOperationRateLimitMiddleware,
@@ -110,14 +119,185 @@ def create_app() -> FastAPI:
         KeyOperationRateLimitMiddleware, monitoring_service=key_monitoring_service
     )
 
-    # Add exception handlers
-    @app.exception_handler(TripSageException)
-    async def tripsage_exception_handler(request: Request, exc: TripSageException):
-        """Handle TripSage custom exceptions."""
+    # Add exception handlers for detailed agent API error responses
+    @app.exception_handler(CoreAuthenticationError)
+    async def authentication_error_handler(
+        request: Request, exc: CoreAuthenticationError
+    ):
+        """Handle authentication errors with detailed agent context."""
         logger.error(
-            f"TripSage exception: {exc.message}",
+            f"Authentication error: {exc.message}",
             extra={
-                "error_code": exc.error_code,
+                "error_code": exc.code,
+                "status_code": exc.status_code,
+                "path": request.url.path,
+                "correlation_id": getattr(request.state, "correlation_id", None),
+                "user_id": exc.details.user_id,
+            },
+        )
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={
+                "status": "error",
+                "message": exc.message,
+                "error_code": exc.code,
+                "error_type": "authentication",
+                "details": exc.details.model_dump(exclude_none=True),
+                "retry_guidance": (
+                    "Check your authentication credentials and ensure they are valid"
+                ),
+            },
+        )
+
+    @app.exception_handler(CoreKeyValidationError)
+    async def key_validation_error_handler(
+        request: Request, exc: CoreKeyValidationError
+    ):
+        """Handle API key validation errors with service-specific guidance."""
+        logger.error(
+            f"API key validation error: {exc.message}",
+            extra={
+                "error_code": exc.code,
+                "service": exc.details.service,
+                "path": request.url.path,
+                "correlation_id": getattr(request.state, "correlation_id", None),
+            },
+        )
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={
+                "status": "error",
+                "message": exc.message,
+                "error_code": exc.code,
+                "error_type": "key_validation",
+                "details": exc.details.model_dump(exclude_none=True),
+                "retry_guidance": (
+                    f"Verify your {exc.details.service} API key is correct and has "
+                    "required permissions"
+                ),
+            },
+        )
+
+    @app.exception_handler(CoreRateLimitError)
+    async def rate_limit_error_handler(request: Request, exc: CoreRateLimitError):
+        """Handle rate limit errors with retry information."""
+        retry_after = exc.details.additional_context.get("retry_after", 60)
+        logger.warning(
+            f"Rate limit exceeded: {exc.message}",
+            extra={
+                "error_code": exc.code,
+                "retry_after": retry_after,
+                "path": request.url.path,
+                "correlation_id": getattr(request.state, "correlation_id", None),
+            },
+        )
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={
+                "status": "error",
+                "message": exc.message,
+                "error_code": exc.code,
+                "error_type": "rate_limit",
+                "details": exc.details.model_dump(exclude_none=True),
+                "retry_after": retry_after,
+                "retry_guidance": (
+                    f"Wait {retry_after} seconds before making another request"
+                ),
+            },
+            headers={"Retry-After": str(retry_after)},
+        )
+
+    @app.exception_handler(CoreMCPError)
+    async def mcp_error_handler(request: Request, exc: CoreMCPError):
+        """Handle MCP server errors with tool-specific context."""
+        logger.error(
+            f"MCP error: {exc.message}",
+            extra={
+                "error_code": exc.code,
+                "service": exc.details.service,
+                "tool": exc.details.additional_context.get("tool"),
+                "path": request.url.path,
+                "correlation_id": getattr(request.state, "correlation_id", None),
+            },
+        )
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={
+                "status": "error",
+                "message": exc.message,
+                "error_code": exc.code,
+                "error_type": "mcp_service",
+                "details": exc.details.model_dump(exclude_none=True),
+                "retry_guidance": (
+                    "The external service is temporarily unavailable. "
+                    "Try again in a few moments"
+                ),
+            },
+        )
+
+    @app.exception_handler(CoreExternalAPIError)
+    async def external_api_error_handler(request: Request, exc: CoreExternalAPIError):
+        """Handle external API errors with service context."""
+        logger.error(
+            f"External API error: {exc.message}",
+            extra={
+                "error_code": exc.code,
+                "service": exc.details.service,
+                "api_status_code": exc.details.additional_context.get(
+                    "api_status_code"
+                ),
+                "path": request.url.path,
+                "correlation_id": getattr(request.state, "correlation_id", None),
+            },
+        )
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={
+                "status": "error",
+                "message": exc.message,
+                "error_code": exc.code,
+                "error_type": "external_api",
+                "details": exc.details.model_dump(exclude_none=True),
+                "retry_guidance": (
+                    "External service error. Check service status and try again"
+                ),
+            },
+        )
+
+    @app.exception_handler(CoreValidationError)
+    async def validation_error_handler(request: Request, exc: CoreValidationError):
+        """Handle validation errors with field-specific context."""
+        logger.warning(
+            f"Validation error: {exc.message}",
+            extra={
+                "error_code": exc.code,
+                "field": exc.details.additional_context.get("field"),
+                "path": request.url.path,
+                "correlation_id": getattr(request.state, "correlation_id", None),
+            },
+        )
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={
+                "status": "error",
+                "message": exc.message,
+                "error_code": exc.code,
+                "error_type": "validation",
+                "details": exc.details.model_dump(exclude_none=True),
+                "retry_guidance": (
+                    "Check the request parameters and ensure they meet the "
+                    "required format"
+                ),
+            },
+        )
+
+    @app.exception_handler(CoreTripSageError)
+    async def core_tripsage_error_handler(request: Request, exc: CoreTripSageError):
+        """Handle all other core TripSage exceptions."""
+        logger.error(
+            f"Core TripSage error: {exc.message}",
+            extra={
+                "error_code": exc.code,
                 "status_code": exc.status_code,
                 "path": request.url.path,
                 "correlation_id": getattr(request.state, "correlation_id", None),
@@ -128,8 +308,53 @@ def create_app() -> FastAPI:
             content={
                 "status": "error",
                 "message": exc.message,
-                "error_code": exc.error_code,
-                "details": exc.details,
+                "error_code": exc.code,
+                "error_type": "tripsage_error",
+                "details": exc.details.model_dump(exclude_none=True),
+                "retry_guidance": (
+                    "An error occurred. Please check your request and try again"
+                ),
+            },
+        )
+
+    @app.exception_handler(RequestValidationError)
+    async def request_validation_error_handler(
+        request: Request, exc: RequestValidationError
+    ):
+        """Handle FastAPI request validation errors."""
+        error_details = []
+        for error in exc.errors():
+            error_details.append(
+                {
+                    "field": ".".join(str(x) for x in error["loc"]),
+                    "message": error["msg"],
+                    "type": error["type"],
+                    "input": error.get("input"),
+                }
+            )
+
+        logger.warning(
+            f"Request validation error: {len(error_details)} validation errors",
+            extra={
+                "errors": error_details,
+                "path": request.url.path,
+                "correlation_id": getattr(request.state, "correlation_id", None),
+            },
+        )
+        return JSONResponse(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            content={
+                "status": "error",
+                "message": "Request validation failed",
+                "error_code": "REQUEST_VALIDATION_ERROR",
+                "error_type": "validation",
+                "details": {
+                    "validation_errors": error_details,
+                },
+                "retry_guidance": (
+                    "Check the request format and ensure all required fields are "
+                    "provided correctly"
+                ),
             },
         )
 
@@ -149,14 +374,16 @@ def create_app() -> FastAPI:
             content={
                 "status": "error",
                 "message": exc.detail,
-                "error_code": f"http_{exc.status_code}",
+                "error_code": f"HTTP_{exc.status_code}",
+                "error_type": "http",
                 "details": {},
+                "retry_guidance": "Check the request URL and method",
             },
         )
 
     @app.exception_handler(Exception)
     async def general_exception_handler(request: Request, exc: Exception):
-        """Handle all other exceptions."""
+        """Handle all other unhandled exceptions."""
         logger.exception(
             f"Unhandled exception: {str(exc)}",
             extra={
@@ -170,8 +397,17 @@ def create_app() -> FastAPI:
             content={
                 "status": "error",
                 "message": "Internal server error",
-                "error_code": "internal_error",
-                "details": {"type": type(exc).__name__} if settings.debug else {},
+                "error_code": "INTERNAL_ERROR",
+                "error_type": "system",
+                "details": {
+                    "exception_type": type(exc).__name__,
+                    "exception_message": str(exc)
+                    if settings.debug
+                    else "Internal error occurred",
+                },
+                "retry_guidance": (
+                    "An unexpected error occurred. Please try again or contact support"
+                ),
             },
         )
 

@@ -9,7 +9,9 @@ from typing import Optional
 from fastapi import Depends, Request, Security
 from fastapi.security import APIKeyHeader, APIKeyQuery, OAuth2PasswordBearer
 
-from api.core.config import settings
+from tripsage.api.core.config import get_settings
+
+settings = get_settings()
 from tripsage.mcp_abstraction import MCPManager, mcp_manager
 from tripsage_core.exceptions.exceptions import (
     CoreAuthenticationError as AuthenticationError,
