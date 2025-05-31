@@ -7,20 +7,22 @@ Ensures proper inheritance, agent-specific configurations, and validation.
 
 import os
 import tempfile
-from unittest.mock import patch, Mock
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
-from pydantic import ValidationError, SecretStr
+from pydantic import ValidationError
 
 # Set test environment before imports
-os.environ.update({
-    "SUPABASE_URL": "https://test-project.supabase.co",
-    "SUPABASE_ANON_KEY": "test-anon-key",
-    "OPENAI_API_KEY": "test-openai-key",
-    "DEBUG": "false",
-    "ENVIRONMENT": "testing",
-})
+os.environ.update(
+    {
+        "SUPABASE_URL": "https://test-project.supabase.co",
+        "SUPABASE_ANON_KEY": "test-anon-key",
+        "OPENAI_API_KEY": "test-openai-key",
+        "DEBUG": "false",
+        "ENVIRONMENT": "testing",
+    }
+)
 
 from tripsage.api.core.config import Settings, get_settings
 from tripsage_core.config.base_app_settings import CoreAppSettings
@@ -51,19 +53,19 @@ class TestAgentAPISettings:
 
         # Agent API specific settings
         assert settings.api_prefix == "/api/agent"
-        
+
         # Agent-specific CORS origins
         expected_origins = ["http://localhost:3000", "https://tripsage.app"]
         assert settings.cors_origins == expected_origins
-        
+
         # Agent-specific JWT expiration (longer than frontend)
         assert settings.token_expiration_minutes == 120
         assert settings.refresh_token_expiration_days == 30
-        
+
         # Agent-specific rate limiting (higher than frontend)
         assert settings.rate_limit_requests == 1000
         assert settings.rate_limit_timeframe == 60
-        
+
         # Agent API key expiration (longer than frontend)
         assert settings.api_key_expiration_days == 365
 
@@ -74,7 +76,7 @@ class TestAgentAPISettings:
         # Test core app metadata
         assert settings.app_name == "TripSage"
         assert settings.environment == "testing"
-        
+
         # Test core configurations are accessible
         assert hasattr(settings, "database")
         assert hasattr(settings, "dragonfly")
@@ -88,19 +90,19 @@ class TestAgentAPISettings:
     def test_secret_key_property(self):
         """Test the secret_key property delegates to jwt_secret_key."""
         settings = Settings()
-        
+
         # Test secret_key property
         secret = settings.secret_key
         assert isinstance(secret, str)
         assert len(secret) > 0
-        
+
         # Verify it accesses the inherited jwt_secret_key
         assert secret == settings.jwt_secret_key.get_secret_value()
 
     def test_custom_agent_settings(self):
         """Test custom agent API configuration overrides."""
         custom_origins = ["https://custom-agent.domain.com"]
-        
+
         settings = Settings(
             api_prefix="/api/v2/agent",
             cors_origins=custom_origins,
@@ -127,7 +129,7 @@ class TestAgentAPISettings:
                 environment="production",
                 cors_origins=["*"],
             )
-        
+
         assert "Wildcard CORS origin not allowed in production" in str(exc_info.value)
 
     def test_cors_validation_development(self):
@@ -137,7 +139,7 @@ class TestAgentAPISettings:
             environment="development",
             cors_origins=["*"],
         )
-        
+
         assert settings.cors_origins == ["*"]
         assert settings.environment == "development"
 
@@ -177,7 +179,7 @@ class TestAgentAPISettings:
         # Verify core API keys are accessible
         assert hasattr(settings, "openai_api_key")
         assert settings.openai_api_key.get_secret_value() == "test-openai-key"
-        
+
         # Test other inherited optional keys
         assert hasattr(settings, "google_maps_api_key")
         assert hasattr(settings, "duffel_api_key")
@@ -205,13 +207,13 @@ class TestAgentAPISettings:
         # Test model_dump works (important for config inspection)
         config_dict = settings.model_dump()
         assert isinstance(config_dict, dict)
-        
+
         # Agent-specific fields
         assert "api_prefix" in config_dict
         assert "cors_origins" in config_dict
         assert "token_expiration_minutes" in config_dict
         assert "api_key_expiration_days" in config_dict
-        
+
         # Inherited fields
         assert "app_name" in config_dict
         assert "environment" in config_dict
@@ -232,18 +234,21 @@ class TestAgentAPISettings:
     def test_environment_variable_override(self):
         """Test that environment variables can override agent settings."""
         settings = Settings()
-        
+
         # Environment variable should override default
         assert settings.api_prefix == "/custom/agent"
 
-    @patch.dict("os.environ", {
-        "TRIPSAGE_API_TOKEN_EXPIRATION_MINUTES": "180",
-        "TRIPSAGE_API_RATE_LIMIT_REQUESTS": "1500"
-    })
+    @patch.dict(
+        "os.environ",
+        {
+            "TRIPSAGE_API_TOKEN_EXPIRATION_MINUTES": "180",
+            "TRIPSAGE_API_RATE_LIMIT_REQUESTS": "1500",
+        },
+    )
     def test_multiple_env_var_overrides(self):
         """Test multiple environment variable overrides."""
         settings = Settings()
-        
+
         assert settings.token_expiration_minutes == 180
         assert settings.rate_limit_requests == 1500
 
@@ -257,7 +262,7 @@ class TestAgentAPISettings:
             rate_limit_timeframe=30,
             api_key_expiration_days=180,
         )
-        
+
         assert valid_settings.token_expiration_minutes == 60
         assert valid_settings.refresh_token_expiration_days == 30
         assert valid_settings.rate_limit_requests == 500
@@ -279,15 +284,18 @@ class TestAgentAPISettings:
         """Test that fields have proper descriptions."""
         # Access field info through model fields
         fields = Settings.model_fields
-        
+
         assert "api_prefix" in fields
         assert fields["api_prefix"].description == "API prefix for agent endpoints"
-        
+
         assert "cors_origins" in fields
         assert fields["cors_origins"].description == "CORS origins for agent API access"
-        
+
         assert "token_expiration_minutes" in fields
-        assert fields["token_expiration_minutes"].description == "Agent JWT token expiration in minutes"
+        assert (
+            fields["token_expiration_minutes"].description
+            == "Agent JWT token expiration in minutes"
+        )
 
 
 class TestGetSettingsFunction:
@@ -296,7 +304,7 @@ class TestGetSettingsFunction:
     def test_get_settings_returns_settings_instance(self):
         """Test that get_settings returns a Settings instance."""
         settings = get_settings()
-        
+
         assert isinstance(settings, Settings)
         assert isinstance(settings, CoreAppSettings)
 
@@ -305,20 +313,20 @@ class TestGetSettingsFunction:
         # Call multiple times
         settings1 = get_settings()
         settings2 = get_settings()
-        
+
         # Should return the same instance due to caching
         assert settings1 is settings2
 
     def test_get_settings_has_required_attributes(self):
         """Test that get_settings() returns instance with all required attributes."""
         settings = get_settings()
-        
+
         # Agent-specific attributes
         assert hasattr(settings, "api_prefix")
         assert hasattr(settings, "cors_origins")
         assert hasattr(settings, "token_expiration_minutes")
         assert hasattr(settings, "secret_key")
-        
+
         # Inherited attributes
         assert hasattr(settings, "app_name")
         assert hasattr(settings, "database")
@@ -335,30 +343,30 @@ class TestSettingsIntegration:
         # These are common patterns that existing code might use
         assert hasattr(settings, "secret_key")
         assert isinstance(settings.secret_key, str)
-        
+
         # Test JWT-related functionality
         assert len(settings.secret_key) > 0
 
     def test_agent_vs_frontend_api_differences(self):
         """Test that agent API has different defaults than frontend API."""
         settings = get_settings()
-        
+
         # Agent API should have different prefix
         assert settings.api_prefix == "/api/agent"
-        
+
         # Agent API should have longer token expiration (120 vs 30 minutes)
         assert settings.token_expiration_minutes == 120
-        
+
         # Agent API should have higher rate limits (1000 vs 60 requests)
         assert settings.rate_limit_requests == 1000
-        
+
         # Agent API should have longer API key expiration (365 vs 90 days)
         assert settings.api_key_expiration_days == 365
 
     def test_settings_with_real_environment_loading(self):
         """Test settings loading with realistic environment setup."""
         # Create a temporary .env file
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.env', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".env", delete=False) as f:
             f.write("TRIPSAGE_API_API_PREFIX=/test/agent\n")
             f.write("TRIPSAGE_API_TOKEN_EXPIRATION_MINUTES=300\n")
             temp_env_file = f.name
@@ -368,10 +376,10 @@ class TestSettingsIntegration:
             original_config = Settings.model_config.copy()
             # Temporarily update the env_file in model_config
             Settings.model_config["env_file"] = temp_env_file
-            
+
             # Create settings instance
             settings = Settings()
-            
+
             # These values should come from the env file
             # Note: In actual usage, the env file would be loaded automatically
             # This test verifies the mechanism is in place
@@ -387,11 +395,11 @@ class TestSettingsIntegration:
     def test_core_app_settings_validation_inherited(self):
         """Test that CoreAppSettings validation is inherited."""
         settings = get_settings()
-        
+
         # Test validate_critical_settings method
         validation_errors = settings.validate_critical_settings()
         assert isinstance(validation_errors, list)
-        
+
         # In test environment, should not have critical errors
         # (since we set required env vars at module level)
         if validation_errors:
@@ -401,7 +409,7 @@ class TestSettingsIntegration:
     def test_feature_flags_inheritance(self):
         """Test that feature flags are properly inherited."""
         settings = get_settings()
-        
+
         # Test feature flags are accessible
         assert hasattr(settings, "feature_flags")
         assert hasattr(settings.feature_flags, "enable_agent_memory")
@@ -410,7 +418,7 @@ class TestSettingsIntegration:
     def test_service_configurations_inheritance(self):
         """Test that service configurations are inherited."""
         settings = get_settings()
-        
+
         # Test various service configs are accessible
         assert hasattr(settings, "database")
         assert hasattr(settings, "dragonfly")

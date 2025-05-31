@@ -10,8 +10,8 @@ from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
 
-from api.services.auth_service import get_auth_service
 from api.deps import get_settings_dependency
+from api.services.auth_service import get_auth_service
 from tripsage.api.middlewares.auth import create_access_token, get_current_user
 from tripsage.api.models.auth import (
     RefreshToken,

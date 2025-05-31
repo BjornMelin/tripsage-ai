@@ -5,9 +5,10 @@ Tests the thin wrapper functionality, model adaptation, error handling,
 and dependency injection patterns of the KeyService.
 """
 
-import pytest
 from datetime import datetime, timezone
 from unittest.mock import AsyncMock
+
+import pytest
 
 from api.schemas.requests.keys import (
     CreateApiKeyRequest,
@@ -25,11 +26,17 @@ from api.schemas.responses.keys import (
 from api.services.key_service import KeyService
 from tripsage_core.exceptions.exceptions import (
     CoreServiceError as ServiceError,
+)
+from tripsage_core.exceptions.exceptions import (
     CoreValidationError as ValidationError,
 )
 from tripsage_core.services.business.key_management_service import (
     ApiKeyResponse as CoreApiKeyResponse,
+)
+from tripsage_core.services.business.key_management_service import (
     ApiKeyValidationResult,
+)
+from tripsage_core.services.business.key_management_service import (
     KeyManagementService as CoreKeyManagementService,
 )
 
@@ -71,7 +78,10 @@ class TestKeyService:
             is_valid=True,
             service="openai",
             message="API key format is valid and authenticated",
-            details={"validation_type": "full_authentication", "rate_limit_remaining": 1000},
+            details={
+                "validation_type": "full_authentication",
+                "rate_limit_remaining": 1000,
+            },
             validated_at=datetime.now(timezone.utc),
         )
 
@@ -125,7 +135,7 @@ class TestKeyService:
         # Verify core service was called with correct data
         call_args = mock_core_key_service.create_api_key.call_args
         assert call_args[0][0] == user_id
-        
+
         core_request = call_args[0][1]
         assert core_request.name == request.name
         assert core_request.service == request.service
@@ -165,7 +175,9 @@ class TestKeyService:
             key_value="sk-test123",
         )
 
-        mock_core_key_service.create_api_key.side_effect = Exception("Encryption failed")
+        mock_core_key_service.create_api_key.side_effect = Exception(
+            "Encryption failed"
+        )
 
         # Act & Assert
         with pytest.raises(ServiceError, match="Failed to create API key"):
@@ -193,14 +205,18 @@ class TestKeyService:
         mock_core_key_service.get_user_api_keys.assert_called_once_with(user_id)
 
     async def test_get_user_api_keys_multiple_keys(
-        self, key_service, mock_core_key_service, sample_core_api_key, sample_expired_api_key
+        self,
+        key_service,
+        mock_core_key_service,
+        sample_core_api_key,
+        sample_expired_api_key,
     ):
         """Test retrieval of multiple API keys."""
         # Arrange
         user_id = "user_abc123"
         mock_core_key_service.get_user_api_keys.return_value = [
             sample_core_api_key,
-            sample_expired_api_key
+            sample_expired_api_key,
         ]
 
         # Act
@@ -210,11 +226,11 @@ class TestKeyService:
         assert isinstance(result, ApiKeyListResponse)
         assert len(result.keys) == 2
         assert result.total == 2
-        
+
         # Verify both keys are properly adapted
         openai_key = next(k for k in result.keys if k.service == "openai")
         weather_key = next(k for k in result.keys if k.service == "weather")
-        
+
         assert openai_key.is_valid is True
         assert weather_key.is_valid is False
 
@@ -238,7 +254,9 @@ class TestKeyService:
         """Test error handling in get_user_api_keys returns empty list."""
         # Arrange
         user_id = "user_abc123"
-        mock_core_key_service.get_user_api_keys.side_effect = Exception("Database error")
+        mock_core_key_service.get_user_api_keys.side_effect = Exception(
+            "Database error"
+        )
 
         # Act
         result = await key_service.get_user_api_keys(user_id)
@@ -362,7 +380,9 @@ class TestKeyService:
         # Arrange
         user_id = "user_abc123"
         service = "openai"
-        mock_core_key_service.get_api_key_for_service.side_effect = Exception("Database error")
+        mock_core_key_service.get_api_key_for_service.side_effect = Exception(
+            "Database error"
+        )
 
         # Act
         result = await key_service.get_service_status(user_id, service)
@@ -385,10 +405,16 @@ class TestKeyService:
         # Assert
         assert isinstance(result, ApiKeyServicesStatusResponse)
         expected_services = [
-            "openai", "weather", "flights", "googlemaps", 
-            "accommodation", "webcrawl", "calendar", "email"
+            "openai",
+            "weather",
+            "flights",
+            "googlemaps",
+            "accommodation",
+            "webcrawl",
+            "calendar",
+            "email",
         ]
-        
+
         for service in expected_services:
             assert service in result.services
             assert isinstance(result.services[service], ApiKeyServiceStatusResponse)
@@ -402,7 +428,9 @@ class TestKeyService:
         """Test error handling in get_all_services_status."""
         # Arrange
         user_id = "user_abc123"
-        mock_core_key_service.get_api_key_for_service.side_effect = Exception("Database error")
+        mock_core_key_service.get_api_key_for_service.side_effect = Exception(
+            "Database error"
+        )
 
         # Act
         result = await key_service.get_all_services_status(user_id)
@@ -410,10 +438,16 @@ class TestKeyService:
         # Assert - Should return status responses with safe defaults on errors
         assert isinstance(result, ApiKeyServicesStatusResponse)
         expected_services = [
-            "openai", "weather", "flights", "googlemaps", 
-            "accommodation", "webcrawl", "calendar", "email"
+            "openai",
+            "weather",
+            "flights",
+            "googlemaps",
+            "accommodation",
+            "webcrawl",
+            "calendar",
+            "email",
         ]
-        
+
         # All services should be present with safe defaults
         for service in expected_services:
             assert service in result.services
@@ -441,13 +475,14 @@ class TestKeyService:
         assert result.is_valid is True
         assert result.service == "openai"
         assert result.message == "API key format is valid and authenticated"
-        assert result.details == {"validation_type": "full_authentication", "rate_limit_remaining": 1000}
+        assert result.details == {
+            "validation_type": "full_authentication",
+            "rate_limit_remaining": 1000,
+        }
 
         mock_core_key_service.validate_api_key.assert_called_once_with(key_id, user_id)
 
-    async def test_validate_api_key_failure(
-        self, key_service, mock_core_key_service
-    ):
+    async def test_validate_api_key_failure(self, key_service, mock_core_key_service):
         """Test API key validation failure."""
         # Arrange
         user_id = "user_abc123"
@@ -629,7 +664,9 @@ class TestKeyService:
     ):
         """Test validation result model adaptation."""
         # Act
-        api_validation = key_service._adapt_validation_response(sample_validation_result)
+        api_validation = key_service._adapt_validation_response(
+            sample_validation_result
+        )
 
         # Assert
         assert isinstance(api_validation, ApiKeyValidationResponse)
@@ -655,23 +692,26 @@ class TestKeyService:
         """Test core key service lazy initialization."""
         # Arrange
         key_service = KeyService()
-        
+
         # Mock the lazy initialization
         mock_service = AsyncMock(spec=CoreKeyManagementService)
-        
+
         # Mock the get_core_key_management_service function
         async def mock_get_core_key_service():
             return mock_service
-            
+
         # Replace the function
         import api.services.key_service
+
         original_fn = api.services.key_service.get_core_key_management_service
-        api.services.key_service.get_core_key_management_service = mock_get_core_key_service
-        
+        api.services.key_service.get_core_key_management_service = (
+            mock_get_core_key_service
+        )
+
         try:
             # Act
             result = await key_service._get_core_key_service()
-            
+
             # Assert
             assert result is mock_service
             assert key_service.core_key_service is mock_service
@@ -687,11 +727,11 @@ class TestKeyService:
         # Arrange
         user_id = "user_abc123"
         request = CreateApiKeyRequest(
-            name="Test Key",
-            service="openai", 
-            key_value="sk-test123"
+            name="Test Key", service="openai", key_value="sk-test123"
         )
-        mock_core_key_service.create_api_key.side_effect = ServiceError("Encryption failed")
+        mock_core_key_service.create_api_key.side_effect = ServiceError(
+            "Encryption failed"
+        )
 
         # Act
         with pytest.raises(ServiceError):
@@ -705,25 +745,31 @@ class TestKeyService:
         """Test that service status includes all expected services."""
         # Act
         from api.services.key_service import KeyService
-        
+
         # Create a real instance to test the hardcoded service list
         service = KeyService()
-        
+
         # Mock the core service calls
         mock_core = AsyncMock()
         mock_core.get_api_key_for_service.return_value = None
         service.core_key_service = mock_core
-        
-        result = await service.get_all_services_status("user_123")
-        
+
+        await service.get_all_services_status("user_123")
+
         # Assert all expected services are present
         expected_services = {
-            "openai", "weather", "flights", "googlemaps",
-            "accommodation", "webcrawl", "calendar", "email"
+            "openai",
+            "weather",
+            "flights",
+            "googlemaps",
+            "accommodation",
+            "webcrawl",
+            "calendar",
+            "email",
         }
-        
+
         # When there's no error, services should be present
-        for service_name in expected_services:
+        for _service_name in expected_services:
             # The method calls get_service_status for each service
             # which should have been called if there were no errors
             pass  # This test verifies the service list is comprehensive
@@ -735,15 +781,16 @@ class TestKeyService:
         # Arrange
         user_id = "user_abc123"
         mock_core_key_service.get_user_api_keys.return_value = [sample_core_api_key]
-        
+
         # Act - Simulate concurrent calls
         import asyncio
+
         results = await asyncio.gather(
             key_service.get_user_api_keys(user_id),
             key_service.get_user_api_keys(user_id),
             key_service.get_user_api_keys(user_id),
         )
-        
+
         # Assert - All calls should succeed
         for result in results:
             assert isinstance(result, ApiKeyListResponse)

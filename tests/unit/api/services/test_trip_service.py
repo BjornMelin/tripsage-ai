@@ -5,14 +5,17 @@ Tests the thin wrapper functionality, model adaptation, error handling,
 and dependency injection patterns of the TripService.
 """
 
-import pytest
 from datetime import datetime, timezone
 from unittest.mock import AsyncMock
 from uuid import UUID, uuid4
 
-from api.services.trip_service import TripService, MockTripService
+import pytest
+
+from api.services.trip_service import MockTripService, TripService
 from tripsage_core.exceptions.exceptions import (
     CoreServiceError as ServiceError,
+)
+from tripsage_core.exceptions.exceptions import (
     CoreValidationError as ValidationError,
 )
 from tripsage_core.services.business.trip_service import (
@@ -53,23 +56,27 @@ class TestTripService:
     def sample_trip_list(self, sample_trip_data):
         """Sample list of trips."""
         trip2 = sample_trip_data.copy()
-        trip2.update({
-            "id": str(uuid4()),
-            "name": "Asian Journey",
-            "description": "Exploring Asian cultures",
-            "destination": "Asia",
-            "status": "active",
-        })
-        
+        trip2.update(
+            {
+                "id": str(uuid4()),
+                "name": "Asian Journey",
+                "description": "Exploring Asian cultures",
+                "destination": "Asia",
+                "status": "active",
+            }
+        )
+
         trip3 = sample_trip_data.copy()
-        trip3.update({
-            "id": str(uuid4()),
-            "name": "American Road Trip", 
-            "description": "Cross-country adventure",
-            "destination": "USA",
-            "status": "completed",
-        })
-        
+        trip3.update(
+            {
+                "id": str(uuid4()),
+                "name": "American Road Trip",
+                "description": "Cross-country adventure",
+                "destination": "USA",
+                "status": "completed",
+            }
+        )
+
         return [sample_trip_data, trip2, trip3]
 
     # Trip Creation Tests
@@ -87,7 +94,7 @@ class TestTripService:
             "end_date": "2024-06-25",
             "budget": 5000.0,
         }
-        
+
         mock_core_trip_service.create_trip.return_value = sample_trip_data
 
         # Act
@@ -106,7 +113,7 @@ class TestTripService:
         # Arrange
         user_id = "user_123"
         trip_input = {"name": ""}  # Invalid empty name
-        
+
         mock_core_trip_service.create_trip.side_effect = ValidationError(
             "Trip name cannot be empty"
         )
@@ -122,7 +129,7 @@ class TestTripService:
         # Arrange
         user_id = "user_123"
         trip_input = {"name": "Test Trip"}
-        
+
         mock_core_trip_service.create_trip.side_effect = ServiceError(
             "Database connection failed"
         )
@@ -138,7 +145,7 @@ class TestTripService:
         # Arrange
         user_id = "user_123"
         trip_input = {"name": "Test Trip"}
-        
+
         mock_core_trip_service.create_trip.side_effect = Exception("Unexpected error")
 
         # Act & Assert
@@ -164,9 +171,7 @@ class TestTripService:
             trip_id=trip_id, user_id=user_id
         )
 
-    async def test_get_trip_not_found(
-        self, trip_service, mock_core_trip_service
-    ):
+    async def test_get_trip_not_found(self, trip_service, mock_core_trip_service):
         """Test trip retrieval when trip not found."""
         # Arrange
         trip_id = uuid4()
@@ -197,16 +202,12 @@ class TestTripService:
         with pytest.raises(ValidationError, match="Invalid trip ID format"):
             await trip_service.get_trip(trip_id, user_id)
 
-    async def test_get_trip_service_error(
-        self, trip_service, mock_core_trip_service
-    ):
+    async def test_get_trip_service_error(self, trip_service, mock_core_trip_service):
         """Test trip retrieval with service error."""
         # Arrange
         trip_id = uuid4()
         user_id = "user_123"
-        mock_core_trip_service.get_trip.side_effect = ServiceError(
-            "Database error"
-        )
+        mock_core_trip_service.get_trip.side_effect = ServiceError("Database error")
 
         # Act & Assert
         with pytest.raises(ServiceError, match="Database error"):
@@ -321,7 +322,7 @@ class TestTripService:
         trip_id = UUID(sample_trip_data["id"])
         user_id = "user_123"
         updates = {"name": "Updated Trip Name", "budget": 6000.0}
-        
+
         updated_trip = sample_trip_data.copy()
         updated_trip.update(updates)
         mock_core_trip_service.update_trip.return_value = updated_trip
@@ -354,7 +355,7 @@ class TestTripService:
         trip_id = uuid4()
         user_id = "user_123"
         updates = {"name": ""}  # Invalid empty name
-        
+
         mock_core_trip_service.update_trip.side_effect = ValidationError(
             "Trip name cannot be empty"
         )
@@ -371,10 +372,8 @@ class TestTripService:
         trip_id = uuid4()
         user_id = "user_123"
         updates = {"name": "Updated Name"}
-        
-        mock_core_trip_service.update_trip.side_effect = ServiceError(
-            "Database error"
-        )
+
+        mock_core_trip_service.update_trip.side_effect = ServiceError("Database error")
 
         # Act & Assert
         with pytest.raises(ServiceError, match="Database error"):
@@ -388,7 +387,7 @@ class TestTripService:
         trip_id = uuid4()
         user_id = "user_123"
         updates = {"name": "Updated Name"}
-        
+
         mock_core_trip_service.update_trip.side_effect = Exception("Unexpected error")
 
         # Act & Assert
@@ -396,9 +395,7 @@ class TestTripService:
             await trip_service.update_trip(trip_id, user_id, updates)
 
     # Trip Deletion Tests
-    async def test_delete_trip_success(
-        self, trip_service, mock_core_trip_service
-    ):
+    async def test_delete_trip_success(self, trip_service, mock_core_trip_service):
         """Test successful trip deletion."""
         # Arrange
         trip_id = uuid4()
@@ -414,9 +411,7 @@ class TestTripService:
             trip_id=trip_id, user_id=user_id
         )
 
-    async def test_delete_trip_not_found(
-        self, trip_service, mock_core_trip_service
-    ):
+    async def test_delete_trip_not_found(self, trip_service, mock_core_trip_service):
         """Test trip deletion when trip not found."""
         # Arrange
         trip_id = uuid4()
@@ -449,9 +444,7 @@ class TestTripService:
         # Arrange
         trip_id = uuid4()
         user_id = "user_123"
-        mock_core_trip_service.delete_trip.side_effect = ServiceError(
-            "Database error"
-        )
+        mock_core_trip_service.delete_trip.side_effect = ServiceError("Database error")
 
         # Act & Assert
         with pytest.raises(ServiceError, match="Database error"):
@@ -479,7 +472,7 @@ class TestTripService:
         user_id = "user_123"
         query = "European"
         status = "planning"
-        
+
         # Mock the core service to have search_trips method
         mock_core_trip_service.search_trips.return_value = [sample_trip_list[0]]
 
@@ -499,13 +492,13 @@ class TestTripService:
         # Arrange
         user_id = "user_123"
         query = "European"
-        
+
         # Create a mock core service without search_trips method
         mock_core_service = AsyncMock()
         # Remove search_trips method to simulate fallback scenario
         del mock_core_service.search_trips
         mock_core_service.get_user_trips.return_value = sample_trip_list
-        
+
         trip_service.core_trip_service = mock_core_service
 
         # Act
@@ -525,12 +518,12 @@ class TestTripService:
         # Arrange
         user_id = "user_123"
         status = "active"
-        
+
         # Create a mock core service without search_trips method
         mock_core_service = AsyncMock()
         del mock_core_service.search_trips
         mock_core_service.get_user_trips.return_value = sample_trip_list
-        
+
         trip_service.core_trip_service = mock_core_service
 
         # Act
@@ -548,12 +541,12 @@ class TestTripService:
         user_id = "user_123"
         query = "Asian"
         status = "active"
-        
+
         # Create a mock core service without search_trips method
         mock_core_service = AsyncMock()
         del mock_core_service.search_trips
         mock_core_service.get_user_trips.return_value = sample_trip_list
-        
+
         trip_service.core_trip_service = mock_core_service
 
         # Act
@@ -592,9 +585,7 @@ class TestTripService:
         """Test trip search with service error."""
         # Arrange
         user_id = "user_123"
-        mock_core_trip_service.search_trips.side_effect = ServiceError(
-            "Database error"
-        )
+        mock_core_trip_service.search_trips.side_effect = ServiceError("Database error")
 
         # Act & Assert
         with pytest.raises(ServiceError, match="Database error"):
@@ -628,23 +619,24 @@ class TestTripService:
         """Test core trip service lazy initialization."""
         # Arrange
         trip_service = TripService()
-        
+
         # Mock the lazy initialization
         mock_service = AsyncMock(spec=CoreTripService)
-        
+
         # Mock the get_core_trip_service function
         async def mock_get_core_trip_service():
             return mock_service
-            
+
         # Replace the function
         import api.services.trip_service
+
         original_fn = api.services.trip_service.get_core_trip_service
         api.services.trip_service.get_core_trip_service = mock_get_core_trip_service
-        
+
         try:
             # Act
             result = await trip_service._get_core_trip_service()
-            
+
             # Assert
             assert result is mock_service
             assert trip_service.core_trip_service is mock_service
@@ -656,20 +648,21 @@ class TestTripService:
         """Test core trip service initialization failure fallback."""
         # Arrange
         trip_service = TripService()
-        
+
         # Mock the get_core_trip_service to raise an exception
         async def mock_get_core_trip_service():
             raise Exception("Database not configured")
-            
+
         # Replace the function
         import api.services.trip_service
+
         original_fn = api.services.trip_service.get_core_trip_service
         api.services.trip_service.get_core_trip_service = mock_get_core_trip_service
-        
+
         try:
             # Act
             result = await trip_service._get_core_trip_service()
-            
+
             # Assert
             assert isinstance(result, MockTripService)
             assert trip_service.core_trip_service is result
@@ -738,12 +731,12 @@ class TestTripService:
         # Arrange
         user_id = "user_123"
         query = "EUROPEAN"  # Upper case query
-        
+
         # Create a mock core service without search_trips method
         mock_core_service = AsyncMock()
         del mock_core_service.search_trips
         mock_core_service.get_user_trips.return_value = sample_trip_list
-        
+
         trip_service.core_trip_service = mock_core_service
 
         # Act
@@ -760,12 +753,12 @@ class TestTripService:
         # Arrange
         user_id = "user_123"
         query = "cultures"  # This appears in Asian trip description
-        
+
         # Create a mock core service without search_trips method
         mock_core_service = AsyncMock()
         del mock_core_service.search_trips
         mock_core_service.get_user_trips.return_value = sample_trip_list
-        
+
         trip_service.core_trip_service = mock_core_service
 
         # Act
