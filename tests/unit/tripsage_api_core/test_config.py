@@ -543,10 +543,15 @@ class TestDocumentation:
         """Test that all fields have descriptions."""
         # Check that field info includes descriptions for API-specific fields
         api_fields = [
-            "api_prefix", "api_title", "api_version", "access_token_expire_minutes",
-            "cors_origins", "rate_limit_enabled", "enable_byok"
+            "api_prefix",
+            "api_title",
+            "api_version",
+            "access_token_expire_minutes",
+            "cors_origins",
+            "rate_limit_enabled",
+            "enable_byok",
         ]
-        
+
         for field_name in api_fields:
             field_info = Settings.model_fields[field_name]
             assert field_info.description is not None
