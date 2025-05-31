@@ -11,8 +11,6 @@ from fastapi import Depends, Request, Security
 from fastapi.security import APIKeyHeader, APIKeyQuery, OAuth2PasswordBearer
 
 from tripsage.api.core.config import get_settings
-
-settings = get_settings()
 from tripsage_core.exceptions.exceptions import (
     CoreAuthenticationError as AuthenticationError,
 )
@@ -24,6 +22,9 @@ from tripsage_core.services.business.auth_service import (
 )
 from tripsage_core.services.infrastructure import get_cache_service
 from tripsage_core.utils.session_utils import SessionMemory
+
+# Initialize settings after imports
+settings = get_settings()
 
 # OAuth2 setup
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/v1/auth/token", auto_error=False)
