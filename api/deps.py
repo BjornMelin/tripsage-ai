@@ -1,7 +1,8 @@
 """
 Dependency injection for TripSage API.
 
-This module centralizes all FastAPI dependencies for the TripSage API.
+This module centralizes all FastAPI dependencies for the TripSage API,
+focusing on core services and JWT-based authentication.
 """
 
 from typing import Optional
@@ -12,9 +13,14 @@ from fastapi.security import APIKeyHeader, APIKeyQuery, OAuth2PasswordBearer
 from tripsage.api.core.config import get_settings
 
 settings = get_settings()
-from tripsage.mcp_abstraction import MCPManager, mcp_manager
 from tripsage_core.exceptions.exceptions import (
     CoreAuthenticationError as AuthenticationError,
+)
+from tripsage_core.services.business.auth_service import (
+    AuthenticationService as CoreAuthService,
+)
+from tripsage_core.services.business.auth_service import (
+    get_auth_service as get_core_auth_service,
 )
 from tripsage_core.services.infrastructure import get_cache_service
 from tripsage_core.utils.session_utils import SessionMemory
@@ -27,14 +33,35 @@ api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
 api_key_query = APIKeyQuery(name="api_key", auto_error=False)
 
 
-# MCP Manager dependency
-def get_mcp_manager_dep() -> MCPManager:
-    """Get the MCP manager instance as a dependency.
+# Core auth service dependency
+async def get_core_auth_service_dep() -> CoreAuthService:
+    """Get the core auth service instance as a dependency.
 
     Returns:
-        The singleton MCP manager instance
+        CoreAuthService instance
     """
-    return mcp_manager
+    return await get_core_auth_service()
+
+
+# Settings dependency
+def get_settings_dependency():
+    """Get settings instance as a dependency.
+
+    Returns:
+        Settings instance
+    """
+    return get_settings()
+
+
+# Database dependency
+async def get_db():
+    """Get database session as a dependency.
+
+    This is a placeholder function. In a full implementation,
+    this would return an actual database session.
+    """
+    # Placeholder - implement when database integration is complete
+    return None
 
 
 # Session memory dependency
@@ -64,10 +91,14 @@ async def get_session_memory(request: Request) -> SessionMemory:
 
 
 # Authentication dependencies
+_core_auth_service_dep = Depends(get_core_auth_service_dep)
+
+
 async def get_current_user_optional(
     token: Optional[str] = Depends(oauth2_scheme),
     api_key_header: Optional[str] = Security(api_key_header),
     api_key_query: Optional[str] = Security(api_key_query),
+    auth_service: CoreAuthService = _core_auth_service_dep,
 ):
     """Get the current user if authenticated, otherwise return None.
 
@@ -75,6 +106,7 @@ async def get_current_user_optional(
         token: OAuth2 token
         api_key_header: API key from header
         api_key_query: API key from query parameter
+        auth_service: Core authentication service
 
     Returns:
         User object if authenticated, None otherwise
@@ -99,17 +131,15 @@ async def get_current_user_optional(
     # If no API key, check OAuth2 token
     if token:
         try:
-            # Validate JWT token and get user info
-            # This is a simplified implementation
-            # In a real system, you'd verify the JWT signature and extract claims
-            import jwt
-
-            payload = jwt.decode(token, settings.secret_key, algorithms=["HS256"])
-
+            # Use core auth service for JWT validation
+            user = await auth_service.get_current_user(token)
             return {
-                "id": payload["sub"],
-                "username": payload["username"],
+                "id": user.id,
+                "username": user.username,
+                "email": user.email,
                 "is_api": False,
+                "is_active": user.is_active,
+                "is_verified": user.is_verified,
             }
         except Exception:
             # Invalid token - return None for optional auth
@@ -119,8 +149,19 @@ async def get_current_user_optional(
     return None
 
 
-async def get_current_user():
+async def get_current_user(
+    token: Optional[str] = Depends(oauth2_scheme),
+    api_key_header: Optional[str] = Security(api_key_header),
+    api_key_query: Optional[str] = Security(api_key_query),
+    auth_service: CoreAuthService = _core_auth_service_dep,
+):
     """Get the current authenticated user or raise an error.
+
+    Args:
+        token: OAuth2 token
+        api_key_header: API key from header
+        api_key_query: API key from query parameter
+        auth_service: Core authentication service
 
     Returns:
         User object if authenticated
@@ -128,9 +169,11 @@ async def get_current_user():
     Raises:
         AuthenticationError: If no user is authenticated
     """
-    user = await get_current_user_optional()
+    user = await get_current_user_optional(
+        token, api_key_header, api_key_query, auth_service
+    )
     if user is None:
-        raise AuthenticationError(message="Not authenticated")
+        raise AuthenticationError("Not authenticated")
     return user
 
 
@@ -165,102 +208,36 @@ async def verify_api_key(
     return True
 
 
-# Accommodations MCP dependency (only remaining MCP service)
-def get_accommodations_mcp_dep():
-    """Get the accommodations MCP wrapper as a dependency."""
-    mcp_manager_dependency = Depends(get_mcp_manager_dep)
+# API Service dependencies (using the refactored thin wrappers)
+async def get_auth_service_dep():
+    """Get the API auth service instance as a dependency."""
+    from api.services.auth_service import get_auth_service
 
-    async def _get_accommodations_mcp(mcp_manager=mcp_manager_dependency):
-        return await mcp_manager.initialize_mcp("accommodations")
-
-    return _get_accommodations_mcp
+    return await get_auth_service()
 
 
-# Direct service dependencies (using comprehensive API implementations)
-async def get_webcrawl_service():
-    """Get the direct WebCrawl service."""
-    from tripsage_core.services.external_apis.webcrawl_service import WebCrawlService
+async def get_key_service_dep():
+    """Get the API key service instance as a dependency."""
+    from api.services.key_service import get_key_service
 
-    return WebCrawlService()
-
-
-async def get_memory_service():
-    """Get the direct Memory service (Mem0)."""
-    from tripsage_core.services.business.memory_service import MemoryService
-
-    return MemoryService()
+    return await get_key_service()
 
 
-async def get_dragonfly_service():
-    """Get the DragonflyDB cache service."""
+async def get_trip_service_dep():
+    """Get the API trip service instance as a dependency."""
+    from api.services.trip_service import get_trip_service
+
+    return await get_trip_service()
+
+
+# Cache service dependency
+async def get_cache_service_dep():
+    """Get the cache service instance as a dependency."""
     return await get_cache_service()
 
 
-async def get_google_maps_service():
-    """Get the direct Google Maps service."""
-    from tripsage_core.services.external_apis.google_maps_service import (
-        GoogleMapsService,
-    )
-
-    return GoogleMapsService()
-
-
-async def get_playwright_service():
-    """Get the direct Playwright service for complex web scraping."""
-    from tripsage_core.services.external_apis.playwright_service import (
-        PlaywrightService,
-    )
-
-    return PlaywrightService()
-
-
-async def get_weather_service():
-    """Get the comprehensive OpenWeatherMap API service."""
-    from tripsage_core.services.external_apis.weather_service import (
-        WeatherService as OpenWeatherMapService,
-    )
-
-    return OpenWeatherMapService()
-
-
-async def get_calendar_service():
-    """Get the comprehensive Google Calendar API service."""
-    from tripsage_core.services.external_apis.calendar_service import (
-        GoogleCalendarService,
-    )
-
-    service = GoogleCalendarService()
-    await service.initialize()
-    return service
-
-
-async def get_flights_service():
-    """Get the comprehensive Duffel Flights API service."""
-    from tripsage_core.services.external_apis.duffel_http_client import (
-        DuffelHTTPClient as DuffelFlightsService,
-    )
-
-    return DuffelFlightsService()
-
-
-async def get_time_service():
-    """Get the direct Time service using Python datetime."""
-    from tripsage_core.services.external_apis.time_service import TimeService
-
-    return TimeService()
-
-
 # Define singleton dependencies
-mcp_manager_dependency = Depends(get_mcp_manager_dep)
-accommodations_mcp_dependency = Depends(get_accommodations_mcp_dep())
-
-# Direct service dependencies
-webcrawl_service_dependency = Depends(get_webcrawl_service)
-memory_service_dependency = Depends(get_memory_service)
-dragonfly_service_dependency = Depends(get_dragonfly_service)
-google_maps_service_dependency = Depends(get_google_maps_service)
-playwright_service_dependency = Depends(get_playwright_service)
-weather_service_dependency = Depends(get_weather_service)
-calendar_service_dependency = Depends(get_calendar_service)
-flights_service_dependency = Depends(get_flights_service)
-time_service_dependency = Depends(get_time_service)
+auth_service_dependency = Depends(get_auth_service_dep)
+key_service_dependency = Depends(get_key_service_dep)
+trip_service_dependency = Depends(get_trip_service_dep)
+cache_service_dependency = Depends(get_cache_service_dep)

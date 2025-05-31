@@ -1157,6 +1157,7 @@ name = "tripsage-ai"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
+    { name = "cryptography" },
     { name = "email-validator" },
     { name = "fakeredis" },
     { name = "fastapi" },
@@ -1215,6 +1216,7 @@ test = [
 [package.metadata]
 requires-dist = [
     { name = "coverage", extras = ["toml"], marker = "extra == 'dev'", specifier = ">=7.6.9" },
+    { name = "cryptography", specifier = ">=45.0.3" },
     { name = "email-validator", specifier = ">=2.2.0" },
     { name = "fakeredis", specifier = ">=2.29.0" },
     { name = "fakeredis", marker = "extra == 'dev'", specifier = ">=2.29.0" },

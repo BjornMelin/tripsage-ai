@@ -10,7 +10,7 @@ from typing import List
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from pydantic import BaseModel, Field
 
-from tripsage.api.core.dependencies import get_current_user
+from api.deps import get_current_user
 from tripsage_core.models.db.user import UserDB
 from tripsage_core.services.file_processor import FileProcessor
 from tripsage_core.utils.file_utils import MAX_SESSION_SIZE, validate_file

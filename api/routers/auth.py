@@ -12,7 +12,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
 
-from api.deps import get_current_user
+from api.deps import auth_service_dependency, get_current_user
 from api.schemas.requests.auth import RefreshTokenRequest, RegisterUserRequest
 from api.schemas.responses.auth import TokenResponse, UserResponse
 from api.services.auth_service import AuthService
@@ -25,17 +25,8 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
-_auth_service_singleton = AuthService()
-
-
-def get_auth_service() -> AuthService:
-    """Dependency provider for the AuthService singleton."""
-    return _auth_service_singleton
-
-
 # Module-level dependency singletons to avoid B008 linting errors
 get_current_user_dep = Depends(get_current_user)
-get_auth_service_dep = Depends(get_auth_service)
 oauth2_form_dep = Depends()
 
 
@@ -44,7 +35,7 @@ oauth2_form_dep = Depends()
 )
 async def register(
     request: RegisterUserRequest,
-    auth_service: AuthService = get_auth_service_dep,
+    auth_service: AuthService = auth_service_dependency,
 ):
     """Register a new user.
 
@@ -83,7 +74,7 @@ async def register(
 async def login(
     response: Response,
     form_data: OAuth2PasswordRequestForm = oauth2_form_dep,
-    auth_service: AuthService = get_auth_service_dep,
+    auth_service: AuthService = auth_service_dependency,
 ):
     """Authenticate and get access tokens.
 
@@ -147,7 +138,7 @@ async def refresh_token(
     response: Response,
     request: RefreshTokenRequest = None,
     refresh_token: Optional[str] = None,
-    auth_service: AuthService = get_auth_service_dep,
+    auth_service: AuthService = auth_service_dependency,
 ):
     """Refresh access token.
 
@@ -247,7 +238,7 @@ async def logout(response: Response):
 @router.get("/me", response_model=UserResponse)
 async def get_current_user_info(
     current_user: dict = get_current_user_dep,
-    auth_service: AuthService = get_auth_service_dep,
+    auth_service: AuthService = auth_service_dependency,
 ):
     """Get information about the current user.
 

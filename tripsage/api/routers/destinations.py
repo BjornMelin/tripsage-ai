@@ -7,7 +7,7 @@ from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from tripsage.api.core.dependencies import get_current_user
+from api.deps import get_current_user
 from tripsage.api.models.destinations import (
     DestinationDetails,
     DestinationRecommendation,
