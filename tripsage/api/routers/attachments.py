@@ -10,8 +10,8 @@ from typing import List
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from pydantic import BaseModel, Field
 
-from api.deps import get_current_user
-from tripsage_core.models.db.user import UserDB
+from tripsage.api.core.dependencies import get_current_user
+from tripsage_core.models.db.user import User
 from tripsage_core.services.file_processor import FileProcessor
 from tripsage_core.utils.file_utils import MAX_SESSION_SIZE, validate_file
 
@@ -62,7 +62,7 @@ class BatchUploadResponse(BaseModel):
 @router.post("/upload", response_model=FileUploadResponse)
 async def upload_file(
     file: UploadFile = file_upload_dep,
-    current_user: UserDB = get_current_user_dep,
+    current_user: User = get_current_user_dep,
     processor: FileProcessor = get_file_processor_dep,
 ):
     """Upload and process a single file attachment.
@@ -116,7 +116,7 @@ async def upload_file(
 @router.post("/upload/batch", response_model=BatchUploadResponse)
 async def upload_files_batch(
     files: List[UploadFile] = files_upload_dep,
-    current_user: UserDB = get_current_user_dep,
+    current_user: User = get_current_user_dep,
     processor: FileProcessor = get_file_processor_dep,
 ):
     """Upload and process multiple files in a batch.
@@ -200,7 +200,7 @@ async def upload_files_batch(
 @router.get("/files/{file_id}")
 async def get_file_metadata(
     file_id: str,
-    current_user: UserDB = get_current_user_dep,
+    current_user: User = get_current_user_dep,
     processor: FileProcessor = get_file_processor_dep,
 ):
     """Get metadata and analysis results for an uploaded file.
@@ -228,7 +228,7 @@ async def get_file_metadata(
 @router.delete("/files/{file_id}")
 async def delete_file(
     file_id: str,
-    current_user: UserDB = get_current_user_dep,
+    current_user: User = get_current_user_dep,
     processor: FileProcessor = get_file_processor_dep,
 ):
     """Delete an uploaded file and its associated data.
@@ -256,7 +256,7 @@ async def delete_file(
 
 @router.get("/files")
 async def list_user_files(
-    current_user: UserDB = get_current_user_dep,
+    current_user: User = get_current_user_dep,
     processor: FileProcessor = get_file_processor_dep,
     limit: int = 50,
     offset: int = 0,

@@ -9,7 +9,6 @@ from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
 
-from api.services.key_service import KeyService, get_key_service
 from tripsage.api.middlewares.auth import get_current_user
 from tripsage.api.models.requests.api_keys import (
     ApiKeyCreate,
@@ -19,6 +18,12 @@ from tripsage.api.models.requests.api_keys import (
 from tripsage.api.models.responses.api_keys import (
     ApiKeyResponse,
     ApiKeyValidateResponse,
+)
+from tripsage_core.services.business.key_management_service import (
+    KeyManagementService as KeyService,
+)
+from tripsage_core.services.business.key_management_service import (
+    get_key_management_service as get_key_service,
 )
 from tripsage_core.services.infrastructure.key_monitoring_service import (
     KeyMonitoringService,
