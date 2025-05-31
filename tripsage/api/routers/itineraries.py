@@ -7,7 +7,7 @@ from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from api.deps import get_current_user
+from tripsage.api.middlewares.auth import get_current_user
 from tripsage.api.models.itineraries import (
     Itinerary,
     ItineraryConflictCheckResponse,
@@ -21,21 +21,10 @@ from tripsage.api.models.itineraries import (
     ItinerarySearchResponse,
     ItineraryUpdateRequest,
 )
-
-# Note: ItineraryService needs to be refactored to use the new pattern
-# For now, keeping the old import until it's refactored
-from tripsage.api.services.itinerary import ItineraryService
+from tripsage.api.services.itinerary import ItineraryService, get_itinerary_service
 from tripsage_core.exceptions.exceptions import (
     CoreResourceNotFoundError as ResourceNotFoundError,
 )
-
-_itinerary_service_singleton = ItineraryService()
-
-
-def get_itinerary_service() -> ItineraryService:
-    """Dependency provider for the ItineraryService singleton."""
-    return _itinerary_service_singleton
-
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -45,11 +34,11 @@ logger = logging.getLogger(__name__)
 async def create_itinerary(
     request: ItineraryCreateRequest,
     user_id: str = Depends(get_current_user),
+    itinerary_service: ItineraryService = Depends(get_itinerary_service),
 ):
     """
     Create a new itinerary.
     """
-    itinerary_service = get_itinerary_service()
     try:
         return await itinerary_service.create_itinerary(user_id, request)
     except ValueError as e:
@@ -63,11 +52,11 @@ async def create_itinerary(
 @router.get("", response_model=List[Itinerary])
 async def list_itineraries(
     user_id: str = Depends(get_current_user),
+    itinerary_service: ItineraryService = Depends(get_itinerary_service),
 ):
     """
     List all itineraries for the current user.
     """
-    itinerary_service = get_itinerary_service()
     return await itinerary_service.list_itineraries(user_id)
 
 
@@ -75,11 +64,11 @@ async def list_itineraries(
 async def search_itineraries(
     request: ItinerarySearchRequest,
     user_id: str = Depends(get_current_user),
+    itinerary_service: ItineraryService = Depends(get_itinerary_service),
 ):
     """
     Search for itineraries based on criteria.
     """
-    itinerary_service = get_itinerary_service()
     return await itinerary_service.search_itineraries(user_id, request)
 
 
@@ -87,11 +76,11 @@ async def search_itineraries(
 async def get_itinerary(
     itinerary_id: str,
     user_id: str = Depends(get_current_user),
+    itinerary_service: ItineraryService = Depends(get_itinerary_service),
 ):
     """
     Get a specific itinerary by ID.
     """
-    itinerary_service = get_itinerary_service()
     try:
         return await itinerary_service.get_itinerary(user_id, itinerary_id)
     except ResourceNotFoundError as e:
@@ -107,11 +96,11 @@ async def update_itinerary(
     itinerary_id: str,
     request: ItineraryUpdateRequest,
     user_id: str = Depends(get_current_user),
+    itinerary_service: ItineraryService = Depends(get_itinerary_service),
 ):
     """
     Update an existing itinerary.
     """
-    itinerary_service = get_itinerary_service()
     try:
         return await itinerary_service.update_itinerary(user_id, itinerary_id, request)
     except ResourceNotFoundError as e:
@@ -132,11 +121,11 @@ async def update_itinerary(
 async def delete_itinerary(
     itinerary_id: str,
     user_id: str = Depends(get_current_user),
+    itinerary_service: ItineraryService = Depends(get_itinerary_service),
 ):
     """
     Delete an itinerary.
     """
-    itinerary_service = get_itinerary_service()
     try:
         await itinerary_service.delete_itinerary(user_id, itinerary_id)
     except ResourceNotFoundError as e:
@@ -152,11 +141,11 @@ async def add_item_to_itinerary(
     itinerary_id: str,
     request: ItineraryItemCreateRequest,
     user_id: str = Depends(get_current_user),
+    itinerary_service: ItineraryService = Depends(get_itinerary_service),
 ):
     """
     Add an item to an itinerary.
     """
-    itinerary_service = get_itinerary_service()
     try:
         return await itinerary_service.add_item_to_itinerary(
             user_id, itinerary_id, request
@@ -180,11 +169,11 @@ async def get_itinerary_item(
     itinerary_id: str,
     item_id: str,
     user_id: str = Depends(get_current_user),
+    itinerary_service: ItineraryService = Depends(get_itinerary_service),
 ):
     """
     Get a specific item from an itinerary.
     """
-    itinerary_service = get_itinerary_service()
     try:
         return await itinerary_service.get_item(user_id, itinerary_id, item_id)
     except ResourceNotFoundError as e:
@@ -201,11 +190,11 @@ async def update_itinerary_item(
     item_id: str,
     request: ItineraryItemUpdateRequest,
     user_id: str = Depends(get_current_user),
+    itinerary_service: ItineraryService = Depends(get_itinerary_service),
 ):
     """
     Update an item in an itinerary.
     """
-    itinerary_service = get_itinerary_service()
     try:
         return await itinerary_service.update_item(
             user_id, itinerary_id, item_id, request
@@ -231,11 +220,11 @@ async def delete_itinerary_item(
     itinerary_id: str,
     item_id: str,
     user_id: str = Depends(get_current_user),
+    itinerary_service: ItineraryService = Depends(get_itinerary_service),
 ):
     """
     Delete an item from an itinerary.
     """
-    itinerary_service = get_itinerary_service()
     try:
         await itinerary_service.delete_item(user_id, itinerary_id, item_id)
     except ResourceNotFoundError as e:
@@ -250,11 +239,11 @@ async def delete_itinerary_item(
 async def check_itinerary_conflicts(
     itinerary_id: str,
     user_id: str = Depends(get_current_user),
+    itinerary_service: ItineraryService = Depends(get_itinerary_service),
 ):
     """
     Check for conflicts in an itinerary schedule.
     """
-    itinerary_service = get_itinerary_service()
     try:
         return await itinerary_service.check_conflicts(user_id, itinerary_id)
     except ResourceNotFoundError as e:
@@ -269,11 +258,11 @@ async def check_itinerary_conflicts(
 async def optimize_itinerary(
     request: ItineraryOptimizeRequest,
     user_id: str = Depends(get_current_user),
+    itinerary_service: ItineraryService = Depends(get_itinerary_service),
 ):
     """
     Optimize an itinerary based on provided settings.
     """
-    itinerary_service = get_itinerary_service()
     try:
         return await itinerary_service.optimize_itinerary(user_id, request)
     except ResourceNotFoundError as e:
