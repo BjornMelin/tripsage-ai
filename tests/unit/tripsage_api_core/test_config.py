@@ -466,7 +466,8 @@ class TestErrorHandling:
 
     def test_negative_rate_limits(self):
         """Test handling of negative rate limits."""
-        # Pydantic allows negative integers by default, would need custom validator to restrict
+        # Pydantic allows negative integers by default, would need
+        # custom validator to restrict
         settings = Settings(rate_limit_requests=-1)
         assert settings.rate_limit_requests == -1
 
@@ -477,7 +478,8 @@ class TestErrorHandling:
 
     def test_empty_string_validation(self):
         """Test handling of empty string values."""
-        # Pydantic allows empty strings by default, would need custom validator to restrict
+        # Pydantic allows empty strings by default, would need custom validator to
+        # restrict
         settings = Settings(api_prefix="")
         assert settings.api_prefix == ""
 

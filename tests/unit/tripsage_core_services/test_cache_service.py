@@ -2,7 +2,8 @@
 Comprehensive test suite for tripsage_core.services.infrastructure.cache_service module.
 
 This module provides extensive tests for the cache service functionality,
-including Redis/DragonflyDB operations, key management, TTL handling, and error scenarios.
+including Redis/DragonflyDB operations, key management, TTL handling,
+and error scenarios.
 """
 
 import asyncio
