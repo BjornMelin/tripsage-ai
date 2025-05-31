@@ -3,7 +3,7 @@
 This package contains organized Pydantic models with clear separation of concerns:
 
 - common/     : Shared domain models and data structures
-- requests/   : API request schemas and validation models  
+- requests/   : API request schemas and validation models
 - responses/  : API response schemas and output models
 
 Import directly from the appropriate subdirectory:
@@ -19,6 +19,8 @@ For shared types from tripsage_core:
 # Re-export shared types for convenience
 from tripsage_core.models.schemas_common import (
     BookingStatus as BookingStatus,
+)
+from tripsage_core.models.schemas_common import (
     CancellationPolicy,
 )
 
