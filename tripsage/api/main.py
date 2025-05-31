@@ -15,9 +15,11 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from tripsage.api.core.config import get_settings
 from tripsage.api.core.openapi import custom_openapi
-from tripsage.api.middlewares.auth import AuthMiddleware
-from tripsage.api.middlewares.logging import LoggingMiddleware
-from tripsage.api.middlewares.rate_limit import RateLimitMiddleware
+from tripsage.api.middlewares import (
+    AuthenticationMiddleware,
+    EnhancedRateLimitMiddleware,
+    LoggingMiddleware,
+)
 from tripsage.api.routers import (
     accommodations,
     auth,
@@ -104,12 +106,14 @@ def create_app() -> FastAPI:
     # Logging middleware should be first to log all requests
     app.add_middleware(LoggingMiddleware)
 
-    # Rate limiting middleware
-    use_redis = bool(settings.dragonfly.url)
-    app.add_middleware(RateLimitMiddleware, settings=settings, use_redis=use_redis)
+    # Enhanced rate limiting middleware with principal-based limits
+    use_dragonfly = bool(settings.dragonfly.url)
+    app.add_middleware(
+        EnhancedRateLimitMiddleware, settings=settings, use_dragonfly=use_dragonfly
+    )
 
-    # Authentication middleware
-    app.add_middleware(AuthMiddleware, settings=settings)
+    # Enhanced authentication middleware supporting JWT and API keys
+    app.add_middleware(AuthenticationMiddleware, settings=settings)
 
     # Add key operation rate limiting middleware
     key_monitoring_service = KeyMonitoringService(settings)

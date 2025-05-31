@@ -10,7 +10,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, status
 
-from tripsage.api.middlewares.auth import get_current_user
+from tripsage.api.core.dependencies import get_current_user
 from tripsage.api.models.requests.accommodations import (
     AccommodationDetailsRequest,
     AccommodationSearchRequest,

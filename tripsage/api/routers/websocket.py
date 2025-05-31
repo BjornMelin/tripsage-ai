@@ -15,7 +15,7 @@ from fastapi import (
     WebSocket,
     WebSocketDisconnect,
 )
-from pydantic import ValidationError
+from pydantic import Field, ValidationError
 
 from tripsage.agents.chat import ChatAgent
 from tripsage.api.core.dependencies import get_db
@@ -27,11 +27,7 @@ from tripsage.services.core.chat_service import ChatService
 from tripsage_core.models.schemas_common.chat import (
     ChatMessage as WebSocketMessage,
 )
-from tripsage_core.models.schemas_common.chat import (
-    MessageRole,
-)
 from tripsage_core.services.infrastructure.websocket_manager import (
-    ConnectionStatus,
     WebSocketEvent,
     WebSocketEventType,
     websocket_manager,
@@ -50,8 +46,8 @@ class ChatMessageChunkEvent(WebSocketEvent):
 
 
 class ConnectionEvent(WebSocketEvent):
-    status: ConnectionStatus
-    connection_id: str
+    status: str = Field(..., description="Connection status")
+    connection_id: str = Field(..., description="Connection ID")
 
 
 class ErrorEvent(WebSocketEvent):
@@ -136,7 +132,7 @@ async def chat_websocket(
 
         # Send connection established event
         connection_event = ConnectionEvent(
-            status=ConnectionStatus.CONNECTED,
+            status="connected",
             connection_id=connection_id,
             user_id=user_id,
             session_id=session_id,
@@ -321,7 +317,7 @@ async def agent_status_websocket(
 
         # Send connection established event
         connection_event = ConnectionEvent(
-            status=ConnectionStatus.CONNECTED,
+            status="connected",
             connection_id=connection_id,
             user_id=user_id,
         )
@@ -439,7 +435,7 @@ async def handle_chat_message(
 
         # Create user message
         user_message = WebSocketMessage(
-            role=MessageRole.USER,
+            role="user",
             content=content,
             session_id=session_id,
             user_id=user_id,
@@ -533,7 +529,7 @@ async def handle_chat_message(
 
         # Send final complete message event
         assistant_message = WebSocketMessage(
-            role=MessageRole.ASSISTANT,
+            role="assistant",
             content=full_content,
             session_id=session_id,
             user_id=user_id,
