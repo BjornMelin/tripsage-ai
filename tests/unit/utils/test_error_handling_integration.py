@@ -20,10 +20,9 @@ from tripsage_core.utils.error_handling_utils import (
     create_mcp_error,
     create_validation_error,
     # Utility functions
-    format_exception,
     log_exception,
-    safe_execute,
-    with_error_handling,
+    safe_execute_with_logging,
+    with_error_handling_and_logging,
 )
 
 
@@ -55,15 +54,15 @@ class TestUpdatedUtilityFunctions:
     """Test updated utility functions that use core exceptions."""
 
     def test_format_exception_delegation(self):
-        """Test that format_exception delegates to core implementation."""
+        """Test that error exceptions use core implementation."""
         exc = CoreValidationError("Test validation error")
-        result = format_exception(exc)
 
-        # Should return the core exception's to_dict() output
-        expected = exc.to_dict()
-        assert result == expected
+        # Should have the core exception's to_dict() method
+        result = exc.to_dict()
+        assert "message" in result
+        assert result["message"] == "Test validation error"
 
-    @patch("tripsage.utils.error_handling.get_logger")
+    @patch("tripsage_core.utils.error_handling_utils.get_logger")
     def test_log_exception_with_mcp_error(self, mock_get_logger):
         """Test log_exception with CoreMCPError."""
         mock_logger = Mock()
@@ -85,7 +84,7 @@ class TestUpdatedUtilityFunctions:
         assert "flights-mcp" in call_args
         assert "search_flights" in call_args
 
-    @patch("tripsage.utils.error_handling.get_logger")
+    @patch("tripsage_core.utils.error_handling_utils.get_logger")
     def test_log_exception_with_api_error(self, mock_get_logger):
         """Test log_exception with CoreExternalAPIError."""
         mock_logger = Mock()
@@ -107,7 +106,7 @@ class TestUpdatedUtilityFunctions:
         assert "openai" in call_args
         assert 429 in call_args
 
-    @patch("tripsage.utils.error_handling.get_logger")
+    @patch("tripsage_core.utils.error_handling_utils.get_logger")
     def test_log_exception_with_core_exception(self, mock_get_logger):
         """Test log_exception with generic CoreTripSageError."""
         mock_logger = Mock()
@@ -124,7 +123,7 @@ class TestUpdatedUtilityFunctions:
         assert "CoreValidationError" in call_args[1]
         assert "Validation failed" in call_args[2]
 
-    @patch("tripsage.utils.error_handling.get_logger")
+    @patch("tripsage_core.utils.error_handling_utils.get_logger")
     def test_log_exception_with_standard_exception(self, mock_get_logger):
         """Test log_exception with standard Python exception."""
         mock_logger = Mock()
@@ -147,21 +146,23 @@ class TestUpdatedUtilityFunctions:
         def test_func(x, y):
             return x * y
 
-        result = safe_execute(test_func, 3, 4, fallback=0)
+        result = safe_execute_with_logging(test_func, 3, 4, fallback=0)
         assert result == 12
 
         # Test with exception
         def failing_func():
             raise ValueError("Test error")
 
-        result = safe_execute(failing_func, fallback="fallback_value")
+        result = safe_execute_with_logging(failing_func, fallback="fallback_value")
         assert result == "fallback_value"
 
     def test_with_error_handling_delegates_to_core(self):
         """Test that with_error_handling delegates to core implementation."""
         mock_logger = Mock()
 
-        @with_error_handling(fallback="error_result", logger_instance=mock_logger)
+        @with_error_handling_and_logging(
+            fallback="error_result", logger_instance=mock_logger
+        )
         def test_func():
             raise ValueError("Test error")
 
@@ -343,7 +344,7 @@ class TestTripSageErrorContext:
 class TestIntegrationScenarios:
     """Test realistic integration scenarios."""
 
-    @patch("tripsage.utils.error_handling.get_logger")
+    @patch("tripsage_core.utils.error_handling_utils.get_logger")
     def test_mcp_service_error_workflow(self, mock_get_logger):
         """Test complete MCP service error handling workflow."""
         mock_logger = Mock()
@@ -378,7 +379,7 @@ class TestIntegrationScenarios:
         assert enhanced_exc.details.request_id == "req456"
 
         # Verify error formatting
-        formatted = format_exception(enhanced_exc)
+        formatted = enhanced_exc.to_dict()
         assert formatted["error"] == "CoreMCPError"
         assert formatted["message"] == "Flight search timeout"
         assert formatted["code"] == "MCP_TIMEOUT_ERROR"
@@ -406,18 +407,24 @@ class TestIntegrationScenarios:
             return True
 
         # Test successful validation
-        result = safe_execute(validate_email, "user@example.com", fallback=False)
+        result = safe_execute_with_logging(
+            validate_email, "user@example.com", fallback=False
+        )
         assert result is True
 
         # Test validation error with fallback
-        result = safe_execute(validate_email, "invalid-email", fallback=False)
+        result = safe_execute_with_logging(
+            validate_email, "invalid-email", fallback=False
+        )
         assert result is False
 
     def test_database_error_with_decorator(self):
         """Test database error handling with decorator."""
         mock_logger = Mock()
 
-        @with_error_handling(fallback=[], logger_instance=mock_logger)
+        @with_error_handling_and_logging(
+            fallback=[], logger_instance=mock_logger
+        )
         def get_users():
             raise create_database_error(
                 message="Connection timeout", operation="SELECT", table="users"
