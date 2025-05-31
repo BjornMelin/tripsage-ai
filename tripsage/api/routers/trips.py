@@ -8,10 +8,13 @@ import logging
 
 from fastapi import APIRouter, Depends, status
 
-from api.services.trip_service import TripService, get_trip_service
 from tripsage.api.middlewares.auth import get_current_user
 from tripsage.api.models.requests.trips import CreateTripRequest
 from tripsage.api.models.responses.trips import TripResponse
+from tripsage_core.services.business.trip_service import (
+    TripService,
+    get_trip_service,
+)
 
 logger = logging.getLogger(__name__)
 

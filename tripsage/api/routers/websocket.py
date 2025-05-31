@@ -17,8 +17,8 @@ from fastapi import (
 )
 from pydantic import ValidationError
 
-from api.deps import get_db
 from tripsage.agents.chat import ChatAgent
+from tripsage.api.core.dependencies import get_db
 from tripsage.api.models.requests.websocket import (
     WebSocketAuthRequest,
     WebSocketSubscribeRequest,
@@ -144,9 +144,8 @@ async def chat_websocket(
         await websocket_manager.send_to_connection(connection_id, connection_event)
 
         # Create chat service with database session
-        db_session = get_db()
-        db = await db_session.__anext__()
-        chat_service = ChatService(db)
+        db_session = await get_db()
+        chat_service = ChatService(db_session)
         chat_agent = get_chat_agent()
 
         logger.info(
@@ -250,11 +249,6 @@ async def chat_websocket(
         # Clean up connection
         if connection_id:
             await websocket_manager.disconnect_connection(connection_id)
-        # Close database session
-        try:
-            await db_session.aclose()
-        except Exception:
-            pass
 
 
 @router.websocket("/ws/agent-status/{user_id}")
