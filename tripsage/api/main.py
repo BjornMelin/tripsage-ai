@@ -20,6 +20,7 @@ from tripsage.api.middlewares.logging import LoggingMiddleware
 from tripsage.api.middlewares.rate_limit import RateLimitMiddleware
 from tripsage.api.routers import (
     accommodations,
+    attachments,
     auth,
     chat,
     destinations,
@@ -45,6 +46,7 @@ from tripsage_core.services.infrastructure.key_monitoring_service import (
     KeyMonitoringService,
     KeyOperationRateLimitMiddleware,
 )
+from tripsage_core.services.infrastructure.websocket_manager import websocket_manager
 
 logger = logging.getLogger(__name__)
 
@@ -56,7 +58,7 @@ async def lifespan(app: FastAPI):
     Args:
         app: The FastAPI application
     """
-    # Startup: Initialize MCP Manager and other resources
+    # Startup: Initialize MCP Manager and WebSocket Manager
     logger.info("Initializing MCP Manager on API startup")
     await mcp_manager.initialize_all_enabled()
 
@@ -65,9 +67,16 @@ async def lifespan(app: FastAPI):
     logger.info(f"Available MCPs: {available_mcps}")
     logger.info(f"Initialized MCPs: {initialized_mcps}")
 
+    # Initialize WebSocket Manager
+    logger.info("Starting WebSocket Manager")
+    await websocket_manager.start()
+
     yield  # Application runs here
 
     # Shutdown: Clean up resources
+    logger.info("Stopping WebSocket Manager")
+    await websocket_manager.stop()
+
     logger.info("Shutting down MCP Manager")
     await mcp_manager.shutdown()
 
@@ -105,8 +114,10 @@ def create_app() -> FastAPI:
     app.add_middleware(LoggingMiddleware)
 
     # Rate limiting middleware
-    use_redis = bool(settings.dragonfly.url)
-    app.add_middleware(RateLimitMiddleware, settings=settings, use_redis=use_redis)
+    use_dragonfly = bool(settings.dragonfly.url)
+    app.add_middleware(
+        RateLimitMiddleware, settings=settings, use_dragonfly=use_dragonfly
+    )
 
     # Authentication middleware
     app.add_middleware(AuthMiddleware, settings=settings)
@@ -275,7 +286,7 @@ def create_app() -> FastAPI:
             },
         )
         return JSONResponse(
-            status_code=exc.status_code,
+            status_code=status.HTTP_400_BAD_REQUEST,  # Use 400 for validation errors
             content={
                 "status": "error",
                 "message": exc.message,
@@ -412,8 +423,11 @@ def create_app() -> FastAPI:
     # Include routers
     app.include_router(health.router, prefix="/api", tags=["health"])
     app.include_router(keys.router, prefix="/api/user/keys", tags=["api_keys"])
-    app.include_router(auth.router, prefix="/api", tags=["auth"])
+    app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
     app.include_router(chat.router, prefix="/api/v1/chat", tags=["chat"])
+    app.include_router(
+        attachments.router, prefix="/api/attachments", tags=["attachments"]
+    )
     app.include_router(trips.router, prefix="/api/trips", tags=["trips"])
     app.include_router(flights.router, prefix="/api/flights", tags=["flights"])
     app.include_router(

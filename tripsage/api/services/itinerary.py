@@ -6,9 +6,8 @@ handling API-specific concerns like model adaptation and FastAPI integration.
 """
 
 import logging
-from datetime import date
+from datetime import date as DateType
 from typing import List
-from typing import List as ListType
 
 from fastapi import Depends
 
@@ -47,8 +46,8 @@ from tripsage_core.services.business.itinerary_service import (
 
 
 class ItineraryDay(BaseModel):
-    date: date = Field(..., description="Date of the itinerary day")
-    items: ListType[ItineraryItem] = Field(default=[], description="Items for this day")
+    date: DateType = Field(..., description="Date of the itinerary day")
+    items: List[ItineraryItem] = Field(default=[], description="Items for this day")
 
 
 logger = logging.getLogger(__name__)
