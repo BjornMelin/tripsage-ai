@@ -27,9 +27,7 @@ from tripsage.services.core.chat_service import ChatService
 from tripsage_core.models.schemas_common.chat import (
     ChatMessage as WebSocketMessage,
 )
-from tripsage_core.models.schemas_common.chat import (
-    MessageRole,
-)
+from tripsage_core.services.business.chat_service import MessageRole
 from tripsage_core.services.infrastructure.websocket_manager import (
     ConnectionStatus,
     WebSocketEvent,
@@ -50,7 +48,7 @@ class ChatMessageChunkEvent(WebSocketEvent):
 
 
 class ConnectionEvent(WebSocketEvent):
-    status: ConnectionStatus
+    status: str  # One of: connecting, connected, authenticated, error, disconnected
     connection_id: str
 
 

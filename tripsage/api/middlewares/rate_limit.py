@@ -200,12 +200,12 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         if use_dragonfly:
             self.rate_limiter = DragonflyRateLimiter(
                 rate_limit=self.settings.rate_limit_requests,
-                timeframe=self.settings.rate_limit_timeframe,
+                timeframe=self.settings.rate_limit_window,
             )
         else:
             self.rate_limiter = InMemoryRateLimiter(
                 rate_limit=self.settings.rate_limit_requests,
-                timeframe=self.settings.rate_limit_timeframe,
+                timeframe=self.settings.rate_limit_window,
             )
 
     async def dispatch(
@@ -241,7 +241,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                 extra={"key": key, "path": request.url.path},
             )
 
-            retry_after = self.settings.rate_limit_timeframe
+            retry_after = self.settings.rate_limit_window
 
             return Response(
                 content=(f"Rate limit exceeded. Try again in {retry_after} seconds."),
@@ -259,7 +259,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         )  # Simplified, should be actual count
         response.headers["X-RateLimit-Reset"] = str(
             int(datetime.now(datetime.UTC).timestamp())
-            + self.settings.rate_limit_timeframe
+            + self.settings.rate_limit_window
         )
 
         return response
