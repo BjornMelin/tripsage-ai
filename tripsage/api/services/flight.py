@@ -117,7 +117,8 @@ class FlightService:
         """
         try:
             logger.info(
-                f"Searching for multi-city flights with {len(request.segments)} segments"
+                f"Searching for multi-city flights with {len(request.segments)} "
+                f"segments"
             )
 
             # Adapt API request to core model
@@ -406,7 +407,8 @@ class FlightService:
         if not core_offer:
             return None
 
-        # This is a simplified adaptation - real implementation would need detailed mapping
+        # This is a simplified adaptation - real implementation would need
+        # detailed mapping
         return FlightOffer(
             id=core_offer.get("id", ""),
             origin=core_offer.get("origin", ""),
