@@ -15,8 +15,8 @@ from pydantic import BaseModel
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.types import ASGIApp
 
-from api.deps import get_settings_dependency
 from tripsage.api.core.config import Settings, get_settings
+from tripsage.api.core.dependencies import get_settings_dependency
 from tripsage_core.exceptions.exceptions import (
     CoreAuthenticationError as AuthenticationError,
 )
