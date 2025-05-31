@@ -295,7 +295,8 @@ class TripSageErrorContext:
                     exc_val.details.request_id = self.request_id
 
             # Log the exception with context
-            log_exception(exc_val, self.logger.name)
+            logger_name = getattr(self.logger, 'name', None)
+            log_exception(exc_val, logger_name)
 
         else:
             self.logger.debug(
