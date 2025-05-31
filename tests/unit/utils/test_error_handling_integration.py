@@ -422,9 +422,7 @@ class TestIntegrationScenarios:
         """Test database error handling with decorator."""
         mock_logger = Mock()
 
-        @with_error_handling_and_logging(
-            fallback=[], logger_instance=mock_logger
-        )
+        @with_error_handling_and_logging(fallback=[], logger_instance=mock_logger)
         def get_users():
             raise create_database_error(
                 message="Connection timeout", operation="SELECT", table="users"
