@@ -10,15 +10,25 @@ from typing import List, Optional
 
 from fastapi import Depends
 
-from tripsage.api.models.destinations import (
+from tripsage.api.models.common.destinations import (
     Destination,
-    DestinationDetails,
-    DestinationRecommendation,
+)
+from tripsage.api.models.requests.destinations import (
     DestinationSearchRequest,
-    DestinationSearchResponse,
     PointOfInterestSearchRequest,
+)
+from tripsage.api.models.responses.destinations import (
+    DestinationDetailsResponse as DestinationDetails,
+)
+from tripsage.api.models.responses.destinations import (
+    DestinationSearchResponse,
     PointOfInterestSearchResponse,
-    SavedDestination,
+)
+from tripsage.api.models.responses.destinations import (
+    DestinationSuggestionResponse as DestinationRecommendation,
+)
+from tripsage.api.models.responses.destinations import (
+    SavedDestinationResponse as SavedDestination,
 )
 from tripsage_core.exceptions.exceptions import (
     CoreResourceNotFoundError as ResourceNotFoundError,

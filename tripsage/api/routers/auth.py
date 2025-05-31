@@ -8,10 +8,8 @@ import logging
 
 from fastapi import APIRouter, Depends, status
 
-from tripsage.api.models.auth import (
-    UserCreate,
-    UserResponse,
-)
+from tripsage.api.models.requests.auth import UserCreate
+from tripsage.api.models.responses.auth import UserResponse
 from tripsage.api.services.user import UserService, get_user_service
 
 router = APIRouter()

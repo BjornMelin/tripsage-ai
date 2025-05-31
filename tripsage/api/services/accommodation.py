@@ -10,13 +10,15 @@ from uuid import UUID
 
 from fastapi import Depends
 
-from tripsage.api.models.accommodations import (
+from tripsage.api.models.common.accommodations import AccommodationListing
+from tripsage.api.models.requests.accommodations import (
     AccommodationDetailsRequest,
-    AccommodationDetailsResponse,
-    AccommodationListing,
     AccommodationSearchRequest,
-    AccommodationSearchResponse,
     SavedAccommodationRequest,
+)
+from tripsage.api.models.responses.accommodations import (
+    AccommodationDetailsResponse,
+    AccommodationSearchResponse,
     SavedAccommodationResponse,
 )
 from tripsage_core.exceptions.exceptions import (

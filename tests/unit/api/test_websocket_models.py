@@ -13,15 +13,15 @@ from uuid import UUID, uuid4
 import pytest
 from pydantic import ValidationError
 
-from tripsage.api.models.websocket import (
+from tripsage.api.models.requests.websocket import WebSocketAuthRequest
+from tripsage.api.models.responses.websocket import WebSocketAuthResponse
+from tripsage.api.models.common.websocket import (
     ChatMessageChunkEvent,
     ConnectionEvent,
     ConnectionStatus,
     ErrorEvent,
     MessageRole,
     WebSocketAgentStatus,
-    WebSocketAuthRequest,
-    WebSocketAuthResponse,
     WebSocketEvent,
     WebSocketEventType,
     WebSocketMessage,
@@ -198,7 +198,7 @@ class TestWebSocketMessage:
 
     def test_chat_message_with_tool_calls(self):
         """Test chat message with tool calls."""
-        from tripsage.api.models.websocket import WebSocketToolCall
+        from tripsage.api.models.common.websocket import WebSocketToolCall
 
         tool_call = WebSocketToolCall(
             name="get_weather",

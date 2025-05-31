@@ -10,7 +10,7 @@ from typing import Optional
 from fastapi import Depends
 from pydantic import EmailStr
 
-from tripsage.api.models.auth import UserResponse
+from tripsage.api.models.responses.auth import UserResponse
 from tripsage_core.exceptions.exceptions import (
     CoreServiceError as ServiceError,
 )

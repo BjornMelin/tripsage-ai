@@ -10,18 +10,24 @@ from typing import List
 
 from fastapi import Depends
 
-from tripsage.api.models.itineraries import (
+from tripsage.api.models.common.itineraries import (
     Itinerary,
-    ItineraryConflictCheckResponse,
-    ItineraryCreateRequest,
+    ItineraryDay,
     ItineraryItem,
+    ItineraryStatus,
+)
+from tripsage.api.models.requests.itineraries import (
+    ItineraryCreateRequest,
     ItineraryItemCreateRequest,
     ItineraryItemUpdateRequest,
     ItineraryOptimizeRequest,
-    ItineraryOptimizeResponse,
     ItinerarySearchRequest,
-    ItinerarySearchResponse,
     ItineraryUpdateRequest,
+)
+from tripsage.api.models.responses.itineraries import (
+    ItineraryConflictCheckResponse,
+    ItineraryOptimizeResponse,
+    ItinerarySearchResponse,
 )
 from tripsage_core.exceptions import CoreResourceNotFoundError as ResourceNotFoundError
 from tripsage_core.exceptions.exceptions import (
@@ -282,7 +288,7 @@ class ItineraryService:
         """
         try:
             logger.info(
-                f"Adding {request.type} item to itinerary {itinerary_id} "
+                f"Adding {request.item_type} item to itinerary {itinerary_id} "
                 f"for user {user_id}"
             )
 
@@ -541,10 +547,10 @@ class ItineraryService:
     ) -> dict:
         """Adapt API itinerary item create request to core model."""
         return {
-            "type": request.type,
+            "type": request.item_type,
             "title": request.title,
             "description": request.description,
-            "date": request.date,
+            "date": request.item_date,
             "time_slot": request.time_slot,
             "location": request.location,
             "cost": request.cost,
@@ -591,7 +597,7 @@ class ItineraryService:
     def _adapt_itinerary(self, core_itinerary) -> Itinerary:
         """Adapt core itinerary to API model."""
         # This is a simplified adaptation - real implementation needs detailed mapping
-        from tripsage.api.models.itineraries import ItineraryStatus
+        # ItineraryStatus already imported at module level
 
         return Itinerary(
             id=core_itinerary.get("id", ""),
@@ -616,10 +622,10 @@ class ItineraryService:
 
     def _adapt_itinerary_day(self, core_day):
         """Adapt core itinerary day to API model."""
-        from tripsage.api.models.itineraries import ItineraryDay
+        # ItineraryDay already imported at module level
 
         return ItineraryDay(
-            date=core_day.get("date"),
+            day_date=core_day.get("date"),
             items=[
                 self._adapt_itinerary_item(item) for item in core_day.get("items", [])
             ],
@@ -630,10 +636,10 @@ class ItineraryService:
         # This is a simplified adaptation - real implementation needs detailed mapping
         return ItineraryItem(
             id=core_item.get("id", ""),
-            type=core_item.get("type", ""),
+            item_type=core_item.get("type", ""),
             title=core_item.get("title", ""),
             description=core_item.get("description", ""),
-            date=core_item.get("date"),
+            item_date=core_item.get("date"),
             time_slot=core_item.get("time_slot"),
             location=core_item.get("location", ""),
             cost=core_item.get("cost"),

@@ -17,15 +17,19 @@ from fastapi import WebSocket
 from jose import jwt
 
 from tripsage.api.core.config import get_settings
-from tripsage.api.models.websocket import (
-    ConnectionStatus,
+from tripsage.api.models.requests.websocket import (
     WebSocketAuthRequest,
+    WebSocketSubscribeRequest,
+)
+from tripsage.api.models.responses.websocket import (
     WebSocketAuthResponse,
+    WebSocketSubscribeResponse,
+)
+from tripsage.api.models.common.websocket import (
+    ConnectionStatus,
     WebSocketConnectionInfo,
     WebSocketEvent,
     WebSocketEventType,
-    WebSocketSubscribeRequest,
-    WebSocketSubscribeResponse,
 )
 
 logger = logging.getLogger(__name__)

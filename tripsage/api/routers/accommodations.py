@@ -11,13 +11,14 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, status
 
 from tripsage.api.middlewares.auth import get_current_user
-from tripsage.api.models.accommodations import (
+from tripsage.api.models.requests.accommodations import (
     AccommodationDetailsRequest,
-    AccommodationDetailsResponse,
     AccommodationSearchRequest,
-    AccommodationSearchResponse,
-    BookingStatus,
     SavedAccommodationRequest,
+)
+from tripsage.api.models.responses.accommodations import (
+    AccommodationDetailsResponse,
+    AccommodationSearchResponse,
     SavedAccommodationResponse,
 )
 from tripsage.api.services.accommodation import (
@@ -27,6 +28,7 @@ from tripsage.api.services.accommodation import (
 from tripsage_core.exceptions.exceptions import (
     CoreResourceNotFoundError as ResourceNotFoundError,
 )
+from tripsage_core.models.schemas_common import BookingStatus
 
 logger = logging.getLogger(__name__)
 
