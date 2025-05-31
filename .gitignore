@@ -109,11 +109,43 @@ dev-debug.log
 test-results/
 playwright-report/
 playwright/.cache/
+coverage/
+htmlcov/
+.nyc_output/
+lcov.info
+*.lcov
+coverage.json
 
 # Frontend build
 .next/
 out/
 dist/
+*.tsbuildinfo
+
+# Python dependency management
+.uv/
+
+# Temporary upload directories
+uploads/
+
+# Logs directory
+logs/
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Temporary scripts
+health_check.py
+scripts/update_*.py
+
+# Git worktrees
+worktrees/
+
+# Python cache in various locations
+**/__pycache__/
+**/*.pyc
 
 # Archived local files
 .archived/
