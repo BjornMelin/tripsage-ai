@@ -1,279 +1,263 @@
 """
 Service for itinerary-related operations in the TripSage API.
+
+This service acts as a thin wrapper around the core itinerary service,
+handling API-specific concerns like model adaptation and FastAPI integration.
 """
 
 import logging
-import uuid
-from datetime import datetime, timedelta
 from typing import List
+
+from fastapi import Depends
 
 from tripsage.api.models.itineraries import (
     Itinerary,
     ItineraryConflictCheckResponse,
     ItineraryCreateRequest,
-    ItineraryDay,
     ItineraryItem,
     ItineraryItemCreateRequest,
-    ItineraryItemType,
     ItineraryItemUpdateRequest,
     ItineraryOptimizeRequest,
     ItineraryOptimizeResponse,
     ItinerarySearchRequest,
     ItinerarySearchResponse,
-    ItineraryStatus,
     ItineraryUpdateRequest,
-    TimeSlot,
 )
 from tripsage_core.exceptions import CoreResourceNotFoundError as ResourceNotFoundError
+from tripsage_core.exceptions.exceptions import (
+    CoreServiceError as ServiceError,
+)
+from tripsage_core.exceptions.exceptions import (
+    CoreValidationError as ValidationError,
+)
+from tripsage_core.services.business.itinerary_service import (
+    ItineraryService as CoreItineraryService,
+)
+from tripsage_core.services.business.itinerary_service import (
+    get_itinerary_service as get_core_itinerary_service,
+)
 
 logger = logging.getLogger(__name__)
 
 
 class ItineraryService:
-    """Service for itinerary-related operations."""
+    """
+    API itinerary service that delegates to core business services.
 
-    _instance = None
+    This service acts as a façade, handling:
+    - Model adaptation between API and core models
+    - API-specific error handling
+    - FastAPI dependency integration
+    """
 
-    def __new__(cls):
-        """Create a singleton instance of the service."""
-        if cls._instance is None:
-            cls._instance = super(ItineraryService, cls).__new__(cls)
-            cls._instance._init()
-        return cls._instance
+    def __init__(self, core_itinerary_service: CoreItineraryService = None):
+        """
+        Initialize the API itinerary service.
 
-    def _init(self) -> None:
-        """Initialize the service."""
-        # In-memory storage for itineraries (would be a database in production)
-        self._itineraries = {}
-        # In-memory storage for itinerary items
-        self._items = {}
-        logger.info("ItineraryService initialized")
+        Args:
+            core_itinerary_service: Core itinerary service
+        """
+        self.core_itinerary_service = core_itinerary_service
+
+    async def _get_core_itinerary_service(self) -> CoreItineraryService:
+        """Get or create core itinerary service instance."""
+        if self.core_itinerary_service is None:
+            self.core_itinerary_service = await get_core_itinerary_service()
+        return self.core_itinerary_service
 
     async def create_itinerary(
         self, user_id: str, request: ItineraryCreateRequest
     ) -> Itinerary:
-        """Create a new itinerary for a user."""
-        logger.info(f"Creating new itinerary for user {user_id}: {request.title}")
+        """Create a new itinerary for a user.
 
-        # Generate a unique ID for the itinerary
-        itinerary_id = str(uuid.uuid4())
+        Args:
+            user_id: User ID
+            request: Itinerary creation request
 
-        # Create empty days for the entire date range
-        days = []
-        current_date = request.start_date
-        while current_date <= request.end_date:
-            days.append(
-                ItineraryDay(
-                    date=current_date,
-                    items=[],
-                )
-            )
-            current_date += timedelta(days=1)
+        Returns:
+            Created itinerary
 
-        now = datetime.now(datetime.UTC).isoformat()
+        Raises:
+            ValidationError: If request data is invalid
+            ServiceError: If creation fails
+        """
+        try:
+            logger.info(f"Creating new itinerary for user {user_id}: {request.title}")
 
-        # Create the itinerary object
-        itinerary = Itinerary(
-            id=itinerary_id,
-            user_id=user_id,
-            title=request.title,
-            description=request.description,
-            status=ItineraryStatus.DRAFT,
-            start_date=request.start_date,
-            end_date=request.end_date,
-            days=days,
-            destinations=request.destinations,
-            total_budget=request.total_budget,
-            currency=request.currency,
-            tags=request.tags,
-            created_at=now,
-            updated_at=now,
-        )
+            # Adapt API request to core model
+            core_request = self._adapt_itinerary_create_request(request)
 
-        # Store the itinerary
-        if user_id not in self._itineraries:
-            self._itineraries[user_id] = {}
-        self._itineraries[user_id][itinerary_id] = itinerary
+            # Create via core service
+            core_service = await self._get_core_itinerary_service()
+            core_response = await core_service.create_itinerary(user_id, core_request)
 
-        return itinerary
+            # Adapt core response to API model
+            return self._adapt_itinerary(core_response)
+
+        except (ValidationError, ServiceError) as e:
+            logger.error(f"Itinerary creation failed: {str(e)}")
+            raise
+        except Exception as e:
+            logger.error(f"Unexpected error creating itinerary: {str(e)}")
+            raise ServiceError("Failed to create itinerary") from e
 
     async def get_itinerary(self, user_id: str, itinerary_id: str) -> Itinerary:
-        """Get an itinerary by ID."""
-        logger.info(f"Getting itinerary {itinerary_id} for user {user_id}")
+        """Get an itinerary by ID.
 
-        if (
-            user_id not in self._itineraries
-            or itinerary_id not in self._itineraries[user_id]
-        ):
-            msg = f"Itinerary {itinerary_id} not found for user {user_id}"
-            logger.warning(msg)
-            raise ResourceNotFoundError(msg)
+        Args:
+            user_id: User ID
+            itinerary_id: Itinerary ID
 
-        return self._itineraries[user_id][itinerary_id]
+        Returns:
+            Itinerary
+
+        Raises:
+            ResourceNotFoundError: If itinerary not found
+            ServiceError: If retrieval fails
+        """
+        try:
+            logger.info(f"Getting itinerary {itinerary_id} for user {user_id}")
+
+            # Get via core service
+            core_service = await self._get_core_itinerary_service()
+            core_response = await core_service.get_itinerary(user_id, itinerary_id)
+
+            # Adapt core response to API model
+            return self._adapt_itinerary(core_response)
+
+        except ResourceNotFoundError as e:
+            logger.error(f"Itinerary not found: {str(e)}")
+            raise
+        except Exception as e:
+            logger.error(f"Failed to get itinerary: {str(e)}")
+            raise ServiceError("Failed to get itinerary") from e
 
     async def update_itinerary(
         self, user_id: str, itinerary_id: str, request: ItineraryUpdateRequest
     ) -> Itinerary:
-        """Update an existing itinerary."""
-        logger.info(f"Updating itinerary {itinerary_id} for user {user_id}")
+        """Update an existing itinerary.
 
-        # Get the existing itinerary
-        itinerary = await self.get_itinerary(user_id, itinerary_id)
+        Args:
+            user_id: User ID
+            itinerary_id: Itinerary ID
+            request: Update request
 
-        # Update fields if provided in the request
-        if request.title is not None:
-            itinerary.title = request.title
-        if request.description is not None:
-            itinerary.description = request.description
-        if request.status is not None:
-            itinerary.status = request.status
-        if request.start_date is not None:
-            itinerary.start_date = request.start_date
-        if request.end_date is not None:
-            itinerary.end_date = request.end_date
-        if request.destinations is not None:
-            itinerary.destinations = request.destinations
-        if request.total_budget is not None:
-            itinerary.total_budget = request.total_budget
-        if request.currency is not None:
-            itinerary.currency = request.currency
-        if request.tags is not None:
-            itinerary.tags = request.tags
-        if request.share_settings is not None:
-            itinerary.share_settings = request.share_settings
+        Returns:
+            Updated itinerary
 
-        # Update the 'updated_at' timestamp
-        itinerary.updated_at = datetime.now(datetime.UTC).isoformat()
+        Raises:
+            ResourceNotFoundError: If itinerary not found
+            ValidationError: If request data is invalid
+            ServiceError: If update fails
+        """
+        try:
+            logger.info(f"Updating itinerary {itinerary_id} for user {user_id}")
 
-        # If dates have changed, we need to update the days array
-        if request.start_date is not None or request.end_date is not None:
-            # Create a dict of existing days by date for easy lookup
-            existing_days = {day.date.isoformat(): day for day in itinerary.days}
+            # Adapt API request to core model
+            core_request = self._adapt_itinerary_update_request(request)
 
-            # Create new days array
-            days = []
-            current_date = itinerary.start_date
-            while current_date <= itinerary.end_date:
-                date_str = current_date.isoformat()
-                if date_str in existing_days:
-                    # Use existing day
-                    days.append(existing_days[date_str])
-                else:
-                    # Create new empty day
-                    days.append(ItineraryDay(date=current_date, items=[]))
-                current_date += timedelta(days=1)
+            # Update via core service
+            core_service = await self._get_core_itinerary_service()
+            core_response = await core_service.update_itinerary(
+                user_id, itinerary_id, core_request
+            )
 
-            # Update the days array
-            itinerary.days = days
+            # Adapt core response to API model
+            return self._adapt_itinerary(core_response)
 
-        # Store the updated itinerary
-        self._itineraries[user_id][itinerary_id] = itinerary
-
-        return itinerary
+        except (ResourceNotFoundError, ValidationError, ServiceError) as e:
+            logger.error(f"Itinerary update failed: {str(e)}")
+            raise
+        except Exception as e:
+            logger.error(f"Unexpected error updating itinerary: {str(e)}")
+            raise ServiceError("Failed to update itinerary") from e
 
     async def delete_itinerary(self, user_id: str, itinerary_id: str) -> None:
-        """Delete an itinerary."""
-        logger.info(f"Deleting itinerary {itinerary_id} for user {user_id}")
+        """Delete an itinerary.
 
-        # Check if the itinerary exists
-        await self.get_itinerary(user_id, itinerary_id)
+        Args:
+            user_id: User ID
+            itinerary_id: Itinerary ID
 
-        # Delete the itinerary
-        del self._itineraries[user_id][itinerary_id]
+        Raises:
+            ResourceNotFoundError: If itinerary not found
+            ServiceError: If deletion fails
+        """
+        try:
+            logger.info(f"Deleting itinerary {itinerary_id} for user {user_id}")
+
+            # Delete via core service
+            core_service = await self._get_core_itinerary_service()
+            await core_service.delete_itinerary(user_id, itinerary_id)
+
+        except ResourceNotFoundError as e:
+            logger.error(f"Itinerary not found: {str(e)}")
+            raise
+        except Exception as e:
+            logger.error(f"Failed to delete itinerary: {str(e)}")
+            raise ServiceError("Failed to delete itinerary") from e
 
     async def list_itineraries(self, user_id: str) -> List[Itinerary]:
-        """List all itineraries for a user."""
-        logger.info(f"Listing itineraries for user {user_id}")
+        """List all itineraries for a user.
 
-        if user_id not in self._itineraries:
-            return []
+        Args:
+            user_id: User ID
 
-        return list(self._itineraries[user_id].values())
+        Returns:
+            List of itineraries
+
+        Raises:
+            ServiceError: If listing fails
+        """
+        try:
+            logger.info(f"Listing itineraries for user {user_id}")
+
+            # List via core service
+            core_service = await self._get_core_itinerary_service()
+            core_itineraries = await core_service.list_itineraries(user_id)
+
+            # Adapt core response to API model
+            return [self._adapt_itinerary(itinerary) for itinerary in core_itineraries]
+
+        except Exception as e:
+            logger.error(f"Failed to list itineraries: {str(e)}")
+            raise ServiceError("Failed to list itineraries") from e
 
     async def search_itineraries(
         self, user_id: str, request: ItinerarySearchRequest
     ) -> ItinerarySearchResponse:
-        """Search for itineraries based on criteria."""
-        log_msg = f"Searching itineraries for user {user_id} with criteria"
-        logger.info(log_msg)
+        """Search for itineraries based on criteria.
 
-        if user_id not in self._itineraries:
-            return ItinerarySearchResponse(
-                results=[],
-                total=0,
-                page=request.page,
-                page_size=request.page_size,
-                pages=0,
-            )
+        Args:
+            user_id: User ID
+            request: Search request
 
-        # Get all itineraries for the user
-        all_itineraries = list(self._itineraries[user_id].values())
+        Returns:
+            Search results
 
-        # Apply filters
-        filtered_itineraries = []
-        for itinerary in all_itineraries:
-            # Filter by query (title or description)
-            if request.query:
-                query_lower = request.query.lower()
-                title_match = itinerary.title and query_lower in itinerary.title.lower()
-                desc_match = (
-                    itinerary.description
-                    and query_lower in itinerary.description.lower()
-                )
-                if not (title_match or desc_match):
-                    continue
+        Raises:
+            ValidationError: If request data is invalid
+            ServiceError: If search fails
+        """
+        try:
+            logger.info(f"Searching itineraries for user {user_id} with criteria")
 
-            # Filter by dates
-            if (
-                request.start_date_from
-                and itinerary.start_date < request.start_date_from
-            ):
-                continue
-            if request.start_date_to and itinerary.start_date > request.start_date_to:
-                continue
-            if request.end_date_from and itinerary.end_date < request.end_date_from:
-                continue
-            if request.end_date_to and itinerary.end_date > request.end_date_to:
-                continue
+            # Adapt API request to core model
+            core_request = self._adapt_itinerary_search_request(request)
 
-            # Filter by destinations
-            if request.destinations:
-                if not any(
-                    dest in itinerary.destinations for dest in request.destinations
-                ):
-                    continue
+            # Search via core service
+            core_service = await self._get_core_itinerary_service()
+            core_response = await core_service.search_itineraries(user_id, core_request)
 
-            # Filter by status
-            if request.status and itinerary.status != request.status:
-                continue
+            # Adapt core response to API model
+            return self._adapt_itinerary_search_response(core_response)
 
-            # Filter by tags
-            if request.tags:
-                if not any(tag in itinerary.tags for tag in request.tags):
-                    continue
-
-            # All filters passed, add to results
-            filtered_itineraries.append(itinerary)
-
-        # Sort results by updated_at (most recent first)
-        sorted_itineraries = sorted(
-            filtered_itineraries, key=lambda x: x.updated_at, reverse=True
-        )
-
-        # Apply pagination
-        total = len(sorted_itineraries)
-        pages = (total + request.page_size - 1) // request.page_size
-        start_idx = (request.page - 1) * request.page_size
-        end_idx = start_idx + request.page_size
-        paginated_results = sorted_itineraries[start_idx:end_idx]
-
-        return ItinerarySearchResponse(
-            results=paginated_results,
-            total=total,
-            page=request.page,
-            page_size=request.page_size,
-            pages=pages,
-        )
+        except (ValidationError, ServiceError) as e:
+            logger.error(f"Itinerary search failed: {str(e)}")
+            raise
+        except Exception as e:
+            logger.error(f"Unexpected error searching itineraries: {str(e)}")
+            raise ServiceError("Failed to search itineraries") from e
 
     async def add_item_to_itinerary(
         self,
@@ -281,29 +265,278 @@ class ItineraryService:
         itinerary_id: str,
         request: ItineraryItemCreateRequest,
     ) -> ItineraryItem:
-        """Add an item to an itinerary."""
-        logger.info(
-            f"Adding {request.type} item to itinerary {itinerary_id} for user {user_id}"
-        )
+        """Add an item to an itinerary.
 
-        # Get the itinerary
-        itinerary = await self.get_itinerary(user_id, itinerary_id)
+        Args:
+            user_id: User ID
+            itinerary_id: Itinerary ID
+            request: Item creation request
 
-        # Check if the date is within the itinerary date range
-        if request.date < itinerary.start_date or request.date > itinerary.end_date:
-            msg = (
-                f"Item date {request.date} is outside the itinerary date range "
-                f"({itinerary.start_date} to {itinerary.end_date})"
+        Returns:
+            Created item
+
+        Raises:
+            ResourceNotFoundError: If itinerary not found
+            ValidationError: If request data is invalid
+            ServiceError: If creation fails
+        """
+        try:
+            logger.info(
+                f"Adding {request.type} item to itinerary {itinerary_id} for user {user_id}"
             )
-            logger.warning(msg)
-            raise ValueError(msg)
 
-        # Generate a unique ID for the item
-        item_id = str(uuid.uuid4())
+            # Adapt API request to core model
+            core_request = self._adapt_itinerary_item_create_request(request)
 
-        # Create the base item with common properties
-        item_dict = {
-            "id": item_id,
+            # Add item via core service
+            core_service = await self._get_core_itinerary_service()
+            core_response = await core_service.add_item_to_itinerary(
+                user_id, itinerary_id, core_request
+            )
+
+            # Adapt core response to API model
+            return self._adapt_itinerary_item(core_response)
+
+        except (ResourceNotFoundError, ValidationError, ServiceError) as e:
+            logger.error(f"Failed to add item to itinerary: {str(e)}")
+            raise
+        except Exception as e:
+            logger.error(f"Unexpected error adding item to itinerary: {str(e)}")
+            raise ServiceError("Failed to add item to itinerary") from e
+
+    async def update_item(
+        self,
+        user_id: str,
+        itinerary_id: str,
+        item_id: str,
+        request: ItineraryItemUpdateRequest,
+    ) -> ItineraryItem:
+        """Update an item in an itinerary.
+
+        Args:
+            user_id: User ID
+            itinerary_id: Itinerary ID
+            item_id: Item ID
+            request: Update request
+
+        Returns:
+            Updated item
+
+        Raises:
+            ResourceNotFoundError: If itinerary or item not found
+            ValidationError: If request data is invalid
+            ServiceError: If update fails
+        """
+        try:
+            logger.info(
+                f"Updating item {item_id} in itinerary {itinerary_id} for user {user_id}"
+            )
+
+            # Adapt API request to core model
+            core_request = self._adapt_itinerary_item_update_request(request)
+
+            # Update item via core service
+            core_service = await self._get_core_itinerary_service()
+            core_response = await core_service.update_item(
+                user_id, itinerary_id, item_id, core_request
+            )
+
+            # Adapt core response to API model
+            return self._adapt_itinerary_item(core_response)
+
+        except (ResourceNotFoundError, ValidationError, ServiceError) as e:
+            logger.error(f"Failed to update item: {str(e)}")
+            raise
+        except Exception as e:
+            logger.error(f"Unexpected error updating item: {str(e)}")
+            raise ServiceError("Failed to update item") from e
+
+    async def delete_item(self, user_id: str, itinerary_id: str, item_id: str) -> None:
+        """Delete an item from an itinerary.
+
+        Args:
+            user_id: User ID
+            itinerary_id: Itinerary ID
+            item_id: Item ID
+
+        Raises:
+            ResourceNotFoundError: If itinerary or item not found
+            ServiceError: If deletion fails
+        """
+        try:
+            logger.info(
+                f"Deleting item {item_id} from itinerary {itinerary_id} for user {user_id}"
+            )
+
+            # Delete item via core service
+            core_service = await self._get_core_itinerary_service()
+            await core_service.delete_item(user_id, itinerary_id, item_id)
+
+        except ResourceNotFoundError as e:
+            logger.error(f"Item not found: {str(e)}")
+            raise
+        except Exception as e:
+            logger.error(f"Failed to delete item: {str(e)}")
+            raise ServiceError("Failed to delete item") from e
+
+    async def get_item(
+        self, user_id: str, itinerary_id: str, item_id: str
+    ) -> ItineraryItem:
+        """Get an item from an itinerary by ID.
+
+        Args:
+            user_id: User ID
+            itinerary_id: Itinerary ID
+            item_id: Item ID
+
+        Returns:
+            Itinerary item
+
+        Raises:
+            ResourceNotFoundError: If itinerary or item not found
+            ServiceError: If retrieval fails
+        """
+        try:
+            logger.info(
+                f"Getting item {item_id} from itinerary {itinerary_id} for user {user_id}"
+            )
+
+            # Get item via core service
+            core_service = await self._get_core_itinerary_service()
+            core_response = await core_service.get_item(user_id, itinerary_id, item_id)
+
+            # Adapt core response to API model
+            return self._adapt_itinerary_item(core_response)
+
+        except ResourceNotFoundError as e:
+            logger.error(f"Item not found: {str(e)}")
+            raise
+        except Exception as e:
+            logger.error(f"Failed to get item: {str(e)}")
+            raise ServiceError("Failed to get item") from e
+
+    async def check_conflicts(
+        self, user_id: str, itinerary_id: str
+    ) -> ItineraryConflictCheckResponse:
+        """Check for conflicts in an itinerary schedule.
+
+        Args:
+            user_id: User ID
+            itinerary_id: Itinerary ID
+
+        Returns:
+            Conflict check response
+
+        Raises:
+            ResourceNotFoundError: If itinerary not found
+            ServiceError: If check fails
+        """
+        try:
+            logger.info(
+                f"Checking conflicts in itinerary {itinerary_id} for user {user_id}"
+            )
+
+            # Check conflicts via core service
+            core_service = await self._get_core_itinerary_service()
+            core_response = await core_service.check_conflicts(user_id, itinerary_id)
+
+            # Adapt core response to API model
+            return self._adapt_conflict_check_response(core_response)
+
+        except ResourceNotFoundError as e:
+            logger.error(f"Itinerary not found: {str(e)}")
+            raise
+        except Exception as e:
+            logger.error(f"Failed to check conflicts: {str(e)}")
+            raise ServiceError("Failed to check conflicts") from e
+
+    async def optimize_itinerary(
+        self, user_id: str, request: ItineraryOptimizeRequest
+    ) -> ItineraryOptimizeResponse:
+        """Optimize an itinerary based on provided settings.
+
+        Args:
+            user_id: User ID
+            request: Optimization request
+
+        Returns:
+            Optimization response
+
+        Raises:
+            ResourceNotFoundError: If itinerary not found
+            ValidationError: If request data is invalid
+            ServiceError: If optimization fails
+        """
+        try:
+            logger.info(
+                f"Optimizing itinerary {request.itinerary_id} for user {user_id}"
+            )
+
+            # Adapt API request to core model
+            core_request = self._adapt_itinerary_optimize_request(request)
+
+            # Optimize via core service
+            core_service = await self._get_core_itinerary_service()
+            core_response = await core_service.optimize_itinerary(user_id, core_request)
+
+            # Adapt core response to API model
+            return self._adapt_optimize_response(core_response)
+
+        except (ResourceNotFoundError, ValidationError, ServiceError) as e:
+            logger.error(f"Itinerary optimization failed: {str(e)}")
+            raise
+        except Exception as e:
+            logger.error(f"Unexpected error optimizing itinerary: {str(e)}")
+            raise ServiceError("Failed to optimize itinerary") from e
+
+    def _adapt_itinerary_create_request(self, request: ItineraryCreateRequest) -> dict:
+        """Adapt API itinerary create request to core model."""
+        return {
+            "title": request.title,
+            "description": request.description,
+            "start_date": request.start_date,
+            "end_date": request.end_date,
+            "destinations": request.destinations,
+            "total_budget": request.total_budget,
+            "currency": request.currency,
+            "tags": request.tags,
+        }
+
+    def _adapt_itinerary_update_request(self, request: ItineraryUpdateRequest) -> dict:
+        """Adapt API itinerary update request to core model."""
+        return {
+            "title": request.title,
+            "description": request.description,
+            "status": request.status,
+            "start_date": request.start_date,
+            "end_date": request.end_date,
+            "destinations": request.destinations,
+            "total_budget": request.total_budget,
+            "currency": request.currency,
+            "tags": request.tags,
+            "share_settings": request.share_settings,
+        }
+
+    def _adapt_itinerary_search_request(self, request: ItinerarySearchRequest) -> dict:
+        """Adapt API itinerary search request to core model."""
+        return {
+            "query": request.query,
+            "start_date_from": request.start_date_from,
+            "start_date_to": request.start_date_to,
+            "end_date_from": request.end_date_from,
+            "end_date_to": request.end_date_to,
+            "destinations": request.destinations,
+            "status": request.status,
+            "tags": request.tags,
+            "page": request.page,
+            "page_size": request.page_size,
+        }
+
+    def _adapt_itinerary_item_create_request(
+        self, request: ItineraryItemCreateRequest
+    ) -> dict:
+        """Adapt API itinerary item create request to core model."""
+        return {
             "type": request.type,
             "title": request.title,
             "description": request.description,
@@ -315,491 +548,150 @@ class ItineraryService:
             "booking_reference": request.booking_reference,
             "notes": request.notes,
             "is_flexible": request.is_flexible,
+            "flight_details": request.flight_details,
+            "accommodation_details": request.accommodation_details,
+            "activity_details": request.activity_details,
+            "transportation_details": request.transportation_details,
         }
 
-        # Add type-specific details if provided
-        if request.type == ItineraryItemType.FLIGHT and request.flight_details:
-            item_dict.update(request.flight_details)
-        elif (
-            request.type == ItineraryItemType.ACCOMMODATION
-            and request.accommodation_details
-        ):
-            item_dict.update(request.accommodation_details)
-        elif request.type == ItineraryItemType.ACTIVITY and request.activity_details:
-            item_dict.update(request.activity_details)
-        elif (
-            request.type == ItineraryItemType.TRANSPORTATION
-            and request.transportation_details
-        ):
-            item_dict.update(request.transportation_details)
+    def _adapt_itinerary_item_update_request(
+        self, request: ItineraryItemUpdateRequest
+    ) -> dict:
+        """Adapt API itinerary item update request to core model."""
+        return {
+            "title": request.title,
+            "description": request.description,
+            "date": request.date,
+            "time_slot": request.time_slot,
+            "location": request.location,
+            "cost": request.cost,
+            "currency": request.currency,
+            "booking_reference": request.booking_reference,
+            "notes": request.notes,
+            "is_flexible": request.is_flexible,
+            "flight_details": request.flight_details,
+            "accommodation_details": request.accommodation_details,
+            "activity_details": request.activity_details,
+            "transportation_details": request.transportation_details,
+        }
 
-        # Create the appropriate item type
-        if request.type == ItineraryItemType.FLIGHT:
-            # For production, we would create specific item types
-            # For now, we'll just use a generic ItineraryItem
-            item = ItineraryItem(**item_dict)
-        else:
-            item = ItineraryItem(**item_dict)
+    def _adapt_itinerary_optimize_request(
+        self, request: ItineraryOptimizeRequest
+    ) -> dict:
+        """Adapt API itinerary optimize request to core model."""
+        return {
+            "itinerary_id": request.itinerary_id,
+            "settings": request.settings,
+        }
 
-        # Find the correct day to add the item to
-        for day in itinerary.days:
-            if day.date == request.date:
-                day.items.append(item)
-                break
-        else:
-            # This should not happen if we validated the date range correctly
-            msg = f"No matching day found for date {request.date}"
-            logger.error(msg)
-            raise ValueError(msg)
+    def _adapt_itinerary(self, core_itinerary) -> Itinerary:
+        """Adapt core itinerary to API model."""
+        # This is a simplified adaptation - real implementation needs detailed mapping
+        from tripsage.api.models.itineraries import ItineraryStatus
 
-        # Update the itinerary's updated_at timestamp
-        itinerary.updated_at = datetime.now(datetime.UTC).isoformat()
-
-        # Store the updated itinerary
-        self._itineraries[user_id][itinerary_id] = itinerary
-
-        # Store the item separately for direct access
-        if itinerary_id not in self._items:
-            self._items[itinerary_id] = {}
-        self._items[itinerary_id][item_id] = item
-
-        # If the item has a cost, update the budget_spent in the itinerary
-        if request.cost:
-            if itinerary.budget_spent is None:
-                itinerary.budget_spent = 0
-            itinerary.budget_spent += request.cost
-
-        return item
-
-    async def update_item(
-        self,
-        user_id: str,
-        itinerary_id: str,
-        item_id: str,
-        request: ItineraryItemUpdateRequest,
-    ) -> ItineraryItem:
-        """Update an item in an itinerary."""
-        logger.info(
-            f"Updating item {item_id} in itinerary {itinerary_id} for user {user_id}"
+        return Itinerary(
+            id=core_itinerary.get("id", ""),
+            user_id=core_itinerary.get("user_id", ""),
+            title=core_itinerary.get("title", ""),
+            description=core_itinerary.get("description", ""),
+            status=ItineraryStatus(core_itinerary.get("status", "draft")),
+            start_date=core_itinerary.get("start_date"),
+            end_date=core_itinerary.get("end_date"),
+            days=[
+                self._adapt_itinerary_day(day) for day in core_itinerary.get("days", [])
+            ],
+            destinations=core_itinerary.get("destinations", []),
+            total_budget=core_itinerary.get("total_budget"),
+            budget_spent=core_itinerary.get("budget_spent"),
+            currency=core_itinerary.get("currency", "USD"),
+            tags=core_itinerary.get("tags", []),
+            created_at=core_itinerary.get("created_at", ""),
+            updated_at=core_itinerary.get("updated_at", ""),
+            share_settings=core_itinerary.get("share_settings"),
         )
 
-        # Get the itinerary
-        itinerary = await self.get_itinerary(user_id, itinerary_id)
+    def _adapt_itinerary_day(self, core_day):
+        """Adapt core itinerary day to API model."""
+        from tripsage.api.models.itineraries import ItineraryDay
 
-        # Find the item in the itinerary
-        found_item = None
-        found_day = None
-
-        for day in itinerary.days:
-            for _i, item in enumerate(day.items):
-                if item.id == item_id:
-                    found_item = item
-                    found_day = day
-                    break
-            if found_item:
-                break
-
-        if not found_item:
-            msg = f"Item {item_id} not found in itinerary {itinerary_id}"
-            logger.warning(msg)
-            raise ResourceNotFoundError(msg)
-
-        # Check if we're changing the date
-        if request.date and request.date != found_item.date:
-            # Check if the new date is within the itinerary date range
-            if request.date < itinerary.start_date or request.date > itinerary.end_date:
-                msg = (
-                    f"New item date {request.date} is outside the itinerary date range "
-                    f"({itinerary.start_date} to {itinerary.end_date})"
-                )
-                logger.warning(msg)
-                raise ValueError(msg)
-
-            # Remove the item from the current day
-            found_day.items = [item for item in found_day.items if item.id != item_id]
-
-            # Find the new day to add the item to
-            new_day = None
-            for day in itinerary.days:
-                if day.date == request.date:
-                    new_day = day
-                    break
-
-            if not new_day:
-                # This should not happen if we validated the date range correctly
-                msg = f"No matching day found for date {request.date}"
-                logger.error(msg)
-                raise ValueError(msg)
-
-            # Update the item date
-            found_item.date = request.date
-
-            # Add the item to the new day
-            new_day.items.append(found_item)
-
-        # Update other fields if provided
-        if request.title is not None:
-            found_item.title = request.title
-        if request.description is not None:
-            found_item.description = request.description
-        if request.time_slot is not None:
-            found_item.time_slot = request.time_slot
-        if request.location is not None:
-            found_item.location = request.location
-
-        # Handle cost updates
-        if request.cost is not None and request.cost != found_item.cost:
-            # If the item already had a cost, subtract it from the budget_spent
-            if found_item.cost is not None and itinerary.budget_spent is not None:
-                itinerary.budget_spent -= found_item.cost
-
-            # Add the new cost to the budget_spent
-            if itinerary.budget_spent is None:
-                itinerary.budget_spent = 0
-            itinerary.budget_spent += request.cost
-
-            # Update the item cost
-            found_item.cost = request.cost
-
-        if request.currency is not None:
-            found_item.currency = request.currency
-        if request.booking_reference is not None:
-            found_item.booking_reference = request.booking_reference
-        if request.notes is not None:
-            found_item.notes = request.notes
-        if request.is_flexible is not None:
-            found_item.is_flexible = request.is_flexible
-
-        # Update type-specific details if provided
-        item_type = found_item.type
-        if item_type == ItineraryItemType.FLIGHT and request.flight_details:
-            for key, value in request.flight_details.items():
-                setattr(found_item, key, value)
-        elif (
-            item_type == ItineraryItemType.ACCOMMODATION
-            and request.accommodation_details
-        ):
-            for key, value in request.accommodation_details.items():
-                setattr(found_item, key, value)
-        elif item_type == ItineraryItemType.ACTIVITY and request.activity_details:
-            for key, value in request.activity_details.items():
-                setattr(found_item, key, value)
-        elif (
-            item_type == ItineraryItemType.TRANSPORTATION
-            and request.transportation_details
-        ):
-            for key, value in request.transportation_details.items():
-                setattr(found_item, key, value)
-
-        # Update the itinerary's updated_at timestamp
-        itinerary.updated_at = datetime.now(datetime.UTC).isoformat()
-
-        # Store the updated itinerary
-        self._itineraries[user_id][itinerary_id] = itinerary
-
-        # Update the item in separate storage
-        if itinerary_id in self._items and item_id in self._items[itinerary_id]:
-            self._items[itinerary_id][item_id] = found_item
-
-        return found_item
-
-    async def delete_item(self, user_id: str, itinerary_id: str, item_id: str) -> None:
-        """Delete an item from an itinerary."""
-        logger.info(
-            f"Deleting item {item_id} from itinerary {itinerary_id} for user {user_id}"
+        return ItineraryDay(
+            date=core_day.get("date"),
+            items=[
+                self._adapt_itinerary_item(item) for item in core_day.get("items", [])
+            ],
         )
 
-        # Get the itinerary
-        itinerary = await self.get_itinerary(user_id, itinerary_id)
-
-        # Find the item in the itinerary
-        found_item = None
-        found_day = None
-
-        for day in itinerary.days:
-            for item in day.items:
-                if item.id == item_id:
-                    found_item = item
-                    found_day = day
-                    break
-            if found_item:
-                break
-
-        if not found_item:
-            msg = f"Item {item_id} not found in itinerary {itinerary_id}"
-            logger.warning(msg)
-            raise ResourceNotFoundError(msg)
-
-        # If the item has a cost, update the budget_spent in the itinerary
-        if found_item.cost is not None and itinerary.budget_spent is not None:
-            itinerary.budget_spent -= found_item.cost
-
-        # Remove the item from the day
-        found_day.items = [item for item in found_day.items if item.id != item_id]
-
-        # Update the itinerary's updated_at timestamp
-        itinerary.updated_at = datetime.now(datetime.UTC).isoformat()
-
-        # Store the updated itinerary
-        self._itineraries[user_id][itinerary_id] = itinerary
-
-        # Remove the item from separate storage
-        if itinerary_id in self._items and item_id in self._items[itinerary_id]:
-            del self._items[itinerary_id][item_id]
-
-    async def get_item(
-        self, user_id: str, itinerary_id: str, item_id: str
-    ) -> ItineraryItem:
-        """Get an item from an itinerary by ID."""
-        logger.info(
-            f"Getting item {item_id} from itinerary {itinerary_id} for user {user_id}"
+    def _adapt_itinerary_item(self, core_item) -> ItineraryItem:
+        """Adapt core itinerary item to API model."""
+        # This is a simplified adaptation - real implementation needs detailed mapping
+        return ItineraryItem(
+            id=core_item.get("id", ""),
+            type=core_item.get("type", ""),
+            title=core_item.get("title", ""),
+            description=core_item.get("description", ""),
+            date=core_item.get("date"),
+            time_slot=core_item.get("time_slot"),
+            location=core_item.get("location", ""),
+            cost=core_item.get("cost"),
+            currency=core_item.get("currency", "USD"),
+            booking_reference=core_item.get("booking_reference", ""),
+            notes=core_item.get("notes", ""),
+            is_flexible=core_item.get("is_flexible", False),
         )
 
-        # First check if we have direct access to the item
-        if itinerary_id in self._items and item_id in self._items[itinerary_id]:
-            return self._items[itinerary_id][item_id]
+    def _adapt_itinerary_search_response(
+        self, core_response
+    ) -> ItinerarySearchResponse:
+        """Adapt core itinerary search response to API model."""
+        return ItinerarySearchResponse(
+            results=[
+                self._adapt_itinerary(itinerary)
+                for itinerary in core_response.get("results", [])
+            ],
+            total=core_response.get("total", 0),
+            page=core_response.get("page", 1),
+            page_size=core_response.get("page_size", 10),
+            pages=core_response.get("pages", 0),
+        )
 
-        # Otherwise, search through the itinerary
-        itinerary = await self.get_itinerary(user_id, itinerary_id)
-
-        for day in itinerary.days:
-            for item in day.items:
-                if item.id == item_id:
-                    return item
-
-        # If we get here, the item wasn't found
-        msg = f"Item {item_id} not found in itinerary {itinerary_id}"
-        logger.warning(msg)
-        raise ResourceNotFoundError(msg)
-
-    async def check_conflicts(
-        self, user_id: str, itinerary_id: str
+    def _adapt_conflict_check_response(
+        self, core_response
     ) -> ItineraryConflictCheckResponse:
-        """Check for conflicts in an itinerary schedule."""
-        log_msg = f"Checking conflicts in itinerary {itinerary_id} for user {user_id}"
-        logger.info(log_msg)
-
-        # Get the itinerary
-        itinerary = await self.get_itinerary(user_id, itinerary_id)
-
-        conflicts = []
-
-        # Check for conflicts in each day
-        for day in itinerary.days:
-            # Only check items with time slots
-            items_with_time = [item for item in day.items if item.time_slot]
-
-            # Sort the items by start time
-            items_with_time.sort(
-                key=lambda x: x.time_slot.start_time  # type: ignore
-            )
-
-            # Check for overlapping time slots
-            for i in range(len(items_with_time) - 1):
-                current_item = items_with_time[i]
-                next_item = items_with_time[i + 1]
-
-                current_end = current_item.time_slot.end_time  # type: ignore
-                next_start = next_item.time_slot.start_time  # type: ignore
-
-                # Convert to minutes for comparison
-                current_end_hour, current_end_minute = map(
-                    int,
-                    current_end.split(":"),  # type: ignore
-                )
-                next_start_hour, next_start_minute = map(
-                    int,
-                    next_start.split(":"),  # type: ignore
-                )
-
-                current_end_minutes = current_end_hour * 60 + current_end_minute
-                next_start_minutes = next_start_hour * 60 + next_start_minute
-
-                # Handle overnight slots (e.g., end time is after midnight)
-                if current_end_minutes > 24 * 60:
-                    current_end_minutes -= 24 * 60
-
-                if next_start_minutes < current_end_minutes:
-                    # We have a conflict
-                    conflicts.append(
-                        {
-                            "day": day.date.isoformat(),
-                            "first_item_id": current_item.id,
-                            "first_item_title": current_item.title,
-                            "first_item_end": current_end,
-                            "second_item_id": next_item.id,
-                            "second_item_title": next_item.title,
-                            "second_item_start": next_start,
-                            "overlap_minutes": current_end_minutes - next_start_minutes,
-                        }
-                    )
-
-        # Check for multi-day accommodation overlaps
-        accommodations = []
-        for day in itinerary.days:
-            for item in day.items:
-                if item.type == ItineraryItemType.ACCOMMODATION:
-                    accommodations.append(item)
-
-        # Sort accommodations by date
-        accommodations.sort(key=lambda x: x.date)
-
-        # Check for overlapping accommodations
-        for i in range(len(accommodations) - 1):
-            current_item = accommodations[i]
-            next_item = accommodations[i + 1]
-
-            # If type-specific attributes are available
-            current_checkout = getattr(current_item, "check_out_date", None)
-            next_checkin = getattr(next_item, "check_in_date", None)
-
-            if current_checkout and next_checkin and current_checkout > next_checkin:
-                conflicts.append(
-                    {
-                        "type": "accommodation_overlap",
-                        "first_item_id": current_item.id,
-                        "first_item_title": current_item.title,
-                        "first_item_checkout": current_checkout.isoformat(),
-                        "second_item_id": next_item.id,
-                        "second_item_title": next_item.title,
-                        "second_item_checkin": next_checkin.isoformat(),
-                        "overlap_days": (current_checkout - next_checkin).days,
-                    }
-                )
-
-        # Return the conflicts found
+        """Adapt core conflict check response to API model."""
         return ItineraryConflictCheckResponse(
-            has_conflicts=len(conflicts) > 0,
-            conflicts=conflicts,
+            has_conflicts=core_response.get("has_conflicts", False),
+            conflicts=core_response.get("conflicts", []),
         )
 
-    async def optimize_itinerary(
-        self, user_id: str, request: ItineraryOptimizeRequest
-    ) -> ItineraryOptimizeResponse:
-        """
-        Optimize an itinerary based on provided settings.
-
-        This is a placeholder implementation that would typically involve
-        complex optimization algorithms. For now, it just returns a simple
-        rearrangement of the itinerary.
-        """
-        logger.info(f"Optimizing itinerary {request.itinerary_id} for user {user_id}")
-
-        # Get the itinerary
-        itinerary = await self.get_itinerary(user_id, request.itinerary_id)
-
-        # Create a copy of the original itinerary for the response
-        original_itinerary = itinerary
-
-        # Create a deep copy of the itinerary for optimization
-        optimized_itinerary = Itinerary.model_validate(itinerary.model_dump())
-
-        # Track changes made during optimization
-        changes = []
-
-        # Simple optimization logic (placeholder)
-        for day in optimized_itinerary.days:
-            # Only optimize items with time slots
-            items_with_time = [item for item in day.items if item.time_slot]
-            items_without_time = [item for item in day.items if not item.time_slot]
-
-            if items_with_time:
-                # Sort items by start time
-                items_with_time.sort(
-                    key=lambda x: x.time_slot.start_time  # type: ignore
-                )
-
-                # Distribute items evenly throughout the day
-                if request.settings.start_day_time and request.settings.end_day_time:
-                    # Convert time strings to minutes
-                    start_hour, start_minute = map(
-                        int, request.settings.start_day_time.split(":")
-                    )
-                    end_hour, end_minute = map(
-                        int, request.settings.end_day_time.split(":")
-                    )
-
-                    start_minutes = start_hour * 60 + start_minute
-                    end_minutes = end_hour * 60 + end_minute
-
-                    # Handle overnight (end time is after midnight)
-                    if end_minutes < start_minutes:
-                        end_minutes += 24 * 60
-
-                    available_minutes = end_minutes - start_minutes
-
-                    # Calculate total item duration
-                    total_item_duration = sum(
-                        item.time_slot.duration_minutes
-                        for item in items_with_time  # type: ignore
-                    )
-
-                    # Calculate break duration if specified
-                    break_duration = request.settings.break_duration_minutes or 30
-                    total_break_duration = break_duration * (len(items_with_time) - 1)
-
-                    # Check if everything fits
-                    total_planned_time = total_item_duration + total_break_duration
-                    if total_planned_time <= available_minutes:
-                        # Distribute items
-                        current_minutes = start_minutes
-
-                        for i, item in enumerate(items_with_time):
-                            # Set new start time
-                            current_hour = current_minutes // 60
-                            current_minute = current_minutes % 60
-
-                            new_start_time = f"{current_hour:02d}:{current_minute:02d}"
-
-                            # Calculate new end time
-                            duration = item.time_slot.duration_minutes  # type: ignore
-                            end_minutes = current_minutes + duration
-                            end_hour = end_minutes // 60
-                            end_minute = end_minutes % 60
-
-                            new_end_time = f"{end_hour:02d}:{end_minute:02d}"
-
-                            # Record the change
-                            changes.append(
-                                {
-                                    "item_id": item.id,
-                                    "type": "time_adjustment",
-                                    "old_start": item.time_slot.start_time,  # type: ignore
-                                    "old_end": item.time_slot.end_time,  # type: ignore
-                                    "new_start": new_start_time,
-                                    "new_end": new_end_time,
-                                }
-                            )
-
-                            # Update the item's time slot
-                            item.time_slot = TimeSlot(  # type: ignore
-                                start_time=new_start_time,
-                                end_time=new_end_time,
-                                duration_minutes=duration,
-                            )
-
-                            # Move to the next item's start time (add break)
-                            if i < len(items_with_time) - 1:
-                                current_minutes = end_minutes + break_duration
-
-            # Update the day's items
-            day.items = items_with_time + items_without_time
-
-        # Update the itinerary's updated_at timestamp
-        optimized_itinerary.updated_at = datetime.now(datetime.UTC).isoformat()
-
-        # Calculate an optimization score (placeholder)
-        optimization_score = 0.75  # In a real implementation, this would be calculated
-
-        # Return the optimized itinerary and details
+    def _adapt_optimize_response(self, core_response) -> ItineraryOptimizeResponse:
+        """Adapt core optimize response to API model."""
         return ItineraryOptimizeResponse(
-            original_itinerary=original_itinerary,
-            optimized_itinerary=optimized_itinerary,
-            changes=changes,
-            optimization_score=optimization_score,
+            original_itinerary=self._adapt_itinerary(
+                core_response.get("original_itinerary")
+            ),
+            optimized_itinerary=self._adapt_itinerary(
+                core_response.get("optimized_itinerary")
+            ),
+            changes=core_response.get("changes", []),
+            optimization_score=core_response.get("optimization_score", 0.0),
         )
 
 
-def get_itinerary_service() -> ItineraryService:
-    """Get the singleton instance of the itinerary service."""
-    return ItineraryService()
+# Module-level dependency annotation
+_core_itinerary_service_dep = Depends(get_core_itinerary_service)
+
+
+# Dependency function for FastAPI
+async def get_itinerary_service(
+    core_itinerary_service: CoreItineraryService = _core_itinerary_service_dep,
+) -> ItineraryService:
+    """
+    Get itinerary service instance for dependency injection.
+
+    Args:
+        core_itinerary_service: Core itinerary service
+
+    Returns:
+        ItineraryService instance
+    """
+    return ItineraryService(core_itinerary_service=core_itinerary_service)
