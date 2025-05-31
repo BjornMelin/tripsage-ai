@@ -81,5 +81,5 @@ def test_model_inheritance():
 def test_no_circular_imports():
     """Test that there are no circular imports."""
     # Re-import the module to check for circular import errors
-    importlib.reload(importlib.import_module("tripsage.models.db"))
+    importlib.reload(importlib.import_module("tripsage_core.models.db"))
     # If we get here without errors, the test passes
