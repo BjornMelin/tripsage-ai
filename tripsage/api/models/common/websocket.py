@@ -1,6 +1,6 @@
-"""WebSocket models for TripSage API.
+"""Common WebSocket models for TripSage API.
 
-This module provides Pydantic v2 models for WebSocket communication,
+This module provides Pydantic v2 common models for WebSocket communication,
 including event types, message schemas, and connection management.
 """
 
@@ -293,53 +293,6 @@ class WebSocketConnectionInfo(BaseModel):
     subscribed_channels: List[str] = Field(
         default_factory=list, description="Subscribed channels"
     )
-
-
-class WebSocketAuthRequest(BaseModel):
-    """WebSocket authentication request."""
-
-    token: str = Field(..., description="JWT authentication token")
-    session_id: Optional[UUID] = Field(None, description="Optional session ID to join")
-    channels: List[str] = Field(
-        default_factory=list, description="Channels to subscribe to"
-    )
-
-
-class WebSocketAuthResponse(BaseModel):
-    """WebSocket authentication response."""
-
-    success: bool = Field(..., description="Authentication success")
-    connection_id: str = Field(..., description="Connection ID")
-    user_id: Optional[UUID] = Field(None, description="Authenticated user ID")
-    session_id: Optional[UUID] = Field(None, description="Session ID")
-    error: Optional[str] = Field(
-        None, description="Error message if authentication failed"
-    )
-    available_channels: List[str] = Field(
-        default_factory=list, description="Available channels"
-    )
-
-
-class WebSocketSubscribeRequest(BaseModel):
-    """WebSocket channel subscription request."""
-
-    channels: List[str] = Field(..., description="Channels to subscribe to")
-    unsubscribe_channels: List[str] = Field(
-        default_factory=list, description="Channels to unsubscribe from"
-    )
-
-
-class WebSocketSubscribeResponse(BaseModel):
-    """WebSocket channel subscription response."""
-
-    success: bool = Field(..., description="Subscription success")
-    subscribed_channels: List[str] = Field(
-        default_factory=list, description="Successfully subscribed channels"
-    )
-    failed_channels: List[str] = Field(
-        default_factory=list, description="Failed subscription channels"
-    )
-    error: Optional[str] = Field(None, description="Error message")
 
 
 # Union type for all WebSocket events

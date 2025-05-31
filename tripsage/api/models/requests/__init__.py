@@ -1,39 +1,103 @@
 """Request models for the TripSage API.
 
-This package contains Pydantic V2 models for request validation.
+This package contains Pydantic V2 models for API request validation.
 """
 
-# Auth request models
-from tripsage.api.models.requests.auth import (
+from .accommodations import (
+    AccommodationDetailsRequest,
+    AccommodationSearchRequest,
+    SavedAccommodationRequest,
+)
+from .api_keys import (
+    ApiKeyCreate,
+    ApiKeyRotateRequest,
+    ApiKeyValidateRequest,
+)
+from .auth import (
     ChangePasswordRequest,
     ForgotPasswordRequest,
     LoginRequest,
+    RefreshToken,
     RefreshTokenRequest,
     RegisterUserRequest,
     ResetPasswordRequest,
+    UserCreate,
+    UserLogin,
 )
-
-# Trip request models
-from tripsage.api.models.requests.trips import (
+from .chat import ChatRequest
+from .destinations import (
+    DestinationDetailsRequest,
+    DestinationSearchRequest,
+    DestinationSuggestionRequest,
+    SavedDestinationRequest,
+)
+from .flights import (
+    AirportSearchRequest,
+    FlightSearchRequest,
+    MultiCityFlightSearchRequest,
+    SavedFlightRequest,
+)
+from .itineraries import (
+    ItineraryCreateRequest,
+    ItineraryItemCreateRequest,
+    ItineraryItemUpdateRequest,
+    ItineraryOptimizeRequest,
+    ItinerarySearchRequest,
+    ItineraryUpdateRequest,
+)
+from .trips import (
     CreateTripRequest,
-    TripDestination,
-    TripPreferences,
     TripPreferencesRequest,
     UpdateTripRequest,
 )
+from .websocket import (
+    WebSocketAuthRequest,
+    WebSocketSubscribeRequest,
+)
 
 __all__ = [
-    # Auth requests
+    # Accommodations
+    "AccommodationDetailsRequest",
+    "AccommodationSearchRequest",
+    "SavedAccommodationRequest",
+    # API Keys
+    "ApiKeyCreate",
+    "ApiKeyRotateRequest",
+    "ApiKeyValidateRequest",
+    # Auth
     "ChangePasswordRequest",
     "ForgotPasswordRequest",
     "LoginRequest",
+    "RefreshToken",
     "RefreshTokenRequest",
     "RegisterUserRequest",
     "ResetPasswordRequest",
-    # Trip requests
+    "UserCreate",
+    "UserLogin",
+    # Chat
+    "ChatRequest",
+    # Destinations
+    "DestinationDetailsRequest",
+    "DestinationSearchRequest",
+    "DestinationSuggestionRequest",
+    "SavedDestinationRequest",
+    # Flights
+    "AirportSearchRequest",
+    "FlightSearchRequest",
+    "MultiCityFlightSearchRequest",
+    "SavedFlightRequest",
+    # Itineraries
+    "ItineraryCreateRequest",
+    "ItineraryItemCreateRequest",
+    "ItineraryItemUpdateRequest",
+    "ItineraryOptimizeRequest",
+    "ItinerarySearchRequest",
+    "ItineraryUpdateRequest",
+    # Trips
     "CreateTripRequest",
-    "TripDestination",
-    "TripPreferences",
     "TripPreferencesRequest",
     "UpdateTripRequest",
+    # WebSocket
+    "WebSocketAuthRequest",
+    "WebSocketSubscribeRequest",
 ]

@@ -3,153 +3,195 @@
 This package contains Pydantic V2 models for request and response validation.
 """
 
-# Auth models
+# Import from tripsage_core for shared types
+from tripsage_core.models.schemas_common import (
+    BookingStatus,
+    CancellationPolicy,
+)
+
 # Accommodations models
-from tripsage.api.models.accommodations import (
+from .common.accommodations import (
     AccommodationAmenity,
-    AccommodationDetailsRequest,
-    AccommodationDetailsResponse,
     AccommodationImage,
     AccommodationListing,
     AccommodationLocation,
-    AccommodationSearchRequest,
-    AccommodationSearchResponse,
-    BookingStatus,
-    CancellationPolicy,
-    PropertyType,
-    SavedAccommodationRequest,
-    SavedAccommodationResponse,
 )
-from tripsage.api.models.api_key import (
-    ApiKeyCreate,
-    ApiKeyResponse,
-    ApiKeyRotateRequest,
-    ApiKeyValidateRequest,
-    ApiKeyValidateResponse,
-)
-from tripsage.api.models.auth import (
-    RefreshToken,
-    Token,
-    TokenData,
-    UserCreate,
-    UserLogin,
-    UserResponse,
+
+# Auth models
+from .common.auth import TokenData
+
+# Chat models
+from .common.chat import (
+    ChatMessage,
+    ChatSession,
+    ToolCall,
 )
 
 # Destinations models
-from tripsage.api.models.destinations import (
+from .common.destinations import (
     Destination,
     DestinationCategory,
-    DestinationDetailsRequest,
-    DestinationDetailsResponse,
     DestinationImage,
-    DestinationSearchRequest,
-    DestinationSearchResponse,
-    DestinationSuggestionRequest,
-    DestinationSuggestionResponse,
     DestinationVisitSchedule,
     DestinationWeather,
     PointOfInterest,
-    SavedDestinationRequest,
-    SavedDestinationResponse,
 )
 
 # Flights models
-from tripsage.api.models.flights import (
+from .common.flights import (
     Airport,
-    AirportSearchRequest,
-    AirportSearchResponse,
     FlightOffer,
-    FlightSearchRequest,
-    FlightSearchResponse,
-    MultiCityFlightSearchRequest,
     MultiCityFlightSegment,
-    SavedFlightRequest,
-    SavedFlightResponse,
 )
 
-# Itineraries models - temporarily commented out due to Pydantic V2 compatibility issues
-# from tripsage.api.models.itineraries import (
-#     AccommodationItineraryItem,
-#     ActivityItineraryItem,
-#     FlightItineraryItem,
-#     Itinerary,
-#     ItineraryConflictCheckResponse,
-#     ItineraryCreateRequest,
-#     ItineraryDay,
-#     ItineraryItem,
-#     ItineraryItemCreateRequest,
-#     ItineraryItemType,
-#     ItineraryItemUpdateRequest,
-#     ItineraryOptimizeRequest,
-#     ItineraryOptimizeResponse,
-#     ItinerarySearchRequest,
-#     ItinerarySearchResponse,
-#     ItineraryShareSettings,
-#     ItineraryStatus,
-#     ItineraryUpdateRequest,
-#     ItineraryVisibility,
-#     Location,
-#     OptimizationSetting,
-#     TimeSlot,
-#     TransportationItineraryItem,
-# )
-# Request models
-from tripsage.api.models.requests.auth import (
+# Itineraries models
+from .common.itineraries import (
+    AccommodationItineraryItem,
+    ActivityItineraryItem,
+    FlightItineraryItem,
+    Itinerary,
+    ItineraryDay,
+    ItineraryItem,
+    ItineraryItemType,
+    ItineraryShareSettings,
+    ItineraryStatus,
+    ItineraryVisibility,
+    Location,
+    OptimizationSetting,
+    TimeSlot,
+    TransportationItineraryItem,
+)
+
+# Trip models
+from .common.trips import (
+    Trip,
+    TripDay,
+    TripDestination,
+    TripDestinationData,
+    TripMember,
+    TripPreferenceData,
+    TripPreferences,
+    TripStatus,
+    TripVisibility,
+)
+
+# WebSocket models
+from .common.websocket import (
+    WebSocketConnectionInfo,
+    WebSocketEvent,
+    WebSocketEventType,
+)
+from .requests.accommodations import (
+    AccommodationDetailsRequest,
+    AccommodationSearchRequest,
+    SavedAccommodationRequest,
+)
+
+# API Key models
+from .requests.api_keys import (
+    ApiKeyCreate,
+    ApiKeyRotateRequest,
+    ApiKeyValidateRequest,
+)
+from .requests.auth import (
     ChangePasswordRequest,
     ForgotPasswordRequest,
     LoginRequest,
+    RefreshToken,
     RefreshTokenRequest,
     RegisterUserRequest,
     ResetPasswordRequest,
+    UserCreate,
+    UserLogin,
 )
-from tripsage.api.models.requests.trips import (
+from .requests.chat import ChatRequest
+from .requests.destinations import (
+    DestinationDetailsRequest,
+    DestinationSearchRequest,
+    DestinationSuggestionRequest,
+    SavedDestinationRequest,
+)
+from .requests.flights import (
+    AirportSearchRequest,
+    FlightSearchRequest,
+    MultiCityFlightSearchRequest,
+    SavedFlightRequest,
+)
+from .requests.itineraries import (
+    ItineraryCreateRequest,
+    ItineraryItemCreateRequest,
+    ItineraryItemUpdateRequest,
+    ItineraryOptimizeRequest,
+    ItinerarySearchRequest,
+    ItineraryUpdateRequest,
+)
+from .requests.trips import (
     CreateTripRequest,
-    TripDestination,
-    TripPreferences,
     TripPreferencesRequest,
     UpdateTripRequest,
 )
-
-# Response models
-from tripsage.api.models.responses.auth import (
+from .requests.websocket import (
+    WebSocketAuthRequest,
+    WebSocketSubscribeRequest,
+)
+from .responses.accommodations import (
+    AccommodationDetailsResponse,
+    AccommodationSearchResponse,
+    SavedAccommodationResponse,
+)
+from .responses.api_keys import (
+    ApiKeyResponse,
+    ApiKeyValidateResponse,
+)
+from .responses.auth import (
     MessageResponse,
     PasswordResetResponse,
+    Token,
     TokenResponse,
     UserPreferencesResponse,
+    UserResponse,
 )
-from tripsage.api.models.responses.auth import UserResponse as UserResponseExtended
-from tripsage.api.models.responses.trips import (
+from .responses.chat import (
+    ChatResponse,
+    ChatStreamChunk,
+    SessionHistoryResponse,
+)
+from .responses.destinations import (
+    DestinationDetailsResponse,
+    DestinationSearchResponse,
+    DestinationSuggestionResponse,
+    SavedDestinationResponse,
+)
+from .responses.flights import (
+    AirportSearchResponse,
+    FlightSearchResponse,
+    SavedFlightResponse,
+)
+from .responses.itineraries import (
+    ItineraryConflictCheckResponse,
+    ItineraryOptimizeResponse,
+    ItinerarySearchResponse,
+)
+from .responses.trips import (
     TripListItem,
     TripListResponse,
     TripResponse,
     TripSummaryResponse,
 )
-
-# Trip models
-from tripsage.api.models.trips import (
-    Trip,
-    TripDay,
-    TripDestinationData,
-    TripMember,
-    TripPreferenceData,
-    TripStatus,
-    TripVisibility,
+from .responses.websocket import (
+    WebSocketAuthResponse,
+    WebSocketSubscribeResponse,
 )
 
+# Alias for backward compatibility
+PropertyType = CancellationPolicy  # From accommodations
+UserResponseExtended = UserResponse
+
 __all__ = [
-    # Auth models
-    "Token",
-    "TokenData",
-    "UserCreate",
-    "UserLogin",
-    "UserResponse",
-    "RefreshToken",
-    "ApiKeyCreate",
-    "ApiKeyResponse",
-    "ApiKeyValidateRequest",
-    "ApiKeyValidateResponse",
-    "ApiKeyRotateRequest",
+    # Shared types
+    "BookingStatus",
+    "CancellationPolicy",
+    "PropertyType",
     # Accommodations models
     "AccommodationAmenity",
     "AccommodationDetailsRequest",
@@ -159,11 +201,40 @@ __all__ = [
     "AccommodationLocation",
     "AccommodationSearchRequest",
     "AccommodationSearchResponse",
-    "BookingStatus",
-    "CancellationPolicy",
-    "PropertyType",
     "SavedAccommodationRequest",
     "SavedAccommodationResponse",
+    # API Key models
+    "ApiKeyCreate",
+    "ApiKeyResponse",
+    "ApiKeyRotateRequest",
+    "ApiKeyValidateRequest",
+    "ApiKeyValidateResponse",
+    # Auth models
+    "ChangePasswordRequest",
+    "ForgotPasswordRequest",
+    "LoginRequest",
+    "MessageResponse",
+    "PasswordResetResponse",
+    "RefreshToken",
+    "RefreshTokenRequest",
+    "RegisterUserRequest",
+    "ResetPasswordRequest",
+    "Token",
+    "TokenData",
+    "TokenResponse",
+    "UserCreate",
+    "UserLogin",
+    "UserPreferencesResponse",
+    "UserResponse",
+    "UserResponseExtended",
+    # Chat models
+    "ChatMessage",
+    "ChatRequest",
+    "ChatResponse",
+    "ChatSession",
+    "ChatStreamChunk",
+    "SessionHistoryResponse",
+    "ToolCall",
     # Destinations models
     "Destination",
     "DestinationCategory",
@@ -214,34 +285,29 @@ __all__ = [
     "OptimizationSetting",
     "TimeSlot",
     "TransportationItineraryItem",
-    # Request models
-    "RegisterUserRequest",
-    "LoginRequest",
-    "RefreshTokenRequest",
-    "ChangePasswordRequest",
-    "ForgotPasswordRequest",
-    "ResetPasswordRequest",
-    "TripDestination",
-    "TripPreferences",
-    "CreateTripRequest",
-    "UpdateTripRequest",
-    "TripPreferencesRequest",
-    # Response models
-    "TokenResponse",
-    "UserResponseExtended",
-    "UserPreferencesResponse",
-    "MessageResponse",
-    "PasswordResetResponse",
-    "TripResponse",
-    "TripListItem",
-    "TripListResponse",
-    "TripSummaryResponse",
     # Trip models
+    "CreateTripRequest",
     "Trip",
     "TripDay",
+    "TripDestination",
     "TripDestinationData",
+    "TripListItem",
+    "TripListResponse",
     "TripMember",
     "TripPreferenceData",
+    "TripPreferences",
+    "TripPreferencesRequest",
+    "TripResponse",
     "TripStatus",
+    "TripSummaryResponse",
     "TripVisibility",
+    "UpdateTripRequest",
+    # WebSocket models
+    "WebSocketAuthRequest",
+    "WebSocketAuthResponse",
+    "WebSocketConnectionInfo",
+    "WebSocketEvent",
+    "WebSocketEventType",
+    "WebSocketSubscribeRequest",
+    "WebSocketSubscribeResponse",
 ]
