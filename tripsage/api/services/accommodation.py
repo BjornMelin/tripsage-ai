@@ -265,7 +265,8 @@ class AccommodationService:
         """
         try:
             logger.info(
-                f"Updating saved accommodation {saved_accommodation_id} status to {status} "
+                f"Updating saved accommodation {saved_accommodation_id} status to "
+                f"{status} "
                 f"for user {user_id}"
             )
 
@@ -368,7 +369,8 @@ class AccommodationService:
         if not core_listing:
             return None
 
-        # This is a simplified adaptation - real implementation would need detailed mapping
+        # This is a simplified adaptation - real implementation would need
+        # detailed mapping
         from tripsage.api.models.accommodations import (
             AccommodationAmenity,
             AccommodationImage,
@@ -443,7 +445,9 @@ _core_accommodation_service_dep = Depends(get_core_accommodation_service)
 
 # Dependency function for FastAPI
 async def get_accommodation_service(
-    core_accommodation_service: CoreAccommodationService = _core_accommodation_service_dep,
+    core_accommodation_service: CoreAccommodationService = (
+        _core_accommodation_service_dep
+    ),
 ) -> AccommodationService:
     """
     Get accommodation service instance for dependency injection.

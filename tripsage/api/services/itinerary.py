@@ -282,7 +282,8 @@ class ItineraryService:
         """
         try:
             logger.info(
-                f"Adding {request.type} item to itinerary {itinerary_id} for user {user_id}"
+                f"Adding {request.type} item to itinerary {itinerary_id} "
+                f"for user {user_id}"
             )
 
             # Adapt API request to core model
@@ -329,7 +330,8 @@ class ItineraryService:
         """
         try:
             logger.info(
-                f"Updating item {item_id} in itinerary {itinerary_id} for user {user_id}"
+                f"Updating item {item_id} in itinerary {itinerary_id} "
+                f"for user {user_id}"
             )
 
             # Adapt API request to core model
@@ -365,7 +367,8 @@ class ItineraryService:
         """
         try:
             logger.info(
-                f"Deleting item {item_id} from itinerary {itinerary_id} for user {user_id}"
+                f"Deleting item {item_id} from itinerary {itinerary_id} "
+                f"for user {user_id}"
             )
 
             # Delete item via core service
@@ -398,7 +401,8 @@ class ItineraryService:
         """
         try:
             logger.info(
-                f"Getting item {item_id} from itinerary {itinerary_id} for user {user_id}"
+                f"Getting item {item_id} from itinerary {itinerary_id} "
+                f"for user {user_id}"
             )
 
             # Get item via core service
