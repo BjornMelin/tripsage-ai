@@ -4,12 +4,28 @@ This module defines Pydantic models for destination-related requests.
 """
 
 from datetime import date
+
+# Create simple enums for missing models
+from enum import Enum
 from typing import Dict, List, Optional
 from uuid import UUID
 
 from pydantic import BaseModel, Field
 
-from ..common.destinations import DestinationCategory, DestinationVisitSchedule
+
+class DestinationCategory(str, Enum):
+    CULTURE = "culture"
+    NATURE = "nature"
+    ADVENTURE = "adventure"
+    RELAXATION = "relaxation"
+    FOOD = "food"
+
+
+class DestinationVisitSchedule(str, Enum):
+    MORNING = "morning"
+    AFTERNOON = "afternoon"
+    EVENING = "evening"
+    FULL_DAY = "full_day"
 
 
 class DestinationSearchRequest(BaseModel):

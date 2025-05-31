@@ -8,7 +8,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
-from ..common.chat import ChatMessage
+from tripsage_core.models.schemas_common.chat import ChatMessage
 
 
 class ChatRequest(BaseModel):

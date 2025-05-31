@@ -5,49 +5,16 @@ used across different storage backends.
 """
 
 from datetime import datetime
-from enum import Enum
 from typing import Optional
 
 from pydantic import Field, field_validator, model_validator
 
 from tripsage_core.models.base_core_model import TripSageModel
-
-
-class AirlineProvider(str, Enum):
-    """Enum for airline provider values."""
-
-    AMERICAN = "american"
-    DELTA = "delta"
-    UNITED = "united"
-    SOUTHWEST = "southwest"
-    JETBLUE = "jetblue"
-    ALASKA = "alaska"
-    SPIRIT = "spirit"
-    FRONTIER = "frontier"
-    LUFTHANSA = "lufthansa"
-    AIR_FRANCE = "air_france"
-    BRITISH_AIRWAYS = "british_airways"
-    OTHER = "other"
-
-
-class BookingStatus(str, Enum):
-    """Enum for booking status values."""
-
-    VIEWED = "viewed"
-    SAVED = "saved"
-    BOOKED = "booked"
-    CANCELED = "canceled"
-
-
-class DataSource(str, Enum):
-    """Enum for data source values."""
-
-    EXPEDIA = "expedia"
-    KAYAK = "kayak"
-    SKYSCANNER = "skyscanner"
-    GOOGLE_FLIGHTS = "google_flights"
-    AIRLINE_DIRECT = "airline_direct"
-    OTHER = "other"
+from tripsage_core.models.schemas_common.enums import (
+    AirlineProvider,
+    BookingStatus,
+    DataSource,
+)
 
 
 class Flight(TripSageModel):

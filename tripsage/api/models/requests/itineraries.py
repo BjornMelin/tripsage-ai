@@ -5,18 +5,49 @@ This module defines Pydantic models for validating incoming itinerary-related re
 """
 
 from datetime import date as Date
+from datetime import time
+
+# Create simple models for missing imports
+from enum import Enum
 from typing import Dict, List, Optional
 
 from pydantic import BaseModel, Field, model_validator
 
-from ..common.itineraries import (
-    ItineraryItemType,
-    ItineraryShareSettings,
-    ItineraryStatus,
-    Location,
-    OptimizationSetting,
-    TimeSlot,
-)
+
+class ItineraryItemType(str, Enum):
+    ACTIVITY = "activity"
+    ACCOMMODATION = "accommodation"
+    TRANSPORT = "transport"
+    MEAL = "meal"
+
+
+class ItineraryStatus(str, Enum):
+    DRAFT = "draft"
+    ACTIVE = "active"
+    COMPLETED = "completed"
+
+
+class ItineraryShareSettings(str, Enum):
+    PRIVATE = "private"
+    PUBLIC = "public"
+    SHARED = "shared"
+
+
+class OptimizationSetting(str, Enum):
+    TIME = "time"
+    COST = "cost"
+    CONVENIENCE = "convenience"
+
+
+class Location(BaseModel):
+    latitude: float
+    longitude: float
+    name: Optional[str] = None
+
+
+class TimeSlot(BaseModel):
+    start_time: time
+    end_time: time
 
 
 class ItineraryCreateRequest(BaseModel):

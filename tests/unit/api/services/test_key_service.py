@@ -10,12 +10,13 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from api.schemas.requests.keys import (
+from api.services.key_service import KeyService
+from tripsage.api.models.requests.api_keys import (
     CreateApiKeyRequest,
     RotateApiKeyRequest,
     ValidateApiKeyRequest,
 )
-from api.schemas.responses.keys import (
+from tripsage.api.models.responses.api_keys import (
     ApiKeyListResponse,
     ApiKeyResponse,
     ApiKeyServicesStatusResponse,
@@ -23,7 +24,6 @@ from api.schemas.responses.keys import (
     ApiKeyValidationResponse,
     MessageResponse,
 )
-from api.services.key_service import KeyService
 from tripsage_core.exceptions.exceptions import (
     CoreServiceError as ServiceError,
 )

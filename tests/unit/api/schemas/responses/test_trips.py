@@ -12,7 +12,7 @@ from uuid import uuid4
 import pytest
 from pydantic import ValidationError
 
-from api.schemas.responses.trips import (
+from tripsage.api.models.responses.trips import (
     TripListItem,
     TripListResponse,
     TripResponse,

@@ -8,10 +8,6 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from tripsage.api.middlewares.auth import get_current_user
-from tripsage.api.models.common.itineraries import (
-    Itinerary,
-    ItineraryItem,
-)
 from tripsage.api.models.requests.itineraries import (
     ItineraryCreateRequest,
     ItineraryItemCreateRequest,
@@ -21,6 +17,7 @@ from tripsage.api.models.requests.itineraries import (
     ItineraryUpdateRequest,
 )
 from tripsage.api.models.responses.itineraries import (
+    Itinerary,
     ItineraryConflictCheckResponse,
     ItineraryOptimizeResponse,
     ItinerarySearchResponse,
@@ -29,6 +26,7 @@ from tripsage.api.services.itinerary import ItineraryService, get_itinerary_serv
 from tripsage_core.exceptions.exceptions import (
     CoreResourceNotFoundError as ResourceNotFoundError,
 )
+from tripsage_core.models.db.itinerary_item import ItineraryItem
 
 router = APIRouter()
 logger = logging.getLogger(__name__)

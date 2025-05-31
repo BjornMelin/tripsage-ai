@@ -11,7 +11,7 @@ from decimal import Decimal
 import pytest
 from pydantic import ValidationError
 
-from api.schemas.requests.trips import (
+from tripsage.api.models.requests.trips import (
     CreateTripRequest,
     TripPreferencesRequest,
     TripSearchRequest,

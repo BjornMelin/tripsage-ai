@@ -4,11 +4,23 @@ Response models for itinerary endpoints.
 This module defines Pydantic models for API responses related to itineraries.
 """
 
-from typing import Dict, List
+from datetime import date
+from typing import Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
-from ..common.itineraries import Itinerary
+from tripsage_core.models.db.itinerary_item import ItineraryItem
+
+
+class Itinerary(BaseModel):
+    """Response model for itinerary."""
+
+    id: Optional[str] = Field(None, description="Itinerary identifier")
+    title: str = Field(..., description="Itinerary title")
+    description: Optional[str] = Field(None, description="Itinerary description")
+    start_date: date = Field(..., description="Itinerary start date")
+    end_date: date = Field(..., description="Itinerary end date")
+    items: List[ItineraryItem] = Field(default=[], description="Itinerary items")
 
 
 class ItinerarySearchResponse(BaseModel):

@@ -5,34 +5,15 @@ used across different storage backends.
 """
 
 from datetime import datetime
-from enum import Enum
 from typing import Optional
 
 from pydantic import Field, field_validator, model_validator
 
 from tripsage_core.models.base_core_model import TripSageModel
-
-
-class TransportationType(str, Enum):
-    """Enum for transportation type values."""
-
-    CAR_RENTAL = "car_rental"
-    PUBLIC_TRANSIT = "public_transit"
-    TAXI = "taxi"
-    SHUTTLE = "shuttle"
-    FERRY = "ferry"
-    TRAIN = "train"
-    BUS = "bus"
-    OTHER = "other"
-
-
-class BookingStatus(str, Enum):
-    """Enum for booking status values."""
-
-    VIEWED = "viewed"
-    SAVED = "saved"
-    BOOKED = "booked"
-    CANCELED = "canceled"
+from tripsage_core.models.schemas_common.enums import (
+    BookingStatus,
+    TransportationType,
+)
 
 
 class Transportation(TripSageModel):

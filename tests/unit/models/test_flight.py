@@ -5,11 +5,11 @@ from datetime import datetime, timedelta
 import pytest
 from pydantic import ValidationError
 
-from tripsage_core.models.db.flight import (
+from tripsage_core.models.db.flight import Flight
+from tripsage_core.models.schemas_common.enums import (
     AirlineProvider,
     BookingStatus,
     DataSource,
-    Flight,
 )
 
 

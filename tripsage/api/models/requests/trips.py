@@ -9,7 +9,7 @@ from typing import List, Optional
 
 from pydantic import BaseModel, Field, model_validator
 
-from ..common.trips import TripDestination, TripPreferences
+from tripsage_core.models.schemas_common.travel import TripDestination, TripPreferences
 
 
 class CreateTripRequest(BaseModel):

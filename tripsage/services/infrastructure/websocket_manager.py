@@ -17,12 +17,6 @@ from fastapi import WebSocket
 from jose import jwt
 
 from tripsage.api.core.config import get_settings
-from tripsage.api.models.common.websocket import (
-    ConnectionStatus,
-    WebSocketConnectionInfo,
-    WebSocketEvent,
-    WebSocketEventType,
-)
 from tripsage.api.models.requests.websocket import (
     WebSocketAuthRequest,
     WebSocketSubscribeRequest,
@@ -30,6 +24,12 @@ from tripsage.api.models.requests.websocket import (
 from tripsage.api.models.responses.websocket import (
     WebSocketAuthResponse,
     WebSocketSubscribeResponse,
+)
+from tripsage_core.services.infrastructure.websocket_manager import (
+    ConnectionStatus,
+    WebSocketConnectionInfo,
+    WebSocketEvent,
+    WebSocketEventType,
 )
 
 logger = logging.getLogger(__name__)
