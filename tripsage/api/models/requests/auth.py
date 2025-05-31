@@ -1,173 +1,154 @@
-"""
-Request models for authentication endpoints.
+"""Authentication request models using Pydantic V2.
 
-This module defines Pydantic models for validating incoming authentication requests.
+This module defines Pydantic models for authentication-related requests.
 """
 
-from pydantic import BaseModel, EmailStr, Field, model_validator
+from typing import Optional
+
+from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
+
+from tripsage_core.models.schemas_common.validators import (
+    validate_password_strength,
+    validate_passwords_different,
+    validate_passwords_match,
+)
 
 
 class RegisterUserRequest(BaseModel):
-    """Request model for user registration."""
+    """User registration request model."""
 
     username: str = Field(
-        ...,
-        description="Username",
         min_length=3,
         max_length=50,
+        description="Username (3-50 characters, alphanumeric, underscore, hyphen)",
         pattern=r"^[a-zA-Z0-9_-]+$",
     )
-    email: EmailStr = Field(..., description="Email address")
+    email: EmailStr = Field(description="Valid email address")
     password: str = Field(
-        ...,
-        description="Password",
         min_length=8,
-        max_length=100,
+        max_length=128,
+        description="Password (8-128 characters with strength requirements)",
     )
-    password_confirm: str = Field(..., description="Password confirmation")
+    password_confirm: str = Field(
+        min_length=8,
+        max_length=128,
+        description="Password confirmation (must match password)",
+    )
     full_name: str = Field(
-        ...,
-        description="Full name",
         min_length=1,
         max_length=100,
+        description="Full name (1-100 characters)",
     )
 
+    @field_validator("password")
+    @classmethod
+    def validate_password_strength_check(cls, v: str) -> str:
+        """Validate password meets strength requirements."""
+        return validate_password_strength(v)
+
     @model_validator(mode="after")
-    def validate_passwords_match(self) -> "RegisterUserRequest":
+    def validate_passwords_match_check(self) -> "RegisterUserRequest":
         """Validate that password and password_confirm match."""
-        if self.password != self.password_confirm:
-            raise ValueError("Passwords do not match")
-        return self
-
-    @model_validator(mode="after")
-    def validate_password_strength(self) -> "RegisterUserRequest":
-        """Validate password strength."""
-        # Check for at least one uppercase letter
-        if not any(c.isupper() for c in self.password):
-            raise ValueError("Password must contain at least one uppercase letter")
-
-        # Check for at least one lowercase letter
-        if not any(c.islower() for c in self.password):
-            raise ValueError("Password must contain at least one lowercase letter")
-
-        # Check for at least one digit
-        if not any(c.isdigit() for c in self.password):
-            raise ValueError("Password must contain at least one number")
-
-        # Check for at least one special character
-        special_chars = "!@#$%^&*()_-+=[]{}|:;,.<>?/"
-        if not any(c in special_chars for c in self.password):
-            raise ValueError("Password must contain at least one special character")
-
+        validate_passwords_match(self.password, self.password_confirm)
         return self
 
 
 class LoginRequest(BaseModel):
-    """Request model for user login."""
+    """User login request model."""
 
-    username: str = Field(..., description="Username or email")
-    password: str = Field(..., description="Password")
-    remember_me: bool = Field(False, description="Remember me")
+    username: str = Field(description="Username or email address")
+    password: str = Field(description="User password")
+    remember_me: bool = Field(default=False, description="Remember user session")
 
 
 class RefreshTokenRequest(BaseModel):
-    """Request model for token refresh."""
+    """Refresh token request model."""
 
-    refresh_token: str = Field(..., description="Refresh token")
+    refresh_token: str = Field(description="JWT refresh token")
 
 
 class ChangePasswordRequest(BaseModel):
-    """Request model for changing password."""
+    """Change password request model."""
 
-    current_password: str = Field(..., description="Current password")
+    current_password: str = Field(description="Current user password")
     new_password: str = Field(
-        ...,
-        description="New password",
         min_length=8,
-        max_length=100,
+        max_length=128,
+        description="New password (8-128 characters with strength requirements)",
     )
-    new_password_confirm: str = Field(..., description="New password confirmation")
+    new_password_confirm: str = Field(
+        min_length=8,
+        max_length=128,
+        description="New password confirmation (must match new_password)",
+    )
+
+    @field_validator("new_password")
+    @classmethod
+    def validate_new_password_strength(cls, v: str) -> str:
+        """Validate new password meets strength requirements."""
+        return validate_password_strength(v)
 
     @model_validator(mode="after")
-    def validate_passwords_match(self) -> "ChangePasswordRequest":
-        """Validate that new_password and new_password_confirm match."""
-        if self.new_password != self.new_password_confirm:
-            raise ValueError("New passwords do not match")
-        return self
-
-    @model_validator(mode="after")
-    def validate_passwords_different(self) -> "ChangePasswordRequest":
-        """Validate that current_password and new_password are different."""
-        if self.current_password == self.new_password:
-            raise ValueError("New password must be different from current password")
-        return self
-
-    @model_validator(mode="after")
-    def validate_password_strength(self) -> "ChangePasswordRequest":
-        """Validate password strength."""
-        # Check for at least one uppercase letter
-        if not any(c.isupper() for c in self.new_password):
-            raise ValueError("Password must contain at least one uppercase letter")
-
-        # Check for at least one lowercase letter
-        if not any(c.islower() for c in self.new_password):
-            raise ValueError("Password must contain at least one lowercase letter")
-
-        # Check for at least one digit
-        if not any(c.isdigit() for c in self.new_password):
-            raise ValueError("Password must contain at least one number")
-
-        # Check for at least one special character
-        special_chars = "!@#$%^&*()_-+=[]{}|:;,.<>?/"
-        if not any(c in special_chars for c in self.new_password):
-            raise ValueError("Password must contain at least one special character")
-
+    def validate_password_requirements(self) -> "ChangePasswordRequest":
+        """Validate password requirements."""
+        # Check that passwords match
+        validate_passwords_match(self.new_password, self.new_password_confirm)
+        # Check that new password is different from current
+        validate_passwords_different(self.current_password, self.new_password)
         return self
 
 
 class ForgotPasswordRequest(BaseModel):
-    """Request model for forgot password."""
+    """Forgot password request model."""
 
-    email: EmailStr = Field(..., description="Email address")
+    email: EmailStr = Field(description="Email address for password reset")
 
 
 class ResetPasswordRequest(BaseModel):
-    """Request model for resetting password."""
+    """Reset password request model."""
 
-    token: str = Field(..., description="Reset token")
+    token: str = Field(description="Password reset token")
     new_password: str = Field(
-        ...,
-        description="New password",
         min_length=8,
-        max_length=100,
+        max_length=128,
+        description="New password (8-128 characters with strength requirements)",
     )
-    new_password_confirm: str = Field(..., description="New password confirmation")
+    new_password_confirm: str = Field(
+        min_length=8,
+        max_length=128,
+        description="New password confirmation (must match new_password)",
+    )
+
+    @field_validator("new_password")
+    @classmethod
+    def validate_new_password_strength(cls, v: str) -> str:
+        """Validate new password meets strength requirements."""
+        return validate_password_strength(v)
 
     @model_validator(mode="after")
-    def validate_passwords_match(self) -> "ResetPasswordRequest":
-        """Validate that new_password and new_password_confirm match."""
-        if self.new_password != self.new_password_confirm:
-            raise ValueError("Passwords do not match")
+    def validate_passwords_match_check(self) -> "ResetPasswordRequest":
+        """Validate that password and password_confirm match."""
+        validate_passwords_match(self.new_password, self.new_password_confirm)
         return self
 
-    @model_validator(mode="after")
-    def validate_password_strength(self) -> "ResetPasswordRequest":
-        """Validate password strength."""
-        # Check for at least one uppercase letter
-        if not any(c.isupper() for c in self.new_password):
-            raise ValueError("Password must contain at least one uppercase letter")
 
-        # Check for at least one lowercase letter
-        if not any(c.islower() for c in self.new_password):
-            raise ValueError("Password must contain at least one lowercase letter")
+# Legacy models for backward compatibility
+class UserCreate(BaseModel):
+    """User creation request model (legacy)."""
 
-        # Check for at least one digit
-        if not any(c.isdigit() for c in self.new_password):
-            raise ValueError("Password must contain at least one number")
+    email: EmailStr
+    password: str = Field(min_length=8)
+    full_name: Optional[str] = None
 
-        # Check for at least one special character
-        special_chars = "!@#$%^&*()_-+=[]{}|:;,.<>?/"
-        if not any(c in special_chars for c in self.new_password):
-            raise ValueError("Password must contain at least one special character")
 
-        return self
+class UserLogin(BaseModel):
+    """User login request model (legacy)."""
+
+    email: EmailStr
+    password: str
+
+
+class RefreshToken(BaseModel):
+    """Refresh token request model (legacy)."""
+
+    refresh_token: str

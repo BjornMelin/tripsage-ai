@@ -10,25 +10,29 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
-from tripsage.api.models.requests.trips import TripDestination, TripPreferences
+from ..common.trips import TripDestination, TripPreferences
 
 
 class TripResponse(BaseModel):
     """Response model for trip details."""
 
-    id: UUID = Field(..., description="Trip ID")
-    user_id: str = Field(..., description="User ID")
-    title: str = Field(..., description="Trip title")
-    description: Optional[str] = Field(None, description="Trip description")
-    start_date: date = Field(..., description="Trip start date")
-    end_date: date = Field(..., description="Trip end date")
-    duration_days: int = Field(..., description="Trip duration in days")
-    destinations: List[TripDestination] = Field(..., description="Trip destinations")
-    preferences: Optional[TripPreferences] = Field(None, description="Trip preferences")
-    itinerary_id: Optional[UUID] = Field(None, description="Associated itinerary ID")
-    status: str = Field(..., description="Trip status")
-    created_at: datetime = Field(..., description="Creation timestamp")
-    updated_at: datetime = Field(..., description="Last update timestamp")
+    id: UUID = Field(description="Trip ID")
+    user_id: str = Field(description="User ID")
+    title: str = Field(description="Trip title")
+    description: Optional[str] = Field(default=None, description="Trip description")
+    start_date: date = Field(description="Trip start date")
+    end_date: date = Field(description="Trip end date")
+    duration_days: int = Field(description="Trip duration in days")
+    destinations: List[TripDestination] = Field(description="Trip destinations")
+    preferences: Optional[TripPreferences] = Field(
+        default=None, description="Trip preferences"
+    )
+    itinerary_id: Optional[UUID] = Field(
+        default=None, description="Associated itinerary ID"
+    )
+    status: str = Field(description="Trip status")
+    created_at: datetime = Field(description="Creation timestamp")
+    updated_at: datetime = Field(description="Last update timestamp")
 
     model_config = {
         "json_schema_extra": {
@@ -106,43 +110,44 @@ class TripResponse(BaseModel):
 class TripListItem(BaseModel):
     """Response model for trip list items."""
 
-    id: UUID = Field(..., description="Trip ID")
-    title: str = Field(..., description="Trip title")
-    start_date: date = Field(..., description="Trip start date")
-    end_date: date = Field(..., description="Trip end date")
-    duration_days: int = Field(..., description="Trip duration in days")
-    destinations: List[str] = Field(..., description="Trip destination names")
-    status: str = Field(..., description="Trip status")
-    created_at: datetime = Field(..., description="Creation timestamp")
+    id: UUID = Field(description="Trip ID")
+    title: str = Field(description="Trip title")
+    start_date: date = Field(description="Trip start date")
+    end_date: date = Field(description="Trip end date")
+    duration_days: int = Field(description="Trip duration in days")
+    destinations: List[str] = Field(description="Trip destination names")
+    status: str = Field(description="Trip status")
+    created_at: datetime = Field(description="Creation timestamp")
 
 
 class TripListResponse(BaseModel):
     """Response model for a list of trips."""
 
-    items: List[TripListItem] = Field(..., description="List of trips")
-    total: int = Field(..., description="Total number of trips")
-    skip: int = Field(..., description="Number of trips skipped")
-    limit: int = Field(..., description="Maximum number of trips returned")
+    items: List[TripListItem] = Field(description="List of trips")
+    total: int = Field(description="Total number of trips")
+    skip: int = Field(description="Number of trips skipped")
+    limit: int = Field(description="Maximum number of trips returned")
 
 
 class TripSummaryResponse(BaseModel):
     """Response model for trip summary."""
 
-    id: UUID = Field(..., description="Trip ID")
-    title: str = Field(..., description="Trip title")
-    date_range: str = Field(..., description="Trip date range")
-    duration_days: int = Field(..., description="Trip duration in days")
-    destinations: List[str] = Field(..., description="Trip destination names")
+    id: UUID = Field(description="Trip ID")
+    title: str = Field(description="Trip title")
+    date_range: str = Field(description="Trip date range")
+    duration_days: int = Field(description="Trip duration in days")
+    destinations: List[str] = Field(description="Trip destination names")
     accommodation_summary: Optional[str] = Field(
-        None, description="Accommodation summary"
+        default=None, description="Accommodation summary"
     )
     transportation_summary: Optional[str] = Field(
-        None, description="Transportation summary"
+        default=None, description="Transportation summary"
     )
-    budget_summary: Optional[Dict[str, Any]] = Field(None, description="Budget summary")
-    has_itinerary: bool = Field(..., description="Whether trip has an itinerary")
+    budget_summary: Optional[Dict[str, Any]] = Field(
+        default=None, description="Budget summary"
+    )
+    has_itinerary: bool = Field(description="Whether trip has an itinerary")
     completion_percentage: int = Field(
-        ...,
         description="Trip planning completion percentage",
         ge=0,
         le=100,

@@ -1,7 +1,6 @@
-"""
-Response models for authentication endpoints.
+"""Authentication response models using Pydantic V2.
 
-This module defines Pydantic models for API responses related to authentication.
+This module defines Pydantic models for authentication-related responses.
 """
 
 from datetime import datetime
@@ -10,44 +9,58 @@ from typing import Dict, Optional
 from pydantic import BaseModel, EmailStr, Field
 
 
-class TokenResponse(BaseModel):
-    """Response model for authentication tokens."""
+class Token(BaseModel):
+    """Token response model."""
 
-    access_token: str = Field(..., description="JWT access token")
-    refresh_token: str = Field(..., description="JWT refresh token")
-    token_type: str = Field("bearer", description="Token type")
-    expires_in: int = Field(..., description="Token expiration time in seconds")
+    access_token: str = Field(description="JWT access token")
+    refresh_token: str = Field(description="JWT refresh token")
+    token_type: str = Field(default="bearer", description="Token type")
+    expires_at: datetime = Field(description="Token expiration timestamp")
+
+
+class TokenResponse(BaseModel):
+    """Enhanced token response model."""
+
+    access_token: str = Field(description="JWT access token")
+    refresh_token: str = Field(description="JWT refresh token")
+    token_type: str = Field(default="bearer", description="Token type")
+    expires_in: int = Field(description="Token expiration in seconds")
+    user: "UserResponse" = Field(description="User information")
 
 
 class UserResponse(BaseModel):
-    """Response model for user information."""
+    """User response model."""
 
-    id: str = Field(..., description="User ID")
-    username: str = Field(..., description="Username")
-    email: EmailStr = Field(..., description="Email address")
-    full_name: str = Field(..., description="Full name")
-    is_active: bool = Field(..., description="Whether the user is active")
-    is_verified: bool = Field(..., description="Whether the user's email is verified")
-    created_at: datetime = Field(..., description="User creation timestamp")
-    updated_at: datetime = Field(..., description="User last update timestamp")
-    preferences: Optional[Dict] = Field(None, description="User preferences")
+    id: str = Field(description="User ID")
+    email: EmailStr = Field(description="User email address")
+    full_name: Optional[str] = Field(default=None, description="User's full name")
+    created_at: datetime = Field(description="Account creation timestamp")
+    updated_at: datetime = Field(description="Last update timestamp")
+    is_active: bool = Field(default=True, description="Whether user account is active")
+    preferences: Optional[Dict] = Field(default=None, description="User preferences")
 
 
 class UserPreferencesResponse(BaseModel):
-    """Response model for user preferences."""
+    """User preferences response model."""
 
-    id: str = Field(..., description="User ID")
-    preferences: Dict = Field({}, description="User preferences")
+    user_id: str = Field(description="User ID")
+    preferences: Dict = Field(description="User preferences dictionary")
+    updated_at: datetime = Field(description="Last update timestamp")
 
 
 class MessageResponse(BaseModel):
-    """Response model for simple messages."""
+    """Generic message response model."""
 
-    message: str = Field(..., description="Message")
+    message: str = Field(description="Response message")
+    success: bool = Field(default=True, description="Whether operation was successful")
+    details: Optional[Dict] = Field(default=None, description="Additional details")
 
 
 class PasswordResetResponse(BaseModel):
-    """Response model for password reset."""
+    """Password reset response model."""
 
-    message: str = Field(..., description="Message")
-    email: EmailStr = Field(..., description="Email address")
+    message: str = Field(description="Reset status message")
+    email: EmailStr = Field(description="Email where reset link was sent")
+    reset_token_expires_at: Optional[datetime] = Field(
+        default=None, description="When reset token expires"
+    )
