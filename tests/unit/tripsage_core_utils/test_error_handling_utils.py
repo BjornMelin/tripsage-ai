@@ -2,7 +2,8 @@
 Comprehensive test suite for tripsage_core.utils.error_handling_utils module.
 
 This module provides extensive tests for error handling utilities,
-including exception formatting, error tracking, retry mechanisms, and logging integration.
+including exception formatting, error tracking, retry mechanisms,
+and logging integration.
 """
 
 import logging
@@ -10,15 +11,6 @@ import time
 from unittest.mock import MagicMock
 
 import pytest
-
-try:
-    from tripsage_core.utils.error_handling_utils import (
-        log_exception,
-    )
-
-    HAS_ERROR_UTILS = True
-except ImportError:
-    HAS_ERROR_UTILS = False
 
 
 # Mock implementations for testing
@@ -477,7 +469,7 @@ class TestRetryWithBackoff:
                 raise ValueError("Retry me")
             return "success"
 
-        start_time = time.time()
+        _start_time = time.time()
         result = timed_function()
 
         assert result == "success"
@@ -851,7 +843,7 @@ class TestPerformance:
             start_time = time.time()
 
             for _ in range(100):
-                formatted = format_exception(e)
+                _formatted = format_exception(e)
 
             end_time = time.time()
             total_time = end_time - start_time
