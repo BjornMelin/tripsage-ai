@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.12"
 authors = [{ name = "TripSage Team" }]
 dependencies = [
+    "cryptography>=45.0.3",
     "email-validator>=2.2.0",
     "fakeredis>=2.29.0",
     "fastapi>=0.115.12",

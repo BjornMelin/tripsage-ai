@@ -10,7 +10,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Query, status
 
 from api.services.trip_service import get_trip_service
-from tripsage.api.core.dependencies import get_session_memory
+from api.deps import get_session_memory
 from tripsage.api.middlewares.auth import get_current_user
 from tripsage.api.models.trips import (
     CreateTripRequest,
