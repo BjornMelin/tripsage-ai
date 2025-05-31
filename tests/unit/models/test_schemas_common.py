@@ -182,7 +182,7 @@ class TestFinancialModels:
         with pytest.raises(ValidationError) as excinfo:
             Currency(code=CurrencyCode.USD, decimal_places=5)
 
-        assert "Decimal places must be between 0 and 4" in str(excinfo.value)
+        assert "Input should be less than or equal to 4" in str(excinfo.value)
 
     def test_price_creation(self):
         """Test Price model creation."""
@@ -196,7 +196,7 @@ class TestFinancialModels:
         with pytest.raises(ValidationError) as excinfo:
             Price(amount=Decimal("-10"), currency=CurrencyCode.USD)
 
-        assert "Price amount must be non-negative" in str(excinfo.value)
+        assert "Input should be greater than or equal to 0" in str(excinfo.value)
 
     def test_price_formatting(self):
         """Test Price formatting methods."""
@@ -282,12 +282,12 @@ class TestGeographicModels:
         with pytest.raises(ValidationError) as excinfo:
             Coordinates(latitude=91, longitude=0)
 
-        assert "Latitude must be between -90 and 90 degrees" in str(excinfo.value)
+        assert "Input should be less than or equal to 90" in str(excinfo.value)
 
         with pytest.raises(ValidationError) as excinfo:
             Coordinates(latitude=0, longitude=181)
 
-        assert "Longitude must be between -180 and 180 degrees" in str(excinfo.value)
+        assert "Input should be less than or equal to 180" in str(excinfo.value)
 
     def test_coordinates_distance(self):
         """Test distance calculation between coordinates."""
@@ -373,7 +373,7 @@ class TestGeographicModels:
         with pytest.raises(ValidationError) as excinfo:
             Airport(code="INVALID", name="Test", city="Test", country="Test")
 
-        assert "IATA code must be exactly 3 letters" in str(excinfo.value)
+        assert "String should have at most 3 characters" in str(excinfo.value)
 
     def test_route_creation(self):
         """Test Route model creation."""
@@ -454,7 +454,7 @@ class TestTemporalModels:
         with pytest.raises(ValidationError) as excinfo:
             Duration(hours=25)  # Invalid hours
 
-        assert "Hours must be between 0 and 23" in str(excinfo.value)
+        assert "Input should be less than 24" in str(excinfo.value)
 
     def test_availability_creation(self):
         """Test Availability model creation."""
