@@ -11,10 +11,12 @@ from uuid import UUID
 
 from fastapi import (
     APIRouter,
+    Depends,
     WebSocket,
     WebSocketDisconnect,
 )
 from pydantic import Field, ValidationError
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from tripsage.agents.chat import ChatAgent
 from tripsage.api.core.dependencies import get_db
@@ -22,11 +24,16 @@ from tripsage.api.models.requests.websocket import (
     WebSocketAuthRequest,
     WebSocketSubscribeRequest,
 )
-from tripsage.services.core.chat_service import ChatService
 from tripsage_core.models.schemas_common.chat import (
     ChatMessage as WebSocketMessage,
 )
-from tripsage_core.services.business.chat_service import MessageRole
+from tripsage_core.services.business.chat_service import (
+    ChatService as CoreChatService,
+)
+from tripsage_core.services.business.chat_service import (
+    MessageCreateRequest,
+    MessageRole,
+)
 from tripsage_core.services.infrastructure.websocket_manager import (
     WebSocketEvent,
     WebSocketEventType,
@@ -71,16 +78,32 @@ def get_chat_agent() -> ChatAgent:
     return _chat_agent
 
 
+async def get_core_chat_service(db: AsyncSession = Depends(get_db)) -> CoreChatService:
+    """Get CoreChatService instance with database dependency.
+
+    Args:
+        db: Database session from dependency injection
+
+    Returns:
+        CoreChatService instance
+    """
+    return CoreChatService(database_service=db)
+
+
 @router.websocket("/ws/chat/{session_id}")
 async def chat_websocket(
     websocket: WebSocket,
     session_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    chat_service: CoreChatService = Depends(get_core_chat_service),
 ):
     """WebSocket endpoint for real-time chat communication.
 
     Args:
         websocket: WebSocket connection
         session_id: Chat session ID
+        db: Database session from dependency injection
+        chat_service: CoreChatService instance from dependency injection
     """
     connection_id = None
 
@@ -140,9 +163,7 @@ async def chat_websocket(
         )
         await websocket_manager.send_to_connection(connection_id, connection_event)
 
-        # Create chat service with database session
-        db_session = await get_db()
-        chat_service = ChatService(db_session)
+        # Get chat agent instance (dependency injection provides chat_service)
         chat_agent = get_chat_agent()
 
         logger.info(
@@ -411,7 +432,7 @@ async def handle_chat_message(
     user_id: UUID,
     session_id: UUID,
     message_data: dict,
-    chat_service: ChatService,
+    chat_service: CoreChatService,
     chat_agent: ChatAgent,
 ) -> None:
     """Handle incoming chat message and stream response.
@@ -421,7 +442,7 @@ async def handle_chat_message(
         user_id: User ID
         session_id: Chat session ID
         message_data: Message data from client
-        chat_service: Chat service instance
+        chat_service: CoreChatService instance
         chat_agent: Chat agent instance
     """
     try:
@@ -454,11 +475,14 @@ async def handle_chat_message(
         await websocket_manager.send_to_session(session_id, user_message_event)
 
         # Store user message in database
-        await chat_service.add_message(
-            session_id=session_id,
-            role="user",
+        user_message_request = MessageCreateRequest(
+            role=MessageRole.USER,
             content=content,
-            user_id=user_id,
+        )
+        await chat_service.add_message(
+            session_id=str(session_id),
+            user_id=str(user_id),
+            message_data=user_message_request,
         )
 
         # Get available tools for this user (simplified for now)
@@ -548,10 +572,14 @@ async def handle_chat_message(
         await websocket_manager.send_to_session(session_id, complete_message_event)
 
         # Store assistant message in database
-        await chat_service.add_message(
-            session_id=session_id,
-            role="assistant",
+        assistant_message_request = MessageCreateRequest(
+            role=MessageRole.ASSISTANT,
             content=full_content,
+        )
+        await chat_service.add_message(
+            session_id=str(session_id),
+            user_id=str(user_id),
+            message_data=assistant_message_request,
         )
 
     except Exception as e:
@@ -563,21 +591,6 @@ async def handle_chat_message(
             session_id=session_id,
         )
         await websocket_manager.send_to_connection(connection_id, error_event)
-
-
-# WebSocket manager lifecycle hooks
-@router.on_event("startup")
-async def start_websocket_manager():
-    """Start the WebSocket manager on application startup."""
-    await websocket_manager.start()
-    logger.info("WebSocket manager started")
-
-
-@router.on_event("shutdown")
-async def stop_websocket_manager():
-    """Stop the WebSocket manager on application shutdown."""
-    await websocket_manager.stop()
-    logger.info("WebSocket manager stopped")
 
 
 # Health check endpoint for WebSocket service
