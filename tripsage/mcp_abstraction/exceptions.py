@@ -1,44 +1,34 @@
 """
-Custom exceptions for the TripSage MCP abstraction layer.
+Custom exceptions for the Airbnb MCP abstraction layer.
 
-This module defines a hierarchy of exceptions for handling various
-MCP-related errors.
+This module defines exceptions for handling Airbnb MCP-related errors.
 """
 
 from typing import Optional
 
 
 class TripSageMCPError(Exception):
-    """Base exception for all MCP-related errors in TripSage."""
+    """Base exception for MCP-related errors in TripSage."""
 
     pass
-
-
-# Alias for compatibility
-MCPError = TripSageMCPError
 
 
 class MCPClientError(TripSageMCPError):
     """Exception raised when an MCP client operation fails."""
 
     def __init__(
-        self, message: str, mcp_name: str, original_error: Optional[Exception] = None
+        self,
+        message: str,
+        mcp_name: str = "airbnb",
+        original_error: Optional[Exception] = None,
     ):
         self.mcp_name = mcp_name
         self.original_error = original_error
         super().__init__(message)
 
 
-class MCPNotRegisteredError(TripSageMCPError):
-    """Exception raised when an MCP is not registered."""
-
-    def __init__(self, message: str, mcp_name: str):
-        self.mcp_name = mcp_name
-        super().__init__(message)
-
-
-class MCPManagerError(TripSageMCPError):
-    """Exception raised for MCP manager-related errors."""
+class MCPRegistrationError(TripSageMCPError):
+    """Exception raised for MCP registration errors."""
 
     pass
 
@@ -49,8 +39,8 @@ class MCPInvocationError(MCPClientError):
     def __init__(
         self,
         message: str,
-        mcp_name: str,
-        method_name: str,
+        mcp_name: str = "airbnb",
+        method_name: str = "",
         original_error: Optional[Exception] = None,
     ):
         self.method_name = method_name
@@ -58,16 +48,16 @@ class MCPInvocationError(MCPClientError):
 
 
 class MCPMethodNotFoundError(MCPClientError):
-    """Exception raised when a method is not found on an MCP."""
+    """Exception raised when a method is not found on the MCP."""
 
     def __init__(
         self,
         message: str,
-        mcp_name: Optional[str] = None,
-        method_name: Optional[str] = None,
+        mcp_name: str = "airbnb",
+        method_name: str = "",
     ):
         self.method_name = method_name
-        super().__init__(message, mcp_name or "unknown")
+        super().__init__(message, mcp_name)
 
 
 class MCPTimeoutError(MCPClientError):
@@ -76,8 +66,8 @@ class MCPTimeoutError(MCPClientError):
     def __init__(
         self,
         message: str,
-        mcp_name: str,
-        timeout_seconds: float,
+        mcp_name: str = "airbnb",
+        timeout_seconds: float = 30.0,
         original_error: Optional[Exception] = None,
     ):
         self.timeout_seconds = timeout_seconds
@@ -96,25 +86,9 @@ class MCPRateLimitError(MCPClientError):
     def __init__(
         self,
         message: str,
-        mcp_name: str,
+        mcp_name: str = "airbnb",
         retry_after: Optional[float] = None,
         original_error: Optional[Exception] = None,
     ):
         self.retry_after = retry_after
-        super().__init__(message, mcp_name, original_error)
-
-
-class MCPNotFoundError(MCPClientError):
-    """Exception raised when a requested resource is not found in an MCP."""
-
-    def __init__(
-        self,
-        message: str,
-        mcp_name: str,
-        resource_type: Optional[str] = None,
-        resource_id: Optional[str] = None,
-        original_error: Optional[Exception] = None,
-    ):
-        self.resource_type = resource_type
-        self.resource_id = resource_id
         super().__init__(message, mcp_name, original_error)

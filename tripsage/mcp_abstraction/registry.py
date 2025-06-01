@@ -1,164 +1,106 @@
 """
-MCP Client Registry for Airbnb MCP wrapper.
+Simplified MCP Registry for Airbnb wrapper.
 
-This module provides a simplified registry that only handles the Airbnb
-MCP wrapper. All other services use direct SDK integration.
+This module provides a lightweight registry that only handles the Airbnb
+MCP wrapper, since all other services use direct SDK integration.
 """
 
-import threading
-from typing import Callable, Dict, Optional, Type
+from typing import Optional
 
 from tripsage_core.utils.logging_utils import get_logger
 
 from .base_wrapper import BaseMCPWrapper
+from .exceptions import MCPRegistrationError
+
+logger = get_logger(__name__)
 
 
-class MCPClientRegistry:
-    """Singleton registry for MCP client wrappers."""
-
-    _instance: Optional["MCPClientRegistry"] = None
-    _lock = threading.Lock()
-
-    def __new__(cls) -> "MCPClientRegistry":
-        if cls._instance is None:
-            with cls._lock:
-                # Double-checked locking pattern
-                if cls._instance is None:
-                    cls._instance = super().__new__(cls)
-                    cls._instance._initialized = False
-        return cls._instance
+class MCPRegistry:
+    """Simple registry for the Airbnb MCP wrapper."""
 
     def __init__(self):
-        """Initialize the registry."""
-        # Ensure initialization only happens once
-        if not self._initialized:
-            self._registry: Dict[str, Type[BaseMCPWrapper]] = {}
-            self._lazy_loaders: Dict[str, Callable[[], Type[BaseMCPWrapper]]] = {}
-            self._initialized = True
-            self._auto_register_called = False
+        """Initialize the MCP registry."""
+        self._wrapper_class: Optional[type[BaseMCPWrapper]] = None
+        self._wrapper_instance: Optional[BaseMCPWrapper] = None
 
-    def register(
-        self, mcp_name: str, wrapper_class: Type[BaseMCPWrapper], replace: bool = False
-    ) -> None:
+    def register_airbnb(self, wrapper_class: type[BaseMCPWrapper]) -> None:
         """
-        Register an MCP wrapper class.
+        Register the Airbnb wrapper class.
 
         Args:
-            mcp_name: The name identifier for the MCP
-            wrapper_class: The wrapper class to register
-            replace: Whether to replace an existing registration
+            wrapper_class: The Airbnb wrapper class
 
         Raises:
-            ValueError: If mcp_name is already registered and replace is False
+            MCPRegistrationError: If wrapper class is invalid
         """
-        if mcp_name in self._registry and not replace:
-            raise ValueError(f"MCP '{mcp_name}' is already registered")
-
         if not issubclass(wrapper_class, BaseMCPWrapper):
-            raise TypeError(
-                f"Wrapper class must inherit from BaseMCPWrapper, got {wrapper_class}"
-            )
+            raise MCPRegistrationError("Wrapper class must inherit from BaseMCPWrapper")
 
-        self._registry[mcp_name] = wrapper_class
+        self._wrapper_class = wrapper_class
+        logger.info("Registered Airbnb MCP wrapper")
 
-    def register_lazy(
-        self,
-        mcp_name: str,
-        loader: Callable[[], Type[BaseMCPWrapper]],
-        replace: bool = False,
-    ) -> None:
+    def get_airbnb_wrapper(self) -> type[BaseMCPWrapper]:
         """
-        Register a lazy loader for an MCP wrapper class.
-
-        Args:
-            mcp_name: The name identifier for the MCP
-            loader: A callable that returns the wrapper class when called
-            replace: Whether to replace an existing registration
-        """
-        if mcp_name in self._lazy_loaders and not replace:
-            raise ValueError(f"MCP '{mcp_name}' is already registered")
-
-        self._lazy_loaders[mcp_name] = loader
-
-    def get_wrapper_class(self, mcp_name: str) -> Type[BaseMCPWrapper]:
-        """
-        Get a registered wrapper class by name.
-
-        Args:
-            mcp_name: The name of the MCP to retrieve
+        Get the Airbnb wrapper class.
 
         Returns:
-            The registered wrapper class
+            The Airbnb wrapper class
 
         Raises:
-            KeyError: If the MCP is not registered
+            MCPRegistrationError: If wrapper is not registered
         """
-        # First check if it's already loaded
-        if mcp_name in self._registry:
-            return self._registry[mcp_name]
-
-        # Check if we have a lazy loader for it
-        if mcp_name in self._lazy_loaders:
-            loader = self._lazy_loaders[mcp_name]
-            wrapper_class = loader()
-            self._registry[mcp_name] = wrapper_class
-            return wrapper_class
-
-        # If not found, auto-register if we haven't already
-        if not self._auto_register_called:
+        if self._wrapper_class is None:
+            # Auto-register if not already done
             self._auto_register()
-            # Try again after auto-registration
-            if mcp_name in self._registry:
-                return self._registry[mcp_name]
-            if mcp_name in self._lazy_loaders:
-                loader = self._lazy_loaders[mcp_name]
-                wrapper_class = loader()
-                self._registry[mcp_name] = wrapper_class
-                return wrapper_class
 
-        # Still not found
-        available_mcps = list(self._registry.keys()) + list(self._lazy_loaders.keys())
-        raise KeyError(
-            f"MCP '{mcp_name}' not found in registry. Available MCPs: {available_mcps}"
-        )
+        if self._wrapper_class is None:
+            raise MCPRegistrationError("Airbnb MCP wrapper not registered")
 
-    def _auto_register(self):
+        return self._wrapper_class
+
+    def _auto_register(self) -> None:
         """Auto-register the Airbnb wrapper."""
-        if self._auto_register_called:
-            return
-
-        self._auto_register_called = True
-
-        # Auto-register Airbnb wrapper
         try:
             from .wrappers import AirbnbMCPWrapper
 
-            self.register("airbnb", AirbnbMCPWrapper)
+            self.register_airbnb(AirbnbMCPWrapper)
         except ImportError as e:
-            logger = get_logger(__name__)
             logger.error(f"Failed to auto-register Airbnb wrapper: {e}")
-
-    def is_registered(self, mcp_name: str) -> bool:
-        """
-        Check if an MCP is registered.
-
-        Args:
-            mcp_name: The name of the MCP to check
-
-        Returns:
-            True if the MCP is registered, False otherwise
-        """
-        return mcp_name in self._registry or mcp_name in self._lazy_loaders
 
     def get_registered_mcps(self) -> list[str]:
         """
-        Get a list of all registered MCP names.
+        Get list of registered MCP names.
+
+        For backward compatibility, returns only 'airbnb' since
+        all other services have been migrated to direct SDK.
 
         Returns:
-            List of registered MCP names
+            List containing only 'airbnb'
         """
-        return list(self._registry.keys()) + list(self._lazy_loaders.keys())
+        return ["airbnb"] if self._wrapper_class else []
+
+    def get_wrapper_class(self, mcp_name: str) -> type[BaseMCPWrapper]:
+        """
+        Get wrapper class by MCP name.
+
+        For backward compatibility. Only supports 'airbnb'.
+
+        Args:
+            mcp_name: MCP name (must be 'airbnb')
+
+        Returns:
+            The Airbnb wrapper class
+
+        Raises:
+            MCPRegistrationError: If mcp_name is not 'airbnb'
+        """
+        if mcp_name != "airbnb":
+            raise MCPRegistrationError(
+                f"MCP '{mcp_name}' is not supported. "
+                "Only 'airbnb' remains after SDK migration."
+            )
+        return self.get_airbnb_wrapper()
 
 
 # Global registry instance
-registry = MCPClientRegistry()
+registry = MCPRegistry()

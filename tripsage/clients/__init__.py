@@ -1,8 +1,7 @@
 """Client implementations for external services and MCPs.
 
 After the MCP to SDK migration, this module only contains:
-- AccommodationMCPClient: For Airbnb accommodations (only service remaining on MCP)
-- MCPClientFactory: Factory for creating Airbnb MCP clients
+- AirbnbMCPClient: For Airbnb accommodations (only service remaining on MCP)
 
 All other services have been migrated to direct SDK integration:
 - Redis → DragonflyDB direct SDK (tripsage.services.infrastructure.dragonfly_service)
@@ -14,8 +13,6 @@ All other services have been migrated to direct SDK integration:
 - Webcrawl → Crawl4AI direct SDK integration (completed)
 """
 
-from tripsage.clients.accommodations import AccommodationMCPClient
 from tripsage.clients.airbnb_mcp_client import AirbnbMCPClient
-from tripsage.clients.factory import MCPClientFactory
 
-__all__ = ["AccommodationMCPClient", "AirbnbMCPClient", "MCPClientFactory"]
+__all__ = ["AirbnbMCPClient"]
