@@ -75,11 +75,9 @@ def mock_mcp_manager():
     manager = MagicMock()
     manager.invoke = AsyncMock(return_value={})
     manager.initialize = AsyncMock()
-    manager.get_available_methods = Mock(return_value=[
-        "search_listings",
-        "get_listing_details",
-        "check_availability"
-    ])
+    manager.get_available_methods = Mock(
+        return_value=["search_listings", "get_listing_details", "check_availability"]
+    )
 
     # Create a side effect that returns Airbnb-specific responses
     def invoke_side_effect(method_name, params=None, **kwargs):
@@ -105,7 +103,7 @@ def mock_mcp_registry():
     registry._wrapper_class = None
     registry.register_airbnb = Mock()
     registry.get_airbnb_wrapper = Mock()
-    
+
     # Mock the AirbnbMCPWrapper class
     mock_wrapper_class = MagicMock()
     mock_wrapper_class.__name__ = "AirbnbMCPWrapper"
