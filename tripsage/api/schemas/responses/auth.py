@@ -32,11 +32,13 @@ class UserResponse(BaseModel):
     """User response model."""
 
     id: str = Field(description="User ID")
+    username: Optional[str] = Field(default=None, description="Username")
     email: EmailStr = Field(description="User email address")
     full_name: Optional[str] = Field(default=None, description="User's full name")
     created_at: datetime = Field(description="Account creation timestamp")
     updated_at: datetime = Field(description="Last update timestamp")
     is_active: bool = Field(default=True, description="Whether user account is active")
+    is_verified: bool = Field(default=False, description="Whether user account is verified")
     preferences: Optional[Dict] = Field(default=None, description="User preferences")
 
 
@@ -54,6 +56,13 @@ class MessageResponse(BaseModel):
     message: str = Field(description="Response message")
     success: bool = Field(default=True, description="Whether operation was successful")
     details: Optional[Dict] = Field(default=None, description="Additional details")
+
+
+class AuthResponse(BaseModel):
+    """Authentication response with user and tokens."""
+    
+    user: UserResponse = Field(description="User information")
+    tokens: Token = Field(description="Authentication tokens")
 
 
 class PasswordResetResponse(BaseModel):
