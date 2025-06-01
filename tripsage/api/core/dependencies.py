@@ -24,12 +24,6 @@ from tripsage.api.services import (
 )
 from tripsage.mcp_abstraction import MCPManager, mcp_manager
 from tripsage_core.exceptions.exceptions import CoreAuthenticationError
-from tripsage_core.services.business.key_management_service import (
-    KeyManagementService as CoreKeyManagementService,
-)
-from tripsage_core.services.business.key_management_service import (
-    get_key_management_service as get_core_key_management_service,
-)
 from tripsage_core.services.infrastructure import get_cache_service
 from tripsage_core.services.infrastructure.database_service import get_database_service
 from tripsage_core.utils.session_utils import SessionMemory
@@ -117,8 +111,7 @@ def get_principal_id(principal: Principal) -> str:
 async def verify_service_access(
     principal: Principal,
     service: str = "openai",
-    db: AsyncSession = Depends(get_db),
-    key_service: CoreKeyManagementService = Depends(get_core_key_management_service),
+    key_service = Depends(get_key_management_service),
 ) -> bool:
     """Verify that the principal has access to a specific service."""
     # Agents with API keys already have service access
@@ -128,7 +121,7 @@ async def verify_service_access(
     # For users, check they have the required service key
     if principal.type == "user":
         try:
-            keys = await key_service.get_user_keys(principal.id, db)
+            keys = await key_service.list_api_keys(principal.id)
             service_key = next((k for k in keys if k.service == service), None)
             return service_key is not None
         except Exception:

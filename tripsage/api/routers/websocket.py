@@ -28,10 +28,9 @@ from tripsage.api.schemas.requests.websocket import (
 from tripsage_core.models.schemas_common.chat import (
     ChatMessage as WebSocketMessage,
 )
+from tripsage.api.services.chat import ChatService, get_chat_service
 from tripsage_core.services.business.chat_service import (
     ChatService as CoreChatService,
-)
-from tripsage_core.services.business.chat_service import (
     MessageCreateRequest,
     MessageRole,
 )
