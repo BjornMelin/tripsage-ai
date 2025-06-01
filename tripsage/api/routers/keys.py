@@ -9,7 +9,7 @@ from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
 
-from tripsage.api.middlewares.auth import get_current_user
+from tripsage.api.core.dependencies import get_current_user
 from tripsage.api.models.requests.api_keys import (
     ApiKeyCreate,
     ApiKeyRotateRequest,
