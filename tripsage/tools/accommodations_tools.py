@@ -124,7 +124,6 @@ async def search_airbnb_rentals_tool(
         else:
             # Call the MCP via MCPManager
             result = await mcp_manager.invoke(
-                mcp_name="airbnb",
                 method_name="search_accommodations",
                 params=validated_params.model_dump(by_alias=True),
             )
@@ -252,7 +251,6 @@ async def get_airbnb_listing_details_tool(
         else:
             # Call the MCP via MCPManager
             result = await mcp_manager.invoke(
-                mcp_name="airbnb",
                 method_name="get_listing_details",
                 params=params,
             )
