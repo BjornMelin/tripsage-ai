@@ -17,6 +17,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from tripsage.agents.chat import ChatAgent
+from tripsage.agents.service_registry import ServiceRegistry
 from tripsage.api.core.dependencies import (
     get_db_dep,
     get_principal_id,
@@ -24,14 +25,16 @@ from tripsage.api.core.dependencies import (
     require_principal_dep,
 )
 from tripsage.api.middlewares.authentication import Principal
+from tripsage_core.models.schemas_common.chat import ToolCall
 from tripsage_core.services.business.chat_service import (
     ChatService as CoreChatService,
+)
+from tripsage_core.services.business.chat_service import (
     MessageCreateRequest,
     MessageRole,
     RateLimiter,
     RecentMessagesRequest,
 )
-from tripsage_core.models.schemas_common.chat import ToolCall
 
 logger = logging.getLogger(__name__)
 
@@ -40,15 +43,25 @@ router = APIRouter()
 # Global instances (singleton pattern)
 _chat_agent = None
 _rate_limiter = None
+_service_registry = None
 
 # Module-level dependency singletons imported from deps module
+
+
+def get_service_registry() -> ServiceRegistry:
+    """Get or create the service registry singleton."""
+    global _service_registry
+    if _service_registry is None:
+        _service_registry = ServiceRegistry()
+    return _service_registry
 
 
 def get_chat_agent() -> ChatAgent:
     """Get or create the chat agent singleton."""
     global _chat_agent
     if _chat_agent is None:
-        _chat_agent = ChatAgent()
+        service_registry = get_service_registry()
+        _chat_agent = ChatAgent(service_registry=service_registry)
     return _chat_agent
 
 
@@ -205,7 +218,7 @@ async def stream_agent_response(
     """
     try:
         # Run the agent with tool calling
-        response = await agent.run_with_tools(user_input, context, available_tools)
+        response = await agent.run(user_input, context)
 
         # Extract content and metadata
         content = response.get("content", "")
@@ -224,25 +237,13 @@ async def stream_agent_response(
                 yield await format_tool_call_chunk(tool_call)
                 await asyncio.sleep(0.05)
 
-                # Execute tool call if it has arguments
-                if "arguments" in tool_call:
-                    try:
-                        user_id = context.get("user_id", "anonymous")
-                        tool_result = await agent.execute_tool_call(
-                            tool_call["name"], tool_call["arguments"], user_id
-                        )
-
-                        yield await format_tool_result_chunk(
-                            tool_call.get("id", str(uuid4())), tool_result
-                        )
-                        await asyncio.sleep(0.05)
-
-                    except Exception as e:
-                        logger.error(f"Tool execution failed: {str(e)}")
-                        error_result = {"status": "error", "error": str(e)}
-                        yield await format_tool_result_chunk(
-                            tool_call.get("id", str(uuid4())), error_result
-                        )
+                # Tool execution is handled internally by the agent
+                # Just send the result if it's available
+                if "result" in tool_call:
+                    yield await format_tool_result_chunk(
+                        tool_call.get("id", str(uuid4())), tool_call["result"]
+                    )
+                    await asyncio.sleep(0.05)
 
         # Stream text content in chunks
         if content:
@@ -444,33 +445,19 @@ async def chat(
         )
     else:
         # Return regular JSON response
-        response = await agent.run_with_tools(
-            last_message.content, context, available_tools
-        )
+        response = await agent.run(last_message.content, context)
 
         # Process tool calls for response format
         processed_tool_calls = []
         if response.get("tool_calls"):
             for tool_call in response["tool_calls"]:
-                # Execute tool if not already executed
-                tool_result = None
-                if "arguments" in tool_call:
-                    try:
-                        tool_result = await agent.execute_tool_call(
-                            tool_call["name"],
-                            tool_call["arguments"],
-                            str(user_id),
-                        )
-                    except Exception as e:
-                        logger.error(f"Tool execution failed: {str(e)}")
-                        tool_result = {"status": "error", "error": str(e)}
-
+                # Tool execution is handled internally by the agent
                 processed_tool_calls.append(
                     ToolCall(
                         id=tool_call.get("id", str(uuid4())),
-                        name=tool_call["name"],
+                        name=tool_call.get("name", ""),
                         args=tool_call.get("arguments", {}),
-                        result=tool_result,
+                        result=tool_call.get("result"),
                     )
                 )
 
@@ -562,7 +549,9 @@ async def get_session_history(
         ) from e
 
     # Get messages
-    messages = await chat_service.get_messages(session_id, user_id=user_id, limit=limit, offset=offset)
+    messages = await chat_service.get_messages(
+        session_id, user_id=user_id, limit=limit, offset=offset
+    )
 
     return {
         "session_id": str(session.id),
@@ -600,7 +589,9 @@ async def list_sessions(
         List of active sessions with statistics
     """
     user_id = get_principal_id(principal)
-    sessions = await chat_service.get_user_sessions(user_id, limit=limit, include_ended=False)
+    sessions = await chat_service.get_user_sessions(
+        user_id, limit=limit, include_ended=False
+    )
 
     return {
         "sessions": [
@@ -669,7 +660,9 @@ async def export_chat_data(
     """
     user_id = get_principal_id(principal)
     # Get all user sessions
-    sessions = await chat_service.get_user_sessions(user_id, limit=1000, include_ended=False)
+    sessions = await chat_service.get_user_sessions(
+        user_id, limit=1000, include_ended=False
+    )
 
     export_data = {
         "user_id": user_id,
@@ -679,7 +672,9 @@ async def export_chat_data(
 
     # Get messages for each session
     for session in sessions:
-        messages = await chat_service.get_messages(session.id, user_id=user_id, limit=10000)
+        messages = await chat_service.get_messages(
+            session.id, user_id=user_id, limit=10000
+        )
 
         session_data = {
             "session_id": str(session.id),
@@ -770,7 +765,9 @@ async def delete_all_chat_data(
         )
 
     # Get all user sessions
-    sessions = await chat_service.get_user_sessions(user_id, limit=1000, include_ended=False)
+    sessions = await chat_service.get_user_sessions(
+        user_id, limit=1000, include_ended=False
+    )
 
     deleted_sessions = 0
     deleted_messages = 0
@@ -778,7 +775,9 @@ async def delete_all_chat_data(
     # Delete all sessions and their messages
     for session in sessions:
         # Get message count
-        messages = await chat_service.get_messages(session.id, user_id=user_id, limit=10000)
+        messages = await chat_service.get_messages(
+            session.id, user_id=user_id, limit=10000
+        )
         deleted_messages += len(messages)
 
         # End/delete the session (this should cascade delete messages)
