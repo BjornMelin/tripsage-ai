@@ -7,14 +7,18 @@ delegated to by the main TravelPlanningAgent, using the OpenAI Agents SDK.
 
 from tripsage.agents.handoffs.helper import (
     HandoffError,
-    create_travel_handoff,
+    create_handoff_tool,
+    create_delegation_tool,
     create_user_announcement,
-    register_travel_handoffs,
+    register_handoff_tools,
+    register_delegation_tools,
 )
 
 __all__ = [
     "HandoffError",
-    "create_travel_handoff",
-    "register_travel_handoffs",
+    "create_handoff_tool",
+    "create_delegation_tool",
     "create_user_announcement",
+    "register_handoff_tools",
+    "register_delegation_tools",
 ]

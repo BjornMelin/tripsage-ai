@@ -1,243 +1,403 @@
 """
-Tests for the BaseAgent class.
+Tests for the BaseAgent with dependency injection.
 
-This module tests the BaseAgent implementation that serves as the foundation
-for all TripSage agents, including its integration with the OpenAI Agents SDK.
+This module tests the refactored BaseAgent class that uses the ServiceRegistry
+for dependency injection instead of direct MCP calls.
 """
 
-from unittest.mock import AsyncMock, MagicMock, patch
-
 import pytest
+from unittest.mock import MagicMock, AsyncMock, patch
 
 from tripsage.agents.base import BaseAgent
-
-# Import OpenAI Agents SDK types
-try:
-    from openai.agents import RunContext, RunResult
-except ImportError:
-    # Fallback for testing - create mock classes
-    class RunContext:
-        pass
-
-    class RunResult:
-        pass
-
-
-@pytest.fixture
-def mock_runner():
-    """Mock for the OpenAI Agents SDK Runner."""
-    mock = MagicMock()
-    mock.run = AsyncMock()
-    return mock
-
-
-@pytest.fixture
-def mock_agent_sdk():
-    """Mock for the OpenAI Agents SDK Agent."""
-    mock = MagicMock()
-    return mock
-
-
-@pytest.fixture
-def mock_memory_tools():
-    """Mock for the memory tools module."""
-    mock = MagicMock()
-    # Create mock tool functions
-    mock.get_knowledge_graph = MagicMock()
-    mock.search_knowledge_graph = MagicMock()
-    mock.get_entity_details = MagicMock()
-    mock.create_knowledge_entities = MagicMock()
-    mock.create_knowledge_relations = MagicMock()
-    mock.add_entity_observations = MagicMock()
-    mock.delete_knowledge_entities = MagicMock()
-    mock.delete_knowledge_relations = MagicMock()
-    mock.delete_entity_observations = MagicMock()
-    mock.initialize_agent_memory = MagicMock()
-    mock.update_agent_memory = MagicMock()
-    mock.save_session_summary = MagicMock()
-    return mock
-
-
-@pytest.fixture
-def mock_mcp_client():
-    """Mock for an MCP client."""
-    mock = MagicMock()
-    mock.server_name = "TestMCP"
-    mock.list_tools_sync = MagicMock(return_value=["tool1", "tool2"])
-    mock.get_tool_metadata_sync = MagicMock(
-        return_value={"description": "Test tool description"}
-    )
-    mock.call_tool = AsyncMock(return_value={"result": "success"})
-    return mock
+from tripsage.agents.service_registry import ServiceRegistry
 
 
 class TestBaseAgent:
-    """Tests for the BaseAgent class."""
+    """Tests for the BaseAgent class with dependency injection."""
 
-    @patch("src.agents.base_agent.Agent")
-    @patch("src.agents.base_agent.Runner")
-    def test_agent_initialization(
-        self, mock_runner_cls, mock_agent_cls, mock_memory_tools
-    ):
-        """Test that the agent initializes with proper configuration."""
-        # Setup mocks
-        with patch("src.agents.base_agent.memory_tools", mock_memory_tools):
-            mock_agent_cls.return_value = MagicMock()
-            mock_runner_cls.return_value = MagicMock()
-
-            # Define test parameters
-            name = "Test Agent"
-            instructions = "Test instructions"
-            model = "gpt-4"
-            temperature = 0.3
-            metadata = {"agent_type": "test_agent", "version": "1.0.0"}
-
-            # Create agent
+    def test_initialization_with_service_registry(self):
+        """Test BaseAgent initialization with ServiceRegistry."""
+        mock_memory = MagicMock()
+        registry = ServiceRegistry(memory_service=mock_memory)
+        
+        with patch('agents.Agent') as mock_agent_class:
+            mock_agent_instance = MagicMock()
+            mock_agent_class.return_value = mock_agent_instance
+            
             agent = BaseAgent(
-                name=name,
-                instructions=instructions,
-                model=model,
-                temperature=temperature,
-                metadata=metadata,
+                name="TestAgent",
+                instructions="Test instructions",
+                service_registry=registry
             )
+            
+            assert agent.name == "TestAgent"
+            assert agent.instructions == "Test instructions"
+            assert agent.service_registry is registry
+            assert agent.agent is mock_agent_instance
 
-            # Verify agent has expected configuration
-            assert agent.name == name
-            assert agent.instructions == instructions
-            assert agent.model == model
-            assert agent.temperature == temperature
-            assert agent.metadata == metadata
+    def test_initialization_with_custom_parameters(self):
+        """Test BaseAgent initialization with custom model and temperature."""
+        registry = ServiceRegistry()
+        
+        with patch('agents.Agent') as mock_agent_class:
+            mock_agent_instance = MagicMock()
+            mock_agent_class.return_value = mock_agent_instance
+            
+            agent = BaseAgent(
+                name="CustomAgent",
+                instructions="Custom instructions",
+                service_registry=registry,
+                model="gpt-4",
+                temperature=0.8,
+                metadata={"type": "custom"}
+            )
+            
+            assert agent.model == "gpt-4"
+            assert agent.temperature == 0.8
+            assert agent.metadata["type"] == "custom"
 
-            # Verify OpenAI Agent was created with correct parameters
-            mock_agent_cls.assert_called_once()
-            args = mock_agent_cls.call_args
-            assert args[1]["name"] == name
-            assert args[1]["instructions"] == instructions
-            assert args[1]["model"] == model
-            assert args[1]["temperature"] == temperature
-            assert len(args[1]["tools"]) > 0  # Default tools should be registered
+    def test_register_tool_function(self):
+        """Test registering a simple tool function."""
+        registry = ServiceRegistry()
+        
+        with patch('agents.Agent'):
+            agent = BaseAgent(
+                name="TestAgent",
+                instructions="Test instructions",
+                service_registry=registry
+            )
+            
+            # Mock tool function
+            mock_tool = MagicMock()
+            mock_tool.__name__ = "test_tool"
+            
+            agent._register_tool(mock_tool)
+            
+            assert mock_tool in agent._tools
+            assert "test_tool" in agent._registered_tools
 
-            # Verify Runner was created
-            mock_runner_cls.assert_called_once()
-            assert hasattr(agent, "runner")
+    def test_register_tool_duplicate_prevention(self):
+        """Test that duplicate tools are not registered."""
+        registry = ServiceRegistry()
+        
+        with patch('agents.Agent'):
+            agent = BaseAgent(
+                name="TestAgent",
+                instructions="Test instructions",
+                service_registry=registry
+            )
+            
+            # Mock tool function
+            mock_tool = MagicMock()
+            mock_tool.__name__ = "test_tool"
+            
+            # Register tool twice
+            agent._register_tool(mock_tool)
+            initial_count = len(agent._tools)
+            
+            agent._register_tool(mock_tool)
+            
+            # Should not add duplicate
+            assert len(agent._tools) == initial_count
 
-    @patch("src.agents.base_agent.Agent")
-    @patch("src.agents.base_agent.Runner")
-    async def test_agent_run(
-        self, mock_runner_cls, mock_agent_cls, mock_runner, mock_memory_tools
-    ):
-        """Test that the agent run method correctly uses the Runner."""
-        # Setup mocks
-        with patch("src.agents.base_agent.memory_tools", mock_memory_tools):
-            mock_agent = MagicMock()
-            mock_agent_cls.return_value = mock_agent
-            mock_runner_cls.return_value = mock_runner
+    def test_register_tool_group_with_service_injection(self):
+        """Test registering a tool group that needs service injection."""
+        mock_memory = MagicMock()
+        registry = ServiceRegistry(memory_service=mock_memory)
+        
+        with patch('agents.Agent'):
+            agent = BaseAgent(
+                name="TestAgent",
+                instructions="Test instructions",
+                service_registry=registry
+            )
+            
+            # Mock a tool module with a function that needs service registry
+            mock_tool_func = MagicMock()
+            mock_tool_func.__name__ = "memory_tool"
+            mock_tool_func.__is_function_tool__ = True
+            
+            mock_module = MagicMock()
+            mock_module.memory_tool = mock_tool_func
+            
+            with patch('importlib.import_module', return_value=mock_module):
+                with patch('inspect.getmembers', return_value=[('memory_tool', mock_tool_func)]):
+                    with patch('inspect.signature') as mock_signature:
+                        # Mock signature to indicate service_registry parameter
+                        mock_param = MagicMock()
+                        mock_signature.return_value.parameters = {'service_registry': mock_param}
+                        
+                        count = agent.register_tool_group("memory_tools")
+                        
+                        assert count == 1
 
-            # Mock runner response
-            mock_result = MagicMock(spec=RunResult)
-            mock_result.output = "Test response"
-            mock_result.tool_calls = []
-            mock_result.handoffs = {}
-            mock_runner.run.return_value = mock_result
+    def test_create_service_injected_tool(self):
+        """Test creating a tool wrapper with service injection."""
+        mock_memory = MagicMock()
+        registry = ServiceRegistry(memory_service=mock_memory)
+        
+        with patch('agents.Agent'):
+            agent = BaseAgent(
+                name="TestAgent", 
+                instructions="Test instructions",
+                service_registry=registry
+            )
+            
+            # Create a mock tool that accepts service_registry
+            @pytest.mark.asyncio
+            async def mock_tool(query: str, service_registry=None):
+                return {"query": query, "registry": service_registry}
+            
+            mock_tool.__is_function_tool__ = True
+            mock_tool.__name__ = "mock_tool"
+            mock_tool.__doc__ = "Mock tool"
+            
+            # Create wrapped tool
+            wrapped_tool = agent._create_service_injected_tool(mock_tool, registry)
+            
+            # Verify wrapper preserves attributes
+            assert hasattr(wrapped_tool, '__is_function_tool__')
+            assert wrapped_tool.__name__ == "mock_tool"
+            assert wrapped_tool.__doc__ == "Mock tool"
 
-            # Create agent
-            agent = BaseAgent(name="Test Agent", instructions="Test instructions")
+    @pytest.mark.asyncio
+    async def test_run_with_context(self):
+        """Test running agent with context."""
+        mock_memory = MagicMock()
+        registry = ServiceRegistry(memory_service=mock_memory)
+        
+        with patch('agents.Agent') as mock_agent_class:
+            with patch('agents.Runner') as mock_runner_class:
+                # Mock the agent and runner
+                mock_agent_instance = MagicMock()
+                mock_agent_class.return_value = mock_agent_instance
+                
+                mock_result = MagicMock()
+                mock_result.final_output = "Test response"
+                mock_result.tool_calls = []
+                mock_runner_class.run = AsyncMock(return_value=mock_result)
+                
+                agent = BaseAgent(
+                    name="TestAgent",
+                    instructions="Test instructions", 
+                    service_registry=registry
+                )
+                
+                response = await agent.run("Test input", context={"user_id": "test"})
+                
+                assert response["content"] == "Test response"
+                assert response["status"] == "success"
 
-            # Mock session memory functions
-            with (
-                patch("src.agents.base_agent.initialize_session_memory"),
-                patch("src.agents.base_agent.store_session_summary"),
-            ):
-                # Execute run
-                user_input = "Test input"
-                context = {"key": "value"}
-                result = await agent.run(user_input, context=context)
+    @pytest.mark.asyncio
+    async def test_run_with_handoff_detection(self):
+        """Test agent run with handoff detection."""
+        registry = ServiceRegistry()
+        
+        with patch('agents.Agent') as mock_agent_class:
+            with patch('agents.Runner') as mock_runner_class:
+                # Mock agent and runner
+                mock_agent_instance = MagicMock()
+                mock_agent_class.return_value = mock_agent_instance
+                
+                # Mock result with handoff
+                mock_result = MagicMock()
+                mock_result.final_output = "Handing off to specialist"
+                mock_result.tool_calls = [{"name": "handoff_tool"}]
+                mock_runner_class.run = AsyncMock(return_value=mock_result)
+                
+                agent = BaseAgent(
+                    name="TestAgent",
+                    instructions="Test instructions",
+                    service_registry=registry
+                )
+                
+                # Register a handoff tool
+                agent._handoff_tools["handoff_tool"] = {
+                    "target_agent": "SpecialistAgent",
+                    "tool": MagicMock()
+                }
+                
+                response = await agent.run("Test input")
+                
+                assert response["status"] == "handoff"
+                assert response["handoff_target"] == "SpecialistAgent"
+                assert response["handoff_tool"] == "handoff_tool"
 
-                # Verify runner was called with correct parameters
-                mock_runner.run.assert_called_once()
-                args = mock_runner.run.call_args
-                assert args[1]["agent"] == mock_agent
-                assert args[1]["input"] == user_input
-                assert isinstance(args[1]["context"], RunContext)
+    @pytest.mark.asyncio
+    async def test_run_error_handling(self):
+        """Test agent run with error handling."""
+        registry = ServiceRegistry()
+        
+        with patch('agents.Agent') as mock_agent_class:
+            with patch('agents.Runner') as mock_runner_class:
+                # Mock agent
+                mock_agent_instance = MagicMock()
+                mock_agent_class.return_value = mock_agent_instance
+                
+                # Mock runner to raise exception
+                mock_runner_class.run = AsyncMock(side_effect=Exception("Test error"))
+                
+                agent = BaseAgent(
+                    name="TestAgent",
+                    instructions="Test instructions",
+                    service_registry=registry
+                )
+                
+                response = await agent.run("Test input")
+                
+                assert response["status"] == "error"
+                assert "error" in response["content"].lower()
 
-                # Verify context was passed correctly
-                run_context = args[1]["context"]
-                assert run_context.key == "value"
+    @pytest.mark.asyncio
+    async def test_initialize_session_with_user_id(self):
+        """Test session initialization with user context."""
+        mock_memory = MagicMock()
+        mock_memory.get_user_context = AsyncMock(return_value={
+            "preferences": {"budget": "mid-range"},
+            "past_trips": ["Paris", "Tokyo"]
+        })
+        
+        registry = ServiceRegistry(memory_service=mock_memory)
+        
+        with patch('agents.Agent'):
+            agent = BaseAgent(
+                name="TestAgent",
+                instructions="Test instructions",
+                service_registry=registry
+            )
+            
+            session_data = await agent._initialize_session("user123")
+            
+            assert session_data["user_id"] == "user123"
+            assert session_data["preferences"]["budget"] == "mid-range"
+            assert "Paris" in session_data["past_trips"]
 
-                # Verify result
-                assert result["content"] == "Test response"
-                assert result["status"] == "success"
-                assert "tool_calls" in result
-                assert "handoffs" in result
+    @pytest.mark.asyncio
+    async def test_save_session_summary(self):
+        """Test saving session summary to memory."""
+        mock_memory = MagicMock()
+        mock_memory.add_conversation_memory = AsyncMock(return_value={"status": "success"})
+        
+        registry = ServiceRegistry(memory_service=mock_memory)
+        
+        with patch('agents.Agent'):
+            agent = BaseAgent(
+                name="TestAgent",
+                instructions="Test instructions",
+                service_registry=registry
+            )
+            
+            # Add some message history
+            agent.messages_history = [
+                {"role": "user", "content": "Hello"},
+                {"role": "assistant", "content": "Hi there!"}
+            ]
+            
+            await agent._save_session_summary("user123", "Test summary")
+            
+            # Verify memory service was called
+            mock_memory.add_conversation_memory.assert_called_once()
 
-    @patch("src.agents.base_agent.Agent")
-    @patch("src.agents.base_agent.Runner")
-    def test_register_tool(self, mock_runner_cls, mock_agent_cls, mock_memory_tools):
-        """Test registering custom tools."""
-        # Setup mocks
-        with patch("src.agents.base_agent.memory_tools", mock_memory_tools):
-            mock_agent_cls.return_value = MagicMock()
-            mock_runner_cls.return_value = MagicMock()
+    def test_get_conversation_history(self):
+        """Test getting conversation history."""
+        registry = ServiceRegistry()
+        
+        with patch('agents.Agent'):
+            agent = BaseAgent(
+                name="TestAgent",
+                instructions="Test instructions",
+                service_registry=registry
+            )
+            
+            # Add test messages
+            test_messages = [
+                {"role": "user", "content": "Hello"},
+                {"role": "assistant", "content": "Hi!"}
+            ]
+            agent.messages_history = test_messages
+            
+            history = agent.get_conversation_history()
+            
+            assert history == test_messages
 
-            # Create agent
-            agent = BaseAgent(name="Test Agent", instructions="Test instructions")
+    @pytest.mark.asyncio
+    async def test_echo_tool(self):
+        """Test the built-in echo tool."""
+        registry = ServiceRegistry()
+        
+        with patch('agents.Agent'):
+            agent = BaseAgent(
+                name="TestAgent",
+                instructions="Test instructions",
+                service_registry=registry
+            )
+            
+            result = await agent.echo("test message")
+            
+            assert result["text"] == "test message"
 
-            # Create a custom tool
-            def custom_tool():
-                """Custom tool for testing."""
-                return {"result": "success"}
 
-            # Register the tool
-            agent._register_tool(custom_tool)
+class TestBaseAgentEdgeCases:
+    """Edge case tests for BaseAgent."""
 
-            # Verify tool was added to tools list
-            assert custom_tool in agent._tools
+    def test_initialization_without_openai_sdk(self):
+        """Test BaseAgent initialization when OpenAI SDK is not available."""
+        registry = ServiceRegistry()
+        
+        # The BaseAgent should handle missing SDK gracefully due to try/except
+        with patch('agents.Agent', side_effect=ImportError("agents not available")):
+            # This should not raise an exception due to the mock fallback
+            agent = BaseAgent(
+                name="TestAgent",
+                instructions="Test instructions",
+                service_registry=registry
+            )
+            
+            assert agent.name == "TestAgent"
+            assert agent.service_registry is registry
 
-    @patch("src.agents.base_agent.Agent")
-    @patch("src.agents.base_agent.Runner")
-    def test_register_mcp_client_tools(
-        self, mock_runner_cls, mock_agent_cls, mock_memory_tools, mock_mcp_client
-    ):
-        """Test registering tools from an MCP client."""
-        # Setup mocks
-        with patch("src.agents.base_agent.memory_tools", mock_memory_tools):
-            mock_agent_cls.return_value = MagicMock()
-            mock_runner_cls.return_value = MagicMock()
+    def test_tool_registration_missing_module(self):
+        """Test tool registration when module doesn't exist."""
+        registry = ServiceRegistry()
+        
+        with patch('agents.Agent'):
+            agent = BaseAgent(
+                name="TestAgent",
+                instructions="Test instructions",
+                service_registry=registry
+            )
+            
+            # Try to register tools from non-existent module
+            count = agent.register_tool_group("nonexistent_tools")
+            
+            # Should return 0 and not crash
+            assert count == 0
 
-            # Create agent
-            agent = BaseAgent(name="Test Agent", instructions="Test instructions")
-
-            # Register MCP client tools
-            agent._register_mcp_client_tools(mock_mcp_client, prefix="test_")
-
-            # Verify client tools were queried
-            mock_mcp_client.list_tools_sync.assert_called_once()
-            assert (
-                mock_mcp_client.get_tool_metadata_sync.call_count == 2
-            )  # For tool1 and tool2
-
-            # Verify tools were added
-            # We can't directly access the wrapped functions, but check the length
-            # 13 default tools (including echo) + 2 MCP tools = 15 total
-            assert len(agent._tools) == 15
-
-    @patch("src.agents.base_agent.Agent")
-    @patch("src.agents.base_agent.Runner")
-    async def test_echo_tool(self, mock_runner_cls, mock_agent_cls, mock_memory_tools):
-        """Test the echo tool functionality."""
-        # Setup mocks
-        with patch("src.agents.base_agent.memory_tools", mock_memory_tools):
-            mock_agent_cls.return_value = MagicMock()
-            mock_runner_cls.return_value = MagicMock()
-
-            # Create agent
-            agent = BaseAgent(name="Test Agent", instructions="Test instructions")
-
-            # Test echo tool
-            message = "This is a test message"
-            result = await agent.echo({"message": message})
-
-            # Verify echo result
-            assert "content" in result
-            assert result["content"] == message
-            assert "timestamp" in result
+    def test_service_injection_without_parameter(self):
+        """Test tool that doesn't need service injection."""
+        registry = ServiceRegistry()
+        
+        with patch('agents.Agent'):
+            agent = BaseAgent(
+                name="TestAgent",
+                instructions="Test instructions",
+                service_registry=registry
+            )
+            
+            # Mock a tool that doesn't need service registry
+            mock_tool = MagicMock()
+            mock_tool.__name__ = "simple_tool"
+            mock_tool.__is_function_tool__ = True
+            
+            mock_module = MagicMock()
+            mock_module.simple_tool = mock_tool
+            
+            with patch('importlib.import_module', return_value=mock_module):
+                with patch('inspect.getmembers', return_value=[('simple_tool', mock_tool)]):
+                    with patch('inspect.signature') as mock_signature:
+                        # Mock signature without service_registry parameter
+                        mock_signature.return_value.parameters = {}
+                        
+                        count = agent.register_tool_group("simple_tools")
+                        
+                        assert count == 1
