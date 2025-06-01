@@ -1,12 +1,7 @@
-"""Request models for the TripSage API.
-
-This package contains Pydantic V2 models for API request validation.
-"""
+"""API request schemas for TripSage."""
 
 from .accommodations import (
-    AccommodationDetailsRequest,
     AccommodationSearchRequest,
-    SavedAccommodationRequest,
 )
 from .api_keys import (
     ApiKeyCreate,
@@ -14,27 +9,28 @@ from .api_keys import (
     ApiKeyValidateRequest,
 )
 from .auth import (
-    ChangePasswordRequest,
-    ForgotPasswordRequest,
     LoginRequest,
-    RefreshToken,
     RefreshTokenRequest,
-    RegisterUserRequest,
+    RegisterRequest,
     ResetPasswordRequest,
-    UserCreate,
-    UserLogin,
 )
-from .chat import ChatRequest
+from .chat import (
+    ChatRequest,
+)
 from .destinations import (
+    DestinationCategory,
     DestinationDetailsRequest,
     DestinationSearchRequest,
     DestinationSuggestionRequest,
+    DestinationVisitSchedule,
+    PointOfInterestSearchRequest,
     SavedDestinationRequest,
 )
 from .flights import (
     AirportSearchRequest,
     FlightSearchRequest,
     MultiCityFlightSearchRequest,
+    MultiCityFlightSegment,
     SavedFlightRequest,
 )
 from .itineraries import (
@@ -57,34 +53,31 @@ from .websocket import (
 
 __all__ = [
     # Accommodations
-    "AccommodationDetailsRequest",
     "AccommodationSearchRequest",
-    "SavedAccommodationRequest",
     # API Keys
     "ApiKeyCreate",
     "ApiKeyRotateRequest",
     "ApiKeyValidateRequest",
     # Auth
-    "ChangePasswordRequest",
-    "ForgotPasswordRequest",
     "LoginRequest",
-    "RefreshToken",
     "RefreshTokenRequest",
-    "RegisterUserRequest",
+    "RegisterRequest",
     "ResetPasswordRequest",
-    "UserCreate",
-    "UserLogin",
     # Chat
     "ChatRequest",
     # Destinations
+    "DestinationCategory",
     "DestinationDetailsRequest",
     "DestinationSearchRequest",
     "DestinationSuggestionRequest",
+    "DestinationVisitSchedule",
+    "PointOfInterestSearchRequest",
     "SavedDestinationRequest",
     # Flights
     "AirportSearchRequest",
     "FlightSearchRequest",
     "MultiCityFlightSearchRequest",
+    "MultiCityFlightSegment",
     "SavedFlightRequest",
     # Itineraries
     "ItineraryCreateRequest",

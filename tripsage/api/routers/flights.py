@@ -12,13 +12,13 @@ from fastapi import APIRouter, Depends, status
 
 from tripsage.api.core.dependencies import get_principal_id, require_principal_dep
 from tripsage.api.middlewares.authentication import Principal
-from tripsage.api.models.requests.flights import (
+from tripsage.api.schemas.requests.flights import (
     AirportSearchRequest,
     FlightSearchRequest,
     MultiCityFlightSearchRequest,
     SavedFlightRequest,
 )
-from tripsage.api.models.responses.flights import (
+from tripsage.api.schemas.responses.flights import (
     AirportSearchResponse,
     FlightSearchResponse,
     SavedFlightResponse,

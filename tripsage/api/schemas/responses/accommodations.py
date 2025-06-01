@@ -10,8 +10,6 @@ from uuid import UUID
 from pydantic import BaseModel, Field
 
 from tripsage_core.models.schemas_common import BookingStatus
-
-# Create AccommodationListing model here
 from tripsage_core.models.schemas_common.enums import AccommodationType
 
 from ..requests.accommodations import AccommodationSearchRequest

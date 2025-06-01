@@ -11,12 +11,12 @@ from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
 
 from tripsage.api.core.dependencies import get_principal_id, require_principal_dep
 from tripsage.api.middlewares.authentication import Principal
-from tripsage.api.models.requests.api_keys import (
+from tripsage.api.schemas.requests.api_keys import (
     ApiKeyCreate,
     ApiKeyRotateRequest,
     ApiKeyValidateRequest,
 )
-from tripsage.api.models.responses.api_keys import (
+from tripsage.api.schemas.responses.api_keys import (
     ApiKeyResponse,
     ApiKeyValidateResponse,
 )

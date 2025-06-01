@@ -8,8 +8,8 @@ import logging
 
 from fastapi import APIRouter, Depends, status
 
-from tripsage.api.models.requests.auth import UserCreate
-from tripsage.api.models.responses.auth import UserResponse
+from tripsage.api.schemas.requests.auth import RegisterRequest
+from tripsage.api.schemas.responses.auth import UserResponse
 from tripsage.api.services.user import UserService, get_user_service
 
 router = APIRouter()
@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
     summary="Register a new user",
 )
 async def register(
-    user_data: UserCreate,
+    user_data: RegisterRequest,
     user_service: UserService = Depends(get_user_service),
 ):
     """Register a new user.

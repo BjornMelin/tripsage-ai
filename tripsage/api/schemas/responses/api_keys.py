@@ -4,9 +4,9 @@ This module defines Pydantic models for API key-related responses.
 """
 
 from datetime import datetime
-from typing import Optional
+from typing import List, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class ApiKeyResponse(BaseModel):
@@ -29,3 +29,10 @@ class ApiKeyValidateResponse(BaseModel):
     is_valid: bool
     service: str
     message: str
+
+
+class ApiKeyListResponse(BaseModel):
+    """API key list response model."""
+
+    api_keys: List[ApiKeyResponse] = Field(description="List of API keys")
+    count: int = Field(description="Number of API keys")

@@ -1,20 +1,20 @@
 """
-Request models for itinerary endpoints.
+Request schemas for itinerary endpoints.
 
-This module defines Pydantic models for validating incoming itinerary-related requests.
+This module defines Pydantic V2 models for validating incoming itinerary-related
+requests.
 """
 
-from datetime import date as Date
-from datetime import time
-
-# Create simple models for missing imports
+from datetime import date, time
 from enum import Enum
 from typing import Dict, List, Optional
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, field_validator
 
 
 class ItineraryItemType(str, Enum):
+    """Types of items that can be in an itinerary."""
+
     ACTIVITY = "activity"
     ACCOMMODATION = "accommodation"
     TRANSPORT = "transport"
@@ -22,32 +22,50 @@ class ItineraryItemType(str, Enum):
 
 
 class ItineraryStatus(str, Enum):
+    """Status of an itinerary."""
+
     DRAFT = "draft"
     ACTIVE = "active"
     COMPLETED = "completed"
 
 
 class ItineraryShareSettings(str, Enum):
+    """Sharing settings for an itinerary."""
+
     PRIVATE = "private"
     PUBLIC = "public"
     SHARED = "shared"
 
 
 class OptimizationSetting(str, Enum):
+    """Optimization settings for itinerary planning."""
+
     TIME = "time"
     COST = "cost"
     CONVENIENCE = "convenience"
 
 
 class Location(BaseModel):
-    latitude: float
-    longitude: float
-    name: Optional[str] = None
+    """Location information for itinerary items."""
+
+    latitude: float = Field(description="Latitude coordinate", ge=-90, le=90)
+    longitude: float = Field(description="Longitude coordinate", ge=-180, le=180)
+    name: Optional[str] = Field(None, description="Name of the location")
 
 
 class TimeSlot(BaseModel):
-    start_time: time
-    end_time: time
+    """Time slot for itinerary items."""
+
+    start_time: time = Field(description="Start time")
+    end_time: time = Field(description="End time")
+
+    @field_validator("end_time")
+    @classmethod
+    def validate_end_time(cls, v: time, info) -> time:
+        """Validate that end_time is after start_time."""
+        if "start_time" in info.data and v <= info.data["start_time"]:
+            raise ValueError("End time must be after start time")
+        return v
 
 
 class ItineraryCreateRequest(BaseModel):
@@ -59,81 +77,82 @@ class ItineraryCreateRequest(BaseModel):
         max_length=100,
     )
     description: Optional[str] = Field(
-        default=None,
+        None,
         description="Description of the itinerary",
     )
-    start_date: Date = Field(description="Start date of the itinerary")
-    end_date: Date = Field(description="End date of the itinerary")
+    start_date: date = Field(description="Start date of the itinerary")
+    end_date: date = Field(description="End date of the itinerary")
     destinations: List[str] = Field(
-        default=[],
+        default_factory=list,
         description="List of destination IDs to include in this itinerary",
     )
     total_budget: Optional[float] = Field(
-        default=None,
+        None,
         description="Total budget for the trip",
         ge=0,
     )
     currency: Optional[str] = Field(
-        default=None,
+        None,
         description="Currency code for budget amounts (e.g., 'USD')",
     )
     tags: List[str] = Field(
-        default=[],
+        default_factory=list,
         description="List of tags to associate with this itinerary",
     )
 
-    @model_validator(mode="after")
-    def validate_dates(self) -> "ItineraryCreateRequest":
+    @field_validator("end_date")
+    @classmethod
+    def validate_dates(cls, v: date, info) -> date:
         """Validate that end_date is after or equal to start_date."""
-        if self.end_date < self.start_date:
+        if "start_date" in info.data and v < info.data["start_date"]:
             raise ValueError("End date must be after or equal to start date")
-        return self
+        return v
 
 
 class ItineraryUpdateRequest(BaseModel):
     """Request model for updating an existing itinerary."""
 
     title: Optional[str] = Field(
-        default=None,
+        None,
         description="Title of the itinerary",
         min_length=1,
         max_length=100,
     )
     description: Optional[str] = Field(
-        default=None,
+        None,
         description="Description of the itinerary",
     )
     status: Optional[ItineraryStatus] = Field(
-        default=None,
+        None,
         description="Current status of the itinerary",
     )
-    start_date: Optional[Date] = Field(
-        default=None,
+    start_date: Optional[date] = Field(
+        None,
         description="Start date of the itinerary",
     )
-    end_date: Optional[Date] = Field(
-        default=None,
+    end_date: Optional[date] = Field(
+        None,
         description="End date of the itinerary",
     )
     destinations: Optional[List[str]] = Field(
-        default=None,
+        None,
         description="List of destination IDs to include in this itinerary",
     )
     total_budget: Optional[float] = Field(
-        default=None,
+        None,
         description="Total budget for the trip",
         ge=0,
     )
     currency: Optional[str] = Field(
-        default=None,
+        None,
         description="Currency code for budget amounts (e.g., 'USD')",
     )
     tags: Optional[List[str]] = Field(
-        default=None,
+        None,
         description="List of tags to associate with this itinerary",
     )
     share_settings: Optional[ItineraryShareSettings] = Field(
-        default=None,
+        None,
         description="Sharing settings for the itinerary",
     )
 
@@ -148,139 +167,120 @@ class ItineraryItemCreateRequest(BaseModel):
         max_length=100,
     )
     description: Optional[str] = Field(
-        default=None,
+        None,
         description="Description of the item",
     )
-    item_date: Date = Field(description="Date of the itinerary item")
+    item_date: date = Field(description="Date of the itinerary item")
     time_slot: Optional[TimeSlot] = Field(
-        default=None,
+        None,
         description="Time slot for the item, if applicable",
     )
     location: Optional[Location] = Field(
-        default=None,
+        None,
         description="Location of the item, if applicable",
     )
     cost: Optional[float] = Field(
-        default=None,
+        None,
         description="Cost of the item in the trip's currency",
         ge=0,
     )
     currency: Optional[str] = Field(
-        default=None,
+        None,
         description="Currency code for the cost (e.g., 'USD')",
     )
     booking_reference: Optional[str] = Field(
-        default=None,
+        None,
         description="Booking reference or confirmation number",
     )
     notes: Optional[str] = Field(
-        default=None,
+        None,
         description="Additional notes about the item",
     )
     is_flexible: bool = Field(
-        default=False,
+        False,
         description="Whether this item's time is flexible",
     )
     # Type-specific fields as they are conditionally needed
     flight_details: Optional[Dict] = Field(
-        default=None,
-        description="Flight-specific details if type is FLIGHT",
+        None,
+        description="Flight-specific details if type is TRANSPORT",
     )
     accommodation_details: Optional[Dict] = Field(
-        default=None,
+        None,
         description="Accommodation-specific details if type is ACCOMMODATION",
     )
     activity_details: Optional[Dict] = Field(
-        default=None,
+        None,
         description="Activity-specific details if type is ACTIVITY",
     )
     transportation_details: Optional[Dict] = Field(
-        default=None,
-        description="Transportation-specific details if type is TRANSPORTATION",
+        None,
+        description="Transportation-specific details if type is TRANSPORT",
     )
-
-    @model_validator(mode="after")
-    def validate_type_specific_details(self) -> "ItineraryItemCreateRequest":
-        """Validate that type-specific details are provided when required."""
-        if self.item_type == ItineraryItemType.FLIGHT and not self.flight_details:
-            raise ValueError("Flight details must be provided for flight items")
-        if (
-            self.item_type == ItineraryItemType.ACCOMMODATION
-            and not self.accommodation_details
-        ):
-            raise ValueError("Accommodation details required for accommodation items")
-        if self.item_type == ItineraryItemType.ACTIVITY and not self.activity_details:
-            raise ValueError("Activity details must be provided for activity items")
-        if (
-            self.item_type == ItineraryItemType.TRANSPORTATION
-            and not self.transportation_details
-        ):
-            raise ValueError("Transportation details required for transportation items")
-        return self
 
 
 class ItineraryItemUpdateRequest(BaseModel):
     """Request model for updating an itinerary item."""
 
     title: Optional[str] = Field(
-        default=None,
+        None,
         description="Title or name of the item",
         min_length=1,
         max_length=100,
     )
     description: Optional[str] = Field(
-        default=None,
+        None,
         description="Description of the item",
     )
-    date: Optional[Date] = Field(
-        default=None,
+    item_date: Optional[date] = Field(
+        None,
         description="Date of the itinerary item",
     )
     time_slot: Optional[TimeSlot] = Field(
-        default=None,
+        None,
         description="Time slot for the item, if applicable",
     )
     location: Optional[Location] = Field(
-        default=None,
+        None,
         description="Location of the item, if applicable",
     )
     cost: Optional[float] = Field(
-        default=None,
+        None,
         description="Cost of the item in the trip's currency",
         ge=0,
     )
     currency: Optional[str] = Field(
-        default=None,
+        None,
         description="Currency code for the cost (e.g., 'USD')",
     )
     booking_reference: Optional[str] = Field(
-        default=None,
+        None,
         description="Booking reference or confirmation number",
     )
     notes: Optional[str] = Field(
-        default=None,
+        None,
         description="Additional notes about the item",
     )
     is_flexible: Optional[bool] = Field(
-        default=None,
+        None,
         description="Whether this item's time is flexible",
     )
     # Type-specific details as they are conditionally needed
     flight_details: Optional[Dict] = Field(
-        default=None,
-        description="Flight-specific details if type is FLIGHT",
+        None,
+        description="Flight-specific details if type is TRANSPORT",
     )
     accommodation_details: Optional[Dict] = Field(
-        default=None,
+        None,
         description="Accommodation-specific details if type is ACCOMMODATION",
     )
     activity_details: Optional[Dict] = Field(
-        default=None,
+        None,
         description="Activity-specific details if type is ACTIVITY",
     )
     transportation_details: Optional[Dict] = Field(
-        default=None,
-        description="Transportation-specific details if type is TRANSPORTATION",
+        None,
+        description="Transportation-specific details if type is TRANSPORT",
     )
 
 
@@ -288,44 +288,44 @@ class ItinerarySearchRequest(BaseModel):
     """Request model for searching itineraries."""
 
     query: Optional[str] = Field(
-        default=None,
+        None,
         description="Search query for finding itineraries",
     )
-    start_date_from: Optional[Date] = Field(
-        default=None,
+    start_date_from: Optional[date] = Field(
+        None,
         description="Filter for itineraries starting from this date",
     )
-    start_date_to: Optional[Date] = Field(
-        default=None,
+    start_date_to: Optional[date] = Field(
+        None,
         description="Filter for itineraries starting before this date",
     )
-    end_date_from: Optional[Date] = Field(
-        default=None,
+    end_date_from: Optional[date] = Field(
+        None,
         description="Filter for itineraries ending from this date",
     )
-    end_date_to: Optional[Date] = Field(
-        default=None,
+    end_date_to: Optional[date] = Field(
+        None,
         description="Filter for itineraries ending before this date",
     )
     destinations: Optional[List[str]] = Field(
-        default=None,
+        None,
         description="Filter by destination IDs included in the itinerary",
     )
     status: Optional[ItineraryStatus] = Field(
-        default=None,
+        None,
         description="Filter by itinerary status",
     )
     tags: Optional[List[str]] = Field(
-        default=None,
+        None,
         description="Filter by tags associated with the itinerary",
     )
     page: int = Field(
-        default=1,
+        1,
         description="Page number for pagination",
         ge=1,
     )
     page_size: int = Field(
-        default=10,
+        10,
         description="Number of results per page",
         ge=1,
         le=100,

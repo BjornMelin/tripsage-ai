@@ -1,11 +1,9 @@
-"""Authentication request models using Pydantic V2.
+"""Authentication request schemas using Pydantic V2.
 
 This module defines Pydantic models for authentication-related requests.
 """
 
-from typing import Optional
-
-from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
+from pydantic import BaseModel, EmailStr, Field, field_validator
 
 from tripsage_core.models.schemas_common.validators import (
     validate_password_strength,
@@ -14,7 +12,7 @@ from tripsage_core.models.schemas_common.validators import (
 )
 
 
-class RegisterUserRequest(BaseModel):
+class RegisterRequest(BaseModel):
     """User registration request model."""
 
     username: str = Field(
@@ -46,11 +44,13 @@ class RegisterUserRequest(BaseModel):
         """Validate password meets strength requirements."""
         return validate_password_strength(v)
 
-    @model_validator(mode="after")
-    def validate_passwords_match_check(self) -> "RegisterUserRequest":
+    @field_validator("password_confirm")
+    @classmethod
+    def validate_passwords_match_check(cls, v: str, info) -> str:
         """Validate that password and password_confirm match."""
-        validate_passwords_match(self.password, self.password_confirm)
-        return self
+        if "password" in info.data:
+            validate_passwords_match(info.data["password"], v)
+        return v
 
 
 class LoginRequest(BaseModel):
@@ -58,7 +58,7 @@ class LoginRequest(BaseModel):
 
     username: str = Field(description="Username or email address")
     password: str = Field(description="User password")
-    remember_me: bool = Field(default=False, description="Remember user session")
+    remember_me: bool = Field(False, description="Remember user session")
 
 
 class RefreshTokenRequest(BaseModel):
@@ -88,14 +88,19 @@ class ChangePasswordRequest(BaseModel):
         """Validate new password meets strength requirements."""
         return validate_password_strength(v)
 
-    @model_validator(mode="after")
-    def validate_password_requirements(self) -> "ChangePasswordRequest":
+    @field_validator("new_password_confirm")
+    @classmethod
+    def validate_password_requirements(cls, v: str, info) -> str:
         """Validate password requirements."""
-        # Check that passwords match
-        validate_passwords_match(self.new_password, self.new_password_confirm)
-        # Check that new password is different from current
-        validate_passwords_different(self.current_password, self.new_password)
-        return self
+        if "new_password" in info.data:
+            # Check that passwords match
+            validate_passwords_match(info.data["new_password"], v)
+        if "current_password" in info.data and "new_password" in info.data:
+            # Check that new password is different from current
+            validate_passwords_different(
+                info.data["current_password"], info.data["new_password"]
+            )
+        return v
 
 
 class ForgotPasswordRequest(BaseModel):
@@ -125,30 +130,10 @@ class ResetPasswordRequest(BaseModel):
         """Validate new password meets strength requirements."""
         return validate_password_strength(v)
 
-    @model_validator(mode="after")
-    def validate_passwords_match_check(self) -> "ResetPasswordRequest":
+    @field_validator("new_password_confirm")
+    @classmethod
+    def validate_passwords_match_check(cls, v: str, info) -> str:
         """Validate that password and password_confirm match."""
-        validate_passwords_match(self.new_password, self.new_password_confirm)
-        return self
-
-
-# Legacy models for backward compatibility
-class UserCreate(BaseModel):
-    """User creation request model (legacy)."""
-
-    email: EmailStr
-    password: str = Field(min_length=8)
-    full_name: Optional[str] = None
-
-
-class UserLogin(BaseModel):
-    """User login request model (legacy)."""
-
-    email: EmailStr
-    password: str
-
-
-class RefreshToken(BaseModel):
-    """Refresh token request model (legacy)."""
-
-    refresh_token: str
+        if "new_password" in info.data:
+            validate_passwords_match(info.data["new_password"], v)
+        return v

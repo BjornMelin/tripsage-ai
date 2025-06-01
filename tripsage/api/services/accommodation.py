@@ -10,12 +10,12 @@ from uuid import UUID
 
 from fastapi import Depends
 
-from tripsage.api.models.requests.accommodations import (
+from tripsage.api.schemas.requests.accommodations import (
     AccommodationDetailsRequest,
     AccommodationSearchRequest,
     SavedAccommodationRequest,
 )
-from tripsage.api.models.responses.accommodations import (
+from tripsage.api.schemas.responses.accommodations import (
     AccommodationDetailsResponse,
     AccommodationListing,
     AccommodationSearchResponse,
@@ -373,7 +373,7 @@ class AccommodationService:
 
         # This is a simplified adaptation - real implementation would need
         # detailed mapping
-        from tripsage.api.models.responses.accommodations import (
+        from tripsage.api.schemas.responses.accommodations import (
             AccommodationAmenity,
             AccommodationImage,
             AccommodationLocation,

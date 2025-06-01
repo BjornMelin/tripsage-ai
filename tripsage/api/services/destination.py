@@ -10,21 +10,20 @@ from typing import List, Optional
 
 from fastapi import Depends
 
-from tripsage.api.models.requests.destinations import (
+from tripsage.api.schemas.requests.destinations import (
     DestinationSearchRequest,
     PointOfInterestSearchRequest,
 )
-from tripsage.api.models.responses.destinations import (
+from tripsage.api.schemas.responses.destinations import (
     DestinationDetailsResponse as DestinationDetails,
 )
-from tripsage.api.models.responses.destinations import (
+from tripsage.api.schemas.responses.destinations import (
     DestinationSearchResponse,
-    PointOfInterestSearchResponse,
 )
-from tripsage.api.models.responses.destinations import (
+from tripsage.api.schemas.responses.destinations import (
     DestinationSuggestionResponse as DestinationRecommendation,
 )
-from tripsage.api.models.responses.destinations import (
+from tripsage.api.schemas.responses.destinations import (
     SavedDestinationResponse as SavedDestination,
 )
 from tripsage_core.exceptions.exceptions import (
@@ -234,7 +233,7 @@ class DestinationService:
 
     async def search_points_of_interest(
         self, request: PointOfInterestSearchRequest
-    ) -> PointOfInterestSearchResponse:
+    ) -> DestinationSearchResponse:
         """Search for points of interest in a destination.
 
         Args:
@@ -342,13 +341,11 @@ class DestinationService:
             page_size=core_response.get("page_size", 10),
         )
 
-    def _adapt_poi_search_response(
-        self, core_response
-    ) -> PointOfInterestSearchResponse:
+    def _adapt_poi_search_response(self, core_response) -> DestinationSearchResponse:
         """Adapt core POI search response to API model."""
         pois = core_response.get("pois", [])
 
-        return PointOfInterestSearchResponse(
+        return DestinationSearchResponse(
             results=pois,
             total_count=core_response.get("total_count", len(pois)),
             page=core_response.get("page", 1),

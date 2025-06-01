@@ -10,13 +10,13 @@ from uuid import UUID
 
 from fastapi import Depends
 
-from tripsage.api.models.requests.flights import (
+from tripsage.api.schemas.requests.flights import (
     AirportSearchRequest,
     FlightSearchRequest,
     MultiCityFlightSearchRequest,
     SavedFlightRequest,
 )
-from tripsage.api.models.responses.flights import (
+from tripsage.api.schemas.responses.flights import (
     Airport,
     AirportSearchResponse,
     FlightOffer,
