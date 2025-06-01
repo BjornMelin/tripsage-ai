@@ -2,7 +2,8 @@
 Base Agent implementation for TripSage.
 
 This module provides the base agent class using the OpenAI Agents SDK
-for the TripSage application.
+for the TripSage application. Refactored to use dependency injection
+and proper async patterns.
 """
 
 import importlib
@@ -12,14 +13,16 @@ import uuid
 from typing import Any, Callable, Dict, List, Optional, Set, Type, Union
 
 try:
-    from agents import Agent, function_tool
+    from agents import Agent, Runner, function_tool
 except ImportError:
     # Mock for testing environments where agents package may not be available
     from unittest.mock import MagicMock
 
     Agent = MagicMock
+    Runner = MagicMock
     function_tool = MagicMock
 
+from tripsage.agents.service_registry import ServiceRegistry
 from tripsage_core.config.base_app_settings import get_settings
 from tripsage_core.exceptions.exceptions import CoreTripSageError
 from tripsage_core.utils.error_handling_utils import log_exception
@@ -36,16 +39,18 @@ class BaseAgent:
         self,
         name: str,
         instructions: str,
+        service_registry: ServiceRegistry,
         model: str = None,
         temperature: float = None,
         tools: Optional[List[Callable]] = None,
         metadata: Optional[Dict[str, str]] = None,
     ):
-        """Initialize the agent.
+        """Initialize the agent with dependency injection.
 
         Args:
             name: Agent name
             instructions: Agent instructions
+            service_registry: Service registry for dependency injection
             model: Model name to use (defaults to settings if None)
             temperature: Temperature for model sampling (defaults to settings if None)
             tools: List of tools to register
@@ -53,6 +58,7 @@ class BaseAgent:
         """
         self.name = name
         self.instructions = instructions
+        self.service_registry = service_registry
         self.model = model or settings.agent.model_name
         self.temperature = temperature or settings.agent.temperature
         self.metadata = metadata or {"agent_type": "tripsage"}
@@ -85,8 +91,8 @@ class BaseAgent:
 
     def _register_default_tools(self) -> None:
         """Register default tools for the agent."""
-        # Register memory tools
-        self.register_tool_group("memory_tools")
+        # Register memory tools with service injection
+        self.register_tool_group("memory_tools", service_registry=self.service_registry)
 
         # Register echo tool
         self._register_tool(self.echo)
@@ -132,16 +138,21 @@ class BaseAgent:
             logger.debug("Registered tool: %s", tool_name)
 
     def register_tool_group(
-        self, module_name: str, package: Optional[str] = None
+        self,
+        module_name: str,
+        package: Optional[str] = None,
+        service_registry: Optional[ServiceRegistry] = None,
     ) -> int:
-        """Register all tools from a module.
+        """Register all tools from a module with service injection.
 
         This method automatically discovers and registers all functions
-        decorated with @function_tool in the specified module.
+        decorated with @function_tool in the specified module, passing
+        the service registry to tools that need it.
 
         Args:
             module_name: Name of the module containing tools
             package: Optional package name for relative imports
+            service_registry: Service registry to pass to tools
 
         Returns:
             Number of tools registered
@@ -154,6 +165,9 @@ class BaseAgent:
             else:
                 module = importlib.import_module(module_name, package)
 
+            # Use the provided service registry or the agent's
+            registry = service_registry or self.service_registry
+
             # Find all function tools in the module
             tool_count = 0
             for name, obj in inspect.getmembers(module):
@@ -163,7 +177,14 @@ class BaseAgent:
 
                 # Check if it's a function_tool
                 if hasattr(obj, "__is_function_tool__"):
-                    self._register_tool(obj)
+                    # Create a wrapper that injects the service registry
+                    if "service_registry" in inspect.signature(obj).parameters:
+                        # Tool accepts service registry - create wrapper
+                        wrapped_tool = self._create_service_injected_tool(obj, registry)
+                        self._register_tool(wrapped_tool)
+                    else:
+                        # Tool doesn't need service registry
+                        self._register_tool(obj)
                     tool_count += 1
 
             logger.info("Registered %d tools from module: %s", tool_count, module_name)
@@ -172,6 +193,34 @@ class BaseAgent:
         except (ImportError, AttributeError) as e:
             logger.warning("Could not register tools from %s: %s", module_name, str(e))
             return 0
+
+    def _create_service_injected_tool(
+        self, tool: Callable, service_registry: ServiceRegistry
+    ) -> Callable:
+        """Create a wrapper that injects the service registry into a tool.
+
+        Args:
+            tool: The original tool function
+            service_registry: The service registry to inject
+
+        Returns:
+            Wrapped tool function with service registry injected
+        """
+        from functools import wraps
+
+        @wraps(tool)
+        async def wrapped_tool(*args, **kwargs):
+            # Inject service registry if not already provided
+            if "service_registry" not in kwargs:
+                kwargs["service_registry"] = service_registry
+            return await tool(*args, **kwargs)
+
+        # Preserve attributes from original tool
+        for attr in ["__is_function_tool__", "__name__", "__doc__"]:
+            if hasattr(tool, attr):
+                setattr(wrapped_tool, attr, getattr(tool, attr))
+
+        return wrapped_tool
 
     def register_handoff(
         self,
@@ -195,6 +244,7 @@ class BaseAgent:
             tool_name,
             description,
             context_filter=context_filter,
+            service_registry=self.service_registry,
         )
 
         self._register_tool(handoff_tool)
@@ -224,6 +274,7 @@ class BaseAgent:
             description,
             return_key=return_key,
             context_filter=context_filter,
+            service_registry=self.service_registry,
         )
 
         self._register_tool(delegation_tool)
@@ -245,7 +296,9 @@ class BaseAgent:
         """
         from tripsage.agents.handoffs.helper import register_handoff_tools
 
-        return register_handoff_tools(self, target_agents)
+        return register_handoff_tools(
+            self, target_agents, service_registry=self.service_registry
+        )
 
     def register_multiple_delegations(
         self,
@@ -267,12 +320,14 @@ class BaseAgent:
         """
         from tripsage.agents.handoffs.helper import register_delegation_tools
 
-        return register_delegation_tools(self, target_agents)
+        return register_delegation_tools(
+            self, target_agents, service_registry=self.service_registry
+        )
 
     async def _initialize_session(
         self, user_id: Optional[str] = None
     ) -> Dict[str, Any]:
-        """Initialize a new session with knowledge graph data.
+        """Initialize a new session with memory data.
 
         Args:
             user_id: Optional user ID
@@ -281,12 +336,21 @@ class BaseAgent:
             Session data
         """
         try:
-            # Initialize session memory
-            # This will be implemented in the memory_tools module
+            # Initialize session memory using memory service
             session_data = {}
-            if user_id:
-                # Replace with actual implementation later
+            if user_id and self.service_registry.memory_service:
+                # Get user context from memory service
+                context = await self.service_registry.memory_service.get_user_context(
+                    user_id
+                )
+                session_data = {
+                    "user_id": user_id,
+                    "preferences": context.get("preferences", {}),
+                    "past_trips": context.get("past_trips", []),
+                }
+            elif user_id:
                 session_data = {"user_id": user_id}
+
             self.session_data = session_data
             logger.info("Session initialized with memory data")
             return self.session_data
@@ -303,7 +367,23 @@ class BaseAgent:
             summary: Session summary
         """
         try:
-            # To be implemented with memory_tools
+            if self.service_registry.memory_service:
+                # Save conversation history to memory
+                messages = [
+                    {"role": msg["role"], "content": msg["content"]}
+                    for msg in self.messages_history
+                    if "role" in msg and "content" in msg
+                ]
+
+                await self.service_registry.memory_service.add_conversation_memory(
+                    messages=messages,
+                    user_id=user_id,
+                    session_id=self.session_id,
+                    metadata={
+                        "agent": self.name,
+                        "summary": summary,
+                    },
+                )
             logger.info("Session summary saved")
         except Exception as e:
             logger.error("Error saving session summary: %s", str(e))
@@ -321,8 +401,6 @@ class BaseAgent:
         Returns:
             Dictionary with the agent's response and other information
         """
-        from agents import Runner
-
         # Add to message history
         self.messages_history.append(
             {"role": "user", "content": user_input, "timestamp": time.time()}
@@ -375,7 +453,6 @@ class BaseAgent:
 
             # Check if any tool calls were handoffs
             tool_calls = result.tool_calls if hasattr(result, "tool_calls") else []
-            # handoff_detected = False
 
             for tool_call in tool_calls:
                 tool_name = tool_call.get("name", "")
@@ -387,7 +464,6 @@ class BaseAgent:
                         self._handoff_tools[tool_name]["target_agent"],
                         tool_name,
                     )
-                    _handoff_detected = True
 
                     # Add handoff information to response
                     result.handoff_detected = True
@@ -395,8 +471,6 @@ class BaseAgent:
                         "target_agent"
                     ]
                     result.handoff_tool = tool_name
-
-                    # No need to add to message history since control is transferred
 
                     # Create handoff response with both content and handoff metadata
                     return {
