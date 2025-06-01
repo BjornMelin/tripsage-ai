@@ -19,6 +19,7 @@ from pydantic import Field, ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from tripsage.agents.chat import ChatAgent
+from tripsage.agents.service_registry import ServiceRegistry
 from tripsage.api.core.dependencies import get_db
 from tripsage.api.models.requests.websocket import (
     WebSocketAuthRequest,
@@ -68,13 +69,23 @@ router = APIRouter()
 
 # Global chat agent instance
 _chat_agent = None
+_service_registry = None
+
+
+def get_service_registry() -> ServiceRegistry:
+    """Get or create the service registry singleton."""
+    global _service_registry
+    if _service_registry is None:
+        _service_registry = ServiceRegistry()
+    return _service_registry
 
 
 def get_chat_agent() -> ChatAgent:
     """Get or create the chat agent singleton."""
     global _chat_agent
     if _chat_agent is None:
-        _chat_agent = ChatAgent()
+        service_registry = get_service_registry()
+        _chat_agent = ChatAgent(service_registry=service_registry)
     return _chat_agent
 
 
@@ -522,7 +533,7 @@ async def handle_chat_message(
         await websocket_manager.send_to_session(session_id, typing_event)
 
         # Get agent response (this will be streaming in the future)
-        response = await chat_agent.run_with_tools(content, context, available_tools)
+        response = await chat_agent.run(content, context)
         response_content = response.get("content", "")
 
         # Send stop typing indicator
