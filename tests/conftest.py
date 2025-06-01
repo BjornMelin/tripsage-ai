@@ -71,26 +71,22 @@ def mock_environment_variables():
 # Mock MCP manager for use in tests
 @pytest.fixture
 def mock_mcp_manager():
-    """Create a mock MCPManager for testing."""
+    """Create a mock MCPManager for testing (Airbnb only)."""
     manager = MagicMock()
     manager.invoke = AsyncMock(return_value={})
-    manager.initialize_mcp = AsyncMock()
-    manager.initialize_all_enabled = AsyncMock()
-    available_mcps = ["weather", "time", "googlemaps", "supabase"]
-    manager.get_available_mcps = Mock(return_value=available_mcps)
-    manager.get_initialized_mcps = Mock(return_value=[])
-    manager.load_configurations = Mock()
+    manager.initialize = AsyncMock()
+    manager.get_available_methods = Mock(
+        return_value=["search_listings", "get_listing_details", "check_availability"]
+    )
 
-    # Create a side effect that returns different responses based on the MCP type
-    def invoke_side_effect(mcp_name, method_name, params=None, **kwargs):
-        if mcp_name == "weather":
-            return {"temperature": 22.5, "conditions": "Sunny"}
-        elif mcp_name == "time":
-            return {"current_time": "2025-01-16T12:00:00Z", "timezone": "UTC"}
-        elif mcp_name == "googlemaps":
-            return {"latitude": 37.7749, "longitude": -122.4194}
-        elif mcp_name == "supabase":
-            return {"id": "123", "created_at": "2025-01-16T12:00:00Z"}
+    # Create a side effect that returns Airbnb-specific responses
+    def invoke_side_effect(method_name, params=None, **kwargs):
+        if method_name in ["search_listings", "search_accommodations", "search"]:
+            return {"listings": [], "count": 0}
+        elif method_name in ["get_listing_details", "get_listing", "get_details"]:
+            return {"id": "123", "name": "Test Listing", "price_per_night": 100}
+        elif method_name in ["check_availability", "check_listing_availability"]:
+            return {"available": True, "dates": []}
         return {}
 
     manager.invoke.side_effect = invoke_side_effect
@@ -102,30 +98,16 @@ def mock_mcp_manager():
 # Mock MCP registry for use in tests
 @pytest.fixture
 def mock_mcp_registry():
-    """Create a mock MCPClientRegistry for testing."""
+    """Create a mock MCPRegistry for testing (Airbnb only)."""
     registry = MagicMock()
-    registry._registry = {}  # Empty registry
-    registry._lazy_loaders = {}  # Empty lazy loaders
-    registry.register = Mock()
-    registry.register_lazy = Mock()
-    registry.get_wrapper_class = Mock()
-    registry.is_registered = Mock(return_value=False)
-    registry.get_registered_mcps = Mock(return_value=[])
+    registry._wrapper_class = None
+    registry.register_airbnb = Mock()
+    registry.get_airbnb_wrapper = Mock()
 
-    # Setup side_effect for get_wrapper_class
-    def get_wrapper_class_side_effect(mcp_name):
-        if mcp_name == "weather":
-            return MagicMock(__name__="WeatherMCPWrapper")
-        elif mcp_name == "time":
-            return MagicMock(__name__="TimeMCPWrapper")
-        elif mcp_name == "googlemaps":
-            return MagicMock(__name__="GoogleMapsMCPWrapper")
-        elif mcp_name == "supabase":
-            return MagicMock(__name__="SupabaseMCPWrapper")
-        else:
-            raise KeyError(f"MCP '{mcp_name}' not found in registry")
-
-    registry.get_wrapper_class.side_effect = get_wrapper_class_side_effect
+    # Mock the AirbnbMCPWrapper class
+    mock_wrapper_class = MagicMock()
+    mock_wrapper_class.__name__ = "AirbnbMCPWrapper"
+    registry.get_airbnb_wrapper.return_value = mock_wrapper_class
 
     with patch("tripsage.mcp_abstraction.registry.registry", registry):
         yield registry
