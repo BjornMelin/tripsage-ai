@@ -8,7 +8,8 @@ import logging
 
 from fastapi import APIRouter, Depends, status
 
-from tripsage.api.core.dependencies import get_current_user
+from tripsage.api.core.dependencies import require_principal_dep
+from tripsage.api.middlewares.authentication import Principal
 from tripsage.api.models.requests.trips import CreateTripRequest
 from tripsage.api.models.responses.trips import TripResponse
 from tripsage_core.services.business.trip_service import (
@@ -24,14 +25,14 @@ router = APIRouter()
 @router.post("/", response_model=TripResponse, status_code=status.HTTP_201_CREATED)
 async def create_trip(
     trip_request: CreateTripRequest,
-    user_id: str = Depends(get_current_user),
+    principal: Principal = require_principal_dep,
     trip_service: TripService = Depends(get_trip_service),
 ):
     """Create a new trip.
 
     Args:
         trip_request: Trip creation request
-        user_id: Current user ID (from token)
+        principal: Current authenticated principal
 
     Returns:
         Created trip

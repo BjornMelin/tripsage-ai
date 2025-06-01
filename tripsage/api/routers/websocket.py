@@ -26,7 +26,6 @@ from tripsage.services.core.chat_service import ChatService
 from tripsage_core.models.schemas_common.chat import (
     ChatMessage as WebSocketMessage,
 )
-from tripsage_core.services.business.chat_service import MessageRole
 from tripsage_core.services.infrastructure.websocket_manager import (
     WebSocketEvent,
     WebSocketEventType,
@@ -566,14 +565,17 @@ async def handle_chat_message(
 
 
 # WebSocket manager lifecycle hooks
-@router.on_event("startup")
+# Note: These should be handled at the application level in main.py using
+# lifespan events
+# @router.on_event is deprecated in favor of app.lifespan context manager
+
+
 async def start_websocket_manager():
     """Start the WebSocket manager on application startup."""
     await websocket_manager.start()
     logger.info("WebSocket manager started")
 
 
-@router.on_event("shutdown")
 async def stop_websocket_manager():
     """Stop the WebSocket manager on application shutdown."""
     await websocket_manager.stop()
