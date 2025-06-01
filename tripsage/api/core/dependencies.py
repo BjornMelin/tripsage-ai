@@ -10,6 +10,18 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from tripsage.api.core.config import Settings, get_settings
 from tripsage.api.middlewares.authentication import Principal
+from tripsage.api.services import (
+    get_accommodation_service,
+    get_auth_service,
+    get_chat_service,
+    get_destination_service,
+    get_flight_service,
+    get_itinerary_service,
+    get_key_management_service,
+    get_memory_service,
+    get_trip_service,
+    get_user_service,
+)
 from tripsage.mcp_abstraction import MCPManager, mcp_manager
 from tripsage_core.exceptions.exceptions import CoreAuthenticationError
 from tripsage_core.services.business.key_management_service import (
@@ -137,6 +149,7 @@ def get_mcp_manager() -> MCPManager:
     return mcp_manager
 
 
+
 # Module-level dependency singletons
 get_current_principal_dep = Depends(get_current_principal)
 require_principal_dep = Depends(require_principal)
@@ -148,3 +161,15 @@ get_settings_dep = Depends(get_settings_dependency)
 cache_service_dependency = Depends(get_cache_service_dep)
 mcp_manager_dependency = Depends(get_mcp_manager)
 verify_service_access_dep = Depends(verify_service_access)
+
+# Unified API service dependencies
+get_accommodation_service_dep = Depends(get_accommodation_service)
+get_auth_service_dep = Depends(get_auth_service)
+get_chat_service_dep = Depends(get_chat_service)
+get_destination_service_dep = Depends(get_destination_service)
+get_flight_service_dep = Depends(get_flight_service)
+get_itinerary_service_dep = Depends(get_itinerary_service)
+get_key_management_service_dep = Depends(get_key_management_service)
+get_memory_service_dep = Depends(get_memory_service)
+get_trip_service_dep = Depends(get_trip_service)
+get_user_service_dep = Depends(get_user_service)
