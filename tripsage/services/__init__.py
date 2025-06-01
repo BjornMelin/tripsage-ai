@@ -18,7 +18,7 @@ from .infrastructure import *  # noqa: F403, F401
 __all__ = [
     # From core
     "ChatOrchestrationService",  # noqa: F405
-    "ChatService",  # noqa: F405
+    # "ChatService",  # Removed - replaced with CoreChatService
     "ErrorHandlingService",  # noqa: F405
     "LocationService",  # noqa: F405
     "MemoryService",  # noqa: F405
