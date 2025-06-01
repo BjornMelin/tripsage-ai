@@ -196,7 +196,7 @@ class EnhancedRateLimitMiddleware(BaseHTTPMiddleware):
         settings: Optional[Settings] = None,
         use_dragonfly: bool = False,
     ):
-        """Initialize RateLimitMiddleware.
+        """Initialize EnhancedRateLimitMiddleware.
 
         Args:
             app: The ASGI application
