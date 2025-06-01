@@ -9,7 +9,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
-from tripsage.api.models.requests.destinations import DestinationVisitSchedule
+from tripsage.api.schemas.requests.destinations import DestinationVisitSchedule
 from tripsage_core.models.schemas_common.geographic import Place as Destination
 
 
@@ -55,8 +55,5 @@ class DestinationSuggestionResponse(BaseModel):
     )
 
 
-# Aliases for backward compatibility with existing service imports
-DestinationDetails = DestinationDetailsResponse
+# Keep these aliases as they represent different semantic concepts
 DestinationRecommendation = DestinationSuggestionResponse
-PointOfInterestSearchResponse = DestinationSearchResponse
-SavedDestination = SavedDestinationResponse

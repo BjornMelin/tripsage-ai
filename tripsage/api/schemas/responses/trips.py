@@ -8,7 +8,7 @@ from datetime import date, datetime
 from typing import Any, Dict, List, Optional
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from tripsage_core.models.schemas_common.travel import TripDestination, TripPreferences
 
@@ -16,26 +16,8 @@ from tripsage_core.models.schemas_common.travel import TripDestination, TripPref
 class TripResponse(BaseModel):
     """Response model for trip details."""
 
-    id: UUID = Field(description="Trip ID")
-    user_id: str = Field(description="User ID")
-    title: str = Field(description="Trip title")
-    description: Optional[str] = Field(default=None, description="Trip description")
-    start_date: date = Field(description="Trip start date")
-    end_date: date = Field(description="Trip end date")
-    duration_days: int = Field(description="Trip duration in days")
-    destinations: List[TripDestination] = Field(description="Trip destinations")
-    preferences: Optional[TripPreferences] = Field(
-        default=None, description="Trip preferences"
-    )
-    itinerary_id: Optional[UUID] = Field(
-        default=None, description="Associated itinerary ID"
-    )
-    status: str = Field(description="Trip status")
-    created_at: datetime = Field(description="Creation timestamp")
-    updated_at: datetime = Field(description="Last update timestamp")
-
-    model_config = {
-        "json_schema_extra": {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "id": "123e4567-e89b-12d3-a456-426614174000",
                 "user_id": "user123",
@@ -104,7 +86,25 @@ class TripResponse(BaseModel):
                 "updated_at": "2025-01-16T09:45:00Z",
             }
         }
-    }
+    )
+
+    id: UUID = Field(description="Trip ID")
+    user_id: str = Field(description="User ID")
+    title: str = Field(description="Trip title")
+    description: Optional[str] = Field(default=None, description="Trip description")
+    start_date: date = Field(description="Trip start date")
+    end_date: date = Field(description="Trip end date")
+    duration_days: int = Field(description="Trip duration in days")
+    destinations: List[TripDestination] = Field(description="Trip destinations")
+    preferences: Optional[TripPreferences] = Field(
+        default=None, description="Trip preferences"
+    )
+    itinerary_id: Optional[UUID] = Field(
+        default=None, description="Associated itinerary ID"
+    )
+    status: str = Field(description="Trip status")
+    created_at: datetime = Field(description="Creation timestamp")
+    updated_at: datetime = Field(description="Last update timestamp")
 
 
 class TripListItem(BaseModel):
@@ -132,29 +132,8 @@ class TripListResponse(BaseModel):
 class TripSummaryResponse(BaseModel):
     """Response model for trip summary."""
 
-    id: UUID = Field(description="Trip ID")
-    title: str = Field(description="Trip title")
-    date_range: str = Field(description="Trip date range")
-    duration_days: int = Field(description="Trip duration in days")
-    destinations: List[str] = Field(description="Trip destination names")
-    accommodation_summary: Optional[str] = Field(
-        default=None, description="Accommodation summary"
-    )
-    transportation_summary: Optional[str] = Field(
-        default=None, description="Transportation summary"
-    )
-    budget_summary: Optional[Dict[str, Any]] = Field(
-        default=None, description="Budget summary"
-    )
-    has_itinerary: bool = Field(description="Whether trip has an itinerary")
-    completion_percentage: int = Field(
-        description="Trip planning completion percentage",
-        ge=0,
-        le=100,
-    )
-
-    model_config = {
-        "json_schema_extra": {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "id": "123e4567-e89b-12d3-a456-426614174000",
                 "title": "Summer Vacation in Europe",
@@ -181,4 +160,25 @@ class TripSummaryResponse(BaseModel):
                 "completion_percentage": 60,
             }
         }
-    }
+    )
+
+    id: UUID = Field(description="Trip ID")
+    title: str = Field(description="Trip title")
+    date_range: str = Field(description="Trip date range")
+    duration_days: int = Field(description="Trip duration in days")
+    destinations: List[str] = Field(description="Trip destination names")
+    accommodation_summary: Optional[str] = Field(
+        default=None, description="Accommodation summary"
+    )
+    transportation_summary: Optional[str] = Field(
+        default=None, description="Transportation summary"
+    )
+    budget_summary: Optional[Dict[str, Any]] = Field(
+        default=None, description="Budget summary"
+    )
+    has_itinerary: bool = Field(description="Whether trip has an itinerary")
+    completion_percentage: int = Field(
+        description="Trip planning completion percentage",
+        ge=0,
+        le=100,
+    )

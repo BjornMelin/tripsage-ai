@@ -4,7 +4,7 @@ This module defines the response models for chat functionality.
 """
 
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any, Dict, List, Optional
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel, Field
@@ -18,9 +18,9 @@ class ChatResponse(BaseModel):
     id: UUID = Field(default_factory=uuid4, description="Response ID")
     session_id: Optional[UUID] = Field(None, description="Session ID")
     content: str = Field(..., description="Response content")
-    tool_calls: Optional[list[ToolCall]] = Field(None, description="Tool calls made")
+    tool_calls: Optional[List[ToolCall]] = Field(None, description="Tool calls made")
     finish_reason: str = Field("stop", description="Finish reason")
-    usage: Optional[dict[str, int]] = Field(None, description="Token usage information")
+    usage: Optional[Dict[str, int]] = Field(None, description="Token usage information")
     created_at: datetime = Field(
         default_factory=datetime.utcnow, description="Response timestamp"
     )
@@ -31,14 +31,14 @@ class ChatStreamChunk(BaseModel):
 
     type: str = Field(..., description="Chunk type")
     content: str = Field(..., description="Chunk content")
-    metadata: Optional[dict[str, Any]] = Field(None, description="Chunk metadata")
+    metadata: Optional[Dict[str, Any]] = Field(None, description="Chunk metadata")
 
 
 class SessionHistoryResponse(BaseModel):
     """Response for session history request."""
 
     session_id: UUID = Field(..., description="Session ID")
-    messages: list[ChatMessage] = Field(..., description="Session messages")
+    messages: List[ChatMessage] = Field(..., description="Session messages")
     created_at: Optional[datetime] = Field(None, description="Session creation time")
     updated_at: Optional[datetime] = Field(None, description="Last update time")
-    metadata: Optional[dict[str, Any]] = Field(None, description="Session metadata")
+    metadata: Optional[Dict[str, Any]] = Field(None, description="Session metadata")

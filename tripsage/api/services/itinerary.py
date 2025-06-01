@@ -14,7 +14,7 @@ from fastapi import Depends
 # Create simple models for missing classes
 from pydantic import BaseModel, Field
 
-from tripsage.api.models.requests.itineraries import (
+from tripsage.api.schemas.requests.itineraries import (
     ItineraryCreateRequest,
     ItineraryItemCreateRequest,
     ItineraryItemUpdateRequest,
@@ -22,10 +22,10 @@ from tripsage.api.models.requests.itineraries import (
     ItinerarySearchRequest,
     ItineraryUpdateRequest,
 )
-from tripsage.api.models.responses.itineraries import (
-    Itinerary,
+from tripsage.api.schemas.responses.itineraries import (
     ItineraryConflictCheckResponse,
     ItineraryOptimizeResponse,
+    ItineraryResponse,
     ItinerarySearchResponse,
 )
 from tripsage_core.exceptions import CoreResourceNotFoundError as ResourceNotFoundError
@@ -82,7 +82,7 @@ class ItineraryService:
         self,
         user_id: str,
         request: ItineraryCreateRequest,
-    ) -> Itinerary:
+    ) -> ItineraryResponse:
         """Create a new itinerary for a user.
 
         Args:
@@ -116,7 +116,7 @@ class ItineraryService:
             logger.error(f"Unexpected error creating itinerary: {e!s}")
             raise ServiceError("Failed to create itinerary") from e
 
-    async def get_itinerary(self, user_id: str, itinerary_id: str) -> Itinerary:
+    async def get_itinerary(self, user_id: str, itinerary_id: str) -> ItineraryResponse:
         """Get an itinerary by ID.
 
         Args:
@@ -152,7 +152,7 @@ class ItineraryService:
         user_id: str,
         itinerary_id: str,
         request: ItineraryUpdateRequest,
-    ) -> Itinerary:
+    ) -> ItineraryResponse:
         """Update an existing itinerary.
 
         Args:
@@ -217,7 +217,7 @@ class ItineraryService:
             logger.error(f"Failed to delete itinerary: {e!s}")
             raise ServiceError("Failed to delete itinerary") from e
 
-    async def list_itineraries(self, user_id: str) -> list[Itinerary]:
+    async def list_itineraries(self, user_id: str) -> list[ItineraryResponse]:
         """List all itineraries for a user.
 
         Args:
@@ -625,12 +625,12 @@ class ItineraryService:
             "settings": request.settings,
         }
 
-    def _adapt_itinerary(self, core_itinerary) -> Itinerary:
+    def _adapt_itinerary(self, core_itinerary) -> ItineraryResponse:
         """Adapt core itinerary to API model."""
         # This is a simplified adaptation - real implementation needs detailed mapping
         # ItineraryStatus already imported at module level
 
-        return Itinerary(
+        return ItineraryResponse(
             id=core_itinerary.get("id", ""),
             user_id=core_itinerary.get("user_id", ""),
             title=core_itinerary.get("title", ""),

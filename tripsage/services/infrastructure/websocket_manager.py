@@ -17,11 +17,11 @@ from fastapi import WebSocket
 from jose import jwt
 
 from tripsage.api.core.config import get_settings
-from tripsage.api.models.requests.websocket import (
+from tripsage.api.schemas.requests.websocket import (
     WebSocketAuthRequest,
     WebSocketSubscribeRequest,
 )
-from tripsage.api.models.responses.websocket import (
+from tripsage.api.schemas.responses.websocket import (
     WebSocketAuthResponse,
     WebSocketSubscribeResponse,
 )

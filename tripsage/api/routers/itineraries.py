@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 
 from tripsage.api.core.dependencies import get_principal_id, require_principal_dep
 from tripsage.api.middlewares.authentication import Principal
-from tripsage.api.models.requests.itineraries import (
+from tripsage.api.schemas.requests.itineraries import (
     ItineraryCreateRequest,
     ItineraryItemCreateRequest,
     ItineraryItemUpdateRequest,
@@ -17,10 +17,10 @@ from tripsage.api.models.requests.itineraries import (
     ItinerarySearchRequest,
     ItineraryUpdateRequest,
 )
-from tripsage.api.models.responses.itineraries import (
-    Itinerary,
+from tripsage.api.schemas.responses.itineraries import (
     ItineraryConflictCheckResponse,
     ItineraryOptimizeResponse,
+    ItineraryResponse,
     ItinerarySearchResponse,
 )
 from tripsage.api.services.itinerary import ItineraryService, get_itinerary_service
@@ -33,7 +33,7 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
-@router.post("", response_model=Itinerary, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=ItineraryResponse, status_code=status.HTTP_201_CREATED)
 async def create_itinerary(
     request: ItineraryCreateRequest,
     principal: Principal = require_principal_dep,
@@ -53,7 +53,7 @@ async def create_itinerary(
         ) from e
 
 
-@router.get("", response_model=List[Itinerary])
+@router.get("", response_model=List[ItineraryResponse])
 async def list_itineraries(
     principal: Principal = require_principal_dep,
     itinerary_service: ItineraryService = Depends(get_itinerary_service),
@@ -78,7 +78,7 @@ async def search_itineraries(
     return await itinerary_service.search_itineraries(user_id, request)
 
 
-@router.get("/{itinerary_id}", response_model=Itinerary)
+@router.get("/{itinerary_id}", response_model=ItineraryResponse)
 async def get_itinerary(
     itinerary_id: str,
     principal: Principal = require_principal_dep,
@@ -98,7 +98,7 @@ async def get_itinerary(
         ) from e
 
 
-@router.put("/{itinerary_id}", response_model=Itinerary)
+@router.put("/{itinerary_id}", response_model=ItineraryResponse)
 async def update_itinerary(
     itinerary_id: str,
     request: ItineraryUpdateRequest,
