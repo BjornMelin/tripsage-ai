@@ -3,12 +3,14 @@ Base agent node implementation for LangGraph orchestration.
 
 This module provides the abstract base class that all specialized agent nodes
 inherit from, ensuring consistent error handling, logging, and tool management.
+Refactored to support dependency injection and service-based architecture.
 """
 
 from abc import ABC, abstractmethod
 from datetime import datetime
 from typing import Any, Dict, Optional
 
+from tripsage.agents.service_registry import ServiceRegistry
 from tripsage.orchestration.state import TravelPlanningState, update_state_timestamp
 from tripsage_core.exceptions.exceptions import CoreTripSageError as TripSageError
 from tripsage_core.utils.error_handling_utils import log_exception
@@ -29,22 +31,29 @@ class BaseAgentNode(ABC):
     and tool initialization that all specialized agent nodes can inherit.
     """
 
-    def __init__(self, node_name: str, config: Optional[Dict[str, Any]] = None):
+    def __init__(
+        self,
+        node_name: str,
+        service_registry: ServiceRegistry,
+        config: Optional[Dict[str, Any]] = None,
+    ):
         """
-        Initialize the base agent node.
+        Initialize the base agent node with dependency injection.
 
         Args:
             node_name: Unique name for this node (used in logging and routing)
+            service_registry: Service registry for dependency injection
             config: Optional configuration dictionary for node-specific settings
         """
         self.node_name = node_name
+        self.service_registry = service_registry
         self.config = config or {}
         self.logger = get_logger(f"orchestration.{node_name}")
 
         # Initialize node-specific tools
         self._initialize_tools()
 
-        self.logger.info(f"Initialized {node_name} node")
+        self.logger.info(f"Initialized {node_name} node with service injection")
 
     @abstractmethod
     def _initialize_tools(self) -> None:
@@ -53,6 +62,7 @@ class BaseAgentNode(ABC):
 
         This method should be implemented by each specialized node to set up
         any tools, MCP clients, or other resources it needs to operate.
+        The implementation should use self.service_registry to access services.
         """
         pass
 
@@ -187,3 +197,30 @@ class BaseAgentNode(ABC):
             message.update(additional_data)
 
         return message
+
+    def get_service(self, service_name: str):
+        """
+        Get a required service from the registry.
+
+        Args:
+            service_name: Name of the service to retrieve
+
+        Returns:
+            The service instance
+
+        Raises:
+            ValueError: If the service is not available
+        """
+        return self.service_registry.get_required_service(service_name)
+
+    def get_optional_service(self, service_name: str):
+        """
+        Get an optional service from the registry.
+
+        Args:
+            service_name: Name of the service to retrieve
+
+        Returns:
+            The service instance or None if not available
+        """
+        return self.service_registry.get_optional_service(service_name)
