@@ -70,10 +70,10 @@ class MCPRegistry:
     def get_registered_mcps(self) -> list[str]:
         """
         Get list of registered MCP names.
-        
+
         For backward compatibility, returns only 'airbnb' since
         all other services have been migrated to direct SDK.
-        
+
         Returns:
             List containing only 'airbnb'
         """
@@ -82,21 +82,22 @@ class MCPRegistry:
     def get_wrapper_class(self, mcp_name: str) -> type[BaseMCPWrapper]:
         """
         Get wrapper class by MCP name.
-        
+
         For backward compatibility. Only supports 'airbnb'.
-        
+
         Args:
             mcp_name: MCP name (must be 'airbnb')
-            
+
         Returns:
             The Airbnb wrapper class
-            
+
         Raises:
             MCPRegistrationError: If mcp_name is not 'airbnb'
         """
         if mcp_name != "airbnb":
             raise MCPRegistrationError(
-                f"MCP '{mcp_name}' is not supported. Only 'airbnb' remains after SDK migration."
+                f"MCP '{mcp_name}' is not supported. "
+                "Only 'airbnb' remains after SDK migration."
             )
         return self.get_airbnb_wrapper()
 

@@ -42,10 +42,19 @@ class MockService(ServiceProtocol):
 class MockAdapter(ServiceAdapter):
     """Mock adapter for testing."""
 
-    def __init__(self):
-        super().__init__("mock")
+    def __init__(self, service_name="airbnb"):
+        super().__init__(service_name)
         self.mcp_service = MockService()
         self.direct_service = MockService()
+
+    async def get_service_instance(self):
+        """Get service instance based on integration mode."""
+        if self.is_direct:
+            await self.direct_service.connect()
+            return self.direct_service
+        else:
+            await self.mcp_service.connect()
+            return self.mcp_service
 
     async def get_mcp_client(self):
         await self.mcp_service.connect()
@@ -85,7 +94,7 @@ class TestServiceRegistry:
     async def test_get_service_mcp_mode(self, registry, mock_adapter):
         """Test getting service in MCP mode."""
         # Set to MCP mode
-        feature_flags.set_integration_mode("mock", IntegrationMode.MCP)
+        feature_flags.set_integration_mode("airbnb", IntegrationMode.MCP)
 
         registry.register_service("test", mock_adapter)
         service = await registry.get_service("test")
@@ -97,7 +106,7 @@ class TestServiceRegistry:
     async def test_get_service_direct_mode(self, registry, mock_adapter):
         """Test getting service in direct mode."""
         # Set to direct mode
-        feature_flags.set_integration_mode("mock", IntegrationMode.DIRECT)
+        feature_flags.set_integration_mode("airbnb", IntegrationMode.DIRECT)
 
         registry.register_service("test", mock_adapter)
         service = await registry.get_service("test")
@@ -124,7 +133,7 @@ class TestServiceRegistry:
 
     async def test_refresh_service(self, registry, mock_adapter):
         """Test refreshing service after mode change."""
-        feature_flags.set_integration_mode("mock", IntegrationMode.MCP)
+        feature_flags.set_integration_mode("airbnb", IntegrationMode.MCP)
         registry.register_service("test", mock_adapter)
 
         # Get initial service (MCP)
@@ -132,7 +141,7 @@ class TestServiceRegistry:
         assert service1 == mock_adapter.mcp_service
 
         # Change mode
-        feature_flags.set_integration_mode("mock", IntegrationMode.DIRECT)
+        feature_flags.set_integration_mode("airbnb", IntegrationMode.DIRECT)
 
         # Refresh service
         service2 = await registry.refresh_service("test")

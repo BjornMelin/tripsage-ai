@@ -79,14 +79,15 @@ class MCPManager:
         if mcp_name is not None:
             if mcp_name != "airbnb":
                 raise MCPInvocationError(
-                    f"MCP '{mcp_name}' is not supported. Only 'airbnb' remains after SDK migration.",
+                    f"MCP '{mcp_name}' is not supported. "
+                    "Only 'airbnb' remains after SDK migration.",
                     mcp_name=mcp_name,
                     method_name=method_name or "",
                 )
             # If mcp_name is airbnb and method_name is in kwargs, extract it
             if method_name is None and "method_name" in kwargs:
                 method_name = kwargs.pop("method_name")
-        
+
         if method_name is None:
             raise MCPInvocationError(
                 "method_name is required",

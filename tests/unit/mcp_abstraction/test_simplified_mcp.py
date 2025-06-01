@@ -78,12 +78,14 @@ class TestMCPManager:
         """Test that invoke initializes the wrapper if not already done."""
         mock_wrapper = MagicMock(spec=AirbnbMCPWrapper)
         mock_wrapper.invoke_method = AsyncMock(return_value={"results": []})
-        
+
         async def mock_initialize():
             manager._wrapper = mock_wrapper
             return mock_wrapper
-        
-        with patch.object(manager, "initialize", side_effect=mock_initialize) as mock_init:
+
+        with patch.object(
+            manager, "initialize", side_effect=mock_initialize
+        ) as mock_init:
             manager._wrapper = None  # Ensure wrapper is None to trigger initialization
 
             result = await manager.invoke("search_listings", location="Paris")

@@ -12,7 +12,7 @@ from typing import Any, Dict, List, Optional
 from langchain_core.tools import Tool, tool
 from pydantic import BaseModel, Field
 
-from tripsage.mcp_abstraction.exceptions import MCPError
+from tripsage.mcp_abstraction.exceptions import TripSageMCPError
 from tripsage.mcp_abstraction.manager import (
     MCPManager,
 )
@@ -220,7 +220,7 @@ class LangGraphMCPBridge:
                 else:
                     return str(result)
 
-            except MCPError as e:
+            except TripSageMCPError as e:
                 logger.error(f"Airbnb tool {metadata.name} failed: {e}")
                 return f"Tool execution failed: {str(e)}"
             except Exception as e:
@@ -248,8 +248,10 @@ class LangGraphMCPBridge:
         if not parameters:
             return None
 
-        # Create dynamic Pydantic model for parameters
-        fields = {}
+        # Create annotations and fields for dynamic Pydantic model
+        annotations = {}
+        field_defaults = {}
+
         for param_name, param_info in parameters.items():
             if isinstance(param_info, dict):
                 param_type = param_info.get("type", "string")
@@ -268,20 +270,22 @@ class LangGraphMCPBridge:
                 else:
                     field_type = str  # Default to string
 
-                # Create field with proper type and description
+                # Set up type annotations and field defaults
                 if required:
-                    fields[param_name] = (field_type, Field(description=param_desc))
+                    annotations[param_name] = field_type
+                    field_defaults[param_name] = Field(description=param_desc)
                 else:
-                    fields[param_name] = (
-                        Optional[field_type],
-                        Field(default=None, description=param_desc),
+                    annotations[param_name] = Optional[field_type]
+                    field_defaults[param_name] = Field(
+                        default=None, description=param_desc
                     )
 
-        if not fields:
+        if not annotations:
             return None
 
-        # Create dynamic model class
-        return type("AirbnbToolArgsSchema", (BaseModel,), fields)
+        # Create dynamic model class with proper annotations
+        namespace = {"__annotations__": annotations, **field_defaults}
+        return type("AirbnbToolArgsSchema", (BaseModel,), namespace)
 
     async def invoke_tool_direct(self, tool_name: str, params: Dict[str, Any]) -> Any:
         """
@@ -362,11 +366,13 @@ def create_airbnb_tool(name: str, description: str, mcp_method: str):
     """
 
     def decorator(func):
-        @tool(name=name, description=description)
+        @tool(description=description)
         async def wrapper(**kwargs) -> str:
             bridge = await get_mcp_bridge()
             return await bridge.invoke_tool_direct(f"airbnb_{mcp_method}", kwargs)
 
+        # Set the name manually after creation
+        wrapper.name = name
         return wrapper
 
     return decorator
