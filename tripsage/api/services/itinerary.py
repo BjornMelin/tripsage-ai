@@ -79,7 +79,9 @@ class ItineraryService:
         return self.core_itinerary_service
 
     async def create_itinerary(
-        self, user_id: str, request: ItineraryCreateRequest,
+        self,
+        user_id: str,
+        request: ItineraryCreateRequest,
     ) -> Itinerary:
         """Create a new itinerary for a user.
 
@@ -146,7 +148,10 @@ class ItineraryService:
             raise ServiceError("Failed to get itinerary") from e
 
     async def update_itinerary(
-        self, user_id: str, itinerary_id: str, request: ItineraryUpdateRequest,
+        self,
+        user_id: str,
+        itinerary_id: str,
+        request: ItineraryUpdateRequest,
     ) -> Itinerary:
         """Update an existing itinerary.
 
@@ -172,7 +177,9 @@ class ItineraryService:
             # Update via core service
             core_service = await self._get_core_itinerary_service()
             core_response = await core_service.update_itinerary(
-                user_id, itinerary_id, core_request,
+                user_id,
+                itinerary_id,
+                core_request,
             )
 
             # Adapt core response to API model
@@ -237,7 +244,9 @@ class ItineraryService:
             raise ServiceError("Failed to list itineraries") from e
 
     async def search_itineraries(
-        self, user_id: str, request: ItinerarySearchRequest,
+        self,
+        user_id: str,
+        request: ItinerarySearchRequest,
     ) -> ItinerarySearchResponse:
         """Search for itineraries based on criteria.
 
@@ -305,7 +314,9 @@ class ItineraryService:
             # Add item via core service
             core_service = await self._get_core_itinerary_service()
             core_response = await core_service.add_item_to_itinerary(
-                user_id, itinerary_id, core_request,
+                user_id,
+                itinerary_id,
+                core_request,
             )
 
             # Adapt core response to API model
@@ -353,7 +364,10 @@ class ItineraryService:
             # Update item via core service
             core_service = await self._get_core_itinerary_service()
             core_response = await core_service.update_item(
-                user_id, itinerary_id, item_id, core_request,
+                user_id,
+                itinerary_id,
+                item_id,
+                core_request,
             )
 
             # Adapt core response to API model
@@ -396,7 +410,10 @@ class ItineraryService:
             raise ServiceError("Failed to delete item") from e
 
     async def get_item(
-        self, user_id: str, itinerary_id: str, item_id: str,
+        self,
+        user_id: str,
+        itinerary_id: str,
+        item_id: str,
     ) -> ItineraryItem:
         """Get an item from an itinerary by ID.
 
@@ -433,7 +450,9 @@ class ItineraryService:
             raise ServiceError("Failed to get item") from e
 
     async def check_conflicts(
-        self, user_id: str, itinerary_id: str,
+        self,
+        user_id: str,
+        itinerary_id: str,
     ) -> ItineraryConflictCheckResponse:
         """Check for conflicts in an itinerary schedule.
 
@@ -468,7 +487,9 @@ class ItineraryService:
             raise ServiceError("Failed to check conflicts") from e
 
     async def optimize_itinerary(
-        self, user_id: str, request: ItineraryOptimizeRequest,
+        self,
+        user_id: str,
+        request: ItineraryOptimizeRequest,
     ) -> ItineraryOptimizeResponse:
         """Optimize an itinerary based on provided settings.
 
@@ -550,7 +571,8 @@ class ItineraryService:
         }
 
     def _adapt_itinerary_item_create_request(
-        self, request: ItineraryItemCreateRequest,
+        self,
+        request: ItineraryItemCreateRequest,
     ) -> dict:
         """Adapt API itinerary item create request to core model."""
         return {
@@ -572,7 +594,8 @@ class ItineraryService:
         }
 
     def _adapt_itinerary_item_update_request(
-        self, request: ItineraryItemUpdateRequest,
+        self,
+        request: ItineraryItemUpdateRequest,
     ) -> dict:
         """Adapt API itinerary item update request to core model."""
         return {
@@ -593,7 +616,8 @@ class ItineraryService:
         }
 
     def _adapt_itinerary_optimize_request(
-        self, request: ItineraryOptimizeRequest,
+        self,
+        request: ItineraryOptimizeRequest,
     ) -> dict:
         """Adapt API itinerary optimize request to core model."""
         return {
@@ -657,7 +681,8 @@ class ItineraryService:
         )
 
     def _adapt_itinerary_search_response(
-        self, core_response,
+        self,
+        core_response,
     ) -> ItinerarySearchResponse:
         """Adapt core itinerary search response to API model."""
         return ItinerarySearchResponse(
@@ -672,7 +697,8 @@ class ItineraryService:
         )
 
     def _adapt_conflict_check_response(
-        self, core_response,
+        self,
+        core_response,
     ) -> ItineraryConflictCheckResponse:
         """Adapt core conflict check response to API model."""
         return ItineraryConflictCheckResponse(

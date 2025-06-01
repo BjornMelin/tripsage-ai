@@ -236,13 +236,15 @@ def create_app() -> FastAPI:
     # Add key operation rate limiting middleware
     key_monitoring_service = KeyMonitoringService(settings)
     app.add_middleware(
-        KeyOperationRateLimitMiddleware, monitoring_service=key_monitoring_service,
+        KeyOperationRateLimitMiddleware,
+        monitoring_service=key_monitoring_service,
     )
 
     # Add exception handlers for detailed agent API error responses
     @app.exception_handler(CoreAuthenticationError)
     async def authentication_error_handler(
-        request: Request, exc: CoreAuthenticationError,
+        request: Request,
+        exc: CoreAuthenticationError,
     ):
         """Handle authentication errors with detailed agent context."""
         logger.error(
@@ -262,7 +264,8 @@ def create_app() -> FastAPI:
 
     @app.exception_handler(CoreKeyValidationError)
     async def key_validation_error_handler(
-        request: Request, exc: CoreKeyValidationError,
+        request: Request,
+        exc: CoreKeyValidationError,
     ):
         """Handle API key validation errors with service-specific guidance."""
         logger.error(
@@ -293,7 +296,9 @@ def create_app() -> FastAPI:
             },
         )
         response_content = format_error_response(
-            exc, request, is_agent_request(request),
+            exc,
+            request,
+            is_agent_request(request),
         )
         response_content["retry_after"] = retry_after
         return JSONResponse(
@@ -376,7 +381,8 @@ def create_app() -> FastAPI:
 
     @app.exception_handler(RequestValidationError)
     async def request_validation_error_handler(
-        request: Request, exc: RequestValidationError,
+        request: Request,
+        exc: RequestValidationError,
     ):
         """Handle FastAPI request validation errors."""
         error_details = []
@@ -407,7 +413,9 @@ def create_app() -> FastAPI:
         )
 
         response_content = format_error_response(
-            validation_exc, request, is_agent_request(request),
+            validation_exc,
+            request,
+            is_agent_request(request),
         )
 
         # Add validation errors to the response for both frontend and agents
@@ -443,7 +451,8 @@ def create_app() -> FastAPI:
             )
         elif exc.status_code == 403:
             core_exc = CoreAuthorizationError(
-                message=exc.detail or "Access forbidden", code=f"HTTP_{exc.status_code}",
+                message=exc.detail or "Access forbidden",
+                code=f"HTTP_{exc.status_code}",
             )
         else:
             core_exc = CoreTripSageError(
@@ -483,7 +492,9 @@ def create_app() -> FastAPI:
         )
 
         response_content = format_error_response(
-            generic_exc, request, is_agent_request(request),
+            generic_exc,
+            request,
+            is_agent_request(request),
         )
 
         # Add debug information if in debug mode
@@ -509,10 +520,14 @@ def create_app() -> FastAPI:
     app.include_router(trips.router, prefix="/api/trips", tags=["trips"])
     app.include_router(flights.router, prefix="/api/flights", tags=["flights"])
     app.include_router(
-        accommodations.router, prefix="/api/accommodations", tags=["accommodations"],
+        accommodations.router,
+        prefix="/api/accommodations",
+        tags=["accommodations"],
     )
     app.include_router(
-        destinations.router, prefix="/api/destinations", tags=["destinations"],
+        destinations.router,
+        prefix="/api/destinations",
+        tags=["destinations"],
     )
     # app.include_router(
     #     itineraries.router, prefix="/api/itineraries", tags=["itineraries"]
