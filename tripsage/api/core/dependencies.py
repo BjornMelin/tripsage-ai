@@ -1,220 +1,128 @@
 """
-Dependency injection for TripSage API.
+Unified dependency injection for TripSage API.
 
-This module centralizes all FastAPI dependencies for the TripSage API,
-focusing on core services and JWT-based authentication.
+This module provides clean, modern dependency injection using the Principal model
+for unified authentication across JWT (frontend) and API keys (agents).
 """
 
-from typing import Optional, Union
+from fastapi import Depends, Request
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from fastapi import Depends, Request, Security
-from fastapi.security import APIKeyHeader, APIKeyQuery, OAuth2PasswordBearer
-
-from tripsage.api.core.config import get_settings
-from tripsage_core.exceptions.exceptions import (
-    CoreAuthenticationError as AuthenticationError,
+from tripsage.api.core.config import Settings, get_settings
+from tripsage.api.middlewares.authentication import Principal
+from tripsage.mcp_abstraction import MCPManager, mcp_manager
+from tripsage_core.exceptions.exceptions import CoreAuthenticationError
+from tripsage_core.services.business.key_management_service import (
+    KeyManagementService as CoreKeyManagementService,
 )
-from tripsage_core.models.db.user import User
-from tripsage_core.services.business.auth_service import (
-    AuthenticationService as CoreAuthService,
-)
-from tripsage_core.services.business.auth_service import (
-    get_auth_service as get_core_auth_service,
+from tripsage_core.services.business.key_management_service import (
+    get_key_management_service as get_core_key_management_service,
 )
 from tripsage_core.services.infrastructure import get_cache_service
+from tripsage_core.services.infrastructure.database_service import get_database_service
 from tripsage_core.utils.session_utils import SessionMemory
-
-# Initialize settings after imports
-settings = get_settings()
-
-# OAuth2 setup
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/v1/auth/token", auto_error=False)
-
-# API key authentication setup
-api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
-api_key_query = APIKeyQuery(name="api_key", auto_error=False)
-
-
-class ApiUser:
-    """Simplified user class for API key authentication."""
-
-    def __init__(self, api_key: str):
-        self.id = "api_user"
-        self.username = "api_user"
-        self.email = None
-        self.is_api = True
-        self.is_active = True
-        self.is_verified = True
-        self.api_key = api_key
-
-
-# Core auth service dependency
-async def get_core_auth_service_dep() -> CoreAuthService:
-    """Get the core auth service instance as a dependency.
-
-    Returns:
-        CoreAuthService instance
-    """
-    return await get_core_auth_service()
 
 
 # Settings dependency
-def get_settings_dependency():
-    """Get settings instance as a dependency.
-
-    Returns:
-        Settings instance
-    """
+def get_settings_dependency() -> Settings:
+    """Get settings instance as a dependency."""
     return get_settings()
 
 
 # Database dependency
-async def get_db():
-    """Get database session as a dependency.
-
-    This is a placeholder function. In a full implementation,
-    this would return an actual database session.
-    """
-    # Placeholder - implement when database integration is complete
-    return None
+async def get_db() -> AsyncSession:
+    """Get database session as a dependency."""
+    db_service = await get_database_service()
+    async with db_service.get_session() as session:
+        yield session
 
 
 # Session memory dependency
 async def get_session_memory(request: Request) -> SessionMemory:
-    """Get the session memory for the current request.
-
-    Args:
-        request: The current FastAPI request
-
-    Returns:
-        SessionMemory instance for the current session
-    """
+    """Get session memory for the current request."""
     if not hasattr(request.state, "session_memory"):
-        # Create or get a session memory instance for this request
         session_id = request.cookies.get("session_id", None)
-
         if not session_id:
-            # Generate a new session ID if it doesn't exist
             from uuid import uuid4
 
             session_id = str(uuid4())
-
-        # Initialize session memory
         request.state.session_memory = SessionMemory(session_id=session_id)
-
     return request.state.session_memory
 
 
-# Authentication dependencies
-_core_auth_service_dep = Depends(get_core_auth_service_dep)
+# Principal-based authentication
+async def get_current_principal(request: Request) -> Principal | None:
+    """Get the current authenticated principal from request state.
 
-
-async def get_current_user_optional(
-    token: Optional[str] = Depends(oauth2_scheme),
-    api_key_header: Optional[str] = Security(api_key_header),
-    api_key_query: Optional[str] = Security(api_key_query),
-    auth_service: CoreAuthService = _core_auth_service_dep,
-) -> Optional[Union[User, ApiUser]]:
-    """Get the current user if authenticated, otherwise return None.
-
-    Args:
-        token: OAuth2 token
-        api_key_header: API key from header
-        api_key_query: API key from query parameter
-        auth_service: Core authentication service
-
-    Returns:
-        User object if authenticated, None otherwise
+    This retrieves the Principal set by AuthenticationMiddleware.
+    Returns None if no authentication is present.
     """
-    # First check API key (from header or query)
-    api_key = api_key_header or api_key_query
-
-    if api_key:
-        # Validate API key
-        # This is a simplified implementation - in a real system,
-        # you'd verify the key against a database
-        if api_key.startswith("tripsage_"):
-            # Return API user instance
-            return ApiUser(api_key)
-
-    # If no API key, check OAuth2 token
-    if token:
-        try:
-            # Use core auth service for JWT validation
-            user = await auth_service.get_current_user(token)
-            return user
-        except Exception:
-            # Invalid token - return None for optional auth
-            return None
-
-    # No authentication provided
-    return None
+    return getattr(request.state, "principal", None)
 
 
-async def get_current_user(
-    token: Optional[str] = Depends(oauth2_scheme),
-    api_key_header: Optional[str] = Security(api_key_header),
-    api_key_query: Optional[str] = Security(api_key_query),
-    auth_service: CoreAuthService = _core_auth_service_dep,
-) -> Union[User, ApiUser]:
-    """Get the current authenticated user or raise an error.
-
-    Args:
-        token: OAuth2 token
-        api_key_header: API key from header
-        api_key_query: API key from query parameter
-        auth_service: Core authentication service
-
-    Returns:
-        User object if authenticated
-
-    Raises:
-        AuthenticationError: If no user is authenticated
-    """
-    user = await get_current_user_optional(
-        token, api_key_header, api_key_query, auth_service
-    )
-    if user is None:
-        raise AuthenticationError("Not authenticated")
-    return user
+async def require_principal(request: Request) -> Principal:
+    """Require an authenticated principal or raise an error."""
+    principal = await get_current_principal(request)
+    if principal is None:
+        raise CoreAuthenticationError(
+            message="Authentication required",
+            code="AUTH_REQUIRED",
+            details={"additional_context": {"hint": "Provide JWT token or API key"}},
+        )
+    return principal
 
 
-# Module-level dependency singletons to avoid B008 linting errors
-get_current_user_dep = Depends(get_current_user)
-get_current_user_optional_dep = Depends(get_current_user_optional)
-get_db_dep = Depends(get_db)
-get_session_memory_dep = Depends(get_session_memory)
+async def require_user_principal(request: Request) -> Principal:
+    """Require a user principal (JWT-authenticated user)."""
+    principal = await require_principal(request)
+    if principal.type != "user":
+        raise CoreAuthenticationError(
+            message="User authentication required",
+            code="USER_AUTH_REQUIRED",
+            details={"additional_context": {"current_auth": principal.type}},
+        )
+    return principal
 
 
-async def verify_api_key(
-    current_user: Union[User, ApiUser] = get_current_user_dep,
+async def require_agent_principal(request: Request) -> Principal:
+    """Require an agent principal (API key-authenticated agent)."""
+    principal = await require_principal(request)
+    if principal.type != "agent":
+        raise CoreAuthenticationError(
+            message="Agent authentication required",
+            code="AGENT_AUTH_REQUIRED",
+            details={"additional_context": {"current_auth": principal.type}},
+        )
+    return principal
+
+
+# Principal utilities
+def get_principal_id(principal: Principal) -> str:
+    """Get the principal's ID as a string."""
+    return principal.id
+
+
+async def verify_service_access(
+    principal: Principal,
+    service: str = "openai",
+    db: AsyncSession = Depends(get_db),
+    key_service: CoreKeyManagementService = Depends(get_core_key_management_service),
 ) -> bool:
-    """Verify that the user has a valid API key for chat functionality.
+    """Verify that the principal has access to a specific service."""
+    # Agents with API keys already have service access
+    if principal.auth_method == "api_key":
+        return True
 
-    For now, this is a simplified check. In a full implementation,
-    this would validate specific service keys (like OpenAI) from the database.
+    # For users, check they have the required service key
+    if principal.type == "user":
+        try:
+            keys = await key_service.get_user_keys(principal.id, db)
+            service_key = next((k for k in keys if k.service == service), None)
+            return service_key is not None
+        except Exception:
+            return False
 
-    Args:
-        current_user: Current authenticated user
-
-    Returns:
-        True if user has valid API keys
-
-    Raises:
-        AuthenticationError: If no valid API key is found
-    """
-    # In a real implementation, you would:
-    # 1. Query the database for the user's API keys
-    # 2. Validate the keys against the respective services
-    # 3. Return the validation status
-
-    # For now, we'll assume authenticated users have valid keys
-    # This will be enhanced when the full BYOK system is integrated
-    return True
-
-
-# Module-level dependency for API key verification
-verify_api_key_dep = Depends(verify_api_key)
+    return False
 
 
 # Cache service dependency
@@ -223,5 +131,20 @@ async def get_cache_service_dep():
     return await get_cache_service()
 
 
-# Define singleton dependencies
+# MCP Manager dependency
+def get_mcp_manager() -> MCPManager:
+    """Get the MCP Manager instance."""
+    return mcp_manager
+
+
+# Module-level dependency singletons
+get_current_principal_dep = Depends(get_current_principal)
+require_principal_dep = Depends(require_principal)
+require_user_principal_dep = Depends(require_user_principal)
+require_agent_principal_dep = Depends(require_agent_principal)
+get_db_dep = Depends(get_db)
+get_session_memory_dep = Depends(get_session_memory)
+get_settings_dep = Depends(get_settings_dependency)
 cache_service_dependency = Depends(get_cache_service_dep)
+mcp_manager_dependency = Depends(get_mcp_manager)
+verify_service_access_dep = Depends(verify_service_access)

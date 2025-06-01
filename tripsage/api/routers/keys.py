@@ -5,11 +5,12 @@ Own Key) functionality for user-provided API keys.
 """
 
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
 
-from tripsage.api.core.dependencies import get_current_user
+from tripsage.api.core.dependencies import get_principal_id, require_principal_dep
+from tripsage.api.middlewares.authentication import Principal
 from tripsage.api.models.requests.api_keys import (
     ApiKeyCreate,
     ApiKeyRotateRequest,
@@ -45,18 +46,19 @@ def get_monitoring_service() -> KeyMonitoringService:
     summary="List API keys",
 )
 async def list_keys(
-    user_id: str = Depends(get_current_user),
+    principal: Principal = require_principal_dep,
     key_service: KeyService = Depends(get_key_service),
 ):
     """List all API keys for the current user.
 
     Args:
-        user_id: Current user ID
+        principal: Current authenticated principal
         key_service: Injected key service
 
     Returns:
         List of API keys
     """
+    user_id = get_principal_id(principal)
     return await key_service.list_keys(user_id)
 
 
@@ -68,14 +70,14 @@ async def list_keys(
 )
 async def create_key(
     key_data: ApiKeyCreate,
-    user_id: str = Depends(get_current_user),
+    principal: Principal = require_principal_dep,
     key_service: KeyService = Depends(get_key_service),
 ):
     """Create a new API key.
 
     Args:
         key_data: API key data
-        user_id: Current user ID
+        principal: Current authenticated principal
         key_service: Injected key service
 
     Returns:
@@ -96,6 +98,7 @@ async def create_key(
             )
 
         # Create the API key
+        user_id = get_principal_id(principal)
         return await key_service.create_key(user_id, key_data)
     except Exception as e:
         logger.error(f"Error creating API key: {e}")
@@ -112,14 +115,14 @@ async def create_key(
 )
 async def delete_key(
     key_id: str = Path(..., description="The API key ID"),
-    user_id: str = Depends(get_current_user),
+    principal: Principal = require_principal_dep,
     key_service: KeyService = Depends(get_key_service),
 ):
     """Delete an API key.
 
     Args:
         key_id: The API key ID
-        user_id: Current user ID
+        principal: Current authenticated principal
 
     Raises:
         HTTPException: If the key is not found or does not belong to the user
@@ -134,6 +137,7 @@ async def delete_key(
             detail="API key not found",
         )
 
+    user_id = get_principal_id(principal)
     if key["user_id"] != user_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -151,19 +155,20 @@ async def delete_key(
 )
 async def validate_key(
     key_data: ApiKeyValidateRequest,
-    user_id: Optional[str] = Depends(get_current_user),
+    principal: Principal = require_principal_dep,
     key_service: KeyService = Depends(get_key_service),
 ):
     """Validate an API key with the service.
 
     Args:
         key_data: API key data
-        user_id: Current user ID
+        principal: Current authenticated principal
 
     Returns:
         Validation result
     """
 
+    user_id = get_principal_id(principal)
     return await key_service.validate_key(key_data.key, key_data.service, user_id)
 
 
@@ -175,7 +180,7 @@ async def validate_key(
 async def rotate_key(
     key_data: ApiKeyRotateRequest,
     key_id: str = Path(..., description="The API key ID"),
-    user_id: str = Depends(get_current_user),
+    principal: Principal = require_principal_dep,
     key_service: KeyService = Depends(get_key_service),
 ):
     """Rotate an API key.
@@ -183,7 +188,7 @@ async def rotate_key(
     Args:
         key_data: New API key data
         key_id: The API key ID
-        user_id: Current user ID
+        principal: Current authenticated principal
 
     Returns:
         The updated API key
@@ -201,6 +206,7 @@ async def rotate_key(
             detail="API key not found",
         )
 
+    user_id = get_principal_id(principal)
     if key["user_id"] != user_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -228,12 +234,12 @@ async def rotate_key(
     summary="Get API key metrics",
 )
 async def get_metrics(
-    user_id: str = Depends(get_current_user),
+    principal: Principal = require_principal_dep,
 ):
     """Get API key health metrics.
 
     Args:
-        user_id: Current user ID
+        principal: Current authenticated principal
 
     Returns:
         Key health metrics
@@ -250,14 +256,14 @@ async def get_metrics(
     summary="Get API key audit log",
 )
 async def get_audit_log(
-    user_id: str = Depends(get_current_user),
+    principal: Principal = require_principal_dep,
     limit: int = Query(100, ge=1, le=1000),
     monitoring_service: KeyMonitoringService = Depends(get_monitoring_service),
 ):
     """Get API key audit log for a user.
 
     Args:
-        user_id: Current user ID
+        principal: Current authenticated principal
         limit: Maximum number of entries to return
 
     Returns:

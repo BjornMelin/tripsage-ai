@@ -7,7 +7,8 @@ from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from tripsage.api.core.dependencies import get_current_user
+from tripsage.api.core.dependencies import get_principal_id, require_principal_dep
+from tripsage.api.middlewares.authentication import Principal
 from tripsage.api.models.requests.itineraries import (
     ItineraryCreateRequest,
     ItineraryItemCreateRequest,
@@ -35,13 +36,14 @@ logger = logging.getLogger(__name__)
 @router.post("", response_model=Itinerary, status_code=status.HTTP_201_CREATED)
 async def create_itinerary(
     request: ItineraryCreateRequest,
-    user_id: str = Depends(get_current_user),
+    principal: Principal = require_principal_dep,
     itinerary_service: ItineraryService = Depends(get_itinerary_service),
 ):
     """
     Create a new itinerary.
     """
     try:
+        user_id = get_principal_id(principal)
         return await itinerary_service.create_itinerary(user_id, request)
     except ValueError as e:
         logger.warning(f"Invalid itinerary creation request: {str(e)}")
@@ -53,37 +55,40 @@ async def create_itinerary(
 
 @router.get("", response_model=List[Itinerary])
 async def list_itineraries(
-    user_id: str = Depends(get_current_user),
+    principal: Principal = require_principal_dep,
     itinerary_service: ItineraryService = Depends(get_itinerary_service),
 ):
     """
     List all itineraries for the current user.
     """
+    user_id = get_principal_id(principal)
     return await itinerary_service.list_itineraries(user_id)
 
 
 @router.post("/search", response_model=ItinerarySearchResponse)
 async def search_itineraries(
     request: ItinerarySearchRequest,
-    user_id: str = Depends(get_current_user),
+    principal: Principal = require_principal_dep,
     itinerary_service: ItineraryService = Depends(get_itinerary_service),
 ):
     """
     Search for itineraries based on criteria.
     """
+    user_id = get_principal_id(principal)
     return await itinerary_service.search_itineraries(user_id, request)
 
 
 @router.get("/{itinerary_id}", response_model=Itinerary)
 async def get_itinerary(
     itinerary_id: str,
-    user_id: str = Depends(get_current_user),
+    principal: Principal = require_principal_dep,
     itinerary_service: ItineraryService = Depends(get_itinerary_service),
 ):
     """
     Get a specific itinerary by ID.
     """
     try:
+        user_id = get_principal_id(principal)
         return await itinerary_service.get_itinerary(user_id, itinerary_id)
     except ResourceNotFoundError as e:
         logger.warning(f"Itinerary not found: {itinerary_id}")
@@ -97,13 +102,14 @@ async def get_itinerary(
 async def update_itinerary(
     itinerary_id: str,
     request: ItineraryUpdateRequest,
-    user_id: str = Depends(get_current_user),
+    principal: Principal = require_principal_dep,
     itinerary_service: ItineraryService = Depends(get_itinerary_service),
 ):
     """
     Update an existing itinerary.
     """
     try:
+        user_id = get_principal_id(principal)
         return await itinerary_service.update_itinerary(user_id, itinerary_id, request)
     except ResourceNotFoundError as e:
         logger.warning(f"Itinerary not found: {itinerary_id}")
@@ -122,13 +128,14 @@ async def update_itinerary(
 @router.delete("/{itinerary_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_itinerary(
     itinerary_id: str,
-    user_id: str = Depends(get_current_user),
+    principal: Principal = require_principal_dep,
     itinerary_service: ItineraryService = Depends(get_itinerary_service),
 ):
     """
     Delete an itinerary.
     """
     try:
+        user_id = get_principal_id(principal)
         await itinerary_service.delete_itinerary(user_id, itinerary_id)
     except ResourceNotFoundError as e:
         logger.warning(f"Itinerary not found: {itinerary_id}")
@@ -142,13 +149,14 @@ async def delete_itinerary(
 async def add_item_to_itinerary(
     itinerary_id: str,
     request: ItineraryItemCreateRequest,
-    user_id: str = Depends(get_current_user),
+    principal: Principal = require_principal_dep,
     itinerary_service: ItineraryService = Depends(get_itinerary_service),
 ):
     """
     Add an item to an itinerary.
     """
     try:
+        user_id = get_principal_id(principal)
         return await itinerary_service.add_item_to_itinerary(
             user_id, itinerary_id, request
         )
@@ -170,13 +178,14 @@ async def add_item_to_itinerary(
 async def get_itinerary_item(
     itinerary_id: str,
     item_id: str,
-    user_id: str = Depends(get_current_user),
+    principal: Principal = require_principal_dep,
     itinerary_service: ItineraryService = Depends(get_itinerary_service),
 ):
     """
     Get a specific item from an itinerary.
     """
     try:
+        user_id = get_principal_id(principal)
         return await itinerary_service.get_item(user_id, itinerary_id, item_id)
     except ResourceNotFoundError as e:
         logger.warning(f"Item not found: {item_id} in itinerary {itinerary_id}")
@@ -191,13 +200,14 @@ async def update_itinerary_item(
     itinerary_id: str,
     item_id: str,
     request: ItineraryItemUpdateRequest,
-    user_id: str = Depends(get_current_user),
+    principal: Principal = require_principal_dep,
     itinerary_service: ItineraryService = Depends(get_itinerary_service),
 ):
     """
     Update an item in an itinerary.
     """
     try:
+        user_id = get_principal_id(principal)
         return await itinerary_service.update_item(
             user_id, itinerary_id, item_id, request
         )
@@ -221,13 +231,14 @@ async def update_itinerary_item(
 async def delete_itinerary_item(
     itinerary_id: str,
     item_id: str,
-    user_id: str = Depends(get_current_user),
+    principal: Principal = require_principal_dep,
     itinerary_service: ItineraryService = Depends(get_itinerary_service),
 ):
     """
     Delete an item from an itinerary.
     """
     try:
+        user_id = get_principal_id(principal)
         await itinerary_service.delete_item(user_id, itinerary_id, item_id)
     except ResourceNotFoundError as e:
         logger.warning(f"Item not found: {item_id} in itinerary {itinerary_id}")
@@ -240,13 +251,14 @@ async def delete_itinerary_item(
 @router.get("/{itinerary_id}/conflicts", response_model=ItineraryConflictCheckResponse)
 async def check_itinerary_conflicts(
     itinerary_id: str,
-    user_id: str = Depends(get_current_user),
+    principal: Principal = require_principal_dep,
     itinerary_service: ItineraryService = Depends(get_itinerary_service),
 ):
     """
     Check for conflicts in an itinerary schedule.
     """
     try:
+        user_id = get_principal_id(principal)
         return await itinerary_service.check_conflicts(user_id, itinerary_id)
     except ResourceNotFoundError as e:
         logger.warning(f"Itinerary not found: {itinerary_id}")
@@ -259,13 +271,14 @@ async def check_itinerary_conflicts(
 @router.post("/optimize", response_model=ItineraryOptimizeResponse)
 async def optimize_itinerary(
     request: ItineraryOptimizeRequest,
-    user_id: str = Depends(get_current_user),
+    principal: Principal = require_principal_dep,
     itinerary_service: ItineraryService = Depends(get_itinerary_service),
 ):
     """
     Optimize an itinerary based on provided settings.
     """
     try:
+        user_id = get_principal_id(principal)
         return await itinerary_service.optimize_itinerary(user_id, request)
     except ResourceNotFoundError as e:
         logger.warning(f"Itinerary not found: {request.itinerary_id}")
