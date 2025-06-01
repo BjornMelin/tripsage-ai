@@ -23,7 +23,13 @@ from tripsage.api.core.dependencies import (
     get_session_memory_dep,
     verify_api_key_dep,
 )
-from tripsage.services.core.chat_service import ChatService, RateLimiter
+from tripsage_core.services.business.chat_service import (
+    ChatService as CoreChatService,
+    MessageCreateRequest,
+    MessageRole,
+    RateLimiter,
+    RecentMessagesRequest,
+)
 from tripsage_core.models.db.user import User
 from tripsage_core.models.schemas_common.chat import ToolCall
 
@@ -54,9 +60,9 @@ def get_rate_limiter() -> RateLimiter:
     return _rate_limiter
 
 
-async def get_chat_service(db: AsyncSession = get_db_dep) -> ChatService:
+async def get_chat_service(db: AsyncSession = get_db_dep) -> CoreChatService:
     """Get chat service instance."""
-    return ChatService(db, rate_limiter=get_rate_limiter())
+    return CoreChatService(database_service=db, rate_limiter=get_rate_limiter())
 
 
 # Create module-level dependency for chat service
@@ -264,7 +270,7 @@ async def chat(
     request: ChatRequest,
     current_user: User = get_current_user_dep,
     session_memory: dict = get_session_memory_dep,
-    chat_service: ChatService = get_chat_service_dep,
+    chat_service: CoreChatService = get_chat_service_dep,
     api_key_valid: bool = verify_api_key_dep,
 ):
     """Handle chat requests with optional streaming and session persistence.
@@ -324,11 +330,14 @@ async def chat(
     # Store incoming message (only if history saving is enabled)
     if request.save_history:
         try:
-            await chat_service.add_message(
-                session_id=session_id,
+            message_request = MessageCreateRequest(
                 role=last_message.role,
                 content=last_message.content,
+            )
+            await chat_service.add_message(
+                session_id=session_id,
                 user_id=current_user.id,
+                message_data=message_request,
             )
         except Exception as e:
             if "Rate limit exceeded" in str(e):
@@ -339,9 +348,17 @@ async def chat(
             raise
 
     # Build context with session history and tool information
-    recent_messages = await chat_service.get_recent_messages(
-        session_id=session_id, limit=50, max_tokens=4000
+    recent_messages_request = RecentMessagesRequest(
+        limit=50,
+        max_tokens=4000,
+        offset=0,
     )
+    recent_messages_response = await chat_service.get_recent_messages(
+        session_id=session_id,
+        user_id=current_user.id,
+        request=recent_messages_request,
+    )
+    recent_messages = recent_messages_response.messages
 
     # Get available tools for this user
     available_tools = get_user_available_tools(current_user)
@@ -406,11 +423,15 @@ async def chat(
                 if tool_results:
                     metadata["tool_results"] = tool_results
 
-                await chat_service.add_message(
-                    session_id=session_id,
-                    role="assistant",
+                assistant_message_request = MessageCreateRequest(
+                    role=MessageRole.ASSISTANT,
                     content=full_content,
                     metadata=metadata if metadata else None,
+                )
+                await chat_service.add_message(
+                    session_id=session_id,
+                    user_id=current_user.id,
+                    message_data=assistant_message_request,
                 )
 
         return StreamingResponse(
@@ -464,11 +485,15 @@ async def chat(
                     for tc in processed_tool_calls
                 ]
 
-            await chat_service.add_message(
-                session_id=session_id,
-                role="assistant",
+            assistant_message_request = MessageCreateRequest(
+                role=MessageRole.ASSISTANT,
                 content=response.get("content", ""),
                 metadata=metadata if metadata else None,
+            )
+            await chat_service.add_message(
+                session_id=session_id,
+                user_id=current_user.id,
+                message_data=assistant_message_request,
             )
 
         return ChatResponse(
@@ -487,7 +512,7 @@ async def continue_session(
     request: ChatRequest,
     current_user: User = get_current_user_dep,
     session_memory: dict = get_session_memory_dep,
-    chat_service: ChatService = get_chat_service_dep,
+    chat_service: CoreChatService = get_chat_service_dep,
     api_key_valid: bool = verify_api_key_dep,
 ):
     """Continue an existing chat session.
@@ -513,7 +538,7 @@ async def continue_session(
 async def get_session_history(
     session_id: UUID,
     current_user: User = get_current_user_dep,
-    chat_service: ChatService = get_chat_service_dep,
+    chat_service: CoreChatService = get_chat_service_dep,
     limit: int = 100,
     offset: int = 0,
 ):
@@ -539,7 +564,7 @@ async def get_session_history(
         ) from e
 
     # Get messages
-    messages = await chat_service.get_messages(session_id, limit=limit, offset=offset)
+    messages = await chat_service.get_messages(session_id, user_id=current_user.id, limit=limit, offset=offset)
 
     return {
         "session_id": str(session.id),
@@ -563,7 +588,7 @@ async def get_session_history(
 @router.get("/sessions")
 async def list_sessions(
     current_user: User = get_current_user_dep,
-    chat_service: ChatService = get_chat_service_dep,
+    chat_service: CoreChatService = get_chat_service_dep,
     limit: int = 20,
 ):
     """List active chat sessions for the current user.
@@ -576,7 +601,7 @@ async def list_sessions(
     Returns:
         List of active sessions with statistics
     """
-    sessions = await chat_service.get_active_sessions(current_user.id, limit=limit)
+    sessions = await chat_service.get_user_sessions(current_user.id, limit=limit, include_ended=False)
 
     return {
         "sessions": [
@@ -599,7 +624,7 @@ async def list_sessions(
 async def end_session(
     session_id: UUID,
     current_user: User = get_current_user_dep,
-    chat_service: ChatService = get_chat_service_dep,
+    chat_service: CoreChatService = get_chat_service_dep,
 ):
     """End a chat session.
 
@@ -629,7 +654,7 @@ async def end_session(
 @router.get("/export")
 async def export_chat_data(
     current_user: User = get_current_user_dep,
-    chat_service: ChatService = get_chat_service_dep,
+    chat_service: CoreChatService = get_chat_service_dep,
     format: str = "json",
 ):
     """Export all chat data for the current user.
@@ -643,7 +668,7 @@ async def export_chat_data(
         User's chat data in the requested format
     """
     # Get all user sessions
-    sessions = await chat_service.get_active_sessions(current_user.id, limit=1000)
+    sessions = await chat_service.get_user_sessions(current_user.id, limit=1000, include_ended=False)
 
     export_data = {
         "user_id": current_user.id,
@@ -653,7 +678,7 @@ async def export_chat_data(
 
     # Get messages for each session
     for session in sessions:
-        messages = await chat_service.get_messages(session.id, limit=10000)
+        messages = await chat_service.get_messages(session.id, user_id=current_user.id, limit=10000)
 
         session_data = {
             "session_id": str(session.id),
@@ -723,7 +748,7 @@ async def export_chat_data(
 @router.delete("/data")
 async def delete_all_chat_data(
     current_user: User = get_current_user_dep,
-    chat_service: ChatService = get_chat_service_dep,
+    chat_service: CoreChatService = get_chat_service_dep,
     confirm: bool = False,
 ):
     """Delete all chat data for the current user.
@@ -743,7 +768,7 @@ async def delete_all_chat_data(
         )
 
     # Get all user sessions
-    sessions = await chat_service.get_active_sessions(current_user.id, limit=1000)
+    sessions = await chat_service.get_user_sessions(current_user.id, limit=1000, include_ended=False)
 
     deleted_sessions = 0
     deleted_messages = 0
@@ -751,7 +776,7 @@ async def delete_all_chat_data(
     # Delete all sessions and their messages
     for session in sessions:
         # Get message count
-        messages = await chat_service.get_messages(session.id, limit=10000)
+        messages = await chat_service.get_messages(session.id, user_id=current_user.id, limit=10000)
         deleted_messages += len(messages)
 
         # End/delete the session (this should cascade delete messages)
