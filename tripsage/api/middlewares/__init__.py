@@ -1,5 +1,16 @@
 """Middleware components for the TripSage API.
 
 This package contains middleware components for request processing,
-including logging, authentication, and error handling.
+including authentication, logging, and rate limiting.
 """
+
+from .authentication import AuthenticationMiddleware, Principal
+from .logging import LoggingMiddleware
+from .rate_limiting import EnhancedRateLimitMiddleware
+
+__all__ = [
+    "AuthenticationMiddleware",
+    "Principal",
+    "LoggingMiddleware",
+    "EnhancedRateLimitMiddleware",
+]
