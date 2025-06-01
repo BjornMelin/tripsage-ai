@@ -18,13 +18,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from tripsage.agents.chat import ChatAgent
 from tripsage.api.core.dependencies import (
-    get_current_user_dep,
     get_db_dep,
+    get_principal_id,
     get_session_memory_dep,
-    verify_api_key_dep,
+    require_principal_dep,
 )
+from tripsage.api.middlewares.authentication import Principal
 from tripsage.services.core.chat_service import ChatService, RateLimiter
-from tripsage_core.models.db.user import User
 from tripsage_core.models.schemas_common.chat import ToolCall
 
 logger = logging.getLogger(__name__)
@@ -118,11 +118,11 @@ async def format_vercel_stream_chunk(chunk_type: str, content: str) -> str:
     return ""
 
 
-def get_user_available_tools(user: User) -> List[str]:
+def get_user_available_tools(user_id: str) -> List[str]:
     """Get list of tools available to the user based on their API keys.
 
     Args:
-        user: User object
+        user_id: User ID string
 
     Returns:
         List of available tool names
@@ -139,7 +139,7 @@ def get_user_available_tools(user: User) -> List[str]:
     # Add tools based on user's API keys
     # (would check user.api_keys in real implementation)
     # For now, assume all tools are available if user is authenticated
-    if user:
+    if user_id:
         available_tools.extend(
             ["flight_tools", "accommodations_tools", "planning_tools"]
         )
@@ -262,22 +262,22 @@ async def stream_agent_response(
 @router.post("/")
 async def chat(
     request: ChatRequest,
-    current_user: User = get_current_user_dep,
+    principal: Principal = require_principal_dep,
     session_memory: dict = get_session_memory_dep,
     chat_service: ChatService = get_chat_service_dep,
-    api_key_valid: bool = verify_api_key_dep,
 ):
     """Handle chat requests with optional streaming and session persistence.
 
     Args:
         request: Chat request
-        current_user: Current user object
+        principal: Current authenticated principal
         session_memory: Session memory
         chat_service: Chat service instance
 
     Returns:
         StreamingResponse for streaming requests, ChatResponse otherwise
     """
+    user_id = get_principal_id(principal)
     # Get the chat agent
     agent = get_chat_agent()
 
@@ -300,7 +300,7 @@ async def chat(
     if not session_id:
         # Create new session
         session = await chat_service.create_session(
-            user_id=current_user.id,
+            user_id=user_id,
             metadata={
                 "agent": "travel_planning",
                 "stream": request.stream,
@@ -308,13 +308,11 @@ async def chat(
             },
         )
         session_id = session.id
-        logger.info(f"Created new chat session {session_id} for user {current_user.id}")
+        logger.info(f"Created new chat session {session_id} for user {user_id}")
     else:
         # Verify session exists and belongs to user
         try:
-            session = await chat_service.get_session(
-                session_id, user_id=current_user.id
-            )
+            session = await chat_service.get_session(session_id, user_id=user_id)
         except Exception as e:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -328,7 +326,7 @@ async def chat(
                 session_id=session_id,
                 role=last_message.role,
                 content=last_message.content,
-                user_id=current_user.id,
+                user_id=user_id,
             )
         except Exception as e:
             if "Rate limit exceeded" in str(e):
@@ -344,14 +342,14 @@ async def chat(
     )
 
     # Get available tools for this user
-    available_tools = get_user_available_tools(current_user)
+    available_tools = get_user_available_tools(user_id)
 
     # Filter tools if specific tools requested
     if request.tools:
         available_tools = [tool for tool in available_tools if tool in request.tools]
 
     context = {
-        "user_id": str(current_user.id),
+        "user_id": str(user_id),
         "session_id": str(session_id),
         "session_memory": session_memory,
         "available_tools": available_tools,
@@ -440,7 +438,7 @@ async def chat(
                         tool_result = await agent.execute_tool_call(
                             tool_call["name"],
                             tool_call["arguments"],
-                            str(current_user.id),
+                            str(user_id),
                         )
                     except Exception as e:
                         logger.error(f"Tool execution failed: {str(e)}")
@@ -485,10 +483,9 @@ async def chat(
 async def continue_session(
     session_id: UUID,
     request: ChatRequest,
-    current_user: User = get_current_user_dep,
+    principal: Principal = require_principal_dep,
     session_memory: dict = get_session_memory_dep,
     chat_service: ChatService = get_chat_service_dep,
-    api_key_valid: bool = verify_api_key_dep,
 ):
     """Continue an existing chat session.
 
@@ -506,13 +503,13 @@ async def continue_session(
     request.session_id = session_id
 
     # Delegate to main chat endpoint
-    return await chat(request, current_user, session_memory, chat_service)
+    return await chat(request, principal, session_memory, chat_service)
 
 
 @router.get("/sessions/{session_id}/history")
 async def get_session_history(
     session_id: UUID,
-    current_user: User = get_current_user_dep,
+    principal: Principal = require_principal_dep,
     chat_service: ChatService = get_chat_service_dep,
     limit: int = 100,
     offset: int = 0,
@@ -521,7 +518,7 @@ async def get_session_history(
 
     Args:
         session_id: Session ID
-        current_user: Current user object
+        principal: Current authenticated principal
         chat_service: Chat service instance
         limit: Maximum number of messages to return
         offset: Number of messages to skip
@@ -529,9 +526,10 @@ async def get_session_history(
     Returns:
         Session with message history
     """
+    user_id = get_principal_id(principal)
     # Get session (verifies access)
     try:
-        session = await chat_service.get_session(session_id, user_id=current_user.id)
+        session = await chat_service.get_session(session_id, user_id=user_id)
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -562,21 +560,22 @@ async def get_session_history(
 
 @router.get("/sessions")
 async def list_sessions(
-    current_user: User = get_current_user_dep,
+    principal: Principal = require_principal_dep,
     chat_service: ChatService = get_chat_service_dep,
     limit: int = 20,
 ):
     """List active chat sessions for the current user.
 
     Args:
-        current_user: Current user object
+        principal: Current authenticated principal
         chat_service: Chat service instance
         limit: Maximum number of sessions to return
 
     Returns:
         List of active sessions with statistics
     """
-    sessions = await chat_service.get_active_sessions(current_user.id, limit=limit)
+    user_id = get_principal_id(principal)
+    sessions = await chat_service.get_active_sessions(user_id, limit=limit)
 
     return {
         "sessions": [
@@ -598,22 +597,23 @@ async def list_sessions(
 @router.post("/sessions/{session_id}/end")
 async def end_session(
     session_id: UUID,
-    current_user: User = get_current_user_dep,
+    principal: Principal = require_principal_dep,
     chat_service: ChatService = get_chat_service_dep,
 ):
     """End a chat session.
 
     Args:
         session_id: Session ID to end
-        current_user: Current user object
+        principal: Current authenticated principal
         chat_service: Chat service instance
 
     Returns:
         Success message
     """
+    user_id = get_principal_id(principal)
     # Verify session belongs to user
     try:
-        await chat_service.get_session(session_id, user_id=current_user.id)
+        await chat_service.get_session(session_id, user_id=user_id)
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -628,25 +628,26 @@ async def end_session(
 
 @router.get("/export")
 async def export_chat_data(
-    current_user: User = get_current_user_dep,
+    principal: Principal = require_principal_dep,
     chat_service: ChatService = get_chat_service_dep,
     format: str = "json",
 ):
     """Export all chat data for the current user.
 
     Args:
-        current_user: Current user object
+        principal: Current authenticated principal
         chat_service: Chat service instance
         format: Export format (json, csv)
 
     Returns:
         User's chat data in the requested format
     """
+    user_id = get_principal_id(principal)
     # Get all user sessions
-    sessions = await chat_service.get_active_sessions(current_user.id, limit=1000)
+    sessions = await chat_service.get_active_sessions(user_id, limit=1000)
 
     export_data = {
-        "user_id": current_user.id,
+        "user_id": user_id,
         "exported_at": datetime.now(datetime.UTC).isoformat(),
         "sessions": [],
     }
@@ -722,14 +723,14 @@ async def export_chat_data(
 
 @router.delete("/data")
 async def delete_all_chat_data(
-    current_user: User = get_current_user_dep,
+    principal: Principal = require_principal_dep,
     chat_service: ChatService = get_chat_service_dep,
     confirm: bool = False,
 ):
     """Delete all chat data for the current user.
 
     Args:
-        current_user: Current user object
+        principal: Current authenticated principal
         chat_service: Chat service instance
         confirm: Confirmation flag
 
@@ -742,8 +743,9 @@ async def delete_all_chat_data(
             detail="Data deletion requires confirmation. Set confirm=true.",
         )
 
+    user_id = get_principal_id(principal)
     # Get all user sessions
-    sessions = await chat_service.get_active_sessions(current_user.id, limit=1000)
+    sessions = await chat_service.get_active_sessions(user_id, limit=1000)
 
     deleted_sessions = 0
     deleted_messages = 0
