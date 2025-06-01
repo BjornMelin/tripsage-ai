@@ -7,7 +7,6 @@ including chat streaming, agent status updates, and live user feedback.
 import asyncio
 import json
 import logging
-from typing import Dict
 from uuid import UUID
 
 from fastapi import (
@@ -27,9 +26,7 @@ from tripsage.services.core.chat_service import ChatService
 from tripsage_core.models.schemas_common.chat import (
     ChatMessage as WebSocketMessage,
 )
-from tripsage_core.models.schemas_common.chat import (
-    MessageRole,
-)
+from tripsage_core.services.business.chat_service import MessageRole
 from tripsage_core.services.infrastructure.websocket_manager import (
     ConnectionStatus,
     WebSocketEvent,
@@ -50,7 +47,7 @@ class ChatMessageChunkEvent(WebSocketEvent):
 
 
 class ConnectionEvent(WebSocketEvent):
-    status: ConnectionStatus
+    status: str  # One of ConnectionStatus values
     connection_id: str
 
 
@@ -105,15 +102,15 @@ async def chat_websocket(
                         "type": "error",
                         "message": "Invalid authentication request",
                         "details": str(e),
-                    }
-                )
+                    },
+                ),
             )
             await websocket.close(code=4000)
             return
 
         # Authenticate connection
         auth_response = await websocket_manager.authenticate_connection(
-            websocket, auth_request
+            websocket, auth_request,
         )
 
         if not auth_response.success:
@@ -122,8 +119,8 @@ async def chat_websocket(
                     {
                         "type": "error",
                         "message": auth_response.error or "Authentication failed",
-                    }
-                )
+                    },
+                ),
             )
             await websocket.close(code=4001)
             return
@@ -150,7 +147,7 @@ async def chat_websocket(
 
         logger.info(
             f"Chat WebSocket authenticated: connection_id={connection_id}, "
-            f"user_id={user_id}"
+            f"user_id={user_id}",
         )
 
         # Message handling loop
@@ -183,18 +180,18 @@ async def chat_websocket(
                     # Handle channel subscription
                     try:
                         subscribe_request = WebSocketSubscribeRequest.model_validate(
-                            message_json.get("payload", {})
+                            message_json.get("payload", {}),
                         )
                         response = await websocket_manager.subscribe_connection(
-                            connection_id, subscribe_request
+                            connection_id, subscribe_request,
                         )
                         await websocket.send_text(
                             json.dumps(
                                 {
                                     "type": "subscribe_response",
                                     "payload": response.model_dump(),
-                                }
-                            )
+                                },
+                            ),
                         )
                     except ValidationError as e:
                         await websocket.send_text(
@@ -203,8 +200,8 @@ async def chat_websocket(
                                     "type": "error",
                                     "message": "Invalid subscription request",
                                     "details": str(e),
-                                }
-                            )
+                                },
+                            ),
                         )
 
                 else:
@@ -212,7 +209,7 @@ async def chat_websocket(
 
             except WebSocketDisconnect:
                 logger.info(
-                    f"Chat WebSocket disconnected: connection_id={connection_id}"
+                    f"Chat WebSocket disconnected: connection_id={connection_id}",
                 )
                 break
             except json.JSONDecodeError:
@@ -226,7 +223,7 @@ async def chat_websocket(
                 await websocket_manager.send_to_connection(connection_id, error_event)
             except Exception as e:
                 logger.error(
-                    f"Error handling message from connection {connection_id}: {e}"
+                    f"Error handling message from connection {connection_id}: {e}",
                 )
                 error_event = ErrorEvent(
                     error_code="message_error",
@@ -282,15 +279,15 @@ async def agent_status_websocket(
                         "type": "error",
                         "message": "Invalid authentication request",
                         "details": str(e),
-                    }
-                )
+                    },
+                ),
             )
             await websocket.close(code=4000)
             return
 
         # Authenticate connection
         auth_response = await websocket_manager.authenticate_connection(
-            websocket, auth_request
+            websocket, auth_request,
         )
 
         if not auth_response.success:
@@ -299,8 +296,8 @@ async def agent_status_websocket(
                     {
                         "type": "error",
                         "message": auth_response.error or "Authentication failed",
-                    }
-                )
+                    },
+                ),
             )
             await websocket.close(code=4001)
             return
@@ -311,7 +308,7 @@ async def agent_status_websocket(
         # Verify user ID matches authenticated user
         if authenticated_user_id != user_id:
             await websocket.send_text(
-                json.dumps({"type": "error", "message": "User ID mismatch"})
+                json.dumps({"type": "error", "message": "User ID mismatch"}),
             )
             await websocket.close(code=4003)
             return
@@ -329,7 +326,7 @@ async def agent_status_websocket(
 
         logger.info(
             f"Agent status WebSocket authenticated: connection_id={connection_id}, "
-            f"user_id={user_id}"
+            f"user_id={user_id}",
         )
 
         # Message handling loop (mainly for heartbeats and subscription changes)
@@ -351,18 +348,18 @@ async def agent_status_websocket(
                     # Handle channel subscription
                     try:
                         subscribe_request = WebSocketSubscribeRequest.model_validate(
-                            message_json.get("payload", {})
+                            message_json.get("payload", {}),
                         )
                         response = await websocket_manager.subscribe_connection(
-                            connection_id, subscribe_request
+                            connection_id, subscribe_request,
                         )
                         await websocket.send_text(
                             json.dumps(
                                 {
                                     "type": "subscribe_response",
                                     "payload": response.model_dump(),
-                                }
-                            )
+                                },
+                            ),
                         )
                     except ValidationError as e:
                         await websocket.send_text(
@@ -371,30 +368,30 @@ async def agent_status_websocket(
                                     "type": "error",
                                     "message": "Invalid subscription request",
                                     "details": str(e),
-                                }
-                            )
+                                },
+                            ),
                         )
 
                 else:
                     logger.warning(
-                        f"Unknown message type for agent status: {message_type}"
+                        f"Unknown message type for agent status: {message_type}",
                     )
 
             except WebSocketDisconnect:
                 logger.info(
                     f"Agent status WebSocket disconnected: "
-                    f"connection_id={connection_id}"
+                    f"connection_id={connection_id}",
                 )
                 break
             except json.JSONDecodeError:
                 logger.error(
                     f"Invalid JSON received from agent status connection "
-                    f"{connection_id}"
+                    f"{connection_id}",
                 )
             except Exception as e:
                 logger.error(
                     f"Error handling agent status message from connection "
-                    f"{connection_id}: {e}"
+                    f"{connection_id}: {e}",
                 )
 
     except Exception as e:
@@ -410,7 +407,7 @@ async def handle_chat_message(
     connection_id: str,
     user_id: UUID,
     session_id: UUID,
-    message_data: Dict,
+    message_data: dict,
     chat_service: ChatService,
     chat_agent: ChatAgent,
 ) -> None:

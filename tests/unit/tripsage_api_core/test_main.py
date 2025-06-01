@@ -276,7 +276,7 @@ class TestExceptionHandlers:
 
         response = await handler(mock_request, error)
 
-        assert response.status_code == 400
+        assert response.status_code == 422
         content = response.body.decode()
         assert "Validation failed" in content
 
@@ -312,8 +312,8 @@ class TestExceptionHandlers:
                     "msg": "field required",
                     "type": "value_error.missing",
                     "input": {},
-                }
-            ]
+                },
+            ],
         )
 
         response = await handler(mock_request, validation_error)
@@ -411,7 +411,7 @@ class TestIntegration:
     def test_cors_headers_in_response(self, client):
         """Test that CORS headers are properly set."""
         response = client.options(
-            "/api/health", headers={"Origin": "http://localhost:3000"}
+            "/api/health", headers={"Origin": "http://localhost:3000"},
         )
         # Should have CORS headers if properly configured
         assert response.status_code in [200, 404, 405]
@@ -515,7 +515,7 @@ class TestErrorScenarios:
 
         with patch("tripsage.api.main.mcp_manager") as mock_mcp_manager:
             mock_mcp_manager.initialize_all_enabled = AsyncMock(
-                side_effect=Exception("MCP init failed")
+                side_effect=Exception("MCP init failed"),
             )
             mock_mcp_manager.shutdown = AsyncMock()
 
