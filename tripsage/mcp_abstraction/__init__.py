@@ -1,20 +1,24 @@
-"""TripSage MCP Abstraction Layer.
+"""
+TripSage MCP Abstraction Layer for Airbnb.
 
-This module provides a unified abstraction layer for interacting with
-various external MCP clients, serving as the primary way TripSage tools
-and services interact with MCPs.
+This module provides a simplified abstraction layer for the Airbnb MCP client,
+which is the only remaining MCP integration in TripSage.
 """
 
 from .base_wrapper import BaseMCPWrapper
 from .exceptions import (
+    MCPAuthenticationError,
+    MCPClientError,
     MCPInvocationError,
-    MCPManagerError,
     MCPMethodNotFoundError,
-    MCPNotFoundError,
+    MCPRateLimitError,
+    MCPRegistrationError,
+    MCPTimeoutError,
     TripSageMCPError,
 )
 from .manager import MCPManager, mcp_manager
 from .registry import registry
+from .wrappers import AirbnbMCPWrapper
 
 __all__ = [
     # Manager
@@ -22,12 +26,16 @@ __all__ = [
     "mcp_manager",
     # Registry
     "registry",
-    # Base Wrapper
+    # Wrappers
     "BaseMCPWrapper",
+    "AirbnbMCPWrapper",
     # Exceptions
     "TripSageMCPError",
-    "MCPNotFoundError",
-    "MCPManagerError",
+    "MCPClientError",
+    "MCPRegistrationError",
     "MCPInvocationError",
     "MCPMethodNotFoundError",
+    "MCPTimeoutError",
+    "MCPAuthenticationError",
+    "MCPRateLimitError",
 ]

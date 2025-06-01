@@ -1,11 +1,10 @@
 """
 Airbnb MCP Wrapper implementation.
 
-This wrapper provides a standardized interface for the Airbnb MCP client,
-mapping user-friendly method names to actual Airbnb MCP client methods.
+This wrapper provides a standardized interface for the Airbnb MCP client.
 """
 
-from typing import Dict, List
+from typing import List, Optional
 
 from tripsage.clients.airbnb_mcp_client import AirbnbMCPClient
 from tripsage.mcp_abstraction.base_wrapper import BaseMCPWrapper
@@ -15,55 +14,46 @@ from tripsage_core.config.base_app_settings import settings
 class AirbnbMCPWrapper(BaseMCPWrapper):
     """Wrapper for the Airbnb MCP client."""
 
-    def __init__(self, client: AirbnbMCPClient = None, mcp_name: str = "airbnb"):
+    def __init__(self, client: Optional[AirbnbMCPClient] = None):
         """
         Initialize the Airbnb MCP wrapper.
 
         Args:
             client: Optional pre-initialized client, will create one if None
-            mcp_name: Name identifier for this MCP service
         """
         if client is None:
             # Create client from configuration
             config = settings.airbnb
-            if config.enabled:
-                client = AirbnbMCPClient(
-                    endpoint=str(config.url),
-                    timeout=config.timeout,
-                    use_cache=config.retry_attempts > 0,
-                    cache_ttl=config.retry_backoff * 60,  # Convert to seconds
-                )
-            else:
+            if not config.enabled:
                 raise ValueError("Airbnb MCP is not enabled in configuration")
-        super().__init__(client, mcp_name)
 
-    def _build_method_map(self) -> Dict[str, str]:
-        """
-        Build mapping from standardized method names to actual client methods.
+            client = AirbnbMCPClient(
+                endpoint=str(config.url),
+                timeout=config.timeout,
+                use_cache=config.retry_attempts > 0,
+                cache_ttl=config.retry_backoff * 60,  # Convert to seconds
+            )
 
-        Returns:
-            Dictionary mapping standard names to actual client method names
-        """
-        return {
-            # Search operations
-            "search_listings": "search_accommodations",
-            "search_accommodations": "search_accommodations",
-            "search": "search_accommodations",
-            # Listing details
-            "get_listing_details": "get_listing_details",
-            "get_listing": "get_listing_details",
-            "get_details": "get_listing_details",
-            "get_accommodation_details": "get_listing_details",
-            # Availability operations (part of listing details)
-            "check_availability": "get_listing_details",
-            "check_listing_availability": "get_listing_details",
-        }
+        super().__init__(client, mcp_name="airbnb")
 
     def get_available_methods(self) -> List[str]:
         """
-        Get list of available standardized method names.
+        Get list of available method names.
 
         Returns:
             List of available method names
         """
-        return list(self._method_map.keys())
+        return [
+            # Search operations
+            "search_listings",
+            "search_accommodations",
+            "search",
+            # Listing details
+            "get_listing_details",
+            "get_listing",
+            "get_details",
+            "get_accommodation_details",
+            # Availability operations
+            "check_availability",
+            "check_listing_availability",
+        ]
