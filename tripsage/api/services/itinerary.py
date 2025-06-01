@@ -79,7 +79,9 @@ class ItineraryService:
         return self.core_itinerary_service
 
     async def create_itinerary(
-        self, user_id: str, request: ItineraryCreateRequest
+        self,
+        user_id: str,
+        request: ItineraryCreateRequest,
     ) -> Itinerary:
         """Create a new itinerary for a user.
 
@@ -108,10 +110,10 @@ class ItineraryService:
             return self._adapt_itinerary(core_response)
 
         except (ValidationError, ServiceError) as e:
-            logger.error(f"Itinerary creation failed: {str(e)}")
+            logger.error(f"Itinerary creation failed: {e!s}")
             raise
         except Exception as e:
-            logger.error(f"Unexpected error creating itinerary: {str(e)}")
+            logger.error(f"Unexpected error creating itinerary: {e!s}")
             raise ServiceError("Failed to create itinerary") from e
 
     async def get_itinerary(self, user_id: str, itinerary_id: str) -> Itinerary:
@@ -139,14 +141,17 @@ class ItineraryService:
             return self._adapt_itinerary(core_response)
 
         except ResourceNotFoundError as e:
-            logger.error(f"Itinerary not found: {str(e)}")
+            logger.error(f"Itinerary not found: {e!s}")
             raise
         except Exception as e:
-            logger.error(f"Failed to get itinerary: {str(e)}")
+            logger.error(f"Failed to get itinerary: {e!s}")
             raise ServiceError("Failed to get itinerary") from e
 
     async def update_itinerary(
-        self, user_id: str, itinerary_id: str, request: ItineraryUpdateRequest
+        self,
+        user_id: str,
+        itinerary_id: str,
+        request: ItineraryUpdateRequest,
     ) -> Itinerary:
         """Update an existing itinerary.
 
@@ -172,17 +177,19 @@ class ItineraryService:
             # Update via core service
             core_service = await self._get_core_itinerary_service()
             core_response = await core_service.update_itinerary(
-                user_id, itinerary_id, core_request
+                user_id,
+                itinerary_id,
+                core_request,
             )
 
             # Adapt core response to API model
             return self._adapt_itinerary(core_response)
 
         except (ResourceNotFoundError, ValidationError, ServiceError) as e:
-            logger.error(f"Itinerary update failed: {str(e)}")
+            logger.error(f"Itinerary update failed: {e!s}")
             raise
         except Exception as e:
-            logger.error(f"Unexpected error updating itinerary: {str(e)}")
+            logger.error(f"Unexpected error updating itinerary: {e!s}")
             raise ServiceError("Failed to update itinerary") from e
 
     async def delete_itinerary(self, user_id: str, itinerary_id: str) -> None:
@@ -204,13 +211,13 @@ class ItineraryService:
             await core_service.delete_itinerary(user_id, itinerary_id)
 
         except ResourceNotFoundError as e:
-            logger.error(f"Itinerary not found: {str(e)}")
+            logger.error(f"Itinerary not found: {e!s}")
             raise
         except Exception as e:
-            logger.error(f"Failed to delete itinerary: {str(e)}")
+            logger.error(f"Failed to delete itinerary: {e!s}")
             raise ServiceError("Failed to delete itinerary") from e
 
-    async def list_itineraries(self, user_id: str) -> List[Itinerary]:
+    async def list_itineraries(self, user_id: str) -> list[Itinerary]:
         """List all itineraries for a user.
 
         Args:
@@ -233,11 +240,13 @@ class ItineraryService:
             return [self._adapt_itinerary(itinerary) for itinerary in core_itineraries]
 
         except Exception as e:
-            logger.error(f"Failed to list itineraries: {str(e)}")
+            logger.error(f"Failed to list itineraries: {e!s}")
             raise ServiceError("Failed to list itineraries") from e
 
     async def search_itineraries(
-        self, user_id: str, request: ItinerarySearchRequest
+        self,
+        user_id: str,
+        request: ItinerarySearchRequest,
     ) -> ItinerarySearchResponse:
         """Search for itineraries based on criteria.
 
@@ -266,10 +275,10 @@ class ItineraryService:
             return self._adapt_itinerary_search_response(core_response)
 
         except (ValidationError, ServiceError) as e:
-            logger.error(f"Itinerary search failed: {str(e)}")
+            logger.error(f"Itinerary search failed: {e!s}")
             raise
         except Exception as e:
-            logger.error(f"Unexpected error searching itineraries: {str(e)}")
+            logger.error(f"Unexpected error searching itineraries: {e!s}")
             raise ServiceError("Failed to search itineraries") from e
 
     async def add_item_to_itinerary(
@@ -296,7 +305,7 @@ class ItineraryService:
         try:
             logger.info(
                 f"Adding {request.item_type} item to itinerary {itinerary_id} "
-                f"for user {user_id}"
+                f"for user {user_id}",
             )
 
             # Adapt API request to core model
@@ -305,17 +314,19 @@ class ItineraryService:
             # Add item via core service
             core_service = await self._get_core_itinerary_service()
             core_response = await core_service.add_item_to_itinerary(
-                user_id, itinerary_id, core_request
+                user_id,
+                itinerary_id,
+                core_request,
             )
 
             # Adapt core response to API model
             return self._adapt_itinerary_item(core_response)
 
         except (ResourceNotFoundError, ValidationError, ServiceError) as e:
-            logger.error(f"Failed to add item to itinerary: {str(e)}")
+            logger.error(f"Failed to add item to itinerary: {e!s}")
             raise
         except Exception as e:
-            logger.error(f"Unexpected error adding item to itinerary: {str(e)}")
+            logger.error(f"Unexpected error adding item to itinerary: {e!s}")
             raise ServiceError("Failed to add item to itinerary") from e
 
     async def update_item(
@@ -344,7 +355,7 @@ class ItineraryService:
         try:
             logger.info(
                 f"Updating item {item_id} in itinerary {itinerary_id} "
-                f"for user {user_id}"
+                f"for user {user_id}",
             )
 
             # Adapt API request to core model
@@ -353,17 +364,20 @@ class ItineraryService:
             # Update item via core service
             core_service = await self._get_core_itinerary_service()
             core_response = await core_service.update_item(
-                user_id, itinerary_id, item_id, core_request
+                user_id,
+                itinerary_id,
+                item_id,
+                core_request,
             )
 
             # Adapt core response to API model
             return self._adapt_itinerary_item(core_response)
 
         except (ResourceNotFoundError, ValidationError, ServiceError) as e:
-            logger.error(f"Failed to update item: {str(e)}")
+            logger.error(f"Failed to update item: {e!s}")
             raise
         except Exception as e:
-            logger.error(f"Unexpected error updating item: {str(e)}")
+            logger.error(f"Unexpected error updating item: {e!s}")
             raise ServiceError("Failed to update item") from e
 
     async def delete_item(self, user_id: str, itinerary_id: str, item_id: str) -> None:
@@ -381,7 +395,7 @@ class ItineraryService:
         try:
             logger.info(
                 f"Deleting item {item_id} from itinerary {itinerary_id} "
-                f"for user {user_id}"
+                f"for user {user_id}",
             )
 
             # Delete item via core service
@@ -389,14 +403,17 @@ class ItineraryService:
             await core_service.delete_item(user_id, itinerary_id, item_id)
 
         except ResourceNotFoundError as e:
-            logger.error(f"Item not found: {str(e)}")
+            logger.error(f"Item not found: {e!s}")
             raise
         except Exception as e:
-            logger.error(f"Failed to delete item: {str(e)}")
+            logger.error(f"Failed to delete item: {e!s}")
             raise ServiceError("Failed to delete item") from e
 
     async def get_item(
-        self, user_id: str, itinerary_id: str, item_id: str
+        self,
+        user_id: str,
+        itinerary_id: str,
+        item_id: str,
     ) -> ItineraryItem:
         """Get an item from an itinerary by ID.
 
@@ -415,7 +432,7 @@ class ItineraryService:
         try:
             logger.info(
                 f"Getting item {item_id} from itinerary {itinerary_id} "
-                f"for user {user_id}"
+                f"for user {user_id}",
             )
 
             # Get item via core service
@@ -426,14 +443,16 @@ class ItineraryService:
             return self._adapt_itinerary_item(core_response)
 
         except ResourceNotFoundError as e:
-            logger.error(f"Item not found: {str(e)}")
+            logger.error(f"Item not found: {e!s}")
             raise
         except Exception as e:
-            logger.error(f"Failed to get item: {str(e)}")
+            logger.error(f"Failed to get item: {e!s}")
             raise ServiceError("Failed to get item") from e
 
     async def check_conflicts(
-        self, user_id: str, itinerary_id: str
+        self,
+        user_id: str,
+        itinerary_id: str,
     ) -> ItineraryConflictCheckResponse:
         """Check for conflicts in an itinerary schedule.
 
@@ -450,7 +469,7 @@ class ItineraryService:
         """
         try:
             logger.info(
-                f"Checking conflicts in itinerary {itinerary_id} for user {user_id}"
+                f"Checking conflicts in itinerary {itinerary_id} for user {user_id}",
             )
 
             # Check conflicts via core service
@@ -461,14 +480,16 @@ class ItineraryService:
             return self._adapt_conflict_check_response(core_response)
 
         except ResourceNotFoundError as e:
-            logger.error(f"Itinerary not found: {str(e)}")
+            logger.error(f"Itinerary not found: {e!s}")
             raise
         except Exception as e:
-            logger.error(f"Failed to check conflicts: {str(e)}")
+            logger.error(f"Failed to check conflicts: {e!s}")
             raise ServiceError("Failed to check conflicts") from e
 
     async def optimize_itinerary(
-        self, user_id: str, request: ItineraryOptimizeRequest
+        self,
+        user_id: str,
+        request: ItineraryOptimizeRequest,
     ) -> ItineraryOptimizeResponse:
         """Optimize an itinerary based on provided settings.
 
@@ -486,7 +507,7 @@ class ItineraryService:
         """
         try:
             logger.info(
-                f"Optimizing itinerary {request.itinerary_id} for user {user_id}"
+                f"Optimizing itinerary {request.itinerary_id} for user {user_id}",
             )
 
             # Adapt API request to core model
@@ -500,10 +521,10 @@ class ItineraryService:
             return self._adapt_optimize_response(core_response)
 
         except (ResourceNotFoundError, ValidationError, ServiceError) as e:
-            logger.error(f"Itinerary optimization failed: {str(e)}")
+            logger.error(f"Itinerary optimization failed: {e!s}")
             raise
         except Exception as e:
-            logger.error(f"Unexpected error optimizing itinerary: {str(e)}")
+            logger.error(f"Unexpected error optimizing itinerary: {e!s}")
             raise ServiceError("Failed to optimize itinerary") from e
 
     def _adapt_itinerary_create_request(self, request: ItineraryCreateRequest) -> dict:
@@ -550,7 +571,8 @@ class ItineraryService:
         }
 
     def _adapt_itinerary_item_create_request(
-        self, request: ItineraryItemCreateRequest
+        self,
+        request: ItineraryItemCreateRequest,
     ) -> dict:
         """Adapt API itinerary item create request to core model."""
         return {
@@ -572,7 +594,8 @@ class ItineraryService:
         }
 
     def _adapt_itinerary_item_update_request(
-        self, request: ItineraryItemUpdateRequest
+        self,
+        request: ItineraryItemUpdateRequest,
     ) -> dict:
         """Adapt API itinerary item update request to core model."""
         return {
@@ -593,7 +616,8 @@ class ItineraryService:
         }
 
     def _adapt_itinerary_optimize_request(
-        self, request: ItineraryOptimizeRequest
+        self,
+        request: ItineraryOptimizeRequest,
     ) -> dict:
         """Adapt API itinerary optimize request to core model."""
         return {
@@ -657,7 +681,8 @@ class ItineraryService:
         )
 
     def _adapt_itinerary_search_response(
-        self, core_response
+        self,
+        core_response,
     ) -> ItinerarySearchResponse:
         """Adapt core itinerary search response to API model."""
         return ItinerarySearchResponse(
@@ -672,7 +697,8 @@ class ItineraryService:
         )
 
     def _adapt_conflict_check_response(
-        self, core_response
+        self,
+        core_response,
     ) -> ItineraryConflictCheckResponse:
         """Adapt core conflict check response to API model."""
         return ItineraryConflictCheckResponse(
@@ -684,10 +710,10 @@ class ItineraryService:
         """Adapt core optimize response to API model."""
         return ItineraryOptimizeResponse(
             original_itinerary=self._adapt_itinerary(
-                core_response.get("original_itinerary")
+                core_response.get("original_itinerary"),
             ),
             optimized_itinerary=self._adapt_itinerary(
-                core_response.get("optimized_itinerary")
+                core_response.get("optimized_itinerary"),
             ),
             changes=core_response.get("changes", []),
             optimization_score=core_response.get("optimization_score", 0.0),

@@ -248,7 +248,7 @@ class WebSocketManager:
             payload = jwt.decode(
                 auth_request.token,
                 settings.secret_key,
-                algorithms=["HS256"],
+                algorithms=[settings.algorithm],
             )
 
             # Validate the token data

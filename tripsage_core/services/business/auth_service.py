@@ -526,11 +526,20 @@ async def get_auth_service() -> AuthenticationService:
     Returns:
         AuthenticationService instance
     """
+    from tripsage.api.core.config import get_settings
     from tripsage_core.services.business.user_service import UserService
     from tripsage_core.services.infrastructure.database_service import (
         get_database_service,
     )
 
+    settings = get_settings()
     database_service = await get_database_service()
     user_service = UserService(database_service=database_service)
-    return AuthenticationService(user_service=user_service)
+
+    return AuthenticationService(
+        user_service=user_service,
+        secret_key=settings.secret_key,
+        algorithm=settings.algorithm,
+        access_token_expire_minutes=settings.access_token_expire_minutes,
+        refresh_token_expire_days=settings.refresh_token_expire_days,
+    )

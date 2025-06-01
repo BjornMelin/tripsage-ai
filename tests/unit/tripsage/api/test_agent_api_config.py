@@ -48,25 +48,30 @@ class TestAgentAPISettings:
         assert hasattr(settings, "openai_api_key")
 
     def test_agent_specific_default_values(self):
-        """Test default values for agent-specific settings."""
+        """Test default values for unified API settings."""
         settings = Settings()
 
-        # Agent API specific settings
-        assert settings.api_prefix == "/api/agent"
+        # Unified API settings
+        assert settings.api_prefix == "/api/v1"
 
-        # Agent-specific CORS origins
-        expected_origins = ["http://localhost:3000", "https://tripsage.app"]
+        # Default CORS origins for unified API
+        expected_origins = [
+            "http://localhost:3000",
+            "http://localhost:3001",
+            "https://tripsage.app",
+            "https://app.tripsage.ai",
+        ]
         assert settings.cors_origins == expected_origins
 
-        # Agent-specific JWT expiration (longer than frontend)
-        assert settings.token_expiration_minutes == 120
-        assert settings.refresh_token_expiration_days == 30
+        # JWT expiration settings
+        assert settings.access_token_expire_minutes == 60
+        assert settings.refresh_token_expire_days == 7
 
-        # Agent-specific rate limiting (higher than frontend)
-        assert settings.rate_limit_requests == 1000
-        assert settings.rate_limit_timeframe == 60
+        # Rate limiting settings
+        assert settings.rate_limit_requests == 100
+        assert settings.rate_limit_window == 60
 
-        # Agent API key expiration (longer than frontend)
+        # API key expiration
         assert settings.api_key_expiration_days == 365
 
     def test_inherited_core_settings(self):
@@ -106,19 +111,19 @@ class TestAgentAPISettings:
         settings = Settings(
             api_prefix="/api/v2/agent",
             cors_origins=custom_origins,
-            token_expiration_minutes=240,
-            refresh_token_expiration_days=60,
+            access_token_expire_minutes=240,
+            refresh_token_expire_days=60,
             rate_limit_requests=2000,
-            rate_limit_timeframe=120,
+            rate_limit_window=120,
             api_key_expiration_days=730,
         )
 
         assert settings.api_prefix == "/api/v2/agent"
         assert settings.cors_origins == custom_origins
-        assert settings.token_expiration_minutes == 240
-        assert settings.refresh_token_expiration_days == 60
+        assert settings.access_token_expire_minutes == 240
+        assert settings.refresh_token_expire_days == 60
         assert settings.rate_limit_requests == 2000
-        assert settings.rate_limit_timeframe == 120
+        assert settings.rate_limit_window == 120
         assert settings.api_key_expiration_days == 730
 
     def test_cors_validation_production(self):
@@ -211,7 +216,7 @@ class TestAgentAPISettings:
         # Agent-specific fields
         assert "api_prefix" in config_dict
         assert "cors_origins" in config_dict
-        assert "token_expiration_minutes" in config_dict
+        assert "access_token_expire_minutes" in config_dict
         assert "api_key_expiration_days" in config_dict
 
         # Inherited fields
@@ -241,7 +246,7 @@ class TestAgentAPISettings:
     @patch.dict(
         "os.environ",
         {
-            "TRIPSAGE_API_TOKEN_EXPIRATION_MINUTES": "180",
+            "TRIPSAGE_API_ACCESS_TOKEN_EXPIRE_MINUTES": "180",
             "TRIPSAGE_API_RATE_LIMIT_REQUESTS": "1500",
         },
     )
@@ -249,24 +254,24 @@ class TestAgentAPISettings:
         """Test multiple environment variable overrides."""
         settings = Settings()
 
-        assert settings.token_expiration_minutes == 180
+        assert settings.access_token_expire_minutes == 180
         assert settings.rate_limit_requests == 1500
 
     def test_validation_for_numeric_fields(self):
         """Test validation for numeric field constraints."""
         # Test valid values
         valid_settings = Settings(
-            token_expiration_minutes=60,
-            refresh_token_expiration_days=30,
+            access_token_expire_minutes=60,
+            refresh_token_expire_days=30,
             rate_limit_requests=500,
-            rate_limit_timeframe=30,
+            rate_limit_window=30,
             api_key_expiration_days=180,
         )
 
-        assert valid_settings.token_expiration_minutes == 60
-        assert valid_settings.refresh_token_expiration_days == 30
+        assert valid_settings.access_token_expire_minutes == 60
+        assert valid_settings.refresh_token_expire_days == 30
         assert valid_settings.rate_limit_requests == 500
-        assert valid_settings.rate_limit_timeframe == 30
+        assert valid_settings.rate_limit_window == 30
         assert valid_settings.api_key_expiration_days == 180
 
     def test_cors_origins_list_validation(self):
@@ -286,15 +291,15 @@ class TestAgentAPISettings:
         fields = Settings.model_fields
 
         assert "api_prefix" in fields
-        assert fields["api_prefix"].description == "API prefix for agent endpoints"
+        assert fields["api_prefix"].description == "API prefix for all endpoints"
 
         assert "cors_origins" in fields
-        assert fields["cors_origins"].description == "CORS origins for agent API access"
+        assert fields["cors_origins"].description == "CORS origins for API access"
 
-        assert "token_expiration_minutes" in fields
+        assert "access_token_expire_minutes" in fields
         assert (
-            fields["token_expiration_minutes"].description
-            == "Agent JWT token expiration in minutes"
+            fields["access_token_expire_minutes"].description
+            == "JWT access token expiration in minutes"
         )
 
 
@@ -324,7 +329,7 @@ class TestGetSettingsFunction:
         # Agent-specific attributes
         assert hasattr(settings, "api_prefix")
         assert hasattr(settings, "cors_origins")
-        assert hasattr(settings, "token_expiration_minutes")
+        assert hasattr(settings, "access_token_expire_minutes")
         assert hasattr(settings, "secret_key")
 
         # Inherited attributes
@@ -351,16 +356,16 @@ class TestSettingsIntegration:
         """Test that agent API has different defaults than frontend API."""
         settings = get_settings()
 
-        # Agent API should have different prefix
-        assert settings.api_prefix == "/api/agent"
+        # Unified API prefix
+        assert settings.api_prefix == "/api/v1"
 
-        # Agent API should have longer token expiration (120 vs 30 minutes)
-        assert settings.token_expiration_minutes == 120
+        # Unified token expiration
+        assert settings.access_token_expire_minutes == 60
 
-        # Agent API should have higher rate limits (1000 vs 60 requests)
-        assert settings.rate_limit_requests == 1000
+        # Unified rate limits
+        assert settings.rate_limit_requests == 100
 
-        # Agent API should have longer API key expiration (365 vs 90 days)
+        # API key expiration
         assert settings.api_key_expiration_days == 365
 
     def test_settings_with_real_environment_loading(self):
@@ -368,7 +373,7 @@ class TestSettingsIntegration:
         # Create a temporary .env file
         with tempfile.NamedTemporaryFile(mode="w", suffix=".env", delete=False) as f:
             f.write("TRIPSAGE_API_API_PREFIX=/test/agent\n")
-            f.write("TRIPSAGE_API_TOKEN_EXPIRATION_MINUTES=300\n")
+            f.write("TRIPSAGE_API_ACCESS_TOKEN_EXPIRE_MINUTES=300\n")
             temp_env_file = f.name
 
         try:
@@ -384,7 +389,7 @@ class TestSettingsIntegration:
             # Note: In actual usage, the env file would be loaded automatically
             # This test verifies the mechanism is in place
             assert hasattr(settings, "api_prefix")
-            assert hasattr(settings, "token_expiration_minutes")
+            assert hasattr(settings, "access_token_expire_minutes")
         finally:
             # Restore original config
             Settings.model_config.clear()
