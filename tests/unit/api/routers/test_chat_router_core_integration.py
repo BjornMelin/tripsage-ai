@@ -255,6 +255,7 @@ class TestChatEndpointBehavior:
     async def test_chat_service_methods_are_called_correctly(self):
         """Test that chat service methods are called with correct parameters."""
         from tripsage.api.routers.chat import ChatRequest
+        from tripsage.api.middlewares.authentication import Principal
         from tripsage_core.services.business.chat_service import (
             ChatSessionResponse,
             RecentMessagesRequest,
@@ -263,13 +264,13 @@ class TestChatEndpointBehavior:
 
         # Create mocks
         mock_core_chat_service = AsyncMock(spec=CoreChatService)
-        mock_user = MagicMock()
-        mock_user.id = str(uuid4())
+        mock_principal = MagicMock(spec=Principal)
+        user_id = str(uuid4())
 
         # Mock CoreChatService responses
         session_response = ChatSessionResponse(
             id=str(uuid4()),
-            user_id=mock_user.id,
+            user_id=user_id,
             title="Test Session",
             created_at="2024-01-01T00:00:00Z",
             updated_at="2024-01-01T00:00:00Z",
@@ -296,7 +297,6 @@ class TestChatEndpointBehavior:
 
         # Mock dependencies
         session_memory = {}
-        api_key_valid = True
 
         # Import and call the endpoint function directly for testing
         from tripsage.api.routers.chat import chat
@@ -304,22 +304,23 @@ class TestChatEndpointBehavior:
         with (
             patch("tripsage.api.routers.chat.get_chat_agent") as mock_get_agent,
             patch("tripsage.api.routers.chat.get_user_available_tools") as mock_tools,
+            patch("tripsage.api.routers.chat.get_principal_id") as mock_get_principal_id,
         ):
             mock_agent = AsyncMock()
-            mock_agent.run_with_tools = AsyncMock(
+            mock_agent.run = AsyncMock(
                 return_value={"content": "Test response"}
             )
             mock_get_agent.return_value = mock_agent
             mock_tools.return_value = []
+            mock_get_principal_id.return_value = user_id
 
             # This would normally return a StreamingResponse, but we're testing the service calls
             try:
                 await chat(
                     request=request,
-                    current_user=mock_user,
+                    principal=mock_principal,
                     session_memory=session_memory,
                     chat_service=mock_core_chat_service,
-                    api_key_valid=api_key_valid,
                 )
             except Exception:
                 # Expected to fail due to missing mocks, but service calls should have been made
@@ -332,7 +333,7 @@ class TestChatEndpointBehavior:
         # Verify recent messages was called with RecentMessagesRequest
         recent_call_args = mock_core_chat_service.get_recent_messages.call_args
         assert isinstance(recent_call_args[1]["request"], RecentMessagesRequest)
-        assert recent_call_args[1]["user_id"] == mock_user.id
+        assert recent_call_args[1]["user_id"] == user_id
 
 
 class TestChatRouterErrorHandling:
