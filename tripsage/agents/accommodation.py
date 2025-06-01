@@ -3,9 +3,11 @@ Accommodation Agent implementation for TripSage.
 
 This module provides the accommodation agent implementation specializing in
 hotel, rental and Airbnb search and booking with the OpenAI Agents SDK.
+Refactored to use dependency injection and service-based architecture.
 """
 
 from tripsage.agents.base import BaseAgent
+from tripsage.agents.service_registry import ServiceRegistry
 from tripsage_core.config.base_app_settings import get_settings
 from tripsage_core.utils.logging_utils import get_logger
 
@@ -18,13 +20,15 @@ class AccommodationAgent(BaseAgent):
 
     def __init__(
         self,
+        service_registry: ServiceRegistry,
         name: str = "TripSage Accommodation Assistant",
         model: str = None,
         temperature: float = None,
     ):
-        """Initialize the accommodation agent.
+        """Initialize the accommodation agent with dependency injection.
 
         Args:
+            service_registry: Service registry for dependency injection
             name: Agent name
             model: Model name to use (defaults to settings if None)
             temperature: Temperature for model sampling (defaults to settings if None)
@@ -92,17 +96,18 @@ class AccommodationAgent(BaseAgent):
         super().__init__(
             name=name,
             instructions=instructions,
+            service_registry=service_registry,
             model=model,
             temperature=temperature,
-            metadata={"agent_type": "accommodation_agent", "version": "1.0.0"},
+            metadata={"agent_type": "accommodation_agent", "version": "2.0.0"},
         )
 
         # Register accommodation-specific tools
         self._register_accommodation_tools()
 
     def _register_accommodation_tools(self) -> None:
-        """Register accommodation-specific tools."""
-        # Register tool groups
+        """Register accommodation-specific tools with service injection."""
+        # Register tool groups with service injection
         tool_modules = [
             "accommodations_tools",
             "googlemaps_tools",
@@ -111,4 +116,4 @@ class AccommodationAgent(BaseAgent):
         ]
 
         for module in tool_modules:
-            self.register_tool_group(module)
+            self.register_tool_group(module, service_registry=self.service_registry)

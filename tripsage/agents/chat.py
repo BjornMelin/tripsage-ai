@@ -3,6 +3,7 @@ Chat Agent implementation for TripSage.
 
 This module provides the central chat agent that coordinates with specialized
 agents and manages tool calling for travel planning tasks.
+Refactored to use dependency injection and service-based architecture.
 """
 
 import re
@@ -15,17 +16,12 @@ from tripsage.agents.budget import Budget as BudgetAgent
 from tripsage.agents.destination_research import DestinationResearchAgent
 from tripsage.agents.flight import FlightAgent
 from tripsage.agents.itinerary import Itinerary as ItineraryAgent
+from tripsage.agents.service_registry import ServiceRegistry
 from tripsage.agents.travel import TravelAgent
-from tripsage.mcp_abstraction.manager import MCPManager
-from tripsage.services.core.chat_orchestration import ChatOrchestrationService
-from tripsage.tools.memory_tools import ConversationMessage
 from tripsage_core.config.base_app_settings import get_settings
 from tripsage_core.exceptions import CoreTripSageError
-from tripsage_core.services.business.memory_service import MemoryService
 from tripsage_core.utils.decorator_utils import with_error_handling
-from tripsage_core.utils.error_handling_utils import (
-    log_exception,
-)
+from tripsage_core.utils.error_handling_utils import log_exception
 from tripsage_core.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)
@@ -45,18 +41,18 @@ class ChatAgent(BaseAgent):
 
     def __init__(
         self,
+        service_registry: ServiceRegistry,
         name: str = "TripSage Chat Assistant",
         model: str = None,
         temperature: float = None,
-        mcp_manager: Optional[MCPManager] = None,
     ):
-        """Initialize the chat agent.
+        """Initialize the chat agent with dependency injection.
 
         Args:
+            service_registry: Service registry for dependency injection
             name: Agent name
             model: Model name to use (defaults to settings if None)
             temperature: Temperature for model sampling (defaults to settings if None)
-            mcp_manager: Optional MCP manager instance. If None, uses global instance.
         """
         # Define comprehensive chat instructions
         instructions = """
@@ -131,18 +127,15 @@ class ChatAgent(BaseAgent):
         super().__init__(
             name=name,
             instructions=instructions,
+            service_registry=service_registry,
             model=model,
             temperature=temperature,
-            metadata={"agent_type": "chat_coordinator", "version": "1.0.0"},
+            metadata={"agent_type": "chat_coordinator", "version": "2.0.0"},
         )
 
-        # Initialize MCP integration (only needed for Airbnb accommodations)
-        self.mcp_manager = mcp_manager or MCPManager()
-        self.chat_service = ChatOrchestrationService()
-
-        # Initialize memory service for personalization
-        self.memory_service = MemoryService()
-        self._memory_initialized = False
+        # Track tool call rate limiting
+        self._tool_call_history: Dict[str, List[float]] = {}
+        self._max_tool_calls_per_minute = 5
 
         # Initialize specialized agents
         self._initialize_specialized_agents()
@@ -150,31 +143,34 @@ class ChatAgent(BaseAgent):
         # Register travel tools
         self._register_travel_tools()
 
-        # Track tool call rate limiting
-        self._tool_call_history: Dict[str, List[float]] = {}
-        self._max_tool_calls_per_minute = 5
-
-        logger.info("ChatAgent initialized with Phase 5 MCP integration")
+        logger.info("ChatAgent initialized with service-based architecture")
 
     def _initialize_specialized_agents(self) -> None:
-        """Initialize specialized agents for routing."""
+        """Initialize specialized agents for routing with service injection."""
         try:
-            self.flight_agent = FlightAgent()
-            self.accommodation_agent = AccommodationAgent()
-            self.budget_agent = BudgetAgent()
-            self.destination_agent = DestinationResearchAgent()
-            self.itinerary_agent = ItineraryAgent()
-            self.travel_agent = TravelAgent()
+            # All specialized agents now use the same service registry
+            self.flight_agent = FlightAgent(service_registry=self.service_registry)
+            self.accommodation_agent = AccommodationAgent(
+                service_registry=self.service_registry
+            )
+            self.budget_agent = BudgetAgent(service_registry=self.service_registry)
+            self.destination_agent = DestinationResearchAgent(
+                service_registry=self.service_registry
+            )
+            self.itinerary_agent = ItineraryAgent(
+                service_registry=self.service_registry
+            )
+            self.travel_agent = TravelAgent(service_registry=self.service_registry)
 
-            logger.info("Initialized specialized agents for chat coordination")
+            logger.info("Initialized specialized agents with service injection")
         except Exception as e:
             logger.error(f"Failed to initialize specialized agents: {str(e)}")
             log_exception(e)
-            # Continue without specialized agents - will fallback to tools
+            # Continue without specialized agents
 
     def _register_travel_tools(self) -> None:
         """Register travel-specific tools for direct execution."""
-        # Register core travel tool groups
+        # Register core travel tool groups with service injection
         tool_modules = [
             "time_tools",
             "weather_tools",
@@ -185,19 +181,9 @@ class ChatAgent(BaseAgent):
 
         for module in tool_modules:
             try:
-                self.register_tool_group(module)
+                self.register_tool_group(module, service_registry=self.service_registry)
             except Exception as e:
                 logger.warning(f"Could not register tool module {module}: {str(e)}")
-
-    async def _ensure_memory_initialized(self) -> None:
-        """Ensure memory service is connected and ready."""
-        if not self._memory_initialized:
-            try:
-                await self.memory_service.connect()
-                self._memory_initialized = True
-                logger.info("Memory service initialized for ChatAgent")
-            except Exception as e:
-                logger.warning(f"Failed to initialize memory service: {e}")
 
     async def _get_user_context(self, user_id: str) -> Dict[str, Any]:
         """Get user context from memory for personalization.
@@ -209,24 +195,29 @@ class ChatAgent(BaseAgent):
             User context including preferences and history
         """
         try:
-            await self._ensure_memory_initialized()
-            context = await self.memory_service.get_user_context(user_id)
+            if self.service_registry.memory_service:
+                context = await self.service_registry.memory_service.get_user_context(
+                    user_id
+                )
 
-            # Extract key personalization data
-            user_context = {
-                "preferences": context.get("preferences", []),
-                "past_trips": context.get("past_trips", []),
-                "budget_patterns": context.get("budget_patterns", []),
-                "travel_style": context.get("travel_style", []),
-                "insights": context.get("insights", {}),
-                "summary": context.get("summary", ""),
-            }
+                # Extract key personalization data
+                user_context = {
+                    "preferences": context.get("preferences", []),
+                    "past_trips": context.get("past_trips", []),
+                    "budget_patterns": context.get("budget_patterns", []),
+                    "travel_style": context.get("travel_style", []),
+                    "insights": context.get("insights", {}),
+                    "summary": context.get("summary", ""),
+                }
 
-            logger.debug(
-                f"Retrieved user context for {user_id}: "
-                f"{len(context.get('preferences', []))} preferences"
-            )
-            return user_context
+                logger.debug(
+                    f"Retrieved user context for {user_id}: "
+                    f"{len(context.get('preferences', []))} preferences"
+                )
+                return user_context
+            else:
+                logger.warning("Memory service not available for user context")
+                return {}
 
         except Exception as e:
             logger.warning(f"Failed to get user context for {user_id}: {e}")
@@ -248,23 +239,27 @@ class ChatAgent(BaseAgent):
             session_id: Optional session identifier
         """
         try:
-            await self._ensure_memory_initialized()
+            if self.service_registry.memory_service:
+                # Create conversation messages
+                messages = [
+                    {"role": "user", "content": user_message},
+                    {"role": "assistant", "content": assistant_response},
+                ]
 
-            # Create conversation messages
-            messages = [
-                ConversationMessage(role="user", content=user_message),
-                ConversationMessage(role="assistant", content=assistant_response),
-            ]
+                # Store in memory with travel context
+                await self.service_registry.memory_service.add_conversation_memory(
+                    messages=messages,
+                    user_id=user_id,
+                    session_id=session_id,
+                    metadata={
+                        "source": "chat_agent",
+                        "agent_type": "travel_coordinator",
+                    },
+                )
 
-            # Store in memory with travel context
-            await self.memory_service.add_conversation_memory(
-                messages=messages,
-                user_id=user_id,
-                session_id=session_id,
-                metadata={"source": "chat_agent", "agent_type": "travel_coordinator"},
-            )
-
-            logger.debug(f"Stored conversation memory for user {user_id}")
+                logger.debug(f"Stored conversation memory for user {user_id}")
+            else:
+                logger.warning("Memory service not available for storing conversation")
 
         except Exception as e:
             logger.warning(f"Failed to store conversation memory for {user_id}: {e}")
@@ -298,7 +293,7 @@ class ChatAgent(BaseAgent):
                     r"\bflight\s+from\b",
                     r"\bbook.*flight\b",
                 ],
-                "weight": 0.0,
+                "weight": 0,
             },
             "accommodation": {
                 "keywords": [
@@ -310,9 +305,15 @@ class ChatAgent(BaseAgent):
                     "resort",
                     "airbnb",
                     "booking",
+                    "check in",
+                    "check out",
                 ],
-                "patterns": [r"\bstay\s+in\b", r"\bhotel\s+in\b", r"\bbook.*hotel\b"],
-                "weight": 0.0,
+                "patterns": [
+                    r"\bstay\s+in\b",
+                    r"\bbook.*hotel\b",
+                    r"\bfind.*accommodation\b",
+                ],
+                "weight": 0,
             },
             "budget": {
                 "keywords": [
@@ -324,9 +325,11 @@ class ChatAgent(BaseAgent):
                     "afford",
                     "cheap",
                     "expensive",
+                    "deal",
+                    "$",
                 ],
-                "patterns": [r"\bhow\s+much\b", r"\bcost\s+of\b", r"\bbudget\s+for\b"],
-                "weight": 0.0,
+                "patterns": [r"\bhow\s+much\b", r"\bbudget\s+for\b", r"\bcost\s+of\b"],
+                "weight": 0,
             },
             "destination": {
                 "keywords": [
@@ -337,13 +340,16 @@ class ChatAgent(BaseAgent):
                     "attractions",
                     "culture",
                     "visit",
+                    "explore",
+                    "sights",
+                    "tourist",
                 ],
                 "patterns": [
-                    r"\bwhere\s+to\b",
-                    r"\bplaces\s+to\b",
-                    r"\battraction.*in\b",
+                    r"\bwhere.*go\b",
+                    r"\bplaces\s+to\s+visit\b",
+                    r"\bthings\s+to\s+do\b",
                 ],
-                "weight": 0.0,
+                "weight": 0,
             },
             "itinerary": {
                 "keywords": [
@@ -353,45 +359,31 @@ class ChatAgent(BaseAgent):
                     "day-by-day",
                     "timeline",
                     "agenda",
+                    "trip plan",
+                    "organize",
                 ],
                 "patterns": [
-                    r"\bday\s+\d+\b",
-                    r"\bschedule\s+for\b",
                     r"\bplan.*trip\b",
+                    r"\bcreate.*itinerary\b",
+                    r"\bday\s+by\s+day\b",
                 ],
-                "weight": 0.0,
+                "weight": 0,
             },
-            "weather": {
+            "general": {
                 "keywords": [
-                    "weather",
-                    "temperature",
-                    "rain",
-                    "sunny",
-                    "forecast",
-                    "climate",
+                    "travel",
+                    "trip",
+                    "vacation",
+                    "journey",
+                    "tour",
+                    "holiday",
                 ],
-                "patterns": [r"\bweather\s+in\b", r"\btemperature.*in\b"],
-                "weight": 0.0,
-            },
-            "maps": {
-                "keywords": [
-                    "direction",
-                    "location",
-                    "address",
-                    "distance",
-                    "route",
-                    "map",
-                ],
-                "patterns": [
-                    r"\bhow\s+to\s+get\b",
-                    r"\bdirection.*to\b",
-                    r"\bwhere\s+is\b",
-                ],
-                "weight": 0.0,
+                "patterns": [r"\bplan.*travel\b", r"\bhelp.*trip\b"],
+                "weight": 0,
             },
         }
 
-        # Calculate intent scores
+        # Calculate weights for each intent
         for _intent, config in intent_patterns.items():
             # Check keywords
             for keyword in config["keywords"]:
@@ -401,583 +393,182 @@ class ChatAgent(BaseAgent):
             # Check patterns
             for pattern in config["patterns"]:
                 if re.search(pattern, message_lower):
-                    config["weight"] += 2
+                    config["weight"] += 2  # Patterns get higher weight
 
-        # Find dominant intent
-        max_weight = max(config["weight"] for config in intent_patterns.values())
+        # Find the intent with highest weight
+        primary_intent = max(intent_patterns.items(), key=lambda x: x[1]["weight"])
 
-        if max_weight == 0:
-            primary_intent = "general"
-            confidence = 0.5
-        else:
-            primary_intent = max(
-                intent_patterns.keys(), key=lambda k: intent_patterns[k]["weight"]
-            )
-            confidence = min(max_weight / 5.0, 1.0)  # Normalize to 0-1
+        # Check if multiple intents have high weights (multi-intent query)
+        multi_intent = []
+        for intent, config in intent_patterns.items():
+            if config["weight"] > 0 and intent != primary_intent[0]:
+                multi_intent.append(intent)
 
         return {
-            "primary_intent": primary_intent,
-            "confidence": confidence,
-            "all_scores": {k: v["weight"] for k, v in intent_patterns.items()},
-            "requires_routing": confidence > 0.7
-            and primary_intent
-            in ["flight", "accommodation", "budget", "destination", "itinerary"],
+            "primary": primary_intent[0]
+            if primary_intent[1]["weight"] > 0
+            else "general",
+            "confidence": min(
+                primary_intent[1]["weight"] / 5.0, 1.0
+            ),  # Normalize to 0-1
+            "multi_intent": multi_intent,
+            "requires_clarification": primary_intent[1]["weight"] == 0,
         }
 
-    async def check_tool_rate_limit(self, user_id: str) -> bool:
-        """Check if user has exceeded tool call rate limit.
-
-        Args:
-            user_id: User identifier
-
-        Returns:
-            True if within rate limit, False if exceeded
-        """
-        now = time.time()
-        user_calls = self._tool_call_history.get(user_id, [])
-
-        # Remove calls older than 1 minute
-        recent_calls = [call_time for call_time in user_calls if now - call_time < 60]
-        self._tool_call_history[user_id] = recent_calls
-
-        return len(recent_calls) < self._max_tool_calls_per_minute
-
-    async def log_tool_call(self, user_id: str) -> None:
-        """Log a tool call for rate limiting.
-
-        Args:
-            user_id: User identifier
-        """
-        now = time.time()
-        if user_id not in self._tool_call_history:
-            self._tool_call_history[user_id] = []
-        self._tool_call_history[user_id].append(now)
-
-    async def route_to_agent(
-        self, intent: Dict[str, Any], message: str, context: Dict[str, Any]
-    ) -> Dict[str, Any]:
-        """Route message to appropriate specialized agent.
-
-        Args:
-            intent: Intent detection results
-            message: User message
-            context: Conversation context
-
-        Returns:
-            Agent response
-        """
-        primary_intent = intent["primary_intent"]
-
-        try:
-            if primary_intent == "flight" and hasattr(self, "flight_agent"):
-                logger.info("Routing to FlightAgent")
-                return await self.flight_agent.run(message, context)
-
-            elif primary_intent == "accommodation" and hasattr(
-                self, "accommodation_agent"
-            ):
-                logger.info("Routing to AccommodationAgent")
-                return await self.accommodation_agent.run(message, context)
-
-            elif primary_intent == "budget" and hasattr(self, "budget_agent"):
-                logger.info("Routing to BudgetAgent")
-                return await self.budget_agent.run(message, context)
-
-            elif primary_intent == "destination" and hasattr(self, "destination_agent"):
-                logger.info("Routing to DestinationResearchAgent")
-                return await self.destination_agent.run(message, context)
-
-            elif primary_intent == "itinerary" and hasattr(self, "itinerary_agent"):
-                logger.info("Routing to ItineraryAgent")
-                return await self.itinerary_agent.run(message, context)
-
-            else:
-                # Fallback to general travel agent
-                logger.info("Routing to TravelAgent (general)")
-                if hasattr(self, "travel_agent"):
-                    return await self.travel_agent.run(message, context)
-                else:
-                    # Handle directly if no travel agent available
-                    return await self.run(message, context)
-
-        except Exception as e:
-            logger.error(f"Error routing to {primary_intent} agent: {str(e)}")
-            log_exception(e)
-
-            # Fallback to direct handling
-            return {
-                "content": (
-                    f"I encountered an issue with the {primary_intent} "
-                    "specialist. Let me help you directly."
-                ),
-                "status": "fallback",
-                "original_error": str(e),
-            }
-
-    async def execute_tool_call(
-        self, tool_name: str, parameters: Dict[str, Any], user_id: str
-    ) -> Dict[str, Any]:
-        """Execute a tool call with rate limiting and error handling.
-
-        Args:
-            tool_name: Name of the tool to execute
-            parameters: Tool parameters
-            user_id: User identifier for rate limiting
-
-        Returns:
-            Tool execution result
-        """
-        # Check rate limit
-        if not await self.check_tool_rate_limit(user_id):
-            return {
-                "status": "error",
-                "error_type": "RateLimitExceeded",
-                "error_message": (
-                    f"Tool call limit exceeded. Maximum "
-                    f"{self._max_tool_calls_per_minute} calls per minute."
-                ),
-                "retry_after": 60,
-            }
-
-        # Log the tool call
-        await self.log_tool_call(user_id)
-
-        try:
-            # Execute via MCP manager
-            result = await self.mcp_manager.invoke(tool_name, **parameters)
-
-            return {
-                "status": "success",
-                "result": result,
-                "tool_name": tool_name,
-                "execution_time": time.time(),
-            }
-
-        except Exception as e:
-            logger.error(f"Tool execution failed for {tool_name}: {str(e)}")
-            log_exception(e)
-
-            return {
-                "status": "error",
-                "error_type": type(e).__name__,
-                "error_message": str(e),
-                "tool_name": tool_name,
-            }
-
-    async def process_message(
-        self, message: str, context: Optional[Dict[str, Any]] = None
-    ) -> Dict[str, Any]:
-        """Process user message with intent detection and routing.
-
-        Args:
-            message: User message
-            context: Optional conversation context
-
-        Returns:
-            Processed response with routing and tool call information
-        """
-        context = context or {}
-        user_id = context.get("user_id", "anonymous")
-        session_id = context.get("session_id")
-
-        # Create session if not exists
-        if not session_id and user_id != "anonymous":
-            try:
-                session_data = await self.create_chat_session_mcp(
-                    user_id=int(user_id) if user_id.isdigit() else 1,
-                    metadata={"agent": "chat", "created_from": "process_message"},
-                )
-                session_id = session_data.get("session_id")
-                context["session_id"] = session_id
-            except Exception as e:
-                logger.warning(f"Failed to create session: {e}")
-
-        # Save user message if session exists
-        if session_id:
-            try:
-                await self.save_message_mcp(
-                    session_id=session_id,
-                    role="user",
-                    content=message,
-                    metadata={"timestamp": context.get("timestamp")},
-                )
-            except Exception as e:
-                logger.warning(f"Failed to save user message: {e}")
-
-        # Get user context from memory for personalization
-        user_context = {}
-        if user_id != "anonymous":
-            user_context = await self._get_user_context(user_id)
-            context["user_memory"] = user_context
-
-            # Enhance instructions with user context if available
-            if user_context.get("summary"):
-                context["user_summary"] = user_context["summary"]
-                logger.debug(
-                    f"Added user context summary for personalization: {user_id}"
-                )
-
-        # Detect intent
-        intent = await self.detect_intent(message)
-
-        # Add intent to context
-        context["detected_intent"] = intent
-        context["chat_agent_processed"] = True
-
-        # Route to specialized agent if high confidence
-        if intent["requires_routing"]:
-            logger.info(
-                f"High confidence ({intent['confidence']:.2f}) "
-                f"for {intent['primary_intent']}, routing to specialist"
-            )
-            response = await self.route_to_agent(intent, message, context)
-
-            # Add routing metadata
-            response["routed_to"] = intent["primary_intent"]
-            response["routing_confidence"] = intent["confidence"]
-
-        else:
-            # Handle directly for general queries or low confidence
-            logger.info(
-                f"Handling directly - intent: {intent['primary_intent']} "
-                f"(confidence: {intent['confidence']:.2f})"
-            )
-
-            # Use parent run method for direct handling
-            response = await super().run(message, context)
-
-            # Add intent metadata
-            response["intent_detected"] = intent
-            response["handled_by"] = "chat_agent"
-
-        # Save assistant response if session exists
-        if session_id and response.get("content"):
-            try:
-                await self.save_message_mcp(
-                    session_id=session_id,
-                    role="assistant",
-                    content=response.get("content", ""),
-                    metadata={
-                        "intent": intent,
-                        "routed_to": response.get("routed_to"),
-                        "handled_by": response.get("handled_by"),
-                    },
-                )
-            except Exception as e:
-                logger.warning(f"Failed to save assistant message: {e}")
-
-        # Store conversation in memory for future personalization
-        if user_id != "anonymous" and response.get("content"):
-            try:
-                await self._store_conversation_memory(
-                    user_message=message,
-                    assistant_response=response.get("content", ""),
-                    user_id=user_id,
-                    session_id=session_id,
-                )
-            except Exception as e:
-                logger.warning(f"Failed to store conversation memory: {e}")
-
-        # Add session_id to response
-        response["session_id"] = session_id
-
-        return response
-
-    async def run_with_tools(
-        self,
-        message: str,
-        context: Optional[Dict[str, Any]] = None,
-        available_tools: Optional[List[str]] = None,
-    ) -> Dict[str, Any]:
-        """Run the agent with explicit tool calling support.
-
-        Args:
-            message: User message
-            context: Optional conversation context
-            available_tools: Optional list of available tools for this user
-
-        Returns:
-            Response with tool call results
-        """
-        context = context or {}
-        context["available_tools"] = available_tools or []
-        context["tool_calling_enabled"] = True
-
-        return await self.process_message(message, context)
-
-    # Phase 5: MCP Tool Integration Methods
-
     @with_error_handling
-    async def route_request(
-        self, message: str, session_id: str, context: Optional[Dict[str, Any]] = None
+    async def route_to_specialist(
+        self, intent: Dict[str, Any], user_input: str, context: Dict[str, Any]
     ) -> Dict[str, Any]:
-        """Route chat request to appropriate specialized agent or handle directly.
-
-        This method implements Phase 5 routing patterns using MCP tools.
+        """Route request to appropriate specialist agent.
 
         Args:
-            message: User message content
-            session_id: Chat session ID
+            intent: Detected intent information
+            user_input: Original user input
+            context: Request context
+
+        Returns:
+            Specialist agent response
+        """
+        primary_intent = intent["primary"]
+
+        # Map intents to specialist agents
+        agent_map = {
+            "flight": self.flight_agent,
+            "accommodation": self.accommodation_agent,
+            "budget": self.budget_agent,
+            "destination": self.destination_agent,
+            "itinerary": self.itinerary_agent,
+            "general": self.travel_agent,
+        }
+
+        specialist = agent_map.get(primary_intent, self.travel_agent)
+
+        logger.info(
+            f"Routing to {specialist.__class__.__name__} for {primary_intent} intent"
+        )
+
+        # Add routing metadata to context
+        context["routed_from"] = "ChatAgent"
+        context["detected_intent"] = intent
+
+        # Execute specialist agent
+        result = await specialist.run(user_input, context)
+
+        return result
+
+    async def run(
+        self, user_input: str, context: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
+        """Run the chat agent with user input.
+
+        This method overrides the base agent's run method to add intent detection
+        and routing logic before executing the standard agent flow.
+
+        Args:
+            user_input: User input text
             context: Optional context data
 
         Returns:
-            Dictionary with response and routing information
-
-        Raises:
-            ChatAgentError: If request routing fails
+            Dictionary with the agent's response and other information
         """
         try:
-            self.logger.info(f"Routing Phase 5 request for session {session_id}")
-
-            # Use existing intent detection
-            intent = await self.detect_intent(message)
-
-            # Add session context
-            routing_context = context or {}
-            routing_context["session_id"] = session_id
-            routing_context["detected_intent"] = intent
-
-            # For high-confidence intents, use MCP-based services
-            if intent["confidence"] > 0.7:
-                return await self._handle_mcp_routing(intent, message, routing_context)
-            else:
-                return await self._handle_direct_conversation(message, routing_context)
-
-        except Exception as e:
-            self.logger.error(f"Phase 5 request routing failed: {e}")
-            raise ChatAgentError(f"Request routing failed: {str(e)}") from e
-
-    async def _handle_mcp_routing(
-        self, intent: Dict[str, Any], message: str, context: Dict[str, Any]
-    ) -> Dict[str, Any]:
-        """Handle routing using MCP services.
-
-        Args:
-            intent: Intent detection results
-            message: User message
-            context: Routing context
-
-        Returns:
-            Response dictionary
-        """
-        primary_intent = intent["primary_intent"]
-
-        if primary_intent == "flight":
-            return await self._handle_flight_request_mcp(message, context)
-        elif primary_intent == "accommodation":
-            return await self._handle_accommodation_request_mcp(message, context)
-        elif primary_intent == "weather":
-            return await self._handle_weather_request_mcp(message, context)
-        elif primary_intent == "maps":
-            return await self._handle_maps_request_mcp(message, context)
-        else:
-            # Route to existing specialized agents
-            return await self.route_to_agent(intent, message, context)
-
-    async def _handle_flight_request_mcp(
-        self, message: str, context: Dict[str, Any]
-    ) -> Dict[str, Any]:
-        """Handle flight requests using MCP services."""
-        try:
-            # For demonstration, extract basic flight parameters
-            # In production, this would use more sophisticated NLP
-            return {
-                "content": (
-                    "I'll help you search for flights using our MCP-integrated "
-                    "flight service. Let me find the best options for you."
-                ),
-                "intent": "flight_search",
-                "action": "mcp_flight_search",
-                "session_id": context.get("session_id"),
-                "mcp_service": "duffel_flights",
-                "status": "ready_for_tool_call",
-            }
-        except Exception as e:
-            return {"content": f"Flight search error: {str(e)}", "status": "error"}
-
-    async def _handle_accommodation_request_mcp(
-        self, message: str, context: Dict[str, Any]
-    ) -> Dict[str, Any]:
-        """Handle accommodation requests using MCP services."""
-        try:
-            return {
-                "content": (
-                    "I'll search for accommodations using our integrated booking "
-                    "services. What location and dates are you considering?"
-                ),
-                "intent": "accommodation_search",
-                "action": "mcp_accommodation_search",
-                "session_id": context.get("session_id"),
-                "mcp_service": "airbnb",
-                "status": "ready_for_tool_call",
-            }
-        except Exception as e:
-            return {
-                "content": f"Accommodation search error: {str(e)}",
-                "status": "error",
-            }
-
-    async def _handle_weather_request_mcp(
-        self, message: str, context: Dict[str, Any]
-    ) -> Dict[str, Any]:
-        """Handle weather requests using MCP services."""
-        try:
-            return {
-                "content": "Let me check the weather information for your destination.",
-                "intent": "weather_check",
-                "action": "mcp_weather_check",
-                "session_id": context.get("session_id"),
-                "mcp_service": "weather",
-                "status": "ready_for_tool_call",
-            }
-        except Exception as e:
-            return {"content": f"Weather check error: {str(e)}", "status": "error"}
-
-    async def _handle_maps_request_mcp(
-        self, message: str, context: Dict[str, Any]
-    ) -> Dict[str, Any]:
-        """Handle maps/location requests using MCP services."""
-        try:
-            return {
-                "content": (
-                    "I'll help you with location information using our maps service."
-                ),
-                "intent": "location_info",
-                "action": "mcp_location_lookup",
-                "session_id": context.get("session_id"),
-                "mcp_service": "google_maps",
-                "status": "ready_for_tool_call",
-            }
-        except Exception as e:
-            return {"content": f"Location lookup error: {str(e)}", "status": "error"}
-
-    async def _handle_direct_conversation(
-        self, message: str, context: Dict[str, Any]
-    ) -> Dict[str, Any]:
-        """Handle general conversation directly."""
-        # Use existing direct handling
-        return await super().run(message, context)
-
-    @with_error_handling
-    async def call_mcp_tools(self, tool_calls: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """Execute tool calls via MCP manager (Phase 5 pattern).
-
-        Args:
-            tool_calls: List of tool call dictionaries
-
-        Returns:
-            Dictionary with tool call results
-
-        Raises:
-            ChatAgentError: If tool calling fails
-        """
-        try:
-            self.logger.info(f"Executing {len(tool_calls)} MCP tool calls")
-
-            # Use chat orchestration service for parallel execution
-            results = await self.chat_service.execute_parallel_tools(tool_calls)
-
-            return {
-                "tool_call_results": results,
-                "execution_count": len(tool_calls),
-                "status": "success",
-                "timestamp": time.time(),
-            }
-
-        except Exception as e:
-            self.logger.error(f"MCP tool calling failed: {e}")
-            raise ChatAgentError(f"MCP tool calling failed: {str(e)}") from e
-
-    @with_error_handling
-    async def create_chat_session_mcp(
-        self, user_id: int, metadata: Optional[Dict[str, Any]] = None
-    ) -> Dict[str, Any]:
-        """Create a new chat session using MCP database operations.
-
-        Args:
-            user_id: User ID for the session
-            metadata: Optional session metadata
-
-        Returns:
-            Dictionary with session information
-
-        Raises:
-            ChatAgentError: If session creation fails
-        """
-        try:
-            return await self.chat_service.create_chat_session(user_id, metadata)
-        except Exception as e:
-            self.logger.error(f"MCP session creation failed: {e}")
-            raise ChatAgentError(f"Session creation failed: {str(e)}") from e
-
-    @with_error_handling
-    async def save_message_mcp(
-        self,
-        session_id: str,
-        role: str,
-        content: str,
-        metadata: Optional[Dict[str, Any]] = None,
-    ) -> Dict[str, Any]:
-        """Save a chat message using MCP database operations.
-
-        Args:
-            session_id: Chat session ID
-            role: Message role (user, assistant, system)
-            content: Message content
-            metadata: Optional message metadata
-
-        Returns:
-            Dictionary with saved message information
-
-        Raises:
-            ChatAgentError: If message saving fails
-        """
-        try:
-            return await self.chat_service.save_message(
-                session_id, role, content, metadata
+            # Detect intent first
+            intent = await self.detect_intent(user_input)
+            logger.info(
+                f"Detected intent: {intent['primary']} with confidence "
+                f"{intent['confidence']}"
             )
-        except Exception as e:
-            self.logger.error(f"MCP message saving failed: {e}")
-            raise ChatAgentError(f"Message saving failed: {str(e)}") from e
 
-    @with_error_handling
-    async def get_chat_history_mcp(
-        self, session_id: str, limit: int = 10, offset: int = 0
-    ) -> List[Dict[str, Any]]:
-        """Get chat history using MCP database operations.
+            # Add intent to context
+            if context is None:
+                context = {}
+            context["detected_intent"] = intent
+
+            # Get user context for personalization if user_id is provided
+            user_id = context.get("user_id")
+            if user_id:
+                user_context = await self._get_user_context(user_id)
+                context["user_context"] = user_context
+
+            # Route to specialist if high confidence and not a simple tool query
+            if intent["confidence"] > 0.6 and intent["primary"] != "general":
+                # Check if this is a simple tool query that we can handle directly
+                tool_keywords = ["weather", "time", "map", "direction", "temperature"]
+                is_tool_query = any(kw in user_input.lower() for kw in tool_keywords)
+
+                if not is_tool_query:
+                    # Route to specialist
+                    result = await self.route_to_specialist(intent, user_input, context)
+
+                    # Store conversation memory if user_id provided
+                    if user_id and "content" in result:
+                        await self._store_conversation_memory(
+                            user_input,
+                            result["content"],
+                            user_id,
+                            context.get("session_id"),
+                        )
+
+                    return result
+
+            # Otherwise, handle with base agent (tool calling or general chat)
+            result = await super().run(user_input, context)
+
+            # Store conversation memory if user_id provided
+            if user_id and "content" in result:
+                await self._store_conversation_memory(
+                    user_input, result["content"], user_id, context.get("session_id")
+                )
+
+            return result
+
+        except Exception as e:
+            logger.error(f"Error in ChatAgent run: {str(e)}")
+            log_exception(e)
+            return {
+                "content": (
+                    "I apologize, but I encountered an issue processing your request. "
+                    "Could you please try rephrasing or let me know how I can help you "
+                    "with your travel planning?"
+                ),
+                "status": "error",
+                "error_type": type(e).__name__,
+                "error_message": str(e),
+            }
+
+    def check_rate_limit(self, user_id: str) -> bool:
+        """Check if user is within rate limit for tool calls.
 
         Args:
-            session_id: Chat session ID
-            limit: Maximum number of messages to return
-            offset: Number of messages to skip
+            user_id: User identifier
 
         Returns:
-            List of message dictionaries
-
-        Raises:
-            ChatAgentError: If history retrieval fails
+            True if within rate limit, False otherwise
         """
-        try:
-            return await self.chat_service.get_chat_history(session_id, limit, offset)
-        except Exception as e:
-            self.logger.error(f"MCP history retrieval failed: {e}")
-            raise ChatAgentError(f"History retrieval failed: {str(e)}") from e
+        current_time = time.time()
 
-    @with_error_handling
-    async def end_chat_session_mcp(self, session_id: str) -> bool:
-        """End a chat session using MCP database operations.
+        # Clean up old entries
+        if user_id in self._tool_call_history:
+            self._tool_call_history[user_id] = [
+                t
+                for t in self._tool_call_history[user_id]
+                if current_time - t < 60  # Keep only last minute
+            ]
+        else:
+            self._tool_call_history[user_id] = []
+
+        # Check rate limit
+        return len(self._tool_call_history[user_id]) < self._max_tool_calls_per_minute
+
+    def record_tool_call(self, user_id: str) -> None:
+        """Record a tool call for rate limiting.
 
         Args:
-            session_id: Chat session ID to end
-
-        Returns:
-            True if session was ended successfully
-
-        Raises:
-            ChatAgentError: If session ending fails
+            user_id: User identifier
         """
-        try:
-            return await self.chat_service.end_chat_session(session_id)
-        except Exception as e:
-            self.logger.error(f"MCP session ending failed: {e}")
-            raise ChatAgentError(f"Session ending failed: {str(e)}") from e
+        current_time = time.time()
+
+        if user_id not in self._tool_call_history:
+            self._tool_call_history[user_id] = []
+
+        self._tool_call_history[user_id].append(current_time)
