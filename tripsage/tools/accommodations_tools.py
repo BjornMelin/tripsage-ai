@@ -215,7 +215,6 @@ async def get_airbnb_listing_details_tool(
             "listing_id": listing_id,
         }
 
-
 @function_tool
 @with_error_handling
 async def search_accommodations_tool(
