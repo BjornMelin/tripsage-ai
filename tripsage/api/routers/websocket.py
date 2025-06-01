@@ -108,7 +108,8 @@ async def chat_websocket(
 
         # Authenticate connection
         auth_response = await websocket_manager.authenticate_connection(
-            websocket, auth_request,
+            websocket,
+            auth_request,
         )
 
         if not auth_response.success:
@@ -181,7 +182,8 @@ async def chat_websocket(
                             message_json.get("payload", {}),
                         )
                         response = await websocket_manager.subscribe_connection(
-                            connection_id, subscribe_request,
+                            connection_id,
+                            subscribe_request,
                         )
                         await websocket.send_text(
                             json.dumps(
@@ -285,7 +287,8 @@ async def agent_status_websocket(
 
         # Authenticate connection
         auth_response = await websocket_manager.authenticate_connection(
-            websocket, auth_request,
+            websocket,
+            auth_request,
         )
 
         if not auth_response.success:
@@ -349,7 +352,8 @@ async def agent_status_websocket(
                             message_json.get("payload", {}),
                         )
                         response = await websocket_manager.subscribe_connection(
-                            connection_id, subscribe_request,
+                            connection_id,
+                            subscribe_request,
                         )
                         await websocket.send_text(
                             json.dumps(
