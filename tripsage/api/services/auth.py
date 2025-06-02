@@ -33,7 +33,7 @@ from tripsage_core.exceptions.exceptions import (
     CoreValidationError as ValidationError,
 )
 from tripsage_core.services.business.auth_service import (
-    AuthService as CoreAuthService,
+    AuthenticationService as CoreAuthService,
 )
 from tripsage_core.services.business.auth_service import (
     get_auth_service as get_core_auth_service,
