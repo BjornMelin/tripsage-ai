@@ -5,7 +5,7 @@ import {
   useApiMutation,
   useApiPutMutation,
   useApiDeleteMutation,
-} from "@/lib/hooks/use-api-query";
+} from "@/hooks/use-api-query";
 import { useBudgetStore } from "@/stores/budget-store";
 import type {
   Budget,

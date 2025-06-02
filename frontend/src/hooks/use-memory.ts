@@ -1,6 +1,6 @@
 "use client";
 
-import { useApiQuery, useApiMutation } from "@/lib/hooks/use-api-query";
+import { useApiQuery, useApiMutation } from "@/hooks/use-api-query";
 import type {
   MemoryContextResponse,
   SearchMemoriesRequest,

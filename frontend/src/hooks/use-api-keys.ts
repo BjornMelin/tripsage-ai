@@ -4,7 +4,7 @@ import {
   useApiQuery,
   useApiMutation,
   useApiDeleteMutation,
-} from "@/lib/hooks/use-api-query";
+} from "@/hooks/use-api-query";
 import { useApiKeyStore } from "@/stores/api-key-store";
 import type {
   AddKeyRequest,

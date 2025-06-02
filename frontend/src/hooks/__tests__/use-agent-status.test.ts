@@ -7,10 +7,10 @@ import {
   useResourceUsage,
 } from "../use-agent-status";
 import { useAgentStatusStore } from "@/stores/agent-status-store";
-import * as apiQuery from "@/lib/hooks/use-api-query";
+import * as apiQuery from "@/hooks/use-api-query";
 
 // Mock the API query hooks
-vi.mock("@/lib/hooks/use-api-query", () => ({
+vi.mock("@/hooks/use-api-query", () => ({
   useApiQuery: vi.fn(),
   useApiMutation: vi.fn(),
 }));

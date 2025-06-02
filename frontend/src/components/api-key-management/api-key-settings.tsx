@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { useApiKeys } from "@/lib/hooks/use-api-keys";
+import { useApiKeys } from "@/hooks/use-api-keys";
 import { ApiKeyForm } from "./api-key-form";
 import { ApiKeyList } from "./api-key-list";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";

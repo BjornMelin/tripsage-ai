@@ -29,7 +29,7 @@ import {
   useMemoryInsights,
   useMemoryStats,
   useUpdatePreferences,
-} from "@/lib/hooks/use-memory";
+} from "@/hooks/use-memory";
 import type {
   PersonalizationInsightsProps,
   UserPreferences,

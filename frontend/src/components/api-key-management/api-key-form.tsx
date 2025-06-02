@@ -18,7 +18,7 @@ import { Loader2 } from "lucide-react";
 import { ApiKeyInput } from "./api-key-input";
 import { ServiceSelector } from "./service-selector";
 import { useApiKeyStore } from "@/stores/api-key-store";
-import { useAddApiKey, useValidateApiKey } from "@/lib/hooks/use-api-keys";
+import { useAddApiKey, useValidateApiKey } from "@/hooks/use-api-keys";
 import { Switch } from "@/components/ui/switch";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { CheckCircle, AlertCircle } from "lucide-react";

@@ -6,12 +6,12 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import ActivitiesSearchPage from "../page";
-import { useActivitySearch } from "@/lib/hooks/use-activity-search";
+import { useActivitySearch } from "@/hooks/use-activity-search";
 import { useSearchStore } from "@/stores/search-store";
 import type { Activity } from "@/types/search";
 
 // Mock the hooks
-vi.mock("@/lib/hooks/use-activity-search", () => ({
+vi.mock("@/hooks/use-activity-search", () => ({
   useActivitySearch: vi.fn(),
 }));
 

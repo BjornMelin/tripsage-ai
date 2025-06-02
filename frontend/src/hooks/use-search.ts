@@ -2,7 +2,7 @@
 
 import { useCallback } from "react";
 import { useSearchStore } from "@/stores/search-store";
-import { useApiQuery, useApiMutation } from "@/lib/hooks/use-api-query";
+import { useApiQuery, useApiMutation } from "@/hooks/use-api-query";
 import type {
   SearchType,
   SearchParams,

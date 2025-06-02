@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback } from "react";
-import { useApiQuery, useApiMutation } from "@/lib/hooks/use-api-query";
+import { useApiQuery, useApiMutation } from "@/hooks/use-api-query";
 import { useAgentStatusStore } from "@/stores/agent-status-store";
 import type {
   Agent,

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useSearchStore } from "@/stores/search-store";
-import { useDestinationSearch } from "@/lib/hooks/use-destination-search";
+import { useDestinationSearch } from "@/hooks/use-destination-search";
 import { DestinationSearchForm } from "@/components/features/search/destination-search-form";
 import { DestinationCard } from "@/components/features/search/destination-card";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
