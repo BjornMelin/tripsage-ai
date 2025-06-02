@@ -38,7 +38,9 @@ class UserResponse(BaseModel):
     created_at: datetime = Field(description="Account creation timestamp")
     updated_at: datetime = Field(description="Last update timestamp")
     is_active: bool = Field(default=True, description="Whether user account is active")
-    is_verified: bool = Field(default=False, description="Whether user account is verified")
+    is_verified: bool = Field(
+        default=False, description="Whether user account is verified"
+    )
     preferences: Optional[Dict] = Field(default=None, description="User preferences")
 
 
@@ -60,7 +62,7 @@ class MessageResponse(BaseModel):
 
 class AuthResponse(BaseModel):
     """Authentication response with user and tokens."""
-    
+
     user: UserResponse = Field(description="User information")
     tokens: Token = Field(description="Authentication tokens")
 

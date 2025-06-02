@@ -111,7 +111,7 @@ def get_principal_id(principal: Principal) -> str:
 async def verify_service_access(
     principal: Principal,
     service: str = "openai",
-    key_service = Depends(get_key_management_service),
+    key_service=Depends(get_key_management_service),
 ) -> bool:
     """Verify that the principal has access to a specific service."""
     # Agents with API keys already have service access
@@ -140,7 +140,6 @@ async def get_cache_service_dep():
 def get_mcp_manager() -> MCPManager:
     """Get the MCP Manager instance."""
     return mcp_manager
-
 
 
 # Module-level dependency singletons

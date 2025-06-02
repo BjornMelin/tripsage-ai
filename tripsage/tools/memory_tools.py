@@ -480,7 +480,6 @@ async def track_user_activity(
         return {"status": "error", "error": str(e)}
 
 
-
 # Health check function
 @function_tool
 @with_error_handling

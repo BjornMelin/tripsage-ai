@@ -6,6 +6,7 @@ for better integration with Core settings and exception handling.
 """
 
 from .chat_orchestration import ChatOrchestrationService
+
 # ChatService removed - replaced with CoreChatService in tripsage_core.services.business.chat_service
 from .error_handling_service import ErrorRecoveryService as ErrorHandlingService
 from .location_service import LocationService

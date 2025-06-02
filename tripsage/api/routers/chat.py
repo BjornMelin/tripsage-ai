@@ -42,7 +42,7 @@ async def chat(
     """
     try:
         user_id = get_principal_id(principal)
-        
+
         # Delegate to unified chat service
         response = await chat_service.chat_completion(user_id, request)
         return response
@@ -51,7 +51,7 @@ async def chat(
         logger.error(f"Chat request failed: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Chat request failed"
+            detail="Chat request failed",
         ) from e
 
 
@@ -73,10 +73,11 @@ async def create_session(
     """
     try:
         user_id = get_principal_id(principal)
-        
+
         from tripsage.api.schemas.requests.chat import SessionCreateRequest
+
         session_request = SessionCreateRequest(title=title)
-        
+
         session = await chat_service.create_session(user_id, session_request)
         return session
 
@@ -84,7 +85,7 @@ async def create_session(
         logger.error(f"Session creation failed: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Session creation failed"
+            detail="Session creation failed",
         ) from e
 
 
@@ -111,7 +112,7 @@ async def list_sessions(
         logger.error(f"Session listing failed: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Session listing failed"
+            detail="Session listing failed",
         ) from e
 
 
@@ -134,13 +135,12 @@ async def get_session(
     try:
         user_id = get_principal_id(principal)
         session = await chat_service.get_session(user_id, session_id)
-        
+
         if session is None:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Session not found"
+                status_code=status.HTTP_404_NOT_FOUND, detail="Session not found"
             )
-            
+
         return session
 
     except HTTPException:
@@ -149,7 +149,7 @@ async def get_session(
         logger.error(f"Session retrieval failed: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Session retrieval failed"
+            detail="Session retrieval failed",
         ) from e
 
 
@@ -180,7 +180,7 @@ async def get_session_messages(
         logger.error(f"Message retrieval failed: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Message retrieval failed"
+            detail="Message retrieval failed",
         ) from e
 
 
@@ -206,10 +206,11 @@ async def create_message(
     """
     try:
         user_id = get_principal_id(principal)
-        
+
         from tripsage.api.schemas.requests.chat import CreateMessageRequest
+
         message_request = CreateMessageRequest(content=content, role=role)
-        
+
         message = await chat_service.create_message(
             user_id, session_id, message_request
         )
@@ -219,7 +220,7 @@ async def create_message(
         logger.error(f"Message creation failed: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Message creation failed"
+            detail="Message creation failed",
         ) from e
 
 
@@ -242,13 +243,12 @@ async def delete_session(
     try:
         user_id = get_principal_id(principal)
         success = await chat_service.delete_session(user_id, session_id)
-        
+
         if not success:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Session not found"
+                status_code=status.HTTP_404_NOT_FOUND, detail="Session not found"
             )
-            
+
         return {"message": "Session deleted successfully"}
 
     except HTTPException:
@@ -257,5 +257,5 @@ async def delete_session(
         logger.error(f"Session deletion failed: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Session deletion failed"
+            detail="Session deletion failed",
         ) from e
