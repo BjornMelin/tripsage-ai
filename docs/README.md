@@ -319,6 +319,23 @@ TripSage is designed for enterprise-scale performance:
 
 ---
 
+## 🔬 Technical Research & Analysis
+
+### **Web Scraping & Performance Research (2024)**
+
+Comprehensive technical analysis supporting TripSage's web crawling and content extraction strategy:
+
+- **[Web Scraping Analysis 2024](research/web_scraping_analysis_2024.md)** - Detailed technical analysis of current implementation (7/10) with upgrade path to enterprise-grade (10/10) web scraping capabilities
+- **[External Research Validation](research/external_research_validation.md)** - External validation and consensus analysis of technical decisions
+
+**Key Research Findings:**
+- **V1.5 Critical Path**: AIOHTTP + TLS fingerprinting = 8.5/10 solution (1-2 weeks)
+- **V1 Full Implementation**: Complete enterprise features = 10/10 solution (3 months)
+- **Performance Validation**: 10x concurrent performance improvement with AIOHTTP
+- **Anti-Detection Strategy**: Modern TLS fingerprinting achieving 92-95% success rates
+
+---
+
 ## 🔗 External Resources
 
 ### **Technology Documentation**
