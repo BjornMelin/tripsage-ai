@@ -18,7 +18,7 @@ This documentation is organized into several key sections to help you find the i
 
 3. **[Database and Storage](./03_DATABASE_AND_STORAGE/README.md)**:
 
-   - Information on TripSage's dual-storage architecture, including guides for relational databases (Supabase/Neon) and the Neo4j knowledge graph, as well as data migration details.
+   - Information on TripSage's unified storage architecture, including the Supabase PostgreSQL setup with pgvector extensions, Mem0 memory system integration, and migration details from legacy architectures.
 
 4. **[MCP Servers](./04_MCP_SERVERS/README.md)**:
 
@@ -38,6 +38,9 @@ This documentation is organized into several key sections to help you find the i
 
 8. **[Reference](./08_REFERENCE/README.md)**:
    - Canonical examples, data schemas, and usage guides for core technologies like Pydantic, database schemas, and centralized settings.
+
+9. **[Archived Documentation](./archived/README.md)**:
+   - Historical documentation including completed research phases, comprehensive code reviews, and deprecated architectural approaches. This preserves development history while maintaining focus on current implementation guidance.
 
 ## Getting Started
 

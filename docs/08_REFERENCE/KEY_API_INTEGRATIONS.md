@@ -1,16 +1,18 @@
 # TripSage Key External API Integrations Guide
 
-This document outlines the strategy and implementation details for integrating key external third-party APIs that power various functionalities within the TripSage system. While TripSage primarily interacts with these services via its Model Context Protocol (MCP) servers or client wrappers, understanding the underlying APIs is crucial.
+This document outlines the strategy and implementation details for integrating key external third-party APIs that power various functionalities within the TripSage system. TripSage uses **7 direct SDK integrations** and **1 MCP server** (Airbnb) for optimal performance and simplified architecture.
 
 ## 1. General API Integration Strategy
 
-TripSage's approach to integrating external APIs involves:
+TripSage's unified architecture approach to integrating external APIs involves:
 
-1.  **Abstraction via MCPs/Clients**: Most direct API interactions are encapsulated within specific MCP servers (e.g., Flights MCP, Weather MCP) or dedicated Python client wrappers. This decouples the core application logic from the specifics of external APIs.
-2.  **Centralized Configuration**: API keys and service endpoints are managed through the centralized Pydantic settings system.
-3.  **Error Handling**: Standardized error handling and retry mechanisms are implemented in the client wrappers or MCP servers.
-4.  **Caching**: Responses from external APIs are cached (using Redis) to improve performance and manage rate limits/costs.
-5.  **Asynchronous Operations**: API calls are made asynchronously using libraries like `httpx` (Python) or `axios` (Node.js for MCPs).
+1.  **Direct SDK Integration**: 7 primary services use official SDKs for optimal performance and native Python integration
+2.  **Single MCP Server**: Only Airbnb integration uses MCP server due to lack of official API access
+3.  **BYOK (Bring Your Own Key)**: Centralized user-provided API key management with secure encryption
+4.  **Unified Configuration**: All API keys and service endpoints managed through Pydantic settings with validation
+5.  **Advanced Error Handling**: Standardized retry mechanisms, circuit breakers, and graceful degradation
+6.  **DragonflyDB Caching**: High-performance caching with multi-tier TTL strategy (25x faster than Redis)
+7.  **Asynchronous Operations**: All API calls use `httpx` with connection pooling and timeout management
 
 ## 2. Flight Data and Booking APIs
 
@@ -24,7 +26,7 @@ TripSage's approach to integrating external APIs involves:
 *   **Versioning**: Via `Duffel-Version` header (e.g., `2023-06-02`).
 *   **SDKs**: Official SDKs available (e.g., `@duffel/api` for Node.js, `duffel_api` for Python). TripSage's Flights MCP (Node.js based) uses the official Node.js SDK.
 *   **Pricing**: Transaction-based fees.
-*   **TripSage Integration**: Via the **Flights MCP Server**. The MCP server's `DuffelService` encapsulates all interactions with the Duffel API.
+*   **TripSage Integration**: **Direct SDK Integration** via `DuffelFlightsService` using the official Duffel Python SDK.
     *   Key Endpoints Used (by Flights MCP):
         *   `POST /air/offer_requests`: To initiate a flight search.
         *   `GET /air/offers?offer_request_id={id}`: To retrieve flight offers.
@@ -53,24 +55,20 @@ TripSage's approach to integrating external APIs involves:
 
 TripSage uses a hybrid approach, primarily relying on MCP servers that scrape public data, and potentially direct API integrations in the future.
 
-### 3.1. Airbnb Data (via OpenBnB MCP Server)
+### 3.1. Airbnb Data (via Airbnb MCP Server)
 
 *   **Source**: Public Airbnb website data.
-*   **Integration**: Via the `@openbnb/mcp-server-airbnb` (Node.js).
-*   **Functionality**: Search listings, get listing details. No booking.
-*   **Authentication**: None required for the OpenBnB MCP itself.
-*   **Rationale**: Provides access to Airbnb's unique vacation rental inventory without needing a private API.
-*   **TripSage Integration**: Via the **Accommodations MCP Server** (which internally uses a client for the OpenBnB MCP).
+*   **Integration**: Via the `@openbnb/mcp-server-airbnb` (Node.js) - **Only remaining MCP integration**.
+*   **Functionality**: Search listings, get listing details, pricing information. No booking capability.
+*   **Authentication**: None required for the MCP server itself.
+*   **Rationale**: No official Airbnb API available; MCP provides structured access to vacation rental inventory.
+*   **TripSage Integration**: Via dedicated `AirbnbMCPClient` with caching and error handling.
 
-### 3.2. Booking.com Data (via Apify Booking.com Scraper)
+### 3.2. Alternative Hotel Data Sources
 
-*   **Source**: Public Booking.com website data.
-*   **Integration**: Via an Apify actor (e.g., `voyager/booking-scraper`). TripSage uses the Apify API to run this actor and retrieve results.
-*   **Functionality**: Hotel/accommodation search, property details, pricing, reviews. No direct booking.
-*   **Authentication**: Apify API Token.
-*   **Pricing**: Apify platform credits (pay-per-execution/usage).
-*   **Rationale**: Access to Booking.com's extensive hotel inventory.
-*   **TripSage Integration**: Via the **Accommodations MCP Server** (which has an internal `ApifyService` to call the Apify API).
+*   **Note**: Direct hotel booking integrations are planned for future releases.
+*   **Current Focus**: Airbnb vacation rentals provide unique inventory not available through other channels.
+*   **Future Integrations**: Considering direct partnerships with hotel chains and OTA APIs for comprehensive accommodation coverage.
 
 ### 3.3. Alternatives Considered for Accommodations:
 
@@ -91,7 +89,7 @@ TripSage uses a hybrid approach, primarily relying on MCP servers that scrape pu
 *   **Authentication**: API Key.
 *   **SDKs**: Official SDKs for various languages (e.g., `@googlemaps/google-maps-services-js` for Node.js, `google-maps-services-python`).
 *   **Pricing**: Pay-as-you-go with a significant monthly free tier ($200 credit).
-*   **TripSage Integration**: Via the **Google Maps MCP Server** (`@modelcontextprotocol/server-google-maps`, Node.js based). TripSage's Python backend uses a client to communicate with this MCP server.
+*   **TripSage Integration**: **Direct SDK Integration** via `GoogleMapsService` using the official Google Maps Python SDK with BYOK support.
 *   **Rationale for Choice**: Highest quality and most comprehensive mapping, place, and routing data globally. Excellent documentation and SDKs. Free tier is usually sufficient for development and personal/small-scale use.
 
 ### 4.2. Alternatives Considered for Maps:
@@ -108,22 +106,22 @@ TripSage uses a hybrid approach, primarily relying on MCP servers that scrape pu
     *   Strong enterprise offering, particularly good for automotive and logistics.
     *   Good global coverage.
 
-## 5. Web Search APIs (for General Information)
+## 5. Web Crawling and Search APIs
 
-### 5.1. Primary Method: OpenAI WebSearchTool (via Agents SDK)
+### 5.1. Primary Method: Crawl4AI (Direct Integration)
 
-*   **Functionality**: Allows AI agents to perform web searches to answer general knowledge questions, find current events, or research topics not covered by specialized APIs.
-*   **Integration**: Natively available as a tool within the OpenAI Agents SDK.
-*   **Configuration**: TripSage enhances this by providing travel-optimized `allowed_domains` and `blocked_domains` lists to guide the agent towards reliable travel information sources.
-*   **Cost**: Included as part of the OpenAI API usage (token consumption for search queries and processing results).
-*   **Rationale**: Simplifies implementation as it's built into the agent framework. Agent can autonomously decide when and what to search. Travel-specific domain configuration helps improve relevance.
+*   **Functionality**: High-performance web crawling and content extraction optimized for travel information gathering.
+*   **Integration**: **Direct SDK Integration** via `Crawl4AIService` with async HTTP client.
+*   **Configuration**: Self-hosted Crawl4AI instance with travel-specific extraction rules and content filtering.
+*   **Performance**: Async processing with connection pooling, 5 concurrent requests max.
+*   **Cost**: Self-hosted infrastructure costs only, no per-request fees.
+*   **Rationale**: Superior performance and control compared to external search APIs. Optimized for structured travel data extraction.
 
-### 5.2. Specialized Web Crawling (via WebCrawl MCP)
+### 5.2. Dynamic Content Handling
 
-*   **Functionality**: For deeper, structured data extraction from specific websites or topics, TripSage uses its **WebCrawl MCP**. This MCP, in turn, uses:
-    *   **Crawl4AI (Self-Hosted)**: For efficient bulk crawling and extraction from informational sites.
-    *   **Playwright (via BrowserAutomation MCP or embedded)**: For dynamic, JavaScript-heavy sites.
-*   **Rationale**: Used when WebSearchTool is too general or cannot extract information in the required structured format.
+*   **Playwright Integration**: Embedded within Crawl4AI for JavaScript-heavy sites and dynamic content.
+*   **Browser Automation**: Headless Chrome instances for complex interactions and SPA rendering.
+*   **Intelligent Routing**: Automatic selection between static crawling and browser automation based on site requirements.
 
 ### 5.3. Alternatives Considered for General Search:
 
@@ -136,27 +134,43 @@ TripSage uses a hybrid approach, primarily relying on MCP servers that scrape pu
     *   **Pros**: Standardized MCP interface.
     *   **Cons**: May add an extra layer if the underlying search is one of the above; WebSearchTool is more direct for OpenAI agents. Considered as a potential supplement if WebSearchTool has limitations.
 
-## 6. Authentication Flow for External APIs
+## 6. BYOK (Bring Your Own Key) Authentication System
 
-*   **API Keys**: For services like Duffel, Apify, Google Maps, API keys are stored securely in TripSage's centralized configuration (loaded from environment variables using Pydantic `SecretStr`). These keys are used by the respective MCP servers or client wrappers when making calls.
-*   **OAuth 2.0 (e.g., Google Calendar, potentially Amadeus)**:
-    1.  **Authorization Request**: TripSage (via the relevant MCP server like Calendar MCP) initiates the OAuth flow by redirecting the user to the provider's authorization server with requested scopes.
-    2.  **User Consent**: User grants permission.
-    3.  **Authorization Code**: Provider redirects back to TripSage's registered callback URI with an authorization code.
-    4.  **Token Exchange**: TripSage's MCP server exchanges the code for an access token and a refresh token.
-    5.  **Token Storage**: Access and refresh tokens are securely stored (e.g., encrypted in Supabase, associated with the TripSage user).
-    6.  **API Access**: Access token is used for API calls. Refresh token is used to obtain new access tokens when they expire.
+*   **User-Provided API Keys**: Users provide their own API keys for external services, ensuring cost control and compliance.
+*   **Secure Storage**: API keys encrypted using AES-256 with user-specific salt and master secret.
+*   **Key Validation**: Automatic validation of API keys before storage and periodic health checks.
+*   **Service Mapping**: Each user can configure keys for specific services (Duffel, Google Maps, etc.).
+*   **Fallback Handling**: Graceful degradation when user keys are invalid or quota exceeded.
+*   **OAuth 2.0 (Google Calendar)**: 
+    1.  **Authorization Request**: TripSage initiates OAuth flow via `GoogleCalendarService` 
+    2.  **User Consent**: User grants calendar access permissions
+    3.  **Token Exchange**: Service exchanges authorization code for access/refresh tokens
+    4.  **Secure Storage**: Tokens encrypted and stored in Supabase with user association
+    5.  **Automatic Refresh**: Background token refresh with fallback error handling
+    6.  **Scoped Access**: Minimal required permissions for calendar read/write operations
 
-## 7. API Client Implementation in TripSage
+## 7. Current External Service Integrations
 
-For each external API integrated (usually via an MCP server), TripSage has a corresponding Python client class (e.g., `FlightsMCPClient`, `GoogleMapsMCPClient`). These clients typically:
+### Direct SDK Integrations (7 services):
 
-*   Inherit from a `BaseMCPClient` (part of the MCP Abstraction Layer).
-*   Handle request formatting, authentication, and response parsing.
-*   Integrate with the Redis caching layer.
-*   Implement standardized error handling.
-*   Expose methods as `@function_tool` for easy use by AI agents.
+1. **Duffel** - Flight search and booking (`DuffelFlightsService`)
+2. **Google Maps** - Geocoding, places, directions (`GoogleMapsService`)
+3. **Google Calendar** - Calendar integration (`GoogleCalendarService`)
+4. **OpenWeatherMap** - Weather data (`WeatherService`)
+5. **Visual Crossing** - Extended weather forecasts (`WeatherService`)
+6. **Crawl4AI** - Web crawling and content extraction (`Crawl4AIService`)
+7. **Mem0** - Memory and embedding operations (`Mem0Service`)
 
-(See specific MCP server documents in `docs/04_MCP_SERVERS/` for details on their underlying API usage and client implementations.)
+### MCP Integration (1 service):
 
-This multi-API integration strategy allows TripSage to leverage best-in-class services for each specific travel domain, providing a rich and comprehensive dataset for its AI planning agents.
+8. **Airbnb** - Vacation rental listings (`AirbnbMCPClient`)
+
+### Service Architecture:
+
+*   **Unified Service Pattern**: All services inherit from `BaseService` with standardized error handling
+*   **DragonflyDB Integration**: High-performance caching across all services
+*   **BYOK Support**: User-provided API keys for cost control and compliance
+*   **Agent Tool Integration**: Services exposed as `@function_tool` for AI agent use
+*   **Performance Monitoring**: Request tracking, error rates, and latency monitoring
+
+This streamlined integration strategy provides optimal performance while maintaining flexibility and user control over API costs.

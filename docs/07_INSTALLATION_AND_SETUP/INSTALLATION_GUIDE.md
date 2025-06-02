@@ -1,274 +1,304 @@
-# TripSage Installation and Usage Guide
+# TripSage Installation and Setup Guide
 
-This guide explains how to set up, install, and run the TripSage project and its components using the `uv` Python package manager.
+This guide explains how to set up and run the TripSage AI travel planning platform. TripSage features a unified architecture with a single FastAPI service, Supabase + pgvector database, DragonflyDB caching, and a Next.js 15 frontend.
 
-## Prerequisites
+## System Requirements
 
-- Python 3.10 or higher
-- `uv` package manager (installation instructions below)
-- Git (for cloning the repository)
-- Node.js 16+ (for MCP servers - see [Node.js Compatibility Guide](./node_js/COMPATIBILITY_GUIDE.md))
+- **Python**: 3.12+ (required for modern async features)
+- **Node.js**: 18+ (required for Next.js 15)
+- **pnpm**: Latest version (preferred package manager)
+- **uv**: Latest version (Python package manager)
+- **Git**: For cloning the repository
+- **Docker**: Optional, for local DragonflyDB
 
-## Installing UV
+## Quick Start
 
-If you don't have `uv` installed, you can install it using:
-
-```bash
-# On macOS or Linux
-curl -sSf https://astral.sh/uv/install.sh | sh
-
-# On Windows with PowerShell
-irm https://astral.sh/uv/install.ps1 | iex
-```
-
-## Project Structure
-
-TripSage uses a hybrid package management approach:
-
-- Root level `pyproject.toml` for project-wide settings and shared dependencies
-- Individual `requirements.txt` files in each subproject for component-specific dependencies
-
-The main subprojects are:
-
-- `src/api/` - Backend API server
-- `src/agents/` - AI agents implementation
-- `src/mcp/` - MCP server implementations (browser, time, weather, etc.)
-- `src/db/` - Database access layer
-
-## Installation
-
-### 1. Clone the Repository
+### 1. Clone and Setup
 
 ```bash
+# Clone the repository
 git clone <repository-url>
 cd tripsage-ai
-```
 
-### 2. Create and Activate Virtual Environment
-
-UV's built-in virtual environment management:
-
-```bash
-# Create a virtual environment in the project directory
+# Create Python virtual environment
 uv venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 
-# Activate the virtual environment
-# On macOS/Linux:
-source .venv/bin/activate
-# On Windows:
-.venv\Scripts\activate
+# Install Python dependencies
+uv pip install -e .
+
+# Install frontend dependencies
+cd frontend
+pnpm install
+cd ..
 ```
 
-### 3. Install Dependencies
+### 2. Environment Configuration
 
-#### Option 1: Complete Installation (Recommended)
-
-The simplest approach is to use the root `requirements.txt`, which includes all dependencies:
+Copy the environment template and configure your services:
 
 ```bash
-# From the project root with virtual environment activated
-uv pip install -r requirements.txt
+cp .env.example .env
 ```
 
-This installs most common dependencies, but may not include all module-specific dependencies.
+Edit `.env` with your service credentials:
 
-#### Option 2: Comprehensive Installation
+```env
+# Core Configuration
+DEBUG=false
+ENVIRONMENT=development
+PORT=8000
 
-For a complete installation of all dependencies including subprojects:
+# AI Services (Required)
+OPENAI_API_KEY=your_openai_api_key_here
+
+# Database - Supabase (Required)
+SUPABASE_URL=https://your-project-id.supabase.co
+SUPABASE_ANON_KEY=your_supabase_anon_key_here
+SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key_here
+
+# Cache - DragonflyDB (Local development)
+DRAGONFLY_URL=redis://localhost:6379
+DRAGONFLY_PASSWORD=your_secure_password
+
+# External APIs (Optional - for full functionality)
+GOOGLE_MAPS_API_KEY=your_google_maps_api_key_here
+DUFFEL_API_KEY=your_duffel_api_key_here
+OPENWEATHERMAP_API_KEY=your_openweathermap_api_key_here
+```
+
+### 3. Database Setup
+
+TripSage uses Supabase with pgvector for unified storage:
 
 ```bash
-# Install main project dependencies
-uv pip install -r requirements.txt
+# Run database migrations
+uv run python scripts/database/run_migrations.py
 
-# Install subproject dependencies
-uv pip install -r src/api/requirements.txt
-uv pip install -r src/agents/requirements.txt
-uv pip install -r src/mcp/browser/requirements.txt
-
-# Install any other module-specific dependencies as needed
-# For example:
-# uv pip install -r path/to/other/requirements.txt
+# Verify database connection
+uv run python scripts/verification/verify_connection.py
 ```
 
-#### Option 3: Modular Installation
+### 4. Start Services
 
-If you prefer a more granular approach:
-
-1. Install project-wide shared dependencies:
-
-   ```bash
-   uv pip install -e .
-   ```
-
-2. Install component-specific dependencies based on which parts you're working with:
-
+#### Option A: Development (Recommended)
 ```bash
-# For API component
-uv pip install -r src/api/requirements.txt
+# Terminal 1: Start DragonflyDB (if not using external Redis)
+docker-compose up dragonfly
 
-# For Agents component
-uv pip install -r src/agents/requirements.txt
+# Terminal 2: Start API server
+uv run python -m tripsage.api.main
 
-# For Browser MCP
-uv pip install -r src/mcp/browser/requirements.txt
+# Terminal 3: Start frontend
+cd frontend
+pnpm dev
 ```
 
-#### Option 4: Development Setup
-
-If you're focusing on development:
-
+#### Option B: Full Infrastructure
 ```bash
-# Install development dependencies
-uv pip install -e ".[dev]"
+# Start all infrastructure services
+docker-compose up -d
 
-# Then add required component dependencies
-uv pip install -r src/api/requirements.txt
-uv pip install -r src/agents/requirements.txt
-uv pip install -r src/mcp/browser/requirements.txt
+# Start API server
+uv run python -m tripsage.api.main
+
+# Start frontend (in another terminal)
+cd frontend && pnpm dev
 ```
 
-## Running the Project
+### 5. Verify Installation
 
-### Setting Up Environment Variables
+- **API**: <http://localhost:8000/docs> (FastAPI docs)
+- **Frontend**: <http://localhost:3000> (Next.js app)
+- **Monitoring**: <http://localhost:3000> (Grafana, if using full stack)
 
-Create a `.env` file in the project root:
+## Architecture Overview
 
-```bash
-touch .env
-```
+### Unified Backend
+- **Single FastAPI service** at `tripsage/api/`
+- **LangGraph Phase 3** for agent orchestration
+- **PostgreSQL checkpointing** for conversation state
+- **Mem0 memory system** with pgvector backend
 
-Add the necessary environment variables to the `.env` file:
+### Database Stack
+- **Supabase**: Primary database with pgvector for embeddings
+- **DragonflyDB**: 25x faster Redis-compatible caching
+- **No Neo4j**: Eliminated for simplified architecture
 
-```plaintext
-# API Keys
-OPENAI_API_KEY=your_openai_api_key
+### API Integrations
+- **7 Direct SDKs**: Google Maps, Duffel, OpenWeather, etc.
+- **1 MCP Server**: Airbnb (only remaining MCP)
+- **BYOK System**: Bring Your Own Key authentication
 
-# Supabase Configuration
-SUPABASE_URL=your_supabase_url
-SUPABASE_KEY=your_supabase_anon_key
-SUPABASE_SERVICE_KEY=your_supabase_service_key
-
-# API Configuration
-API_SECRET_KEY=your_api_secret_key
-```
-
-### Running the API Server
-
-```bash
-cd src/api
-uvicorn main:app --reload
-```
-
-The API will be available at <http://localhost:8000>
-
-### Running Agent Components
-
-```bash
-cd src/agents
-python travel_agent.py
-```
+### Frontend
+- **Next.js 15**: Modern React with App Router
+- **TypeScript**: Full type safety
+- **Tailwind CSS**: Utility-first styling
+- **Zustand**: State management
 
 ## Development Workflow
 
-### Code Formatting and Linting
-
-Format and lint your code using Ruff:
-
+### Code Quality
 ```bash
-# Format code
-ruff format .
+# Python (run from project root)
+ruff check . --fix && ruff format .
+uv run pytest --cov=tripsage
 
-# Lint code
-ruff check .
+# TypeScript (run from frontend/)
+cd frontend
+npx biome lint --apply .
+npx biome format --write .
+npx vitest run --coverage
 ```
 
-### Adding New Dependencies
-
-When adding new dependencies to a specific component:
-
+### Testing
 ```bash
-# For API component
-cd src/api
-uv pip install new_package
-uv pip freeze > requirements.txt  # Update requirements.txt
+# Backend tests
+uv run pytest tests/ --cov=tripsage --cov-report=html
 
-# For Agents component
-cd src/agents
-uv pip install new_package
-uv pip freeze > requirements.txt  # Update requirements.txt
+# Frontend tests
+cd frontend
+pnpm test:run
+pnpm test:e2e
+
+# Integration tests
+uv run pytest tests/integration/ -v
 ```
 
-For project-wide dependencies, update the `pyproject.toml` file manually and then run:
+### Adding Dependencies
 
+**Python packages:**
 ```bash
+# Add to pyproject.toml dependencies, then:
 uv pip install -e .
 ```
 
-### Running Tests
-
+**Frontend packages:**
 ```bash
-# Run all tests
-pytest
-
-# Run specific test file
-pytest tests/test_file.py
+cd frontend
+pnpm add package-name
+# For dev dependencies:
+pnpm add -D package-name
 ```
+
+## Production Deployment
+
+### Environment Variables
+Ensure all production environment variables are set:
+- Database connection strings
+- API keys for external services
+- Security keys and passwords
+- Monitoring and logging configuration
+
+### Database Migration
+```bash
+# Run production migrations
+ENVIRONMENT=production uv run python scripts/database/run_migrations.py
+```
+
+### Build and Deploy
+```bash
+# Build frontend
+cd frontend
+pnpm build
+
+# Start production API
+ENVIRONMENT=production uvicorn tripsage.api.main:app --host 0.0.0.0 --port 8000
+
+# Start production frontend
+cd frontend
+pnpm start
+```
+
+## Configuration Details
+
+### BYOK (Bring Your Own Key) System
+Users provide their own API keys through the frontend:
+- Stored securely in Supabase
+- Encrypted at rest
+- Validated before use
+- Supports: OpenAI, Google Maps, Duffel, OpenWeather
+
+### Memory System (Mem0)
+- **Unified memory** across all conversations
+- **pgvector embeddings** for semantic search
+- **Automatic context** building for agents
+- **Persistent storage** in Supabase
+
+### Agent Orchestration (LangGraph)
+- **Phase 3 implementation** with PostgreSQL checkpointing
+- **State persistence** across sessions
+- **Error recovery** and retry logic
+- **Parallel agent execution** for performance
 
 ## Troubleshooting
 
 ### Common Issues
 
-#### Package Not Found
-
-If you encounter "package not found" errors, ensure you've installed the dependencies for the specific component you're working with:
-
+**Database Connection Errors:**
 ```bash
-# Verify which component's dependencies you need
-uv pip install -r src/component_name/requirements.txt
+# Check Supabase connection
+uv run python scripts/verification/verify_connection.py
+
+# Check environment variables
+grep -E "SUPABASE|DATABASE" .env
 ```
 
-Different modules have their own requirements.txt files:
-
-- Main project: `/requirements.txt`
-- API: `/src/api/requirements.txt`
-- Agents: `/src/agents/requirements.txt`
-- Browser MCP: `/src/mcp/browser/requirements.txt`
-- (Other MCP components may have their own requirements.txt files)
-
-#### Environment Variable Issues
-
-If you encounter errors related to missing environment variables, make sure your `.env` file is properly set up and you're running your code from the correct directory.
-
-#### Virtual Environment Issues
-
-If your virtual environment isn't working correctly, you can recreate it:
-
+**DragonflyDB/Redis Issues:**
 ```bash
-# Remove existing virtual environment
-rm -rf .venv
+# Test cache connection
+docker exec -it tripsage-dragonfly redis-cli ping
 
-# Create a new virtual environment
-uv venv
+# Check cache configuration
+grep -E "DRAGONFLY|REDIS" .env
+```
 
-# Activate and reinstall dependencies
-source .venv/bin/activate  # or .venv\Scripts\activate on Windows
+**Import Errors:**
+```bash
+# Reinstall in development mode
 uv pip install -e .
+
+# Check Python path
+python -c "import tripsage; print(tripsage.__file__)"
 ```
 
-## Project Verification
-
-To verify your installation works correctly:
-
+**Frontend Build Issues:**
 ```bash
-# Run the connection verification script
-cd scripts
-node verify_connection.js
+cd frontend
+# Clear cache and reinstall
+rm -rf node_modules .next
+pnpm install
+pnpm build
 ```
 
-## Best Practices
+### Performance Tuning
 
-1. **Always activate the virtual environment** before working on the project
-2. **Keep requirements.txt files updated** when adding new dependencies
-3. **Run formatting and linting checks** before committing code
-4. **Never commit** the `.env` file or API keys
-5. **Follow the Python standards** defined in CLAUDE.md
+**Database:**
+- Enable pgvector extension in Supabase
+- Configure connection pooling
+- Monitor query performance
+
+**Caching:**
+- Use DragonflyDB for 25x performance improvement
+- Configure appropriate TTL values
+- Monitor cache hit rates
+
+**Frontend:**
+- Enable Next.js 15 Turbopack for development
+- Optimize bundle size with tree shaking
+- Use React 19 concurrent features
+
+## Getting Help
+
+1. **Check logs**: Both API and frontend provide detailed error logs
+2. **Run verification**: Use scripts in `scripts/verification/`
+3. **Review documentation**: See `docs/` for detailed guides
+4. **Test configuration**: Ensure `.env` variables are correctly set
+
+## Security Considerations
+
+- **Never commit `.env`** files with real credentials
+- **Use `.env.example`** as a template only
+- **Rotate API keys** regularly
+- **Enable HTTPS** in production
+- **Configure CORS** appropriately for your domain

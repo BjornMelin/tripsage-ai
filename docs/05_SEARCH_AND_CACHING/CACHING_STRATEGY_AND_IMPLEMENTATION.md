@@ -4,16 +4,18 @@ This document provides a comprehensive guide to TripSage's caching strategy and 
 
 ## 1. Overview of Caching Strategy
 
-TripSage implements a multi-level caching strategy to reduce latency, minimize API calls, improve scalability, and deliver a faster user experience. **DragonflyDB** serves as the primary cache store, providing **25x performance improvement** over Redis.
+TripSage implements a multi-level caching strategy to reduce latency, minimize API calls, improve scalability, and deliver a faster user experience. **DragonflyDB** serves as the primary cache store, providing **25x performance improvement** over Redis with significantly higher throughput capabilities.
 
 ### Migration from Redis to DragonflyDB
 
 **Performance Benefits**:
 
 - **25x faster operations** compared to Redis
-- **Lower memory usage** with better compression
+- **Significantly higher throughput** for concurrent operations
+- **Lower memory usage** with better compression algorithms
 - **Higher throughput** for concurrent operations
 - **Better scalability** for travel application workloads
+- **Redis-compatible API** ensuring seamless migration
 
 ## 2. Caching Architecture
 
@@ -64,10 +66,14 @@ class DragonflyCache:
 
 ## 5. Caching in Specific Components
 
-- **Web Search Services**: Specialized cache for search queries using direct SDK integrations.
-- **Service Clients**: Cache results from external APIs (flights via Duffel SDK, weather via direct APIs, etc.) using generated keys.
-- **Supabase Queries**: Cache frequent database queries and results.
-- **Mem0 Memory System**: Cache memory retrieval and embedding operations.
+- **Direct SDK Integrations**: High-performance cache for 7 direct SDK services (Duffel, Google Maps/Calendar, OpenWeatherMap, Crawl4AI)
+- **Unified Service Clients**: Cache results from external APIs using multi-tier TTL strategy:
+  - **Flight data**: 5-10 minutes (high volatility)
+  - **Weather data**: 30 minutes (medium volatility) 
+  - **Maps/Places data**: 24 hours (low volatility)
+  - **Accommodation data**: 1 hour via Airbnb MCP
+- **Supabase Queries**: Cache frequent database queries and pgvector operations
+- **Mem0 Memory System**: Cache embedding operations and similarity searches
 
 ## 6. Stale-While-Revalidate Pattern
 
@@ -102,16 +108,25 @@ class DragonflyCache:
 
 | Metric | Redis | DragonflyDB | Improvement |
 |--------|-------|-------------|-------------|
-| Operations/sec | 100K | 2.5M | 25x |
+| Operations/sec | 257K | 6.4M+ | 25x |
 | Memory Usage | Baseline | 30% less | 1.4x efficiency |
 | Latency (P99) | 10ms | 0.4ms | 25x faster |
 | Concurrent Connections | 10K | 1M | 100x |
+| Multi-tier TTL Support | Basic | Advanced | Native |
+
+### Multi-Tier TTL Strategy Implementation
+
+- **Short TTL (5 minutes)**: Flight prices, real-time availability
+- **Medium TTL (1 hour)**: Hotel listings, search results
+- **Long TTL (24 hours)**: Static location data, airport information
+- **Ultra-long TTL (7 days)**: Configuration data, feature flags
 
 ### Integration with Unified Architecture
 
 - **Seamless Migration**: Redis-compatible API ensures drop-in replacement
-- **Enhanced Direct SDK Performance**: Faster caching complements direct service integration
-- **Unified Storage Benefits**: Works synergistically with Supabase + pgvector architecture
+- **Enhanced Direct SDK Performance**: Faster caching complements 7 direct service integrations
+- **Unified Storage Benefits**: Works synergistically with Supabase + pgvector + Mem0 architecture
+- **BYOK Support**: Secure caching of user-provided API keys and responses
 - **Cost Efficiency**: Better performance-per-dollar ratio than Redis solutions
 
 ## 12. Conclusion

@@ -33,7 +33,7 @@ The system is now production-ready with a clear roadmap for final SDK migrations
   - Full error handling and monitoring integration
 
 - ✅ **Session Memory Bridge** (`tripsage/orchestration/memory_bridge.py`)
-  - Bidirectional state synchronization with Neo4j knowledge graph
+  - Intelligent memory management with Mem0 + pgvector integration
   - State hydration from user preferences and conversation history
   - Insight extraction and persistence from LangGraph state
 

@@ -9,7 +9,7 @@ This section details the comprehensive strategies and implementations for search
   - Outlines TripSage's hybrid search approach, which combines the capabilities of OpenAI's WebSearchTool, specialized web crawling via the WebCrawl MCP, and interactive browser automation via the BrowserAutomation MCP. This document explains the tool selection logic, an overview of how different search tools are configured and used for travel-specific queries, and how results are aggregated and presented.
 
 - **[Caching Strategy and Implementation](./CACHING_STRATEGY_AND_IMPLEMENTATION.md)**:
-  - Provides a detailed guide to TripSage's multi-level caching architecture, primarily leveraging Redis. It covers cache key generation, content-aware Time-To-Live (TTL) policies, cache invalidation strategies, integration with various MCP clients and services (including WebSearchTool and WebCrawl MCP), and monitoring for cache performance. This document also includes specifics on rate limiting management using Redis.
+  - Provides a detailed guide to TripSage's multi-level caching architecture, leveraging **DragonflyDB** for **25x performance improvement** over Redis. It covers cache key generation, multi-tier Time-To-Live (TTL) policies, cache invalidation strategies, integration with 7 direct SDK services and 1 MCP server (Airbnb), and performance monitoring. This document includes specifics on **high-throughput operations** and advanced rate limiting management using DragonflyDB's superior performance characteristics.
 
 ## Purpose
 
