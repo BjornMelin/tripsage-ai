@@ -5,6 +5,7 @@ This document provides a comprehensive overview of the TripSage AI Travel Planni
 ## 1. Executive Summary
 
 TripSage implements a modern **4-layer unified architecture** that has achieved:
+
 - **25x cache performance improvement** with DragonflyDB
 - **91% faster memory operations** with Mem0 + pgvector
 - **80% cost reduction** through architecture simplification
@@ -89,6 +90,7 @@ TripSage implements a modern **4-layer unified architecture** that has achieved:
 ### 3.1. Phase 3 Completion Status (May 2025)
 
 **✅ PRODUCTION READY**:
+
 - **LangGraph Agent Orchestration**: Complete with 100% test coverage
 - **Unified Database Architecture**: Single Supabase PostgreSQL instance
 - **Memory System**: Mem0 with pgvector backend (91% faster)
@@ -96,21 +98,24 @@ TripSage implements a modern **4-layer unified architecture** that has achieved:
 - **Direct SDK Integrations**: 7 services migrated from MCP
 
 **🔄 SDK Migration Progress**:
+
 - **Week 1 Complete**: Redis→DragonflyDB, Supabase direct SDK
 - **Remaining**: Google Maps, Calendar, Weather, Time services
 - **Expected**: Additional 50-70% latency reduction
 
 ### 3.2. Technology Stack Evolution
 
-#### **From Complex Multi-Service to Unified Architecture**:
+#### **From Complex Multi-Service to Unified Architecture**
 
 **Before (2024)**:
+
 - 12 MCP servers with abstraction overhead
 - Multiple databases (Neo4j, Qdrant, PostgreSQL)
 - Complex dual-storage patterns
 - Redis caching with performance limitations
 
 **After (2025)**:
+
 - 7 direct SDK integrations + 1 MCP (Airbnb only)
 - Single Supabase PostgreSQL with pgvector
 - Mem0 memory system with 91% performance improvement
@@ -121,6 +126,7 @@ TripSage implements a modern **4-layer unified architecture** that has achieved:
 ### 4.1. Presentation Layer
 
 #### **Frontend (Next.js 15)**
+
 - **App Router**: Modern routing with server-side rendering
 - **React Server Components**: Optimized server-side rendering
 - **Real-time Features**: WebSocket integration for live updates
@@ -129,6 +135,7 @@ TripSage implements a modern **4-layer unified architecture** that has achieved:
 - **Performance**: Code splitting and lazy loading
 
 #### **AI Agents (LangGraph)**
+
 - **Planning Agent**: Master coordinator for complex trip planning
 - **Specialized Agents**: Flight, Accommodation, Budget, Destination
 - **Memory Agent**: Context management and user preference learning
@@ -138,21 +145,25 @@ TripSage implements a modern **4-layer unified architecture** that has achieved:
 ### 4.2. Unified API Layer (FastAPI)
 
 #### **Consumer-Aware Design**
+
 The API automatically adapts responses based on consumer type:
 
 **Frontend Consumers**:
+
 - User-friendly error messages and UI metadata
 - Pagination and display hints
 - Standard rate limits for human interaction
 - Sanitized data for web display
 
 **Agent Consumers**:
+
 - Technical error context and debugging information
 - Tool integration metadata and suggestions
 - Enhanced rate limits for automated workflows
 - Raw data access for AI processing
 
 #### **Core Features**
+
 - **Authentication**: JWT for users, API keys for agents, BYOK support
 - **Rate Limiting**: Consumer-aware limits with principal tracking
 - **WebSocket Support**: Real-time communication for chat and collaboration
@@ -162,26 +173,31 @@ The API automatically adapts responses based on consumer type:
 ### 4.3. Business Logic Layer (TripSage Core)
 
 #### **Service Architecture**
+
 Three-tier service design with clean separation:
 
 **Business Services**:
+
 - AuthService, MemoryService, ChatService
 - FlightService, AccommodationService, DestinationService  
 - TripService, ItineraryService, UserService
 - KeyManagementService, FileProcessingService
 
 **External API Services**:
+
 - GoogleMapsService, WeatherService, CalendarService
 - DocumentAnalyzer, WebcrawlService, PlaywrightService
 - TimeService with timezone handling
 
 **Infrastructure Services**:
+
 - DatabaseService with transaction management
 - CacheService with DragonflyDB integration
 - WebSocketManager for real-time communication
 - KeyMonitoringService for security
 
 #### **LangGraph Orchestration**
+
 - **Graph-based Workflows**: Complex multi-step planning
 - **PostgreSQL Checkpointing**: Persistent state management
 - **Memory Bridge**: Neo4j integration for relationship data
@@ -191,6 +207,7 @@ Three-tier service design with clean separation:
 ### 4.4. Infrastructure Layer
 
 #### **Unified Database (Supabase)**
+
 - **PostgreSQL 15**: Primary data storage with ACID compliance
 - **pgvector Extension**: Vector similarity search (471 QPS, 11x faster)
 - **Row Level Security**: Fine-grained access control
@@ -198,6 +215,7 @@ Three-tier service design with clean separation:
 - **Migration System**: Version-controlled schema evolution
 
 #### **High-Performance Cache (DragonflyDB)**
+
 - **25x Performance**: 6.43M operations/second vs Redis
 - **Redis Compatibility**: Drop-in replacement with enhanced features
 - **Multi-tier TTL Strategy**: Hot/warm/cold data management
@@ -205,6 +223,7 @@ Three-tier service design with clean separation:
 - **Intelligent Invalidation**: Smart cache refresh strategies
 
 #### **Memory System (Mem0 + pgvector)**
+
 - **91% Performance Improvement**: vs traditional context approaches
 - **Vector Storage**: pgvector backend for similarity search
 - **Context Compression**: Intelligent memory summarization
@@ -257,6 +276,7 @@ class ServiceManager:
 ### 5.2. Performance Benefits
 
 **Direct SDK Integration Results**:
+
 - **Latency Reduction**: 50-70% vs MCP abstraction
 - **Type Safety**: Native SDK types and Pydantic validation
 - **Error Handling**: Direct access to provider error details
@@ -265,7 +285,8 @@ class ServiceManager:
 
 ### 5.3. Current Service Portfolio
 
-#### **Direct SDK Integrations (7 Services)**:
+#### **Direct SDK Integrations (7 Services)**
+
 1. **Flights**: Duffel SDK for comprehensive flight data
 2. **Database**: Supabase SDK for unified data operations
 3. **Memory**: Mem0 SDK with pgvector backend
@@ -274,7 +295,8 @@ class ServiceManager:
 6. **Weather**: Direct HTTP API integration
 7. **Time/Calendar**: Python datetime + Google Calendar SDK
 
-#### **Remaining MCP Integration (1 Service)**:
+#### **Remaining MCP Integration (1 Service)**
+
 - **Accommodations**: Airbnb MCP server (evaluation for SDK migration)
 
 ## 6. Data Flow Architecture
@@ -352,18 +374,21 @@ class MemoryFlow:
 ### 7.1. Achieved Performance Metrics
 
 **Cache Performance (DragonflyDB)**:
+
 - **Operations/Second**: 6.43M (25x improvement over Redis)
 - **Memory Efficiency**: 30% better memory utilization
 - **Latency**: Sub-millisecond response times
 - **Hit Rate**: 99.9% with intelligent TTL strategies
 
 **Vector Search (pgvector)**:
+
 - **Queries/Second**: 471 QPS (11x faster than Qdrant)
 - **Accuracy**: 26% better relevance scores
 - **Integration**: Native PostgreSQL integration
 - **Scalability**: Handles 10K+ concurrent connections
 
 **Memory Operations (Mem0)**:
+
 - **Performance**: 91% faster than traditional context approaches
 - **Accuracy**: 26% better context relevance
 - **Storage**: Unified with PostgreSQL (no separate vector DB)
@@ -372,11 +397,13 @@ class MemoryFlow:
 ### 7.2. Cost Optimization Results
 
 **Infrastructure Costs**:
+
 - **Before**: $1000+/month (multiple databases, services)
 - **After**: $150-250/month (unified Supabase + DragonflyDB)
 - **Savings**: 80% reduction
 
 **Licensing Costs**:
+
 - **Eliminated**: Firecrawl ($700-1200/year)
 - **Simplified**: Single database licensing model
 - **Total**: $1500-2000/year savings
@@ -386,18 +413,21 @@ class MemoryFlow:
 ### 8.1. Multi-Layer Security
 
 **Authentication & Authorization**:
+
 - **JWT Tokens**: For user sessions with refresh capability
 - **API Keys**: For service-to-service communication
 - **BYOK System**: Secure user-provided API key management
 - **Row Level Security**: Database-level access control
 
 **Data Protection**:
+
 - **Encryption at Rest**: AES-256 for sensitive data
 - **Encryption in Transit**: TLS 1.3 for all communications
 - **Key Rotation**: Automatic encryption key rotation
 - **BYOK Encryption**: User-specific salt and key derivation
 
 **Rate Limiting & Monitoring**:
+
 - **Consumer-Aware Limits**: Different limits for frontend vs agents
 - **Principal-Based Tracking**: Per-user and per-API key monitoring
 - **Security Event Logging**: Comprehensive audit trail
@@ -440,16 +470,19 @@ class WebSocketArchitecture:
 ### 9.2. Real-time Features
 
 **Live Trip Planning**:
+
 - Multi-user collaboration on trip planning
 - Real-time updates for itinerary changes
 - Shared workspace with conflict resolution
 
 **Agent Status Updates**:
+
 - Live progress tracking for AI agent operations
 - Status notifications for long-running tasks
 - Error reporting and recovery status
 
 **Chat Integration**:
+
 - Real-time messaging with AI agents
 - Typing indicators and presence
 - Message delivery confirmation
@@ -459,12 +492,14 @@ class WebSocketArchitecture:
 ### 10.1. Container Orchestration
 
 **Production Deployment**:
+
 - **Kubernetes**: Container orchestration with auto-scaling
 - **Docker Compose**: Development environment
 - **Service Mesh**: Inter-service communication
 - **Load Balancing**: Traffic distribution and failover
 
 **Scaling Strategy**:
+
 - **API Service**: Auto-scaling based on request volume
 - **Frontend**: CDN distribution with edge caching
 - **Database**: Read replicas for query distribution
@@ -473,12 +508,14 @@ class WebSocketArchitecture:
 ### 10.2. Monitoring & Observability
 
 **Performance Monitoring**:
+
 - **Request/Response Times**: Per-endpoint monitoring
 - **Error Rates**: By consumer type and service
 - **Cache Metrics**: Hit rates and performance data
 - **Database Performance**: Query optimization and indexing
 
 **Health Checks**:
+
 - **Service Health**: Individual service monitoring
 - **Database Connectivity**: Connection pool status
 - **External API Status**: Provider availability
@@ -489,16 +526,19 @@ class WebSocketArchitecture:
 ### 11.1. Planned Enhancements
 
 **SDK Migration Completion (Weeks 2-4)**:
+
 - Google Maps, Calendar, Weather, Time services
 - Expected 70% total latency reduction
 - Elimination of remaining MCP complexity
 
 **Advanced AI Features**:
+
 - Enhanced LangGraph workflows
 - Multi-modal input processing
 - Advanced reasoning capabilities
 
 **Scalability Improvements**:
+
 - Global deployment with edge computing
 - Advanced caching strategies
 - Database sharding for massive scale
@@ -506,16 +546,19 @@ class WebSocketArchitecture:
 ### 11.2. Technology Roadmap
 
 **Short-term (Months 1-3)**:
+
 - Production deployment and monitoring
 - Performance optimization and tuning
 - Advanced security features
 
 **Medium-term (Months 3-6)**:
+
 - Mobile application development
 - Advanced AI agent capabilities
 - Enterprise features and compliance
 
 **Long-term (6+ Months)**:
+
 - Global expansion and localization
 - Advanced analytics and insights
 - Third-party platform integrations

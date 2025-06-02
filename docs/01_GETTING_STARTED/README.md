@@ -17,17 +17,20 @@
 ## 🎯 For Different User Types
 
 ### 👩‍💻 **Developers** (New to Project)
+
 1. Start with [System Requirements](SYSTEM_REQUIREMENTS.md)
 2. Follow [Installation Guide](INSTALLATION_GUIDE.md)
 3. Configure with [Environment Setup](ENVIRONMENT_SETUP.md)
 4. Test with [Quick Start Guide](QUICK_START_GUIDE.md)
 
 ### 🚀 **DevOps/Operations** (Production Deployment)
+
 1. Review [System Requirements](SYSTEM_REQUIREMENTS.md)
 2. Follow [Production Deployment](PRODUCTION_DEPLOYMENT.md)
 3. Keep [Troubleshooting](TROUBLESHOOTING.md) handy
 
 ### 🔧 **Contributors** (Contributing to TripSage)
+
 1. Complete developer setup above
 2. See [Development Workflow](../02_PROJECT_OVERVIEW/DEVELOPMENT_WORKFLOW.md)
 3. Review [Coding Standards](../04_DEVELOPMENT_GUIDE/CODING_STANDARDS.md)

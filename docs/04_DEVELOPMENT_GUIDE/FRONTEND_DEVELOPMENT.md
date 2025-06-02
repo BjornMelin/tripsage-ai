@@ -8,30 +8,32 @@ This comprehensive guide covers the architecture, technology stack, development 
 
 ## 📋 Table of Contents
 
-- [Technology Stack Overview](#technology-stack-overview)
-- [Architecture and Design Patterns](#architecture-and-design-patterns)
-- [Application Structure](#application-structure)
-- [Pages and Features](#pages-and-features)
-- [Component Development](#component-development)
-- [State Management](#state-management)
-- [AI Integration](#ai-integration)
-- [Authentication and Security](#authentication-and-security)
-- [Performance Optimization](#performance-optimization)
-- [Testing Strategy](#testing-strategy)
-- [Development Workflow](#development-workflow)
-- [Budget-Focused Features](#budget-focused-features)
+- [Technology Stack Overview](#-technology-stack-overview)
+- [Architecture and Design Patterns](#️-architecture-and-design-patterns)
+- [Application Structure](#-application-structure)
+- [Pages and Features](#-pages-and-features)
+- [Component Development](#-component-development)
+- [State Management](#️-state-management)
+- [AI Integration](#-ai-integration)
+- [Authentication and Security](#-authentication-and-security)
+- [Performance Optimization](#-performance-optimization)
+- [Testing Strategy](#-testing-strategy)
+- [Development Workflow](#-development-workflow)
+- [Budget-Focused Features](#-budget-focused-features)
 
 ## 🚀 Technology Stack Overview
 
 ### **Core Technologies**
 
 #### **Framework and Runtime**
+
 - **Next.js 15.3.1**: App Router, Server Components, API routes, Turbopack
 - **React 19.1.0**: Server Components, improved Suspense, concurrent features
 - **TypeScript 5.5+**: Strict type safety, template literal types
 - **Node.js 20+**: Latest LTS with native ESM support
 
 #### **UI Framework and Styling**
+
 - **Tailwind CSS v4.0**: OKLCH color space, CSS-based config, container queries
 - **shadcn/ui v3**: Copy-paste components built on Radix UI
 - **Framer Motion v11**: Modern animations and transitions
@@ -39,21 +41,25 @@ This comprehensive guide covers the architecture, technology stack, development 
 - **clsx & tailwind-merge**: Conditional styling utilities
 
 #### **State Management**
+
 - **Zustand v5.0.4**: Simple state management with native `useSyncExternalStore`
 - **TanStack Query v5**: Server state, caching, and data synchronization
 - **React Context API**: For isolated state within feature boundaries
 
 #### **AI Integration**
+
 - **Vercel AI SDK v4.3.16**: ✅ **IMPLEMENTED** - Streaming AI responses, tool calling, file attachments
 - **Server-Sent Events (SSE)**: Real-time AI streaming
 - **OpenAI SDK**: Direct API integration when needed
 - **Custom useChatAi Hook**: Zustand integration with AI SDK for state management
 
 #### **Form Handling and Validation**
+
 - **React Hook Form v8**: Performance-optimized form handling
 - **Zod v3**: TypeScript-first schema validation
 
 #### **Additional Libraries**
+
 - **Supabase JS Client**: Database integration and authentication
 - **Recharts**: Data visualization
 - **date-fns**: Date manipulation
@@ -64,6 +70,7 @@ This comprehensive guide covers the architecture, technology stack, development 
 ### **Key Architecture Decisions**
 
 #### **1. Authentication Strategy: Supabase Auth**
+
 ```typescript
 // Server-side authentication with cookies
 const supabase = createServerClient(
@@ -86,6 +93,7 @@ export async function middleware(request: NextRequest) {
 ```
 
 #### **2. Real-time Communication: Server-Sent Events (SSE)**
+
 ```typescript
 // AI streaming via Vercel AI SDK
 const { messages, input, handleSubmit, isLoading } = useChat({
@@ -101,6 +109,7 @@ const { messages, input, handleSubmit, isLoading } = useChat({
 ```
 
 #### **3. API Key Management: Backend Proxy Pattern**
+
 ```typescript
 // Frontend → FastAPI → MCP Servers
 const searchFlights = async (searchParams: FlightSearchParams) => {
@@ -125,7 +134,7 @@ const searchFlights = async (searchParams: FlightSearchParams) => {
 
 ### **Application Architecture Overview**
 
-```
+```plaintext
 ┌──────────────────────────────────────────────────────────────────────┐
 │                       Next.js 15 Application                        │
 ├─────────────────────────┬────────────────────────────────────────────┤
@@ -163,6 +172,7 @@ const searchFlights = async (searchParams: FlightSearchParams) => {
 ### **Component Architecture Patterns**
 
 #### **1. Feature-Based Organization**
+
 ```typescript
 // Feature-based directory structure
 src/
@@ -182,6 +192,7 @@ src/
 ```
 
 #### **2. Compound Component Pattern**
+
 ```typescript
 // Example: Search component with sub-components
 export const SearchInterface = ({ children }: { children: React.ReactNode }) => {
@@ -207,6 +218,7 @@ SearchInterface.Pagination = SearchPagination
 ```
 
 #### **3. Render Props Pattern for AI Integration**
+
 ```typescript
 // AI Chat component with render props
 interface ChatProviderProps {
@@ -245,7 +257,8 @@ export const ChatProvider = ({ children }: ChatProviderProps) => {
 ## 📱 Application Structure
 
 ### **Directory Structure**
-```
+
+```plaintext
 frontend/
 ├── src/
 │   ├── app/                           # Next.js App Router pages
@@ -397,6 +410,7 @@ TripSage
 ### **Page Implementation Examples**
 
 #### **1. Dashboard Overview (`/dashboard`)**
+
 ```typescript
 // app/(dashboard)/page.tsx
 import { Suspense } from 'react'
@@ -431,6 +445,7 @@ export default function DashboardPage() {
 ```
 
 #### **2. AI Chat Interface (`/dashboard/chat`)**
+
 ```typescript
 // app/(dashboard)/chat/page.tsx
 import { ChatInterface } from '@/components/features/chat/chat-interface'
@@ -454,6 +469,7 @@ export default function ChatPage() {
 ```
 
 #### **3. Flight Search (`/dashboard/search/flights`)**
+
 ```typescript
 // app/(dashboard)/search/flights/page.tsx
 import { FlightSearchForm } from '@/components/features/search/flight-search-form'
@@ -488,6 +504,7 @@ export default function FlightSearchPage() {
 ### **Component Design Principles**
 
 #### **1. Single Responsibility**
+
 ```typescript
 // ✅ Good: Component has single responsibility
 export const MessageBubble = ({ message, isUser }: MessageBubbleProps) => {
@@ -513,6 +530,7 @@ export const MessageComponent = ({ message, isUser, onEdit, onDelete, onReply })
 ```
 
 #### **2. Composition over Configuration**
+
 ```typescript
 // ✅ Good: Composable components
 export const Card = ({ children, className, ...props }: CardProps) => (
@@ -545,6 +563,7 @@ export const CardContent = ({ children, className, ...props }: CardContentProps)
 ```
 
 #### **3. TypeScript-First Development**
+
 ```typescript
 // Comprehensive type definitions
 interface TripCardProps {
@@ -588,6 +607,7 @@ export const TripCard = ({
 ### **Component Testing Strategy**
 
 #### **1. Unit Testing with Vitest**
+
 ```typescript
 // components/ui/button.test.tsx
 import { render, screen, fireEvent } from '@testing-library/react'
@@ -615,6 +635,7 @@ describe('Button', () => {
 ```
 
 #### **2. Integration Testing with Playwright**
+
 ```typescript
 // e2e/chat-interface.spec.ts
 import { test, expect } from '@playwright/test'
@@ -644,6 +665,7 @@ test.describe('Chat Interface', () => {
 ### **Zustand Store Architecture**
 
 #### **1. Chat Store**
+
 ```typescript
 // stores/chat-store.ts
 import { create } from 'zustand'
@@ -754,6 +776,7 @@ export const useChatError = () => useChatStore(state => state.error)
 ```
 
 #### **2. Search Store**
+
 ```typescript
 // stores/search-store.ts
 interface SearchState {
@@ -811,6 +834,7 @@ export const useSearchStore = create<SearchState>((set, get) => ({
 ### **TanStack Query Integration**
 
 #### **Server State Management**
+
 ```typescript
 // hooks/use-trips.ts
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -870,6 +894,7 @@ export const useUpdateTrip = (tripId: string) => {
 ### **Vercel AI SDK Implementation**
 
 #### **1. Chat Hook with Streaming**
+
 ```typescript
 // hooks/use-chat-ai.ts
 import { useChat } from 'ai/react'
@@ -945,6 +970,7 @@ export const useChatAI = (sessionId?: string) => {
 ```
 
 #### **2. API Route for AI Streaming**
+
 ```typescript
 // app/api/chat/[sessionId]/route.ts
 import { NextRequest } from 'next/server'
@@ -1030,6 +1056,7 @@ export async function POST(
 ### **Tool Calling Integration**
 
 #### **Travel Planning Tools**
+
 ```typescript
 // lib/ai/travel-tools.ts
 export const travelPlanningTools = {
@@ -1118,6 +1145,7 @@ export const travelPlanningTools = {
 ### **Supabase Authentication Setup**
 
 #### **1. Authentication Provider**
+
 ```typescript
 // lib/auth/supabase.ts
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
@@ -1166,6 +1194,7 @@ export const getUser = async () => {
 ```
 
 #### **2. Route Protection Middleware**
+
 ```typescript
 // middleware.ts
 import { createServerClient } from '@supabase/ssr'
@@ -1253,6 +1282,7 @@ export const config = {
 ```
 
 #### **3. Client-Side Auth Hook**
+
 ```typescript
 // hooks/use-auth.ts
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
@@ -1332,6 +1362,7 @@ export const useAuth = () => {
 ### **API Security**
 
 #### **1. API Route Protection**
+
 ```typescript
 // lib/api/middleware.ts
 import { NextRequest, NextResponse } from 'next/server'
@@ -1387,6 +1418,7 @@ export const withRateLimit = (handler: Function, limit: number = 100) => {
 ### **Core Performance Strategies**
 
 #### **1. Next.js Optimizations**
+
 ```typescript
 // next.config.ts
 /** @type {import('next').NextConfig} */
@@ -1441,6 +1473,7 @@ export default nextConfig
 ```
 
 #### **2. Component Lazy Loading**
+
 ```typescript
 // Dynamic imports for heavy components
 import dynamic from 'next/dynamic'
@@ -1485,6 +1518,7 @@ export const TripDetails = ({ trip }: { trip: Trip }) => {
 ```
 
 #### **3. Image Optimization**
+
 ```typescript
 // Optimized image component
 import Image from 'next/image'
@@ -1511,6 +1545,7 @@ export const TripImage = ({
 ```
 
 #### **4. Bundle Optimization**
+
 ```typescript
 // lib/utils/dynamic-imports.ts
 export const dynamicImports = {
@@ -1543,6 +1578,7 @@ export const DatePickerField = (props: DatePickerProps) => (
 ### **Caching Strategy**
 
 #### **1. Client-Side Caching**
+
 ```typescript
 // lib/cache/client-cache.ts
 class ClientCache {
@@ -1580,7 +1616,8 @@ export const clientCache = new ClientCache()
 
 ### **Testing Architecture**
 
-#### **1. Unit Testing with Vitest**
+#### **1. Unit Testing with Vitest - Testing Architecture**
+
 ```typescript
 // vitest.config.ts
 import { defineConfig } from 'vitest/config'
@@ -1614,6 +1651,7 @@ export default defineConfig({
 ```
 
 #### **2. Component Testing**
+
 ```typescript
 // __tests__/components/trip-card.test.tsx
 import { render, screen, fireEvent } from '@testing-library/react'
@@ -1657,6 +1695,7 @@ describe('TripCard', () => {
 ```
 
 #### **3. E2E Testing with Playwright**
+
 ```typescript
 // e2e/trip-creation.spec.ts
 import { test, expect } from '@playwright/test'
@@ -1705,6 +1744,7 @@ test.describe('Trip Creation Flow', () => {
 ### **Development Setup**
 
 #### **1. Project Setup Commands**
+
 ```bash
 # Install dependencies
 pnpm install
@@ -1738,6 +1778,7 @@ pnpm start
 ```
 
 #### **2. Git Hooks with Husky**
+
 ```json
 // package.json
 {
@@ -1769,6 +1810,7 @@ pnpm test --run
 ### **Code Quality Tools**
 
 #### **1. Biome Configuration**
+
 ```json
 // biome.json
 {
@@ -1812,6 +1854,7 @@ pnpm test --run
 ### **Core Budget Feature Categories**
 
 #### **1. Advanced Price Analysis & Prediction**
+
 - **Real-time price monitoring** across multiple booking platforms
 - **AI-powered price prediction** algorithms with confidence scoring
 - **Historical price trends** and seasonal pattern analysis
@@ -1819,6 +1862,7 @@ pnpm test --run
 - **"Best time to book"** recommendations
 
 #### **2. Total Cost Optimization**
+
 - **Comprehensive expense calculator** covering all trip aspects
 - **Hidden cost detection** (taxes, fees, tips, transport)
 - **Alternative route analysis** (split ticketing, nearby airports)
@@ -1826,6 +1870,7 @@ pnpm test --run
 - **Currency conversion** with fee minimization strategies
 
 #### **3. Smart Deal Discovery**
+
 - **Error fare monitoring** and flash sale aggregation
 - **Community deal sharing** platform with verification
 - **Personalized deal alerts** based on travel preferences
@@ -1835,6 +1880,7 @@ pnpm test --run
 ### **Advanced Price Optimization**
 
 #### **1. Flight Price Tracking**
+
 ```typescript
 // components/features/budget/price-tracker.tsx
 export const FlightPriceTracker = ({ route }: { route: FlightRoute }) => {
@@ -1886,6 +1932,7 @@ export const FlightPriceTracker = ({ route }: { route: FlightRoute }) => {
 ```
 
 #### **2. Budget Optimization Engine**
+
 ```typescript
 // lib/budget/optimization-engine.ts
 export class BudgetOptimizationEngine {
@@ -1951,6 +1998,7 @@ export class BudgetOptimizationEngine {
 ```
 
 #### **3. Smart Deal Detection**
+
 ```typescript
 // components/features/budget/deal-detector.tsx
 export const DealDetector = ({ searchParams }: { searchParams: SearchParams }) => {
@@ -2017,6 +2065,7 @@ export const DealDetector = ({ searchParams }: { searchParams: SearchParams }) =
 ### **Budget Tracking Dashboard**
 
 #### **Real-time Budget Monitoring**
+
 ```typescript
 // components/features/budget/budget-dashboard.tsx
 export const BudgetDashboard = ({ tripId }: { tripId: string }) => {
@@ -2081,6 +2130,7 @@ export const BudgetDashboard = ({ tripId }: { tripId: string }) => {
 ### **Comprehensive Trip Cost Calculator**
 
 #### **Advanced Budget Interface**
+
 ```typescript
 // components/features/budget/comprehensive-trip-calculator.tsx
 interface TripCostBreakdown {
@@ -2207,6 +2257,7 @@ export const ComprehensiveTripCalculator = ({ destination, dates }: CalculatorPr
 ### **Group Travel Cost Splitting**
 
 #### **Shared Expense Management**
+
 ```typescript
 // components/features/budget/group-cost-splitter.tsx
 export const GroupCostSplitter = ({ tripId, participants }: GroupCostProps) => {
@@ -2304,6 +2355,7 @@ export const GroupCostSplitter = ({ tripId, participants }: GroupCostProps) => {
 ### **Currency & Fee Management**
 
 #### **Smart Currency Tools**
+
 ```typescript
 // components/features/budget/currency-manager.tsx
 export const SmartCurrencyManager = ({ destination, budget }: CurrencyProps) => {
@@ -2380,6 +2432,7 @@ export const SmartCurrencyManager = ({ destination, budget }: CurrencyProps) => 
 TripSage extensively uses Pydantic v2 for data validation, API schemas, and configuration management. Here are the canonical patterns:
 
 #### **1. Basic Model Definition**
+
 ```python
 from typing import Annotated, Optional, Literal, List
 from datetime import date, datetime
@@ -2410,6 +2463,7 @@ class TravelRequest(BaseModel):
 ```
 
 #### **2. API Request/Response Models**
+
 ```python
 class FlightSearchRequest(BaseModel):
     """Request model for flight search API."""

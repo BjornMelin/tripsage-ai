@@ -8,19 +8,20 @@ This comprehensive reference document provides detailed information about the Tr
 
 ## 📋 Table of Contents
 
-- [Project Information](#project-information)
-- [Schema Design Principles](#schema-design-principles)
-- [Core Tables](#core-tables)
-- [Travel-Specific Tables](#travel-specific-tables)
-- [Supporting Tables](#supporting-tables)
-- [Memory and Knowledge Graph](#memory-and-knowledge-graph)
-- [Indexes and Performance](#indexes-and-performance)
-- [Triggers and Functions](#triggers-and-functions)
-- [Row Level Security](#row-level-security)
+- [Project Information](#️-project-information)
+- [Schema Design Principles](#-schema-design-principles)
+- [Core Tables](#-core-tables)
+- [Travel-Specific Tables](#️-travel-specific-tables)
+- [Supporting Tables](#-supporting-tables)
+- [Memory and Knowledge Graph](#-memory-and-knowledge-graph)
+- [Indexes and Performance](#-indexes-and-performance)
+- [Triggers and Functions](#️-triggers-and-functions)
+- [Row Level Security](#-row-level-security)
 
 ## 🏗️ Project Information
 
 ### **Database Configuration**
+
 - **Project Name (Supabase)**: `tripsage_planner`
 - **Database Type**: PostgreSQL (version 15+)
 - **Extensions**: pgvector, uuid-ossp, citext
@@ -29,6 +30,7 @@ This comprehensive reference document provides detailed information about the Tr
 - **Testing**: Local PostgreSQL with Docker
 
 ### **Schema Overview**
+
 ```sql
 -- Enable required extensions
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
@@ -44,6 +46,7 @@ CREATE SCHEMA IF NOT EXISTS memory;     -- AI memory and embeddings
 ## 📐 Schema Design Principles
 
 ### **Naming Conventions**
+
 - **Case**: Use `snake_case` for all table and column names (PostgreSQL standard)
 - **Table Names**: Plural, lowercase, with underscores separating words (e.g., `trips`, `itinerary_items`)
 - **Column Names**: Lowercase, with underscores
@@ -53,6 +56,7 @@ CREATE SCHEMA IF NOT EXISTS memory;     -- AI memory and embeddings
 - **Indexes**: Prefix index names with table abbreviation (e.g., `idx_trips_user_id`)
 
 ### **Data Types Standards**
+
 - **IDs**: `BIGINT GENERATED ALWAYS AS IDENTITY` for application tables, `UUID` for auth references
 - **Timestamps**: `TIMESTAMP WITH TIME ZONE` (abbreviated as `TIMESTAMPTZ`)
 - **Text**: `TEXT` for variable-length strings, `CITEXT` for case-insensitive
@@ -60,6 +64,7 @@ CREATE SCHEMA IF NOT EXISTS memory;     -- AI memory and embeddings
 - **Vectors**: `vector(1536)` for embedding storage using pgvector
 
 ### **Constraint Patterns**
+
 - **Check Constraints**: Validate data integrity (dates, prices, enums)
 - **Foreign Key Constraints**: Maintain referential integrity with appropriate CASCADE rules
 - **Unique Constraints**: Prevent data duplication where business logic requires

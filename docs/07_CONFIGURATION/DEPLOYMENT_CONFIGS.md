@@ -5,17 +5,18 @@
 
 ## 📋 Table of Contents
 
-- [Quick Start Deployment](#quick-start-deployment)
-- [Platform Comparisons](#platform-comparisons)
-- [Cost Calculator & Planning](#cost-calculator--planning)
-- [Vercel Deployment (Recommended)](#vercel-deployment-recommended)
-- [Alternative Platforms](#alternative-platforms)
-- [Cost Optimization](#cost-optimization)
-- [Monitoring & Maintenance](#monitoring--maintenance)
+- [Quick Start Deployment](#-quick-start-deployment)
+- [Platform Comparisons](#-platform-comparisons)
+- [Cost Calculator & Planning](#-cost-calculator--planning)
+- [Vercel Deployment (Recommended)](#-vercel-deployment-recommended)
+- [Alternative Platforms](#-alternative-platforms)
+- [Cost Optimization Strategies](#-cost-optimization-strategies)
+- [Monitoring & Maintenance](#-monitoring--maintenance)
 
 ## 🚀 Quick Start Deployment
 
 ### Recommended Platform: Vercel
+
 **Best for**: Modern web applications, Next.js optimization, serverless functions
 
 ```bash
@@ -33,6 +34,7 @@ vercel --prod
 ```
 
 ### Required Environment Variables
+
 ```bash
 # Core Configuration
 NEXT_PUBLIC_API_URL=https://api.tripsage.ai
@@ -68,7 +70,8 @@ SENTRY_DSN=https://...@sentry.io/...
 ### Traffic-Based Estimates
 
 #### Calculate Your Requirements
-```
+
+```plaintext
 Monthly Visitors: _____ 
 Page Views per Visitor: _____ 
 Average Page Size: _____ KB
@@ -77,6 +80,7 @@ Function Execution Time: _____ ms
 ```
 
 #### Calculation Formulas
+
 ```bash
 # Bandwidth Calculation
 Monthly Bandwidth = Visitors × Page Views × Page Size × 1.2 (overhead)
@@ -94,6 +98,7 @@ Example: (8 × 200ms × 50,000 × 5) / 3,600,000 = 1.11 GB-hours/month
 ### Cost Examples by Business Type
 
 #### 🏠 Personal Travel Blog (10K visitors/month)
+
 - **Bandwidth**: ~30 GB
 - **Edge Requests**: ~200,000
 - **Function Time**: 0.5 GB-hours
@@ -101,6 +106,7 @@ Example: (8 × 200ms × 50,000 × 5) / 3,600,000 = 1.11 GB-hours/month
 - **Monthly Cost**: **$0**
 
 #### 🚀 Growing Travel Startup (25K visitors/month)
+
 - **Bandwidth**: ~200 GB
 - **Edge Requests**: ~2.5M
 - **Function Time**: 15 GB-hours
@@ -108,6 +114,7 @@ Example: (8 × 200ms × 50,000 × 5) / 3,600,000 = 1.11 GB-hours/month
 - **Monthly Cost**: **$20-30**
 
 #### 🏢 Established Platform (100K visitors/month)
+
 - **Bandwidth**: ~800 GB
 - **Edge Requests**: ~15M
 - **Function Time**: 80 GB-hours
@@ -115,6 +122,7 @@ Example: (8 × 200ms × 50,000 × 5) / 3,600,000 = 1.11 GB-hours/month
 - **Monthly Cost**: **$60-85**
 
 #### 🌍 Enterprise Solution (500K+ visitors/month)
+
 - **Bandwidth**: 3+ TB
 - **Edge Requests**: 50M+
 - **Function Time**: 500+ GB-hours
@@ -218,6 +226,7 @@ netlify deploy --prod
 ```
 
 **Cost Structure**:
+
 - Free: 100GB bandwidth, 300 build minutes
 - Pro ($19/month): 400GB bandwidth, 25,000 function invocations
 
@@ -231,6 +240,7 @@ railway deploy
 ```
 
 **Cost Structure**:
+
 - Starter: $5/month (512MB RAM, shared CPU)
 - Pro: $20-50/month (1-2GB RAM, dedicated CPU)
 
@@ -245,6 +255,7 @@ amplify publish
 ```
 
 **Cost Structure**:
+
 - Small app: $10-20/month
 - Medium app: $30-60/month
 - Large app: $100-300/month
@@ -258,6 +269,7 @@ docker run -p 3000:3000 tripsage-frontend
 ```
 
 **Cost Structure**:
+
 - Basic VPS: $5-10/month (1GB RAM, 1 CPU)
 - Production VPS: $20-40/month (4GB RAM, 2 CPU)
 - CDN: $5-20/month (Cloudflare Pro)
@@ -265,18 +277,21 @@ docker run -p 3000:3000 tripsage-frontend
 ## 🎯 Cost Optimization Strategies
 
 ### For Small Projects (< 10K visitors)
+
 1. **Static Generation**: Pre-render pages when possible
 2. **Image Optimization**: Use Next.js Image optimization
 3. **Minimal API Calls**: Batch requests, implement caching
 4. **Free Tier Usage**: Maximize free tier benefits
 
 ### For Growing Projects (10K-100K visitors)
+
 1. **Edge Caching**: Implement caching for API responses
 2. **Code Splitting**: Reduce initial bundle size
 3. **Database Optimization**: Efficient queries, connection pooling
 4. **Usage Monitoring**: Set up spend alerts
 
 ### For Large Projects (100K+ visitors)
+
 1. **CDN Strategy**: External CDN for static assets
 2. **Function Optimization**: Reduce execution time and memory
 3. **Database Scaling**: Read replicas, caching layers
@@ -285,6 +300,7 @@ docker run -p 3000:3000 tripsage-frontend
 ### Universal Optimization Tips
 
 #### 1. Reduce Function Execution Time
+
 ```typescript
 // Implement caching
 export const revalidate = 3600 // 1 hour
@@ -297,11 +313,13 @@ const getExpensiveData = cache(async () => {
 ```
 
 #### 2. Minimize Data Transfer
+
 - Enable compression
 - Optimize images (WebP/AVIF)
 - Use CDN for static assets
 
 #### 3. Smart Caching Policies
+
 ```yaml
 cache_policies:
   search_results: 300      # 5 minutes
@@ -358,6 +376,7 @@ Sentry.init({
 ```
 
 ### Key Metrics to Track
+
 - **Core Web Vitals**: LCP, FID, CLS
 - **Load Time**: <3 seconds
 - **Bundle Size**: <1MB initial load
@@ -368,6 +387,7 @@ Sentry.init({
 ### Common Issues
 
 #### Build Failures
+
 ```bash
 # Check build logs in platform dashboard
 pnpm install --frozen-lockfile  # Dependency issues
@@ -376,11 +396,13 @@ pnpm lint --fix                 # Linting errors
 ```
 
 #### Environment Variable Issues
+
 - Verify in platform dashboard
 - Check preview vs production environments
 - Ensure NEXT_PUBLIC_ prefix for client-side vars
 
 #### Function Timeout
+
 ```json
 // Platform configuration
 {
@@ -393,6 +415,7 @@ pnpm lint --fix                 # Linting errors
 ```
 
 #### Large Bundle Size
+
 ```bash
 # Analyze bundle
 pnpm analyze
@@ -406,18 +429,21 @@ pnpm analyze
 ## 📅 Growth Planning Timeline
 
 ### Year 1: MVP Launch
+
 - **Target**: 1,000-5,000 monthly users
 - **Platform**: Vercel Hobby/Pro
 - **Estimated cost**: $0-40/month
 - **Focus**: Product development, user feedback
 
 ### Year 2: Market Expansion
+
 - **Target**: 10,000-50,000 monthly users
 - **Platform**: Vercel Pro
 - **Estimated cost**: $50-150/month
 - **Focus**: Performance optimization, feature expansion
 
 ### Year 3: Scale & Optimize
+
 - **Target**: 50,000-200,000 monthly users
 - **Platform**: Vercel Pro/Enterprise or multi-cloud
 - **Estimated cost**: $200-800/month
@@ -426,6 +452,7 @@ pnpm analyze
 ## ⚠️ Hidden Costs to Consider
 
 ### Additional Services
+
 - **Database hosting**: $20-100/month (Supabase, PlanetScale)
 - **External APIs**: $50-500/month (Maps, payments, etc.)
 - **Monitoring tools**: $10-50/month (Sentry, DataDog)
@@ -433,34 +460,40 @@ pnpm analyze
 - **Analytics**: $0-200/month (Mixpanel, Amplitude)
 
 ### Development Tools
+
 - **Design tools**: $10-50/month (Figma, Adobe)
 - **Testing tools**: $20-100/month (Playwright Cloud, Percy)
 - **CI/CD**: $0-100/month (additional runners, storage)
 
 ### Compliance & Security
+
 - **SSL certificates**: $0-200/year (Let's Encrypt free, premium certs)
 - **Security scanning**: $50-500/month (Snyk, Dependabot Pro)
 - **Compliance tools**: $100-1000/month (SOC2, PCI-DSS)
 
 ## 🎯 Platform Selection Guide
 
-### Choose Vercel If:
+### Choose Vercel If
+
 - Using Next.js or React
 - Want zero-config deployment
 - Need excellent performance out-of-the-box
 - Budget allows for usage-based pricing
 
-### Choose Netlify If:
+### Choose Netlify If
+
 - Building mostly static sites
 - Need strong free tier
 - Want alternative to Vercel
 
-### Choose Railway If:
+### Choose Railway If
+
 - Want simple, predictable pricing
 - Need database included
 - Prefer container-based deployment
 
-### Choose Self-Hosted If:
+### Choose Self-Hosted If
+
 - Monthly costs exceed $200
 - Need specific compliance requirements
 - Want predictable, fixed costs

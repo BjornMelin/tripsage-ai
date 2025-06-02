@@ -7,18 +7,18 @@ This document defines TripSage's comprehensive hybrid search strategy and advanc
 
 ## 📋 Table of Contents
 
-- [Search Architecture Overview](#search-architecture-overview)
-- [Hybrid Search Strategy](#hybrid-search-strategy)
-- [DragonflyDB Caching Implementation](#dragonflydb-caching-implementation)
-- [Search Performance Optimization](#search-performance-optimization)
-- [Caching Policies & TTL Strategy](#caching-policies--ttl-strategy)
-- [Integration Patterns](#integration-patterns)
+- [Search Architecture Overview](#️-search-architecture-overview)
+- [Hybrid Search Strategy](#-hybrid-search-strategy)
+- [DragonflyDB Caching Implementation](#-dragonflydb-caching-implementation)
+- [Search Performance Optimization](#-search-performance-optimization)
+- [Caching Policies & TTL Strategy](#-caching-policies--ttl-strategy)
+- [Integration Patterns](#-integration-patterns)
 
 ## 🏗️ Search Architecture Overview
 
 TripSage implements a hierarchical and federated search strategy that intelligently selects or combines tools based on query nature, required information depth, and interaction complexity.
 
-```
+```plaintext
 ┌──────────────────────────────────────────────────────────────────────┐
 │                       TripSage Travel Agent                          │
 └───────────────────────────────┬──────────────────────────────────────┘
@@ -46,18 +46,21 @@ TripSage implements a hierarchical and federated search strategy that intelligen
 ### **Search Components**
 
 #### **1. Vector Search (Semantic)**
+
 - **Technology**: PostgreSQL + pgvector + pgvectorscale
 - **Use Cases**: User preference matching, similar trip discovery, conversational memory
 - **Performance**: <100ms similarity search, 11x faster than dedicated vector databases
 - **Features**: 1536-dimensional embeddings, HNSW indexing, hybrid search
 
 #### **2. External API Search**
+
 - **Flight Search**: Duffel API integration for real-time flight data
 - **Accommodation Search**: Airbnb MCP + hotel API integrations
 - **Location Services**: Google Maps API for places and routing
 - **Performance**: Direct SDK integration, 50% fewer network hops
 
 #### **3. Web Crawling & Real-time Data**
+
 - **Technology**: Crawl4AI integration for web content extraction
 - **Use Cases**: Travel guides, destination information, real-time updates
 - **Performance**: 6-10x improvement with direct SDK integration
@@ -215,6 +218,7 @@ async def _web_crawl_search(self, query: str) -> Dict[str, Any]:
 TripSage has migrated from Redis to DragonflyDB for superior performance:
 
 #### **Performance Benefits**
+
 - **25x faster operations** compared to Redis
 - **Multi-threaded architecture** vs Redis single-threaded
 - **Higher throughput** for concurrent operations
@@ -343,7 +347,7 @@ class DragonflyDBService(CacheService):
 
 ### **Caching Architecture Layers**
 
-```
+```plaintext
 ┌─────────────────────────────────────────────────────────────────┐
 │                    Application Layer                           │
 └─────────────────────────┬───────────────────────────────────────┘
@@ -653,18 +657,21 @@ class RealtimeCacheUpdater:
 ### **Current Performance Achievements**
 
 #### **Search Performance**
+
 - **Vector Search**: <100ms similarity search (P95)
 - **API Search**: <200ms multi-provider search (P95)
 - **Web Crawling**: <2s intelligent content extraction (P95)
 - **Cache Hit Ratio**: >95% for frequent searches
 
 #### **Caching Performance**
+
 - **DragonflyDB Operations**: 25x faster than Redis
 - **Throughput**: 10,000+ operations/second sustained
 - **Memory Efficiency**: 40% better compression than Redis
 - **Latency**: <1ms for cache operations (P95)
 
 #### **Overall System Performance**
+
 - **Search to Results**: <500ms end-to-end (P95)
 - **Concurrent Users**: 1,000+ supported simultaneously
 - **Data Freshness**: Real-time updates with <30s propagation

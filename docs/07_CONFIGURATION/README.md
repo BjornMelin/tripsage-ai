@@ -17,6 +17,7 @@
 ## 🌍 Environment Setup
 
 ### **Development Environment**
+
 ```bash
 # Core API Keys (Required)
 OPENAI_API_KEY=sk-your-openai-key
@@ -40,6 +41,7 @@ ENVIRONMENT=development
 ```
 
 ### **Production Environment**
+
 ```bash
 # Security (Required)
 SECRET_KEY=your-256-bit-secret-key
@@ -65,6 +67,7 @@ GRAFANA_URL=https://your-grafana.com
 ## 🚩 Feature Flags
 
 ### **Core Feature Flags**
+
 ```python
 # Infrastructure Toggles
 FEATURE_REDIS_INTEGRATION: direct | mcp
@@ -83,6 +86,7 @@ FEATURE_WEATHER_SERVICE: openweathermap | disabled
 ```
 
 ### **Gradual Rollout Flags**
+
 ```python
 # Percentage-based rollouts
 ROLLOUT_NEW_SEARCH_UI: 25  # 25% of users
@@ -98,6 +102,7 @@ ENTERPRISE_FEATURES_ENABLED: true
 ## 📊 Application Settings
 
 ### **API Configuration**
+
 ```yaml
 api:
   host: "0.0.0.0"
@@ -119,6 +124,7 @@ api:
 ```
 
 ### **Database Configuration**
+
 ```yaml
 database:
   url: "${DATABASE_URL}"
@@ -139,6 +145,7 @@ database:
 ```
 
 ### **Caching Configuration**
+
 ```yaml
 cache:
   backend: "dragonfly"
@@ -160,6 +167,7 @@ cache:
 ## 🔒 Security Configuration
 
 ### **Authentication Settings**
+
 ```yaml
 auth:
   jwt:
@@ -179,6 +187,7 @@ auth:
 ```
 
 ### **Encryption Settings**
+
 ```yaml
 encryption:
   algorithm: "fernet"  # AES-128 CBC + HMAC-SHA256
@@ -204,6 +213,7 @@ security:
 ## 📝 Logging Configuration
 
 ### **Log Levels**
+
 ```yaml
 logging:
   level: "INFO"  # DEBUG, INFO, WARNING, ERROR, CRITICAL
@@ -236,6 +246,7 @@ logging:
 ## 📈 Monitoring Configuration
 
 ### **OpenTelemetry Setup**
+
 ```yaml
 telemetry:
   service_name: "tripsage-api"
@@ -260,6 +271,7 @@ telemetry:
 ```
 
 ### **Health Checks**
+
 ```yaml
 health:
   endpoint: "/health"
@@ -285,6 +297,7 @@ health:
 ## 🚀 Deployment Configurations
 
 ### **Docker Configuration**
+
 ```yaml
 # docker-compose.yml
 version: '3.8'
@@ -311,6 +324,7 @@ services:
 ```
 
 ### **Kubernetes Configuration**
+
 ```yaml
 apiVersion: apps/v1
 kind: Deployment
@@ -341,12 +355,14 @@ spec:
 ## 🔗 Configuration Templates
 
 ### **Environment Templates**
+
 - **[.env.development]**: Development environment template
 - **[.env.staging]**: Staging environment template
 - **[.env.production]**: Production environment template
 - **[.env.test]**: Test environment template
 
 ### **Infrastructure Templates**
+
 - **[docker-compose.dev.yml]**: Development Docker setup
 - **[docker-compose.prod.yml]**: Production Docker setup
 - **[k8s-manifests/]**: Kubernetes deployment manifests
@@ -354,16 +370,19 @@ spec:
 ## 🔗 Related Documentation
 
 ### **Setup & Installation**
+
 - **[Getting Started](../01_GETTING_STARTED/README.md)** - Initial setup
 - **[Installation Guide](../01_GETTING_STARTED/INSTALLATION_GUIDE.md)** - Detailed installation
 - **[Production Deployment](../01_GETTING_STARTED/PRODUCTION_DEPLOYMENT.md)** - Production setup
 
 ### **Development Resources**
+
 - **[Development Guide](../04_DEVELOPMENT_GUIDE/README.md)** - Developer resources
 - **[Debugging Guide](../04_DEVELOPMENT_GUIDE/DEBUGGING_GUIDE.md)** - Troubleshooting
 - **[API Reference](../06_API_REFERENCE/README.md)** - API documentation
 
 ### **Operations**
+
 - **[Monitoring Setup](MONITORING_SETUP.md)** - Observability configuration
 - **[Security Architecture](../03_ARCHITECTURE/SECURITY_ARCHITECTURE.md)** - Security design
 - **[Performance Optimization](../03_ARCHITECTURE/PERFORMANCE_OPTIMIZATION.md)** - Performance tuning

@@ -19,18 +19,21 @@
 ## 🏛️ Architecture Principles
 
 ### **KISS (Keep It Simple, Stupid)**
+
 - ✅ Single database for all storage needs
 - ✅ Direct SDK integration over complex wrappers
 - ✅ Unified configuration patterns
 - ✅ Standard Python async patterns throughout
 
 ### **YAGNI (You Aren't Gonna Need It)**
+
 - ✅ Removed unused Neo4j complexity for MVP
 - ✅ Eliminated premature vector database optimization
 - ✅ Simplified memory model to key-value extraction
 - ✅ Deferred complex graph features to v2
 
 ### **DRY (Don't Repeat Yourself)**
+
 - ✅ Unified service registry pattern
 - ✅ Consistent error handling across all services
 - ✅ Shared observability framework
@@ -39,7 +42,8 @@
 ## 🔧 Current Architecture (v2.0)
 
 ### **Unified Technology Stack**
-```
+
+```plaintext
 ┌─────────────────────────────────────────────────────────────────┐
 │                   PostgreSQL (Supabase)                        │
 │              + pgvector + Mem0 Memory Store                    │
@@ -59,21 +63,25 @@
 ### **Key Architectural Decisions**
 
 #### **Database Consolidation**
+
 - **From**: Neon + Supabase dual complexity
 - **To**: Supabase PostgreSQL + pgvector unified storage
 - **Benefits**: 40% performance improvement, $500-800/month savings
 
 #### **Caching Modernization**
+
 - **From**: Redis (single-threaded)
 - **To**: DragonflyDB (multi-threaded)
 - **Benefits**: 25x performance improvement, 80% cost reduction
 
 #### **Memory System Simplification**
+
 - **From**: Neo4j graph database complexity
 - **To**: Mem0 key-value extraction
 - **Benefits**: 91% lower latency, 26% higher accuracy
 
 #### **MCP to SDK Migration**
+
 - **From**: 12 MCP server wrappers
 - **To**: 7 direct SDK integrations + 1 MCP (Airbnb)
 - **Benefits**: ~3,000 lines of code eliminated, 50% fewer network hops
@@ -81,6 +89,7 @@
 ## 📊 Performance Metrics
 
 ### **System-Wide Improvements**
+
 - **Overall Latency**: 50-70% reduction across all services
 - **Cache Operations**: 25x improvement with DragonflyDB
 - **Memory Operations**: 91% lower latency with Mem0
@@ -88,6 +97,7 @@
 - **Database Queries**: 40% improvement with unified architecture
 
 ### **Cost Optimization**
+
 - **Infrastructure Savings**: $1,500-2,000/month (80% reduction)
 - **Operational Efficiency**: 70% reduction in system maintenance
 - **Development Velocity**: 50% improvement in feature delivery
@@ -95,7 +105,8 @@
 ## 🔄 Migration Journey
 
 ### **Before: Complex Multi-Service Architecture**
-```
+
+```plaintext
 ┌─────────────┐  ┌──────────────┐  ┌─────────────┐  ┌──────────────┐
 │    Neon     │  │   Supabase   │  │    Redis    │  │   Qdrant     │
 │ PostgreSQL  │  │ PostgreSQL   │  │  Caching    │  │  Vector DB   │
@@ -110,7 +121,8 @@
 ```
 
 ### **After: Unified High-Performance Architecture**
-```
+
+```plaintext
 ┌─────────────────────────────────────────────────────────────────┐
 │                   PostgreSQL (Supabase)                        │
 │              + pgvector + Mem0 Memory Store                    │
@@ -130,16 +142,19 @@
 ## 🔗 Related Documentation
 
 ### **Implementation Details**
+
 - **[Database Architecture](DATABASE_ARCHITECTURE.md)** - PostgreSQL + pgvector design
 - **[Agent Design](AGENT_DESIGN_AND_OPTIMIZATION.md)** - LangGraph orchestration
 - **[API Architecture](API_ARCHITECTURE.md)** - FastAPI patterns & structure
 
 ### **Operations & Deployment**
+
 - **[Deployment Strategy](DEPLOYMENT_STRATEGY.md)** - Infrastructure setup
 - **[Security Architecture](SECURITY_ARCHITECTURE.md)** - Security framework
 - **[Performance Optimization](PERFORMANCE_OPTIMIZATION.md)** - Optimization strategies
 
 ### **Development Resources**
+
 - **[Development Guide](../04_DEVELOPMENT_GUIDE/README.md)** - Developer resources
 - **[Configuration](../07_CONFIGURATION/README.md)** - Settings & environment
 - **[API Reference](../06_API_REFERENCE/README.md)** - Technical reference
