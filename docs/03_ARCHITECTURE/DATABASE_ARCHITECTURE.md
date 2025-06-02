@@ -7,13 +7,13 @@ This document provides comprehensive guidance for TripSage's unified database ar
 
 ## 📋 Table of Contents
 
-- [Architecture Overview](#architecture-overview)
-- [Database Consolidation Strategy](#database-consolidation-strategy)
-- [PostgreSQL + pgvector Implementation](#postgresql--pgvector-implementation)
-- [Schema Design](#schema-design)
-- [Vector Search Optimization](#vector-search-optimization)
-- [Performance Metrics](#performance-metrics)
-- [Migration & Operations](#migration--operations)
+- [Architecture Overview](#️-architecture-overview)
+- [Database Consolidation Strategy](#-database-consolidation-strategy)
+- [PostgreSQL + pgvector Implementation](#-postgresql--pgvector-implementation)
+- [Schema Design](#-schema-design)
+- [Vector Search Optimization](#-vector-search-optimization)
+- [Performance Metrics](#-performance-metrics)
+- [Migration & Operations](#-migration--operations)
 
 ## 🏗️ Architecture Overview
 
@@ -21,7 +21,7 @@ This document provides comprehensive guidance for TripSage's unified database ar
 
 TripSage has migrated to a **unified Supabase PostgreSQL architecture** with advanced extensions for all data persistence needs. This consolidated approach replaced the previous multi-database strategy, delivering significant improvements in performance, cost, and operational simplicity.
 
-```
+```plaintext
 ┌─────────────────────────────────────────────────────────────────┐
 │                   PostgreSQL (Supabase)                        │
 │                                                                 │
@@ -55,7 +55,8 @@ TripSage has migrated to a **unified Supabase PostgreSQL architecture** with adv
 TripSage successfully migrated from a complex dual-database setup to a unified architecture:
 
 #### **Before: Complex Multi-Database Architecture**
-```
+
+```plaintext
 ┌─────────────┐  ┌──────────────┐  ┌─────────────┐
 │    Neon     │  │   Supabase   │  │   Qdrant    │
 │ PostgreSQL  │  │ PostgreSQL   │  │  Vector DB  │
@@ -68,7 +69,8 @@ TripSage successfully migrated from a complex dual-database setup to a unified a
 ```
 
 #### **After: Unified High-Performance Architecture**
-```
+
+```plaintext
 ┌─────────────────────────────────────────────────────────────────┐
 │                   PostgreSQL (Supabase)                        │
 │              + pgvector + pgvectorscale                        │
@@ -77,6 +79,7 @@ TripSage successfully migrated from a complex dual-database setup to a unified a
 ```
 
 ### **Migration Results**
+
 - **Cost Reduction**: $500-800/month savings (Neon elimination)
 - **Performance Improvement**: 40% faster queries with unified architecture
 - **Operational Simplification**: Single database to manage and monitor
@@ -140,6 +143,7 @@ database:
 ### Core Data Models
 
 #### **User & Authentication**
+
 ```sql
 -- Users table with enhanced authentication support
 CREATE TABLE users (
@@ -160,6 +164,7 @@ CREATE POLICY "Users can only see their own data" ON users
 ```
 
 #### **Travel Planning Core**
+
 ```sql
 -- Trips table
 CREATE TABLE trips (
@@ -218,6 +223,7 @@ CREATE TABLE accommodations (
 ```
 
 #### **AI Memory & Vector Storage**
+
 ```sql
 -- Memory embeddings for AI context
 CREATE TABLE memory_embeddings (
@@ -364,18 +370,21 @@ SET random_page_cost = 1.1;
 ### **Achieved Performance**
 
 #### **Database Operations**
+
 - **Vector Search**: 11x faster with pgvector + pgvectorscale
 - **Relational Queries**: 40% improvement with unified architecture
 - **Memory Operations**: 91% lower latency with Mem0 integration
 - **Overall Throughput**: 471+ QPS sustained load
 
 #### **Latency Benchmarks**
+
 - **Vector Similarity Search**: <100ms (P95)
 - **Complex Trip Queries**: <200ms (P95)
 - **User Preference Lookup**: <50ms (P95)
 - **Chat History Retrieval**: <75ms (P95)
 
 #### **Resource Utilization**
+
 - **Connection Pool**: 95% efficiency with pgbouncer
 - **Index Usage**: >98% query index usage
 - **Cache Hit Ratio**: >95% for frequently accessed data
@@ -627,6 +636,7 @@ class RealtimeIntegration:
 ## 🎯 Best Practices
 
 ### **Development Guidelines**
+
 1. **Always Use Transactions**: For multi-table operations
 2. **Optimize Vector Indexes**: Regular VACUUM and REINDEX on vector tables
 3. **Monitor Query Performance**: Use pg_stat_statements for analysis
@@ -634,6 +644,7 @@ class RealtimeIntegration:
 5. **Regular Backup Testing**: Verify backup integrity monthly
 
 ### **Security Considerations**
+
 1. **Row Level Security**: Enable RLS on all user data tables
 2. **Encrypted Storage**: Use pgcrypto for sensitive data
 3. **API Key Security**: Store encrypted with Fernet encryption

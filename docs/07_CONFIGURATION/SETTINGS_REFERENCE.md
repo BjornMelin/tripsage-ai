@@ -8,21 +8,22 @@ This comprehensive reference document covers TripSage's centralized configuratio
 
 ## 📋 Table of Contents
 
-- [System Overview](#system-overview)
-- [Core Benefits](#core-benefits)
-- [Settings Architecture](#settings-architecture)
-- [Configuration Models](#configuration-models)
-- [Environment Variables](#environment-variables)
-- [Usage Patterns](#usage-patterns)
-- [Security Best Practices](#security-best-practices)
-- [Development Workflow](#development-workflow)
-- [Production Considerations](#production-considerations)
+- [System Overview](#-system-overview)
+- [Core Benefits](#-core-benefits)
+- [Settings Architecture](#️-settings-architecture)
+- [Configuration Models](#️-configuration-models)
+- [Environment Variables](#-environment-variables)
+- [Usage Patterns](#-usage-patterns)
+- [Security Best Practices](#-security-best-practices)
+- [Development Workflow](#️-development-workflow)
+- [Production Considerations](#-production-considerations)
 
 ## 🎯 System Overview
 
 TripSage employs a centralized settings system that manages all application configurations through Pydantic's `BaseSettings` class. This unified approach supports the current architecture with DragonflyDB caching, Mem0 memory system, 7 direct SDK integrations, and BYOK (Bring Your Own Key) management.
 
 ### **Architecture Principles**
+
 - **Single Source of Truth**: All configurations defined in hierarchical structure
 - **Type Safety**: Compile-time validation with Pydantic models
 - **Environment Flexibility**: Easy overrides via environment variables
@@ -32,6 +33,7 @@ TripSage employs a centralized settings system that manages all application conf
 ## ✅ Core Benefits
 
 ### **1. Type Safety and Validation**
+
 ```python
 # Automatic type validation and conversion
 class DatabaseConfig(BaseSettings):
@@ -47,6 +49,7 @@ class DatabaseConfig(BaseSettings):
 ```
 
 ### **2. Environment Variable Support**
+
 ```python
 # Automatic environment variable loading
 class ExternalServiceConfig(BaseSettings):
@@ -57,6 +60,7 @@ class ExternalServiceConfig(BaseSettings):
 ```
 
 ### **3. Hierarchical Organization**
+
 ```python
 # Nested configuration models
 class AppSettings(BaseSettings):
@@ -374,7 +378,7 @@ class AirbnbMCPConfig(BaseSettings):
 
 The settings system automatically maps environment variables to configuration fields using the following pattern:
 
-```
+```plaintext
 {ENV_PREFIX}_{MODEL_PREFIX}_{FIELD_NAME}
 ```
 

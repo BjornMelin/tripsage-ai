@@ -12,7 +12,7 @@ TripSage implements a microservices architecture with the following components:
 - **Backend API**: FastAPI service handling core business logic
 - **Direct SDK Integrations**: Simplified service integrations for different domains
   - Flight APIs (direct SDK integration)
-  - Accommodation APIs (direct SDK integration) 
+  - Accommodation APIs (direct SDK integration)
   - Google Maps SDK (location services)
   - Time services (direct SDK)
   - Weather services (direct SDK)

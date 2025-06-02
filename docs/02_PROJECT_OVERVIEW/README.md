@@ -34,12 +34,14 @@ TripSage AI is an intelligent travel planning platform that combines:
 ## 🏗️ Key Components
 
 ### **Core Infrastructure**
+
 - **Database**: Supabase PostgreSQL + pgvector + pgvectorscale
 - **Caching**: DragonflyDB (25x faster than Redis)
 - **Memory**: Mem0 (direct SDK integration)
 - **Orchestration**: LangGraph with PostgreSQL checkpointing
 
 ### **Service Integration**
+
 - **Direct SDKs**: 7 services (Supabase, Google Maps, Duffel, etc.)
 - **MCP Integration**: 1 service (Airbnb only)
 - **Monitoring**: OpenTelemetry + Prometheus + Grafana
@@ -64,18 +66,21 @@ TripSage AI is an intelligent travel planning platform that combines:
 ## 📈 Business Impact
 
 ### **For Development Teams**
+
 - 60-70% fewer moving parts to understand
 - Standard SDK integration patterns
 - Native IDE support and documentation
 - Faster onboarding with familiar technologies
 
 ### **For Operations Teams**
+
 - Simplified deployment (single database and caching layer)
 - Unified observability with OpenTelemetry
 - Fewer services to manage and update
 - Improved reliability with battle-tested architectures
 
 ### **For Business Stakeholders**
+
 - $1,500-2,000/month operational cost reduction
 - 50-70% faster system response times
 - Modern multi-threaded architectures ready for growth

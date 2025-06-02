@@ -113,7 +113,7 @@ graph.add_conditional_edges("router", route_to_agent, {...})
 
 ### Specialized Agent Nodes (Production Ready)
 
-- **Router Node**: 
+- **Router Node**:
   - **Responsibilities**: Analyzes user messages and routes to appropriate specialized agents
   - **Intelligence**: Uses conversation history and intent classification for optimal routing
   - **Performance**: Fast routing decisions with caching for common patterns
@@ -868,6 +868,7 @@ User → TravelAgent (Triage) → Specialized Agents (Flight, Accommodation, Iti
 ```
 
 This pattern enabled:
+
 - Clear separation of responsibilities
 - Focused expertise in specialized domains
 - Simplified maintenance and updates
@@ -905,6 +906,7 @@ travel_agent = Agent(
 ### Migration to LangGraph
 
 The current system replaced this pattern with LangGraph-based orchestration for:
+
 - **Better State Management**: Persistent conversation state across agent transitions
 - **Graph-Based Workflows**: Deterministic execution flows with conditional branching
 - **PostgreSQL Checkpointing**: Production-ready state persistence and recovery

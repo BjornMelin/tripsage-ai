@@ -82,6 +82,7 @@ uv run python scripts/verification/verify_connection.py
 ### 4. Start Services
 
 #### Option A: Development (Recommended)
+
 ```bash
 # Terminal 1: Start DragonflyDB (if not using external Redis)
 docker-compose up dragonfly
@@ -95,6 +96,7 @@ pnpm dev
 ```
 
 #### Option B: Full Infrastructure
+
 ```bash
 # Start all infrastructure services
 docker-compose up -d
@@ -115,22 +117,26 @@ cd frontend && pnpm dev
 ## Architecture Overview
 
 ### Unified Backend
+
 - **Single FastAPI service** at `tripsage/api/`
 - **LangGraph Phase 3** for agent orchestration
 - **PostgreSQL checkpointing** for conversation state
 - **Mem0 memory system** with pgvector backend
 
 ### Database Stack
+
 - **Supabase**: Primary database with pgvector for embeddings
 - **DragonflyDB**: 25x faster Redis-compatible caching
 - **No Neo4j**: Eliminated for simplified architecture
 
 ### API Integrations
+
 - **7 Direct SDKs**: Google Maps, Duffel, OpenWeather, etc.
 - **1 MCP Server**: Airbnb (only remaining MCP)
 - **BYOK System**: Bring Your Own Key authentication
 
 ### Frontend
+
 - **Next.js 15**: Modern React with App Router
 - **TypeScript**: Full type safety
 - **Tailwind CSS**: Utility-first styling
@@ -139,6 +145,7 @@ cd frontend && pnpm dev
 ## Development Workflow
 
 ### Code Quality
+
 ```bash
 # Python (run from project root)
 ruff check . --fix && ruff format .
@@ -152,6 +159,7 @@ npx vitest run --coverage
 ```
 
 ### Testing
+
 ```bash
 # Backend tests
 uv run pytest tests/ --cov=tripsage --cov-report=html
@@ -168,12 +176,14 @@ uv run pytest tests/integration/ -v
 ### Adding Dependencies
 
 **Python packages:**
+
 ```bash
 # Add to pyproject.toml dependencies, then:
 uv pip install -e .
 ```
 
 **Frontend packages:**
+
 ```bash
 cd frontend
 pnpm add package-name
@@ -184,19 +194,23 @@ pnpm add -D package-name
 ## Production Deployment
 
 ### Environment Variables
+
 Ensure all production environment variables are set:
+
 - Database connection strings
 - API keys for external services
 - Security keys and passwords
 - Monitoring and logging configuration
 
 ### Database Migration
+
 ```bash
 # Run production migrations
 ENVIRONMENT=production uv run python scripts/database/run_migrations.py
 ```
 
 ### Build and Deploy
+
 ```bash
 # Build frontend
 cd frontend
@@ -213,19 +227,23 @@ pnpm start
 ## Configuration Details
 
 ### BYOK (Bring Your Own Key) System
+
 Users provide their own API keys through the frontend:
+
 - Stored securely in Supabase
 - Encrypted at rest
 - Validated before use
 - Supports: OpenAI, Google Maps, Duffel, OpenWeather
 
 ### Memory System (Mem0)
+
 - **Unified memory** across all conversations
 - **pgvector embeddings** for semantic search
 - **Automatic context** building for agents
 - **Persistent storage** in Supabase
 
 ### Agent Orchestration (LangGraph)
+
 - **Phase 3 implementation** with PostgreSQL checkpointing
 - **State persistence** across sessions
 - **Error recovery** and retry logic
@@ -236,6 +254,7 @@ Users provide their own API keys through the frontend:
 ### Common Issues
 
 **Database Connection Errors:**
+
 ```bash
 # Check Supabase connection
 uv run python scripts/verification/verify_connection.py
@@ -245,6 +264,7 @@ grep -E "SUPABASE|DATABASE" .env
 ```
 
 **DragonflyDB/Redis Issues:**
+
 ```bash
 # Test cache connection
 docker exec -it tripsage-dragonfly redis-cli ping
@@ -254,6 +274,7 @@ grep -E "DRAGONFLY|REDIS" .env
 ```
 
 **Import Errors:**
+
 ```bash
 # Reinstall in development mode
 uv pip install -e .
@@ -263,6 +284,7 @@ python -c "import tripsage; print(tripsage.__file__)"
 ```
 
 **Frontend Build Issues:**
+
 ```bash
 cd frontend
 # Clear cache and reinstall
@@ -274,16 +296,19 @@ pnpm build
 ### Performance Tuning
 
 **Database:**
+
 - Enable pgvector extension in Supabase
 - Configure connection pooling
 - Monitor query performance
 
 **Caching:**
+
 - Use DragonflyDB for 25x performance improvement
 - Configure appropriate TTL values
 - Monitor cache hit rates
 
 **Frontend:**
+
 - Enable Next.js 15 Turbopack for development
 - Optimize bundle size with tree shaking
 - Use React 19 concurrent features

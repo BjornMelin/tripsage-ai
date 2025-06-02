@@ -18,6 +18,7 @@
 ## 🚀 API Overview
 
 ### **REST API**
+
 - **Base URL**: `https://api.tripsage.ai/v1`
 - **Authentication**: API Key, JWT, OAuth 2.0
 - **Format**: JSON request/response
@@ -25,12 +26,14 @@
 - **Versioning**: URL-based versioning (`/v1/`, `/v2/`)
 
 ### **WebSocket API**
+
 - **Endpoint**: `wss://api.tripsage.ai/ws`
 - **Authentication**: JWT token or API key
 - **Features**: Real-time updates, agent communication
 - **Protocols**: JSON-RPC 2.0 over WebSocket
 
 ### **GraphQL API**
+
 - **Endpoint**: `https://api.tripsage.ai/graphql`
 - **Schema**: Auto-generated from Pydantic models
 - **Features**: Flexible queries, real-time subscriptions
@@ -39,7 +42,8 @@
 ## 🔌 Core API Endpoints
 
 ### **Travel Planning**
-```
+
+```plaintext
 GET    /api/v1/destinations/search      # Search destinations
 GET    /api/v1/flights/search          # Search flights
 GET    /api/v1/accommodations/search   # Search accommodations
@@ -49,7 +53,8 @@ PUT    /api/v1/trips/{trip_id}         # Update trip plan
 ```
 
 ### **User Management**
-```
+
+```plaintext
 POST   /api/v1/auth/register           # User registration
 POST   /api/v1/auth/login              # User authentication
 POST   /api/v1/auth/refresh            # Refresh tokens
@@ -58,7 +63,8 @@ PUT    /api/v1/users/profile           # Update user profile
 ```
 
 ### **AI & Memory**
-```
+
+```plaintext
 POST   /api/v1/chat/completions        # Chat with AI agents
 GET    /api/v1/memory/conversations    # Get conversation history
 POST   /api/v1/memory/preferences      # Update user preferences
@@ -69,6 +75,7 @@ POST   /api/v1/agents/handoff          # Trigger agent handoff
 ## 📊 Data Models
 
 ### **Core Travel Models**
+
 ```python
 # Trip Model
 class Trip(BaseModel):
@@ -97,6 +104,7 @@ class Flight(BaseModel):
 ```
 
 ### **Authentication Models**
+
 ```python
 # User Model
 class User(BaseModel):
@@ -120,6 +128,7 @@ class APIKey(BaseModel):
 ## 🔒 Authentication
 
 ### **API Key Authentication**
+
 ```http
 GET /api/v1/destinations/search
 Authorization: Bearer your-api-key-here
@@ -127,6 +136,7 @@ Content-Type: application/json
 ```
 
 ### **JWT Authentication**
+
 ```http
 POST /api/v1/auth/login
 Content-Type: application/json
@@ -140,7 +150,8 @@ Content-Type: application/json
 ```
 
 ### **OAuth 2.0 Flow**
-```
+
+```plaintext
 1. Redirect to: /api/v1/auth/oauth/authorize?provider=google
 2. Callback to: /api/v1/auth/oauth/callback
 3. Receive JWT tokens in response
@@ -149,6 +160,7 @@ Content-Type: application/json
 ## ⚡ WebSocket Communication
 
 ### **Connection Setup**
+
 ```javascript
 const ws = new WebSocket('wss://api.tripsage.ai/ws');
 ws.onopen = () => {
@@ -161,6 +173,7 @@ ws.onopen = () => {
 ```
 
 ### **Real-Time Events**
+
 ```javascript
 // Agent status updates
 {
@@ -184,6 +197,7 @@ ws.onopen = () => {
 ## 🚨 Error Handling
 
 ### **Standard Error Response**
+
 ```json
 {
   "error": {
@@ -199,6 +213,7 @@ ws.onopen = () => {
 ```
 
 ### **HTTP Status Codes**
+
 - **200**: Success
 - **201**: Created
 - **400**: Bad Request
@@ -211,6 +226,7 @@ ws.onopen = () => {
 ## 📈 Rate Limiting
 
 ### **Rate Limit Headers**
+
 ```http
 X-RateLimit-Limit: 1000
 X-RateLimit-Remaining: 999
@@ -219,6 +235,7 @@ X-RateLimit-Window: 3600
 ```
 
 ### **Rate Limit Tiers**
+
 - **Free**: 100 requests/hour
 - **Standard**: 1,000 requests/hour
 - **Premium**: 10,000 requests/hour
@@ -227,6 +244,7 @@ X-RateLimit-Window: 3600
 ## 🔄 Pagination
 
 ### **Cursor-Based Pagination**
+
 ```json
 {
   "data": [...],
@@ -240,6 +258,7 @@ X-RateLimit-Window: 3600
 ```
 
 ### **Page-Based Pagination**
+
 ```http
 GET /api/v1/trips?page=2&size=20&sort=created_at:desc
 ```
@@ -247,11 +266,13 @@ GET /api/v1/trips?page=2&size=20&sort=created_at:desc
 ## 🔗 SDK & Libraries
 
 ### **Official SDKs**
+
 - **Python**: `pip install tripsage-python`
 - **JavaScript/TypeScript**: `npm install tripsage-js`
 - **React**: `npm install @tripsage/react`
 
 ### **Community Libraries**
+
 - **Go**: `github.com/community/tripsage-go`
 - **PHP**: `composer require community/tripsage-php`
 - **Ruby**: `gem install tripsage-ruby`
@@ -259,11 +280,13 @@ GET /api/v1/trips?page=2&size=20&sort=created_at:desc
 ## 📖 Interactive Documentation
 
 ### **API Explorer**
+
 - **Swagger UI**: `https://api.tripsage.ai/docs`
 - **GraphQL Playground**: `https://api.tripsage.ai/graphql`
 - **Postman Collection**: Available in developer portal
 
 ### **Code Examples**
+
 - **cURL Examples**: Complete command-line examples
 - **Language SDKs**: Examples in Python, JavaScript, etc.
 - **Integration Patterns**: Common use case implementations
@@ -271,15 +294,18 @@ GET /api/v1/trips?page=2&size=20&sort=created_at:desc
 ## 🔗 Related Documentation
 
 ### **Implementation Guides**
+
 - **[Getting Started](../01_GETTING_STARTED/README.md)** - Setup and installation
 - **[Development Guide](../04_DEVELOPMENT_GUIDE/README.md)** - Developer resources
 - **[Features](../05_FEATURES_AND_INTEGRATIONS/README.md)** - Feature documentation
 
 ### **Configuration**
+
 - **[Configuration](../07_CONFIGURATION/README.md)** - Settings & environment
 - **[Authentication System](../05_FEATURES_AND_INTEGRATIONS/AUTHENTICATION_SYSTEM.md)** - Auth details
 
 ### **User Resources**
+
 - **[User Guides](../08_USER_GUIDES/README.md)** - End-user documentation
 - **[API Usage Examples](../08_USER_GUIDES/API_USAGE_EXAMPLES.md)** - Developer examples
 

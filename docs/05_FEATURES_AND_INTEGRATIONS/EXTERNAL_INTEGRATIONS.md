@@ -8,22 +8,21 @@ This document provides comprehensive coverage of TripSage's external service int
 
 ## 📋 Table of Contents
 
-- [Integration Strategy Overview](#integration-strategy-overview)
-- [Direct SDK Integrations](#direct-sdk-integrations)
-- [MCP Server Integrations](#mcp-server-integrations)
-- [Accommodation Services](#accommodation-services)
-- [Flight and Transportation](#flight-and-transportation)
-- [Location and Mapping Services](#location-and-mapping-services)
-- [Weather and Time Services](#weather-and-time-services)
-- [Web Content and Research](#web-content-and-research)
-- [Authentication and Security](#authentication-and-security)
-- [Performance and Monitoring](#performance-and-monitoring)
+- [Integration Strategy Overview](#️-integration-strategy-overview)
+- [Direct SDK Integrations](#-direct-sdk-integrations)
+- [Accommodation Services](#-accommodation-services)
+- [Flight and Transportation](#-flight-and-transportation)
+- [Location and Mapping Services](#️-location-and-mapping-services)
+- [Weather and Time Services](#️-weather-and-time-services)
+- [Web Content and Research](#-web-content-and-research)
+- [Authentication and Security](#-authentication-and-security)
+- [Performance and Monitoring](#-performance-and-monitoring)
 
 ## 🏗️ Integration Strategy Overview
 
 TripSage implements a **hybrid integration architecture** that prioritizes performance through direct SDK integration while maintaining flexibility with MCP server fallbacks.
 
-```
+```plaintext
 ┌──────────────────────────────────────────────────────────────────────┐
 │                       TripSage Integration Layer                     │
 ├─────────────────────────┬────────────────────────────────────────────┤
@@ -65,12 +64,14 @@ TripSage implements a **hybrid integration architecture** that prioritizes perfo
 
 ### **1. Duffel Flight Services**
 
-#### **Overview**
+#### Overview
+
 - **Technology**: Duffel SDK (Python) for flight search, booking, and management
 - **Performance**: Direct API integration, ~200ms response times
 - **Coverage**: 300+ airlines, global flight inventory
 
-#### **Implementation**
+#### Implementation
+
 ```python
 from tripsage_core.services.external_apis.duffel_http_client import DuffelHTTPClient
 from tripsage_core.utils.cache_utils import cache_result
@@ -106,6 +107,7 @@ class FlightService:
 ```
 
 #### **Key Features**
+
 - **Real-time Flight Search**: Live inventory with pricing
 - **Booking Management**: Create, modify, and cancel bookings
 - **Seat Selection**: Detailed seat maps and selection
@@ -119,6 +121,7 @@ class FlightService:
 **Versioning**: Via `Duffel-Version` header (e.g., `2023-06-02`)
 
 **Key Endpoints Used by TripSage**:
+
 - `POST /air/offer_requests`: Initiate flight search with detailed parameters
 - `GET /air/offers?offer_request_id={id}`: Retrieve flight offers from search
 - `GET /air/offers/{id}`: Get specific offer details and pricing
@@ -132,12 +135,14 @@ class FlightService:
 
 ### **2. Google Maps and Places API**
 
-#### **Overview**
+#### Overview - Google Maps and Places API
+
 - **Technology**: Google Maps Platform SDK
 - **Performance**: <100ms geocoding, <200ms place search
 - **Coverage**: Global location data, detailed place information
 
-#### **Implementation**
+#### Implementation - Google Maps and Places API
+
 ```python
 from tripsage_core.services.external_apis.google_maps_service import GoogleMapsService
 
@@ -183,7 +188,8 @@ class LocationService:
         )
 ```
 
-#### **Key Features**
+#### Key Features - Google Maps and Places API
+
 - **Place Search**: Comprehensive place discovery and details
 - **Geocoding**: Address to coordinates conversion
 - **Directions**: Multi-modal routing and navigation
@@ -192,12 +198,14 @@ class LocationService:
 
 ### **3. Google Calendar Integration**
 
-#### **Overview**
+#### Overview - Google Calendar API
+
 - **Technology**: Google Calendar API v3
 - **Performance**: Real-time calendar sync, <300ms operations
 - **Purpose**: Trip planning and schedule coordination
 
-#### **Implementation**
+#### Implementation - Google Calendar API
+
 ```python
 from tripsage_core.services.external_apis.calendar_service import CalendarService
 
@@ -231,7 +239,8 @@ class TripCalendarService:
         )
 ```
 
-#### **Key Features**
+#### Key Features
+
 - **Trip Calendars**: Dedicated calendars for each trip
 - **Automated Events**: Flight, hotel, and activity scheduling
 - **Conflict Detection**: Avoid scheduling conflicts
@@ -240,12 +249,14 @@ class TripCalendarService:
 
 ### **4. OpenWeatherMap Integration**
 
-#### **Overview**
+#### Overview - OpenWeatherMap API
+
 - **Technology**: OpenWeatherMap API v3.0
 - **Performance**: <200ms weather data retrieval
 - **Coverage**: Global weather data with forecasts
 
-#### **Implementation**
+#### Implementation - OpenWeatherMap API
+
 ```python
 from tripsage_core.services.external_apis.weather_service import WeatherService
 
@@ -279,7 +290,8 @@ class TravelWeatherService:
         )
 ```
 
-#### **Key Features**
+#### Key Features - OpenWeatherMap API
+
 - **Travel-Specific Forecasts**: Weather data optimized for trip planning
 - **Packing Recommendations**: Clothing and gear suggestions
 - **Activity Suitability**: Weather-based activity recommendations
@@ -288,12 +300,14 @@ class TravelWeatherService:
 
 ### **5. Crawl4AI Web Content Extraction**
 
-#### **Overview**
+#### Overview - Crawl4AI Web Content Extraction
+
 - **Technology**: Crawl4AI Python SDK
 - **Performance**: 6-10x improvement over browser automation
 - **Purpose**: Intelligent travel content extraction
 
-#### **Implementation**
+#### Implementation - Crawl4AI Web Content Extraction
+
 ```python
 from tripsage.tools.webcrawl.crawl4ai_client import Crawl4AIClient
 
@@ -337,7 +351,8 @@ class TravelContentService:
         )
 ```
 
-#### **Key Features**
+#### Key Features - Crawl4AI Web Content Extraction
+
 - **Structured Extraction**: Convert web content to structured travel data
 - **Multi-source Aggregation**: Combine information from multiple sources
 - **Content Classification**: Automatic categorization of travel information
@@ -346,12 +361,14 @@ class TravelContentService:
 
 ### **6. Time and Timezone Services**
 
-#### **Overview**
+#### Overview - Time and Timezone Services
+
 - **Technology**: Multiple timezone and time APIs
 - **Performance**: <50ms timezone operations
 - **Purpose**: Multi-timezone trip coordination
 
-#### **Implementation**
+#### Implementation - Time and Timezone Services
+
 ```python
 from tripsage_core.services.external_apis.time_service import TimeService
 
@@ -396,7 +413,8 @@ class TravelTimeService:
         )
 ```
 
-#### **Key Features**
+#### Key Features - Time and Timezone Services
+
 - **Multi-timezone Coordination**: Handle complex timezone calculations
 - **Jet Lag Analysis**: Optimize travel times for health
 - **Local Time Display**: Always show relevant local times
@@ -405,12 +423,14 @@ class TravelTimeService:
 
 ### **7. Currency and Exchange Services**
 
-#### **Overview**
+#### Overview - Currency and Exchange Services
+
 - **Technology**: Multiple currency APIs with fallbacks
 - **Performance**: <100ms exchange rate operations
 - **Purpose**: Multi-currency travel budgeting
 
-#### **Implementation**
+#### **Implementation - Currency and Exchange Services**
+
 ```python
 from tripsage_core.services.external_apis.currency_service import CurrencyService
 
@@ -459,7 +479,8 @@ class TravelCurrencyService:
         )
 ```
 
-#### **Key Features**
+#### Key Features - Currency and Exchange Services
+
 - **Real-time Exchange Rates**: Up-to-date currency conversions
 - **Multi-currency Budgeting**: Handle complex budget calculations
 - **Historical Rate Analysis**: Track currency trends
@@ -470,10 +491,12 @@ class TravelCurrencyService:
 
 ### **Airbnb Integration (MCP Server)**
 
-#### **Overview**
+#### Overview - Airbnb Integration (MCP Server)
+
 TripSage integrates with Airbnb through the OpenBnB MCP Server, providing access to vacation rentals and unique accommodations without requiring official Airbnb API access.
 
-#### **Integration Architecture**
+#### Integration Architecture - Airbnb Integration (MCP Server)
+
 ```python
 from tripsage.mcp_abstraction.wrappers.airbnb_wrapper import AirbnbWrapper
 
@@ -512,14 +535,16 @@ class AccommodationService:
         )
 ```
 
-#### **Key Features**
+#### Key Features - Airbnb Integration (MCP Server)
+
 - **Vacation Rental Search**: Access to Airbnb's global inventory
 - **Detailed Property Information**: Photos, amenities, house rules, reviews
 - **Price Comparison**: Compare costs across different providers
 - **Availability Checking**: Real-time availability verification
 - **Review Integration**: Access to guest reviews and ratings
 
-#### **MCP Tools Exposed**
+#### MCP Tools Exposed - Airbnb Integration (MCP Server)
+
 - **`airbnb_search`**: Search for Airbnb listings by location and dates
 - **`airbnb_listing_details`**: Get detailed information for specific listings
 - **`airbnb_reviews`**: Retrieve guest reviews for properties
@@ -527,13 +552,15 @@ class AccommodationService:
 
 ### **Hotel Integration Strategy**
 
-#### **Future Provider Integrations**
+#### Future Provider Integrations - Hotel Integration Strategy
+
 1. **Booking.com** (via Apify scraper integration)
 2. **Hotels.com** (direct API when available)
 3. **Expedia** (partner API integration)
 4. **Local Hotel Chains** (direct partnerships)
 
-#### **Unified Accommodation Interface**
+#### Unified Accommodation Interface - Hotel Integration Strategy
+
 ```python
 class UnifiedAccommodationInterface:
     """Abstract interface for all accommodation providers."""
@@ -562,6 +589,7 @@ class UnifiedAccommodationInterface:
 TripSage's primary flight service integration provides comprehensive flight search, booking, and management capabilities through direct SDK integration.
 
 #### **Core Flight Services**
+
 ```python
 class FlightBookingService:
     """Complete flight booking and management service."""
@@ -598,6 +626,7 @@ class FlightBookingService:
 ```
 
 #### **Advanced Flight Features**
+
 - **Multi-city Itineraries**: Complex routing with multiple stops
 - **Seat Selection**: Interactive seat maps and preferences
 - **Fare Comparison**: Real-time price monitoring and alerts
@@ -607,6 +636,7 @@ class FlightBookingService:
 ### **Ground Transportation Integration**
 
 #### **Planned Integrations**
+
 1. **Uber/Lyft APIs**: Ride-sharing integration for airport transfers
 2. **Car Rental APIs**: Hertz, Avis, Enterprise integration
 3. **Public Transit APIs**: Local transit information and booking
@@ -619,6 +649,7 @@ class FlightBookingService:
 TripSage leverages Google Maps Platform for comprehensive location services, providing global coverage and detailed geographic information.
 
 #### **Core Location Services**
+
 ```python
 class LocationIntelligenceService:
     """Advanced location services for travel planning."""
@@ -662,6 +693,7 @@ class LocationIntelligenceService:
 ```
 
 #### **Advanced Mapping Features**
+
 - **Route Optimization**: Multi-stop itinerary optimization
 - **Travel Time Analysis**: Realistic travel time calculations
 - **Accessibility Information**: Wheelchair-accessible routes and venues
@@ -671,6 +703,7 @@ class LocationIntelligenceService:
 ### **Location-Based Recommendations**
 
 #### **Intelligent Recommendation Engine**
+
 ```python
 class LocationRecommendationEngine:
     """AI-powered location recommendations based on user preferences."""
@@ -706,6 +739,7 @@ class LocationRecommendationEngine:
 TripSage provides comprehensive weather intelligence specifically designed for travel planning, including forecasts, alerts, and travel recommendations.
 
 #### **Travel-Optimized Weather Service**
+
 ```python
 class TravelWeatherIntelligence:
     """Weather intelligence optimized for travel planning."""
@@ -753,6 +787,7 @@ class TravelWeatherIntelligence:
 ### **Time Zone Intelligence**
 
 #### **Advanced Time Management**
+
 ```python
 class TravelTimeIntelligence:
     """Intelligent time management for complex travel itineraries."""
@@ -784,6 +819,7 @@ class TravelTimeIntelligence:
 TripSage's web content extraction service provides intelligent research capabilities for travel planning, using advanced AI to extract and structure travel information from web sources.
 
 #### **Intelligent Travel Research**
+
 ```python
 class TravelResearchService:
     """AI-powered travel research and content extraction."""
@@ -826,6 +862,7 @@ class TravelResearchService:
 ```
 
 #### **Content Quality and Verification**
+
 ```python
 class ContentQualityService:
     """Ensure high-quality, accurate travel information."""
@@ -863,6 +900,7 @@ class ContentQualityService:
 TripSage implements a comprehensive Bring Your Own Key (BYOK) system that allows users to securely provide and manage their own API keys for external services.
 
 #### **Secure Key Storage**
+
 ```python
 from tripsage_core.services.business.key_management_service import KeyManagementService
 
@@ -907,6 +945,7 @@ class SecureKeyManagementService:
 ```
 
 #### **Key Security Features**
+
 - **Encryption at Rest**: All API keys encrypted with user-specific encryption keys
 - **Access Control**: Role-based access to API key management
 - **Usage Monitoring**: Track API key usage and detect anomalies
@@ -916,6 +955,7 @@ class SecureKeyManagementService:
 ### **Rate Limiting and Quota Management**
 
 #### **Intelligent Rate Limiting**
+
 ```python
 class IntelligentRateLimiter:
     """Manage API rate limits across multiple services and users."""
@@ -977,6 +1017,7 @@ class IntelligentRateLimiter:
 TripSage maintains comprehensive performance monitoring across all external integrations to ensure optimal user experience.
 
 #### **Performance Monitoring Dashboard**
+
 ```python
 class IntegrationPerformanceMonitor:
     """Monitor and optimize integration performance."""
@@ -1011,6 +1052,7 @@ class IntegrationPerformanceMonitor:
 ### **Integration Health Monitoring**
 
 #### **Automated Health Checks**
+
 ```python
 class IntegrationHealthMonitor:
     """Monitor health of all external integrations."""
@@ -1045,20 +1087,23 @@ class IntegrationHealthMonitor:
 
 ### **Current Performance Achievements**
 
-#### **Integration Performance Metrics**
+#### Integration Performance Metrics
+
 - **Direct SDK Integrations**: 6-10x performance improvement over MCP-only approach
 - **Duffel Flight Search**: <200ms average response time (P95)
 - **Google Maps Operations**: <100ms geocoding, <200ms place search (P95)
 - **Weather Data Retrieval**: <200ms forecast data (P95)
 - **Content Extraction**: <2s intelligent web crawling (P95)
 
-#### **Caching Performance** 
+#### **Caching Performance**
+
 - **DragonflyDB Operations**: 25x faster than Redis baseline
 - **Cache Hit Rates**: >95% for frequently accessed data
 - **Memory Efficiency**: 40% better compression than Redis
 - **Throughput**: 10,000+ operations/second sustained
 
 #### **Overall System Performance**
+
 - **API Response Times**: <500ms end-to-end for complex operations (P95)
 - **Concurrent Users**: 1,000+ users supported simultaneously
 - **Service Availability**: 99.9% uptime with graceful degradation
@@ -1066,4 +1111,4 @@ class IntegrationHealthMonitor:
 
 ---
 
-*This comprehensive external integrations architecture provides TripSage with robust, high-performance connectivity to essential travel services while maintaining security, reliability, and optimal user experience.*
+> This comprehensive external integrations architecture provides TripSage with robust, high-performance connectivity to essential travel services while maintaining security, reliability, and optimal user experience.

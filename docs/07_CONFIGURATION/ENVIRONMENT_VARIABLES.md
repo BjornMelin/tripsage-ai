@@ -340,6 +340,7 @@ GET /health/external     # External API status
 ### Common Issues
 
 **Database Connection Failed:**
+
 ```bash
 # Check Supabase URL format
 SUPABASE_URL=https://your-project.supabase.co  # Must be HTTPS
@@ -349,6 +350,7 @@ SUPABASE_ANON_KEY=eyJ...  # Should be JWT format, >100 characters
 ```
 
 **Cache Connection Failed:**
+
 ```bash
 # Check DragonflyDB URL format
 DRAGONFLY_URL=redis://localhost:6379/0
@@ -358,6 +360,7 @@ DRAGONFLY_URL=redis://username:password@host:port/database
 ```
 
 **BYOK API Key Issues:**
+
 ```bash
 # User API keys are stored in database, not environment
 # Check api_keys table for user-specific keys
@@ -367,11 +370,13 @@ DRAGONFLY_URL=redis://username:password@host:port/database
 ### Debug Commands
 
 **Check System Health:**
+
 ```bash
 curl http://localhost:8000/health/detailed
 ```
 
 **Test Database Connection:**
+
 ```python
 from tripsage_core.services.infrastructure.database_service import DatabaseService
 db = DatabaseService()
@@ -379,6 +384,7 @@ await db.health_check()
 ```
 
 **Test Cache Connection:**
+
 ```python
 from tripsage_core.services.infrastructure.cache_service import CacheService
 cache = CacheService()

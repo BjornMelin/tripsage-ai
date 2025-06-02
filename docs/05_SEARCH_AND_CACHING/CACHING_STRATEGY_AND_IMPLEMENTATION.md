@@ -69,7 +69,7 @@ class DragonflyCache:
 - **Direct SDK Integrations**: High-performance cache for 7 direct SDK services (Duffel, Google Maps/Calendar, OpenWeatherMap, Crawl4AI)
 - **Unified Service Clients**: Cache results from external APIs using multi-tier TTL strategy:
   - **Flight data**: 5-10 minutes (high volatility)
-  - **Weather data**: 30 minutes (medium volatility) 
+  - **Weather data**: 30 minutes (medium volatility)
   - **Maps/Places data**: 24 hours (low volatility)
   - **Accommodation data**: 1 hour via Airbnb MCP
 - **Supabase Queries**: Cache frequent database queries and pgvector operations

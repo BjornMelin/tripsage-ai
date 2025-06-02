@@ -18,6 +18,7 @@
 ## 🛠️ Development Stack
 
 ### **Core Technologies**
+
 - **Backend**: Python 3.12, FastAPI, Pydantic v2
 - **Frontend**: Next.js 15, TypeScript, Tailwind CSS
 - **Database**: PostgreSQL (Supabase) + pgvector
@@ -26,6 +27,7 @@
 - **Orchestration**: LangGraph
 
 ### **Development Tools**
+
 - **Python**: uv (package management), ruff (linting/formatting)
 - **TypeScript**: Biome (linting/formatting), pnpm (package management)
 - **Testing**: pytest (Python), Vitest (TypeScript), Playwright (E2E)
@@ -34,6 +36,7 @@
 ## 🚀 Quick Start for Developers
 
 ### **1. Environment Setup**
+
 ```bash
 # Clone repository
 git clone [repository-url]
@@ -48,6 +51,7 @@ pnpm install
 ```
 
 ### **2. Development Workflow**
+
 ```bash
 # Start development services
 docker-compose up -d
@@ -64,6 +68,7 @@ cd frontend && pnpm test
 ```
 
 ### **3. Code Quality**
+
 ```bash
 # Python linting & formatting
 ruff check . --fix
@@ -78,6 +83,7 @@ npx biome format . --write
 ## 📊 Development Standards
 
 ### **Code Quality Requirements**
+
 - **Test Coverage**: ≥90% (enforced by CI)
 - **Type Hints**: Mandatory for all Python functions
 - **Linting**: Must pass ruff (Python) and Biome (TypeScript)
@@ -85,6 +91,7 @@ npx biome format . --write
 - **Security**: No secrets in code, use environment variables
 
 ### **Git Workflow**
+
 - **Branches**: `feature/*`, `fix/*`, `docs/*`
 - **Commits**: Conventional format (`feat:`, `fix:`, `docs:`, etc.)
 - **Pull Requests**: Required for all changes to `main`
@@ -93,6 +100,7 @@ npx biome format . --write
 ## 🏗️ Architecture Patterns
 
 ### **Backend Patterns**
+
 - **Service Layer**: Business logic separation
 - **Repository Pattern**: Data access abstraction
 - **Dependency Injection**: FastAPI dependencies
@@ -100,6 +108,7 @@ npx biome format . --write
 - **Async/Await**: Throughout the stack
 
 ### **Frontend Patterns**
+
 - **Component Structure**: Feature-based organization
 - **State Management**: Zustand stores
 - **Type Safety**: Zod for runtime validation
@@ -109,6 +118,7 @@ npx biome format . --write
 ## 🔧 Common Development Tasks
 
 ### **Adding a New API Endpoint**
+
 1. Define Pydantic models in `tripsage/api/schemas/`
 2. Implement service logic in `tripsage/api/services/`
 3. Create router in `tripsage/api/routers/`
@@ -116,6 +126,7 @@ npx biome format . --write
 5. Update API documentation
 
 ### **Adding a New Frontend Feature**
+
 1. Create components in `frontend/src/components/features/`
 2. Add types in `frontend/src/types/`
 3. Implement stores in `frontend/src/stores/`
@@ -123,6 +134,7 @@ npx biome format . --write
 5. Update navigation and routing
 
 ### **Database Migration**
+
 1. Create migration file in `migrations/`
 2. Test migration locally
 3. Update database models
@@ -132,11 +144,13 @@ npx biome format . --write
 ## 📚 Learning Resources
 
 ### **Internal Documentation**
+
 - **[Architecture](../03_ARCHITECTURE/README.md)** - System design
 - **[API Reference](../06_API_REFERENCE/README.md)** - API documentation
 - **[Configuration](../07_CONFIGURATION/README.md)** - Environment setup
 
 ### **External Resources**
+
 - **FastAPI**: [Official Documentation](https://fastapi.tiangolo.com/)
 - **Pydantic v2**: [Official Documentation](https://docs.pydantic.dev/latest/)
 - **Next.js 15**: [Official Documentation](https://nextjs.org/docs)
@@ -145,12 +159,14 @@ npx biome format . --write
 ## 🐛 Debugging & Troubleshooting
 
 ### **Common Issues**
+
 - **Import Errors**: Check Python path and virtual environment
 - **Database Connection**: Verify environment variables
 - **Frontend Builds**: Clear node_modules and reinstall
 - **Test Failures**: Check for async/await issues
 
 ### **Debugging Tools**
+
 - **Python**: Built-in debugger, pytest fixtures
 - **TypeScript**: Browser DevTools, VS Code debugger
 - **Database**: pgAdmin, Supabase dashboard
