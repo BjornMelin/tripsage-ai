@@ -253,7 +253,7 @@ class TestMemorySystemIntegration:
         # This structure should match frontend types/memory.ts interfaces
         assert expected_memory_response is not None
 
-    @patch("tripsage.services.memory_service.MemoryService")
+    @patch("tripsage_core.services.business.memory_service.MemoryService")
     def test_memory_service_initialization(self, mock_service_class):
         """Test memory service proper initialization."""
         # Verify service can be instantiated

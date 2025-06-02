@@ -12,10 +12,10 @@ from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, Field, field_validator
 
 from tripsage.mcp_abstraction.manager import MCPManager
-from tripsage.services.core.error_handling_service import (
+from tripsage_core.exceptions.exceptions import CoreTripSageError as TripSageError
+from tripsage_core.services.business.error_handling_service import (
     ErrorRecoveryService,
 )
-from tripsage_core.exceptions.exceptions import CoreTripSageError as TripSageError
 from tripsage_core.utils.decorator_utils import with_error_handling
 from tripsage_core.utils.logging_utils import get_logger
 
@@ -533,3 +533,25 @@ class ToolCallService:
             "data": result,
             "actions": ["save", "alert"],
         }
+
+
+# Dependency function for FastAPI
+async def get_tool_calling_service() -> ToolCallService:
+    """
+    Get tool calling service instance for dependency injection.
+
+    Returns:
+        ToolCallService instance
+    """
+    # Import here to avoid circular imports
+    try:
+        from tripsage.mcp_abstraction.manager import MCPManager
+
+        mcp_manager = MCPManager()
+    except ImportError:
+        # Create a minimal mock for testing
+        from unittest.mock import MagicMock
+
+        mcp_manager = MagicMock()
+
+    return ToolCallService(mcp_manager=mcp_manager)

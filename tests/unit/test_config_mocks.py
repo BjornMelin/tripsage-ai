@@ -7,23 +7,11 @@ to enable isolated testing without external dependencies.
 
 import os
 from pathlib import Path
-from unittest.mock import MagicMock, AsyncMock
 from typing import Any, Dict, Optional
+from unittest.mock import AsyncMock
 
 import pytest
 from pydantic import SecretStr
-
-from tripsage_core.config.base_app_settings import (
-    CoreAppSettings,
-    DatabaseConfig,
-    DragonflyConfig,
-    Mem0Config,
-    LangGraphConfig,
-    Crawl4AIConfig,
-    AgentConfig,
-    FeatureFlags,
-    OpenTelemetryConfig
-)
 
 
 class MockCoreAppSettings:
@@ -35,14 +23,14 @@ class MockCoreAppSettings:
         self.debug = True
         self.environment = "testing"
         self.log_level = "INFO"
-        
+
         # Base paths
         self.base_dir = Path("/tmp/test")
-        
+
         # Security secrets (safe test values)
         self.jwt_secret_key = SecretStr("test-jwt-secret-key")
         self.api_key_master_secret = SecretStr("test-master-secret")
-        
+
         # API keys (safe test values)
         self.openai_api_key = SecretStr("sk-test-openai-key-1234567890abcdef")
         self.google_maps_api_key = SecretStr("test-google-maps-key")
@@ -51,7 +39,7 @@ class MockCoreAppSettings:
         self.openweathermap_api_key = SecretStr("test-weather-api-key")
         self.visual_crossing_api_key = SecretStr("test-visual-crossing-key")
         self.duffel_api_key = SecretStr("test-duffel-api-key")
-        
+
         # Sub-configurations with mock defaults
         self.database = MockDatabaseConfig()
         self.dragonfly = MockDragonflyConfig()
@@ -83,7 +71,7 @@ class MockCoreAppSettings:
 
 class MockDatabaseConfig:
     """Mock database configuration."""
-    
+
     def __init__(self):
         self.supabase_url = "https://test-project.supabase.co"
         self.supabase_anon_key = SecretStr("test-anon-key")
@@ -98,7 +86,7 @@ class MockDatabaseConfig:
 
 class MockDragonflyConfig:
     """Mock DragonflyDB configuration."""
-    
+
     def __init__(self):
         self.url = "redis://localhost:6379/1"  # Test database
         self.ttl_short = 300
@@ -111,7 +99,7 @@ class MockDragonflyConfig:
 
 class MockMem0Config:
     """Mock Mem0 memory configuration."""
-    
+
     def __init__(self):
         self.vector_store_type = "pgvector"
         self.embedding_model = "text-embedding-3-small"
@@ -127,7 +115,7 @@ class MockMem0Config:
 
 class MockLangGraphConfig:
     """Mock LangGraph configuration."""
-    
+
     def __init__(self):
         self.checkpoint_storage = "memory"  # Use memory for tests
         self.enable_streaming = False  # Disable for tests
@@ -144,7 +132,7 @@ class MockLangGraphConfig:
 
 class MockCrawl4AIConfig:
     """Mock Crawl4AI configuration."""
-    
+
     def __init__(self):
         self.api_url = "http://localhost:8000/api"
         self.api_key = SecretStr("test-crawl4ai-key")
@@ -162,7 +150,7 @@ class MockCrawl4AIConfig:
 
 class MockAgentConfig:
     """Mock agent configuration."""
-    
+
     def __init__(self):
         self.model_name = "gpt-4o"
         self.max_tokens = 1000  # Lower for tests
@@ -175,19 +163,19 @@ class MockAgentConfig:
             "max_stops": 1,
             "preferred_airlines": [],
             "avoid_airlines": [],
-            "time_window": "flexible"
+            "time_window": "flexible",
         }
         self.default_accommodation_preferences = {
             "property_type": "hotel",
             "min_rating": 3.5,
             "amenities": ["wifi"],
-            "location_preference": "city_center"
+            "location_preference": "city_center",
         }
 
 
 class MockFeatureFlags:
     """Mock feature flags."""
-    
+
     def __init__(self):
         self.enable_agent_memory = True
         self.enable_parallel_agents = True
@@ -202,7 +190,7 @@ class MockFeatureFlags:
 
 class MockOpenTelemetryConfig:
     """Mock OpenTelemetry configuration."""
-    
+
     def __init__(self):
         self.enabled = False  # Disable for tests
         self.service_name = "tripsage-test"
@@ -274,37 +262,31 @@ def setup_test_environment():
         "TRIPSAGE_TEST_MODE": "true",
         "ENVIRONMENT": "testing",
         "DEBUG": "true",
-        
         # Database
         "SUPABASE_URL": "https://test-project.supabase.co",
         "SUPABASE_ANON_KEY": "test-anon-key",
         "SUPABASE_SERVICE_ROLE_KEY": "test-service-role-key",
-        
         # Cache
         "REDIS_URL": "redis://localhost:6379/1",
-        
         # API Keys (safe test values)
         "OPENAI_API_KEY": "sk-test-openai-key-1234567890abcdef",
         "GOOGLE_MAPS_API_KEY": "test-google-maps-key",
         "DUFFEL_API_KEY": "test-duffel-api-key",
         "OPENWEATHERMAP_API_KEY": "test-weather-api-key",
-        
         # Security
         "JWT_SECRET_KEY": "test-jwt-secret-key",
         "API_KEY_MASTER_SECRET": "test-master-secret",
-        
         # Services
         "CRAWL4AI_API_URL": "http://localhost:8000/api",
         "CRAWL4AI_API_KEY": "test-crawl4ai-key",
-        
         # Feature flags
         "ENABLE_STREAMING_RESPONSES": "false",
         "ENABLE_RATE_LIMITING": "false",
         "ENABLE_CACHING": "false",
         "ENABLE_DEBUG_MODE": "true",
-        "ENABLE_TRACING": "false"
+        "ENABLE_TRACING": "false",
     }
-    
+
     for key, value in test_env.items():
         os.environ[key] = value
 
@@ -319,19 +301,19 @@ def setup_test_env():
 
 class MockServiceRegistry:
     """Mock service registry for dependency injection testing."""
-    
+
     def __init__(self):
         self._services = {}
-    
+
     def register_service(self, name: str, service: Any):
         """Register a mock service."""
         self._services[name] = service
-    
+
     def get_service(self, name: str) -> Any:
         """Get a mock service."""
         if name in self._services:
             return self._services[name]
-        
+
         # Return appropriate mock based on service name
         if "accommodation" in name.lower():
             return self._create_accommodation_service_mock()
@@ -343,80 +325,82 @@ class MockServiceRegistry:
             return self._create_weather_service_mock()
         else:
             return AsyncMock()
-    
+
     def get_optional_service(self, name: str) -> Optional[Any]:
         """Get an optional mock service."""
         try:
             return self.get_service(name)
         except Exception:
             return None
-    
+
     def _create_accommodation_service_mock(self):
         """Create mock accommodation service."""
         service = AsyncMock()
-        service.search_accommodations = AsyncMock(return_value={
-            "accommodations": [
-                {
-                    "id": "hotel_123",
-                    "name": "Test Hotel",
-                    "price_per_night": 150.0,
-                    "rating": 4.5,
-                    "location": "Test City"
-                }
-            ],
-            "total_count": 1
-        })
-        service.book_accommodation = AsyncMock(return_value={
-            "booking_id": "booking_456",
-            "status": "confirmed"
-        })
+        service.search_accommodations = AsyncMock(
+            return_value={
+                "accommodations": [
+                    {
+                        "id": "hotel_123",
+                        "name": "Test Hotel",
+                        "price_per_night": 150.0,
+                        "rating": 4.5,
+                        "location": "Test City",
+                    }
+                ],
+                "total_count": 1,
+            }
+        )
+        service.book_accommodation = AsyncMock(
+            return_value={"booking_id": "booking_456", "status": "confirmed"}
+        )
         return service
-    
+
     def _create_flight_service_mock(self):
         """Create mock flight service."""
         service = AsyncMock()
-        service.search_flights = AsyncMock(return_value={
-            "flights": [
-                {
-                    "id": "flight_123",
-                    "airline": "Test Airways",
-                    "origin": "NYC",
-                    "destination": "LAX",
-                    "price": 299.99,
-                    "duration": "5h 30m"
-                }
-            ],
-            "total_count": 1
-        })
+        service.search_flights = AsyncMock(
+            return_value={
+                "flights": [
+                    {
+                        "id": "flight_123",
+                        "airline": "Test Airways",
+                        "origin": "NYC",
+                        "destination": "LAX",
+                        "price": 299.99,
+                        "duration": "5h 30m",
+                    }
+                ],
+                "total_count": 1,
+            }
+        )
         return service
-    
+
     def _create_memory_service_mock(self):
         """Create mock memory service."""
         service = AsyncMock()
-        service.search_memories = AsyncMock(return_value={
-            "memories": [
-                {
-                    "id": "memory_123",
-                    "content": "User prefers boutique hotels",
-                    "relevance": 0.95
-                }
-            ]
-        })
-        service.add_conversation_memory = AsyncMock(return_value={
-            "memory_id": "memory_456",
-            "status": "stored"
-        })
+        service.search_memories = AsyncMock(
+            return_value={
+                "memories": [
+                    {
+                        "id": "memory_123",
+                        "content": "User prefers boutique hotels",
+                        "relevance": 0.95,
+                    }
+                ]
+            }
+        )
+        service.add_conversation_memory = AsyncMock(
+            return_value={"memory_id": "memory_456", "status": "stored"}
+        )
         service.connect = AsyncMock()
         return service
-    
+
     def _create_weather_service_mock(self):
         """Create mock weather service."""
         service = AsyncMock()
-        service.get_current_weather = AsyncMock(return_value={
-            "temperature": 75,
-            "condition": "sunny",
-            "humidity": 60
-        })
+        service.get_current_weather = AsyncMock(
+            return_value={"temperature": 75, "condition": "sunny", "humidity": 60}
+        )
         return service
 
 
@@ -428,41 +412,30 @@ def mock_service_registry():
 
 class MockMCPManager:
     """Mock MCP Manager for testing."""
-    
+
     def __init__(self):
         self.invoke = AsyncMock()
         self.is_connected = AsyncMock(return_value=True)
         self.connect = AsyncMock()
         self.disconnect = AsyncMock()
-    
+
     async def invoke(self, method_name: str, params: Dict[str, Any]) -> Dict[str, Any]:
         """Mock MCP invoke method."""
         # Return different mock responses based on method name
         if "search_flights" in method_name:
             return {
                 "flights": [
-                    {
-                        "id": "flight_123",
-                        "price": 299.99,
-                        "airline": "Test Airways"
-                    }
+                    {"id": "flight_123", "price": 299.99, "airline": "Test Airways"}
                 ]
             }
         elif "search_accommodations" in method_name:
             return {
                 "accommodations": [
-                    {
-                        "id": "hotel_123",
-                        "price_per_night": 150.0,
-                        "name": "Test Hotel"
-                    }
+                    {"id": "hotel_123", "price_per_night": 150.0, "name": "Test Hotel"}
                 ]
             }
         elif "weather" in method_name:
-            return {
-                "temperature": 75,
-                "condition": "sunny"
-            }
+            return {"temperature": 75, "condition": "sunny"}
         else:
             return {"status": "success", "result": "mock_result"}
 
@@ -475,12 +448,13 @@ def mock_mcp_manager():
 
 def mock_pydantic_settings():
     """Mock Pydantic settings to avoid validation errors."""
+
     def mock_init(self, **kwargs):
         # Set all attributes from mock configurations
         mock_settings = MockCoreAppSettings()
         for key, value in mock_settings.__dict__.items():
             setattr(self, key, value)
-    
+
     return mock_init
 
 
@@ -488,22 +462,22 @@ def mock_pydantic_settings():
 def test_mock_settings_validation():
     """Test that mock settings are valid."""
     settings = MockCoreAppSettings()
-    
+
     # Basic validation
     assert settings.app_name == "TripSage"
     assert settings.environment == "testing"
     assert settings.is_testing() is True
     assert settings.is_production() is False
-    
+
     # API keys validation
     assert settings.get_secret_value("openai_api_key") is not None
     assert settings.get_secret_value("jwt_secret_key") is not None
-    
+
     # Sub-configuration validation
     assert settings.database.supabase_url is not None
     assert settings.dragonfly.url is not None
     assert settings.mem0.vector_store_type == "pgvector"
-    
+
     # No validation errors
     assert len(settings.validate_critical_settings()) == 0
 
@@ -511,18 +485,18 @@ def test_mock_settings_validation():
 def test_mock_service_registry():
     """Test mock service registry functionality."""
     registry = MockServiceRegistry()
-    
+
     # Test service registration
     mock_service = AsyncMock()
     registry.register_service("test_service", mock_service)
     assert registry.get_service("test_service") == mock_service
-    
+
     # Test automatic mock creation
     accommodation_service = registry.get_service("accommodation_service")
     assert accommodation_service is not None
-    
+
     flight_service = registry.get_service("flight_service")
     assert flight_service is not None
-    
+
     memory_service = registry.get_service("memory_service")
     assert memory_service is not None

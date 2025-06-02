@@ -425,10 +425,6 @@ class ItineraryService:
 
         if optimization_engine is None:
             # TODO: Implement external optimization engine
-            # from tripsage.services.external.optimization_engine import (
-            #     OptimizationEngine
-            # )
-            # optimization_engine = OptimizationEngine()
             # Optimization engine is optional - will use basic optimization
             optimization_engine = None
 

@@ -12,7 +12,11 @@ from pydantic import BaseModel, Field
 
 from tripsage.api.core.dependencies import get_principal_id, require_principal_dep
 from tripsage.api.middlewares.authentication import Principal
-from tripsage.services.external.file_processor import FileProcessor
+from tripsage_core.services.business.file_processing_service import (
+    FileProcessingService,
+    FileSearchRequest,
+    FileUploadRequest,
+)
 from tripsage_core.utils.file_utils import MAX_SESSION_SIZE, validate_file
 
 logger = logging.getLogger(__name__)
@@ -29,14 +33,14 @@ file_upload_dep = File(...)
 files_upload_dep = File(...)
 
 
-def get_file_processor() -> FileProcessor:
-    """Get file processor singleton."""
+def get_file_processing_service() -> FileProcessingService:
+    """Get file processing service singleton."""
     # Choice: Using simple import pattern instead of complex DI
-    # Reason: KISS principle - FileProcessor is lightweight and stateless
-    return FileProcessor()
+    # Reason: KISS principle - FileProcessingService is lightweight and stateless
+    return FileProcessingService()
 
 
-get_file_processor_dep = Depends(get_file_processor)
+get_file_processing_service_dep = Depends(get_file_processing_service)
 
 
 class FileUploadResponse(BaseModel):
@@ -63,7 +67,7 @@ class BatchUploadResponse(BaseModel):
 async def upload_file(
     file: UploadFile = file_upload_dep,
     principal: Principal = require_principal_module_dep,
-    processor: FileProcessor = get_file_processor_dep,
+    service: FileProcessingService = get_file_processing_service_dep,
 ):
     """Upload and process a single file attachment.
 
@@ -89,7 +93,17 @@ async def upload_file(
     try:
         # Process file with user context
         user_id = get_principal_id(principal)
-        result = await processor.process_file(file, user_id)
+
+        # Read file content
+        content = await file.read()
+
+        # Create upload request
+        upload_request = FileUploadRequest(
+            filename=file.filename, content=content, auto_analyze=True
+        )
+
+        # Process file
+        result = await service.upload_file(user_id, upload_request)
 
         logger.info(
             f"File uploaded successfully: {file.filename} "
@@ -97,11 +111,11 @@ async def upload_file(
         )
 
         return FileUploadResponse(
-            file_id=result.file_id,
+            file_id=result.id,
             filename=result.original_filename,
             file_size=result.file_size,
             mime_type=result.mime_type,
-            processing_status=result.processing_status,
+            processing_status=result.processing_status.value,
             upload_status="completed",
             message="Upload successful",
         )
@@ -118,7 +132,7 @@ async def upload_file(
 async def upload_files_batch(
     files: List[UploadFile] = files_upload_dep,
     principal: Principal = require_principal_module_dep,
-    processor: FileProcessor = get_file_processor_dep,
+    service: FileProcessingService = get_file_processing_service_dep,
 ):
     """Upload and process multiple files in a batch.
 
@@ -158,15 +172,23 @@ async def upload_files_batch(
                 errors.append(f"{file.filename}: {validation_result.error_message}")
                 continue
 
+            # Read file content
+            content = await file.read()
+
+            # Create upload request
+            upload_request = FileUploadRequest(
+                filename=file.filename, content=content, auto_analyze=True
+            )
+
             # Process file
-            result = await processor.process_file(file, user_id)
+            result = await service.upload_file(user_id, upload_request)
             processed_files.append(
                 FileUploadResponse(
-                    file_id=result.file_id,
+                    file_id=result.id,
                     filename=result.original_filename,
                     file_size=result.file_size,
                     mime_type=result.mime_type,
-                    processing_status=result.processing_status,
+                    processing_status=result.processing_status.value,
                     upload_status="completed",
                     message="Upload successful",
                 )
@@ -203,7 +225,7 @@ async def upload_files_batch(
 async def get_file_metadata(
     file_id: str,
     principal: Principal = require_principal_module_dep,
-    processor: FileProcessor = get_file_processor_dep,
+    service: FileProcessingService = get_file_processing_service_dep,
 ):
     """Get metadata and analysis results for an uploaded file.
 
@@ -211,7 +233,7 @@ async def get_file_metadata(
     """
     try:
         user_id = get_principal_id(principal)
-        file_info = await processor.get_file_metadata(file_id, user_id)
+        file_info = await service.get_file(file_id, user_id)
         if not file_info:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -232,7 +254,7 @@ async def get_file_metadata(
 async def delete_file(
     file_id: str,
     principal: Principal = require_principal_module_dep,
-    processor: FileProcessor = get_file_processor_dep,
+    service: FileProcessingService = get_file_processing_service_dep,
 ):
     """Delete an uploaded file and its associated data.
 
@@ -240,7 +262,7 @@ async def delete_file(
     """
     try:
         user_id = get_principal_id(principal)
-        success = await processor.delete_file(file_id, user_id)
+        success = await service.delete_file(file_id, user_id)
         if not success:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -261,14 +283,18 @@ async def delete_file(
 @router.get("/files")
 async def list_user_files(
     principal: Principal = require_principal_module_dep,
-    processor: FileProcessor = get_file_processor_dep,
+    service: FileProcessingService = get_file_processing_service_dep,
     limit: int = 50,
     offset: int = 0,
 ):
     """List files uploaded by the current user with pagination."""
     try:
         user_id = get_principal_id(principal)
-        files = await processor.list_user_files(user_id, limit=limit, offset=offset)
+
+        # Create search request with basic pagination
+        search_request = FileSearchRequest(limit=limit, offset=offset)
+
+        files = await service.search_files(user_id, search_request)
 
         return {
             "files": files,

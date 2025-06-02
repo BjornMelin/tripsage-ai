@@ -12,14 +12,8 @@ from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl, field_validator
 
-
-class CabinClass(str, Enum):
-    """Available cabin classes for flights."""
-
-    ECONOMY = "economy"
-    PREMIUM_ECONOMY = "premium_economy"
-    BUSINESS = "business"
-    FIRST = "first"
+# CabinClass enum moved to tripsage_core.models.schemas_common.enums
+from tripsage_core.models.schemas_common.enums import CabinClass
 
 
 class PassengerType(str, Enum):

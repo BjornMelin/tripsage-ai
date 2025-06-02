@@ -1,171 +1,158 @@
 """
-MCP tool integration for LangGraph orchestration.
+MCP Integration for LangGraph orchestration.
 
-This module provides wrappers to integrate existing MCP tools with LangGraph's
-tool calling system, enabling seamless use of the existing tool ecosystem.
+This module provides MCP tool registry and wrapper classes for LangGraph-based agents.
 """
 
+import asyncio
 import json
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional
 
-from langchain_core.tools import BaseTool
+from langchain_core.tools import Tool
 from langchain_core.tools.base import ToolException
-from pydantic import Field
 
-from tripsage.mcp_abstraction.manager import MCPManager
+from tripsage.mcp_abstraction.manager import mcp_manager
 from tripsage_core.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)
 
 
-class MCPToolWrapper(BaseTool):
+class MCPToolWrapper:
     """
-    Wrapper to integrate MCP tools with LangGraph.
+    Wrapper for MCP tools to make them compatible with LangGraph.
 
-    This class adapts MCP tools to work with LangGraph's tool calling system,
-    providing a bridge between the existing MCP ecosystem and the new LangGraph agents.
+    This class wraps MCP service methods as LangGraph tools with proper
+    async/await support and error handling.
     """
-
-    # Declare fields for Pydantic model
-    service_name: str = Field(description="Name of the MCP service")
-    method_name: str = Field(description="Name of the method to call")
-    parameters: Dict = Field(default_factory=dict, description="Parameter schema")
-    mcp_manager: Any = Field(
-        default_factory=MCPManager, description="MCP manager instance"
-    )
 
     def __init__(
         self,
         service_name: str,
         method_name: str,
         description: str,
-        parameters: Optional[Dict] = None,
+        parameters: Optional[Dict[str, Any]] = None,
         **kwargs,
     ):
         """
-        Initialize the MCP tool wrapper.
+        Initialize MCP tool wrapper.
 
         Args:
-            service_name: Name of the MCP service (e.g., 'flights', 'accommodations')
-            method_name: Name of the method to call on the service
-            description: Human-readable description of what this tool does
-            parameters: Optional parameter schema for the tool
+            service_name: Name of the MCP service
+            method_name: Name of the method to call
+            description: Tool description
+            parameters: Parameter schema for the tool
+            **kwargs: Additional Tool arguments
         """
-        # Initialize parent with all required fields
-        super().__init__(
-            name=f"{service_name}_{method_name}",
-            description=description,
-            service_name=service_name,
-            method_name=method_name,
-            parameters=parameters or {},
-            mcp_manager=MCPManager(),
+        self.name = f"{service_name}_{method_name}"
+        self.description = description
+        self.service_name = service_name
+        self.method_name = method_name
+        self.parameters = parameters or {}
+        self.mcp_manager = mcp_manager
+
+        # Create the actual Tool instance
+        self._tool = Tool(
+            name=self.name,
+            description=self.description,
+            func=self._run,
+            coroutine=self._arun,
             **kwargs,
         )
 
+    @property
+    def func(self):
+        """Get the function property for compatibility."""
+        return self._tool.func
+
+    @property
+    def coroutine(self):
+        """Get the coroutine property for compatibility."""
+        return self._tool.coroutine
+
+    def run(self, *args, **kwargs):
+        """Run the tool synchronously."""
+        return self._tool.run(*args, **kwargs)
+
+    async def arun(self, *args, **kwargs):
+        """Run the tool asynchronously."""
+        return await self._tool.arun(*args, **kwargs)
+
+    def __call__(self, *args, **kwargs):
+        """Make the wrapper callable."""
+        return self._tool(*args, **kwargs)
+
     def _run(self, **kwargs) -> str:
         """
-        Execute MCP tool call synchronously.
-
-        Note: This method should be avoided in favor of the async _arun method.
-        It's provided for compatibility with synchronous tool calling contexts.
+        Synchronous execution wrapper for async MCP calls.
 
         Args:
-            **kwargs: Parameters to pass to the MCP tool
+            **kwargs: Tool parameters
 
         Returns:
-            JSON string containing the tool result
-
-        Raises:
-            ToolException: If the MCP call fails
+            JSON string result
         """
         try:
-            logger.info(
-                f"Executing sync MCP tool: {self.service_name}.{self.method_name}"
-            )
-            logger.warning("Using synchronous MCP call - prefer async _arun method")
-
             # Run async method in sync context
-            import asyncio
-
-            try:
-                # Try to get current event loop
-                loop = asyncio.get_event_loop()
-                if loop.is_running():
-                    # If loop is running, we need to use run_in_executor or similar
-                    raise RuntimeError("Cannot run sync from running event loop")
-                else:
-                    result = loop.run_until_complete(
-                        self.mcp_manager.invoke(
-                            method_name=self.method_name, params=kwargs
-                        )
-                    )
-            except RuntimeError:
-                # Create new event loop for sync execution
-                result = asyncio.run(
-                    self.mcp_manager.invoke(method_name=self.method_name, params=kwargs)
-                )
-
-            logger.info(f"Sync MCP tool {self.name} executed successfully")
-            return json.dumps(result, ensure_ascii=False)
-
+            return asyncio.run(self._arun(**kwargs))
         except Exception as e:
-            logger.error(f"Sync MCP tool {self.name} failed: {str(e)}")
+            logger.error(f"Error in sync execution of {self.name}: {e}")
             raise ToolException(f"Error executing {self.name}: {str(e)}") from e
 
     async def _arun(self, **kwargs) -> str:
         """
-        Execute MCP tool call asynchronously.
+        Asynchronous execution of MCP tool.
 
         Args:
-            **kwargs: Parameters to pass to the MCP tool
+            **kwargs: Tool parameters
 
         Returns:
-            JSON string containing the tool result
+            JSON string result
 
         Raises:
-            ToolException: If the MCP call fails
+            ToolException: If tool execution fails
         """
         try:
-            logger.info(
-                f"Executing async MCP tool: {self.service_name}.{self.method_name}"
-            )
+            logger.debug(f"Executing MCP tool {self.name} with params: {kwargs}")
 
-            # Use async MCP manager invoke method
+            # Call MCP manager with service method
             result = await self.mcp_manager.invoke(
                 method_name=self.method_name, params=kwargs
             )
 
-            logger.info(f"Async MCP tool {self.name} executed successfully")
+            # Convert result to JSON string for LangGraph compatibility
             return json.dumps(result, ensure_ascii=False)
 
         except Exception as e:
-            logger.error(f"Async MCP tool {self.name} failed: {str(e)}")
+            logger.error(f"Error executing {self.name}: {e}")
             raise ToolException(f"Error executing {self.name}: {str(e)}") from e
 
 
 class MCPToolRegistry:
     """
-    Registry for all MCP tools available to LangGraph.
+    Registry for MCP tools used by LangGraph agents.
 
-    This class manages the registration and retrieval of MCP tools,
-    providing a centralized way to access tools across different agents.
+    This class manages the available MCP tools and provides them to different
+    agent types based on their capabilities and requirements.
     """
 
     def __init__(self):
-        """Initialize the tool registry and register all available tools."""
-        self.tools: Dict[str, Union[MCPToolWrapper, BaseTool]] = {}
-        self._register_all_tools()
-        logger.info(f"Initialized MCP tool registry with {len(self.tools)} tools")
+        """Initialize the tool registry with available MCP tools."""
+        self.tools: Dict[str, MCPToolWrapper] = {}
+        self._agent_tool_mappings: Dict[str, List[str]] = {}
+        self._initialize_tools()
+        self._setup_agent_mappings()
 
-    def _register_all_tools(self) -> None:
-        """Register all MCP tools for LangGraph use."""
-
+    def _initialize_tools(self) -> None:
+        """Initialize all available MCP tools."""
         # Flight tools
         self.tools["search_flights"] = MCPToolWrapper(
-            "flights",
-            "search_flights",
-            "Search for flights between destinations with dates and preferences",
-            {
+            service_name="flights",
+            method_name="search_flights",
+            description=(
+                "Search for flights between two locations with optional filters "
+                "for dates, passengers, and preferences"
+            ),
+            parameters={
                 "origin": {
                     "type": "string",
                     "description": "Origin airport code or city",
@@ -180,22 +167,31 @@ class MCPToolRegistry:
                 },
                 "return_date": {
                     "type": "string",
-                    "description": "Return date (YYYY-MM-DD), optional",
+                    "description": "Return date (YYYY-MM-DD)",
+                    "required": False,
                 },
                 "passengers": {
                     "type": "integer",
                     "description": "Number of passengers",
-                    "default": 1,
+                    "required": False,
+                },
+                "class": {
+                    "type": "string",
+                    "description": "Flight class (economy, business, first)",
+                    "required": False,
                 },
             },
         )
 
         # Accommodation tools
         self.tools["search_accommodations"] = MCPToolWrapper(
-            "accommodations",
-            "search_stays",
-            "Search for hotels, rentals, and accommodations",
-            {
+            service_name="accommodations",
+            method_name="search_listings",
+            description=(
+                "Search for accommodations in a specific location with "
+                "check-in/out dates and guest requirements"
+            ),
+            parameters={
                 "location": {
                     "type": "string",
                     "description": "Location to search for accommodations",
@@ -211,93 +207,130 @@ class MCPToolRegistry:
                 "guests": {
                     "type": "integer",
                     "description": "Number of guests",
-                    "default": 1,
+                    "required": False,
+                },
+                "price_min": {
+                    "type": "number",
+                    "description": "Minimum price per night",
+                    "required": False,
+                },
+                "price_max": {
+                    "type": "number",
+                    "description": "Maximum price per night",
+                    "required": False,
                 },
             },
         )
 
-        # Maps tools - Use unified LocationService supporting both MCP and direct modes
-        from tripsage.orchestration.tools.location_tools import (
-            DirectionsTool,
-            DistanceMatrixTool,
-            ElevationTool,
-            GeocodeTool,
-            PlaceDetailsTool,
-            ReverseGeocodeTool,
-            SearchPlacesTool,
-            TimezoneTool,
+        # Location and weather tools
+        self.tools["geocode_location"] = MCPToolWrapper(
+            service_name="maps",
+            method_name="geocode",
+            description="Get geographic coordinates and details for a location",
+            parameters={
+                "location": {"type": "string", "description": "Location to geocode"}
+            },
         )
 
-        self.tools["geocode_location"] = GeocodeTool()
-        self.tools["reverse_geocode_location"] = ReverseGeocodeTool()
-        self.tools["search_places"] = SearchPlacesTool()
-        self.tools["get_place_details"] = PlaceDetailsTool()
-        self.tools["get_directions"] = DirectionsTool()
-        self.tools["distance_matrix"] = DistanceMatrixTool()
-        self.tools["get_elevation"] = ElevationTool()
-        self.tools["get_timezone"] = TimezoneTool()
-
-        # Weather tools
         self.tools["get_weather"] = MCPToolWrapper(
-            "weather",
-            "get_current_weather",
-            "Get current weather conditions for a location",
-            {
+            service_name="weather",
+            method_name="get_current_weather",
+            description="Get current weather information for a location",
+            parameters={
                 "location": {
                     "type": "string",
-                    "description": "Location to get weather for",
+                    "description": "Location for weather information",
                 }
             },
         )
 
-        # Memory tools
-        self.tools["search_memory"] = MCPToolWrapper(
-            "memory",
-            "search_nodes",
-            "Search user's travel history and preferences",
-            {"query": {"type": "string", "description": "Search query for memory"}},
-        )
-
-        self.tools["add_memory"] = MCPToolWrapper(
-            "memory",
-            "add_observations",
-            "Store new information about user preferences or travel context",
-            {
-                "entity_name": {
+        # Web search and research tools
+        self.tools["web_search"] = MCPToolWrapper(
+            service_name="web",
+            method_name="search",
+            description="Search the web for travel-related information",
+            parameters={
+                "query": {"type": "string", "description": "Search query"},
+                "location": {
                     "type": "string",
-                    "description": "Entity to add observations to",
-                },
-                "observations": {
-                    "type": "array",
-                    "description": "List of observations to add",
+                    "description": "Location context for search",
+                    "required": False,
                 },
             },
         )
 
-        # Time tools
-        self.tools["get_current_time"] = MCPToolWrapper(
-            "time",
-            "get_current_time",
-            "Get current time in a specific timezone",
-            {"timezone": {"type": "string", "description": "IANA timezone name"}},
+        # Memory and planning tools
+        self.tools["save_memory"] = MCPToolWrapper(
+            service_name="memory",
+            method_name="add_memory",
+            description=(
+                "Save important information to user memory for future reference"
+            ),
+            parameters={
+                "content": {"type": "string", "description": "Information to save"},
+                "category": {
+                    "type": "string",
+                    "description": "Memory category",
+                    "required": False,
+                },
+            },
         )
 
-        # Web crawling tools - Direct SDK integration only
-        from tripsage.orchestration.tools.webcrawl_integration import (
-            BookingSiteCrawlTool,
-            EventListingCrawlTool,
-            TravelBlogCrawlTool,
-            WebCrawlTool,
+        self.tools["search_memory"] = MCPToolWrapper(
+            service_name="memory",
+            method_name="search_memories",
+            description="Search user memories for relevant information",
+            parameters={
+                "query": {"type": "string", "description": "Search query for memories"}
+            },
         )
 
-        self.tools["crawl_website_content"] = WebCrawlTool()
-        self.tools["crawl_travel_blog"] = TravelBlogCrawlTool()
-        self.tools["crawl_booking_site"] = BookingSiteCrawlTool()
-        self.tools["crawl_event_listing"] = EventListingCrawlTool()
+    def _setup_agent_mappings(self) -> None:
+        """Setup tool mappings for different agent types."""
+        self._agent_tool_mappings = {
+            "flight_agent": [
+                "search_flights",
+                "geocode_location",
+                "get_weather",
+                "web_search",
+                "save_memory",
+                "search_memory",
+            ],
+            "accommodation_agent": [
+                "search_accommodations",
+                "geocode_location",
+                "get_weather",
+                "web_search",
+                "save_memory",
+                "search_memory",
+            ],
+            "destination_research_agent": [
+                "geocode_location",
+                "get_weather",
+                "web_search",
+                "save_memory",
+                "search_memory",
+            ],
+            "budget_agent": [
+                "search_flights",
+                "search_accommodations",
+                "web_search",
+                "save_memory",
+                "search_memory",
+            ],
+            "itinerary_agent": [
+                "search_flights",
+                "search_accommodations",
+                "geocode_location",
+                "get_weather",
+                "web_search",
+                "save_memory",
+                "search_memory",
+            ],
+            "memory_update": ["save_memory", "search_memory"],
+        }
 
-        logger.info("All MCP tools registered successfully")
-
-    def get_tool(self, tool_name: str) -> Optional[Union[MCPToolWrapper, BaseTool]]:
+    def get_tool(self, tool_name: str) -> Optional[MCPToolWrapper]:
         """
         Get a specific tool by name.
 
@@ -309,110 +342,22 @@ class MCPToolRegistry:
         """
         return self.tools.get(tool_name)
 
-    def get_all_tools(self) -> List[Union[MCPToolWrapper, BaseTool]]:
+    def get_tools_for_agent(self, agent_type: str) -> List[MCPToolWrapper]:
         """
-        Get all available tools.
-
-        Returns:
-            List of all registered tool instances
-        """
-        return list(self.tools.values())
-
-    def get_tools_for_agent(
-        self, agent_name: str
-    ) -> List[Union[MCPToolWrapper, BaseTool]]:
-        """
-        Get tools relevant to a specific agent.
+        Get tools available for a specific agent type.
 
         Args:
-            agent_name: Name of the agent to get tools for
+            agent_type: Type of agent (e.g., 'flight_agent', 'accommodation_agent')
 
         Returns:
-            List of relevant tool instances
+            List of tools available for the agent
         """
-        # Define which tools each agent should have access to
-        agent_tool_mapping = {
-            "flight_agent": [
-                "search_flights",
-                "geocode_location",
-                "reverse_geocode_location",
-                "get_directions",
-                "distance_matrix",
-                "get_weather",
-                "get_current_time",
-                "search_memory",
-            ],
-            "accommodation_agent": [
-                "search_accommodations",
-                "geocode_location",
-                "reverse_geocode_location",
-                "search_places",
-                "get_place_details",
-                "get_directions",
-                "distance_matrix",
-                "get_weather",
-                "search_memory",
-            ],
-            "destination_research_agent": [
-                "geocode_location",
-                "reverse_geocode_location",
-                "search_places",
-                "get_place_details",
-                "get_directions",
-                "get_elevation",
-                "get_timezone",
-                "get_weather",
-                "crawl_website_content",
-                "crawl_travel_blog",
-                "search_memory",
-            ],
-            "destination_agent": [
-                "geocode_location",
-                "reverse_geocode_location",
-                "search_places",
-                "get_place_details",
-                "get_weather",
-                "crawl_website_content",
-                "crawl_travel_blog",
-                "search_memory",
-            ],
-            "budget_agent": ["search_memory", "get_current_time"],
-            "itinerary_agent": [
-                "geocode_location",
-                "reverse_geocode_location",
-                "search_places",
-                "get_place_details",
-                "get_directions",
-                "distance_matrix",
-                "get_elevation",
-                "get_timezone",
-                "get_weather",
-                "get_current_time",
-                "crawl_website_content",
-                "crawl_booking_site",
-                "crawl_event_listing",
-                "search_memory",
-            ],
-            "travel_agent": [
-                "search_memory",
-                "geocode_location",
-                "reverse_geocode_location",
-                "search_places",
-                "get_place_details",
-                "get_directions",
-                "get_current_time",
-                "get_weather",
-                "crawl_website_content",
-                "crawl_travel_blog",
-            ],
-        }
-
-        tool_names = agent_tool_mapping.get(agent_name, [])
+        tool_names = self._agent_tool_mappings.get(agent_type, [])
         return [self.tools[name] for name in tool_names if name in self.tools]
 
-    def register_custom_tool(self, tool: Union[MCPToolWrapper, BaseTool]) -> None:
+    def register_custom_tool(self, tool: MCPToolWrapper) -> None:
         """
-        Register a custom tool.
+        Register a custom MCP tool.
 
         Args:
             tool: Custom tool to register
@@ -422,9 +367,18 @@ class MCPToolRegistry:
 
     def list_available_tools(self) -> Dict[str, str]:
         """
-        Get a list of all available tools with their descriptions.
+        List all available tools with their descriptions.
 
         Returns:
             Dictionary mapping tool names to descriptions
         """
         return {name: tool.description for name, tool in self.tools.items()}
+
+    def get_all_tools(self) -> List[MCPToolWrapper]:
+        """
+        Get all available tools.
+
+        Returns:
+            List of all tools in the registry
+        """
+        return list(self.tools.values())

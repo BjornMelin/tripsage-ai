@@ -214,7 +214,7 @@ TAG_DESCRIPTIONS = [
         ),
     },
     {
-        "name": "api_keys", 
+        "name": "api_keys",
         "description": (
             "API key management endpoints (BYOK - Bring Your Own Key). "
             "Supports both system API keys for agents and user-provided external service keys."
@@ -249,7 +249,7 @@ TAG_DESCRIPTIONS = [
         ),
     },
     {
-        "name": "itineraries", 
+        "name": "itineraries",
         "description": (
             "Itinerary building and optimization endpoints. Intelligent trip scheduling "
             "with route optimization and activity coordination."
