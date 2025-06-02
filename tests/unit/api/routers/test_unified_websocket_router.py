@@ -5,10 +5,10 @@ This module tests the updated WebSocket router that integrates with
 both unified services and existing core services.
 """
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
+import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
@@ -75,15 +75,18 @@ class TestWebSocketDependencyInjection:
 
     @pytest.mark.asyncio
     async def test_get_core_chat_service_creates_instance(self):
-        """Test that get_core_chat_service creates CoreChatService with database dependency."""
-        from tripsage.api.routers.websocket import get_core_chat_service
+        """Test that get_core_chat_service creates CoreChatService with dependency."""
         from sqlalchemy.ext.asyncio import AsyncSession
+
+        from tripsage.api.routers.websocket import get_core_chat_service
 
         # Create mock database session
         mock_db_session = MagicMock(spec=AsyncSession)
 
         # Call the dependency function
-        with patch("tripsage.api.routers.websocket.CoreChatService") as mock_service_class:
+        with patch(
+            "tripsage.api.routers.websocket.CoreChatService"
+        ) as mock_service_class:
             mock_instance = AsyncMock()
             mock_service_class.return_value = mock_instance
 
@@ -96,8 +99,10 @@ class TestWebSocketDependencyInjection:
     def test_websocket_chat_endpoint_has_correct_dependencies(self):
         """Test that WebSocket chat endpoint has proper dependency injection."""
         import inspect
-        from tripsage.api.routers.websocket import chat_websocket
+
         from sqlalchemy.ext.asyncio import AsyncSession
+
+        from tripsage.api.routers.websocket import chat_websocket
 
         sig = inspect.signature(chat_websocket)
 
@@ -129,28 +134,29 @@ class TestWebSocketEventModels:
             ConnectionEvent,
             ErrorEvent,
         )
-        from uuid import uuid4
+        from tripsage_core.models.schemas_common.chat import ChatMessage
 
         # Test ChatMessageEvent creation
         session_id = uuid4()
         user_id = uuid4()
-        
-        # Create a mock message
-        mock_message = MagicMock()
-        mock_message.role = "user"
-        mock_message.content = "Hello"
+
+        # Create a proper ChatMessage object
+        chat_message = ChatMessage(role="user", content="Hello")
 
         message_event = ChatMessageEvent(
-            message=mock_message,
+            type="chat.message",
+            message=chat_message,
             user_id=user_id,
             session_id=session_id,
         )
-        assert message_event.message == mock_message
+        assert message_event.message == chat_message
         assert message_event.user_id == user_id
         assert message_event.session_id == session_id
+        assert message_event.type == "chat.message"
 
         # Test ChatMessageChunkEvent creation
         chunk_event = ChatMessageChunkEvent(
+            type="chat.chunk",
             content="Hello",
             chunk_index=0,
             is_final=False,
@@ -160,9 +166,11 @@ class TestWebSocketEventModels:
         assert chunk_event.content == "Hello"
         assert chunk_event.chunk_index == 0
         assert chunk_event.is_final is False
+        assert chunk_event.type == "chat.chunk"
 
         # Test ConnectionEvent creation
         connection_event = ConnectionEvent(
+            type="connection.status",
             status="connected",
             connection_id="conn123",
             user_id=user_id,
@@ -170,9 +178,11 @@ class TestWebSocketEventModels:
         )
         assert connection_event.status == "connected"
         assert connection_event.connection_id == "conn123"
+        assert connection_event.type == "connection.status"
 
         # Test ErrorEvent creation
         error_event = ErrorEvent(
+            type="error",
             error_code="test_error",
             error_message="Test error message",
             user_id=user_id,
@@ -180,6 +190,7 @@ class TestWebSocketEventModels:
         )
         assert error_event.error_code == "test_error"
         assert error_event.error_message == "Test error message"
+        assert error_event.type == "error"
 
     def test_event_models_inherit_from_websocket_event(self):
         """Test that event models inherit from WebSocketEvent."""
@@ -189,7 +200,9 @@ class TestWebSocketEventModels:
             ConnectionEvent,
             ErrorEvent,
         )
-        from tripsage_core.services.infrastructure.websocket_manager import WebSocketEvent
+        from tripsage_core.services.infrastructure.websocket_manager import (
+            WebSocketEvent,
+        )
 
         # Verify inheritance
         assert issubclass(ChatMessageEvent, WebSocketEvent)
@@ -224,6 +237,7 @@ class TestWebSocketManagerIntegration:
         """Test WebSocket connections endpoint structure."""
         from fastapi import FastAPI
         from fastapi.testclient import TestClient
+
         from tripsage.api.routers.websocket import router
 
         # Create test app
@@ -238,7 +252,7 @@ class TestWebSocketManagerIntegration:
                 "user_id": "user1",
                 "status": "connected",
             }
-            
+
             mock_connection2 = MagicMock()
             mock_connection2.get_info.return_value.model_dump.return_value = {
                 "connection_id": "conn2",
@@ -285,6 +299,8 @@ class TestWebSocketCoreServiceIntegration:
         # Verify they're from the core service module
         from tripsage_core.services.business.chat_service import (
             MessageCreateRequest as CoreMessageCreateRequest,
+        )
+        from tripsage_core.services.business.chat_service import (
             MessageRole as CoreMessageRole,
         )
 
@@ -292,11 +308,10 @@ class TestWebSocketCoreServiceIntegration:
         assert MessageRole == CoreMessageRole
 
     def test_websocket_uses_unified_chat_service_alongside_core(self):
-        """Test that WebSocket router uses unified ChatService alongside core services."""
-        from tripsage.api.routers.websocket import get_chat_service
-        from tripsage.api.services.chat import ChatService
+        """Test that WebSocket router uses unified ChatService alongside core."""
+        from tripsage.api.services import get_chat_service
 
-        # Verify unified ChatService is also imported
+        # Verify unified ChatService is available for WebSocket use
         assert get_chat_service is not None
 
         # The WebSocket router should have access to both unified and core services
@@ -311,6 +326,7 @@ class TestWebSocketErrorHandling:
     async def test_handle_chat_message_function_exists(self):
         """Test that handle_chat_message function exists and has correct signature."""
         import inspect
+
         from tripsage.api.routers.websocket import handle_chat_message
 
         # Verify function exists
@@ -320,7 +336,7 @@ class TestWebSocketErrorHandling:
         sig = inspect.signature(handle_chat_message)
         expected_params = [
             "connection_id",
-            "user_id", 
+            "user_id",
             "session_id",
             "message_data",
             "chat_service",
@@ -342,7 +358,9 @@ class TestWebSocketErrorHandling:
         assert get_service_registry is not None
 
         # Test that they return instances (with mocked dependencies)
-        with patch("tripsage.api.routers.websocket.ServiceRegistry") as mock_service_registry:
+        with patch(
+            "tripsage.api.routers.websocket.ServiceRegistry"
+        ) as mock_service_registry:
             with patch("tripsage.api.routers.websocket.ChatAgent") as mock_chat_agent:
                 mock_service_instance = MagicMock()
                 mock_agent_instance = MagicMock()

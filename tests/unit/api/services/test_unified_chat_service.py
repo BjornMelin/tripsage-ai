@@ -1,18 +1,21 @@
 """
 Tests for unified ChatService API adapter.
 
-This module tests the unified ChatService that acts as a thin adaptation 
+This module tests the unified ChatService that acts as a thin adaptation
 layer between API requests and core business logic.
 """
 
-import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
-from tripsage.api.services.chat import ChatService
+import pytest
+
 from tripsage.api.schemas.requests.chat import ChatRequest, SessionCreateRequest
+from tripsage.api.services.chat import ChatService
+from tripsage_core.services.business.auth_service import (
+    AuthenticationService as CoreAuthService,
+)
 from tripsage_core.services.business.chat_service import ChatService as CoreChatService
-from tripsage_core.services.business.auth_service import AuthenticationService as CoreAuthService
 
 
 class TestChatServiceAdapter:
@@ -174,8 +177,12 @@ class TestChatServiceDependencyInjection:
     async def test_get_chat_service_creates_instance(self):
         """Test that get_chat_service creates ChatService with proper dependencies."""
         with (
-            patch("tripsage.api.services.chat.get_core_chat_service") as mock_get_core_chat,
-            patch("tripsage.api.services.chat.get_core_auth_service") as mock_get_core_auth,
+            patch(
+                "tripsage.api.services.chat.get_core_chat_service"
+            ) as mock_get_core_chat,
+            patch(
+                "tripsage.api.services.chat.get_core_auth_service"
+            ) as mock_get_core_auth,
         ):
             mock_core_chat = AsyncMock()
             mock_core_auth = AsyncMock()

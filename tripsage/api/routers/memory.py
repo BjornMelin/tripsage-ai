@@ -70,7 +70,7 @@ async def add_conversation_memory(
         logger.error(f"Add conversation memory failed: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to add conversation memory"
+            detail="Failed to add conversation memory",
         ) from e
 
 
@@ -97,7 +97,7 @@ async def get_user_context(
         logger.error(f"Get user context failed: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to get user context"
+            detail="Failed to get user context",
         ) from e
 
 
@@ -128,7 +128,7 @@ async def search_memories(
         logger.error(f"Search memories failed: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to search memories"
+            detail="Failed to search memories",
         ) from e
 
 
@@ -159,7 +159,7 @@ async def update_preferences(
         logger.error(f"Update preferences failed: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to update preferences"
+            detail="Failed to update preferences",
         ) from e
 
 
@@ -192,7 +192,7 @@ async def add_preference(
         logger.error(f"Add preference failed: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to add preference"
+            detail="Failed to add preference",
         ) from e
 
 
@@ -215,13 +215,12 @@ async def delete_memory(
     try:
         user_id = get_principal_id(principal)
         success = await memory_service.delete_memory(user_id, memory_id)
-        
+
         if not success:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Memory not found"
+                status_code=status.HTTP_404_NOT_FOUND, detail="Memory not found"
             )
-            
+
         return {"message": "Memory deleted successfully"}
 
     except HTTPException:
@@ -230,7 +229,7 @@ async def delete_memory(
         logger.error(f"Delete memory failed: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to delete memory"
+            detail="Failed to delete memory",
         ) from e
 
 
@@ -257,7 +256,7 @@ async def get_memory_stats(
         logger.error(f"Get memory stats failed: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to get memory stats"
+            detail="Failed to get memory stats",
         ) from e
 
 
@@ -286,5 +285,5 @@ async def clear_user_memory(
         logger.error(f"Clear memory failed: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to clear memory"
+            detail="Failed to clear memory",
         ) from e

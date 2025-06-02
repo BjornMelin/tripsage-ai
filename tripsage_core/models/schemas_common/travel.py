@@ -72,17 +72,19 @@ class TransportationPreferences(TripSageModel):
     flight_preferences: Optional[Dict[str, Any]] = Field(
         None,
         description="Flight preferences",
-        example={
-            "seat_class": "economy",
-            "max_stops": 1,
-            "preferred_airlines": [],
-            "time_window": "flexible",
+        json_schema_extra={
+            "example": {
+                "seat_class": "economy",
+                "max_stops": 1,
+                "preferred_airlines": [],
+                "time_window": "flexible",
+            }
         },
     )
     local_transportation: Optional[List[str]] = Field(
         None,
         description="Preferred local transportation methods",
-        example=["public_transport", "walking"],
+        json_schema_extra={"example": ["public_transport", "walking"]},
     )
     max_travel_time_hours: Optional[int] = Field(
         None, description="Maximum acceptable travel time in hours", ge=1
@@ -110,23 +112,23 @@ class TripPreferences(TripSageModel):
     activities: Optional[List[str]] = Field(
         None,
         description="Preferred activities",
-        example=["sightseeing", "museums", "outdoor_activities"],
+        json_schema_extra={"example": ["sightseeing", "museums", "outdoor_activities"]},
     )
     dietary_restrictions: Optional[List[str]] = Field(
         None,
         description="Dietary restrictions",
-        example=["vegetarian", "gluten_free"],
+        json_schema_extra={"example": ["vegetarian", "gluten_free"]},
     )
     accessibility_needs: Optional[List[str]] = Field(
         None,
         description="Accessibility needs",
-        example=["wheelchair_accessible", "elevator_access"],
+        json_schema_extra={"example": ["wheelchair_accessible", "elevator_access"]},
     )
     group_size: Optional[int] = Field(None, description="Number of travelers", ge=1)
     trip_style: Optional[str] = Field(
         None,
         description="Trip style",
-        example="relaxed",
+        json_schema_extra={"example": "relaxed"},
     )
 
     @field_validator("group_size")

@@ -5,18 +5,17 @@ This module tests the updated chat router that uses the unified ChatService
 adapter for clean separation of concerns.
 """
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
-from fastapi import HTTPException
+import pytest
+from fastapi import FastAPI, HTTPException
 from fastapi.testclient import TestClient
-from fastapi import FastAPI
 
-from tripsage.api.routers.chat import router
-from tripsage.api.services.chat import ChatService
 from tripsage.api.middlewares.authentication import Principal
-from tripsage.api.schemas.requests.chat import ChatRequest, SessionCreateRequest
+from tripsage.api.routers.chat import router
+from tripsage.api.schemas.requests.chat import ChatRequest
+from tripsage.api.services.chat import ChatService
 
 
 class TestChatRouterEndpoints:
@@ -50,16 +49,23 @@ class TestChatRouterEndpoints:
 
     def test_chat_router_endpoints_have_correct_methods(self, app):
         """Test that endpoints have correct HTTP methods."""
-        routes = {route.path: route for route in app.routes if hasattr(route, "path")}
+        # Collect all methods for each path
+        path_methods = {}
+        for route in app.routes:
+            if hasattr(route, "path") and hasattr(route, "methods"):
+                path = route.path
+                if path not in path_methods:
+                    path_methods[path] = set()
+                path_methods[path].update(route.methods)
 
         # Verify HTTP methods for each endpoint
-        assert "POST" in routes["/"].methods
-        assert "POST" in routes["/sessions"].methods
-        assert "GET" in routes["/sessions"].methods
-        assert "GET" in routes["/sessions/{session_id}"].methods
-        assert "DELETE" in routes["/sessions/{session_id}"].methods
-        assert "GET" in routes["/sessions/{session_id}/messages"].methods
-        assert "POST" in routes["/sessions/{session_id}/messages"].methods
+        assert "POST" in path_methods["/"]
+        assert "POST" in path_methods["/sessions"]
+        assert "GET" in path_methods["/sessions"]
+        assert "GET" in path_methods["/sessions/{session_id}"]
+        assert "DELETE" in path_methods["/sessions/{session_id}"]
+        assert "GET" in path_methods["/sessions/{session_id}/messages"]
+        assert "POST" in path_methods["/sessions/{session_id}/messages"]
 
 
 class TestChatEndpoint:
@@ -74,7 +80,7 @@ class TestChatEndpoint:
         mock_principal = MagicMock(spec=Principal)
         mock_principal.id = str(uuid4())
         mock_chat_service = AsyncMock(spec=ChatService)
-        
+
         # Mock service response
         mock_response = {
             "content": "Hello back!",
@@ -92,7 +98,7 @@ class TestChatEndpoint:
         # Call endpoint
         with patch("tripsage.api.routers.chat.get_principal_id") as mock_get_id:
             mock_get_id.return_value = mock_principal.id
-            
+
             result = await chat(
                 request=request,
                 principal=mock_principal,
@@ -114,7 +120,7 @@ class TestChatEndpoint:
         mock_principal = MagicMock(spec=Principal)
         mock_principal.id = str(uuid4())
         mock_chat_service = AsyncMock(spec=ChatService)
-        
+
         # Mock service to raise an error
         mock_chat_service.chat_completion.side_effect = Exception("Service error")
 
@@ -126,7 +132,7 @@ class TestChatEndpoint:
         # Call endpoint and expect HTTPException
         with patch("tripsage.api.routers.chat.get_principal_id") as mock_get_id:
             mock_get_id.return_value = mock_principal.id
-            
+
             with pytest.raises(HTTPException) as exc_info:
                 await chat(
                     request=request,
@@ -150,7 +156,7 @@ class TestSessionEndpoints:
         mock_principal = MagicMock(spec=Principal)
         mock_principal.id = str(uuid4())
         mock_chat_service = AsyncMock(spec=ChatService)
-        
+
         # Mock service response
         mock_session = {
             "id": str(uuid4()),
@@ -162,7 +168,7 @@ class TestSessionEndpoints:
         # Call endpoint
         with patch("tripsage.api.routers.chat.get_principal_id") as mock_get_id:
             mock_get_id.return_value = mock_principal.id
-            
+
             result = await create_session(
                 title="Test Session",
                 principal=mock_principal,
@@ -185,7 +191,7 @@ class TestSessionEndpoints:
         mock_principal = MagicMock(spec=Principal)
         mock_principal.id = str(uuid4())
         mock_chat_service = AsyncMock(spec=ChatService)
-        
+
         # Mock service response
         mock_sessions = [
             {"id": str(uuid4()), "title": "Session 1"},
@@ -196,7 +202,7 @@ class TestSessionEndpoints:
         # Call endpoint
         with patch("tripsage.api.routers.chat.get_principal_id") as mock_get_id:
             mock_get_id.return_value = mock_principal.id
-            
+
             result = await list_sessions(
                 principal=mock_principal,
                 chat_service=mock_chat_service,
@@ -216,7 +222,7 @@ class TestSessionEndpoints:
         mock_principal.id = str(uuid4())
         mock_chat_service = AsyncMock(spec=ChatService)
         session_id = uuid4()
-        
+
         # Mock service response
         mock_session = {"id": str(session_id), "title": "Test Session"}
         mock_chat_service.get_session.return_value = mock_session
@@ -224,7 +230,7 @@ class TestSessionEndpoints:
         # Call endpoint
         with patch("tripsage.api.routers.chat.get_principal_id") as mock_get_id:
             mock_get_id.return_value = mock_principal.id
-            
+
             result = await get_session(
                 session_id=session_id,
                 principal=mock_principal,
@@ -247,14 +253,14 @@ class TestSessionEndpoints:
         mock_principal.id = str(uuid4())
         mock_chat_service = AsyncMock(spec=ChatService)
         session_id = uuid4()
-        
+
         # Mock service to return None (not found)
         mock_chat_service.get_session.return_value = None
 
         # Call endpoint and expect HTTPException
         with patch("tripsage.api.routers.chat.get_principal_id") as mock_get_id:
             mock_get_id.return_value = mock_principal.id
-            
+
             with pytest.raises(HTTPException) as exc_info:
                 await get_session(
                     session_id=session_id,
@@ -275,14 +281,14 @@ class TestSessionEndpoints:
         mock_principal.id = str(uuid4())
         mock_chat_service = AsyncMock(spec=ChatService)
         session_id = uuid4()
-        
+
         # Mock service response
         mock_chat_service.delete_session.return_value = True
 
         # Call endpoint
         with patch("tripsage.api.routers.chat.get_principal_id") as mock_get_id:
             mock_get_id.return_value = mock_principal.id
-            
+
             result = await delete_session(
                 session_id=session_id,
                 principal=mock_principal,
@@ -305,14 +311,14 @@ class TestSessionEndpoints:
         mock_principal.id = str(uuid4())
         mock_chat_service = AsyncMock(spec=ChatService)
         session_id = uuid4()
-        
+
         # Mock service to return False (not found)
         mock_chat_service.delete_session.return_value = False
 
         # Call endpoint and expect HTTPException
         with patch("tripsage.api.routers.chat.get_principal_id") as mock_get_id:
             mock_get_id.return_value = mock_principal.id
-            
+
             with pytest.raises(HTTPException) as exc_info:
                 await delete_session(
                     session_id=session_id,
@@ -337,7 +343,7 @@ class TestMessageEndpoints:
         mock_principal.id = str(uuid4())
         mock_chat_service = AsyncMock(spec=ChatService)
         session_id = uuid4()
-        
+
         # Mock service response
         mock_messages = [
             {"role": "user", "content": "Hello"},
@@ -348,7 +354,7 @@ class TestMessageEndpoints:
         # Call endpoint
         with patch("tripsage.api.routers.chat.get_principal_id") as mock_get_id:
             mock_get_id.return_value = mock_principal.id
-            
+
             result = await get_session_messages(
                 session_id=session_id,
                 principal=mock_principal,
@@ -372,7 +378,7 @@ class TestMessageEndpoints:
         mock_principal.id = str(uuid4())
         mock_chat_service = AsyncMock(spec=ChatService)
         session_id = uuid4()
-        
+
         # Mock service response
         mock_message = {
             "id": str(uuid4()),
@@ -385,7 +391,7 @@ class TestMessageEndpoints:
         # Call endpoint
         with patch("tripsage.api.routers.chat.get_principal_id") as mock_get_id:
             mock_get_id.return_value = mock_principal.id
-            
+
             result = await create_message(
                 session_id=session_id,
                 content="Hello",
@@ -410,10 +416,11 @@ class TestChatRouterDependencyInjection:
     def test_chat_router_uses_principal_authentication(self):
         """Test that chat router uses Principal-based authentication."""
         import inspect
+
         from tripsage.api.routers.chat import chat
 
         sig = inspect.signature(chat)
-        
+
         # Verify principal parameter exists with correct type
         assert "principal" in sig.parameters
         principal_param = sig.parameters["principal"]
@@ -422,10 +429,11 @@ class TestChatRouterDependencyInjection:
     def test_chat_router_uses_unified_chat_service(self):
         """Test that chat router uses unified ChatService."""
         import inspect
+
         from tripsage.api.routers.chat import chat
 
         sig = inspect.signature(chat)
-        
+
         # Verify chat_service parameter exists with correct type
         assert "chat_service" in sig.parameters
         chat_service_param = sig.parameters["chat_service"]
@@ -433,7 +441,9 @@ class TestChatRouterDependencyInjection:
 
         # Verify it has a Depends() default
         assert chat_service_param.default is not None
-        assert str(type(chat_service_param.default)) == "<class 'fastapi.params.Depends'>"
+        assert (
+            str(type(chat_service_param.default)) == "<class 'fastapi.params.Depends'>"
+        )
 
 
 class TestChatRouterErrorHandling:
@@ -447,13 +457,13 @@ class TestChatRouterErrorHandling:
         # Create mocks
         mock_principal = MagicMock(spec=Principal)
         mock_chat_service = AsyncMock(spec=ChatService)
-        
+
         # Mock get_principal_id to raise an error
         request = ChatRequest(messages=[{"role": "user", "content": "Hello"}])
 
         with patch("tripsage.api.routers.chat.get_principal_id") as mock_get_id:
             mock_get_id.side_effect = Exception("Authentication failed")
-            
+
             with pytest.raises(HTTPException) as exc_info:
                 await chat(
                     request=request,
@@ -470,13 +480,13 @@ class TestChatRouterErrorHandling:
 
         mock_principal = MagicMock(spec=Principal)
         mock_chat_service = AsyncMock(spec=ChatService)
-        
+
         # Test create_session error handling
         mock_chat_service.create_session.side_effect = Exception("Service error")
-        
+
         with patch("tripsage.api.routers.chat.get_principal_id") as mock_get_id:
             mock_get_id.return_value = "user123"
-            
+
             with pytest.raises(HTTPException) as exc_info:
                 await create_session(
                     title="Test",
@@ -487,10 +497,10 @@ class TestChatRouterErrorHandling:
 
         # Test list_sessions error handling
         mock_chat_service.list_sessions.side_effect = Exception("Service error")
-        
+
         with patch("tripsage.api.routers.chat.get_principal_id") as mock_get_id:
             mock_get_id.return_value = "user123"
-            
+
             with pytest.raises(HTTPException) as exc_info:
                 await list_sessions(
                     principal=mock_principal,

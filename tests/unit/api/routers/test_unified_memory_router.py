@@ -5,17 +5,16 @@ This module tests the updated memory router that uses the unified MemoryService
 adapter for clean separation of concerns.
 """
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
-from fastapi import HTTPException
+import pytest
+from fastapi import FastAPI, HTTPException
 from fastapi.testclient import TestClient
-from fastapi import FastAPI
 
+from tripsage.api.middlewares.authentication import Principal
 from tripsage.api.routers.memory import router
 from tripsage.api.services.memory import MemoryService
-from tripsage.api.middlewares.authentication import Principal
 
 
 class TestMemoryRouterEndpoints:
@@ -72,13 +71,16 @@ class TestConversationMemoryEndpoint:
     @pytest.mark.asyncio
     async def test_add_conversation_memory_delegates_to_service(self):
         """Test that add_conversation_memory endpoint delegates to MemoryService."""
-        from tripsage.api.routers.memory import add_conversation_memory, ConversationMemoryRequest
+        from tripsage.api.routers.memory import (
+            ConversationMemoryRequest,
+            add_conversation_memory,
+        )
 
         # Create mocks
         mock_principal = MagicMock(spec=Principal)
         mock_principal.id = str(uuid4())
         mock_memory_service = AsyncMock(spec=MemoryService)
-        
+
         # Mock service response
         mock_response = {"memory_id": str(uuid4()), "success": True}
         mock_memory_service.add_conversation_memory.return_value = mock_response
@@ -95,7 +97,7 @@ class TestConversationMemoryEndpoint:
         # Call endpoint
         with patch("tripsage.api.routers.memory.get_principal_id") as mock_get_id:
             mock_get_id.return_value = mock_principal.id
-            
+
             result = await add_conversation_memory(
                 request=request,
                 principal=mock_principal,
@@ -111,15 +113,20 @@ class TestConversationMemoryEndpoint:
     @pytest.mark.asyncio
     async def test_add_conversation_memory_handles_errors(self):
         """Test that add_conversation_memory handles service errors."""
-        from tripsage.api.routers.memory import add_conversation_memory, ConversationMemoryRequest
+        from tripsage.api.routers.memory import (
+            ConversationMemoryRequest,
+            add_conversation_memory,
+        )
 
         # Create mocks
         mock_principal = MagicMock(spec=Principal)
         mock_principal.id = str(uuid4())
         mock_memory_service = AsyncMock(spec=MemoryService)
-        
+
         # Mock service to raise an error
-        mock_memory_service.add_conversation_memory.side_effect = Exception("Storage failed")
+        mock_memory_service.add_conversation_memory.side_effect = Exception(
+            "Storage failed"
+        )
 
         # Create request
         request = ConversationMemoryRequest(
@@ -129,7 +136,7 @@ class TestConversationMemoryEndpoint:
         # Call endpoint and expect HTTPException
         with patch("tripsage.api.routers.memory.get_principal_id") as mock_get_id:
             mock_get_id.return_value = mock_principal.id
-            
+
             with pytest.raises(HTTPException) as exc_info:
                 await add_conversation_memory(
                     request=request,
@@ -153,7 +160,7 @@ class TestUserContextEndpoint:
         mock_principal = MagicMock(spec=Principal)
         mock_principal.id = str(uuid4())
         mock_memory_service = AsyncMock(spec=MemoryService)
-        
+
         # Mock service response
         mock_context = {
             "preferences": {"travel_style": "luxury"},
@@ -164,7 +171,7 @@ class TestUserContextEndpoint:
         # Call endpoint
         with patch("tripsage.api.routers.memory.get_principal_id") as mock_get_id:
             mock_get_id.return_value = mock_principal.id
-            
+
             result = await get_user_context(
                 principal=mock_principal,
                 memory_service=mock_memory_service,
@@ -182,14 +189,16 @@ class TestUserContextEndpoint:
         # Create mocks
         mock_principal = MagicMock(spec=Principal)
         mock_memory_service = AsyncMock(spec=MemoryService)
-        
+
         # Mock service to raise an error
-        mock_memory_service.get_user_context.side_effect = Exception("Context fetch failed")
+        mock_memory_service.get_user_context.side_effect = Exception(
+            "Context fetch failed"
+        )
 
         # Call endpoint and expect HTTPException
         with patch("tripsage.api.routers.memory.get_principal_id") as mock_get_id:
             mock_get_id.return_value = "user123"
-            
+
             with pytest.raises(HTTPException) as exc_info:
                 await get_user_context(
                     principal=mock_principal,
@@ -206,13 +215,13 @@ class TestSearchMemoriesEndpoint:
     @pytest.mark.asyncio
     async def test_search_memories_delegates_to_service(self):
         """Test that search_memories endpoint delegates to MemoryService."""
-        from tripsage.api.routers.memory import search_memories, SearchMemoryRequest
+        from tripsage.api.routers.memory import SearchMemoryRequest, search_memories
 
         # Create mocks
         mock_principal = MagicMock(spec=Principal)
         mock_principal.id = str(uuid4())
         mock_memory_service = AsyncMock(spec=MemoryService)
-        
+
         # Mock service response
         mock_memories = [
             {"id": str(uuid4()), "content": "Travel to Paris"},
@@ -226,7 +235,7 @@ class TestSearchMemoriesEndpoint:
         # Call endpoint
         with patch("tripsage.api.routers.memory.get_principal_id") as mock_get_id:
             mock_get_id.return_value = mock_principal.id
-            
+
             result = await search_memories(
                 request=request,
                 principal=mock_principal,
@@ -242,12 +251,12 @@ class TestSearchMemoriesEndpoint:
     @pytest.mark.asyncio
     async def test_search_memories_handles_errors(self):
         """Test that search_memories handles service errors."""
-        from tripsage.api.routers.memory import search_memories, SearchMemoryRequest
+        from tripsage.api.routers.memory import SearchMemoryRequest, search_memories
 
         # Create mocks
         mock_principal = MagicMock(spec=Principal)
         mock_memory_service = AsyncMock(spec=MemoryService)
-        
+
         # Mock service to raise an error
         mock_memory_service.search_memories.side_effect = Exception("Search failed")
 
@@ -257,7 +266,7 @@ class TestSearchMemoriesEndpoint:
         # Call endpoint and expect HTTPException
         with patch("tripsage.api.routers.memory.get_principal_id") as mock_get_id:
             mock_get_id.return_value = "user123"
-            
+
             with pytest.raises(HTTPException) as exc_info:
                 await search_memories(
                     request=request,
@@ -275,13 +284,16 @@ class TestPreferencesEndpoints:
     @pytest.mark.asyncio
     async def test_update_preferences_delegates_to_service(self):
         """Test that update_preferences endpoint delegates to MemoryService."""
-        from tripsage.api.routers.memory import update_preferences, UpdatePreferencesRequest
+        from tripsage.api.routers.memory import (
+            UpdatePreferencesRequest,
+            update_preferences,
+        )
 
         # Create mocks
         mock_principal = MagicMock(spec=Principal)
         mock_principal.id = str(uuid4())
         mock_memory_service = AsyncMock(spec=MemoryService)
-        
+
         # Mock service response
         mock_response = {"updated": True, "preferences": {"budget": "$1000"}}
         mock_memory_service.update_user_preferences.return_value = mock_response
@@ -292,7 +304,7 @@ class TestPreferencesEndpoints:
         # Call endpoint
         with patch("tripsage.api.routers.memory.get_principal_id") as mock_get_id:
             mock_get_id.return_value = mock_principal.id
-            
+
             result = await update_preferences(
                 request=request,
                 principal=mock_principal,
@@ -314,7 +326,7 @@ class TestPreferencesEndpoints:
         mock_principal = MagicMock(spec=Principal)
         mock_principal.id = str(uuid4())
         mock_memory_service = AsyncMock(spec=MemoryService)
-        
+
         # Mock service response
         mock_response = {"preference_id": str(uuid4()), "created": True}
         mock_memory_service.add_user_preference.return_value = mock_response
@@ -322,7 +334,7 @@ class TestPreferencesEndpoints:
         # Call endpoint
         with patch("tripsage.api.routers.memory.get_principal_id") as mock_get_id:
             mock_get_id.return_value = mock_principal.id
-            
+
             result = await add_preference(
                 key="favorite_airline",
                 value="Delta",
@@ -351,14 +363,14 @@ class TestMemoryManagementEndpoints:
         mock_principal.id = str(uuid4())
         mock_memory_service = AsyncMock(spec=MemoryService)
         memory_id = str(uuid4())
-        
+
         # Mock service response
         mock_memory_service.delete_memory.return_value = True
 
         # Call endpoint
         with patch("tripsage.api.routers.memory.get_principal_id") as mock_get_id:
             mock_get_id.return_value = mock_principal.id
-            
+
             result = await delete_memory(
                 memory_id=memory_id,
                 principal=mock_principal,
@@ -380,14 +392,14 @@ class TestMemoryManagementEndpoints:
         mock_principal = MagicMock(spec=Principal)
         mock_memory_service = AsyncMock(spec=MemoryService)
         memory_id = str(uuid4())
-        
+
         # Mock service to return False (not found)
         mock_memory_service.delete_memory.return_value = False
 
         # Call endpoint and expect HTTPException
         with patch("tripsage.api.routers.memory.get_principal_id") as mock_get_id:
             mock_get_id.return_value = "user123"
-            
+
             with pytest.raises(HTTPException) as exc_info:
                 await delete_memory(
                     memory_id=memory_id,
@@ -407,7 +419,7 @@ class TestMemoryManagementEndpoints:
         mock_principal = MagicMock(spec=Principal)
         mock_principal.id = str(uuid4())
         mock_memory_service = AsyncMock(spec=MemoryService)
-        
+
         # Mock service response
         mock_stats = {
             "total_memories": 15,
@@ -419,7 +431,7 @@ class TestMemoryManagementEndpoints:
         # Call endpoint
         with patch("tripsage.api.routers.memory.get_principal_id") as mock_get_id:
             mock_get_id.return_value = mock_principal.id
-            
+
             result = await get_memory_stats(
                 principal=mock_principal,
                 memory_service=mock_memory_service,
@@ -438,7 +450,7 @@ class TestMemoryManagementEndpoints:
         mock_principal = MagicMock(spec=Principal)
         mock_principal.id = str(uuid4())
         mock_memory_service = AsyncMock(spec=MemoryService)
-        
+
         # Mock service response
         mock_response = {"cleared": True, "count": 15}
         mock_memory_service.clear_user_memory.return_value = mock_response
@@ -446,7 +458,7 @@ class TestMemoryManagementEndpoints:
         # Call endpoint
         with patch("tripsage.api.routers.memory.get_principal_id") as mock_get_id:
             mock_get_id.return_value = mock_principal.id
-            
+
             result = await clear_user_memory(
                 confirm=True,
                 principal=mock_principal,
@@ -466,10 +478,11 @@ class TestMemoryRouterDependencyInjection:
     def test_memory_router_uses_principal_authentication(self):
         """Test that memory router uses Principal-based authentication."""
         import inspect
+
         from tripsage.api.routers.memory import add_conversation_memory
 
         sig = inspect.signature(add_conversation_memory)
-        
+
         # Verify principal parameter exists with correct type
         assert "principal" in sig.parameters
         principal_param = sig.parameters["principal"]
@@ -478,10 +491,11 @@ class TestMemoryRouterDependencyInjection:
     def test_memory_router_uses_unified_memory_service(self):
         """Test that memory router uses unified MemoryService."""
         import inspect
+
         from tripsage.api.routers.memory import add_conversation_memory
 
         sig = inspect.signature(add_conversation_memory)
-        
+
         # Verify memory_service parameter exists with correct type
         assert "memory_service" in sig.parameters
         memory_service_param = sig.parameters["memory_service"]
@@ -489,7 +503,10 @@ class TestMemoryRouterDependencyInjection:
 
         # Verify it has a Depends() default
         assert memory_service_param.default is not None
-        assert str(type(memory_service_param.default)) == "<class 'fastapi.params.Depends'>"
+        assert (
+            str(type(memory_service_param.default))
+            == "<class 'fastapi.params.Depends'>"
+        )
 
 
 class TestMemoryRouterErrorHandling:
@@ -499,16 +516,16 @@ class TestMemoryRouterErrorHandling:
     async def test_all_endpoints_handle_errors_consistently(self):
         """Test that all memory endpoints handle errors consistently."""
         from tripsage.api.routers.memory import (
+            ConversationMemoryRequest,
+            SearchMemoryRequest,
             add_conversation_memory,
             get_user_context,
             search_memories,
-            ConversationMemoryRequest,
-            SearchMemoryRequest,
         )
 
         mock_principal = MagicMock(spec=Principal)
         mock_memory_service = AsyncMock(spec=MemoryService)
-        
+
         # Test multiple endpoints for consistent error handling
         endpoints_to_test = [
             (
@@ -530,18 +547,20 @@ class TestMemoryRouterErrorHandling:
 
         for endpoint_func, extra_kwargs, service_method in endpoints_to_test:
             # Mock service method to raise an error
-            getattr(mock_memory_service, service_method).side_effect = Exception("Service error")
-            
+            getattr(mock_memory_service, service_method).side_effect = Exception(
+                "Service error"
+            )
+
             with patch("tripsage.api.routers.memory.get_principal_id") as mock_get_id:
                 mock_get_id.return_value = "user123"
-                
+
                 with pytest.raises(HTTPException) as exc_info:
                     await endpoint_func(
                         principal=mock_principal,
                         memory_service=mock_memory_service,
                         **extra_kwargs,
                     )
-                
+
                 # Verify all endpoints return 500 status code for service errors
                 assert exc_info.value.status_code == 500
                 assert "Failed to" in exc_info.value.detail
