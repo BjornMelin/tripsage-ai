@@ -81,9 +81,13 @@ This streamlined TODO list tracks current development priorities for TripSage AI
   - [ ] Time service (native Python datetime)
   - [ ] Duffel Flights API SDK
   - [ ] Google Calendar API
-  - [ ] Firecrawl → Crawl4AI direct SDK
-  - [ ] Playwright native SDK
-- **Expected Impact**: 50-70% latency reduction
+  - [ ] **Webcrawl Performance & Reliability Enhancements** (1-2 weeks)
+    - [ ] Firecrawl → Crawl4AI direct SDK completion
+    - [ ] AIOHTTP integration for 10x concurrent performance improvement
+    - [ ] TLS fingerprinting bypass with hrequests/curl_cffi for enterprise sites
+    - [ ] Scrapling integration for intelligent site adaptation
+  - [ ] Playwright native SDK with browser pooling
+- **Expected Impact**: 50-70% latency reduction + 10x webcrawl concurrent performance
 
 ### 4. LangGraph Production Deployment (Issue #172)
 
@@ -104,7 +108,23 @@ This streamlined TODO list tracks current development priorities for TripSage AI
 
 ## Medium Priority Tasks
 
-### 5. Complete Test Suite Migration (Issue #35)
+### 5. Webcrawl Production Readiness (1-2 weeks)
+
+- [ ] **Caching & Performance Integration**
+  - [ ] Redis caching layer integration with existing DragonflyDB infrastructure
+  - [ ] Content deduplication engine to reduce redundant requests
+  - [ ] Smart caching with TTL strategies based on content type
+- [ ] **Reliability & Rate Management**
+  - [ ] Domain-specific rate limiting with adaptive thresholds
+  - [ ] Browser instance pooling for Playwright fallback optimization
+  - [ ] Enhanced error handling with exponential backoff patterns
+- [ ] **Production Monitoring**
+  - [ ] Webcrawl performance metrics integration
+  - [ ] Success rate tracking per domain and content type
+  - [ ] Resource usage monitoring and throttling
+- **Expected Impact**: Production-ready webcrawl reliability, reduced resource usage
+
+### 6. Complete Test Suite Migration (Issue #35)
 
 - [ ] Migrate remaining agent tests to use tripsage.*
 - [x] Create comprehensive test suite for API dependencies module (832 lines, 80-90% coverage)
