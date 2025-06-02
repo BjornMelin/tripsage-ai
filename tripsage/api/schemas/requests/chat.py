@@ -27,3 +27,17 @@ class ChatRequest(BaseModel):
     tools: Optional[list[str]] = Field(
         None, description="Specific tools to enable for this request"
     )
+
+
+class SessionCreateRequest(BaseModel):
+    """Request model for creating a new chat session."""
+
+    title: str = Field(..., description="Session title")
+    metadata: Optional[dict] = Field(None, description="Session metadata")
+
+
+class CreateMessageRequest(BaseModel):
+    """Request model for creating a message in a session."""
+
+    content: str = Field(..., description="Message content")
+    role: str = Field(default="user", description="Message role")
