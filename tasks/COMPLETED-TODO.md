@@ -114,6 +114,16 @@ This file contains all the tasks that were marked as completed in the main TODO.
   - **Domain Coverage:** Flight, Accommodation, SearchParameters, TripNote, PriceHistory, SavedOption, TripComparison models
   - **Integration:** Domain-specific Supabase and Neo4j tools for complex operations
 
+- [x] **Comprehensive Backend Service Consolidation & Refactoring** ✅ COMPLETED (June 2, 2025)
+  - **Architectural Decision:** Complete consolidation of service and model layers for maximum maintainability
+  - **Service Consolidation:** Moved all business services from tripsage/services/ to tripsage_core/services/business/
+  - **Model Streamlining:** Eliminated duplicates, centralized enums in schemas_common/enums.py, established clear model boundaries
+  - **Tool Consolidation:** Unified tool directories, fixed all import paths, created proper orchestration tools structure
+  - **Architecture Documentation:** Created comprehensive ARCHITECTURE.md files for both tripsage and tripsage_core packages
+  - **Testing Modernization:** Updated all tests to current pytest-asyncio patterns, fixed deprecated decorators
+  - **Code Quality:** Applied ruff linting/formatting, removed backwards compatibility, achieved clean separation
+  - **Impact:** Streamlined architecture with reduced redundancy, improved clarity, low complexity, 80-90% test coverage
+
 ---
 
 ## Implementation Documentation Note

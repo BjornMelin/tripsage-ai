@@ -7,7 +7,6 @@ for the TripSage travel planning system.
 
 from datetime import datetime
 
-from tripsage.agents.service_registry import ServiceRegistry
 from tripsage.orchestration.nodes.base import BaseAgentNode
 from tripsage.orchestration.state import TravelPlanningState
 from tripsage_core.utils.logging_utils import get_logger

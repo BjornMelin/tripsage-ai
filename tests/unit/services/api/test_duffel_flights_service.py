@@ -6,7 +6,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
 import pytest
-import pytest_asyncio
 from pydantic import ValidationError
 
 from tripsage.models.api.flights_models import (
@@ -43,7 +42,7 @@ def mock_redis():
     return redis
 
 
-@pytest_asyncio.fixture
+@pytest.fixture
 async def flights_service(mock_settings, mock_redis):
     """Create flights service instance for testing."""
     with patch(

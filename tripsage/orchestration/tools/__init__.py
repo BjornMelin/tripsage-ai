@@ -1,10 +1,5 @@
 """
-Tool integration package for LangGraph orchestration.
+Orchestration tools for TripSage.
 
-This package contains integrations between LangGraph and various tool systems,
-including MCP (Model Context Protocol) tools.
+This module contains tools and utilities for LangGraph-based orchestration.
 """
-
-from .mcp_integration import MCPToolRegistry, MCPToolWrapper
-
-__all__ = ["MCPToolWrapper", "MCPToolRegistry"]

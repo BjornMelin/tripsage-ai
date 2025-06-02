@@ -57,7 +57,6 @@ class TestAccommodationService:
         """Create AccommodationService instance with mocked dependencies."""
         return AccommodationService(
             database_service=mock_database_service,
-            external_api_service=mock_external_api_service,
         )
 
     @pytest.fixture
@@ -219,7 +218,7 @@ class TestAccommodationService:
         }
 
         result = await accommodation_service.search_accommodations(
-            user_id, sample_search_request
+            sample_search_request
         )
 
         # Assertions

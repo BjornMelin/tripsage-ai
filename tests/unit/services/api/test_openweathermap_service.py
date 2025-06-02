@@ -6,7 +6,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
 import pytest
-import pytest_asyncio
 
 from tripsage.models.api.weather_models import (
     AirQualityIndex,
@@ -32,7 +31,7 @@ def mock_redis():
     return redis
 
 
-@pytest_asyncio.fixture
+@pytest.fixture
 async def weather_service(mock_settings, mock_redis):
     """Create weather service instance for testing."""
     with patch(

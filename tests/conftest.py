@@ -13,11 +13,10 @@ from typing import Any, Dict, List, Optional
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
-import pytest_asyncio
 
 # Load test environment variables FIRST
 from dotenv import load_dotenv
-from pydantic import BaseModel, SecretStr
+from pydantic import BaseModel
 
 load_dotenv(".env.test", override=True)
 
@@ -34,17 +33,14 @@ def setup_test_environment():
         "ENVIRONMENT": "testing",
         "DEBUG": "true",
         "LOG_LEVEL": "INFO",
-        
         # Database configuration
         "SUPABASE_URL": "https://test-project.supabase.co",
         "SUPABASE_ANON_KEY": "test-anon-key-1234567890abcdef",
         "SUPABASE_SERVICE_ROLE_KEY": "test-service-role-key-1234567890abcdef",
         "SUPABASE_PROJECT_ID": "test-project-id",
-        
         # Cache configuration
         "REDIS_URL": "redis://localhost:6379/1",
         "DRAGONFLY_URL": "redis://localhost:6379/1",
-        
         # API Keys (safe test values)
         "OPENAI_API_KEY": "sk-test-openai-key-1234567890abcdef",
         "ANTHROPIC_API_KEY": "sk-ant-test-anthropic-key-1234567890abcdef",
@@ -54,17 +50,14 @@ def setup_test_environment():
         "DUFFEL_API_KEY": "test-duffel-api-key-1234567890",
         "OPENWEATHERMAP_API_KEY": "test-weather-api-key-1234567890",
         "VISUAL_CROSSING_API_KEY": "test-visual-crossing-key-1234567890",
-        
         # Security
         "JWT_SECRET_KEY": "test-jwt-secret-key-for-testing-only",
         "API_KEY_MASTER_SECRET": "test-master-secret-for-byok-encryption",
-        
         # External services
         "CRAWL4AI_API_URL": "http://localhost:8000/api",
         "CRAWL4AI_API_KEY": "test-crawl4ai-key-1234567890",
         "WEBCRAWL_CRAWL4AI_API_KEY": "test-crawl-key",
         "WEBCRAWL_FIRECRAWL_API_KEY": "test-firecrawl-key",
-        
         # MCP Endpoints - All required MCP configurations
         "TIME_MCP_ENDPOINT": "http://localhost:3006",
         "WEATHER_MCP_ENDPOINT": "http://localhost:3007",
@@ -82,7 +75,6 @@ def setup_test_environment():
         "CALENDAR_MCP_GOOGLE_CLIENT_SECRET": "test-client-secret",
         "CALENDAR_MCP_GOOGLE_REDIRECT_URI": "http://localhost:3000/callback",
         "SUPABASE_MCP_ENDPOINT": "http://localhost:3016",
-        
         # Feature flags for testing
         "ENABLE_STREAMING_RESPONSES": "false",
         "ENABLE_RATE_LIMITING": "false",
@@ -95,7 +87,7 @@ def setup_test_environment():
         "ENABLE_MEM0": "true",
         "ENABLE_LANGGRAPH": "true",
     }
-    
+
     # Apply all environment variables
     for key, value in test_env.items():
         os.environ[key] = value
@@ -109,25 +101,25 @@ def mock_problematic_imports():
         import langgraph
     except ImportError:
         # Create mock modules if imports fail
-        sys.modules['langchain_core'] = MagicMock()
-        sys.modules['langchain_core.language_models'] = MagicMock()
-        sys.modules['langchain_core.language_models.chat_models'] = MagicMock()
-        sys.modules['langchain_openai'] = MagicMock()
-        sys.modules['langchain_openai.chat_models'] = MagicMock()
-        sys.modules['langgraph'] = MagicMock()
-        sys.modules['langgraph.graph'] = MagicMock()
-        sys.modules['langgraph.checkpoint'] = MagicMock()
-        
+        sys.modules["langchain_core"] = MagicMock()
+        sys.modules["langchain_core.language_models"] = MagicMock()
+        sys.modules["langchain_core.language_models.chat_models"] = MagicMock()
+        sys.modules["langchain_openai"] = MagicMock()
+        sys.modules["langchain_openai.chat_models"] = MagicMock()
+        sys.modules["langgraph"] = MagicMock()
+        sys.modules["langgraph.graph"] = MagicMock()
+        sys.modules["langgraph.checkpoint"] = MagicMock()
+
         # Mock ChatOpenAI class
         mock_chat_openai = MagicMock()
         mock_chat_openai.return_value = AsyncMock()
-        sys.modules['langchain_openai'].ChatOpenAI = mock_chat_openai
-    
+        sys.modules["langchain_openai"].ChatOpenAI = mock_chat_openai
+
     try:
         import mem0ai
     except ImportError:
-        sys.modules['mem0ai'] = MagicMock()
-        sys.modules['mem0'] = MagicMock()
+        sys.modules["mem0ai"] = MagicMock()
+        sys.modules["mem0"] = MagicMock()
 
 
 # Set up test environment immediately

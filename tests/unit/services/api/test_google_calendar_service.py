@@ -5,7 +5,6 @@ from datetime import datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-import pytest_asyncio
 from google.auth.exceptions import RefreshError
 from google.oauth2.credentials import Credentials
 from googleapiclient.errors import HttpError
@@ -56,7 +55,7 @@ def mock_redis():
     return redis
 
 
-@pytest_asyncio.fixture
+@pytest.fixture
 async def calendar_service(mock_settings, mock_credentials, mock_redis):
     """Create calendar service instance for testing."""
     with patch(
