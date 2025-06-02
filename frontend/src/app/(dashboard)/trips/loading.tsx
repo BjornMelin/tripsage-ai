@@ -1,4 +1,4 @@
-import { Skeleton, SkeletonCard } from "@/components/ui/enhanced-skeleton";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function TripsLoading() {
   return (
@@ -27,14 +27,14 @@ export default function TripsLoading() {
         {Array.from({ length: 9 }).map((_, i) => (
           <div key={i} className="border rounded-lg overflow-hidden">
             {/* Trip image */}
-            <Skeleton variant="rectangular" className="h-48 w-full" />
+            <Skeleton className="h-48 w-full" />
 
             {/* Trip content */}
             <div className="p-4 space-y-3">
               <div className="space-y-2">
                 <Skeleton className="h-5 w-3/4" />
                 <div className="flex items-center space-x-2">
-                  <Skeleton variant="circular" className="h-4 w-4" />
+                  <Skeleton variant="rounded" className="h-4 w-4" />
                   <Skeleton className="h-4 w-24" />
                 </div>
               </div>
@@ -66,7 +66,7 @@ export default function TripsLoading() {
                 <Skeleton className="h-8 w-20 rounded-md" />
                 <Skeleton className="h-8 w-16 rounded-md" />
                 <div className="ml-auto">
-                  <Skeleton variant="circular" className="h-8 w-8" />
+                  <Skeleton variant="rounded" className="h-8 w-8" />
                 </div>
               </div>
             </div>

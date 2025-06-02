@@ -14,7 +14,7 @@ vi.mock("zustand/middleware", () => ({
 }));
 
 // Mock API query hooks
-vi.mock("@/lib/hooks/use-api-query", () => ({
+vi.mock("@/hooks/use-api-query", () => ({
   useApiQuery: vi.fn().mockReturnValue({
     data: null,
     isLoading: false,

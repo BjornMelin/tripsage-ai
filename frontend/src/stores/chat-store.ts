@@ -734,7 +734,7 @@ export const useChatStore = create<ChatState>()(
 
         try {
           // Import memory hooks here to avoid circular dependencies
-          const { useMemoryContext } = await import("@/lib/hooks/use-memory");
+          const { useMemoryContext } = await import("@/hooks/use-memory");
 
           // Note: This would typically be handled by the component using the hook
           // This is a placeholder for the actual implementation
@@ -771,7 +771,7 @@ export const useChatStore = create<ChatState>()(
 
           // Import memory hooks here to avoid circular dependencies
           const { useAddConversationMemory } = await import(
-            "@/lib/hooks/use-memory"
+            "@/hooks/use-memory"
           );
 
           // Note: This would typically be handled by the component using the hook

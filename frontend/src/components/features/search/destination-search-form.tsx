@@ -25,7 +25,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Clock, Star, TrendingUp, MapPin } from "lucide-react";
-import { useMemoryContext } from "@/lib/hooks/use-memory";
+import { useMemoryContext } from "@/hooks/use-memory";
 import type { DestinationSearchParams } from "@/types/search";
 
 const destinationSearchFormSchema = z.object({

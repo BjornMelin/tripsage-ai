@@ -46,7 +46,7 @@ export {
   type UseLoadingOptions,
   type UseLoadingReturn,
   type UseAsyncLoadingReturn,
-} from "../../lib/hooks/use-loading";
+} from "../../hooks/use-loading";
 
 // Types
 export type {

@@ -5,7 +5,7 @@ import { ActivitySearchForm } from "@/components/features/search/activity-search
 import { ActivityCard } from "@/components/features/search/activity-card";
 import { SearchResults } from "@/components/features/search/search-results";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
-import { useActivitySearch } from "@/lib/hooks/use-activity-search";
+import { useActivitySearch } from "@/hooks/use-activity-search";
 import { useSearchStore } from "@/stores/search-store";
 import type { ActivitySearchParams, Activity } from "@/types/search";
 

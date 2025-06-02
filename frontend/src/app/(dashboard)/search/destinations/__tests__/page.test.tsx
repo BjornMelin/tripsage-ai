@@ -21,7 +21,7 @@ vi.mock("@/stores/search-store", () => ({
   })),
 }));
 
-vi.mock("@/lib/hooks/use-destination-search", () => ({
+vi.mock("@/hooks/use-destination-search", () => ({
   useDestinationSearch: vi.fn(() => ({
     searchDestinationsMock: vi.fn(),
     isSearching: false,
@@ -134,7 +134,7 @@ describe("DestinationsSearchPage", () => {
   it("handles search form submission", async () => {
     const mockSearchDestinationsMock = vi.fn();
     const { useDestinationSearch } = await import(
-      "@/lib/hooks/use-destination-search"
+      "@/hooks/use-destination-search"
     );
 
     (useDestinationSearch as any).mockReturnValue({

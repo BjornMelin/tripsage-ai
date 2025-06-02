@@ -4,7 +4,7 @@ import { useState } from "react";
 import { SearchLayout } from "@/components/layouts/search-layout";
 import { HotelSearchForm } from "@/components/features/search/hotel-search-form";
 import { SearchResults } from "@/components/features/search/search-results";
-import { useAccommodationSearch } from "@/lib/hooks/use-accommodation-search";
+import { useAccommodationSearch } from "@/hooks/use-accommodation-search";
 import {
   Card,
   CardContent,

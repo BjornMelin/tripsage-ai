@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback } from "react";
-import { useApiQuery } from "@/lib/hooks/use-api-query";
+import { useApiQuery } from "@/hooks/use-api-query";
 import { useCurrencyStore } from "@/stores/currency-store";
 import type {
   CurrencyCode,

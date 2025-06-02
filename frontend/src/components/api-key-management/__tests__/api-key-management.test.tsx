@@ -6,11 +6,11 @@ import { ApiKeyList } from "../api-key-list";
 import { ApiKeySettings } from "../api-key-settings";
 import { ApiKeyInput } from "../api-key-input";
 import { ServiceSelector } from "../service-selector";
-import * as apiHooks from "@/lib/hooks/use-api-keys";
+import * as apiHooks from "@/hooks/use-api-keys";
 import { useApiKeyStore } from "@/stores/api-key-store";
 
 // Mock the TanStack Query hooks
-vi.mock("@/lib/hooks/use-api-keys", () => ({
+vi.mock("@/hooks/use-api-keys", () => ({
   useApiKeys: vi.fn(),
   useAddApiKey: vi.fn(),
   useDeleteApiKey: vi.fn(),

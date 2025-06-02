@@ -19,7 +19,7 @@ import {
   ChevronUp,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useMemoryContext, useMemoryInsights } from "@/lib/hooks/use-memory";
+import { useMemoryContext, useMemoryInsights } from "@/hooks/use-memory";
 import type {
   MemoryContextPanelProps,
   Memory,

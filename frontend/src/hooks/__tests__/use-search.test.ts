@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
 import { useSearch, useSavedSearches, useRecentSearches } from "../use-search";
 import { useSearchStore } from "@/stores/search-store";
-import { useApiQuery, useApiMutation } from "@/lib/hooks/use-api-query";
+import { useApiQuery, useApiMutation } from "@/hooks/use-api-query";
 import { vi } from "vitest";
 
 // Mock dependencies
@@ -10,7 +10,7 @@ vi.mock("@/stores/search-store", () => ({
   useSearchStore: vi.fn(),
 }));
 
-vi.mock("@/lib/hooks/use-api-query", () => ({
+vi.mock("@/hooks/use-api-query", () => ({
   useApiQuery: vi.fn(),
   useApiMutation: vi.fn(),
 }));

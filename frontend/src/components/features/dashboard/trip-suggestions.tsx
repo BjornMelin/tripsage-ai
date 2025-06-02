@@ -24,7 +24,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
 import { useDealsStore } from "@/stores/deals-store";
 import { useBudgetStore } from "@/stores/budget-store";
-import { useMemoryContext, useMemoryInsights } from "@/lib/hooks/use-memory";
+import { useMemoryContext, useMemoryInsights } from "@/hooks/use-memory";
 
 interface TripSuggestion {
   id: string;
