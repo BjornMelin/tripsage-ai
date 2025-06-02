@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.12"
 authors = [{ name = "TripSage Team" }]
 dependencies = [
+    "aiofiles>=24.1.0",
     "crawl4ai>=0.6.3",
     "cryptography>=45.0.3",
     "email-validator>=2.2.0",
@@ -17,6 +18,9 @@ dependencies = [
     "google-auth-oauthlib>=1.2.2",
     "googlemaps>=4.10.0",
     "httpx>=0.28.1",
+    "langchain-core>=0.3.63",
+    "langchain-openai>=0.3.18",
+    "langgraph>=0.4.7",
     "mem0ai>=0.1.102",
     "passlib[bcrypt]>=1.7.4",
     "playwright>=1.52.0",
@@ -77,11 +81,13 @@ dev = [
     "ruff>=0.11.9", 
     "pytest>=8.3.5", 
     "pytest-cov>=6.1.1",
-    "pytest-asyncio>=0.25.1",
+    "pytest-asyncio>=1.0.0",
+    "pytest-mock>=3.14.1",
     "coverage[toml]>=7.6.9",
     "pytest-benchmark>=4.0.0",
     "pytest-httpx>=0.35.0",
-    "fakeredis>=2.29.0"
+    "fakeredis>=2.29.0",
+    "nest-asyncio>=1.6.0"
 ]
 
 [tool.pytest.ini_options]
@@ -114,6 +120,8 @@ dev = [
     "pytest>=8.3.5",
     "pytest-asyncio>=1.0.0",
     "pytest-cov>=6.1.1",
+    "pytest-mock>=3.14.1",
+    "nest-asyncio>=1.6.0",
 ]
 test = [
     "email-validator>=2.2.0",
@@ -125,6 +133,7 @@ test = [
     "pytest>=8.3.5",
     "pytest-asyncio>=1.0.0",
     "pytest-mock>=3.14.1",
+    "pytest-cov>=6.1.1",
     "python-dotenv>=1.1.0",
     "python-jose>=3.5.0",
     "python-multipart>=0.0.20",
@@ -132,6 +141,8 @@ test = [
     "sqlalchemy>=2.0.41",
     "supabase>=2.15.2",
     "uvicorn>=0.34.2",
+    "nest-asyncio>=1.6.0",
+    "fakeredis>=2.29.0",
 ]
 
 [tool.hatch.build.targets.wheel]

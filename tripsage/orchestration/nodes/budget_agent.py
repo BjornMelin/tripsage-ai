@@ -13,6 +13,7 @@ from typing import Any, Dict, Optional
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
 
+from tripsage.agents.service_registry import ServiceRegistry
 from tripsage.orchestration.nodes.base import BaseAgentNode
 from tripsage.orchestration.state import TravelPlanningState
 from tripsage.orchestration.tools.mcp_integration import MCPToolRegistry
@@ -31,9 +32,9 @@ class BudgetAgentNode(BaseAgentNode):
     integration.
     """
 
-    def __init__(self):
+    def __init__(self, service_registry):
         """Initialize the budget agent node with tools and language model."""
-        super().__init__("budget_agent")
+        super().__init__("budget_agent", service_registry)
 
         # Initialize LLM for budget-specific tasks
         self.llm = ChatOpenAI(

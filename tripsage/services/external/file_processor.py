@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 from uuid import uuid4
 
+import aiofiles
 from fastapi import HTTPException, UploadFile
 from pydantic import BaseModel, Field
 
@@ -268,9 +269,9 @@ class FileProcessor:
             # Read file content
             content = await file.read()
 
-            # Write to storage
-            with open(storage_path, "wb") as f:
-                f.write(content)
+            # Write to storage asynchronously
+            async with aiofiles.open(storage_path, "wb") as f:
+                await f.write(content)
 
             # Reset file pointer for potential future reads
             await file.seek(0)
@@ -309,8 +310,8 @@ class FileProcessor:
                 pass
             elif mime_type in ["text/plain", "text/csv"]:
                 # Add text file metadata
-                with open(file_path, "r", encoding="utf-8") as f:
-                    content = f.read()
+                async with aiofiles.open(file_path, "r", encoding="utf-8") as f:
+                    content = await f.read()
                     metadata["line_count"] = len(content.splitlines())
                     metadata["character_count"] = len(content)
 
