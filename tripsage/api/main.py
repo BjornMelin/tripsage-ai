@@ -30,7 +30,7 @@ from tripsage.api.routers import (
     destinations,
     flights,
     health,
-    # itineraries,  # Temporarily disabled due to model recursion issues
+    itineraries,
     keys,
     memory,
     trips,
@@ -541,9 +541,9 @@ def create_app() -> FastAPI:
         prefix="/api/destinations",
         tags=["destinations"],
     )
-    # app.include_router(
-    #     itineraries.router, prefix="/api/itineraries", tags=["itineraries"]
-    # )  # Temporarily disabled
+    app.include_router(
+        itineraries.router, prefix="/api/itineraries", tags=["itineraries"]
+    )
     app.include_router(memory.router, prefix="/api", tags=["memory"])
     app.include_router(websocket.router, prefix="/api", tags=["websocket"])
 

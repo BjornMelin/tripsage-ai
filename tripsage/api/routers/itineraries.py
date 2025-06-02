@@ -19,6 +19,7 @@ from tripsage.api.schemas.requests.itineraries import (
 )
 from tripsage.api.schemas.responses.itineraries import (
     ItineraryConflictCheckResponse,
+    ItineraryItemResponse,
     ItineraryOptimizeResponse,
     ItineraryResponse,
     ItinerarySearchResponse,
@@ -27,7 +28,6 @@ from tripsage.api.services.itinerary import ItineraryService, get_itinerary_serv
 from tripsage_core.exceptions.exceptions import (
     CoreResourceNotFoundError as ResourceNotFoundError,
 )
-from tripsage_core.models.db.itinerary_item import ItineraryItem
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -145,7 +145,7 @@ async def delete_itinerary(
         ) from e
 
 
-@router.post("/{itinerary_id}/items", response_model=ItineraryItem)
+@router.post("/{itinerary_id}/items", response_model=ItineraryItemResponse)
 async def add_item_to_itinerary(
     itinerary_id: str,
     request: ItineraryItemCreateRequest,
@@ -174,7 +174,7 @@ async def add_item_to_itinerary(
         ) from e
 
 
-@router.get("/{itinerary_id}/items/{item_id}", response_model=ItineraryItem)
+@router.get("/{itinerary_id}/items/{item_id}", response_model=ItineraryItemResponse)
 async def get_itinerary_item(
     itinerary_id: str,
     item_id: str,
@@ -195,7 +195,7 @@ async def get_itinerary_item(
         ) from e
 
 
-@router.put("/{itinerary_id}/items/{item_id}", response_model=ItineraryItem)
+@router.put("/{itinerary_id}/items/{item_id}", response_model=ItineraryItemResponse)
 async def update_itinerary_item(
     itinerary_id: str,
     item_id: str,
