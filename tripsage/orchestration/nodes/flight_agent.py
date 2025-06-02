@@ -13,6 +13,7 @@ from typing import Any, Dict, Optional
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
 
+from tripsage.agents.service_registry import ServiceRegistry
 from tripsage.orchestration.nodes.base import BaseAgentNode
 from tripsage.orchestration.state import TravelPlanningState
 from tripsage.orchestration.tools.mcp_integration import MCPToolRegistry
@@ -30,9 +31,9 @@ class FlightAgentNode(BaseAgentNode):
     changes, and flight information using MCP tool integration.
     """
 
-    def __init__(self):
+    def __init__(self, service_registry):
         """Initialize the flight agent node with tools and language model."""
-        super().__init__("flight_agent")
+        super().__init__("flight_agent", service_registry)
 
         # Initialize LLM for flight-specific tasks
         self.llm = ChatOpenAI(

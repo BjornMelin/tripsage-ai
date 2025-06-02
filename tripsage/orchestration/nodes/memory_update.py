@@ -7,6 +7,7 @@ insights learned during conversation.
 
 from typing import List
 
+from tripsage.agents.service_registry import ServiceRegistry
 from tripsage.orchestration.nodes.base import BaseAgentNode
 from tripsage.orchestration.state import TravelPlanningState
 from tripsage.orchestration.tools.mcp_integration import MCPToolRegistry
@@ -23,9 +24,9 @@ class MemoryUpdateNode(BaseAgentNode):
     both the knowledge graph and session data for future reference.
     """
 
-    def __init__(self):
+    def __init__(self, service_registry):
         """Initialize the memory update node."""
-        super().__init__("memory_update")
+        super().__init__("memory_update", service_registry)
 
     def _initialize_tools(self) -> None:
         """Initialize memory management tools."""

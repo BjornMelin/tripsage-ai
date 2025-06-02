@@ -7,6 +7,7 @@ for the TripSage travel planning system.
 
 from datetime import datetime
 
+from tripsage.agents.service_registry import ServiceRegistry
 from tripsage.orchestration.nodes.base import BaseAgentNode
 from tripsage.orchestration.state import TravelPlanningState
 from tripsage_core.utils.logging_utils import get_logger
@@ -22,9 +23,9 @@ class ErrorRecoveryNode(BaseAgentNode):
     retry logic, fallback options, and escalation to human support.
     """
 
-    def __init__(self):
+    def __init__(self, service_registry):
         """Initialize the error recovery node."""
-        super().__init__("error_recovery")
+        super().__init__("error_recovery", service_registry)
         self.max_retries = 3
         self.escalation_threshold = 5
 

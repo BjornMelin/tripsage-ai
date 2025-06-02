@@ -384,9 +384,7 @@ class ToolCallService:
         try:
             # Execute with timeout
             result = await asyncio.wait_for(
-                self.mcp_manager.invoke(
-                    service=request.service, method=request.method, params=params
-                ),
+                self.mcp_manager.invoke(method_name=request.method, params=params),
                 timeout=request.timeout,
             )
 

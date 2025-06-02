@@ -66,6 +66,9 @@ class MCPToolWrapper(BaseTool):
         """
         Execute MCP tool call synchronously.
 
+        Note: This method should be avoided in favor of the async _arun method.
+        It's provided for compatibility with synchronous tool calling contexts.
+
         Args:
             **kwargs: Parameters to pass to the MCP tool
 
@@ -76,17 +79,37 @@ class MCPToolWrapper(BaseTool):
             ToolException: If the MCP call fails
         """
         try:
-            logger.info(f"Executing MCP tool: {self.service_name}.{self.method_name}")
-
-            result = self.mcp_manager.invoke(
-                self.service_name, self.method_name, kwargs
+            logger.info(
+                f"Executing sync MCP tool: {self.service_name}.{self.method_name}"
             )
+            logger.warning("Using synchronous MCP call - prefer async _arun method")
 
-            logger.info(f"MCP tool {self.name} executed successfully")
+            # Run async method in sync context
+            import asyncio
+
+            try:
+                # Try to get current event loop
+                loop = asyncio.get_event_loop()
+                if loop.is_running():
+                    # If loop is running, we need to use run_in_executor or similar
+                    raise RuntimeError("Cannot run sync from running event loop")
+                else:
+                    result = loop.run_until_complete(
+                        self.mcp_manager.invoke(
+                            method_name=self.method_name, params=kwargs
+                        )
+                    )
+            except RuntimeError:
+                # Create new event loop for sync execution
+                result = asyncio.run(
+                    self.mcp_manager.invoke(method_name=self.method_name, params=kwargs)
+                )
+
+            logger.info(f"Sync MCP tool {self.name} executed successfully")
             return json.dumps(result, ensure_ascii=False)
 
         except Exception as e:
-            logger.error(f"MCP tool {self.name} failed: {str(e)}")
+            logger.error(f"Sync MCP tool {self.name} failed: {str(e)}")
             raise ToolException(f"Error executing {self.name}: {str(e)}") from e
 
     async def _arun(self, **kwargs) -> str:
@@ -98,10 +121,26 @@ class MCPToolWrapper(BaseTool):
 
         Returns:
             JSON string containing the tool result
+
+        Raises:
+            ToolException: If the MCP call fails
         """
-        # For now, use synchronous implementation
-        # TODO: Implement async MCP calls if needed
-        return self._run(**kwargs)
+        try:
+            logger.info(
+                f"Executing async MCP tool: {self.service_name}.{self.method_name}"
+            )
+
+            # Use async MCP manager invoke method
+            result = await self.mcp_manager.invoke(
+                method_name=self.method_name, params=kwargs
+            )
+
+            logger.info(f"Async MCP tool {self.name} executed successfully")
+            return json.dumps(result, ensure_ascii=False)
+
+        except Exception as e:
+            logger.error(f"Async MCP tool {self.name} failed: {str(e)}")
+            raise ToolException(f"Error executing {self.name}: {str(e)}") from e
 
 
 class MCPToolRegistry:

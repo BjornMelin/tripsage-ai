@@ -13,6 +13,7 @@ from typing import Any, Dict, List, Optional
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
 
+from tripsage.agents.service_registry import ServiceRegistry
 from tripsage.orchestration.nodes.base import BaseAgentNode
 from tripsage.orchestration.state import TravelPlanningState
 from tripsage.orchestration.tools.mcp_integration import MCPToolRegistry
@@ -30,9 +31,9 @@ class ItineraryAgentNode(BaseAgentNode):
     modification, and calendar integration using MCP tool integration.
     """
 
-    def __init__(self):
+    def __init__(self, service_registry):
         """Initialize the itinerary agent node with tools and language model."""
-        super().__init__("itinerary_agent")
+        super().__init__("itinerary_agent", service_registry)
 
         # Initialize LLM for itinerary-specific tasks
         self.llm = ChatOpenAI(

@@ -13,6 +13,7 @@ from typing import Any, Dict, Optional
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
 
+from tripsage.agents.service_registry import ServiceRegistry
 from tripsage.orchestration.nodes.base import BaseAgentNode
 from tripsage.orchestration.state import TravelPlanningState
 from tripsage.orchestration.tools.mcp_integration import MCPToolRegistry
@@ -31,10 +32,10 @@ class DestinationResearchAgentNode(BaseAgentNode):
     information using MCP tool integration.
     """
 
-    def __init__(self):
+    def __init__(self, service_registry):
         """Initialize the destination research agent node with tools and
         language model."""
-        super().__init__("destination_research_agent")
+        super().__init__("destination_research_agent", service_registry)
 
         # Initialize LLM for destination research tasks
         self.llm = ChatOpenAI(

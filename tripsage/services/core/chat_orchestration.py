@@ -36,8 +36,8 @@ class ChatOrchestrationService:
     def __init__(self):
         """Initialize the chat orchestration service."""
         self.database = None  # Will be initialized async
-        self.tool_call_service = ToolCallService()
         self.mcp_manager = MCPManager()
+        self.tool_call_service = ToolCallService(self.mcp_manager)
         self.logger = logger
 
     async def _ensure_database(self):
