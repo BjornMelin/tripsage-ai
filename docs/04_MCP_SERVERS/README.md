@@ -17,7 +17,7 @@ TripSage has **completed migration from MCP servers to direct SDK integration** 
 - ✅ **Flights**: Direct Duffel SDK integration
 - ✅ **Weather**: Direct weather API integration  
 - ✅ **Time**: Direct time API integration
-- ✅ **Memory/Neo4j**: Direct Neo4j SDK integration
+- ✅ **Memory**: Direct Mem0 SDK with Supabase PostgreSQL backend
 - ✅ **WebCrawl**: Direct Crawl4AI integration (Firecrawl deprecated)
 - ✅ **Calendar**: Direct Google Calendar SDK integration
 - ✅ **Google Maps**: Direct Google Maps SDK integration

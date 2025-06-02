@@ -1,6 +1,6 @@
 # TripSage Centralized Settings System Guide
 
-This document provides an overview and guide to the centralized configuration system used in the TripSage application, based on Pydantic's `BaseSettings`.
+This document provides an overview and guide to the centralized configuration system used in the TripSage application, based on Pydantic's `BaseSettings`. The system has been unified to support the current architecture with DragonflyDB caching, Mem0 memory, and 7 direct SDK integrations.
 
 ## 1. Overview
 
@@ -28,61 +28,71 @@ from pydantic import Field, SecretStr, HttpUrl, PostgresDsn, RedisDsn, model_val
 from pydantic_settings import BaseSettings, SettingsConfigDict # For Pydantic v2 pydantic-settings
 
 # --- Individual Service Configurations ---
-class DatabasePrimaryConfig(BaseSettings):
-    model_config = SettingsConfigDict(env_prefix='TRIPSAGE_DB_PRIMARY_') # Example prefix
+class DatabaseConfig(BaseSettings):
+    """Unified database configuration for Supabase PostgreSQL with pgvector."""
+    model_config = SettingsConfigDict(env_prefix='TRIPSAGE_DB_')
     
-    url: PostgresDsn = "postgresql://user:pass@host:port/db"
-    pool_size: int = Field(default=5, ge=1)
-    # ... other primary DB settings
-
-class Neo4jGraphConfig(BaseSettings):
-    model_config = SettingsConfigDict(env_prefix='TRIPSAGE_NEO4J_')
+    # Supabase configuration
+    supabase_url: str = Field(default="https://test-project.supabase.co")
+    supabase_anon_key: SecretStr = Field(default=SecretStr("test-anon-key"))
+    supabase_service_role_key: Optional[SecretStr] = Field(default=None)
+    supabase_project_id: Optional[str] = Field(default=None)
+    supabase_timeout: float = Field(default=60.0)
     
-    uri: str = "bolt://localhost:7687"
-    user: str = "neo4j"
-    password: Optional[SecretStr] = None
-    database: str = "neo4j"
-    # ... other Neo4j settings
+    # pgvector configuration
+    pgvector_enabled: bool = Field(default=True)
+    vector_dimensions: int = Field(default=1536)
 
-class RedisCacheConfig(BaseSettings):
-    model_config = SettingsConfigDict(env_prefix='TRIPSAGE_REDIS_')
+class DragonflyConfig(BaseSettings):
+    """DragonflyDB configuration (Redis-compatible with 25x performance)."""
+    model_config = SettingsConfigDict(env_prefix='TRIPSAGE_DRAGONFLY_')
     
-    url: RedisDsn = "redis://localhost:6379/0"
-    default_ttl_seconds: int = Field(default=3600, ge=60)
-    # ... other Redis settings
+    url: str = Field(default="redis://localhost:6379/0")
+    ttl_short: int = Field(default=300, description="TTL for short-lived data (5m)")
+    ttl_medium: int = Field(default=3600, description="TTL for medium-lived data (1h)")
+    ttl_long: int = Field(default=86400, description="TTL for long-lived data (24h)")
+    max_connections: int = Field(default=10000)
+    thread_count: int = Field(default=4)
 
-class OpenAIServiceConfig(BaseSettings):
-    model_config = SettingsConfigDict(env_prefix='TRIPSAGE_OPENAI_')
+class Mem0Config(BaseSettings):
+    """Mem0 memory system configuration."""
+    model_config = SettingsConfigDict(env_prefix='TRIPSAGE_MEM0_')
     
-    api_key: Optional[SecretStr] = None
-    default_model: str = "gpt-4o"
-    # ... other OpenAI settings
+    vector_store_type: str = Field(default="pgvector")
+    embedding_model: str = Field(default="text-embedding-3-small")
+    embedding_dimensions: int = Field(default=1536)
+    max_memories_per_user: int = Field(default=1000)
+    similarity_threshold: float = Field(default=0.7)
+    max_search_results: int = Field(default=10)
 
-# --- MCP Server Specific Configurations ---
-class BaseMCPServiceConfig(BaseSettings):
-    # Common fields for all MCP server client configs
-    endpoint: HttpUrl
-    api_key: Optional[SecretStr] = None # API key for the MCP server itself, if secured
+class ExternalServiceConfig(BaseSettings):
+    """Configuration for external service integrations."""
+    model_config = SettingsConfigDict(env_prefix='TRIPSAGE_EXTERNAL_')
+    
+    # Core LLM service
+    openai_api_key: SecretStr = Field(default=SecretStr("test-openai-key"))
+    
+    # Direct SDK integrations (7 services)
+    duffel_api_key: Optional[SecretStr] = Field(default=None)
+    google_maps_api_key: Optional[SecretStr] = Field(default=None)
+    google_client_id: Optional[SecretStr] = Field(default=None)
+    google_client_secret: Optional[SecretStr] = Field(default=None)
+    openweathermap_api_key: Optional[SecretStr] = Field(default=None)
+    visual_crossing_api_key: Optional[SecretStr] = Field(default=None)
+    
+    # Crawl4AI service
+    crawl4ai_api_url: str = Field(default="http://localhost:8000/api")
+    crawl4ai_api_key: Optional[SecretStr] = Field(default=None)
+
+# --- Single MCP Configuration (Airbnb only) ---
+class AirbnbMCPConfig(BaseSettings):
+    """Configuration for the remaining Airbnb MCP integration."""
+    model_config = SettingsConfigDict(env_prefix='TRIPSAGE_AIRBNB_MCP_')
+    
+    endpoint: str = Field(default="http://localhost:3001")
     timeout_seconds: int = Field(default=30, ge=5)
-
-class WeatherMCPConfig(BaseMCPServiceConfig):
-    model_config = SettingsConfigDict(env_prefix='TRIPSAGE_MCP_WEATHER_')
-    # Specific settings for Weather MCP, if any, beyond BaseMCPServiceConfig
-    # e.g., primary_provider_api_key: Optional[SecretStr] = None (if WeatherMCP needs its own keys)
-
-class FlightsMCPConfig(BaseMCPServiceConfig):
-    model_config = SettingsConfigDict(env_prefix='TRIPSAGE_MCP_FLIGHTS_')
-    # e.g., duffel_api_key: Optional[SecretStr] = None (if FlightsMCP needs its own keys)
-
-# ... other MCP configurations (Memory, WebCrawl, Calendar, GoogleMaps, Accommodations, etc.)
-
-class MCPServersConfig(BaseSettings):
-    # This model groups all MCP client configurations
-    weather: WeatherMCPConfig = WeatherMCPConfig(endpoint="http://localhost:3003") # Default endpoint
-    flights: FlightsMCPConfig = FlightsMCPConfig(endpoint="http://localhost:3002")
-    # memory: MemoryMCPConfig = ...
-    # webcrawl: WebCrawlMCPConfig = ...
-    # ... add all other MCPs
+    max_retries: int = Field(default=3)
+    cache_ttl: int = Field(default=3600)  # 1 hour for accommodation data
 
 # --- Main Application Settings ---
 class AppSettings(BaseSettings):
@@ -105,12 +115,18 @@ class AppSettings(BaseSettings):
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 30
 
-    # Nested configuration models
-    primary_database: DatabasePrimaryConfig = DatabasePrimaryConfig()
-    knowledge_graph_db: Neo4jGraphConfig = Neo4jGraphConfig()
-    cache_db: RedisCacheConfig = RedisCacheConfig()
-    openai_config: OpenAIServiceConfig = OpenAIServiceConfig()
-    mcp_servers: MCPServersConfig = MCPServersConfig()
+    # Unified configuration models
+    database: DatabaseConfig = Field(default_factory=DatabaseConfig)
+    dragonfly: DragonflyConfig = Field(default_factory=DragonflyConfig)
+    mem0: Mem0Config = Field(default_factory=Mem0Config)
+    external_services: ExternalServiceConfig = Field(default_factory=ExternalServiceConfig)
+    airbnb_mcp: AirbnbMCPConfig = Field(default_factory=AirbnbMCPConfig)
+    
+    # BYOK (Bring Your Own Key) configuration
+    api_key_master_secret: SecretStr = Field(
+        default=SecretStr("master-secret-for-byok-encryption"),
+        description="Master secret for BYOK encryption"
+    )
 
     # Example of a validator
     @model_validator(mode="after")
@@ -120,11 +136,18 @@ class AppSettings(BaseSettings):
         return self
     
     @model_validator(mode="after")
-    def ensure_openai_key_if_not_dev(self) -> 'AppSettings':
-        if self.environment != "development" and (not self.openai_config.api_key or not self.openai_config.api_key.get_secret_value()):
-            # In dev, might allow no key for local LLM or mocked tests
-            # logger.warning("OpenAI API key is not set. AI features may be limited.")
-            pass # Or raise ValueError if strictly required
+    def validate_production_settings(self) -> 'AppSettings':
+        if self.environment == "production":
+            # Validate critical service configurations
+            if not self.external_services.openai_api_key.get_secret_value():
+                raise ValueError("OpenAI API key is required in production")
+            
+            if self.dragonfly.url == "redis://localhost:6379/0":
+                raise ValueError("DragonflyDB must not use localhost in production")
+            
+            if "test-project.supabase.co" in self.database.supabase_url:
+                raise ValueError("Supabase URL must be configured for production")
+                
         return self
 
 # --- Global Settings Instance ---
@@ -162,12 +185,14 @@ if settings.debug:
     # logger.setLevel(logging.DEBUG)
     pass
 
-# Accessing a nested setting
-primary_db_url = settings.primary_database.url
-flights_mcp_endpoint = settings.mcp_servers.flights.endpoint
+# Accessing unified settings
+supabase_url = settings.database.supabase_url
+dragonfly_url = settings.dragonfly.url
+airbnb_mcp_endpoint = settings.airbnb_mcp.endpoint
 
-# Accessing a secret value (Pydantic's SecretStr handles this)
-openai_api_key_value = settings.openai_config.api_key.get_secret_value() if settings.openai_config.api_key else None
+# Accessing external service keys
+openai_api_key = settings.external_services.openai_api_key.get_secret_value()
+duffel_api_key = settings.external_services.duffel_api_key.get_secret_value() if settings.external_services.duffel_api_key else None
 
 # Using settings to configure a client
 # class SomeApiClient:
@@ -185,19 +210,43 @@ Nested models also contribute their parent's name to the prefix. For example, `m
 
 *   **`.env` File**: Create a `.env` file in the project root for local development. This file is loaded automatically if `env_file='.env'` is set in `model_config`.
     ```plaintext
-    # .env example
+    # .env example for unified architecture
     TRIPSAGE_ENVIRONMENT="development"
     TRIPSAGE_DEBUG="True"
-    TRIPSAGE_API_PORT="8001"
+    TRIPSAGE_LOG_LEVEL="INFO"
 
-    TRIPSAGE_OPENAI_API_KEY="sk-yourkey"
+    # Core LLM service
+    TRIPSAGE_EXTERNAL_OPENAI_API_KEY="sk-yourkey"
     
-    TRIPSAGE_PRIMARY_DATABASE_URL="postgresql://devuser:devpass@localhost:5432/tripsage_dev"
+    # Database configuration (Supabase + pgvector)
+    TRIPSAGE_DB_SUPABASE_URL="https://your-project.supabase.co"
+    TRIPSAGE_DB_SUPABASE_ANON_KEY="your-anon-key"
+    TRIPSAGE_DB_SUPABASE_SERVICE_ROLE_KEY="your-service-role-key"
     
-    TRIPSAGE_MCP_SERVERS_WEATHER_ENDPOINT="http://127.0.0.1:7001" 
-    # Note: Pydantic v2 BaseSettings might form this as TRIPSAGE_MCP_SERVERS__WEATHER__ENDPOINT
-    # Check pydantic-settings documentation for exact env var naming with nested models.
-    # Often it's PARENT_FIELD_NAME__CHILD_FIELD_NAME (double underscore for nesting).
+    # DragonflyDB cache configuration
+    TRIPSAGE_DRAGONFLY_URL="redis://localhost:6379/0"
+    TRIPSAGE_DRAGONFLY_TTL_SHORT="300"
+    TRIPSAGE_DRAGONFLY_TTL_MEDIUM="3600"
+    TRIPSAGE_DRAGONFLY_TTL_LONG="86400"
+    
+    # External service integrations (BYOK)
+    TRIPSAGE_EXTERNAL_DUFFEL_API_KEY="duffel_live_your-key"
+    TRIPSAGE_EXTERNAL_GOOGLE_MAPS_API_KEY="AIza-your-google-maps-key"
+    TRIPSAGE_EXTERNAL_OPENWEATHERMAP_API_KEY="your-weather-key"
+    
+    # Crawl4AI configuration
+    TRIPSAGE_EXTERNAL_CRAWL4AI_API_URL="http://localhost:8000/api"
+    
+    # Single MCP server (Airbnb)
+    TRIPSAGE_AIRBNB_MCP_ENDPOINT="http://localhost:3001"
+    
+    # Mem0 memory system
+    TRIPSAGE_MEM0_VECTOR_STORE_TYPE="pgvector"
+    TRIPSAGE_MEM0_EMBEDDING_MODEL="text-embedding-3-small"
+    
+    # Security
+    TRIPSAGE_JWT_SECRET_KEY="your-production-jwt-secret"
+    TRIPSAGE_API_KEY_MASTER_SECRET="your-byok-encryption-secret"
     ```
 *   **`.env.example`**: Maintain an `.env.example` file in the repository. This file should list all possible environment variables with placeholders or default values, serving as a template for users. **Do not commit the actual `.env` file with secrets.**
 

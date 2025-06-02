@@ -10,14 +10,14 @@ TripSage implements a microservices architecture with the following components:
 
 - **Frontend**: Next.js application serving the user interface
 - **Backend API**: FastAPI service handling core business logic
-- **MCP Servers**: Specialized microservices for different domains
-  - Memory MCP Server (Neo4j-based knowledge graph)
-  - Google Maps MCP Server (location services)
-  - Airbnb MCP Server (accommodation search)
-  - Flight MCP Server (flight search)
-  - Time MCP Server (timezone management)
-  - Weather MCP Server (weather forecasting)
-- **Database**: Supabase (PostgreSQL) for structured data storage
+- **Direct SDK Integrations**: Simplified service integrations for different domains
+  - Flight APIs (direct SDK integration)
+  - Accommodation APIs (direct SDK integration) 
+  - Google Maps SDK (location services)
+  - Time services (direct SDK)
+  - Weather services (direct SDK)
+- **Database**: Unified Supabase PostgreSQL with pgvector for all data storage
+- **Memory System**: Mem0 with PostgreSQL backend for intelligent memory management
 
 ### 1.2 Infrastructure Components
 
@@ -28,7 +28,7 @@ The deployment infrastructure includes:
 - **Orchestration**: Kubernetes for production, Docker Compose for development
 - **Hosting**: Vercel for frontend, managed Kubernetes for backend services
 - **Database**: Managed Supabase instance
-- **Caching**: Redis for distributed caching
+- **Caching**: DragonflyDB (Redis-compatible) for high-performance caching
 - **Monitoring**: Datadog for observability
 - **CDN**: Vercel Edge Network
 
