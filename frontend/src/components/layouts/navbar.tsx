@@ -6,6 +6,7 @@ import { Calendar, MapPin, Menu, Settings, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 
 const navItems = [
   { name: "Home", href: "/" },
@@ -53,7 +54,8 @@ export function Navbar() {
         </div>
 
         {/* User section */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2">
+          <ThemeToggle />
           <Button variant="outline" size="sm" asChild>
             <Link href="/login">Log in</Link>
           </Button>

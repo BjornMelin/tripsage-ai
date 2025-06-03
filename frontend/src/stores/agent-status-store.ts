@@ -111,8 +111,11 @@ export const useAgentStatusStore = create<AgentStatusState>()(
       },
 
       addAgent: (agentData) => {
-        const { currentSessionId, currentSession } = get();
-        if (!currentSessionId || !currentSession) return;
+        const { currentSessionId, sessions } = get();
+        if (!currentSessionId) return;
+        
+        const currentSession = sessions.find((session) => session.id === currentSessionId);
+        if (!currentSession) return;
 
         const timestamp = getCurrentTimestamp();
         const newAgent: Agent = {

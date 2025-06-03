@@ -102,7 +102,7 @@ export async function getSession(): Promise<JWTPayload | null> {
 
 export async function getCurrentUser(): Promise<User | null> {
   const session = await getSession();
-  
+
   if (!session) {
     return null;
   }
@@ -120,11 +120,11 @@ export async function getCurrentUser(): Promise<User | null> {
 
 export async function requireAuth(): Promise<User> {
   const user = await getCurrentUser();
-  
+
   if (!user) {
     redirect("/login");
   }
-  
+
   return user;
 }
 
@@ -183,11 +183,11 @@ export async function loginAction(
     return { success: true, user };
   } catch (error) {
     console.error("Login error:", error);
-    
+
     if (error instanceof z.ZodError) {
       return { error: error.errors[0]?.message || "Validation failed" };
     }
-    
+
     return { error: "An unexpected error occurred. Please try again." };
   }
 }
@@ -246,11 +246,11 @@ export async function registerAction(
     return { success: true, user };
   } catch (error) {
     console.error("Registration error:", error);
-    
+
     if (error instanceof z.ZodError) {
       return { error: error.errors[0]?.message || "Validation failed" };
     }
-    
+
     return { error: "An unexpected error occurred. Please try again." };
   }
 }
@@ -283,11 +283,11 @@ export async function resetPasswordAction(
     };
   } catch (error) {
     console.error("Password reset error:", error);
-    
+
     if (error instanceof z.ZodError) {
       return { error: error.errors[0]?.message || "Validation failed" };
     }
-    
+
     return { error: "An unexpected error occurred. Please try again." };
   }
 }
@@ -302,7 +302,7 @@ export async function isAuthenticated(): Promise<boolean> {
 export async function refreshToken(): Promise<boolean> {
   try {
     const session = await getSession();
-    
+
     if (!session) {
       return false;
     }

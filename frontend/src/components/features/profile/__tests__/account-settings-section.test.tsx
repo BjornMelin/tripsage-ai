@@ -1,5 +1,5 @@
 import { toast } from "@/components/ui/use-toast";
-import { useUserStore } from "@/stores/user-store";
+import { useUserProfileStore } from "@/stores/user-store";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { vi } from "vitest";
 import { AccountSettingsSection } from "../account-settings-section";
@@ -30,7 +30,7 @@ const mockToast = vi.fn();
 describe("AccountSettingsSection", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    (useUserStore as any).mockReturnValue({
+    (useUserProfileStore as any).mockReturnValue({
       user: mockUser,
       updateUser: mockUpdateUser,
     });
@@ -46,7 +46,7 @@ describe("AccountSettingsSection", () => {
   });
 
   it("shows unverified badge for unverified email", () => {
-    (useUserStore as any).mockReturnValue({
+    (useUserProfileStore as any).mockReturnValue({
       user: { ...mockUser, isEmailVerified: false },
       updateUser: mockUpdateUser,
     });
@@ -61,7 +61,7 @@ describe("AccountSettingsSection", () => {
   });
 
   it("handles email verification request", async () => {
-    (useUserStore as any).mockReturnValue({
+    (useUserProfileStore as any).mockReturnValue({
       user: { ...mockUser, isEmailVerified: false },
       updateUser: mockUpdateUser,
     });

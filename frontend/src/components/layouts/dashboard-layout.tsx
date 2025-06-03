@@ -3,6 +3,13 @@
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useState, useTransition } from "react";
+import { logoutAction } from "@/lib/auth/server-actions";
+import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { LogOut, Settings, User as UserIcon, ChevronDown } from "lucide-react";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 
 interface SidebarNavProps extends React.HTMLAttributes<HTMLElement> {
   items: {
@@ -54,7 +61,8 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
         <Link href="/dashboard" className="flex items-center gap-2 font-semibold">
           TripSage AI
         </Link>
-        <div className="ml-auto flex items-center gap-4">
+        <div className="ml-auto flex items-center gap-2">
+          <ThemeToggle />
           <UserNav />
         </div>
       </header>
@@ -71,12 +79,68 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
 }
 
 function UserNav() {
+  const [isPending, startTransition] = useTransition();
+  const [isOpen, setIsOpen] = useState(false);
+
+  const handleLogout = () => {
+    startTransition(async () => {
+      setIsOpen(false);
+      await logoutAction();
+    });
+  };
+
   return (
-    <div className="flex items-center gap-2">
-      <div className="rounded-full bg-primary h-8 w-8 flex items-center justify-center text-primary-foreground">
-        U
-      </div>
-      <span className="text-sm font-medium">User</span>
-    </div>
+    <Popover open={isOpen} onOpenChange={setIsOpen}>
+      <PopoverTrigger asChild>
+        <Button variant="ghost" className="flex items-center gap-2 px-3 py-2">
+          <Avatar className="h-8 w-8">
+            <AvatarFallback className="bg-primary text-primary-foreground">
+              U
+            </AvatarFallback>
+          </Avatar>
+          <span className="text-sm font-medium hidden sm:block">User</span>
+          <ChevronDown className="h-4 w-4 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-56 p-0" align="end">
+        <div className="space-y-1">
+          <div className="px-3 py-2 border-b">
+            <p className="text-sm font-medium">User</p>
+            <p className="text-xs text-muted-foreground">user@example.com</p>
+          </div>
+
+          <div className="p-1">
+            <Link
+              href="/dashboard/profile"
+              className="flex items-center gap-2 px-2 py-2 text-sm rounded-sm hover:bg-accent hover:text-accent-foreground transition-colors"
+              onClick={() => setIsOpen(false)}
+            >
+              <UserIcon className="h-4 w-4" />
+              Profile
+            </Link>
+
+            <Link
+              href="/dashboard/settings"
+              className="flex items-center gap-2 px-2 py-2 text-sm rounded-sm hover:bg-accent hover:text-accent-foreground transition-colors"
+              onClick={() => setIsOpen(false)}
+            >
+              <Settings className="h-4 w-4" />
+              Settings
+            </Link>
+
+            <div className="border-t my-1" />
+
+            <button
+              onClick={handleLogout}
+              disabled={isPending}
+              className="w-full flex items-center gap-2 px-2 py-2 text-sm rounded-sm hover:bg-accent hover:text-accent-foreground transition-colors disabled:opacity-50"
+            >
+              <LogOut className="h-4 w-4" />
+              {isPending ? "Logging out..." : "Log out"}
+            </button>
+          </div>
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 }

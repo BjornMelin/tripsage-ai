@@ -12,7 +12,7 @@ export default function ResetPasswordPage() {
     <div className="min-h-screen flex items-center justify-center p-8 bg-gradient-to-br from-background to-muted/20">
       {/* Background pattern */}
       <div className="absolute inset-0 bg-grid-white/10 bg-grid-16 [mask-image:radial-gradient(ellipse_at_center,white,transparent_70%)]" />
-      
+
       {/* Content */}
       <div className="relative z-10 w-full max-w-md space-y-8">
         {/* Logo */}

@@ -168,7 +168,9 @@ function matchesPattern(pathname: string, patterns: string[]): boolean {
   });
 }
 
-async function handleAuthentication(request: NextRequest): Promise<NextResponse | null> {
+async function handleAuthentication(
+  request: NextRequest
+): Promise<NextResponse | null> {
   const { pathname } = request.nextUrl;
   const authToken = request.cookies.get("auth-token");
 
@@ -208,10 +210,7 @@ async function handleAuthentication(request: NextRequest): Promise<NextResponse 
   if (matchesPattern(pathname, PROTECTED_API_ROUTES)) {
     if (!isAuthenticated) {
       // Return 401 for unauthenticated API requests
-      return NextResponse.json(
-        { error: "Authentication required" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Authentication required" }, { status: 401 });
     }
   }
 

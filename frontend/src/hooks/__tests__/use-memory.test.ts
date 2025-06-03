@@ -4,7 +4,7 @@
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
-import type { ReactNode } from "react";
+import React, { type ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -17,7 +17,7 @@ import {
 } from "../use-memory";
 
 // Mock the API client
-vi.mock("../../api/client", () => ({
+vi.mock("../../lib/api/client", () => ({
   apiClient: {
     get: vi.fn(),
     post: vi.fn(),
@@ -25,7 +25,7 @@ vi.mock("../../api/client", () => ({
   },
 }));
 
-import { apiClient } from "../../api/client";
+import { apiClient } from "../../lib/api/client";
 
 const mockApiClient = apiClient as any;
 
@@ -39,11 +39,7 @@ const createWrapper = () => {
   });
 
   return function TestWrapper({ children }: { children: ReactNode }) {
-    return (
-      <QueryClientProvider client={queryClient}>
-        {children}
-      </QueryClientProvider>
-    );
+    return React.createElement(QueryClientProvider, { client: queryClient }, children);
   };
 };
 

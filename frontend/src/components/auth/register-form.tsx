@@ -2,12 +2,25 @@
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { registerAction } from "@/lib/auth/server-actions";
-import { AlertCircle, CheckCircle2, Eye, EyeOff, Loader2, UserPlus } from "lucide-react";
+import {
+  AlertCircle,
+  CheckCircle2,
+  Eye,
+  EyeOff,
+  Loader2,
+  UserPlus,
+} from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import React, { useActionState, useOptimistic, startTransition, useMemo } from "react";
@@ -33,7 +46,7 @@ export function RegisterForm({ redirectTo = "/", className }: RegisterFormProps)
   const router = useRouter();
   const [showPassword, setShowPassword] = React.useState(false);
   const [password, setPassword] = React.useState("");
-  
+
   // React 19 useActionState for form handling
   const [state, formAction, isPending] = useActionState(registerAction, {
     success: false,
@@ -107,7 +120,7 @@ export function RegisterForm({ redirectTo = "/", className }: RegisterFormProps)
 
     startTransition(async () => {
       const result = await formAction(formData);
-      
+
       if (result.success && result.user) {
         // Optimistically set user as authenticated
         setOptimisticState({
@@ -115,7 +128,7 @@ export function RegisterForm({ redirectTo = "/", className }: RegisterFormProps)
           isAuthenticated: true,
           error: null,
         });
-        
+
         // Redirect after successful registration
         router.push(redirectTo);
       }
@@ -228,19 +241,28 @@ export function RegisterForm({ redirectTo = "/", className }: RegisterFormProps)
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-muted-foreground">Password strength</span>
-                  <span className={`font-medium ${
-                    passwordStrength.score >= 75 ? "text-green-600" :
-                    passwordStrength.score >= 50 ? "text-yellow-600" :
-                    passwordStrength.score >= 25 ? "text-orange-600" :
-                    "text-red-600"
-                  }`}>
-                    {passwordStrength.score >= 75 ? "Strong" :
-                     passwordStrength.score >= 50 ? "Good" :
-                     passwordStrength.score >= 25 ? "Fair" : "Weak"}
+                  <span
+                    className={`font-medium ${
+                      passwordStrength.score >= 75
+                        ? "text-green-600"
+                        : passwordStrength.score >= 50
+                          ? "text-yellow-600"
+                          : passwordStrength.score >= 25
+                            ? "text-orange-600"
+                            : "text-red-600"
+                    }`}
+                  >
+                    {passwordStrength.score >= 75
+                      ? "Strong"
+                      : passwordStrength.score >= 50
+                        ? "Good"
+                        : passwordStrength.score >= 25
+                          ? "Fair"
+                          : "Weak"}
                   </span>
                 </div>
-                <Progress 
-                  value={passwordStrength.score} 
+                <Progress
+                  value={passwordStrength.score}
                   className="h-2"
                   // Custom styling for the progress bar
                 />
@@ -266,9 +288,9 @@ export function RegisterForm({ redirectTo = "/", className }: RegisterFormProps)
           </div>
 
           {/* Submit Button */}
-          <Button 
-            type="submit" 
-            className="w-full" 
+          <Button
+            type="submit"
+            className="w-full"
             disabled={isPending || passwordStrength.score < 75}
           >
             {isPending ? (
@@ -287,10 +309,7 @@ export function RegisterForm({ redirectTo = "/", className }: RegisterFormProps)
           {/* Login Link */}
           <div className="text-center text-sm text-muted-foreground">
             Already have an account?{" "}
-            <Link 
-              href="/login" 
-              className="text-primary hover:underline font-medium"
-            >
+            <Link href="/login" className="text-primary hover:underline font-medium">
               Sign in here
             </Link>
           </div>
@@ -303,9 +322,15 @@ export function RegisterForm({ redirectTo = "/", className }: RegisterFormProps)
               Development Mode - Test Registration
             </p>
             <div className="text-xs text-center space-y-1">
-              <p><strong>Name:</strong> Any valid name</p>
-              <p><strong>Email:</strong> Any valid email (avoid existing@example.com)</p>
-              <p><strong>Password:</strong> Must meet all strength requirements</p>
+              <p>
+                <strong>Name:</strong> Any valid name
+              </p>
+              <p>
+                <strong>Email:</strong> Any valid email (avoid existing@example.com)
+              </p>
+              <p>
+                <strong>Password:</strong> Must meet all strength requirements
+              </p>
             </div>
           </div>
         )}

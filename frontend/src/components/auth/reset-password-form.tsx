@@ -2,7 +2,13 @@
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { resetPasswordAction } from "@/lib/auth/server-actions";
@@ -25,7 +31,7 @@ interface ResetPasswordState {
 export function ResetPasswordForm({ className }: ResetPasswordFormProps) {
   const router = useRouter();
   const [email, setEmail] = React.useState("");
-  
+
   // React 19 useActionState for form handling
   const [state, formAction, isPending] = useActionState(resetPasswordAction, {
     success: false,
@@ -50,15 +56,15 @@ export function ResetPasswordForm({ className }: ResetPasswordFormProps) {
   // Handle form submission with optimistic updates
   const handleSubmit = async (formData: FormData) => {
     // Optimistically clear any existing errors and set submitting state
-    setOptimisticState({ 
-      error: null, 
+    setOptimisticState({
+      error: null,
       isSubmitting: true,
-      message: null 
+      message: null,
     });
 
     startTransition(async () => {
       const result = await formAction(formData);
-      
+
       if (result.success) {
         // Optimistically set success state
         setOptimisticState({
@@ -95,7 +101,8 @@ export function ResetPasswordForm({ className }: ResetPasswordFormProps) {
           <CardTitle className="text-2xl">Reset your password</CardTitle>
         </div>
         <CardDescription className="text-center">
-          Enter your email address and we'll send you instructions to reset your password
+          Enter your email address and we'll send you instructions to reset your
+          password
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -132,11 +139,7 @@ export function ResetPasswordForm({ className }: ResetPasswordFormProps) {
             </div>
 
             {/* Submit Button */}
-            <Button 
-              type="submit" 
-              className="w-full" 
-              disabled={isPending || !email}
-            >
+            <Button type="submit" className="w-full" disabled={isPending || !email}>
               {isPending ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -153,10 +156,7 @@ export function ResetPasswordForm({ className }: ResetPasswordFormProps) {
             {/* Back to Login Link */}
             <div className="flex items-center justify-center space-x-1 text-sm text-muted-foreground">
               <ArrowLeft className="h-3 w-3" />
-              <Link 
-                href="/login" 
-                className="text-primary hover:underline font-medium"
-              >
+              <Link href="/login" className="text-primary hover:underline font-medium">
                 Back to sign in
               </Link>
             </div>
@@ -167,7 +167,9 @@ export function ResetPasswordForm({ className }: ResetPasswordFormProps) {
             <Alert className="border-green-200 bg-green-50">
               <CheckCircle2 className="h-4 w-4 text-green-600" />
               <AlertDescription className="text-green-800">
-                {optimisticState.message || state.message || "Password reset instructions have been sent to your email"}
+                {optimisticState.message ||
+                  state.message ||
+                  "Password reset instructions have been sent to your email"}
               </AlertDescription>
             </Alert>
 
@@ -183,7 +185,7 @@ export function ResetPasswordForm({ className }: ResetPasswordFormProps) {
               </p>
             </div>
 
-            <Button 
+            <Button
               onClick={() => router.push("/login")}
               className="w-full"
               variant="outline"
@@ -197,10 +199,10 @@ export function ResetPasswordForm({ className }: ResetPasswordFormProps) {
               <button
                 type="button"
                 onClick={() => {
-                  setOptimisticState({ 
-                    isSuccess: false, 
+                  setOptimisticState({
+                    isSuccess: false,
                     message: null,
-                    error: null 
+                    error: null,
                   });
                 }}
                 className="text-sm text-primary hover:underline"

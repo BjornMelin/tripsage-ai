@@ -5,7 +5,7 @@ const nextConfig: NextConfig = {
     // Enable React 19 Compiler when available
     // reactCompiler: true, // Uncomment when react-compiler is installed
   },
-  
+
   // Turbopack is now stable and configured at top level
   turbopack: {
     rules: {
@@ -24,9 +24,12 @@ const nextConfig: NextConfig = {
 
   compiler: {
     // Remove console.log statements in production
-    removeConsole: process.env.NODE_ENV === "production" ? {
-      exclude: ["error", "warn"],
-    } : false,
+    removeConsole:
+      process.env.NODE_ENV === "production"
+        ? {
+            exclude: ["error", "warn"],
+          }
+        : false,
   },
 
   // Image optimization with modern formats
@@ -41,10 +44,10 @@ const nextConfig: NextConfig = {
 
   // Performance optimizations
   compress: true,
-  
+
   // Output configuration
   output: "standalone",
-  
+
   // Strict mode for better development experience
   reactStrictMode: true,
 
@@ -89,7 +92,7 @@ const nextConfig: NextConfig = {
         permanent: true,
       },
       {
-        source: "/auth/register", 
+        source: "/auth/register",
         destination: "/register",
         permanent: true,
       },

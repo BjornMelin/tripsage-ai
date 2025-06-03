@@ -41,7 +41,10 @@ Object.defineProperty(global, "CSS", {
   },
 });
 
-// Mock zustand persist
+// Mock zustand middleware
 vi.mock("zustand/middleware", () => ({
-  persist: (fn: any) => fn,
+  persist: vi.fn((fn: any) => fn),
+  devtools: vi.fn((fn: any) => fn),
+  subscribeWithSelector: vi.fn((fn: any) => fn),
+  combine: vi.fn((fn: any) => fn),
 }));
