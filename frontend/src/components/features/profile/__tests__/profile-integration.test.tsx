@@ -8,7 +8,7 @@ import { SecuritySection } from "../security-section";
 
 // Mock all dependencies to focus on component rendering
 vi.mock("@/stores/user-store", () => ({
-  useUserStore: () => ({
+  useUserProfileStore: () => ({
     user: {
       id: "1",
       email: "test@example.com",

@@ -2,7 +2,14 @@
 
 import { getCurrentUser, logoutAction, type User } from "@/lib/auth/server-actions";
 import { useRouter } from "next/navigation";
-import React, { createContext, useContext, useEffect, useOptimistic, startTransition } from "react";
+import type React from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useOptimistic,
+  startTransition,
+} from "react";
 
 // Authentication context types
 interface AuthContextType {
@@ -43,7 +50,7 @@ interface AuthState {
 
 export function AuthProvider({ children, initialUser = null }: AuthProviderProps) {
   const router = useRouter();
-  
+
   // React 19 optimistic state management
   const [authState, setAuthState] = useOptimistic<AuthState>(
     {
@@ -69,9 +76,9 @@ export function AuthProvider({ children, initialUser = null }: AuthProviderProps
   const refreshUser = async () => {
     try {
       setAuthState({ isLoading: true, error: null });
-      
+
       const user = await getCurrentUser();
-      
+
       startTransition(() => {
         setAuthState({
           user,
@@ -118,14 +125,14 @@ export function AuthProvider({ children, initialUser = null }: AuthProviderProps
 
       // Call server action to clear cookie
       await logoutAction();
-      
+
       // Note: logoutAction redirects to "/" automatically
     } catch (error) {
       console.error("Logout failed:", error);
       setAuthState({
         error: "Failed to logout. Please try again.",
       });
-      
+
       // Manual redirect on error
       router.push("/");
     }
@@ -147,11 +154,7 @@ export function AuthProvider({ children, initialUser = null }: AuthProviderProps
     clearError,
   };
 
-  return (
-    <AuthContext.Provider value={contextValue}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={contextValue}>{children}</AuthContext.Provider>;
 }
 
 // Higher-order component for protected pages

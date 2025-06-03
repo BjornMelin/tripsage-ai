@@ -1,10 +1,13 @@
-export { ChatContainer } from "./chat-container";
-export { MessageInput } from "./message-input";
+// Modern React 19 chat components
+export { ChatContainer } from "../../chat/chat-container";
+export { MessageInput } from "../../chat/message-input";
+export { MessageList } from "../../chat/message-list";
+export { MessageItem } from "../../chat/message-item";
+export { ConnectionStatus } from "../../chat/connection-status";
+export { TypingIndicator } from "../../chat/typing-indicator";
+
+// Legacy components (to be migrated)
 export { AgentStatusPanel } from "./agent-status-panel";
-export { ConnectionStatus } from "./connection-status";
-export { TypingIndicator } from "./typing-indicator";
-export { MessageList } from "./messages/message-list";
-export { MessageItem } from "./messages/message-item";
 export { MessageBubble } from "./messages/message-bubble";
 export { MessageAttachments } from "./messages/message-attachments";
 export { MessageToolCalls } from "./messages/message-tool-calls";

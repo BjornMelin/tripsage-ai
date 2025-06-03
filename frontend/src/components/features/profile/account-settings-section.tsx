@@ -32,7 +32,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/components/ui/use-toast";
-import { useUserStore } from "@/stores/user-store";
+import { useUserProfileStore } from "@/stores/user-store";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Check, Mail, Trash2, X } from "lucide-react";
 import { useForm } from "react-hook-form";
@@ -45,7 +45,7 @@ const emailUpdateSchema = z.object({
 type EmailUpdateFormData = z.infer<typeof emailUpdateSchema>;
 
 export function AccountSettingsSection() {
-  const { user, updateUser } = useUserStore();
+  const { user, updateUser } = useUserProfileStore();
   const { toast } = useToast();
 
   const emailForm = useForm<EmailUpdateFormData>({

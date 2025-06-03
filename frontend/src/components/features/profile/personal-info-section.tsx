@@ -21,7 +21,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
-import { useUserStore } from "@/stores/user-store";
+import { useUserProfileStore } from "@/stores/user-store";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Camera, Upload } from "lucide-react";
 import { useState } from "react";
@@ -49,7 +49,7 @@ const personalInfoSchema = z.object({
 type PersonalInfoFormData = z.infer<typeof personalInfoSchema>;
 
 export function PersonalInfoSection() {
-  const { user, updateUser } = useUserStore();
+  const { user, updateUser } = useUserProfileStore();
   const { toast } = useToast();
   const [isUploading, setIsUploading] = useState(false);
 

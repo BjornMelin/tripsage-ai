@@ -27,7 +27,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/components/ui/use-toast";
 import { useCurrencyStore } from "@/stores/currency-store";
-import { useUserStore } from "@/stores/user-store";
+import { useUserProfileStore } from "@/stores/user-store";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Globe, MapPin, Palette, Zap } from "lucide-react";
 import { useForm } from "react-hook-form";
@@ -46,7 +46,7 @@ const preferencesSchema = z.object({
 type PreferencesFormData = z.infer<typeof preferencesSchema>;
 
 export function PreferencesSection() {
-  const { user, updateUser } = useUserStore();
+  const { user, updateUser } = useUserProfileStore();
   const { currency, setCurrency } = useCurrencyStore();
   const { toast } = useToast();
 

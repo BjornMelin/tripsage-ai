@@ -1,4 +1,4 @@
-import { useUserStore } from "@/stores/user-store";
+import { useUserProfileStore } from "@/stores/user-store";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { vi } from "vitest";
 import { PersonalInfoSection } from "../personal-info-section";
@@ -29,7 +29,7 @@ const mockUpdateUser = vi.fn();
 describe("PersonalInfoSection", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    (useUserStore as any).mockReturnValue({
+    (useUserProfileStore as any).mockReturnValue({
       user: mockUser,
       updateUser: mockUpdateUser,
     });
@@ -47,7 +47,7 @@ describe("PersonalInfoSection", () => {
   });
 
   it("renders avatar with user initials when no avatar URL", () => {
-    (useUserStore as any).mockReturnValue({
+    (useUserProfileStore as any).mockReturnValue({
       user: { ...mockUser, avatarUrl: undefined },
       updateUser: mockUpdateUser,
     });
@@ -205,7 +205,7 @@ describe("PersonalInfoSection", () => {
     ];
 
     testCases.forEach(({ user, expected }) => {
-      (useUserStore as any).mockReturnValue({
+      (useUserProfileStore as any).mockReturnValue({
         user: { ...mockUser, ...user },
         updateUser: mockUpdateUser,
       });

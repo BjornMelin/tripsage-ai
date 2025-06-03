@@ -1,5 +1,5 @@
 import { toast } from "@/components/ui/use-toast";
-import { useUserStore } from "@/stores/user-store";
+import { useUserProfileStore } from "@/stores/user-store";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { vi } from "vitest";
 import { SecuritySection } from "../security-section";
@@ -22,7 +22,7 @@ const mockToast = vi.fn();
 describe("SecuritySection", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    (useUserStore as any).mockReturnValue({
+    (useUserProfileStore as any).mockReturnValue({
       user: mockUser,
       updateUser: mockUpdateUser,
     });
@@ -222,7 +222,7 @@ describe("SecuritySection", () => {
   });
 
   it("toggles 2FA off", async () => {
-    (useUserStore as any).mockReturnValue({
+    (useUserProfileStore as any).mockReturnValue({
       user: { ...mockUser, security: { twoFactorEnabled: true } },
       updateUser: mockUpdateUser,
     });
@@ -372,7 +372,7 @@ describe("SecuritySection", () => {
   });
 
   it("handles missing security settings gracefully", () => {
-    (useUserStore as any).mockReturnValue({
+    (useUserProfileStore as any).mockReturnValue({
       user: { ...mockUser, security: undefined },
       updateUser: mockUpdateUser,
     });

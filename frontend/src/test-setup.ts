@@ -2,6 +2,14 @@ import { cleanup } from "@testing-library/react";
 import { afterEach, beforeAll, vi } from "vitest";
 import "@testing-library/jest-dom";
 
+// Mock zustand middleware
+vi.mock("zustand/middleware", () => ({
+  persist: vi.fn((fn: any) => fn),
+  devtools: vi.fn((fn: any) => fn),
+  subscribeWithSelector: vi.fn((fn: any) => fn),
+  combine: vi.fn((fn: any) => fn),
+}));
+
 // Clean up after each test
 afterEach(() => {
   cleanup();
@@ -53,3 +61,6 @@ global.console = {
   log: vi.fn(),
   info: vi.fn(),
 };
+
+// Mock environment variables for testing
+process.env.NODE_ENV = 'test';
