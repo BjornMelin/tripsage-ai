@@ -1,13 +1,10 @@
 "use client";
 
+import { errorService } from "@/lib/error-service";
+import type { ErrorInfo as CustomErrorInfo, ErrorBoundaryProps } from "@/types/errors";
 import type React from "react";
 import { Component, type ErrorInfo, type ReactNode } from "react";
 import { ErrorFallback } from "./error-fallback";
-import { errorService } from "@/lib/error-service";
-import type {
-  ErrorBoundaryProps,
-  ErrorInfo as CustomErrorInfo,
-} from "@/types/errors";
 
 interface ErrorBoundaryState {
   hasError: boolean;
@@ -19,10 +16,7 @@ interface ErrorBoundaryState {
 /**
  * Reusable Error Boundary component with logging and fallback UI
  */
-export class ErrorBoundary extends Component<
-  ErrorBoundaryProps,
-  ErrorBoundaryState
-> {
+export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   private maxRetries = 3;
 
   constructor(props: ErrorBoundaryProps) {
@@ -135,11 +129,7 @@ export class ErrorBoundary extends Component<
         <FallbackComponent
           error={errorWithDigest}
           reset={this.handleReset}
-          retry={
-            this.state.retryCount < this.maxRetries
-              ? this.handleRetry
-              : undefined
-          }
+          retry={this.state.retryCount < this.maxRetries ? this.handleRetry : undefined}
         />
       );
     }

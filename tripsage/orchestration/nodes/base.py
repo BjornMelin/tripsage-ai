@@ -7,7 +7,7 @@ Refactored to support dependency injection and service-based architecture.
 """
 
 from abc import ABC, abstractmethod
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
 from tripsage.agents.service_registry import ServiceRegistry
@@ -54,6 +54,11 @@ class BaseAgentNode(ABC):
         self._initialize_tools()
 
         self.logger.info(f"Initialized {node_name} node with service injection")
+
+    @property
+    def name(self) -> str:
+        """Get the node name for compatibility with tests."""
+        return self.node_name
 
     @abstractmethod
     def _initialize_tools(self) -> None:
@@ -145,7 +150,7 @@ class BaseAgentNode(ABC):
             ),
             "agent": self.node_name,
             "error": True,
-            "timestamp": datetime.now(datetime.UTC).isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
         state["messages"].append(error_message)
 
@@ -169,7 +174,7 @@ class BaseAgentNode(ABC):
         """
         return {
             "message": message,
-            "timestamp": datetime.now(datetime.UTC).isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "node": self.node_name,
         }
 
@@ -190,7 +195,7 @@ class BaseAgentNode(ABC):
             "role": "assistant",
             "content": content,
             "agent": self.node_name,
-            "timestamp": datetime.now(datetime.UTC).isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
         if additional_data:

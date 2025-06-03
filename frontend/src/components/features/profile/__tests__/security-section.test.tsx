@@ -1,8 +1,8 @@
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { toast } from "@/components/ui/use-toast";
+import { useUserProfileStore } from "@/stores/user-store";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { vi } from "vitest";
 import { SecuritySection } from "../security-section";
-import { useUserStore } from "@/stores/user-store";
-import { toast } from "@/components/ui/use-toast";
 
 // Mock the stores and hooks
 vi.mock("@/stores/user-store");
@@ -22,7 +22,7 @@ const mockToast = vi.fn();
 describe("SecuritySection", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    (useUserStore as any).mockReturnValue({
+    (useUserProfileStore as any).mockReturnValue({
       user: mockUser,
       updateUser: mockUpdateUser,
     });
@@ -50,9 +50,7 @@ describe("SecuritySection", () => {
     fireEvent.click(submitButton);
 
     await waitFor(() => {
-      expect(
-        screen.getByText("Current password is required")
-      ).toBeInTheDocument();
+      expect(screen.getByText("Current password is required")).toBeInTheDocument();
     });
   });
 
@@ -218,14 +216,13 @@ describe("SecuritySection", () => {
     await waitFor(() => {
       expect(mockToast).toHaveBeenCalledWith({
         title: "2FA enabled",
-        description:
-          "Two-factor authentication has been enabled for your account.",
+        description: "Two-factor authentication has been enabled for your account.",
       });
     });
   });
 
   it("toggles 2FA off", async () => {
-    (useUserStore as any).mockReturnValue({
+    (useUserProfileStore as any).mockReturnValue({
       user: { ...mockUser, security: { twoFactorEnabled: true } },
       updateUser: mockUpdateUser,
     });
@@ -304,8 +301,7 @@ describe("SecuritySection", () => {
     await waitFor(() => {
       expect(mockToast).toHaveBeenCalledWith({
         title: "Device revoked",
-        description:
-          "The device has been successfully revoked from your account.",
+        description: "The device has been successfully revoked from your account.",
       });
     });
   });
@@ -356,9 +352,7 @@ describe("SecuritySection", () => {
     render(<SecuritySection />);
 
     expect(screen.getByText("Security Recommendations")).toBeInTheDocument();
-    expect(
-      screen.getByText("Enable Two-Factor Authentication")
-    ).toBeInTheDocument();
+    expect(screen.getByText("Enable Two-Factor Authentication")).toBeInTheDocument();
     expect(screen.getByText("Use a Strong Password")).toBeInTheDocument();
     expect(screen.getByText("Review Active Sessions")).toBeInTheDocument();
   });
@@ -378,7 +372,7 @@ describe("SecuritySection", () => {
   });
 
   it("handles missing security settings gracefully", () => {
-    (useUserStore as any).mockReturnValue({
+    (useUserProfileStore as any).mockReturnValue({
       user: { ...mockUser, security: undefined },
       updateUser: mockUpdateUser,
     });

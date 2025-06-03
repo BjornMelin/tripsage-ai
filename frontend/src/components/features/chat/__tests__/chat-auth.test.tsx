@@ -2,12 +2,12 @@
  * Unit tests for chat authentication integration.
  */
 
+import { useApiKeyStore } from "@/stores/api-key-store";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type React from "react";
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
-import { vi, describe, it, expect, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { create } from "zustand";
 import { ChatContainer } from "../chat-container";
-import { useApiKeyStore } from "@/stores/api-key-store";
 
 // Mock the API key store
 vi.mock("@/stores/api-key-store", () => ({
@@ -29,10 +29,7 @@ vi.mock("@/stores/chat-store", () => ({
 
 // Mock Next.js Link component
 vi.mock("next/link", () => ({
-  default: ({
-    children,
-    href,
-  }: { children: React.ReactNode; href: string }) => (
+  default: ({ children, href }: { children: React.ReactNode; href: string }) => (
     <a href={href}>{children}</a>
   ),
 }));
@@ -94,12 +91,11 @@ describe("ChatContainer Authentication", () => {
     render(<ChatContainer />);
 
     expect(screen.getByText("API Key Required")).toBeInTheDocument();
-    expect(
-      screen.getByText(/A valid OpenAI API key is required/)
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("link", { name: "Manage API Keys" })
-    ).toHaveAttribute("href", "/settings/api-keys");
+    expect(screen.getByText(/A valid OpenAI API key is required/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Manage API Keys" })).toHaveAttribute(
+      "href",
+      "/settings/api-keys"
+    );
   });
 
   it("shows loading state when initializing", () => {
@@ -121,9 +117,7 @@ describe("ChatContainer Authentication", () => {
 
     render(<ChatContainer />);
 
-    expect(
-      screen.getByText("Initializing chat session...")
-    ).toBeInTheDocument();
+    expect(screen.getByText("Initializing chat session...")).toBeInTheDocument();
   });
 
   it("shows chat interface when fully authenticated and initialized", () => {
@@ -146,13 +140,9 @@ describe("ChatContainer Authentication", () => {
     render(<ChatContainer />);
 
     // Should show the chat interface elements
-    expect(
-      screen.queryByText("Authentication Required")
-    ).not.toBeInTheDocument();
+    expect(screen.queryByText("Authentication Required")).not.toBeInTheDocument();
     expect(screen.queryByText("API Key Required")).not.toBeInTheDocument();
-    expect(
-      screen.queryByText("Initializing chat session...")
-    ).not.toBeInTheDocument();
+    expect(screen.queryByText("Initializing chat session...")).not.toBeInTheDocument();
   });
 
   it("displays auth error with API key management link", () => {
@@ -178,9 +168,7 @@ describe("ChatContainer Authentication", () => {
     render(<ChatContainer />);
 
     expect(screen.getByText(authError)).toBeInTheDocument();
-    expect(
-      screen.getByRole("link", { name: "Manage API Keys" })
-    ).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Manage API Keys" })).toBeInTheDocument();
   });
 
   it("displays general error without management link", () => {

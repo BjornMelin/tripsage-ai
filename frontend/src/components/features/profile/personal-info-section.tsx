@@ -1,10 +1,5 @@
 "use client";
 
-import { useState } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { useUserStore } from "@/stores/user-store";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -26,7 +21,12 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
+import { useUserProfileStore } from "@/stores/user-store";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Camera, Upload } from "lucide-react";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
 
 const personalInfoSchema = z.object({
   firstName: z
@@ -42,21 +42,14 @@ const personalInfoSchema = z.object({
     .min(1, "Display name is required")
     .max(50, "Display name must be less than 50 characters"),
   bio: z.string().max(500, "Bio must be less than 500 characters").optional(),
-  location: z
-    .string()
-    .max(100, "Location must be less than 100 characters")
-    .optional(),
-  website: z
-    .string()
-    .url("Please enter a valid URL")
-    .optional()
-    .or(z.literal("")),
+  location: z.string().max(100, "Location must be less than 100 characters").optional(),
+  website: z.string().url("Please enter a valid URL").optional().or(z.literal("")),
 });
 
 type PersonalInfoFormData = z.infer<typeof personalInfoSchema>;
 
 export function PersonalInfoSection() {
-  const { user, updateUser } = useUserStore();
+  const { user, updateUser } = useUserProfileStore();
   const { toast } = useToast();
   const [isUploading, setIsUploading] = useState(false);
 
@@ -91,9 +84,7 @@ export function PersonalInfoSection() {
     }
   };
 
-  const handleAvatarUpload = async (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
+  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
@@ -141,11 +132,7 @@ export function PersonalInfoSection() {
     }
   };
 
-  const getInitials = (
-    firstName?: string,
-    lastName?: string,
-    displayName?: string
-  ) => {
+  const getInitials = (firstName?: string, lastName?: string, displayName?: string) => {
     if (firstName && lastName) {
       return `${firstName[0]}${lastName[0]}`.toUpperCase();
     }
@@ -173,11 +160,7 @@ export function PersonalInfoSection() {
             <Avatar className="h-24 w-24">
               <AvatarImage src={user?.avatarUrl} alt="Profile picture" />
               <AvatarFallback className="text-lg">
-                {getInitials(
-                  user?.firstName,
-                  user?.lastName,
-                  user?.displayName
-                )}
+                {getInitials(user?.firstName, user?.lastName, user?.displayName)}
               </AvatarFallback>
             </Avatar>
             <div className="absolute -bottom-2 -right-2">
@@ -185,9 +168,7 @@ export function PersonalInfoSection() {
                 size="sm"
                 variant="outline"
                 className="h-8 w-8 rounded-full p-0"
-                onClick={() =>
-                  document.getElementById("avatar-upload")?.click()
-                }
+                onClick={() => document.getElementById("avatar-upload")?.click()}
                 disabled={isUploading}
               >
                 {isUploading ? (
@@ -208,8 +189,8 @@ export function PersonalInfoSection() {
           <div className="space-y-1">
             <h3 className="font-medium">Profile Picture</h3>
             <p className="text-sm text-muted-foreground">
-              Click the camera icon to upload a new profile picture. Recommended
-              size: 400x400px. Max file size: 5MB.
+              Click the camera icon to upload a new profile picture. Recommended size:
+              400x400px. Max file size: 5MB.
             </p>
           </div>
         </div>

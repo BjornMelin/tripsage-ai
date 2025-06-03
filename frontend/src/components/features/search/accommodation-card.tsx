@@ -1,16 +1,16 @@
-import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import type { Accommodation } from "@/types/search";
 import {
-  MapPin,
-  Star,
-  Wifi,
   Car,
   Coffee,
   Dumbbell,
-  Waves,
+  MapPin,
+  Star,
   Utensils,
+  Waves,
+  Wifi,
 } from "lucide-react";
 
 interface AccommodationCardProps {

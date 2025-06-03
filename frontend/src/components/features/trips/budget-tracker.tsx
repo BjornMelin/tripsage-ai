@@ -1,12 +1,7 @@
 "use client";
 
-import { useMemo } from "react";
-import {
-  useBudgetStore,
-  type Budget,
-  type BudgetSummary,
-} from "@/stores/budget-store";
-import { useCurrencyStore } from "@/stores/currency-store";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -15,16 +10,17 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { type Budget, type BudgetSummary, useBudgetStore } from "@/stores/budget-store";
+import { useCurrencyStore } from "@/stores/currency-store";
 import {
-  TrendingUp,
-  TrendingDown,
   AlertTriangle,
   DollarSign,
   Plus,
   Target,
+  TrendingDown,
+  TrendingUp,
 } from "lucide-react";
+import { useMemo } from "react";
 
 interface BudgetTrackerProps {
   tripId?: string;
@@ -43,13 +39,8 @@ export function BudgetTracker({
   onAddExpense,
   onCreateBudget,
 }: BudgetTrackerProps) {
-  const {
-    budgets,
-    activeBudget,
-    budgetSummary,
-    budgetsByTrip,
-    setActiveBudget,
-  } = useBudgetStore();
+  const { budgets, activeBudget, budgetSummary, budgetsByTrip, setActiveBudget } =
+    useBudgetStore();
 
   const { convertCurrency, baseCurrency } = useCurrencyStore();
 
@@ -80,8 +71,7 @@ export function BudgetTracker({
     const totalBudget = targetBudget.totalAmount;
     const totalSpent = 0; // Would be calculated from expenses
     const totalRemaining = totalBudget - totalSpent;
-    const percentageSpent =
-      totalBudget > 0 ? (totalSpent / totalBudget) * 100 : 0;
+    const percentageSpent = totalBudget > 0 ? (totalSpent / totalBudget) * 100 : 0;
 
     return {
       totalBudget,
@@ -173,10 +163,7 @@ export function BudgetTracker({
               {formatCurrency(summary.totalBudget)}
             </span>
           </div>
-          <Progress
-            value={Math.min(summary.percentageSpent, 100)}
-            className="h-2"
-          />
+          <Progress value={Math.min(summary.percentageSpent, 100)} className="h-2" />
           <div className="flex items-center justify-between text-xs text-muted-foreground">
             <span>{summary.percentageSpent.toFixed(1)}% used</span>
             <span>
@@ -237,24 +224,20 @@ export function BudgetTracker({
         {Object.keys(summary.spentByCategory).length > 0 && (
           <div className="space-y-2">
             <h4 className="text-sm font-medium">Category Breakdown</h4>
-            {Object.entries(summary.spentByCategory).map(
-              ([category, amount]) => {
-                const percentage =
-                  summary.totalBudget > 0
-                    ? (amount / summary.totalBudget) * 100
-                    : 0;
+            {Object.entries(summary.spentByCategory).map(([category, amount]) => {
+              const percentage =
+                summary.totalBudget > 0 ? (amount / summary.totalBudget) * 100 : 0;
 
-                return (
-                  <div key={category} className="space-y-1">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="capitalize">{category}</span>
-                      <span>{formatCurrency(amount)}</span>
-                    </div>
-                    <Progress value={percentage} className="h-1" />
+              return (
+                <div key={category} className="space-y-1">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="capitalize">{category}</span>
+                    <span>{formatCurrency(amount)}</span>
                   </div>
-                );
-              }
-            )}
+                  <Progress value={percentage} className="h-1" />
+                </div>
+              );
+            })}
           </div>
         )}
 

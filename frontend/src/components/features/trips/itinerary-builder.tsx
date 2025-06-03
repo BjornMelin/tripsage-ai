@@ -1,26 +1,7 @@
 "use client";
 
-import { useState, useCallback } from "react";
-import {
-  DragDropContext,
-  Droppable,
-  Draggable,
-  type DropResult,
-} from "@hello-pangea/dnd";
-import {
-  Plus,
-  GripVertical,
-  MapPin,
-  Calendar,
-  Clock,
-  Trash2,
-  Edit2,
-  Plane,
-  Car,
-  Train,
-  Hotel,
-} from "lucide-react";
-import { useTripStore, type Trip, type Destination } from "@/stores/trip-store";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -28,11 +9,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
@@ -42,6 +18,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -49,6 +27,28 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { type Destination, type Trip, useTripStore } from "@/stores/trip-store";
+import {
+  DragDropContext,
+  Draggable,
+  type DropResult,
+  Droppable,
+} from "@hello-pangea/dnd";
+import {
+  Calendar,
+  Car,
+  Clock,
+  Edit2,
+  GripVertical,
+  Hotel,
+  MapPin,
+  Plane,
+  Plus,
+  Train,
+  Trash2,
+} from "lucide-react";
+import { useCallback, useState } from "react";
 
 interface ItineraryBuilderProps {
   trip: Trip;
@@ -84,8 +84,9 @@ export function ItineraryBuilder({
   const { updateTrip, addDestination, updateDestination, removeDestination } =
     useTripStore();
   const [isAddingDestination, setIsAddingDestination] = useState(false);
-  const [editingDestination, setEditingDestination] =
-    useState<Destination | null>(null);
+  const [editingDestination, setEditingDestination] = useState<Destination | null>(
+    null
+  );
   const [formData, setFormData] = useState<DestinationFormData>({
     name: "",
     country: "",
@@ -157,11 +158,8 @@ export function ItineraryBuilder({
       country: formData.country,
       startDate: formData.startDate || undefined,
       endDate: formData.endDate || undefined,
-      activities:
-        formData.activities.length > 0 ? formData.activities : undefined,
-      accommodation: formData.accommodation.name
-        ? formData.accommodation
-        : undefined,
+      activities: formData.activities.length > 0 ? formData.activities : undefined,
+      accommodation: formData.accommodation.name ? formData.accommodation : undefined,
       transportation: formData.transportation.details
         ? formData.transportation
         : undefined,
@@ -376,12 +374,7 @@ export function ItineraryBuilder({
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <Label>Activities</Label>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={addActivity}
-              >
+              <Button type="button" variant="outline" size="sm" onClick={addActivity}>
                 <Plus className="h-4 w-4 mr-1" />
                 Add Activity
               </Button>
@@ -458,9 +451,7 @@ export function ItineraryBuilder({
               <MapPin className="h-5 w-5" />
               Itinerary Builder
             </CardTitle>
-            <CardDescription>
-              Plan and organize your trip destinations
-            </CardDescription>
+            <CardDescription>Plan and organize your trip destinations</CardDescription>
           </div>
           <Button onClick={openAddDialog}>
             <Plus className="h-4 w-4 mr-2" />
@@ -500,9 +491,7 @@ export function ItineraryBuilder({
                         <Card
                           ref={provided.innerRef}
                           {...provided.draggableProps}
-                          className={`${
-                            snapshot.isDragging ? "shadow-lg" : ""
-                          }`}
+                          className={`${snapshot.isDragging ? "shadow-lg" : ""}`}
                         >
                           <CardContent className="p-4">
                             <div className="flex items-start gap-4">
@@ -527,9 +516,7 @@ export function ItineraryBuilder({
                                     <Button
                                       variant="ghost"
                                       size="sm"
-                                      onClick={() =>
-                                        openEditDialog(destination)
-                                      }
+                                      onClick={() => openEditDialog(destination)}
                                     >
                                       <Edit2 className="h-4 w-4" />
                                     </Button>
@@ -547,42 +534,34 @@ export function ItineraryBuilder({
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-4 text-sm text-muted-foreground">
-                                  {destination.startDate &&
-                                    destination.endDate && (
-                                      <div className="flex items-center gap-1">
-                                        <Calendar className="h-4 w-4" />
-                                        <span>
-                                          {destination.startDate} -{" "}
-                                          {destination.endDate}
-                                        </span>
-                                      </div>
-                                    )}
+                                  {destination.startDate && destination.endDate && (
+                                    <div className="flex items-center gap-1">
+                                      <Calendar className="h-4 w-4" />
+                                      <span>
+                                        {destination.startDate} - {destination.endDate}
+                                      </span>
+                                    </div>
+                                  )}
 
                                   {destination.transportation && (
                                     <div className="flex items-center gap-1">
                                       {getTransportationIcon(
                                         destination.transportation.type
                                       )}
-                                      <span>
-                                        {destination.transportation.details}
-                                      </span>
+                                      <span>{destination.transportation.details}</span>
                                     </div>
                                   )}
 
                                   {destination.accommodation && (
                                     <div className="flex items-center gap-1">
                                       <Hotel className="h-4 w-4" />
-                                      <span>
-                                        {destination.accommodation.name}
-                                      </span>
+                                      <span>{destination.accommodation.name}</span>
                                     </div>
                                   )}
 
                                   {destination.estimatedCost && (
                                     <div className="flex items-center gap-1">
-                                      <span>
-                                        Cost: ${destination.estimatedCost}
-                                      </span>
+                                      <span>Cost: ${destination.estimatedCost}</span>
                                     </div>
                                   )}
                                 </div>

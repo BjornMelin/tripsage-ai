@@ -7,8 +7,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import Link from "next/link";
 import { ArrowRight } from "lucide-react";
+import Link from "next/link";
 
 export default function SettingsPage() {
   return (
@@ -26,8 +26,8 @@ export default function SettingsPage() {
             </CardHeader>
             <CardContent className="flex justify-between items-center">
               <p className="text-sm text-muted-foreground">
-                Add, validate, and remove API keys for services like maps,
-                weather, and more.
+                Add, validate, and remove API keys for services like maps, weather, and
+                more.
               </p>
               <ArrowRight className="h-5 w-5 text-muted-foreground" />
             </CardContent>

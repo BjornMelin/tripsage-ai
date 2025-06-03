@@ -66,28 +66,31 @@ class Accommodation(TripSageModel):
     booking_status: BookingStatus = Field(
         BookingStatus.VIEWED, description="Status of the accommodation booking"
     )
-    cancellation_policy: Optional[CancellationPolicy] = Field(
-        None, description="Cancellation policy for the booking"
+    cancellation_policy: CancellationPolicy = Field(
+        CancellationPolicy.UNKNOWN, description="Cancellation policy for the booking"
     )
     distance_to_center: Optional[float] = Field(
         None, description="Distance to city center in kilometers"
     )
     neighborhood: Optional[str] = Field(None, description="Neighborhood or area name")
+    images: List[str] = Field(default_factory=list, description="List of image URLs")
 
     @field_validator("price_per_night", "total_price")
     @classmethod
     def validate_price(cls, v: float) -> float:
         """Validate that price is a positive number."""
-        if v < 0:
-            raise ValueError("Price must be non-negative")
+        if v <= 0:
+            raise ValueError("ensure this value is greater than 0")
         return v
 
     @field_validator("rating")
     @classmethod
     def validate_rating(cls, v: Optional[float]) -> Optional[float]:
         """Validate that rating is between 0 and 5 if provided."""
-        if v is not None and (v < 0 or v > 5):
-            raise ValueError("Rating must be between 0 and 5")
+        if v is not None and v < 0:
+            raise ValueError("ensure this value is greater than or equal to 0")
+        if v is not None and v > 5:
+            raise ValueError("ensure this value is less than or equal to 5")
         return v
 
     @field_validator("distance_to_center")
@@ -100,9 +103,9 @@ class Accommodation(TripSageModel):
 
     @model_validator(mode="after")
     def validate_dates(self) -> "Accommodation":
-        """Validate that check_out is not before check_in."""
-        if self.check_out < self.check_in:
-            raise ValueError("Check-out date must not be before check-in date")
+        """Validate that check_out is after check_in."""
+        if self.check_out <= self.check_in:
+            raise ValueError("Check-out date must be after check-in date")
         return self
 
     @model_validator(mode="after")

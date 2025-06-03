@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import type { SearchType, FilterOption } from "@/types/search";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import type { FilterOption, SearchType } from "@/types/search";
+import { useState } from "react";
 
 interface SearchFiltersProps {
   type: SearchType;
@@ -78,9 +78,7 @@ export function SearchFilters({
         <div className="space-y-6">
           {Object.entries(groupedFilters).map(([type, filtersGroup]) => (
             <div key={type} className="space-y-2">
-              <h3 className="text-sm font-semibold capitalize">
-                {type} Filters
-              </h3>
+              <h3 className="text-sm font-semibold capitalize">{type} Filters</h3>
               <div className="space-y-2">
                 {filtersGroup.map((filter) => (
                   <div key={filter.id} className="space-y-2">
@@ -105,9 +103,7 @@ export function SearchFilters({
                                   type="checkbox"
                                   checked={
                                     Array.isArray(activeFilters[filter.id]) &&
-                                    activeFilters[filter.id]?.includes(
-                                      option.value
-                                    )
+                                    activeFilters[filter.id]?.includes(option.value)
                                   }
                                   onChange={(e) => {
                                     const currentValues = Array.isArray(
@@ -124,9 +120,7 @@ export function SearchFilters({
                                     } else {
                                       handleFilterChange(
                                         filter.id,
-                                        currentValues.filter(
-                                          (v) => v !== option.value
-                                        )
+                                        currentValues.filter((v) => v !== option.value)
                                       );
                                     }
                                   }}
@@ -153,9 +147,7 @@ export function SearchFilters({
                                 <input
                                   type="radio"
                                   name={filter.id}
-                                  checked={
-                                    activeFilters[filter.id] === option.value
-                                  }
+                                  checked={activeFilters[filter.id] === option.value}
                                   onChange={() =>
                                     handleFilterChange(filter.id, option.value)
                                   }

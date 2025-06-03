@@ -1,31 +1,31 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
+import { useMemoryContext, useMemoryInsights } from "@/hooks/use-memory";
+import { cn } from "@/lib/utils";
+import type {
+  Memory,
+  MemoryContextPanelProps,
+  MemoryInsight,
+  UserPreferences,
+} from "@/types/memory";
 import {
   Brain,
-  MapPin,
-  DollarSign,
   Calendar,
-  User,
-  TrendingUp,
-  Clock,
-  Star,
   ChevronDown,
   ChevronUp,
+  Clock,
+  DollarSign,
+  MapPin,
+  Star,
+  TrendingUp,
+  User,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { useMemoryContext, useMemoryInsights } from "@/lib/hooks/use-memory";
-import type {
-  MemoryContextPanelProps,
-  Memory,
-  UserPreferences,
-  MemoryInsight,
-} from "@/types/memory";
+import React, { useEffect, useState } from "react";
 
 export default function MemoryContextPanel({
   userId,
@@ -34,9 +34,9 @@ export default function MemoryContextPanel({
   onMemorySelect,
 }: MemoryContextPanelProps) {
   const [isExpanded, setIsExpanded] = useState(false);
-  const [selectedTab, setSelectedTab] = useState<
-    "context" | "insights" | "recent"
-  >("context");
+  const [selectedTab, setSelectedTab] = useState<"context" | "insights" | "recent">(
+    "context"
+  );
 
   const {
     data: memoryContext,
@@ -175,9 +175,7 @@ export default function MemoryContextPanel({
             </div>
             <div className="p-3 rounded-lg bg-muted">
               <div className="flex items-center justify-between mb-1">
-                <span className="font-medium text-sm">
-                  {travelPersonality.type}
-                </span>
+                <span className="font-medium text-sm">{travelPersonality.type}</span>
                 <Badge variant="secondary" className="text-xs">
                   {Math.round(travelPersonality.confidence * 100)}% confident
                 </Badge>
@@ -238,9 +236,7 @@ export default function MemoryContextPanel({
                     </Badge>
                   </div>
                   <p className="text-xs font-medium">{rec.recommendation}</p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {rec.reasoning}
-                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">{rec.reasoning}</p>
                 </div>
               ))}
             </div>
@@ -282,9 +278,7 @@ export default function MemoryContextPanel({
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-muted-foreground">
-            Unable to load memory context
-          </p>
+          <p className="text-sm text-muted-foreground">Unable to load memory context</p>
         </CardContent>
       </Card>
     );
@@ -300,9 +294,7 @@ export default function MemoryContextPanel({
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-muted-foreground">
-            No memory context available
-          </p>
+          <p className="text-sm text-muted-foreground">No memory context available</p>
         </CardContent>
       </Card>
     );
@@ -318,11 +310,7 @@ export default function MemoryContextPanel({
             <Brain className="h-4 w-4" />
             Memory Context
           </CardTitle>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setIsExpanded(!isExpanded)}
-          >
+          <Button variant="ghost" size="sm" onClick={() => setIsExpanded(!isExpanded)}>
             {isExpanded ? (
               <ChevronUp className="h-4 w-4" />
             ) : (
@@ -354,16 +342,11 @@ export default function MemoryContextPanel({
 
       <CardContent>
         <ScrollArea
-          className={cn(
-            "transition-all duration-300",
-            isExpanded ? "h-96" : "h-48"
-          )}
+          className={cn("transition-all duration-300", isExpanded ? "h-96" : "h-48")}
         >
-          {selectedTab === "context" &&
-            renderPreferences(context.userPreferences)}
+          {selectedTab === "context" && renderPreferences(context.userPreferences)}
           {selectedTab === "insights" && renderInsights()}
-          {selectedTab === "recent" &&
-            renderRecentMemories(context.recentMemories)}
+          {selectedTab === "recent" && renderRecentMemories(context.recentMemories)}
         </ScrollArea>
 
         {memoryContext.metadata && (
@@ -376,9 +359,7 @@ export default function MemoryContextPanel({
               <div className="flex justify-between">
                 <span>Last Updated:</span>
                 <span>
-                  {new Date(
-                    memoryContext.metadata.lastUpdated
-                  ).toLocaleDateString()}
+                  {new Date(memoryContext.metadata.lastUpdated).toLocaleDateString()}
                 </span>
               </div>
             </div>

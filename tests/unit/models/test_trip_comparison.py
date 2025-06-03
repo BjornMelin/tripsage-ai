@@ -1,6 +1,6 @@
 """Tests for TripComparison model."""
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from tripsage_core.models.db.trip_comparison import TripComparison
 
@@ -16,7 +16,7 @@ def test_trip_comparison_creation(sample_trip_comparison_dict):
 
 def test_trip_comparison_optional_fields():
     """Test creating a TripComparison model with minimal required fields."""
-    now = datetime.now(datetime.UTC)
+    now = datetime.now(timezone.utc)
     minimal_comparison = TripComparison(
         trip_id=1,
         timestamp=now,

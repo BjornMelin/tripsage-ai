@@ -409,21 +409,35 @@ class TestAccommodationModel:
         )
         assert accommodation.rating == 0.0
 
-    def test_auto_calculate_total_price(self):
-        """Test automatic total price calculation feature."""
+    def test_calculated_total_price_consistency(self):
+        """Test total price consistency validation."""
         today = date.today()
+        # Test with consistent pricing (within 5% tolerance)
         accommodation = Accommodation(
             trip_id=1,
-            name="Auto-Calc Hotel",
+            name="Consistent Hotel",
             accommodation_type=AccommodationType.HOTEL,
             check_in=today + timedelta(days=10),
             check_out=today + timedelta(days=17),  # 7 nights
             price_per_night=100.00,
-            total_price=0.00,  # Will be overridden
+            total_price=700.00,  # Exactly 7 nights * 100.00
             location="Tokyo, Japan",
-            calculate_total_price=True,
         )
-        assert accommodation.total_price == 700.00  # 7 nights * 100.00
+        assert accommodation.total_price == 700.00
+        assert accommodation.duration_nights == 7
+
+        # Test with slightly inconsistent pricing (but within tolerance)
+        accommodation = Accommodation(
+            trip_id=1,
+            name="Slightly Inconsistent Hotel",
+            accommodation_type=AccommodationType.HOTEL,
+            check_in=today + timedelta(days=10),
+            check_out=today + timedelta(days=17),  # 7 nights
+            price_per_night=100.00,
+            total_price=720.00,  # With fees/taxes - within 5% tolerance
+            location="Tokyo, Japan",
+        )
+        assert accommodation.total_price == 720.00
 
     def test_accommodation_properties(self, sample_accommodation_dict):
         """Test various accommodation properties."""

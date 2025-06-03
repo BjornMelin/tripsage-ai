@@ -7,7 +7,7 @@ capabilities.
 """
 
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
 from langchain_core.messages import HumanMessage, SystemMessage
@@ -15,7 +15,7 @@ from langchain_openai import ChatOpenAI
 
 from tripsage.orchestration.nodes.base import BaseAgentNode
 from tripsage.orchestration.state import TravelPlanningState
-from tripsage.orchestration.tools.mcp_integration import MCPToolRegistry
+from tripsage.orchestration.tools.registry import get_tool_registry
 from tripsage_core.config.base_app_settings import settings
 from tripsage_core.utils.logging_utils import get_logger
 
@@ -45,7 +45,7 @@ class DestinationResearchAgentNode(BaseAgentNode):
 
     def _initialize_tools(self) -> None:
         """Initialize destination research tools and MCP integrations."""
-        self.tool_registry = MCPToolRegistry()
+        self.tool_registry = get_tool_registry(self.service_registry)
         self.available_tools = self.tool_registry.get_tools_for_agent(
             "destination_research_agent"
         )
@@ -76,7 +76,7 @@ class DestinationResearchAgentNode(BaseAgentNode):
 
             # Update state with results
             research_record = {
-                "timestamp": datetime.now(datetime.UTC).isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
                 "parameters": research_params,
                 "results": research_results,
                 "agent": "destination_research_agent",

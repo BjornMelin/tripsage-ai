@@ -1,10 +1,10 @@
-import { describe, it, expect, beforeEach, afterEach, vi, type Mock } from "vitest";
-import { renderHook, act } from "@testing-library/react";
+import { act, renderHook } from "@testing-library/react";
+import { type Mock, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useChatStore } from "../chat-store";
-import type { 
-  WebSocketMessageEvent, 
+import type {
+  Message,
   WebSocketAgentStatusEvent,
-  Message 
+  WebSocketMessageEvent,
 } from "../chat-store";
 
 // Test constants
@@ -32,14 +32,14 @@ describe("Chat Store WebSocket Integration", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    
+
     // Reset the store
     const { result } = renderHook(() => useChatStore());
     store = result.current;
-    
+
     // Clear the store state
     act(() => {
-      store.sessions.forEach(session => store.deleteSession(session.id));
+      store.sessions.forEach((session) => store.deleteSession(session.id));
     });
   });
 
@@ -91,11 +91,26 @@ describe("Chat Store WebSocket Integration", () => {
       expect(mockWebSocket.on).toHaveBeenCalledWith("close", expect.any(Function));
       expect(mockWebSocket.on).toHaveBeenCalledWith("connecting", expect.any(Function));
       expect(mockWebSocket.on).toHaveBeenCalledWith("error", expect.any(Function));
-      expect(mockWebSocket.on).toHaveBeenCalledWith("chat_message", expect.any(Function));
-      expect(mockWebSocket.on).toHaveBeenCalledWith("chat_message_chunk", expect.any(Function));
-      expect(mockWebSocket.on).toHaveBeenCalledWith("agent_status_update", expect.any(Function));
-      expect(mockWebSocket.on).toHaveBeenCalledWith("user_typing", expect.any(Function));
-      expect(mockWebSocket.on).toHaveBeenCalledWith("user_stop_typing", expect.any(Function));
+      expect(mockWebSocket.on).toHaveBeenCalledWith(
+        "chat_message",
+        expect.any(Function)
+      );
+      expect(mockWebSocket.on).toHaveBeenCalledWith(
+        "chat_message_chunk",
+        expect.any(Function)
+      );
+      expect(mockWebSocket.on).toHaveBeenCalledWith(
+        "agent_status_update",
+        expect.any(Function)
+      );
+      expect(mockWebSocket.on).toHaveBeenCalledWith(
+        "user_typing",
+        expect.any(Function)
+      );
+      expect(mockWebSocket.on).toHaveBeenCalledWith(
+        "user_stop_typing",
+        expect.any(Function)
+      );
     });
 
     it("should send authentication message after connection", async () => {
@@ -110,7 +125,10 @@ describe("Chat Store WebSocket Integration", () => {
 
       // Assert
       expect(mockWebSocket.connect).toHaveBeenCalled();
-      expect(mockWebSocket.send).toHaveBeenCalledWith("auth", { token, sessionId });
+      expect(mockWebSocket.send).toHaveBeenCalledWith("auth", {
+        token,
+        sessionId,
+      });
     });
 
     it("should disconnect existing WebSocket before creating new one", async () => {
@@ -198,8 +216,9 @@ describe("Chat Store WebSocket Integration", () => {
 
     it("should update status to connected on open event", () => {
       // Arrange
-      const openHandler = (mockWebSocket.on as Mock).mock.calls
-        .find(([event]) => event === "open")?.[1];
+      const openHandler = (mockWebSocket.on as Mock).mock.calls.find(
+        ([event]) => event === "open"
+      )?.[1];
 
       // Act
       act(() => {
@@ -212,8 +231,9 @@ describe("Chat Store WebSocket Integration", () => {
 
     it("should update status to disconnected on close event", () => {
       // Arrange
-      const closeHandler = (mockWebSocket.on as Mock).mock.calls
-        .find(([event]) => event === "close")?.[1];
+      const closeHandler = (mockWebSocket.on as Mock).mock.calls.find(
+        ([event]) => event === "close"
+      )?.[1];
 
       // Act
       act(() => {
@@ -226,8 +246,9 @@ describe("Chat Store WebSocket Integration", () => {
 
     it("should update status to connecting on connecting event", () => {
       // Arrange
-      const connectingHandler = (mockWebSocket.on as Mock).mock.calls
-        .find(([event]) => event === "connecting")?.[1];
+      const connectingHandler = (mockWebSocket.on as Mock).mock.calls.find(
+        ([event]) => event === "connecting"
+      )?.[1];
 
       // Act
       act(() => {
@@ -240,8 +261,9 @@ describe("Chat Store WebSocket Integration", () => {
 
     it("should update status to error on error event", () => {
       // Arrange
-      const errorHandler = (mockWebSocket.on as Mock).mock.calls
-        .find(([event]) => event === "error")?.[1];
+      const errorHandler = (mockWebSocket.on as Mock).mock.calls.find(
+        ([event]) => event === "error"
+      )?.[1];
       const error = { message: "WebSocket error" };
 
       // Act
@@ -280,9 +302,9 @@ describe("Chat Store WebSocket Integration", () => {
       });
 
       // Assert
-      const session = store.sessions.find(s => s.id === sessionId);
+      const session = store.sessions.find((s) => s.id === sessionId);
       const lastMessage = session?.messages[session.messages.length - 1];
-      
+
       expect(lastMessage).toBeDefined();
       expect(lastMessage?.content).toBe("Hello from WebSocket");
       expect(lastMessage?.role).toBe("assistant");
@@ -310,9 +332,9 @@ describe("Chat Store WebSocket Integration", () => {
       });
 
       // Assert
-      const session = store.sessions.find(s => s.id === sessionId);
-      const message = session?.messages.find(m => m.id === messageId);
-      
+      const session = store.sessions.find((s) => s.id === sessionId);
+      const message = session?.messages.find((m) => m.id === messageId);
+
       expect(message?.content).toBe("Initial chunk");
       expect(message?.isStreaming).toBe(true);
     });
@@ -333,9 +355,9 @@ describe("Chat Store WebSocket Integration", () => {
       });
 
       // Assert
-      const session = store.sessions.find(s => s.id === sessionId);
+      const session = store.sessions.find((s) => s.id === sessionId);
       const lastMessage = session?.messages[session.messages.length - 1];
-      
+
       expect(lastMessage?.content).toBe("New streaming message");
       expect(lastMessage?.isStreaming).toBe(true);
       expect(lastMessage?.role).toBe("assistant");
@@ -363,9 +385,9 @@ describe("Chat Store WebSocket Integration", () => {
       });
 
       // Assert
-      const session = store.sessions.find(s => s.id === sessionId);
-      const message = session?.messages.find(m => m.id === messageId);
-      
+      const session = store.sessions.find((s) => s.id === sessionId);
+      const message = session?.messages.find((m) => m.id === messageId);
+
       expect(message?.content).toBe("Streaming complete");
       expect(message?.isStreaming).toBe(false);
     });
@@ -405,9 +427,9 @@ describe("Chat Store WebSocket Integration", () => {
       });
 
       // Assert
-      const session = store.sessions.find(s => s.id === sessionId);
+      const session = store.sessions.find((s) => s.id === sessionId);
       const lastMessage = session?.messages[session.messages.length - 1];
-      
+
       expect(lastMessage?.toolCalls).toEqual(toolCalls);
       expect(lastMessage?.attachments).toEqual(attachments);
     });
@@ -415,7 +437,8 @@ describe("Chat Store WebSocket Integration", () => {
     it("should ignore messages for different sessions", () => {
       // Arrange
       const otherSessionId = "other-session";
-      const initialMessageCount = store.sessions.find(s => s.id === sessionId)?.messages.length || 0;
+      const initialMessageCount =
+        store.sessions.find((s) => s.id === sessionId)?.messages.length || 0;
 
       const event: WebSocketMessageEvent = {
         type: "chat_message",
@@ -430,7 +453,7 @@ describe("Chat Store WebSocket Integration", () => {
       });
 
       // Assert
-      const session = store.sessions.find(s => s.id === sessionId);
+      const session = store.sessions.find((s) => s.id === sessionId);
       expect(session?.messages.length).toBe(initialMessageCount);
     });
   });
@@ -461,7 +484,7 @@ describe("Chat Store WebSocket Integration", () => {
       });
 
       // Assert
-      const session = store.sessions.find(s => s.id === sessionId);
+      const session = store.sessions.find((s) => s.id === sessionId);
       expect(session?.agentStatus).toEqual({
         isActive: true,
         currentTask: "Processing request",
@@ -473,7 +496,7 @@ describe("Chat Store WebSocket Integration", () => {
     it("should ignore status updates for different sessions", () => {
       // Arrange
       const otherSessionId = "other-session";
-      const initialStatus = store.sessions.find(s => s.id === sessionId)?.agentStatus;
+      const initialStatus = store.sessions.find((s) => s.id === sessionId)?.agentStatus;
 
       const event: WebSocketAgentStatusEvent = {
         type: "agent_status_update",
@@ -489,7 +512,7 @@ describe("Chat Store WebSocket Integration", () => {
       });
 
       // Assert
-      const session = store.sessions.find(s => s.id === sessionId);
+      const session = store.sessions.find((s) => s.id === sessionId);
       expect(session?.agentStatus).toEqual(initialStatus);
     });
   });
@@ -643,7 +666,7 @@ describe("Chat Store WebSocket Integration", () => {
         },
         {
           id: "msg-2",
-          role: "user", 
+          role: "user",
           content: "Message 2",
           timestamp: new Date().toISOString(),
         },
@@ -651,7 +674,7 @@ describe("Chat Store WebSocket Integration", () => {
 
       // Act
       act(() => {
-        messages.forEach(msg => store.addPendingMessage(msg));
+        messages.forEach((msg) => store.addPendingMessage(msg));
       });
 
       // Assert
@@ -674,8 +697,9 @@ describe("Chat Store WebSocket Integration", () => {
 
       // Simulate connected state
       act(() => {
-        const openHandler = (mockWebSocket.on as Mock).mock.calls
-          .find(([event]) => event === "open")?.[1];
+        const openHandler = (mockWebSocket.on as Mock).mock.calls.find(
+          ([event]) => event === "open"
+        )?.[1];
         openHandler();
       });
     });
@@ -683,9 +707,7 @@ describe("Chat Store WebSocket Integration", () => {
     it("should send message via WebSocket when connected and realtime enabled", async () => {
       // Arrange
       const content = "Hello WebSocket";
-      const attachments = [
-        new File(["content"], "test.txt", { type: "text/plain" }),
-      ];
+      const attachments = [new File(["content"], "test.txt", { type: "text/plain" })];
 
       // Act
       await act(async () => {
@@ -721,12 +743,12 @@ describe("Chat Store WebSocket Integration", () => {
 
       // Assert
       // Should add user message
-      const session = store.sessions.find(s => s.id === sessionId);
-      const userMessage = session?.messages.find(m => m.role === "user");
+      const session = store.sessions.find((s) => s.id === sessionId);
+      const userMessage = session?.messages.find((m) => m.role === "user");
       expect(userMessage?.content).toBe(content);
 
       // Should add assistant response (fallback behavior)
-      const assistantMessage = session?.messages.find(m => m.role === "assistant");
+      const assistantMessage = session?.messages.find((m) => m.role === "assistant");
       expect(assistantMessage?.content).toContain("placeholder response");
     });
 
@@ -745,10 +767,13 @@ describe("Chat Store WebSocket Integration", () => {
 
       // Assert
       // Should not attempt WebSocket send
-      expect(mockWebSocket.send).not.toHaveBeenCalledWith("chat_message", expect.anything());
+      expect(mockWebSocket.send).not.toHaveBeenCalledWith(
+        "chat_message",
+        expect.anything()
+      );
 
       // Should add messages via HTTP fallback
-      const session = store.sessions.find(s => s.id === sessionId);
+      const session = store.sessions.find((s) => s.id === sessionId);
       expect(session?.messages).toHaveLength(2); // User + assistant
     });
 
@@ -767,7 +792,10 @@ describe("Chat Store WebSocket Integration", () => {
 
       // Assert
       // Should not attempt WebSocket send
-      expect(mockWebSocket.send).not.toHaveBeenCalledWith("chat_message", expect.anything());
+      expect(mockWebSocket.send).not.toHaveBeenCalledWith(
+        "chat_message",
+        expect.anything()
+      );
     });
   });
 
@@ -786,8 +814,9 @@ describe("Chat Store WebSocket Integration", () => {
 
     it("should handle user_typing events", () => {
       // Arrange
-      const typingHandler = (mockWebSocket.on as Mock).mock.calls
-        .find(([event]) => event === "user_typing")?.[1];
+      const typingHandler = (mockWebSocket.on as Mock).mock.calls.find(
+        ([event]) => event === "user_typing"
+      )?.[1];
 
       const typingData = {
         sessionId,
@@ -815,8 +844,9 @@ describe("Chat Store WebSocket Integration", () => {
         store.setUserTyping(sessionId, "user-123", "John Doe");
       });
 
-      const stopTypingHandler = (mockWebSocket.on as Mock).mock.calls
-        .find(([event]) => event === "user_stop_typing")?.[1];
+      const stopTypingHandler = (mockWebSocket.on as Mock).mock.calls.find(
+        ([event]) => event === "user_stop_typing"
+      )?.[1];
 
       const stopTypingData = {
         sessionId,
@@ -835,8 +865,9 @@ describe("Chat Store WebSocket Integration", () => {
 
     it("should handle chat_message events through event handlers", () => {
       // Arrange
-      const messageHandler = (mockWebSocket.on as Mock).mock.calls
-        .find(([event]) => event === "chat_message")?.[1];
+      const messageHandler = (mockWebSocket.on as Mock).mock.calls.find(
+        ([event]) => event === "chat_message"
+      )?.[1];
 
       const messageData: WebSocketMessageEvent = {
         type: "chat_message",
@@ -851,15 +882,16 @@ describe("Chat Store WebSocket Integration", () => {
       });
 
       // Assert
-      const session = store.sessions.find(s => s.id === sessionId);
+      const session = store.sessions.find((s) => s.id === sessionId);
       const lastMessage = session?.messages[session.messages.length - 1];
       expect(lastMessage?.content).toBe("WebSocket message");
     });
 
     it("should handle agent_status_update events through event handlers", () => {
       // Arrange
-      const statusHandler = (mockWebSocket.on as Mock).mock.calls
-        .find(([event]) => event === "agent_status_update")?.[1];
+      const statusHandler = (mockWebSocket.on as Mock).mock.calls.find(
+        ([event]) => event === "agent_status_update"
+      )?.[1];
 
       const statusData: WebSocketAgentStatusEvent = {
         type: "agent_status_update",
@@ -876,7 +908,7 @@ describe("Chat Store WebSocket Integration", () => {
       });
 
       // Assert
-      const session = store.sessions.find(s => s.id === sessionId);
+      const session = store.sessions.find((s) => s.id === sessionId);
       expect(session?.agentStatus).toEqual({
         isActive: true,
         currentTask: "Processing",

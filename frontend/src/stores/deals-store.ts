@@ -1,18 +1,18 @@
-import { create } from "zustand";
-import { persist } from "zustand/middleware";
-import { z } from "zod";
 import {
-  type DealType,
   type Deal,
   type DealAlert,
+  DealAlertSchema,
+  DealNotification,
+  DealNotificationSchema,
+  DealSchema,
   type DealState,
   type DealStats,
-  DealNotification,
-  DealSchema,
-  DealAlertSchema,
-  DealNotificationSchema,
+  type DealType,
   SearchDealsRequest,
 } from "@/types/deals";
+import { z } from "zod";
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
 
 interface DealsStore extends DealState {
   // Deals management
@@ -76,10 +76,7 @@ const validateAlert = (alert: unknown): alert is DealAlert => {
 };
 
 // Calculate percentage discount
-const calculateDiscountPercentage = (
-  originalPrice: number,
-  price: number
-): number => {
+const calculateDiscountPercentage = (originalPrice: number, price: number): number => {
   if (originalPrice <= 0 || price <= 0 || originalPrice <= price) return 0;
   return Math.round(((originalPrice - price) / originalPrice) * 100);
 };
@@ -114,8 +111,7 @@ const calculateDealsStats = (deals: Deal[]): DealStats => {
     byType[deal.type] = (byType[deal.type] || 0) + 1;
 
     // Count by destination
-    byDestination[deal.destination] =
-      (byDestination[deal.destination] || 0) + 1;
+    byDestination[deal.destination] = (byDestination[deal.destination] || 0) + 1;
 
     // Calculate savings and discount
     if (deal.originalPrice && deal.originalPrice > deal.price) {
@@ -127,10 +123,7 @@ const calculateDealsStats = (deals: Deal[]): DealStats => {
       totalDiscountPercentage += deal.discountPercentage;
       dealsWithDiscount++;
     } else if (deal.originalPrice && deal.originalPrice > deal.price) {
-      const discount = calculateDiscountPercentage(
-        deal.originalPrice,
-        deal.price
-      );
+      const discount = calculateDiscountPercentage(deal.originalPrice, deal.price);
       totalDiscountPercentage += discount;
       dealsWithDiscount++;
     }
@@ -151,18 +144,11 @@ const calculateDealsStats = (deals: Deal[]): DealStats => {
 };
 
 // Match deal against filters
-const matchDealWithFilters = (
-  deal: Deal,
-  filters?: DealState["filters"]
-): boolean => {
+const matchDealWithFilters = (deal: Deal, filters?: DealState["filters"]): boolean => {
   if (!filters) return true;
 
   // Match deal type
-  if (
-    filters.types &&
-    filters.types.length > 0 &&
-    !filters.types.includes(deal.type)
-  ) {
+  if (filters.types && filters.types.length > 0 && !filters.types.includes(deal.type)) {
     return false;
   }
 
@@ -296,16 +282,13 @@ export const useDealsStore = create<DealsStore>()(
 
       removeDeal: (id) =>
         set((state) => {
-          const { deals, featuredDeals, savedDeals, recentlyViewedDeals } =
-            state;
+          const { deals, featuredDeals, savedDeals, recentlyViewedDeals } = state;
 
           // Remove from all collections
           const newDeals = { ...deals };
           delete newDeals[id];
 
-          const newFeaturedDeals = featuredDeals.filter(
-            (dealId) => dealId !== id
-          );
+          const newFeaturedDeals = featuredDeals.filter((dealId) => dealId !== id);
           const newSavedDeals = savedDeals.filter((dealId) => dealId !== id);
           const newRecentlyViewedDeals = recentlyViewedDeals.filter(
             (dealId) => dealId !== id
@@ -436,9 +419,7 @@ export const useDealsStore = create<DealsStore>()(
           if (!state.deals[dealId]) return state;
 
           // Remove if already exists (to move to front)
-          const filtered = state.recentlyViewedDeals.filter(
-            (id) => id !== dealId
-          );
+          const filtered = state.recentlyViewedDeals.filter((id) => id !== dealId);
 
           // Add to front and limit to 20 items
           return {
@@ -470,9 +451,7 @@ export const useDealsStore = create<DealsStore>()(
 
         if (!state.filters) return allDeals;
 
-        return allDeals.filter((deal) =>
-          matchDealWithFilters(deal, state.filters)
-        );
+        return allDeals.filter((deal) => matchDealWithFilters(deal, state.filters));
       },
 
       getFeaturedDeals: () => {
@@ -487,9 +466,7 @@ export const useDealsStore = create<DealsStore>()(
 
       getRecentlyViewedDeals: () => {
         const state = get();
-        return state.recentlyViewedDeals
-          .map((id) => state.deals[id])
-          .filter(Boolean);
+        return state.recentlyViewedDeals.map((id) => state.deals[id]).filter(Boolean);
       },
 
       getDealsStats: () => {

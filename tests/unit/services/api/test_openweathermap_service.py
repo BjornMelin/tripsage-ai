@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import httpx
 import pytest
 
-from tripsage.models.api.weather_models import (
+from tripsage_core.models.api.weather_models import (
     AirQualityIndex,
 )
 from tripsage_core.services.external_apis.weather_service import WeatherService

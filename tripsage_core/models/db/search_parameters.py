@@ -32,29 +32,44 @@ class SearchParameters(TripSageModel):
     @property
     def is_flight_search(self) -> bool:
         """Check if this is a flight search."""
+        # Prioritize explicit type field
+        if "type" in self.parameter_json:
+            return self.parameter_json.get("type") == "flight"
+        # Fallback to field-based detection (stricter logic)
         return (
-            self.parameter_json.get("type") == "flight"
-            or "origin" in self.parameter_json
-            or "destination" in self.parameter_json
+            "origin" in self.parameter_json
+            and "destination" in self.parameter_json
+            and "check_in" not in self.parameter_json
         )
 
     @property
     def is_accommodation_search(self) -> bool:
         """Check if this is an accommodation search."""
-        return (
-            self.parameter_json.get("type") == "accommodation"
-            or "check_in" in self.parameter_json
-            or "check_out" in self.parameter_json
+        # Prioritize explicit type field
+        if "type" in self.parameter_json:
+            return self.parameter_json.get("type") == "accommodation"
+        # Fallback to field-based detection
+        return "check_in" in self.parameter_json or "check_out" in self.parameter_json
+
+    @property
+    def is_activity_search(self) -> bool:
+        """Check if this is an activity search."""
+        # Prioritize explicit type field
+        if "type" in self.parameter_json:
+            return self.parameter_json.get("type") == "activity"
+        # Fallback to field-based detection
+        return "activity_type" in self.parameter_json or (
+            "date" in self.parameter_json and "location" in self.parameter_json
         )
 
     @property
     def is_transportation_search(self) -> bool:
         """Check if this is a transportation search."""
-        return (
-            self.parameter_json.get("type") == "transportation"
-            or "pickup" in self.parameter_json
-            or "dropoff" in self.parameter_json
-        )
+        # Prioritize explicit type field
+        if "type" in self.parameter_json:
+            return self.parameter_json.get("type") == "transportation"
+        # Fallback to field-based detection
+        return "pickup" in self.parameter_json or "dropoff" in self.parameter_json
 
     @property
     def search_summary(self) -> str:
@@ -62,22 +77,52 @@ class SearchParameters(TripSageModel):
         if self.is_flight_search:
             origin = self.parameter_json.get("origin", "Unknown")
             destination = self.parameter_json.get("destination", "Unknown")
-            departure_date = self.parameter_json.get("departure_date", "Any")
-            return f"Flight from {origin} to {destination} on {departure_date}"
+            cabin_class = self.parameter_json.get("cabin_class", "Economy").title()
+            adults = self.parameter_json.get("adults", 1)
+            children = self.parameter_json.get("children", 0)
+            return f"Flight from {origin} to {destination} ({cabin_class}, {adults} adults, {children} children)"
 
         elif self.is_accommodation_search:
             location = self.parameter_json.get("location", "Unknown")
             check_in = self.parameter_json.get("check_in", "Any")
             check_out = self.parameter_json.get("check_out", "Any")
-            return f"Accommodation in {location} from {check_in} to {check_out}"
+            adults = self.parameter_json.get("adults", 2)
+            accommodation_type = self.parameter_json.get(
+                "accommodation_type", "Hotel"
+            ).title()
+            return f"{accommodation_type} in {location} ({check_in} to {check_out}, {adults} adults)"
+
+        elif self.is_activity_search:
+            location = self.parameter_json.get("location", "Unknown")
+            activity_type = self.parameter_json.get(
+                "activity_type", "Sightseeing"
+            ).title()
+            date = self.parameter_json.get("date", "Any")
+            return f"{activity_type} activity in {location} ({date})"
 
         elif self.is_transportation_search:
-            pickup = self.parameter_json.get("pickup", "Unknown")
-            dropoff = self.parameter_json.get("dropoff", "Unknown")
-            pickup_date = self.parameter_json.get("pickup_date", "Any")
-            return f"Transportation from {pickup} to {dropoff} on {pickup_date}"
+            # Transportation uses origin/destination OR pickup/dropoff
+            pickup = self.parameter_json.get("pickup") or self.parameter_json.get(
+                "origin", "Unknown"
+            )
+            dropoff = self.parameter_json.get("dropoff") or self.parameter_json.get(
+                "destination", "Unknown"
+            )
+            transportation_type = self.parameter_json.get(
+                "transportation_type", "Train"
+            ).title()
+            pickup_date = self.parameter_json.get(
+                "pickup_date"
+            ) or self.parameter_json.get("date", "Any")
+            return f"{transportation_type} from {pickup} to {dropoff} ({pickup_date})"
 
         else:
+            # Fallback for unknown search types
+            search_type = self.parameter_json.get("type", "unknown")
+            if search_type == "unknown":
+                # Format the dictionary properly with quotes
+                dict_repr = repr(self.parameter_json)
+                return f"Search for {search_type} with parameters: {dict_repr}"
             return f"Search at {self.timestamp.strftime('%Y-%m-%d %H:%M')}"
 
     @property

@@ -2,13 +2,14 @@
 Error recovery node implementation for LangGraph orchestration.
 
 This module provides sophisticated error handling and recovery mechanisms
-for the TripSage travel planning system.
+for the TripSage travel planning system, enhanced with structured error tracking
+and improved recovery strategies.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from tripsage.orchestration.nodes.base import BaseAgentNode
-from tripsage.orchestration.state import TravelPlanningState
+from tripsage.orchestration.state import ErrorInfo, HandoffContext, TravelPlanningState
 from tripsage_core.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)
@@ -42,38 +43,57 @@ class ErrorRecoveryNode(BaseAgentNode):
         Returns:
             Updated state with recovery actions taken
         """
-        error_count = state.get("error_count", 0)
+        # Get error info from enhanced state structure
+        error_info = ErrorInfo.model_validate(state.get("error_info", {}))
         current_agent = state.get("current_agent", "")
 
         logger.info(
-            f"Processing error recovery: count={error_count}, agent={current_agent}"
+            f"Processing error recovery: count={error_info.error_count}, "
+            f"agent={current_agent}, last_error={error_info.last_error}"
         )
 
-        # Determine recovery strategy based on error severity
-        if error_count < self.max_retries:
-            return await self._attempt_retry(state)
-        elif error_count < self.escalation_threshold:
-            return await self._attempt_fallback(state)
+        # Determine recovery strategy based on error severity and patterns
+        if error_info.error_count < self.max_retries:
+            return await self._attempt_retry(state, error_info)
+        elif error_info.error_count < self.escalation_threshold:
+            return await self._attempt_fallback(state, error_info)
         else:
-            return await self._escalate_to_human(state)
+            return await self._escalate_to_human(state, error_info)
 
-    async def _attempt_retry(self, state: TravelPlanningState) -> TravelPlanningState:
+    async def _attempt_retry(
+        self, state: TravelPlanningState, error_info: ErrorInfo
+    ) -> TravelPlanningState:
         """
-        Attempt retry with modified parameters.
+        Attempt retry with modified parameters using enhanced error tracking.
 
         Args:
             state: Current state with error information
+            error_info: Structured error information
 
         Returns:
             State configured for retry attempt
         """
         current_agent = state.get("current_agent", "")
-        retry_count = state["retry_attempts"].get(current_agent, 0)
+        retry_count = error_info.retry_attempts.get(current_agent, 0)
 
         logger.info(f"Attempting retry #{retry_count + 1} for {current_agent}")
 
-        # Clear the error state for retry
-        state["last_error"] = None
+        # Update error info for retry
+        error_info.last_error = None
+        error_info.retry_attempts[current_agent] = retry_count + 1
+
+        # Record the retry attempt in error history
+        error_info.error_history.append(
+            {
+                "action": "retry_attempt",
+                "agent": current_agent,
+                "attempt": retry_count + 1,
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+            }
+        )
+
+        # Update state with modified error info
+        state["error_info"] = error_info.model_dump()
 
         # Add retry message to conversation
         retry_message = {
@@ -84,22 +104,33 @@ class ErrorRecoveryNode(BaseAgentNode):
             ),
             "agent": "error_recovery",
             "retry_attempt": retry_count + 1,
-            "timestamp": datetime.now(datetime.UTC).isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
         state["messages"].append(retry_message)
 
         # Set routing back to router for intelligent retry
         state["current_agent"] = "router"
 
-        # Add retry context to handoff information
-        state["handoff_context"] = {
-            "retry_context": {
-                "original_agent": current_agent,
-                "retry_attempt": retry_count + 1,
-                "original_error": state.get("last_error", "Unknown error"),
+        # Create enhanced handoff context
+        handoff_context = HandoffContext(
+            from_agent="error_recovery",
+            to_agent="router",
+            routing_confidence=0.8,  # High confidence for retry
+            routing_reasoning=(
+                f"Retry attempt {retry_count + 1} after error in {current_agent}"
+            ),
+            timestamp=datetime.now(timezone.utc).isoformat(),
+            message_analyzed="Error recovery retry",
+            additional_context={
+                "retry_context": {
+                    "original_agent": current_agent,
+                    "retry_attempt": retry_count + 1,
+                    "original_error": error_info.last_error or "Unknown error",
+                }
             },
-            "timestamp": datetime.now(datetime.UTC).isoformat(),
-        }
+        )
+
+        state["handoff_context"] = handoff_context.model_dump()
 
         return state
 
@@ -127,7 +158,7 @@ class ErrorRecoveryNode(BaseAgentNode):
             "content": self._generate_fallback_message(current_agent, fallback_agent),
             "agent": "error_recovery",
             "fallback_strategy": True,
-            "timestamp": datetime.now(datetime.UTC).isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
         state["messages"].append(fallback_message)
 
@@ -141,7 +172,7 @@ class ErrorRecoveryNode(BaseAgentNode):
                 "fallback_agent": fallback_agent,
                 "reason": "Multiple errors in original agent",
             },
-            "timestamp": datetime.now(datetime.UTC).isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
         return state
@@ -167,7 +198,7 @@ class ErrorRecoveryNode(BaseAgentNode):
             "content": self._generate_escalation_message(),
             "agent": "error_recovery",
             "escalation": True,
-            "timestamp": datetime.now(datetime.UTC).isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
         state["messages"].append(escalation_message)
 
@@ -181,7 +212,7 @@ class ErrorRecoveryNode(BaseAgentNode):
                 "error_count": state.get("error_count", 0),
                 "session_id": state.get("session_id"),
                 "user_id": state.get("user_id"),
-                "timestamp": datetime.now(datetime.UTC).isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
             }
         }
 
@@ -279,7 +310,7 @@ class ErrorRecoveryNode(BaseAgentNode):
             "last_error": state.get("last_error"),
             "agent_history": state.get("agent_history", []),
             "retry_attempts": state.get("retry_attempts", {}),
-            "timestamp": datetime.now(datetime.UTC).isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "conversation_length": len(state.get("messages", [])),
         }
 

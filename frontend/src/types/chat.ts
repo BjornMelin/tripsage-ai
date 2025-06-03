@@ -139,6 +139,4 @@ export const ChatCompletionResponseSchema = z.object({
     })
     .optional(),
 });
-export type ChatCompletionResponse = z.infer<
-  typeof ChatCompletionResponseSchema
->;
+export type ChatCompletionResponse = z.infer<typeof ChatCompletionResponseSchema>;

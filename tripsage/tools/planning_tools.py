@@ -5,7 +5,7 @@ This module provides function tools for travel planning operations used by the
 TravelPlanningAgent, including plan creation, updates, and persistence.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
@@ -86,7 +86,7 @@ async def create_travel_plan(params: Dict[str, Any]) -> Dict[str, Any]:
         plan_input = TravelPlanInput(**params)
 
         # Generate plan ID
-        plan_id = f"plan_{datetime.now(datetime.UTC).strftime('%Y%m%d%H%M%S')}"
+        plan_id = f"plan_{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}"
 
         # Create travel plan object
         travel_plan = {
@@ -99,8 +99,8 @@ async def create_travel_plan(params: Dict[str, Any]) -> Dict[str, Any]:
             "travelers": plan_input.travelers,
             "budget": plan_input.budget,
             "preferences": plan_input.preferences or {},
-            "created_at": datetime.now(datetime.UTC).isoformat(),
-            "updated_at": datetime.now(datetime.UTC).isoformat(),
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "updated_at": datetime.now(timezone.utc).isoformat(),
             "components": {
                 "flights": [],
                 "accommodations": [],
@@ -208,7 +208,7 @@ async def update_travel_plan(params: Dict[str, Any]) -> Dict[str, Any]:
                 travel_plan[key] = value
 
         # Update the modification timestamp
-        travel_plan["updated_at"] = datetime.now(datetime.UTC).isoformat()
+        travel_plan["updated_at"] = datetime.now(timezone.utc).isoformat()
 
         # Save the updated plan
         await redis_cache.set(cache_key, travel_plan, ttl=86400 * 7)  # 7 days
@@ -608,10 +608,10 @@ async def save_travel_plan(params: Dict[str, Any]) -> Dict[str, Any]:
         # Mark as finalized if requested
         if finalize:
             travel_plan["status"] = "finalized"
-            travel_plan["finalized_at"] = datetime.now(datetime.UTC).isoformat()
+            travel_plan["finalized_at"] = datetime.now(timezone.utc).isoformat()
 
         # Update the modification timestamp
-        travel_plan["updated_at"] = datetime.now(datetime.UTC).isoformat()
+        travel_plan["updated_at"] = datetime.now(timezone.utc).isoformat()
 
         # Save to persistent storage (database)
         # This would interface with the database in a real implementation
@@ -627,7 +627,7 @@ async def save_travel_plan(params: Dict[str, Any]) -> Dict[str, Any]:
 
             # Add finalization memory if finalized
             if finalize:
-                finalization_time = datetime.now(datetime.UTC).isoformat()
+                finalization_time = datetime.now(timezone.utc).isoformat()
                 finalize_memory = (
                     f"Travel plan '{travel_plan.get('title', 'Untitled')}' "
                     f"finalized on {finalization_time}"

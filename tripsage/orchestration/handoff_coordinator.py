@@ -7,7 +7,7 @@ between specialized agents.
 """
 
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Dict, List, Optional, Set, Tuple
 
@@ -64,7 +64,7 @@ class HandoffContext(BaseModel):
     trigger: HandoffTrigger = Field(description="Handoff trigger")
     reason: str = Field(description="Reason for handoff")
     timestamp: str = Field(
-        default_factory=lambda: datetime.now(datetime.UTC).isoformat()
+        default_factory=lambda: datetime.now(timezone.utc).isoformat()
     )
     preserved_context: Dict[str, Any] = Field(
         default_factory=dict, description="Context to preserve"

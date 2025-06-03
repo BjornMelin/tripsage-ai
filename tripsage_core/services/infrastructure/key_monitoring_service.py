@@ -9,7 +9,7 @@ import inspect
 import logging
 import secrets
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 from functools import wraps
 from typing import Any, Callable, Dict, List, Optional, Set, TypeVar, cast
@@ -104,7 +104,7 @@ class KeyMonitoringService:
 
         # Create a log entry
         log_data = {
-            "timestamp": datetime.now(datetime.UTC).isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "operation": operation.value,
             "user_id": user_id,
             "key_id": key_id,
@@ -166,9 +166,9 @@ class KeyMonitoringService:
         # Get existing operations
         existing_ops = await self.cache_service.get_json(key) or []
         # Add new timestamp
-        existing_ops.append(datetime.now(datetime.UTC).isoformat())
+        existing_ops.append(datetime.now(timezone.utc).isoformat())
         # Keep only recent operations within timeframe
-        cutoff_time = datetime.now(datetime.UTC) - timedelta(
+        cutoff_time = datetime.now(timezone.utc) - timedelta(
             seconds=self.pattern_timeframe
         )
         existing_ops = [
@@ -236,7 +236,7 @@ class KeyMonitoringService:
         existing_alerts = await self.cache_service.get_json(alert_key) or []
         existing_alerts.append(
             {
-                "timestamp": datetime.now(datetime.UTC).isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
                 "message": alert_message,
                 "operation": operation.value,
                 "user_id": user_id,
@@ -594,7 +594,7 @@ async def check_key_expiration(
     await monitoring_service.initialize()
 
     # Get date threshold
-    threshold = datetime.now(datetime.UTC) + timedelta(days=days_before)
+    threshold = datetime.now(timezone.utc) + timedelta(days=days_before)
 
     # Get expiring keys from database
     try:
@@ -631,7 +631,7 @@ async def get_key_health_metrics() -> Dict[str, Any]:
                 service_count[service] = service_count.get(service, 0) + 1
 
         # Get count of expired keys
-        now = datetime.now(datetime.UTC)
+        now = datetime.now(timezone.utc)
         expired_count = await db_service.count(
             "api_keys", {"expires_at": {"lte": now.isoformat()}}
         )
