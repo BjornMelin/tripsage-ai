@@ -23,7 +23,7 @@ interface AgentStatusPanelProps {
   showHeader?: boolean;
 }
 
-export default function AgentStatusPanel({
+export function AgentStatusPanel({
   sessionId,
   className,
   showHeader = true,

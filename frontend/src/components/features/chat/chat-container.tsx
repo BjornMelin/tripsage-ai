@@ -2,10 +2,10 @@
 
 import React, { useCallback, useEffect } from "react";
 import { useChatStore } from "@/stores";
-import MessageList from "./messages/message-list";
-import MessageInput from "./message-input";
-import AgentStatusPanel from "./agent-status-panel";
-import ConnectionStatus from "./connection-status";
+import { MessageList } from "./messages/message-list";
+import { MessageInput } from "./message-input";
+import { AgentStatusPanel } from "./agent-status-panel";
+import { ConnectionStatus } from "./connection-status";
 import { PanelRightOpen, AlertCircle, Key, Wifi } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -20,7 +20,7 @@ interface ChatContainerProps {
   className?: string;
 }
 
-export default function ChatContainer({
+export function ChatContainer({
   sessionId,
   initialMessages = [],
   className,

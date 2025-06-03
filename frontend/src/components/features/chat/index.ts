@@ -1,6 +1,10 @@
-export { default as ChatContainer } from "./chat-container";
-export { default as MessageInput } from "./message-input";
-export { default as AgentStatusPanel } from "./agent-status-panel";
-export { default as MessageList } from "./messages/message-list";
-export { default as MessageItem } from "./messages/message-item";
-export { default as MessageBubble } from "./messages/message-bubble";
+export { ChatContainer } from "./chat-container";
+export { MessageInput } from "./message-input";
+export { AgentStatusPanel } from "./agent-status-panel";
+export { ConnectionStatus } from "./connection-status";
+export { TypingIndicator } from "./typing-indicator";
+export { MessageList } from "./messages/message-list";
+export { MessageItem } from "./messages/message-item";
+export { MessageBubble } from "./messages/message-bubble";
+export { MessageAttachments } from "./messages/message-attachments";
+export { MessageToolCalls } from "./messages/message-tool-calls";

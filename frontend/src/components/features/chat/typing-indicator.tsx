@@ -17,7 +17,7 @@ interface TypingIndicatorProps {
   className?: string;
 }
 
-export default function TypingIndicator({
+export function TypingIndicator({
   typingUsers,
   sessionId,
   className,

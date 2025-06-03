@@ -26,7 +26,7 @@ interface MessageInputProps {
   isStreaming?: boolean;
 }
 
-export default function MessageInput({
+export function MessageInput({
   disabled,
   placeholder = "Type a message...",
   showAttachmentButton = true,

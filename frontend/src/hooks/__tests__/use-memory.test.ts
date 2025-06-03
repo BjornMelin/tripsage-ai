@@ -2,10 +2,10 @@
  * Tests for memory hooks - frontend API integration
  */
 
-import { renderHook, waitFor } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import type { ReactNode } from 'react';
-import { vi, describe, it, expect, beforeEach } from 'vitest';
+import { renderHook, waitFor } from "@testing-library/react";
+import { QueryClient, type QueryClientProvider } from "@tanstack/react-query";
+import type { ReactNode } from "react";
+import { vi, describe, it, expect, beforeEach } from "vitest";
 
 import {
   useMemoryContext,
@@ -14,10 +14,10 @@ import {
   useMemoryInsights,
   useMemoryStats,
   useStoreConversation,
-} from '../use-memory';
+} from "../use-memory";
 
 // Mock the API client
-vi.mock('../../api/client', () => ({
+vi.mock("../../api/client", () => ({
   apiClient: {
     get: vi.fn(),
     post: vi.fn(),
@@ -25,7 +25,7 @@ vi.mock('../../api/client', () => ({
   },
 }));
 
-import { apiClient } from '../../api/client';
+import { apiClient } from "../../api/client";
 
 const mockApiClient = apiClient as any;
 

@@ -1,20 +1,20 @@
 /**
  * React hooks for WebSocket integration
- * 
+ *
  * Provides React-friendly WebSocket state management with automatic
  * cleanup, error handling, and integration with the Zustand store.
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { 
-  WebSocketClient, 
-  WebSocketClientFactory, 
-  WebSocketEventType, 
+import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  WebSocketClient,
+  WebSocketClientFactory,
+  WebSocketEventType,
   ConnectionStatus,
   type WebSocketEvent,
   type WebSocketMessage,
-  type EventHandler
-} from '@/lib/websocket/websocket-client';
+  type EventHandler,
+} from "@/lib/websocket/websocket-client";
 
 // Hook configuration
 export interface UseWebSocketConfig {
@@ -52,9 +52,28 @@ export interface UseWebSocketReturn extends WebSocketState {
   disconnect: () => void;
   send: (type: string, payload?: Record<string, unknown>) => Promise<void>;
   sendChatMessage: (content: string, attachments?: string[]) => Promise<void>;
-  subscribeToChannels: (channels: string[], unsubscribeChannels?: string[]) => Promise<void>;
-  on: <T = unknown>(event: WebSocketEventType | 'connect' | 'disconnect' | 'error' | 'reconnect', handler: EventHandler<T>) => void;
-  off: <T = unknown>(event: WebSocketEventType | 'connect' | 'disconnect' | 'error' | 'reconnect', handler: EventHandler<T>) => void;
+  subscribeToChannels: (
+    channels: string[],
+    unsubscribeChannels?: string[]
+  ) => Promise<void>;
+  on: <T = unknown>(
+    event:
+      | WebSocketEventType
+      | "connect"
+      | "disconnect"
+      | "error"
+      | "reconnect",
+    handler: EventHandler<T>
+  ) => void;
+  off: <T = unknown>(
+    event:
+      | WebSocketEventType
+      | "connect"
+      | "disconnect"
+      | "error"
+      | "reconnect",
+    handler: EventHandler<T>
+  ) => void;
   client: WebSocketClient | null;
 }
 
@@ -75,16 +94,18 @@ export function useWebSocket(config: UseWebSocketConfig): UseWebSocketReturn {
 
   // Update state helper
   const updateState = useCallback((updates: Partial<WebSocketState>) => {
-    setState(prev => {
+    setState((prev) => {
       const newState = { ...prev, ...updates };
-      
+
       // Derive boolean flags from status
       newState.isConnected = newState.status === ConnectionStatus.CONNECTED;
       newState.isConnecting = newState.status === ConnectionStatus.CONNECTING;
-      newState.isDisconnected = newState.status === ConnectionStatus.DISCONNECTED;
-      newState.isReconnecting = newState.status === ConnectionStatus.RECONNECTING;
+      newState.isDisconnected =
+        newState.status === ConnectionStatus.DISCONNECTED;
+      newState.isReconnecting =
+        newState.status === ConnectionStatus.RECONNECTING;
       newState.hasError = newState.status === ConnectionStatus.ERROR;
-      
+
       return newState;
     });
   }, []);
@@ -105,7 +126,7 @@ export function useWebSocket(config: UseWebSocketConfig): UseWebSocketReturn {
     clientRef.current = client;
 
     // Set up event handlers
-    client.on('connect', () => {
+    client.on("connect", () => {
       const clientState = client.getState();
       updateState({
         status: ConnectionStatus.CONNECTED,
@@ -118,7 +139,7 @@ export function useWebSocket(config: UseWebSocketConfig): UseWebSocketReturn {
       });
     });
 
-    client.on('disconnect', () => {
+    client.on("disconnect", () => {
       updateState({
         status: ConnectionStatus.DISCONNECTED,
         connectionId: undefined,
@@ -126,23 +147,25 @@ export function useWebSocket(config: UseWebSocketConfig): UseWebSocketReturn {
       });
     });
 
-    client.on('error', (error: Event | Error) => {
-      const errorMessage = error instanceof Error 
-        ? error.message 
-        : 'WebSocket error occurred';
-      
+    client.on("error", (error: Event | Error) => {
+      const errorMessage =
+        error instanceof Error ? error.message : "WebSocket error occurred";
+
       updateState({
         status: ConnectionStatus.ERROR,
         error: errorMessage,
       });
     });
 
-    client.on('reconnect', ({ attempt }: { attempt: number; maxAttempts: number }) => {
-      updateState({
-        status: ConnectionStatus.RECONNECTING,
-        reconnectAttempt: attempt,
-      });
-    });
+    client.on(
+      "reconnect",
+      ({ attempt }: { attempt: number; maxAttempts: number }) => {
+        updateState({
+          status: ConnectionStatus.RECONNECTING,
+          reconnectAttempt: attempt,
+        });
+      }
+    );
 
     // Handle heartbeat events
     client.on(WebSocketEventType.CONNECTION_HEARTBEAT, () => {
@@ -153,8 +176,8 @@ export function useWebSocket(config: UseWebSocketConfig): UseWebSocketReturn {
 
     // Auto-connect if enabled
     if (config.autoConnect !== false) {
-      client.connect().catch(error => {
-        console.error('Failed to auto-connect WebSocket:', error);
+      client.connect().catch((error) => {
+        console.error("Failed to auto-connect WebSocket:", error);
       });
     }
 
@@ -163,7 +186,13 @@ export function useWebSocket(config: UseWebSocketConfig): UseWebSocketReturn {
       client.destroy();
       clientRef.current = null;
     };
-  }, [config.url, config.token, config.sessionId, config.autoConnect, updateState]);
+  }, [
+    config.url,
+    config.token,
+    config.sessionId,
+    config.autoConnect,
+    updateState,
+  ]);
 
   // Connection methods
   const connect = useCallback(async () => {
@@ -179,41 +208,69 @@ export function useWebSocket(config: UseWebSocketConfig): UseWebSocketReturn {
     }
   }, []);
 
-  const send = useCallback(async (type: string, payload: Record<string, unknown> = {}) => {
-    if (clientRef.current) {
-      await clientRef.current.send(type, payload);
-    }
-  }, []);
+  const send = useCallback(
+    async (type: string, payload: Record<string, unknown> = {}) => {
+      if (clientRef.current) {
+        await clientRef.current.send(type, payload);
+      }
+    },
+    []
+  );
 
-  const sendChatMessage = useCallback(async (content: string, attachments: string[] = []) => {
-    if (clientRef.current) {
-      await clientRef.current.sendChatMessage(content, attachments);
-    }
-  }, []);
+  const sendChatMessage = useCallback(
+    async (content: string, attachments: string[] = []) => {
+      if (clientRef.current) {
+        await clientRef.current.sendChatMessage(content, attachments);
+      }
+    },
+    []
+  );
 
-  const subscribeToChannels = useCallback(async (channels: string[], unsubscribeChannels: string[] = []) => {
-    if (clientRef.current) {
-      await clientRef.current.subscribeToChannels(channels, unsubscribeChannels);
-    }
-  }, []);
+  const subscribeToChannels = useCallback(
+    async (channels: string[], unsubscribeChannels: string[] = []) => {
+      if (clientRef.current) {
+        await clientRef.current.subscribeToChannels(
+          channels,
+          unsubscribeChannels
+        );
+      }
+    },
+    []
+  );
 
-  const on = useCallback(<T = unknown>(
-    event: WebSocketEventType | 'connect' | 'disconnect' | 'error' | 'reconnect', 
-    handler: EventHandler<T>
-  ) => {
-    if (clientRef.current) {
-      clientRef.current.on(event, handler);
-    }
-  }, []);
+  const on = useCallback(
+    <T = unknown>(
+      event:
+        | WebSocketEventType
+        | "connect"
+        | "disconnect"
+        | "error"
+        | "reconnect",
+      handler: EventHandler<T>
+    ) => {
+      if (clientRef.current) {
+        clientRef.current.on(event, handler);
+      }
+    },
+    []
+  );
 
-  const off = useCallback(<T = unknown>(
-    event: WebSocketEventType | 'connect' | 'disconnect' | 'error' | 'reconnect', 
-    handler: EventHandler<T>
-  ) => {
-    if (clientRef.current) {
-      clientRef.current.off(event, handler);
-    }
-  }, []);
+  const off = useCallback(
+    <T = unknown>(
+      event:
+        | WebSocketEventType
+        | "connect"
+        | "disconnect"
+        | "error"
+        | "reconnect",
+      handler: EventHandler<T>
+    ) => {
+      if (clientRef.current) {
+        clientRef.current.off(event, handler);
+      }
+    },
+    []
+  );
 
   return {
     ...state,
@@ -231,35 +288,46 @@ export function useWebSocket(config: UseWebSocketConfig): UseWebSocketReturn {
 /**
  * Chat WebSocket hook
  */
-export function useChatWebSocket(sessionId: string, token: string, config: Partial<UseWebSocketConfig> = {}) {
+export function useChatWebSocket(
+  sessionId: string,
+  token: string,
+  config: Partial<UseWebSocketConfig> = {}
+) {
   const factory = new WebSocketClientFactory(
-    process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8000/api',
-    { debug: process.env.NODE_ENV === 'development' }
+    process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:8000/api",
+    { debug: process.env.NODE_ENV === "development" }
   );
 
   const client = factory.createChatClient(sessionId, token, config);
-  
+
   return useWebSocketWithClient(client, config.autoConnect !== false);
 }
 
 /**
  * Agent status WebSocket hook
  */
-export function useAgentStatusWebSocket(userId: string, token: string, config: Partial<UseWebSocketConfig> = {}) {
+export function useAgentStatusWebSocket(
+  userId: string,
+  token: string,
+  config: Partial<UseWebSocketConfig> = {}
+) {
   const factory = new WebSocketClientFactory(
-    process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8000/api',
-    { debug: process.env.NODE_ENV === 'development' }
+    process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:8000/api",
+    { debug: process.env.NODE_ENV === "development" }
   );
 
   const client = factory.createAgentStatusClient(userId, token, config);
-  
+
   return useWebSocketWithClient(client, config.autoConnect !== false);
 }
 
 /**
  * WebSocket hook with existing client
  */
-function useWebSocketWithClient(client: WebSocketClient, autoConnect: boolean = true): UseWebSocketReturn {
+function useWebSocketWithClient(
+  client: WebSocketClient,
+  autoConnect = true
+): UseWebSocketReturn {
   const clientRef = useRef<WebSocketClient>(client);
   const [state, setState] = useState<WebSocketState>({
     status: ConnectionStatus.DISCONNECTED,
@@ -273,16 +341,18 @@ function useWebSocketWithClient(client: WebSocketClient, autoConnect: boolean = 
 
   // Update state helper
   const updateState = useCallback((updates: Partial<WebSocketState>) => {
-    setState(prev => {
+    setState((prev) => {
       const newState = { ...prev, ...updates };
-      
+
       // Derive boolean flags from status
       newState.isConnected = newState.status === ConnectionStatus.CONNECTED;
       newState.isConnecting = newState.status === ConnectionStatus.CONNECTING;
-      newState.isDisconnected = newState.status === ConnectionStatus.DISCONNECTED;
-      newState.isReconnecting = newState.status === ConnectionStatus.RECONNECTING;
+      newState.isDisconnected =
+        newState.status === ConnectionStatus.DISCONNECTED;
+      newState.isReconnecting =
+        newState.status === ConnectionStatus.RECONNECTING;
       newState.hasError = newState.status === ConnectionStatus.ERROR;
-      
+
       return newState;
     });
   }, []);
@@ -292,7 +362,7 @@ function useWebSocketWithClient(client: WebSocketClient, autoConnect: boolean = 
     const wsClient = clientRef.current;
 
     // Set up event handlers
-    wsClient.on('connect', () => {
+    wsClient.on("connect", () => {
       const clientState = wsClient.getState();
       updateState({
         status: ConnectionStatus.CONNECTED,
@@ -305,7 +375,7 @@ function useWebSocketWithClient(client: WebSocketClient, autoConnect: boolean = 
       });
     });
 
-    wsClient.on('disconnect', () => {
+    wsClient.on("disconnect", () => {
       updateState({
         status: ConnectionStatus.DISCONNECTED,
         connectionId: undefined,
@@ -313,23 +383,25 @@ function useWebSocketWithClient(client: WebSocketClient, autoConnect: boolean = 
       });
     });
 
-    wsClient.on('error', (error: Event | Error) => {
-      const errorMessage = error instanceof Error 
-        ? error.message 
-        : 'WebSocket error occurred';
-      
+    wsClient.on("error", (error: Event | Error) => {
+      const errorMessage =
+        error instanceof Error ? error.message : "WebSocket error occurred";
+
       updateState({
         status: ConnectionStatus.ERROR,
         error: errorMessage,
       });
     });
 
-    wsClient.on('reconnect', ({ attempt }: { attempt: number; maxAttempts: number }) => {
-      updateState({
-        status: ConnectionStatus.RECONNECTING,
-        reconnectAttempt: attempt,
-      });
-    });
+    wsClient.on(
+      "reconnect",
+      ({ attempt }: { attempt: number; maxAttempts: number }) => {
+        updateState({
+          status: ConnectionStatus.RECONNECTING,
+          reconnectAttempt: attempt,
+        });
+      }
+    );
 
     // Handle heartbeat events
     wsClient.on(WebSocketEventType.CONNECTION_HEARTBEAT, () => {
@@ -340,8 +412,8 @@ function useWebSocketWithClient(client: WebSocketClient, autoConnect: boolean = 
 
     // Auto-connect if enabled
     if (autoConnect) {
-      wsClient.connect().catch(error => {
-        console.error('Failed to auto-connect WebSocket:', error);
+      wsClient.connect().catch((error) => {
+        console.error("Failed to auto-connect WebSocket:", error);
       });
     }
 
@@ -361,31 +433,59 @@ function useWebSocketWithClient(client: WebSocketClient, autoConnect: boolean = 
     clientRef.current.disconnect();
   }, []);
 
-  const send = useCallback(async (type: string, payload: Record<string, unknown> = {}) => {
-    await clientRef.current.send(type, payload);
-  }, []);
+  const send = useCallback(
+    async (type: string, payload: Record<string, unknown> = {}) => {
+      await clientRef.current.send(type, payload);
+    },
+    []
+  );
 
-  const sendChatMessage = useCallback(async (content: string, attachments: string[] = []) => {
-    await clientRef.current.sendChatMessage(content, attachments);
-  }, []);
+  const sendChatMessage = useCallback(
+    async (content: string, attachments: string[] = []) => {
+      await clientRef.current.sendChatMessage(content, attachments);
+    },
+    []
+  );
 
-  const subscribeToChannels = useCallback(async (channels: string[], unsubscribeChannels: string[] = []) => {
-    await clientRef.current.subscribeToChannels(channels, unsubscribeChannels);
-  }, []);
+  const subscribeToChannels = useCallback(
+    async (channels: string[], unsubscribeChannels: string[] = []) => {
+      await clientRef.current.subscribeToChannels(
+        channels,
+        unsubscribeChannels
+      );
+    },
+    []
+  );
 
-  const on = useCallback(<T = unknown>(
-    event: WebSocketEventType | 'connect' | 'disconnect' | 'error' | 'reconnect', 
-    handler: EventHandler<T>
-  ) => {
-    clientRef.current.on(event, handler);
-  }, []);
+  const on = useCallback(
+    <T = unknown>(
+      event:
+        | WebSocketEventType
+        | "connect"
+        | "disconnect"
+        | "error"
+        | "reconnect",
+      handler: EventHandler<T>
+    ) => {
+      clientRef.current.on(event, handler);
+    },
+    []
+  );
 
-  const off = useCallback(<T = unknown>(
-    event: WebSocketEventType | 'connect' | 'disconnect' | 'error' | 'reconnect', 
-    handler: EventHandler<T>
-  ) => {
-    clientRef.current.off(event, handler);
-  }, []);
+  const off = useCallback(
+    <T = unknown>(
+      event:
+        | WebSocketEventType
+        | "connect"
+        | "disconnect"
+        | "error"
+        | "reconnect",
+      handler: EventHandler<T>
+    ) => {
+      clientRef.current.off(event, handler);
+    },
+    []
+  );
 
   return {
     ...state,
@@ -404,21 +504,24 @@ function useWebSocketWithClient(client: WebSocketClient, autoConnect: boolean = 
  * Chat message listener hook
  */
 export function useChatMessages(
-  sessionId: string, 
-  token: string, 
+  sessionId: string,
+  token: string,
   onMessage?: (message: WebSocketMessage) => void,
   onChunk?: (content: string, isComplete: boolean) => void
 ) {
   const [messages, setMessages] = useState<WebSocketMessage[]>([]);
   const [isTyping, setIsTyping] = useState(false);
-  
-  const { isConnected, on, off, sendChatMessage } = useChatWebSocket(sessionId, token);
+
+  const { isConnected, on, off, sendChatMessage } = useChatWebSocket(
+    sessionId,
+    token
+  );
 
   useEffect(() => {
     const handleChatMessage = (event: WebSocketEvent) => {
       if (event.payload.message) {
         const message = event.payload.message as WebSocketMessage;
-        setMessages(prev => [...prev, message]);
+        setMessages((prev) => [...prev, message]);
         onMessage?.(message);
       }
     };
@@ -469,7 +572,7 @@ export function useAgentStatus(
 ) {
   const [agentStatus, setAgentStatus] = useState<any>(null);
   const [isActive, setIsActive] = useState(false);
-  
+
   const { isConnected, on, off } = useAgentStatusWebSocket(userId, token);
 
   useEffect(() => {

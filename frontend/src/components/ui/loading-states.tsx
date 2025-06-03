@@ -12,6 +12,7 @@ export interface LoadingOverlayProps {
   spinnerProps?: React.ComponentProps<typeof LoadingSpinner>;
   className?: string;
   backdrop?: boolean;
+  variant?: "overlay" | "page" | "fullscreen";
 }
 
 export const LoadingOverlay = React.forwardRef<
@@ -26,48 +27,74 @@ export const LoadingOverlay = React.forwardRef<
       spinnerProps,
       className,
       backdrop = true,
+      variant = "overlay",
       ...props
     },
     ref
   ) => {
     if (!isVisible) return null;
 
+    const isFullScreen = variant === "page" || variant === "fullscreen";
+    const baseClasses = isFullScreen
+      ? "fixed inset-0 z-50 flex flex-col items-center justify-center bg-background"
+      : "absolute inset-0 z-50 flex flex-col items-center justify-center";
+
+    const backdropClasses =
+      backdrop && !isFullScreen ? "bg-background/80 backdrop-blur-sm" : "";
+
     return (
       <div
         ref={ref}
-        className={cn(
-          "absolute inset-0 z-50 flex flex-col items-center justify-center",
-          backdrop && "bg-background/80 backdrop-blur-sm",
-          className
-        )}
+        className={cn(baseClasses, backdropClasses, className)}
         role="status"
         aria-live="polite"
         aria-label={message || "Loading"}
         {...props}
       >
-        <div className="flex flex-col items-center space-y-4">
-          <LoadingSpinner {...spinnerProps} />
+        <div className="flex flex-col items-center space-y-6">
+          <div className="relative">
+            <LoadingSpinner
+              {...spinnerProps}
+              size={isFullScreen ? "xl" : spinnerProps?.size}
+            />
+          </div>
 
-          {message && (
-            <p className="text-sm text-muted-foreground text-center max-w-sm">
-              {message}
-            </p>
-          )}
+          <div className="text-center space-y-2">
+            {message && (
+              <h2
+                className={cn(
+                  "text-center max-w-sm",
+                  isFullScreen
+                    ? "text-lg font-semibold"
+                    : "text-sm text-muted-foreground"
+                )}
+              >
+                {message}
+              </h2>
+            )}
 
-          {typeof progress === "number" && (
-            <div className="w-48 space-y-2">
-              <div className="flex justify-between text-xs text-muted-foreground">
-                <span>Progress</span>
-                <span>{Math.round(progress)}%</span>
-              </div>
-              <div className="h-2 bg-muted rounded-full overflow-hidden">
+            {typeof progress === "number" && (
+              <div className={cn("space-y-2", isFullScreen ? "w-64" : "w-48")}>
                 <div
-                  className="h-full bg-primary transition-all duration-300 ease-out"
-                  style={{ width: `${Math.min(100, Math.max(0, progress))}%` }}
-                />
+                  className={cn(
+                    "flex justify-between text-muted-foreground",
+                    isFullScreen ? "text-sm" : "text-xs"
+                  )}
+                >
+                  <span>{isFullScreen ? "Loading" : "Progress"}</span>
+                  <span>{Math.round(progress)}%</span>
+                </div>
+                <div className="h-2 bg-muted rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-primary transition-all duration-300 ease-out"
+                    style={{
+                      width: `${Math.min(100, Math.max(0, progress))}%`,
+                    }}
+                  />
+                </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
     );
@@ -246,7 +273,7 @@ export const LoadingContainer = React.forwardRef<
 LoadingContainer.displayName = "LoadingContainer";
 
 /**
- * Page loading component for full page loading states
+ * Page loading component - convenience wrapper for full page loading
  */
 export interface PageLoadingProps {
   message?: string;
@@ -257,43 +284,16 @@ export interface PageLoadingProps {
 export const PageLoading = React.forwardRef<HTMLDivElement, PageLoadingProps>(
   ({ message = "Loading page...", progress, className, ...props }, ref) => {
     return (
-      <div
+      <LoadingOverlay
         ref={ref}
-        className={cn(
-          "fixed inset-0 z-50 flex flex-col items-center justify-center bg-background",
-          className
-        )}
-        role="status"
-        aria-live="polite"
-        aria-label={message}
+        isVisible={true}
+        variant="page"
+        message={message}
+        progress={progress}
+        className={className}
+        backdrop={false}
         {...props}
-      >
-        <div className="flex flex-col items-center space-y-6">
-          <div className="relative">
-            <LoadingSpinner size="xl" />
-          </div>
-
-          <div className="text-center space-y-2">
-            <h2 className="text-lg font-semibold">{message}</h2>
-            {typeof progress === "number" && (
-              <div className="w-64 space-y-2">
-                <div className="flex justify-between text-sm text-muted-foreground">
-                  <span>Loading</span>
-                  <span>{Math.round(progress)}%</span>
-                </div>
-                <div className="h-2 bg-muted rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-primary transition-all duration-300 ease-out"
-                    style={{
-                      width: `${Math.min(100, Math.max(0, progress))}%`,
-                    }}
-                  />
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
+      />
     );
   }
 );

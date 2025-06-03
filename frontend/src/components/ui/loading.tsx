@@ -57,6 +57,7 @@ export type {
   LoadingSpinnerProps,
   LoadingOverlayProps,
   LoadingStateProps,
+  LoadingContextValue,
 } from "../../types/loading";
 
 export { SkeletonType } from "../../types/loading";
