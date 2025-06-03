@@ -1,6 +1,7 @@
 "use client";
 
-import React from "react";
+import React, { useCallback, useMemo, startTransition } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   type Message,
   MessageRole,
@@ -9,10 +10,37 @@ import {
 } from "@/types/chat";
 import { cn } from "@/lib/utils";
 import { Avatar } from "@/components/ui/avatar";
-import { Bot, User, Info, Server } from "lucide-react";
-import MessageBubble from "./message-bubble";
-import MessageAttachments from "./message-attachments";
-import MessageToolCalls from "./message-tool-calls";
+import { Badge } from "@/components/ui/badge";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "@/components/ui/hover-card";
+import { Button } from "@/components/ui/button";
+import {
+  Bot,
+  User,
+  Info,
+  Server,
+  Clock,
+  Copy,
+  MoreHorizontal,
+  Sparkles,
+  Zap,
+  Shield,
+  Activity,
+  Brain,
+  CheckCircle2,
+} from "lucide-react";
+import { MessageBubble } from "./message-bubble";
+import { MessageAttachments } from "./message-attachments";
+import { MessageToolCalls } from "./message-tool-calls";
 
 interface MessageItemProps {
   message: Message;
@@ -20,14 +48,18 @@ interface MessageItemProps {
   toolResults?: ToolResult[];
   onRetryToolCall?: (toolCallId: string) => void;
   onCancelToolCall?: (toolCallId: string) => void;
+  isStreaming?: boolean;
+  showActions?: boolean;
 }
 
-export default function MessageItem({
+export function MessageItem({
   message,
   activeToolCalls,
   toolResults,
   onRetryToolCall,
   onCancelToolCall,
+  isStreaming = false,
+  showActions = true,
 }: MessageItemProps) {
   const isUser = message.role === "USER";
   const isAssistant = message.role === "ASSISTANT";
@@ -37,75 +69,379 @@ export default function MessageItem({
   const hasAttachments = message.attachments && message.attachments.length > 0;
   const hasToolCalls = message.toolCalls && message.toolCalls.length > 0;
 
-  // Format timestamp
-  const formattedTime = message.createdAt
-    ? new Date(message.createdAt).toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-      })
-    : "";
+  // Enhanced timestamp formatting with relative time
+  const timeDisplay = useMemo(() => {
+    if (!message.createdAt) return null;
 
-  // Get the avatar icon based on message role
-  const getAvatarIcon = () => {
-    if (isAssistant) return <Bot className="h-4 w-4" />;
-    if (isSystem) return <Info className="h-4 w-4" />;
-    if (isTool) return <Server className="h-4 w-4" />;
-    return <span className="text-xs">SYS</span>;
-  };
+    const date = new Date(message.createdAt);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
 
-  // Get the avatar background color based on message role
-  const getAvatarClass = () => {
-    if (isAssistant) return "bg-secondary";
-    if (isSystem) return "bg-yellow-500/20";
-    if (isTool) return "bg-blue-500/20";
-    return "bg-secondary";
+    let relative = "";
+    if (diffMins < 1) relative = "Just now";
+    else if (diffMins < 60) relative = `${diffMins}m ago`;
+    else if (diffHours < 24) relative = `${diffHours}h ago`;
+    else if (diffDays < 7) relative = `${diffDays}d ago`;
+    else relative = date.toLocaleDateString();
+
+    const absolute = date.toLocaleString([], {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+
+    return { relative, absolute };
+  }, [message.createdAt]);
+
+  // Enhanced avatar configuration with role-based styling
+  const avatarConfig = useMemo(() => {
+    if (isUser) {
+      return {
+        icon: User,
+        className: "bg-primary text-primary-foreground",
+        gradient: "from-blue-500 to-purple-600",
+        badgeText: "You",
+        badgeVariant: "default" as const,
+        hoverText: "Your message",
+      };
+    }
+
+    if (isAssistant) {
+      return {
+        icon: Bot,
+        className:
+          "bg-gradient-to-br from-emerald-500/20 to-blue-500/20 text-emerald-600 dark:text-emerald-400",
+        gradient: "from-emerald-500 to-blue-500",
+        badgeText: "AI",
+        badgeVariant: "secondary" as const,
+        hoverText: "TripSage AI Assistant",
+      };
+    }
+
+    if (isSystem) {
+      return {
+        icon: Shield,
+        className:
+          "bg-gradient-to-br from-yellow-500/20 to-orange-500/20 text-yellow-600 dark:text-yellow-400",
+        gradient: "from-yellow-500 to-orange-500",
+        badgeText: "System",
+        badgeVariant: "outline" as const,
+        hoverText: "System notification",
+      };
+    }
+
+    if (isTool) {
+      return {
+        icon: Activity,
+        className:
+          "bg-gradient-to-br from-purple-500/20 to-pink-500/20 text-purple-600 dark:text-purple-400",
+        gradient: "from-purple-500 to-pink-500",
+        badgeText: "Tool",
+        badgeVariant: "outline" as const,
+        hoverText: "Tool execution result",
+      };
+    }
+
+    return {
+      icon: Info,
+      className: "bg-muted text-muted-foreground",
+      gradient: "from-gray-500 to-gray-600",
+      badgeText: "Unknown",
+      badgeVariant: "outline" as const,
+      hoverText: "Unknown message type",
+    };
+  }, [isUser, isAssistant, isSystem, isTool]);
+
+  // Handle copy message content
+  const handleCopyMessage = useCallback(() => {
+    if (message.content) {
+      startTransition(() => {
+        navigator.clipboard.writeText(message.content);
+      });
+    }
+  }, [message.content]);
+
+  const AdvancedAvatar = ({ config }: { config: typeof avatarConfig }) => {
+    const IconComponent = config.icon;
+
+    return (
+      <HoverCard>
+        <HoverCardTrigger asChild>
+          <motion.div
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            transition={{ duration: 0.2 }}
+          >
+            <Avatar
+              className={cn(
+                "h-10 w-10 relative overflow-visible cursor-pointer",
+                "border-2 border-transparent hover:border-primary/20",
+                "transition-all duration-300"
+              )}
+            >
+              <motion.div
+                className={cn(
+                  "w-full h-full flex items-center justify-center rounded-full",
+                  config.className
+                )}
+                whileHover={{ rotate: isAssistant ? 360 : 0 }}
+                transition={{ duration: 0.6 }}
+              >
+                <IconComponent className="h-5 w-5" />
+              </motion.div>
+
+              {/* Status indicator */}
+              <motion.div
+                className="absolute -bottom-1 -right-1"
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ delay: 0.3, duration: 0.3 }}
+              >
+                <div
+                  className={cn(
+                    "w-4 h-4 rounded-full border-2 border-background flex items-center justify-center",
+                    isAssistant && "bg-emerald-500",
+                    isUser && "bg-blue-500",
+                    isSystem && "bg-yellow-500",
+                    isTool && "bg-purple-500"
+                  )}
+                >
+                  {isAssistant && <Sparkles className="w-2 h-2 text-white" />}
+                  {isUser && <CheckCircle2 className="w-2 h-2 text-white" />}
+                  {isSystem && <Shield className="w-2 h-2 text-white" />}
+                  {isTool && <Zap className="w-2 h-2 text-white" />}
+                </div>
+              </motion.div>
+            </Avatar>
+          </motion.div>
+        </HoverCardTrigger>
+        <HoverCardContent className="w-64">
+          <div className="space-y-3">
+            <div className="flex items-center gap-3">
+              <div
+                className={cn(
+                  "w-8 h-8 rounded-full bg-gradient-to-r flex items-center justify-center",
+                  `bg-gradient-to-r ${config.gradient}`
+                )}
+              >
+                <IconComponent className="w-4 h-4 text-white" />
+              </div>
+              <div>
+                <h4 className="font-medium">{config.hoverText}</h4>
+                <Badge variant={config.badgeVariant} className="text-xs">
+                  {config.badgeText}
+                </Badge>
+              </div>
+            </div>
+
+            {isAssistant && (
+              <div className="text-sm text-muted-foreground">
+                <p>
+                  Advanced AI assistant powered by cutting-edge language models
+                </p>
+                <div className="flex items-center gap-1 mt-2">
+                  <Brain className="w-3 h-3" />
+                  <span className="text-xs">
+                    Context-aware • Travel expertise
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {timeDisplay && (
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Clock className="w-3 h-3" />
+                <span>{timeDisplay.absolute}</span>
+              </div>
+            )}
+          </div>
+        </HoverCardContent>
+      </HoverCard>
+    );
   };
 
   return (
-    <div
-      className={cn("flex w-full gap-4 items-start", isUser && "justify-end")}
+    <motion.div
+      initial={{ opacity: 0, y: 20, scale: 0.95 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: -20, scale: 0.95 }}
+      transition={{ duration: 0.4, ease: "easeOut" }}
+      layout="position"
+      className={cn(
+        "group flex w-full gap-4 items-start relative",
+        "hover:bg-muted/30 rounded-lg p-2 -m-2 transition-all duration-300",
+        isUser && "justify-end"
+      )}
     >
+      {/* Assistant/System/Tool avatar */}
       {!isUser && (
-        <Avatar
-          className={cn(
-            "h-8 w-8 flex items-center justify-center",
-            getAvatarClass()
-          )}
+        <motion.div
+          initial={{ scale: 0.8, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ delay: 0.1, duration: 0.3 }}
         >
-          {getAvatarIcon()}
-        </Avatar>
+          <AdvancedAvatar config={avatarConfig} />
+        </motion.div>
       )}
 
-      <div className={cn("flex flex-col max-w-[85%]", isUser && "items-end")}>
-        <div className="flex flex-col gap-2">
-          {hasAttachments && message.attachments && (
-            <MessageAttachments attachments={message.attachments} />
-          )}
-
-          <MessageBubble message={message} />
-
-          {hasToolCalls && message.toolCalls && (
-            <MessageToolCalls
-              toolCalls={message.toolCalls}
-              toolResults={message.toolResults || toolResults}
-              onRetryToolCall={onRetryToolCall}
-              onCancelToolCall={onCancelToolCall}
-            />
-          )}
-        </div>
-
-        {formattedTime && (
-          <span className="text-xs text-muted-foreground mt-1">
-            {formattedTime}
-          </span>
+      {/* Message content container */}
+      <motion.div
+        className={cn(
+          "flex flex-col max-w-[85%] min-w-0",
+          isUser && "items-end"
         )}
-      </div>
+        layout="position"
+      >
+        {/* Role badge for non-user messages */}
+        {!isUser && (
+          <motion.div
+            initial={{ opacity: 0, x: -10 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.2, duration: 0.3 }}
+            className="mb-1"
+          >
+            <Badge
+              variant={avatarConfig.badgeVariant}
+              className="text-xs px-2 py-0.5"
+            >
+              {avatarConfig.badgeText}
+            </Badge>
+          </motion.div>
+        )}
 
+        {/* Message content */}
+        <motion.div className="flex flex-col gap-2 w-full" layout="position">
+          <AnimatePresence>
+            {hasAttachments && message.attachments && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                <MessageAttachments attachments={message.attachments} />
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <motion.div
+            whileHover={{ scale: 1.01 }}
+            transition={{ duration: 0.2 }}
+          >
+            <MessageBubble message={message} isStreaming={isStreaming} />
+          </motion.div>
+
+          <AnimatePresence>
+            {hasToolCalls && message.toolCalls && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                <MessageToolCalls
+                  toolCalls={message.toolCalls}
+                  toolResults={message.toolResults || toolResults}
+                  onRetryToolCall={onRetryToolCall}
+                  onCancelToolCall={onCancelToolCall}
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </motion.div>
+
+        {/* Enhanced timestamp and actions */}
+        <motion.div
+          className={cn(
+            "flex items-center gap-2 mt-2 opacity-0 group-hover:opacity-100",
+            "transition-opacity duration-300",
+            isUser && "flex-row-reverse"
+          )}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 0 }}
+        >
+          {timeDisplay && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <motion.div
+                    className="flex items-center gap-1 text-xs text-muted-foreground cursor-help"
+                    whileHover={{ scale: 1.05 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <Clock className="w-3 h-3" />
+                    <span>{timeDisplay.relative}</span>
+                  </motion.div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{timeDisplay.absolute}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+
+          {/* Action buttons */}
+          {showActions && message.content && (
+            <motion.div
+              className="flex items-center gap-1"
+              initial={{ opacity: 0, x: isUser ? 10 : -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.1, duration: 0.2 }}
+            >
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-6 w-6 p-0 hover:bg-primary/10"
+                      onClick={handleCopyMessage}
+                    >
+                      <Copy className="w-3 h-3" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Copy message</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-6 w-6 p-0 hover:bg-primary/10"
+                    >
+                      <MoreHorizontal className="w-3 h-3" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>More actions</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </motion.div>
+          )}
+        </motion.div>
+      </motion.div>
+
+      {/* User avatar */}
       {isUser && (
-        <Avatar className="h-8 w-8 bg-primary flex items-center justify-center">
-          <User className="h-4 w-4 text-primary-foreground" />
-        </Avatar>
+        <motion.div
+          initial={{ scale: 0.8, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ delay: 0.1, duration: 0.3 }}
+        >
+          <AdvancedAvatar config={avatarConfig} />
+        </motion.div>
       )}
-    </div>
+    </motion.div>
   );
 }

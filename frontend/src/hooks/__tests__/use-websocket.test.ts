@@ -1,22 +1,30 @@
-import { describe, it, expect, beforeEach, afterEach, vi, type Mock } from "vitest";
+import {
+  describe,
+  it,
+  expect,
+  beforeEach,
+  afterEach,
+  vi,
+  type Mock,
+} from "vitest";
 import { renderHook, act, waitFor } from "@testing-library/react";
-import { 
-  useWebSocket, 
+import {
+  useWebSocket,
   useChatWebSocket,
   useAgentStatusWebSocket,
-  useChatMessages, 
+  useChatMessages,
   useAgentStatus,
-  type UseWebSocketConfig 
+  type UseWebSocketConfig,
 } from "../use-websocket";
 
 // Test constants
 const TEST_TOKEN = process.env.TEST_JWT_TOKEN || "mock-test-token-for-hooks";
-import { 
-  WebSocketClient, 
+import {
+  WebSocketClient,
   WebSocketClientFactory,
-  ConnectionStatus, 
+  ConnectionStatus,
   WebSocketEventType,
-  type WebSocketEvent 
+  type WebSocketEvent,
 } from "@/lib/websocket/websocket-client";
 
 // Mock WebSocketClient
@@ -72,7 +80,7 @@ describe("useWebSocket", () => {
     vi.clearAllMocks();
     mockClient = new WebSocketClient({} as any);
     (WebSocketClient as any).mockReturnValue(mockClient);
-    
+
     config = {
       url: "ws://localhost:8000/ws/chat/test-session",
       token: TEST_TOKEN,
@@ -113,11 +121,23 @@ describe("useWebSocket", () => {
       renderHook(() => useWebSocket(config));
 
       // Assert
-      expect(mockClient.on).toHaveBeenCalledWith("connect", expect.any(Function));
-      expect(mockClient.on).toHaveBeenCalledWith("disconnect", expect.any(Function));
+      expect(mockClient.on).toHaveBeenCalledWith(
+        "connect",
+        expect.any(Function)
+      );
+      expect(mockClient.on).toHaveBeenCalledWith(
+        "disconnect",
+        expect.any(Function)
+      );
       expect(mockClient.on).toHaveBeenCalledWith("error", expect.any(Function));
-      expect(mockClient.on).toHaveBeenCalledWith("reconnect", expect.any(Function));
-      expect(mockClient.on).toHaveBeenCalledWith(WebSocketEventType.CONNECTION_HEARTBEAT, expect.any(Function));
+      expect(mockClient.on).toHaveBeenCalledWith(
+        "reconnect",
+        expect.any(Function)
+      );
+      expect(mockClient.on).toHaveBeenCalledWith(
+        WebSocketEventType.CONNECTION_HEARTBEAT,
+        expect.any(Function)
+      );
     });
 
     it("should auto-connect when enabled", () => {
@@ -169,8 +189,9 @@ describe("useWebSocket", () => {
     it("should update state on connect event", async () => {
       // Arrange
       const { result } = renderHook(() => useWebSocket(config));
-      const connectHandler = (mockClient.on as Mock).mock.calls
-        .find(([event]) => event === "connect")?.[1];
+      const connectHandler = (mockClient.on as Mock).mock.calls.find(
+        ([event]) => event === "connect"
+      )?.[1];
 
       mockClient.getState.mockReturnValue({
         status: ConnectionStatus.CONNECTED,
@@ -200,8 +221,9 @@ describe("useWebSocket", () => {
     it("should update state on disconnect event", async () => {
       // Arrange
       const { result } = renderHook(() => useWebSocket(config));
-      const disconnectHandler = (mockClient.on as Mock).mock.calls
-        .find(([event]) => event === "disconnect")?.[1];
+      const disconnectHandler = (mockClient.on as Mock).mock.calls.find(
+        ([event]) => event === "disconnect"
+      )?.[1];
 
       // Act
       act(() => {
@@ -219,8 +241,9 @@ describe("useWebSocket", () => {
     it("should update state on error event", async () => {
       // Arrange
       const { result } = renderHook(() => useWebSocket(config));
-      const errorHandler = (mockClient.on as Mock).mock.calls
-        .find(([event]) => event === "error")?.[1];
+      const errorHandler = (mockClient.on as Mock).mock.calls.find(
+        ([event]) => event === "error"
+      )?.[1];
 
       // Act
       act(() => {
@@ -238,8 +261,9 @@ describe("useWebSocket", () => {
     it("should update state on reconnect event", async () => {
       // Arrange
       const { result } = renderHook(() => useWebSocket(config));
-      const reconnectHandler = (mockClient.on as Mock).mock.calls
-        .find(([event]) => event === "reconnect")?.[1];
+      const reconnectHandler = (mockClient.on as Mock).mock.calls.find(
+        ([event]) => event === "reconnect"
+      )?.[1];
 
       // Act
       act(() => {
@@ -257,8 +281,9 @@ describe("useWebSocket", () => {
     it("should update heartbeat timestamp", async () => {
       // Arrange
       const { result } = renderHook(() => useWebSocket(config));
-      const heartbeatHandler = (mockClient.on as Mock).mock.calls
-        .find(([event]) => event === WebSocketEventType.CONNECTION_HEARTBEAT)?.[1];
+      const heartbeatHandler = (mockClient.on as Mock).mock.calls.find(
+        ([event]) => event === WebSocketEventType.CONNECTION_HEARTBEAT
+      )?.[1];
 
       // Act
       act(() => {
@@ -309,7 +334,9 @@ describe("useWebSocket", () => {
       });
 
       // Assert
-      expect(mockClient.send).toHaveBeenCalledWith("test_message", { data: "test" });
+      expect(mockClient.send).toHaveBeenCalledWith("test_message", {
+        data: "test",
+      });
     });
 
     it("should call client sendChatMessage method", async () => {
@@ -322,7 +349,9 @@ describe("useWebSocket", () => {
       });
 
       // Assert
-      expect(mockClient.sendChatMessage).toHaveBeenCalledWith("Hello", ["attachment1"]);
+      expect(mockClient.sendChatMessage).toHaveBeenCalledWith("Hello", [
+        "attachment1",
+      ]);
     });
 
     it("should call client subscribeToChannels method", async () => {
@@ -335,7 +364,10 @@ describe("useWebSocket", () => {
       });
 
       // Assert
-      expect(mockClient.subscribeToChannels).toHaveBeenCalledWith(["channel1"], ["channel2"]);
+      expect(mockClient.subscribeToChannels).toHaveBeenCalledWith(
+        ["channel1"],
+        ["channel2"]
+      );
     });
   });
 
@@ -402,7 +434,11 @@ describe("useChatWebSocket", () => {
     renderHook(() => useChatWebSocket(sessionId, token, config));
 
     // Assert
-    expect(mockFactory.createChatClient).toHaveBeenCalledWith(sessionId, token, config);
+    expect(mockFactory.createChatClient).toHaveBeenCalledWith(
+      sessionId,
+      token,
+      config
+    );
   });
 
   it("should setup event handlers for chat client", () => {
@@ -411,7 +447,10 @@ describe("useChatWebSocket", () => {
 
     // Assert
     expect(mockClient.on).toHaveBeenCalledWith("connect", expect.any(Function));
-    expect(mockClient.on).toHaveBeenCalledWith("disconnect", expect.any(Function));
+    expect(mockClient.on).toHaveBeenCalledWith(
+      "disconnect",
+      expect.any(Function)
+    );
     expect(mockClient.on).toHaveBeenCalledWith("error", expect.any(Function));
   });
 });
@@ -448,7 +487,11 @@ describe("useAgentStatusWebSocket", () => {
     renderHook(() => useAgentStatusWebSocket(userId, token, config));
 
     // Assert
-    expect(mockFactory.createAgentStatusClient).toHaveBeenCalledWith(userId, token, config);
+    expect(mockFactory.createAgentStatusClient).toHaveBeenCalledWith(
+      userId,
+      token,
+      config
+    );
   });
 });
 
@@ -478,9 +521,7 @@ describe("useChatMessages", () => {
 
   it("should initialize with empty messages and not typing", () => {
     // Act
-    const { result } = renderHook(() => 
-      useChatMessages("session-id", "token")
-    );
+    const { result } = renderHook(() => useChatMessages("session-id", "token"));
 
     // Assert
     expect(result.current.messages).toEqual([]);
@@ -491,12 +532,13 @@ describe("useChatMessages", () => {
   it("should handle chat message events", async () => {
     // Arrange
     const onMessage = vi.fn();
-    const { result } = renderHook(() => 
+    const { result } = renderHook(() =>
       useChatMessages("session-id", "token", onMessage)
     );
 
-    const messageHandler = (mockClient.on as Mock).mock.calls
-      .find(([event]) => event === WebSocketEventType.CHAT_MESSAGE)?.[1];
+    const messageHandler = (mockClient.on as Mock).mock.calls.find(
+      ([event]) => event === WebSocketEventType.CHAT_MESSAGE
+    )?.[1];
 
     const testMessage = {
       id: "msg-1",
@@ -527,12 +569,13 @@ describe("useChatMessages", () => {
   it("should handle chat chunk events", async () => {
     // Arrange
     const onChunk = vi.fn();
-    renderHook(() => 
+    renderHook(() =>
       useChatMessages("session-id", "token", undefined, onChunk)
     );
 
-    const chunkHandler = (mockClient.on as Mock).mock.calls
-      .find(([event]) => event === WebSocketEventType.CHAT_MESSAGE_CHUNK)?.[1];
+    const chunkHandler = (mockClient.on as Mock).mock.calls.find(
+      ([event]) => event === WebSocketEventType.CHAT_MESSAGE_CHUNK
+    )?.[1];
 
     const event: WebSocketEvent = {
       id: "event-1",
@@ -554,14 +597,14 @@ describe("useChatMessages", () => {
 
   it("should handle typing start/stop events", async () => {
     // Arrange
-    const { result } = renderHook(() => 
-      useChatMessages("session-id", "token")
-    );
+    const { result } = renderHook(() => useChatMessages("session-id", "token"));
 
-    const typingStartHandler = (mockClient.on as Mock).mock.calls
-      .find(([event]) => event === WebSocketEventType.CHAT_TYPING_START)?.[1];
-    const typingStopHandler = (mockClient.on as Mock).mock.calls
-      .find(([event]) => event === WebSocketEventType.CHAT_TYPING_STOP)?.[1];
+    const typingStartHandler = (mockClient.on as Mock).mock.calls.find(
+      ([event]) => event === WebSocketEventType.CHAT_TYPING_START
+    )?.[1];
+    const typingStopHandler = (mockClient.on as Mock).mock.calls.find(
+      ([event]) => event === WebSocketEventType.CHAT_TYPING_STOP
+    )?.[1];
 
     // Act - Start typing
     act(() => {
@@ -586,9 +629,7 @@ describe("useChatMessages", () => {
 
   it("should send messages through sendMessage", async () => {
     // Arrange
-    const { result } = renderHook(() => 
-      useChatMessages("session-id", "token")
-    );
+    const { result } = renderHook(() => useChatMessages("session-id", "token"));
 
     // Act
     await act(async () => {
@@ -596,22 +637,39 @@ describe("useChatMessages", () => {
     });
 
     // Assert
-    expect(mockClient.sendChatMessage).toHaveBeenCalledWith("Hello World", ["attachment1"]);
+    expect(mockClient.sendChatMessage).toHaveBeenCalledWith("Hello World", [
+      "attachment1",
+    ]);
   });
 
   it("should cleanup event listeners on unmount", () => {
     // Act
-    const { unmount } = renderHook(() => 
+    const { unmount } = renderHook(() =>
       useChatMessages("session-id", "token")
     );
     unmount();
 
     // Assert
-    expect(mockClient.off).toHaveBeenCalledWith(WebSocketEventType.CHAT_MESSAGE, expect.any(Function));
-    expect(mockClient.off).toHaveBeenCalledWith(WebSocketEventType.CHAT_MESSAGE_CHUNK, expect.any(Function));
-    expect(mockClient.off).toHaveBeenCalledWith(WebSocketEventType.CHAT_MESSAGE_COMPLETE, expect.any(Function));
-    expect(mockClient.off).toHaveBeenCalledWith(WebSocketEventType.CHAT_TYPING_START, expect.any(Function));
-    expect(mockClient.off).toHaveBeenCalledWith(WebSocketEventType.CHAT_TYPING_STOP, expect.any(Function));
+    expect(mockClient.off).toHaveBeenCalledWith(
+      WebSocketEventType.CHAT_MESSAGE,
+      expect.any(Function)
+    );
+    expect(mockClient.off).toHaveBeenCalledWith(
+      WebSocketEventType.CHAT_MESSAGE_CHUNK,
+      expect.any(Function)
+    );
+    expect(mockClient.off).toHaveBeenCalledWith(
+      WebSocketEventType.CHAT_MESSAGE_COMPLETE,
+      expect.any(Function)
+    );
+    expect(mockClient.off).toHaveBeenCalledWith(
+      WebSocketEventType.CHAT_TYPING_START,
+      expect.any(Function)
+    );
+    expect(mockClient.off).toHaveBeenCalledWith(
+      WebSocketEventType.CHAT_TYPING_STOP,
+      expect.any(Function)
+    );
   });
 });
 
@@ -639,9 +697,7 @@ describe("useAgentStatus", () => {
 
   it("should initialize with null status and inactive", () => {
     // Act
-    const { result } = renderHook(() => 
-      useAgentStatus("user-id", "token")
-    );
+    const { result } = renderHook(() => useAgentStatus("user-id", "token"));
 
     // Assert
     expect(result.current.agentStatus).toBe(null);
@@ -652,12 +708,13 @@ describe("useAgentStatus", () => {
   it("should handle agent status updates", async () => {
     // Arrange
     const onStatusUpdate = vi.fn();
-    const { result } = renderHook(() => 
+    const { result } = renderHook(() =>
       useAgentStatus("user-id", "token", onStatusUpdate)
     );
 
-    const statusHandler = (mockClient.on as Mock).mock.calls
-      .find(([event]) => event === WebSocketEventType.AGENT_STATUS_UPDATE)?.[1];
+    const statusHandler = (mockClient.on as Mock).mock.calls.find(
+      ([event]) => event === WebSocketEventType.AGENT_STATUS_UPDATE
+    )?.[1];
 
     const testStatus = {
       agent_id: "agent-1",
@@ -688,12 +745,11 @@ describe("useAgentStatus", () => {
 
   it("should handle agent task events", async () => {
     // Arrange
-    const { result } = renderHook(() => 
-      useAgentStatus("user-id", "token")
-    );
+    const { result } = renderHook(() => useAgentStatus("user-id", "token"));
 
-    const taskStartHandler = (mockClient.on as Mock).mock.calls
-      .find(([event]) => event === WebSocketEventType.AGENT_TASK_START)?.[1];
+    const taskStartHandler = (mockClient.on as Mock).mock.calls.find(
+      ([event]) => event === WebSocketEventType.AGENT_TASK_START
+    )?.[1];
 
     const testStatus = {
       agent_id: "agent-1",
@@ -722,15 +778,25 @@ describe("useAgentStatus", () => {
 
   it("should cleanup event listeners on unmount", () => {
     // Act
-    const { unmount } = renderHook(() => 
-      useAgentStatus("user-id", "token")
-    );
+    const { unmount } = renderHook(() => useAgentStatus("user-id", "token"));
     unmount();
 
     // Assert
-    expect(mockClient.off).toHaveBeenCalledWith(WebSocketEventType.AGENT_STATUS_UPDATE, expect.any(Function));
-    expect(mockClient.off).toHaveBeenCalledWith(WebSocketEventType.AGENT_TASK_START, expect.any(Function));
-    expect(mockClient.off).toHaveBeenCalledWith(WebSocketEventType.AGENT_TASK_PROGRESS, expect.any(Function));
-    expect(mockClient.off).toHaveBeenCalledWith(WebSocketEventType.AGENT_TASK_COMPLETE, expect.any(Function));
+    expect(mockClient.off).toHaveBeenCalledWith(
+      WebSocketEventType.AGENT_STATUS_UPDATE,
+      expect.any(Function)
+    );
+    expect(mockClient.off).toHaveBeenCalledWith(
+      WebSocketEventType.AGENT_TASK_START,
+      expect.any(Function)
+    );
+    expect(mockClient.off).toHaveBeenCalledWith(
+      WebSocketEventType.AGENT_TASK_PROGRESS,
+      expect.any(Function)
+    );
+    expect(mockClient.off).toHaveBeenCalledWith(
+      WebSocketEventType.AGENT_TASK_COMPLETE,
+      expect.any(Function)
+    );
   });
 });

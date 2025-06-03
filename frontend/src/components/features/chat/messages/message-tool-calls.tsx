@@ -79,7 +79,7 @@ const getCategoryColor = (category: string): string => {
   return colorMap[category] || colorMap.general;
 };
 
-export default function MessageToolCalls({
+export function MessageToolCalls({
   toolCalls,
   toolResults,
   onRetryToolCall,

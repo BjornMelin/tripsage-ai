@@ -150,7 +150,10 @@ export class WebSocketClient {
   private isDestroyed = false;
 
   // Performance optimization properties
-  private messageQueue: Array<{ type: string; payload: Record<string, unknown> }> = [];
+  private messageQueue: Array<{
+    type: string;
+    payload: Record<string, unknown>;
+  }> = [];
   private batchTimer: NodeJS.Timeout | null = null;
   private performanceMetrics = {
     messagesSent: 0,
@@ -240,7 +243,10 @@ export class WebSocketClient {
   /**
    * Send a message through the WebSocket with optional batching
    */
-  async send(type: string, payload: Record<string, unknown> = {}): Promise<void> {
+  async send(
+    type: string,
+    payload: Record<string, unknown> = {}
+  ): Promise<void> {
     if (this.state.status !== ConnectionStatus.CONNECTED || !this.ws) {
       throw new Error("WebSocket is not connected");
     }
@@ -314,7 +320,10 @@ export class WebSocketClient {
   /**
    * Send a chat message
    */
-  async sendChatMessage(content: string, attachments: string[] = []): Promise<void> {
+  async sendChatMessage(
+    content: string,
+    attachments: string[] = []
+  ): Promise<void> {
     await this.send("chat_message", {
       content,
       attachments,
@@ -347,7 +356,12 @@ export class WebSocketClient {
    * Add event listener
    */
   on<T = unknown>(
-    event: WebSocketEventType | "connect" | "disconnect" | "error" | "reconnect",
+    event:
+      | WebSocketEventType
+      | "connect"
+      | "disconnect"
+      | "error"
+      | "reconnect",
     handler: EventHandler<T>
   ): void {
     if (!this.eventHandlers.has(event)) {
@@ -360,7 +374,12 @@ export class WebSocketClient {
    * Remove event listener
    */
   off<T = unknown>(
-    event: WebSocketEventType | "connect" | "disconnect" | "error" | "reconnect",
+    event:
+      | WebSocketEventType
+      | "connect"
+      | "disconnect"
+      | "error"
+      | "reconnect",
     handler: EventHandler<T>
   ): void {
     const handlers = this.eventHandlers.get(event);
@@ -407,7 +426,8 @@ export class WebSocketClient {
    */
   getPerformanceMetrics() {
     const now = Date.now();
-    const connectionDuration = now - this.performanceMetrics.connectionStartTime;
+    const connectionDuration =
+      now - this.performanceMetrics.connectionStartTime;
 
     return {
       ...this.performanceMetrics,
@@ -420,7 +440,8 @@ export class WebSocketClient {
           : 0,
       averageMessageSize:
         this.performanceMetrics.messagesSent > 0
-          ? this.performanceMetrics.bytesSent / this.performanceMetrics.messagesSent
+          ? this.performanceMetrics.bytesSent /
+            this.performanceMetrics.messagesSent
           : 0,
       queuedMessages: this.messageQueue.length,
       isHighFrequency: now - this.performanceMetrics.lastMessageTime < 100, // Less than 100ms since last message
@@ -661,7 +682,10 @@ export class WebSocketClient {
       reconnectAttempt: attempt,
     });
 
-    this.emit("reconnect", { attempt, maxAttempts: this.config.reconnectAttempts });
+    this.emit("reconnect", {
+      attempt,
+      maxAttempts: this.config.reconnectAttempts,
+    });
 
     this.reconnectTimer = setTimeout(async () => {
       try {
@@ -744,7 +768,9 @@ export class WebSocketClient {
 /**
  * Create a WebSocket client instance
  */
-export function createWebSocketClient(config: WebSocketClientConfig): WebSocketClient {
+export function createWebSocketClient(
+  config: WebSocketClientConfig
+): WebSocketClient {
   return new WebSocketClient(config);
 }
 
@@ -755,7 +781,10 @@ export class WebSocketClientFactory {
   private baseUrl: string;
   private defaultConfig: Partial<WebSocketClientConfig>;
 
-  constructor(baseUrl: string, defaultConfig: Partial<WebSocketClientConfig> = {}) {
+  constructor(
+    baseUrl: string,
+    defaultConfig: Partial<WebSocketClientConfig> = {}
+  ) {
     this.baseUrl = baseUrl;
     this.defaultConfig = defaultConfig;
   }

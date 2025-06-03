@@ -10,7 +10,7 @@ import type { ReactNode } from "react";
 import { MemoryContextPanel } from "../memory-context-panel";
 
 // Mock the memory hooks
-vi.mock("../../../lib/hooks/use-memory", () => ({
+vi.mock("../../../../hooks/use-memory", () => ({
   useMemoryContext: vi.fn(),
   useMemoryInsights: vi.fn(),
   useMemoryStats: vi.fn(),
@@ -20,7 +20,7 @@ import {
   useMemoryContext,
   useMemoryInsights,
   useMemoryStats,
-} from "../../../lib/hooks/use-memory";
+} from "../../../../hooks/use-memory";
 
 const mockUseMemoryContext = useMemoryContext as any;
 const mockUseMemoryInsights = useMemoryInsights as any;

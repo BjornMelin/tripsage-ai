@@ -1,6 +1,11 @@
 import * as React from "react";
 import { Skeleton } from "./skeleton";
-import { CardSkeleton, ListItemSkeleton } from "./loading-skeletons";
+import {
+  CardSkeleton,
+  ListItemSkeleton,
+  AvatarSkeleton,
+  FormSkeleton,
+} from "./loading-skeletons";
 import { cn } from "@/lib/utils";
 
 /**
@@ -81,26 +86,27 @@ export const HotelSkeleton = React.forwardRef<
   return (
     <div
       ref={ref}
-      className={cn("rounded-lg border overflow-hidden", className)}
+      className={cn("overflow-hidden", className)}
       role="status"
       aria-label="Loading hotel results"
       {...props}
     >
-      {/* Hotel image */}
-      <Skeleton height="200px" width="100%" />
+      <CardSkeleton
+        hasImage
+        titleLines={1}
+        bodyLines={0}
+        className="border-none p-0"
+      />
 
       <div className="p-4 space-y-3">
-        {/* Hotel name and rating */}
-        <div className="space-y-2">
-          <Skeleton height="1.5rem" width="80%" />
-          <div className="flex items-center space-x-2">
-            <div className="flex space-x-1">
-              {Array.from({ length: 5 }).map((_, index) => (
-                <Skeleton key={index} height="1rem" width="1rem" />
-              ))}
-            </div>
-            <Skeleton height="1rem" width="60px" />
+        {/* Hotel rating */}
+        <div className="flex items-center space-x-2">
+          <div className="flex space-x-1">
+            {Array.from({ length: 5 }).map((_, index) => (
+              <Skeleton key={index} height="1rem" width="1rem" />
+            ))}
           </div>
+          <Skeleton height="1rem" width="60px" />
         </div>
 
         {/* Location */}
@@ -145,18 +151,19 @@ export const TripSkeleton = React.forwardRef<HTMLDivElement, TripSkeletonProps>(
     return (
       <div
         ref={ref}
-        className={cn("rounded-lg border overflow-hidden", className)}
+        className={cn("overflow-hidden", className)}
         role="status"
         aria-label="Loading trip information"
         {...props}
       >
-        {/* Trip image */}
-        <Skeleton height="160px" width="100%" />
+        <CardSkeleton
+          hasImage
+          titleLines={1}
+          bodyLines={0}
+          className="border-none p-0"
+        />
 
         <div className="p-4 space-y-3">
-          {/* Trip title */}
-          <Skeleton height="1.5rem" width="90%" />
-
           {/* Trip dates */}
           <div className="flex items-center space-x-2">
             <Skeleton height="1rem" width="16px" />
@@ -196,24 +203,27 @@ export const DestinationSkeleton = React.forwardRef<
   return (
     <div
       ref={ref}
-      className={cn("rounded-lg border overflow-hidden", className)}
+      className={cn("overflow-hidden", className)}
       role="status"
       aria-label="Loading destination information"
       {...props}
     >
-      {/* Destination image */}
+      {/* Destination image with overlay */}
       <div className="relative">
-        <Skeleton height="200px" width="100%" />
+        <CardSkeleton
+          hasImage
+          titleLines={0}
+          bodyLines={0}
+          className="border-none p-0"
+        />
         <div className="absolute top-4 right-4">
           <Skeleton height="2rem" width="2rem" variant="rounded" />
         </div>
       </div>
 
       <div className="p-4 space-y-3">
-        {/* Destination name */}
+        {/* Destination name and description */}
         <Skeleton height="1.5rem" width="70%" />
-
-        {/* Destination description */}
         <Skeleton lines={2} height="1rem" />
 
         {/* Weather and best time */}
@@ -310,7 +320,7 @@ export const ChatMessageSkeleton = React.forwardRef<
       aria-label="Loading chat message"
       {...props}
     >
-      {!isUser && <Skeleton height="2rem" width="2rem" variant="rounded" />}
+      {!isUser && <AvatarSkeleton size="sm" />}
 
       <div className={cn("max-w-md space-y-2", isUser && "order-first")}>
         <Skeleton
@@ -325,7 +335,7 @@ export const ChatMessageSkeleton = React.forwardRef<
         />
       </div>
 
-      {isUser && <Skeleton height="2rem" width="2rem" variant="rounded" />}
+      {isUser && <AvatarSkeleton size="sm" />}
     </div>
   );
 });
@@ -337,34 +347,44 @@ ChatMessageSkeleton.displayName = "ChatMessageSkeleton";
  */
 export interface SearchFilterSkeletonProps {
   className?: string;
+  sections?: number;
 }
 
 export const SearchFilterSkeleton = React.forwardRef<
   HTMLDivElement,
   SearchFilterSkeletonProps
->(({ className, ...props }, ref) => {
+>(({ className, sections = 4, ...props }, ref) => {
   return (
     <div
       ref={ref}
-      className={cn("space-y-4 p-4 border rounded-lg", className)}
+      className={cn("border rounded-lg", className)}
       role="status"
       aria-label="Loading search filters"
       {...props}
     >
-      {/* Filter sections */}
-      {Array.from({ length: 4 }).map((_, sectionIndex) => (
-        <div key={sectionIndex} className="space-y-2">
-          <Skeleton height="1.25rem" width="30%" />
-          <div className="space-y-2">
-            {Array.from({ length: 3 }).map((_, itemIndex) => (
-              <div key={itemIndex} className="flex items-center space-x-2">
-                <Skeleton height="1rem" width="1rem" />
-                <Skeleton height="1rem" width="70%" />
-              </div>
-            ))}
+      {/* Use FormSkeleton as base for overall structure */}
+      <div className="p-4 space-y-4">
+        {Array.from({ length: sections }).map((_, sectionIndex) => (
+          <div key={sectionIndex} className="space-y-2">
+            {/* Section title */}
+            <Skeleton height="1.25rem" width="30%" />
+
+            {/* Section options using ListItemSkeleton pattern */}
+            <div className="space-y-2">
+              {Array.from({ length: 3 }).map((_, itemIndex) => (
+                <ListItemSkeleton
+                  key={itemIndex}
+                  hasAvatar={false}
+                  hasAction={false}
+                  titleLines={1}
+                  subtitleLines={0}
+                  className="p-0 space-x-2"
+                />
+              ))}
+            </div>
           </div>
-        </div>
-      ))}
+        ))}
+      </div>
     </div>
   );
 });

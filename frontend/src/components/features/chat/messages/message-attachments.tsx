@@ -13,9 +13,7 @@ interface MessageAttachmentsProps {
   attachments: string[];
 }
 
-export default function MessageAttachments({
-  attachments,
-}: MessageAttachmentsProps) {
+export function MessageAttachments({ attachments }: MessageAttachmentsProps) {
   if (!attachments || attachments.length === 0) return null;
 
   return (

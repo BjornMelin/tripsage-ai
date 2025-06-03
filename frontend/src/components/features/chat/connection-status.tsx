@@ -20,7 +20,7 @@ interface ConnectionStatusProps {
   compact?: boolean;
 }
 
-export default function ConnectionStatus({
+export function ConnectionStatus({
   status,
   onReconnect,
   className,

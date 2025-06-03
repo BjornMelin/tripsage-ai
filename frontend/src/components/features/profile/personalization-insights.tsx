@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Brain,
@@ -36,7 +35,7 @@ import type {
   MemoryInsight,
 } from "@/types/memory";
 
-export default function PersonalizationInsights({
+export function PersonalizationInsights({
   userId,
   className,
   showRecommendations = true,
@@ -458,14 +457,14 @@ export default function PersonalizationInsights({
       </div>
 
       {/* Content */}
-      <ScrollArea className="h-[600px]">
+      <div className="h-[600px] overflow-y-auto">
         {selectedView === "overview" && renderOverview()}
         {selectedView === "budget" && renderBudgetInsights()}
         {selectedView === "destinations" && renderOverview()}
         {selectedView === "recommendations" &&
           showRecommendations &&
           renderRecommendations()}
-      </ScrollArea>
+      </div>
 
       {/* Metadata */}
       {insights?.metadata && (
