@@ -272,9 +272,9 @@ describe("Trip Store", () => {
       await act(async () => {
         await result.current.createTrip({ name: "Trip 1" });
       });
-      
+
       const trip1Id = result.current.currentTrip!.id;
-      
+
       await act(async () => {
         await result.current.createTrip({ name: "Trip 2" });
       });
@@ -294,11 +294,11 @@ describe("Trip Store", () => {
 
     beforeEach(async () => {
       const { result } = renderHook(() => useTripStore());
-      
+
       await act(async () => {
         await result.current.createTrip({ name: "Test Trip" });
       });
-      
+
       tripId = result.current.trips[0].id;
     });
 
@@ -334,7 +334,7 @@ describe("Trip Store", () => {
       expect(result.current.isLoading).toBe(false);
       expect(result.current.error).toBeNull();
 
-      const trip = result.current.trips.find(t => t.id === tripId);
+      const trip = result.current.trips.find((t) => t.id === tripId);
       expect(trip?.destinations).toHaveLength(1);
       expect(trip?.destinations[0]).toEqual(destination);
 
@@ -354,10 +354,13 @@ describe("Trip Store", () => {
       };
 
       await act(async () => {
-        await result.current.addDestination(tripId, destinationWithoutId as Destination);
+        await result.current.addDestination(
+          tripId,
+          destinationWithoutId as Destination
+        );
       });
 
-      const trip = result.current.trips.find(t => t.id === tripId);
+      const trip = result.current.trips.find((t) => t.id === tripId);
       expect(trip?.destinations).toHaveLength(1);
       expect(trip?.destinations[0].id).toBeDefined();
       expect(trip?.destinations[0].name).toBe("Rome");
@@ -391,9 +394,9 @@ describe("Trip Store", () => {
       expect(result.current.isLoading).toBe(false);
       expect(result.current.error).toBeNull();
 
-      const trip = result.current.trips.find(t => t.id === tripId);
+      const trip = result.current.trips.find((t) => t.id === tripId);
       const updatedDestination = trip?.destinations[0];
-      
+
       expect(updatedDestination?.name).toBe("Paris Updated");
       expect(updatedDestination?.estimatedCost).toBe(1200);
       expect(updatedDestination?.notes).toBe("Added notes");
@@ -445,7 +448,7 @@ describe("Trip Store", () => {
         });
       });
 
-      const trip = result.current.trips.find(t => t.id === tripId);
+      const trip = result.current.trips.find((t) => t.id === tripId);
       expect(trip?.destinations).toHaveLength(2);
 
       // Remove first destination
@@ -456,7 +459,7 @@ describe("Trip Store", () => {
       expect(result.current.isLoading).toBe(false);
       expect(result.current.error).toBeNull();
 
-      const updatedTrip = result.current.trips.find(t => t.id === tripId);
+      const updatedTrip = result.current.trips.find((t) => t.id === tripId);
       expect(updatedTrip?.destinations).toHaveLength(1);
       expect(updatedTrip?.destinations[0].id).toBe("dest-2");
     });
@@ -496,7 +499,9 @@ describe("Trip Store", () => {
       });
 
       // Should not affect existing trips
-      expect(result.current.trips.find(t => t.id === tripId)?.destinations).toHaveLength(0);
+      expect(
+        result.current.trips.find((t) => t.id === tripId)?.destinations
+      ).toHaveLength(0);
     });
   });
 
@@ -604,7 +609,7 @@ describe("Trip Store", () => {
           notes: "Visit the Louvre",
         },
         {
-          id: "dest-2", 
+          id: "dest-2",
           name: "Rome",
           country: "Italy",
           coordinates: { latitude: 41.9028, longitude: 12.4964 },
@@ -624,9 +629,9 @@ describe("Trip Store", () => {
         });
       }
 
-      const trip = result.current.trips.find(t => t.id === tripId);
+      const trip = result.current.trips.find((t) => t.id === tripId);
       expect(trip?.destinations).toHaveLength(2);
-      
+
       // Verify all data is preserved
       expect(trip?.destinations[0].activities).toEqual(["sightseeing", "museums"]);
       expect(trip?.destinations[0].accommodation?.name).toBe("Hotel de Ville");
@@ -659,19 +664,20 @@ describe("Trip Store", () => {
       await act(async () => {
         await result.current.addDestination(tripId, {
           id: "dest-2",
-          name: "Rome", 
+          name: "Rome",
           country: "Italy",
           estimatedCost: 600,
         });
       });
 
-      const trip = result.current.trips.find(t => t.id === tripId);
+      const trip = result.current.trips.find((t) => t.id === tripId);
       expect(trip?.budget).toBe(2000);
       expect(trip?.currency).toBe("EUR");
-      
+
       // Calculate total estimated cost
       const totalEstimatedCost = trip?.destinations.reduce(
-        (sum, dest) => sum + (dest.estimatedCost || 0), 0
+        (sum, dest) => sum + (dest.estimatedCost || 0),
+        0
       );
       expect(totalEstimatedCost).toBe(1400);
     });

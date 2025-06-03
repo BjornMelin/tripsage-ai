@@ -1,7 +1,12 @@
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useSearchHistoryStore } from "../search-history-store";
-import type { SearchHistoryItem, ValidatedSavedSearch, SearchCollection, QuickSearch } from "../search-history-store";
+import type {
+  SearchHistoryItem,
+  ValidatedSavedSearch,
+  SearchCollection,
+  QuickSearch,
+} from "../search-history-store";
 import type { SearchType } from "@/types/search";
 
 // Mock console.error to avoid noise in tests
@@ -204,7 +209,10 @@ describe("Search History Store", () => {
       // Add 5 searches
       for (let i = 1; i <= 5; i++) {
         act(() => {
-          result.current.addRecentSearch("flight", { origin: `Origin${i}`, destination: `Dest${i}` });
+          result.current.addRecentSearch("flight", {
+            origin: `Origin${i}`,
+            destination: `Dest${i}`,
+          });
         });
       }
 
@@ -229,7 +237,9 @@ describe("Search History Store", () => {
       });
 
       expect(result.current.recentSearches).toHaveLength(1);
-      expect(result.current.recentSearches.find(s => s.id === searchIdToRemove)).toBeUndefined();
+      expect(
+        result.current.recentSearches.find((s) => s.id === searchIdToRemove)
+      ).toBeUndefined();
     });
 
     it("clears all recent searches", () => {
@@ -394,7 +404,7 @@ describe("Search History Store", () => {
       const { result } = renderHook(() => useSearchHistoryStore());
 
       const originalParams = { origin: "NYC", destination: "LAX" };
-      
+
       // First save a search
       let originalId: string | null = null;
       await act(async () => {
@@ -409,13 +419,18 @@ describe("Search History Store", () => {
       // Then duplicate it
       let duplicateId: string | null = null;
       await act(async () => {
-        duplicateId = await result.current.duplicateSavedSearch(originalId!, "Duplicated Search");
+        duplicateId = await result.current.duplicateSavedSearch(
+          originalId!,
+          "Duplicated Search"
+        );
       });
 
       expect(duplicateId).toBeTruthy();
       expect(result.current.savedSearches).toHaveLength(2);
 
-      const duplicatedSearch = result.current.savedSearches.find(s => s.id === duplicateId);
+      const duplicatedSearch = result.current.savedSearches.find(
+        (s) => s.id === duplicateId
+      );
       expect(duplicatedSearch?.name).toBe("Duplicated Search");
       expect(duplicatedSearch?.params).toEqual(originalParams);
       expect(duplicatedSearch?.description).toBe("Original description");
@@ -487,7 +502,9 @@ describe("Search History Store", () => {
       expect(collectionId).toBeTruthy();
       expect(result.current.searchCollections).toHaveLength(1);
       expect(result.current.searchCollections[0].name).toBe("Travel Plans");
-      expect(result.current.searchCollections[0].description).toBe("Collection of my travel searches");
+      expect(result.current.searchCollections[0].description).toBe(
+        "Collection of my travel searches"
+      );
     });
 
     it("updates a collection", async () => {
@@ -604,7 +621,7 @@ describe("Search History Store", () => {
 
       expect(quickSearchId).toBeTruthy();
       expect(result.current.quickSearches).toHaveLength(1);
-      
+
       const quickSearch = result.current.quickSearches[0];
       expect(quickSearch.label).toBe("NYC ✈️ LAX");
       expect(quickSearch.searchType).toBe("flight");
@@ -619,7 +636,11 @@ describe("Search History Store", () => {
       // Create quick search first
       let quickSearchId: string | null = null;
       await act(async () => {
-        quickSearchId = await result.current.createQuickSearch("Original", "flight", {});
+        quickSearchId = await result.current.createQuickSearch(
+          "Original",
+          "flight",
+          {}
+        );
       });
 
       // Update quick search
@@ -644,7 +665,11 @@ describe("Search History Store", () => {
       // Create quick search first
       let quickSearchId: string | null = null;
       await act(async () => {
-        quickSearchId = await result.current.createQuickSearch("Test Quick Search", "flight", {});
+        quickSearchId = await result.current.createQuickSearch(
+          "Test Quick Search",
+          "flight",
+          {}
+        );
       });
 
       expect(result.current.quickSearches).toHaveLength(1);
@@ -664,7 +689,11 @@ describe("Search History Store", () => {
       const quickSearchIds: string[] = [];
       for (let i = 1; i <= 3; i++) {
         await act(async () => {
-          const id = await result.current.createQuickSearch(`Search ${i}`, "flight", {});
+          const id = await result.current.createQuickSearch(
+            `Search ${i}`,
+            "flight",
+            {}
+          );
           quickSearchIds.push(id!);
         });
       }
@@ -678,7 +707,9 @@ describe("Search History Store", () => {
       });
 
       // Check new order
-      const reorderedSearches = result.current.quickSearches.sort((a, b) => a.sortOrder - b.sortOrder);
+      const reorderedSearches = result.current.quickSearches.sort(
+        (a, b) => a.sortOrder - b.sortOrder
+      );
       expect(reorderedSearches[0].label).toBe("Search 3");
       expect(reorderedSearches[1].label).toBe("Search 2");
       expect(reorderedSearches[2].label).toBe("Search 1");
@@ -734,9 +765,9 @@ describe("Search History Store", () => {
       });
 
       expect(result.current.searchSuggestions.length).toBeGreaterThan(0);
-      
+
       const suggestions = result.current.searchSuggestions;
-      const nycSuggestions = suggestions.filter(s => s.text.includes("NYC"));
+      const nycSuggestions = suggestions.filter((s) => s.text.includes("NYC"));
       expect(nycSuggestions.length).toBeGreaterThan(0);
     });
 
@@ -751,9 +782,9 @@ describe("Search History Store", () => {
       // Get suggestions for "NYC"
       const nycSuggestions = result.current.getSearchSuggestions("NYC");
       expect(nycSuggestions.length).toBeGreaterThan(0);
-      
+
       // All suggestions should contain "NYC"
-      nycSuggestions.forEach(suggestion => {
+      nycSuggestions.forEach((suggestion) => {
         expect(suggestion.text.toLowerCase()).toContain("nyc");
       });
     });
@@ -768,7 +799,7 @@ describe("Search History Store", () => {
 
       // Get flight suggestions only
       const flightSuggestions = result.current.getSearchSuggestions("", "flight");
-      flightSuggestions.forEach(suggestion => {
+      flightSuggestions.forEach((suggestion) => {
         expect(suggestion.searchType).toBe("flight");
       });
     });
@@ -852,11 +883,15 @@ describe("Search History Store", () => {
     it("filters saved searches by search type", () => {
       const { result } = renderHook(() => useSearchHistoryStore());
 
-      const flightResults = result.current.searchSavedSearches("", { searchType: "flight" });
+      const flightResults = result.current.searchSavedSearches("", {
+        searchType: "flight",
+      });
       expect(flightResults).toHaveLength(1);
       expect(flightResults[0].searchType).toBe("flight");
 
-      const accommodationResults = result.current.searchSavedSearches("", { searchType: "accommodation" });
+      const accommodationResults = result.current.searchSavedSearches("", {
+        searchType: "accommodation",
+      });
       expect(accommodationResults).toHaveLength(1);
       expect(accommodationResults[0].searchType).toBe("accommodation");
     });
@@ -864,7 +899,9 @@ describe("Search History Store", () => {
     it("filters saved searches by tags", () => {
       const { result } = renderHook(() => useSearchHistoryStore());
 
-      const businessResults = result.current.searchSavedSearches("", { tags: ["business"] });
+      const businessResults = result.current.searchSavedSearches("", {
+        tags: ["business"],
+      });
       expect(businessResults).toHaveLength(1);
       expect(businessResults[0].tags).toContain("business");
     });
@@ -872,11 +909,15 @@ describe("Search History Store", () => {
     it("filters saved searches by favorite status", () => {
       const { result } = renderHook(() => useSearchHistoryStore());
 
-      const favoriteResults = result.current.searchSavedSearches("", { isFavorite: true });
+      const favoriteResults = result.current.searchSavedSearches("", {
+        isFavorite: true,
+      });
       expect(favoriteResults).toHaveLength(1);
       expect(favoriteResults[0].isFavorite).toBe(true);
 
-      const nonFavoriteResults = result.current.searchSavedSearches("", { isFavorite: false });
+      const nonFavoriteResults = result.current.searchSavedSearches("", {
+        isFavorite: false,
+      });
       expect(nonFavoriteResults).toHaveLength(1);
       expect(nonFavoriteResults[0].isFavorite).toBe(false);
     });
@@ -961,7 +1002,9 @@ describe("Search History Store", () => {
       };
 
       await act(async () => {
-        const success = await result.current.importSearchHistory(JSON.stringify(importData));
+        const success = await result.current.importSearchHistory(
+          JSON.stringify(importData)
+        );
         expect(success).toBe(true);
       });
 
@@ -1085,16 +1128,16 @@ describe("Search History Store", () => {
       const { result } = renderHook(() => useSearchHistoryStore());
 
       const analytics = result.current.getSearchAnalytics();
-      
+
       expect(analytics.totalSearches).toBe(3);
       expect(analytics.searchesByType.flight).toBe(2);
       expect(analytics.searchesByType.accommodation).toBe(1);
       expect(analytics.averageSearchDuration).toBe(1500); // (1500 + 2000 + 1000) / 3
-      
+
       expect(analytics.mostUsedSearchTypes).toHaveLength(4);
       expect(analytics.mostUsedSearchTypes[0].type).toBe("flight");
       expect(analytics.mostUsedSearchTypes[0].count).toBe(2);
-      
+
       expect(analytics.searchTrends).toHaveLength(30); // Last 30 days
       expect(analytics.popularSearchTimes).toHaveLength(24); // 24 hours
     });
@@ -1113,7 +1156,7 @@ describe("Search History Store", () => {
 
       const trends = result.current.getSearchTrends("flight", 7);
       expect(trends).toHaveLength(7);
-      
+
       // Today should have 2 flight searches
       const today = trends[trends.length - 1];
       expect(today.count).toBe(2);
@@ -1128,18 +1171,20 @@ describe("Search History Store", () => {
       act(() => {
         result.current.addRecentSearch("flight", {});
         useSearchHistoryStore.setState({
-          savedSearches: [{
-            id: "test",
-            name: "Test",
-            searchType: "flight",
-            params: {},
-            tags: [],
-            isPublic: false,
-            isFavorite: false,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            usageCount: 0,
-          }],
+          savedSearches: [
+            {
+              id: "test",
+              name: "Test",
+              searchType: "flight",
+              params: {},
+              tags: [],
+              isPublic: false,
+              isFavorite: false,
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+              usageCount: 0,
+            },
+          ],
         });
       });
 

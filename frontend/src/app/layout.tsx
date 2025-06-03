@@ -23,7 +23,11 @@ export const metadata: Metadata = {
   description: "Plan your perfect trip with AI-powered recommendations and insights",
   keywords: ["travel", "AI", "planning", "trips", "budget", "itinerary"],
   authors: [{ name: "TripSage Team" }],
-  viewport: "width=device-width, initial-scale=1",
+};
+
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
 };
 
 export default function RootLayout({

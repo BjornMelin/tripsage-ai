@@ -45,19 +45,22 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     if (asChild) {
       return (
         <React.Fragment>
-          {React.Children.map(props.children, (child) => 
+          {React.Children.map(props.children, (child) =>
             React.isValidElement(child)
               ? React.cloneElement(child, {
-                  className: cn(buttonVariants({ variant, size }), child.props.className),
+                  className: cn(
+                    buttonVariants({ variant, size }),
+                    child.props.className
+                  ),
                   ...props,
-                  children: child.props.children
+                  children: child.props.children,
                 })
               : child
           )}
         </React.Fragment>
       );
     }
-    
+
     return (
       <button
         className={cn(buttonVariants({ variant, size, className }))}

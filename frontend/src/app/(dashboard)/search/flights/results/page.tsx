@@ -91,14 +91,17 @@ export default function FlightResultsPage() {
             <CardContent>
               <div className="flex flex-wrap gap-2">
                 <Badge variant="outline">
-                  {currentContext.searchParams?.passengers || 1} passenger
-                  {currentContext.searchParams?.passengers > 1 ? "s" : ""}
+                  {(() => {
+                    const passengers =
+                      Number(currentContext.searchParams?.passengers) || 1;
+                    return `${passengers} passenger${passengers > 1 ? "s" : ""}`;
+                  })()}
                 </Badge>
                 <Badge variant="outline">
-                  {currentContext.searchParams?.class || "Economy"}
+                  {String(currentContext.searchParams?.class || "Economy")}
                 </Badge>
                 <Badge variant="outline">
-                  {currentContext.searchParams?.tripType || "Round trip"}
+                  {String(currentContext.searchParams?.tripType || "Round trip")}
                 </Badge>
               </div>
             </CardContent>
