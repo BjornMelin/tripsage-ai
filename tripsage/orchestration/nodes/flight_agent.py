@@ -2,8 +2,7 @@
 Flight agent node implementation for LangGraph orchestration.
 
 This module implements the flight search and booking agent as a LangGraph node,
-replacing the OpenAI Agents SDK implementation with improved performance and
-capabilities.
+using the centralized tool registry and improved async patterns.
 """
 
 import json
@@ -15,7 +14,9 @@ from langchain_openai import ChatOpenAI
 
 from tripsage.orchestration.nodes.base import BaseAgentNode
 from tripsage.orchestration.state import TravelPlanningState
-from tripsage.orchestration.tools.mcp_integration import MCPToolRegistry
+from tripsage.orchestration.tools.registry import (
+    get_tool_registry,
+)
 from tripsage_core.config.base_app_settings import settings
 from tripsage_core.utils.logging_utils import get_logger
 
@@ -27,7 +28,14 @@ class FlightAgentNode(BaseAgentNode):
     Flight search and booking agent node.
 
     This node handles all flight-related requests including search, booking,
-    changes, and flight information using MCP tool integration.
+    changes, and flight information using the centralized tool registry.
+
+    Responsibilities:
+    - Extract flight search parameters from user input and conversation context
+    - Execute flight searches using MCP tools
+    - Generate user-friendly responses with flight options
+    - Handle general flight inquiries and provide guidance
+    - Update conversation state with search results and booking progress
     """
 
     def __init__(self, service_registry):
@@ -42,9 +50,32 @@ class FlightAgentNode(BaseAgentNode):
         )
 
     def _initialize_tools(self) -> None:
-        """Initialize flight-specific tools and MCP integrations."""
-        self.tool_registry = MCPToolRegistry()
-        self.available_tools = self.tool_registry.get_tools_for_agent("flight_agent")
+        """Initialize flight-specific tools from the centralized registry."""
+        self.tool_registry = get_tool_registry(self.service_registry)
+
+        # Get tools specifically for flight agent with flight capabilities
+        self.available_tools = self.tool_registry.get_tools_for_agent(
+            agent_type="flight_agent",
+            capabilities=[
+                "flight_search",
+                "geocoding",
+                "weather",
+                "web_search",
+                "memory",
+            ],
+        )
+
+        # Get LangChain-compatible tools for LLM binding
+        self.langchain_tools = self.tool_registry.get_langchain_tools_for_agent(
+            agent_type="flight_agent",
+            capabilities=[
+                "flight_search",
+                "geocoding",
+                "weather",
+                "web_search",
+                "memory",
+            ],
+        )
 
         logger.info(f"Initialized flight agent with {len(self.available_tools)} tools")
 
@@ -169,21 +200,20 @@ class FlightAgentNode(BaseAgentNode):
             Flight search results
         """
         try:
-            # Get the flight search tool
-            search_tool = self.tool_registry.get_tool("search_flights")
+            # Get the flight search tool from registry
+            search_tool = self.tool_registry.get_tool("flights_search_flights")
 
             if search_tool:
-                # Execute flight search
-                result_json = await search_tool._arun(**search_params)
-                result = json.loads(result_json)
+                # Execute flight search using the tool wrapper
+                result = await search_tool.execute(**search_params)
 
-                logger.info(
-                    f"Flight search completed: "
-                    f"{len(result.get('flights', []))} flights found"
+                flights_count = (
+                    len(result.get("flights", [])) if isinstance(result, dict) else 0
                 )
+                logger.info(f"Flight search completed: {flights_count} flights found")
                 return result
             else:
-                logger.error("Flight search tool not available")
+                logger.error("Flight search tool not available in registry")
                 return {"error": "Flight search service unavailable"}
 
         except Exception as e:

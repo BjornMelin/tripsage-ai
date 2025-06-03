@@ -10,6 +10,7 @@ from typing import Any, Dict, Optional
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, StateGraph
 
+from tripsage.agents.service_registry import ServiceRegistry
 from tripsage.orchestration.checkpoint_manager import get_checkpoint_manager
 from tripsage.orchestration.config import get_default_config
 from tripsage.orchestration.handoff_coordinator import (
@@ -42,16 +43,21 @@ class TripSageOrchestrator:
     """
 
     def __init__(
-        self, checkpointer: Optional[Any] = None, config: Optional[Any] = None
+        self,
+        service_registry: Optional[ServiceRegistry] = None,
+        checkpointer: Optional[Any] = None,
+        config: Optional[Any] = None,
     ):
         """
         Initialize the orchestrator with graph construction and checkpointing.
 
         Args:
+            service_registry: Service registry for dependency injection
             checkpointer: Optional checkpointer for state persistence
                          (defaults to MemorySaver for development)
             config: Optional configuration object (defaults to environment config)
         """
+        self.service_registry = service_registry or ServiceRegistry()
         self.config = config or get_default_config()
         self.checkpointer = checkpointer or MemorySaver()
         self.memory_bridge = get_memory_bridge()
@@ -99,15 +105,17 @@ class TripSageOrchestrator:
         graph = StateGraph(TravelPlanningState)
 
         # Add the router node (entry point for all requests)
-        router_node = RouterNode()
+        router_node = RouterNode(self.service_registry)
         graph.add_node("router", router_node)
 
-        # Add specialized agent nodes (Phase 2 complete implementations)
-        flight_agent_node = FlightAgentNode()
-        accommodation_agent_node = AccommodationAgentNode()
-        budget_agent_node = BudgetAgentNode()
-        destination_research_agent_node = DestinationResearchAgentNode()
-        itinerary_agent_node = ItineraryAgentNode()
+        # Add specialized agent nodes with service registry
+        flight_agent_node = FlightAgentNode(self.service_registry)
+        accommodation_agent_node = AccommodationAgentNode(self.service_registry)
+        budget_agent_node = BudgetAgentNode(self.service_registry)
+        destination_research_agent_node = DestinationResearchAgentNode(
+            self.service_registry
+        )
+        itinerary_agent_node = ItineraryAgentNode(self.service_registry)
 
         graph.add_node("flight_agent", flight_agent_node)
         graph.add_node("accommodation_agent", accommodation_agent_node)
@@ -118,9 +126,9 @@ class TripSageOrchestrator:
         # General purpose agent for unrouted requests
         graph.add_node("general_agent", self._create_general_agent())
 
-        # Add utility nodes
-        memory_update_node = MemoryUpdateNode()
-        error_recovery_node = ErrorRecoveryNode()
+        # Add utility nodes with service registry
+        memory_update_node = MemoryUpdateNode(self.service_registry)
+        error_recovery_node = ErrorRecoveryNode(self.service_registry)
         graph.add_node("memory_update", memory_update_node)
         graph.add_node("error_recovery", error_recovery_node)
 

@@ -165,6 +165,43 @@ class MCPManager:
             ]
         return self._wrapper.get_available_methods()
 
+    async def check_service_health(self, service_name: str = "airbnb") -> bool:
+        """
+        Check if the MCP service is healthy and responsive.
+
+        Args:
+            service_name: Name of the service to check (default: "airbnb")
+
+        Returns:
+            True if service is healthy, False otherwise
+
+        Raises:
+            MCPInvocationError: If health check fails critically
+        """
+        if service_name != "airbnb":
+            logger.warning(
+                f"Health check requested for unsupported service: {service_name}"
+            )
+            return False
+
+        try:
+            # Try to initialize the wrapper if not already done
+            if self._wrapper is None:
+                await self.initialize()
+
+            # Perform a basic health check - try to get available methods
+            methods = self.get_available_methods()
+            is_healthy = len(methods) > 0
+
+            logger.debug(
+                f"Airbnb MCP health check: {'healthy' if is_healthy else 'unhealthy'}"
+            )
+            return is_healthy
+
+        except Exception as e:
+            logger.warning(f"Airbnb MCP health check failed: {e}")
+            return False
+
 
 # Global manager instance
 mcp_manager = MCPManager()
