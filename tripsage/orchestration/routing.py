@@ -1,8 +1,9 @@
 """
 Intelligent routing node for LangGraph orchestration.
 
-This module implements semantic intent detection and routing logic to determine
-which specialized agent should handle each user request.
+This module implements enhanced semantic intent detection and routing logic to determine
+which specialized agent should handle each user request, with improved context awareness
+and confidence scoring.
 """
 
 import json
@@ -15,6 +16,9 @@ from langchain_openai import ChatOpenAI
 from tripsage.orchestration.nodes.base import BaseAgentNode
 from tripsage.orchestration.state import TravelPlanningState
 from tripsage_core.config.base_app_settings import settings
+from tripsage_core.utils.logging_utils import get_logger
+
+logger = get_logger(__name__)
 
 
 class RouterNode(BaseAgentNode):
@@ -22,19 +26,133 @@ class RouterNode(BaseAgentNode):
     Intelligent routing node using semantic analysis to determine agent routing.
 
     This node analyzes user messages and determines which specialized agent
-    should handle the request based on intent detection and context analysis.
+    should handle the request based on intent detection, context analysis,
+    and conversation history.
+
+    Responsibilities:
+    - Analyze user intent and conversation context
+    - Route requests to appropriate specialized agents
+    - Maintain confidence scoring for routing decisions
+    - Handle routing failures and fallback strategies
+    - Extract and update user preferences and travel context
     """
 
-    def __init__(self):
-        """Initialize the router node with semantic classification capabilities."""
-        super().__init__("router")
+    def __init__(self, service_registry):
+        """Initialize the router node with enhanced classification capabilities."""
+        super().__init__("router", service_registry)
 
-        # Initialize classifier model
+        # Initialize classifier model with improved configuration
         self.classifier = ChatOpenAI(
             model="gpt-4o-mini",  # Use smaller, faster model for classification
             temperature=0.1,  # Low temperature for consistent routing decisions
             api_key=settings.openai_api_key.get_secret_value(),
         )
+
+        # Available agent types and their capabilities
+        self.agent_capabilities = {
+            "flight_agent": {
+                "description": "Flight search, booking, changes, airline information",
+                "keywords": [
+                    "flight",
+                    "flights",
+                    "fly",
+                    "airline",
+                    "airport",
+                    "departure",
+                    "arrival",
+                    "booking",
+                ],
+                "entities": [
+                    "origin",
+                    "destination",
+                    "departure_date",
+                    "return_date",
+                    "passengers",
+                    "class",
+                ],
+            },
+            "accommodation_agent": {
+                "description": "Hotels, rentals, lodging, accommodation booking",
+                "keywords": [
+                    "hotel",
+                    "hotels",
+                    "accommodation",
+                    "stay",
+                    "rental",
+                    "airbnb",
+                    "lodging",
+                    "room",
+                ],
+                "entities": [
+                    "location",
+                    "check_in",
+                    "check_out",
+                    "guests",
+                    "room_type",
+                ],
+            },
+            "budget_agent": {
+                "description": "Budget planning, cost analysis, expense tracking",
+                "keywords": [
+                    "budget",
+                    "cost",
+                    "price",
+                    "expensive",
+                    "cheap",
+                    "afford",
+                    "money",
+                    "expenses",
+                ],
+                "entities": ["budget_total", "currency", "price_range"],
+            },
+            "itinerary_agent": {
+                "description": (
+                    "Trip planning, scheduling, activities, day-by-day planning"
+                ),
+                "keywords": [
+                    "itinerary",
+                    "plan",
+                    "schedule",
+                    "activity",
+                    "activities",
+                    "tour",
+                    "sightseeing",
+                ],
+                "entities": ["travel_dates", "duration", "activities", "preferences"],
+            },
+            "destination_research_agent": {
+                "description": (
+                    "Destination research, recommendations, local information"
+                ),
+                "keywords": [
+                    "destination",
+                    "place",
+                    "city",
+                    "country",
+                    "visit",
+                    "recommend",
+                    "explore",
+                    "travel",
+                ],
+                "entities": ["destination", "interests", "season", "duration"],
+            },
+            "travel_agent": {
+                "description": (
+                    "General travel assistance, documentation, travel tips, "
+                    "multi-domain queries"
+                ),
+                "keywords": [
+                    "travel",
+                    "trip",
+                    "vacation",
+                    "passport",
+                    "visa",
+                    "insurance",
+                    "tips",
+                ],
+                "entities": ["travel_type", "duration", "group_size"],
+            },
+        }
 
     def _initialize_tools(self) -> None:
         """Router doesn't need external tools, only classification model."""
