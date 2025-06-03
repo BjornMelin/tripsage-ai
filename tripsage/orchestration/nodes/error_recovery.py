@@ -6,7 +6,7 @@ for the TripSage travel planning system, enhanced with structured error tracking
 and improved recovery strategies.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from tripsage.orchestration.nodes.base import BaseAgentNode
 from tripsage.orchestration.state import ErrorInfo, HandoffContext, TravelPlanningState
@@ -88,7 +88,7 @@ class ErrorRecoveryNode(BaseAgentNode):
                 "action": "retry_attempt",
                 "agent": current_agent,
                 "attempt": retry_count + 1,
-                "timestamp": datetime.now(datetime.UTC).isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
             }
         )
 
@@ -104,7 +104,7 @@ class ErrorRecoveryNode(BaseAgentNode):
             ),
             "agent": "error_recovery",
             "retry_attempt": retry_count + 1,
-            "timestamp": datetime.now(datetime.UTC).isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
         state["messages"].append(retry_message)
 
@@ -119,7 +119,7 @@ class ErrorRecoveryNode(BaseAgentNode):
             routing_reasoning=(
                 f"Retry attempt {retry_count + 1} after error in {current_agent}"
             ),
-            timestamp=datetime.now(datetime.UTC).isoformat(),
+            timestamp=datetime.now(timezone.utc).isoformat(),
             message_analyzed="Error recovery retry",
             additional_context={
                 "retry_context": {
@@ -158,7 +158,7 @@ class ErrorRecoveryNode(BaseAgentNode):
             "content": self._generate_fallback_message(current_agent, fallback_agent),
             "agent": "error_recovery",
             "fallback_strategy": True,
-            "timestamp": datetime.now(datetime.UTC).isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
         state["messages"].append(fallback_message)
 
@@ -172,7 +172,7 @@ class ErrorRecoveryNode(BaseAgentNode):
                 "fallback_agent": fallback_agent,
                 "reason": "Multiple errors in original agent",
             },
-            "timestamp": datetime.now(datetime.UTC).isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
         return state
@@ -198,7 +198,7 @@ class ErrorRecoveryNode(BaseAgentNode):
             "content": self._generate_escalation_message(),
             "agent": "error_recovery",
             "escalation": True,
-            "timestamp": datetime.now(datetime.UTC).isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
         state["messages"].append(escalation_message)
 
@@ -212,7 +212,7 @@ class ErrorRecoveryNode(BaseAgentNode):
                 "error_count": state.get("error_count", 0),
                 "session_id": state.get("session_id"),
                 "user_id": state.get("user_id"),
-                "timestamp": datetime.now(datetime.UTC).isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
             }
         }
 
@@ -310,7 +310,7 @@ class ErrorRecoveryNode(BaseAgentNode):
             "last_error": state.get("last_error"),
             "agent_history": state.get("agent_history", []),
             "retry_attempts": state.get("retry_attempts", {}),
-            "timestamp": datetime.now(datetime.UTC).isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "conversation_length": len(state.get("messages", [])),
         }
 

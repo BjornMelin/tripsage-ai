@@ -36,10 +36,32 @@ logger = get_logger(__name__)
 
 class TripSageOrchestrator:
     """
-    Main LangGraph orchestrator for TripSage AI.
+    Enhanced LangGraph orchestrator for TripSage AI with centralized tool management.
 
     This class builds and manages the graph-based workflow that coordinates
-    all specialized travel planning agents using LangGraph.
+    all specialized travel planning agents using LangGraph. Enhanced with:
+
+    Features:
+    - **Centralized Tool Registry**: All agent tools managed through
+      LangGraphToolRegistry
+    - **Enhanced Error Handling**: Sophisticated error recovery with fallback strategies
+    - **Improved Routing**: Multi-tier classification with confidence scoring
+    - **Async Optimization**: Full async/await support with concurrent operations
+    - **Robust State Management**: Structured state with comprehensive tracking
+    - **Agent Handoffs**: Intelligent inter-agent coordination and context preservation
+
+    Architecture:
+    - Router Node: Enhanced semantic intent detection with fallback classification
+    - Agent Nodes: Specialized travel planning agents with centralized tool access
+    - Error Recovery: Sophisticated error handling with retry and escalation strategies
+    - Memory Management: Conversation context and user preference tracking
+    - Tool Registry: Centralized management of MCP and SDK tools with usage analytics
+
+    Performance Optimizations:
+    - Batch tool execution for concurrent operations
+    - Event loop-aware async patterns
+    - Intelligent tool selection and caching
+    - Resource usage monitoring and limits
     """
 
     def __init__(
@@ -221,8 +243,9 @@ class TripSageOrchestrator:
         Returns:
             Next step identifier
         """
-        # Check for errors
-        if state.get("error_count", 0) > 0:
+        # Check for errors using the enhanced error structure
+        error_info = state.get("error_info", {})
+        if error_info.get("error_count", 0) > 0:
             return "error"
 
         # Check for handoff using handoff coordinator
@@ -234,7 +257,7 @@ class TripSageOrchestrator:
         if handoff_result:
             next_agent, handoff_context = handoff_result
             # Update state with handoff information
-            state["next_agent"] = next_agent
+            state["current_agent"] = next_agent
             state["handoff_context"] = handoff_context.model_dump()
             return "continue"  # Continue to router for handoff
 
@@ -242,14 +265,32 @@ class TripSageOrchestrator:
         if (
             state.get("user_preferences")
             or state.get("destination_info")
-            or state.get("budget_constraints")
+            or state.get("booking_progress")
         ):
             return "memory"
 
-        # Check if conversation should continue
+        # Check conversation state for natural completion
         last_message = state["messages"][-1] if state["messages"] else {}
         if last_message.get("role") == "assistant":
-            # Agent provided a response, conversation can end or continue
+            # If the response indicates completion or escalation, end conversation
+            keywords = ["escalation", "human support", "technical difficulties"]
+            if any(
+                keyword in last_message.get("content", "").lower()
+                for keyword in keywords
+            ):
+                return "end"
+
+            # Check if user needs to respond
+            content = last_message.get("content", "")
+            question_phrases = [
+                "Would you like",
+                "Do you want",
+                "What would you prefer",
+            ]
+            if any(phrase in content for phrase in question_phrases):
+                return "end"  # Wait for user response
+
+            # Agent provided informational response, can continue
             return "end"
 
         # Default to continue conversation

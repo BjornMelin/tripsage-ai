@@ -140,7 +140,18 @@ class MCPToolWrapper(BaseToolWrapper):
     def _run(self, **kwargs) -> str:
         """Synchronous execution wrapper for async MCP calls."""
         try:
-            return asyncio.run(self._arun(**kwargs))
+            # Check if we're already in an event loop
+            try:
+                asyncio.get_running_loop()
+                # If we're in an event loop, we shouldn't use asyncio.run()
+                raise ToolException(
+                    f"Synchronous tool execution attempted from async context "
+                    f"for {self.metadata.name}. "
+                    "Use async execution instead."
+                )
+            except RuntimeError:
+                # No event loop running, safe to create new one
+                return asyncio.run(self._arun(**kwargs))
         except Exception as e:
             self.logger.error(f"Error in sync execution of {self.metadata.name}: {e}")
             raise ToolException(
@@ -226,12 +237,22 @@ class SDKToolWrapper(BaseToolWrapper):
     def _run(self, **kwargs) -> str:
         """Synchronous execution wrapper."""
         try:
-            result = asyncio.run(self.execute(**kwargs))
-            return (
-                json.dumps(result, ensure_ascii=False)
-                if not isinstance(result, str)
-                else result
-            )
+            # Check if we're already in an event loop
+            try:
+                asyncio.get_running_loop()
+                # If we're in an event loop, we shouldn't use asyncio.run()
+                raise ToolException(
+                    f"Synchronous tool execution attempted from async context "
+                    f"for {self.metadata.name}. Use async execution instead."
+                )
+            except RuntimeError:
+                # No event loop running, safe to create new one
+                result = asyncio.run(self.execute(**kwargs))
+                return (
+                    json.dumps(result, ensure_ascii=False)
+                    if not isinstance(result, str)
+                    else result
+                )
         except Exception as e:
             self.logger.error(f"Error in sync execution of {self.metadata.name}: {e}")
             raise ToolException(
@@ -475,9 +496,82 @@ class LangGraphToolRegistry:
 
     def _register_sdk_tools(self) -> None:
         """Register SDK-based tools."""
-        # These would be implemented based on available SDK tools
-        # Example: Google Maps direct SDK tools, Playwright tools, etc.
-        pass
+        # Google Maps SDK tools
+        sdk_tools = [
+            {
+                "name": "google_maps_geocode",
+                "description": (
+                    "Convert addresses to geographic coordinates using Google Maps"
+                ),
+                "func": self._create_google_maps_geocode_tool(),
+                "agent_types": [
+                    "destination_research_agent",
+                    "flight_agent",
+                    "accommodation_agent",
+                    "itinerary_agent",
+                ],
+                "capabilities": ["geocoding", "location", "mapping"],
+                "dependencies": ["google_maps_api"],
+                "parameters": {
+                    "address": {
+                        "type": "string",
+                        "description": "Address to geocode",
+                        "required": True,
+                    }
+                },
+            },
+            {
+                "name": "google_maps_places",
+                "description": "Find places of interest using Google Maps Places API",
+                "func": self._create_google_maps_places_tool(),
+                "agent_types": [
+                    "destination_research_agent",
+                    "itinerary_agent",
+                ],
+                "capabilities": ["place_search", "poi", "recommendations"],
+                "dependencies": ["google_maps_api"],
+                "parameters": {
+                    "query": {
+                        "type": "string",
+                        "description": "Place search query",
+                        "required": True,
+                    },
+                    "location": {
+                        "type": "string",
+                        "description": "Location bias for search",
+                        "required": False,
+                    },
+                },
+            },
+            {
+                "name": "webcrawl_search",
+                "description": "Search and crawl web content for travel information",
+                "func": self._create_webcrawl_tool(),
+                "agent_types": [
+                    "destination_research_agent",
+                    "flight_agent",
+                    "accommodation_agent",
+                ],
+                "capabilities": ["web_search", "content_extraction", "research"],
+                "dependencies": ["crawl4ai"],
+                "parameters": {
+                    "query": {
+                        "type": "string",
+                        "description": "Search query",
+                        "required": True,
+                    },
+                    "urls": {
+                        "type": "array",
+                        "description": "Optional specific URLs to crawl",
+                        "required": False,
+                    },
+                },
+            },
+        ]
+
+        for tool_config in sdk_tools:
+            tool = SDKToolWrapper(**tool_config)
+            self.register_tool(tool)
 
     def _setup_agent_mappings(self) -> None:
         """Setup agent-specific tool mappings."""
@@ -657,6 +751,123 @@ class LangGraphToolRegistry:
                 logger.warning(f"Health check failed for tool {tool_name}: {e}")
 
         return health_status
+
+    def _create_google_maps_geocode_tool(self) -> callable:
+        """Create Google Maps geocoding tool function."""
+
+        async def google_maps_geocode(address: str) -> Dict[str, Any]:
+            """Geocode an address using Google Maps API."""
+            if self.service_registry and hasattr(
+                self.service_registry, "google_maps_service"
+            ):
+                try:
+                    geocode_service = self.service_registry.google_maps_service
+                    result = await geocode_service.geocode_address(address)
+                    return {"status": "success", "result": result}
+                except Exception as e:
+                    logger.error(f"Google Maps geocoding failed: {e}")
+                    return {"status": "error", "error": str(e)}
+            else:
+                return {"status": "error", "error": "Google Maps service not available"}
+
+        return google_maps_geocode
+
+    def _create_google_maps_places_tool(self) -> callable:
+        """Create Google Maps places search tool function."""
+
+        async def google_maps_places(
+            query: str, location: Optional[str] = None
+        ) -> Dict[str, Any]:
+            """Search for places using Google Maps Places API."""
+            if self.service_registry and hasattr(
+                self.service_registry, "google_maps_service"
+            ):
+                try:
+                    maps_service = self.service_registry.google_maps_service
+                    result = await maps_service.search_places(
+                        query, location_bias=location
+                    )
+                    return {"status": "success", "result": result}
+                except Exception as e:
+                    logger.error(f"Google Maps places search failed: {e}")
+                    return {"status": "error", "error": str(e)}
+            else:
+                return {"status": "error", "error": "Google Maps service not available"}
+
+        return google_maps_places
+
+    def _create_webcrawl_tool(self) -> callable:
+        """Create web crawling tool function."""
+
+        async def webcrawl_search(
+            query: str, urls: Optional[List[str]] = None
+        ) -> Dict[str, Any]:
+            """Search and crawl web content."""
+            if self.service_registry and hasattr(
+                self.service_registry, "webcrawl_service"
+            ):
+                try:
+                    if urls:
+                        # Crawl specific URLs
+                        webcrawl_service = self.service_registry.webcrawl_service
+                        result = await webcrawl_service.crawl_urls(urls)
+                    else:
+                        # Search and crawl
+                        webcrawl_service = self.service_registry.webcrawl_service
+                        result = await webcrawl_service.search_and_crawl(query)
+                    return {"status": "success", "result": result}
+                except Exception as e:
+                    logger.error(f"Web crawling failed: {e}")
+                    return {"status": "error", "error": str(e)}
+            else:
+                return {
+                    "status": "error",
+                    "error": "Web crawling service not available",
+                }
+
+        return webcrawl_search
+
+    async def batch_execute_tools(
+        self, tool_executions: List[Dict[str, Any]], max_concurrent: int = 5
+    ) -> List[Dict[str, Any]]:
+        """
+        Execute multiple tools concurrently with concurrency limit.
+
+        Args:
+            tool_executions: List of dicts with 'tool_name' and 'params' keys
+            max_concurrent: Maximum number of concurrent executions
+
+        Returns:
+            List of execution results
+        """
+        semaphore = asyncio.Semaphore(max_concurrent)
+
+        async def execute_with_semaphore(execution: Dict[str, Any]) -> Dict[str, Any]:
+            async with semaphore:
+                try:
+                    tool = self.get_tool(execution["tool_name"])
+                    if tool:
+                        result = await tool.execute(**execution.get("params", {}))
+                        return {
+                            "tool_name": execution["tool_name"],
+                            "status": "success",
+                            "result": result,
+                        }
+                    else:
+                        return {
+                            "tool_name": execution["tool_name"],
+                            "status": "error",
+                            "error": f"Tool {execution['tool_name']} not found",
+                        }
+                except Exception as e:
+                    return {
+                        "tool_name": execution["tool_name"],
+                        "status": "error",
+                        "error": str(e),
+                    }
+
+        tasks = [execute_with_semaphore(execution) for execution in tool_executions]
+        return await asyncio.gather(*tasks, return_exceptions=True)
 
 
 # Global registry instance
