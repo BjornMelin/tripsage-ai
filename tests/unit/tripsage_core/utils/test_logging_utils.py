@@ -17,9 +17,7 @@ from tripsage_core.utils.logging_utils import (
     configure_logging,
     configure_root_logger,
     get_logger,
-    get_module_logger,
     log_exception,
-    setup_logging,
 )
 
 
@@ -48,7 +46,7 @@ class TestLoggingUtils:
     def test_setup_logging_console_only(self):
         """Test logging setup with console handler only."""
         with patch.dict(os.environ, {"TESTING": "true"}):
-            setup_logging(log_level=logging.DEBUG)
+            configure_root_logger(level=logging.DEBUG)
 
         root_logger = logging.getLogger()
 
@@ -69,7 +67,7 @@ class TestLoggingUtils:
         log_file = temp_log_dir / "test.log"
 
         with patch.dict(os.environ, {}, clear=True):
-            setup_logging(log_level=logging.INFO, log_file=str(log_file))
+            configure_root_logger(level=logging.INFO)
 
         root_logger = logging.getLogger()
 
@@ -204,7 +202,7 @@ class TestLoggingUtils:
     def test_logger_formatting(self, caplog):
         """Test log message formatting."""
         with patch.dict(os.environ, {"TESTING": "true"}):
-            setup_logging(log_level=logging.INFO)
+            configure_root_logger(level=logging.INFO)
 
         logger = get_logger("test.formatting")
         logger.info("Test message with %s", "formatting", extra={"key": "value"})
@@ -266,7 +264,7 @@ class TestLoggingUtils:
     )
     def test_log_level_filtering(self, level, should_log, caplog):
         """Test that log level filtering works correctly."""
-        setup_logging(log_level=logging.INFO)
+        configure_root_logger(level=logging.INFO)
         logger = get_logger("test.filtering")
 
         test_message = f"Test message at {logging.getLevelName(level)}"
@@ -366,15 +364,15 @@ class TestLoggingUtils:
         assert len(root_logger.handlers) == 1
         assert isinstance(root_logger.handlers[0], logging.StreamHandler)
 
-    def test_get_module_logger_legacy(self):
-        """Test legacy get_module_logger function."""
-        logger = get_module_logger("test.legacy")
+    def test_get_logger_functionality(self):
+        """Test get_logger function."""
+        logger = get_logger("test.legacy")
         assert isinstance(logger, logging.Logger)
         assert logger.name == "test.legacy"
 
-    def test_setup_logging_legacy(self):
-        """Test legacy setup_logging function."""
-        setup_logging(level=logging.INFO)
+    def test_configure_root_logger_functionality(self):
+        """Test configure_root_logger function."""
+        configure_root_logger(level=logging.INFO)
 
         root_logger = logging.getLogger()
         assert root_logger.level == logging.INFO

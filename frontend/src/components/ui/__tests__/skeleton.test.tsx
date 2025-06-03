@@ -1,5 +1,5 @@
 import { render, screen } from "@testing-library/react";
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import { Skeleton } from "../skeleton";
 
 describe("Skeleton", () => {
@@ -61,9 +61,7 @@ describe("Skeleton", () => {
   });
 
   it("applies different variants", () => {
-    const { rerender } = render(
-      <Skeleton variant="light" data-testid="skeleton" />
-    );
+    const { rerender } = render(<Skeleton variant="light" data-testid="skeleton" />);
     let skeleton = screen.getByTestId("skeleton");
     expect(skeleton).toHaveClass("bg-slate-50");
 
@@ -91,9 +89,7 @@ describe("Skeleton", () => {
   });
 
   it("supports accessibility attributes", () => {
-    render(
-      <Skeleton aria-label="Custom loading message" data-testid="skeleton" />
-    );
+    render(<Skeleton aria-label="Custom loading message" data-testid="skeleton" />);
 
     const skeleton = screen.getByTestId("skeleton");
     expect(skeleton).toHaveAttribute("aria-label", "Custom loading message");

@@ -216,3 +216,14 @@ class ServiceRegistry:
             The service instance or None
         """
         return getattr(self, service_name, None)
+
+    def get_service(self, service_name: str):
+        """Get a service by name, for compatibility with tests.
+
+        Args:
+            service_name: The name of the service attribute
+
+        Returns:
+            The service instance or None
+        """
+        return self.get_optional_service(service_name)

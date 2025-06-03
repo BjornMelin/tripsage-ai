@@ -1,10 +1,7 @@
 "use client";
 
-import { format, differenceInDays } from "date-fns";
-import { Calendar, MapPin, Users, DollarSign } from "lucide-react";
-import Link from "next/link";
-import { useTripStore, type Trip } from "@/stores/trip-store";
-import { useBudgetStore } from "@/stores/budget-store";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -13,8 +10,11 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { useBudgetStore } from "@/stores/budget-store";
+import { type Trip, useTripStore } from "@/stores/trip-store";
+import { differenceInDays, format } from "date-fns";
+import { Calendar, DollarSign, MapPin, Users } from "lucide-react";
+import Link from "next/link";
 
 interface TripCardProps {
   trip: Trip;
@@ -66,9 +66,7 @@ export function TripCard({ trip, onEdit, onDelete, className }: TripCardProps) {
         </div>
         <CardTitle className="line-clamp-1">{trip.name}</CardTitle>
         {trip.description && (
-          <CardDescription className="line-clamp-2">
-            {trip.description}
-          </CardDescription>
+          <CardDescription className="line-clamp-2">{trip.description}</CardDescription>
         )}
       </CardHeader>
 
@@ -107,8 +105,7 @@ export function TripCard({ trip, onEdit, onDelete, className }: TripCardProps) {
 
         {tripBudgets.length > 0 && (
           <div className="text-xs text-muted-foreground">
-            {tripBudgets.length} budget{tripBudgets.length !== 1 ? "s" : ""}{" "}
-            tracked
+            {tripBudgets.length} budget{tripBudgets.length !== 1 ? "s" : ""} tracked
           </div>
         )}
       </CardContent>

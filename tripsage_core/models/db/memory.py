@@ -4,7 +4,7 @@ These models represent the database schema for memory storage and retrieval,
 implementing Mem0's memory system with pgvector for semantic search.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, List, Optional
 from uuid import UUID
 
@@ -84,10 +84,11 @@ class Memory(BaseModel):
         seen = set()
         cleaned = []
         for category in v:
-            if category and category.strip() and category not in seen:
+            if category and category.strip():
                 cleaned_category = category.strip().lower()
-                cleaned.append(cleaned_category)
-                seen.add(cleaned_category)
+                if cleaned_category not in seen:
+                    cleaned.append(cleaned_category)
+                    seen.add(cleaned_category)
         return cleaned
 
     @field_validator("relevance_score")
@@ -222,13 +223,25 @@ class SessionMemory(BaseModel):
     @property
     def is_expired(self) -> bool:
         """Check if the session memory has expired."""
-        return datetime.now(datetime.UTC) > self.expires_at.replace(tzinfo=datetime.UTC)
+        expires_at = self.expires_at
+        if expires_at.tzinfo is None:
+            # If expires_at is naive, compare with naive now
+            return datetime.now() > expires_at
+        else:
+            # If expires_at is timezone-aware, compare with timezone-aware now
+            return datetime.now(timezone.utc) > expires_at
 
     def extend_expiry(self, hours: int = 24) -> None:
         """Extend the expiry time by the specified number of hours."""
         from datetime import timedelta
 
-        self.expires_at = datetime.now(datetime.UTC) + timedelta(hours=hours)
+        # Ensure timezone-aware comparison
+        new_expiry = datetime.now(timezone.utc) + timedelta(hours=hours)
+        # Keep the same timezone format as original
+        if self.expires_at.tzinfo is None:
+            self.expires_at = new_expiry.replace(tzinfo=None)
+        else:
+            self.expires_at = new_expiry
 
 
 class MemorySearchResult(BaseModel):

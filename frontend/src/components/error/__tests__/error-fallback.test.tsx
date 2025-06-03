@@ -1,6 +1,6 @@
+import { fireEvent, render, screen } from "@testing-library/react";
 import React from "react";
-import { render, screen, fireEvent } from "@testing-library/react";
-import { describe, it, expect, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   ErrorFallback,
   MinimalErrorFallback,
@@ -94,9 +94,7 @@ describe("Error Fallback Components", () => {
     });
 
     it("should render try again button when retry function provided", () => {
-      render(
-        <ErrorFallback error={mockError} reset={mockReset} retry={mockRetry} />
-      );
+      render(<ErrorFallback error={mockError} reset={mockReset} retry={mockRetry} />);
 
       const tryAgainButton = screen.getByRole("button", { name: /try again/i });
       expect(tryAgainButton).toBeInTheDocument();
@@ -128,9 +126,7 @@ describe("Error Fallback Components", () => {
     it("should not render buttons when functions not provided", () => {
       render(<ErrorFallback error={mockError} />);
 
-      expect(
-        screen.queryByRole("button", { name: /reset/i })
-      ).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /reset/i })).not.toBeInTheDocument();
       expect(
         screen.queryByRole("button", { name: /try again/i })
       ).not.toBeInTheDocument();
@@ -220,14 +216,11 @@ describe("Error Fallback Components", () => {
       process.env.NODE_ENV = "development";
 
       const errorWithStack = { ...mockError };
-      errorWithStack.stack =
-        "Error: Test error\n    at Component (Component.tsx:10:5)";
+      errorWithStack.stack = "Error: Test error\n    at Component (Component.tsx:10:5)";
 
       render(<PageErrorFallback error={errorWithStack} reset={mockReset} />);
 
-      expect(
-        screen.getByText("Error Details (Development)")
-      ).toBeInTheDocument();
+      expect(screen.getByText("Error Details (Development)")).toBeInTheDocument();
 
       // Click details to expand
       fireEvent.click(screen.getByText("Error Details (Development)"));
@@ -241,14 +234,11 @@ describe("Error Fallback Components", () => {
       process.env.NODE_ENV = "production";
 
       const errorWithStack = { ...mockError };
-      errorWithStack.stack =
-        "Error: Test error\n    at Component (Component.tsx:10:5)";
+      errorWithStack.stack = "Error: Test error\n    at Component (Component.tsx:10:5)";
 
       render(<PageErrorFallback error={errorWithStack} reset={mockReset} />);
 
-      expect(
-        screen.queryByText("Error Details (Development)")
-      ).not.toBeInTheDocument();
+      expect(screen.queryByText("Error Details (Development)")).not.toBeInTheDocument();
 
       process.env.NODE_ENV = originalEnv;
     });
@@ -273,31 +263,19 @@ describe("Error Fallback Components", () => {
     });
 
     it("should have proper button roles", () => {
-      render(
-        <ErrorFallback error={mockError} reset={mockReset} retry={mockRetry} />
-      );
+      render(<ErrorFallback error={mockError} reset={mockReset} retry={mockRetry} />);
 
       const buttons = screen.getAllByRole("button");
       expect(buttons).toHaveLength(4); // Try Again, Reset, Reload Page, Go Home
     });
 
     it("should have accessible button text", () => {
-      render(
-        <ErrorFallback error={mockError} reset={mockReset} retry={mockRetry} />
-      );
+      render(<ErrorFallback error={mockError} reset={mockReset} retry={mockRetry} />);
 
-      expect(
-        screen.getByRole("button", { name: /try again/i })
-      ).toBeInTheDocument();
-      expect(
-        screen.getByRole("button", { name: /reset/i })
-      ).toBeInTheDocument();
-      expect(
-        screen.getByRole("button", { name: /reload page/i })
-      ).toBeInTheDocument();
-      expect(
-        screen.getByRole("button", { name: /go home/i })
-      ).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /try again/i })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /reset/i })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /reload page/i })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /go home/i })).toBeInTheDocument();
     });
   });
 

@@ -1,12 +1,12 @@
 import { render, screen } from "@testing-library/react";
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
   AvatarSkeleton,
   CardSkeleton,
+  ChartSkeleton,
+  FormSkeleton,
   ListItemSkeleton,
   TableSkeleton,
-  FormSkeleton,
-  ChartSkeleton,
 } from "../loading-skeletons";
 
 describe("AvatarSkeleton", () => {
@@ -19,9 +19,7 @@ describe("AvatarSkeleton", () => {
   });
 
   it("applies different sizes", () => {
-    const { rerender } = render(
-      <AvatarSkeleton size="sm" data-testid="avatar" />
-    );
+    const { rerender } = render(<AvatarSkeleton size="sm" data-testid="avatar" />);
     let avatar = screen.getByTestId("avatar");
     expect(avatar).toHaveClass("h-8", "w-8");
 
@@ -64,9 +62,7 @@ describe("CardSkeleton", () => {
     const { container } = render(<CardSkeleton hasAvatar={true} />);
 
     // Check for avatar skeleton
-    const avatarSkeletons = container.querySelectorAll(
-      "[class*='rounded-full']"
-    );
+    const avatarSkeletons = container.querySelectorAll("[class*='rounded-full']");
     expect(avatarSkeletons.length).toBeGreaterThan(0);
   });
 
@@ -91,18 +87,14 @@ describe("ListItemSkeleton", () => {
   it("includes avatar when specified", () => {
     const { container } = render(<ListItemSkeleton hasAvatar={true} />);
 
-    const avatarSkeletons = container.querySelectorAll(
-      "[class*='rounded-full']"
-    );
+    const avatarSkeletons = container.querySelectorAll("[class*='rounded-full']");
     expect(avatarSkeletons.length).toBeGreaterThan(0);
   });
 
   it("includes action when specified", () => {
     const { container } = render(<ListItemSkeleton hasAction={true} />);
 
-    const actionSkeletons = container.querySelectorAll(
-      "[class*='h-8'][class*='w-16']"
-    );
+    const actionSkeletons = container.querySelectorAll("[class*='h-8'][class*='w-16']");
     expect(actionSkeletons.length).toBeGreaterThan(0);
   });
 });
@@ -207,9 +199,7 @@ describe("ChartSkeleton", () => {
     const { container } = render(<ChartSkeleton />);
 
     // Should have legend items
-    const legendItems = container.querySelectorAll(
-      "[class*='h-3'][class*='w-3']"
-    );
+    const legendItems = container.querySelectorAll("[class*='h-3'][class*='w-3']");
     expect(legendItems.length).toBeGreaterThan(0);
   });
 });

@@ -10,6 +10,7 @@ from typing import Any, Dict, Optional
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, StateGraph
 
+from tripsage.agents.service_registry import ServiceRegistry
 from tripsage.orchestration.checkpoint_manager import get_checkpoint_manager
 from tripsage.orchestration.config import get_default_config
 from tripsage.orchestration.handoff_coordinator import (
@@ -35,23 +36,50 @@ logger = get_logger(__name__)
 
 class TripSageOrchestrator:
     """
-    Main LangGraph orchestrator for TripSage AI.
+    Enhanced LangGraph orchestrator for TripSage AI with centralized tool management.
 
     This class builds and manages the graph-based workflow that coordinates
-    all specialized travel planning agents using LangGraph.
+    all specialized travel planning agents using LangGraph. Enhanced with:
+
+    Features:
+    - **Centralized Tool Registry**: All agent tools managed through
+      LangGraphToolRegistry
+    - **Enhanced Error Handling**: Sophisticated error recovery with fallback strategies
+    - **Improved Routing**: Multi-tier classification with confidence scoring
+    - **Async Optimization**: Full async/await support with concurrent operations
+    - **Robust State Management**: Structured state with comprehensive tracking
+    - **Agent Handoffs**: Intelligent inter-agent coordination and context preservation
+
+    Architecture:
+    - Router Node: Enhanced semantic intent detection with fallback classification
+    - Agent Nodes: Specialized travel planning agents with centralized tool access
+    - Error Recovery: Sophisticated error handling with retry and escalation strategies
+    - Memory Management: Conversation context and user preference tracking
+    - Tool Registry: Centralized management of MCP and SDK tools with usage analytics
+
+    Performance Optimizations:
+    - Batch tool execution for concurrent operations
+    - Event loop-aware async patterns
+    - Intelligent tool selection and caching
+    - Resource usage monitoring and limits
     """
 
     def __init__(
-        self, checkpointer: Optional[Any] = None, config: Optional[Any] = None
+        self,
+        service_registry: Optional[ServiceRegistry] = None,
+        checkpointer: Optional[Any] = None,
+        config: Optional[Any] = None,
     ):
         """
         Initialize the orchestrator with graph construction and checkpointing.
 
         Args:
+            service_registry: Service registry for dependency injection
             checkpointer: Optional checkpointer for state persistence
                          (defaults to MemorySaver for development)
             config: Optional configuration object (defaults to environment config)
         """
+        self.service_registry = service_registry or ServiceRegistry()
         self.config = config or get_default_config()
         self.checkpointer = checkpointer or MemorySaver()
         self.memory_bridge = get_memory_bridge()
@@ -99,15 +127,17 @@ class TripSageOrchestrator:
         graph = StateGraph(TravelPlanningState)
 
         # Add the router node (entry point for all requests)
-        router_node = RouterNode()
+        router_node = RouterNode(self.service_registry)
         graph.add_node("router", router_node)
 
-        # Add specialized agent nodes (Phase 2 complete implementations)
-        flight_agent_node = FlightAgentNode()
-        accommodation_agent_node = AccommodationAgentNode()
-        budget_agent_node = BudgetAgentNode()
-        destination_research_agent_node = DestinationResearchAgentNode()
-        itinerary_agent_node = ItineraryAgentNode()
+        # Add specialized agent nodes with service registry
+        flight_agent_node = FlightAgentNode(self.service_registry)
+        accommodation_agent_node = AccommodationAgentNode(self.service_registry)
+        budget_agent_node = BudgetAgentNode(self.service_registry)
+        destination_research_agent_node = DestinationResearchAgentNode(
+            self.service_registry
+        )
+        itinerary_agent_node = ItineraryAgentNode(self.service_registry)
 
         graph.add_node("flight_agent", flight_agent_node)
         graph.add_node("accommodation_agent", accommodation_agent_node)
@@ -118,9 +148,9 @@ class TripSageOrchestrator:
         # General purpose agent for unrouted requests
         graph.add_node("general_agent", self._create_general_agent())
 
-        # Add utility nodes
-        memory_update_node = MemoryUpdateNode()
-        error_recovery_node = ErrorRecoveryNode()
+        # Add utility nodes with service registry
+        memory_update_node = MemoryUpdateNode(self.service_registry)
+        error_recovery_node = ErrorRecoveryNode(self.service_registry)
         graph.add_node("memory_update", memory_update_node)
         graph.add_node("error_recovery", error_recovery_node)
 
@@ -213,8 +243,9 @@ class TripSageOrchestrator:
         Returns:
             Next step identifier
         """
-        # Check for errors
-        if state.get("error_count", 0) > 0:
+        # Check for errors using the enhanced error structure
+        error_info = state.get("error_info", {})
+        if error_info.get("error_count", 0) > 0:
             return "error"
 
         # Check for handoff using handoff coordinator
@@ -226,7 +257,7 @@ class TripSageOrchestrator:
         if handoff_result:
             next_agent, handoff_context = handoff_result
             # Update state with handoff information
-            state["next_agent"] = next_agent
+            state["current_agent"] = next_agent
             state["handoff_context"] = handoff_context.model_dump()
             return "continue"  # Continue to router for handoff
 
@@ -234,14 +265,32 @@ class TripSageOrchestrator:
         if (
             state.get("user_preferences")
             or state.get("destination_info")
-            or state.get("budget_constraints")
+            or state.get("booking_progress")
         ):
             return "memory"
 
-        # Check if conversation should continue
+        # Check conversation state for natural completion
         last_message = state["messages"][-1] if state["messages"] else {}
         if last_message.get("role") == "assistant":
-            # Agent provided a response, conversation can end or continue
+            # If the response indicates completion or escalation, end conversation
+            keywords = ["escalation", "human support", "technical difficulties"]
+            if any(
+                keyword in last_message.get("content", "").lower()
+                for keyword in keywords
+            ):
+                return "end"
+
+            # Check if user needs to respond
+            content = last_message.get("content", "")
+            question_phrases = [
+                "Would you like",
+                "Do you want",
+                "What would you prefer",
+            ]
+            if any(phrase in content for phrase in question_phrases):
+                return "end"  # Wait for user response
+
+            # Agent provided informational response, can continue
             return "end"
 
         # Default to continue conversation

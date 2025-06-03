@@ -1,10 +1,5 @@
 "use client";
 
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { useUserStore } from "@/stores/user-store";
-import { useCurrencyStore } from "@/stores/currency-store";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -31,7 +26,12 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/components/ui/use-toast";
-import { Globe, Palette, Zap, MapPin } from "lucide-react";
+import { useCurrencyStore } from "@/stores/currency-store";
+import { useUserProfileStore } from "@/stores/user-store";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Globe, MapPin, Palette, Zap } from "lucide-react";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
 
 const preferencesSchema = z.object({
   language: z.string().min(1, "Please select a language"),
@@ -46,7 +46,7 @@ const preferencesSchema = z.object({
 type PreferencesFormData = z.infer<typeof preferencesSchema>;
 
 export function PreferencesSection() {
-  const { user, updateUser } = useUserStore();
+  const { user, updateUser } = useUserProfileStore();
   const { currency, setCurrency } = useCurrencyStore();
   const { toast } = useToast();
 
@@ -56,8 +56,7 @@ export function PreferencesSection() {
       language: user?.preferences?.language || "en",
       currency: currency || "USD",
       timezone:
-        user?.preferences?.timezone ||
-        Intl.DateTimeFormat().resolvedOptions().timeZone,
+        user?.preferences?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone,
       theme: user?.preferences?.theme || "system",
       units: user?.preferences?.units || "metric",
       dateFormat: user?.preferences?.dateFormat || "MM/DD/YYYY",
@@ -181,10 +180,7 @@ export function PreferencesSection() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Language</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                      >
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Select language" />
@@ -209,10 +205,7 @@ export function PreferencesSection() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Currency</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                      >
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Select currency" />
@@ -238,10 +231,7 @@ export function PreferencesSection() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Timezone</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                    >
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select timezone" />
@@ -267,22 +257,15 @@ export function PreferencesSection() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Units</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                      >
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Select units" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="metric">
-                            Metric (km, °C)
-                          </SelectItem>
-                          <SelectItem value="imperial">
-                            Imperial (mi, °F)
-                          </SelectItem>
+                          <SelectItem value="metric">Metric (km, °C)</SelectItem>
+                          <SelectItem value="imperial">Imperial (mi, °F)</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -296,10 +279,7 @@ export function PreferencesSection() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Theme</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                      >
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Select theme" />
@@ -324,10 +304,7 @@ export function PreferencesSection() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Date Format</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                      >
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Select date format" />
@@ -350,10 +327,7 @@ export function PreferencesSection() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Time Format</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                      >
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Select time format" />
@@ -372,9 +346,7 @@ export function PreferencesSection() {
 
               <div className="flex justify-end">
                 <Button type="submit" disabled={form.formState.isSubmitting}>
-                  {form.formState.isSubmitting
-                    ? "Saving..."
-                    : "Save Preferences"}
+                  {form.formState.isSubmitting ? "Saving..." : "Save Preferences"}
                 </Button>
               </div>
             </form>
@@ -448,9 +420,7 @@ export function PreferencesSection() {
             </div>
             <Switch
               checked={user?.preferences?.analytics ?? true}
-              onCheckedChange={(enabled) =>
-                toggleAdvancedSetting("analytics", enabled)
-              }
+              onCheckedChange={(enabled) => toggleAdvancedSetting("analytics", enabled)}
             />
           </div>
         </CardContent>

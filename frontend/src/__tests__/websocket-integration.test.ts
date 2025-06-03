@@ -1,15 +1,15 @@
 /**
  * End-to-end WebSocket integration tests
- * 
+ *
  * Tests the complete WebSocket flow from frontend to backend,
  * including authentication, message handling, and real-time updates.
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { renderHook, act, waitFor } from "@testing-library/react";
-import { useChatStore } from "@/stores/chat-store";
 import { useWebSocket } from "@/hooks/use-websocket";
-import { WebSocketClient, ConnectionStatus } from "@/lib/websocket/websocket-client";
+import { ConnectionStatus, WebSocketClient } from "@/lib/websocket/websocket-client";
+import { useChatStore } from "@/stores/chat-store";
+import { act, renderHook, waitFor } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // Mock environment variables
 vi.stubEnv("NEXT_PUBLIC_WS_URL", "ws://localhost:8000");
@@ -31,7 +31,7 @@ class MockWebSocketServer {
   }
 
   broadcast(data: string, exclude?: MockWebSocket) {
-    this.clients.forEach(client => {
+    this.clients.forEach((client) => {
       if (client !== exclude && client.readyState === MockWebSocket.OPEN) {
         client.receive(data);
       }
@@ -39,14 +39,14 @@ class MockWebSocketServer {
   }
 
   sendToClient(clientUrl: string, data: string) {
-    const client = Array.from(this.clients).find(c => c.url.includes(clientUrl));
+    const client = Array.from(this.clients).find((c) => c.url.includes(clientUrl));
     if (client && client.readyState === MockWebSocket.OPEN) {
       client.receive(data);
     }
   }
 
   getConnectedClients() {
-    return Array.from(this.clients).filter(c => c.readyState === MockWebSocket.OPEN);
+    return Array.from(this.clients).filter((c) => c.readyState === MockWebSocket.OPEN);
   }
 
   reset() {
@@ -69,28 +69,31 @@ class MockWebSocket {
   static CLOSING = 2;
   static CLOSED = 3;
 
-  constructor(public url: string, public protocols?: string | string[]) {
+  constructor(
+    public url: string,
+    public protocols?: string | string[]
+  ) {
     mockServer.addClient(this);
-    
+
     // Simulate async connection
     setTimeout(() => {
       this.readyState = MockWebSocket.OPEN;
-      this.onopen?.(new Event('open'));
+      this.onopen?.(new Event("open"));
     }, 10);
   }
 
   receive(data: string) {
-    this.onmessage?.(new MessageEvent('message', { data }));
+    this.onmessage?.(new MessageEvent("message", { data }));
   }
 
-  simulateClose(code = 1000, reason = 'Normal closure') {
+  simulateClose(code = 1000, reason = "Normal closure") {
     this.readyState = MockWebSocket.CLOSED;
-    this.onclose?.(new CloseEvent('close', { code, reason }));
+    this.onclose?.(new CloseEvent("close", { code, reason }));
     mockServer.removeClient(this);
   }
 
   simulateError() {
-    this.onerror?.(new Event('error'));
+    this.onerror?.(new Event("error"));
   }
 }
 
@@ -111,7 +114,7 @@ describe("WebSocket Integration Tests", () => {
     it("should establish connection and exchange messages", async () => {
       const sessionId = "test-session-123";
       const token = TEST_TOKEN;
-      
+
       // Setup chat store
       const { result: storeResult } = renderHook(() => useChatStore());
       const store = storeResult.current;
@@ -134,12 +137,15 @@ describe("WebSocket Integration Tests", () => {
 
       // Simulate authentication success
       await act(async () => {
-        mockServer.sendToClient(sessionId, JSON.stringify({
-          success: true,
-          connection_id: "conn-123",
-          user_id: "user-123",
-          session_id: sessionId,
-        }));
+        mockServer.sendToClient(
+          sessionId,
+          JSON.stringify({
+            success: true,
+            connection_id: "conn-123",
+            user_id: "user-123",
+            session_id: sessionId,
+          })
+        );
       });
 
       // Verify connected state
@@ -164,10 +170,10 @@ describe("WebSocket Integration Tests", () => {
 
       // Verify message was added to store
       await waitFor(() => {
-        const session = store.sessions.find(s => s.id === sessionId);
+        const session = store.sessions.find((s) => s.id === sessionId);
         const messages = session?.messages || [];
         const lastMessage = messages[messages.length - 1];
-        
+
         expect(lastMessage?.content).toBe("Hello from assistant");
         expect(lastMessage?.role).toBe("assistant");
       });
@@ -176,7 +182,7 @@ describe("WebSocket Integration Tests", () => {
     it("should handle message streaming", async () => {
       const sessionId = "streaming-session";
       const token = TEST_TOKEN;
-      
+
       const { result: storeResult } = renderHook(() => useChatStore());
       const store = storeResult.current;
 
@@ -192,39 +198,47 @@ describe("WebSocket Integration Tests", () => {
 
       // Wait for auth
       await act(async () => {
-        mockServer.sendToClient(sessionId, JSON.stringify({
-          success: true,
-          connection_id: "conn-streaming",
-        }));
+        mockServer.sendToClient(
+          sessionId,
+          JSON.stringify({
+            success: true,
+            connection_id: "conn-streaming",
+          })
+        );
       });
 
       // Send streaming chunks
       const messageId = "stream-msg-1";
       const chunks = ["Hello", " streaming", " world", "!"];
-      
+
       for (let i = 0; i < chunks.length; i++) {
         const isComplete = i === chunks.length - 1;
-        
+
         await act(async () => {
-          mockServer.sendToClient(sessionId, JSON.stringify({
-            id: `chunk-${i}`,
-            type: "chat_message_chunk",
-            timestamp: new Date().toISOString(),
-            payload: {
-              messageId,
-              content: chunks[i],
-              isComplete,
-            },
-          }));
+          mockServer.sendToClient(
+            sessionId,
+            JSON.stringify({
+              id: `chunk-${i}`,
+              type: "chat_message_chunk",
+              timestamp: new Date().toISOString(),
+              payload: {
+                messageId,
+                content: chunks[i],
+                isComplete,
+              },
+            })
+          );
         });
       }
 
       // Verify complete streamed message
       await waitFor(() => {
-        const session = store.sessions.find(s => s.id === sessionId);
+        const session = store.sessions.find((s) => s.id === sessionId);
         const messages = session?.messages || [];
-        const streamedMessage = messages.find(m => m.content.includes("Hello streaming world!"));
-        
+        const streamedMessage = messages.find((m) =>
+          m.content.includes("Hello streaming world!")
+        );
+
         expect(streamedMessage).toBeDefined();
         expect(streamedMessage?.isStreaming).toBe(false);
       });
@@ -233,7 +247,7 @@ describe("WebSocket Integration Tests", () => {
     it("should handle agent status updates", async () => {
       const sessionId = "agent-status-session";
       const token = TEST_TOKEN;
-      
+
       const { result: storeResult } = renderHook(() => useChatStore());
       const store = storeResult.current;
 
@@ -249,33 +263,39 @@ describe("WebSocket Integration Tests", () => {
 
       // Authenticate
       await act(async () => {
-        mockServer.sendToClient(sessionId, JSON.stringify({
-          success: true,
-          connection_id: "conn-agent-status",
-        }));
+        mockServer.sendToClient(
+          sessionId,
+          JSON.stringify({
+            success: true,
+            connection_id: "conn-agent-status",
+          })
+        );
       });
 
       // Send agent status update
       await act(async () => {
-        mockServer.sendToClient(sessionId, JSON.stringify({
-          id: "status-1",
-          type: "agent_status_update",
-          timestamp: new Date().toISOString(),
-          payload: {
-            sessionId,
-            isActive: true,
-            currentTask: "Processing your request",
-            progress: 75,
-            statusMessage: "Analyzing data...",
-          },
-        }));
+        mockServer.sendToClient(
+          sessionId,
+          JSON.stringify({
+            id: "status-1",
+            type: "agent_status_update",
+            timestamp: new Date().toISOString(),
+            payload: {
+              sessionId,
+              isActive: true,
+              currentTask: "Processing your request",
+              progress: 75,
+              statusMessage: "Analyzing data...",
+            },
+          })
+        );
       });
 
       // Verify agent status was updated
       await waitFor(() => {
-        const session = store.sessions.find(s => s.id === sessionId);
+        const session = store.sessions.find((s) => s.id === sessionId);
         const agentStatus = session?.agentStatus;
-        
+
         expect(agentStatus?.isActive).toBe(true);
         expect(agentStatus?.currentTask).toBe("Processing your request");
         expect(agentStatus?.progress).toBe(75);
@@ -286,7 +306,7 @@ describe("WebSocket Integration Tests", () => {
     it("should handle typing indicators", async () => {
       const sessionId = "typing-session";
       const token = TEST_TOKEN;
-      
+
       const { result: storeResult } = renderHook(() => useChatStore());
       const store = storeResult.current;
 
@@ -302,10 +322,13 @@ describe("WebSocket Integration Tests", () => {
 
       // Authenticate
       await act(async () => {
-        mockServer.sendToClient(sessionId, JSON.stringify({
-          success: true,
-          connection_id: "conn-typing",
-        }));
+        mockServer.sendToClient(
+          sessionId,
+          JSON.stringify({
+            success: true,
+            connection_id: "conn-typing",
+          })
+        );
       });
 
       // User starts typing
@@ -332,8 +355,8 @@ describe("WebSocket Integration Tests", () => {
     it("should handle connection failures and reconnection", async () => {
       const sessionId = "reconnect-session";
       const token = TEST_TOKEN;
-      
-      const { result: hookResult } = renderHook(() => 
+
+      const { result: hookResult } = renderHook(() =>
         useWebSocket({
           url: `ws://localhost:8000/ws/chat/${sessionId}`,
           token,
@@ -363,9 +386,12 @@ describe("WebSocket Integration Tests", () => {
       }
 
       // Verify error state
-      await waitFor(() => {
-        expect(status).toBe(ConnectionStatus.ERROR);
-      }, { timeout: 1000 });
+      await waitFor(
+        () => {
+          expect(status).toBe(ConnectionStatus.ERROR);
+        },
+        { timeout: 1000 }
+      );
 
       // Cleanup
       act(() => {
@@ -383,7 +409,7 @@ describe("WebSocket Integration Tests", () => {
       // Setup two stores for different users
       const { result: store1Result } = renderHook(() => useChatStore());
       const { result: store2Result } = renderHook(() => useChatStore());
-      
+
       const store1 = store1Result.current;
       const store2 = store2Result.current;
 
@@ -396,14 +422,16 @@ describe("WebSocket Integration Tests", () => {
       });
 
       // Wait for connections
-      await new Promise(resolve => setTimeout(resolve, 50));
+      await new Promise((resolve) => setTimeout(resolve, 50));
 
       // Authenticate both clients
       await act(async () => {
-        mockServer.broadcast(JSON.stringify({
-          success: true,
-          connection_id: "conn-broadcast-1",
-        }));
+        mockServer.broadcast(
+          JSON.stringify({
+            success: true,
+            connection_id: "conn-broadcast-1",
+          })
+        );
       });
 
       // Send message from one client
@@ -424,9 +452,9 @@ describe("WebSocket Integration Tests", () => {
 
       // Verify both stores received the message
       await waitFor(() => {
-        const session1 = store1.sessions.find(s => s.id === sessionId);
-        const session2 = store2.sessions.find(s => s.id === sessionId);
-        
+        const session1 = store1.sessions.find((s) => s.id === sessionId);
+        const session2 = store2.sessions.find((s) => s.id === sessionId);
+
         // Note: In real implementation, stores would be separate instances
         // For this test, we're verifying the broadcast mechanism works
         expect(mockServer.getConnectedClients().length).toBeGreaterThan(0);
@@ -436,7 +464,7 @@ describe("WebSocket Integration Tests", () => {
     it("should handle client disconnections gracefully", async () => {
       const sessionId = "disconnect-session";
       const token = TEST_TOKEN;
-      
+
       const { result: storeResult } = renderHook(() => useChatStore());
       const store = storeResult.current;
 
@@ -446,7 +474,7 @@ describe("WebSocket Integration Tests", () => {
       });
 
       // Wait for connection
-      await new Promise(resolve => setTimeout(resolve, 50));
+      await new Promise((resolve) => setTimeout(resolve, 50));
 
       // Verify connected
       expect(mockServer.getConnectedClients().length).toBe(1);
@@ -466,7 +494,7 @@ describe("WebSocket Integration Tests", () => {
     it("should handle authentication failures", async () => {
       const sessionId = "auth-fail-session";
       const invalidToken = "invalid-token";
-      
+
       const { result: storeResult } = renderHook(() => useChatStore());
       const store = storeResult.current;
 
@@ -476,15 +504,18 @@ describe("WebSocket Integration Tests", () => {
       });
 
       // Wait for connection attempt
-      await new Promise(resolve => setTimeout(resolve, 50));
+      await new Promise((resolve) => setTimeout(resolve, 50));
 
       // Simulate auth failure
       await act(async () => {
-        mockServer.sendToClient(sessionId, JSON.stringify({
-          success: false,
-          error: "Invalid token",
-          code: "AUTH_FAILED",
-        }));
+        mockServer.sendToClient(
+          sessionId,
+          JSON.stringify({
+            success: false,
+            error: "Invalid token",
+            code: "AUTH_FAILED",
+          })
+        );
       });
 
       // Verify error state
@@ -497,7 +528,7 @@ describe("WebSocket Integration Tests", () => {
     it("should handle malformed messages gracefully", async () => {
       const sessionId = "malformed-session";
       const token = TEST_TOKEN;
-      
+
       const { result: storeResult } = renderHook(() => useChatStore());
       const store = storeResult.current;
 
@@ -507,10 +538,13 @@ describe("WebSocket Integration Tests", () => {
       });
 
       await act(async () => {
-        mockServer.sendToClient(sessionId, JSON.stringify({
-          success: true,
-          connection_id: "conn-malformed",
-        }));
+        mockServer.sendToClient(
+          sessionId,
+          JSON.stringify({
+            success: true,
+            connection_id: "conn-malformed",
+          })
+        );
       });
 
       // Send malformed message
@@ -527,7 +561,7 @@ describe("WebSocket Integration Tests", () => {
     it("should handle network interruptions", async () => {
       const sessionId = "network-session";
       const token = TEST_TOKEN;
-      
+
       const { result: storeResult } = renderHook(() => useChatStore());
       const store = storeResult.current;
 
@@ -538,17 +572,20 @@ describe("WebSocket Integration Tests", () => {
 
       // Authenticate
       await act(async () => {
-        mockServer.sendToClient(sessionId, JSON.stringify({
-          success: true,
-          connection_id: "conn-network",
-        }));
+        mockServer.sendToClient(
+          sessionId,
+          JSON.stringify({
+            success: true,
+            connection_id: "conn-network",
+          })
+        );
       });
 
       // Simulate network interruption
       const clients = mockServer.getConnectedClients();
       if (clients.length > 0) {
         await act(async () => {
-          clients[0].simulateClose(1006, 'Abnormal closure');
+          clients[0].simulateClose(1006, "Abnormal closure");
         });
       }
 
@@ -563,7 +600,7 @@ describe("WebSocket Integration Tests", () => {
     it("should handle high-frequency messages", async () => {
       const sessionId = "performance-session";
       const token = TEST_TOKEN;
-      
+
       const { result: storeResult } = renderHook(() => useChatStore());
       const store = storeResult.current;
 
@@ -573,10 +610,13 @@ describe("WebSocket Integration Tests", () => {
       });
 
       await act(async () => {
-        mockServer.sendToClient(sessionId, JSON.stringify({
-          success: true,
-          connection_id: "conn-performance",
-        }));
+        mockServer.sendToClient(
+          sessionId,
+          JSON.stringify({
+            success: true,
+            connection_id: "conn-performance",
+          })
+        );
       });
 
       // Send multiple messages rapidly
@@ -598,20 +638,24 @@ describe("WebSocket Integration Tests", () => {
       });
 
       // Verify all messages were processed
-      await waitFor(() => {
-        const session = store.sessions.find(s => s.id === sessionId);
-        const receivedMessages = session?.messages.filter(m => 
-          m.content.includes("Performance test message")
-        ) || [];
-        
-        expect(receivedMessages.length).toBe(messageCount);
-      }, { timeout: 2000 });
+      await waitFor(
+        () => {
+          const session = store.sessions.find((s) => s.id === sessionId);
+          const receivedMessages =
+            session?.messages.filter((m) =>
+              m.content.includes("Performance test message")
+            ) || [];
+
+          expect(receivedMessages.length).toBe(messageCount);
+        },
+        { timeout: 2000 }
+      );
     });
 
     it("should maintain connection stability", async () => {
       const sessionId = "stability-session";
       const token = TEST_TOKEN;
-      
+
       const { result: storeResult } = renderHook(() => useChatStore());
       const store = storeResult.current;
 
@@ -622,15 +666,18 @@ describe("WebSocket Integration Tests", () => {
 
       // Authenticate
       await act(async () => {
-        mockServer.sendToClient(sessionId, JSON.stringify({
-          success: true,
-          connection_id: "conn-stability",
-        }));
+        mockServer.sendToClient(
+          sessionId,
+          JSON.stringify({
+            success: true,
+            connection_id: "conn-stability",
+          })
+        );
       });
 
       // Verify stable connection over time
       const checkStability = async () => {
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise((resolve) => setTimeout(resolve, 100));
         expect(store.connectionStatus).toBe("connected");
       };
 

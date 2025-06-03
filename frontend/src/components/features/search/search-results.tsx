@@ -1,17 +1,17 @@
 "use client";
 
-import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { AccommodationCard } from "./accommodation-card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type {
-  SearchType,
-  Flight,
   Accommodation,
   Activity,
-  SearchResults as SearchResultsType,
+  Flight,
   SearchResult,
+  SearchResults as SearchResultsType,
+  SearchType,
 } from "@/types/search";
+import { useState } from "react";
+import { AccommodationCard } from "./accommodation-card";
 
 interface SearchResultsProps {
   type?: SearchType;
@@ -58,8 +58,7 @@ export function SearchResults({
   const resultsArray = getResultsArray();
 
   const handleSort = (field: string) => {
-    const newDirection =
-      sortBy === field && sortDirection === "asc" ? "desc" : "asc";
+    const newDirection = sortBy === field && sortDirection === "asc" ? "desc" : "asc";
     setSortBy(field);
     setSortDirection(newDirection);
 
@@ -111,9 +110,7 @@ export function SearchResults({
             >
               Price
               {sortBy === "price" && (
-                <span className="ml-1">
-                  {sortDirection === "asc" ? "↑" : "↓"}
-                </span>
+                <span className="ml-1">{sortDirection === "asc" ? "↑" : "↓"}</span>
               )}
             </Button>
             {type === "flight" && (
@@ -126,9 +123,7 @@ export function SearchResults({
                 >
                   Duration
                   {sortBy === "duration" && (
-                    <span className="ml-1">
-                      {sortDirection === "asc" ? "↑" : "↓"}
-                    </span>
+                    <span className="ml-1">{sortDirection === "asc" ? "↑" : "↓"}</span>
                   )}
                 </Button>
                 <Button
@@ -139,9 +134,7 @@ export function SearchResults({
                 >
                   Stops
                   {sortBy === "stops" && (
-                    <span className="ml-1">
-                      {sortDirection === "asc" ? "↑" : "↓"}
-                    </span>
+                    <span className="ml-1">{sortDirection === "asc" ? "↑" : "↓"}</span>
                   )}
                 </Button>
               </>
@@ -155,9 +148,7 @@ export function SearchResults({
               >
                 Rating
                 {sortBy === "rating" && (
-                  <span className="ml-1">
-                    {sortDirection === "asc" ? "↑" : "↓"}
-                  </span>
+                  <span className="ml-1">{sortDirection === "asc" ? "↑" : "↓"}</span>
                 )}
               </Button>
             )}
@@ -184,11 +175,7 @@ export function SearchResults({
           >
             {type === "flight" &&
               (resultsArray as Flight[]).map((flight) => (
-                <FlightResultCard
-                  key={flight.id}
-                  flight={flight}
-                  view={activeView}
-                />
+                <FlightResultCard key={flight.id} flight={flight} view={activeView} />
               ))}
             {type === "accommodation" &&
               (resultsArray as Accommodation[]).map((accommodation) => (
@@ -255,8 +242,7 @@ function FlightResultCard({
                 <div className="flex-1 flex items-center px-2">
                   <div className="h-0.5 w-full bg-muted relative">
                     <div className="absolute top-1/2 left-1/2 transform -translate-y-1/2 -translate-x-1/2 text-xs text-muted-foreground whitespace-nowrap">
-                      {Math.floor(flight.duration / 60)}h {flight.duration % 60}
-                      m
+                      {Math.floor(flight.duration / 60)}h {flight.duration % 60}m
                     </div>
                   </div>
                 </div>
@@ -342,9 +328,7 @@ function AccommodationResultCard({
               <div className="text-right">
                 <p className="font-medium">${accommodation.pricePerNight}</p>
                 <p className="text-xs text-muted-foreground">per night</p>
-                <p className="text-sm font-medium mt-1">
-                  ${accommodation.totalPrice}
-                </p>
+                <p className="text-sm font-medium mt-1">${accommodation.totalPrice}</p>
                 <p className="text-xs text-muted-foreground">total</p>
               </div>
             </div>
@@ -373,9 +357,7 @@ function AccommodationResultCard({
           <>
             <div className="mb-2">
               <p className="font-medium">{accommodation.name}</p>
-              <p className="text-sm text-muted-foreground">
-                {accommodation.location}
-              </p>
+              <p className="text-sm text-muted-foreground">{accommodation.location}</p>
               <div className="flex items-center mt-1 mb-2">
                 <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full mr-2">
                   {accommodation.rating} ★
@@ -433,16 +415,12 @@ function ActivityResultCard({
             <div className="flex justify-between mb-2">
               <div>
                 <p className="font-medium">{activity.name}</p>
-                <p className="text-sm text-muted-foreground">
-                  {activity.location}
-                </p>
+                <p className="text-sm text-muted-foreground">{activity.location}</p>
                 <div className="flex items-center mt-1">
                   <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full mr-2">
                     {activity.rating} ★
                   </span>
-                  <span className="text-xs text-muted-foreground">
-                    {activity.type}
-                  </span>
+                  <span className="text-xs text-muted-foreground">{activity.type}</span>
                 </div>
               </div>
               <div className="text-right">
@@ -453,8 +431,8 @@ function ActivityResultCard({
             <div className="mt-2">
               <p className="text-sm line-clamp-2">{activity.description}</p>
               <p className="text-xs text-muted-foreground mt-1">
-                Duration: {Math.floor(activity.duration / 60)}h{" "}
-                {activity.duration % 60}m
+                Duration: {Math.floor(activity.duration / 60)}h {activity.duration % 60}
+                m
               </p>
             </div>
             <div className="mt-auto pt-2">
@@ -465,20 +443,16 @@ function ActivityResultCard({
           <>
             <div className="mb-2">
               <p className="font-medium">{activity.name}</p>
-              <p className="text-sm text-muted-foreground">
-                {activity.location}
-              </p>
+              <p className="text-sm text-muted-foreground">{activity.location}</p>
               <div className="flex items-center mt-1 mb-2">
                 <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full mr-2">
                   {activity.rating} ★
                 </span>
-                <span className="text-xs text-muted-foreground">
-                  {activity.type}
-                </span>
+                <span className="text-xs text-muted-foreground">{activity.type}</span>
               </div>
               <p className="text-xs text-muted-foreground">
-                Duration: {Math.floor(activity.duration / 60)}h{" "}
-                {activity.duration % 60}m
+                Duration: {Math.floor(activity.duration / 60)}h {activity.duration % 60}
+                m
               </p>
             </div>
             <div className="flex justify-between items-center mt-2">

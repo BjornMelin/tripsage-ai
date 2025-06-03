@@ -25,8 +25,8 @@ from tripsage.api.core.dependencies import (
     verify_service_access,
 )
 from tripsage.api.middlewares.authentication import Principal
-from tripsage.mcp_abstraction import MCPManager
 from tripsage_core.exceptions.exceptions import CoreAuthenticationError
+from tripsage_core.mcp_abstraction import MCPManager
 from tripsage_core.utils.session_utils import SessionMemory
 
 

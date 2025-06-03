@@ -4,7 +4,7 @@ This module provides the Flight model with business logic validation,
 used across different storage backends.
 """
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional
 
 from pydantic import Field, field_validator, model_validator
@@ -70,8 +70,8 @@ class Flight(TripSageModel):
     @classmethod
     def validate_price(cls, v: float) -> float:
         """Validate that price is a positive number."""
-        if v < 0:
-            raise ValueError("Price must be non-negative")
+        if v <= 0:
+            raise ValueError("ensure this value is greater than 0")
         return v
 
     @field_validator("segment_number")
@@ -84,9 +84,9 @@ class Flight(TripSageModel):
 
     @model_validator(mode="after")
     def validate_dates(self) -> "Flight":
-        """Validate that arrival_time is not before departure_time."""
-        if self.arrival_time < self.departure_time:
-            raise ValueError("Arrival time must not be before departure time")
+        """Validate that arrival_time is after departure_time."""
+        if self.arrival_time <= self.departure_time:
+            raise ValueError("Arrival time must be after departure time")
         return self
 
     @model_validator(mode="after")
@@ -97,15 +97,27 @@ class Flight(TripSageModel):
         return self
 
     @property
+    def duration(self) -> timedelta:
+        """Get the flight duration as a timedelta object."""
+        return self.arrival_time - self.departure_time
+
+    @property
     def duration_minutes(self) -> float:
         """Get the flight duration in minutes."""
-        delta = self.arrival_time - self.departure_time
-        return delta.total_seconds() / 60
+        return self.duration.total_seconds() / 60
 
     @property
     def duration_hours(self) -> float:
         """Get the flight duration in hours."""
         return self.duration_minutes / 60
+
+    @property
+    def formatted_duration(self) -> str:
+        """Get the flight duration formatted as 'Xh Ym'."""
+        total_minutes = int(self.duration_minutes)
+        hours = total_minutes // 60
+        minutes = total_minutes % 60
+        return f"{hours}h {minutes}m"
 
     @property
     def is_domestic(self) -> bool:

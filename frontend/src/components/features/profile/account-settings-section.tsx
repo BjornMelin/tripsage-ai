@@ -1,9 +1,17 @@
 "use client";
 
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { useUserStore } from "@/stores/user-store";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -23,20 +31,12 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/use-toast";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import { Mail, Check, X, Trash2 } from "lucide-react";
+import { useUserProfileStore } from "@/stores/user-store";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Check, Mail, Trash2, X } from "lucide-react";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
 
 const emailUpdateSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
@@ -45,7 +45,7 @@ const emailUpdateSchema = z.object({
 type EmailUpdateFormData = z.infer<typeof emailUpdateSchema>;
 
 export function AccountSettingsSection() {
-  const { user, updateUser } = useUserStore();
+  const { user, updateUser } = useUserProfileStore();
   const { toast } = useToast();
 
   const emailForm = useForm<EmailUpdateFormData>({
@@ -67,8 +67,7 @@ export function AccountSettingsSection() {
 
       toast({
         title: "Email updated",
-        description:
-          "Please check your inbox to verify your new email address.",
+        description: "Please check your inbox to verify your new email address.",
       });
     } catch (error) {
       toast({
@@ -115,10 +114,7 @@ export function AccountSettingsSection() {
     }
   };
 
-  const toggleNotificationSetting = async (
-    setting: string,
-    enabled: boolean
-  ) => {
+  const toggleNotificationSetting = async (setting: string, enabled: boolean) => {
     try {
       // Simulate API call to update notification settings
       await new Promise((resolve) => setTimeout(resolve, 500));
@@ -190,11 +186,7 @@ export function AccountSettingsSection() {
                     Please verify your email address to enable all features.
                   </p>
                 </div>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={handleEmailVerification}
-                >
+                <Button size="sm" variant="outline" onClick={handleEmailVerification}>
                   Send Verification
                 </Button>
               </div>
@@ -216,17 +208,14 @@ export function AccountSettingsSection() {
                       <Input placeholder="Enter new email address" {...field} />
                     </FormControl>
                     <FormDescription>
-                      Changing your email will require verification of the new
-                      address.
+                      Changing your email will require verification of the new address.
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
               />
               <Button type="submit" disabled={emailForm.formState.isSubmitting}>
-                {emailForm.formState.isSubmitting
-                  ? "Updating..."
-                  : "Update Email"}
+                {emailForm.formState.isSubmitting ? "Updating..." : "Update Email"}
               </Button>
             </form>
           </Form>
@@ -247,8 +236,7 @@ export function AccountSettingsSection() {
               <div className="space-y-0.5">
                 <div className="text-sm font-medium">Email Notifications</div>
                 <div className="text-sm text-muted-foreground">
-                  Receive trip updates and important account information via
-                  email.
+                  Receive trip updates and important account information via email.
                 </div>
               </div>
               <Switch
@@ -267,9 +255,7 @@ export function AccountSettingsSection() {
                 </div>
               </div>
               <Switch
-                checked={
-                  user?.preferences?.notifications?.tripReminders ?? true
-                }
+                checked={user?.preferences?.notifications?.tripReminders ?? true}
                 onCheckedChange={(enabled) =>
                   toggleNotificationSetting("tripReminders", enabled)
                 }
@@ -293,9 +279,7 @@ export function AccountSettingsSection() {
 
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
-                <div className="text-sm font-medium">
-                  Marketing Communications
-                </div>
+                <div className="text-sm font-medium">Marketing Communications</div>
                 <div className="text-sm text-muted-foreground">
                   Receive promotional offers and travel tips.
                 </div>
@@ -331,9 +315,9 @@ export function AccountSettingsSection() {
               <AlertDialogHeader>
                 <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                 <AlertDialogDescription>
-                  This action cannot be undone. This will permanently delete
-                  your account and remove all your data from our servers. All
-                  your trips, bookings, and preferences will be lost.
+                  This action cannot be undone. This will permanently delete your
+                  account and remove all your data from our servers. All your trips,
+                  bookings, and preferences will be lost.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>

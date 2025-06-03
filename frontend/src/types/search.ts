@@ -67,11 +67,7 @@ export type SearchParams =
   | DestinationSearchParams;
 
 // Search type
-export type SearchType =
-  | "flight"
-  | "accommodation"
-  | "activity"
-  | "destination";
+export type SearchType = "flight" | "accommodation" | "activity" | "destination";
 
 // Flight search result
 export interface Flight {

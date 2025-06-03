@@ -252,6 +252,7 @@ class DataSource(str, Enum):
     KAYAK = "kayak"
     SKYSCANNER = "skyscanner"
     GOOGLE_FLIGHTS = "google_flights"
+    DUFFEL = "duffel"
     AIRLINE_DIRECT = "airline_direct"
     BOOKING_COM = "booking_com"
     AIRBNB = "airbnb"
