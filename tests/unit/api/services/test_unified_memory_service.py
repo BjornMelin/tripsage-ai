@@ -197,7 +197,8 @@ class TestMemoryServiceAdapter:
         value = "Delta"
         category = "travel"
 
-        # Mock core service response (add_user_preference uses update_user_preferences internally)
+        # Mock core service response (add_user_preference uses
+        # update_user_preferences internally)
         mock_response = {
             "results": [{"id": str(uuid4()), "memory": "User preference added"}],
             "success": True,
@@ -227,7 +228,8 @@ class TestMemoryServiceAdapter:
         user_id = str(uuid4())
         memory_id = str(uuid4())
 
-        # Mock core service response (delete_memory uses delete_user_memories internally)
+        # Mock core service response (delete_memory uses
+        # delete_user_memories internally)
         mock_response = {"deleted_count": 1, "success": True}
         mock_core_memory_service.delete_user_memories.return_value = mock_response
 
@@ -287,13 +289,15 @@ class TestMemoryServiceAdapter:
         user_id = str(uuid4())
         confirm = True
 
-        # Mock core service response (clear_user_memory uses delete_user_memories internally)
+        # Mock core service response (clear_user_memory uses
+        # delete_user_memories internally)
         mock_response = {"deleted_count": 15, "success": True}
         mock_core_memory_service.delete_user_memories.return_value = mock_response
 
         result = await memory_service.clear_user_memory(user_id, confirm)
 
-        # Verify core service was called with delete_user_memories (no memory_ids = delete all)
+        # Verify core service was called with delete_user_memories
+        # (no memory_ids = delete all)
         mock_core_memory_service.delete_user_memories.assert_called_once_with(
             user_id=user_id
         )
@@ -311,7 +315,8 @@ class TestMemoryServiceDependencyInjection:
 
     @pytest.mark.asyncio
     async def test_get_memory_service_creates_instance(self):
-        """Test that get_memory_service creates MemoryService with proper dependencies."""
+        """Test that get_memory_service creates MemoryService with proper
+        dependencies."""
         with patch(
             "tripsage.api.services.memory.get_core_memory_service"
         ) as mock_get_core:
@@ -409,7 +414,7 @@ class TestMemoryServiceValidation:
             "error": "No messages to store",
         }
 
-        result = await memory_service.add_conversation_memory(user_id, messages, None)
+        await memory_service.add_conversation_memory(user_id, messages, None)
 
         # Verify core service was still called (validation happens at core level)
         memory_service.core_memory_service.add_conversation_memory.assert_called_once()

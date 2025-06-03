@@ -1,8 +1,8 @@
 # =============================================================================
-# TripSage AI Local Development Environment
+# TripSage AI Local Development Environment (Dedicated Dockerfiles Version)
 # =============================================================================
 # This Docker Compose file provides a complete local development environment
-# with mock/stub services and MCP (Model Context Protocol) servers.
+# using dedicated Dockerfiles for optimal performance and caching.
 #
 # PURPOSE:
 # - Provides mock/stub services for external SDKs integrated in tripsage_core
@@ -10,8 +10,14 @@
 # - Only exception: airbnb-mcp interacts with actual Airbnb platform via MCP
 #   due to lack of official SDK
 #
+# BENEFITS OF DEDICATED DOCKERFILES:
+# - Faster container startup (pre-installed packages)
+# - Better dependency caching and layer optimization
+# - Enhanced security with non-root users
+# - Built-in health checks for reliability
+#
 # USAGE:
-# docker compose -f docker-compose.mcp.yml up -d
+# docker compose -f docker-compose.mcp.dedicated.yml up -d
 #
 # For production deployment, use separate production configurations.
 # =============================================================================
@@ -23,13 +29,13 @@ services:
   # ==========================================================================
   
   supabase-mcp:
-    image: node:20-alpine
+    build:
+      context: ./dev_services/supabase_mcp
+      dockerfile: Dockerfile
     container_name: tripsage-supabase-mcp
     environment:
       - SUPABASE_URL=${SUPABASE_URL}
       - SUPABASE_KEY=${SUPABASE_KEY}
-    # Pin version for consistent behavior across development environments
-    command: npx -y supabase-mcp@1.0.0
     restart: unless-stopped
     networks:
       - tripsage-mcp
@@ -69,12 +75,12 @@ services:
   # ==========================================================================
   
   duffel-flights-mcp:
-    image: node:20-alpine
+    build:
+      context: ./dev_services/duffel_flights_mcp
+      dockerfile: Dockerfile
     container_name: tripsage-duffel-mcp
     environment:
       - DUFFEL_API_KEY=${DUFFEL_API_KEY}
-    # Mock Duffel flights service for local development
-    command: npx -y duffel-mcp@1.0.0
     restart: unless-stopped
     networks:
       - tripsage-mcp
@@ -88,13 +94,12 @@ services:
           memory: '128M'
 
   airbnb-mcp:
-    image: node:20-alpine
+    build:
+      context: ./dev_services/airbnb_mcp
+      dockerfile: Dockerfile
     container_name: tripsage-airbnb-mcp
     environment:
       - AIRBNB_API_KEY=${AIRBNB_API_KEY}
-    # IMPORTANT: This is the ONLY service that interacts with actual external platform
-    # (Airbnb) due to lack of official SDK. All other services are mocks/stubs.
-    command: npx -y airbnb-mcp@1.0.0
     restart: unless-stopped
     networks:
       - tripsage-mcp
@@ -182,12 +187,12 @@ services:
   # ==========================================================================
   
   google-maps-mcp:
-    image: node:20-alpine
+    build:
+      context: ./dev_services/google_maps_mcp
+      dockerfile: Dockerfile
     container_name: tripsage-googlemaps-mcp
     environment:
       - GOOGLE_MAPS_API_KEY=${GOOGLE_MAPS_API_KEY}
-    # Mock Google Maps service for local development
-    command: npx -y google-maps-mcp@1.0.0
     restart: unless-stopped
     networks:
       - tripsage-mcp

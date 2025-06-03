@@ -96,9 +96,9 @@ def setup_test_environment():
 def mock_problematic_imports():
     """Mock problematic imports that might cause test failures."""
     try:
-        import langchain_core
-        import langchain_openai
-        import langgraph
+        import langchain_core  # noqa: F401
+        import langchain_openai  # noqa: F401
+        import langgraph  # noqa: F401
     except ImportError:
         # Create mock modules if imports fail
         sys.modules["langchain_core"] = MagicMock()
@@ -116,7 +116,7 @@ def mock_problematic_imports():
         sys.modules["langchain_openai"].ChatOpenAI = mock_chat_openai
 
     try:
-        import mem0ai
+        import mem0ai  # noqa: F401
     except ImportError:
         sys.modules["mem0ai"] = MagicMock()
         sys.modules["mem0"] = MagicMock()

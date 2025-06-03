@@ -244,7 +244,7 @@ class TestFileUpload:
         user_id = "user_123"
 
         # Mock duplicate file detection
-        file_hash = hashlib.sha256(sample_upload_request.content).hexdigest()
+        hashlib.sha256(sample_upload_request.content).hexdigest()
         file_processing_service.db.get_file_by_hash.return_value = (
             sample_processed_file.model_dump()
         )
@@ -430,7 +430,7 @@ class TestFileSearch:
 
         file_processing_service.db.search_files.return_value = []
 
-        results = await file_processing_service.search_files(user_id, search_request)
+        await file_processing_service.search_files(user_id, search_request)
 
         # Verify search was called with correct filters
         call_args = file_processing_service.db.search_files.call_args

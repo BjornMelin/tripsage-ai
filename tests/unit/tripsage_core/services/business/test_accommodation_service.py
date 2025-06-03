@@ -209,7 +209,7 @@ class TestAccommodationService:
         sample_accommodation_listing,
     ):
         """Test successful accommodation search."""
-        user_id = str(uuid4())
+        str(uuid4())
 
         # Mock external API response
         mock_external_api_service.search_accommodations.return_value = {
