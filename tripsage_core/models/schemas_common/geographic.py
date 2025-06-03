@@ -7,35 +7,19 @@ addresses, places, and geographic utilities used across the application.
 
 from typing import Optional
 
-from pydantic import Field, field_validator
+from pydantic import Field
 
 from tripsage_core.models.base_core_model import TripSageModel
+
+from .common_validators import AirportCode, Latitude, Longitude
 
 
 class Coordinates(TripSageModel):
     """Geographic coordinates."""
 
-    latitude: float = Field(description="Latitude in decimal degrees", ge=-90, le=90)
-    longitude: float = Field(
-        description="Longitude in decimal degrees", ge=-180, le=180
-    )
+    latitude: Latitude = Field(description="Latitude in decimal degrees")
+    longitude: Longitude = Field(description="Longitude in decimal degrees")
     altitude: Optional[float] = Field(None, description="Altitude in meters")
-
-    @field_validator("latitude")
-    @classmethod
-    def validate_latitude(cls, v: float) -> float:
-        """Validate latitude is within valid range."""
-        if not -90 <= v <= 90:
-            raise ValueError("Latitude must be between -90 and 90 degrees")
-        return v
-
-    @field_validator("longitude")
-    @classmethod
-    def validate_longitude(cls, v: float) -> float:
-        """Validate longitude is within valid range."""
-        if not -180 <= v <= 180:
-            raise ValueError("Longitude must be between -180 and 180 degrees")
-        return v
 
     def distance_to(self, other: "Coordinates") -> float:
         """Calculate the Haversine distance to another coordinate in kilometers."""
@@ -105,44 +89,14 @@ class Place(TripSageModel):
     )
     timezone: Optional[str] = Field(None, description="IANA timezone identifier")
 
-    @field_validator("timezone")
-    @classmethod
-    def validate_timezone(cls, v: Optional[str]) -> Optional[str]:
-        """Validate timezone format."""
-        if v is None:
-            return v
-
-        # Basic validation for IANA timezone format
-        if "/" not in v:
-            raise ValueError(
-                "Timezone must be in IANA format (e.g., 'America/New_York')"
-            )
-
-        return v
-
 
 class BoundingBox(TripSageModel):
     """Geographic bounding box."""
 
-    north: float = Field(description="Northern latitude boundary", ge=-90, le=90)
-    south: float = Field(description="Southern latitude boundary", ge=-90, le=90)
-    east: float = Field(description="Eastern longitude boundary", ge=-180, le=180)
-    west: float = Field(description="Western longitude boundary", ge=-180, le=180)
-
-    @field_validator("north", "south", "east", "west")
-    @classmethod
-    def validate_coordinates(cls, v: float, info) -> float:
-        """Validate coordinate values."""
-        field_name = info.field_name
-
-        if field_name in ("north", "south"):
-            if not -90 <= v <= 90:
-                raise ValueError(f"{field_name} must be between -90 and 90 degrees")
-        else:  # east, west
-            if not -180 <= v <= 180:
-                raise ValueError(f"{field_name} must be between -180 and 180 degrees")
-
-        return v
+    north: Latitude = Field(description="Northern latitude boundary")
+    south: Latitude = Field(description="Southern latitude boundary")
+    east: Longitude = Field(description="Eastern longitude boundary")
+    west: Longitude = Field(description="Western longitude boundary")
 
     def contains(self, coordinates: Coordinates) -> bool:
         """Check if coordinates are within this bounding box."""
@@ -176,7 +130,7 @@ class Region(TripSageModel):
 class Airport(TripSageModel):
     """Airport information."""
 
-    code: str = Field(description="IATA airport code", min_length=3, max_length=3)
+    code: AirportCode = Field(description="IATA airport code")
     icao_code: Optional[str] = Field(
         None, description="ICAO airport code", min_length=4, max_length=4
     )
@@ -185,25 +139,6 @@ class Airport(TripSageModel):
     country: str = Field(description="Country name")
     coordinates: Optional[Coordinates] = Field(None, description="Airport coordinates")
     timezone: Optional[str] = Field(None, description="Airport timezone")
-
-    @field_validator("code")
-    @classmethod
-    def validate_iata_code(cls, v: str) -> str:
-        """Validate IATA airport code format."""
-        if not v.isalpha() or len(v) != 3:
-            raise ValueError("IATA code must be exactly 3 letters")
-        return v.upper()
-
-    @field_validator("icao_code")
-    @classmethod
-    def validate_icao_code(cls, v: Optional[str]) -> Optional[str]:
-        """Validate ICAO airport code format."""
-        if v is None:
-            return v
-
-        if not v.isalpha() or len(v) != 4:
-            raise ValueError("ICAO code must be exactly 4 letters")
-        return v.upper()
 
 
 class Route(TripSageModel):
