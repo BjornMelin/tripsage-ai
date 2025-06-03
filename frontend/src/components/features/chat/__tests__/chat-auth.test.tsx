@@ -2,6 +2,7 @@
  * Unit tests for chat authentication integration.
  */
 
+import { useChatAi } from "@/hooks/use-chat-ai";
 import { useApiKeyStore } from "@/stores/api-key-store";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type React from "react";
@@ -23,7 +24,12 @@ vi.mock("@/hooks/use-chat-ai", () => ({
 vi.mock("@/stores/chat-store", () => ({
   useChatStore: vi.fn(() => ({
     getAgentStatus: vi.fn(() => ({ status: "idle", message: "" })),
-    isStreaming: vi.fn(() => false),
+    isStreaming: false,
+    connectionStatus: "disconnected",
+    isRealtimeEnabled: false,
+    connectWebSocket: vi.fn(),
+    disconnectWebSocket: vi.fn(),
+    setRealtimeEnabled: vi.fn(),
   })),
 }));
 
@@ -34,9 +40,11 @@ vi.mock("next/link", () => ({
   ),
 }));
 
+// Declare mocked functions at module level for reuse across test suites
+const mockUseChatAi = vi.mocked(useChatAi);
+const mockUseApiKeyStore = vi.mocked(useApiKeyStore);
+
 describe("ChatContainer Authentication", () => {
-  const mockUseChatAi = vi.mocked(require("@/hooks/use-chat-ai").useChatAi);
-  const mockUseApiKeyStore = vi.mocked(useApiKeyStore);
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -147,7 +155,7 @@ describe("ChatContainer Authentication", () => {
 
   it("displays auth error with API key management link", () => {
     const authError =
-      "Valid OpenAI API key required. Please add one in your API settings.";
+      "A valid OpenAI API key is required to use the chat feature. Please add one to get started.";
 
     mockUseChatAi.mockReturnValue({
       sessionId: "test-session",

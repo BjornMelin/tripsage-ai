@@ -6,7 +6,7 @@ import {
   ErrorFallback,
   MinimalErrorFallback,
   PageErrorFallback,
-} from "../error";
+} from "../../error";
 
 // Mock console.error to prevent test noise
 const originalConsoleError = console.error;
