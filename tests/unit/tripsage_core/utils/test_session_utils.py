@@ -616,7 +616,8 @@ class TestErrorHandling:
         }
 
         with patch(
-            "tripsage_core.services.business.memory_service.MemoryService", return_value=mock_service
+            "tripsage_core.services.business.memory_service.MemoryService",
+            return_value=mock_service,
         ):
             result = await update_session_memory("user123", updates)
 

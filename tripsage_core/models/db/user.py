@@ -7,7 +7,7 @@ used across different storage backends.
 from enum import Enum
 from typing import Any, Dict, Optional
 
-from pydantic import EmailStr, Field
+from pydantic import Field
 
 from tripsage_core.models.base_core_model import TripSageModel
 from tripsage_core.models.schemas_common.common_validators import EmailLowercase
@@ -43,7 +43,6 @@ class User(TripSageModel):
     preferences_json: Optional[Dict[str, Any]] = Field(
         None, description="User preferences", alias="preferences"
     )
-
 
     @property
     def full_preferences(self) -> Dict[str, Any]:

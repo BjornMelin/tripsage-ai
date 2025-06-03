@@ -5,11 +5,7 @@ This module defines Pydantic models for authentication-related requests.
 
 from pydantic import BaseModel, EmailStr, Field, field_validator
 
-from tripsage_core.models.schemas_common.validators import (
-    validate_password_strength,
-    validate_passwords_different,
-    validate_passwords_match,
-)
+from tripsage_core.models.schemas_common import CommonValidators
 
 
 class RegisterRequest(BaseModel):
@@ -42,14 +38,14 @@ class RegisterRequest(BaseModel):
     @classmethod
     def validate_password_strength_check(cls, v: str) -> str:
         """Validate password meets strength requirements."""
-        return validate_password_strength(v)
+        return CommonValidators.password_strength(v)
 
     @field_validator("password_confirm")
     @classmethod
     def validate_passwords_match_check(cls, v: str, info) -> str:
         """Validate that password and password_confirm match."""
         if "password" in info.data:
-            validate_passwords_match(info.data["password"], v)
+            CommonValidators.passwords_match(info.data["password"], v)
         return v
 
 
@@ -86,7 +82,7 @@ class ChangePasswordRequest(BaseModel):
     @classmethod
     def validate_new_password_strength(cls, v: str) -> str:
         """Validate new password meets strength requirements."""
-        return validate_password_strength(v)
+        return CommonValidators.password_strength(v)
 
     @field_validator("new_password_confirm")
     @classmethod
@@ -94,10 +90,10 @@ class ChangePasswordRequest(BaseModel):
         """Validate password requirements."""
         if "new_password" in info.data:
             # Check that passwords match
-            validate_passwords_match(info.data["new_password"], v)
+            CommonValidators.passwords_match(info.data["new_password"], v)
         if "current_password" in info.data and "new_password" in info.data:
             # Check that new password is different from current
-            validate_passwords_different(
+            CommonValidators.passwords_different(
                 info.data["current_password"], info.data["new_password"]
             )
         return v
@@ -128,12 +124,12 @@ class ResetPasswordRequest(BaseModel):
     @classmethod
     def validate_new_password_strength(cls, v: str) -> str:
         """Validate new password meets strength requirements."""
-        return validate_password_strength(v)
+        return CommonValidators.password_strength(v)
 
     @field_validator("new_password_confirm")
     @classmethod
     def validate_passwords_match_check(cls, v: str, info) -> str:
         """Validate that password and password_confirm match."""
         if "new_password" in info.data:
-            validate_passwords_match(info.data["new_password"], v)
+            CommonValidators.passwords_match(info.data["new_password"], v)
         return v

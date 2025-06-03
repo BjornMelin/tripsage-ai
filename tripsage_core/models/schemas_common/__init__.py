@@ -21,6 +21,7 @@ from .chat import (
     ChatSession,
     ToolCall,
 )
+from .common_validators import CommonValidators
 from .enums import (
     AccommodationType,
     BookingStatus,
@@ -66,7 +67,6 @@ from .travel import (
     TripPreferences,
     TripSummary,
 )
-from .common_validators import CommonValidators
 
 __all__ = [
     # Base models

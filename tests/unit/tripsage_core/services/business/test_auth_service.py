@@ -16,6 +16,8 @@ import pytest
 
 from tripsage_core.exceptions.exceptions import (
     CoreAuthenticationError as AuthenticationError,
+)
+from tripsage_core.exceptions.exceptions import (
     CoreServiceError,
 )
 from tripsage_core.services.business.auth_service import (
@@ -55,7 +57,9 @@ class TestAuthenticationService:
         return cache_service
 
     @pytest.fixture
-    def auth_service(self, mock_user_service, mock_database_service, mock_cache_service):
+    def auth_service(
+        self, mock_user_service, mock_database_service, mock_cache_service
+    ):
         """Create AuthenticationService instance with mocked dependencies."""
         return AuthenticationService(
             user_service=mock_user_service,
@@ -502,7 +506,9 @@ class TestAuthenticationService:
         )
 
         # With the new error handling decorator, unexpected errors are wrapped as CoreServiceError
-        with pytest.raises(CoreServiceError, match="Operation failed: user_authentication"):
+        with pytest.raises(
+            CoreServiceError, match="Operation failed: user_authentication"
+        ):
             await auth_service.authenticate_user(sample_login_request)
 
     async def test_refresh_token_exception_handling(
@@ -530,13 +536,15 @@ class TestAuthenticationService:
         assert hasattr(auth_service, "logger")
         assert hasattr(auth_service, "db")
         assert hasattr(auth_service, "cache")
-        
+
         # Test JWT configuration
         assert auth_service.algorithm == "HS256"
         assert auth_service.access_token_expire_minutes == 30
         assert auth_service.refresh_token_expire_days == 7
 
-    async def test_health_check(self, auth_service, mock_database_service, mock_cache_service):
+    async def test_health_check(
+        self, auth_service, mock_database_service, mock_cache_service
+    ):
         """Test the health check functionality from BaseService."""
         # Mock successful health checks
         mock_database_service.health_check.return_value = None

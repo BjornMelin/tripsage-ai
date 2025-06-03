@@ -14,6 +14,7 @@ from typing_extensions import Annotated
 
 class ToolCallStatus(str, Enum):
     """Valid tool call statuses."""
+
     PENDING = "pending"
     RUNNING = "running"
     COMPLETED = "completed"
@@ -22,6 +23,7 @@ class ToolCallStatus(str, Enum):
 
 class MessageRole(str, Enum):
     """Valid message roles."""
+
     USER = "user"
     ASSISTANT = "assistant"
     SYSTEM = "system"
@@ -46,9 +48,7 @@ class ToolCall(BaseModel):
 
     id: str = Field(..., description="Unique identifier for the tool call")
     name: str = Field(..., description="Name of the tool")
-    arguments: DictOrEmpty = Field(
-        default_factory=dict, description="Tool arguments"
-    )
+    arguments: DictOrEmpty = Field(default_factory=dict, description="Tool arguments")
     result: Optional[DictOrEmpty] = Field(None, description="Tool result")
     status: ToolCallStatus = Field(
         ToolCallStatus.PENDING, description="Tool call status"
@@ -73,9 +73,7 @@ class ChatSession(BaseModel):
     user_id: Optional[int] = Field(None, description="User ID")
     created_at: datetime = Field(..., description="Creation timestamp")
     updated_at: datetime = Field(..., description="Last update timestamp")
-    metadata: DictOrEmpty = Field(
-        default_factory=dict, description="Session metadata"
-    )
+    metadata: DictOrEmpty = Field(default_factory=dict, description="Session metadata")
 
 
 class ChatContext(BaseModel):

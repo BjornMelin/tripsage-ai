@@ -5,10 +5,9 @@ This module tests all validation functions and Annotated types to ensure
 consistent behavior across the application.
 """
 
-import pytest
 from enum import Enum
-from typing import Optional
 
+import pytest
 from pydantic import BaseModel, ValidationError
 
 from tripsage_core.models.schemas_common.common_validators import (
@@ -18,14 +17,14 @@ from tripsage_core.models.schemas_common.common_validators import (
     EmailLowercase,
     Latitude,
     Longitude,
+    MediumString,
     NonNegativeFloat,
     PasswordStrength,
     PositiveInt,
     Rating,
     ShortString,
-    MediumString,
-    TruncatedShortString,
     TruncatedMediumString,
+    TruncatedShortString,
 )
 
 
@@ -45,7 +44,7 @@ class TestAirportCodeValidator:
 
         with pytest.raises(ValueError, match="exactly 3 characters"):
             CommonValidators.airport_code("LAXE")
-        
+
         with pytest.raises(ValueError, match="exactly 3 characters"):
             CommonValidators.airport_code("LA")
 
@@ -54,6 +53,7 @@ class TestAirportCodeValidator:
 
     def test_airport_code_annotated_type(self):
         """Test AirportCode Annotated type."""
+
         class TestModel(BaseModel):
             code: AirportCode
 
@@ -93,6 +93,7 @@ class TestRatingValidator:
 
     def test_rating_annotated_type(self):
         """Test Rating Annotated type."""
+
         class TestModel(BaseModel):
             rating: Rating
 
@@ -114,8 +115,12 @@ class TestEmailValidator:
     def test_valid_emails(self):
         """Test valid email addresses."""
         assert CommonValidators.email_lowercase(None) is None
-        assert CommonValidators.email_lowercase("TEST@EXAMPLE.COM") == "test@example.com"
-        assert CommonValidators.email_lowercase(" User@Domain.org ") == "user@domain.org"
+        assert (
+            CommonValidators.email_lowercase("TEST@EXAMPLE.COM") == "test@example.com"
+        )
+        assert (
+            CommonValidators.email_lowercase(" User@Domain.org ") == "user@domain.org"
+        )
 
     def test_invalid_emails(self):
         """Test invalid email addresses."""
@@ -124,6 +129,7 @@ class TestEmailValidator:
 
     def test_email_annotated_type(self):
         """Test EmailLowercase Annotated type."""
+
         class TestModel(BaseModel):
             email: EmailLowercase
 
@@ -157,6 +163,7 @@ class TestPositiveIntValidator:
 
     def test_positive_int_annotated_type(self):
         """Test PositiveInt Annotated type."""
+
         class TestModel(BaseModel):
             count: PositiveInt
 
@@ -192,6 +199,7 @@ class TestNonNegativeNumberValidator:
 
     def test_non_negative_float_annotated_type(self):
         """Test NonNegativeFloat Annotated type."""
+
         class TestModel(BaseModel):
             amount: NonNegativeFloat
 
@@ -229,6 +237,7 @@ class TestCurrencyCodeValidator:
 
     def test_currency_code_annotated_type(self):
         """Test CurrencyCode Annotated type."""
+
         class TestModel(BaseModel):
             currency: CurrencyCode
 
@@ -271,6 +280,7 @@ class TestPasswordStrengthValidator:
 
     def test_password_strength_annotated_type(self):
         """Test PasswordStrength Annotated type."""
+
         class TestModel(BaseModel):
             password: PasswordStrength
 
@@ -326,6 +336,7 @@ class TestCoordinateValidator:
 
     def test_coordinate_annotated_types(self):
         """Test Latitude and Longitude Annotated types."""
+
         class TestModel(BaseModel):
             lat: Latitude
             lon: Longitude
@@ -354,7 +365,7 @@ class TestStringLengthValidators:
     def test_string_length_range_factory(self):
         """Test string length range validator factory."""
         validator = CommonValidators.string_length_range(5, 10)
-        
+
         # Valid cases
         assert validator(None) is None
         assert validator("hello") == "hello"
@@ -370,6 +381,7 @@ class TestStringLengthValidators:
 
     def test_predefined_string_types(self):
         """Test predefined string length types."""
+
         class TestModel(BaseModel):
             short: ShortString
             medium: MediumString
@@ -390,6 +402,7 @@ class TestTruncationValidators:
 
     def test_truncated_strings(self):
         """Test truncated string types."""
+
         class TestModel(BaseModel):
             short: TruncatedShortString
             medium: TruncatedMediumString
@@ -411,6 +424,7 @@ class TestEnumValidator:
 
     def test_enum_validator_factory(self):
         """Test enum validator creation."""
+
         class TestEnum(Enum):
             OPTION_A = "a"
             OPTION_B = "b"
@@ -457,6 +471,7 @@ class TestIntegrationWithPydantic:
 
     def test_complex_model_validation(self):
         """Test comprehensive model with multiple validators."""
+
         class FlightModel(BaseModel):
             origin: AirportCode
             destination: AirportCode
@@ -472,7 +487,7 @@ class TestIntegrationWithPydantic:
             price=299.99,
             currency="usd",
             rating=4.5,
-            duration_minutes=360
+            duration_minutes=360,
         )
 
         assert model.origin == "LAX"
@@ -490,10 +505,9 @@ class TestIntegrationWithPydantic:
                 price=-100,  # Negative price
                 currency="DOLLAR",  # Invalid currency
                 rating=10,  # Invalid rating
-                duration_minutes=0  # Invalid duration
+                duration_minutes=0,  # Invalid duration
             )
 
         # Should have multiple validation errors
         errors = exc_info.value.errors()
         assert len(errors) >= 4  # At least 4 validation errors
-

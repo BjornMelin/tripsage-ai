@@ -19,8 +19,8 @@ class DateRange(TripSageModel):
     start_date: date = Field(description="Start date")
     end_date: date = Field(description="End date")
 
-    @model_validator(mode='after')
-    def validate_date_range(self) -> 'DateRange':
+    @model_validator(mode="after")
+    def validate_date_range(self) -> "DateRange":
         """Validate that end date is after start date."""
         if self.end_date < self.start_date:
             raise ValueError("End date must be after start date")
@@ -47,8 +47,8 @@ class TimeRange(TripSageModel):
     start_time: time = Field(description="Start time")
     end_time: time = Field(description="End time")
 
-    @model_validator(mode='after')
-    def validate_time_range(self) -> 'TimeRange':
+    @model_validator(mode="after")
+    def validate_time_range(self) -> "TimeRange":
         """Validate that end time is after start time (same day)."""
         if self.end_time <= self.start_time:
             raise ValueError("End time must be after start time")
@@ -113,8 +113,8 @@ class DateTimeRange(TripSageModel):
     end_datetime: datetime = Field(description="End datetime")
     timezone: Optional[str] = Field(None, description="IANA timezone identifier")
 
-    @model_validator(mode='after')
-    def validate_datetime_range(self) -> 'DateTimeRange':
+    @model_validator(mode="after")
+    def validate_datetime_range(self) -> "DateTimeRange":
         """Validate that end datetime is after start datetime."""
         if self.end_datetime <= self.start_datetime:
             raise ValueError("End datetime must be after start datetime")
@@ -149,8 +149,8 @@ class RecurrenceRule(TripSageModel):
     by_month_day: Optional[list[int]] = Field(None, description="Days of month (1-31)")
     by_month: Optional[list[int]] = Field(None, description="Months (1-12)")
 
-    @model_validator(mode='after')
-    def validate_recurrence(self) -> 'RecurrenceRule':
+    @model_validator(mode="after")
+    def validate_recurrence(self) -> "RecurrenceRule":
         """Validate recurrence rule fields."""
         # Validate frequency
         valid_frequencies = {"DAILY", "WEEKLY", "MONTHLY", "YEARLY"}
@@ -159,7 +159,7 @@ class RecurrenceRule(TripSageModel):
                 f"Frequency must be one of: {', '.join(valid_frequencies)}"
             )
         self.frequency = self.frequency.upper()
-        
+
         # Validate by_day
         if self.by_day:
             valid_days = {"MO", "TU", "WE", "TH", "FR", "SA", "SU"}
@@ -167,19 +167,19 @@ class RecurrenceRule(TripSageModel):
                 if day.upper() not in valid_days:
                     raise ValueError(f"Invalid day abbreviation: {day}")
                 self.by_day[i] = day.upper()
-        
-        # Validate by_month_day  
+
+        # Validate by_month_day
         if self.by_month_day:
             for day in self.by_month_day:
                 if not 1 <= day <= 31:
                     raise ValueError(f"Month day must be between 1 and 31: {day}")
-        
+
         # Validate by_month
         if self.by_month:
             for month in self.by_month:
                 if not 1 <= month <= 12:
                     raise ValueError(f"Month must be between 1 and 12: {month}")
-        
+
         return self
 
 
@@ -233,8 +233,8 @@ class Availability(TripSageModel):
         None, description="Availability restrictions"
     )
 
-    @model_validator(mode='after')
-    def validate_availability_range(self) -> 'Availability':
+    @model_validator(mode="after")
+    def validate_availability_range(self) -> "Availability":
         """Validate that to_datetime is after from_datetime."""
         if self.from_datetime and self.to_datetime:
             if self.to_datetime <= self.from_datetime:

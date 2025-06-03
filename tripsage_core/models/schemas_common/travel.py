@@ -49,7 +49,6 @@ class AccommodationPreferences(TripSageModel):
     )
 
 
-
 class TransportationPreferences(TripSageModel):
     """Transportation preferences for trips."""
 

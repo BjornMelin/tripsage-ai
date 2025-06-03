@@ -49,7 +49,6 @@ class TripComparison(TripSageModel):
             return len(options)
         return 0
 
-
     @property
     def has_selected_option(self) -> bool:
         """Check if a selected option is present."""
