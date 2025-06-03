@@ -586,74 +586,17 @@ class ItineraryService:
             ServiceError: If update fails
         """
         try:
-            itinerary = await self.get_itinerary(itinerary_id, user_id)
-            if not itinerary:
-                raise NotFoundError("Itinerary not found")
+            # Validate access and get itinerary
+            itinerary = await self._validate_itinerary_access(
+                itinerary_id, user_id, edit_access=True
+            )
 
-            # Check edit permissions
-            if not await self._check_edit_access(itinerary, user_id):
-                raise PermissionError("Edit access denied")
+            # Apply updates
+            updated = await self._apply_itinerary_updates(itinerary, update_request)
 
-            # Update fields
-            updated = False
-            if update_request.title is not None:
-                itinerary.title = update_request.title
-                updated = True
-
-            if update_request.description is not None:
-                itinerary.description = update_request.description
-                updated = True
-
-            if update_request.status is not None:
-                itinerary.status = update_request.status
-                updated = True
-
-            # Handle date changes
-            if update_request.start_date or update_request.end_date:
-                new_start = update_request.start_date or itinerary.start_date
-                new_end = update_request.end_date or itinerary.end_date
-
-                if new_end < new_start:
-                    raise ValidationError("End date must be after start date")
-
-                # Update days if dates changed
-                if new_start != itinerary.start_date or new_end != itinerary.end_date:
-                    itinerary.start_date = new_start
-                    itinerary.end_date = new_end
-                    itinerary.days = await self._adjust_days(
-                        itinerary.days, new_start, new_end
-                    )
-                    updated = True
-
-            if update_request.destinations is not None:
-                itinerary.destinations = update_request.destinations
-                updated = True
-
-            if update_request.total_budget is not None:
-                itinerary.total_budget = update_request.total_budget
-                updated = True
-
-            if update_request.currency is not None:
-                itinerary.currency = update_request.currency
-                updated = True
-
-            if update_request.tags is not None:
-                itinerary.tags = update_request.tags
-                updated = True
-
-            if update_request.share_settings is not None:
-                itinerary.share_settings = update_request.share_settings
-                updated = True
-
+            # Save if changes were made
             if updated:
-                itinerary.updated_at = datetime.now(timezone.utc)
-                itinerary.version += 1
-
-                # Store updated itinerary
-                await self._store_itinerary(itinerary)
-
-                # Clear cache
-                self._clear_itinerary_cache(itinerary_id)
+                await self._save_itinerary_updates(itinerary, itinerary_id)
 
             return itinerary
 
@@ -669,6 +612,85 @@ class ItineraryService:
                 },
             )
             raise ServiceError(f"Failed to update itinerary: {str(e)}") from e
+
+    async def _validate_itinerary_access(
+        self, itinerary_id: str, user_id: str, edit_access: bool = False
+    ) -> Itinerary:
+        """Validate access to itinerary and return it."""
+        itinerary = await self.get_itinerary(itinerary_id, user_id)
+        if not itinerary:
+            raise NotFoundError("Itinerary not found")
+
+        if edit_access and not await self._check_edit_access(itinerary, user_id):
+            raise PermissionError("Edit access denied")
+
+        return itinerary
+
+    async def _apply_itinerary_updates(
+        self, itinerary: Itinerary, update_request: ItineraryUpdateRequest
+    ) -> bool:
+        """Apply updates to itinerary and return whether any changes were made."""
+        updated = False
+
+        # Simple field updates
+        simple_fields = [
+            ("title", "title"),
+            ("description", "description"),
+            ("status", "status"),
+            ("destinations", "destinations"),
+            ("total_budget", "total_budget"),
+            ("currency", "currency"),
+            ("tags", "tags"),
+            ("share_settings", "share_settings"),
+        ]
+
+        for request_field, itinerary_field in simple_fields:
+            value = getattr(update_request, request_field, None)
+            if value is not None:
+                setattr(itinerary, itinerary_field, value)
+                updated = True
+
+        # Handle complex date updates
+        date_updated = await self._update_itinerary_dates(itinerary, update_request)
+
+        return updated or date_updated
+
+    async def _update_itinerary_dates(
+        self, itinerary: Itinerary, update_request: ItineraryUpdateRequest
+    ) -> bool:
+        """Update itinerary dates and return whether changes were made."""
+        if not (update_request.start_date or update_request.end_date):
+            return False
+
+        new_start = update_request.start_date or itinerary.start_date
+        new_end = update_request.end_date or itinerary.end_date
+
+        if new_end < new_start:
+            raise ValidationError("End date must be after start date")
+
+        # Check if dates actually changed
+        if new_start == itinerary.start_date and new_end == itinerary.end_date:
+            return False
+
+        # Apply date changes
+        itinerary.start_date = new_start
+        itinerary.end_date = new_end
+        itinerary.days = await self._adjust_days(itinerary.days, new_start, new_end)
+
+        return True
+
+    async def _save_itinerary_updates(
+        self, itinerary: Itinerary, itinerary_id: str
+    ) -> None:
+        """Save itinerary updates and update metadata."""
+        itinerary.updated_at = datetime.now(timezone.utc)
+        itinerary.version += 1
+
+        # Store updated itinerary
+        await self._store_itinerary(itinerary)
+
+        # Clear cache
+        self._clear_itinerary_cache(itinerary_id)
 
     async def add_item_to_itinerary(
         self, itinerary_id: str, user_id: str, item_request: ItineraryItemCreateRequest

@@ -8,7 +8,7 @@ used across the application for consistent financial data handling.
 from decimal import Decimal
 from typing import Dict, Optional
 
-from pydantic import Field, field_validator
+from pydantic import Field, model_validator
 
 from tripsage_core.models.base_core_model import TripSageModel
 
@@ -23,14 +23,6 @@ class Currency(TripSageModel):
     name: Optional[str] = Field(None, description="Currency name")
     decimal_places: int = Field(2, ge=0, le=4, description="Number of decimal places")
 
-    @field_validator("decimal_places")
-    @classmethod
-    def validate_decimal_places(cls, v: int) -> int:
-        """Validate decimal places are reasonable."""
-        if not 0 <= v <= 4:
-            raise ValueError("Decimal places must be between 0 and 4")
-        return v
-
 
 class Price(TripSageModel):
     """Price with currency and optional breakdown."""
@@ -38,14 +30,6 @@ class Price(TripSageModel):
     amount: Decimal = Field(description="Price amount", ge=0)
     currency: CurrencyCode = Field(description="Currency code")
     formatted: Optional[str] = Field(None, description="Formatted price string")
-
-    @field_validator("amount")
-    @classmethod
-    def validate_amount(cls, v: Decimal) -> Decimal:
-        """Validate price amount is non-negative."""
-        if v < 0:
-            raise ValueError("Price amount must be non-negative")
-        return v
 
     def to_float(self) -> float:
         """Convert amount to float for calculations."""
@@ -73,17 +57,14 @@ class PriceRange(TripSageModel):
     min_price: Price = Field(description="Minimum price")
     max_price: Price = Field(description="Maximum price")
 
-    @field_validator("max_price")
-    @classmethod
-    def validate_max_price(cls, v: Price, info) -> Price:
+    @model_validator(mode='after')
+    def validate_price_range(self) -> 'PriceRange':
         """Validate max price is greater than or equal to min price."""
-        if "min_price" in info.data:
-            min_price = info.data["min_price"]
-            if v.currency != min_price.currency:
-                raise ValueError("Min and max prices must use the same currency")
-            if v.amount < min_price.amount:
-                raise ValueError("Max price must be greater than or equal to min price")
-        return v
+        if self.min_price.currency != self.max_price.currency:
+            raise ValueError("Min and max prices must use the same currency")
+        if self.max_price.amount < self.min_price.amount:
+            raise ValueError("Max price must be greater than or equal to min price")
+        return self
 
     def contains(self, price: Price) -> bool:
         """Check if a price falls within this range."""
@@ -106,43 +87,36 @@ class PriceBreakdown(TripSageModel):
     discounts: Optional[Price] = Field(None, description="Discount amount")
     total: Price = Field(description="Total price")
 
-    @field_validator("total")
-    @classmethod
-    def validate_total(cls, v: Price, info) -> Price:
+    @model_validator(mode='after')
+    def validate_price_breakdown(self) -> 'PriceBreakdown':
         """Validate total price matches breakdown components."""
-        if "base_price" not in info.data:
-            return v
-
-        base_price = info.data["base_price"]
-        if v.currency != base_price.currency:
+        # Validate currency consistency
+        currencies = {self.base_price.currency}
+        if self.taxes:
+            currencies.add(self.taxes.currency)
+        if self.fees:
+            currencies.add(self.fees.currency)
+        if self.discounts:
+            currencies.add(self.discounts.currency)
+        currencies.add(self.total.currency)
+        
+        if len(currencies) > 1:
             raise ValueError("All price components must use the same currency")
-
+        
         # Calculate expected total
-        expected_total = base_price.amount
-
-        if "taxes" in info.data and info.data["taxes"]:
-            taxes = info.data["taxes"]
-            if taxes.currency != base_price.currency:
-                raise ValueError("All price components must use the same currency")
-            expected_total += taxes.amount
-
-        if "fees" in info.data and info.data["fees"]:
-            fees = info.data["fees"]
-            if fees.currency != base_price.currency:
-                raise ValueError("All price components must use the same currency")
-            expected_total += fees.amount
-
-        if "discounts" in info.data and info.data["discounts"]:
-            discounts = info.data["discounts"]
-            if discounts.currency != base_price.currency:
-                raise ValueError("All price components must use the same currency")
-            expected_total -= discounts.amount
-
+        expected_total = self.base_price.amount
+        if self.taxes:
+            expected_total += self.taxes.amount
+        if self.fees:
+            expected_total += self.fees.amount
+        if self.discounts:
+            expected_total -= self.discounts.amount
+        
         # Allow small rounding differences
-        if abs(v.amount - expected_total) > Decimal("0.01"):
+        if abs(self.total.amount - expected_total) > Decimal("0.01"):
             raise ValueError("Total price does not match breakdown components")
-
-        return v
+        
+        return self
 
 
 class Budget(TripSageModel):
@@ -156,19 +130,25 @@ class Budget(TripSageModel):
         None, description="Budget by category"
     )
 
-    @field_validator("allocated", "spent", "remaining")
-    @classmethod
-    def validate_currency_consistency(cls, v: Optional[Price], info) -> Optional[Price]:
+    @model_validator(mode='after')
+    def validate_budget_currencies(self) -> 'Budget':
         """Validate all amounts use the same currency."""
-        if v is None:
-            return v
-
-        if "total_budget" in info.data:
-            total_budget = info.data["total_budget"]
-            if v.currency != total_budget.currency:
-                raise ValueError("All budget amounts must use the same currency")
-
-        return v
+        base_currency = self.total_budget.currency
+        
+        if self.allocated and self.allocated.currency != base_currency:
+            raise ValueError("All budget amounts must use the same currency")
+        if self.spent and self.spent.currency != base_currency:
+            raise ValueError("All budget amounts must use the same currency")
+        if self.remaining and self.remaining.currency != base_currency:
+            raise ValueError("All budget amounts must use the same currency")
+        
+        # Validate category currencies
+        if self.categories:
+            for category, price in self.categories.items():
+                if price.currency != base_currency:
+                    raise ValueError(f"Category '{category}' uses different currency")
+        
+        return self
 
     def calculate_remaining(self) -> Price:
         """Calculate remaining budget."""
@@ -207,20 +187,6 @@ class PaymentInfo(TripSageModel):
     reference: Optional[str] = Field(None, description="Payment reference")
     status: Optional[str] = Field(None, description="Payment status")
 
-    @field_validator("transaction_id")
-    @classmethod
-    def validate_transaction_id(cls, v: Optional[str]) -> Optional[str]:
-        """Validate transaction ID format."""
-        if v is None:
-            return v
-
-        # Basic validation - should not be empty and reasonable length
-        if not v.strip() or len(v) > 100:
-            raise ValueError(
-                "Transaction ID must be non-empty and less than 100 characters"
-            )
-
-        return v.strip()
 
 
 class ExchangeRate(TripSageModel):
@@ -232,13 +198,6 @@ class ExchangeRate(TripSageModel):
     timestamp: Optional[str] = Field(None, description="Rate timestamp")
     source: Optional[str] = Field(None, description="Rate source")
 
-    @field_validator("rate")
-    @classmethod
-    def validate_rate(cls, v: Decimal) -> Decimal:
-        """Validate exchange rate is positive."""
-        if v <= 0:
-            raise ValueError("Exchange rate must be positive")
-        return v
 
     def convert(self, amount: Decimal) -> Decimal:
         """Convert amount using this exchange rate."""
@@ -263,13 +222,6 @@ class TaxInfo(TripSageModel):
     amount: Price = Field(description="Tax amount")
     included: bool = Field(False, description="Whether tax is included in base price")
 
-    @field_validator("rate")
-    @classmethod
-    def validate_tax_rate(cls, v: Decimal) -> Decimal:
-        """Validate tax rate is between 0 and 100%."""
-        if not 0 <= v <= 1:
-            raise ValueError("Tax rate must be between 0 and 1 (0% to 100%)")
-        return v
 
 
 class Deal(TripSageModel):
@@ -285,25 +237,22 @@ class Deal(TripSageModel):
     final_price: Price = Field(description="Final price after discount")
     valid_until: Optional[str] = Field(None, description="Deal expiration")
 
-    @field_validator("discount_percentage")
-    @classmethod
-    def validate_discount_percentage(cls, v: Optional[Decimal]) -> Optional[Decimal]:
-        """Validate discount percentage is reasonable."""
-        if v is None:
-            return v
-
-        if not 0 <= v <= 100:
-            raise ValueError("Discount percentage must be between 0 and 100")
-        return v
-
-    @field_validator("final_price")
-    @classmethod
-    def validate_final_price(cls, v: Price, info) -> Price:
-        """Validate final price is less than or equal to original price."""
-        if "original_price" in info.data:
-            original_price = info.data["original_price"]
-            if v.currency != original_price.currency:
-                raise ValueError("Original and final prices must use the same currency")
-            if v.amount > original_price.amount:
-                raise ValueError("Final price cannot be greater than original price")
-        return v
+    @model_validator(mode='after')
+    def validate_deal(self) -> 'Deal':
+        """Validate deal consistency."""
+        # Validate currency consistency
+        if self.original_price.currency != self.final_price.currency:
+            raise ValueError("Original and final prices must use the same currency")
+        
+        # Validate final price is not greater than original
+        if self.final_price.amount > self.original_price.amount:
+            raise ValueError("Final price cannot be greater than original price")
+        
+        # Validate discount amount if provided
+        if (
+            self.discount_amount 
+            and self.discount_amount.currency != self.original_price.currency
+        ):
+            raise ValueError("Discount amount must use the same currency as prices")
+        
+        return self

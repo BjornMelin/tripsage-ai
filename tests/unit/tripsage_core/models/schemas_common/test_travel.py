@@ -56,13 +56,13 @@ class TestTripDestination:
         """Test that zero duration fails validation."""
         with pytest.raises(ValidationError) as exc_info:
             TripDestination(name="Paris", duration_days=0)
-        assert "Duration must be at least 1 day" in str(exc_info.value)
+        assert "Value must be positive" in str(exc_info.value)
 
     def test_invalid_duration_negative(self):
         """Test that negative duration fails validation."""
         with pytest.raises(ValidationError) as exc_info:
             TripDestination(name="Paris", duration_days=-1)
-        assert "Duration must be at least 1 day" in str(exc_info.value)
+        assert "Value must be positive" in str(exc_info.value)
 
     def test_valid_duration_one(self):
         """Test that duration of 1 is valid."""
@@ -163,13 +163,13 @@ class TestTransportationPreferences:
         """Test that zero travel time fails validation."""
         with pytest.raises(ValidationError) as exc_info:
             TransportationPreferences(max_travel_time_hours=0)
-        assert "Travel time must be at least 1 hour" in str(exc_info.value)
+        assert "Value must be positive" in str(exc_info.value)
 
     def test_invalid_travel_time_negative(self):
         """Test that negative travel time fails validation."""
         with pytest.raises(ValidationError) as exc_info:
             TransportationPreferences(max_travel_time_hours=-1)
-        assert "Travel time must be at least 1 hour" in str(exc_info.value)
+        assert "Value must be positive" in str(exc_info.value)
 
     def test_valid_travel_time_one(self):
         """Test that travel time of 1 hour is valid."""
@@ -218,13 +218,13 @@ class TestTripPreferences:
         """Test that zero group size fails validation."""
         with pytest.raises(ValidationError) as exc_info:
             TripPreferences(group_size=0)
-        assert "Group size must be at least 1" in str(exc_info.value)
+        assert "Value must be positive" in str(exc_info.value)
 
     def test_invalid_group_size_negative(self):
         """Test that negative group size fails validation."""
         with pytest.raises(ValidationError) as exc_info:
             TripPreferences(group_size=-1)
-        assert "Group size must be at least 1" in str(exc_info.value)
+        assert "Value must be positive" in str(exc_info.value)
 
     def test_valid_group_size_one(self):
         """Test that group size of 1 is valid."""
@@ -276,7 +276,7 @@ class TestTripSummary:
                 destinations=["Boston"],
                 status=TripStatus.PLANNING,
             )
-        assert "Duration must be at least 1 day" in str(exc_info.value)
+        assert "greater than or equal to 1" in str(exc_info.value)
 
     def test_invalid_duration_negative(self):
         """Test that negative duration fails validation."""
@@ -288,7 +288,7 @@ class TestTripSummary:
                 destinations=["Boston"],
                 status=TripStatus.PLANNING,
             )
-        assert "Duration must be at least 1 day" in str(exc_info.value)
+        assert "greater than or equal to 1" in str(exc_info.value)
 
     def test_valid_duration_one(self):
         """Test that duration of 1 is valid."""
