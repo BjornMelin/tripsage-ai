@@ -1,7 +1,7 @@
-import { render, screen, fireEvent } from "@testing-library/react";
-import { describe, it, expect, vi } from "vitest";
-import { TripTimeline } from "../trip-timeline";
 import type { Trip } from "@/stores/trip-store";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
+import { TripTimeline } from "../trip-timeline";
 
 // Mock the stores
 vi.mock("@/stores/trip-store", () => ({
@@ -103,9 +103,7 @@ describe("TripTimeline", () => {
 
   it("calls onEditDestination when edit button is clicked", () => {
     const onEditDestination = vi.fn();
-    render(
-      <TripTimeline trip={mockTrip} onEditDestination={onEditDestination} />
-    );
+    render(<TripTimeline trip={mockTrip} onEditDestination={onEditDestination} />);
 
     const editButtons = screen.getAllByText("Edit");
     fireEvent.click(editButtons[0]);
@@ -115,9 +113,7 @@ describe("TripTimeline", () => {
 
   it("calls onAddDestination when add destination button is clicked", () => {
     const onAddDestination = vi.fn();
-    render(
-      <TripTimeline trip={mockTrip} onAddDestination={onAddDestination} />
-    );
+    render(<TripTimeline trip={mockTrip} onAddDestination={onAddDestination} />);
 
     fireEvent.click(screen.getByText("Add Destination"));
     expect(onAddDestination).toHaveBeenCalled();
@@ -130,9 +126,7 @@ describe("TripTimeline", () => {
     };
 
     const onAddDestination = vi.fn();
-    render(
-      <TripTimeline trip={emptyTrip} onAddDestination={onAddDestination} />
-    );
+    render(<TripTimeline trip={emptyTrip} onAddDestination={onAddDestination} />);
 
     expect(screen.getByText("No destinations planned yet")).toBeInTheDocument();
 

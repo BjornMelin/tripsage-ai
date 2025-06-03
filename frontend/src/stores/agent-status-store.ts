@@ -1,5 +1,3 @@
-import { create } from "zustand";
-import { persist } from "zustand/middleware";
 import type {
   Agent,
   AgentActivity,
@@ -8,6 +6,8 @@ import type {
   AgentTask,
   ResourceUsage,
 } from "@/types/agent-status";
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
 
 interface AgentStatusState {
   agents: Agent[];
@@ -62,9 +62,7 @@ export const useAgentStatusStore = create<AgentStatusState>()(
       get currentSession() {
         const { sessions, currentSessionId } = get();
         if (!currentSessionId) return null;
-        return (
-          sessions.find((session) => session.id === currentSessionId) || null
-        );
+        return sessions.find((session) => session.id === currentSessionId) || null;
       },
 
       get activeAgents() {
@@ -143,16 +141,12 @@ export const useAgentStatusStore = create<AgentStatusState>()(
 
         set((state) => ({
           agents: state.agents.map((agent) =>
-            agent.id === agentId
-              ? { ...agent, status, updatedAt: timestamp }
-              : agent
+            agent.id === agentId ? { ...agent, status, updatedAt: timestamp } : agent
           ),
           sessions: state.sessions.map((session) => ({
             ...session,
             agents: session.agents.map((agent) =>
-              agent.id === agentId
-                ? { ...agent, status, updatedAt: timestamp }
-                : agent
+              agent.id === agentId ? { ...agent, status, updatedAt: timestamp } : agent
             ),
           })),
           lastUpdated: timestamp,
@@ -277,9 +271,7 @@ export const useAgentStatusStore = create<AgentStatusState>()(
             let nextTaskId = agent.currentTaskId;
 
             if (isCurrentTask) {
-              const pendingTask = agent.tasks.find(
-                (t) => t.status === "pending"
-              );
+              const pendingTask = agent.tasks.find((t) => t.status === "pending");
               nextTaskId = pendingTask?.id;
             }
 

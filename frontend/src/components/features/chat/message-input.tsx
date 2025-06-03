@@ -1,17 +1,11 @@
 "use client";
 
-import type React from "react";
-import { useState, useRef, useCallback, FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  SendHorizontal,
-  Paperclip,
-  Mic,
-  Loader2,
-  StopCircle,
-} from "lucide-react";
 import { uploadAttachments } from "@/lib/api/chat-api";
+import { Loader2, Mic, Paperclip, SendHorizontal, StopCircle } from "lucide-react";
+import type React from "react";
+import { FormEvent, useCallback, useRef, useState } from "react";
 
 interface MessageInputProps {
   disabled?: boolean;

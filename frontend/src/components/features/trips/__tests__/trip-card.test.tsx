@@ -1,7 +1,7 @@
-import { render, screen, fireEvent } from "@testing-library/react";
-import { describe, it, expect, vi } from "vitest";
-import { TripCard } from "../trip-card";
 import type { Trip } from "@/stores/trip-store";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
+import { TripCard } from "../trip-card";
 
 // Mock the stores
 vi.mock("@/stores/trip-store", () => ({
@@ -16,10 +16,7 @@ vi.mock("@/stores/budget-store", () => ({
 
 // Mock Next.js Link
 vi.mock("next/link", () => ({
-  default: ({
-    children,
-    href,
-  }: { children: React.ReactNode; href: string }) => (
+  default: ({ children, href }: { children: React.ReactNode; href: string }) => (
     <a href={href}>{children}</a>
   ),
 }));

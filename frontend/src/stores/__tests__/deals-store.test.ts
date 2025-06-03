@@ -1,6 +1,6 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
-import { useDealsStore } from "../deals-store";
 import type { DealType } from "@/types/deals";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { useDealsStore } from "../deals-store";
 
 // Mock current timestamp for consistent testing
 const mockTimestamp = "2025-05-20T12:00:00.000Z";

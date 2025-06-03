@@ -1,9 +1,9 @@
 "use client";
 
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { useSearchStore } from "@/stores/search-store";
 import { api } from "@/lib/api/client";
+import { useSearchStore } from "@/stores/search-store";
 import type { ActivitySearchParams, SearchResponse } from "@/types/search";
+import { useMutation, useQuery } from "@tanstack/react-query";
 
 interface ActivitySearchResponse extends SearchResponse {
   results: {
@@ -27,8 +27,7 @@ interface ActivitySearchResponse extends SearchResponse {
 }
 
 export function useActivitySearch() {
-  const { updateActivityParams, setResults, setIsLoading, setError } =
-    useSearchStore();
+  const { updateActivityParams, setResults, setIsLoading, setError } = useSearchStore();
 
   // Mutation for searching activities
   const searchMutation = useMutation({

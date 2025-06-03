@@ -3,10 +3,10 @@
  * Comprehensive test suite with 80-90% coverage
  */
 
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { vi, describe, it, expect, beforeEach } from "vitest";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { PersonalizationInsights } from "../personalization-insights";
 
@@ -37,9 +37,7 @@ function createWrapper() {
   });
 
   return function TestWrapper({ children }: { children: ReactNode }) {
-    return (
-      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-    );
+    return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
   };
 }
 
@@ -53,8 +51,7 @@ describe("PersonalizationInsights", () => {
       insights: {
         travelPersonality: {
           type: "luxury_adventurer",
-          description:
-            "You enjoy luxury accommodations with adventurous activities",
+          description: "You enjoy luxury accommodations with adventurous activities",
           confidence: 0.89,
           keyTraits: ["luxury", "adventure", "cultural", "premium"],
         },
@@ -152,9 +149,7 @@ describe("PersonalizationInsights", () => {
     // Should show correct main title
     expect(screen.getByText("Personalization Insights")).toBeInTheDocument();
     expect(
-      screen.getByText(
-        "AI-powered analysis of your travel patterns and preferences"
-      )
+      screen.getByText("AI-powered analysis of your travel patterns and preferences")
     ).toBeInTheDocument();
   });
 
@@ -170,9 +165,7 @@ describe("PersonalizationInsights", () => {
     // Should show travel personality
     expect(screen.getByText("luxury_adventurer")).toBeInTheDocument();
     expect(
-      screen.getByText(
-        "You enjoy luxury accommodations with adventurous activities"
-      )
+      screen.getByText("You enjoy luxury accommodations with adventurous activities")
     ).toBeInTheDocument();
     expect(screen.getByText("89%")).toBeInTheDocument(); // confidence
 
@@ -267,18 +260,15 @@ describe("PersonalizationInsights", () => {
     mockUseMemoryStats.mockReturnValue(mockStatsData);
     mockUseUpdatePreferences.mockReturnValue(mockUpdatePreferences);
 
-    render(
-      <PersonalizationInsights userId="user-123" showRecommendations={true} />,
-      { wrapper: createWrapper() }
-    );
+    render(<PersonalizationInsights userId="user-123" showRecommendations={true} />, {
+      wrapper: createWrapper(),
+    });
 
     // Click recommendations view tab
     fireEvent.click(screen.getByText("Recommendations"));
 
     await waitFor(() => {
-      expect(
-        screen.getByText("Personalized Recommendations")
-      ).toBeInTheDocument();
+      expect(screen.getByText("Personalized Recommendations")).toBeInTheDocument();
       expect(
         screen.getByText("Consider luxury eco-lodges in Costa Rica")
       ).toBeInTheDocument();
@@ -295,10 +285,9 @@ describe("PersonalizationInsights", () => {
     mockUseMemoryStats.mockReturnValue(mockStatsData);
     mockUseUpdatePreferences.mockReturnValue(mockUpdatePreferences);
 
-    render(
-      <PersonalizationInsights userId="user-123" showRecommendations={false} />,
-      { wrapper: createWrapper() }
-    );
+    render(<PersonalizationInsights userId="user-123" showRecommendations={false} />, {
+      wrapper: createWrapper(),
+    });
 
     // Click recommendations view tab
     fireEvent.click(screen.getByText("Recommendations"));
@@ -387,9 +376,7 @@ describe("PersonalizationInsights", () => {
       wrapper: createWrapper(),
     });
 
-    expect(
-      screen.getByText("Analysis based on 12 months of data")
-    ).toBeInTheDocument();
+    expect(screen.getByText("Analysis based on 12 months of data")).toBeInTheDocument();
     expect(screen.getByText("Confidence: 87%")).toBeInTheDocument();
     expect(screen.getByText("Updated: 1/1/2024")).toBeInTheDocument();
   });
@@ -485,8 +472,7 @@ describe("PersonalizationInsights", () => {
       data: {
         insights: {
           budgetPatterns: mockInsightsData.data.insights.budgetPatterns,
-          destinationPreferences:
-            mockInsightsData.data.insights.destinationPreferences,
+          destinationPreferences: mockInsightsData.data.insights.destinationPreferences,
         },
         metadata: mockInsightsData.data.metadata,
       },

@@ -1,16 +1,16 @@
 "use client";
 
-import { useApiQuery, useApiMutation } from "@/hooks/use-api-query";
+import { useApiMutation, useApiQuery } from "@/hooks/use-api-query";
 import type {
+  AddConversationMemoryRequest,
+  AddConversationMemoryResponse,
+  DeleteUserMemoriesResponse,
   MemoryContextResponse,
+  MemoryInsightsResponse,
   SearchMemoriesRequest,
   SearchMemoriesResponse,
   UpdatePreferencesRequest,
   UpdatePreferencesResponse,
-  MemoryInsightsResponse,
-  AddConversationMemoryRequest,
-  AddConversationMemoryResponse,
-  DeleteUserMemoriesResponse,
 } from "@/types/memory";
 
 /**
@@ -65,10 +65,9 @@ export function useMemoryInsights(userId: string, enabled = true) {
  * Hook for adding conversation memory
  */
 export function useAddConversationMemory() {
-  return useApiMutation<
-    AddConversationMemoryResponse,
-    AddConversationMemoryRequest
-  >("/api/memory/conversations");
+  return useApiMutation<AddConversationMemoryResponse, AddConversationMemoryRequest>(
+    "/api/memory/conversations"
+  );
 }
 
 /**

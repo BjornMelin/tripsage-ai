@@ -1,18 +1,16 @@
 "use client";
 
-import { useState } from "react";
-import { ActivitySearchForm } from "@/components/features/search/activity-search-form";
 import { ActivityCard } from "@/components/features/search/activity-card";
+import { ActivitySearchForm } from "@/components/features/search/activity-search-form";
 import { SearchResults } from "@/components/features/search/search-results";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { useActivitySearch } from "@/hooks/use-activity-search";
 import { useSearchStore } from "@/stores/search-store";
-import type { ActivitySearchParams, Activity } from "@/types/search";
+import type { Activity, ActivitySearchParams } from "@/types/search";
+import { useState } from "react";
 
 export default function ActivitiesSearchPage() {
-  const [selectedActivity, setSelectedActivity] = useState<Activity | null>(
-    null
-  );
+  const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
   const { searchActivities, isSearching, searchError } = useActivitySearch();
   const { results, isLoading, error } = useSearchStore();
 
@@ -85,17 +83,13 @@ export default function ActivitiesSearchPage() {
             </div>
           )}
 
-          {!isLoading &&
-            !isSearching &&
-            !hasResults &&
-            !error &&
-            !searchError && (
-              <div className="text-center py-12">
-                <p className="text-muted-foreground">
-                  Use the search form to find activities at your destination
-                </p>
-              </div>
-            )}
+          {!isLoading && !isSearching && !hasResults && !error && !searchError && (
+            <div className="text-center py-12">
+              <p className="text-muted-foreground">
+                Use the search form to find activities at your destination
+              </p>
+            </div>
+          )}
         </div>
       </div>
 

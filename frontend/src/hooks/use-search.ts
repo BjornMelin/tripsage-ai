@@ -1,18 +1,18 @@
 "use client";
 
-import { useCallback } from "react";
+import { useApiMutation, useApiQuery } from "@/hooks/use-api-query";
 import { useSearchStore } from "@/stores/search-store";
-import { useApiQuery, useApiMutation } from "@/hooks/use-api-query";
 import type {
-  SearchType,
-  SearchParams,
-  FlightSearchParams,
   AccommodationSearchParams,
   ActivitySearchParams,
-  SearchResults,
-  SearchResponse,
+  FlightSearchParams,
   SavedSearch,
+  SearchParams,
+  SearchResponse,
+  SearchResults,
+  SearchType,
 } from "@/types/search";
+import { useCallback } from "react";
 
 /**
  * Hook for searching flights, accommodations, and activities
@@ -69,8 +69,7 @@ export function useSearch() {
     // Apply any active filters to the search params
     const paramsWithFilters = {
       ...currentParams,
-      filters:
-        Object.keys(activeFilters).length > 0 ? activeFilters : undefined,
+      filters: Object.keys(activeFilters).length > 0 ? activeFilters : undefined,
       sort: activeSortOption?.value,
       sortDirection: activeSortOption?.direction,
     };
@@ -100,9 +99,7 @@ export function useSearch() {
           updateFlightParams(params as Partial<FlightSearchParams>);
           break;
         case "accommodation":
-          updateAccommodationParams(
-            params as Partial<AccommodationSearchParams>
-          );
+          updateAccommodationParams(params as Partial<AccommodationSearchParams>);
           break;
         case "activity":
           updateActivityParams(params as Partial<ActivitySearchParams>);
@@ -191,9 +188,7 @@ export function useSavedSearches() {
 
     switch (type) {
       case "flight":
-        useSearchStore
-          .getState()
-          .updateFlightParams(params as FlightSearchParams);
+        useSearchStore.getState().updateFlightParams(params as FlightSearchParams);
         break;
       case "accommodation":
         useSearchStore
@@ -201,9 +196,7 @@ export function useSavedSearches() {
           .updateAccommodationParams(params as AccommodationSearchParams);
         break;
       case "activity":
-        useSearchStore
-          .getState()
-          .updateActivityParams(params as ActivitySearchParams);
+        useSearchStore.getState().updateActivityParams(params as ActivitySearchParams);
         break;
     }
   }, []);
@@ -236,30 +229,23 @@ export function useRecentSearches() {
   const { recentSearches, clearRecentSearches } = useSearchStore();
 
   // Function to load a recent search
-  const loadRecentSearch = useCallback(
-    (type: SearchType, params: SearchParams) => {
-      useSearchStore.getState().setSearchType(type);
+  const loadRecentSearch = useCallback((type: SearchType, params: SearchParams) => {
+    useSearchStore.getState().setSearchType(type);
 
-      switch (type) {
-        case "flight":
-          useSearchStore
-            .getState()
-            .updateFlightParams(params as FlightSearchParams);
-          break;
-        case "accommodation":
-          useSearchStore
-            .getState()
-            .updateAccommodationParams(params as AccommodationSearchParams);
-          break;
-        case "activity":
-          useSearchStore
-            .getState()
-            .updateActivityParams(params as ActivitySearchParams);
-          break;
-      }
-    },
-    []
-  );
+    switch (type) {
+      case "flight":
+        useSearchStore.getState().updateFlightParams(params as FlightSearchParams);
+        break;
+      case "accommodation":
+        useSearchStore
+          .getState()
+          .updateAccommodationParams(params as AccommodationSearchParams);
+        break;
+      case "activity":
+        useSearchStore.getState().updateActivityParams(params as ActivitySearchParams);
+        break;
+    }
+  }, []);
 
   return {
     recentSearches,

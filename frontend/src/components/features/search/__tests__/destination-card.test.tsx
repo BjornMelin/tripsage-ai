@@ -2,11 +2,11 @@
  * @vitest-environment jsdom
  */
 
-import { describe, it, expect, vi } from "vitest";
+import type { Destination } from "@/types/search";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { describe, expect, it, vi } from "vitest";
 import { DestinationCard } from "../destination-card";
-import type { Destination } from "@/types/search";
 
 const mockDestination: Destination = {
   id: "dest_paris_fr",
@@ -27,12 +27,7 @@ const mockDestination: Destination = {
     averageTemp: 12,
     rainfall: 640,
   },
-  attractions: [
-    "Eiffel Tower",
-    "Louvre Museum",
-    "Notre-Dame",
-    "Arc de Triomphe",
-  ],
+  attractions: ["Eiffel Tower", "Louvre Museum", "Notre-Dame", "Arc de Triomphe"],
   bestTimeToVisit: ["Apr", "May", "Jun", "Sep", "Oct"],
 };
 
@@ -134,9 +129,7 @@ describe("DestinationCard", () => {
       coordinates: { lat: 0, lng: 0 },
     };
 
-    render(
-      <DestinationCard destination={minimalDestination} {...mockHandlers} />
-    );
+    render(<DestinationCard destination={minimalDestination} {...mockHandlers} />);
 
     expect(screen.getByText("Test City")).toBeInTheDocument();
     expect(screen.getByText("Test City, Test Country")).toBeInTheDocument();
@@ -150,10 +143,7 @@ describe("DestinationCard", () => {
     };
 
     render(
-      <DestinationCard
-        destination={establishmentDestination}
-        {...mockHandlers}
-      />
+      <DestinationCard destination={establishmentDestination} {...mockHandlers} />
     );
 
     expect(screen.getByText("Landmark, Attraction")).toBeInTheDocument();
@@ -177,10 +167,7 @@ describe("DestinationCard", () => {
     };
 
     rerender(
-      <DestinationCard
-        destination={establishmentDestination}
-        {...mockHandlers}
-      />
+      <DestinationCard destination={establishmentDestination} {...mockHandlers} />
     );
 
     // The icons are rendered as SVGs, so we can't easily test their specific type
@@ -210,16 +197,11 @@ describe("DestinationCard", () => {
     };
 
     render(
-      <DestinationCard
-        destination={longDescriptionDestination}
-        {...mockHandlers}
-      />
+      <DestinationCard destination={longDescriptionDestination} {...mockHandlers} />
     );
 
     // The description should be present but truncated with CSS (line-clamp-3)
-    expect(
-      screen.getByText(/This is a very long description/)
-    ).toBeInTheDocument();
+    expect(screen.getByText(/This is a very long description/)).toBeInTheDocument();
   });
 
   it("formats best time to visit with limited months", () => {
@@ -228,9 +210,7 @@ describe("DestinationCard", () => {
       bestTimeToVisit: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug"],
     };
 
-    render(
-      <DestinationCard destination={manyMonthsDestination} {...mockHandlers} />
-    );
+    render(<DestinationCard destination={manyMonthsDestination} {...mockHandlers} />);
 
     // Should only show first 3 months
     expect(screen.getByText("Best: Jan, Feb, Mar")).toBeInTheDocument();
@@ -242,9 +222,7 @@ describe("DestinationCard", () => {
       bestTimeToVisit: undefined,
     };
 
-    render(
-      <DestinationCard destination={noTimeDestination} {...mockHandlers} />
-    );
+    render(<DestinationCard destination={noTimeDestination} {...mockHandlers} />);
 
     expect(screen.getByText("Best: Year-round")).toBeInTheDocument();
   });

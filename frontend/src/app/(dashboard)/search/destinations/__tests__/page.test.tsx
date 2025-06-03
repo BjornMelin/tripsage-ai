@@ -2,13 +2,13 @@
  * @vitest-environment jsdom
  */
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createElement } from "react";
-import DestinationsSearchPage from "../page";
 import type { ReactNode } from "react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import DestinationsSearchPage from "../page";
 
 // Mock the hooks and stores
 vi.mock("@/stores/search-store", () => ({
@@ -36,9 +36,7 @@ vi.mock("@/components/features/search/destination-search-form", () => ({
     <div data-testid="destination-search-form">
       <button
         type="button"
-        onClick={() =>
-          onSearch({ query: "Paris", types: ["locality"], limit: 10 })
-        }
+        onClick={() => onSearch({ query: "Paris", types: ["locality"], limit: 10 })}
       >
         Mock Search
       </button>
@@ -47,12 +45,7 @@ vi.mock("@/components/features/search/destination-search-form", () => ({
 }));
 
 vi.mock("@/components/features/search/destination-card", () => ({
-  DestinationCard: ({
-    destination,
-    onSelect,
-    onCompare,
-    onViewDetails,
-  }: any) => (
+  DestinationCard: ({ destination, onSelect, onCompare, onViewDetails }: any) => (
     <div data-testid="destination-card">
       <h3>{destination.name}</h3>
       <button type="button" onClick={() => onSelect?.(destination)}>
@@ -121,9 +114,7 @@ describe("DestinationsSearchPage", () => {
     const wrapper = createWrapper();
     render(<DestinationsSearchPage />, { wrapper });
 
-    expect(
-      screen.getByText("Discover Amazing Destinations")
-    ).toBeInTheDocument();
+    expect(screen.getByText("Discover Amazing Destinations")).toBeInTheDocument();
     expect(
       screen.getByText(
         "Search for cities, countries, landmarks, or regions to find your next travel destination."
@@ -133,9 +124,7 @@ describe("DestinationsSearchPage", () => {
 
   it("handles search form submission", async () => {
     const mockSearchDestinationsMock = vi.fn();
-    const { useDestinationSearch } = await import(
-      "@/hooks/use-destination-search"
-    );
+    const { useDestinationSearch } = await import("@/hooks/use-destination-search");
 
     (useDestinationSearch as any).mockReturnValue({
       searchDestinationsMock: mockSearchDestinationsMock,
@@ -172,9 +161,7 @@ describe("DestinationsSearchPage", () => {
     const wrapper = createWrapper();
     render(<DestinationsSearchPage />, { wrapper });
 
-    expect(
-      screen.getByText("Search Results (1 destinations)")
-    ).toBeInTheDocument();
+    expect(screen.getByText("Search Results (1 destinations)")).toBeInTheDocument();
     expect(screen.getByTestId("destination-card")).toBeInTheDocument();
     expect(screen.getByText("Paris")).toBeInTheDocument();
   });
@@ -280,9 +267,7 @@ describe("DestinationsSearchPage", () => {
 
     // Should show comparison bar
     await waitFor(() => {
-      expect(
-        screen.getByText("Compare Destinations (1/3)")
-      ).toBeInTheDocument();
+      expect(screen.getByText("Compare Destinations (1/3)")).toBeInTheDocument();
     });
   });
 

@@ -1,18 +1,15 @@
 "use client";
 
-import { useQuery, useMutation } from "@tanstack/react-query";
 import { api } from "@/lib/api/client";
-import type { AccommodationSearchParams, Accommodation } from "@/types/search";
 import { useSearchStore } from "@/stores/search-store";
+import type { Accommodation, AccommodationSearchParams } from "@/types/search";
+import { useMutation, useQuery } from "@tanstack/react-query";
 
 export interface AccommodationSearchResponse {
   results: Accommodation[];
   totalResults: number;
   filters?: Record<string, string | number | boolean | string[]>;
-  metadata?: Record<
-    string,
-    string | number | boolean | Record<string, unknown>
-  >;
+  metadata?: Record<string, string | number | boolean | Record<string, unknown>>;
 }
 
 export function useAccommodationSearch() {

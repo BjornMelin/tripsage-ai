@@ -1,59 +1,48 @@
 "use client";
 
-import React, {
-  useEffect,
-  useRef,
-  useCallback,
-  useMemo,
-  startTransition,
-} from "react";
-import {
-  motion,
-  AnimatePresence,
-  useSpring,
-  useTransform,
-} from "framer-motion";
-import type { Message, ToolCall, ToolResult } from "@/types/chat";
-import { cn } from "@/lib/utils";
-import { MessageItem } from "./message-item";
-import {
-  Bot,
-  Loader2,
-  MessageSquare,
-  Sparkles,
-  MapPin,
-  Plane,
-  Calendar,
-  Star,
-  Compass,
-  Camera,
-  Gift,
-  Zap,
-  Globe,
-  ArrowUp,
-  Copy,
-  RotateCcw,
-  Volume2,
-} from "lucide-react";
-import { TypingIndicator } from "../typing-indicator";
-import { useChatStore } from "@/stores/chat-store";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "@/components/ui/hover-card";
+import { Progress } from "@/components/ui/progress";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
+import { useChatStore } from "@/stores/chat-store";
+import type { Message, ToolCall, ToolResult } from "@/types/chat";
+import { AnimatePresence, motion, useSpring, useTransform } from "framer-motion";
 import {
-  HoverCard,
-  HoverCardContent,
-  HoverCardTrigger,
-} from "@/components/ui/hover-card";
-import { Separator } from "@/components/ui/separator";
-import { Progress } from "@/components/ui/progress";
+  ArrowUp,
+  Bot,
+  Calendar,
+  Camera,
+  Compass,
+  Copy,
+  Gift,
+  Globe,
+  Loader2,
+  MapPin,
+  MessageSquare,
+  Plane,
+  RotateCcw,
+  Sparkles,
+  Star,
+  Volume2,
+  Zap,
+} from "lucide-react";
+import React, { useEffect, useRef, useCallback, useMemo, startTransition } from "react";
+import { TypingIndicator } from "../typing-indicator";
+import { MessageItem } from "./message-item";
 
 interface MessageListProps {
   messages: Message[];
@@ -89,8 +78,7 @@ export function MessageList({
     typingUsers: sessionId
       ? Object.values(state.typingUsers).filter((user) =>
           Object.keys(state.typingUsers).find(
-            (key) =>
-              key.startsWith(`${sessionId}_`) && state.typingUsers[key] === user
+            (key) => key.startsWith(`${sessionId}_`) && state.typingUsers[key] === user
           )
         )
       : [],
@@ -103,8 +91,7 @@ export function MessageList({
 
       // Check if user has scrolled up
       const isAtBottom =
-        container.scrollHeight - container.clientHeight - container.scrollTop <
-        100;
+        container.scrollHeight - container.clientHeight - container.scrollTop < 100;
 
       // Auto-scroll if at bottom or a new message arrives from the user
       const lastMessage = messages[messages.length - 1];
@@ -185,8 +172,7 @@ export function MessageList({
     if (containerRef.current) {
       const container = containerRef.current;
       const isAtBottom =
-        container.scrollHeight - container.clientHeight - container.scrollTop <
-        100;
+        container.scrollHeight - container.clientHeight - container.scrollTop < 100;
       setUserScrolledUp(!isAtBottom);
     }
   }, []);
@@ -263,9 +249,9 @@ export function MessageList({
               transition={{ delay: 0.6, duration: 0.6 }}
               className="text-xl text-muted-foreground max-w-2xl mx-auto"
             >
-              Your intelligent travel companion powered by advanced AI. Get
-              personalized recommendations, detailed itineraries, and insider
-              tips for unforgettable journeys.
+              Your intelligent travel companion powered by advanced AI. Get personalized
+              recommendations, detailed itineraries, and insider tips for unforgettable
+              journeys.
             </motion.p>
           </div>
         </motion.div>
@@ -392,9 +378,7 @@ export function MessageList({
                       whileHover={{ scale: 1.2 }}
                       transition={{ duration: 0.2 }}
                     >
-                      <category.icon
-                        className={cn("w-5 h-5", category.color)}
-                      />
+                      <category.icon className={cn("w-5 h-5", category.color)} />
                     </motion.div>
                     <Badge
                       variant="secondary"
@@ -411,8 +395,7 @@ export function MessageList({
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{
-                          delay:
-                            1.6 + categoryIndex * 0.2 + suggestionIndex * 0.1,
+                          delay: 1.6 + categoryIndex * 0.2 + suggestionIndex * 0.1,
                           duration: 0.4,
                         }}
                         whileHover={{ scale: 1.02 }}
@@ -457,9 +440,7 @@ export function MessageList({
                                 <Button
                                   variant="ghost"
                                   className="w-full text-left h-auto p-0 justify-start"
-                                  onClick={() =>
-                                    handleSuggestionClick(suggestion.text)
-                                  }
+                                  onClick={() => handleSuggestionClick(suggestion.text)}
                                 >
                                   <span className="text-sm leading-relaxed font-medium">
                                     {suggestion.text}
@@ -490,10 +471,9 @@ export function MessageList({
                                 </span>
                               </div>
                               <p className="text-sm text-muted-foreground">
-                                This {suggestion.difficulty.toLowerCase()}-level
-                                query will help you get{" "}
-                                {category.title.toLowerCase()} recommendations
-                                tailored to your preferences.
+                                This {suggestion.difficulty.toLowerCase()}-level query
+                                will help you get {category.title.toLowerCase()}{" "}
+                                recommendations tailored to your preferences.
                               </p>
                               <Separator />
                               <div className="flex items-center gap-2 text-xs text-muted-foreground">

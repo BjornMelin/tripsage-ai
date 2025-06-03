@@ -33,11 +33,7 @@ const getAuthHeaders = () => {
 };
 
 // Extend fetch with timeout functionality
-const fetchWithTimeout = async (
-  url: string,
-  options: RequestInit,
-  timeout = 30000
-) => {
+const fetchWithTimeout = async (url: string, options: RequestInit, timeout = 30000) => {
   const controller = new AbortController();
   const id = setTimeout(() => controller.abort(), timeout);
 
@@ -125,9 +121,7 @@ export function streamChatRequest(
 
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(
-          `API stream request failed: ${response.status} ${errorText}`
-        );
+        throw new Error(`API stream request failed: ${response.status} ${errorText}`);
       }
 
       if (!response.body) {
@@ -181,8 +175,7 @@ export function streamChatRequest(
         if (onAbort) onAbort();
       } else {
         console.error("Stream error:", error);
-        if (onError)
-          onError(error instanceof Error ? error : new Error(String(error)));
+        if (onError) onError(error instanceof Error ? error : new Error(String(error)));
       }
     }
   };
@@ -197,9 +190,7 @@ export function streamChatRequest(
 /**
  * Upload attachments to the API
  */
-export async function uploadAttachments(
-  files: File[]
-): Promise<{ urls: string[] }> {
+export async function uploadAttachments(files: File[]): Promise<{ urls: string[] }> {
   try {
     // Create FormData to send files
     const formData = new FormData();

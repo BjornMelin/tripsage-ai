@@ -118,8 +118,7 @@ export const useUserStore = create<UserState>()(
           });
         } catch (error) {
           set({
-            error:
-              error instanceof Error ? error.message : "Registration failed",
+            error: error instanceof Error ? error.message : "Registration failed",
             isLoading: false,
           });
         }

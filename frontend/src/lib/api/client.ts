@@ -61,10 +61,7 @@ export async function fetchApi<T = any>(
   // Set default headers
   const headers = new Headers(fetchOptions.headers);
 
-  if (
-    !headers.has("Content-Type") &&
-    !(fetchOptions.body instanceof FormData)
-  ) {
+  if (!headers.has("Content-Type") && !(fetchOptions.body instanceof FormData)) {
     headers.set("Content-Type", "application/json");
   }
 
@@ -114,11 +111,7 @@ export const api = {
     fetchApi<T>(endpoint, { ...options, method: "DELETE" }),
 
   // For file uploads
-  upload: <T = any>(
-    endpoint: string,
-    formData: FormData,
-    options?: FetchOptions
-  ) =>
+  upload: <T = any>(endpoint: string, formData: FormData, options?: FetchOptions) =>
     fetchApi<T>(endpoint, {
       ...options,
       method: "POST",

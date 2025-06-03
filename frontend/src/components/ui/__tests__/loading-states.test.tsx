@@ -1,10 +1,10 @@
-import { render, screen, fireEvent } from "@testing-library/react";
-import { describe, it, expect, vi } from "vitest";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 import {
-  LoadingOverlay,
-  LoadingState,
   LoadingButton,
   LoadingContainer,
+  LoadingOverlay,
+  LoadingState,
   PageLoading,
 } from "../loading-states";
 
@@ -43,9 +43,7 @@ describe("LoadingOverlay", () => {
   });
 
   it("can disable backdrop", () => {
-    render(
-      <LoadingOverlay isVisible={true} backdrop={false} data-testid="overlay" />
-    );
+    render(<LoadingOverlay isVisible={true} backdrop={false} data-testid="overlay" />);
 
     const overlay = screen.getByTestId("overlay");
     expect(overlay).not.toHaveClass("bg-background/80", "backdrop-blur-sm");
@@ -182,11 +180,7 @@ describe("LoadingContainer", () => {
 
   it("applies minimum height", () => {
     render(
-      <LoadingContainer
-        isLoading={false}
-        minHeight="400px"
-        data-testid="container"
-      >
+      <LoadingContainer isLoading={false} minHeight="400px" data-testid="container">
         <div>Content</div>
       </LoadingContainer>
     );
@@ -197,11 +191,7 @@ describe("LoadingContainer", () => {
 
   it("applies numeric minimum height", () => {
     render(
-      <LoadingContainer
-        isLoading={false}
-        minHeight={300}
-        data-testid="container"
-      >
+      <LoadingContainer isLoading={false} minHeight={300} data-testid="container">
         <div>Content</div>
       </LoadingContainer>
     );
@@ -240,9 +230,7 @@ describe("PageLoading", () => {
   });
 
   it("applies custom className", () => {
-    render(
-      <PageLoading className="custom-loading" data-testid="page-loading" />
-    );
+    render(<PageLoading className="custom-loading" data-testid="page-loading" />);
 
     const loading = screen.getByTestId("page-loading");
     expect(loading).toHaveClass("custom-loading");

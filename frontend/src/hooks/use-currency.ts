@@ -1,28 +1,23 @@
 "use client";
 
-import { useCallback } from "react";
 import { useApiQuery } from "@/hooks/use-api-query";
 import { useCurrencyStore } from "@/stores/currency-store";
 import type {
-  CurrencyCode,
-  Currency,
   ConversionResult,
+  Currency,
+  CurrencyCode,
   CurrencyPair,
   UpdateExchangeRatesResponse,
 } from "@/types/currency";
+import { useCallback } from "react";
 import { z } from "zod";
 
 /**
  * Hook for accessing currency state and basic operations
  */
 export function useCurrency() {
-  const {
-    currencies,
-    baseCurrency,
-    exchangeRates,
-    favoriteCurrencies,
-    lastUpdated,
-  } = useCurrencyStore();
+  const { currencies, baseCurrency, exchangeRates, favoriteCurrencies, lastUpdated } =
+    useCurrencyStore();
 
   return {
     currencies,
@@ -82,11 +77,7 @@ export function useCurrencyConverter() {
   const { convertAmount, formatAmountWithCurrency } = useCurrencyStore();
 
   const convert = useCallback(
-    (
-      amount: number,
-      from: CurrencyCode,
-      to: CurrencyCode
-    ): ConversionResult | null => {
+    (amount: number, from: CurrencyCode, to: CurrencyCode): ConversionResult | null => {
       return convertAmount(amount, from, to);
     },
     [convertAmount]

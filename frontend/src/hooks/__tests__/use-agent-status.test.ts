@@ -1,13 +1,13 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
-import { renderHook, act } from "@testing-library/react";
+import * as apiQuery from "@/hooks/use-api-query";
+import { useAgentStatusStore } from "@/stores/agent-status-store";
+import { act, renderHook } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  useAgentActivities,
   useAgentStatus,
   useAgentTasks,
-  useAgentActivities,
   useResourceUsage,
 } from "../use-agent-status";
-import { useAgentStatusStore } from "@/stores/agent-status-store";
-import * as apiQuery from "@/hooks/use-api-query";
 
 // Mock the API query hooks
 vi.mock("@/hooks/use-api-query", () => ({
@@ -212,8 +212,7 @@ describe("Agent Status Hooks", () => {
       // The mock data should have updated our agent's status and progress
       act(() => {
         // Manually trigger the onSuccess callback to simulate data fetch
-        const onSuccess = (apiQuery.useApiQuery as any).mock.calls[0][2]
-          .onSuccess;
+        const onSuccess = (apiQuery.useApiQuery as any).mock.calls[0][2].onSuccess;
         onSuccess({
           agents: [
             {

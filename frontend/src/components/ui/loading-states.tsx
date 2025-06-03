@@ -1,6 +1,6 @@
+import { cn } from "@/lib/utils";
 import * as React from "react";
 import { LoadingSpinner } from "./loading-spinner";
-import { cn } from "@/lib/utils";
 
 /**
  * Loading overlay component for full-screen or container loading
@@ -15,10 +15,7 @@ export interface LoadingOverlayProps {
   variant?: "overlay" | "page" | "fullscreen";
 }
 
-export const LoadingOverlay = React.forwardRef<
-  HTMLDivElement,
-  LoadingOverlayProps
->(
+export const LoadingOverlay = React.forwardRef<HTMLDivElement, LoadingOverlayProps>(
   (
     {
       isVisible,
@@ -116,10 +113,7 @@ export interface LoadingStateProps {
 }
 
 export const LoadingState = React.forwardRef<HTMLDivElement, LoadingStateProps>(
-  (
-    { isLoading, skeleton, spinner, children, className, fallback, ...props },
-    ref
-  ) => {
+  ({ isLoading, skeleton, spinner, children, className, fallback, ...props }, ref) => {
     if (isLoading) {
       if (skeleton) {
         return (
@@ -169,10 +163,7 @@ export interface LoadingButtonProps
   children: React.ReactNode;
 }
 
-export const LoadingButton = React.forwardRef<
-  HTMLButtonElement,
-  LoadingButtonProps
->(
+export const LoadingButton = React.forwardRef<HTMLButtonElement, LoadingButtonProps>(
   (
     {
       isLoading = false,
@@ -218,10 +209,7 @@ export interface LoadingContainerProps {
   minHeight?: string | number;
 }
 
-export const LoadingContainer = React.forwardRef<
-  HTMLDivElement,
-  LoadingContainerProps
->(
+export const LoadingContainer = React.forwardRef<HTMLDivElement, LoadingContainerProps>(
   (
     {
       isLoading,
@@ -236,8 +224,7 @@ export const LoadingContainer = React.forwardRef<
   ) => {
     const containerStyle = minHeight
       ? {
-          minHeight:
-            typeof minHeight === "number" ? `${minHeight}px` : minHeight,
+          minHeight: typeof minHeight === "number" ? `${minHeight}px` : minHeight,
         }
       : undefined;
 

@@ -1,13 +1,8 @@
-import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
-import { renderHook, act } from "@testing-library/react";
-import {
-  useDeals,
-  useDealAlerts,
-  useFeaturedDeals,
-  useSavedDeals,
-} from "../use-deals";
 import { useDealsStore } from "@/stores/deals-store";
 import type { DealType } from "@/types/deals";
+import { act, renderHook } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { useDealAlerts, useDeals, useFeaturedDeals, useSavedDeals } from "../use-deals";
 
 // Mock current timestamp for consistent testing
 const mockTimestamp = "2025-05-20T12:00:00.000Z";
@@ -137,15 +132,9 @@ describe("useDeals Hook", () => {
     const { result } = renderHook(() => useDeals());
 
     expect(result.current.allDeals).toHaveLength(3);
-    expect(result.current.allDeals.map((d) => d.id)).toContain(
-      sampleDeals[0].id
-    );
-    expect(result.current.allDeals.map((d) => d.id)).toContain(
-      sampleDeals[1].id
-    );
-    expect(result.current.allDeals.map((d) => d.id)).toContain(
-      sampleDeals[2].id
-    );
+    expect(result.current.allDeals.map((d) => d.id)).toContain(sampleDeals[0].id);
+    expect(result.current.allDeals.map((d) => d.id)).toContain(sampleDeals[1].id);
+    expect(result.current.allDeals.map((d) => d.id)).toContain(sampleDeals[2].id);
   });
 
   it("should provide access to featured deals", () => {
@@ -159,12 +148,8 @@ describe("useDeals Hook", () => {
     const { result } = renderHook(() => useDeals());
 
     expect(result.current.savedDeals).toHaveLength(2);
-    expect(result.current.savedDeals.map((d) => d.id)).toContain(
-      sampleDeals[0].id
-    );
-    expect(result.current.savedDeals.map((d) => d.id)).toContain(
-      sampleDeals[1].id
-    );
+    expect(result.current.savedDeals.map((d) => d.id)).toContain(sampleDeals[0].id);
+    expect(result.current.savedDeals.map((d) => d.id)).toContain(sampleDeals[1].id);
   });
 
   it("should provide access to recently viewed deals", () => {
@@ -321,12 +306,8 @@ describe("useDealAlerts Hook", () => {
     const { result } = renderHook(() => useDealAlerts());
 
     expect(result.current.alerts).toHaveLength(2);
-    expect(result.current.alerts.map((a) => a.id)).toContain(
-      sampleAlerts[0].id
-    );
-    expect(result.current.alerts.map((a) => a.id)).toContain(
-      sampleAlerts[1].id
-    );
+    expect(result.current.alerts.map((a) => a.id)).toContain(sampleAlerts[0].id);
+    expect(result.current.alerts.map((a) => a.id)).toContain(sampleAlerts[1].id);
   });
 
   it("should provide access to active alerts", () => {
@@ -431,12 +412,8 @@ describe("useSavedDeals Hook", () => {
     const { result } = renderHook(() => useSavedDeals());
 
     expect(result.current.savedDeals).toHaveLength(2);
-    expect(result.current.savedDeals.map((d) => d.id)).toContain(
-      sampleDeals[0].id
-    );
-    expect(result.current.savedDeals.map((d) => d.id)).toContain(
-      sampleDeals[1].id
-    );
+    expect(result.current.savedDeals.map((d) => d.id)).toContain(sampleDeals[0].id);
+    expect(result.current.savedDeals.map((d) => d.id)).toContain(sampleDeals[1].id);
   });
 
   it("should provide sorted saved deals", () => {

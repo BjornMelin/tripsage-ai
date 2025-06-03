@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 /**
  * Loading state interface
@@ -43,12 +43,7 @@ export interface UseLoadingReturn {
  * Hook for managing loading states with optional timeout
  */
 export function useLoading(options: UseLoadingOptions = {}): UseLoadingReturn {
-  const {
-    initialLoading = false,
-    initialMessage,
-    timeout,
-    onTimeout,
-  } = options;
+  const { initialLoading = false, initialMessage, timeout, onTimeout } = options;
 
   const [state, setState] = useState<UseLoadingState>({
     isLoading: initialLoading,
@@ -183,8 +178,7 @@ export function useAsyncLoading<T>(
         setData(result);
         return result;
       } catch (err) {
-        const errorMessage =
-          err instanceof Error ? err.message : "An error occurred";
+        const errorMessage = err instanceof Error ? err.message : "An error occurred";
         setError(errorMessage);
         throw err;
       } finally {

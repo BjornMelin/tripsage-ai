@@ -1,18 +1,10 @@
-import {
-  describe,
-  it,
-  expect,
-  beforeEach,
-  afterEach,
-  vi,
-  type Mock,
-} from "vitest";
-import { renderHook, act } from "@testing-library/react";
+import { act, renderHook } from "@testing-library/react";
+import { type Mock, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useChatStore } from "../chat-store";
 import type {
-  WebSocketMessageEvent,
-  WebSocketAgentStatusEvent,
   Message,
+  WebSocketAgentStatusEvent,
+  WebSocketMessageEvent,
 } from "../chat-store";
 
 // Test constants
@@ -75,9 +67,7 @@ describe("Chat Store WebSocket Integration", () => {
       });
 
       // Assert
-      const { WebSocketClient } = await import(
-        "@/lib/websocket/websocket-client"
-      );
+      const { WebSocketClient } = await import("@/lib/websocket/websocket-client");
       expect(WebSocketClient).toHaveBeenCalledWith({
         url: `ws://localhost:8000/ws/chat/${sessionId}`,
         reconnect: true,
@@ -97,22 +87,10 @@ describe("Chat Store WebSocket Integration", () => {
       });
 
       // Assert
-      expect(mockWebSocket.on).toHaveBeenCalledWith(
-        "open",
-        expect.any(Function)
-      );
-      expect(mockWebSocket.on).toHaveBeenCalledWith(
-        "close",
-        expect.any(Function)
-      );
-      expect(mockWebSocket.on).toHaveBeenCalledWith(
-        "connecting",
-        expect.any(Function)
-      );
-      expect(mockWebSocket.on).toHaveBeenCalledWith(
-        "error",
-        expect.any(Function)
-      );
+      expect(mockWebSocket.on).toHaveBeenCalledWith("open", expect.any(Function));
+      expect(mockWebSocket.on).toHaveBeenCalledWith("close", expect.any(Function));
+      expect(mockWebSocket.on).toHaveBeenCalledWith("connecting", expect.any(Function));
+      expect(mockWebSocket.on).toHaveBeenCalledWith("error", expect.any(Function));
       expect(mockWebSocket.on).toHaveBeenCalledWith(
         "chat_message",
         expect.any(Function)
@@ -518,9 +496,7 @@ describe("Chat Store WebSocket Integration", () => {
     it("should ignore status updates for different sessions", () => {
       // Arrange
       const otherSessionId = "other-session";
-      const initialStatus = store.sessions.find(
-        (s) => s.id === sessionId
-      )?.agentStatus;
+      const initialStatus = store.sessions.find((s) => s.id === sessionId)?.agentStatus;
 
       const event: WebSocketAgentStatusEvent = {
         type: "agent_status_update",
@@ -731,9 +707,7 @@ describe("Chat Store WebSocket Integration", () => {
     it("should send message via WebSocket when connected and realtime enabled", async () => {
       // Arrange
       const content = "Hello WebSocket";
-      const attachments = [
-        new File(["content"], "test.txt", { type: "text/plain" }),
-      ];
+      const attachments = [new File(["content"], "test.txt", { type: "text/plain" })];
 
       // Act
       await act(async () => {
@@ -774,9 +748,7 @@ describe("Chat Store WebSocket Integration", () => {
       expect(userMessage?.content).toBe(content);
 
       // Should add assistant response (fallback behavior)
-      const assistantMessage = session?.messages.find(
-        (m) => m.role === "assistant"
-      );
+      const assistantMessage = session?.messages.find((m) => m.role === "assistant");
       expect(assistantMessage?.content).toContain("placeholder response");
     });
 

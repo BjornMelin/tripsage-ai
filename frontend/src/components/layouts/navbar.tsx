@@ -1,10 +1,10 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import { Calendar, MapPin, Menu, Settings, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import { MapPin, Calendar, Settings, Menu, X } from "lucide-react";
 import { useState } from "react";
 
 const navItems = [
@@ -42,9 +42,7 @@ export function Navbar() {
                 href={item.href}
                 className={cn(
                   "text-sm font-medium transition-colors hover:text-primary flex items-center",
-                  pathname === item.href
-                    ? "text-primary"
-                    : "text-muted-foreground"
+                  pathname === item.href ? "text-primary" : "text-muted-foreground"
                 )}
               >
                 {item.icon}
@@ -70,11 +68,7 @@ export function Navbar() {
             className="md:hidden"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
           >
-            {mobileMenuOpen ? (
-              <X className="h-5 w-5" />
-            ) : (
-              <Menu className="h-5 w-5" />
-            )}
+            {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </Button>
         </div>
       </div>

@@ -1,19 +1,19 @@
+import {
+  type ConversionResult,
+  ConversionResultSchema,
+  type Currency,
+  type CurrencyCode,
+  CurrencyCodeSchema,
+  type CurrencyPair,
+  CurrencyPairSchema,
+  CurrencySchema,
+  type CurrencyState,
+  type ExchangeRate,
+  ExchangeRateSchema,
+} from "@/types/currency";
+import { z } from "zod";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { z } from "zod";
-import {
-  type CurrencyCode,
-  type Currency,
-  type ExchangeRate,
-  type CurrencyState,
-  type ConversionResult,
-  type CurrencyPair,
-  CurrencySchema,
-  ExchangeRateSchema,
-  CurrencyCodeSchema,
-  ConversionResultSchema,
-  CurrencyPairSchema,
-} from "@/types/currency";
 
 // Common currencies with symbols and decimal places
 const COMMON_CURRENCIES: Record<CurrencyCode, Currency> = {
@@ -89,10 +89,7 @@ interface CurrencyStore extends CurrencyState {
     rate: number,
     timestamp?: string
   ) => void;
-  updateAllExchangeRates: (
-    rates: Record<string, number>,
-    timestamp?: string
-  ) => void;
+  updateAllExchangeRates: (rates: Record<string, number>, timestamp?: string) => void;
 
   // Favorites management
   addFavoriteCurrency: (code: CurrencyCode) => void;
@@ -240,11 +237,7 @@ export const useCurrencyStore = create<CurrencyStore>()(
         }),
 
       // Exchange rate management
-      updateExchangeRate: (
-        targetCurrency,
-        rate,
-        timestamp = getCurrentTimestamp()
-      ) =>
+      updateExchangeRate: (targetCurrency, rate, timestamp = getCurrentTimestamp()) =>
         set((state) => {
           // Validate the currency code
           if (!validateCurrencyCode(targetCurrency)) {
@@ -327,10 +320,7 @@ export const useCurrencyStore = create<CurrencyStore>()(
             return state;
           }
 
-          if (
-            !state.currencies[code] ||
-            state.favoriteCurrencies.includes(code)
-          ) {
+          if (!state.currencies[code] || state.favoriteCurrencies.includes(code)) {
             return state;
           }
 

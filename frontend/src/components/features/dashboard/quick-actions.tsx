@@ -1,17 +1,6 @@
 "use client";
 
-import Link from "next/link";
-import {
-  Plane,
-  MapPin,
-  Calendar,
-  MessageCircle,
-  Search,
-  Plus,
-  Settings,
-  BookOpen,
-  Compass,
-} from "lucide-react";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -19,8 +8,19 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import {
+  BookOpen,
+  Calendar,
+  Compass,
+  MapPin,
+  MessageCircle,
+  Plane,
+  Plus,
+  Search,
+  Settings,
+} from "lucide-react";
+import Link from "next/link";
 
 interface QuickAction {
   id: string;
@@ -65,8 +65,7 @@ const quickActions: QuickAction[] = [
     icon: <Plus className="h-4 w-4" />,
     href: "/dashboard/trips/create",
     variant: "secondary",
-    className:
-      "bg-purple-50 border-purple-200 hover:bg-purple-100 text-purple-700",
+    className: "bg-purple-50 border-purple-200 hover:bg-purple-100 text-purple-700",
   },
   {
     id: "ai-chat",
@@ -75,8 +74,7 @@ const quickActions: QuickAction[] = [
     icon: <MessageCircle className="h-4 w-4" />,
     href: "/dashboard/chat",
     variant: "outline",
-    className:
-      "bg-orange-50 border-orange-200 hover:bg-orange-100 text-orange-700",
+    className: "bg-orange-50 border-orange-200 hover:bg-orange-100 text-orange-700",
     badge: "AI",
   },
   {
@@ -86,8 +84,7 @@ const quickActions: QuickAction[] = [
     icon: <Compass className="h-4 w-4" />,
     href: "/dashboard/search/destinations",
     variant: "outline",
-    className:
-      "bg-indigo-50 border-indigo-200 hover:bg-indigo-100 text-indigo-700",
+    className: "bg-indigo-50 border-indigo-200 hover:bg-indigo-100 text-indigo-700",
   },
   {
     id: "my-trips",
@@ -142,9 +139,7 @@ function ActionButton({
         )}
         <div className="flex items-center gap-2 w-full">
           {action.icon}
-          <span
-            className={cn("font-medium", compact ? "text-sm" : "text-base")}
-          >
+          <span className={cn("font-medium", compact ? "text-sm" : "text-base")}>
             {action.title}
           </span>
         </div>
@@ -218,9 +213,7 @@ function ListLayout({
             )}
             {action.icon}
             <div className="flex-1 text-left">
-              <div
-                className={cn("font-medium", compact ? "text-sm" : "text-base")}
-              >
+              <div className={cn("font-medium", compact ? "text-sm" : "text-base")}>
                 {action.title}
               </div>
               {showDescription && !compact && (
@@ -247,9 +240,7 @@ export function QuickActions({
   return (
     <Card>
       <CardHeader className={compact ? "pb-3" : undefined}>
-        <CardTitle className={compact ? "text-lg" : undefined}>
-          Quick Actions
-        </CardTitle>
+        <CardTitle className={compact ? "text-lg" : undefined}>Quick Actions</CardTitle>
         {!compact && (
           <CardDescription>
             Common tasks and shortcuts to help you get started

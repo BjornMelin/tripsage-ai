@@ -1,9 +1,9 @@
 "use client";
 
-import { useMutation } from "@tanstack/react-query";
-import { useSearchStore } from "@/stores/search-store";
 import { api } from "@/lib/api/client";
-import type { DestinationSearchParams, Destination } from "@/types/search";
+import { useSearchStore } from "@/stores/search-store";
+import type { Destination, DestinationSearchParams } from "@/types/search";
+import { useMutation } from "@tanstack/react-query";
 
 interface DestinationSearchResponse {
   destinations: Destination[];
@@ -114,9 +114,7 @@ export function useDestinationSearch() {
   };
 
   // Helper function to get autocomplete suggestions
-  const getAutocompleteSuggestions = async (
-    params: DestinationAutocompleteParams
-  ) => {
+  const getAutocompleteSuggestions = async (params: DestinationAutocompleteParams) => {
     try {
       return await autocompleteMutation.mutateAsync(params);
     } catch (error) {
@@ -160,12 +158,7 @@ export function useDestinationSearch() {
           averageTemp: 12,
           rainfall: 640,
         },
-        attractions: [
-          "Eiffel Tower",
-          "Louvre Museum",
-          "Notre-Dame",
-          "Arc de Triomphe",
-        ],
+        attractions: ["Eiffel Tower", "Louvre Museum", "Notre-Dame", "Arc de Triomphe"],
         bestTimeToVisit: ["Apr", "May", "Jun", "Sep", "Oct"],
       },
       {
@@ -261,8 +254,7 @@ export function useDestinationSearch() {
 
       return response;
     } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : "Search failed";
+      const errorMessage = error instanceof Error ? error.message : "Search failed";
       setError(errorMessage);
       setIsLoading(false);
       throw error;

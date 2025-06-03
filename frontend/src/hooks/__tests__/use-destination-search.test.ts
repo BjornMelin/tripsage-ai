@@ -2,14 +2,14 @@
  * @vitest-environment jsdom
  */
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { renderHook, waitFor } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { createElement } from "react";
-import { useDestinationSearch } from "../use-destination-search";
 import { useSearchStore } from "@/stores/search-store";
-import type { ReactNode } from "react";
 import type { DestinationSearchParams } from "@/types/search";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { renderHook, waitFor } from "@testing-library/react";
+import { createElement } from "react";
+import type { ReactNode } from "react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { useDestinationSearch } from "../use-destination-search";
 
 // Mock the search store
 vi.mock("@/stores/search-store", () => ({
@@ -140,9 +140,7 @@ describe("useDestinationSearch", () => {
     expect(mockSearchStore.setResults).toHaveBeenCalledWith({
       destinations: expect.any(Array),
     });
-    expect(mockSearchStore.updateDestinationParams).toHaveBeenCalledWith(
-      searchParams
-    );
+    expect(mockSearchStore.updateDestinationParams).toHaveBeenCalledWith(searchParams);
     expect(mockSearchStore.setIsLoading).toHaveBeenCalledWith(false);
   });
 
@@ -181,9 +179,7 @@ describe("useDestinationSearch", () => {
     });
 
     // Should find Paris in the mock data
-    const parisDestination = parisResponse.destinations.find(
-      (d) => d.name === "Paris"
-    );
+    const parisDestination = parisResponse.destinations.find((d) => d.name === "Paris");
     expect(parisDestination).toBeDefined();
 
     // Search for a non-existent destination

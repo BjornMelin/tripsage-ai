@@ -1,8 +1,8 @@
-import type React from "react";
 import { render, screen } from "@testing-library/react";
+import type React from "react";
 import { vi } from "vitest";
-import { PersonalInfoSection } from "../personal-info-section";
 import { AccountSettingsSection } from "../account-settings-section";
+import { PersonalInfoSection } from "../personal-info-section";
 import { PreferencesSection } from "../preferences-section";
 import { SecuritySection } from "../security-section";
 

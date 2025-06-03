@@ -1,8 +1,8 @@
 import {
-  RecentTrips,
-  UpcomingFlights,
-  TripSuggestions,
   QuickActions,
+  RecentTrips,
+  TripSuggestions,
+  UpcomingFlights,
 } from "@/components/features/dashboard";
 
 export default function DashboardPage() {

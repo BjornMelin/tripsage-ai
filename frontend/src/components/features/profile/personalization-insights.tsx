@@ -1,39 +1,39 @@
 "use client";
 
-import React, { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import {
-  Brain,
-  TrendingUp,
-  TrendingDown,
-  MapPin,
-  DollarSign,
-  Calendar,
-  Star,
-  User,
-  Target,
-  BarChart3,
-  Lightbulb,
-  Settings,
-  RefreshCw,
-  Info,
-} from "lucide-react";
-import { cn } from "@/lib/utils";
 import {
   useMemoryInsights,
   useMemoryStats,
   useUpdatePreferences,
 } from "@/hooks/use-memory";
+import { cn } from "@/lib/utils";
 import type {
+  MemoryInsight,
   PersonalizationInsightsProps,
   UserPreferences,
-  MemoryInsight,
 } from "@/types/memory";
+import {
+  BarChart3,
+  Brain,
+  Calendar,
+  DollarSign,
+  Info,
+  Lightbulb,
+  MapPin,
+  RefreshCw,
+  Settings,
+  Star,
+  Target,
+  TrendingDown,
+  TrendingUp,
+  User,
+} from "lucide-react";
+import React, { useState } from "react";
 
 export function PersonalizationInsights({
   userId,
@@ -53,10 +53,7 @@ export function PersonalizationInsights({
     refetch: refetchInsights,
   } = useMemoryInsights(userId, !!userId);
 
-  const { data: stats, isLoading: statsLoading } = useMemoryStats(
-    userId,
-    !!userId
-  );
+  const { data: stats, isLoading: statsLoading } = useMemoryStats(userId, !!userId);
 
   const updatePreferences = useUpdatePreferences(userId);
 
@@ -78,9 +75,7 @@ export function PersonalizationInsights({
     }
   };
 
-  const handlePreferenceUpdate = async (
-    preferences: Partial<UserPreferences>
-  ) => {
+  const handlePreferenceUpdate = async (preferences: Partial<UserPreferences>) => {
     setIsUpdating(true);
     try {
       await updatePreferences.mutateAsync({
@@ -115,9 +110,7 @@ export function PersonalizationInsights({
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between mb-4">
                   <div>
-                    <h4 className="font-medium text-lg">
-                      {travelPersonality.type}
-                    </h4>
+                    <h4 className="font-medium text-lg">{travelPersonality.type}</h4>
                     <p className="text-sm text-muted-foreground">
                       {travelPersonality.description}
                     </p>
@@ -126,9 +119,7 @@ export function PersonalizationInsights({
                     <div className="text-2xl font-bold text-blue-500">
                       {Math.round(travelPersonality.confidence * 100)}%
                     </div>
-                    <div className="text-xs text-muted-foreground">
-                      Confidence
-                    </div>
+                    <div className="text-xs text-muted-foreground">Confidence</div>
                   </div>
                 </div>
 
@@ -143,10 +134,7 @@ export function PersonalizationInsights({
                   </div>
                 </div>
 
-                <Progress
-                  value={travelPersonality.confidence * 100}
-                  className="mt-4"
-                />
+                <Progress value={travelPersonality.confidence * 100} className="mt-4" />
               </CardContent>
             </Card>
           </div>
@@ -165,9 +153,7 @@ export function PersonalizationInsights({
                   <div className="text-2xl font-bold text-blue-500">
                     {stats.totalMemories}
                   </div>
-                  <div className="text-sm text-muted-foreground">
-                    Total Memories
-                  </div>
+                  <div className="text-sm text-muted-foreground">Total Memories</div>
                 </CardContent>
               </Card>
 
@@ -176,9 +162,7 @@ export function PersonalizationInsights({
                 .map(([type, count]) => (
                   <Card key={type}>
                     <CardContent className="pt-6 text-center">
-                      <div className="text-2xl font-bold text-purple-500">
-                        {count}
-                      </div>
+                      <div className="text-2xl font-bold text-purple-500">{count}</div>
                       <div className="text-sm text-muted-foreground capitalize">
                         {type}
                       </div>
@@ -197,30 +181,27 @@ export function PersonalizationInsights({
               Favorite Destinations
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {destinationPreferences.topDestinations
-                .slice(0, 4)
-                .map((dest, idx) => (
-                  <Card key={idx}>
-                    <CardContent className="pt-6">
-                      <div className="flex items-center justify-between mb-2">
-                        <h4 className="font-medium">{dest.destination}</h4>
-                        <Badge variant="outline">{dest.visits} visits</Badge>
+              {destinationPreferences.topDestinations.slice(0, 4).map((dest, idx) => (
+                <Card key={idx}>
+                  <CardContent className="pt-6">
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="font-medium">{dest.destination}</h4>
+                      <Badge variant="outline">{dest.visits} visits</Badge>
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      Last visit: {new Date(dest.lastVisit).toLocaleDateString()}
+                    </div>
+                    {dest.satisfaction_score && (
+                      <div className="flex items-center gap-2 mt-2">
+                        <Star className="h-4 w-4 text-yellow-500" />
+                        <span className="text-sm">
+                          {dest.satisfaction_score.toFixed(1)}/5
+                        </span>
                       </div>
-                      <div className="text-sm text-muted-foreground">
-                        Last visit:{" "}
-                        {new Date(dest.lastVisit).toLocaleDateString()}
-                      </div>
-                      {dest.satisfaction_score && (
-                        <div className="flex items-center gap-2 mt-2">
-                          <Star className="h-4 w-4 text-yellow-500" />
-                          <span className="text-sm">
-                            {dest.satisfaction_score.toFixed(1)}/5
-                          </span>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                ))}
+                    )}
+                  </CardContent>
+                </Card>
+              ))}
             </div>
           </div>
         )}
@@ -244,23 +225,16 @@ export function PersonalizationInsights({
         {budgetPatterns.averageSpending && (
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">
-                Average Spending by Category
-              </CardTitle>
+              <CardTitle className="text-base">Average Spending by Category</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
                 {Object.entries(budgetPatterns.averageSpending).map(
                   ([category, amount]) => (
-                    <div
-                      key={category}
-                      className="flex items-center justify-between"
-                    >
+                    <div key={category} className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <div className="w-3 h-3 rounded-full bg-blue-500" />
-                        <span className="capitalize font-medium">
-                          {category}
-                        </span>
+                        <span className="capitalize font-medium">{category}</span>
                       </div>
                       <span className="font-mono">
                         {formatCurrency(amount as number)}
@@ -274,51 +248,48 @@ export function PersonalizationInsights({
         )}
 
         {/* Spending Trends */}
-        {budgetPatterns.spendingTrends &&
-          budgetPatterns.spendingTrends.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Spending Trends</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {budgetPatterns.spendingTrends.map((trend, idx) => (
-                    <div
-                      key={idx}
-                      className="flex items-center justify-between p-3 rounded-lg bg-muted"
-                    >
-                      <div className="flex items-center gap-3">
-                        {getTrendIcon(trend.trend)}
-                        <div>
-                          <div className="font-medium capitalize">
-                            {trend.category}
-                          </div>
-                          <div className="text-sm text-muted-foreground capitalize">
-                            {trend.trend} trend
-                          </div>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div
-                          className={cn(
-                            "font-mono text-sm",
-                            trend.trend === "increasing"
-                              ? "text-red-500"
-                              : trend.trend === "decreasing"
-                                ? "text-green-500"
-                                : "text-gray-500"
-                          )}
-                        >
-                          {trend.percentage_change > 0 ? "+" : ""}
-                          {trend.percentage_change}%
+        {budgetPatterns.spendingTrends && budgetPatterns.spendingTrends.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Spending Trends</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {budgetPatterns.spendingTrends.map((trend, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-center justify-between p-3 rounded-lg bg-muted"
+                  >
+                    <div className="flex items-center gap-3">
+                      {getTrendIcon(trend.trend)}
+                      <div>
+                        <div className="font-medium capitalize">{trend.category}</div>
+                        <div className="text-sm text-muted-foreground capitalize">
+                          {trend.trend} trend
                         </div>
                       </div>
                     </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
+                    <div className="text-right">
+                      <div
+                        className={cn(
+                          "font-mono text-sm",
+                          trend.trend === "increasing"
+                            ? "text-red-500"
+                            : trend.trend === "decreasing"
+                              ? "text-green-500"
+                              : "text-gray-500"
+                        )}
+                      >
+                        {trend.percentage_change > 0 ? "+" : ""}
+                        {trend.percentage_change}%
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
     );
   };
@@ -394,8 +365,7 @@ export function PersonalizationInsights({
         <Alert>
           <Info className="h-4 w-4" />
           <AlertDescription>
-            Unable to load personalization insights. Please try refreshing the
-            page.
+            Unable to load personalization insights. Please try refreshing the page.
           </AlertDescription>
         </Alert>
       </div>
@@ -472,12 +442,11 @@ export function PersonalizationInsights({
           <CardContent className="pt-6">
             <div className="flex items-center justify-between text-sm text-muted-foreground">
               <span>
-                Analysis based on {insights.metadata.data_coverage_months}{" "}
-                months of data
+                Analysis based on {insights.metadata.data_coverage_months} months of
+                data
               </span>
               <span>
-                Confidence:{" "}
-                {Math.round(insights.metadata.confidence_level * 100)}%
+                Confidence: {Math.round(insights.metadata.confidence_level * 100)}%
               </span>
               <span>
                 Updated:{" "}

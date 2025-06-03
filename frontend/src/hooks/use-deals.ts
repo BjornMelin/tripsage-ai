@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useCallback, useMemo } from "react";
 import { useDealsStore } from "@/stores/deals-store";
-import type { Deal, DealAlert, DealType, DealState } from "@/types/deals";
+import type { Deal, DealAlert, DealState, DealType } from "@/types/deals";
+import { useCallback, useEffect, useMemo } from "react";
 
 /**
  * Custom hook for accessing and managing deals
@@ -18,10 +18,7 @@ export function useDeals() {
   }, [dealsStore.isInitialized, dealsStore.initialize]);
 
   // Get all deals as array
-  const allDeals = useMemo(
-    () => Object.values(dealsStore.deals),
-    [dealsStore.deals]
-  );
+  const allDeals = useMemo(() => Object.values(dealsStore.deals), [dealsStore.deals]);
 
   // Get filtered deals based on current filters
   const filteredDeals = useMemo(
@@ -138,8 +135,7 @@ export function useDeals() {
             break;
           case "expiry":
             comparison =
-              new Date(a.expiryDate).getTime() -
-              new Date(b.expiryDate).getTime();
+              new Date(a.expiryDate).getTime() - new Date(b.expiryDate).getTime();
             break;
           case "created":
             comparison =
@@ -257,8 +253,7 @@ export function useDeals() {
  * Custom hook for managing deal alerts
  */
 export function useDealAlerts() {
-  const { alerts, addAlert, updateAlert, removeAlert, toggleAlertActive } =
-    useDeals();
+  const { alerts, addAlert, updateAlert, removeAlert, toggleAlertActive } = useDeals();
 
   // Get active alerts
   const activeAlerts = useMemo(
@@ -313,10 +308,7 @@ export function useFeaturedDeals() {
   );
 
   // Get top deals (highest discount)
-  const topDeals = useMemo(
-    () => sortedByDiscount.slice(0, 5),
-    [sortedByDiscount]
-  );
+  const topDeals = useMemo(() => sortedByDiscount.slice(0, 5), [sortedByDiscount]);
 
   // Toggle featured status
   const toggleFeatured = useCallback(
@@ -345,13 +337,8 @@ export function useFeaturedDeals() {
  * Custom hook for saved deals
  */
 export function useSavedDeals() {
-  const {
-    savedDeals,
-    addToSavedDeals,
-    removeFromSavedDeals,
-    isDealSaved,
-    sortDeals,
-  } = useDeals();
+  const { savedDeals, addToSavedDeals, removeFromSavedDeals, isDealSaved, sortDeals } =
+    useDeals();
 
   // Toggle saved status
   const toggleSaved = useCallback(

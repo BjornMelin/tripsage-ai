@@ -1,9 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -14,14 +11,17 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { Switch } from "@/components/ui/switch";
+import { useAddApiKey, useValidateApiKey } from "@/hooks/use-api-keys";
+import { useApiKeyStore } from "@/stores/api-key-store";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
+import { AlertCircle, CheckCircle } from "lucide-react";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
 import { ApiKeyInput } from "./api-key-input";
 import { ServiceSelector } from "./service-selector";
-import { useApiKeyStore } from "@/stores/api-key-store";
-import { useAddApiKey, useValidateApiKey } from "@/hooks/use-api-keys";
-import { Switch } from "@/components/ui/switch";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { CheckCircle, AlertCircle } from "lucide-react";
 
 // Define form schema with Zod
 const formSchema = z.object({
@@ -40,8 +40,7 @@ export function ApiKeyForm() {
     message: string;
   } | null>(null);
 
-  const { supportedServices, selectedService, setSelectedService } =
-    useApiKeyStore();
+  const { supportedServices, selectedService, setSelectedService } = useApiKeyStore();
   const { mutate: validateKey, isPending: isValidating } = useValidateApiKey();
   const { mutate: addKey, isPending: isAdding } = useAddApiKey();
 
@@ -102,9 +101,7 @@ export function ApiKeyForm() {
           setValidationResult({
             isValid: false,
             message:
-              error instanceof Error
-                ? error.message
-                : "Failed to validate API key",
+              error instanceof Error ? error.message : "Failed to validate API key",
           });
         },
       }
@@ -142,9 +139,7 @@ export function ApiKeyForm() {
                   disabled={isValidating || isAdding}
                 />
               </FormControl>
-              <FormDescription>
-                Select the service for this API key.
-              </FormDescription>
+              <FormDescription>Select the service for this API key.</FormDescription>
               <FormMessage />
             </FormItem>
           )}
@@ -166,8 +161,8 @@ export function ApiKeyForm() {
                 />
               </FormControl>
               <FormDescription>
-                Enter your API key for the selected service. This will never be
-                stored in plain text.
+                Enter your API key for the selected service. This will never be stored
+                in plain text.
               </FormDescription>
               <FormMessage />
             </FormItem>
@@ -182,8 +177,8 @@ export function ApiKeyForm() {
               <div className="space-y-0.5">
                 <FormLabel className="text-base">Save API Key</FormLabel>
                 <FormDescription>
-                  Save this API key for future use. Keys are stored securely
-                  using envelope encryption.
+                  Save this API key for future use. Keys are stored securely using
+                  envelope encryption.
                 </FormDescription>
               </div>
               <FormControl>
@@ -197,19 +192,11 @@ export function ApiKeyForm() {
           )}
         />
 
-        <Button
-          type="submit"
-          disabled={isValidating || isAdding}
-          className="w-full"
-        >
+        <Button type="submit" disabled={isValidating || isAdding} className="w-full">
           {(isValidating || isAdding) && (
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
           )}
-          {isValidating
-            ? "Validating..."
-            : isAdding
-              ? "Saving..."
-              : "Validate & Save"}
+          {isValidating ? "Validating..." : isAdding ? "Saving..." : "Validate & Save"}
         </Button>
       </form>
     </Form>

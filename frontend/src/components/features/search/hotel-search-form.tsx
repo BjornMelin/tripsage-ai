@@ -1,8 +1,6 @@
 "use client";
 
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -10,7 +8,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import {
   Form,
   FormControl,
@@ -22,6 +19,9 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import type { AccommodationSearchParams } from "@/types/search";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
 
 const hotelSearchFormSchema = z.object({
   location: z.string().min(1, { message: "Location is required" }),
@@ -101,9 +101,7 @@ export function HotelSearchForm({
     <Card>
       <CardHeader>
         <CardTitle>Hotel Search</CardTitle>
-        <CardDescription>
-          Find the perfect accommodation for your stay
-        </CardDescription>
+        <CardDescription>Find the perfect accommodation for your stay</CardDescription>
       </CardHeader>
       <CardContent>
         <Form {...form}>
@@ -116,10 +114,7 @@ export function HotelSearchForm({
                   <FormItem>
                     <FormLabel>Location</FormLabel>
                     <FormControl>
-                      <Input
-                        placeholder="City, address, or landmark"
-                        {...field}
-                      />
+                      <Input placeholder="City, address, or landmark" {...field} />
                     </FormControl>
                     <FormDescription>
                       Enter city name, specific address, or landmark
@@ -310,18 +305,13 @@ export function HotelSearchForm({
                           <input
                             type="checkbox"
                             value={amenity.id}
-                            checked={form
-                              .watch("amenities")
-                              .includes(amenity.id)}
+                            checked={form.watch("amenities").includes(amenity.id)}
                             onChange={(e) => {
                               const checked = e.target.checked;
                               const amenities = form.getValues("amenities");
 
                               if (checked) {
-                                form.setValue("amenities", [
-                                  ...amenities,
-                                  amenity.id,
-                                ]);
+                                form.setValue("amenities", [...amenities, amenity.id]);
                               } else {
                                 form.setValue(
                                   "amenities",

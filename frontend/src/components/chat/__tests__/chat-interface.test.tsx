@@ -1,7 +1,7 @@
-import { describe, it, expect, vi } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import { ChatInterface } from "../chat-interface";
 import { useChatStore } from "@/stores/chat-store";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
+import { ChatInterface } from "../chat-interface";
 
 // Mock the chat store
 vi.mock("@/stores/chat-store", () => ({

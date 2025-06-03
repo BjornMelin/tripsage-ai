@@ -1,20 +1,5 @@
 "use client";
 
-import React, { useCallback, useMemo, useRef, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import type { Message } from "@/types/chat";
-import { cn } from "@/lib/utils";
-import {
-  Loader2,
-  Copy,
-  ExternalLink,
-  Code2,
-  FileText,
-  Sparkles,
-  Zap,
-  Shield,
-  Activity,
-} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Tooltip,
@@ -22,12 +7,24 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
+import type { Message } from "@/types/chat";
+import { AnimatePresence, motion } from "framer-motion";
+import {
+  Activity,
+  Code2,
+  Copy,
+  ExternalLink,
+  FileText,
+  Loader2,
+  Shield,
+  Sparkles,
+  Zap,
+} from "lucide-react";
+import React, { useCallback, useMemo, useRef, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
-import {
-  oneDark,
-  oneLight,
-} from "react-syntax-highlighter/dist/esm/styles/prism";
+import { oneDark, oneLight } from "react-syntax-highlighter/dist/esm/styles/prism";
 
 interface MessageBubbleProps {
   message: Message;
@@ -146,9 +143,7 @@ export function MessageBubble({
                         size="sm"
                         variant="ghost"
                         className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                        onClick={() =>
-                          navigator.clipboard.writeText(String(children))
-                        }
+                        onClick={() => navigator.clipboard.writeText(String(children))}
                       >
                         <Copy className="w-3 h-3" />
                       </Button>
@@ -360,9 +355,7 @@ export function MessageBubble({
         "transition-all duration-300",
         bubbleConfig.className,
         isStreaming && "animate-pulse",
-        isRealtime &&
-          !isStreaming &&
-          "ring-2 ring-emerald-500/20 shadow-emerald-500/10"
+        isRealtime && !isStreaming && "ring-2 ring-emerald-500/20 shadow-emerald-500/10"
       )}
     >
       {/* Streaming indicator */}
@@ -421,8 +414,7 @@ export function MessageBubble({
           isUser ? "prose-invert" : "dark:prose-invert",
           // Customize prose colors based on role
           !isUser && "prose-headings:text-foreground prose-p:text-foreground",
-          !isUser &&
-            "prose-strong:text-foreground prose-em:text-muted-foreground",
+          !isUser && "prose-strong:text-foreground prose-em:text-muted-foreground",
           !isUser && "prose-code:text-foreground"
         )}
         initial={{ opacity: 0 }}

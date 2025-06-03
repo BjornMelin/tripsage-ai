@@ -1,17 +1,17 @@
-import { create } from "zustand";
-import { persist } from "zustand/middleware";
 import type {
-  SearchType,
-  SearchParams,
-  FlightSearchParams,
   AccommodationSearchParams,
   ActivitySearchParams,
   DestinationSearchParams,
-  SearchResults,
-  SavedSearch,
   FilterOption,
+  FlightSearchParams,
+  SavedSearch,
+  SearchParams,
+  SearchResults,
+  SearchType,
   SortOption,
 } from "@/types/search";
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
 
 interface SearchState {
   // Search parameters
@@ -46,9 +46,7 @@ interface SearchState {
   // Actions
   setSearchType: (type: SearchType) => void;
   updateFlightParams: (params: Partial<FlightSearchParams>) => void;
-  updateAccommodationParams: (
-    params: Partial<AccommodationSearchParams>
-  ) => void;
+  updateAccommodationParams: (params: Partial<AccommodationSearchParams>) => void;
   updateActivityParams: (params: Partial<ActivitySearchParams>) => void;
   updateDestinationParams: (params: Partial<DestinationSearchParams>) => void;
   resetParams: (type?: SearchType) => void;
@@ -189,14 +187,12 @@ export const useSearchStore = create<SearchState>()(
               break;
             case "activity":
               if (Object.keys(state.activityParams).length === 0) {
-                updatedState.activityParams =
-                  getDefaultSearchParams("activity");
+                updatedState.activityParams = getDefaultSearchParams("activity");
               }
               break;
             case "destination":
               if (Object.keys(state.destinationParams).length === 0) {
-                updatedState.destinationParams =
-                  getDefaultSearchParams("destination");
+                updatedState.destinationParams = getDefaultSearchParams("destination");
               }
               break;
           }
@@ -313,9 +309,7 @@ export const useSearchStore = create<SearchState>()(
 
       deleteSearch: (id) =>
         set((state) => ({
-          savedSearches: state.savedSearches.filter(
-            (search) => search.id !== id
-          ),
+          savedSearches: state.savedSearches.filter((search) => search.id !== id),
         })),
 
       addRecentSearch: () =>
@@ -331,10 +325,10 @@ export const useSearchStore = create<SearchState>()(
           };
 
           // Keep only the 10 most recent searches
-          const recentSearches = [
-            newRecentSearch,
-            ...state.recentSearches,
-          ].slice(0, 10);
+          const recentSearches = [newRecentSearch, ...state.recentSearches].slice(
+            0,
+            10
+          );
 
           return { recentSearches };
         }),

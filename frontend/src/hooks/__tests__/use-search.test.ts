@@ -1,9 +1,9 @@
-import { describe, it, expect, beforeEach } from "vitest";
-import { renderHook, act } from "@testing-library/react";
-import { useSearch, useSavedSearches, useRecentSearches } from "../use-search";
+import { useApiMutation, useApiQuery } from "@/hooks/use-api-query";
 import { useSearchStore } from "@/stores/search-store";
-import { useApiQuery, useApiMutation } from "@/hooks/use-api-query";
+import { act, renderHook } from "@testing-library/react";
+import { beforeEach, describe, expect, it } from "vitest";
 import { vi } from "vitest";
+import { useRecentSearches, useSavedSearches, useSearch } from "../use-search";
 
 // Mock dependencies
 vi.mock("@/stores/search-store", () => ({

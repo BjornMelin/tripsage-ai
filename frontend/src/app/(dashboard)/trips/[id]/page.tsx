@@ -1,24 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useParams, useRouter } from "next/navigation";
 import {
-  ArrowLeft,
-  Edit,
-  Share2,
-  Download,
-  Settings,
-  MapPin,
-  Calendar,
-  DollarSign,
-  Users,
-} from "lucide-react";
-import { useTripStore } from "@/stores/trip-store";
-import {
-  TripTimeline,
-  ItineraryBuilder,
   BudgetTracker,
+  ItineraryBuilder,
+  TripTimeline,
 } from "@/components/features/trips";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -27,10 +14,23 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
-import { format, differenceInDays } from "date-fns";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useTripStore } from "@/stores/trip-store";
+import { differenceInDays, format } from "date-fns";
+import {
+  ArrowLeft,
+  Calendar,
+  DollarSign,
+  Download,
+  Edit,
+  MapPin,
+  Settings,
+  Share2,
+  Users,
+} from "lucide-react";
+import { useParams, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
 export default function TripDetailsPage() {
   const params = useParams();
@@ -112,12 +112,7 @@ export default function TripDetailsPage() {
     <div className="container mx-auto py-8">
       {/* Header */}
       <div className="flex items-center gap-4 mb-6">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={handleBackToTrips}
-          className="p-2"
-        >
+        <Button variant="ghost" size="sm" onClick={handleBackToTrips} className="p-2">
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div className="flex-1">
@@ -129,9 +124,7 @@ export default function TripDetailsPage() {
             {currentTrip.isPublic && <Badge variant="outline">Public</Badge>}
           </div>
           {currentTrip.description && (
-            <p className="text-muted-foreground mt-1">
-              {currentTrip.description}
-            </p>
+            <p className="text-muted-foreground mt-1">{currentTrip.description}</p>
           )}
         </div>
         <div className="flex gap-2">
@@ -162,8 +155,7 @@ export default function TripDetailsPage() {
               {duration ? `${duration} days` : "Not set"}
             </div>
             <div className="text-xs text-muted-foreground mt-1">
-              {formatDate(currentTrip.startDate)} -{" "}
-              {formatDate(currentTrip.endDate)}
+              {formatDate(currentTrip.startDate)} - {formatDate(currentTrip.endDate)}
             </div>
           </CardContent>
         </Card>
@@ -174,9 +166,7 @@ export default function TripDetailsPage() {
               <MapPin className="h-4 w-4" />
               Destinations
             </div>
-            <div className="font-semibold">
-              {currentTrip.destinations.length}
-            </div>
+            <div className="font-semibold">{currentTrip.destinations.length}</div>
             <div className="text-xs text-muted-foreground mt-1">
               {currentTrip.destinations.length > 0
                 ? currentTrip.destinations.map((d) => d.name).join(", ")
@@ -279,9 +269,8 @@ export default function TripDetailsPage() {
                           </div>
                         </div>
                       ))}
-                    {currentTrip.destinations.filter(
-                      (dest) => dest.accommodation
-                    ).length === 0 && (
+                    {currentTrip.destinations.filter((dest) => dest.accommodation)
+                      .length === 0 && (
                       <div className="text-muted-foreground">
                         No accommodations booked
                       </div>
@@ -298,14 +287,12 @@ export default function TripDetailsPage() {
                         <div key={dest.id}>
                           <div className="font-medium">To {dest.name}</div>
                           <div className="text-muted-foreground">
-                            {dest.transportation?.type} -{" "}
-                            {dest.transportation?.details}
+                            {dest.transportation?.type} - {dest.transportation?.details}
                           </div>
                         </div>
                       ))}
-                    {currentTrip.destinations.filter(
-                      (dest) => dest.transportation
-                    ).length === 0 && (
+                    {currentTrip.destinations.filter((dest) => dest.transportation)
+                      .length === 0 && (
                       <div className="text-muted-foreground">
                         No transportation planned
                       </div>

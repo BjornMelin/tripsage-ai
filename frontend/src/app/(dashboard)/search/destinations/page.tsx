@@ -1,12 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useSearchStore } from "@/stores/search-store";
-import { useDestinationSearch } from "@/hooks/use-destination-search";
-import { DestinationSearchForm } from "@/components/features/search/destination-search-form";
 import { DestinationCard } from "@/components/features/search/destination-card";
-import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { DestinationSearchForm } from "@/components/features/search/destination-search-form";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -15,18 +12,19 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { useDestinationSearch } from "@/hooks/use-destination-search";
+import { useSearchStore } from "@/stores/search-store";
+import type { Destination, DestinationSearchParams } from "@/types/search";
 import { AlertCircle, MapPin, Search, Star } from "lucide-react";
-import type { DestinationSearchParams, Destination } from "@/types/search";
+import { useEffect, useState } from "react";
 
 export default function DestinationsSearchPage() {
   const { results, isLoading, error, destinationParams } = useSearchStore();
   const { searchDestinationsMock, isSearching, searchError, resetSearch } =
     useDestinationSearch();
 
-  const [selectedDestinations, setSelectedDestinations] = useState<
-    Destination[]
-  >([]);
+  const [selectedDestinations, setSelectedDestinations] = useState<Destination[]>([]);
   const [showComparisonModal, setShowComparisonModal] = useState(false);
 
   // Set search type on component mount
@@ -74,8 +72,7 @@ export default function DestinationsSearchPage() {
 
   const destinations = results.destinations || [];
   const hasResults = destinations.length > 0;
-  const hasSearched =
-    destinationParams?.query && destinationParams.query.length > 0;
+  const hasSearched = destinationParams?.query && destinationParams.query.length > 0;
 
   return (
     <div className="container mx-auto py-6 space-y-6">
@@ -83,8 +80,8 @@ export default function DestinationsSearchPage() {
       <div>
         <h1 className="text-3xl font-bold mb-2">Destination Search</h1>
         <p className="text-muted-foreground">
-          Discover amazing destinations around the world with intelligent search
-          and autocomplete
+          Discover amazing destinations around the world with intelligent search and
+          autocomplete
         </p>
       </div>
 
@@ -165,9 +162,7 @@ export default function DestinationsSearchPage() {
           <Card>
             <CardContent className="text-center py-12">
               <Search className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-semibold mb-2">
-                No destinations found
-              </h3>
+              <h3 className="text-lg font-semibold mb-2">No destinations found</h3>
               <p className="text-muted-foreground mb-4">
                 Try adjusting your search terms or destination types
               </p>
@@ -214,9 +209,9 @@ export default function DestinationsSearchPage() {
               Discover Amazing Destinations
             </h3>
             <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-              Search for cities, countries, landmarks, or regions to find your
-              next travel destination. Use our smart autocomplete to get
-              suggestions as you type.
+              Search for cities, countries, landmarks, or regions to find your next
+              travel destination. Use our smart autocomplete to get suggestions as you
+              type.
             </p>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-2xl mx-auto">
               <div className="text-center">
@@ -265,8 +260,7 @@ export default function DestinationsSearchPage() {
                     <h3 className="font-semibold mb-2">{destination.name}</h3>
                     <div className="space-y-2 text-sm">
                       <div>
-                        Rating:{" "}
-                        {destination.rating ? `${destination.rating}/5` : "N/A"}
+                        Rating: {destination.rating ? `${destination.rating}/5` : "N/A"}
                       </div>
                       <div>Country: {destination.country || "N/A"}</div>
                       <div>
@@ -282,10 +276,7 @@ export default function DestinationsSearchPage() {
                 ))}
               </div>
               <div className="flex justify-end gap-2 mt-6">
-                <Button
-                  variant="outline"
-                  onClick={() => setShowComparisonModal(false)}
-                >
+                <Button variant="outline" onClick={() => setShowComparisonModal(false)}>
                   Close
                 </Button>
               </div>

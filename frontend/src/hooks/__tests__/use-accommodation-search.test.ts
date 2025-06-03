@@ -1,9 +1,9 @@
-import { renderHook, act, waitFor } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { useAccommodationSearch } from "../use-accommodation-search";
-import { useSearchStore } from "@/stores/search-store";
 import { api } from "@/lib/api/client";
+import { useSearchStore } from "@/stores/search-store";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { act, renderHook, waitFor } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { useAccommodationSearch } from "../use-accommodation-search";
 
 // Mock dependencies
 vi.mock("@/lib/api/client", () => ({
@@ -45,11 +45,7 @@ describe("useAccommodationSearch", () => {
 
   const wrapper = ({ children }: { children: React.ReactNode }) => {
     const { createElement } = require("react");
-    return createElement(
-      QueryClientProvider,
-      { client: queryClient },
-      children
-    );
+    return createElement(QueryClientProvider, { client: queryClient }, children);
   };
 
   it("should search for accommodations successfully", async () => {
@@ -91,10 +87,7 @@ describe("useAccommodationSearch", () => {
     });
 
     await waitFor(() => {
-      expect(api.post).toHaveBeenCalledWith(
-        "/api/accommodations/search",
-        searchParams
-      );
+      expect(api.post).toHaveBeenCalledWith("/api/accommodations/search", searchParams);
       expect(mockSetIsLoading).toHaveBeenCalledWith(true);
       expect(mockSetResults).toHaveBeenCalledWith({
         accommodations: mockResults.results,

@@ -2,13 +2,13 @@
  * @vitest-environment jsdom
  */
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import ActivitiesSearchPage from "../page";
 import { useActivitySearch } from "@/hooks/use-activity-search";
 import { useSearchStore } from "@/stores/search-store";
 import type { Activity } from "@/types/search";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import ActivitiesSearchPage from "../page";
 
 // Mock the hooks
 vi.mock("@/hooks/use-activity-search", () => ({
@@ -55,8 +55,7 @@ const mockActivities: Activity[] = [
     duration: 2.5,
     price: 45,
     rating: 4.7,
-    description:
-      "Discover the hidden gems of Central Park with an expert guide.",
+    description: "Discover the hidden gems of Central Park with an expert guide.",
     images: ["https://example.com/image1.jpg"],
     coordinates: { lat: 40.7829, lng: -73.9654 },
   },
@@ -87,9 +86,7 @@ describe("ActivitiesSearchPage", () => {
 
     expect(screen.getByText("Search Activities")).toBeInTheDocument();
     expect(
-      screen.getByText(
-        "Discover exciting activities and experiences for your trip"
-      )
+      screen.getByText("Discover exciting activities and experiences for your trip")
     ).toBeInTheDocument();
   });
 
@@ -107,9 +104,7 @@ describe("ActivitiesSearchPage", () => {
     render(<ActivitiesSearchPage />, { wrapper: createWrapper() });
 
     expect(
-      screen.getByText(
-        "Use the search form to find activities at your destination"
-      )
+      screen.getByText("Use the search form to find activities at your destination")
     ).toBeInTheDocument();
   });
 
@@ -193,10 +188,7 @@ describe("ActivitiesSearchPage", () => {
     const selectButtons = screen.getAllByRole("button", { name: /select/i });
     fireEvent.click(selectButtons[0]);
 
-    expect(consoleSpy).toHaveBeenCalledWith(
-      "Selected activity:",
-      mockActivities[0]
-    );
+    expect(consoleSpy).toHaveBeenCalledWith("Selected activity:", mockActivities[0]);
 
     consoleSpy.mockRestore();
   });
@@ -214,10 +206,7 @@ describe("ActivitiesSearchPage", () => {
     const compareButtons = screen.getAllByRole("button", { name: /compare/i });
     fireEvent.click(compareButtons[0]);
 
-    expect(consoleSpy).toHaveBeenCalledWith(
-      "Compare activity:",
-      mockActivities[0]
-    );
+    expect(consoleSpy).toHaveBeenCalledWith("Compare activity:", mockActivities[0]);
 
     consoleSpy.mockRestore();
   });
@@ -271,12 +260,8 @@ describe("ActivitiesSearchPage", () => {
       expect(
         screen.getByText("You selected: Central Park Walking Tour")
       ).toBeInTheDocument();
-      expect(
-        screen.getByRole("button", { name: /close/i })
-      ).toBeInTheDocument();
-      expect(
-        screen.getByRole("button", { name: /add to trip/i })
-      ).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /close/i })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /add to trip/i })).toBeInTheDocument();
     });
   });
 
@@ -370,9 +355,7 @@ describe("ActivitiesSearchPage", () => {
     render(<ActivitiesSearchPage />, { wrapper: createWrapper() });
 
     expect(
-      screen.getByText(
-        "Use the search form to find activities at your destination"
-      )
+      screen.getByText("Use the search form to find activities at your destination")
     ).toBeInTheDocument();
   });
 });

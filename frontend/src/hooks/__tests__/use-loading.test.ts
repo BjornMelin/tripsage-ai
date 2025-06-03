@@ -1,10 +1,6 @@
-import { renderHook, act } from "@testing-library/react";
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import {
-  useLoading,
-  useAsyncLoading,
-  useDebouncedLoading,
-} from "../use-loading";
+import { act, renderHook } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { useAsyncLoading, useDebouncedLoading, useLoading } from "../use-loading";
 
 describe("useLoading", () => {
   beforeEach(() => {
@@ -155,9 +151,7 @@ describe("useLoading", () => {
 
   it("handles timeout", () => {
     const onTimeout = vi.fn();
-    const { result } = renderHook(() =>
-      useLoading({ timeout: 5000, onTimeout })
-    );
+    const { result } = renderHook(() => useLoading({ timeout: 5000, onTimeout }));
 
     act(() => {
       result.current.startLoading();
@@ -175,9 +169,7 @@ describe("useLoading", () => {
 
   it("clears timeout when stopped manually", () => {
     const onTimeout = vi.fn();
-    const { result } = renderHook(() =>
-      useLoading({ timeout: 5000, onTimeout })
-    );
+    const { result } = renderHook(() => useLoading({ timeout: 5000, onTimeout }));
 
     act(() => {
       result.current.startLoading();

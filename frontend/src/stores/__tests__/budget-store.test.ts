@@ -1,9 +1,9 @@
-import { describe, it, expect, beforeEach } from "vitest";
-import { useBudgetStore } from "../budget-store";
+import type { Budget, BudgetCategory, Expense } from "@/types/budget";
 import { act } from "@testing-library/react";
 import { renderHook } from "@testing-library/react";
-import type { Budget, Expense, BudgetCategory } from "@/types/budget";
+import { beforeEach, describe, expect, it } from "vitest";
 import { vi } from "vitest";
+import { useBudgetStore } from "../budget-store";
 
 // Mock the store to avoid persistence issues in tests
 vi.mock("zustand/middleware", () => ({
@@ -247,9 +247,7 @@ describe("useBudgetStore", () => {
         result.current.addBudgetCategory("budget-1", newCategory);
       });
 
-      expect(result.current.budgets["budget-1"].categories).toContainEqual(
-        newCategory
-      );
+      expect(result.current.budgets["budget-1"].categories).toContainEqual(newCategory);
       // Check that updatedAt was changed
       expect(result.current.budgets["budget-1"].updatedAt).not.toBe(
         "2025-05-20T12:00:00Z"
@@ -292,16 +290,10 @@ describe("useBudgetStore", () => {
         });
       });
 
-      expect(result.current.budgets["budget-1"].categories[0].amount).toBe(
-        2000
-      );
+      expect(result.current.budgets["budget-1"].categories[0].amount).toBe(2000);
       expect(result.current.budgets["budget-1"].categories[0].spent).toBe(500);
-      expect(result.current.budgets["budget-1"].categories[0].remaining).toBe(
-        1500
-      );
-      expect(result.current.budgets["budget-1"].categories[0].percentage).toBe(
-        25
-      );
+      expect(result.current.budgets["budget-1"].categories[0].remaining).toBe(1500);
+      expect(result.current.budgets["budget-1"].categories[0].percentage).toBe(25);
     });
 
     it("removes a budget category", () => {
@@ -703,9 +695,7 @@ describe("useBudgetStore", () => {
 
       // Verify the spent by category
       expect(result.current.budgetSummary?.spentByCategory.flights).toBe(1000);
-      expect(result.current.budgetSummary?.spentByCategory.accommodations).toBe(
-        800
-      );
+      expect(result.current.budgetSummary?.spentByCategory.accommodations).toBe(800);
     });
 
     it("returns budgets by trip ID", () => {

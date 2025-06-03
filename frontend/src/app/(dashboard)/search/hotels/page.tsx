@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
-import { SearchLayout } from "@/components/layouts/search-layout";
 import { HotelSearchForm } from "@/components/features/search/hotel-search-form";
 import { SearchResults } from "@/components/features/search/search-results";
-import { useAccommodationSearch } from "@/hooks/use-accommodation-search";
+import { SearchLayout } from "@/components/layouts/search-layout";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -12,11 +12,11 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import type { AccommodationSearchParams } from "@/types/search";
+import { useAccommodationSearch } from "@/hooks/use-accommodation-search";
 import { useSearchStore } from "@/stores/search-store";
+import type { AccommodationSearchParams } from "@/types/search";
+import { useState } from "react";
 
 export default function HotelSearchPage() {
   const { search, isSearching } = useAccommodationSearch();
@@ -97,9 +97,7 @@ export default function HotelSearchPage() {
             <Card>
               <CardHeader>
                 <CardTitle>Popular Destinations</CardTitle>
-                <CardDescription>
-                  Trending hotel destinations and deals
-                </CardDescription>
+                <CardDescription>Trending hotel destinations and deals</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">

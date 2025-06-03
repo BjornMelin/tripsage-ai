@@ -1,17 +1,17 @@
-import { create } from "zustand";
-import { persist } from "zustand/middleware";
-import { z } from "zod";
 import type {
-  MemoryContextResponse,
-  UserPreferences,
-  Memory,
-  ConversationMessage,
-} from "@/types/memory";
-import type {
+  ConnectionStatus,
   WebSocketClient,
   WebSocketEventType,
-  ConnectionStatus,
 } from "@/lib/websocket/websocket-client";
+import type {
+  ConversationMessage,
+  Memory,
+  MemoryContextResponse,
+  UserPreferences,
+} from "@/types/memory";
+import { z } from "zod";
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
 
 // Enhanced Message type with support for tool calls and attachments
 export interface Message {
@@ -115,10 +115,7 @@ interface ChatState {
   websocketClient: WebSocketClient | null;
   connectionStatus: ConnectionStatus;
   isRealtimeEnabled: boolean;
-  typingUsers: Record<
-    string,
-    { userId: string; username?: string; timestamp: string }
-  >;
+  typingUsers: Record<string, { userId: string; username?: string; timestamp: string }>;
   pendingMessages: Message[];
 
   // Actions
@@ -126,20 +123,14 @@ interface ChatState {
   setCurrentSession: (sessionId: string) => void;
   deleteSession: (sessionId: string) => void;
   renameSession: (sessionId: string, title: string) => void;
-  addMessage: (
-    sessionId: string,
-    message: Omit<Message, "id" | "timestamp">
-  ) => string;
+  addMessage: (sessionId: string, message: Omit<Message, "id" | "timestamp">) => string;
   updateMessage: (
     sessionId: string,
     messageId: string,
     updates: Partial<Omit<Message, "id" | "timestamp">>
   ) => void;
   sendMessage: (content: string, options?: SendMessageOptions) => Promise<void>;
-  streamMessage: (
-    content: string,
-    options?: SendMessageOptions
-  ) => Promise<void>;
+  streamMessage: (content: string, options?: SendMessageOptions) => Promise<void>;
   stopStreaming: () => void;
   addToolResult: (
     sessionId: string,
@@ -159,10 +150,7 @@ interface ChatState {
     memoryContext: MemoryContextResponse
   ) => void;
   syncMemoryToSession: (sessionId: string) => Promise<void>;
-  storeConversationMemory: (
-    sessionId: string,
-    messages?: Message[]
-  ) => Promise<void>;
+  storeConversationMemory: (sessionId: string, messages?: Message[]) => Promise<void>;
   setMemoryEnabled: (enabled: boolean) => void;
   setAutoSyncMemory: (enabled: boolean) => void;
 
@@ -241,9 +229,7 @@ export const useChatStore = create<ChatState>()(
       get currentSession() {
         const { sessions, currentSessionId } = get();
         if (!currentSessionId) return null;
-        return (
-          sessions.find((session) => session.id === currentSessionId) || null
-        );
+        return sessions.find((session) => session.id === currentSessionId) || null;
       },
 
       createSession: (title, userId) => {
@@ -279,9 +265,7 @@ export const useChatStore = create<ChatState>()(
 
       deleteSession: (sessionId) => {
         set((state) => {
-          const sessions = state.sessions.filter(
-            (session) => session.id !== sessionId
-          );
+          const sessions = state.sessions.filter((session) => session.id !== sessionId);
 
           // If we're deleting the current session, select the first available or null
           const currentSessionId =
@@ -337,9 +321,7 @@ export const useChatStore = create<ChatState>()(
               ? {
                   ...session,
                   messages: session.messages.map((message) =>
-                    message.id === messageId
-                      ? { ...message, ...updates }
-                      : message
+                    message.id === messageId ? { ...message, ...updates } : message
                   ),
                   updatedAt: new Date().toISOString(),
                 }
@@ -379,11 +361,7 @@ export const useChatStore = create<ChatState>()(
         set({ isLoading: true, error: null });
 
         // Use WebSocket if available and connected
-        if (
-          isRealtimeEnabled &&
-          websocketClient &&
-          connectionStatus === "connected"
-        ) {
+        if (isRealtimeEnabled && websocketClient && connectionStatus === "connected") {
           try {
             await websocketClient.send("chat_message", {
               content,
@@ -435,8 +413,7 @@ export const useChatStore = create<ChatState>()(
           set({ isLoading: false });
         } catch (error) {
           set({
-            error:
-              error instanceof Error ? error.message : "Failed to send message",
+            error: error instanceof Error ? error.message : "Failed to send message",
             isLoading: false,
           });
 
@@ -541,9 +518,7 @@ export const useChatStore = create<ChatState>()(
           if (!(error instanceof DOMException && error.name === "AbortError")) {
             set({
               error:
-                error instanceof Error
-                  ? error.message
-                  : "Failed to stream message",
+                error instanceof Error ? error.message : "Failed to stream message",
             });
 
             // Add system error message
@@ -595,9 +570,7 @@ export const useChatStore = create<ChatState>()(
                       ? {
                           ...message,
                           toolCalls: (message.toolCalls || []).map((call) =>
-                            call.id === callId
-                              ? { ...call, state: "result" }
-                              : call
+                            call.id === callId ? { ...call, state: "result" } : call
                           ),
                           toolResults: [
                             ...(message.toolResults || []),
@@ -704,9 +677,7 @@ export const useChatStore = create<ChatState>()(
         } catch (error) {
           set({
             error:
-              error instanceof Error
-                ? error.message
-                : "Failed to import session data",
+              error instanceof Error ? error.message : "Failed to import session data",
           });
           return null;
         }
@@ -738,10 +709,7 @@ export const useChatStore = create<ChatState>()(
 
           // Note: This would typically be handled by the component using the hook
           // This is a placeholder for the actual implementation
-          console.log(
-            "Memory sync would fetch context for user:",
-            session.userId
-          );
+          console.log("Memory sync would fetch context for user:", session.userId);
         } catch (error) {
           console.error("Failed to sync memory to session:", error);
           set({ error: "Failed to sync memory context" });
@@ -750,15 +718,14 @@ export const useChatStore = create<ChatState>()(
 
       storeConversationMemory: async (sessionId, messages) => {
         const session = get().sessions.find((s) => s.id === sessionId);
-        if (!session?.userId || !get().memoryEnabled || !get().autoSyncMemory)
-          return;
+        if (!session?.userId || !get().memoryEnabled || !get().autoSyncMemory) return;
 
         try {
           const messagesToStore = messages || session.messages;
 
           // Convert messages to conversation format
-          const conversationMessages: ConversationMessage[] =
-            messagesToStore.map((msg) => ({
+          const conversationMessages: ConversationMessage[] = messagesToStore.map(
+            (msg) => ({
               role: msg.role,
               content: msg.content,
               timestamp: msg.timestamp,
@@ -767,12 +734,11 @@ export const useChatStore = create<ChatState>()(
                 toolResults: msg.toolResults,
                 attachments: msg.attachments,
               },
-            }));
+            })
+          );
 
           // Import memory hooks here to avoid circular dependencies
-          const { useAddConversationMemory } = await import(
-            "@/hooks/use-memory"
-          );
+          const { useAddConversationMemory } = await import("@/hooks/use-memory");
 
           // Note: This would typically be handled by the component using the hook
           // This is a placeholder for the actual implementation
@@ -806,9 +772,7 @@ export const useChatStore = create<ChatState>()(
 
         try {
           // Import WebSocketClient dynamically to avoid SSR issues
-          const { WebSocketClient } = await import(
-            "@/lib/websocket/websocket-client"
-          );
+          const { WebSocketClient } = await import("@/lib/websocket/websocket-client");
 
           const newClient = new WebSocketClient({
             url: `${process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:8000"}/ws/chat/${sessionId}`,
@@ -868,9 +832,7 @@ export const useChatStore = create<ChatState>()(
           set({
             connectionStatus: "error",
             error:
-              error instanceof Error
-                ? error.message
-                : "Failed to connect WebSocket",
+              error instanceof Error ? error.message : "Failed to connect WebSocket",
           });
         }
       },
@@ -994,9 +956,7 @@ export const useChatStore = create<ChatState>()(
 
       removePendingMessage: (messageId) => {
         set((state) => ({
-          pendingMessages: state.pendingMessages.filter(
-            (m) => m.id !== messageId
-          ),
+          pendingMessages: state.pendingMessages.filter((m) => m.id !== messageId),
         }));
       },
     }),

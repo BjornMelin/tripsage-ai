@@ -5,16 +5,16 @@
  * cleanup, error handling, and integration with the Zustand store.
  */
 
-import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  ConnectionStatus,
+  type EventHandler,
   WebSocketClient,
   WebSocketClientFactory,
-  WebSocketEventType,
-  ConnectionStatus,
   type WebSocketEvent,
+  WebSocketEventType,
   type WebSocketMessage,
-  type EventHandler,
 } from "@/lib/websocket/websocket-client";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 // Hook configuration
 export interface UseWebSocketConfig {
@@ -57,21 +57,11 @@ export interface UseWebSocketReturn extends WebSocketState {
     unsubscribeChannels?: string[]
   ) => Promise<void>;
   on: <T = unknown>(
-    event:
-      | WebSocketEventType
-      | "connect"
-      | "disconnect"
-      | "error"
-      | "reconnect",
+    event: WebSocketEventType | "connect" | "disconnect" | "error" | "reconnect",
     handler: EventHandler<T>
   ) => void;
   off: <T = unknown>(
-    event:
-      | WebSocketEventType
-      | "connect"
-      | "disconnect"
-      | "error"
-      | "reconnect",
+    event: WebSocketEventType | "connect" | "disconnect" | "error" | "reconnect",
     handler: EventHandler<T>
   ) => void;
   client: WebSocketClient | null;
@@ -100,10 +90,8 @@ export function useWebSocket(config: UseWebSocketConfig): UseWebSocketReturn {
       // Derive boolean flags from status
       newState.isConnected = newState.status === ConnectionStatus.CONNECTED;
       newState.isConnecting = newState.status === ConnectionStatus.CONNECTING;
-      newState.isDisconnected =
-        newState.status === ConnectionStatus.DISCONNECTED;
-      newState.isReconnecting =
-        newState.status === ConnectionStatus.RECONNECTING;
+      newState.isDisconnected = newState.status === ConnectionStatus.DISCONNECTED;
+      newState.isReconnecting = newState.status === ConnectionStatus.RECONNECTING;
       newState.hasError = newState.status === ConnectionStatus.ERROR;
 
       return newState;
@@ -157,15 +145,12 @@ export function useWebSocket(config: UseWebSocketConfig): UseWebSocketReturn {
       });
     });
 
-    client.on(
-      "reconnect",
-      ({ attempt }: { attempt: number; maxAttempts: number }) => {
-        updateState({
-          status: ConnectionStatus.RECONNECTING,
-          reconnectAttempt: attempt,
-        });
-      }
-    );
+    client.on("reconnect", ({ attempt }: { attempt: number; maxAttempts: number }) => {
+      updateState({
+        status: ConnectionStatus.RECONNECTING,
+        reconnectAttempt: attempt,
+      });
+    });
 
     // Handle heartbeat events
     client.on(WebSocketEventType.CONNECTION_HEARTBEAT, () => {
@@ -186,13 +171,7 @@ export function useWebSocket(config: UseWebSocketConfig): UseWebSocketReturn {
       client.destroy();
       clientRef.current = null;
     };
-  }, [
-    config.url,
-    config.token,
-    config.sessionId,
-    config.autoConnect,
-    updateState,
-  ]);
+  }, [config.url, config.token, config.sessionId, config.autoConnect, updateState]);
 
   // Connection methods
   const connect = useCallback(async () => {
@@ -229,10 +208,7 @@ export function useWebSocket(config: UseWebSocketConfig): UseWebSocketReturn {
   const subscribeToChannels = useCallback(
     async (channels: string[], unsubscribeChannels: string[] = []) => {
       if (clientRef.current) {
-        await clientRef.current.subscribeToChannels(
-          channels,
-          unsubscribeChannels
-        );
+        await clientRef.current.subscribeToChannels(channels, unsubscribeChannels);
       }
     },
     []
@@ -240,12 +216,7 @@ export function useWebSocket(config: UseWebSocketConfig): UseWebSocketReturn {
 
   const on = useCallback(
     <T = unknown>(
-      event:
-        | WebSocketEventType
-        | "connect"
-        | "disconnect"
-        | "error"
-        | "reconnect",
+      event: WebSocketEventType | "connect" | "disconnect" | "error" | "reconnect",
       handler: EventHandler<T>
     ) => {
       if (clientRef.current) {
@@ -257,12 +228,7 @@ export function useWebSocket(config: UseWebSocketConfig): UseWebSocketReturn {
 
   const off = useCallback(
     <T = unknown>(
-      event:
-        | WebSocketEventType
-        | "connect"
-        | "disconnect"
-        | "error"
-        | "reconnect",
+      event: WebSocketEventType | "connect" | "disconnect" | "error" | "reconnect",
       handler: EventHandler<T>
     ) => {
       if (clientRef.current) {
@@ -347,10 +313,8 @@ function useWebSocketWithClient(
       // Derive boolean flags from status
       newState.isConnected = newState.status === ConnectionStatus.CONNECTED;
       newState.isConnecting = newState.status === ConnectionStatus.CONNECTING;
-      newState.isDisconnected =
-        newState.status === ConnectionStatus.DISCONNECTED;
-      newState.isReconnecting =
-        newState.status === ConnectionStatus.RECONNECTING;
+      newState.isDisconnected = newState.status === ConnectionStatus.DISCONNECTED;
+      newState.isReconnecting = newState.status === ConnectionStatus.RECONNECTING;
       newState.hasError = newState.status === ConnectionStatus.ERROR;
 
       return newState;
@@ -449,22 +413,14 @@ function useWebSocketWithClient(
 
   const subscribeToChannels = useCallback(
     async (channels: string[], unsubscribeChannels: string[] = []) => {
-      await clientRef.current.subscribeToChannels(
-        channels,
-        unsubscribeChannels
-      );
+      await clientRef.current.subscribeToChannels(channels, unsubscribeChannels);
     },
     []
   );
 
   const on = useCallback(
     <T = unknown>(
-      event:
-        | WebSocketEventType
-        | "connect"
-        | "disconnect"
-        | "error"
-        | "reconnect",
+      event: WebSocketEventType | "connect" | "disconnect" | "error" | "reconnect",
       handler: EventHandler<T>
     ) => {
       clientRef.current.on(event, handler);
@@ -474,12 +430,7 @@ function useWebSocketWithClient(
 
   const off = useCallback(
     <T = unknown>(
-      event:
-        | WebSocketEventType
-        | "connect"
-        | "disconnect"
-        | "error"
-        | "reconnect",
+      event: WebSocketEventType | "connect" | "disconnect" | "error" | "reconnect",
       handler: EventHandler<T>
     ) => {
       clientRef.current.off(event, handler);
@@ -512,10 +463,7 @@ export function useChatMessages(
   const [messages, setMessages] = useState<WebSocketMessage[]>([]);
   const [isTyping, setIsTyping] = useState(false);
 
-  const { isConnected, on, off, sendChatMessage } = useChatWebSocket(
-    sessionId,
-    token
-  );
+  const { isConnected, on, off, sendChatMessage } = useChatWebSocket(sessionId, token);
 
   useEffect(() => {
     const handleChatMessage = (event: WebSocketEvent) => {

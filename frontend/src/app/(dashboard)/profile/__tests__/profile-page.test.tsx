@@ -1,7 +1,7 @@
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { useUserStore } from "@/stores/user-store";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { vi } from "vitest";
 import ProfilePage from "../page";
-import { useUserStore } from "@/stores/user-store";
 
 // Mock the stores and profile components
 vi.mock("@/stores/user-store");
@@ -21,9 +21,7 @@ vi.mock("@/components/features/profile/preferences-section", () => ({
   ),
 }));
 vi.mock("@/components/features/profile/security-section", () => ({
-  SecuritySection: () => (
-    <div data-testid="security-section">Security Section</div>
-  ),
+  SecuritySection: () => <div data-testid="security-section">Security Section</div>,
 }));
 
 const mockUser = {
@@ -61,9 +59,7 @@ describe("ProfilePage", () => {
     render(<ProfilePage />);
 
     expect(screen.getByText("Profile Not Found")).toBeInTheDocument();
-    expect(
-      screen.getByText("Please log in to view your profile.")
-    ).toBeInTheDocument();
+    expect(screen.getByText("Please log in to view your profile.")).toBeInTheDocument();
   });
 
   it("renders profile page with tabs when user is logged in", () => {
@@ -109,9 +105,7 @@ describe("ProfilePage", () => {
     fireEvent.click(accountTab);
 
     await waitFor(() => {
-      expect(
-        screen.getByTestId("account-settings-section")
-      ).toBeInTheDocument();
+      expect(screen.getByTestId("account-settings-section")).toBeInTheDocument();
     });
   });
 

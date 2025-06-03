@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 
 test.describe("Error Boundaries and Loading States", () => {
   test.beforeEach(async ({ page }) => {
@@ -7,9 +7,7 @@ test.describe("Error Boundaries and Loading States", () => {
   });
 
   test.describe("Loading States", () => {
-    test("should show loading skeleton on initial page load", async ({
-      page,
-    }) => {
+    test("should show loading skeleton on initial page load", async ({ page }) => {
       // Intercept API calls to simulate slow loading
       await page.route("**/api/**", async (route) => {
         await page.waitForTimeout(2000); // Simulate slow API
@@ -28,9 +26,7 @@ test.describe("Error Boundaries and Loading States", () => {
       await expect(page.locator('[role="status"]')).toHaveCount(0);
     });
 
-    test("should show appropriate loading skeleton for dashboard", async ({
-      page,
-    }) => {
+    test("should show appropriate loading skeleton for dashboard", async ({ page }) => {
       await page.route("**/api/dashboard/**", async (route) => {
         await page.waitForTimeout(1000);
         await route.fulfill({
@@ -91,9 +87,7 @@ test.describe("Error Boundaries and Loading States", () => {
   });
 
   test.describe("Error Boundaries", () => {
-    test("should catch and display route-level errors gracefully", async ({
-      page,
-    }) => {
+    test("should catch and display route-level errors gracefully", async ({ page }) => {
       // Simulate a route error by returning 500
       await page.route("**/api/dashboard", async (route) => {
         await route.fulfill({
@@ -110,9 +104,7 @@ test.describe("Error Boundaries and Loading States", () => {
       await expect(page.locator('button:has-text("Go Home")')).toBeVisible();
     });
 
-    test("should allow error recovery with try again button", async ({
-      page,
-    }) => {
+    test("should allow error recovery with try again button", async ({ page }) => {
       let requestCount = 0;
 
       await page.route("**/api/dashboard", async (route) => {
@@ -180,9 +172,7 @@ test.describe("Error Boundaries and Loading States", () => {
       await expect(page.locator('button:has-text("Retry")')).toBeVisible();
     });
 
-    test("should display error ID for tracking in development", async ({
-      page,
-    }) => {
+    test("should display error ID for tracking in development", async ({ page }) => {
       // This test would only run in development mode
       const isDev = process.env.NODE_ENV === "development";
 
@@ -197,12 +187,8 @@ test.describe("Error Boundaries and Loading States", () => {
         await page.goto("/test-error-page"); // hypothetical error page
 
         // Should show error ID in development
-        await expect(
-          page.locator("text=/Error ID: error_\\d+_\\w+/")
-        ).toBeVisible();
-        await expect(
-          page.locator("text=Test error for development")
-        ).toBeVisible();
+        await expect(page.locator("text=/Error ID: error_\\d+_\\w+/")).toBeVisible();
+        await expect(page.locator("text=Test error for development")).toBeVisible();
       }
     });
   });
@@ -240,10 +226,7 @@ test.describe("Error Boundaries and Loading States", () => {
 
       // Check for proper ARIA labels on loading elements
       const loadingElements = page.locator('[role="status"]');
-      await expect(loadingElements.first()).toHaveAttribute(
-        "aria-label",
-        "Loading..."
-      );
+      await expect(loadingElements.first()).toHaveAttribute("aria-label", "Loading...");
 
       // Check for screen reader text
       await expect(page.locator("text=Loading...")).toBeVisible();

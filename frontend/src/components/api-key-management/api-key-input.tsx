@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Eye, EyeOff } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { Eye, EyeOff } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 
 interface ApiKeyInputProps {
   value: string;
@@ -28,9 +28,7 @@ export function ApiKeyInput({
   error,
 }: ApiKeyInputProps) {
   const [visible, setVisible] = useState(false);
-  const [inactivityTimer, setInactivityTimer] = useState<NodeJS.Timeout | null>(
-    null
-  );
+  const [inactivityTimer, setInactivityTimer] = useState<NodeJS.Timeout | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Auto-clear after 2 minutes of inactivity for security
@@ -97,9 +95,7 @@ export function ApiKeyInput({
         ) : (
           <Eye className="h-4 w-4" aria-hidden="true" />
         )}
-        <span className="sr-only">
-          {visible ? "Hide API key" : "Show API key"}
-        </span>
+        <span className="sr-only">{visible ? "Hide API key" : "Show API key"}</span>
       </Button>
       {error && <p className="mt-1 text-sm text-destructive">{error}</p>}
     </div>
