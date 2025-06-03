@@ -27,7 +27,7 @@ from tripsage.api.services.flight import FlightService, get_flight_service
 from tripsage_core.exceptions.exceptions import (
     CoreResourceNotFoundError as ResourceNotFoundError,
 )
-from tripsage_core.models.travel.flights import FlightOffer
+from tripsage_core.models.domain.flight import FlightOffer
 
 logger = logging.getLogger(__name__)
 

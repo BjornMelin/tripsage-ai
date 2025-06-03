@@ -36,7 +36,6 @@ from tripsage.api.routers import (
     trips,
     websocket,
 )
-from tripsage.mcp_abstraction import mcp_manager
 from tripsage_core.exceptions.exceptions import (
     CoreAuthenticationError,
     CoreAuthorizationError,
@@ -48,6 +47,7 @@ from tripsage_core.exceptions.exceptions import (
     CoreTripSageError,
     CoreValidationError,
 )
+from tripsage_core.mcp_abstraction import mcp_manager
 from tripsage_core.services.infrastructure.key_monitoring_service import (
     KeyMonitoringService,
     KeyOperationRateLimitMiddleware,

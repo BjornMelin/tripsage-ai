@@ -95,29 +95,28 @@ def setup_test_environment():
 
 def mock_problematic_imports():
     """Mock problematic imports that might cause test failures."""
-    try:
-        import langchain_core
-        import langchain_openai
-        import langgraph
-    except ImportError:
-        # Create mock modules if imports fail
+    import importlib.util
+
+    # Check and mock langchain modules
+    if importlib.util.find_spec("langchain_core") is None:
         sys.modules["langchain_core"] = MagicMock()
         sys.modules["langchain_core.language_models"] = MagicMock()
         sys.modules["langchain_core.language_models.chat_models"] = MagicMock()
+
+    if importlib.util.find_spec("langchain_openai") is None:
         sys.modules["langchain_openai"] = MagicMock()
         sys.modules["langchain_openai.chat_models"] = MagicMock()
-        sys.modules["langgraph"] = MagicMock()
-        sys.modules["langgraph.graph"] = MagicMock()
-        sys.modules["langgraph.checkpoint"] = MagicMock()
-
         # Mock ChatOpenAI class
         mock_chat_openai = MagicMock()
         mock_chat_openai.return_value = AsyncMock()
         sys.modules["langchain_openai"].ChatOpenAI = mock_chat_openai
 
-    try:
-        import mem0ai
-    except ImportError:
+    if importlib.util.find_spec("langgraph") is None:
+        sys.modules["langgraph"] = MagicMock()
+        sys.modules["langgraph.graph"] = MagicMock()
+        sys.modules["langgraph.checkpoint"] = MagicMock()
+
+    if importlib.util.find_spec("mem0ai") is None:
         sys.modules["mem0ai"] = MagicMock()
         sys.modules["mem0"] = MagicMock()
 

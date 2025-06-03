@@ -12,6 +12,22 @@ This document captures features that:
 - Can be implemented post-MVP based on user feedback
 - May be over-engineering for current scale
 
+## Docker & Infrastructure Enhancements (V2)
+
+- [ ] **Advanced Docker Orchestration**
+  - Kubernetes deployment configurations for production scaling
+  - Advanced service mesh integration (Istio/Linkerd)
+  - Multi-cluster deployment strategies
+  - Complex rolling update strategies with blue-green deployments
+  - Advanced load balancing with traffic shaping
+
+- [ ] **Enhanced Development Tooling**
+  - Docker Desktop extensions for TripSage development
+  - Advanced debugging configurations with remote debugging
+  - Performance profiling containers with APM integration
+  - Custom Docker Compose profiles for different development scenarios
+  - Automated testing environments with Docker-in-Docker
+
 ## Advanced Analytics & Monitoring
 
 - [ ] **Complex Performance Analytics**

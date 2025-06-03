@@ -41,7 +41,7 @@ CREATE TABLE IF NOT EXISTS trips (
     CONSTRAINT trips_date_check CHECK (end_date >= start_date),
     CONSTRAINT trips_travelers_check CHECK (travelers > 0),
     CONSTRAINT trips_budget_check CHECK (budget > 0),
-    CONSTRAINT trips_status_check CHECK (status IN ('planning', 'booked', 'completed', 'canceled')),
+    CONSTRAINT trips_status_check CHECK (status IN ('planning', 'booked', 'completed', 'cancelled')),
     CONSTRAINT trips_type_check CHECK (trip_type IN ('leisure', 'business', 'family', 'solo', 'other'))
 );
 
@@ -53,7 +53,7 @@ COMMENT ON COLUMN trips.end_date IS 'Trip end date';
 COMMENT ON COLUMN trips.destination IS 'Primary destination of the trip';
 COMMENT ON COLUMN trips.budget IS 'Total budget allocated for the trip';
 COMMENT ON COLUMN trips.travelers IS 'Number of travelers for the trip';
-COMMENT ON COLUMN trips.status IS 'Current status of the trip (planning, booked, completed, canceled)';
+COMMENT ON COLUMN trips.status IS 'Current status of the trip (planning, booked, completed, cancelled)';
 COMMENT ON COLUMN trips.trip_type IS 'Type of trip (leisure, business, family, solo, other)';
 COMMENT ON COLUMN trips.flexibility IS 'JSON containing flexibility parameters for dates, budget, etc.';
 COMMENT ON COLUMN trips.created_at IS 'Timestamp when the trip was created';

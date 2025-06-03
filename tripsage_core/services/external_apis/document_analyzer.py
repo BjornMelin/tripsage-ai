@@ -15,14 +15,15 @@ from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
-# Import models from existing location (could be moved to Core later)
-from tripsage.models.attachments import (
-    DocumentAnalysisResult,
-    FileType,
-)
 from tripsage_core.config.base_app_settings import CoreAppSettings, get_settings
 from tripsage_core.exceptions.exceptions import CoreExternalAPIError as CoreAPIError
 from tripsage_core.exceptions.exceptions import CoreServiceError
+
+# Import models from existing location (could be moved to Core later)
+from tripsage_core.models.attachments import (
+    DocumentAnalysisResult,
+    FileType,
+)
 
 
 class DocumentAnalyzerError(CoreAPIError):

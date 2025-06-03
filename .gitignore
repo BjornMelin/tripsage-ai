@@ -149,3 +149,4 @@ worktrees/
 
 # Archived local files
 .archived/
+repomix-output.*

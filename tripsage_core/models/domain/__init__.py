@@ -9,12 +9,17 @@ Domain Models:
 - Accommodation: AccommodationListing, AccommodationLocation, AccommodationAmenity,
   AccommodationImage, PropertyType
 - Flight: FlightOffer, Airport, FlightSegment, CabinClass
+- Transportation: TransportationOffer, TransportationProvider, TransportationVehicle,
+  TransportationLocation
+- Trip: TripItinerary, TripLocation, TripBudget, TripPreferences
 - Memory: Entity, Relation, TravelMemory, SessionMemory
 
 Usage:
     from tripsage_core.models.domain import (
         AccommodationListing,
         FlightOffer,
+        TransportationOffer,
+        TripItinerary,
         Entity,
         TravelMemory
     )
@@ -45,6 +50,22 @@ from .memory import (
     TravelMemory,
 )
 
+# Transportation domain models
+from .transportation import (
+    TransportationLocation,
+    TransportationOffer,
+    TransportationProvider,
+    TransportationVehicle,
+)
+
+# Trip domain models
+from .trip import (
+    TripBudget,
+    TripItinerary,
+    TripLocation,
+    TripPreferences,
+)
+
 __all__ = [
     # Accommodation models
     "AccommodationListing",
@@ -57,6 +78,16 @@ __all__ = [
     "Airport",
     "FlightSegment",
     "CabinClass",
+    # Transportation models
+    "TransportationOffer",
+    "TransportationProvider",
+    "TransportationVehicle",
+    "TransportationLocation",
+    # Trip models
+    "TripItinerary",
+    "TripLocation",
+    "TripBudget",
+    "TripPreferences",
     # Memory models
     "Entity",
     "Relation",
