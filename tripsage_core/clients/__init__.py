@@ -13,6 +13,6 @@ All other services have been migrated to direct SDK integration:
 - Webcrawl → Crawl4AI direct SDK integration (completed)
 """
 
-from tripsage.clients.airbnb_mcp_client import AirbnbMCPClient
+from tripsage_core.clients.airbnb_mcp_client import AirbnbMCPClient
 
 __all__ = ["AirbnbMCPClient"]

@@ -1,0 +1,50 @@
+# syntax=docker/dockerfile:1
+# =============================================================================
+# TripSage Frontend Development Container
+# =============================================================================
+# Next.js 15 frontend with modern development features:
+# - App Router with React Server Components
+# - WebSocket integration for real-time chat
+# - Optimized development environment with hot reload
+
+FROM node:20-alpine
+
+# Set working directory
+WORKDIR /app
+
+# Install dependencies for better development experience
+RUN apk add --no-cache \
+    git \
+    curl
+
+# Copy package configuration
+COPY package.json pnpm-lock.yaml ./
+
+# Install pnpm and dependencies
+RUN npm install -g pnpm@latest && \
+    pnpm install
+
+# Copy application code
+COPY . .
+
+# Create non-root user for security
+RUN addgroup -g 1001 -S nextjs && \
+    adduser -S nextjs -u 1001 -G nextjs
+
+# Change ownership of the app directory
+RUN chown -R nextjs:nextjs /app
+USER nextjs
+
+# Health check for frontend availability
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+    CMD curl -f http://localhost:3000 || exit 1
+
+# Expose frontend port
+EXPOSE 3000
+
+# Set development environment
+ENV NODE_ENV=development
+ENV NEXT_TELEMETRY_DISABLED=1
+
+# Start Next.js development server with hot reload
+CMD ["pnpm", "dev"]

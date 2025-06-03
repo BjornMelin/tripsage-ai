@@ -10,8 +10,8 @@ import json
 import time
 from typing import Any, Dict, List, Optional
 
-from tripsage.mcp_abstraction.manager import MCPManager
 from tripsage_core.exceptions.exceptions import CoreTripSageError as TripSageError
+from tripsage_core.mcp_abstraction.manager import MCPManager
 from tripsage_core.services.business.tool_calling_service import (
     ToolCallRequest,
     ToolCallResponse,

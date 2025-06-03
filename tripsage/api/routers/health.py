@@ -6,7 +6,7 @@ and its dependencies.
 
 from fastapi import APIRouter
 
-from tripsage.mcp_abstraction import mcp_manager
+from tripsage_core.mcp_abstraction import mcp_manager
 
 router = APIRouter()
 

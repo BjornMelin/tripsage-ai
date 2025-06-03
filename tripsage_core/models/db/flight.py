@@ -125,8 +125,8 @@ class Flight(TripSageModel):
 
     @property
     def is_canceled(self) -> bool:
-        """Check if the flight is canceled."""
-        return self.booking_status == BookingStatus.CANCELED
+        """Check if the flight is cancelled."""
+        return self.booking_status == BookingStatus.CANCELLED
 
     @property
     def is_active(self) -> bool:
@@ -136,6 +136,16 @@ class Flight(TripSageModel):
             BookingStatus.SAVED,
             BookingStatus.BOOKED,
         ]
+
+    def book(self) -> None:
+        """Book this flight."""
+        self.booking_status = BookingStatus.BOOKED
+
+    def cancel(self) -> None:
+        """Cancel this flight booking."""
+        if self.booking_status != BookingStatus.BOOKED:
+            raise ValueError("Only booked flights can be cancelled")
+        self.booking_status = BookingStatus.CANCELLED
 
     def can_cancel(self) -> bool:
         """Check if the flight can be canceled."""
@@ -160,15 +170,15 @@ class Flight(TripSageModel):
             BookingStatus.VIEWED: [
                 BookingStatus.SAVED,
                 BookingStatus.BOOKED,
-                BookingStatus.CANCELED,
+                BookingStatus.CANCELLED,
             ],
             BookingStatus.SAVED: [
                 BookingStatus.BOOKED,
-                BookingStatus.CANCELED,
+                BookingStatus.CANCELLED,
                 BookingStatus.VIEWED,
             ],
-            BookingStatus.BOOKED: [BookingStatus.CANCELED],
-            BookingStatus.CANCELED: [],  # Cannot change from canceled
+            BookingStatus.BOOKED: [BookingStatus.CANCELLED],
+            BookingStatus.CANCELLED: [],  # Cannot change from cancelled
         }
 
         if new_status in valid_transitions.get(self.booking_status, []):

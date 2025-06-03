@@ -233,7 +233,7 @@ class TestToolErrorHandling:
         # Test with timeout
         start_time = asyncio.get_event_loop().time()
         try:
-            result = await asyncio.wait_for(
+            await asyncio.wait_for(
                 search_memory_tool(query="test query", service_registry=mock_registry),
                 timeout=1.0,
             )
@@ -429,7 +429,7 @@ class TestToolsIntegrationScenarios:
 
         # Execute booking workflow
         if search_result:  # Assuming search returns results
-            booking_result = await book_accommodation_tool(
+            await book_accommodation_tool(
                 accommodation_id="hotel_123",
                 checkin="2024-06-01",
                 checkout="2024-06-05",

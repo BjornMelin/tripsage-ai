@@ -296,6 +296,13 @@ class CoreAppSettings(BaseSettings):
         default=SecretStr("your-secret-key-here-change-in-production"),
         description="Secret key for signing JWT tokens",
     )
+    jwt_algorithm: str = Field(default="HS256", description="JWT signing algorithm")
+    access_token_expire_minutes: int = Field(
+        default=60, description="JWT access token expiration in minutes"
+    )
+    refresh_token_expire_days: int = Field(
+        default=7, description="JWT refresh token expiration in days"
+    )
     api_key_master_secret: SecretStr = Field(
         default=SecretStr("master-secret-for-byok-encryption"),
         description="Master secret for BYOK encryption",
@@ -385,6 +392,17 @@ class CoreAppSettings(BaseSettings):
         if secret and isinstance(secret, SecretStr):
             return secret.get_secret_value()
         return None
+
+    # Convenience properties for JWT authentication
+    @property
+    def secret_key(self) -> str:
+        """Get the JWT secret key."""
+        return self.jwt_secret_key.get_secret_value()
+
+    @property
+    def algorithm(self) -> str:
+        """Get the JWT algorithm."""
+        return self.jwt_algorithm
 
     def validate_critical_settings(self) -> List[str]:
         """

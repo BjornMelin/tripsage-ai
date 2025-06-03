@@ -15,7 +15,7 @@ class BookingStatus(str, Enum):
     VIEWED = "viewed"
     SAVED = "saved"
     BOOKED = "booked"
-    CANCELED = "canceled"
+    CANCELLED = "cancelled"
 
 
 class TripStatus(str, Enum):
@@ -25,8 +25,7 @@ class TripStatus(str, Enum):
     BOOKED = "booked"
     IN_PROGRESS = "in_progress"
     COMPLETED = "completed"
-    CANCELED = "canceled"  # Keep for backward compatibility
-    CANCELLED = "cancelled"  # API standard spelling
+    CANCELLED = "cancelled"
 
 
 class AccommodationType(str, Enum):

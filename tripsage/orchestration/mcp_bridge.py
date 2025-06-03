@@ -12,11 +12,11 @@ from typing import Any, Dict, List, Optional
 from langchain_core.tools import Tool, tool
 from pydantic import BaseModel, Field
 
-from tripsage.mcp_abstraction.exceptions import TripSageMCPError
-from tripsage.mcp_abstraction.manager import (
+from tripsage_core.mcp_abstraction.exceptions import TripSageMCPError
+from tripsage_core.mcp_abstraction.manager import (
     MCPManager,
 )
-from tripsage.mcp_abstraction.manager import (
+from tripsage_core.mcp_abstraction.manager import (
     mcp_manager as global_mcp_manager,
 )
 
