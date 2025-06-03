@@ -1,12 +1,12 @@
-import * as React from "react";
-import { Skeleton } from "./skeleton";
-import {
-  CardSkeleton,
-  ListItemSkeleton,
-  AvatarSkeleton,
-  FormSkeleton,
-} from "./loading-skeletons";
 import { cn } from "@/lib/utils";
+import * as React from "react";
+import {
+  AvatarSkeleton,
+  CardSkeleton,
+  FormSkeleton,
+  ListItemSkeleton,
+} from "./loading-skeletons";
+import { Skeleton } from "./skeleton";
 
 /**
  * Flight search result skeleton
@@ -15,60 +15,59 @@ export interface FlightSkeletonProps {
   className?: string;
 }
 
-export const FlightSkeleton = React.forwardRef<
-  HTMLDivElement,
-  FlightSkeletonProps
->(({ className, ...props }, ref) => {
-  return (
-    <div
-      ref={ref}
-      className={cn("rounded-lg border p-4 space-y-4", className)}
-      role="status"
-      aria-label="Loading flight results"
-      {...props}
-    >
-      {/* Flight route and times */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          {/* Departure */}
-          <div className="text-center space-y-1">
-            <Skeleton height="1.5rem" width="80px" />
+export const FlightSkeleton = React.forwardRef<HTMLDivElement, FlightSkeletonProps>(
+  ({ className, ...props }, ref) => {
+    return (
+      <div
+        ref={ref}
+        className={cn("rounded-lg border p-4 space-y-4", className)}
+        role="status"
+        aria-label="Loading flight results"
+        {...props}
+      >
+        {/* Flight route and times */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            {/* Departure */}
+            <div className="text-center space-y-1">
+              <Skeleton height="1.5rem" width="80px" />
+              <Skeleton height="1rem" width="60px" />
+            </div>
+
+            {/* Flight path */}
+            <div className="flex items-center space-x-2">
+              <Skeleton height="0.5rem" width="60px" />
+              <Skeleton height="1rem" width="20px" variant="rounded" />
+              <Skeleton height="0.5rem" width="60px" />
+            </div>
+
+            {/* Arrival */}
+            <div className="text-center space-y-1">
+              <Skeleton height="1.5rem" width="80px" />
+              <Skeleton height="1rem" width="60px" />
+            </div>
+          </div>
+
+          {/* Price */}
+          <div className="text-right space-y-1">
+            <Skeleton height="1.5rem" width="100px" />
+            <Skeleton height="1rem" width="80px" />
+          </div>
+        </div>
+
+        {/* Flight details */}
+        <div className="flex items-center justify-between text-sm">
+          <div className="flex items-center space-x-4">
+            <Skeleton height="1rem" width="100px" />
+            <Skeleton height="1rem" width="80px" />
             <Skeleton height="1rem" width="60px" />
           </div>
-
-          {/* Flight path */}
-          <div className="flex items-center space-x-2">
-            <Skeleton height="0.5rem" width="60px" />
-            <Skeleton height="1rem" width="20px" variant="rounded" />
-            <Skeleton height="0.5rem" width="60px" />
-          </div>
-
-          {/* Arrival */}
-          <div className="text-center space-y-1">
-            <Skeleton height="1.5rem" width="80px" />
-            <Skeleton height="1rem" width="60px" />
-          </div>
-        </div>
-
-        {/* Price */}
-        <div className="text-right space-y-1">
-          <Skeleton height="1.5rem" width="100px" />
-          <Skeleton height="1rem" width="80px" />
+          <Skeleton height="2rem" width="100px" className="rounded-md" />
         </div>
       </div>
-
-      {/* Flight details */}
-      <div className="flex items-center justify-between text-sm">
-        <div className="flex items-center space-x-4">
-          <Skeleton height="1rem" width="100px" />
-          <Skeleton height="1rem" width="80px" />
-          <Skeleton height="1rem" width="60px" />
-        </div>
-        <Skeleton height="2rem" width="100px" className="rounded-md" />
-      </div>
-    </div>
-  );
-});
+    );
+  }
+);
 
 FlightSkeleton.displayName = "FlightSkeleton";
 
@@ -79,63 +78,62 @@ export interface HotelSkeletonProps {
   className?: string;
 }
 
-export const HotelSkeleton = React.forwardRef<
-  HTMLDivElement,
-  HotelSkeletonProps
->(({ className, ...props }, ref) => {
-  return (
-    <div
-      ref={ref}
-      className={cn("overflow-hidden", className)}
-      role="status"
-      aria-label="Loading hotel results"
-      {...props}
-    >
-      <CardSkeleton
-        hasImage
-        titleLines={1}
-        bodyLines={0}
-        className="border-none p-0"
-      />
+export const HotelSkeleton = React.forwardRef<HTMLDivElement, HotelSkeletonProps>(
+  ({ className, ...props }, ref) => {
+    return (
+      <div
+        ref={ref}
+        className={cn("overflow-hidden", className)}
+        role="status"
+        aria-label="Loading hotel results"
+        {...props}
+      >
+        <CardSkeleton
+          hasImage
+          titleLines={1}
+          bodyLines={0}
+          className="border-none p-0"
+        />
 
-      <div className="p-4 space-y-3">
-        {/* Hotel rating */}
-        <div className="flex items-center space-x-2">
-          <div className="flex space-x-1">
-            {Array.from({ length: 5 }).map((_, index) => (
-              <Skeleton key={index} height="1rem" width="1rem" />
+        <div className="p-4 space-y-3">
+          {/* Hotel rating */}
+          <div className="flex items-center space-x-2">
+            <div className="flex space-x-1">
+              {Array.from({ length: 5 }).map((_, index) => (
+                <Skeleton key={index} height="1rem" width="1rem" />
+              ))}
+            </div>
+            <Skeleton height="1rem" width="60px" />
+          </div>
+
+          {/* Location */}
+          <Skeleton height="1rem" width="70%" />
+
+          {/* Amenities */}
+          <div className="flex flex-wrap gap-2">
+            {Array.from({ length: 4 }).map((_, index) => (
+              <Skeleton
+                key={index}
+                height="1.5rem"
+                width="80px"
+                className="rounded-full"
+              />
             ))}
           </div>
-          <Skeleton height="1rem" width="60px" />
-        </div>
 
-        {/* Location */}
-        <Skeleton height="1rem" width="70%" />
-
-        {/* Amenities */}
-        <div className="flex flex-wrap gap-2">
-          {Array.from({ length: 4 }).map((_, index) => (
-            <Skeleton
-              key={index}
-              height="1.5rem"
-              width="80px"
-              className="rounded-full"
-            />
-          ))}
-        </div>
-
-        {/* Price and booking */}
-        <div className="flex items-end justify-between pt-2">
-          <div className="space-y-1">
-            <Skeleton height="1rem" width="100px" />
-            <Skeleton height="1.5rem" width="120px" />
+          {/* Price and booking */}
+          <div className="flex items-end justify-between pt-2">
+            <div className="space-y-1">
+              <Skeleton height="1rem" width="100px" />
+              <Skeleton height="1.5rem" width="120px" />
+            </div>
+            <Skeleton height="2.5rem" width="100px" className="rounded-md" />
           </div>
-          <Skeleton height="2.5rem" width="100px" className="rounded-md" />
         </div>
       </div>
-    </div>
-  );
-});
+    );
+  }
+);
 
 HotelSkeleton.displayName = "HotelSkeleton";
 

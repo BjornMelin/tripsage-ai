@@ -1,6 +1,6 @@
-import { render, screen, fireEvent } from "@testing-library/react";
-import { SearchResults } from "../search-results";
 import type { Flight } from "@/types/search";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { SearchResults } from "../search-results";
 
 // Mock the onSort and onFilter functions
 const mockOnSort = vi.fn();

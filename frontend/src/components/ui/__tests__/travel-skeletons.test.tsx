@@ -1,13 +1,13 @@
 import { render, screen } from "@testing-library/react";
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
+  ChatMessageSkeleton,
+  DestinationSkeleton,
   FlightSkeleton,
   HotelSkeleton,
-  TripSkeleton,
-  DestinationSkeleton,
   ItineraryItemSkeleton,
-  ChatMessageSkeleton,
   SearchFilterSkeleton,
+  TripSkeleton,
 } from "../travel-skeletons";
 
 describe("FlightSkeleton", () => {
@@ -82,9 +82,7 @@ describe("TripSkeleton", () => {
     expect(imageSkeletons.length).toBeGreaterThan(0);
 
     // Should have multiple detail skeletons
-    const detailSkeletons = container.querySelectorAll(
-      "[class*='animate-pulse']"
-    );
+    const detailSkeletons = container.querySelectorAll("[class*='animate-pulse']");
     expect(detailSkeletons.length).toBeGreaterThan(5);
   });
 });
@@ -131,9 +129,7 @@ describe("ItineraryItemSkeleton", () => {
     expect(timeSkeletons.length).toBeGreaterThan(0);
 
     // Should have content skeletons
-    const contentSkeletons = container.querySelectorAll(
-      "[class*='animate-pulse']"
-    );
+    const contentSkeletons = container.querySelectorAll("[class*='animate-pulse']");
     expect(contentSkeletons.length).toBeGreaterThan(3);
   });
 });
@@ -155,9 +151,7 @@ describe("ChatMessageSkeleton", () => {
   });
 
   it("renders assistant message layout", () => {
-    render(
-      <ChatMessageSkeleton isUser={false} data-testid="assistant-message" />
-    );
+    render(<ChatMessageSkeleton isUser={false} data-testid="assistant-message" />);
 
     const message = screen.getByTestId("assistant-message");
     expect(message).toHaveClass("justify-start");
@@ -167,9 +161,7 @@ describe("ChatMessageSkeleton", () => {
     const { container } = render(<ChatMessageSkeleton />);
 
     // Should have avatar skeleton
-    const avatarSkeletons = container.querySelectorAll(
-      "[class*='rounded-full']"
-    );
+    const avatarSkeletons = container.querySelectorAll("[class*='rounded-full']");
     expect(avatarSkeletons.length).toBeGreaterThan(0);
   });
 });

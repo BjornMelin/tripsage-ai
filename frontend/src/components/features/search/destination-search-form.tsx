@@ -1,9 +1,7 @@
 "use client";
 
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { useState, useRef, useEffect } from "react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -11,7 +9,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import {
   Form,
   FormControl,
@@ -22,18 +19,19 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Clock, Star, TrendingUp, MapPin } from "lucide-react";
 import { useMemoryContext } from "@/hooks/use-memory";
 import type { DestinationSearchParams } from "@/types/search";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Clock, MapPin, Star, TrendingUp } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
 
 const destinationSearchFormSchema = z.object({
   query: z.string().min(1, { message: "Destination is required" }),
   types: z
-    .array(
-      z.enum(["locality", "country", "administrative_area", "establishment"])
-    )
+    .array(z.enum(["locality", "country", "administrative_area", "establishment"]))
     .default(["locality", "country"]),
   language: z.string().optional(),
   region: z.string().optional(),
@@ -201,8 +199,7 @@ export function DestinationSearchForm({
       <CardHeader>
         <CardTitle>Destination Search</CardTitle>
         <CardDescription>
-          Discover amazing destinations around the world with intelligent
-          autocomplete
+          Discover amazing destinations around the world with intelligent autocomplete
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -247,9 +244,7 @@ export function DestinationSearchForm({
                                     key={suggestion.placeId}
                                     type="button"
                                     className="w-full text-left p-3 hover:bg-gray-50 focus:bg-gray-50 focus:outline-none border-b border-gray-100 last:border-b-0"
-                                    onClick={() =>
-                                      handleSuggestionSelect(suggestion)
-                                    }
+                                    onClick={() => handleSuggestionSelect(suggestion)}
                                   >
                                     <div className="font-medium text-sm">
                                       {suggestion.mainText}
@@ -287,9 +282,7 @@ export function DestinationSearchForm({
                           key={idx}
                           variant="outline"
                           className="cursor-pointer hover:bg-yellow-50 hover:border-yellow-300 transition-colors border-yellow-200 text-yellow-700"
-                          onClick={() =>
-                            handlePopularDestinationClick(destination)
-                          }
+                          onClick={() => handlePopularDestinationClick(destination)}
                         >
                           <Star className="h-3 w-3 mr-1" />
                           {destination}
@@ -301,8 +294,7 @@ export function DestinationSearchForm({
 
               {/* Trending from Travel Patterns */}
               {showMemoryRecommendations &&
-                memoryContext?.context?.travelPatterns
-                  ?.frequentDestinations && (
+                memoryContext?.context?.travelPatterns?.frequentDestinations && (
                   <div className="space-y-3">
                     <FormLabel className="text-sm font-medium flex items-center gap-2">
                       <TrendingUp className="h-4 w-4 text-blue-500" />
@@ -316,9 +308,7 @@ export function DestinationSearchForm({
                             key={idx}
                             variant="outline"
                             className="cursor-pointer hover:bg-blue-50 hover:border-blue-300 transition-colors border-blue-200 text-blue-700"
-                            onClick={() =>
-                              handlePopularDestinationClick(destination)
-                            }
+                            onClick={() => handlePopularDestinationClick(destination)}
                           >
                             <TrendingUp className="h-3 w-3 mr-1" />
                             {destination}
@@ -329,49 +319,43 @@ export function DestinationSearchForm({
                 )}
 
               {/* Recent Memories */}
-              {showMemoryRecommendations &&
-                memoryContext?.context?.recentMemories && (
-                  <div className="space-y-3">
-                    <FormLabel className="text-sm font-medium flex items-center gap-2">
-                      <Clock className="h-4 w-4 text-green-500" />
-                      Recent Memories
-                    </FormLabel>
-                    <div className="flex flex-wrap gap-2">
-                      {memoryContext.context.recentMemories
-                        .filter(
-                          (memory) =>
-                            memory.type === "destination" ||
-                            memory.content.toLowerCase().includes("visit")
-                        )
-                        .slice(0, 3)
-                        .map((memory, idx) => {
-                          // Extract destination names from memory content
-                          const matches = memory.content.match(
-                            /\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\b/g
-                          );
-                          const destination =
-                            matches?.[0] || memory.content.slice(0, 20);
-                          return (
-                            <Badge
-                              key={idx}
-                              variant="outline"
-                              className="cursor-pointer hover:bg-green-50 hover:border-green-300 transition-colors border-green-200 text-green-700"
-                              onClick={() =>
-                                handlePopularDestinationClick(destination)
-                              }
-                            >
-                              <Clock className="h-3 w-3 mr-1" />
-                              {destination}
-                            </Badge>
-                          );
-                        })}
-                    </div>
+              {showMemoryRecommendations && memoryContext?.context?.recentMemories && (
+                <div className="space-y-3">
+                  <FormLabel className="text-sm font-medium flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-green-500" />
+                    Recent Memories
+                  </FormLabel>
+                  <div className="flex flex-wrap gap-2">
+                    {memoryContext.context.recentMemories
+                      .filter(
+                        (memory) =>
+                          memory.type === "destination" ||
+                          memory.content.toLowerCase().includes("visit")
+                      )
+                      .slice(0, 3)
+                      .map((memory, idx) => {
+                        // Extract destination names from memory content
+                        const matches = memory.content.match(
+                          /\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\b/g
+                        );
+                        const destination = matches?.[0] || memory.content.slice(0, 20);
+                        return (
+                          <Badge
+                            key={idx}
+                            variant="outline"
+                            className="cursor-pointer hover:bg-green-50 hover:border-green-300 transition-colors border-green-200 text-green-700"
+                            onClick={() => handlePopularDestinationClick(destination)}
+                          >
+                            <Clock className="h-3 w-3 mr-1" />
+                            {destination}
+                          </Badge>
+                        );
+                      })}
                   </div>
-                )}
-
-              {showMemoryRecommendations && memoryContext?.context && (
-                <Separator />
+                </div>
               )}
+
+              {showMemoryRecommendations && memoryContext?.context && <Separator />}
 
               {/* Popular Destinations Quick Select */}
               <div className="space-y-3">
@@ -412,18 +396,13 @@ export function DestinationSearchForm({
                           <input
                             type="checkbox"
                             value={type.id}
-                            checked={form
-                              .watch("types")
-                              .includes(type.id as any)}
+                            checked={form.watch("types").includes(type.id as any)}
                             onChange={(e) => {
                               const checked = e.target.checked;
                               const types = form.getValues("types");
 
                               if (checked) {
-                                form.setValue("types", [
-                                  ...types,
-                                  type.id as any,
-                                ]);
+                                form.setValue("types", [...types, type.id as any]);
                               } else {
                                 form.setValue(
                                   "types",
@@ -434,9 +413,7 @@ export function DestinationSearchForm({
                             className="h-4 w-4 mt-0.5"
                           />
                           <div className="flex-1">
-                            <div className="font-medium text-sm">
-                              {type.label}
-                            </div>
+                            <div className="font-medium text-sm">{type.label}</div>
                             <div className="text-xs text-gray-500">
                               {type.description}
                             </div>

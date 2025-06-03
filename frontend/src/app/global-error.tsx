@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect } from "react";
 import { MinimalErrorFallback } from "@/components/error/error-fallback";
 import { errorService } from "@/lib/error-service";
+import { useEffect } from "react";
 
 /**
  * Global error boundary - catches errors in the root layout or template

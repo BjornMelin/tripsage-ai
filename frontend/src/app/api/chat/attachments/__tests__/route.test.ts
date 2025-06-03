@@ -1,8 +1,8 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { NextRequest } from "next/server";
-import { POST } from "../route";
-import * as fs from "fs/promises";
 import path from "path";
+import * as fs from "fs/promises";
+import { NextRequest } from "next/server";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { POST } from "../route";
 
 // Mock fs/promises
 vi.mock("fs/promises", () => ({
@@ -181,13 +181,9 @@ describe("/api/chat/attachments route", () => {
 
     it("should sanitize filenames", async () => {
       // Arrange
-      const file = new File(
-        [Buffer.from("content")],
-        "../../../etc/passwd.txt",
-        {
-          type: "text/plain",
-        }
-      );
+      const file = new File([Buffer.from("content")], "../../../etc/passwd.txt", {
+        type: "text/plain",
+      });
 
       const formData = new FormData();
       formData.append("file-0", file);

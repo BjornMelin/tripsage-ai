@@ -1,8 +1,8 @@
 "use client";
 
+import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { cn } from "@/lib/utils";
 
 interface SidebarNavProps extends React.HTMLAttributes<HTMLElement> {
   items: {
@@ -17,10 +17,7 @@ export function SidebarNav({ className, items, ...props }: SidebarNavProps) {
 
   return (
     <nav
-      className={cn(
-        "flex space-x-2 lg:flex-col lg:space-x-0 lg:space-y-1",
-        className
-      )}
+      className={cn("flex space-x-2 lg:flex-col lg:space-x-0 lg:space-y-1", className)}
       {...props}
     >
       {items.map((item) => (
@@ -29,9 +26,7 @@ export function SidebarNav({ className, items, ...props }: SidebarNavProps) {
           href={item.href}
           className={cn(
             "flex items-center rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground",
-            pathname === item.href
-              ? "bg-accent text-accent-foreground"
-              : "transparent"
+            pathname === item.href ? "bg-accent text-accent-foreground" : "transparent"
           )}
         >
           {item.icon && <span className="mr-2">{item.icon}</span>}
@@ -56,10 +51,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen flex-col">
       <header className="sticky top-0 z-40 flex h-16 items-center gap-4 border-b bg-background px-6">
-        <Link
-          href="/dashboard"
-          className="flex items-center gap-2 font-semibold"
-        >
+        <Link href="/dashboard" className="flex items-center gap-2 font-semibold">
           TripSage AI
         </Link>
         <div className="ml-auto flex items-center gap-4">

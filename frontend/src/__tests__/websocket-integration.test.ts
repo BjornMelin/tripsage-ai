@@ -5,21 +5,17 @@
  * including authentication, message handling, and real-time updates.
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { renderHook, act, waitFor } from "@testing-library/react";
-import { useChatStore } from "@/stores/chat-store";
 import { useWebSocket } from "@/hooks/use-websocket";
-import {
-  WebSocketClient,
-  ConnectionStatus,
-} from "@/lib/websocket/websocket-client";
+import { ConnectionStatus, WebSocketClient } from "@/lib/websocket/websocket-client";
+import { useChatStore } from "@/stores/chat-store";
+import { act, renderHook, waitFor } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // Mock environment variables
 vi.stubEnv("NEXT_PUBLIC_WS_URL", "ws://localhost:8000");
 
 // Test constants
-const TEST_TOKEN =
-  process.env.TEST_JWT_TOKEN || "mock-test-token-for-integration";
+const TEST_TOKEN = process.env.TEST_JWT_TOKEN || "mock-test-token-for-integration";
 
 // Mock WebSocket for integration testing
 class MockWebSocketServer {
@@ -43,18 +39,14 @@ class MockWebSocketServer {
   }
 
   sendToClient(clientUrl: string, data: string) {
-    const client = Array.from(this.clients).find((c) =>
-      c.url.includes(clientUrl)
-    );
+    const client = Array.from(this.clients).find((c) => c.url.includes(clientUrl));
     if (client && client.readyState === MockWebSocket.OPEN) {
       client.receive(data);
     }
   }
 
   getConnectedClients() {
-    return Array.from(this.clients).filter(
-      (c) => c.readyState === MockWebSocket.OPEN
-    );
+    return Array.from(this.clients).filter((c) => c.readyState === MockWebSocket.OPEN);
   }
 
   reset() {

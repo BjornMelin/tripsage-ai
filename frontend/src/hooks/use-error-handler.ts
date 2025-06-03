@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback } from "react";
 import { errorService } from "@/lib/error-service";
+import { useCallback } from "react";
 
 /**
  * Hook for handling errors in components
@@ -21,11 +21,7 @@ export function useErrorHandler() {
 
       // Log in development
       if (process.env.NODE_ENV === "development") {
-        console.error(
-          "Error handled by useErrorHandler:",
-          error,
-          additionalInfo
-        );
+        console.error("Error handled by useErrorHandler:", error, additionalInfo);
       }
     },
     []

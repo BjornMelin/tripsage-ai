@@ -2,10 +2,10 @@
  * Tests for MemoryContextPanel component
  */
 
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { vi, describe, it, expect, beforeEach } from "vitest";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { MemoryContextPanel } from "../memory-context-panel";
 
@@ -36,9 +36,7 @@ function createWrapper() {
   });
 
   return function TestWrapper({ children }: { children: ReactNode }) {
-    return (
-      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-    );
+    return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
   };
 }
 
@@ -193,12 +191,8 @@ describe("MemoryContextPanel", () => {
     fireEvent.click(screen.getByRole("tab", { name: /recent/i }));
 
     await waitFor(() => {
-      expect(
-        screen.getByText("User prefers luxury hotels")
-      ).toBeInTheDocument();
-      expect(
-        screen.getByText("Budget typically $5000-10000")
-      ).toBeInTheDocument();
+      expect(screen.getByText("User prefers luxury hotels")).toBeInTheDocument();
+      expect(screen.getByText("Budget typically $5000-10000")).toBeInTheDocument();
     });
   });
 
@@ -234,9 +228,7 @@ describe("MemoryContextPanel", () => {
       wrapper: createWrapper(),
     });
 
-    expect(
-      screen.getByText("Failed to load memory context")
-    ).toBeInTheDocument();
+    expect(screen.getByText("Failed to load memory context")).toBeInTheDocument();
   });
 
   it("handles empty memory data gracefully", () => {
@@ -357,9 +349,7 @@ describe("MemoryContextPanel", () => {
 
     await waitFor(() => {
       // Should show memory content and metadata
-      expect(
-        screen.getByText("User prefers luxury hotels")
-      ).toBeInTheDocument();
+      expect(screen.getByText("User prefers luxury hotels")).toBeInTheDocument();
       expect(screen.getByText("accommodation")).toBeInTheDocument(); // category badge
       expect(screen.getByText("95%")).toBeInTheDocument(); // confidence score
     });

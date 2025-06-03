@@ -1,10 +1,6 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
-import {
-  QuickActions,
-  QuickActionsCompact,
-  QuickActionsList,
-} from "../quick-actions";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { QuickActions, QuickActionsCompact, QuickActionsList } from "../quick-actions";
 
 // Mock Next.js Link component
 vi.mock("next/link", () => ({
@@ -51,9 +47,7 @@ describe("QuickActions", () => {
     expect(
       screen.getByText("Discover comfortable accommodations worldwide")
     ).toBeInTheDocument();
-    expect(
-      screen.getByText("Start planning your next adventure")
-    ).toBeInTheDocument();
+    expect(screen.getByText("Start planning your next adventure")).toBeInTheDocument();
     expect(
       screen.getByText("Get personalized travel recommendations")
     ).toBeInTheDocument();
@@ -76,10 +70,7 @@ describe("QuickActions", () => {
     const searchFlightsLink = screen.getByRole("link", {
       name: /Search Flights/i,
     });
-    expect(searchFlightsLink).toHaveAttribute(
-      "href",
-      "/dashboard/search/flights"
-    );
+    expect(searchFlightsLink).toHaveAttribute("href", "/dashboard/search/flights");
 
     const findHotelsLink = screen.getByRole("link", { name: /Find Hotels/i });
     expect(findHotelsLink).toHaveAttribute("href", "/dashboard/search/hotels");
@@ -93,10 +84,7 @@ describe("QuickActions", () => {
     const exploreLink = screen.getByRole("link", {
       name: /Explore Destinations/i,
     });
-    expect(exploreLink).toHaveAttribute(
-      "href",
-      "/dashboard/search/destinations"
-    );
+    expect(exploreLink).toHaveAttribute("href", "/dashboard/search/destinations");
 
     const tripsLink = screen.getByRole("link", { name: /My Trips/i });
     expect(tripsLink).toHaveAttribute("href", "/dashboard/trips");

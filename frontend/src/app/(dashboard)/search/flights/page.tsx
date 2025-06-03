@@ -1,5 +1,5 @@
-import { SearchLayout } from "@/components/layouts/search-layout";
 import { FlightSearchForm } from "@/components/features/search/flight-search-form";
+import { SearchLayout } from "@/components/layouts/search-layout";
 import {
   Card,
   CardContent,
@@ -64,9 +64,7 @@ export default function FlightSearchPage() {
         <Card>
           <CardHeader>
             <CardTitle>Travel Tips</CardTitle>
-            <CardDescription>
-              Tips to help you find the best flights
-            </CardDescription>
+            <CardDescription>Tips to help you find the best flights</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
@@ -121,9 +119,7 @@ function PopularRouteCard({
           </div>
         </div>
         <div>
-          <button className="text-xs text-primary hover:underline">
-            View Deal →
-          </button>
+          <button className="text-xs text-primary hover:underline">View Deal →</button>
         </div>
       </CardContent>
     </Card>

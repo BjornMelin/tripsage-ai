@@ -1,9 +1,9 @@
 "use client";
 
 import {
-  useApiQuery,
-  useApiMutation,
   useApiDeleteMutation,
+  useApiMutation,
+  useApiQuery,
 } from "@/hooks/use-api-query";
 import { useApiKeyStore } from "@/stores/api-key-store";
 import type {
@@ -54,9 +54,7 @@ export function useAddApiKey() {
  * Hook for validating an API key without saving it
  */
 export function useValidateApiKey() {
-  return useApiMutation<ValidateKeyResponse, AddKeyRequest>(
-    "/api/user/keys/validate"
-  );
+  return useApiMutation<ValidateKeyResponse, AddKeyRequest>("/api/user/keys/validate");
 }
 
 /**

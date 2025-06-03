@@ -1,45 +1,45 @@
 "use client";
 
-import React, { useCallback, useMemo, startTransition } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import {
-  type Message,
-  MessageRole,
-  type ToolCall,
-  type ToolResult,
-} from "@/types/chat";
-import { cn } from "@/lib/utils";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "@/components/ui/hover-card";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
 import {
-  HoverCard,
-  HoverCardContent,
-  HoverCardTrigger,
-} from "@/components/ui/hover-card";
-import { Button } from "@/components/ui/button";
+  type Message,
+  MessageRole,
+  type ToolCall,
+  type ToolResult,
+} from "@/types/chat";
+import { AnimatePresence, motion } from "framer-motion";
 import {
-  Bot,
-  User,
-  Info,
-  Server,
-  Clock,
-  Copy,
-  MoreHorizontal,
-  Sparkles,
-  Zap,
-  Shield,
   Activity,
+  Bot,
   Brain,
   CheckCircle2,
+  Clock,
+  Copy,
+  Info,
+  MoreHorizontal,
+  Server,
+  Shield,
+  Sparkles,
+  User,
+  Zap,
 } from "lucide-react";
-import { MessageBubble } from "./message-bubble";
+import React, { useCallback, useMemo, startTransition } from "react";
 import { MessageAttachments } from "./message-attachments";
+import { MessageBubble } from "./message-bubble";
 import { MessageToolCalls } from "./message-tool-calls";
 
 interface MessageItemProps {
@@ -241,14 +241,10 @@ export function MessageItem({
 
             {isAssistant && (
               <div className="text-sm text-muted-foreground">
-                <p>
-                  Advanced AI assistant powered by cutting-edge language models
-                </p>
+                <p>Advanced AI assistant powered by cutting-edge language models</p>
                 <div className="flex items-center gap-1 mt-2">
                   <Brain className="w-3 h-3" />
-                  <span className="text-xs">
-                    Context-aware • Travel expertise
-                  </span>
+                  <span className="text-xs">Context-aware • Travel expertise</span>
                 </div>
               </div>
             )}
@@ -291,10 +287,7 @@ export function MessageItem({
 
       {/* Message content container */}
       <motion.div
-        className={cn(
-          "flex flex-col max-w-[85%] min-w-0",
-          isUser && "items-end"
-        )}
+        className={cn("flex flex-col max-w-[85%] min-w-0", isUser && "items-end")}
         layout="position"
       >
         {/* Role badge for non-user messages */}
@@ -305,10 +298,7 @@ export function MessageItem({
             transition={{ delay: 0.2, duration: 0.3 }}
             className="mb-1"
           >
-            <Badge
-              variant={avatarConfig.badgeVariant}
-              className="text-xs px-2 py-0.5"
-            >
+            <Badge variant={avatarConfig.badgeVariant} className="text-xs px-2 py-0.5">
               {avatarConfig.badgeText}
             </Badge>
           </motion.div>
@@ -329,10 +319,7 @@ export function MessageItem({
             )}
           </AnimatePresence>
 
-          <motion.div
-            whileHover={{ scale: 1.01 }}
-            transition={{ duration: 0.2 }}
-          >
+          <motion.div whileHover={{ scale: 1.01 }} transition={{ duration: 0.2 }}>
             <MessageBubble message={message} isStreaming={isStreaming} />
           </motion.div>
 

@@ -1,8 +1,8 @@
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import HotelSearchPage from "../page";
 import { api } from "@/lib/api/client";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import HotelSearchPage from "../page";
 
 // Mock dependencies
 vi.mock("@/lib/api/client", () => ({
@@ -103,12 +103,9 @@ describe("HotelSearchPage", () => {
     render(<HotelSearchPage />, { wrapper });
 
     // Fill in the form
-    fireEvent.change(
-      screen.getByPlaceholderText("City, address, or landmark"),
-      {
-        target: { value: "New York" },
-      }
-    );
+    fireEvent.change(screen.getByPlaceholderText("City, address, or landmark"), {
+      target: { value: "New York" },
+    });
 
     const checkInInput = screen.getByLabelText("Check-in Date");
     fireEvent.change(checkInInput, { target: { value: "2024-03-15" } });
@@ -122,9 +119,7 @@ describe("HotelSearchPage", () => {
 
     // Should show searching state
     await waitFor(() => {
-      expect(
-        screen.getByText("Searching for accommodations...")
-      ).toBeInTheDocument();
+      expect(screen.getByText("Searching for accommodations...")).toBeInTheDocument();
     });
   });
 
@@ -141,9 +136,7 @@ describe("HotelSearchPage", () => {
 
     render(<HotelSearchPage />, { wrapper });
 
-    expect(
-      screen.getByText("Failed to search accommodations")
-    ).toBeInTheDocument();
+    expect(screen.getByText("Failed to search accommodations")).toBeInTheDocument();
   });
 
   it("should handle amenity selection", () => {

@@ -1,11 +1,9 @@
 "use client";
 
-import { useUserStore } from "@/stores/user-store";
-import { PersonalInfoSection } from "@/components/features/profile/personal-info-section";
 import { AccountSettingsSection } from "@/components/features/profile/account-settings-section";
+import { PersonalInfoSection } from "@/components/features/profile/personal-info-section";
 import { PreferencesSection } from "@/components/features/profile/preferences-section";
 import { SecuritySection } from "@/components/features/profile/security-section";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Card,
   CardContent,
@@ -13,8 +11,10 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { User, Settings, Shield, Sliders } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useUserStore } from "@/stores/user-store";
+import { Settings, Shield, Sliders, User } from "lucide-react";
 
 export default function ProfilePage() {
   const { user, isLoading } = useUserStore();
@@ -49,9 +49,7 @@ export default function ProfilePage() {
         <Card>
           <CardHeader>
             <CardTitle>Profile Not Found</CardTitle>
-            <CardDescription>
-              Please log in to view your profile.
-            </CardDescription>
+            <CardDescription>Please log in to view your profile.</CardDescription>
           </CardHeader>
         </Card>
       </div>

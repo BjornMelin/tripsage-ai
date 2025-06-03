@@ -1,7 +1,7 @@
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import { describe, it, expect, vi } from "vitest";
-import TripsPage from "../page";
 import type { Trip } from "@/stores/trip-store";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
+import TripsPage from "../page";
 
 // Mock the stores
 const mockTrips: Trip[] = [
@@ -52,16 +52,11 @@ vi.mock("@/stores/trip-store", () => ({
 
 // Mock the TripCard component
 vi.mock("@/components/features/trips", () => ({
-  TripCard: ({
-    trip,
-    onDelete,
-  }: { trip: Trip; onDelete?: (id: string) => void }) => (
+  TripCard: ({ trip, onDelete }: { trip: Trip; onDelete?: (id: string) => void }) => (
     <div data-testid={`trip-card-${trip.id}`}>
       <h3>{trip.name}</h3>
       <p>{trip.description}</p>
-      {onDelete && (
-        <button onClick={() => onDelete(trip.id)}>Delete Trip</button>
-      )}
+      {onDelete && <button onClick={() => onDelete(trip.id)}>Delete Trip</button>}
     </div>
   ),
 }));
@@ -89,9 +84,7 @@ describe("TripsPage", () => {
   it("filters trips by search query", async () => {
     render(<TripsPage />);
 
-    const searchInput = screen.getByPlaceholderText(
-      "Search trips, destinations..."
-    );
+    const searchInput = screen.getByPlaceholderText("Search trips, destinations...");
     fireEvent.change(searchInput, { target: { value: "Paris" } });
 
     await waitFor(() => {
@@ -144,9 +137,7 @@ describe("TripsPage", () => {
   it("calls createTrip when create button is clicked", async () => {
     const mockCreateTrip = vi.fn();
 
-    vi.mocked(
-      vi.mocked(require("@/stores/trip-store").useTripStore)
-    ).mockReturnValue({
+    vi.mocked(vi.mocked(require("@/stores/trip-store").useTripStore)).mockReturnValue({
       trips: mockTrips,
       createTrip: mockCreateTrip,
       deleteTrip: vi.fn(),
@@ -170,9 +161,7 @@ describe("TripsPage", () => {
     // Mock window.confirm
     global.confirm = vi.fn(() => true);
 
-    vi.mocked(
-      vi.mocked(require("@/stores/trip-store").useTripStore)
-    ).mockReturnValue({
+    vi.mocked(vi.mocked(require("@/stores/trip-store").useTripStore)).mockReturnValue({
       trips: mockTrips,
       createTrip: vi.fn(),
       deleteTrip: mockDeleteTrip,
@@ -190,9 +179,7 @@ describe("TripsPage", () => {
   });
 
   it("shows empty state when no trips exist", () => {
-    vi.mocked(
-      vi.mocked(require("@/stores/trip-store").useTripStore)
-    ).mockReturnValue({
+    vi.mocked(vi.mocked(require("@/stores/trip-store").useTripStore)).mockReturnValue({
       trips: [],
       createTrip: vi.fn(),
       deleteTrip: vi.fn(),
@@ -207,9 +194,7 @@ describe("TripsPage", () => {
   it("shows no results when search/filter returns empty", async () => {
     render(<TripsPage />);
 
-    const searchInput = screen.getByPlaceholderText(
-      "Search trips, destinations..."
-    );
+    const searchInput = screen.getByPlaceholderText("Search trips, destinations...");
     fireEvent.change(searchInput, { target: { value: "NonexistentTrip" } });
 
     await waitFor(() => {
@@ -222,9 +207,7 @@ describe("TripsPage", () => {
     render(<TripsPage />);
 
     // Apply a search filter
-    const searchInput = screen.getByPlaceholderText(
-      "Search trips, destinations..."
-    );
+    const searchInput = screen.getByPlaceholderText("Search trips, destinations...");
     fireEvent.change(searchInput, { target: { value: "NonexistentTrip" } });
 
     await waitFor(() => {
@@ -247,9 +230,7 @@ describe("TripsPage", () => {
   });
 
   it("handles singular trip count correctly", () => {
-    vi.mocked(
-      vi.mocked(require("@/stores/trip-store").useTripStore)
-    ).mockReturnValue({
+    vi.mocked(vi.mocked(require("@/stores/trip-store").useTripStore)).mockReturnValue({
       trips: [mockTrips[0]],
       createTrip: vi.fn(),
       deleteTrip: vi.fn(),

@@ -1,7 +1,6 @@
 "use client";
 
-import { useCallback } from "react";
-import { useApiQuery, useApiMutation } from "@/hooks/use-api-query";
+import { useApiMutation, useApiQuery } from "@/hooks/use-api-query";
 import { useAgentStatusStore } from "@/stores/agent-status-store";
 import type {
   Agent,
@@ -10,6 +9,7 @@ import type {
   AgentTask,
   ResourceUsage,
 } from "@/types/agent-status";
+import { useCallback } from "react";
 
 /**
  * Hook for fetching and managing agent status
@@ -76,19 +76,19 @@ export function useAgentStatus() {
   });
 
   // Mutation for stopping an agent
-  const stopAgentMutation = useApiMutation<
-    { success: boolean },
-    { agentId: string }
-  >("/api/agents/stop", {
-    onSuccess: (data, variables) => {
-      if (data.success) {
-        updateAgentStatus(variables.agentId, "completed");
-      }
-    },
-    onError: (error: any) => {
-      setError(error.message || "Failed to stop agent");
-    },
-  });
+  const stopAgentMutation = useApiMutation<{ success: boolean }, { agentId: string }>(
+    "/api/agents/stop",
+    {
+      onSuccess: (data, variables) => {
+        if (data.success) {
+          updateAgentStatus(variables.agentId, "completed");
+        }
+      },
+      onError: (error: any) => {
+        setError(error.message || "Failed to stop agent");
+      },
+    }
+  );
 
   // Function to start monitoring agents
   const startMonitoring = useCallback(() => {

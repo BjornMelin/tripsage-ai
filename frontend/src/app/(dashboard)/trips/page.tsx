@@ -1,10 +1,15 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { Plus, Search, Filter, Grid, List } from "lucide-react";
-import { useTripStore } from "@/stores/trip-store";
 import { TripCard } from "@/components/features/trips";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -13,14 +18,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { useTripStore } from "@/stores/trip-store";
+import { Filter, Grid, List, Plus, Search } from "lucide-react";
+import { useMemo, useState } from "react";
 
 type SortOption = "name" | "date" | "budget" | "destinations";
 type FilterOption = "all" | "draft" | "upcoming" | "active" | "completed";
@@ -75,9 +75,7 @@ export default function TripsPage() {
         case "name":
           return a.name.localeCompare(b.name);
         case "date":
-          return (
-            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-          );
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
         case "budget":
           return (b.budget || 0) - (a.budget || 0);
         case "destinations":
@@ -165,8 +163,7 @@ export default function TripsPage() {
         <div>
           <h1 className="text-3xl font-bold">My Trips</h1>
           <p className="text-muted-foreground">
-            {trips.length} trip{trips.length !== 1 ? "s" : ""} in your
-            collection
+            {trips.length} trip{trips.length !== 1 ? "s" : ""} in your collection
           </p>
         </div>
         <Button onClick={handleCreateTrip}>

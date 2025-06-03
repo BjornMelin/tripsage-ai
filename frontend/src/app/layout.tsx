@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { ThemeProvider } from "@/components/providers/theme-provider";
-import { TanStackQueryProvider } from "@/components/providers/query-provider";
 import { Navbar } from "@/components/layouts/navbar";
+import { TanStackQueryProvider } from "@/components/providers/query-provider";
+import { ThemeProvider } from "@/components/providers/theme-provider";
 import { Toaster } from "@/components/ui/toaster";
 
 const geistSans = Geist({
@@ -20,8 +20,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "TripSage AI - Intelligent Travel Planning",
-  description:
-    "Plan your perfect trip with AI-powered recommendations and insights",
+  description: "Plan your perfect trip with AI-powered recommendations and insights",
   keywords: ["travel", "AI", "planning", "trips", "budget", "itinerary"],
   authors: [{ name: "TripSage Team" }],
   viewport: "width=device-width, initial-scale=1",

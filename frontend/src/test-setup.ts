@@ -1,5 +1,5 @@
-import { beforeAll, afterEach, vi } from "vitest";
 import { cleanup } from "@testing-library/react";
+import { afterEach, beforeAll, vi } from "vitest";
 import "@testing-library/jest-dom";
 
 // Clean up after each test

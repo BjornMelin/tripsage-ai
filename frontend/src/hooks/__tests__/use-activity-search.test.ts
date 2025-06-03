@@ -2,14 +2,14 @@
  * @vitest-environment jsdom
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { renderHook, act, waitFor } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { createElement } from "react";
-import { useActivitySearch } from "../use-activity-search";
-import { useSearchStore } from "@/stores/search-store";
 import { api } from "@/lib/api/client";
+import { useSearchStore } from "@/stores/search-store";
 import type { ActivitySearchParams } from "@/types/search";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { act, renderHook, waitFor } from "@testing-library/react";
+import { createElement } from "react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { useActivitySearch } from "../use-activity-search";
 
 // Mock the API client
 vi.mock("@/lib/api/client", () => ({
@@ -123,10 +123,7 @@ describe("useActivitySearch", () => {
 
     await waitFor(() => {
       expect(mockUpdateActivityParams).toHaveBeenCalledWith(searchParams);
-      expect(api.post).toHaveBeenCalledWith(
-        "/api/activities/search",
-        searchParams
-      );
+      expect(api.post).toHaveBeenCalledWith("/api/activities/search", searchParams);
       expect(mockSetIsLoading).toHaveBeenCalledWith(true);
       expect(mockSetError).toHaveBeenCalledWith(null);
       expect(mockSetResults).toHaveBeenCalledWith({
@@ -335,9 +332,7 @@ describe("useActivitySearch", () => {
         "/api/activities/search",
         comprehensiveSearchParams
       );
-      expect(mockUpdateActivityParams).toHaveBeenCalledWith(
-        comprehensiveSearchParams
-      );
+      expect(mockUpdateActivityParams).toHaveBeenCalledWith(comprehensiveSearchParams);
     });
   });
 

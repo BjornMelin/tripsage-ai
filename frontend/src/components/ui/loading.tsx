@@ -10,7 +10,6 @@ export { LoadingSpinner, spinnerVariants } from "./loading-spinner";
 // Loading states
 export {
   LoadingOverlay,
-  LoadingState,
   LoadingButton,
   LoadingContainer,
   PageLoading,
@@ -50,7 +49,6 @@ export {
 
 // Types
 export type {
-  LoadingState,
   SkeletonConfig,
   LoadingSpinnerConfig,
   SkeletonProps,

@@ -1,10 +1,10 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
-  ErrorBoundary,
-  GracefulErrorBoundary,
-  ErrorFallback,
   CompactErrorFallback,
+  ErrorBoundary,
+  ErrorFallback,
+  GracefulErrorBoundary,
 } from "../error-boundary";
 
 // Mock console.error to prevent test noise
@@ -18,9 +18,7 @@ afterEach(() => {
 });
 
 // Problem component that throws an error
-const ErrorThrowingComponent = ({
-  shouldThrow = true,
-}: { shouldThrow?: boolean }) => {
+const ErrorThrowingComponent = ({ shouldThrow = true }: { shouldThrow?: boolean }) => {
   if (shouldThrow) {
     throw new Error("Test error message");
   }
@@ -46,12 +44,8 @@ describe("ErrorBoundary", () => {
     );
 
     expect(screen.getByText("Something went wrong")).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: /try again/i })
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: /reload page/i })
-    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /try again/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /reload page/i })).toBeInTheDocument();
   });
 
   it("calls onError callback when error occurs", () => {
@@ -165,9 +159,7 @@ describe("ErrorFallback", () => {
     render(<ErrorFallback />);
 
     expect(screen.getByText(/oops! something went wrong/i)).toBeInTheDocument();
-    expect(
-      screen.getByText(/we encountered an unexpected error/i)
-    ).toBeInTheDocument();
+    expect(screen.getByText(/we encountered an unexpected error/i)).toBeInTheDocument();
   });
 
   it("renders with custom error", () => {
@@ -219,8 +211,6 @@ describe("CompactErrorFallback", () => {
   it("does not render retry button when onRetry is not provided", () => {
     render(<CompactErrorFallback />);
 
-    expect(
-      screen.queryByRole("button", { name: /retry/i })
-    ).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /retry/i })).not.toBeInTheDocument();
   });
 });

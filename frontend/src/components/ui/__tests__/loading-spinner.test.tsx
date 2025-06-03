@@ -1,5 +1,5 @@
 import { render, screen } from "@testing-library/react";
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import { LoadingSpinner } from "../loading-spinner";
 
 describe("LoadingSpinner", () => {
@@ -29,9 +29,7 @@ describe("LoadingSpinner", () => {
   });
 
   it("applies different sizes", () => {
-    const { rerender } = render(
-      <LoadingSpinner size="sm" data-testid="spinner" />
-    );
+    const { rerender } = render(<LoadingSpinner size="sm" data-testid="spinner" />);
     let spinner = screen.getByTestId("spinner");
     expect(spinner).toHaveClass("h-4", "w-4");
 
@@ -45,9 +43,7 @@ describe("LoadingSpinner", () => {
   });
 
   it("applies different colors", () => {
-    const { rerender } = render(
-      <LoadingSpinner color="white" data-testid="spinner" />
-    );
+    const { rerender } = render(<LoadingSpinner color="white" data-testid="spinner" />);
     let spinner = screen.getByTestId("spinner");
     expect(spinner).toHaveClass("text-white");
 

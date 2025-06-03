@@ -1,18 +1,18 @@
 "use client";
 
-import React, { useCallback, useEffect } from "react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { useChatAi } from "@/hooks/use-chat-ai";
+import { cn } from "@/lib/utils";
 import { useChatStore } from "@/stores";
-import { MessageList } from "./messages/message-list";
-import { MessageInput } from "./message-input";
+import type { Message } from "@/types/chat";
+import { AlertCircle, Key, PanelRightOpen, Wifi } from "lucide-react";
+import Link from "next/link";
+import React, { useCallback, useEffect, useOptimistic, startTransition } from "react";
 import { AgentStatusPanel } from "./agent-status-panel";
 import { ConnectionStatus } from "./connection-status";
-import { PanelRightOpen, AlertCircle, Key, Wifi } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { cn } from "@/lib/utils";
-import type { Message } from "@/types/chat";
-import { useChatAi } from "@/hooks/use-chat-ai";
-import Link from "next/link";
+import { MessageInput } from "./message-input";
+import { MessageList } from "./messages/message-list";
 
 interface ChatContainerProps {
   sessionId?: string;
@@ -30,7 +30,7 @@ export function ChatContainer({
   // Use our new chat hook that integrates Vercel AI SDK
   const {
     sessionId: chatSessionId,
-    messages,
+    messages: baseMessages,
     isLoading,
     error,
     input,
@@ -50,6 +50,12 @@ export function ChatContainer({
     sessionId,
     initialMessages,
   });
+
+  // React 19 optimistic updates for instant message display
+  const [optimisticMessages, addOptimisticMessage] = useOptimistic(
+    baseMessages,
+    (state: Message[], newMessage: Message) => [...state, newMessage]
+  );
 
   // Get chat store state including WebSocket status
   const {
@@ -71,12 +77,31 @@ export function ChatContainer({
   // Track connection toggle state
   const [showConnectionStatus, setShowConnectionStatus] = React.useState(false);
 
-  // Handle sending messages
+  // Handle sending messages with React 19 optimistic updates
   const handleSendMessage = useCallback(
     (content: string, attachments: string[] = []) => {
-      sendMessage(content, attachments);
+      // Create optimistic message for instant UI feedback
+      const optimisticMessage: Message = {
+        id: `temp-${Date.now()}`,
+        role: "user",
+        content,
+        timestamp: new Date().toISOString(),
+        attachments: attachments.map((url, index) => ({
+          id: `temp-attachment-${index}`,
+          url,
+          name: url.split("/").pop() || "Attachment",
+        })),
+      };
+
+      // Add optimistic message immediately
+      addOptimisticMessage(optimisticMessage);
+
+      // Use startTransition for better performance
+      startTransition(() => {
+        sendMessage(content, attachments);
+      });
     },
-    [sendMessage]
+    [sendMessage, addOptimisticMessage]
   );
 
   // Handle cancel
@@ -128,9 +153,7 @@ export function ChatContainer({
       <div className="flex items-center justify-center h-full">
         <div className="p-8 text-center max-w-md">
           <AlertCircle className="h-12 w-12 text-orange-500 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold mb-2">
-            Authentication Required
-          </h3>
+          <h3 className="text-lg font-semibold mb-2">Authentication Required</h3>
           <p className="text-muted-foreground mb-6">
             Please log in to start chatting with TripSage AI.
           </p>
@@ -150,8 +173,8 @@ export function ChatContainer({
           <Key className="h-12 w-12 text-blue-500 mx-auto mb-4" />
           <h3 className="text-lg font-semibold mb-2">API Key Required</h3>
           <p className="text-muted-foreground mb-6">
-            A valid OpenAI API key is required to use the chat feature. Please
-            add one to get started.
+            A valid OpenAI API key is required to use the chat feature. Please add one
+            to get started.
           </p>
           <Link href="/settings/api-keys">
             <Button className="w-full">Manage API Keys</Button>
@@ -177,7 +200,7 @@ export function ChatContainer({
       {/* Main chat area */}
       <div className="flex-1 overflow-hidden flex flex-col">
         <MessageList
-          messages={messages}
+          messages={optimisticMessages}
           isStreaming={isStreaming}
           sessionId={chatSessionId}
           activeToolCalls={activeToolCalls}
@@ -203,8 +226,7 @@ export function ChatContainer({
         size="icon"
         className={cn(
           "absolute bottom-32 right-4 h-8 w-8 rounded-full shadow-md",
-          connectionStatus === "connected" &&
-            "bg-green-500/10 border-green-500/20",
+          connectionStatus === "connected" && "bg-green-500/10 border-green-500/20",
           connectionStatus === "error" && "bg-red-500/10 border-red-500/20"
         )}
         onClick={() => setShowConnectionStatus(!showConnectionStatus)}
@@ -228,10 +250,7 @@ export function ChatContainer({
         onClick={() => setShowAgentPanel(!showAgentPanel)}
       >
         <PanelRightOpen
-          className={cn(
-            "h-4 w-4 transition-transform",
-            showAgentPanel && "rotate-180"
-          )}
+          className={cn("h-4 w-4 transition-transform", showAgentPanel && "rotate-180")}
         />
       </Button>
 

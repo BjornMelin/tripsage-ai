@@ -2,11 +2,11 @@
  * @vitest-environment jsdom
  */
 
-import { describe, it, expect, vi } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { ActivitySearchForm } from "../activity-search-form";
 import type { ActivitySearchParams } from "@/types/search";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
+import { ActivitySearchForm } from "../activity-search-form";
 
 const createWrapper = () => {
   const queryClient = new QueryClient({

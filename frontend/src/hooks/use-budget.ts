@@ -1,22 +1,22 @@
 "use client";
 
 import {
-  useApiQuery,
+  useApiDeleteMutation,
   useApiMutation,
   useApiPutMutation,
-  useApiDeleteMutation,
+  useApiQuery,
 } from "@/hooks/use-api-query";
 import { useBudgetStore } from "@/stores/budget-store";
 import type {
+  AddExpenseRequest,
   Budget,
-  Expense,
   BudgetAlert,
   BudgetCategory,
-  CreateBudgetRequest,
-  UpdateBudgetRequest,
-  AddExpenseRequest,
-  UpdateExpenseRequest,
   CreateBudgetAlertRequest,
+  CreateBudgetRequest,
+  Expense,
+  UpdateBudgetRequest,
+  UpdateExpenseRequest,
 } from "@/types/budget";
 
 /**
@@ -69,8 +69,7 @@ export function useBudgetActions() {
  * Hook for expense management
  */
 export function useExpenses(budgetId?: string) {
-  const { expenses, addExpense, updateExpense, removeExpense } =
-    useBudgetStore();
+  const { expenses, addExpense, updateExpense, removeExpense } = useBudgetStore();
   const budgetExpenses = budgetId ? expenses[budgetId] || [] : [];
 
   return {
@@ -331,10 +330,7 @@ export function useFetchCurrencyRates() {
             };
             return acc;
           },
-          {} as Record<
-            string,
-            { code: string; rate: number; lastUpdated: string }
-          >
+          {} as Record<string, { code: string; rate: number; lastUpdated: string }>
         );
 
         setCurrencies(formattedRates);

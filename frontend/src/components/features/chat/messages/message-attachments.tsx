@@ -1,13 +1,8 @@
 "use client";
 
-import React from "react";
-import {
-  FileIcon,
-  ImageIcon,
-  FileTextIcon,
-  FileArchiveIcon,
-} from "lucide-react";
+import { FileArchiveIcon, FileIcon, FileTextIcon, ImageIcon } from "lucide-react";
 import Image from "next/image";
+import React from "react";
 
 interface MessageAttachmentsProps {
   attachments: string[];
@@ -36,9 +31,7 @@ function AttachmentItem({ url }: AttachmentItemProps) {
   // Determine file type from extension
   const fileExt = fileName.split(".").pop()?.toLowerCase() || "";
 
-  const isImage = ["jpg", "jpeg", "png", "gif", "webp", "svg"].includes(
-    fileExt
-  );
+  const isImage = ["jpg", "jpeg", "png", "gif", "webp", "svg"].includes(fileExt);
   const isPDF = fileExt === "pdf";
   const isText = [
     "txt",

@@ -1,12 +1,12 @@
-import { renderHook, act } from "@testing-library/react";
+import { useCurrencyStore } from "@/stores/currency-store";
+import { act, renderHook } from "@testing-library/react";
 import {
   useCurrency,
   useCurrencyActions,
-  useExchangeRates,
   useCurrencyConverter,
   useCurrencyData,
+  useExchangeRates,
 } from "../use-currency";
-import { useCurrencyStore } from "@/stores/currency-store";
 
 // Mock the store to avoid persistence issues in tests
 vi.mock("zustand/middleware", () => ({
@@ -179,9 +179,7 @@ describe("Currency Hooks", () => {
       // Check that the rate was updated
       const newState = useCurrencyStore.getState();
       expect(newState.exchangeRates["EUR"]?.rate).toBe(0.9);
-      expect(newState.exchangeRates["EUR"]?.timestamp).toBe(
-        "2025-05-21T12:00:00Z"
-      );
+      expect(newState.exchangeRates["EUR"]?.timestamp).toBe("2025-05-21T12:00:00Z");
     });
 
     it("can update all exchange rates", () => {

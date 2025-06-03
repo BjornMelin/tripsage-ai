@@ -1,18 +1,7 @@
 "use client";
 
-import { useMemo } from "react";
-import { format, parseISO, differenceInDays } from "date-fns";
-import {
-  Calendar,
-  MapPin,
-  Clock,
-  Plane,
-  Car,
-  Train,
-  Plus,
-  Edit2,
-} from "lucide-react";
-import { useTripStore, type Trip, type Destination } from "@/stores/trip-store";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -20,9 +9,11 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { type Destination, type Trip, useTripStore } from "@/stores/trip-store";
+import { differenceInDays, format, parseISO } from "date-fns";
+import { Calendar, Car, Clock, Edit2, MapPin, Plane, Plus, Train } from "lucide-react";
+import { useMemo } from "react";
 
 interface TripTimelineProps {
   trip: Trip;
@@ -54,12 +45,8 @@ export function TripTimeline({
     const events: TimelineEvent[] = [];
 
     trip.destinations.forEach((destination, index) => {
-      const startDate = destination.startDate
-        ? parseISO(destination.startDate)
-        : null;
-      const endDate = destination.endDate
-        ? parseISO(destination.endDate)
-        : null;
+      const startDate = destination.startDate ? parseISO(destination.startDate) : null;
+      const endDate = destination.endDate ? parseISO(destination.endDate) : null;
 
       // Arrival event
       if (startDate) {
@@ -94,8 +81,7 @@ export function TripTimeline({
             startDate && endDate
               ? new Date(
                   startDate.getTime() +
-                    ((activityIndex + 1) *
-                      (endDate.getTime() - startDate.getTime())) /
+                    ((activityIndex + 1) * (endDate.getTime() - startDate.getTime())) /
                       (destination.activities!.length + 1)
                 )
               : startDate || new Date();
@@ -290,11 +276,7 @@ export function TripTimeline({
         {showActions && onAddDestination && (
           <>
             <Separator className="my-4" />
-            <Button
-              variant="outline"
-              onClick={onAddDestination}
-              className="w-full"
-            >
+            <Button variant="outline" onClick={onAddDestination} className="w-full">
               <Plus className="h-4 w-4 mr-2" />
               Add Destination
             </Button>

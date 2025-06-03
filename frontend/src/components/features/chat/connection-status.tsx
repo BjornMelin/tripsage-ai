@@ -1,17 +1,11 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import { cn } from "@/lib/utils";
-import {
-  Wifi,
-  WifiOff,
-  Loader2,
-  AlertTriangle,
-  CheckCircle2,
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import type { ConnectionStatus } from "@/lib/websocket/websocket-client";
+import { AlertTriangle, CheckCircle2, Loader2, Wifi, WifiOff } from "lucide-react";
+import React, { useEffect, useState } from "react";
 
 interface ConnectionStatusProps {
   status: ConnectionStatus;
@@ -116,11 +110,7 @@ export function ConnectionStatus({
     return (
       <Badge
         variant={config.variant}
-        className={cn(
-          "flex items-center gap-1 text-xs",
-          config.color,
-          className
-        )}
+        className={cn("flex items-center gap-1 text-xs", config.color, className)}
         onClick={() => status === "error" && onReconnect?.()}
       >
         {config.icon}
@@ -147,12 +137,8 @@ export function ConnectionStatus({
         <div className={cn("flex-shrink-0", config.color)}>{config.icon}</div>
 
         <div className="flex-1 min-w-0">
-          <div className={cn("font-medium text-sm", config.color)}>
-            {config.label}
-          </div>
-          <div className="text-xs text-muted-foreground">
-            {config.description}
-          </div>
+          <div className={cn("font-medium text-sm", config.color)}>{config.label}</div>
+          <div className="text-xs text-muted-foreground">{config.description}</div>
           {lastConnectedTime && status !== "connected" && (
             <div className="text-xs text-muted-foreground mt-1">
               Last connected: {lastConnectedTime.toLocaleTimeString()}
@@ -163,12 +149,7 @@ export function ConnectionStatus({
 
       {/* Reconnect button for error states */}
       {status === "error" && onReconnect && (
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={onReconnect}
-          className="ml-2"
-        >
+        <Button variant="outline" size="sm" onClick={onReconnect} className="ml-2">
           Retry
         </Button>
       )}

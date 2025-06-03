@@ -1,7 +1,7 @@
-import { renderHook, act } from "@testing-library/react";
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { useErrorHandler } from "../use-error-handler";
 import { errorService } from "@/lib/error-service";
+import { act, renderHook } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { useErrorHandler } from "../use-error-handler";
 
 // Mock the error service
 vi.mock("@/lib/error-service", () => ({
@@ -278,9 +278,9 @@ describe("useErrorHandler", () => {
       const asyncOperation = vi.fn().mockRejectedValue(testError);
 
       await act(async () => {
-        await expect(
-          result.current.handleAsyncError(asyncOperation)
-        ).rejects.toThrow("Async error");
+        await expect(result.current.handleAsyncError(asyncOperation)).rejects.toThrow(
+          "Async error"
+        );
       });
     });
   });

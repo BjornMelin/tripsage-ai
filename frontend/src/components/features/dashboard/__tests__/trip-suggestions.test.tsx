@@ -1,8 +1,8 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
-import { TripSuggestions } from "../trip-suggestions";
-import { useDealsStore } from "@/stores/deals-store";
 import { useBudgetStore } from "@/stores/budget-store";
+import { useDealsStore } from "@/stores/deals-store";
+import { render, screen } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { TripSuggestions } from "../trip-suggestions";
 
 // Mock the stores
 vi.mock("@/stores/deals-store", () => ({
@@ -37,22 +37,16 @@ describe("TripSuggestions", () => {
     render(<TripSuggestions />);
 
     expect(screen.getByText("Trip Suggestions")).toBeInTheDocument();
-    expect(
-      screen.getByText("AI-powered travel recommendations")
-    ).toBeInTheDocument();
+    expect(screen.getByText("AI-powered travel recommendations")).toBeInTheDocument();
   });
 
   it("renders trip suggestions correctly", () => {
     render(<TripSuggestions />);
 
     // Check for mock suggestions
-    expect(
-      screen.getByText("Tokyo Cherry Blossom Adventure")
-    ).toBeInTheDocument();
+    expect(screen.getByText("Tokyo Cherry Blossom Adventure")).toBeInTheDocument();
     expect(screen.getByText("Bali Tropical Retreat")).toBeInTheDocument();
-    expect(
-      screen.getByText("Swiss Alps Hiking Experience")
-    ).toBeInTheDocument();
+    expect(screen.getByText("Swiss Alps Hiking Experience")).toBeInTheDocument();
     expect(screen.getByText("Santorini Sunset Romance")).toBeInTheDocument();
   });
 
@@ -160,9 +154,7 @@ describe("TripSuggestions", () => {
     expect(
       screen.queryByText("Tokyo Cherry Blossom Adventure")
     ).not.toBeInTheDocument();
-    expect(
-      screen.queryByText("Swiss Alps Hiking Experience")
-    ).not.toBeInTheDocument();
+    expect(screen.queryByText("Swiss Alps Hiking Experience")).not.toBeInTheDocument();
   });
 
   it("shows all suggestions when no budget is set", () => {
@@ -173,13 +165,9 @@ describe("TripSuggestions", () => {
     render(<TripSuggestions />);
 
     // Should show all mock suggestions
-    expect(
-      screen.getByText("Tokyo Cherry Blossom Adventure")
-    ).toBeInTheDocument();
+    expect(screen.getByText("Tokyo Cherry Blossom Adventure")).toBeInTheDocument();
     expect(screen.getByText("Bali Tropical Retreat")).toBeInTheDocument();
-    expect(
-      screen.getByText("Swiss Alps Hiking Experience")
-    ).toBeInTheDocument();
+    expect(screen.getByText("Swiss Alps Hiking Experience")).toBeInTheDocument();
   });
 
   it("limits the number of suggestions displayed", () => {
@@ -201,13 +189,9 @@ describe("TripSuggestions", () => {
     render(<TripSuggestions />);
 
     expect(
-      screen.getByText(
-        "Get personalized trip suggestions based on your preferences."
-      )
+      screen.getByText("Get personalized trip suggestions based on your preferences.")
     ).toBeInTheDocument();
-    expect(
-      screen.getByText("Chat with AI for Suggestions")
-    ).toBeInTheDocument();
+    expect(screen.getByText("Chat with AI for Suggestions")).toBeInTheDocument();
   });
 
   it("handles showEmpty prop correctly", () => {
@@ -219,16 +203,12 @@ describe("TripSuggestions", () => {
 
     const { rerender } = render(<TripSuggestions showEmpty={false} />);
 
-    expect(
-      screen.queryByText("Chat with AI for Suggestions")
-    ).not.toBeInTheDocument();
+    expect(screen.queryByText("Chat with AI for Suggestions")).not.toBeInTheDocument();
     expect(screen.getByText("No suggestions available.")).toBeInTheDocument();
 
     rerender(<TripSuggestions showEmpty={true} />);
 
-    expect(
-      screen.getByText("Chat with AI for Suggestions")
-    ).toBeInTheDocument();
+    expect(screen.getByText("Chat with AI for Suggestions")).toBeInTheDocument();
   });
 
   it("shows 'Get More Suggestions' button when suggestions exist", () => {
@@ -245,9 +225,7 @@ describe("TripSuggestions", () => {
     render(<TripSuggestions />);
 
     // Check that cards have hover classes
-    const suggestionCards = document.querySelectorAll(
-      ".hover\\:bg-accent\\/50"
-    );
+    const suggestionCards = document.querySelectorAll(".hover\\:bg-accent\\/50");
     expect(suggestionCards.length).toBeGreaterThan(0);
   });
 
@@ -266,9 +244,7 @@ describe("TripSuggestions", () => {
 
     // Tokyo and Iceland are marked as seasonal in mock data
     // We can't easily test for specific badges, but can test that the component renders
-    expect(
-      screen.getByText("Tokyo Cherry Blossom Adventure")
-    ).toBeInTheDocument();
+    expect(screen.getByText("Tokyo Cherry Blossom Adventure")).toBeInTheDocument();
     expect(screen.getByText("Iceland Northern Lights")).toBeInTheDocument();
   });
 

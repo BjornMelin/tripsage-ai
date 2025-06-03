@@ -1,7 +1,7 @@
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { useUserStore } from "@/stores/user-store";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { vi } from "vitest";
 import { PersonalInfoSection } from "../personal-info-section";
-import { useUserStore } from "@/stores/user-store";
 
 // Mock the stores and hooks
 vi.mock("@/stores/user-store");
@@ -62,9 +62,7 @@ describe("PersonalInfoSection", () => {
     render(<PersonalInfoSection />);
 
     expect(screen.getByText("Profile Picture")).toBeInTheDocument();
-    expect(
-      screen.getByText(/Click the camera icon to upload/)
-    ).toBeInTheDocument();
+    expect(screen.getByText(/Click the camera icon to upload/)).toBeInTheDocument();
     expect(screen.getByRole("button")).toBeInTheDocument(); // Camera button
   });
 

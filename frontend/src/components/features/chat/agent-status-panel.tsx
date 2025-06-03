@@ -1,21 +1,21 @@
 "use client";
 
-import React from "react";
-import { useChatStore } from "@/stores/chat-store";
+import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
+import { useChatStore } from "@/stores/chat-store";
+import type { AgentStatus } from "@/stores/chat-store";
 import {
-  Bot,
   Activity,
-  Loader2,
+  AlertTriangle,
   BarChart,
+  Bot,
+  Circle,
   FileSearch,
+  Loader2,
   Map as MapIcon,
   Plane,
-  Circle,
-  AlertTriangle,
 } from "lucide-react";
-import { Progress } from "@/components/ui/progress";
-import type { AgentStatus } from "@/stores/chat-store";
+import React from "react";
 
 interface AgentStatusPanelProps {
   sessionId?: string;
@@ -100,12 +100,7 @@ export function AgentStatusPanel({
   const statusIndicator = getStatusIndicator();
 
   return (
-    <div
-      className={cn(
-        "bg-background/80 p-3 border rounded-lg shadow-sm",
-        className
-      )}
-    >
+    <div className={cn("bg-background/80 p-3 border rounded-lg shadow-sm", className)}>
       {showHeader && (
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
@@ -138,9 +133,7 @@ export function AgentStatusPanel({
       )}
 
       {statusMessage && (
-        <div className="text-xs text-muted-foreground mt-2">
-          {statusMessage}
-        </div>
+        <div className="text-xs text-muted-foreground mt-2">{statusMessage}</div>
       )}
     </div>
   );

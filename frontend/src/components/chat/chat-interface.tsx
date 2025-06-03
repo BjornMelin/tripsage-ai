@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { useChatStore } from "@/stores/chat-store";
+import { useEffect, useRef, useState } from "react";
 
 interface Message {
   id: string;
@@ -53,11 +53,7 @@ function MessageBubble({
 
   return (
     <div
-      className={cn(
-        "flex w-full",
-        isUser ? "justify-end" : "justify-start",
-        className
-      )}
+      className={cn("flex w-full", isUser ? "justify-end" : "justify-start", className)}
     >
       <div
         className={cn(
@@ -127,10 +123,7 @@ function MessageInput({
   }, [input]);
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="flex gap-3 p-4 border-t bg-background"
-    >
+    <form onSubmit={handleSubmit} className="flex gap-3 p-4 border-t bg-background">
       <div className="flex-1 relative">
         <textarea
           ref={textareaRef}
@@ -158,12 +151,7 @@ function MessageInput({
           "h-[44px] flex items-center justify-center"
         )}
       >
-        <svg
-          className="w-4 h-4"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path
             strokeLinecap="round"
             strokeLinejoin="round"

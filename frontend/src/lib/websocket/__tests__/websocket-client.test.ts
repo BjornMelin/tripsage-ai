@@ -1,8 +1,8 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  ConnectionStatus,
   WebSocketClient,
   type WebSocketClientConfig,
-  ConnectionStatus,
 } from "../websocket-client";
 
 // Mock WebSocket implementation that properly simulates behavior
@@ -137,9 +137,7 @@ describe("WebSocketClient", () => {
         mockWebSocketInstance.simulateError();
       }, 1);
 
-      await expect(connectPromise).rejects.toThrow(
-        "WebSocket connection error"
-      );
+      await expect(connectPromise).rejects.toThrow("WebSocket connection error");
     });
 
     it("should disconnect properly", async () => {
