@@ -9,7 +9,7 @@ from google.auth.exceptions import RefreshError
 from google.oauth2.credentials import Credentials
 from googleapiclient.errors import HttpError
 
-from tripsage.models.api.calendar_models import (
+from tripsage_core.models.api.calendar_models import (
     CreateEventRequest,
     EventAttendee,
     EventReminder,

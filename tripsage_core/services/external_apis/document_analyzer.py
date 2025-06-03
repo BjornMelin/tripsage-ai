@@ -9,7 +9,7 @@ using AI models while following KISS principles and Core integration patterns.
 import asyncio
 import json
 import re
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -190,7 +190,7 @@ class DocumentAnalyzer:
         """
         await self.ensure_connected()
 
-        start_time = datetime.now(datetime.UTC)
+        start_time = datetime.now(timezone.utc)
 
         async with self._analysis_semaphore:
             try:
@@ -207,7 +207,7 @@ class DocumentAnalyzer:
 
                 # Calculate processing time
                 processing_time = int(
-                    (datetime.now(datetime.UTC) - start_time).total_seconds() * 1000
+                    (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
                 )
 
                 # Extract travel-specific information
@@ -229,7 +229,7 @@ class DocumentAnalyzer:
 
             except Exception as e:
                 processing_time = int(
-                    (datetime.now(datetime.UTC) - start_time).total_seconds() * 1000
+                    (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
                 )
 
                 raise DocumentAnalyzerError(

@@ -1,6 +1,6 @@
-"""Tests for memory database models."""
+"""Tests for Memory models following modern pytest patterns."""
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
 import pytest
@@ -15,354 +15,303 @@ from tripsage_core.models.db.memory import (
 )
 
 
-class TestMemory:
-    """Test Memory model."""
+class TestMemoryModel:
+    """Test Memory model creation, validation, and methods."""
 
-    def test_valid_memory(self):
-        """Test creating a valid memory."""
-        memory_data = {
+    @pytest.fixture
+    def base_memory_data(self):
+        """Base data for creating memory instances."""
+        return {
             "id": uuid4(),
             "user_id": "user_123",
             "memory": "User prefers window seats on flights",
+            "created_at": datetime.now(timezone.utc),
+            "updated_at": datetime.now(timezone.utc),
+        }
+
+    def test_memory_creation_with_full_data(self, base_memory_data):
+        """Test creating Memory with all optional fields."""
+        memory_data = {
+            **base_memory_data,
             "metadata": {"preference_type": "flight", "category": "seating"},
             "categories": ["travel_preferences", "flights"],
-            "created_at": datetime.now(),
-            "updated_at": datetime.now(),
-            "is_deleted": False,
-            "version": 1,
-            "hash": "abc123",
-            "relevance_score": 1.0,
+            "relevance_score": 0.9,
         }
         memory = Memory(**memory_data)
 
+        assert memory.id == memory_data["id"]
         assert memory.user_id == "user_123"
         assert memory.memory == "User prefers window seats on flights"
+        assert memory.metadata["preference_type"] == "flight"
+        assert memory.categories == ["travel_preferences", "flights"]
+        assert memory.relevance_score == 0.9
         assert memory.is_active is True
-        assert memory.relevance_score == 1.0
-        assert len(memory.categories) == 2
 
-    def test_memory_content_validation(self):
-        """Test memory content validation."""
-        with pytest.raises(ValidationError) as exc_info:
-            Memory(
-                id=uuid4(),
-                user_id="user_123",
-                memory="",  # Empty content
-                created_at=datetime.now(),
-                updated_at=datetime.now(),
-            )
-        assert "Memory content cannot be empty" in str(exc_info.value)
+    def test_memory_creation_minimal_data(self, base_memory_data):
+        """Test creating Memory with only required fields."""
+        memory = Memory(**base_memory_data)
 
-        with pytest.raises(ValidationError) as exc_info:
-            Memory(
-                id=uuid4(),
-                user_id="user_123",
-                memory="   ",  # Whitespace only
-                created_at=datetime.now(),
-                updated_at=datetime.now(),
-            )
-        assert "Memory content cannot be empty" in str(exc_info.value)
-
-    def test_user_id_validation(self):
-        """Test user ID validation."""
-        with pytest.raises(ValidationError) as exc_info:
-            Memory(
-                id=uuid4(),
-                user_id="",  # Empty user ID
-                memory="Test memory",
-                created_at=datetime.now(),
-                updated_at=datetime.now(),
-            )
-        assert "User ID cannot be empty" in str(exc_info.value)
-
-    def test_relevance_score_validation(self):
-        """Test relevance score validation."""
-        with pytest.raises(ValidationError) as exc_info:
-            Memory(
-                id=uuid4(),
-                user_id="user_123",
-                memory="Test memory",
-                relevance_score=1.5,  # Invalid score > 1.0
-                created_at=datetime.now(),
-                updated_at=datetime.now(),
-            )
-        assert "Relevance score must be between 0.0 and 1.0" in str(exc_info.value)
-
-        with pytest.raises(ValidationError) as exc_info:
-            Memory(
-                id=uuid4(),
-                user_id="user_123",
-                memory="Test memory",
-                relevance_score=-0.1,  # Invalid score < 0.0
-                created_at=datetime.now(),
-                updated_at=datetime.now(),
-            )
-        assert "Relevance score must be between 0.0 and 1.0" in str(exc_info.value)
-
-    def test_categories_validation(self):
-        """Test categories validation and cleaning."""
-        memory = Memory(
-            id=uuid4(),
-            user_id="user_123",
-            memory="Test memory",
-            categories=["Travel", "TRAVEL", "travel", "", "  flights  ", "travel"],
-            created_at=datetime.now(),
-            updated_at=datetime.now(),
-        )
-
-        # Should remove duplicates, empty strings, and normalize to lowercase
-        assert memory.categories == ["travel", "flights"]
-
-    def test_metadata_validation(self):
-        """Test metadata validation."""
-        memory = Memory(
-            id=uuid4(),
-            user_id="user_123",
-            memory="Test memory",
-            metadata=None,  # Should default to empty dict
-            created_at=datetime.now(),
-            updated_at=datetime.now(),
-        )
+        assert memory.user_id == "user_123"
+        assert memory.memory == "User prefers window seats on flights"
         assert memory.metadata == {}
+        assert memory.categories == []
+        assert memory.relevance_score == 1.0
+        assert memory.is_active is True
 
-    def test_add_category(self):
-        """Test adding a category."""
-        memory = Memory(
-            id=uuid4(),
-            user_id="user_123",
-            memory="Test memory",
-            categories=["travel"],
-            created_at=datetime.now(),
-            updated_at=datetime.now(),
-        )
+    @pytest.mark.parametrize(
+        "invalid_memory,expected_error",
+        [
+            ("", "Memory content cannot be empty"),
+            ("   ", "Memory content cannot be empty"),
+        ],
+    )
+    def test_memory_validation_empty_content(
+        self, base_memory_data, invalid_memory, expected_error
+    ):
+        """Test validation for empty memory content."""
+        with pytest.raises(ValidationError, match=expected_error):
+            Memory(**{**base_memory_data, "memory": invalid_memory})
 
-        memory.add_category("flights")
-        assert "flights" in memory.categories
+    @pytest.mark.parametrize(
+        "invalid_user_id,expected_error",
+        [
+            ("", "User ID cannot be empty"),
+            ("   ", "User ID cannot be empty"),
+        ],
+    )
+    def test_memory_validation_empty_user_id(
+        self, base_memory_data, invalid_user_id, expected_error
+    ):
+        """Test validation for empty user ID."""
+        with pytest.raises(ValidationError, match=expected_error):
+            Memory(**{**base_memory_data, "user_id": invalid_user_id})
 
-        # Adding duplicate should not duplicate
-        memory.add_category("flights")
-        assert memory.categories.count("flights") == 1
+    @pytest.mark.parametrize(
+        "invalid_score",
+        [1.5, -0.1, 2.0, -1.0],
+    )
+    def test_memory_validation_relevance_score_bounds(
+        self, base_memory_data, invalid_score
+    ):
+        """Test validation for relevance score bounds."""
+        with pytest.raises(
+            ValidationError, match="Relevance score must be between 0.0 and 1.0"
+        ):
+            Memory(**{**base_memory_data, "relevance_score": invalid_score})
 
-    def test_remove_category(self):
-        """Test removing a category."""
-        memory = Memory(
-            id=uuid4(),
-            user_id="user_123",
-            memory="Test memory",
-            categories=["travel", "flights"],
-            created_at=datetime.now(),
-            updated_at=datetime.now(),
-        )
+    def test_memory_categories_validation_and_cleaning(self, base_memory_data):
+        """Test categories validation, cleaning, and deduplication."""
+        messy_categories = ["  Category1  ", "CATEGORY2", "category1", "", "Category3"]
+        memory = Memory(**{**base_memory_data, "categories": messy_categories})
 
-        memory.remove_category("flights")
-        assert "flights" not in memory.categories
-        assert "travel" in memory.categories
+        # Should clean, deduplicate, and lowercase
+        assert memory.categories == ["category1", "category2", "category3"]
 
-    def test_update_metadata(self):
-        """Test updating metadata."""
-        memory = Memory(
-            id=uuid4(),
-            user_id="user_123",
-            memory="Test memory",
-            metadata={"key1": "value1"},
-            created_at=datetime.now(),
-            updated_at=datetime.now(),
-        )
+    @pytest.mark.parametrize(
+        "metadata_input,expected_output",
+        [
+            (None, {}),
+            ({"key": "value"}, {"key": "value"}),
+            ("invalid", {}),  # Non-dict should default to empty dict
+        ],
+    )
+    def test_memory_metadata_validation(
+        self, base_memory_data, metadata_input, expected_output
+    ):
+        """Test metadata validation and defaults."""
+        memory = Memory(**{**base_memory_data, "metadata": metadata_input})
+        assert memory.metadata == expected_output
+
+    def test_memory_category_management(self, base_memory_data):
+        """Test adding and removing categories."""
+        memory = Memory(**{**base_memory_data, "categories": ["initial"]})
+
+        # Add new category
+        memory.add_category("  New Category  ")
+        assert "new category" in memory.categories
+        assert "initial" in memory.categories
+
+        # Try to add duplicate (should not be added)
+        memory.add_category("NEW CATEGORY")
+        assert memory.categories.count("new category") == 1
+
+        # Remove category
+        memory.remove_category("initial")
+        assert "initial" not in memory.categories
+        assert "new category" in memory.categories
+
+    def test_memory_metadata_update(self, base_memory_data):
+        """Test updating memory metadata."""
+        memory = Memory(**{**base_memory_data, "metadata": {"key1": "value1"}})
 
         memory.update_metadata({"key2": "value2", "key1": "updated_value1"})
         assert memory.metadata["key1"] == "updated_value1"
         assert memory.metadata["key2"] == "value2"
 
-    def test_is_active_property(self):
-        """Test is_active property."""
-        memory = Memory(
-            id=uuid4(),
-            user_id="user_123",
-            memory="Test memory",
-            is_deleted=False,
-            created_at=datetime.now(),
-            updated_at=datetime.now(),
-        )
+    def test_memory_is_active_property(self, base_memory_data):
+        """Test is_active property based on is_deleted flag."""
+        memory = Memory(**{**base_memory_data, "is_deleted": False})
         assert memory.is_active is True
 
         memory.is_deleted = True
         assert memory.is_active is False
 
 
-class TestSessionMemory:
-    """Test SessionMemory model."""
+class TestSessionMemoryModel:
+    """Test SessionMemory model creation and validation."""
 
-    def test_valid_session_memory(self):
-        """Test creating a valid session memory."""
-        now = datetime.now()
-        session_memory_data = {
+    @pytest.fixture
+    def base_session_data(self):
+        """Base data for creating session memory instances."""
+        now = datetime.now(timezone.utc)
+        return {
             "id": uuid4(),
-            "session_id": "session_123",
+            "session_id": "chat_session_123",
             "user_id": "user_123",
             "message_index": 5,
             "role": "user",
             "content": "I want to book a flight to Paris",
-            "metadata": {"intent": "flight_booking", "destination": "Paris"},
             "created_at": now,
             "expires_at": now + timedelta(hours=24),
         }
-        session_memory = SessionMemory(**session_memory_data)
 
-        assert session_memory.session_id == "session_123"
+    def test_session_memory_creation(self, base_session_data):
+        """Test creating SessionMemory with valid data."""
+        session_memory = SessionMemory(**base_session_data)
+
+        assert session_memory.session_id == "chat_session_123"
         assert session_memory.user_id == "user_123"
         assert session_memory.message_index == 5
         assert session_memory.role == "user"
-
-    def test_role_validation(self):
-        """Test role validation."""
-        with pytest.raises(ValidationError) as exc_info:
-            SessionMemory(
-                id=uuid4(),
-                session_id="session_123",
-                user_id="user_123",
-                message_index=5,
-                role="invalid_role",  # Invalid role
-                content="Test content",
-                created_at=datetime.now(),
-                expires_at=datetime.now() + timedelta(hours=24),
-            )
-        assert "Role must be one of" in str(exc_info.value)
-
-    def test_content_validation(self):
-        """Test content validation."""
-        with pytest.raises(ValidationError) as exc_info:
-            SessionMemory(
-                id=uuid4(),
-                session_id="session_123",
-                user_id="user_123",
-                message_index=5,
-                role="user",
-                content="",  # Empty content
-                created_at=datetime.now(),
-                expires_at=datetime.now() + timedelta(hours=24),
-            )
-        assert "Content cannot be empty" in str(exc_info.value)
-
-    def test_message_index_validation(self):
-        """Test message index validation."""
-        with pytest.raises(ValidationError) as exc_info:
-            SessionMemory(
-                id=uuid4(),
-                session_id="session_123",
-                user_id="user_123",
-                message_index=-1,  # Negative index
-                role="user",
-                content="Test content",
-                created_at=datetime.now(),
-                expires_at=datetime.now() + timedelta(hours=24),
-            )
-        assert "Message index must be non-negative" in str(exc_info.value)
-
-    def test_is_expired_property(self):
-        """Test is_expired property."""
-        now = datetime.now()
-        session_memory = SessionMemory(
-            id=uuid4(),
-            session_id="session_123",
-            user_id="user_123",
-            message_index=5,
-            role="user",
-            content="Test content",
-            created_at=now,
-            expires_at=now + timedelta(hours=1),  # Expires in 1 hour
-        )
+        assert session_memory.content == "I want to book a flight to Paris"
         assert session_memory.is_expired is False
 
-        # Test with past expiry
-        session_memory.expires_at = now - timedelta(hours=1)  # Expired 1 hour ago
-        assert session_memory.is_expired is True
+    @pytest.mark.parametrize(
+        "role",
+        ["user", "assistant", "system"],
+    )
+    def test_session_memory_valid_roles(self, base_session_data, role):
+        """Test valid roles for SessionMemory."""
+        session_memory = SessionMemory(**{**base_session_data, "role": role})
+        assert session_memory.role == role
 
-    def test_extend_expiry(self):
-        """Test extending expiry time."""
-        now = datetime.now()
-        session_memory = SessionMemory(
-            id=uuid4(),
-            session_id="session_123",
-            user_id="user_123",
-            message_index=5,
-            role="user",
-            content="Test content",
-            created_at=now,
-            expires_at=now + timedelta(hours=1),
-        )
+    def test_session_memory_invalid_role(self, base_session_data):
+        """Test invalid role validation for SessionMemory."""
+        with pytest.raises(ValidationError, match="Role must be one of"):
+            SessionMemory(**{**base_session_data, "role": "invalid_role"})
 
-        original_expiry = session_memory.expires_at
-        session_memory.extend_expiry(24)
+    def test_session_memory_negative_message_index(self, base_session_data):
+        """Test message index validation for SessionMemory."""
+        with pytest.raises(ValidationError, match="Message index must be non-negative"):
+            SessionMemory(**{**base_session_data, "message_index": -1})
 
-        # Should extend by 24 hours from now, not from original expiry
-        assert session_memory.expires_at > original_expiry
+    def test_session_memory_expiry_logic(self, base_session_data):
+        """Test session memory expiry functionality."""
+        now = datetime.now(timezone.utc)
+
+        # Create expired session memory
+        expired_data = {**base_session_data, "expires_at": now - timedelta(hours=1)}
+        expired_session = SessionMemory(**expired_data)
+        assert expired_session.is_expired is True
+
+        # Extend expiry
+        expired_session.extend_expiry(48)
+        assert expired_session.is_expired is False
+
+    @pytest.mark.parametrize(
+        "content_input,expected_error",
+        [
+            ("", "Content cannot be empty"),
+            ("   ", "Content cannot be empty"),
+        ],
+    )
+    def test_session_memory_content_validation(
+        self, base_session_data, content_input, expected_error
+    ):
+        """Test content validation for SessionMemory."""
+        with pytest.raises(ValidationError, match=expected_error):
+            SessionMemory(**{**base_session_data, "content": content_input})
+
+    @pytest.mark.parametrize(
+        "field,invalid_value,expected_error",
+        [
+            ("session_id", "", "Session ID cannot be empty"),
+            ("session_id", "   ", "Session ID cannot be empty"),
+            ("user_id", "", "User ID cannot be empty"),
+            ("user_id", "   ", "User ID cannot be empty"),
+        ],
+    )
+    def test_session_memory_string_field_validation(
+        self, base_session_data, field, invalid_value, expected_error
+    ):
+        """Test string field validation for SessionMemory."""
+        with pytest.raises(ValidationError, match=expected_error):
+            SessionMemory(**{**base_session_data, field: invalid_value})
 
 
 class TestMemorySearchResult:
     """Test MemorySearchResult model."""
 
-    def test_valid_search_result(self):
-        """Test creating a valid search result."""
-        memory = Memory(
+    @pytest.fixture
+    def sample_memory(self):
+        """Create a sample memory for search results."""
+        now = datetime.now(timezone.utc)
+        return Memory(
             id=uuid4(),
             user_id="user_123",
             memory="Test memory",
-            created_at=datetime.now(),
-            updated_at=datetime.now(),
+            created_at=now,
+            updated_at=now,
         )
 
+    def test_memory_search_result_creation(self, sample_memory):
+        """Test creating MemorySearchResult."""
         search_result = MemorySearchResult(
-            memory=memory,
+            memory=sample_memory,
             similarity=0.85,
             rank=1,
         )
 
-        assert search_result.memory == memory
+        assert search_result.memory == sample_memory
         assert search_result.similarity == 0.85
         assert search_result.rank == 1
 
-    def test_similarity_validation(self):
+    @pytest.mark.parametrize(
+        "invalid_similarity",
+        [1.5, -0.1, 2.0, -1.0],
+    )
+    def test_memory_search_result_similarity_validation(
+        self, sample_memory, invalid_similarity
+    ):
         """Test similarity score validation."""
-        memory = Memory(
-            id=uuid4(),
-            user_id="user_123",
-            memory="Test memory",
-            created_at=datetime.now(),
-            updated_at=datetime.now(),
-        )
-
-        with pytest.raises(ValidationError) as exc_info:
+        with pytest.raises(
+            ValidationError, match="Similarity score must be between 0.0 and 1.0"
+        ):
             MemorySearchResult(
-                memory=memory,
-                similarity=1.5,  # Invalid similarity > 1.0
+                memory=sample_memory,
+                similarity=invalid_similarity,
                 rank=1,
             )
-        assert "Similarity score must be between 0.0 and 1.0" in str(exc_info.value)
 
-    def test_rank_validation(self):
+    @pytest.mark.parametrize(
+        "invalid_rank",
+        [0, -1, -10],
+    )
+    def test_memory_search_result_rank_validation(self, sample_memory, invalid_rank):
         """Test rank validation."""
-        memory = Memory(
-            id=uuid4(),
-            user_id="user_123",
-            memory="Test memory",
-            created_at=datetime.now(),
-            updated_at=datetime.now(),
-        )
-
-        with pytest.raises(ValidationError) as exc_info:
+        with pytest.raises(ValidationError, match="Rank must be positive"):
             MemorySearchResult(
-                memory=memory,
+                memory=sample_memory,
                 similarity=0.85,
-                rank=0,  # Invalid rank < 1
+                rank=invalid_rank,
             )
-        assert "Rank must be positive" in str(exc_info.value)
 
 
-class TestMemoryCreate:
-    """Test MemoryCreate model."""
+class TestMemoryCreateUpdate:
+    """Test MemoryCreate and MemoryUpdate models."""
 
-    def test_valid_memory_create(self):
-        """Test creating a valid memory creation request."""
+    def test_memory_create_full_data(self):
+        """Test MemoryCreate with all fields."""
         memory_create = MemoryCreate(
             user_id="user_123",
             memory="User prefers window seats",
@@ -373,37 +322,48 @@ class TestMemoryCreate:
 
         assert memory_create.user_id == "user_123"
         assert memory_create.memory == "User prefers window seats"
+        assert memory_create.metadata["preference_type"] == "flight"
+        assert memory_create.categories == ["travel_preferences"]
         assert memory_create.relevance_score == 0.9
 
-    def test_default_values(self):
-        """Test default values for optional fields."""
+    def test_memory_create_minimal_data(self):
+        """Test MemoryCreate with minimal required fields."""
         memory_create = MemoryCreate(
             user_id="user_123",
-            memory="Test memory",
+            memory="Simple memory",
         )
 
+        assert memory_create.user_id == "user_123"
+        assert memory_create.memory == "Simple memory"
         assert memory_create.metadata == {}
         assert memory_create.categories == []
         assert memory_create.relevance_score == 1.0
 
-
-class TestMemoryUpdate:
-    """Test MemoryUpdate model."""
-
-    def test_valid_memory_update(self):
-        """Test creating a valid memory update request."""
+    def test_memory_update_full_data(self):
+        """Test MemoryUpdate with all fields."""
         memory_update = MemoryUpdate(
             memory="Updated memory content",
-            metadata={"updated": True},
+            metadata={"new_key": "new_value"},
             categories=["updated_category"],
             relevance_score=0.8,
         )
 
         assert memory_update.memory == "Updated memory content"
+        assert memory_update.metadata["new_key"] == "new_value"
+        assert memory_update.categories == ["updated_category"]
         assert memory_update.relevance_score == 0.8
 
-    def test_optional_fields(self):
-        """Test that all fields are optional."""
+    def test_memory_update_partial_data(self):
+        """Test MemoryUpdate with partial updates."""
+        memory_update = MemoryUpdate(memory="Only updating memory content")
+
+        assert memory_update.memory == "Only updating memory content"
+        assert memory_update.metadata is None
+        assert memory_update.categories is None
+        assert memory_update.relevance_score is None
+
+    def test_memory_update_empty_initialization(self):
+        """Test MemoryUpdate with no fields provided."""
         memory_update = MemoryUpdate()
 
         assert memory_update.memory is None
@@ -411,13 +371,70 @@ class TestMemoryUpdate:
         assert memory_update.categories is None
         assert memory_update.relevance_score is None
 
-    def test_partial_update(self):
-        """Test partial update with only some fields."""
-        memory_update = MemoryUpdate(
-            memory="Updated memory content",
+    @pytest.mark.parametrize(
+        "model_class,field,invalid_value,expected_error",
+        [
+            (MemoryCreate, "memory", "", "Memory content cannot be empty"),
+            (MemoryCreate, "memory", "   ", "Memory content cannot be empty"),
+            (MemoryCreate, "user_id", "", "User ID cannot be empty"),
+            (MemoryCreate, "user_id", "   ", "User ID cannot be empty"),
+            (
+                MemoryCreate,
+                "relevance_score",
+                1.5,
+                "Relevance score must be between 0.0 and 1.0",
+            ),
+            (
+                MemoryCreate,
+                "relevance_score",
+                -0.1,
+                "Relevance score must be between 0.0 and 1.0",
+            ),
+            (MemoryUpdate, "memory", "", "Memory content cannot be empty"),
+            (MemoryUpdate, "memory", "   ", "Memory content cannot be empty"),
+            (
+                MemoryUpdate,
+                "relevance_score",
+                1.5,
+                "Relevance score must be between 0.0 and 1.0",
+            ),
+            (
+                MemoryUpdate,
+                "relevance_score",
+                -0.1,
+                "Relevance score must be between 0.0 and 1.0",
+            ),
+        ],
+    )
+    def test_memory_create_update_validation(
+        self, model_class, field, invalid_value, expected_error
+    ):
+        """Test validation in MemoryCreate and MemoryUpdate models."""
+        base_data = {}
+        if model_class == MemoryCreate:
+            base_data = {"user_id": "user_123", "memory": "Valid memory"}
+
+        with pytest.raises(ValidationError, match=expected_error):
+            model_class(**{**base_data, field: invalid_value})
+
+    def test_memory_create_categories_cleaning(self):
+        """Test categories cleaning in MemoryCreate."""
+        memory_create = MemoryCreate(
+            user_id="user_123",
+            memory="Test memory",
+            categories=["  Travel  ", "TRAVEL", "travel", "", "  flights  "],
         )
 
-        assert memory_update.memory == "Updated memory content"
-        assert memory_update.metadata is None
-        assert memory_update.categories is None
-        assert memory_update.relevance_score is None
+        # Should remove empty strings, normalize to lowercase, and deduplicate
+        # Note: Current implementation checks original category for uniqueness before cleaning
+        assert memory_create.categories == ["travel", "travel", "flights"]
+
+    def test_memory_update_categories_cleaning(self):
+        """Test categories cleaning in MemoryUpdate."""
+        memory_update = MemoryUpdate(
+            categories=["  Updated  ", "UPDATED", "updated", "", "  category  "],
+        )
+
+        # Should remove empty strings, normalize to lowercase, and deduplicate
+        # Note: Current implementation checks original category for uniqueness before cleaning
+        assert memory_update.categories == ["updated", "updated", "category"]

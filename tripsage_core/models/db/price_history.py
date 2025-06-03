@@ -38,13 +38,22 @@ class PriceHistory(TripSageModel):
     entity_id: int = Field(..., description="ID of the entity this price is for")
     timestamp: datetime = Field(..., description="When the price was recorded")
     price: float = Field(..., description="The price value in default currency")
+    currency: str = Field("USD", description="Currency code for the price")
 
     @field_validator("price")
     @classmethod
     def validate_price(cls, v: float) -> float:
         """Validate that price is a positive number."""
-        if v < 0:
-            raise ValueError("Price must be non-negative")
+        if v <= 0:
+            raise ValueError("ensure this value is greater than 0")
+        return v
+
+    @field_validator("currency")
+    @classmethod
+    def validate_currency(cls, v: str) -> str:
+        """Validate currency code format."""
+        if not isinstance(v, str) or len(v) != 3 or not v.isupper():
+            raise ValueError("Currency code must be a 3-letter code")
         return v
 
     @property
@@ -63,7 +72,26 @@ class PriceHistory(TripSageModel):
     @property
     def formatted_price(self) -> str:
         """Get the formatted price with currency symbol."""
-        return f"${self.price:.2f}"
+        # Currency symbol mapping
+        currency_symbols = {
+            "USD": "$",
+            "EUR": "€",
+            "GBP": "£",
+            "JPY": "¥",
+            "AUD": "A$",
+            "CAD": "C$",
+            "CHF": "CHF",
+            "CNY": "¥",
+        }
+
+        symbol = currency_symbols.get(self.currency, self.currency)
+
+        # JPY doesn't use decimal places
+        if self.currency == "JPY":
+            return f"{symbol}{self.price:,.0f}"
+
+        # Default formatting with 2 decimal places
+        return f"{symbol}{self.price:,.2f}"
 
     @property
     def is_flight_price(self) -> bool:

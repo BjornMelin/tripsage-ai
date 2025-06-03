@@ -8,7 +8,7 @@ import httpx
 import pytest
 from pydantic import ValidationError
 
-from tripsage.models.api.flights_models import (
+from tripsage_core.models.api.flights_models import (
     Airline,
     CabinClass,
     FlightOffer,
