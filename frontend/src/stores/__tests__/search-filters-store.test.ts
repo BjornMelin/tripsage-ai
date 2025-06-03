@@ -1,7 +1,11 @@
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useSearchFiltersStore } from "../search-filters-store";
-import type { FilterValue, ValidatedFilterOption, ValidatedSortOption } from "../search-filters-store";
+import type {
+  FilterValue,
+  ValidatedFilterOption,
+  ValidatedSortOption,
+} from "../search-filters-store";
 
 describe("Search Filters Store", () => {
   beforeEach(() => {
@@ -414,7 +418,10 @@ describe("Search Filters Store", () => {
       const filterValue: FilterValue = { min: 100, max: 500 };
 
       await act(async () => {
-        const success = await result.current.setActiveFilter("price_range", filterValue);
+        const success = await result.current.setActiveFilter(
+          "price_range",
+          filterValue
+        );
         expect(success).toBe(true);
       });
 
@@ -457,11 +464,17 @@ describe("Search Filters Store", () => {
 
       // Update filter
       await act(async () => {
-        const success = await result.current.updateActiveFilter("price_range", { min: 200, max: 800 });
+        const success = await result.current.updateActiveFilter("price_range", {
+          min: 200,
+          max: 800,
+        });
         expect(success).toBe(true);
       });
 
-      expect(result.current.activeFilters["price_range"].value).toEqual({ min: 200, max: 800 });
+      expect(result.current.activeFilters["price_range"].value).toEqual({
+        min: 200,
+        max: 800,
+      });
     });
 
     it("clears all filters", () => {
@@ -676,7 +689,10 @@ describe("Search Filters Store", () => {
     it("validates filter value successfully", async () => {
       const { result } = renderHook(() => useSearchFiltersStore());
 
-      const isValid = await result.current.validateFilter("price_range", { min: 100, max: 500 });
+      const isValid = await result.current.validateFilter("price_range", {
+        min: 100,
+        max: 500,
+      });
       expect(isValid).toBe(true);
       expect(result.current.filterValidationErrors["price_range"]).toBeUndefined();
     });
@@ -687,18 +703,26 @@ describe("Search Filters Store", () => {
       // Test empty value for required field
       const isValid = await result.current.validateFilter("required_field", "");
       expect(isValid).toBe(false);
-      expect(result.current.filterValidationErrors["required_field"]).toBe("This filter is required");
+      expect(result.current.filterValidationErrors["required_field"]).toBe(
+        "This filter is required"
+      );
     });
 
     it("validates numeric range constraints", async () => {
       const { result } = renderHook(() => useSearchFiltersStore());
 
       // Test value below minimum
-      const isValidMin = await result.current.validateFilter("price_range", { min: -10, max: 500 });
+      const isValidMin = await result.current.validateFilter("price_range", {
+        min: -10,
+        max: 500,
+      });
       expect(isValidMin).toBe(false);
 
       // Test value above maximum
-      const isValidMax = await result.current.validateFilter("price_range", { min: 100, max: 15000 });
+      const isValidMax = await result.current.validateFilter("price_range", {
+        min: 100,
+        max: 15000,
+      });
       expect(isValidMax).toBe(false);
     });
 
@@ -730,7 +754,7 @@ describe("Search Filters Store", () => {
       const { result } = renderHook(() => useSearchFiltersStore());
 
       await result.current.validateFilter("required_field", "");
-      
+
       const error = result.current.getFilterValidationError("required_field");
       expect(error).toBe("This filter is required");
     });
@@ -792,7 +816,10 @@ describe("Search Filters Store", () => {
     it("saves filter preset", async () => {
       const { result } = renderHook(() => useSearchFiltersStore());
 
-      const presetId = await result.current.saveFilterPreset("Budget Flights", "Flights under $500");
+      const presetId = await result.current.saveFilterPreset(
+        "Budget Flights",
+        "Flights under $500"
+      );
       expect(presetId).toBeTruthy();
       expect(result.current.filterPresets).toHaveLength(1);
 
@@ -808,7 +835,7 @@ describe("Search Filters Store", () => {
 
       // Save a preset first
       const presetId = await result.current.saveFilterPreset("Budget Flights");
-      
+
       // Clear current filters
       act(() => {
         result.current.clearAllFilters();
@@ -827,15 +854,15 @@ describe("Search Filters Store", () => {
       const { result } = renderHook(() => useSearchFiltersStore());
 
       const presetId = await result.current.saveFilterPreset("Budget Flights");
-      
+
       const success = await result.current.updateFilterPreset(presetId!, {
         name: "Cheap Flights",
         description: "Updated description",
       });
 
       expect(success).toBe(true);
-      
-      const updatedPreset = result.current.filterPresets.find(p => p.id === presetId);
+
+      const updatedPreset = result.current.filterPresets.find((p) => p.id === presetId);
       expect(updatedPreset?.name).toBe("Cheap Flights");
       expect(updatedPreset?.description).toBe("Updated description");
     });
@@ -857,7 +884,7 @@ describe("Search Filters Store", () => {
       const { result } = renderHook(() => useSearchFiltersStore());
 
       const originalPresetId = await result.current.saveFilterPreset("Budget Flights");
-      
+
       const duplicatedPresetId = await result.current.duplicateFilterPreset(
         originalPresetId!,
         "Budget Flights Copy"
@@ -866,7 +893,9 @@ describe("Search Filters Store", () => {
       expect(duplicatedPresetId).toBeTruthy();
       expect(result.current.filterPresets).toHaveLength(2);
 
-      const duplicatedPreset = result.current.filterPresets.find(p => p.id === duplicatedPresetId);
+      const duplicatedPreset = result.current.filterPresets.find(
+        (p) => p.id === duplicatedPresetId
+      );
       expect(duplicatedPreset?.name).toBe("Budget Flights Copy");
       expect(duplicatedPreset?.usageCount).toBe(0);
     });
@@ -875,15 +904,17 @@ describe("Search Filters Store", () => {
       const { result } = renderHook(() => useSearchFiltersStore());
 
       const presetId = await result.current.saveFilterPreset("Budget Flights");
-      
-      const originalPreset = result.current.filterPresets.find(p => p.id === presetId);
+
+      const originalPreset = result.current.filterPresets.find(
+        (p) => p.id === presetId
+      );
       expect(originalPreset?.usageCount).toBe(0);
 
       act(() => {
         result.current.incrementPresetUsage(presetId!);
       });
 
-      const updatedPreset = result.current.filterPresets.find(p => p.id === presetId);
+      const updatedPreset = result.current.filterPresets.find((p) => p.id === presetId);
       expect(updatedPreset?.usageCount).toBe(1);
     });
   });
@@ -903,15 +934,17 @@ describe("Search Filters Store", () => {
             },
           },
           currentSearchType: "flight",
-          filterPresets: [{
-            id: "preset-1",
-            name: "Test Preset",
-            searchType: "flight",
-            filters: [],
-            isBuiltIn: false,
-            createdAt: new Date().toISOString(),
-            usageCount: 0,
-          }],
+          filterPresets: [
+            {
+              id: "preset-1",
+              name: "Test Preset",
+              searchType: "flight",
+              filters: [],
+              isBuiltIn: false,
+              createdAt: new Date().toISOString(),
+              usageCount: 0,
+            },
+          ],
         });
       });
 

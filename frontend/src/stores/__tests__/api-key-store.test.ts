@@ -108,7 +108,7 @@ describe("API Key Store", () => {
         result.current.setAuthenticated(true, "user-123", "mock-token");
         result.current.setApiKeyValid(true);
         result.current.setKeys({
-          "openai": {
+          openai: {
             id: "key-1",
             service: "openai",
             api_key: "sk-test123",
@@ -174,7 +174,7 @@ describe("API Key Store", () => {
       const { result } = renderHook(() => useApiKeyStore());
 
       const mockKeys: Record<string, ApiKey> = {
-        "openai": {
+        openai: {
           id: "key-1",
           service: "openai",
           api_key: "sk-test123",
@@ -182,7 +182,7 @@ describe("API Key Store", () => {
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         },
-        "anthropic": {
+        anthropic: {
           id: "key-2",
           service: "anthropic",
           api_key: "cl-test456",
@@ -248,7 +248,7 @@ describe("API Key Store", () => {
       const { result } = renderHook(() => useApiKeyStore());
 
       const mockKeys: Record<string, ApiKey> = {
-        "openai": {
+        openai: {
           id: "key-1",
           service: "openai",
           api_key: "sk-test123",
@@ -256,7 +256,7 @@ describe("API Key Store", () => {
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         },
-        "anthropic": {
+        anthropic: {
           id: "key-2",
           service: "anthropic",
           api_key: "cl-test456",
@@ -302,7 +302,7 @@ describe("API Key Store", () => {
           isAuthenticated: true,
           token: "mock-token",
           keys: {
-            "openai": {
+            openai: {
               id: "key-1",
               service: "openai",
               api_key: "sk-test123",
@@ -340,7 +340,7 @@ describe("API Key Store", () => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": "Bearer mock-token",
+          Authorization: "Bearer mock-token",
         },
         body: JSON.stringify({
           service: "openai",
@@ -452,7 +452,7 @@ describe("API Key Store", () => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": "Bearer mock-token",
+          Authorization: "Bearer mock-token",
         },
         body: JSON.stringify({
           service: "openai",
@@ -509,7 +509,7 @@ describe("API Key Store", () => {
 
       const mockResponse = {
         keys: {
-          "openai": {
+          openai: {
             id: "key-1",
             service: "openai",
             api_key: "sk-loaded123",
@@ -535,7 +535,7 @@ describe("API Key Store", () => {
 
       expect(global.fetch).toHaveBeenCalledWith("/api/keys", {
         headers: {
-          "Authorization": "Bearer mock-token",
+          Authorization: "Bearer mock-token",
         },
       });
     });
@@ -604,7 +604,7 @@ describe("API Key Store", () => {
           isAuthenticated: true,
           token: "mock-token",
           keys: {
-            "openai": {
+            openai: {
               id: "key-1",
               service: "openai",
               api_key: "sk-test123",
