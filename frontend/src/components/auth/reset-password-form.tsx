@@ -11,87 +11,70 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { resetPasswordAction } from "@/lib/auth/server-actions";
 import { AlertCircle, ArrowLeft, CheckCircle2, Loader2, Mail } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import React, { useActionState, useOptimistic, startTransition } from "react";
+import React from "react";
 
 interface ResetPasswordFormProps {
   className?: string;
 }
 
-interface ResetPasswordState {
-  isSubmitting: boolean;
-  isSuccess: boolean;
-  error: string | null;
-  message: string | null;
-}
-
 export function ResetPasswordForm({ className }: ResetPasswordFormProps) {
   const router = useRouter();
   const [email, setEmail] = React.useState("");
+  const [isLoading, setIsLoading] = React.useState(false);
+  const [isSuccess, setIsSuccess] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+  const [message, setMessage] = React.useState<string | null>(null);
 
-  // React 19 useActionState for form handling
-  const [state, formAction, isPending] = useActionState(resetPasswordAction, {
-    success: false,
-    error: null,
-    message: null,
-  });
+  // Handle form submission
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
 
-  // React 19 optimistic updates for better UX
-  const [optimisticState, setOptimisticState] = useOptimistic<ResetPasswordState>(
-    {
-      isSubmitting: isPending,
-      isSuccess: state.success || false,
-      error: state.error || null,
-      message: state.message || null,
-    },
-    (currentState, optimisticValue: Partial<ResetPasswordState>) => ({
-      ...currentState,
-      ...optimisticValue,
-    })
-  );
+    if (!email.trim()) {
+      setError("Email address is required");
+      return;
+    }
 
-  // Handle form submission with optimistic updates
-  const handleSubmit = async (formData: FormData) => {
-    // Optimistically clear any existing errors and set submitting state
-    setOptimisticState({
-      error: null,
-      isSubmitting: true,
-      message: null,
-    });
+    setIsLoading(true);
+    setError(null);
+    setMessage(null);
 
-    startTransition(async () => {
-      const result = await formAction(formData);
+    try {
+      // Mock reset password functionality for now
+      await new Promise((resolve) => setTimeout(resolve, 1000));
 
-      if (result.success) {
-        // Optimistically set success state
-        setOptimisticState({
-          isSuccess: true,
-          error: null,
-          message: result.message || "Password reset instructions sent!",
-          isSubmitting: false,
-        });
-      } else {
-        setOptimisticState({
-          isSubmitting: false,
-          error: result.error || "Failed to send reset instructions",
+      // Simulate success
+      setIsSuccess(true);
+      setMessage("Password reset instructions have been sent to your email");
+
+      // Log mock email for development
+      if (process.env.NODE_ENV === "development") {
+        console.log("Mock Password Reset Email:", {
+          to: email,
+          subject: "Password Reset Instructions",
+          message:
+            "Click the link below to reset your password: http://localhost:3000/reset-password/mock-token",
         });
       }
-    });
+    } catch (err) {
+      setError("Failed to send reset instructions. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // Auto-redirect to login after successful reset
   React.useEffect(() => {
-    if (state.success) {
+    if (isSuccess) {
       const timer = setTimeout(() => {
         router.push("/login");
       }, 5000); // Redirect after 5 seconds
 
       return () => clearTimeout(timer);
     }
-  }, [state.success, router]);
+  }, [isSuccess, router]);
 
   return (
     <Card className={className}>
@@ -101,20 +84,18 @@ export function ResetPasswordForm({ className }: ResetPasswordFormProps) {
           <CardTitle className="text-2xl">Reset your password</CardTitle>
         </div>
         <CardDescription className="text-center">
-          Enter your email address and we'll send you instructions to reset your
+          Enter your email address and we&apos;ll send you instructions to reset your
           password
         </CardDescription>
       </CardHeader>
       <CardContent>
-        {!optimisticState.isSuccess ? (
-          <form action={handleSubmit} className="space-y-4">
+        {!isSuccess ? (
+          <form onSubmit={handleSubmit} className="space-y-4">
             {/* Error Alert */}
-            {(optimisticState.error || state.error) && (
+            {error && (
               <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />
-                <AlertDescription>
-                  {optimisticState.error || state.error}
-                </AlertDescription>
+                <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
 
@@ -128,19 +109,19 @@ export function ResetPasswordForm({ className }: ResetPasswordFormProps) {
                 placeholder="john@example.com"
                 required
                 autoComplete="email"
-                disabled={isPending}
+                disabled={isLoading}
                 className="w-full"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
               />
               <p className="text-xs text-muted-foreground">
-                We'll send password reset instructions to this email address
+                We&apos;ll send password reset instructions to this email address
               </p>
             </div>
 
             {/* Submit Button */}
-            <Button type="submit" className="w-full" disabled={isPending || !email}>
-              {isPending ? (
+            <Button type="submit" className="w-full" disabled={isLoading || !email}>
+              {isLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Sending instructions...
@@ -167,9 +148,7 @@ export function ResetPasswordForm({ className }: ResetPasswordFormProps) {
             <Alert className="border-green-200 bg-green-50">
               <CheckCircle2 className="h-4 w-4 text-green-600" />
               <AlertDescription className="text-green-800">
-                {optimisticState.message ||
-                  state.message ||
-                  "Password reset instructions have been sent to your email"}
+                {message || "Password reset instructions have been sent to your email"}
               </AlertDescription>
             </Alert>
 
@@ -178,7 +157,7 @@ export function ResetPasswordForm({ className }: ResetPasswordFormProps) {
                 Check your email inbox for instructions on how to reset your password.
               </p>
               <p className="text-sm text-muted-foreground">
-                If you don't see the email, check your spam folder.
+                If you don&apos;t see the email, check your spam folder.
               </p>
               <p className="text-xs text-muted-foreground">
                 Redirecting to login in 5 seconds...
@@ -199,15 +178,13 @@ export function ResetPasswordForm({ className }: ResetPasswordFormProps) {
               <button
                 type="button"
                 onClick={() => {
-                  setOptimisticState({
-                    isSuccess: false,
-                    message: null,
-                    error: null,
-                  });
+                  setIsSuccess(false);
+                  setMessage(null);
+                  setError(null);
                 }}
                 className="text-sm text-primary hover:underline"
               >
-                Didn't receive the email? Try again
+                Didn&apos;t receive the email? Try again
               </button>
             </div>
           </div>

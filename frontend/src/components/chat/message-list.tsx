@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useCallback } from "react";
+import type { OptimisticChatMessage } from "@/hooks/use-optimistic-chat";
 import { cn } from "@/lib/utils";
+import { useCallback, useEffect, useRef } from "react";
+import { ConnectionStatus } from "./connection-status";
 import { MessageItem } from "./message-item";
 import { TypingIndicator } from "./typing-indicator";
-import { ConnectionStatus } from "./connection-status";
-import type { OptimisticChatMessage } from "@/hooks/use-optimistic-chat";
 
 export interface MessageListProps {
   messages: OptimisticChatMessage[];

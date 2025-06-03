@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useTransition, useOptimistic } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Progress } from "@/components/ui/progress";
 import {
   Select,
   SelectContent,
@@ -12,23 +13,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
+import type { FlightSearchParams } from "@/types/search";
 import {
-  Plane,
-  Calendar,
-  Users,
-  MapPin,
   ArrowRight,
+  Calendar,
+  Clock,
+  Loader2,
+  MapPin,
+  Plane,
+  Search,
   Sparkles,
   TrendingDown,
-  Clock,
-  Search,
-  Loader2,
+  Users,
 } from "lucide-react";
-import type { FlightSearchParams } from "@/types/search";
+import { useOptimistic, useState, useTransition } from "react";
 
 // React 19 optimistic update types
 interface ModernFlightSearchParams {

@@ -44,16 +44,14 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
     // Custom error handler
     if (this.props.onError) {
       this.props.onError(error, {
-        componentStack: errorInfo.componentStack,
-        errorBoundary: errorInfo.errorBoundary,
-        errorBoundaryStack: errorInfo.errorBoundaryStack,
+        componentStack: errorInfo.componentStack ?? "",
       });
     }
 
     // Report error to service
     const errorReport = errorService.createErrorReport(
       error,
-      { componentStack: errorInfo.componentStack },
+      { componentStack: errorInfo.componentStack ?? undefined },
       {
         userId: this.getUserId(),
         sessionId: this.getSessionId(),

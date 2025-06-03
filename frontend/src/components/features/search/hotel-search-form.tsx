@@ -1,10 +1,12 @@
 "use client";
 
-import { useState, useTransition, useOptimistic } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Progress } from "@/components/ui/progress";
 import {
   Select,
   SelectContent,
@@ -12,29 +14,27 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
-import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
+import type { AccommodationSearchParams } from "@/types/search";
 import {
+  Bed,
   Building2,
   Calendar,
-  Users,
-  MapPin,
-  Star,
-  Wifi,
-  Coffee,
   Car,
+  Coffee,
   Dumbbell,
-  Utensils,
-  Sparkles,
-  TrendingUp,
-  Search,
   Loader2,
-  Bed,
+  MapPin,
+  Search,
+  Sparkles,
+  Star,
+  TrendingUp,
+  Users,
+  Utensils,
+  Wifi,
 } from "lucide-react";
-import type { AccommodationSearchParams } from "@/types/search";
+import { useOptimistic, useState, useTransition } from "react";
 
 // React 19 optimistic update types for hotel search
 interface ModernHotelSearchParams {

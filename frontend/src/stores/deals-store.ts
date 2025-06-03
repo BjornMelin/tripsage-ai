@@ -106,7 +106,7 @@ const calculateDealsStats = (deals: Deal[]): DealStats => {
   let totalDiscountPercentage = 0;
   let dealsWithDiscount = 0;
 
-  deals.forEach((deal) => {
+  for (const deal of deals) {
     // Count by type
     byType[deal.type] = (byType[deal.type] || 0) + 1;
 
@@ -127,7 +127,7 @@ const calculateDealsStats = (deals: Deal[]): DealStats => {
       totalDiscountPercentage += discount;
       dealsWithDiscount++;
     }
-  });
+  }
 
   // Calculate averages
   const avgSavings = dealsWithSavings > 0 ? totalSavings / dealsWithSavings : 0;
@@ -254,31 +254,32 @@ export const useDealsStore = create<DealsStore>()(
         return false;
       },
 
-      updateDeal: (id, updates) =>
-        set((state) => {
-          const existingDeal = state.deals[id];
-          if (!existingDeal) return state;
+      updateDeal: (id, updates) => {
+        const state = get();
+        const existingDeal = state.deals[id];
+        if (!existingDeal) return false;
 
-          const updatedDeal = {
-            ...existingDeal,
-            ...updates,
-            updatedAt: getCurrentTimestamp(),
-          };
+        const updatedDeal = {
+          ...existingDeal,
+          ...updates,
+          updatedAt: getCurrentTimestamp(),
+        };
 
-          const result = DealSchema.safeParse(updatedDeal);
-          if (!result.success) {
-            console.error("Invalid deal update:", result.error);
-            return state;
-          }
+        const result = DealSchema.safeParse(updatedDeal);
+        if (!result.success) {
+          console.error("Invalid deal update:", result.error);
+          return false;
+        }
 
-          return {
-            deals: {
-              ...state.deals,
-              [id]: updatedDeal,
-            },
-            lastUpdated: getCurrentTimestamp(),
-          };
-        }),
+        set({
+          deals: {
+            ...state.deals,
+            [id]: updatedDeal,
+          },
+          lastUpdated: getCurrentTimestamp(),
+        });
+        return true;
+      },
 
       removeDeal: (id) =>
         set((state) => {
@@ -346,31 +347,32 @@ export const useDealsStore = create<DealsStore>()(
         return false;
       },
 
-      updateAlert: (id, updates) =>
-        set((state) => {
-          const alertIndex = state.alerts.findIndex((alert) => alert.id === id);
-          if (alertIndex === -1) return state;
+      updateAlert: (id, updates) => {
+        const state = get();
+        const alertIndex = state.alerts.findIndex((alert) => alert.id === id);
+        if (alertIndex === -1) return false;
 
-          const existingAlert = state.alerts[alertIndex];
-          const updatedAlert = {
-            ...existingAlert,
-            ...updates,
-            updatedAt: getCurrentTimestamp(),
-          };
+        const existingAlert = state.alerts[alertIndex];
+        const updatedAlert = {
+          ...existingAlert,
+          ...updates,
+          updatedAt: getCurrentTimestamp(),
+        };
 
-          const result = DealAlertSchema.safeParse(updatedAlert);
-          if (!result.success) {
-            console.error("Invalid alert update:", result.error);
-            return state;
-          }
+        const result = DealAlertSchema.safeParse(updatedAlert);
+        if (!result.success) {
+          console.error("Invalid alert update:", result.error);
+          return false;
+        }
 
-          const newAlerts = [...state.alerts];
-          newAlerts[alertIndex] = updatedAlert;
+        const newAlerts = [...state.alerts];
+        newAlerts[alertIndex] = updatedAlert;
 
-          return {
-            alerts: newAlerts,
-          };
-        }),
+        set({
+          alerts: newAlerts,
+        });
+        return true;
+      },
 
       removeAlert: (id) =>
         set((state) => ({

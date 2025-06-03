@@ -1,29 +1,29 @@
 "use client";
 
-import { useState, useTransition } from "react";
 import { FlightSearchForm } from "@/components/features/search/flight-search-form";
 import { HotelSearchForm } from "@/components/features/search/hotel-search-form";
 import { ModernFlightResults } from "@/components/features/search/modern-flight-results";
 import { ModernHotelResults } from "@/components/features/search/modern-hotel-results";
 import { SearchLayout } from "@/components/layouts/search-layout";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import {
-  Plane,
   Building2,
   Calendar,
-  MapPin,
-  Users,
-  Sparkles,
-  TrendingUp,
-  Zap,
-  Star,
   Clock,
+  MapPin,
+  Plane,
+  Sparkles,
+  Star,
+  TrendingUp,
+  Users,
+  Zap,
 } from "lucide-react";
+import { useState, useTransition } from "react";
 
 // Mock data for demo purposes
 const mockFlightResults = [

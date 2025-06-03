@@ -1,7 +1,8 @@
 "use client";
 
-import React from "react";
 import { SearchLayout } from "@/components/layouts/search-layout";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -9,12 +10,11 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { useSearchResultsStore } from "@/stores/search-store";
+import { ArrowRight, Clock, DollarSign, Filter, MapPin, Plane } from "lucide-react";
 import { useSearchParams } from "next/navigation";
-import { Plane, Clock, MapPin, DollarSign, Filter, ArrowRight } from "lucide-react";
+import React from "react";
 
 export default function FlightResultsPage() {
   const searchParams = useSearchParams();
@@ -91,14 +91,17 @@ export default function FlightResultsPage() {
             <CardContent>
               <div className="flex flex-wrap gap-2">
                 <Badge variant="outline">
-                  {currentContext.searchParams?.passengers || 1} passenger
-                  {currentContext.searchParams?.passengers > 1 ? "s" : ""}
+                  {(() => {
+                    const passengers =
+                      Number(currentContext.searchParams?.passengers) || 1;
+                    return `${passengers} passenger${passengers > 1 ? "s" : ""}`;
+                  })()}
                 </Badge>
                 <Badge variant="outline">
-                  {currentContext.searchParams?.class || "Economy"}
+                  {String(currentContext.searchParams?.class || "Economy")}
                 </Badge>
                 <Badge variant="outline">
-                  {currentContext.searchParams?.tripType || "Round trip"}
+                  {String(currentContext.searchParams?.tripType || "Round trip")}
                 </Badge>
               </div>
             </CardContent>

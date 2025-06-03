@@ -1,4 +1,3 @@
-import { Suspense } from "react";
 import {
   QuickActions,
   RecentTrips,
@@ -7,6 +6,7 @@ import {
 } from "@/components/features/dashboard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Suspense } from "react";
 
 function DashboardSkeleton() {
   return (

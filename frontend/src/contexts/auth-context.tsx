@@ -1,14 +1,14 @@
 "use client";
 
-import { getCurrentUser, logoutAction, type User } from "@/lib/auth/server-actions";
+import { type User, getCurrentUser, logoutAction } from "@/lib/auth/server-actions";
 import { useRouter } from "next/navigation";
 import type React from "react";
 import {
   createContext,
+  startTransition,
   useContext,
   useEffect,
   useOptimistic,
-  startTransition,
 } from "react";
 
 // Authentication context types

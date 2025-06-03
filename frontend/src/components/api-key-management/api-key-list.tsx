@@ -36,9 +36,10 @@ export function ApiKeyList() {
   const { mutate: validateKey, isPending: isValidating } = useValidateApiKey();
 
   // Convert record to array for easier rendering
-  const keysList = Object.entries(keys).map(([service, keyData]) => ({
-    service,
+  const keysList = Object.entries(keys).map(([serviceName, keyData]) => ({
     ...keyData,
+    // Ensure service matches the key name
+    service: serviceName,
   }));
 
   // Format timestamp to readable format
@@ -54,7 +55,7 @@ export function ApiKeyList() {
   // Handle delete confirmation
   const handleDelete = () => {
     if (keyToDelete) {
-      deleteKey({ service: keyToDelete });
+      deleteKey(keyToDelete);
       setKeyToDelete(null);
     }
   };

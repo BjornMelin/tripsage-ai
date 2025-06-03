@@ -1,12 +1,12 @@
+import type { SearchParams, SearchResults, SearchType } from "@/types/search";
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
-import type { SearchType, SearchParams, SearchResults } from "@/types/search";
 
+import { useSearchFiltersStore } from "./search-filters-store";
+import { useSearchHistoryStore } from "./search-history-store";
 // Import the slice stores
 import { useSearchParamsStore } from "./search-params-store";
 import { useSearchResultsStore } from "./search-results-store";
-import { useSearchFiltersStore } from "./search-filters-store";
-import { useSearchHistoryStore } from "./search-history-store";
 
 // Combined search store interface that orchestrates all search operations
 interface SearchOrchestratorState {
