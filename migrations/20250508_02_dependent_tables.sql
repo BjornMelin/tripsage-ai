@@ -19,7 +19,7 @@ CREATE TABLE IF NOT EXISTS flights (
     data_source TEXT,
     CONSTRAINT flights_price_check CHECK (price >= 0),
     CONSTRAINT flights_time_check CHECK (arrival_time > departure_time),
-    CONSTRAINT flights_booking_status_check CHECK (booking_status IN ('viewed', 'saved', 'booked', 'canceled'))
+    CONSTRAINT flights_booking_status_check CHECK (booking_status IN ('viewed', 'saved', 'booked', 'cancelled'))
 );
 
 COMMENT ON TABLE flights IS 'Flight options for trips';
@@ -34,7 +34,7 @@ COMMENT ON COLUMN flights.price IS 'Price of the flight in default currency';
 COMMENT ON COLUMN flights.booking_link IS 'URL for booking the flight';
 COMMENT ON COLUMN flights.segment_number IS 'Segment number for multi-leg flights';
 COMMENT ON COLUMN flights.search_timestamp IS 'When this flight option was found';
-COMMENT ON COLUMN flights.booking_status IS 'Status of the flight booking (viewed, saved, booked, canceled)';
+COMMENT ON COLUMN flights.booking_status IS 'Status of the flight booking (viewed, saved, booked, cancelled)';
 COMMENT ON COLUMN flights.data_source IS 'Source of the flight data (API provider)';
 
 -- Create accommodations table
@@ -60,7 +60,7 @@ CREATE TABLE IF NOT EXISTS accommodations (
     CONSTRAINT accommodations_total_price_check CHECK (total_price >= 0),
     CONSTRAINT accommodations_dates_check CHECK (check_out > check_in),
     CONSTRAINT accommodations_rating_check CHECK (rating IS NULL OR (rating >= 0 AND rating <= 5)),
-    CONSTRAINT accommodations_booking_status_check CHECK (booking_status IN ('viewed', 'saved', 'booked', 'canceled')),
+    CONSTRAINT accommodations_booking_status_check CHECK (booking_status IN ('viewed', 'saved', 'booked', 'cancelled')),
     CONSTRAINT accommodations_type_check CHECK (type IN ('hotel', 'apartment', 'hostel', 'resort', 'villa', 'house', 'other'))
 );
 
@@ -78,7 +78,7 @@ COMMENT ON COLUMN accommodations.rating IS 'Rating of the accommodation (0-5 sca
 COMMENT ON COLUMN accommodations.amenities IS 'List of amenities as JSON';
 COMMENT ON COLUMN accommodations.booking_link IS 'URL for booking the accommodation';
 COMMENT ON COLUMN accommodations.search_timestamp IS 'When this accommodation option was found';
-COMMENT ON COLUMN accommodations.booking_status IS 'Status of the accommodation booking (viewed, saved, booked, canceled)';
+COMMENT ON COLUMN accommodations.booking_status IS 'Status of the accommodation booking (viewed, saved, booked, cancelled)';
 COMMENT ON COLUMN accommodations.cancellation_policy IS 'Description of the cancellation policy';
 COMMENT ON COLUMN accommodations.distance_to_center IS 'Distance to city center or point of interest';
 COMMENT ON COLUMN accommodations.neighborhood IS 'Name of the neighborhood or area';
@@ -96,7 +96,7 @@ CREATE TABLE IF NOT EXISTS transportation (
     booking_status TEXT DEFAULT 'viewed',
     CONSTRAINT transportation_price_check CHECK (price >= 0),
     CONSTRAINT transportation_dates_check CHECK (dropoff_date >= pickup_date),
-    CONSTRAINT transportation_booking_status_check CHECK (booking_status IN ('viewed', 'saved', 'booked', 'canceled')),
+    CONSTRAINT transportation_booking_status_check CHECK (booking_status IN ('viewed', 'saved', 'booked', 'cancelled')),
     CONSTRAINT transportation_type_check CHECK (type IN ('car_rental', 'public_transit', 'taxi', 'shuttle', 'ferry', 'train', 'bus', 'other'))
 );
 
@@ -109,7 +109,7 @@ COMMENT ON COLUMN transportation.pickup_date IS 'Pickup date and time';
 COMMENT ON COLUMN transportation.dropoff_date IS 'Dropoff date and time';
 COMMENT ON COLUMN transportation.price IS 'Price in default currency';
 COMMENT ON COLUMN transportation.notes IS 'Additional notes or information';
-COMMENT ON COLUMN transportation.booking_status IS 'Status of the transportation booking (viewed, saved, booked, canceled)';
+COMMENT ON COLUMN transportation.booking_status IS 'Status of the transportation booking (viewed, saved, booked, cancelled)';
 
 -- Create itinerary_items table
 CREATE TABLE IF NOT EXISTS itinerary_items (

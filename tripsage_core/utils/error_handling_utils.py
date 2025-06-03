@@ -238,10 +238,6 @@ def create_database_error(
     )
 
 
-# Backward compatibility alias
-TripSageError = CoreTripSageError
-
-
 # Enhanced error context manager for TripSage operations
 class TripSageErrorContext:
     """Context manager for enhanced error handling in TripSage operations."""
@@ -313,7 +309,6 @@ class TripSageErrorContext:
 
 
 __all__ = [
-    "TripSageError",  # Backward compatibility alias
     "log_exception",
     "safe_execute_with_logging",
     "with_error_handling_and_logging",

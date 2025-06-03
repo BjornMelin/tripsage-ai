@@ -75,8 +75,8 @@ class Transportation(TripSageModel):
 
     @property
     def is_canceled(self) -> bool:
-        """Check if the transportation is canceled."""
-        return self.booking_status == BookingStatus.CANCELED
+        """Check if the transportation is cancelled."""
+        return self.booking_status == BookingStatus.CANCELLED
 
     @property
     def is_active(self) -> bool:
@@ -110,15 +110,15 @@ class Transportation(TripSageModel):
             BookingStatus.VIEWED: [
                 BookingStatus.SAVED,
                 BookingStatus.BOOKED,
-                BookingStatus.CANCELED,
+                BookingStatus.CANCELLED,
             ],
             BookingStatus.SAVED: [
                 BookingStatus.BOOKED,
-                BookingStatus.CANCELED,
+                BookingStatus.CANCELLED,
                 BookingStatus.VIEWED,
             ],
-            BookingStatus.BOOKED: [BookingStatus.CANCELED],
-            BookingStatus.CANCELED: [],  # Cannot change from canceled
+            BookingStatus.BOOKED: [BookingStatus.CANCELLED],
+            BookingStatus.CANCELLED: [],  # Cannot change from cancelled
         }
 
         if new_status in valid_transitions.get(self.booking_status, []):

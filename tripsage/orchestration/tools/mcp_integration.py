@@ -11,7 +11,7 @@ from typing import Any, Dict, List, Optional
 from langchain_core.tools import Tool
 from langchain_core.tools.base import ToolException
 
-from tripsage.mcp_abstraction.manager import mcp_manager
+from tripsage_core.mcp_abstraction.manager import mcp_manager
 from tripsage_core.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)
