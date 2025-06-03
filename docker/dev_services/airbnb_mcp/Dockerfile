@@ -1,10 +1,10 @@
 # syntax=docker/dockerfile:1
 # =============================================================================
-# Airbnb MCP Service
+# Airbnb MCP Service - Only Remaining MCP Integration
 # =============================================================================
-# IMPORTANT: This is the ONLY service that interacts with the actual external
-# platform (Airbnb) due to the lack of an official SDK. All other services
-# in this environment are mocks/stubs for local development.
+# This is the ONLY MCP service still in use in the modern TripSage architecture.
+# All other services have been migrated to direct SDKs for better performance.
+# Airbnb MCP is retained because there is no official Airbnb SDK available.
 
 FROM node:20-alpine
 
@@ -22,9 +22,12 @@ RUN addgroup -g 1001 -S mcpuser && \
 # Switch to non-root user
 USER mcpuser
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+# Health check for MCP service availability
+HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
     CMD node --version || exit 1
+
+# Expose MCP port
+EXPOSE 3001
 
 # Set default command
 CMD ["airbnb-mcp"]
