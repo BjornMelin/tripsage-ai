@@ -5,7 +5,7 @@ This module defines the unified state schema used across all agent nodes
 in the LangGraph-based orchestration system, enhanced for clarity and maintainability.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Literal, Optional
 
 from langgraph.graph import add_messages
@@ -179,14 +179,14 @@ def create_initial_state(
     Returns:
         Initial TravelPlanningState with default values and enhanced structure
     """
-    now = datetime.now(datetime.UTC).isoformat()
+    now = datetime.now(timezone.utc).isoformat()
 
     return TravelPlanningState(
         # Core conversation data
         messages=[{"role": "user", "content": message, "timestamp": now}],
         user_id=user_id,
         session_id=session_id
-        or f"session_{user_id}_{int(datetime.now(datetime.UTC).timestamp())}",
+        or f"session_{user_id}_{int(datetime.now(timezone.utc).timestamp())}",
         # Structured user context (initialized as None, populated during conversation)
         user_preferences=None,
         travel_dates=None,
@@ -228,5 +228,5 @@ def update_state_timestamp(state: TravelPlanningState) -> TravelPlanningState:
     Returns:
         State with updated timestamp
     """
-    state["updated_at"] = datetime.now(datetime.UTC).isoformat()
+    state["updated_at"] = datetime.now(timezone.utc).isoformat()
     return state
