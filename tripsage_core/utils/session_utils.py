@@ -91,38 +91,35 @@ async def initialize_session_memory(user_id: Optional[str] = None) -> Dict[str, 
                 user_id=user_id, memory_type="user_preferences"
             )
 
-            if memories:
-                # Extract preferences from memories
-                preferences = {}
-                for memory in memories:
-                    if hasattr(memory, "content") and isinstance(memory.content, dict):
-                        preferences.update(memory.content)
+            # Extract preferences from memories
+            preferences = {}
+            for memory in memories:
+                if hasattr(memory, "content") and isinstance(memory.content, dict):
+                    preferences.update(memory.content)
 
-                # Get past trips
-                trip_memories = await memory_service.get_memories(
-                    user_id=user_id, memory_type="trip_history"
-                )
-                recent_trips = []
-                for memory in trip_memories[:5]:  # Limit to 5 most recent
-                    if hasattr(memory, "content"):
-                        recent_trips.append(memory.content)
+            # Get past trips
+            trip_memories = await memory_service.get_memories(
+                user_id=user_id, memory_type="trip_history"
+            )
+            recent_trips = []
+            for memory in trip_memories[:5]:  # Limit to 5 most recent
+                if hasattr(memory, "content"):
+                    recent_trips.append(memory.content)
 
-                # Update session data
-                session_data.update(
-                    {
-                        "user": {"id": user_id, "name": f"User {user_id}"},
-                        "preferences": preferences,
-                        "recent_trips": recent_trips,
-                        "insights": {},  # Populated from conversation context
-                    }
-                )
+            # Update session data
+            session_data.update(
+                {
+                    "user": {"id": user_id, "name": f"User {user_id}"},
+                    "preferences": preferences,
+                    "recent_trips": recent_trips,
+                    "insights": {},  # Populated from conversation context
+                }
+            )
 
-                logger.info(
-                    f"Loaded {len(preferences)} preferences and "
-                    f"{len(recent_trips)} trips for user {user_id}"
-                )
-            else:
-                logger.info(f"No existing memories found for user {user_id}")
+            logger.info(
+                f"Loaded {len(preferences)} preferences and "
+                f"{len(recent_trips)} trips for user {user_id}"
+            )
 
         except Exception as e:
             logger.error(f"Error loading user context for {user_id}: {str(e)}")
@@ -187,6 +184,10 @@ async def update_session_memory(
         logger.error(f"Error updating session memory: {str(e)}")
         result["success"] = False
         result["errors"].append(str(e))
+
+    # Check if any errors occurred in helper functions
+    if result["errors"]:
+        result["success"] = False
 
     return result
 

@@ -497,23 +497,3 @@ class TestIntegrationWithPydantic:
         errors = exc_info.value.errors()
         assert len(errors) >= 4  # At least 4 validation errors
 
-    def test_backward_compatibility(self):
-        """Test that old validator functions still work with deprecation warnings."""
-        from tripsage_core.models.schemas_common.validators import (
-            validate_password_strength,
-            validate_passwords_match,
-            validate_passwords_different,
-        )
-
-        # Test with warnings
-        with pytest.warns(DeprecationWarning):
-            result = validate_password_strength("ValidP@ss123")
-            assert result == "ValidP@ss123"
-
-        with pytest.warns(DeprecationWarning):
-            result = validate_passwords_match("pass123", "pass123")
-            assert result == ("pass123", "pass123")
-
-        with pytest.warns(DeprecationWarning):
-            result = validate_passwords_different("old123", "new456")
-            assert result == ("old123", "new456")

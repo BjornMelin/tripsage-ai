@@ -66,11 +66,7 @@ from .travel import (
     TripPreferences,
     TripSummary,
 )
-from .validators import (
-    validate_password_strength,
-    validate_passwords_different,
-    validate_passwords_match,
-)
+from .common_validators import CommonValidators
 
 __all__ = [
     # Base models
@@ -127,7 +123,5 @@ __all__ = [
     "TripPreferences",
     "TripSummary",
     # Validators
-    "validate_password_strength",
-    "validate_passwords_different",
-    "validate_passwords_match",
+    "CommonValidators",
 ]

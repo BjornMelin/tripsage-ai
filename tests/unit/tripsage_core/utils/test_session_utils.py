@@ -17,10 +17,8 @@ from tripsage_core.utils.session_utils import (
     _process_conversation_context,
     _process_learned_facts,
     _update_user_preferences_memory,
-    get_session_memory_legacy,
     initialize_session_memory,
     store_session_summary,
-    update_memory_legacy,
     update_session_memory,
 )
 
@@ -183,7 +181,7 @@ class TestInitializeSessionMemory:
     async def test_initialize_with_user_id_no_memories(self, mock_memory_service):
         """Test initialization with user ID but no existing memories."""
         with patch(
-            "tripsage_core.utils.session_utils.MemoryService",
+            "tripsage_core.services.business.memory_service.MemoryService",
             return_value=mock_memory_service,
         ):
             result = await initialize_session_memory("user123")
@@ -207,7 +205,7 @@ class TestInitializeSessionMemory:
         ]
 
         with patch(
-            "tripsage_core.utils.session_utils.MemoryService",
+            "tripsage_core.services.business.memory_service.MemoryService",
             return_value=mock_memory_service,
         ):
             result = await initialize_session_memory("user123")
@@ -230,7 +228,7 @@ class TestInitializeSessionMemory:
         ]
 
         with patch(
-            "tripsage_core.utils.session_utils.MemoryService",
+            "tripsage_core.services.business.memory_service.MemoryService",
             return_value=mock_memory_service,
         ):
             result = await initialize_session_memory("user123")
@@ -242,7 +240,7 @@ class TestInitializeSessionMemory:
     async def test_initialize_with_service_error(self, caplog):
         """Test initialization when memory service fails."""
         with patch(
-            "tripsage_core.utils.session_utils.MemoryService",
+            "tripsage_core.services.business.memory_service.MemoryService",
             side_effect=Exception("Service error"),
         ):
             result = await initialize_session_memory("user123")
@@ -270,7 +268,7 @@ class TestInitializeSessionMemory:
         ]
 
         with patch(
-            "tripsage_core.utils.session_utils.MemoryService",
+            "tripsage_core.services.business.memory_service.MemoryService",
             return_value=mock_memory_service,
         ):
             result = await initialize_session_memory("user123")
@@ -299,7 +297,7 @@ class TestUpdateSessionMemory:
         }
 
         with patch(
-            "tripsage_core.utils.session_utils.MemoryService",
+            "tripsage_core.services.business.memory_service.MemoryService",
             return_value=mock_memory_service,
         ):
             result = await update_session_memory("user123", updates)
@@ -319,7 +317,7 @@ class TestUpdateSessionMemory:
         }
 
         with patch(
-            "tripsage_core.utils.session_utils.MemoryService",
+            "tripsage_core.services.business.memory_service.MemoryService",
             return_value=mock_memory_service,
         ):
             result = await update_session_memory("user123", updates)
@@ -340,7 +338,7 @@ class TestUpdateSessionMemory:
         }
 
         with patch(
-            "tripsage_core.utils.session_utils.MemoryService",
+            "tripsage_core.services.business.memory_service.MemoryService",
             return_value=mock_memory_service,
         ):
             result = await update_session_memory("user123", updates)
@@ -357,7 +355,7 @@ class TestUpdateSessionMemory:
         }
 
         with patch(
-            "tripsage_core.utils.session_utils.MemoryService",
+            "tripsage_core.services.business.memory_service.MemoryService",
             return_value=mock_memory_service,
         ):
             result = await update_session_memory("user123", updates)
@@ -372,7 +370,7 @@ class TestUpdateSessionMemory:
         updates = {"preferences": {"travel_style": "cultural"}}
 
         with patch(
-            "tripsage_core.utils.session_utils.MemoryService",
+            "tripsage_core.services.business.memory_service.MemoryService",
             side_effect=Exception("Service error"),
         ):
             result = await update_session_memory("user123", updates)
@@ -384,7 +382,7 @@ class TestUpdateSessionMemory:
     async def test_update_empty_updates(self, mock_memory_service):
         """Test update with empty updates."""
         with patch(
-            "tripsage_core.utils.session_utils.MemoryService",
+            "tripsage_core.services.business.memory_service.MemoryService",
             return_value=mock_memory_service,
         ):
             result = await update_session_memory("user123", {})
@@ -406,7 +404,7 @@ class TestStoreSessionSummary:
     async def test_store_basic_summary(self, mock_memory_service):
         """Test storing basic session summary."""
         with patch(
-            "tripsage_core.utils.session_utils.MemoryService",
+            "tripsage_core.services.business.memory_service.MemoryService",
             return_value=mock_memory_service,
         ):
             result = await store_session_summary(
@@ -422,7 +420,7 @@ class TestStoreSessionSummary:
     async def test_store_detailed_summary(self, mock_memory_service):
         """Test storing detailed session summary with insights and decisions."""
         with patch(
-            "tripsage_core.utils.session_utils.MemoryService",
+            "tripsage_core.services.business.memory_service.MemoryService",
             return_value=mock_memory_service,
         ):
             result = await store_session_summary(
@@ -452,7 +450,7 @@ class TestStoreSessionSummary:
         mock_memory_service.add_memory.return_value = None
 
         with patch(
-            "tripsage_core.utils.session_utils.MemoryService",
+            "tripsage_core.services.business.memory_service.MemoryService",
             return_value=mock_memory_service,
         ):
             result = await store_session_summary(
@@ -466,7 +464,7 @@ class TestStoreSessionSummary:
     async def test_store_summary_exception(self):
         """Test storing summary when exception occurs."""
         with patch(
-            "tripsage_core.utils.session_utils.MemoryService",
+            "tripsage_core.services.business.memory_service.MemoryService",
             side_effect=Exception("Connection error"),
         ):
             result = await store_session_summary(
@@ -494,7 +492,7 @@ class TestPrivateHelperFunctions:
             "budget_range": {"min": 1000, "max": 3000},
             "travel_style": "adventure",
         }
-        result = {}
+        result = {"errors": [], "memories_created": 0}
 
         await _update_user_preferences_memory(
             "user123", preferences, result, mock_memory_service
@@ -508,7 +506,7 @@ class TestPrivateHelperFunctions:
         """Test preference update with invalid data."""
         # Invalid preferences that don't match UserPreferences model
         preferences = {"invalid_field": "invalid_value"}
-        result = {}
+        result = {"errors": []}
 
         await _update_user_preferences_memory(
             "user123", preferences, result, mock_memory_service
@@ -525,7 +523,7 @@ class TestPrivateHelperFunctions:
             "Simple string fact",
             {"insight": "User prefers budget options"},
         ]
-        result = {}
+        result = {"errors": [], "memories_created": 0}
 
         await _process_learned_facts("user123", facts, result, mock_memory_service)
 
@@ -541,7 +539,7 @@ class TestPrivateHelperFunctions:
             "dates_mentioned": "Q2 2024",
             "irrelevant_field": "should be filtered out",
         }
-        result = {}
+        result = {"errors": [], "memories_created": 0}
 
         await _process_conversation_context(
             "user123", context, result, mock_memory_service
@@ -562,7 +560,7 @@ class TestPrivateHelperFunctions:
     async def test_process_conversation_context_empty(self, mock_memory_service):
         """Test conversation context processing with no relevant data."""
         context = {"irrelevant_field1": "value1", "irrelevant_field2": "value2"}
-        result = {}
+        result = {"errors": [], "memories_created": 0}
 
         await _process_conversation_context(
             "user123", context, result, mock_memory_service
@@ -573,57 +571,13 @@ class TestPrivateHelperFunctions:
         mock_memory_service.add_memory.assert_not_called()
 
 
-class TestLegacyCompatibility:
-    """Test legacy compatibility functions."""
-
-    async def test_get_session_memory_legacy(self, caplog):
-        """Test legacy session memory getter."""
-        with patch(
-            "tripsage_core.utils.session_utils.initialize_session_memory"
-        ) as mock_init:
-            mock_init.return_value = {"user": {"id": "user123"}}
-
-            result = await get_session_memory_legacy("user123")
-
-            assert result["user"]["id"] == "user123"
-            mock_init.assert_called_once_with("user123")
-
-            # Should log warning about legacy usage
-            assert "legacy session memory function" in caplog.text
-
-    async def test_update_memory_legacy(self, caplog):
-        """Test legacy memory update function."""
-        updates = {"preferences": {"travel_style": "cultural"}}
-
-        with patch(
-            "tripsage_core.utils.session_utils.update_session_memory"
-        ) as mock_update:
-            mock_update.return_value = {
-                "memories_created": 2,
-                "preferences_updated": 1,
-                "facts_processed": 1,
-            }
-
-            result = await update_memory_legacy("user123", updates)
-
-            # Should convert to legacy format
-            assert result["entities_created"] == 0
-            assert result["relations_created"] == 0
-            assert result["observations_added"] == 2
-
-            mock_update.assert_called_once_with("user123", updates)
-
-            # Should log warning about legacy usage
-            assert "legacy memory update function" in caplog.text
-
-
 class TestErrorHandling:
     """Test error handling in session utilities."""
 
     async def test_memory_service_import_error(self):
         """Test handling of memory service import errors."""
         with patch(
-            "tripsage_core.utils.session_utils.MemoryService",
+            "tripsage_core.services.business.memory_service.MemoryService",
             side_effect=ImportError("Module not found"),
         ):
             result = await initialize_session_memory("user123")
@@ -635,7 +589,7 @@ class TestErrorHandling:
     async def test_memory_service_connection_error(self):
         """Test handling of memory service connection errors."""
         with patch(
-            "tripsage_core.utils.session_utils.MemoryService",
+            "tripsage_core.services.business.memory_service.MemoryService",
             side_effect=ConnectionError("Cannot connect"),
         ):
             result = await update_session_memory(
@@ -662,7 +616,7 @@ class TestErrorHandling:
         }
 
         with patch(
-            "tripsage_core.utils.session_utils.MemoryService", return_value=mock_service
+            "tripsage_core.services.business.memory_service.MemoryService", return_value=mock_service
         ):
             result = await update_session_memory("user123", updates)
 
