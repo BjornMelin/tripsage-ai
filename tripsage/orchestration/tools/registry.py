@@ -668,6 +668,6 @@ def get_tool_registry(
 ) -> LangGraphToolRegistry:
     """Get the global tool registry instance."""
     global _global_registry
-    if _global_registry is None:
+    if _global_registry is None or service_registry is not None:
         _global_registry = LangGraphToolRegistry(service_registry)
     return _global_registry

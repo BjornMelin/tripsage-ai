@@ -55,6 +55,11 @@ class BaseAgentNode(ABC):
 
         self.logger.info(f"Initialized {node_name} node with service injection")
 
+    @property
+    def name(self) -> str:
+        """Get the node name for compatibility with tests."""
+        return self.node_name
+
     @abstractmethod
     def _initialize_tools(self) -> None:
         """
