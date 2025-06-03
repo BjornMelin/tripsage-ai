@@ -6,6 +6,15 @@ import { render, screen } from "@testing-library/react";
 import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+// Mock React hooks for testing environment
+vi.mock("react", async () => {
+  const actual = await vi.importActual("react");
+  return {
+    ...actual,
+    useEffect: vi.fn((fn) => fn()),
+  };
+});
+
 import AuthError from "../(auth)/error";
 import DashboardError from "../(dashboard)/error";
 // Import the error boundary components

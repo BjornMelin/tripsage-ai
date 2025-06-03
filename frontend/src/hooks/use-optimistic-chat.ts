@@ -1,6 +1,6 @@
 "use client";
 
-import { useOptimistic, useCallback, useState } from "react";
+import { useCallback, useOptimistic, useState } from "react";
 import type { ChatMessage } from "./use-websocket-chat";
 
 export interface OptimisticChatMessage extends ChatMessage {

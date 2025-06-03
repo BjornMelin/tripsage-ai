@@ -31,7 +31,7 @@ const formSchema = z.object({
   apiKey: z.string().min(1, {
     message: "API key is required",
   }),
-  save: z.boolean().default(true),
+  save: z.boolean(),
 });
 
 export function ApiKeyForm() {

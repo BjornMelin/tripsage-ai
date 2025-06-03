@@ -3,10 +3,10 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
-import { CheckCircle, XCircle, Clock, MoreVertical } from "lucide-react";
-import { memo } from "react";
 import type { OptimisticChatMessage } from "@/hooks/use-optimistic-chat";
+import { cn } from "@/lib/utils";
+import { CheckCircle, Clock, MoreVertical, XCircle } from "lucide-react";
+import { memo } from "react";
 
 export interface MessageItemProps {
   message: OptimisticChatMessage;

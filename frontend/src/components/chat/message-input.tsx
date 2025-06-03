@@ -3,8 +3,8 @@
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
-import { Send, Paperclip, Smile } from "lucide-react";
-import { useCallback, useRef, useState, type KeyboardEvent } from "react";
+import { Paperclip, Send, Smile } from "lucide-react";
+import { type KeyboardEvent, useCallback, useRef, useState } from "react";
 
 export interface MessageInputProps {
   onSendMessage: (content: string) => Promise<void>;

@@ -1,5 +1,5 @@
-import { type NextRequest, NextResponse } from "next/server";
 import { jwtVerify } from "jose";
+import { type NextRequest, NextResponse } from "next/server";
 
 // Environment variables
 const JWT_SECRET = new TextEncoder().encode(

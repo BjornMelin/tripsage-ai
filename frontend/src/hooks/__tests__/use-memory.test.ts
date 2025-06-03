@@ -43,30 +43,30 @@ const createWrapper = () => {
   };
 };
 
-describe('Memory Hooks', () => {
+describe("Memory Hooks", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  describe('useMemoryContext', () => {
-    it('should fetch memory context for user', async () => {
+  describe("useMemoryContext", () => {
+    it("should fetch memory context for user", async () => {
       const mockResponse = {
         memories: [
           {
-            id: 'mem-1',
-            content: 'User prefers luxury hotels',
-            metadata: { category: 'accommodation', preference: 'luxury' },
+            id: "mem-1",
+            content: "User prefers luxury hotels",
+            metadata: { category: "accommodation", preference: "luxury" },
             score: 0.95,
-            created_at: '2024-01-01T10:00:00Z',
+            created_at: "2024-01-01T10:00:00Z",
           },
         ],
         preferences: {
-          accommodation: 'luxury',
-          budget: 'high',
-          destinations: ['Europe', 'Asia'],
+          accommodation: "luxury",
+          budget: "high",
+          destinations: ["Europe", "Asia"],
         },
         travel_patterns: {
-          favorite_destinations: ['Paris', 'Tokyo'],
+          favorite_destinations: ["Paris", "Tokyo"],
           avg_trip_duration: 7,
           booking_lead_time: 30,
         },
@@ -74,7 +74,7 @@ describe('Memory Hooks', () => {
 
       mockApiClient.get.mockResolvedValueOnce({ data: mockResponse });
 
-      const { result } = renderHook(() => useMemoryContext('user-123'), {
+      const { result } = renderHook(() => useMemoryContext("user-123"), {
         wrapper: createWrapper(),
       });
 
@@ -82,12 +82,12 @@ describe('Memory Hooks', () => {
         expect(result.current.isSuccess).toBe(true);
       });
 
-      expect(mockApiClient.get).toHaveBeenCalledWith('/api/memory/context/user-123');
+      expect(mockApiClient.get).toHaveBeenCalledWith("/api/memory/context/user-123");
       expect(result.current.data).toEqual(mockResponse);
     });
 
-    it('should not fetch when userId is empty', () => {
-      const { result } = renderHook(() => useMemoryContext(''), {
+    it("should not fetch when userId is empty", () => {
+      const { result } = renderHook(() => useMemoryContext(""), {
         wrapper: createWrapper(),
       });
 
@@ -95,10 +95,10 @@ describe('Memory Hooks', () => {
       expect(result.current.isIdle).toBe(true);
     });
 
-    it('should handle API errors gracefully', async () => {
-      mockApiClient.get.mockRejectedValueOnce(new Error('API Error'));
+    it("should handle API errors gracefully", async () => {
+      mockApiClient.get.mockRejectedValueOnce(new Error("API Error"));
 
-      const { result } = renderHook(() => useMemoryContext('user-123'), {
+      const { result } = renderHook(() => useMemoryContext("user-123"), {
         wrapper: createWrapper(),
       });
 
@@ -110,17 +110,17 @@ describe('Memory Hooks', () => {
     });
   });
 
-  describe('useSearchMemories', () => {
-    it('should search memories with query and filters', async () => {
+  describe("useSearchMemories", () => {
+    it("should search memories with query and filters", async () => {
       const mockResults = [
         {
-          content: 'Looking for flights to Paris',
-          metadata: { type: 'search', destination: 'Paris' },
+          content: "Looking for flights to Paris",
+          metadata: { type: "search", destination: "Paris" },
           score: 0.88,
         },
         {
-          content: 'Booked luxury hotel in Tokyo',
-          metadata: { type: 'booking', destination: 'Tokyo' },
+          content: "Booked luxury hotel in Tokyo",
+          metadata: { type: "booking", destination: "Tokyo" },
           score: 0.82,
         },
       ];
@@ -129,10 +129,10 @@ describe('Memory Hooks', () => {
 
       const { result } = renderHook(
         () =>
-          useSearchMemories('user-123', {
-            query: 'travel preferences',
+          useSearchMemories("user-123", {
+            query: "travel preferences",
             limit: 10,
-            filters: { category: 'accommodation' },
+            filters: { category: "accommodation" },
           }),
         { wrapper: createWrapper() }
       );
@@ -141,23 +141,23 @@ describe('Memory Hooks', () => {
         expect(result.current.isSuccess).toBe(true);
       });
 
-      expect(mockApiClient.get).toHaveBeenCalledWith('/api/memory/search/user-123', {
+      expect(mockApiClient.get).toHaveBeenCalledWith("/api/memory/search/user-123", {
         params: {
-          query: 'travel preferences',
+          query: "travel preferences",
           limit: 10,
-          filters: JSON.stringify({ category: 'accommodation' }),
+          filters: JSON.stringify({ category: "accommodation" }),
         },
       });
       expect(result.current.data).toEqual(mockResults);
     });
 
-    it('should handle search without filters', async () => {
+    it("should handle search without filters", async () => {
       mockApiClient.get.mockResolvedValueOnce({ data: [] });
 
       const { result } = renderHook(
         () =>
-          useSearchMemories('user-123', {
-            query: 'hotels',
+          useSearchMemories("user-123", {
+            query: "hotels",
           }),
         { wrapper: createWrapper() }
       );
@@ -166,18 +166,18 @@ describe('Memory Hooks', () => {
         expect(result.current.isSuccess).toBe(true);
       });
 
-      expect(mockApiClient.get).toHaveBeenCalledWith('/api/memory/search/user-123', {
+      expect(mockApiClient.get).toHaveBeenCalledWith("/api/memory/search/user-123", {
         params: {
-          query: 'hotels',
+          query: "hotels",
           limit: 20, // default limit
         },
       });
     });
   });
 
-  describe('useStoreConversation', () => {
-    it('should store conversation memory', async () => {
-      const mockResponse = { status: 'success', memory_id: 'mem-123' };
+  describe("useStoreConversation", () => {
+    it("should store conversation memory", async () => {
+      const mockResponse = { status: "success", memory_id: "mem-123" };
       mockApiClient.post.mockResolvedValueOnce({ data: mockResponse });
 
       const { result } = renderHook(() => useStoreConversation(), {
@@ -187,19 +187,19 @@ describe('Memory Hooks', () => {
       const conversationData = {
         messages: [
           {
-            role: 'user' as const,
-            content: 'I want to book a hotel in Paris',
-            timestamp: '2024-01-01T10:00:00Z',
+            role: "user" as const,
+            content: "I want to book a hotel in Paris",
+            timestamp: "2024-01-01T10:00:00Z",
           },
           {
-            role: 'assistant' as const,
-            content: 'I can help you find hotels in Paris.',
-            timestamp: '2024-01-01T10:01:00Z',
+            role: "assistant" as const,
+            content: "I can help you find hotels in Paris.",
+            timestamp: "2024-01-01T10:01:00Z",
           },
         ],
         metadata: {
-          sessionId: 'session-123',
-          userId: 'user-123',
+          sessionId: "session-123",
+          userId: "user-123",
         },
       };
 
@@ -209,12 +209,15 @@ describe('Memory Hooks', () => {
         expect(result.current.isSuccess).toBe(true);
       });
 
-      expect(mockApiClient.post).toHaveBeenCalledWith('/api/memory/conversations', conversationData);
+      expect(mockApiClient.post).toHaveBeenCalledWith(
+        "/api/memory/conversations",
+        conversationData
+      );
       expect(result.current.data).toEqual(mockResponse);
     });
 
-    it('should handle conversation storage errors', async () => {
-      mockApiClient.post.mockRejectedValueOnce(new Error('Storage failed'));
+    it("should handle conversation storage errors", async () => {
+      mockApiClient.post.mockRejectedValueOnce(new Error("Storage failed"));
 
       const { result } = renderHook(() => useStoreConversation(), {
         wrapper: createWrapper(),
@@ -222,7 +225,7 @@ describe('Memory Hooks', () => {
 
       const conversationData = {
         messages: [],
-        metadata: { sessionId: 'test', userId: 'test' },
+        metadata: { sessionId: "test", userId: "test" },
       };
 
       result.current.mutate(conversationData);
@@ -235,9 +238,9 @@ describe('Memory Hooks', () => {
     });
   });
 
-  describe('useUpdatePreferences', () => {
-    it('should update user preferences', async () => {
-      const mockResponse = { status: 'success' };
+  describe("useUpdatePreferences", () => {
+    it("should update user preferences", async () => {
+      const mockResponse = { status: "success" };
       mockApiClient.put.mockResolvedValueOnce({ data: mockResponse });
 
       const { result } = renderHook(() => useUpdatePreferences(), {
@@ -245,11 +248,11 @@ describe('Memory Hooks', () => {
       });
 
       const preferencesData = {
-        userId: 'user-123',
+        userId: "user-123",
         preferences: {
-          accommodation: 'luxury',
-          budget: 'high',
-          destinations: ['Europe'],
+          accommodation: "luxury",
+          budget: "high",
+          destinations: ["Europe"],
         },
       };
 
@@ -260,25 +263,25 @@ describe('Memory Hooks', () => {
       });
 
       expect(mockApiClient.put).toHaveBeenCalledWith(
-        '/api/memory/preferences/user-123',
+        "/api/memory/preferences/user-123",
         preferencesData.preferences
       );
       expect(result.current.data).toEqual(mockResponse);
     });
   });
 
-  describe('useMemoryInsights', () => {
-    it('should fetch memory insights for user', async () => {
+  describe("useMemoryInsights", () => {
+    it("should fetch memory insights for user", async () => {
       const mockInsights = {
-        travel_personality: 'luxury_traveler',
+        travel_personality: "luxury_traveler",
         budget_patterns: {
           avg_hotel_budget: 300,
           avg_flight_budget: 800,
           budget_consistency: 0.85,
         },
         destination_preferences: {
-          preferred_regions: ['Europe', 'Asia'],
-          climate_preference: 'temperate',
+          preferred_regions: ["Europe", "Asia"],
+          climate_preference: "temperate",
           city_vs_nature: 0.7,
         },
         booking_behavior: {
@@ -287,14 +290,14 @@ describe('Memory Hooks', () => {
           price_sensitivity: 0.6,
         },
         ai_recommendations: [
-          'Consider luxury hotels in Kyoto for your next trip',
-          'Book flights 6-8 weeks in advance for best prices',
+          "Consider luxury hotels in Kyoto for your next trip",
+          "Book flights 6-8 weeks in advance for best prices",
         ],
       };
 
       mockApiClient.get.mockResolvedValueOnce({ data: mockInsights });
 
-      const { result } = renderHook(() => useMemoryInsights('user-123'), {
+      const { result } = renderHook(() => useMemoryInsights("user-123"), {
         wrapper: createWrapper(),
       });
 
@@ -302,28 +305,28 @@ describe('Memory Hooks', () => {
         expect(result.current.isSuccess).toBe(true);
       });
 
-      expect(mockApiClient.get).toHaveBeenCalledWith('/api/memory/insights/user-123');
+      expect(mockApiClient.get).toHaveBeenCalledWith("/api/memory/insights/user-123");
       expect(result.current.data).toEqual(mockInsights);
     });
   });
 
-  describe('useMemoryStats', () => {
-    it('should fetch memory statistics for user', async () => {
+  describe("useMemoryStats", () => {
+    it("should fetch memory statistics for user", async () => {
       const mockStats = {
         total_memories: 150,
         memories_this_month: 12,
         top_categories: [
-          { category: 'accommodation', count: 45 },
-          { category: 'flights', count: 38 },
-          { category: 'destinations', count: 32 },
+          { category: "accommodation", count: 45 },
+          { category: "flights", count: 38 },
+          { category: "destinations", count: 32 },
         ],
         memory_score: 0.87,
-        last_updated: '2024-01-01T10:00:00Z',
+        last_updated: "2024-01-01T10:00:00Z",
       };
 
       mockApiClient.get.mockResolvedValueOnce({ data: mockStats });
 
-      const { result } = renderHook(() => useMemoryStats('user-123'), {
+      const { result } = renderHook(() => useMemoryStats("user-123"), {
         wrapper: createWrapper(),
       });
 
@@ -331,21 +334,21 @@ describe('Memory Hooks', () => {
         expect(result.current.isSuccess).toBe(true);
       });
 
-      expect(mockApiClient.get).toHaveBeenCalledWith('/api/memory/stats/user-123');
+      expect(mockApiClient.get).toHaveBeenCalledWith("/api/memory/stats/user-123");
       expect(result.current.data).toEqual(mockStats);
     });
   });
 
-  describe('Hook Integration', () => {
-    it('should work together in memory workflow', async () => {
+  describe("Hook Integration", () => {
+    it("should work together in memory workflow", async () => {
       // Test a complete workflow: store conversation -> get context -> search memories
-      const storeResponse = { status: 'success', memory_id: 'mem-123' };
+      const storeResponse = { status: "success", memory_id: "mem-123" };
       const contextResponse = {
-        memories: [{ id: 'mem-123', content: 'Test memory', metadata: {}, score: 0.9 }],
+        memories: [{ id: "mem-123", content: "Test memory", metadata: {}, score: 0.9 }],
         preferences: {},
         travel_patterns: {},
       };
-      const searchResponse = [{ content: 'Found memory', metadata: {}, score: 0.8 }];
+      const searchResponse = [{ content: "Found memory", metadata: {}, score: 0.8 }];
 
       mockApiClient.post.mockResolvedValueOnce({ data: storeResponse });
       mockApiClient.get
@@ -358,8 +361,10 @@ describe('Memory Hooks', () => {
       });
 
       storeResult.current.mutate({
-        messages: [{ role: 'user', content: 'test', timestamp: '2024-01-01T10:00:00Z' }],
-        metadata: { sessionId: 'test', userId: 'user-123' },
+        messages: [
+          { role: "user", content: "test", timestamp: "2024-01-01T10:00:00Z" },
+        ],
+        metadata: { sessionId: "test", userId: "user-123" },
       });
 
       await waitFor(() => {
@@ -367,7 +372,7 @@ describe('Memory Hooks', () => {
       });
 
       // Get context
-      const { result: contextResult } = renderHook(() => useMemoryContext('user-123'), {
+      const { result: contextResult } = renderHook(() => useMemoryContext("user-123"), {
         wrapper: createWrapper(),
       });
 
@@ -377,7 +382,7 @@ describe('Memory Hooks', () => {
 
       // Search memories
       const { result: searchResult } = renderHook(
-        () => useSearchMemories('user-123', { query: 'test' }),
+        () => useSearchMemories("user-123", { query: "test" }),
         { wrapper: createWrapper() }
       );
 

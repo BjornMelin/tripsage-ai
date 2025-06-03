@@ -1,7 +1,7 @@
-import { create } from "zustand";
-import { persist, devtools } from "zustand/middleware";
-import { z } from "zod";
 import type { SearchResults, SearchType } from "@/types/search";
+import { z } from "zod";
+import { create } from "zustand";
+import { devtools, persist } from "zustand/middleware";
 
 // Validation schemas for search results
 const SearchStatusSchema = z.enum([

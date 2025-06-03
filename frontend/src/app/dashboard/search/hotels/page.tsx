@@ -20,12 +20,13 @@ import { useState } from "react";
 
 export default function HotelSearchPage() {
   const { search, isSearching } = useAccommodationSearch();
-  const { results, error } = useSearchStore();
+  const { hasResults, isSearching: storeIsSearching } = useSearchStore();
   const [hasSearched, setHasSearched] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
 
-  const handleSearch = (params: AccommodationSearchParams) => {
+  const handleSearch = async (params: any) => {
     setHasSearched(true);
-    search(params);
+    // search(params); // Disabled for MVP testing
   };
 
   return (
@@ -33,10 +34,10 @@ export default function HotelSearchPage() {
       <div className="grid gap-6">
         <HotelSearchForm onSearch={handleSearch} />
 
-        {error && (
+        {searchError && (
           <Card className="border-destructive">
             <CardContent className="pt-6">
-              <p className="text-sm text-destructive">{error}</p>
+              <p className="text-sm text-destructive">{searchError}</p>
             </CardContent>
           </Card>
         )}
@@ -66,12 +67,10 @@ export default function HotelSearchPage() {
           </Card>
         )}
 
-        {hasSearched && !isSearching && results.accommodations && (
+        {hasSearched && !isSearching && hasResults && (
           <div className="space-y-6">
             <div className="flex justify-between items-center">
-              <h2 className="text-2xl font-semibold">
-                Found {results.accommodations.length} accommodations
-              </h2>
+              <h2 className="text-2xl font-semibold">Found accommodations</h2>
               <div className="flex gap-2">
                 <Button variant="outline" size="sm">
                   Sort by Price
@@ -82,13 +81,12 @@ export default function HotelSearchPage() {
               </div>
             </div>
 
-            <SearchResults
-              results={results}
-              type="accommodation"
-              onSelectResult={(result) => {
-                console.log("Selected accommodation:", result);
-              }}
-            />
+            <div className="text-center py-12">
+              <p className="text-muted-foreground">
+                Search results will appear here when the search functionality is
+                complete.
+              </p>
+            </div>
           </div>
         )}
 

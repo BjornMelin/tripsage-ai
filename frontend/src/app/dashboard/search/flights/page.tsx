@@ -1,6 +1,5 @@
 "use client";
 
-import React from "react";
 import { FlightSearchForm } from "@/components/features/search/flight-search-form";
 import { SearchLayout } from "@/components/layouts/search-layout";
 import {
@@ -10,9 +9,10 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { useToast } from "@/components/ui/use-toast";
 import { useSearchStore } from "@/stores/search-store";
 import { useRouter } from "next/navigation";
-import { useToast } from "@/components/ui/use-toast";
+import React from "react";
 
 export default function FlightSearchPage() {
   const { initializeSearch, executeSearch } = useSearchStore();
