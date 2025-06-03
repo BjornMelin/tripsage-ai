@@ -6,9 +6,9 @@ This wrapper provides a standardized interface for the Airbnb MCP client.
 
 from typing import List, Optional
 
-from tripsage.clients.airbnb_mcp_client import AirbnbMCPClient
-from tripsage.mcp_abstraction.base_wrapper import BaseMCPWrapper
+from tripsage_core.clients.airbnb_mcp_client import AirbnbMCPClient
 from tripsage_core.config.base_app_settings import settings
+from tripsage_core.mcp_abstraction.base_wrapper import BaseMCPWrapper
 
 
 class AirbnbMCPWrapper(BaseMCPWrapper):

@@ -371,7 +371,7 @@ async def _process_conversation_context(
 
 # Simple SessionMemory utility class for API dependencies
 class SessionMemory:
-    """Simple session memory utility class for compatibility with existing API code.
+    """Simple session memory utility class for API integration.
 
     This is a lightweight utility class that provides a simple interface for
     session memory operations while the full domain models handle the data storage.
@@ -434,47 +434,6 @@ class SessionMemory:
         }
 
 
-# Legacy compatibility functions for gradual migration
-
-
-async def get_session_memory_legacy(user_id: str) -> Dict[str, Any]:
-    """Legacy wrapper for session memory initialization.
-
-    Provides backward compatibility for existing code that expects the old format.
-
-    Args:
-        user_id: User ID
-
-    Returns:
-        Session memory data in legacy format
-    """
-    logger.warning(
-        "Using legacy session memory function - consider updating to new API"
-    )
-    return await initialize_session_memory(user_id)
-
-
-async def update_memory_legacy(user_id: str, updates: Dict[str, Any]) -> Dict[str, Any]:
-    """Legacy wrapper for memory updates.
-
-    Args:
-        user_id: User ID
-        updates: Updates dictionary
-
-    Returns:
-        Update result in legacy format
-    """
-    logger.warning("Using legacy memory update function - consider updating to new API")
-    result = await update_session_memory(user_id, updates)
-
-    # Convert to legacy format
-    return {
-        "entities_created": 0,  # Not applicable in new system
-        "relations_created": 0,  # Not applicable in new system
-        "observations_added": result.get("memories_created", 0),
-    }
-
-
 __all__ = [
     "ConversationMessage",
     "SessionSummary",
@@ -483,6 +442,4 @@ __all__ = [
     "initialize_session_memory",
     "update_session_memory",
     "store_session_summary",
-    "get_session_memory_legacy",
-    "update_memory_legacy",
 ]

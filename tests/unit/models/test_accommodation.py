@@ -173,7 +173,7 @@ class TestAccommodationModel:
         accommodation = Accommodation(**sample_accommodation_dict)
         assert accommodation.is_canceled is False
 
-        accommodation.booking_status = BookingStatus.CANCELED
+        accommodation.booking_status = BookingStatus.CANCELLED
         assert accommodation.is_canceled is True
 
     def test_accommodation_book(self, sample_accommodation_dict):
@@ -187,12 +187,12 @@ class TestAccommodationModel:
         accommodation = Accommodation(**sample_accommodation_dict)
         accommodation.book()
         accommodation.cancel()
-        assert accommodation.booking_status == BookingStatus.CANCELED
+        assert accommodation.booking_status == BookingStatus.CANCELLED
 
         # Cannot cancel a viewed accommodation with specific error message
         accommodation = Accommodation(**sample_accommodation_dict)
         with pytest.raises(
-            ValueError, match="Only booked accommodations can be canceled"
+            ValueError, match="Only booked accommodations can be cancelled"
         ):
             accommodation.cancel()
 

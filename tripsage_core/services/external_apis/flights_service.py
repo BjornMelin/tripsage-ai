@@ -12,8 +12,9 @@ from typing import Any, Dict, List, Optional, Set
 import httpx
 from pydantic import ValidationError as PydanticValidationError
 
-from tripsage.config.service_registry import BaseService
-from tripsage.models.api.flights_models import (
+from tripsage_core.config.base_app_settings import get_settings
+from tripsage_core.config.service_registry import BaseService
+from tripsage_core.models.api.flights_models import (
     Airport,
     CabinClass,
     FlightOffer,
@@ -23,16 +24,15 @@ from tripsage.models.api.flights_models import (
     PaymentRequest,
     SeatMap,
 )
-from tripsage.models.api.flights_models import (
+from tripsage_core.models.api.flights_models import (
     FlightOfferRequest as OfferRequest,
 )
-from tripsage.models.api.flights_models import (
+from tripsage_core.models.api.flights_models import (
     Order as FlightOrder,
 )
-from tripsage.models.api.flights_models import (
+from tripsage_core.models.api.flights_models import (
     OrderCreateRequest as CreateOrderRequest,
 )
-from tripsage_core.config.base_app_settings import get_settings
 from tripsage_core.utils.cache_utils import cached
 from tripsage_core.utils.decorator_utils import retry_on_failure
 from tripsage_core.utils.logging_utils import get_logger

@@ -11,8 +11,8 @@ from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field, field_validator
 
-from tripsage.mcp_abstraction.manager import MCPManager
 from tripsage_core.exceptions.exceptions import CoreTripSageError as TripSageError
+from tripsage_core.mcp_abstraction.manager import MCPManager
 from tripsage_core.services.business.error_handling_service import (
     ErrorRecoveryService,
 )
@@ -545,7 +545,7 @@ async def get_tool_calling_service() -> ToolCallService:
     """
     # Import here to avoid circular imports
     try:
-        from tripsage.mcp_abstraction.manager import MCPManager
+        from tripsage_core.mcp_abstraction.manager import MCPManager
 
         mcp_manager = MCPManager()
     except ImportError:
