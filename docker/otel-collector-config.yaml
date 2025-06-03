@@ -53,10 +53,13 @@ exporters:
     loglevel: info
 
   # OTLP exporter for future cloud integration
+  # SECURITY: Always use secure TLS in production environments
   otlp/cloud:
     endpoint: ${OTLP_ENDPOINT:-localhost:4317}
     tls:
-      insecure: ${OTLP_INSECURE:-true}
+      # IMPORTANT: Set OTLP_INSECURE=false in production for secure TLS
+      # Only use insecure=true for local development with proper network isolation
+      insecure: ${OTLP_INSECURE:-false}
     headers:
       api-key: ${OTLP_API_KEY:-}
 
