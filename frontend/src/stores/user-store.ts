@@ -1,139 +1,651 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { persist, devtools } from "zustand/middleware";
+import { z } from "zod";
 
-interface User {
+// Validation schemas for user profile
+const TravelPreferencesSchema = z.object({
+  preferredCabinClass: z
+    .enum(["economy", "premium_economy", "business", "first"])
+    .default("economy"),
+  preferredAirlines: z.array(z.string()).default([]),
+  excludedAirlines: z.array(z.string()).default([]),
+  maxLayovers: z.number().min(0).max(5).default(2),
+  preferredDepartureTime: z
+    .enum(["early_morning", "morning", "afternoon", "evening", "late_night"])
+    .optional(),
+  preferredArrivalTime: z
+    .enum(["early_morning", "morning", "afternoon", "evening", "late_night"])
+    .optional(),
+  preferredAccommodationType: z
+    .enum(["hotel", "apartment", "villa", "hostel", "resort"])
+    .default("hotel"),
+  maxBudgetPerNight: z.number().min(0).optional(),
+  preferredHotelChains: z.array(z.string()).default([]),
+  requireWifi: z.boolean().default(true),
+  requireBreakfast: z.boolean().default(false),
+  requireParking: z.boolean().default(false),
+  requireGym: z.boolean().default(false),
+  requirePool: z.boolean().default(false),
+  accessibilityRequirements: z.array(z.string()).default([]),
+  dietaryRestrictions: z.array(z.string()).default([]),
+});
+
+const PersonalInfoSchema = z.object({
+  firstName: z.string().optional(),
+  lastName: z.string().optional(),
+  displayName: z.string().optional(),
+  bio: z.string().max(500).optional(),
+  location: z.string().optional(),
+  website: z.string().url().optional(),
+  phoneNumber: z.string().optional(),
+  dateOfBirth: z.string().optional(),
+  gender: z.enum(["male", "female", "other", "prefer_not_to_say"]).optional(),
+  emergencyContact: z
+    .object({
+      name: z.string(),
+      phone: z.string(),
+      email: z.string().email(),
+      relationship: z.string(),
+    })
+    .optional(),
+});
+
+const PrivacySettingsSchema = z.object({
+  profileVisibility: z.enum(["public", "friends", "private"]).default("private"),
+  showTravelHistory: z.boolean().default(false),
+  allowDataSharing: z.boolean().default(false),
+  enableAnalytics: z.boolean().default(true),
+  enableLocationTracking: z.boolean().default(false),
+});
+
+export const UserProfileSchema = z.object({
+  id: z.string(),
+  email: z.string().email(),
+  avatarUrl: z.string().url().optional(),
+  personalInfo: PersonalInfoSchema.optional(),
+  travelPreferences: TravelPreferencesSchema.optional(),
+  privacySettings: PrivacySettingsSchema.optional(),
+  favoriteDestinations: z
+    .array(
+      z.object({
+        id: z.string(),
+        name: z.string(),
+        country: z.string(),
+        notes: z.string().optional(),
+        visitCount: z.number().default(0),
+        lastVisited: z.string().optional(),
+      })
+    )
+    .default([]),
+  travelDocuments: z
+    .array(
+      z.object({
+        id: z.string(),
+        type: z.enum(["passport", "visa", "license", "insurance", "vaccination"]),
+        number: z.string(),
+        expiryDate: z.string(),
+        issuingCountry: z.string(),
+        notes: z.string().optional(),
+      })
+    )
+    .default([]),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+
+// Types derived from schemas
+export type TravelPreferences = z.infer<typeof TravelPreferencesSchema>;
+export type PersonalInfo = z.infer<typeof PersonalInfoSchema>;
+export type PrivacySettings = z.infer<typeof PrivacySettingsSchema>;
+export type UserProfile = z.infer<typeof UserProfileSchema>;
+
+export interface FavoriteDestination {
   id: string;
-  email: string;
-  displayName?: string;
-  firstName?: string;
-  lastName?: string;
-  avatarUrl?: string;
-  isEmailVerified: boolean;
-  bio?: string;
-  location?: string;
-  website?: string;
-  preferences?: {
-    language?: string;
-    timezone?: string;
-    theme?: "light" | "dark" | "system";
-    units?: "metric" | "imperial";
-    dateFormat?: "MM/DD/YYYY" | "DD/MM/YYYY" | "YYYY-MM-DD";
-    timeFormat?: "12h" | "24h";
-    notifications?: {
-      email?: boolean;
-      tripReminders?: boolean;
-      priceAlerts?: boolean;
-      marketing?: boolean;
-    };
-    autoSaveSearches?: boolean;
-    smartSuggestions?: boolean;
-    locationServices?: boolean;
-    analytics?: boolean;
-  };
-  security?: {
-    twoFactorEnabled?: boolean;
-  };
+  name: string;
+  country: string;
+  notes?: string;
+  visitCount: number;
+  lastVisited?: string;
 }
 
-interface UserState {
-  user: User | null;
+export interface TravelDocument {
+  id: string;
+  type: "passport" | "visa" | "license" | "insurance" | "vaccination";
+  number: string;
+  expiryDate: string;
+  issuingCountry: string;
+  notes?: string;
+}
+
+// User profile store interface (authentication is handled by auth-store)
+interface UserProfileState {
+  // Profile data
+  profile: UserProfile | null;
+
+  // Loading states
   isLoading: boolean;
+  isUpdatingProfile: boolean;
+  isUploadingAvatar: boolean;
+
+  // Error states
   error: string | null;
-  setUser: (user: User | null) => void;
-  updateUser: (data: Partial<User>) => void;
-  login: (email: string, password: string) => Promise<void>;
-  register: (
-    email: string,
-    password: string,
-    firstName?: string,
-    lastName?: string
-  ) => Promise<void>;
-  logout: () => void;
+  uploadError: string | null;
+
+  // Computed properties
+  displayName: string;
+  hasCompleteProfile: boolean;
+  upcomingDocumentExpirations: TravelDocument[];
+
+  // Profile management actions
+  setProfile: (profile: UserProfile | null) => void;
+  updatePersonalInfo: (info: Partial<PersonalInfo>) => Promise<boolean>;
+  updateTravelPreferences: (
+    preferences: Partial<TravelPreferences>
+  ) => Promise<boolean>;
+  updatePrivacySettings: (settings: Partial<PrivacySettings>) => Promise<boolean>;
+
+  // Avatar management
+  uploadAvatar: (file: File) => Promise<string | null>;
+  removeAvatar: () => Promise<boolean>;
+
+  // Favorite destinations
+  addFavoriteDestination: (
+    destination: Omit<FavoriteDestination, "id" | "visitCount">
+  ) => void;
+  removeFavoriteDestination: (destinationId: string) => void;
+  updateFavoriteDestination: (
+    destinationId: string,
+    updates: Partial<FavoriteDestination>
+  ) => void;
+  incrementDestinationVisit: (destinationId: string) => void;
+
+  // Travel documents
+  addTravelDocument: (document: Omit<TravelDocument, "id">) => void;
+  removeTravelDocument: (documentId: string) => void;
+  updateTravelDocument: (documentId: string, updates: Partial<TravelDocument>) => void;
+
+  // Utility actions
+  exportProfile: () => string;
+  importProfile: (data: string) => Promise<boolean>;
   clearError: () => void;
+  reset: () => void;
 }
 
-export const useUserStore = create<UserState>()(
-  persist(
-    (set, get) => ({
-      user: null,
-      isLoading: false,
-      error: null,
+// Helper functions
+const generateId = () =>
+  Date.now().toString(36) + Math.random().toString(36).substring(2, 5);
+const getCurrentTimestamp = () => new Date().toISOString();
 
-      setUser: (user) => set({ user }),
+// Get display name helper
+const getDisplayName = (profile: UserProfile | null): string => {
+  if (!profile) return "";
 
-      updateUser: (data) => {
-        const { user } = get();
-        if (!user) return;
+  const personalInfo = profile.personalInfo;
+  if (personalInfo?.displayName) return personalInfo.displayName;
+  if (personalInfo?.firstName && personalInfo?.lastName) {
+    return `${personalInfo.firstName} ${personalInfo.lastName}`;
+  }
+  if (personalInfo?.firstName) return personalInfo.firstName;
+  return profile.email.split("@")[0];
+};
 
-        set({
-          user: { ...user, ...data },
-        });
-      },
+// Check if profile is complete
+const hasCompleteProfile = (profile: UserProfile | null): boolean => {
+  if (!profile) return false;
 
-      login: async (email, password) => {
-        set({ isLoading: true, error: null });
+  const personalInfo = profile.personalInfo;
+  return !!(
+    personalInfo?.firstName &&
+    personalInfo?.lastName &&
+    profile.travelPreferences &&
+    profile.avatarUrl
+  );
+};
 
-        try {
-          // This will be replaced with actual API call
-          await new Promise((resolve) => setTimeout(resolve, 1000));
+// Get upcoming document expirations (within 60 days)
+const getUpcomingDocumentExpirations = (
+  profile: UserProfile | null
+): TravelDocument[] => {
+  if (!profile) return [];
 
-          // Mock user data
+  const now = new Date();
+  const sixtyDaysFromNow = new Date(now.getTime() + 60 * 24 * 60 * 60 * 1000);
+
+  return profile.travelDocuments.filter((doc) => {
+    const expiryDate = new Date(doc.expiryDate);
+    return expiryDate <= sixtyDaysFromNow && expiryDate > now;
+  });
+};
+
+export const useUserProfileStore = create<UserProfileState>()(
+  devtools(
+    persist(
+      (set, get) => ({
+        // Initial state
+        profile: null,
+
+        // Loading states
+        isLoading: false,
+        isUpdatingProfile: false,
+        isUploadingAvatar: false,
+
+        // Error states
+        error: null,
+        uploadError: null,
+
+        // Computed properties
+        get displayName() {
+          return getDisplayName(get().profile);
+        },
+
+        get hasCompleteProfile() {
+          return hasCompleteProfile(get().profile);
+        },
+
+        get upcomingDocumentExpirations() {
+          return getUpcomingDocumentExpirations(get().profile);
+        },
+
+        // Profile management actions
+        setProfile: (profile) => {
+          set({ profile });
+        },
+
+        updatePersonalInfo: async (info) => {
+          const { profile } = get();
+          if (!profile) return false;
+
+          set({ isUpdatingProfile: true, error: null });
+
+          try {
+            const result = PersonalInfoSchema.safeParse(info);
+            if (!result.success) {
+              throw new Error("Invalid personal information");
+            }
+
+            const updatedProfile = {
+              ...profile,
+              personalInfo: {
+                ...profile.personalInfo,
+                ...result.data,
+              },
+              updatedAt: getCurrentTimestamp(),
+            };
+
+            // Mock API call
+            await new Promise((resolve) => setTimeout(resolve, 500));
+
+            set({
+              profile: updatedProfile,
+              isUpdatingProfile: false,
+            });
+
+            return true;
+          } catch (error) {
+            const message =
+              error instanceof Error ? error.message : "Failed to update personal info";
+            set({
+              error: message,
+              isUpdatingProfile: false,
+            });
+            return false;
+          }
+        },
+
+        updateTravelPreferences: async (preferences) => {
+          const { profile } = get();
+          if (!profile) return false;
+
+          set({ isUpdatingProfile: true, error: null });
+
+          try {
+            const result = TravelPreferencesSchema.safeParse({
+              ...profile.travelPreferences,
+              ...preferences,
+            });
+
+            if (!result.success) {
+              throw new Error("Invalid travel preferences");
+            }
+
+            const updatedProfile = {
+              ...profile,
+              travelPreferences: result.data,
+              updatedAt: getCurrentTimestamp(),
+            };
+
+            // Mock API call
+            await new Promise((resolve) => setTimeout(resolve, 500));
+
+            set({
+              profile: updatedProfile,
+              isUpdatingProfile: false,
+            });
+
+            return true;
+          } catch (error) {
+            const message =
+              error instanceof Error
+                ? error.message
+                : "Failed to update travel preferences";
+            set({
+              error: message,
+              isUpdatingProfile: false,
+            });
+            return false;
+          }
+        },
+
+        updatePrivacySettings: async (settings) => {
+          const { profile } = get();
+          if (!profile) return false;
+
+          set({ isUpdatingProfile: true, error: null });
+
+          try {
+            const result = PrivacySettingsSchema.safeParse({
+              ...profile.privacySettings,
+              ...settings,
+            });
+
+            if (!result.success) {
+              throw new Error("Invalid privacy settings");
+            }
+
+            const updatedProfile = {
+              ...profile,
+              privacySettings: result.data,
+              updatedAt: getCurrentTimestamp(),
+            };
+
+            // Mock API call
+            await new Promise((resolve) => setTimeout(resolve, 500));
+
+            set({
+              profile: updatedProfile,
+              isUpdatingProfile: false,
+            });
+
+            return true;
+          } catch (error) {
+            const message =
+              error instanceof Error
+                ? error.message
+                : "Failed to update privacy settings";
+            set({
+              error: message,
+              isUpdatingProfile: false,
+            });
+            return false;
+          }
+        },
+
+        // Avatar management
+        uploadAvatar: async (file) => {
+          set({ isUploadingAvatar: true, uploadError: null });
+
+          try {
+            // Validate file
+            if (!file.type.startsWith("image/")) {
+              throw new Error("File must be an image");
+            }
+
+            if (file.size > 5 * 1024 * 1024) {
+              throw new Error("File size must be less than 5MB");
+            }
+
+            // Mock upload
+            await new Promise((resolve) => setTimeout(resolve, 2000));
+
+            const avatarUrl = `https://example.com/avatars/${generateId()}.${file.type.split("/")[1]}`;
+
+            const { profile } = get();
+            if (profile) {
+              set({
+                profile: {
+                  ...profile,
+                  avatarUrl,
+                  updatedAt: getCurrentTimestamp(),
+                },
+                isUploadingAvatar: false,
+              });
+            }
+
+            return avatarUrl;
+          } catch (error) {
+            const message =
+              error instanceof Error ? error.message : "Failed to upload avatar";
+            set({
+              uploadError: message,
+              isUploadingAvatar: false,
+            });
+            return null;
+          }
+        },
+
+        removeAvatar: async () => {
+          const { profile } = get();
+          if (!profile) return false;
+
+          set({ isUpdatingProfile: true });
+
+          try {
+            // Mock API call
+            await new Promise((resolve) => setTimeout(resolve, 500));
+
+            set({
+              profile: {
+                ...profile,
+                avatarUrl: undefined,
+                updatedAt: getCurrentTimestamp(),
+              },
+              isUpdatingProfile: false,
+            });
+
+            return true;
+          } catch (error) {
+            set({ isUpdatingProfile: false });
+            return false;
+          }
+        },
+
+        // Favorite destinations
+        addFavoriteDestination: (destination) => {
+          const { profile } = get();
+          if (!profile) return;
+
+          const newDestination: FavoriteDestination = {
+            ...destination,
+            id: generateId(),
+            visitCount: 0,
+          };
+
           set({
-            user: {
-              id: "1",
-              email,
-              displayName: email.split("@")[0],
-              isEmailVerified: true,
+            profile: {
+              ...profile,
+              favoriteDestinations: [...profile.favoriteDestinations, newDestination],
+              updatedAt: getCurrentTimestamp(),
             },
-            isLoading: false,
           });
-        } catch (error) {
+        },
+
+        removeFavoriteDestination: (destinationId) => {
+          const { profile } = get();
+          if (!profile) return;
+
           set({
-            error: error instanceof Error ? error.message : "Login failed",
-            isLoading: false,
-          });
-        }
-      },
-
-      register: async (email, password, firstName, lastName) => {
-        set({ isLoading: true, error: null });
-
-        try {
-          // This will be replaced with actual API call
-          await new Promise((resolve) => setTimeout(resolve, 1000));
-
-          // Mock user data
-          set({
-            user: {
-              id: "1",
-              email,
-              firstName,
-              lastName,
-              displayName: firstName
-                ? `${firstName} ${lastName || ""}`.trim()
-                : email.split("@")[0],
-              isEmailVerified: false,
+            profile: {
+              ...profile,
+              favoriteDestinations: profile.favoriteDestinations.filter(
+                (d) => d.id !== destinationId
+              ),
+              updatedAt: getCurrentTimestamp(),
             },
-            isLoading: false,
           });
-        } catch (error) {
+        },
+
+        updateFavoriteDestination: (destinationId, updates) => {
+          const { profile } = get();
+          if (!profile) return;
+
           set({
-            error:
-              error instanceof Error ? error.message : "Registration failed",
-            isLoading: false,
+            profile: {
+              ...profile,
+              favoriteDestinations: profile.favoriteDestinations.map((d) =>
+                d.id === destinationId ? { ...d, ...updates } : d
+              ),
+              updatedAt: getCurrentTimestamp(),
+            },
           });
-        }
-      },
+        },
 
-      logout: () => {
-        set({ user: null, error: null });
-      },
+        incrementDestinationVisit: (destinationId) => {
+          const { profile } = get();
+          if (!profile) return;
 
-      clearError: () => set({ error: null }),
-    }),
-    {
-      name: "user-storage",
-      partialize: (state) => ({ user: state.user }),
-    }
+          const now = getCurrentTimestamp();
+
+          set({
+            profile: {
+              ...profile,
+              favoriteDestinations: profile.favoriteDestinations.map((d) =>
+                d.id === destinationId
+                  ? { ...d, visitCount: d.visitCount + 1, lastVisited: now }
+                  : d
+              ),
+              updatedAt: now,
+            },
+          });
+        },
+
+        // Travel documents
+        addTravelDocument: (document) => {
+          const { profile } = get();
+          if (!profile) return;
+
+          const newDocument: TravelDocument = {
+            ...document,
+            id: generateId(),
+          };
+
+          set({
+            profile: {
+              ...profile,
+              travelDocuments: [...profile.travelDocuments, newDocument],
+              updatedAt: getCurrentTimestamp(),
+            },
+          });
+        },
+
+        removeTravelDocument: (documentId) => {
+          const { profile } = get();
+          if (!profile) return;
+
+          set({
+            profile: {
+              ...profile,
+              travelDocuments: profile.travelDocuments.filter(
+                (d) => d.id !== documentId
+              ),
+              updatedAt: getCurrentTimestamp(),
+            },
+          });
+        },
+
+        updateTravelDocument: (documentId, updates) => {
+          const { profile } = get();
+          if (!profile) return;
+
+          set({
+            profile: {
+              ...profile,
+              travelDocuments: profile.travelDocuments.map((d) =>
+                d.id === documentId ? { ...d, ...updates } : d
+              ),
+              updatedAt: getCurrentTimestamp(),
+            },
+          });
+        },
+
+        // Utility actions
+        exportProfile: () => {
+          const { profile } = get();
+          if (!profile) return "";
+
+          const exportData = {
+            profile,
+            exportedAt: getCurrentTimestamp(),
+            version: "1.0",
+          };
+
+          return JSON.stringify(exportData, null, 2);
+        },
+
+        importProfile: async (data) => {
+          try {
+            const importData = JSON.parse(data);
+
+            if (importData.profile) {
+              const result = UserProfileSchema.safeParse(importData.profile);
+              if (result.success) {
+                set({ profile: result.data });
+                return true;
+              } else {
+                throw new Error("Invalid profile data");
+              }
+            }
+
+            return false;
+          } catch (error) {
+            const message =
+              error instanceof Error ? error.message : "Failed to import profile";
+            set({ error: message });
+            return false;
+          }
+        },
+
+        clearError: () => {
+          set({ error: null, uploadError: null });
+        },
+
+        reset: () => {
+          set({
+            profile: null,
+            isLoading: false,
+            isUpdatingProfile: false,
+            isUploadingAvatar: false,
+            error: null,
+            uploadError: null,
+          });
+        },
+      }),
+      {
+        name: "user-profile-storage",
+        partialize: (state) => ({
+          // Only persist the profile data
+          profile: state.profile,
+        }),
+      }
+    ),
+    { name: "UserProfileStore" }
   )
 );
+
+// Utility selectors for common use cases
+export const useUserProfile = () => useUserProfileStore((state) => state.profile);
+export const useUserDisplayName = () =>
+  useUserProfileStore((state) => state.displayName);
+export const useUserPersonalInfo = () =>
+  useUserProfileStore((state) => state.profile?.personalInfo);
+export const useUserTravelPreferences = () =>
+  useUserProfileStore((state) => state.profile?.travelPreferences);
+export const useUserPrivacySettings = () =>
+  useUserProfileStore((state) => state.profile?.privacySettings);
+export const useFavoriteDestinations = () =>
+  useUserProfileStore((state) => state.profile?.favoriteDestinations || []);
+export const useTravelDocuments = () =>
+  useUserProfileStore((state) => state.profile?.travelDocuments || []);
+export const useUpcomingDocumentExpirations = () =>
+  useUserProfileStore((state) => state.upcomingDocumentExpirations);
+export const useHasCompleteProfile = () =>
+  useUserProfileStore((state) => state.hasCompleteProfile);

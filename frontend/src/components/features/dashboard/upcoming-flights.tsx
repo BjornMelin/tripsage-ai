@@ -1,7 +1,7 @@
 "use client";
 
-import Link from "next/link";
-import { Plane, Clock, Calendar, Users } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -10,12 +10,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSearchStore } from "@/stores/search-store";
 import { useTripStore } from "@/stores/trip-store";
 import type { Flight } from "@/types/search";
+import { Calendar, Clock, Plane, Users } from "lucide-react";
+import Link from "next/link";
 
 interface UpcomingFlightsProps {
   limit?: number;
@@ -116,8 +116,7 @@ function FlightCard({ flight }: { flight: MockFlight }) {
           <p className="text-xs text-muted-foreground mb-1">Departure</p>
           <p className="font-medium text-sm">{flight.origin}</p>
           <p className="text-xs text-muted-foreground">
-            {formatTime(flight.departureTime)} •{" "}
-            {formatDate(flight.departureTime)}
+            {formatTime(flight.departureTime)} • {formatDate(flight.departureTime)}
           </p>
         </div>
         <div>
@@ -186,10 +185,7 @@ function EmptyState() {
   );
 }
 
-export function UpcomingFlights({
-  limit = 3,
-  showEmpty = true,
-}: UpcomingFlightsProps) {
+export function UpcomingFlights({ limit = 3, showEmpty = true }: UpcomingFlightsProps) {
   const { trips } = useTripStore();
 
   // Generate mock upcoming flights from trips
@@ -213,8 +209,7 @@ export function UpcomingFlights({
         ],
         flightNumber: `${["AA", "DL", "UA", "B6"][Math.floor(Math.random() * 4)]}${Math.floor(Math.random() * 9000) + 1000}`,
         origin: "JFK", // Mock origin
-        destination:
-          trip.destinations[0]?.name?.slice(0, 3).toUpperCase() || "LAX",
+        destination: trip.destinations[0]?.name?.slice(0, 3).toUpperCase() || "LAX",
         departureTime: new Date(
           startDate.getTime() - Math.random() * 7 * 24 * 60 * 60 * 1000
         ).toISOString(),
@@ -271,8 +266,7 @@ export function UpcomingFlights({
       .filter((flight) => new Date(flight.departureTime) > now)
       .sort(
         (a, b) =>
-          new Date(a.departureTime).getTime() -
-          new Date(b.departureTime).getTime()
+          new Date(a.departureTime).getTime() - new Date(b.departureTime).getTime()
       )
       .slice(0, limit);
   };

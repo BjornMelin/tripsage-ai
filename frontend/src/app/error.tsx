@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect } from "react";
 import { PageErrorFallback } from "@/components/error/error-fallback";
 import { errorService } from "@/lib/error-service";
+import { useEffect } from "react";
 
 /**
  * Root-level error boundary for the app directory

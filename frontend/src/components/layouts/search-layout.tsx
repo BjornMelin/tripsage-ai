@@ -1,8 +1,8 @@
 "use client";
 
+import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { cn } from "@/lib/utils";
 
 interface SearchNavProps extends React.HTMLAttributes<HTMLElement> {
   items: {
@@ -23,9 +23,7 @@ export function SearchNav({ className, items, ...props }: SearchNavProps) {
           href={item.href}
           className={cn(
             "flex items-center rounded-md px-3 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground",
-            pathname === item.href
-              ? "bg-accent text-accent-foreground"
-              : "transparent"
+            pathname === item.href ? "bg-accent text-accent-foreground" : "transparent"
           )}
         >
           {item.icon && <span className="mr-2">{item.icon}</span>}

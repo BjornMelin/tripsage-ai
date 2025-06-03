@@ -69,10 +69,7 @@ class ErrorService {
   /**
    * Send error report to remote service
    */
-  private async sendErrorReport(
-    report: ErrorReport,
-    retryCount = 0
-  ): Promise<void> {
+  private async sendErrorReport(report: ErrorReport, retryCount = 0): Promise<void> {
     const maxRetries = this.config.maxRetries ?? 3;
 
     try {

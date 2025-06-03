@@ -1,15 +1,7 @@
 "use client";
 
-import Link from "next/link";
-import {
-  MapPin,
-  Star,
-  Clock,
-  DollarSign,
-  Sparkles,
-  Brain,
-  TrendingUp,
-} from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -18,13 +10,21 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
-import { useDealsStore } from "@/stores/deals-store";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useMemoryContext, useMemoryInsights } from "@/hooks/use-memory";
 import { useBudgetStore } from "@/stores/budget-store";
-import { useMemoryContext, useMemoryInsights } from "@/lib/hooks/use-memory";
+import { useDealsStore } from "@/stores/deals-store";
+import {
+  Brain,
+  Clock,
+  DollarSign,
+  MapPin,
+  Sparkles,
+  Star,
+  TrendingUp,
+} from "lucide-react";
+import Link from "next/link";
 
 interface TripSuggestion {
   id: string;
@@ -36,13 +36,7 @@ interface TripSuggestion {
   currency: string;
   duration: number; // days
   rating: number;
-  category:
-    | "adventure"
-    | "relaxation"
-    | "culture"
-    | "nature"
-    | "city"
-    | "beach";
+  category: "adventure" | "relaxation" | "culture" | "nature" | "city" | "beach";
   bestTimeToVisit: string;
   highlights: string[];
   difficulty?: "easy" | "moderate" | "challenging";
@@ -101,12 +95,7 @@ const mockSuggestions: TripSuggestion[] = [
     rating: 4.9,
     category: "adventure",
     bestTimeToVisit: "June - September",
-    highlights: [
-      "Mountain Hiking",
-      "Alpine Lakes",
-      "Cable Cars",
-      "Local Cuisine",
-    ],
+    highlights: ["Mountain Hiking", "Alpine Lakes", "Cable Cars", "Local Cuisine"],
     difficulty: "challenging",
   },
   {
@@ -121,12 +110,7 @@ const mockSuggestions: TripSuggestion[] = [
     rating: 4.7,
     category: "relaxation",
     bestTimeToVisit: "April - October",
-    highlights: [
-      "Sunset Views",
-      "White Architecture",
-      "Wine Tasting",
-      "Beaches",
-    ],
+    highlights: ["Sunset Views", "White Architecture", "Wine Tasting", "Beaches"],
     difficulty: "easy",
   },
   {
@@ -256,15 +240,11 @@ function SuggestionCard({ suggestion }: { suggestion: TripSuggestion }) {
             <span>{suggestion.duration} days</span>
           </div>
           <div className="flex items-center gap-1">
-            <span className="text-sm">
-              {getCategoryIcon(suggestion.category)}
-            </span>
+            <span className="text-sm">{getCategoryIcon(suggestion.category)}</span>
             <span className="capitalize">{suggestion.category}</span>
           </div>
           {suggestion.difficulty && (
-            <span
-              className={`capitalize ${getDifficultyColor(suggestion.difficulty)}`}
-            >
+            <span className={`capitalize ${getDifficultyColor(suggestion.difficulty)}`}>
               {suggestion.difficulty}
             </span>
           )}
@@ -339,8 +319,7 @@ export function TripSuggestions({
     if (!memoryContext?.context || !insights?.insights) return [];
 
     const { userPreferences, travelPatterns } = memoryContext.context;
-    const { recommendations, budgetPatterns, travelPersonality } =
-      insights.insights;
+    const { recommendations, budgetPatterns, travelPersonality } = insights.insights;
 
     const memoryBasedSuggestions: TripSuggestion[] = [];
 
@@ -352,19 +331,14 @@ export function TripSuggestions({
           title: `Return to ${dest}`,
           destination: dest,
           description: `Based on your previous love for ${dest}, here's a personalized return trip.`,
-          estimatedPrice:
-            budgetPatterns?.averageSpending?.accommodation || 2000,
+          estimatedPrice: budgetPatterns?.averageSpending?.accommodation || 2000,
           currency: "USD",
           duration: 7,
           rating: 4.7,
           category:
-            userPreferences.travel_style === "luxury"
-              ? "relaxation"
-              : "culture",
+            userPreferences.travel_style === "luxury" ? "relaxation" : "culture",
           bestTimeToVisit: "Year-round",
-          highlights: userPreferences.activities?.slice(0, 3) || [
-            "Sightseeing",
-          ],
+          highlights: userPreferences.activities?.slice(0, 3) || ["Sightseeing"],
           trending: true,
         });
       });
@@ -377,8 +351,7 @@ export function TripSuggestions({
           memoryBasedSuggestions.push({
             id: `memory-ai-${idx}`,
             title: rec.recommendation,
-            destination:
-              rec.recommendation.split(" ")[0] || "Somewhere Amazing",
+            destination: rec.recommendation.split(" ")[0] || "Somewhere Amazing",
             description: rec.reasoning,
             estimatedPrice: budgetPatterns?.averageSpending?.total || 2500,
             currency: "USD",

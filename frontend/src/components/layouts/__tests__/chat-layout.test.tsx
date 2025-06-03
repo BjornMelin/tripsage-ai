@@ -1,8 +1,8 @@
-import { describe, it, expect, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
-import { ChatLayout, ChatSidebar, AgentStatusPanel } from "../chat-layout";
-import { useChatStore } from "@/stores/chat-store";
 import { useAgentStatusStore } from "@/stores/agent-status-store";
+import { useChatStore } from "@/stores/chat-store";
+import { render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
+import { AgentStatusPanel, ChatLayout, ChatSidebar } from "../chat-layout";
 
 // Mock the stores
 vi.mock("@/stores/chat-store", () => ({

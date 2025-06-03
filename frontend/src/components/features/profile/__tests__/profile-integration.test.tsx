@@ -1,14 +1,14 @@
-import type React from "react";
 import { render, screen } from "@testing-library/react";
+import type React from "react";
 import { vi } from "vitest";
-import { PersonalInfoSection } from "../personal-info-section";
 import { AccountSettingsSection } from "../account-settings-section";
+import { PersonalInfoSection } from "../personal-info-section";
 import { PreferencesSection } from "../preferences-section";
 import { SecuritySection } from "../security-section";
 
 // Mock all dependencies to focus on component rendering
 vi.mock("@/stores/user-store", () => ({
-  useUserStore: () => ({
+  useUserProfileStore: () => ({
     user: {
       id: "1",
       email: "test@example.com",

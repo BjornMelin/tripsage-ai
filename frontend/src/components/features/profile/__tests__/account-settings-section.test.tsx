@@ -1,8 +1,8 @@
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { toast } from "@/components/ui/use-toast";
+import { useUserProfileStore } from "@/stores/user-store";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { vi } from "vitest";
 import { AccountSettingsSection } from "../account-settings-section";
-import { useUserStore } from "@/stores/user-store";
-import { toast } from "@/components/ui/use-toast";
 
 // Mock the stores and hooks
 vi.mock("@/stores/user-store");
@@ -30,7 +30,7 @@ const mockToast = vi.fn();
 describe("AccountSettingsSection", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    (useUserStore as any).mockReturnValue({
+    (useUserProfileStore as any).mockReturnValue({
       user: mockUser,
       updateUser: mockUpdateUser,
     });
@@ -46,7 +46,7 @@ describe("AccountSettingsSection", () => {
   });
 
   it("shows unverified badge for unverified email", () => {
-    (useUserStore as any).mockReturnValue({
+    (useUserProfileStore as any).mockReturnValue({
       user: { ...mockUser, isEmailVerified: false },
       updateUser: mockUpdateUser,
     });
@@ -61,7 +61,7 @@ describe("AccountSettingsSection", () => {
   });
 
   it("handles email verification request", async () => {
-    (useUserStore as any).mockReturnValue({
+    (useUserProfileStore as any).mockReturnValue({
       user: { ...mockUser, isEmailVerified: false },
       updateUser: mockUpdateUser,
     });
@@ -116,8 +116,7 @@ describe("AccountSettingsSection", () => {
     await waitFor(() => {
       expect(mockToast).toHaveBeenCalledWith({
         title: "Email updated",
-        description:
-          "Please check your inbox to verify your new email address.",
+        description: "Please check your inbox to verify your new email address.",
       });
     });
   });
@@ -179,9 +178,7 @@ describe("AccountSettingsSection", () => {
     render(<AccountSettingsSection />);
 
     expect(screen.getByText("Danger Zone")).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: /delete account/i })
-    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /delete account/i })).toBeInTheDocument();
   });
 
   it("shows confirmation dialog for account deletion", async () => {
@@ -194,9 +191,7 @@ describe("AccountSettingsSection", () => {
 
     await waitFor(() => {
       expect(screen.getByText("Are you absolutely sure?")).toBeInTheDocument();
-      expect(
-        screen.getByText(/This action cannot be undone/)
-      ).toBeInTheDocument();
+      expect(screen.getByText(/This action cannot be undone/)).toBeInTheDocument();
     });
   });
 

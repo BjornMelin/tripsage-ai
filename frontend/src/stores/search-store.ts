@@ -1,353 +1,346 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
-import type {
-  SearchType,
-  SearchParams,
-  FlightSearchParams,
-  AccommodationSearchParams,
-  ActivitySearchParams,
-  DestinationSearchParams,
-  SearchResults,
-  SavedSearch,
-  FilterOption,
-  SortOption,
-} from "@/types/search";
+import { devtools } from "zustand/middleware";
+import type { SearchType, SearchParams, SearchResults } from "@/types/search";
 
-interface SearchState {
-  // Search parameters
+// Import the slice stores
+import { useSearchParamsStore } from "./search-params-store";
+import { useSearchResultsStore } from "./search-results-store";
+import { useSearchFiltersStore } from "./search-filters-store";
+import { useSearchHistoryStore } from "./search-history-store";
+
+// Combined search store interface that orchestrates all search operations
+interface SearchOrchestratorState {
+  // Computed properties that aggregate data from slice stores
   currentSearchType: SearchType | null;
-  flightParams: Partial<FlightSearchParams>;
-  accommodationParams: Partial<AccommodationSearchParams>;
-  activityParams: Partial<ActivitySearchParams>;
-  destinationParams: Partial<DestinationSearchParams>;
-
-  // Results
-  results: SearchResults;
-  isLoading: boolean;
-  error: string | null;
-
-  // Filters and sorting
-  availableFilters: Record<SearchType, FilterOption[]>;
-  activeFilters: Record<string, any>;
-  availableSortOptions: Record<SearchType, SortOption[]>;
-  activeSortOption: SortOption | null;
-
-  // Saved searches
-  savedSearches: SavedSearch[];
-  recentSearches: Array<{
-    type: SearchType;
-    params: SearchParams;
-    timestamp: string;
-  }>;
-
-  // Computed properties
   currentParams: SearchParams | null;
+  hasActiveFilters: boolean;
+  hasResults: boolean;
+  isSearching: boolean;
 
-  // Actions
-  setSearchType: (type: SearchType) => void;
-  updateFlightParams: (params: Partial<FlightSearchParams>) => void;
-  updateAccommodationParams: (
-    params: Partial<AccommodationSearchParams>
-  ) => void;
-  updateActivityParams: (params: Partial<ActivitySearchParams>) => void;
-  updateDestinationParams: (params: Partial<DestinationSearchParams>) => void;
-  resetParams: (type?: SearchType) => void;
+  // High-level search operations
+  initializeSearch: (searchType: SearchType) => void;
+  executeSearch: (params?: SearchParams) => Promise<string | null>;
+  resetSearch: () => void;
 
-  setResults: (results: SearchResults) => void;
-  setIsLoading: (isLoading: boolean) => void;
-  setError: (error: string | null) => void;
-  clearResults: () => void;
+  // Cross-store operations
+  loadSavedSearch: (savedSearchId: string) => Promise<boolean>;
+  duplicateCurrentSearch: (name: string) => Promise<string | null>;
 
-  setAvailableFilters: (type: SearchType, filters: FilterOption[]) => void;
-  setActiveFilter: (filterId: string, value: any) => void;
-  clearFilters: () => void;
+  // Search workflow helpers
+  validateAndExecuteSearch: () => Promise<string | null>;
+  applyFiltersAndSearch: () => Promise<string | null>;
+  retryLastSearch: () => Promise<string | null>;
 
-  setAvailableSortOptions: (type: SearchType, options: SortOption[]) => void;
-  setActiveSortOption: (option: SortOption | null) => void;
+  // State synchronization
+  syncStores: () => void;
 
-  saveSearch: (name: string) => void;
-  deleteSearch: (id: string) => void;
-  addRecentSearch: () => void;
-  clearRecentSearches: () => void;
+  // Quick access helpers
+  getSearchSummary: () => {
+    searchType: SearchType | null;
+    params: SearchParams | null;
+    hasResults: boolean;
+    resultCount: number;
+    hasFilters: boolean;
+    filterCount: number;
+    isValid: boolean;
+  };
 }
 
-const getDefaultSearchParams = (type: SearchType): Partial<SearchParams> => {
-  const baseParams = {
-    adults: 1,
-    children: 0,
-    infants: 0,
-  };
-
-  switch (type) {
-    case "flight":
-      return {
-        ...baseParams,
-        cabinClass: "economy" as const,
-        directOnly: false,
-      };
-    case "accommodation":
-      return {
-        ...baseParams,
-        rooms: 1,
-      };
-    case "activity":
-      return {
-        ...baseParams,
-      };
-    case "destination":
-      return {
-        query: "",
-        limit: 10,
-        types: ["locality", "country"],
-      };
-    default:
-      return baseParams;
-  }
-};
-
-const generateId = () =>
-  Date.now().toString(36) + Math.random().toString(36).substring(2, 5);
-const getCurrentTimestamp = () => new Date().toISOString();
-
-export const useSearchStore = create<SearchState>()(
-  persist(
+// Main search store that orchestrates the slice stores
+export const useSearchStore = create<SearchOrchestratorState>()(
+  devtools(
     (set, get) => ({
-      // Initial state
-      currentSearchType: null,
-      flightParams: {},
-      accommodationParams: {},
-      activityParams: {},
-      destinationParams: {},
-
-      results: {},
-      isLoading: false,
-      error: null,
-
-      availableFilters: {
-        flight: [],
-        accommodation: [],
-        activity: [],
-        destination: [],
+      // Computed properties
+      get currentSearchType() {
+        return useSearchParamsStore.getState().currentSearchType;
       },
-      activeFilters: {},
-      availableSortOptions: {
-        flight: [],
-        accommodation: [],
-        activity: [],
-        destination: [],
+
+      get currentParams() {
+        return useSearchParamsStore.getState().currentParams;
       },
-      activeSortOption: null,
 
-      savedSearches: [],
-      recentSearches: [],
+      get hasActiveFilters() {
+        return useSearchFiltersStore.getState().hasActiveFilters;
+      },
 
-      // Computed property for current parameters based on search type
-      get currentParams(): SearchParams | null {
-        const {
-          currentSearchType,
-          flightParams,
-          accommodationParams,
-          activityParams,
-          destinationParams,
-        } = get();
+      get hasResults() {
+        return useSearchResultsStore.getState().hasResults;
+      },
 
-        if (!currentSearchType) return null;
+      get isSearching() {
+        return useSearchResultsStore.getState().isSearching;
+      },
 
-        switch (currentSearchType) {
-          case "flight":
-            return flightParams as FlightSearchParams;
-          case "accommodation":
-            return accommodationParams as AccommodationSearchParams;
-          case "activity":
-            return activityParams as ActivitySearchParams;
-          case "destination":
-            return destinationParams as DestinationSearchParams;
-          default:
-            return null;
+      // High-level search operations
+      initializeSearch: (searchType) => {
+        // Initialize all stores for the search type
+        useSearchParamsStore.getState().setSearchType(searchType);
+        useSearchFiltersStore.getState().setSearchType(searchType);
+        useSearchResultsStore.getState().clearResults(searchType);
+
+        // Sync the stores
+        get().syncStores();
+      },
+
+      executeSearch: async (params) => {
+        const paramsStore = useSearchParamsStore.getState();
+        const resultsStore = useSearchResultsStore.getState();
+        const filtersStore = useSearchFiltersStore.getState();
+        const historyStore = useSearchHistoryStore.getState();
+
+        const searchType = paramsStore.currentSearchType;
+        if (!searchType) {
+          throw new Error("No search type selected");
+        }
+
+        // Use provided params or current params
+        const searchParams = params || paramsStore.currentParams;
+        if (!searchParams) {
+          throw new Error("No search parameters available");
+        }
+
+        // Validate parameters
+        const isValid = await paramsStore.validateCurrentParams();
+        if (!isValid) {
+          throw new Error("Invalid search parameters");
+        }
+
+        // Start the search
+        const searchId = resultsStore.startSearch(searchType, searchParams);
+
+        try {
+          // Add to recent searches
+          historyStore.addRecentSearch(searchType, searchParams, {
+            resultsCount: 0,
+            searchDuration: 0,
+          });
+
+          // Simulate search progress (replace with actual search implementation)
+          resultsStore.updateSearchProgress(searchId, 25);
+          await new Promise((resolve) => setTimeout(resolve, 500));
+
+          resultsStore.updateSearchProgress(searchId, 50);
+          await new Promise((resolve) => setTimeout(resolve, 500));
+
+          resultsStore.updateSearchProgress(searchId, 75);
+          await new Promise((resolve) => setTimeout(resolve, 500));
+
+          // Mock search results (replace with actual API calls)
+          const mockResults: SearchResults = {};
+
+          switch (searchType) {
+            case "flight":
+              mockResults.flights = [
+                {
+                  id: "1",
+                  price: 450,
+                  airline: "Example Airlines",
+                  duration: "5h 30m",
+                },
+                { id: "2", price: 520, airline: "Demo Air", duration: "6h 15m" },
+              ] as any;
+              break;
+            case "accommodation":
+              mockResults.accommodations = [
+                { id: "1", name: "Example Hotel", price: 120, rating: 4.5 },
+                { id: "2", name: "Demo Resort", price: 180, rating: 4.8 },
+              ] as any;
+              break;
+            case "activity":
+              mockResults.activities = [
+                { id: "1", name: "City Tour", price: 45, duration: "3 hours" },
+                { id: "2", name: "Museum Visit", price: 25, duration: "2 hours" },
+              ] as any;
+              break;
+            case "destination":
+              mockResults.destinations = [
+                { id: "1", name: "Paris", country: "France", type: "city" },
+                { id: "2", name: "Tokyo", country: "Japan", type: "city" },
+              ] as any;
+              break;
+          }
+
+          // Set the results
+          resultsStore.setSearchResults(searchId, mockResults, {
+            totalResults: Object.values(mockResults).flat().length,
+            searchDuration: 1500,
+            provider: "MockProvider",
+            requestId: searchId,
+          });
+
+          return searchId;
+        } catch (error) {
+          const errorDetails = {
+            code: "SEARCH_FAILED",
+            message: error instanceof Error ? error.message : "Search failed",
+            retryable: true,
+            occurredAt: new Date().toISOString(),
+          };
+
+          resultsStore.setSearchError(searchId, errorDetails);
+          throw error;
         }
       },
 
-      // Set search type and initialize default params if empty
-      setSearchType: (type) =>
-        set((state) => {
-          // Initialize default parameters if not set yet
-          const updatedState: Partial<SearchState> = {
-            currentSearchType: type,
-          };
+      resetSearch: () => {
+        useSearchParamsStore.getState().reset();
+        useSearchResultsStore.getState().clearAllResults();
+        useSearchFiltersStore.getState().softReset();
+      },
 
-          switch (type) {
-            case "flight":
-              if (Object.keys(state.flightParams).length === 0) {
-                updatedState.flightParams = getDefaultSearchParams("flight");
-              }
-              break;
-            case "accommodation":
-              if (Object.keys(state.accommodationParams).length === 0) {
-                updatedState.accommodationParams =
-                  getDefaultSearchParams("accommodation");
-              }
-              break;
-            case "activity":
-              if (Object.keys(state.activityParams).length === 0) {
-                updatedState.activityParams =
-                  getDefaultSearchParams("activity");
-              }
-              break;
-            case "destination":
-              if (Object.keys(state.destinationParams).length === 0) {
-                updatedState.destinationParams =
-                  getDefaultSearchParams("destination");
-              }
-              break;
+      // Cross-store operations
+      loadSavedSearch: async (savedSearchId) => {
+        const historyStore = useSearchHistoryStore.getState();
+        const savedSearches = historyStore.savedSearches;
+        const savedSearch = savedSearches.find((search) => search.id === savedSearchId);
+
+        if (!savedSearch) return false;
+
+        try {
+          // Initialize search type
+          get().initializeSearch(savedSearch.searchType);
+
+          // Load parameters
+          const paramsStore = useSearchParamsStore.getState();
+          await paramsStore.loadParamsFromTemplate(
+            savedSearch.params as SearchParams,
+            savedSearch.searchType
+          );
+
+          // Mark as used
+          historyStore.markSearchAsUsed(savedSearchId);
+
+          return true;
+        } catch (error) {
+          console.error("Failed to load saved search:", error);
+          return false;
+        }
+      },
+
+      duplicateCurrentSearch: async (name) => {
+        const paramsStore = useSearchParamsStore.getState();
+        const historyStore = useSearchHistoryStore.getState();
+
+        const { currentSearchType, currentParams } = paramsStore;
+        if (!currentSearchType || !currentParams) return null;
+
+        return await historyStore.saveSearch(name, currentSearchType, currentParams);
+      },
+
+      // Search workflow helpers
+      validateAndExecuteSearch: async () => {
+        const paramsStore = useSearchParamsStore.getState();
+
+        // Validate parameters first
+        const isValid = await paramsStore.validateCurrentParams();
+        if (!isValid) {
+          throw new Error("Search parameters are invalid");
+        }
+
+        return await get().executeSearch();
+      },
+
+      applyFiltersAndSearch: async () => {
+        const filtersStore = useSearchFiltersStore.getState();
+
+        // Validate filters
+        const filtersValid = await filtersStore.validateAllFilters();
+        if (!filtersValid) {
+          throw new Error("Some filters are invalid");
+        }
+
+        return await get().validateAndExecuteSearch();
+      },
+
+      retryLastSearch: async () => {
+        const resultsStore = useSearchResultsStore.getState();
+
+        if (!resultsStore.canRetry) {
+          throw new Error("Cannot retry search");
+        }
+
+        return await resultsStore.retryLastSearch();
+      },
+
+      // State synchronization
+      syncStores: () => {
+        const paramsStore = useSearchParamsStore.getState();
+        const filtersStore = useSearchFiltersStore.getState();
+
+        // Ensure filter store knows about current search type
+        if (
+          paramsStore.currentSearchType &&
+          paramsStore.currentSearchType !== filtersStore.currentSearchType
+        ) {
+          filtersStore.setSearchType(paramsStore.currentSearchType);
+        }
+      },
+
+      // Quick access helpers
+      getSearchSummary: () => {
+        const paramsStore = useSearchParamsStore.getState();
+        const resultsStore = useSearchResultsStore.getState();
+        const filtersStore = useSearchFiltersStore.getState();
+
+        const results = resultsStore.results;
+        const resultCount = Object.values(results).reduce((total, typeResults) => {
+          if (Array.isArray(typeResults)) {
+            return total + typeResults.length;
           }
+          return total;
+        }, 0);
 
-          return updatedState;
-        }),
-
-      // Update search parameters
-      updateFlightParams: (params) =>
-        set((state) => ({
-          flightParams: { ...state.flightParams, ...params },
-        })),
-
-      updateAccommodationParams: (params) =>
-        set((state) => ({
-          accommodationParams: { ...state.accommodationParams, ...params },
-        })),
-
-      updateActivityParams: (params) =>
-        set((state) => ({
-          activityParams: { ...state.activityParams, ...params },
-        })),
-
-      updateDestinationParams: (params) =>
-        set((state) => ({
-          destinationParams: { ...state.destinationParams, ...params },
-        })),
-
-      // Reset search parameters
-      resetParams: (type) =>
-        set((state) => {
-          if (!type) {
-            return {
-              flightParams: {},
-              accommodationParams: {},
-              activityParams: {},
-              destinationParams: {},
-            };
-          }
-
-          switch (type) {
-            case "flight":
-              return { flightParams: getDefaultSearchParams("flight") };
-            case "accommodation":
-              return {
-                accommodationParams: getDefaultSearchParams("accommodation"),
-              };
-            case "activity":
-              return { activityParams: getDefaultSearchParams("activity") };
-            case "destination":
-              return {
-                destinationParams: getDefaultSearchParams("destination"),
-              };
-            default:
-              return {};
-          }
-        }),
-
-      // Search results management
-      setResults: (results) => set({ results, isLoading: false }),
-      setIsLoading: (isLoading) => set({ isLoading }),
-      setError: (error) => set({ error, isLoading: false }),
-      clearResults: () => set({ results: {}, error: null }),
-
-      // Filter management
-      setAvailableFilters: (type, filters) =>
-        set((state) => ({
-          availableFilters: {
-            ...state.availableFilters,
-            [type]: filters,
-          },
-        })),
-
-      setActiveFilter: (filterId, value) =>
-        set((state) => ({
-          activeFilters: {
-            ...state.activeFilters,
-            [filterId]: value,
-          },
-        })),
-
-      clearFilters: () => set({ activeFilters: {} }),
-
-      // Sort options management
-      setAvailableSortOptions: (type, options) =>
-        set((state) => ({
-          availableSortOptions: {
-            ...state.availableSortOptions,
-            [type]: options,
-          },
-        })),
-
-      setActiveSortOption: (option) => set({ activeSortOption: option }),
-
-      // Saved searches management
-      saveSearch: (name) =>
-        set((state) => {
-          const { currentSearchType, currentParams } = state;
-
-          if (!currentSearchType || !currentParams) return state;
-
-          const newSavedSearch: SavedSearch = {
-            id: generateId(),
-            type: currentSearchType,
-            name,
-            params: currentParams,
-            createdAt: getCurrentTimestamp(),
-          };
-
-          return {
-            savedSearches: [...state.savedSearches, newSavedSearch],
-          };
-        }),
-
-      deleteSearch: (id) =>
-        set((state) => ({
-          savedSearches: state.savedSearches.filter(
-            (search) => search.id !== id
-          ),
-        })),
-
-      addRecentSearch: () =>
-        set((state) => {
-          const { currentSearchType, currentParams } = state;
-
-          if (!currentSearchType || !currentParams) return state;
-
-          const newRecentSearch = {
-            type: currentSearchType,
-            params: currentParams,
-            timestamp: getCurrentTimestamp(),
-          };
-
-          // Keep only the 10 most recent searches
-          const recentSearches = [
-            newRecentSearch,
-            ...state.recentSearches,
-          ].slice(0, 10);
-
-          return { recentSearches };
-        }),
-
-      clearRecentSearches: () => set({ recentSearches: [] }),
+        return {
+          searchType: paramsStore.currentSearchType,
+          params: paramsStore.currentParams,
+          hasResults: resultsStore.hasResults,
+          resultCount,
+          hasFilters: filtersStore.hasActiveFilters,
+          filterCount: filtersStore.activeFilterCount,
+          isValid: paramsStore.hasValidParams,
+        };
+      },
     }),
-    {
-      name: "search-storage",
-      partialize: (state) => ({
-        // Only persist the saved searches and recent searches, not the current search params or results
-        savedSearches: state.savedSearches,
-        recentSearches: state.recentSearches,
-      }),
-    }
+    { name: "SearchOrchestratorStore" }
   )
 );
+
+// Re-export the slice stores for direct access when needed
+export {
+  useSearchParamsStore,
+  useSearchResultsStore,
+  useSearchFiltersStore,
+  useSearchHistoryStore,
+};
+
+// Re-export utility selectors
+export {
+  useSearchType,
+  useCurrentSearchParams,
+  useSearchParamsValidation,
+} from "./search-params-store";
+
+export {
+  useSearchStatus,
+  useSearchResults,
+  useIsSearching,
+  useSearchProgress,
+  useSearchError,
+  useHasSearchResults,
+} from "./search-results-store";
+
+export {
+  useActiveFilters,
+  useActiveSortOption,
+  useCurrentFilters,
+  useHasActiveFilters,
+  useFilterPresets,
+} from "./search-filters-store";
+
+export {
+  useRecentSearches,
+  useSavedSearches,
+  useFavoriteSearches,
+  useSearchSuggestions,
+  useSearchAnalytics,
+} from "./search-history-store";

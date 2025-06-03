@@ -1,6 +1,6 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { ErrorService } from "../error-service";
 import type { ErrorReport, ErrorServiceConfig } from "@/types/errors";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { ErrorService } from "../error-service";
 
 // Mock fetch
 const mockFetch = vi.fn();
@@ -114,11 +114,7 @@ describe("ErrorService", () => {
         sessionId: "session456",
       };
 
-      const report = errorService.createErrorReport(
-        error,
-        undefined,
-        additionalInfo
-      );
+      const report = errorService.createErrorReport(error, undefined, additionalInfo);
 
       expect(report.userId).toBe("user123");
       expect(report.sessionId).toBe("session456");
@@ -169,9 +165,7 @@ describe("ErrorService", () => {
         ...mockConfig,
         enabled: false,
       });
-      const consoleErrorSpy = vi
-        .spyOn(console, "error")
-        .mockImplementation(() => {});
+      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
       const errorReport: ErrorReport = {
         error: {
@@ -186,10 +180,7 @@ describe("ErrorService", () => {
       await disabledService.reportError(errorReport);
 
       expect(mockFetch).not.toHaveBeenCalled();
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        "Error reported:",
-        errorReport
-      );
+      expect(consoleErrorSpy).toHaveBeenCalledWith("Error reported:", errorReport);
 
       consoleErrorSpy.mockRestore();
     });
@@ -223,9 +214,7 @@ describe("ErrorService", () => {
     });
 
     it("should validate error report with Zod", async () => {
-      const consoleErrorSpy = vi
-        .spyOn(console, "error")
-        .mockImplementation(() => {});
+      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
       const invalidErrorReport = {
         error: {
@@ -288,9 +277,7 @@ describe("ErrorService", () => {
     });
 
     it("should give up after max retries", async () => {
-      const consoleErrorSpy = vi
-        .spyOn(console, "error")
-        .mockImplementation(() => {});
+      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
       // All calls fail
       mockFetch.mockRejectedValue(new Error("Network error"));

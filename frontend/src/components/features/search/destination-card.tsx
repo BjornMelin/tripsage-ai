@@ -1,17 +1,10 @@
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  MapPin,
-  Globe,
-  Star,
-  Calendar,
-  Thermometer,
-  CloudRain,
-} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { Destination } from "@/types/search";
+import { Calendar, CloudRain, Globe, MapPin, Star, Thermometer } from "lucide-react";
 
 interface DestinationCardProps {
   destination: Destination;
@@ -47,10 +40,7 @@ export function DestinationCard({
     if (types.includes("country")) {
       return <Globe className="h-4 w-4" />;
     }
-    if (
-      types.includes("establishment") ||
-      types.includes("tourist_attraction")
-    ) {
+    if (types.includes("establishment") || types.includes("tourist_attraction")) {
       return <Star className="h-4 w-4" />;
     }
     return <MapPin className="h-4 w-4" />;
@@ -96,9 +86,7 @@ export function DestinationCard({
               {destination.rating && (
                 <div className="flex items-center text-sm">
                   <Star className="h-3 w-3 fill-yellow-400 text-yellow-400 mr-1" />
-                  <span className="font-medium">
-                    {destination.rating.toFixed(1)}
-                  </span>
+                  <span className="font-medium">{destination.rating.toFixed(1)}</span>
                 </div>
               )}
             </div>
@@ -132,9 +120,7 @@ export function DestinationCard({
         {destination.bestTimeToVisit && (
           <div className="flex items-center text-xs text-muted-foreground">
             <Calendar className="h-3 w-3 mr-1" />
-            <span>
-              Best: {formatBestTimeToVisit(destination.bestTimeToVisit)}
-            </span>
+            <span>Best: {formatBestTimeToVisit(destination.bestTimeToVisit)}</span>
           </div>
         )}
 
@@ -173,11 +159,7 @@ export function DestinationCard({
         {/* Action Buttons */}
         <div className="flex gap-2 pt-2">
           {onSelect && (
-            <Button
-              size="sm"
-              onClick={() => onSelect(destination)}
-              className="flex-1"
-            >
+            <Button size="sm" onClick={() => onSelect(destination)} className="flex-1">
               Select
             </Button>
           )}
@@ -191,11 +173,7 @@ export function DestinationCard({
             </Button>
           )}
           {onCompare && (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => onCompare(destination)}
-            >
+            <Button size="sm" variant="outline" onClick={() => onCompare(destination)}>
               Compare
             </Button>
           )}
