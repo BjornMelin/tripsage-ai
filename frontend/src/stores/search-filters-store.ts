@@ -1,7 +1,7 @@
-import { create } from "zustand";
-import { persist, devtools } from "zustand/middleware";
+import type { FilterOption, SearchType, SortOption } from "@/types/search";
 import { z } from "zod";
-import type { FilterOption, SortOption, SearchType } from "@/types/search";
+import { create } from "zustand";
+import { devtools, persist } from "zustand/middleware";
 
 // Validation schemas for filters and sorting
 const SearchTypeSchema = z.enum(["flight", "accommodation", "activity", "destination"]);

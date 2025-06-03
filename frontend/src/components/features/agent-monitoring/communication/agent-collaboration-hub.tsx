@@ -1,41 +1,41 @@
 "use client";
 
-import type React from "react";
-import { useState, useOptimistic, useEffect, startTransition } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Separator } from "@/components/ui/separator";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
+import { AnimatePresence, motion } from "framer-motion";
 import {
-  Users,
-  ArrowRightLeft,
-  Brain,
-  Cpu,
-  MessageSquare,
-  Clock,
-  CheckCircle2,
-  AlertTriangle,
-  TrendingUp,
-  Zap,
-  Network,
   Activity,
+  AlertTriangle,
+  ArrowRightLeft,
   BarChart3,
-  Target,
-  Workflow,
-  GitBranch,
-  Timer,
+  Brain,
+  CheckCircle2,
+  Clock,
+  Cpu,
   Eye,
+  GitBranch,
+  MessageSquare,
+  Network,
+  Target,
+  Timer,
+  TrendingUp,
+  Users,
+  Workflow,
+  Zap,
 } from "lucide-react";
+import type React from "react";
+import { startTransition, useEffect, useOptimistic, useState } from "react";
 
 interface Agent {
   id: string;

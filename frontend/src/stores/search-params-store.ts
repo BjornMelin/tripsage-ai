@@ -1,6 +1,3 @@
-import { create } from "zustand";
-import { persist, devtools } from "zustand/middleware";
-import { z } from "zod";
 import type {
   AccommodationSearchParams,
   ActivitySearchParams,
@@ -9,6 +6,9 @@ import type {
   SearchParams,
   SearchType,
 } from "@/types/search";
+import { z } from "zod";
+import { create } from "zustand";
+import { devtools, persist } from "zustand/middleware";
 
 // Validation schemas for search parameters
 const SearchTypeSchema = z.enum(["flight", "accommodation", "activity", "destination"]);

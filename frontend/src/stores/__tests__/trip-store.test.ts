@@ -1,6 +1,6 @@
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { useTripStore, type Trip, type Destination } from "../trip-store";
+import { type Destination, type Trip, useTripStore } from "../trip-store";
 
 // Mock setTimeout to make tests run faster
 vi.mock("global", () => ({

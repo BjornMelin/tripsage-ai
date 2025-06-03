@@ -1,37 +1,37 @@
 "use client";
 
-import { useState, useTransition, useOptimistic } from "react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import {
-  Building2,
-  Star,
-  Wifi,
-  Coffee,
-  Car,
-  Dumbbell,
-  Utensils,
-  Waves,
-  MapPin,
-  Users,
-  Calendar,
-  Heart,
-  TrendingUp,
-  Sparkles,
-  Shield,
-  Zap,
-  Filter,
   ArrowUpDown,
+  Building2,
+  Calendar,
+  Car,
+  Coffee,
+  Dumbbell,
+  Filter,
   Grid3X3,
+  Heart,
+  Image as ImageIcon,
   List,
   Map,
+  MapPin,
   RefreshCw,
-  Image as ImageIcon,
+  Shield,
+  Sparkles,
+  Star,
+  TrendingUp,
+  Users,
+  Utensils,
+  Waves,
+  Wifi,
+  Zap,
 } from "lucide-react";
+import { useOptimistic, useState, useTransition } from "react";
 
 // Modern hotel result types with 2025 hospitality patterns
 interface ModernHotelResult {

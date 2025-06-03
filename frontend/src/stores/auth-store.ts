@@ -1,6 +1,6 @@
-import { create } from "zustand";
-import { persist, devtools } from "zustand/middleware";
 import { z } from "zod";
+import { create } from "zustand";
+import { devtools, persist } from "zustand/middleware";
 
 // Validation schemas
 const UserPreferencesSchema = z.object({
@@ -804,9 +804,12 @@ export const useAuth = () =>
 
 export const useUser = () => useAuthStore((state) => state.user);
 export const useIsAuthenticated = () => useAuthStore((state) => state.isAuthenticated);
-export const useUserDisplayName = () => useAuthStore((state) => getUserDisplayName(state.user));
-export const useIsTokenExpired = () => useAuthStore((state) => isTokenExpired(state.tokenInfo));
-export const useSessionTimeRemaining = () => useAuthStore((state) => getSessionTimeRemaining(state.session));
+export const useUserDisplayName = () =>
+  useAuthStore((state) => getUserDisplayName(state.user));
+export const useIsTokenExpired = () =>
+  useAuthStore((state) => isTokenExpired(state.tokenInfo));
+export const useSessionTimeRemaining = () =>
+  useAuthStore((state) => getSessionTimeRemaining(state.session));
 export const useAuthLoading = () =>
   useAuthStore((state) => ({
     isLoading: state.isLoading,

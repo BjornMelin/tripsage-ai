@@ -2,11 +2,11 @@ import { act } from "@testing-library/react";
 import { renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
-  useSearchStore,
-  useSearchParamsStore,
-  useSearchResultsStore,
   useSearchFiltersStore,
   useSearchHistoryStore,
+  useSearchParamsStore,
+  useSearchResultsStore,
+  useSearchStore,
 } from "../search-store";
 
 // Mock all Zustand middleware
@@ -215,14 +215,14 @@ describe("Search Store Integration", () => {
           id: "price_range",
           label: "Price Range",
           type: "range",
-          category: "pricing"
+          category: "pricing",
         },
         {
           id: "airline",
           label: "Airlines",
           type: "multiselect",
-          category: "airline"
-        }
+          category: "airline",
+        },
       ];
 
       act(() => {

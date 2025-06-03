@@ -45,7 +45,6 @@ const mockUseChatAi = vi.mocked(useChatAi);
 const mockUseApiKeyStore = vi.mocked(useApiKeyStore);
 
 describe("ChatContainer Authentication", () => {
-
   beforeEach(() => {
     vi.clearAllMocks();
   });

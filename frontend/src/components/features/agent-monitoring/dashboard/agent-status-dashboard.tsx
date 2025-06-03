@@ -1,35 +1,35 @@
 "use client";
 
-import type React from "react";
-import { useOptimistic, useState, useEffect, startTransition } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  AreaChart,
-  Area,
-} from "recharts";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import { AnimatePresence, motion } from "framer-motion";
 import {
   Activity,
+  AlertTriangle,
   Brain,
+  CheckCircle,
+  Clock,
   Cpu,
   Gauge,
   Heart,
   TrendingUp,
-  AlertTriangle,
-  CheckCircle,
-  Clock,
   Zap,
 } from "lucide-react";
+import type React from "react";
+import { startTransition, useEffect, useOptimistic, useState } from "react";
+import {
+  Area,
+  AreaChart,
+  CartesianGrid,
+  Line,
+  LineChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 
 interface AgentMetrics {
   id: string;

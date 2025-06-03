@@ -3,12 +3,12 @@ import { act } from "@testing-library/react";
 import { renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it } from "vitest";
 import { vi } from "vitest";
-import { 
-  useBudgetStore,
+import {
   useActiveBudget,
+  useBudgetStore,
   useBudgetSummary,
   useBudgetsByTrip,
-  useRecentExpenses 
+  useRecentExpenses,
 } from "../budget-store";
 
 // Mock the store to avoid persistence issues in tests
@@ -256,7 +256,9 @@ describe("useBudgetStore", () => {
         storeResult.current.addBudgetCategory("budget-1", newCategory);
       });
 
-      expect(storeResult.current.budgets["budget-1"].categories).toContainEqual(newCategory);
+      expect(storeResult.current.budgets["budget-1"].categories).toContainEqual(
+        newCategory
+      );
       // Check that updatedAt was changed
       expect(storeResult.current.budgets["budget-1"].updatedAt).not.toBe(
         "2025-05-20T12:00:00Z"
@@ -301,7 +303,9 @@ describe("useBudgetStore", () => {
 
       expect(storeResult.current.budgets["budget-1"].categories[0].amount).toBe(2000);
       expect(storeResult.current.budgets["budget-1"].categories[0].spent).toBe(500);
-      expect(storeResult.current.budgets["budget-1"].categories[0].remaining).toBe(1500);
+      expect(storeResult.current.budgets["budget-1"].categories[0].remaining).toBe(
+        1500
+      );
       expect(storeResult.current.budgets["budget-1"].categories[0].percentage).toBe(25);
     });
 

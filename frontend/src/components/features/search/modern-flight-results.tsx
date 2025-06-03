@@ -1,31 +1,31 @@
 "use client";
 
-import { useState, useTransition, useOptimistic } from "react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import {
-  Plane,
-  Clock,
-  Wifi,
-  Coffee,
-  Utensils,
-  Monitor,
-  MapPin,
-  Star,
-  TrendingUp,
-  Zap,
-  Shield,
-  Heart,
-  RefreshCw,
-  Filter,
   ArrowUpDown,
   Calendar,
+  Clock,
+  Coffee,
+  Filter,
+  Heart,
+  MapPin,
+  Monitor,
+  Plane,
+  RefreshCw,
+  Shield,
+  Star,
+  TrendingUp,
   Users,
+  Utensils,
+  Wifi,
+  Zap,
 } from "lucide-react";
+import { useOptimistic, useState, useTransition } from "react";
 
 // Modern flight result types with 2025 travel patterns
 interface ModernFlightResult {
