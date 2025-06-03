@@ -1,7 +1,8 @@
 "use client";
 
-import React from "react";
 import { SearchLayout } from "@/components/layouts/search-layout";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -9,12 +10,11 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { useSearchResultsStore } from "@/stores/search-store";
+import { ArrowRight, Clock, DollarSign, Filter, MapPin, Plane } from "lucide-react";
 import { useSearchParams } from "next/navigation";
-import { Plane, Clock, MapPin, DollarSign, Filter, ArrowRight } from "lucide-react";
+import React from "react";
 
 export default function FlightResultsPage() {
   const searchParams = useSearchParams();

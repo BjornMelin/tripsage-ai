@@ -1,19 +1,19 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  AgentCollaborationHub,
+  AgentStatusDashboard,
+  type ConnectionAnalytics,
+  EnhancedConnectionStatus,
+  type NetworkMetrics,
+  useWebSocketAgent,
+} from "@/components/features/agent-monitoring";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  AgentStatusDashboard,
-  EnhancedConnectionStatus,
-  AgentCollaborationHub,
-  useWebSocketAgent,
-  type NetworkMetrics,
-  type ConnectionAnalytics,
-} from "@/components/features/agent-monitoring";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Activity, Brain, Network, Settings, Zap } from "lucide-react";
+import React, { useState, useEffect } from "react";
 
 // Mock data for demonstration
 const mockAgentMetrics = [

@@ -1,7 +1,7 @@
+import type { ApiKey } from "@/types/api-keys";
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useApiKeyStore } from "../api-key-store";
-import type { ApiKey } from "@/types/api-keys";
 
 // Mock fetch globally
 global.fetch = vi.fn();

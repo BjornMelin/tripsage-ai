@@ -1,13 +1,13 @@
+import type { SearchType } from "@/types/search";
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useSearchHistoryStore } from "../search-history-store";
 import type {
+  QuickSearch,
+  SearchCollection,
   SearchHistoryItem,
   ValidatedSavedSearch,
-  SearchCollection,
-  QuickSearch,
 } from "../search-history-store";
-import type { SearchType } from "@/types/search";
 
 // Mock console.error to avoid noise in tests
 global.console.error = vi.fn();

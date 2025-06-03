@@ -1,14 +1,14 @@
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
-  useUIStore,
-  type Theme,
-  type Notification,
-  type LoadingState,
-  type SidebarState,
-  type NavigationState,
-  type ModalState,
   type CommandPaletteState,
+  type LoadingState,
+  type ModalState,
+  type NavigationState,
+  type Notification,
+  type SidebarState,
+  type Theme,
+  useUIStore,
 } from "../ui-store";
 
 // Mock window.matchMedia for theme detection

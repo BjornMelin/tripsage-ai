@@ -1,13 +1,13 @@
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
-  useUserProfileStore,
-  type UserProfile,
-  type PersonalInfo,
-  type TravelPreferences,
-  type PrivacySettings,
   type FavoriteDestination,
+  type PersonalInfo,
+  type PrivacySettings,
   type TravelDocument,
+  type TravelPreferences,
+  type UserProfile,
+  useUserProfileStore,
 } from "../user-store";
 
 // Mock setTimeout to make tests run faster

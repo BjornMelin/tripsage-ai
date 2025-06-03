@@ -1,8 +1,6 @@
 "use client";
 
-import type React from "react";
-import { useEffect, useState, useMemo } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,27 +11,29 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
+import { AnimatePresence, motion } from "framer-motion";
 import {
-  Wifi,
-  WifiOff,
+  Activity,
+  AlertTriangle,
+  CheckCircle2,
+  Info,
+  Loader2,
+  Monitor,
+  RefreshCw,
+  Router,
   Signal,
   SignalHigh,
   SignalLow,
   SignalMedium,
-  Activity,
-  TrendingUp,
   TrendingDown,
-  AlertTriangle,
-  CheckCircle2,
-  Loader2,
+  TrendingUp,
+  Wifi,
+  WifiOff,
   Zap,
-  Router,
-  Monitor,
-  RefreshCw,
-  Info,
 } from "lucide-react";
+import type React from "react";
+import { useEffect, useMemo, useState } from "react";
 
 export type ConnectionStatus =
   | "connecting"

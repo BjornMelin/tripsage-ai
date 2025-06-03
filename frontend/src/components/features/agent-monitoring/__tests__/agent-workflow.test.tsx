@@ -1,14 +1,14 @@
 import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi, beforeEach } from "vitest";
-import { AgentStatusDashboard } from "../dashboard/agent-status-dashboard";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AgentCollaborationHub } from "../communication/agent-collaboration-hub";
 import { EnhancedConnectionStatus } from "../communication/enhanced-connection-status";
+import { AgentStatusDashboard } from "../dashboard/agent-status-dashboard";
 import type {
   AgentMetrics,
-  NetworkMetrics,
-  ConnectionAnalytics,
   CollaborationAgent,
+  ConnectionAnalytics,
+  NetworkMetrics,
 } from "../types";
 
 // Mock Recharts components to avoid canvas rendering issues in tests

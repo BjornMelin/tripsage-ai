@@ -1,15 +1,15 @@
 "use client";
 
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { logoutAction } from "@/lib/auth/server-actions";
 import { cn } from "@/lib/utils";
+import { ChevronDown, LogOut, Settings, User as UserIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useTransition } from "react";
-import { logoutAction } from "@/lib/auth/server-actions";
-import { Button } from "@/components/ui/button";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { LogOut, Settings, User as UserIcon, ChevronDown } from "lucide-react";
-import { ThemeToggle } from "@/components/ui/theme-toggle";
 
 interface SidebarNavProps extends React.HTMLAttributes<HTMLElement> {
   items: {
