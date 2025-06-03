@@ -1,6 +1,6 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
-import { NextRequest, NextResponse } from "next/server";
 import { middleware } from "@/middleware";
+import { NextRequest, NextResponse } from "next/server";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 describe("Rate Limiting Middleware", () => {
   beforeEach(() => {
@@ -62,9 +62,7 @@ describe("Rate Limiting Middleware", () => {
     expect(blockedResponse.headers.get("Retry-After")).toBeTruthy();
 
     const body = await blockedResponse.json();
-    expect(body.error).toBe(
-      "Too many requests. Please wait before trying again."
-    );
+    expect(body.error).toBe("Too many requests. Please wait before trying again.");
     expect(body.code).toBe("RATE_LIMITED");
   });
 
@@ -136,15 +134,12 @@ describe("Rate Limiting Middleware", () => {
 
   it("should skip rate limiting for attachment uploads", async () => {
     // Arrange
-    const request = new NextRequest(
-      "http://localhost:3000/api/chat/attachments",
-      {
-        method: "POST",
-        headers: {
-          "x-forwarded-for": "192.168.1.7",
-        },
-      }
-    );
+    const request = new NextRequest("http://localhost:3000/api/chat/attachments", {
+      method: "POST",
+      headers: {
+        "x-forwarded-for": "192.168.1.7",
+      },
+    });
 
     // Act
     const response = await middleware(request);

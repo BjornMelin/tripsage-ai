@@ -10,7 +10,6 @@ export { LoadingSpinner, spinnerVariants } from "./loading-spinner";
 // Loading states
 export {
   LoadingOverlay,
-  LoadingState,
   LoadingButton,
   LoadingContainer,
   PageLoading,
@@ -46,17 +45,17 @@ export {
   type UseLoadingOptions,
   type UseLoadingReturn,
   type UseAsyncLoadingReturn,
-} from "../../lib/hooks/use-loading";
+} from "../../hooks/use-loading";
 
 // Types
 export type {
-  LoadingState,
   SkeletonConfig,
   LoadingSpinnerConfig,
   SkeletonProps,
   LoadingSpinnerProps,
   LoadingOverlayProps,
   LoadingStateProps,
+  LoadingContextValue,
 } from "../../types/loading";
 
 export { SkeletonType } from "../../types/loading";

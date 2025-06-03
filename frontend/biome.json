@@ -8,13 +8,35 @@
     "formatWithErrors": false,
     "indentStyle": "space",
     "indentWidth": 2,
-    "lineWidth": 80,
+    "lineWidth": 88,
     "lineEnding": "lf"
   },
   "linter": {
     "enabled": true,
     "rules": {
-      "recommended": true
+      "recommended": true,
+      "correctness": {
+        "useHookAtTopLevel": "error",
+        "useExhaustiveDependencies": "warn"
+      },
+      "style": {
+        "useConst": "error",
+        "useTemplate": "error",
+        "noParameterAssign": "error"
+      },
+      "suspicious": {
+        "noExplicitAny": "warn",
+        "noArrayIndexKey": "warn"
+      },
+      "performance": {
+        "noAccumulatingSpread": "warn"
+      },
+      "a11y": {
+        "useKeyWithClickEvents": "error",
+        "useKeyWithMouseEvents": "error",
+        "noAccessKey": "error",
+        "useAltText": "error"
+      }
     }
   },
   "javascript": {
@@ -22,7 +44,8 @@
       "quoteStyle": "double",
       "jsxQuoteStyle": "double",
       "trailingCommas": "es5",
-      "semicolons": "always"
+      "semicolons": "always",
+      "arrowParentheses": "always"
     }
   },
   "files": {
@@ -31,8 +54,19 @@
       "src/**/*.tsx",
       "src/**/*.js",
       "src/**/*.jsx",
-      "e2e/**/*.ts"
+      "e2e/**/*.ts",
+      "*.ts",
+      "*.tsx"
     ],
-    "ignore": ["node_modules", ".next", "dist", "build", "coverage"]
+    "ignore": [
+      "node_modules",
+      ".next",
+      "dist",
+      "build",
+      "coverage",
+      "public",
+      "*.config.js",
+      "*.config.mjs"
+    ]
   }
 }

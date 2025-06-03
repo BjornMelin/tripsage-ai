@@ -1,8 +1,8 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { 
-  WebSocketClient, 
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  ConnectionStatus,
+  WebSocketClient,
   type WebSocketClientConfig,
-  ConnectionStatus 
 } from "../websocket-client";
 
 // Mock WebSocket implementation that properly simulates behavior
@@ -20,25 +20,28 @@ class MockWebSocket {
   static CLOSING = 2;
   static CLOSED = 3;
 
-  constructor(public url: string, public protocols?: string | string[]) {}
+  constructor(
+    public url: string,
+    public protocols?: string | string[]
+  ) {}
 
   // Utility methods for tests
   simulateOpen() {
     this.readyState = MockWebSocket.OPEN;
-    this.onopen?.(new Event('open'));
+    this.onopen?.(new Event("open"));
   }
 
   simulateMessage(data: string) {
-    this.onmessage?.(new MessageEvent('message', { data }));
+    this.onmessage?.(new MessageEvent("message", { data }));
   }
 
   simulateError() {
-    this.onerror?.(new Event('error'));
+    this.onerror?.(new Event("error"));
   }
 
-  simulateClose(code = 1000, reason = 'Normal closure') {
+  simulateClose(code = 1000, reason = "Normal closure") {
     this.readyState = MockWebSocket.CLOSED;
-    this.onclose?.(new CloseEvent('close', { code, reason }));
+    this.onclose?.(new CloseEvent("close", { code, reason }));
   }
 }
 
@@ -49,8 +52,9 @@ describe("WebSocketClient", () => {
   let client: WebSocketClient;
   let mockWebSocketInstance: MockWebSocket;
   // Test constants
-  const TEST_TOKEN = process.env.TEST_JWT_TOKEN || "mock-test-token-for-websocket-client";
-  
+  const TEST_TOKEN =
+    process.env.TEST_JWT_TOKEN || "mock-test-token-for-websocket-client";
+
   const config: WebSocketClientConfig = {
     url: "ws://localhost:8000/ws/test",
     token: TEST_TOKEN,
@@ -93,21 +97,23 @@ describe("WebSocketClient", () => {
       const connectPromise = client.connect();
 
       // Wait for connection attempt
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise((resolve) => setTimeout(resolve, 10));
 
       expect(MockWebSocketConstructor).toHaveBeenCalledWith(config.url);
       expect(client.getState().status).toBe(ConnectionStatus.CONNECTING);
 
       // Simulate successful connection
       mockWebSocketInstance.simulateOpen();
-      
+
       // Simulate auth response
-      mockWebSocketInstance.simulateMessage(JSON.stringify({
-        success: true,
-        connection_id: "test-conn-123",
-        user_id: "test-user",
-        session_id: "test-session",
-      }));
+      mockWebSocketInstance.simulateMessage(
+        JSON.stringify({
+          success: true,
+          connection_id: "test-conn-123",
+          user_id: "test-user",
+          session_id: "test-session",
+        })
+      );
 
       await connectPromise;
 
@@ -143,18 +149,23 @@ describe("WebSocketClient", () => {
 
       // Connect first
       const connectPromise = client.connect();
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise((resolve) => setTimeout(resolve, 10));
       mockWebSocketInstance.simulateOpen();
-      mockWebSocketInstance.simulateMessage(JSON.stringify({
-        success: true,
-        connection_id: "test-conn-123",
-      }));
+      mockWebSocketInstance.simulateMessage(
+        JSON.stringify({
+          success: true,
+          connection_id: "test-conn-123",
+        })
+      );
       await connectPromise;
 
       // Disconnect
       client.disconnect();
 
-      expect(mockWebSocketInstance.close).toHaveBeenCalledWith(1000, 'Client disconnect');
+      expect(mockWebSocketInstance.close).toHaveBeenCalledWith(
+        1000,
+        "Client disconnect"
+      );
       expect(client.getState().status).toBe(ConnectionStatus.DISCONNECTED);
     });
 
@@ -167,12 +178,14 @@ describe("WebSocketClient", () => {
 
       // Connect first
       const connectPromise1 = client.connect();
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise((resolve) => setTimeout(resolve, 10));
       mockWebSocketInstance.simulateOpen();
-      mockWebSocketInstance.simulateMessage(JSON.stringify({
-        success: true,
-        connection_id: "test-conn-123",
-      }));
+      mockWebSocketInstance.simulateMessage(
+        JSON.stringify({
+          success: true,
+          connection_id: "test-conn-123",
+        })
+      );
       await connectPromise1;
 
       // Attempt second connection
@@ -194,19 +207,21 @@ describe("WebSocketClient", () => {
 
       // Establish connection
       const connectPromise = client.connect();
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise((resolve) => setTimeout(resolve, 10));
       mockWebSocketInstance.simulateOpen();
-      mockWebSocketInstance.simulateMessage(JSON.stringify({
-        success: true,
-        connection_id: "test-conn-123",
-      }));
+      mockWebSocketInstance.simulateMessage(
+        JSON.stringify({
+          success: true,
+          connection_id: "test-conn-123",
+        })
+      );
       await connectPromise;
     });
 
     it("should send messages when connected", async () => {
       // Clear mocks to ignore auth message
       vi.clearAllMocks();
-      
+
       await client.send("test_event", { data: "test" });
 
       expect(mockWebSocketInstance.send).toHaveBeenCalledWith(
@@ -292,7 +307,7 @@ describe("WebSocketClient", () => {
     it("should remove all listeners for an event", () => {
       const handler1 = vi.fn();
       const handler2 = vi.fn();
-      
+
       client.on("chat_message", handler1);
       client.on("chat_message", handler2);
       client.removeAllListeners("chat_message");
@@ -306,7 +321,7 @@ describe("WebSocketClient", () => {
   describe("Connection State", () => {
     it("should provide current state", () => {
       const state = client.getState();
-      
+
       expect(state).toMatchObject({
         status: ConnectionStatus.DISCONNECTED,
         reconnectAttempt: 0,
@@ -315,7 +330,7 @@ describe("WebSocketClient", () => {
 
     it("should provide connection statistics", () => {
       const stats = client.getStats();
-      
+
       expect(stats).toMatchObject({
         status: ConnectionStatus.DISCONNECTED,
         reconnectAttempt: 0,
@@ -333,12 +348,14 @@ describe("WebSocketClient", () => {
       global.WebSocket = MockWebSocketConstructor as any;
 
       const connectPromise = client.connect();
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise((resolve) => setTimeout(resolve, 10));
       mockWebSocketInstance.simulateOpen();
-      mockWebSocketInstance.simulateMessage(JSON.stringify({
-        success: true,
-        connection_id: "test-conn-123",
-      }));
+      mockWebSocketInstance.simulateMessage(
+        JSON.stringify({
+          success: true,
+          connection_id: "test-conn-123",
+        })
+      );
       await connectPromise;
 
       // Clear mocks to ignore auth message
@@ -367,12 +384,14 @@ describe("WebSocketClient", () => {
       global.WebSocket = MockWebSocketConstructor as any;
 
       const connectPromise = client.connect();
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise((resolve) => setTimeout(resolve, 10));
       mockWebSocketInstance.simulateOpen();
-      mockWebSocketInstance.simulateMessage(JSON.stringify({
-        success: true,
-        connection_id: "test-conn-123",
-      }));
+      mockWebSocketInstance.simulateMessage(
+        JSON.stringify({
+          success: true,
+          connection_id: "test-conn-123",
+        })
+      );
       await connectPromise;
 
       // Clear mocks to ignore auth message
@@ -401,12 +420,14 @@ describe("WebSocketClient", () => {
       global.WebSocket = MockWebSocketConstructor as any;
 
       const connectPromise = client.connect();
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise((resolve) => setTimeout(resolve, 10));
       mockWebSocketInstance.simulateOpen();
-      mockWebSocketInstance.simulateMessage(JSON.stringify({
-        success: true,
-        connection_id: "test-conn-123",
-      }));
+      mockWebSocketInstance.simulateMessage(
+        JSON.stringify({
+          success: true,
+          connection_id: "test-conn-123",
+        })
+      );
       await connectPromise;
 
       // Clear mocks to ignore auth message
@@ -434,7 +455,9 @@ describe("WebSocketClient", () => {
       client.destroy();
 
       // Should prevent further operations
-      expect(() => client.connect()).rejects.toThrow("WebSocket client has been destroyed");
+      expect(() => client.connect()).rejects.toThrow(
+        "WebSocket client has been destroyed"
+      );
     });
   });
 });

@@ -1,10 +1,5 @@
 "use client";
 
-import { useEffect } from "react";
-import { useApiKeys } from "@/lib/hooks/use-api-keys";
-import { ApiKeyForm } from "./api-key-form";
-import { ApiKeyList } from "./api-key-list";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Card,
   CardContent,
@@ -12,7 +7,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useApiKeys } from "@/hooks/use-api-keys";
 import { Loader2 } from "lucide-react";
+import { useEffect } from "react";
+import { ApiKeyForm } from "./api-key-form";
+import { ApiKeyList } from "./api-key-list";
 
 export function ApiKeySettings() {
   const { isLoading, isError, error, refetch } = useApiKeys();
@@ -55,8 +55,8 @@ export function ApiKeySettings() {
       <CardHeader>
         <CardTitle>API Key Management</CardTitle>
         <CardDescription>
-          Manage your API keys for external services. These keys are securely
-          stored and used to access various services on your behalf.
+          Manage your API keys for external services. These keys are securely stored and
+          used to access various services on your behalf.
         </CardDescription>
       </CardHeader>
       <CardContent>

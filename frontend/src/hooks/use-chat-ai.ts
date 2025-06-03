@@ -1,17 +1,17 @@
 "use client";
 
-import { useChat, type Message as AiMessage } from "ai/react";
-import { useCallback, useEffect, useRef, useState } from "react";
-import { v4 as uuidv4 } from "uuid";
-import { useChatStore } from "@/stores/chat-store";
 import { useApiKeyStore } from "@/stores/api-key-store";
+import { useChatStore } from "@/stores/chat-store";
 import type {
+  ChatSession,
   Message,
   MessageRole,
-  ChatSession,
   ToolCall,
   ToolResult,
 } from "@/types/chat";
+import { type Message as AiMessage, useChat } from "ai/react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { v4 as uuidv4 } from "uuid";
 
 interface UseChatAiOptions {
   /**
@@ -31,11 +31,7 @@ interface UseChatAiOptions {
 }
 
 export function useChatAi(options: UseChatAiOptions = {}) {
-  const {
-    sessionId: providedSessionId,
-    initialMessages = [],
-    onNewSession,
-  } = options;
+  const { sessionId: providedSessionId, initialMessages = [], onNewSession } = options;
 
   // Generate a session ID if not provided
   const sessionIdRef = useRef<string>(providedSessionId || uuidv4());
@@ -48,9 +44,7 @@ export function useChatAi(options: UseChatAiOptions = {}) {
   const [activeToolCalls, setActiveToolCalls] = useState<Map<string, ToolCall>>(
     new Map()
   );
-  const [toolResults, setToolResults] = useState<Map<string, ToolResult>>(
-    new Map()
-  );
+  const [toolResults, setToolResults] = useState<Map<string, ToolResult>>(new Map());
 
   const {
     isAuthenticated,
@@ -361,10 +355,7 @@ export function useChatAi(options: UseChatAiOptions = {}) {
 
       if (error.message) {
         // Check for specific error patterns
-        if (
-          error.message.includes("timeout") ||
-          error.message.includes("TIMEOUT")
-        ) {
+        if (error.message.includes("timeout") || error.message.includes("TIMEOUT")) {
           errorMessage = "Request timed out. Please try again.";
           errorStatus = "timeout";
         } else if (
@@ -377,8 +368,7 @@ export function useChatAi(options: UseChatAiOptions = {}) {
           error.message.includes("Rate limited") ||
           error.message.includes("RATE_LIMITED")
         ) {
-          errorMessage =
-            "Too many requests. Please wait a moment and try again.";
+          errorMessage = "Too many requests. Please wait a moment and try again.";
           errorStatus = "rate_limited";
         } else if (
           error.message.includes("Service unavailable") ||
@@ -412,9 +402,7 @@ export function useChatAi(options: UseChatAiOptions = {}) {
 
     const sessionMessages =
       sessions.find((s) => s.id === sessionIdRef.current)?.messages || [];
-    const existingMessage = sessionMessages.find(
-      (m) => m.id === lastMessage.id
-    );
+    const existingMessage = sessionMessages.find((m) => m.id === lastMessage.id);
 
     if (existingMessage) {
       // Update existing message
@@ -520,8 +508,7 @@ export function useChatAi(options: UseChatAiOptions = {}) {
   return {
     // Chat state
     sessionId: sessionIdRef.current,
-    messages:
-      sessions.find((s) => s.id === sessionIdRef.current)?.messages || [],
+    messages: sessions.find((s) => s.id === sessionIdRef.current)?.messages || [],
     isLoading,
     error: error || authError || storeAuthError,
 

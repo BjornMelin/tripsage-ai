@@ -1,7 +1,7 @@
-import { render, screen, fireEvent } from "@testing-library/react";
-import { describe, it, expect, vi } from "vitest";
-import { AccommodationCard } from "../accommodation-card";
 import type { Accommodation } from "@/types/search";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
+import { AccommodationCard } from "../accommodation-card";
 
 describe("AccommodationCard", () => {
   const mockAccommodation: Accommodation = {
@@ -14,15 +14,7 @@ describe("AccommodationCard", () => {
     pricePerNight: 250,
     totalPrice: 750,
     rating: 4.8,
-    amenities: [
-      "wifi",
-      "pool",
-      "gym",
-      "spa",
-      "restaurant",
-      "parking",
-      "breakfast",
-    ],
+    amenities: ["wifi", "pool", "gym", "spa", "restaurant", "parking", "breakfast"],
     images: ["https://example.com/image1.jpg"],
     coordinates: {
       lat: 25.7907,
@@ -60,10 +52,7 @@ describe("AccommodationCard", () => {
   it("should handle select button click", () => {
     const mockOnSelect = vi.fn();
     render(
-      <AccommodationCard
-        accommodation={mockAccommodation}
-        onSelect={mockOnSelect}
-      />
+      <AccommodationCard accommodation={mockAccommodation} onSelect={mockOnSelect} />
     );
 
     const selectButton = screen.getByText("View Details");
@@ -75,10 +64,7 @@ describe("AccommodationCard", () => {
   it("should handle compare button click", () => {
     const mockOnCompare = vi.fn();
     render(
-      <AccommodationCard
-        accommodation={mockAccommodation}
-        onCompare={mockOnCompare}
-      />
+      <AccommodationCard accommodation={mockAccommodation} onCompare={mockOnCompare} />
     );
 
     const compareButton = screen.getByText("Compare");
@@ -106,9 +92,7 @@ describe("AccommodationCard", () => {
       totalPrice: 1750,
     };
 
-    render(
-      <AccommodationCard accommodation={accommodationWithDifferentDates} />
-    );
+    render(<AccommodationCard accommodation={accommodationWithDifferentDates} />);
 
     expect(screen.getByText("Total: $1750 (7 nights)")).toBeInTheDocument();
   });
@@ -137,9 +121,7 @@ describe("AccommodationCard", () => {
       amenities: ["free_wifi", "swimming_pool"],
     };
 
-    render(
-      <AccommodationCard accommodation={accommodationWithUnderscoredAmenity} />
-    );
+    render(<AccommodationCard accommodation={accommodationWithUnderscoredAmenity} />);
 
     expect(screen.getByText("free wifi")).toBeInTheDocument();
     expect(screen.getByText("swimming pool")).toBeInTheDocument();

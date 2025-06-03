@@ -102,8 +102,7 @@ export const useTripStore = create<TripState>()(
           }));
         } catch (error) {
           set({
-            error:
-              error instanceof Error ? error.message : "Failed to create trip",
+            error: error instanceof Error ? error.message : "Failed to create trip",
             isLoading: false,
           });
         }
@@ -140,8 +139,7 @@ export const useTripStore = create<TripState>()(
           });
         } catch (error) {
           set({
-            error:
-              error instanceof Error ? error.message : "Failed to update trip",
+            error: error instanceof Error ? error.message : "Failed to update trip",
             isLoading: false,
           });
         }
@@ -156,15 +154,13 @@ export const useTripStore = create<TripState>()(
 
           set((state) => {
             const trips = state.trips.filter((trip) => trip.id !== id);
-            const currentTrip =
-              state.currentTrip?.id === id ? null : state.currentTrip;
+            const currentTrip = state.currentTrip?.id === id ? null : state.currentTrip;
 
             return { trips, currentTrip, isLoading: false };
           });
         } catch (error) {
           set({
-            error:
-              error instanceof Error ? error.message : "Failed to delete trip",
+            error: error instanceof Error ? error.message : "Failed to delete trip",
             isLoading: false,
           });
         }
@@ -198,10 +194,7 @@ export const useTripStore = create<TripState>()(
               state.currentTrip?.id === tripId
                 ? {
                     ...state.currentTrip,
-                    destinations: [
-                      ...state.currentTrip.destinations,
-                      newDestination,
-                    ],
+                    destinations: [...state.currentTrip.destinations, newDestination],
                     updatedAt: new Date().toISOString(),
                   }
                 : state.currentTrip;
@@ -210,10 +203,7 @@ export const useTripStore = create<TripState>()(
           });
         } catch (error) {
           set({
-            error:
-              error instanceof Error
-                ? error.message
-                : "Failed to add destination",
+            error: error instanceof Error ? error.message : "Failed to add destination",
             isLoading: false,
           });
         }
@@ -256,9 +246,7 @@ export const useTripStore = create<TripState>()(
         } catch (error) {
           set({
             error:
-              error instanceof Error
-                ? error.message
-                : "Failed to update destination",
+              error instanceof Error ? error.message : "Failed to update destination",
             isLoading: false,
           });
         }
@@ -301,9 +289,7 @@ export const useTripStore = create<TripState>()(
         } catch (error) {
           set({
             error:
-              error instanceof Error
-                ? error.message
-                : "Failed to remove destination",
+              error instanceof Error ? error.message : "Failed to remove destination",
             isLoading: false,
           });
         }

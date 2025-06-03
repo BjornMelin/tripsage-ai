@@ -1,10 +1,17 @@
 "use client";
 
-import { useState } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { useUserStore } from "@/stores/user-store";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -24,20 +31,13 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/use-toast";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import { Shield, Key, Smartphone, Clock, Eye, EyeOff } from "lucide-react";
+import { useUserProfileStore } from "@/stores/user-store";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Clock, Eye, EyeOff, Key, Shield, Smartphone } from "lucide-react";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
 
 const passwordChangeSchema = z
   .object({
@@ -68,7 +68,7 @@ interface SecurityDevice {
 }
 
 export function SecuritySection() {
-  const { user, updateUser } = useUserStore();
+  const { user, updateUser } = useUserProfileStore();
   const { toast } = useToast();
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
@@ -165,8 +165,7 @@ export function SecuritySection() {
 
       toast({
         title: "Device revoked",
-        description:
-          "The device has been successfully revoked from your account.",
+        description: "The device has been successfully revoked from your account.",
       });
     } catch (error) {
       toast({
@@ -225,9 +224,7 @@ export function SecuritySection() {
                           variant="ghost"
                           size="sm"
                           className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                          onClick={() =>
-                            setShowCurrentPassword(!showCurrentPassword)
-                          }
+                          onClick={() => setShowCurrentPassword(!showCurrentPassword)}
                         >
                           {showCurrentPassword ? (
                             <EyeOff className="h-4 w-4" />
@@ -271,8 +268,8 @@ export function SecuritySection() {
                       </div>
                     </FormControl>
                     <FormDescription>
-                      Password must be at least 8 characters with uppercase,
-                      lowercase, and numbers.
+                      Password must be at least 8 characters with uppercase, lowercase,
+                      and numbers.
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -297,9 +294,7 @@ export function SecuritySection() {
                           variant="ghost"
                           size="sm"
                           className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                          onClick={() =>
-                            setShowConfirmPassword(!showConfirmPassword)
-                          }
+                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                         >
                           {showConfirmPassword ? (
                             <EyeOff className="h-4 w-4" />
@@ -314,10 +309,7 @@ export function SecuritySection() {
                 )}
               />
 
-              <Button
-                type="submit"
-                disabled={passwordForm.formState.isSubmitting}
-              >
+              <Button type="submit" disabled={passwordForm.formState.isSubmitting}>
                 {passwordForm.formState.isSubmitting
                   ? "Updating..."
                   : "Update Password"}
@@ -330,13 +322,9 @@ export function SecuritySection() {
             <div className="flex items-center justify-between">
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
-                  <h3 className="text-sm font-medium">
-                    Two-Factor Authentication
-                  </h3>
+                  <h3 className="text-sm font-medium">Two-Factor Authentication</h3>
                   <Badge
-                    variant={
-                      user?.security?.twoFactorEnabled ? "default" : "secondary"
-                    }
+                    variant={user?.security?.twoFactorEnabled ? "default" : "secondary"}
                   >
                     {user?.security?.twoFactorEnabled ? "Enabled" : "Disabled"}
                   </Badge>
@@ -362,8 +350,7 @@ export function SecuritySection() {
             Active Sessions
           </CardTitle>
           <CardDescription>
-            Manage devices and browsers that are currently signed in to your
-            account.
+            Manage devices and browsers that are currently signed in to your account.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -398,19 +385,15 @@ export function SecuritySection() {
                     </AlertDialogTrigger>
                     <AlertDialogContent>
                       <AlertDialogHeader>
-                        <AlertDialogTitle>
-                          Revoke device access?
-                        </AlertDialogTitle>
+                        <AlertDialogTitle>Revoke device access?</AlertDialogTitle>
                         <AlertDialogDescription>
-                          This will sign out {device.name} from your account.
-                          You'll need to sign in again to use this device.
+                          This will sign out {device.name} from your account. You'll
+                          need to sign in again to use this device.
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
                         <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction
-                          onClick={() => revokeDevice(device.id)}
-                        >
+                        <AlertDialogAction onClick={() => revokeDevice(device.id)}>
                           Revoke Access
                         </AlertDialogAction>
                       </AlertDialogFooter>
@@ -438,8 +421,7 @@ export function SecuritySection() {
                   Enable Two-Factor Authentication
                 </h4>
                 <p className="text-sm text-blue-700">
-                  Add an extra layer of security by enabling 2FA for your
-                  account.
+                  Add an extra layer of security by enabling 2FA for your account.
                 </p>
               </div>
             </div>
@@ -451,8 +433,8 @@ export function SecuritySection() {
                   Use a Strong Password
                 </h4>
                 <p className="text-sm text-green-700">
-                  Your password should be at least 12 characters long and
-                  include a mix of letters, numbers, and symbols.
+                  Your password should be at least 12 characters long and include a mix
+                  of letters, numbers, and symbols.
                 </p>
               </div>
             </div>
@@ -464,8 +446,7 @@ export function SecuritySection() {
                   Review Active Sessions
                 </h4>
                 <p className="text-sm text-yellow-700">
-                  Regularly check and revoke access for devices you no longer
-                  use.
+                  Regularly check and revoke access for devices you no longer use.
                 </p>
               </div>
             </div>

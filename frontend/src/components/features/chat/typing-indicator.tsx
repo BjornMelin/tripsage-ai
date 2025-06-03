@@ -1,9 +1,9 @@
 "use client";
 
-import React from "react";
-import { cn } from "@/lib/utils";
 import { Avatar } from "@/components/ui/avatar";
+import { cn } from "@/lib/utils";
 import { User } from "lucide-react";
+import React from "react";
 
 interface TypingUser {
   userId: string;
@@ -17,7 +17,7 @@ interface TypingIndicatorProps {
   className?: string;
 }
 
-export default function TypingIndicator({
+export function TypingIndicator({
   typingUsers,
   sessionId,
   className,

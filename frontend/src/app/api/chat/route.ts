@@ -141,11 +141,7 @@ export async function POST(req: NextRequest) {
 
     const lastMessage = messages[messages.length - 1];
     if (lastMessage.role !== "user") {
-      throw new ChatError(
-        "Last message must be from user",
-        400,
-        "INVALID_REQUEST"
-      );
+      throw new ChatError("Last message must be from user", 400, "INVALID_REQUEST");
     }
 
     // Get authorization header from the request

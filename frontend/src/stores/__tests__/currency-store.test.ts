@@ -1,9 +1,9 @@
-import { describe, it, expect, beforeEach } from "vitest";
-import { useCurrencyStore } from "../currency-store";
+import type { Currency, ExchangeRate } from "@/types/currency";
 import { act } from "@testing-library/react";
 import { renderHook } from "@testing-library/react";
-import type { Currency, ExchangeRate } from "@/types/currency";
+import { beforeEach, describe, expect, it } from "vitest";
 import { vi } from "vitest";
+import { useCurrencyStore } from "../currency-store";
 
 // Mock the store to avoid persistence issues in tests
 vi.mock("zustand/middleware", () => ({
@@ -116,9 +116,7 @@ describe("useCurrencyStore", () => {
       // Exchange rates should be recalculated
       expect(result.current.exchangeRates["USD"]).toBeDefined();
       expect(result.current.exchangeRates["USD"]?.rate).toBeCloseTo(1 / 0.85);
-      expect(result.current.exchangeRates["GBP"]?.rate).toBeCloseTo(
-        0.75 / 0.85
-      );
+      expect(result.current.exchangeRates["GBP"]?.rate).toBeCloseTo(0.75 / 0.85);
     });
   });
 

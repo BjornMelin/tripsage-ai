@@ -4,7 +4,7 @@
  * This file tests the integration and exports of dashboard components.
  */
 
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 
 describe("Dashboard Components Exports", () => {
   it("should export all dashboard components", async () => {

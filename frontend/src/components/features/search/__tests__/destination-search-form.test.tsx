@@ -2,11 +2,11 @@
  * @vitest-environment jsdom
  */
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import { DestinationSearchForm } from "../destination-search-form";
 import type { DestinationSearchParams } from "@/types/search";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { DestinationSearchForm } from "../destination-search-form";
 
 // Mock the form dependencies
 vi.mock("react-hook-form", async () => {
@@ -55,9 +55,7 @@ describe("DestinationSearchForm", () => {
       )
     ).toBeInTheDocument();
     expect(
-      screen.getByPlaceholderText(
-        "Search for cities, countries, or landmarks..."
-      )
+      screen.getByPlaceholderText("Search for cities, countries, or landmarks...")
     ).toBeInTheDocument();
   });
 
@@ -166,10 +164,7 @@ describe("DestinationSearchForm", () => {
     };
 
     render(
-      <DestinationSearchForm
-        onSearch={mockOnSearch}
-        initialValues={initialValues}
-      />
+      <DestinationSearchForm onSearch={mockOnSearch} initialValues={initialValues} />
     );
 
     // The form should be initialized with these values

@@ -1,8 +1,6 @@
 "use client";
 
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -10,7 +8,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import {
   Form,
   FormControl,
@@ -22,6 +19,9 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import type { ActivitySearchParams } from "@/types/search";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
 
 const activitySearchFormSchema = z.object({
   location: z.string().min(1, { message: "Location is required" }),
@@ -121,10 +121,7 @@ export function ActivitySearchForm({
                   <FormItem>
                     <FormLabel>Location</FormLabel>
                     <FormControl>
-                      <Input
-                        placeholder="City, region, or destination"
-                        {...field}
-                      />
+                      <Input placeholder="City, region, or destination" {...field} />
                     </FormControl>
                     <FormDescription>
                       Enter city name, region, or specific destination
@@ -250,9 +247,7 @@ export function ActivitySearchForm({
                           <input
                             type="checkbox"
                             value={category.id}
-                            checked={form
-                              .watch("categories")
-                              .includes(category.id)}
+                            checked={form.watch("categories").includes(category.id)}
                             onChange={(e) => {
                               const checked = e.target.checked;
                               const categories = form.getValues("categories");
