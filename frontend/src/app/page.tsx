@@ -61,7 +61,8 @@ export default function Home() {
                 alt="TripSage AI"
                 width={420}
                 height={420}
-                className="dark:invert w-full h-auto"
+                className="dark:invert"
+                style={{ width: "100%", height: "auto" }}
                 priority
               />
             </div>

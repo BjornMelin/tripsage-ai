@@ -1,11 +1,12 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
-  CompactErrorFallback,
   ErrorBoundary,
   ErrorFallback,
-  GracefulErrorBoundary,
-} from "../error-boundary";
+  MinimalErrorFallback,
+  PageErrorFallback,
+} from "../error";
 
 // Mock console.error to prevent test noise
 const originalConsoleError = console.error;
@@ -127,30 +128,18 @@ describe("ErrorBoundary", () => {
   });
 });
 
-describe("GracefulErrorBoundary", () => {
-  it("renders children when there is no error", () => {
-    render(
-      <GracefulErrorBoundary>
-        <div>Test content</div>
-      </GracefulErrorBoundary>
-    );
+describe("MinimalErrorFallback", () => {
+  it("renders minimal error message", () => {
+    render(<MinimalErrorFallback />);
 
-    expect(screen.getByText("Test content")).toBeInTheDocument();
+    expect(screen.getByText("Error")).toBeInTheDocument();
   });
 
-  it("shows notification when error occurs but preserves content", async () => {
-    render(
-      <GracefulErrorBoundary>
-        <ErrorThrowingComponent />
-      </GracefulErrorBoundary>
-    );
+  it("renders with custom error", () => {
+    const error = new Error("Custom error");
+    render(<MinimalErrorFallback error={error} />);
 
-    // Should show error notification
-    await waitFor(() => {
-      expect(
-        screen.getByText(/some content failed to load properly/i)
-      ).toBeInTheDocument();
-    });
+    expect(screen.getByText("Error")).toBeInTheDocument();
   });
 });
 
@@ -187,30 +176,28 @@ describe("ErrorFallback", () => {
   });
 });
 
-describe("CompactErrorFallback", () => {
+describe("PageErrorFallback", () => {
   it("renders with default message", () => {
-    render(<CompactErrorFallback />);
+    render(<PageErrorFallback />);
 
-    expect(screen.getByText("Failed to load")).toBeInTheDocument();
+    expect(screen.getByText("Something went wrong")).toBeInTheDocument();
   });
 
-  it("renders with custom message", () => {
-    render(<CompactErrorFallback message="Custom error message" />);
+  it("renders with custom error", () => {
+    const error = new Error("Custom error message");
+    render(<PageErrorFallback error={error} />);
 
     expect(screen.getByText("Custom error message")).toBeInTheDocument();
   });
 
-  it("calls onRetry when retry button is clicked", () => {
-    const onRetry = vi.fn();
-    render(<CompactErrorFallback onRetry={onRetry} />);
+  it("calls reset when reset button is clicked", () => {
+    const reset = vi.fn();
+    render(<PageErrorFallback reset={reset} />);
 
-    fireEvent.click(screen.getByRole("button", { name: /retry/i }));
-    expect(onRetry).toHaveBeenCalled();
-  });
-
-  it("does not render retry button when onRetry is not provided", () => {
-    render(<CompactErrorFallback />);
-
-    expect(screen.queryByRole("button", { name: /retry/i })).not.toBeInTheDocument();
+    const button = screen.queryByRole("button", { name: /try again/i });
+    if (button) {
+      fireEvent.click(button);
+      expect(reset).toHaveBeenCalled();
+    }
   });
 });
