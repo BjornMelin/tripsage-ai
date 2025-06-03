@@ -60,16 +60,16 @@ def test_trip_comparison_selected_option_id(sample_trip_comparison_dict):
     assert trip_comparison.selected_option_id is None
 
 
-def test_trip_comparison_option_count(sample_trip_comparison_dict):
-    """Test the option_count property."""
+def test_trip_comparison_options_count(sample_trip_comparison_dict):
+    """Test the options_count property."""
     trip_comparison = TripComparison(**sample_trip_comparison_dict)
-    assert trip_comparison.option_count == 2
+    assert trip_comparison.options_count == 2
 
     # Add another option
     trip_comparison.comparison_json["options"].append(
         {"id": 3, "type": "flight", "price": 1100.00, "airline": "United"}
     )
-    assert trip_comparison.option_count == 3
+    assert trip_comparison.options_count == 3
 
 
 def test_trip_comparison_comparison_type(sample_trip_comparison_dict):

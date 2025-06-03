@@ -49,10 +49,6 @@ class TripComparison(TripSageModel):
             return len(options)
         return 0
 
-    @property
-    def option_count(self) -> int:
-        """Alias for options_count for backward compatibility."""
-        return self.options_count
 
     @property
     def has_selected_option(self) -> bool:

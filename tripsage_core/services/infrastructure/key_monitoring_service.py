@@ -6,7 +6,6 @@ API key operations in TripSage.
 """
 
 import inspect
-import logging
 import secrets
 import time
 from datetime import datetime, timedelta, timezone
@@ -28,12 +27,13 @@ from tripsage_core.services.infrastructure.database_service import (
     DatabaseService,
     get_database_service,
 )
+from tripsage_core.utils.logging_utils import get_logger
 
 # Type hints
 F = TypeVar("F", bound=Callable[..., Any])
 
 # Create logger
-logger = logging.getLogger("key_operations")
+logger = get_logger("key_operations")
 
 
 class KeyOperation(str, Enum):
