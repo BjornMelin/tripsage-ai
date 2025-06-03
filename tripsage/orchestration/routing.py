@@ -7,7 +7,7 @@ and confidence scoring.
 """
 
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict
 
 from langchain_core.messages import HumanMessage, SystemMessage
@@ -174,15 +174,17 @@ class RouterNode(BaseAgentNode):
         # Get conversation context for better routing
         conversation_context = self._build_conversation_context(state)
 
-        # Perform semantic classification
-        classification = await self._classify_intent(last_message, conversation_context)
+        # Perform enhanced semantic classification with fallback strategies
+        classification = await self._enhanced_classification_with_fallback(
+            last_message, conversation_context
+        )
 
         # Update state with routing decision
         state["current_agent"] = classification["agent"]
         state["handoff_context"] = {
             "routing_confidence": classification["confidence"],
             "routing_reasoning": classification["reasoning"],
-            "timestamp": datetime.now(datetime.UTC).isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "message_analyzed": last_message[:100] + "..."
             if len(last_message) > 100
             else last_message,
@@ -221,7 +223,11 @@ class RouterNode(BaseAgentNode):
             ]
 
             response = await self.classifier.ainvoke(messages)
-            classification = json.loads(response.content)
+            # Handle different response formats
+            content = (
+                response.content if hasattr(response, 'content') else str(response)
+            )
+            classification = json.loads(content)
 
             # Validate classification result
             if not self._validate_classification(classification):
@@ -345,16 +351,20 @@ class RouterNode(BaseAgentNode):
             "accommodation_agent",
             "budget_agent",
             "itinerary_agent",
-            "destination_agent",
-            "travel_agent",
+            "destination_research_agent",  # Updated to match actual agent name
+            "general_agent",  # Updated to match actual fallback agent
         ]
 
         # Check required keys
         if not all(key in classification for key in required_keys):
+            logger.warning(f"Classification missing required keys: {classification}")
             return False
 
         # Check agent is valid
         if classification["agent"] not in valid_agents:
+            logger.warning(
+                f"Invalid agent in classification: {classification['agent']}"
+            )
             return False
 
         # Check confidence is reasonable
@@ -362,6 +372,108 @@ class RouterNode(BaseAgentNode):
             not isinstance(classification["confidence"], (int, float))
             or not 0 <= classification["confidence"] <= 1
         ):
+            logger.warning(f"Invalid confidence score: {classification['confidence']}")
+            return False
+
+        # Additional validation: ensure reasoning is not empty
+        if not classification.get("reasoning", "").strip():
+            logger.warning("Classification reasoning is empty")
             return False
 
         return True
+
+    async def _enhanced_classification_with_fallback(
+        self, message: str, context: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """
+        Enhanced classification with multiple fallback strategies.
+
+        Args:
+            message: User message to classify
+            context: Conversation context
+
+        Returns:
+            Classification result with enhanced confidence scoring
+        """
+        try:
+            # Primary classification
+            classification = await self._classify_intent(message, context)
+
+            # If confidence is too low, try keyword-based fallback
+            if classification["confidence"] < 0.7:
+                keyword_classification = self._keyword_based_classification(message)
+                if keyword_classification["confidence"] > classification["confidence"]:
+                    logger.info(
+                        f"Using keyword-based classification over LLM: "
+                        f"{keyword_classification['agent']} "
+                        f"(confidence: {keyword_classification['confidence']})"
+                    )
+                    return keyword_classification
+
+            return classification
+
+        except Exception as e:
+            logger.error(f"Enhanced classification failed: {str(e)}")
+            return self._get_safe_fallback_classification()
+
+    def _keyword_based_classification(self, message: str) -> Dict[str, Any]:
+        """
+        Keyword-based classification as fallback.
+
+        Args:
+            message: User message to classify
+
+        Returns:
+            Classification result based on keyword matching
+        """
+        message_lower = message.lower()
+
+        # Calculate confidence scores for each agent based on keyword matches
+        agent_scores = {}
+        agent_keyword_counts = {}
+
+        for agent, capabilities in self.agent_capabilities.items():
+            score = 0
+            keyword_matches = 0
+
+            for keyword in capabilities.get("keywords", []):
+                if keyword.lower() in message_lower:
+                    keyword_matches += 1
+                    # Weight certain keywords higher
+                    if keyword.lower() in ["flight", "hotel", "budget", "destination"]:
+                        score += 2
+                    else:
+                        score += 1
+
+            # Store keyword count for this agent
+            agent_keyword_counts[agent] = keyword_matches
+
+            # Normalize score based on keyword count and message length
+            if keyword_matches > 0:
+                word_count = max(len(message_lower.split()), 1)
+                agent_scores[agent] = min(0.95, score / word_count)
+
+        # Find the best match
+        if agent_scores:
+            best_agent = max(agent_scores, key=agent_scores.get)
+            confidence = agent_scores[best_agent]
+            best_keyword_matches = agent_keyword_counts[best_agent]
+
+            return {
+                "agent": best_agent,
+                "confidence": confidence,
+                "reasoning": (
+                    f"Keyword-based classification: {best_keyword_matches} "
+                    f"keyword matches"
+                ),
+            }
+        else:
+            return self._get_safe_fallback_classification()
+
+    def _get_safe_fallback_classification(self) -> Dict[str, Any]:
+        """Get a safe fallback classification."""
+        return {
+            "agent": "general_agent",
+            "confidence": 0.3,
+            "reasoning": "Safe fallback due to classification failure",
+        }

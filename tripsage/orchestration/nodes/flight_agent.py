@@ -6,8 +6,8 @@ using the centralized tool registry and improved async patterns.
 """
 
 import json
-from datetime import datetime
-from typing import Any, Dict, Optional
+from datetime import datetime, timezone
+from typing import Any, Dict, List, Optional
 
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
@@ -100,7 +100,7 @@ class FlightAgentNode(BaseAgentNode):
 
             # Update state with results
             flight_search_record = {
-                "timestamp": datetime.now(datetime.UTC).isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
                 "parameters": search_params,
                 "results": search_results,
                 "agent": "flight_agent",
@@ -219,6 +219,37 @@ class FlightAgentNode(BaseAgentNode):
         except Exception as e:
             logger.error(f"Flight search failed: {str(e)}")
             return {"error": f"Flight search failed: {str(e)}"}
+
+    async def _batch_search_operations(
+        self, search_params_list: List[Dict[str, Any]]
+    ) -> List[Dict[str, Any]]:
+        """
+        Execute multiple flight searches concurrently for better performance.
+
+        Args:
+            search_params_list: List of flight search parameters
+
+        Returns:
+            List of search results
+        """
+        try:
+            # Prepare batch tool executions
+            tool_executions = [
+                {"tool_name": "flights_search_flights", "params": search_params}
+                for search_params in search_params_list
+            ]
+
+            # Execute searches concurrently using the tool registry's batch method
+            results = await self.tool_registry.batch_execute_tools(
+                tool_executions, max_concurrent=3
+            )
+
+            logger.info(f"Batch flight search completed: {len(results)} searches")
+            return results
+
+        except Exception as e:
+            logger.error(f"Batch flight search failed: {str(e)}")
+            return [{"error": f"Batch search failed: {str(e)}"}]
 
     async def _generate_flight_response(
         self,

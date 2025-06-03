@@ -7,7 +7,7 @@ capabilities. Refactored to use dependency injection and service-based architect
 """
 
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
 from langchain_core.messages import HumanMessage, SystemMessage
@@ -72,7 +72,7 @@ class AccommodationAgentNode(BaseAgentNode):
 
             # Update state with results
             accommodation_search_record = {
-                "timestamp": datetime.now(datetime.UTC).isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
                 "parameters": search_params,
                 "results": search_results,
                 "agent": "accommodation_agent",

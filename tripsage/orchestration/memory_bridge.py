@@ -7,7 +7,7 @@ across agent interactions.
 """
 
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 from tripsage.orchestration.state import TravelPlanningState
@@ -139,7 +139,7 @@ class SessionMemoryBridge:
         state["session_metadata"] = {
             "last_activity": session_data.get("last_activity"),
             "session_count": session_data.get("session_count", 0),
-            "memory_loaded_at": datetime.now(datetime.UTC).isoformat(),
+            "memory_loaded_at": datetime.now(timezone.utc).isoformat(),
         }
 
         return state
@@ -287,7 +287,7 @@ class SessionMemoryBridge:
 
         # Add session context
         insights["session_context"] = {
-            "timestamp": datetime.now(datetime.UTC).isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "session_id": state.get("session_id"),
             "agent_interactions": state.get("agent_history", []),
             "total_messages": len(messages),
@@ -419,7 +419,7 @@ class SessionMemoryBridge:
             checkpoint_ref = {
                 "checkpoint_id": checkpoint_id,
                 "session_id": session_id,
-                "timestamp": datetime.now(datetime.UTC).isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
                 "metadata": metadata,
             }
 

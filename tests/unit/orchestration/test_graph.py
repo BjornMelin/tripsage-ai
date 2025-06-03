@@ -110,7 +110,7 @@ class TestTripSageOrchestrator:
     def test_determine_next_step_with_errors(self, orchestrator):
         """Test next step determination when errors are present."""
         state = {
-            "error_count": 2,
+            "error_info": {"error_count": 2},
             "messages": [],
             "user_id": "test_user",
             "session_id": "test_session",
@@ -138,7 +138,7 @@ class TestTripSageOrchestrator:
 
         result = orchestrator._determine_next_step(state)
         assert result == "continue"
-        assert state["next_agent"] == "accommodation_agent"
+        assert state["current_agent"] == "accommodation_agent"
 
     def test_determine_next_step_with_memory_update(self, orchestrator):
         """Test next step determination that requires memory update."""
