@@ -14,7 +14,8 @@ API_TITLE = "TripSage Unified API"
 API_DESCRIPTION = """
 # TripSage Unified Travel Planning API
 
-A comprehensive FastAPI implementation that serves both frontend applications and AI agents for travel planning.
+A comprehensive FastAPI implementation that serves both frontend applications
+and AI agents for travel planning.
 
 ## Dual Consumer Architecture
 
@@ -210,14 +211,16 @@ TAG_DESCRIPTIONS = [
         "name": "auth",
         "description": (
             "Authentication endpoints for user registration, login, "
-            "and JWT token management. Primary authentication method for frontend consumers."
+            "and JWT token management. Primary authentication method "
+            "for frontend consumers."
         ),
     },
     {
         "name": "api_keys",
         "description": (
             "API key management endpoints (BYOK - Bring Your Own Key). "
-            "Supports both system API keys for agents and user-provided external service keys."
+            "Supports both system API keys for agents and user-provided "
+            "external service keys."
         ),
     },
     {
@@ -245,21 +248,24 @@ TAG_DESCRIPTIONS = [
         "name": "destinations",
         "description": (
             "Destination research endpoints with AI-powered insights. "
-            "Provides comprehensive destination information, weather, and recommendations."
+            "Provides comprehensive destination information, weather, "
+            "and recommendations."
         ),
     },
     {
         "name": "itineraries",
         "description": (
-            "Itinerary building and optimization endpoints. Intelligent trip scheduling "
-            "with route optimization and activity coordination."
+            "Itinerary building and optimization endpoints. "
+            "Intelligent trip scheduling with route optimization "
+            "and activity coordination."
         ),
     },
     {
         "name": "chat",
         "description": (
             "Chat and conversation endpoints for AI agent interaction. "
-            "Supports session management and conversation history for both frontend and agent consumers."
+            "Supports session management and conversation history "
+            "for both frontend and agent consumers."
         ),
     },
     {

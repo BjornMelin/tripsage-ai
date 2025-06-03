@@ -40,7 +40,6 @@ from .decorator_utils import (
 
 # Error handling utilities
 from .error_handling_utils import (
-    TripSageError,
     TripSageErrorContext,
     create_api_error,
     create_database_error,
@@ -84,10 +83,8 @@ from .session_utils import (
     ConversationMessage,
     SessionSummary,
     UserPreferences,
-    get_session_memory_legacy,
     initialize_session_memory,
     store_session_summary,
-    update_memory_legacy,
     update_session_memory,
 )
 
@@ -120,7 +117,6 @@ __all__ = [
     "ensure_memory_client_initialized",
     "retry_on_failure",
     # Error handling utilities
-    "TripSageError",
     "log_exception",
     "safe_execute_with_logging",
     "with_error_handling_and_logging",
@@ -156,6 +152,4 @@ __all__ = [
     "initialize_session_memory",
     "update_session_memory",
     "store_session_summary",
-    "get_session_memory_legacy",
-    "update_memory_legacy",
 ]

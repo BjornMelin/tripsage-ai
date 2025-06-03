@@ -238,7 +238,7 @@ class TravelMemoryQuery(BaseModel):
 
     Features:
     - Travel domain optimization
-    - Alias compatibility for legacy systems
+    - API alias support for convenience
     - Same validation as MemorySearchQuery
     """
 

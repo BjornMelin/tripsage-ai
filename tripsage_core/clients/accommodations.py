@@ -1,6 +1,6 @@
 """Accommodation MCP client implementation."""
 
-from tripsage.clients.base import BaseMCPClient
+from tripsage_core.clients.base import BaseMCPClient
 from tripsage_core.models.accommodation import (
     AccommodationBookingRequest,
     AccommodationBookingResponse,
