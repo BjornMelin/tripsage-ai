@@ -22,8 +22,8 @@ from tripsage.api.services import (
     get_trip_service,
     get_user_service,
 )
-from tripsage.mcp_abstraction import MCPManager, mcp_manager
 from tripsage_core.exceptions.exceptions import CoreAuthenticationError
+from tripsage_core.mcp_abstraction import MCPManager, mcp_manager
 from tripsage_core.services.infrastructure import get_cache_service
 from tripsage_core.services.infrastructure.database_service import get_database_service
 from tripsage_core.utils.session_utils import SessionMemory

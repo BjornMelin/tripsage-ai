@@ -225,7 +225,7 @@ class TestFlightModel:
         """Test price validation."""
         now = datetime.now(timezone.utc)
 
-        # Test negative price (legacy test - keeping for compatibility)
+        # Test negative price
         with pytest.raises(
             ValidationError, match="ensure this value is greater than 0"
         ):
@@ -279,7 +279,7 @@ class TestFlightModel:
         flight = Flight(**sample_flight_dict)
         assert flight.is_canceled is False
 
-        flight.booking_status = BookingStatus.CANCELED
+        flight.booking_status = BookingStatus.CANCELLED
         assert flight.is_canceled is True
 
     def test_flight_book(self, sample_flight_dict):
@@ -293,11 +293,11 @@ class TestFlightModel:
         flight = Flight(**sample_flight_dict)
         flight.book()
         flight.cancel()
-        assert flight.booking_status == BookingStatus.CANCELED
+        assert flight.booking_status == BookingStatus.CANCELLED
 
         # Cannot cancel a viewed flight with specific error message
         flight = Flight(**sample_flight_dict)
-        with pytest.raises(ValueError, match="Only booked flights can be canceled"):
+        with pytest.raises(ValueError, match="Only booked flights can be cancelled"):
             flight.cancel()
 
     def test_flight_model_dump(self, sample_flight_dict):

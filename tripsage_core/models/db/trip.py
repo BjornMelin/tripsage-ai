@@ -5,39 +5,15 @@ used across different storage backends.
 """
 
 from datetime import date
-from enum import Enum
 from typing import Any, Dict, Optional
 
 from pydantic import Field, field_validator, model_validator
 
 from tripsage_core.models.base_core_model import TripSageModel
-
-
-class TripStatus(str, Enum):
-    """Enum for trip status values."""
-
-    PLANNING = "planning"
-    BOOKED = "booked"
-    COMPLETED = "completed"
-    CANCELED = "canceled"
-
-
-class TripType(str, Enum):
-    """Enum for trip type values."""
-
-    LEISURE = "leisure"
-    BUSINESS = "business"
-    FAMILY = "family"
-    SOLO = "solo"
-    OTHER = "other"
-
-
-class TripVisibility(str, Enum):
-    """Enum for trip visibility values."""
-
-    PRIVATE = "private"
-    PUBLIC = "public"
-    SHARED = "shared"
+from tripsage_core.models.schemas_common.enums import (
+    TripStatus,
+    TripType,
+)
 
 
 class Trip(TripSageModel):
@@ -155,10 +131,10 @@ class Trip(TripSageModel):
         """
         # Define valid status transitions
         valid_transitions = {
-            TripStatus.PLANNING: [TripStatus.BOOKED, TripStatus.CANCELED],
-            TripStatus.BOOKED: [TripStatus.COMPLETED, TripStatus.CANCELED],
+            TripStatus.PLANNING: [TripStatus.BOOKED, TripStatus.CANCELLED],
+            TripStatus.BOOKED: [TripStatus.COMPLETED, TripStatus.CANCELLED],
             TripStatus.COMPLETED: [],  # Cannot change from completed
-            TripStatus.CANCELED: [],  # Cannot change from canceled
+            TripStatus.CANCELLED: [],  # Cannot change from cancelled
         }
 
         if new_status in valid_transitions.get(self.status, []):

@@ -63,7 +63,7 @@ class TestEnums:
         assert BookingStatus.VIEWED == "viewed"
         assert BookingStatus.SAVED == "saved"
         assert BookingStatus.BOOKED == "booked"
-        assert BookingStatus.CANCELED == "canceled"
+        assert BookingStatus.CANCELLED == "cancelled"
 
     def test_trip_status_values(self):
         """Test TripStatus enum values."""
@@ -71,7 +71,6 @@ class TestEnums:
         assert TripStatus.BOOKED == "booked"
         assert TripStatus.IN_PROGRESS == "in_progress"
         assert TripStatus.COMPLETED == "completed"
-        assert TripStatus.CANCELED == "canceled"
         assert TripStatus.CANCELLED == "cancelled"
 
     def test_accommodation_type_values(self):

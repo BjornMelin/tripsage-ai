@@ -526,7 +526,7 @@ async def get_auth_service() -> AuthenticationService:
     Returns:
         AuthenticationService instance
     """
-    from tripsage.api.core.config import get_settings
+    from tripsage_core.config.base_app_settings import get_settings
     from tripsage_core.services.business.user_service import UserService
     from tripsage_core.services.infrastructure.database_service import (
         get_database_service,
