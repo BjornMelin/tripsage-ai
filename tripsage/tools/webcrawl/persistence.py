@@ -6,7 +6,7 @@ the Memory MCP knowledge graph.
 """
 
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
 from tripsage_core.utils.logging_utils import get_logger
@@ -150,7 +150,7 @@ class WebCrawlPersistence:
             # Prepare data for storage
             data = {
                 "result_data": json.dumps(result),
-                "created_at": datetime.now(datetime.UTC).isoformat(),
+                "created_at": datetime.now(timezone.utc).isoformat(),
                 "success": result.get("success", False),
                 "session_id": session_id,
             }
@@ -453,7 +453,7 @@ class WebCrawlPersistence:
                 "price": item.get("price", 0),
                 "currency": item.get("currency", "USD"),
                 "timestamp": item.get(
-                    "price_timestamp", datetime.now(datetime.UTC).isoformat()
+                    "price_timestamp", datetime.now(timezone.utc).isoformat()
                 ),
                 "product_type": product_type,
                 "availability": item.get("availability", ""),

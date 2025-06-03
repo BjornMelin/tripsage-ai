@@ -32,7 +32,7 @@ class TripNote(TripSageModel):
     def validate_content(cls, v: str) -> str:
         """Validate that content is not empty."""
         if not v or not v.strip():
-            raise ValueError("Note content cannot be empty")
+            raise ValueError("ensure this value has at least 1 character")
         return v
 
     @property
@@ -47,6 +47,16 @@ class TripNote(TripSageModel):
     def formatted_timestamp(self) -> str:
         """Get the formatted timestamp for display."""
         return self.timestamp.strftime("%Y-%m-%d %H:%M")
+
+    @property
+    def content_snippet(self) -> str:
+        """Get a snippet of the note content."""
+        # Return the first 100 characters or the full content if it's shorter
+        max_length = 100
+        if len(self.content) <= max_length:
+            return self.content
+        # Account for the "..." when truncating
+        return self.content[: max_length - 3] + "..."
 
     @property
     def summary(self) -> str:

@@ -71,7 +71,7 @@ def sample_flight_dict() -> Dict[str, Any]:
         "trip_id": 1,
         "origin": "LAX",
         "destination": "NRT",
-        "airline": AirlineProvider.OTHER,
+        "airline": AirlineProvider.JAPAN_AIRLINES,
         "departure_time": now + timedelta(days=10),
         "arrival_time": now + timedelta(days=10, hours=12),
         "price": 1200.00,
@@ -79,7 +79,7 @@ def sample_flight_dict() -> Dict[str, Any]:
         "segment_number": 1,
         "search_timestamp": now,
         "booking_status": BookingStatus.VIEWED,
-        "data_source": DataSource.OTHER,
+        "data_source": DataSource.DUFFEL,
         "flight_number": "JL123",
         "cabin_class": "economy",
     }

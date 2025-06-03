@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from tripsage.mcp_abstraction import (
+from tripsage_core.mcp_abstraction import (
     AirbnbMCPWrapper,
     BaseMCPWrapper,
     MCPAuthenticationError,

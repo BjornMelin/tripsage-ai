@@ -7,7 +7,7 @@ limiting, security features, health metrics, and error handling.
 """
 
 import asyncio
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock, Mock, patch
 from uuid import uuid4
 
@@ -307,7 +307,7 @@ class TestKeyMonitoringService:
         operation = KeyOperation.CREATE
 
         # Mock existing operations - some old, some recent
-        now = datetime.now(datetime.UTC)
+        now = datetime.now(timezone.utc)
         old_timestamp = (
             now - timedelta(seconds=700)
         ).isoformat()  # Older than timeframe
@@ -388,7 +388,7 @@ class TestKeyMonitoringService:
         """Test alert sending functionality."""
         user_id = str(uuid4())
         operation = KeyOperation.CREATE
-        log_data = {"count": 6, "timestamp": datetime.now(datetime.UTC).isoformat()}
+        log_data = {"count": 6, "timestamp": datetime.now(timezone.utc).isoformat()}
 
         mock_cache_service.get_json.return_value = []  # No existing alerts
 

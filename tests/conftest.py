@@ -342,6 +342,264 @@ def mock_settings_and_redis(monkeypatch):
         }
 
 
+# Sample data fixtures for comprehensive model testing
+from datetime import date, timedelta
+
+from tripsage_core.models.schemas_common.enums import (
+    AccommodationType,
+    AirlineProvider,
+    BookingStatus,
+    CancellationPolicy,
+    CurrencyCode,
+    DataSource,
+    TripStatus,
+    TripType,
+    TripVisibility,
+    UserRole,
+)
+
+
+@pytest.fixture
+def sample_accommodation_dict():
+    """Sample accommodation data for testing."""
+    today = date.today()
+    return {
+        "id": 1,
+        "trip_id": 1,
+        "name": "Grand Hyatt Tokyo",
+        "accommodation_type": AccommodationType.HOTEL,
+        "check_in": today + timedelta(days=10),
+        "check_out": today + timedelta(days=17),  # 7 nights
+        "price_per_night": 250.00,
+        "total_price": 1750.00,
+        "location": "Tokyo, Japan",
+        "rating": 4.5,
+        "amenities": {"list": ["wifi", "pool", "gym", "spa"]},
+        "booking_link": "https://example.com/booking/12345",
+        "booking_status": BookingStatus.VIEWED,
+        "cancellation_policy": CancellationPolicy.FLEXIBLE,
+        "distance_to_center": 2.5,
+        "neighborhood": "Roppongi",
+        "images": ["https://example.com/image1.jpg", "https://example.com/image2.jpg"],
+    }
+
+
+@pytest.fixture
+def sample_flight_dict():
+    """Sample flight data for testing."""
+    from datetime import datetime, timezone
+
+    now = datetime.now(timezone.utc)
+    return {
+        "id": 1,
+        "trip_id": 1,
+        "origin": "LAX",
+        "destination": "NRT",
+        "airline": AirlineProvider.JAPAN_AIRLINES,
+        "departure_time": now + timedelta(days=30),
+        "arrival_time": now + timedelta(days=30, hours=12),  # 12 hour flight
+        "price": 1200.00,
+        "search_timestamp": now,
+        "booking_status": BookingStatus.VIEWED,
+        "data_source": DataSource.DUFFEL,
+        "segment_number": 1,
+    }
+
+
+@pytest.fixture
+def sample_trip_dict():
+    """Sample trip data for testing."""
+    today = date.today()
+    return {
+        "id": 1,
+        "user_id": 1,
+        "name": "Tokyo Adventure",
+        "description": "A wonderful trip to Tokyo",
+        "start_date": today + timedelta(days=30),
+        "end_date": today + timedelta(days=37),
+        "destination": "Tokyo, Japan",
+        "status": TripStatus.PLANNING,
+        "trip_type": TripType.LEISURE,
+        "visibility": TripVisibility.PRIVATE,
+        "budget": 5000.00,
+        "currency": CurrencyCode.USD,
+        "travelers_count": 2,
+    }
+
+
+@pytest.fixture
+def sample_user_dict():
+    """Sample user data for testing."""
+    return {
+        "id": 1,
+        "email": "test@example.com",
+        "username": "testuser",
+        "first_name": "John",
+        "last_name": "Doe",
+        "role": UserRole.USER,
+        "is_active": True,
+        "preferred_currency": CurrencyCode.USD,
+        "timezone": "America/Los_Angeles",
+    }
+
+
+# Validation test helpers
+class ValidationTestHelper:
+    """Helper class for testing Pydantic model validation."""
+
+    @staticmethod
+    def assert_validation_error(model_class, data, field_name, error_message_part):
+        """Assert that creating a model with invalid data raises ValidationError."""
+        from pydantic import ValidationError
+
+        with pytest.raises(ValidationError) as exc_info:
+            model_class(**data)
+
+        errors = exc_info.value.errors()
+        field_errors = [e for e in errors if e["loc"][0] == field_name]
+        assert len(field_errors) > 0, (
+            f"No validation error found for field '{field_name}'"
+        )
+        assert error_message_part in str(field_errors[0]["msg"]), (
+            f"Expected error message containing '{error_message_part}' but got '{field_errors[0]['msg']}'"
+        )
+
+    @staticmethod
+    def assert_field_valid(model_class, data, field_name, valid_value):
+        """Assert that a field accepts a valid value."""
+        test_data = data.copy()
+        test_data[field_name] = valid_value
+        instance = model_class(**test_data)
+        assert getattr(instance, field_name) == valid_value
+
+
+# Serialization test helpers
+class SerializationTestHelper:
+    """Helper class for testing model serialization."""
+
+    @staticmethod
+    def test_json_round_trip(model_instance):
+        """Test that a model can be serialized to JSON and back."""
+        json_str = model_instance.model_dump_json()
+        reconstructed = model_instance.__class__.model_validate_json(json_str)
+        return reconstructed
+
+    @staticmethod
+    def test_dict_round_trip(model_instance):
+        """Test that a model can be converted to dict and back."""
+        data_dict = model_instance.model_dump()
+        reconstructed = model_instance.__class__.model_validate(data_dict)
+        return reconstructed
+
+
+@pytest.fixture
+def validation_helper():
+    """Fixture providing validation test utilities."""
+    return ValidationTestHelper()
+
+
+@pytest.fixture
+def serialization_helper():
+    """Fixture providing serialization test utilities."""
+    return SerializationTestHelper()
+
+
+# Performance testing fixtures
+@pytest.fixture
+def large_dataset():
+    """Large dataset for performance testing."""
+    today = date.today()
+    return {
+        "accommodations": [
+            {
+                "id": i,
+                "trip_id": 1,
+                "name": f"Hotel {i}",
+                "accommodation_type": AccommodationType.HOTEL,
+                "check_in": today + timedelta(days=i),
+                "check_out": today + timedelta(days=i + 7),
+                "price_per_night": 100.0 + i,
+                "total_price": (100.0 + i) * 7,
+                "location": f"City {i}",
+                "rating": min(5.0, 3.0 + (i % 3)),
+                "booking_status": BookingStatus.VIEWED,
+            }
+            for i in range(1000)
+        ]
+    }
+
+
+# Edge case testing data
+@pytest.fixture
+def edge_case_data():
+    """Edge case data for testing boundary conditions."""
+    today = date.today()
+    return {
+        "min_price": 0.01,
+        "max_price": 99999.99,
+        "min_rating": 0.0,
+        "max_rating": 5.0,
+        "past_date": today - timedelta(days=365),
+        "far_future_date": today + timedelta(days=365 * 5),
+        "empty_string": "",
+        "very_long_string": "x" * 1000,
+        "unicode_string": "🏨🌟✈️🏝️",
+    }
+
+
+# Parametrized test data
+@pytest.fixture
+def accommodation_types():
+    """All accommodation types for parametrized testing."""
+    return list(AccommodationType)
+
+
+@pytest.fixture
+def booking_statuses():
+    """All booking statuses for parametrized testing."""
+    return list(BookingStatus)
+
+
+@pytest.fixture
+def cancellation_policies():
+    """All cancellation policies for parametrized testing."""
+    return list(CancellationPolicy)
+
+
+# Mock external API responses
+@pytest.fixture
+def mock_airbnb_search_response():
+    """Mock Airbnb search response."""
+    return {
+        "listings": [
+            {
+                "id": "12345",
+                "name": "Beautiful Apartment in Tokyo",
+                "price_per_night": 150.00,
+                "rating": 4.8,
+                "location": "Shibuya, Tokyo",
+                "amenities": ["wifi", "kitchen", "tv"],
+            }
+        ],
+        "count": 1,
+        "has_more": False,
+    }
+
+
+# Database mock fixtures
+@pytest.fixture
+def mock_database_session():
+    """Mock database session for testing."""
+    session = MagicMock()
+    session.add = Mock()
+    session.commit = Mock()
+    session.rollback = Mock()
+    session.close = Mock()
+    session.query = Mock()
+    session.execute = Mock()
+    return session
+
+
 # Clean up after tests
 @pytest.fixture(autouse=True)
 def cleanup_after_test():
