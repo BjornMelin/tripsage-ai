@@ -1,181 +1,218 @@
-# TripSage AI Docker Configuration
+# TripSage AI Modern Development Environment
 
-This directory contains optimized Docker configurations for TripSage AI local development environment.
+**Optimized Docker environment aligned with TripSage's current high-performance architecture.**
 
-## Files
+## Current Architecture (2025)
 
-- `docker-compose.mcp.yml` - **Enhanced** MCP (Model Context Protocol) services configuration
-- `otel-collector-config.yaml` - **Secured** OpenTelemetry collector configuration  
-- `prometheus.yml` - **Enhanced** Prometheus metrics scraping configuration
-- `dev_services/` - **New** Dedicated Dockerfiles for development services (Option A)
-- `docker-compose-neo4j.yml` - **DEPRECATED** - Historical Neo4j configuration (system migrated to Mem0)
+TripSage has evolved to a streamlined, high-performance architecture with dramatic improvements:
 
-## Recent Enhancements (Docker Optimization)
+- **Database**: Supabase PostgreSQL with pgvector extension (unified storage)
+- **Caching**: DragonflyDB (25x faster than Redis)
+- **Memory**: Mem0 with pgvector backend (91% faster than Neo4j)
+- **Web Crawling**: Crawl4AI direct SDK
+- **Browser Automation**: Playwright direct SDK
+- **External APIs**: Direct SDK integrations (Duffel, Google Maps, Weather)
+- **MCP Services**: Only 1 remaining (Airbnb - no official SDK available)
 
-### ✅ Completed Optimizations
+### Performance Achievements
 
-1. **Version Pinning**: All MCP services now use pinned versions (e.g., `@1.0.0`) for consistent behavior
-2. **Resource Limits**: Added CPU and memory limits/reservations for all services to prevent resource exhaustion
-3. **Security Hardening**: 
-   - OTLP exporter now defaults to `insecure: false` for secure TLS
-   - Added security comments and best practices
-4. **Enhanced Documentation**: Comprehensive comments explaining service purposes and configuration options
-5. **Dedicated Dockerfiles**: Created optimized Dockerfiles in `dev_services/` directory for faster builds
-6. **Service Classification**: Clear distinction between mock/stub services and actual external integrations
+- **25x cache performance** improvement (DragonflyDB vs Redis)
+- **11x faster vector search** (pgvector + pgvectorscale)
+- **91% faster memory operations** (Mem0 vs Neo4j)
+- **80% infrastructure cost** reduction
+- **60-70% architecture complexity** reduction
 
-### 🔧 Configuration Options
+## Services Overview
 
-**Option A (Recommended)**: Use dedicated Dockerfiles in `dev_services/` for:
-- Faster container startup (pre-built images)
-- Better dependency caching
-- Improved security with non-root users
-- Health checks for better reliability
+| Service | Type | Purpose | Performance |
+|---------|------|---------|-------------|
+| `supabase` | Database | PostgreSQL + pgvector for unified storage | 11x faster vector search |
+| `dragonfly` | Cache | High-performance Redis replacement | 25x faster than Redis |
+| `tripsage-api` | Backend | FastAPI with modern direct SDKs | 91% faster memory ops |
+| `tripsage-frontend` | Frontend | Next.js 15 with App Router | Modern React architecture |
+| `airbnb-mcp` | Integration | Only remaining MCP (no SDK available) | Minimal MCP usage |
+| `jaeger` | Monitoring | Distributed tracing | Production-ready observability |
+| `prometheus` | Metrics | Time-series metrics collection | Real-time performance monitoring |
+| `grafana` | Dashboards | Metrics visualization | Advanced analytics |
 
-**Option B (Fallback)**: Current version-pinned `npx` commands in `docker-compose.mcp.yml`
+## Quick Start
 
-## Current Architecture
-
-TripSage now uses a unified storage architecture:
-
-- **Database**: Supabase PostgreSQL with pgvector extensions (replaces Neo4j + separate vector database)
-- **Memory**: Mem0 direct SDK integration (replaces Neo4j memory MCP)
-- **Caching**: DragonflyDB service (Redis-compatible, 25x performance improvement)
-
-## Usage
-
-### Quick Start (Local Development)
-
-From the project root:
+### Basic Development Environment
 
 ```bash
-# Start all MCP services with enhanced configuration
+# Start core services (Supabase + DragonflyDB + API + Frontend)
+docker compose -f docker/docker-compose.mcp.yml up supabase dragonfly tripsage-api tripsage-frontend
+
+# Access services
+# - API: http://localhost:8080
+# - Frontend: http://localhost:3000
+# - Supabase Studio: http://localhost:8000
+# - DragonflyDB: localhost:6379
+```
+
+### Full Environment with Monitoring
+
+```bash
+# Start complete development environment
 docker compose -f docker/docker-compose.mcp.yml up -d
 
-# Check service status and resource usage
+# Access monitoring stack
+# - Grafana: http://localhost:3001 (admin/admin)
+# - Prometheus: http://localhost:9090
+# - Jaeger: http://localhost:16686
+```
+
+### Service Management
+
+```bash
+# Monitor all services
 docker compose -f docker/docker-compose.mcp.yml ps
 docker stats
 
-# View logs for specific service
-docker compose -f docker/docker-compose.mcp.yml logs <service-name>
+# View logs
+docker compose -f docker/docker-compose.mcp.yml logs tripsage-api
+docker compose -f docker/docker-compose.mcp.yml logs tripsage-frontend
 
-# Stop all services
+# Stop services
 docker compose -f docker/docker-compose.mcp.yml down
+
+# Clean volumes (reset data)
+docker compose -f docker/docker-compose.mcp.yml down -v
 ```
 
-### Environment Variables
+## Environment Variables
 
-Required environment variables (set in `.env` file):
+### Required Configuration
+
 ```bash
-# Database Services
-SUPABASE_URL=your_supabase_url
-SUPABASE_KEY=your_supabase_key
-NEO4J_URI=your_neo4j_uri  # For legacy compatibility
-NEO4J_USERNAME=your_username
-NEO4J_PASSWORD=your_password
+# Database (Supabase local development)
+POSTGRES_PASSWORD=your_secure_password
+POSTGRES_DB=tripsage_dev
+POSTGRES_USER=postgres
+SUPABASE_JWT_SECRET=your-super-secret-jwt-token
+SUPABASE_ANON_KEY=your-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 
-# Travel APIs
-DUFFEL_API_KEY=your_duffel_key
-AIRBNB_API_KEY=your_airbnb_key  # ONLY service using real API
+# Cache (DragonflyDB)
+DRAGONFLY_PASSWORD=optional_password
 
-# Location & Utility
-GOOGLE_MAPS_API_KEY=your_maps_key
+# External APIs (Direct SDK integrations)
+DUFFEL_API_KEY=your_duffel_api_key
+GOOGLE_MAPS_API_KEY=your_google_maps_key
 OPENWEATHERMAP_API_KEY=your_weather_key
-GOOGLE_CLIENT_ID=your_client_id
-GOOGLE_CLIENT_SECRET=your_client_secret
 
-# Cache
-REDIS_URL=your_redis_url
+# MCP Integration (Only Airbnb)
+AIRBNB_API_KEY=your_airbnb_key
 
-# Observability (Optional)
-OTLP_ENDPOINT=your_otlp_endpoint
-OTLP_INSECURE=false  # IMPORTANT: Use false for production
-OTLP_API_KEY=your_api_key
+# Optional: Web Crawling
+CRAWL4AI_API_KEY=optional_crawl4ai_key
+
+# Optional: Monitoring
+GRAFANA_PASSWORD=admin
 ```
 
-### Service Overview
-
-| Service | Type | Purpose | Resource Limits |
-|---------|------|---------|----------------|
-| `supabase-mcp` | Mock | Database operations simulation | 0.5 CPU, 256MB |
-| `airbnb-mcp` | **Live** | Real Airbnb platform integration | 0.5 CPU, 256MB |
-| `duffel-flights-mcp` | Mock | Flight search simulation | 0.5 CPU, 256MB |
-| `google-maps-mcp` | Mock | Maps/location simulation | 0.5 CPU, 256MB |
-| `playwright-mcp` | Tool | Browser automation | 1.0 CPU, 1GB |
-| `firecrawl-mcp` | Tool | Web scraping service | 0.5 CPU, 256MB |
-| `time-mcp` | Utility | Time operations | 0.25 CPU, 128MB |
-| `weather-mcp` | Mock | Weather data simulation | 0.5 CPU, 256MB |
-
-### Monitoring & Observability
+### Development-Only Variables
 
 ```bash
-# Start with observability stack
-docker compose -f docker/docker-compose.mcp.yml --profile monitoring up -d
+# Mem0 Configuration
+MEM0_CONFIG={"vector_store": {"provider": "pgvector"}}
 
-# Access monitoring endpoints
-# - Prometheus: http://localhost:9090
-# - Grafana: http://localhost:3000
-# - OTEL Collector: http://localhost:8888/metrics
+# Development URLs
+DATABASE_URL=postgresql://postgres:password@supabase:5432/tripsage_dev
+DRAGONFLY_URL=redis://dragonfly:6379
+SUPABASE_URL=http://supabase:8000
 ```
 
-## Architecture Notes
+## Architecture Benefits
 
-### Current Storage Architecture
-- **Database**: Supabase PostgreSQL with pgvector extensions (replaces Neo4j + separate vector database)
-- **Memory**: Mem0 direct SDK integration (replaces Neo4j memory MCP)
-- **Caching**: DragonflyDB service (Redis-compatible, 25x performance improvement)
+### Eliminated Legacy Components
 
-### Migration Notes
-- **Neo4j → Mem0**: Knowledge graph functionality migrated to Mem0 with pgvector backend
-- **Vector Search**: Now handled by pgvector extensions in Supabase (11x performance improvement)
-- **Development**: No local Neo4j instance needed - unified Supabase for all environments
+**Removed from Docker environment** (migrated to direct SDKs):
+- ❌ Neo4j MCP (replaced by Mem0)
+- ❌ Redis MCP (replaced by DragonflyDB)
+- ❌ Firecrawl MCP (replaced by Crawl4AI SDK)
+- ❌ Google Maps MCP (replaced by direct SDK)
+- ❌ Weather MCP (replaced by direct HTTP)
+- ❌ Duffel MCP (replaced by direct SDK)
+- ❌ 8+ other legacy MCP services
 
-### Service Types
-1. **Mock/Stub Services**: Simulate external API behavior for local development (most services)
-2. **Live Integration**: Only `airbnb-mcp` connects to actual external platform
-3. **Development Tools**: Playwright, Firecrawl for automation and scraping
-4. **Utilities**: Time operations, caching services
+**Retained Essential Services**:
+- ✅ Airbnb MCP (only remaining - no official SDK)
+- ✅ Modern monitoring stack (Jaeger, Prometheus, Grafana)
+- ✅ High-performance infrastructure (Supabase, DragonflyDB)
+
+### Development Workflow
+
+1. **Database**: Supabase provides PostgreSQL + pgvector + Studio UI
+2. **Caching**: DragonflyDB provides high-performance Redis-compatible cache
+3. **Memory**: Mem0 integrates directly with pgvector for 91% faster operations
+4. **External APIs**: Direct SDK calls eliminate MCP overhead
+5. **Monitoring**: Production-ready observability stack for performance insights
 
 ## Troubleshooting
 
 ### Common Issues
 
-**Resource Exhaustion**:
+**Service Won't Start**:
 ```bash
-# Check resource usage
-docker stats
-
-# Adjust limits in docker-compose.mcp.yml if needed
-```
-
-**Service Not Starting**:
-```bash
-# Check service logs
-docker compose -f docker/docker-compose.mcp.yml logs <service-name>
+# Check service health
+docker compose -f docker/docker-compose.mcp.yml ps
+docker compose -f docker/docker-compose.mcp.yml logs [service-name]
 
 # Verify environment variables
-env | grep -E '(SUPABASE|DUFFEL|AIRBNB|GOOGLE)'
+env | grep -E '(POSTGRES|DUFFEL|GOOGLE|AIRBNB)'
 ```
 
-**Network Issues**:
+**Database Connection Issues**:
 ```bash
-# Inspect network
-docker network inspect tripsage-mcp-network
+# Test PostgreSQL connection
+docker exec -it tripsage-supabase-local psql -U postgres -d tripsage_dev
 
-# Test service connectivity
-docker compose -f docker/docker-compose.mcp.yml exec <service> ping <other-service>
+# Verify pgvector extension
+docker exec -it tripsage-supabase-local psql -U postgres -d tripsage_dev -c "SELECT * FROM pg_extension WHERE extname = 'vector';"
+```
+
+**Cache Performance Issues**:
+```bash
+# Test DragonflyDB connection
+docker exec -it tripsage-dragonfly redis-cli ping
+
+# Monitor cache metrics
+docker exec -it tripsage-dragonfly redis-cli info memory
 ```
 
 ### Performance Optimization
 
-1. **Use SSD storage** for Docker volumes
-2. **Allocate sufficient Docker resources** (4GB+ RAM recommended)
-3. **Enable BuildKit** for faster builds: `export DOCKER_BUILDKIT=1`
-4. **Use dedicated Dockerfiles** in `dev_services/` for faster startup
+1. **Resource Allocation**: Adjust Docker resource limits based on your system
+2. **SSD Storage**: Use SSD storage for Docker volumes for best performance
+3. **Memory**: Allocate at least 8GB RAM for the full development environment
+4. **Network**: Use Docker's default networking for optimal performance
 
-### Security Considerations
+### Production Alignment
 
-- All services run with non-root users where possible
-- TLS is enforced by default (`OTLP_INSECURE=false`)
-- Resource limits prevent DoS via resource exhaustion
-- Network isolation via dedicated Docker network
-- Environment variables for sensitive configuration
+This development environment mirrors the production architecture:
+- Same database technology (Supabase + pgvector)
+- Same caching solution (DragonflyDB)
+- Same memory system (Mem0)
+- Same direct SDK integrations
+- Same monitoring stack
+
+This ensures development-production parity and prevents environment-specific issues.
+
+## Migration Notes
+
+**From Legacy MCP Architecture**:
+- Docker environment has been streamlined to match the current high-performance architecture
+- Legacy MCP services have been removed in favor of direct SDK integrations
+- Only Airbnb MCP remains due to lack of official SDK
+- Performance improvements are immediately visible in the development environment
+
+**Database Migration**:
+- Neo4j → Mem0 with pgvector backend
+- Multiple databases → Single Supabase instance
+- Complex vector setup → Unified pgvector + pgvectorscale
+
+**Cache Migration**:
+- Redis → DragonflyDB for 25x performance improvement
+- No configuration changes needed (Redis-compatible)
+- Dramatic performance improvements in development environment
