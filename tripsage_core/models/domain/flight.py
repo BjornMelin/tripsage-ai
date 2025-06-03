@@ -14,7 +14,6 @@ from pydantic import Field
 from tripsage_core.models.base_core_model import TripSageDomainModel
 from tripsage_core.models.schemas_common.common_validators import (
     AirportCode,
-    CommonValidators,
     CurrencyCode,
     Latitude,
     Longitude,

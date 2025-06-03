@@ -12,10 +12,7 @@ from typing import Annotated, Any, Optional
 from pydantic import (
     AfterValidator,
     BeforeValidator,
-    Field,
-    ValidationError,
 )
-from pydantic_core.core_schema import ValidatorFunctionWrapHandler
 
 
 def validate_airport_code(value: str) -> str:
@@ -367,12 +364,8 @@ LongString = Annotated[
 ]
 
 # Truncating string validators for user input
-TruncatedShortString = Annotated[
-    str, BeforeValidator(truncate_string(50))
-]
-TruncatedMediumString = Annotated[
-    str, BeforeValidator(truncate_string(255))
-]
+TruncatedShortString = Annotated[str, BeforeValidator(truncate_string(50))]
+TruncatedMediumString = Annotated[str, BeforeValidator(truncate_string(255))]
 
 
 class CommonValidators:

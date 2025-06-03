@@ -610,8 +610,6 @@ def with_error_handling(
     return decorator
 
 
-
-
 # Factory functions for common exceptions
 def create_authentication_error(
     message: str = "Authentication failed", details: Optional[Dict[str, Any]] = None
@@ -666,8 +664,6 @@ __all__ = [
     "create_error_response",
     "safe_execute",
     "with_error_handling",
-    "get_core_exception",
-    "EXCEPTION_MAPPING",
     # Factory functions
     "create_authentication_error",
     "create_authorization_error",

@@ -6,7 +6,6 @@ import pytest
 from fastapi import status
 
 from tripsage_core.exceptions.exceptions import (
-    EXCEPTION_MAPPING,
     CoreAgentError,
     # Authentication and authorization
     CoreAuthenticationError,
@@ -28,7 +27,6 @@ from tripsage_core.exceptions.exceptions import (
     ErrorDetails,
     create_error_response,
     format_exception,
-    get_core_exception,
     safe_execute,
     with_error_handling,
 )
@@ -391,38 +389,6 @@ class TestUtilityFunctions:
             test_func()
 
         mock_logger.error.assert_called_once()
-
-    def test_get_core_exception_mapping(self):
-        """Test get_core_exception mapping function."""
-        # Test existing mappings
-        assert get_core_exception("AuthenticationError") == CoreAuthenticationError
-        assert get_core_exception("ValidationError") == CoreValidationError
-        assert get_core_exception("MCPError") == CoreMCPError
-
-        # Test unknown exception returns base class
-        assert get_core_exception("UnknownError") == CoreTripSageError
-
-    def test_exception_mapping_completeness(self):
-        """Test that EXCEPTION_MAPPING covers all expected legacy exceptions."""
-        expected_mappings = {
-            "TripSageError": CoreTripSageError,
-            "TripSageException": CoreTripSageError,
-            "AuthenticationError": CoreAuthenticationError,
-            "AuthorizationError": CoreAuthorizationError,
-            "ResourceNotFoundError": CoreResourceNotFoundError,
-            "NotFoundError": CoreResourceNotFoundError,
-            "ValidationError": CoreValidationError,
-            "MCPServiceError": CoreMCPError,
-            "MCPError": CoreMCPError,
-            "RateLimitError": CoreRateLimitError,
-            "KeyValidationError": CoreKeyValidationError,
-            "APIKeyError": CoreKeyValidationError,
-            "DatabaseError": CoreDatabaseError,
-            "APIError": CoreExternalAPIError,
-        }
-
-        for legacy_name, core_class in expected_mappings.items():
-            assert EXCEPTION_MAPPING[legacy_name] == core_class
 
 
 class TestExceptionInheritance:

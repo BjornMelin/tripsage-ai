@@ -225,7 +225,7 @@ class RouterNode(BaseAgentNode):
             response = await self.classifier.ainvoke(messages)
             # Handle different response formats
             content = (
-                response.content if hasattr(response, 'content') else str(response)
+                response.content if hasattr(response, "content") else str(response)
             )
             classification = json.loads(content)
 
