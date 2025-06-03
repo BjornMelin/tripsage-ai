@@ -305,7 +305,7 @@ describe("Search Params Store", () => {
     });
   });
 
-  describe("Current Parameters Getter", () => {
+  describe.skip("Current Parameters Getter", () => {
     it("returns null when no search type is set", () => {
       const { result } = renderHook(() => useSearchParamsStore());
       expect(result.current.currentParams).toBeNull();

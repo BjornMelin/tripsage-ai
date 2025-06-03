@@ -1,14 +1,22 @@
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
-  useAuthStore,
   type LoginCredentials,
-  type RegisterCredentials,
-  type PasswordResetRequest,
   type PasswordReset,
+  type PasswordResetRequest,
+  type RegisterCredentials,
   type User,
   type UserPreferences,
   type UserSecurity,
+  useAuth,
+  useAuthErrors,
+  useAuthLoading,
+  useAuthStore,
+  useIsAuthenticated,
+  useIsTokenExpired,
+  useSessionTimeRemaining,
+  useUser,
+  useUserDisplayName,
 } from "../auth-store";
 
 // Mock setTimeout to make tests run faster
@@ -749,7 +757,10 @@ describe("Auth Store", () => {
 
   describe("Computed Properties", () => {
     it("correctly computes token expiration status", () => {
-      const { result } = renderHook(() => useAuthStore());
+      const { result } = renderHook(() => ({
+        isTokenExpired: useIsTokenExpired(),
+        tokenInfo: useAuthStore((state) => state.tokenInfo),
+      }));
 
       // No token - should be expired
       expect(result.current.isTokenExpired).toBe(true);
@@ -782,7 +793,10 @@ describe("Auth Store", () => {
     });
 
     it("correctly computes session time remaining", () => {
-      const { result } = renderHook(() => useAuthStore());
+      const { result } = renderHook(() => ({
+        sessionTimeRemaining: useSessionTimeRemaining(),
+        session: useAuthStore((state) => state.session),
+      }));
 
       // No session
       expect(result.current.sessionTimeRemaining).toBe(0);
@@ -804,7 +818,10 @@ describe("Auth Store", () => {
     });
 
     it("correctly computes user display name", () => {
-      const { result } = renderHook(() => useAuthStore());
+      const { result } = renderHook(() => ({
+        userDisplayName: useUserDisplayName(),
+        user: useAuthStore((state) => state.user),
+      }));
 
       // No user
       expect(result.current.userDisplayName).toBe("");
@@ -996,24 +1013,20 @@ describe("Auth Store", () => {
   });
 
   describe("Utility Selectors", () => {
-    it("useAuth selector returns correct auth state", () => {
-      const { result: authResult } = renderHook(() =>
-        useAuthStore((state) => ({
-          isAuthenticated: state.isAuthenticated,
-          user: state.user,
-          isLoading: state.isLoading,
-          login: state.login,
-          logout: state.logout,
-          register: state.register,
-        }))
-      );
+    it("selector hooks return correct values", () => {
+      const { result: authResult } = renderHook(() => ({
+        isAuthenticated: useIsAuthenticated(),
+        user: useUser(),
+        userDisplayName: useUserDisplayName(),
+        isTokenExpired: useIsTokenExpired(),
+        sessionTimeRemaining: useSessionTimeRemaining(),
+      }));
 
       expect(authResult.current.isAuthenticated).toBe(false);
       expect(authResult.current.user).toBeNull();
-      expect(authResult.current.isLoading).toBe(false);
-      expect(typeof authResult.current.login).toBe("function");
-      expect(typeof authResult.current.logout).toBe("function");
-      expect(typeof authResult.current.register).toBe("function");
+      expect(authResult.current.userDisplayName).toBe("");
+      expect(authResult.current.isTokenExpired).toBe(true);
+      expect(authResult.current.sessionTimeRemaining).toBe(0);
     });
   });
 
@@ -1063,11 +1076,14 @@ describe("Auth Store", () => {
     });
 
     it("handles token refresh scenarios", async () => {
-      const { result } = renderHook(() => useAuthStore());
+      const { result } = renderHook(() => ({
+        store: useAuthStore(),
+        isTokenExpired: useIsTokenExpired(),
+      }));
 
       // Login to get tokens
       await act(async () => {
-        await result.current.login({
+        await result.current.store.login({
           email: "test@example.com",
           password: "password123",
         });
@@ -1090,7 +1106,7 @@ describe("Auth Store", () => {
 
       // Validate token should trigger refresh
       await act(async () => {
-        await result.current.validateToken();
+        await result.current.store.validateToken();
       });
 
       expect(result.current.isTokenExpired).toBe(false);

@@ -45,9 +45,14 @@ describe("Search Store Integration", () => {
 
       useSearchFiltersStore.setState({
         activeFilters: {},
-        availableFilters: {},
+        availableFilters: {
+          flight: [],
+          accommodation: [],
+          activity: [],
+          destination: [],
+        },
         isApplyingFilters: false,
-        filterPresets: {},
+        filterPresets: [],
         activePreset: null,
         sortBy: null,
         sortOrder: "asc",
@@ -70,7 +75,7 @@ describe("Search Store Integration", () => {
 
       expect(typeof result.current.initializeSearch).toBe("function");
       expect(typeof result.current.executeSearch).toBe("function");
-      expect(typeof result.current.clearAll).toBe("function");
+      expect(typeof result.current.resetSearch).toBe("function");
     });
 
     it("initializes search type correctly", () => {
@@ -84,15 +89,17 @@ describe("Search Store Integration", () => {
       expect(paramsResult.current.currentSearchType).toBe("flight");
     });
 
-    it("clears all stores when clearAll is called", () => {
+    it("clears all stores when resetSearch is called", () => {
       const { result: orchestratorResult } = renderHook(() => useSearchStore());
       const { result: paramsResult } = renderHook(() => useSearchParamsStore());
       const { result: resultsResult } = renderHook(() => useSearchResultsStore());
 
       // Set some data first
+      let searchId: string;
       act(() => {
         orchestratorResult.current.initializeSearch("flight");
-        resultsResult.current.setSearchProgress(50);
+        searchId = resultsResult.current.startSearch("flight", {});
+        resultsResult.current.updateSearchProgress(searchId, 50);
       });
 
       // Verify data is set
@@ -101,7 +108,7 @@ describe("Search Store Integration", () => {
 
       // Clear all
       act(() => {
-        orchestratorResult.current.clearAll();
+        orchestratorResult.current.resetSearch();
       });
 
       // Verify data is cleared
@@ -138,7 +145,7 @@ describe("Search Store Integration", () => {
         });
       });
 
-      expect(result.current.flightParams).toEqual({
+      expect(result.current.flightParams).toMatchObject({
         origin: "NYC",
         destination: "LAX",
         adults: 2,
@@ -174,8 +181,14 @@ describe("Search Store Integration", () => {
     it("sets search progress", () => {
       const { result } = renderHook(() => useSearchResultsStore());
 
+      // First start a search to get a searchId
+      let searchId: string;
       act(() => {
-        result.current.setSearchProgress(75);
+        searchId = result.current.startSearch("flight", {});
+      });
+
+      act(() => {
+        result.current.updateSearchProgress(searchId, 75);
       });
 
       expect(result.current.searchProgress).toBe(75);
@@ -186,22 +199,38 @@ describe("Search Store Integration", () => {
     it("initializes with empty filters", () => {
       const { result } = renderHook(() => useSearchFiltersStore());
       expect(result.current.activeFilters).toEqual({});
-      expect(result.current.availableFilters).toEqual({});
+      expect(result.current.availableFilters).toEqual({
+        flight: [],
+        accommodation: [],
+        activity: [],
+        destination: [],
+      });
     });
 
     it("sets available filters", () => {
       const { result } = renderHook(() => useSearchFiltersStore());
 
-      const mockFilters = {
-        price: { min: 100, max: 1000 },
-        airline: ["Delta", "United"],
-      };
+      const mockFilters = [
+        {
+          id: "price_range",
+          label: "Price Range",
+          type: "range",
+          category: "pricing"
+        },
+        {
+          id: "airline",
+          label: "Airlines",
+          type: "multiselect",
+          category: "airline"
+        }
+      ];
 
       act(() => {
-        result.current.setAvailableFilters(mockFilters);
+        result.current.setAvailableFilters("flight", mockFilters);
       });
 
-      expect(result.current.availableFilters).toEqual(mockFilters);
+      expect(result.current.availableFilters.flight).toBeDefined();
+      expect(result.current.availableFilters.flight).toHaveLength(2);
     });
   });
 

@@ -11,6 +11,11 @@ import type {
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
+// Helper functions
+const generateId = () =>
+  Date.now().toString(36) + Math.random().toString(36).substring(2, 5);
+const getCurrentTimestamp = () => new Date().toISOString();
+
 interface BudgetState {
   // Budgets
   budgets: Record<string, Budget>;
@@ -65,11 +70,6 @@ interface BudgetState {
   markAlertAsRead: (id: string, budgetId: string) => void;
   clearAlerts: (budgetId: string) => void;
 }
-
-// Helper functions
-const generateId = () =>
-  Date.now().toString(36) + Math.random().toString(36).substring(2, 5);
-const getCurrentTimestamp = () => new Date().toISOString();
 
 const calculateBudgetSummary = (budget: Budget, expenses: Expense[]): BudgetSummary => {
   const totalBudget = budget.totalAmount;
@@ -477,3 +477,9 @@ export const useBudgetStore = create<BudgetState>()(
     }
   )
 );
+
+// Selector hooks for computed properties
+export const useActiveBudget = () => useBudgetStore((state) => state.activeBudget);
+export const useBudgetSummary = () => useBudgetStore((state) => state.budgetSummary);
+export const useBudgetsByTrip = () => useBudgetStore((state) => state.budgetsByTrip);
+export const useRecentExpenses = () => useBudgetStore((state) => state.recentExpenses);
