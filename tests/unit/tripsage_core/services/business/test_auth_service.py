@@ -3,6 +3,7 @@ Comprehensive tests for AuthenticationService.
 
 This module provides full test coverage for authentication operations
 including JWT token management, token validation, and refresh mechanisms.
+Compatible with refactored AuthenticationService using BaseService and enhanced error handling.
 """
 
 import os
@@ -15,6 +16,7 @@ import pytest
 
 from tripsage_core.exceptions.exceptions import (
     CoreAuthenticationError as AuthenticationError,
+    CoreServiceError,
 )
 from tripsage_core.services.business.auth_service import (
     AuthenticationService,
@@ -39,10 +41,26 @@ class TestAuthenticationService:
         return user_service
 
     @pytest.fixture
-    def auth_service(self, mock_user_service):
+    def mock_database_service(self):
+        """Mock database service for BaseService."""
+        database_service = AsyncMock()
+        database_service.health_check = AsyncMock()
+        return database_service
+
+    @pytest.fixture
+    def mock_cache_service(self):
+        """Mock cache service for BaseService."""
+        cache_service = AsyncMock()
+        cache_service.health_check = AsyncMock()
+        return cache_service
+
+    @pytest.fixture
+    def auth_service(self, mock_user_service, mock_database_service, mock_cache_service):
         """Create AuthenticationService instance with mocked dependencies."""
         return AuthenticationService(
             user_service=mock_user_service,
+            database_service=mock_database_service,
+            cache_service=mock_cache_service,
             secret_key=os.getenv(
                 "TEST_JWT_SECRET_KEY", "dummy_test_secret_for_unit_tests"
             ),
@@ -483,7 +501,8 @@ class TestAuthenticationService:
             "Database error"
         )
 
-        with pytest.raises(AuthenticationError, match="Authentication failed"):
+        # With the new error handling decorator, unexpected errors are wrapped as CoreServiceError
+        with pytest.raises(CoreServiceError, match="Operation failed: user_authentication"):
             await auth_service.authenticate_user(sample_login_request)
 
     async def test_refresh_token_exception_handling(
@@ -498,5 +517,34 @@ class TestAuthenticationService:
 
         refresh_request = RefreshTokenRequest(refresh_token=refresh_token)
 
-        with pytest.raises(AuthenticationError, match="Token refresh failed"):
+        # With the new error handling decorator, unexpected errors are wrapped as CoreServiceError
+        with pytest.raises(CoreServiceError, match="Operation failed: token_refresh"):
             await auth_service.refresh_token(refresh_request)
+
+    async def test_service_initialization_with_base_service(
+        self, auth_service, mock_database_service, mock_cache_service
+    ):
+        """Test that the service initializes correctly with BaseService."""
+        # Test service properties from BaseService
+        assert auth_service.service_name == "AuthenticationService"
+        assert hasattr(auth_service, "logger")
+        assert hasattr(auth_service, "db")
+        assert hasattr(auth_service, "cache")
+        
+        # Test JWT configuration
+        assert auth_service.algorithm == "HS256"
+        assert auth_service.access_token_expire_minutes == 30
+        assert auth_service.refresh_token_expire_days == 7
+
+    async def test_health_check(self, auth_service, mock_database_service, mock_cache_service):
+        """Test the health check functionality from BaseService."""
+        # Mock successful health checks
+        mock_database_service.health_check.return_value = None
+        mock_cache_service.health_check.return_value = None
+
+        health_status = await auth_service.health_check()
+
+        assert health_status["service"] == "AuthenticationService"
+        assert health_status["status"] == "healthy"
+        assert health_status["dependencies"]["database"] == "healthy"
+        assert health_status["dependencies"]["cache"] == "healthy"

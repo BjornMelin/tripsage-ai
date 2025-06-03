@@ -42,16 +42,6 @@ export const ToolResultSchema = z.object({
 });
 export type ToolResult = z.infer<typeof ToolResultSchema>;
 
-// Legacy tool invocation schema (for compatibility)
-export const ToolInvocationSchema = z.object({
-  toolCallId: z.string(),
-  toolName: z.string(),
-  args: z.record(z.any()).optional(),
-  state: ToolCallStateSchema,
-  result: z.any().optional(),
-});
-export type ToolInvocation = z.infer<typeof ToolInvocationSchema>;
-
 // Message part for text content
 export const TextPartSchema = z.object({
   type: z.literal("text"),
@@ -59,17 +49,9 @@ export const TextPartSchema = z.object({
 });
 export type TextPart = z.infer<typeof TextPartSchema>;
 
-// Message part for tool invocation
-export const ToolInvocationPartSchema = z.object({
-  type: z.literal("tool-invocation"),
-  toolInvocation: ToolInvocationSchema,
-});
-export type ToolInvocationPart = z.infer<typeof ToolInvocationPartSchema>;
-
-// Union of message part types
+// Union of message part types (simplified without legacy tool invocation)
 export const MessagePartSchema = z.discriminatedUnion("type", [
   TextPartSchema,
-  ToolInvocationPartSchema,
 ]);
 export type MessagePart = z.infer<typeof MessagePartSchema>;
 
@@ -93,7 +75,6 @@ export const MessageSchema = z.object({
   updatedAt: z.date().or(z.string().datetime()).optional(),
   attachments: z.array(AttachmentSchema).optional(),
   annotations: z.record(z.any()).optional(),
-  toolInvocations: z.array(ToolInvocationSchema).optional(),
   // Enhanced tool calling support
   toolCalls: z.array(ToolCallSchema).optional(),
   toolResults: z.array(ToolResultSchema).optional(),
