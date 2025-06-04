@@ -30,7 +30,7 @@ TripSage is an AI-powered travel planning platform that combines modern web tech
 
 The TripSage platform follows a layered architecture with clear separation between presentation, application, business logic, and infrastructure layers.
 
-```
+```plaintext
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                           TripSage AI Platform                             │
 ├─────────────────────────────────────────────────────────────────────────────┤
@@ -113,6 +113,7 @@ The TripSage platform follows a layered architecture with clear separation betwe
 - **Performance Optimization** - Code splitting and lazy loading
 
 **Key Features:**
+
 - Travel planning interface with drag-and-drop itinerary building
 - Real-time chat with AI agents
 - Trip collaboration and sharing
@@ -132,6 +133,7 @@ The TripSage platform follows a layered architecture with clear separation betwe
 - **Security** - Multi-layer security with encryption and monitoring
 
 **Consumer Adaptations:**
+
 - **Frontend**: User-friendly errors, UI metadata, sanitized responses
 - **Agents**: Technical context, tool suggestions, raw data access
 
@@ -140,6 +142,7 @@ The TripSage platform follows a layered architecture with clear separation betwe
 **Intelligent travel planning agents with specialized capabilities:**
 
 #### Core Agents
+
 - **Planning Agent** - Master coordinator for complex trip planning
 - **Flight Agent** - Flight search, booking, and price tracking
 - **Accommodation Agent** - Hotel and lodging search with MCP integration
@@ -148,6 +151,7 @@ The TripSage platform follows a layered architecture with clear separation betwe
 - **Memory Agent** - Context management and user learning
 
 #### Agent Capabilities
+
 - **Multi-step Planning** - Complex workflows with checkpoints
 - **Tool Integration** - Rich tool calling with external services
 - **Memory Integration** - Persistent context across conversations
@@ -159,6 +163,7 @@ The TripSage platform follows a layered architecture with clear separation betwe
 **Shared foundation providing:**
 
 #### Business Services
+
 - **AuthService** - Authentication and authorization
 - **MemoryService** - Conversation memory and context (91% faster with Mem0)
 - **ChatService** - Chat orchestration and processing
@@ -168,6 +173,7 @@ The TripSage platform follows a layered architecture with clear separation betwe
 - **TripService** - Trip planning and coordination
 
 #### Infrastructure Services
+
 - **DatabaseService** - Supabase integration with transactions
 - **CacheService** - DragonflyDB with intelligent TTL (25x improvement)
 - **WebSocketManager** - Real-time communication
@@ -176,6 +182,7 @@ The TripSage platform follows a layered architecture with clear separation betwe
 ### Infrastructure Layer
 
 #### Database (Supabase PostgreSQL)
+
 - **Primary Storage** - User data, trips, bookings, preferences
 - **pgvector Extension** - AI embeddings for similarity search
 - **Row Level Security** - Fine-grained access control
@@ -183,12 +190,14 @@ The TripSage platform follows a layered architecture with clear separation betwe
 - **Migration System** - Version-controlled schema changes
 
 #### Cache (DragonflyDB)
+
 - **High Performance** - 25x faster than Redis
 - **Multi-tier Strategy** - Hot/warm/cold data with intelligent TTL
 - **Redis Compatibility** - Drop-in Redis replacement
 - **Memory Efficiency** - Optimized for large datasets
 
 #### External Integrations
+
 - **Flight APIs** - Duffel for comprehensive flight data
 - **Accommodation** - Airbnb MCP integration for alternative lodging
 - **Maps & Location** - Google Maps for geographic services
@@ -489,18 +498,21 @@ class SecurityArchitecture:
 The unified architecture provides several key benefits:
 
 ### For Developers
+
 - **Consistent APIs** - Single interface for all functionality
 - **Shared Components** - Reusable services and models
 - **Type Safety** - End-to-end type checking with Pydantic and Zod
 - **Comprehensive Testing** - Integrated testing framework
 
 ### For Users
+
 - **Seamless Experience** - Consistent interface across web and mobile
 - **Real-time Collaboration** - Live updates and shared planning
 - **Intelligent Assistance** - AI agents that learn and adapt
 - **Privacy Protection** - Secure data handling and user control
 
 ### For Operations
+
 - **Scalable Architecture** - Independent scaling of components
 - **Monitoring & Observability** - Comprehensive metrics and logging
 - **High Availability** - Redundant systems and automatic failover
