@@ -1,13 +1,17 @@
 #!/usr/bin/env python3
-"""Script to verify DragonflyDB connection and configuration."""
+"""Script to verify DragonflyDB connection and configuration.
+
+Run from project root: python scripts/verification/verify_dragonfly.py
+"""
 
 import asyncio
 import sys
 from pathlib import Path
 
-# Add project root to path
-project_root = Path(__file__).resolve().parent.parent.parent
-sys.path.insert(0, str(project_root))
+# If running as a script, add project root to path
+if __name__ == "__main__":
+    project_root = Path(__file__).resolve().parent.parent.parent
+    sys.path.insert(0, str(project_root))
 
 from tripsage_core.config.base_app_settings import get_settings
 from tripsage_core.services.infrastructure.cache_service import CacheService

@@ -65,7 +65,10 @@ class ChatAgent(BaseAgent):
             logger.error("Chat agent orchestrator not initialized")
             return {
                 "error": "Chat system not available",
-                "message": "I apologize, but the chat system is currently unavailable. Please try again later.",
+                "message": (
+                    "I apologize, but the chat system is currently unavailable. "
+                    "Please try again later."
+                ),
             }
 
         try:
@@ -84,7 +87,10 @@ class ChatAgent(BaseAgent):
             logger.error(f"Error processing chat message: {e}")
             return {
                 "error": str(e),
-                "message": "I encountered an error while processing your request. Please try again.",
+                "message": (
+                    "I encountered an error while processing your request. "
+                    "Please try again."
+                ),
             }
 
     async def stream_message(
@@ -111,7 +117,9 @@ class ChatAgent(BaseAgent):
                 "type": "error",
                 "data": {
                     "error": "Chat system not available",
-                    "message": "I apologize, but the chat system is currently unavailable.",
+                    "message": (
+                        "I apologize, but the chat system is currently unavailable."
+                    ),
                 },
             }
             return

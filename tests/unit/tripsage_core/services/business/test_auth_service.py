@@ -3,7 +3,8 @@ Comprehensive tests for AuthenticationService.
 
 This module provides full test coverage for authentication operations
 including JWT token management, token validation, and refresh mechanisms.
-Compatible with refactored AuthenticationService using BaseService and enhanced error handling.
+Compatible with refactored AuthenticationService using BaseService and
+enhanced error handling.
 """
 
 import os
@@ -505,7 +506,8 @@ class TestAuthenticationService:
             "Database error"
         )
 
-        # With the new error handling decorator, unexpected errors are wrapped as CoreServiceError
+        # With the new error handling decorator, unexpected errors are
+        # wrapped as CoreServiceError
         with pytest.raises(
             CoreServiceError, match="Operation failed: user_authentication"
         ):
@@ -523,7 +525,8 @@ class TestAuthenticationService:
 
         refresh_request = RefreshTokenRequest(refresh_token=refresh_token)
 
-        # With the new error handling decorator, unexpected errors are wrapped as CoreServiceError
+        # With the new error handling decorator, unexpected errors are
+        # wrapped as CoreServiceError
         with pytest.raises(CoreServiceError, match="Operation failed: token_refresh"):
             await auth_service.refresh_token(refresh_request)
 
