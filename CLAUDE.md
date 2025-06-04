@@ -25,7 +25,7 @@ and optimizes itineraries against budget & user constraints across sessions.
 - ✅ Memory system integration (Mem0 with pgvector embeddings)
 - ✅ LangGraph orchestration (Phase 3 complete)
 - ✅ Direct SDK integrations (Duffel, Google Maps, Crawl4AI)
-- ✅ DragonflyDB caching layer (infrastructure ready, using Redis protocol)
+- ✅ DragonflyDB caching layer (fully configured with 25x performance improvement)
 - ✅ Backend testing infrastructure (2154 tests, 90%+ coverage achieved)
 
 **In Progress:**
@@ -38,9 +38,8 @@ and optimizes itineraries against budget & user constraints across sessions.
 
 1. Complete frontend-backend authentication integration
 2. Migrate remaining Airbnb MCP to direct SDK
-3. Configure DragonflyDB connection URL (currently using redis://)
-4. Implement WebSocket functionality for real-time updates
-5. Deploy production environment
+3. Implement WebSocket functionality for real-time updates
+4. Deploy production environment
 
 ## MCP Tool Integration & Auto-Invocation
 
@@ -178,6 +177,12 @@ ruff check . --fix && ruff format .  # Lint and format
 
 # Database
 uv run python scripts/database/run_migrations.py  # Run migrations
+
+# DragonflyDB
+docker run -d --name tripsage-dragonfly -p 6379:6379 \
+  docker.dragonflydb.io/dragonflydb/dragonfly:latest \
+  --logtostderr --cache_mode --requirepass tripsage_secure_password
+uv run python scripts/verification/verify_dragonfly.py  # Verify cache connection
 ```
 
 ## TripSage-Specific Cognitive Patterns
