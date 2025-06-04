@@ -59,33 +59,58 @@ mcp__taskmaster-ai__set_task_status --id <task_id> --status done
 mcp__taskmaster-ai__update_task --id <task_id> --prompt "Implementation notes..."
 ```
 
-## Tool-Integration Order
+## MCP Tool Integration & Auto-Invocation
 
+### 🎯 TripSage-Specific Tool Patterns
+
+**Travel Domain Auto-Invocations:**
+```
+Query Analysis for Travel Context:
+├── "flight", "airline", "airport" → mcp__exa__github_search("flight API integration")
+├── "hotel", "accommodation", "Airbnb" → mcp__firecrawl__firecrawl_deep_research("accommodation API best practices")
+├── "location", "places", "maps" → mcp__context7__get-library-docs("google-maps")
+├── "weather", "forecast" → mcp__tavily__tavily-search("weather API " + location)
+├── "itinerary", "trip planning" → mcp__clear-thought__sequentialthinking("trip optimization algorithm")
+└── "budget", "cost optimization" → mcp__stochasticthinking__stochasticalgorithm("bandit", budget_constraints)
+```
+
+**MCP Integration Status:**
 1. `flights-mcp` · `airbnb-mcp` · `google-maps-mcp` ✅
-2. `linkup-mcp` · `firecrawl-mcp` ✅
+2. `linkup-mcp` · `firecrawl-mcp` ✅ 
 3. `supabase-mcp` · `memory-mcp` ✅
-4. `playwright-mcp` ✅ _(fallback only)_
-5. `time-mcp` · `sequentialthinking-mcp` ⚠️ (time done, sequential pending)
+4. `playwright-mcp` ✅ _(fallback for dynamic content)_
+5. `time-mcp` · `clear-thought-mcp` · `stochasticthinking-mcp` ✅
+6. `context7` · `exa` · `tavily` · `aws-docs` · `repomix` · `dev-magic` ✅
 
-_Build every server with **FastMCP 2.0**; use **Pydantic v2** models and
-`Field`/`Annotated` validation; log via `Context`._
+_All servers built with **FastMCP 2.0**; **Pydantic v2** models; logging via `Context`._
 
-## Development Workflow
+## Development Workflow with Auto-MCP
 
-1. **Before Starting:**
+1. **Before Starting (Research Phase):**
    - Check taskmaster for next task
-   - Review TODO.md for context
-   - Check related documentation in docs/
+   - **AUTO-SEARCH**: Based on task keywords, invoke relevant MCP tools:
+     - API Integration → `mcp__exa__github_search` + `mcp__context7__get-library-docs`
+     - New Feature → `mcp__firecrawl__firecrawl_deep_research` + `mcp__clear-thought__sequentialthinking`
+     - Bug Fix → `mcp__tavily__tavily-search` (error) + `mcp__clear-thought__debuggingapproach`
+   - Review TODO.md and docs/ with context from searches
 
-2. **During Development:**
-   - Follow test-driven development
-   - Maintain ≥90% test coverage
-   - Run linting after changes: `ruff check . --fix && ruff format .`
-   - Update task status in taskmaster
+2. **During Development (Implementation Phase):**
+   - **CODE WITH INTELLIGENCE**: Use search results and examples
+   - **AUTO-DEBUG**: On any error, parallel invoke:
+     - `mcp__tavily__tavily-search(error_message, time_range="month")`
+     - `mcp__context7__get-library-docs(framework, topic="errors")`
+     - `mcp__clear-thought__debuggingapproach("binary_search", issue)`
+   - **AUTO-OPTIMIZE**: For performance issues:
+     - `mcp__stochasticthinking__stochasticalgorithm("bayesian", metrics)`
+     - `mcp__firecrawl__firecrawl_deep_research("optimization " + specific_area)`
+   - Maintain ≥90% test coverage with patterns from search
+   - Run linting: `ruff check . --fix && ruff format .`
+   - Update taskmaster status
 
-3. **After Completing:**
-   - Mark task as done in taskmaster
-   - Update TODO.md if needed
+3. **After Completing (Validation Phase):**
+   - **VERIFY BEST PRACTICES**: Search for similar implementations
+   - Mark task done in taskmaster
+   - Document MCP insights in code comments
    - Commit with conventional format
 
 ## Memory Graph Workflow
@@ -107,15 +132,20 @@ _Branches_ `main` (protected) · `feature/*` · `fix/*`
 _Commits_ Conventional format — `feat` · `fix` · `docs` · `style` · `refactor`
 · `perf` · `test` · `build` · `ci`.
 
-## Agent Pattern Guide
+## Agent Pattern Guide with MCP Integration
 
-| Pattern              | When to use                               |
-| -------------------- | ----------------------------------------- |
-| **Single LLM Call**  | Simple, deterministic tasks               |
-| **Workflow**         | Predictable multi-step jobs               |
-| **Autonomous Agent** | Complex, dynamic planning _(last resort)_ |
+| Pattern              | When to use                               | Auto-MCP Tool Chain                           |
+| -------------------- | ----------------------------------------- | --------------------------------------------- |
+| **Single LLM Call**  | Simple, deterministic tasks               | `context7` (docs) → implement                 |
+| **Workflow**         | Predictable multi-step jobs               | `sequentialthinking` → `exa` (examples) → code |
+| **Autonomous Agent** | Complex, dynamic planning _(last resort)_ | `firecrawl` (research) → `mcts` → `sequentialthinking` |
+| **Debug Session**    | MCP integration issues                    | `tavily` (error) → `debuggingapproach` → `context7` |
+| **Architecture**     | Agent/service design                      | `mentalmodel` → `exa` (patterns) → `sequentialthinking` |
+| **Optimization**     | Cache/performance tuning                  | `stochasticalgorithm` → `aws-docs` → implement |
 
-Design mantra: **Start simple → add complexity only when required**.
+**Design mantra**: Start simple → add complexity only when required.  
+**MCP mantra**: Search comprehensively → think systematically → implement thoughtfully.  
+**Parallel mantra**: Always batch related MCP calls for maximum efficiency.
 
 ## Security Reminder
 
@@ -123,11 +153,32 @@ Real keys live in `.env`; commit only `.env.example` placeholders.
 
 ## Important Implementation Notes
 
-1. **MCP Manager Usage:** Always use `MCPManager.invoke()` for MCP operations
-2. **Dual Storage:** Use service pattern for Supabase + Neo4j operations
-3. **Error Handling:** Use `@with_error_handling` decorator consistently
-4. **Caching:** Leverage Redis MCP for all cacheable operations
-5. **Validation:** Pydantic v2 with field_validator for all models
+1. **MCP-First Development:** ALWAYS search before implementing:
+   - Unknown API → Search with `exa` + `firecrawl`
+   - Framework feature → Check `context7` documentation
+   - Error/Issue → Search with `tavily` (recent) + `exa` (solutions)
+
+2. **Parallel MCP Execution:** Batch all related searches:
+   ```python
+   # GOOD: Parallel execution
+   results = await asyncio.gather(
+       mcp__context7__get_library_docs("fastapi", "authentication"),
+       mcp__exa__github_search("FastAPI JWT implementation"),
+       mcp__firecrawl__firecrawl_deep_research("FastAPI security 2024")
+   )
+   ```
+
+3. **Tool Chain Patterns:**
+   - **Research**: `firecrawl` (deep) → `clear-thought` (analyze) → implement
+   - **Debug**: `tavily` (error) → `debuggingapproach` → `context7` (docs)
+   - **Optimize**: `stochasticalgorithm` → `exa` (benchmarks) → apply
+
+4. **TripSage Specifics:**
+   - **MCP Manager**: Use `MCPManager.invoke()` for domain MCPs
+   - **Dual Storage**: Supabase + knowledge graph patterns
+   - **Error Handling**: `@with_error_handling` + error search
+   - **Caching**: Redis MCP + search result caching
+   - **Validation**: Pydantic v2 + example search
 
 ## Quick Reference Paths
 
@@ -154,6 +205,31 @@ mcp__taskmaster-ai__expand_task --id <id>       # Break down complex task
 
 # Database
 uv run python scripts/database/run_migrations.py  # Run migrations
+```
+
+## TripSage-Specific Cognitive Patterns
+
+### MCP Integration Debugging
+When MCP tools fail or behave unexpectedly:
+```
+→ AUTO-INVOKE: debuggingapproach(reverse_engineering)
+→ Analyze MCP protocol traces
+→ Isolate integration issues
+```
+
+### Agent Orchestration Design
+When designing multi-agent workflows:
+```
+→ AUTO-INVOKE: mentalmodel(first_principles)
+→ AUTO-INVOKE: stochasticalgorithm(mcts) for decision trees
+→ Document agent handoff patterns
+```
+
+### Performance Optimization
+For caching strategies or query optimization:
+```
+→ AUTO-INVOKE: stochasticalgorithm(bandit) for A/B testing
+→ AUTO-INVOKE: mentalmodel(pareto_principle) for 80/20 analysis
 ```
 
 _End of TripSage project instructions._
