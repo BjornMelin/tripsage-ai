@@ -39,8 +39,8 @@ def setup_test_environment():
         "SUPABASE_SERVICE_ROLE_KEY": "test-service-role-key-1234567890abcdef",
         "SUPABASE_PROJECT_ID": "test-project-id",
         # Cache configuration
-        "REDIS_URL": "redis://localhost:6379/1",
         "DRAGONFLY_URL": "redis://localhost:6379/1",
+        "DRAGONFLY_PASSWORD": "test_dragonfly_password",
         # API Keys (safe test values)
         "OPENAI_API_KEY": "sk-test-openai-key-1234567890abcdef",
         "ANTHROPIC_API_KEY": "sk-ant-test-anthropic-key-1234567890abcdef",

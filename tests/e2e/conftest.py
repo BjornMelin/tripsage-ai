@@ -34,8 +34,9 @@ os.environ.update(
         "OPENAI_API_KEY": "test-key",
         "WEBCRAWL_CRAWL4AI_API_KEY": "test-crawl-key",
         "WEBCRAWL_FIRECRAWL_API_KEY": "test-firecrawl-key",
-        # Redis configuration
-        "REDIS_URL": "redis://localhost:6379/0",
+        # DragonflyDB configuration
+        "DRAGONFLY_URL": "redis://localhost:6379/0",
+        "DRAGONFLY_PASSWORD": "test_dragonfly_password",
         # MCP Endpoints - All required MCP configurations
         "TIME_MCP_ENDPOINT": "http://localhost:3006",
         "WEATHER_MCP_ENDPOINT": "http://localhost:3007",
