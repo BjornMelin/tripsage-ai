@@ -3,61 +3,44 @@
 > **Inheritance**
 > This repo inherits the global Simplicity Charter (`~/.claude/CLAUDE.md`),  
 > which defines all coding, linting, testing, security and library choices  
-> (uv, ruff, FastMCP 2.0, Pydantic v2, ≥ 90 % pytest-cov, secrets in .env, etc.).  
-> TripSage-specific implementation context is maintained in two living docs:  
-> • `docs/implementation/tripsage_todo_list.md` – open tasks & design notes  
-> • `docs/status/implementation_status.md` – current build state & blockers  
-> Always read or update those before coding.
+> (uv, ruff, Pydantic v2, ≥ 90 % pytest-cov, secrets in .env, etc.).  
+> TripSage-specific tasks and progress are tracked in:  
+> • `/TODO.md` – main task list  
+> • `/tasks/TODO-*.md` – categorized tasks (FRONTEND, INTEGRATION, V2)  
+> Always review these files before starting work.
 
 ## Project Snapshot
 
-TripSage is an AI travel-planning platform that fuses flight, lodging and location data,
-stores it in **Supabase SQL + a domain knowledge graph**, and optimises itineraries
-against budget & user constraints across sessions.
+TripSage is an AI travel-planning platform that integrates flight, accommodation and location data,
+stores it in **Supabase PostgreSQL with pgvector embeddings** (Mem0 memory system),
+and optimizes itineraries against budget & user constraints across sessions.
 
 ## Current Status & Priorities
 
 **Completed Components:**
 
-- ✅ Core MCP integrations (Flights, Airbnb, Maps, Weather, Time, Web Crawling)
-- ✅ API structure with FastAPI
-- ✅ Authentication system with BYOK
-- ✅ Redis caching layer
-- ✅ Error handling framework
-- ✅ Database schema design
+- ✅ Backend architecture consolidation (FastAPI with unified routers)
+- ✅ Database schema with PostgreSQL + pgvector (Supabase)
+- ✅ Authentication system (JWT-based with BYOK API keys)
+- ✅ Memory system integration (Mem0 with pgvector embeddings)
+- ✅ LangGraph orchestration (Phase 3 complete)
+- ✅ Direct SDK integrations (Duffel, Google Maps, Crawl4AI)
+- ✅ DragonflyDB caching layer (infrastructure ready, using Redis protocol)
+- ✅ Backend testing infrastructure (2154 tests, 90%+ coverage achieved)
+
+**In Progress:**
+
+- 🔄 Frontend authentication integration (UI built, needs connection)
+- 🔄 SDK migration completion (only Airbnb MCP remains)
+- 🔄 WebSocket real-time features
 
 **Next Priority Tasks:**
 
-1. Complete frontend core setup (Next.js 15)
-2. Implement missing database operations
-3. Build agent guardrails and conversation history
-4. Set up testing infrastructure
+1. Complete frontend-backend authentication integration
+2. Migrate remaining Airbnb MCP to direct SDK
+3. Configure DragonflyDB connection URL (currently using redis://)
+4. Implement WebSocket functionality for real-time updates
 5. Deploy production environment
-
-## Taskmaster Integration
-
-**Task Management:**
-
-- Always check `mcp__taskmaster-ai__next_task` before starting work
-- Update task status with `mcp__taskmaster-ai__set_task_status` as you progress
-- Mark tasks complete immediately after finishing
-- Add subtasks for complex implementations
-
-**PRD Location:** `scripts/prd.txt`
-
-**Task Commands:**
-
-```
-# Get next task
-mcp__taskmaster-ai__next_task
-
-# Update task progress
-mcp__taskmaster-ai__set_task_status --id <task_id> --status in-progress
-mcp__taskmaster-ai__set_task_status --id <task_id> --status done
-
-# Add implementation details
-mcp__taskmaster-ai__update_task --id <task_id> --prompt "Implementation notes..."
-```
 
 ## MCP Tool Integration & Auto-Invocation
 
@@ -75,19 +58,16 @@ Query Analysis for Travel Context:
 ```
 
 **MCP Integration Status:**
-1. `flights-mcp` · `airbnb-mcp` · `google-maps-mcp` ✅
-2. `linkup-mcp` · `firecrawl-mcp` ✅ 
-3. `supabase-mcp` · `memory-mcp` ✅
-4. `playwright-mcp` ✅ _(fallback for dynamic content)_
-5. `time-mcp` · `clear-thought-mcp` · `stochasticthinking-mcp` ✅
-6. `context7` · `exa` · `tavily` · `aws-docs` · `repomix` · `dev-magic` ✅
+- **Currently Active**: Only `airbnb-mcp` remains (via MCP wrapper)
+- **Migrated to SDKs**: Duffel (flights), Google Maps, OpenWeatherMap, Google Calendar, Crawl4AI, Playwright
+- **Available for Development**: All standard MCP tools (context7, exa, tavily, firecrawl, etc.)
 
-_All servers built with **FastMCP 2.0**; **Pydantic v2** models; logging via `Context`._
+_Note: Most domain-specific MCPs have been migrated to direct SDK integrations for better performance and maintainability._
 
 ## Development Workflow with Auto-MCP
 
 1. **Before Starting (Research Phase):**
-   - Check taskmaster for next task
+   - Check your todo list or our `/TODO.md`, `/tasks/TODO-*.md` files for the next task
    - **AUTO-SEARCH**: Based on task keywords, invoke relevant MCP tools:
      - API Integration → `mcp__exa__github_search` + `mcp__context7__get-library-docs`
      - New Feature → `mcp__firecrawl__firecrawl_deep_research` + `mcp__clear-thought__sequentialthinking`
@@ -105,18 +85,16 @@ _All servers built with **FastMCP 2.0**; **Pydantic v2** models; logging via `Co
      - `mcp__firecrawl__firecrawl_deep_research("optimization " + specific_area)`
    - Maintain ≥90% test coverage with patterns from search
    - Run linting: `ruff check . --fix && ruff format .`
-   - Update taskmaster status
 
 3. **After Completing (Validation Phase):**
    - **VERIFY BEST PRACTICES**: Search for similar implementations
-   - Mark task done in taskmaster
    - Document MCP insights in code comments
    - Commit with conventional format
 
-## Memory Graph Workflow
+## Memory System (Mem0)
 
-`read_graph` (boot) → `search_nodes` → plan → `create_entities`/`create_relations`
-→ `update_graph` (shutdown).
+The memory system uses Mem0 with pgvector embeddings in PostgreSQL (no separate graph database).
+Memory operations are handled through the `MemoryService` class with automatic vectorization.
 
 ## Testing Requirements
 
@@ -174,20 +152,20 @@ Real keys live in `.env`; commit only `.env.example` placeholders.
    - **Optimize**: `stochasticalgorithm` → `exa` (benchmarks) → apply
 
 4. **TripSage Specifics:**
-   - **MCP Manager**: Use `MCPManager.invoke()` for domain MCPs
-   - **Dual Storage**: Supabase + knowledge graph patterns
-   - **Error Handling**: `@with_error_handling` + error search
-   - **Caching**: Redis MCP + search result caching
-   - **Validation**: Pydantic v2 + example search
+   - **MCP Manager**: Only for Airbnb operations (`MCPManager.invoke()`)
+   - **Storage**: Single Supabase PostgreSQL with pgvector
+   - **Error Handling**: `@with_error_handling` decorator + error search
+   - **Caching**: DragonflyDB (Redis-compatible) with content-aware TTLs
+   - **Validation**: Pydantic v2 models + schema validation
 
 ## Quick Reference Paths
 
-- **Tasks:** `/tasks/tasks.json`
 - **TODO Files:** `/TODO.md`, `/tasks/TODO-*.md`
 - **Documentation:** `/docs/`
 - **API:** `/tripsage/api/`
-- **Agents:** `/tripsage/agents/`
-- **MCP Abstraction:** `/tripsage/mcp_abstraction/`
+- **Core Services:** `/tripsage_core/services/`
+- **Agents/Orchestration:** `/tripsage/orchestration/`
+- **MCP Abstraction:** `/tripsage_core/mcp_abstraction/`
 - **Tests:** `/tests/`
 
 ## Common Commands
@@ -197,11 +175,6 @@ Real keys live in `.env`; commit only `.env.example` placeholders.
 uv run python -m tripsage.api.main  # Start API server
 uv run pytest                        # Run tests
 ruff check . --fix && ruff format .  # Lint and format
-
-# Taskmaster
-mcp__taskmaster-ai__get_tasks --status pending  # View pending tasks
-mcp__taskmaster-ai__complexity_report           # View task complexity
-mcp__taskmaster-ai__expand_task --id <id>       # Break down complex task
 
 # Database
 uv run python scripts/database/run_migrations.py  # Run migrations

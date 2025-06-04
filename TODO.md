@@ -94,15 +94,15 @@ This streamlined TODO list tracks current development priorities for TripSage AI
 - [ ] Documentation and team training
 - **Status**: Phases 1-3 completed (foundation, migration, MCP integration)
 
-### 3. DragonflyDB Infrastructure Completion (Issue #140)
+### 3. DragonflyDB Configuration Completion (Issue #140)
 
-- [ ] **Minor Operational Tasks** (1 day remaining)
-  - [ ] Create missing validation script for DragonflyDB password
-  - [ ] Add Grafana dashboard configurations
-  - [ ] Complete infrastructure troubleshooting guide
-  - [ ] Add integration tests for security components
-- **Status**: 95% complete - core functionality fully implemented
-- **Expected Impact**: 25x performance improvement (already achieved)
+- [ ] **Configuration Tasks** (Quick fixes)
+  - [ ] Update `DRAGONFLY_URL` environment variable from redis:// to dragonfly://
+  - [ ] Start DragonflyDB container in docker-compose
+  - [ ] Verify connection and performance metrics
+  - [ ] Update .env.example with correct DragonflyDB URL format
+- **Status**: Infrastructure 100% complete, only needs configuration update
+- **Expected Impact**: 25x performance improvement (code ready, awaiting deployment)
 
 ## Medium Priority Tasks
 
