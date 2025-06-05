@@ -45,9 +45,9 @@ class TestFlightModel:
     @pytest.mark.parametrize(
         "airline",
         [
-            AirlineProvider.AMERICAN_AIRLINES,
-            AirlineProvider.DELTA_AIRLINES,
-            AirlineProvider.UNITED_AIRLINES,
+            AirlineProvider.AMERICAN,
+            AirlineProvider.DELTA,
+            AirlineProvider.UNITED,
             AirlineProvider.JAPAN_AIRLINES,
             AirlineProvider.LUFTHANSA,
             AirlineProvider.BRITISH_AIRWAYS,
@@ -221,7 +221,7 @@ class TestFlightModel:
         domestic = Flight(**domestic_data)
         assert domestic.origin == "LAX"
         assert domestic.destination == "SFO"
-        assert domestic.airline == AirlineProvider.AMERICAN_AIRLINES
+        assert domestic.airline == AirlineProvider.AMERICAN
 
     def test_flight_segment_number_validation(
         self, sample_flight_dict, validation_helper
