@@ -202,6 +202,7 @@ class TestItineraryService:
             },
         )
 
+    @pytest.mark.asyncio
     async def test_create_itinerary_success(
         self,
         itinerary_service,
@@ -252,6 +253,7 @@ class TestItineraryService:
         mock_activity_service.get_destination_activities.assert_called_once()
         mock_database_service.store_itinerary.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_create_itinerary_invalid_dates(
         self, itinerary_service, sample_itinerary_create_request
     ):
@@ -268,6 +270,7 @@ class TestItineraryService:
                 user_id, sample_itinerary_create_request
             )
 
+    @pytest.mark.asyncio
     async def test_get_itinerary_success(
         self, itinerary_service, mock_database_service, sample_itinerary
     ):
@@ -283,6 +286,7 @@ class TestItineraryService:
         assert result.title == sample_itinerary.title
         mock_database_service.get_itinerary.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_get_itinerary_access_denied(
         self, itinerary_service, mock_database_service, sample_itinerary
     ):
@@ -297,6 +301,7 @@ class TestItineraryService:
 
         assert result is None
 
+    @pytest.mark.asyncio
     async def test_update_itinerary_success(
         self, itinerary_service, mock_database_service, sample_itinerary
     ):
@@ -322,6 +327,7 @@ class TestItineraryService:
 
         mock_database_service.update_itinerary.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_add_item_to_itinerary_success(
         self,
         itinerary_service,
@@ -355,6 +361,7 @@ class TestItineraryService:
         mock_database_service.update_itinerary.assert_called_once()
         mock_maps_service.calculate_travel_time.assert_called()
 
+    @pytest.mark.asyncio
     async def test_remove_item_from_itinerary_success(
         self, itinerary_service, mock_database_service, sample_itinerary
     ):
@@ -374,6 +381,7 @@ class TestItineraryService:
 
         mock_database_service.update_itinerary.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_optimize_itinerary_success(
         self,
         itinerary_service,
@@ -419,6 +427,7 @@ class TestItineraryService:
         mock_optimization_service.optimize_itinerary.assert_called_once()
         mock_database_service.update_itinerary.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_detect_conflicts_success(
         self, itinerary_service, mock_database_service, sample_itinerary
     ):
@@ -444,6 +453,7 @@ class TestItineraryService:
         assert len(conflicts) >= 1
         assert any(conflict.type == ConflictType.TIME_OVERLAP for conflict in conflicts)
 
+    @pytest.mark.asyncio
     async def test_suggest_improvements_success(
         self,
         itinerary_service,
@@ -494,6 +504,7 @@ class TestItineraryService:
 
         mock_optimization_service.suggest_improvements.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_share_itinerary_success(
         self,
         itinerary_service,
@@ -527,6 +538,7 @@ class TestItineraryService:
         mock_collaboration_service.create_share_link.assert_called_once()
         mock_database_service.update_itinerary.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_add_collaborator_success(
         self,
         itinerary_service,
@@ -559,6 +571,7 @@ class TestItineraryService:
         mock_collaboration_service.notify_collaborator.assert_called_once()
         mock_database_service.update_itinerary.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_export_itinerary_success(
         self, itinerary_service, mock_database_service, sample_itinerary
     ):
@@ -591,6 +604,7 @@ class TestItineraryService:
             assert result["file_size"] > 0
             mock_export.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_clone_itinerary_success(
         self, itinerary_service, mock_database_service, sample_itinerary
     ):
@@ -618,6 +632,7 @@ class TestItineraryService:
 
         mock_database_service.store_itinerary.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_get_user_itineraries_success(
         self, itinerary_service, mock_database_service, sample_itinerary
     ):
@@ -634,6 +649,7 @@ class TestItineraryService:
         assert results[0].id == sample_itinerary.id
         mock_database_service.get_user_itineraries.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_get_itinerary_analytics_success(
         self, itinerary_service, mock_database_service, sample_itinerary
     ):
@@ -679,6 +695,7 @@ class TestItineraryService:
             assert len(result["daily_breakdown"]) == 1
             mock_analytics.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_validate_itinerary_feasibility_success(
         self,
         itinerary_service,
@@ -707,6 +724,7 @@ class TestItineraryService:
 
         mock_maps_service.calculate_route_times.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_generate_alternative_itineraries_success(
         self,
         itinerary_service,
@@ -744,6 +762,7 @@ class TestItineraryService:
 
         mock_optimization_service.generate_alternatives.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_service_error_handling(
         self, itinerary_service, mock_database_service, sample_itinerary_create_request
     ):
@@ -821,6 +840,7 @@ class TestItineraryService:
             == sample_itinerary.budget - sample_itinerary.total_cost
         )
 
+    @pytest.mark.asyncio
     async def test_real_time_updates(
         self, itinerary_service, mock_collaboration_service, sample_itinerary
     ):
@@ -844,6 +864,7 @@ class TestItineraryService:
 
         mock_collaboration_service.broadcast_update.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_version_control(
         self, itinerary_service, mock_database_service, sample_itinerary
     ):
@@ -868,6 +889,7 @@ class TestItineraryService:
         assert versions[0]["version"] == 1
         assert versions[1]["version"] == 2
 
+    @pytest.mark.asyncio
     async def test_smart_scheduling(
         self, itinerary_service, mock_optimization_service, sample_itinerary
     ):
@@ -899,6 +921,7 @@ class TestItineraryService:
         assert result["satisfaction_score"] == 0.89
         assert len(result["schedule_changes"]) == 2
 
+    @pytest.mark.asyncio
     async def test_personalization_engine(
         self, itinerary_service, mock_database_service, sample_itinerary
     ):
