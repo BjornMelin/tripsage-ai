@@ -209,7 +209,7 @@ class ErrorRecoveryNode(BaseAgentNode):
         state["handoff_context"] = {
             "escalation": {
                 "reason": "Multiple error recovery attempts failed",
-                "error_count": state.get("error_count", 0),
+                "error_count": state.get("error_info", {}).get("error_count", 0),
                 "session_id": state.get("session_id"),
                 "user_id": state.get("user_id"),
                 "timestamp": datetime.now(timezone.utc).isoformat(),
@@ -306,10 +306,10 @@ class ErrorRecoveryNode(BaseAgentNode):
         escalation_data = {
             "session_id": state.get("session_id"),
             "user_id": state.get("user_id"),
-            "error_count": state.get("error_count", 0),
-            "last_error": state.get("last_error"),
+            "error_count": state.get("error_info", {}).get("error_count", 0),
+            "last_error": state.get("error_info", {}).get("last_error"),
             "agent_history": state.get("agent_history", []),
-            "retry_attempts": state.get("retry_attempts", {}),
+            "retry_attempts": state.get("error_info", {}).get("retry_attempts", {}),
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "conversation_length": len(state.get("messages", [])),
         }

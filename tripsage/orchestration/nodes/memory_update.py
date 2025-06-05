@@ -215,7 +215,8 @@ class MemoryUpdateNode(BaseAgentNode):
             )
 
         # Analyze error patterns
-        error_count = state.get("error_count", 0)
+        error_info = state.get("error_info", {})
+        error_count = error_info.get("error_count", 0)
         if error_count > 0:
             insights.append(f"Encountered {error_count} errors during session")
 
