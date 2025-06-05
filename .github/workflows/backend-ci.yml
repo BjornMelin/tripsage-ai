@@ -13,6 +13,7 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 30  # Explicit timeout to prevent hanging jobs
     strategy:
       matrix:
         python-version: ["3.11", "3.12", "3.13"]
@@ -68,7 +69,7 @@ jobs:
         uv venv
         source .venv/bin/activate
         uv pip install -r requirements.txt
-        uv pip install pytest pytest-cov pytest-asyncio
+        uv pip install pytest pytest-cov pytest-asyncio pytest-timeout
 
     - name: Lint with ruff
       run: |
@@ -111,6 +112,7 @@ jobs:
 
   integration-tests:
     runs-on: ubuntu-latest
+    timeout-minutes: 20  # Explicit timeout for integration tests
     needs: test
     
     services:
