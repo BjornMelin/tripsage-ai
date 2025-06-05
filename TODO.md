@@ -126,6 +126,45 @@ This streamlined TODO list tracks current development priorities for TripSage AI
 - [ ] Implement comprehensive request/response validation
 - [ ] Add proper error handling and status codes
 
+## 🧪 Testing & Quality Assurance
+
+### Backend Testing Cleanup
+- [ ] Review and restore essential tests from deleted files
+  - Check which tests provide unique coverage
+  - Focus on integration and E2E tests
+  - Keep only tests that match current architecture
+
+### Tests to Restore (Unique Coverage)
+- [ ] **E2E Tests**
+  - `test_api.py` - Full API workflow testing (register, login, create trip, add flight)
+  - `test_chat_auth_flow.py` - Authentication flow for chat system
+  - `test_chat_sessions.py` - Chat session management endpoints
+
+- [ ] **Core Exception Tests**
+  - `test_exceptions.py` - Comprehensive exception system testing
+  - `test_base_core_model.py` - Base model functionality
+  - `test_base_app_settings.py` - Application settings validation
+
+- [ ] **Performance Tests**
+  - `test_memory_performance.py` - Memory system latency and throughput
+  - `test_migration_performance.py` - Database migration performance
+
+- [ ] **Security Tests**
+  - `test_memory_security.py` - Data isolation and GDPR compliance
+
+- [ ] **Utility Tests**
+  - `test_decorators.py` - Error handling and memory client decorators
+  - `test_error_handling_integration.py` - Error handling across system
+
+- [ ] **Orchestration Utilities**
+  - `test_utils.py` - Mock utilities for LangChain/OpenAI testing
+
+### Tests NOT to Restore (Covered or Outdated)
+- Domain model tests (covered by new router tests)
+- Individual service tests (covered by existing business service tests)
+- Tool registry tests (architecture has changed)
+- File processing tests (already have comprehensive coverage)
+
 ## Low Priority Tasks
 
 ### Reference Documentation
