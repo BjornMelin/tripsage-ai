@@ -10,24 +10,21 @@ dependencies = [
     "crawl4ai>=0.6.3",
     "cryptography>=45.0.3",
     "email-validator>=2.2.0",
-    "fakeredis>=2.29.0",
     "fastapi>=0.115.12",
-    "google-api-python-client>=2.170.0",
-    "google-auth>=2.40.2",
+    "google-api-python-client>=2.171.0",
+    "google-auth>=2.40.3",
     "google-auth-httplib2>=0.2.0",
     "google-auth-oauthlib>=1.2.2",
     "googlemaps>=4.10.0",
     "httpx>=0.28.1",
     "langchain-core>=0.3.63",
-    "langchain-openai>=0.3.18",
-    "langgraph>=0.4.7",
-    "mem0ai>=0.1.102",
+    "langchain-openai>=0.3.19",
+    "langgraph>=0.4.8",
+    "mem0ai>=0.1.104",
     "passlib[bcrypt]>=1.7.4",
     "playwright>=1.52.0",
     "pydantic>=2.11.5",
     "pydantic-settings>=2.9.1",
-    "pytest>=8.3.5",
-    "pytest-cov>=6.1.1",
     "python-dotenv>=1.1.0",
     "python-jose[cryptography]>=3.5.0",
     "python-multipart>=0.0.20",
@@ -41,12 +38,11 @@ dependencies = [
 where = ["."]
 include = ["tripsage", "tripsage_core", "tripsage.*", "tripsage_core.*"]
 
-# Optional dependencies for development and testing
-
+# Optional dependencies for end-user features
 [project.optional-dependencies]
 dev = [
     "ruff>=0.11.9", 
-    "pytest>=8.3.5", 
+    "pytest>=8.4.0", 
     "pytest-cov>=6.1.1",
     "pytest-asyncio>=1.0.0",
     "pytest-mock>=3.14.1",
@@ -97,35 +93,27 @@ lint.select = ["E", "F", "B", "I"]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
+# Modern dependency groups following PEP 735
 [dependency-groups]
-dev = [
-    "pytest>=8.3.5",
-    "pytest-asyncio>=1.0.0",
-    "pytest-cov>=6.1.1",
-    "pytest-mock>=3.14.1",
-    "nest-asyncio>=1.6.0",
-    "radon>=6.0.1",
-]
 test = [
-    "email-validator>=2.2.0",
-    "fastapi>=0.115.12",
-    "httpx>=0.28.1",
-    "passlib>=1.7.4",
-    "pydantic>=2.11.5",
-    "pydantic-settings>=2.9.1",
-    "pytest>=8.3.5",
+    "pytest>=8.4.0",
     "pytest-asyncio>=1.0.0",
-    "pytest-mock>=3.14.1",
     "pytest-cov>=6.1.1",
-    "python-dotenv>=1.1.0",
-    "python-jose>=3.5.0",
-    "python-multipart>=0.0.20",
-    "redis>=6.1.0",
-    "sqlalchemy>=2.0.41",
-    "supabase>=2.15.2",
-    "uvicorn>=0.34.2",
+    "pytest-mock>=3.14.1",
+    "pytest-benchmark>=4.0.0",
+    "pytest-httpx>=0.35.0",
+    "coverage[toml]>=7.6.9",
     "nest-asyncio>=1.6.0",
     "fakeredis>=2.29.0",
+]
+lint = [
+    "ruff>=0.11.9",
+    "mypy>=1.8.0",
+]
+dev = [
+    {include-group = "test"},
+    {include-group = "lint"},
+    "radon>=6.0.1",
 ]
 
 [tool.coverage.run]
