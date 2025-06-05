@@ -10,7 +10,7 @@ from enum import Enum
 from typing import Any, Dict, List, Optional
 from uuid import UUID
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, field_serializer
 
 
 class FileType(str, Enum):
@@ -96,8 +96,30 @@ class AttachmentDB(AttachmentBase):
 
     model_config = {
         "from_attributes": True,
-        "json_encoders": {datetime: lambda v: v.isoformat(), UUID: lambda v: str(v)},
+        "json_schema_extra": {
+            "examples": [
+                {
+                    "id": "550e8400-e29b-41d4-a716-446655440000",
+                    "user_id": "123e4567-e89b-12d3-a456-426614174000",
+                    "original_filename": "tokyo_itinerary.pdf",
+                    "file_size": 1048576,
+                    "mime_type": "application/pdf",
+                    "file_type": "document",
+                    "processing_status": "completed",
+                }
+            ]
+        },
     }
+
+    @field_serializer("created_at", "updated_at")
+    def serialize_datetime(self, dt: datetime) -> str:
+        """Serialize datetime to ISO format."""
+        return dt.isoformat()
+
+    @field_serializer("id", "user_id", "chat_session_id")
+    def serialize_uuid(self, uuid_val: Optional[UUID]) -> Optional[str]:
+        """Serialize UUID to string."""
+        return str(uuid_val) if uuid_val else None
 
 
 class AttachmentResponse(AttachmentDB):
@@ -282,4 +304,9 @@ class MessageWithAttachments(BaseModel):
         default_factory=datetime.utcnow, description="Message timestamp"
     )
 
-    model_config = {"json_encoders": {datetime: lambda v: v.isoformat()}}
+    model_config = {"from_attributes": True}
+
+    @field_serializer("timestamp")
+    def serialize_datetime(self, dt: datetime) -> str:
+        """Serialize datetime to ISO format."""
+        return dt.isoformat()
