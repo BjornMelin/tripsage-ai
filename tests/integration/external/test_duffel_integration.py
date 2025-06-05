@@ -11,8 +11,8 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from tripsage_core.services.external_apis.duffel_http_client import DuffelHTTPClient
 from tripsage_core.services.business.flight_service import FlightService
+from tripsage_core.services.external_apis.duffel_http_client import DuffelHTTPClient
 
 
 class TestDuffelAPIIntegration:
@@ -71,7 +71,9 @@ class TestDuffelAPIIntegration:
                                         },
                                         "destination": {
                                             "iata_code": "JFK",
-                                            "name": "John F. Kennedy International Airport",
+                                            "name": (
+                                                "John F. Kennedy International Airport"
+                                            ),
                                             "city_name": "New York",
                                             "time_zone": "America/New_York",
                                         },

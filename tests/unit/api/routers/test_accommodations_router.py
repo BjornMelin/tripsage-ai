@@ -8,6 +8,7 @@ from fastapi.testclient import TestClient
 
 from tests.factories import AccommodationFactory
 from tripsage.api.main import app
+from tripsage_core.exceptions import ResourceNotFoundError
 
 
 class TestAccommodationRouter:

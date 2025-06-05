@@ -62,7 +62,9 @@ class TestGoogleMapsIntegration:
                 {
                     "place_id": "ChIJN1t_tDeuEmsRUsoyG83frY4",
                     "name": "Eiffel Tower",
-                    "formatted_address": "Champ de Mars, 5 Avenue Anatole France, 75007 Paris, France",
+                    "formatted_address": (
+                        "Champ de Mars, 5 Avenue Anatole France, 75007 Paris, France"
+                    ),
                     "geometry": {"location": {"lat": 48.8583701, "lng": 2.2944813}},
                     "rating": 4.6,
                     "types": [
@@ -90,7 +92,10 @@ class TestGoogleMapsIntegration:
                     {
                         "distance": {"text": "1.2 km", "value": 1200},
                         "duration": {"text": "15 mins", "value": 900},
-                        "end_address": "Champ de Mars, 5 Avenue Anatole France, 75007 Paris, France",
+                        "end_address": (
+                            "Champ de Mars, 5 Avenue Anatole France, "
+                            "75007 Paris, France"
+                        ),
                         "end_location": {"lat": 48.8583701, "lng": 2.2944813},
                         "start_address": "Place Vendôme, 75001 Paris, France",
                         "start_location": {"lat": 48.8566969, "lng": 2.3286616},
@@ -98,7 +103,9 @@ class TestGoogleMapsIntegration:
                             {
                                 "distance": {"text": "0.5 km", "value": 500},
                                 "duration": {"text": "6 mins", "value": 360},
-                                "html_instructions": "Head <b>southwest</b> on <b>Rue de la Paix</b>",
+                                "html_instructions": (
+                                    "Head <b>southwest</b> on <b>Rue de la Paix</b>"
+                                ),
                                 "travel_mode": "WALKING",
                             }
                         ],
@@ -195,7 +202,9 @@ class TestGoogleMapsIntegration:
         place_details = {
             "place_id": "ChIJN1t_tDeuEmsRUsoyG83frY4",
             "name": "Eiffel Tower",
-            "formatted_address": "Champ de Mars, 5 Avenue Anatole France, 75007 Paris, France",
+            "formatted_address": (
+                "Champ de Mars, 5 Avenue Anatole France, 75007 Paris, France"
+            ),
             "geometry": {"location": {"lat": 48.8583701, "lng": 2.2944813}},
             "rating": 4.6,
             "user_ratings_total": 142045,

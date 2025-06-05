@@ -83,7 +83,7 @@ class TestAccommodationWorkflow:
         mock_web_operations_cache.set.return_value = True
 
         # Act - First search (cache miss)
-        results1 = await accommodation_service.search_accommodations(
+        _results1 = await accommodation_service.search_accommodations(
             destination=search_params["destination"],
             check_in=search_params["check_in"],
             check_out=search_params["check_out"],
