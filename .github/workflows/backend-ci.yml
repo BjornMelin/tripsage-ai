@@ -5,13 +5,10 @@ on:
     branches: [ main, dev, feat/* ]
   pull_request:
     branches: [ main, dev ]
-    paths:
-      - 'tripsage/**'
-      - 'tripsage_core/**'
-      - 'tests/**'
-      - 'requirements.txt'
-      - 'pyproject.toml'
-      - '.github/workflows/backend-ci.yml'
+  workflow_dispatch:  # Allow manual triggering
+  
+  # Remove path filters to ensure CI runs on all PRs
+  # Can add back selective paths once CI is confirmed working
 
 jobs:
   test:
