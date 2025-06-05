@@ -207,7 +207,7 @@ class TestTripSageOrchestrator:
         """Test routing to error recovery."""
         state = {
             "current_agent": "invalid_agent",
-            "error_count": 5,
+            "error_info": {"error_count": 5},
             "messages": [],
             "user_id": "test_user",
             "session_id": "test_session",
@@ -233,7 +233,7 @@ class TestTripSageOrchestrator:
         """Test error recovery handling."""
         # Test retry case
         state_retry = {
-            "error_count": 2,
+            "error_info": {"error_count": 2},
             "messages": [],
             "user_id": "test_user",
             "session_id": "test_session",
@@ -244,7 +244,7 @@ class TestTripSageOrchestrator:
 
         # Test end case
         state_end = {
-            "error_count": 5,
+            "error_info": {"error_count": 5},
             "messages": [],
             "user_id": "test_user",
             "session_id": "test_session",

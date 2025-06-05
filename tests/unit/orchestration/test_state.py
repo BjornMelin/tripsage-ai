@@ -1,11 +1,11 @@
 """
-Tests for enhanced TravelPlanningState and related models.
+Comprehensive tests for orchestration state management.
 
-This module contains comprehensive tests for the enhanced state management
-system including Pydantic models and state initialization.
+This module provides full test coverage for the TravelPlanningState and
+related Pydantic models used in the orchestration system.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 import pytest
 from pydantic import ValidationError
@@ -18,6 +18,7 @@ from tripsage.orchestration.state import (
     SearchResult,
     ToolCallInfo,
     TravelDates,
+    TravelPlanningState,
     UserPreferences,
     create_initial_state,
     update_state_timestamp,

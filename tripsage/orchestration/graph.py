@@ -226,7 +226,8 @@ class TripSageOrchestrator:
             return current_agent
 
         # Error case or empty state
-        error_count = state.get("error_count", 0)
+        error_info = state.get("error_info", {})
+        error_count = error_info.get("error_count", 0)
         if error_count > 2:
             return "error_recovery"
 
@@ -306,7 +307,8 @@ class TripSageOrchestrator:
         Returns:
             Recovery action
         """
-        error_count = state.get("error_count", 0)
+        error_info = state.get("error_info", {})
+        error_count = error_info.get("error_count", 0)
         retry_threshold = 3
 
         if error_count < retry_threshold:

@@ -134,12 +134,14 @@ class BaseAgentNode(ABC):
         Returns:
             State updated with error information
         """
-        # Update error tracking
-        state["error_count"] += 1
-        state["last_error"] = str(error)
-        state["retry_attempts"][self.node_name] = (
-            state["retry_attempts"].get(self.node_name, 0) + 1
-        )
+        # Update error tracking in error_info structure
+        error_info = state.get("error_info", {})
+        error_info["error_count"] = error_info.get("error_count", 0) + 1
+        error_info["last_error"] = str(error)
+        retry_attempts = error_info.get("retry_attempts", {})
+        retry_attempts[self.node_name] = retry_attempts.get(self.node_name, 0) + 1
+        error_info["retry_attempts"] = retry_attempts
+        state["error_info"] = error_info
 
         # Add error message to conversation
         error_message = {
