@@ -149,6 +149,7 @@ class TestKeyManagementService:
             metadata={"model_access": ["gpt-4", "gpt-3.5-turbo"]},
         )
 
+    @pytest.mark.asyncio
     async def test_create_api_key_success(
         self,
         key_management_service,
@@ -188,6 +189,7 @@ class TestKeyManagementService:
         mock_encryption_service.encrypt.assert_called_once()
         mock_database_service.store_api_key.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_create_api_key_validation_failed(
         self,
         key_management_service,
@@ -207,6 +209,7 @@ class TestKeyManagementService:
                 user_id, sample_api_key_create_request
             )
 
+    @pytest.mark.asyncio
     async def test_create_api_key_limit_exceeded(
         self,
         key_management_service,
@@ -226,6 +229,7 @@ class TestKeyManagementService:
                 user_id, sample_api_key_create_request
             )
 
+    @pytest.mark.asyncio
     async def test_get_api_key_success(
         self, key_management_service, mock_database_service, sample_api_key
     ):
@@ -241,6 +245,7 @@ class TestKeyManagementService:
         assert result.user_id == sample_api_key.user_id
         mock_database_service.get_api_key.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_get_api_key_not_found(
         self, key_management_service, mock_database_service
     ):
@@ -254,6 +259,7 @@ class TestKeyManagementService:
 
         assert result is None
 
+    @pytest.mark.asyncio
     async def test_get_api_key_access_denied(
         self, key_management_service, mock_database_service, sample_api_key
     ):
@@ -268,6 +274,7 @@ class TestKeyManagementService:
 
         assert result is None
 
+    @pytest.mark.asyncio
     async def test_list_api_keys_success(
         self, key_management_service, mock_database_service, sample_api_key
     ):
@@ -284,6 +291,7 @@ class TestKeyManagementService:
         assert results[0].id == sample_api_key.id
         mock_database_service.get_user_api_keys.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_update_api_key_success(
         self, key_management_service, mock_database_service, sample_api_key
     ):
@@ -308,6 +316,7 @@ class TestKeyManagementService:
 
         mock_database_service.update_api_key.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_update_api_key_not_found(
         self, key_management_service, mock_database_service
     ):
@@ -322,6 +331,7 @@ class TestKeyManagementService:
         with pytest.raises(NotFoundError, match="API key not found"):
             await key_management_service.update_api_key(key_id, user_id, update_request)
 
+    @pytest.mark.asyncio
     async def test_delete_api_key_success(
         self, key_management_service, mock_database_service, sample_api_key
     ):
@@ -336,6 +346,7 @@ class TestKeyManagementService:
         assert result is True
         mock_database_service.delete_api_key.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_delete_api_key_not_found(
         self, key_management_service, mock_database_service
     ):
@@ -348,6 +359,7 @@ class TestKeyManagementService:
         with pytest.raises(NotFoundError, match="API key not found"):
             await key_management_service.delete_api_key(key_id, user_id)
 
+    @pytest.mark.asyncio
     async def test_validate_api_key_success(
         self,
         key_management_service,
@@ -375,6 +387,7 @@ class TestKeyManagementService:
         assert result.provider_confirmed == Provider.OPENAI
         mock_validator_service.validate_key.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_validate_api_key_failed(
         self,
         key_management_service,
@@ -398,6 +411,7 @@ class TestKeyManagementService:
         assert result.is_valid is False
         assert "Key has been revoked" in result.error_message
 
+    @pytest.mark.asyncio
     async def test_rotate_api_key_success(
         self,
         key_management_service,
@@ -431,6 +445,7 @@ class TestKeyManagementService:
         mock_encryption_service.encrypt.assert_called_once()
         mock_database_service.update_api_key.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_get_api_key_usage_success(
         self, key_management_service, mock_database_service, sample_api_key
     ):
@@ -461,6 +476,7 @@ class TestKeyManagementService:
         assert result.successful_requests == 1450
         assert result.cost_incurred == 15.50
 
+    @pytest.mark.asyncio
     async def test_record_api_key_usage_success(
         self, key_management_service, mock_database_service
     ):
@@ -482,6 +498,7 @@ class TestKeyManagementService:
             key_id, usage_data
         )
 
+    @pytest.mark.asyncio
     async def test_set_primary_key_success(
         self, key_management_service, mock_database_service, sample_api_key
     ):
@@ -496,6 +513,7 @@ class TestKeyManagementService:
         assert result is True
         mock_database_service.set_primary_api_key.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_get_primary_key_success(
         self, key_management_service, mock_database_service, sample_api_key
     ):
@@ -513,6 +531,7 @@ class TestKeyManagementService:
         assert result.is_primary is True
         assert result.provider == Provider.OPENAI
 
+    @pytest.mark.asyncio
     async def test_deactivate_api_key_success(
         self, key_management_service, mock_database_service, sample_api_key
     ):
@@ -527,6 +546,7 @@ class TestKeyManagementService:
         assert result.status == Status.INACTIVE
         mock_database_service.update_api_key.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_reactivate_api_key_success(
         self,
         key_management_service,
@@ -553,6 +573,7 @@ class TestKeyManagementService:
         assert result.status == Status.ACTIVE
         mock_validator_service.validate_key.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_get_user_key_statistics_success(
         self, key_management_service, mock_database_service
     ):
@@ -577,6 +598,7 @@ class TestKeyManagementService:
         assert result["active_keys"] == 4
         assert result["total_cost_last_30_days"] == 125.75
 
+    @pytest.mark.asyncio
     async def test_bulk_validate_keys_success(
         self, key_management_service, mock_database_service, mock_validator_service
     ):
@@ -604,6 +626,7 @@ class TestKeyManagementService:
         assert results[0]["is_valid"] is True
         assert results[1]["is_valid"] is False
 
+    @pytest.mark.asyncio
     async def test_cleanup_expired_keys_success(
         self, key_management_service, mock_database_service
     ):
@@ -637,6 +660,7 @@ class TestKeyManagementService:
         assert masked.endswith("cdef")
         assert len(masked) < len(key_value)
 
+    @pytest.mark.asyncio
     async def test_service_error_handling(
         self,
         key_management_service,
@@ -661,6 +685,7 @@ class TestKeyManagementService:
         service = get_key_management_service()
         assert isinstance(service, KeyManagementService)
 
+    @pytest.mark.asyncio
     async def test_rate_limit_checking(
         self, key_management_service, mock_database_service, sample_api_key
     ):
@@ -687,6 +712,7 @@ class TestKeyManagementService:
         )
         assert is_within_limits is False
 
+    @pytest.mark.asyncio
     async def test_key_expiration_notification(
         self, key_management_service, mock_database_service
     ):
@@ -710,6 +736,7 @@ class TestKeyManagementService:
         assert len(notifications) == 1
         assert "expiring" in notifications[0]["message"].lower()
 
+    @pytest.mark.asyncio
     async def test_key_security_audit(
         self, key_management_service, mock_database_service
     ):

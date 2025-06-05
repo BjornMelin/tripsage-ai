@@ -225,6 +225,7 @@ class TestDestinationService:
             emergency_numbers={"police": "17", "medical": "15", "fire": "18"},
         )
 
+    @pytest.mark.asyncio
     async def test_search_destinations_success(
         self,
         destination_service,
@@ -254,6 +255,7 @@ class TestDestinationService:
         # Verify service calls
         mock_external_api_service.search_destinations.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_search_destinations_validation_error(self, destination_service):
         """Test destination search with validation errors."""
 
@@ -266,6 +268,7 @@ class TestDestinationService:
                 travelers=2,
             )
 
+    @pytest.mark.asyncio
     async def test_get_destination_details_success(
         self, destination_service, mock_database_service, sample_destination_details
     ):
@@ -288,6 +291,7 @@ class TestDestinationService:
             sample_destination_details.id
         )
 
+    @pytest.mark.asyncio
     async def test_get_destination_details_not_found(
         self, destination_service, mock_database_service
     ):
@@ -299,6 +303,7 @@ class TestDestinationService:
         with pytest.raises(NotFoundError, match="Destination not found"):
             await destination_service.get_destination_details(destination_id)
 
+    @pytest.mark.asyncio
     async def test_get_destination_weather_success(
         self, destination_service, mock_external_api_service, sample_destination_weather
     ):
@@ -322,6 +327,7 @@ class TestDestinationService:
 
         mock_external_api_service.get_destination_weather.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_get_points_of_interest_success(
         self, destination_service, mock_external_api_service, sample_poi
     ):
@@ -343,6 +349,7 @@ class TestDestinationService:
 
         mock_external_api_service.get_points_of_interest.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_get_travel_alerts_success(
         self, destination_service, mock_external_api_service
     ):
@@ -374,6 +381,7 @@ class TestDestinationService:
             destination_id
         )
 
+    @pytest.mark.asyncio
     async def test_get_popular_times_success(
         self, destination_service, mock_external_api_service, sample_poi
     ):
@@ -393,6 +401,7 @@ class TestDestinationService:
 
         mock_external_api_service.get_popular_times.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_compare_destinations_success(
         self, destination_service, mock_database_service, sample_destination_details
     ):
@@ -425,6 +434,7 @@ class TestDestinationService:
         )  # Lowest cost
         assert "recommendations" in result
 
+    @pytest.mark.asyncio
     async def test_get_destination_recommendations_success(
         self, destination_service, mock_database_service, mock_external_api_service
     ):
@@ -477,6 +487,7 @@ class TestDestinationService:
         )
         mock_external_api_service.get_destination_recommendations.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_calculate_destination_budget_success(
         self, destination_service, mock_database_service
     ):
@@ -505,11 +516,13 @@ class TestDestinationService:
             result["total_cost"] == result["daily_average"] * 5 * 2
         )  # 5 days, 2 travelers
 
+    @pytest.mark.asyncio
     async def test_get_destination_service_dependency(self):
         """Test the dependency injection function."""
         service = await get_destination_service()
         assert isinstance(service, DestinationService)
 
+    @pytest.mark.asyncio
     async def test_service_error_handling(
         self, destination_service, mock_external_api_service
     ):

@@ -134,6 +134,7 @@ class TestFileProcessingService:
             last_accessed=None,
         )
 
+    @pytest.mark.asyncio
     async def test_upload_file_success(
         self,
         file_processing_service,
@@ -177,6 +178,7 @@ class TestFileProcessingService:
         mock_storage_service.store_file.assert_called_once()
         mock_database_service.store_file.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_upload_file_malicious_content(
         self, file_processing_service, mock_virus_scanner, sample_upload_request
     ):
@@ -191,6 +193,7 @@ class TestFileProcessingService:
         with pytest.raises(ValidationError, match="File contains malicious content"):
             await file_processing_service.upload_file(user_id, sample_upload_request)
 
+    @pytest.mark.asyncio
     async def test_upload_file_duplicate_detection(
         self,
         file_processing_service,
@@ -221,6 +224,7 @@ class TestFileProcessingService:
         assert result.parent_file_id == sample_processed_file.id
         assert result.user_id == user_id
 
+    @pytest.mark.asyncio
     async def test_upload_file_invalid_extension(
         self, file_processing_service, sample_file_content
     ):
@@ -236,6 +240,7 @@ class TestFileProcessingService:
         ):
             await file_processing_service.upload_file(user_id, invalid_request)
 
+    @pytest.mark.asyncio
     async def test_upload_file_empty_content(self, file_processing_service):
         """Test file upload with empty content."""
         user_id = str(uuid4())
@@ -245,6 +250,7 @@ class TestFileProcessingService:
         with pytest.raises(ValidationError, match="File is empty"):
             await file_processing_service.upload_file(user_id, empty_request)
 
+    @pytest.mark.asyncio
     async def test_upload_file_oversized(self, file_processing_service):
         """Test file upload exceeding size limit."""
         user_id = str(uuid4())
@@ -259,6 +265,7 @@ class TestFileProcessingService:
         with pytest.raises(ValidationError, match="File size .* exceeds maximum"):
             await file_processing_service.upload_file(user_id, oversized_request)
 
+    @pytest.mark.asyncio
     async def test_upload_batch_success(
         self,
         file_processing_service,
@@ -300,6 +307,7 @@ class TestFileProcessingService:
             assert result.user_id == user_id
             assert result.trip_id == trip_id
 
+    @pytest.mark.asyncio
     async def test_upload_batch_oversized(self, file_processing_service):
         """Test batch upload exceeding total size limit."""
         user_id = str(uuid4())
@@ -316,6 +324,7 @@ class TestFileProcessingService:
         with pytest.raises(ValidationError, match="Batch size exceeds limit"):
             await file_processing_service.upload_batch(user_id, batch_request)
 
+    @pytest.mark.asyncio
     async def test_get_file_success(
         self, file_processing_service, mock_database_service, sample_processed_file
     ):
@@ -332,6 +341,7 @@ class TestFileProcessingService:
         assert result.last_accessed is not None
         mock_database_service.update_file.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_get_file_not_found(
         self, file_processing_service, mock_database_service
     ):
@@ -345,6 +355,7 @@ class TestFileProcessingService:
 
         assert result is None
 
+    @pytest.mark.asyncio
     async def test_get_file_access_denied(
         self, file_processing_service, mock_database_service, sample_processed_file
     ):
@@ -358,6 +369,7 @@ class TestFileProcessingService:
                 sample_processed_file.id, different_user_id
             )
 
+    @pytest.mark.asyncio
     async def test_get_file_content_success(
         self,
         file_processing_service,
@@ -378,6 +390,7 @@ class TestFileProcessingService:
         assert result == sample_file_content
         mock_storage_service.get_file_content.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_search_files_success(
         self, file_processing_service, mock_database_service, sample_processed_file
     ):
@@ -398,6 +411,7 @@ class TestFileProcessingService:
         assert results[0].id == sample_processed_file.id
         mock_database_service.search_files.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_delete_file_success(
         self,
         file_processing_service,
@@ -419,6 +433,7 @@ class TestFileProcessingService:
         mock_storage_service.delete_file.assert_called_once()
         mock_database_service.delete_file.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_delete_file_not_owner(
         self, file_processing_service, mock_database_service, sample_processed_file
     ):
@@ -433,6 +448,7 @@ class TestFileProcessingService:
                 sample_processed_file.id, different_user_id
             )
 
+    @pytest.mark.asyncio
     async def test_get_usage_stats_success(
         self, file_processing_service, mock_database_service
     ):
@@ -544,6 +560,7 @@ class TestFileProcessingService:
         assert valid is False
         assert "not valid UTF-8" in error
 
+    @pytest.mark.asyncio
     async def test_extract_metadata_text_file(self, file_processing_service):
         """Test metadata extraction for text files."""
         content = b"This is a sample text file with multiple words for testing."
@@ -557,6 +574,7 @@ class TestFileProcessingService:
         assert metadata.encoding == "utf-8"
         assert len(metadata.keywords) > 0
 
+    @pytest.mark.asyncio
     async def test_check_file_access_owner(
         self, file_processing_service, sample_processed_file
     ):
@@ -566,6 +584,7 @@ class TestFileProcessingService:
         )
         assert has_access is True
 
+    @pytest.mark.asyncio
     async def test_check_file_access_shared(
         self, file_processing_service, sample_processed_file
     ):
@@ -578,6 +597,7 @@ class TestFileProcessingService:
         )
         assert has_access is True
 
+    @pytest.mark.asyncio
     async def test_check_file_access_public(
         self, file_processing_service, sample_processed_file
     ):
@@ -590,6 +610,7 @@ class TestFileProcessingService:
         )
         assert has_access is True
 
+    @pytest.mark.asyncio
     async def test_check_file_access_denied(
         self, file_processing_service, sample_processed_file
     ):
@@ -603,6 +624,7 @@ class TestFileProcessingService:
         )
         assert has_access is False
 
+    @pytest.mark.asyncio
     async def test_analyze_file_content_success(
         self,
         file_processing_service,
@@ -630,6 +652,7 @@ class TestFileProcessingService:
         assert sample_processed_file.processing_status == ProcessingStatus.COMPLETED
         assert sample_processed_file.analysis_result is not None
 
+    @pytest.mark.asyncio
     async def test_service_error_handling(
         self, file_processing_service, mock_database_service, sample_upload_request
     ):
@@ -650,6 +673,7 @@ class TestFileProcessingService:
             service = get_file_processing_service()
             assert isinstance(service, FileProcessingService)
 
+    @pytest.mark.asyncio
     async def test_local_storage_fallback(self, tmp_path):
         """Test local storage fallback when external storage unavailable."""
         with patch(
