@@ -64,9 +64,24 @@ python_classes = "Test*"
 python_functions = "test_*"
 pythonpath = ["."]
 asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
 log_cli = true
 log_cli_level = "INFO"
-addopts = "-v"
+addopts = [
+    "--strict-markers",
+    "--strict-config",
+    "--verbose",
+    "--tb=short",
+    "--cov=tripsage",
+    "--cov=tripsage_core",
+    "--cov-report=term-missing",
+    "--cov-report=html:coverage/html",
+    "--cov-report=xml:coverage/coverage.xml",
+    "--cov-fail-under=90",
+    "--cov-branch",
+    "--no-cov-on-fail",
+    "-ra"
+]
 
 [tool.ruff]
 line-length = 88
@@ -112,6 +127,42 @@ test = [
     "nest-asyncio>=1.6.0",
     "fakeredis>=2.29.0",
 ]
+
+[tool.coverage.run]
+branch = true
+source = ["tripsage", "tripsage_core"]
+omit = [
+    "*/tests/*",
+    "*/migrations/*",
+    "*/__init__.py",
+    "*/config.py",
+    "*/test_*.py",
+    "**/conftest.py"
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "@abstractmethod",
+    "@abc.abstractmethod",
+    "except ImportError:",
+    "# nocov",
+    "pass"
+]
+show_missing = true
+precision = 2
+fail_under = 90
+
+[tool.coverage.html]
+directory = "coverage/html"
+
+[tool.coverage.xml]
+output = "coverage/coverage.xml"
 
 [tool.hatch.build.targets.wheel]
 packages = ["tripsage", "tripsage_core"]

@@ -15,30 +15,14 @@ from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
 
-# Load test environment variables FIRST
+# Load test environment variables FIRST - before any other imports
 from dotenv import load_dotenv
-from pydantic import BaseModel
 
-from tripsage_core.models.schemas_common.enums import (
-    AccommodationType,
-    AirlineProvider,
-    BookingStatus,
-    CancellationPolicy,
-    CurrencyCode,
-    DataSource,
-    TripStatus,
-    TripType,
-    TripVisibility,
-    UserRole,
-)
-
+# Load test environment immediately
 load_dotenv(".env.test", override=True)
 
-# Add the project root directory to the path so tests can import modules directly
-project_root = Path(__file__).parent.parent
-sys.path.insert(0, str(project_root))
 
-
+# Set up test environment variables before any TripSage imports
 def setup_test_environment():
     """Set up comprehensive test environment variables."""
     test_env = {
@@ -107,6 +91,30 @@ def setup_test_environment():
         os.environ[key] = value
 
 
+# Set up test environment immediately
+setup_test_environment()
+
+# Now safe to import pydantic and TripSage modules
+from pydantic import BaseModel
+
+from tripsage_core.models.schemas_common.enums import (
+    AccommodationType,
+    AirlineProvider,
+    BookingStatus,
+    CancellationPolicy,
+    CurrencyCode,
+    DataSource,
+    TripStatus,
+    TripType,
+    TripVisibility,
+    UserRole,
+)
+
+# Add the project root directory to the path so tests can import modules directly
+project_root = Path(__file__).parent.parent
+sys.path.insert(0, str(project_root))
+
+
 def mock_problematic_imports():
     """Mock problematic imports that might cause test failures."""
     import importlib.util
@@ -135,8 +143,7 @@ def mock_problematic_imports():
         sys.modules["mem0"] = MagicMock()
 
 
-# Set up test environment immediately
-setup_test_environment()
+# Mock problematic imports immediately
 mock_problematic_imports()
 
 
@@ -356,91 +363,131 @@ def mock_settings_and_redis(monkeypatch):
         }
 
 
-# Sample data fixtures for comprehensive model testing
+# Sample data fixtures using factories
+from tests.factories import (
+    AccommodationFactory,
+    APIKeyFactory,
+    ChatFactory,
+    DestinationFactory,
+    FlightFactory,
+    ItineraryFactory,
+    MemoryFactory,
+    SearchFactory,
+    TripFactory,
+    UserFactory,
+    WebSocketFactory,
+)
 
 
 @pytest.fixture
 def sample_accommodation_dict():
     """Sample accommodation data for testing."""
-    today = date.today()
-    return {
-        "id": 1,
-        "trip_id": 1,
-        "name": "Grand Hyatt Tokyo",
-        "accommodation_type": AccommodationType.HOTEL,
-        "check_in": today + timedelta(days=10),
-        "check_out": today + timedelta(days=17),  # 7 nights
-        "price_per_night": 250.00,
-        "total_price": 1750.00,
-        "location": "Tokyo, Japan",
-        "rating": 4.5,
-        "amenities": {"list": ["wifi", "pool", "gym", "spa"]},
-        "booking_link": "https://example.com/booking/12345",
-        "booking_status": BookingStatus.VIEWED,
-        "cancellation_policy": CancellationPolicy.FLEXIBLE,
-        "distance_to_center": 2.5,
-        "neighborhood": "Roppongi",
-        "images": ["https://example.com/image1.jpg", "https://example.com/image2.jpg"],
-    }
+    return AccommodationFactory.create()
 
 
 @pytest.fixture
 def sample_flight_dict():
     """Sample flight data for testing."""
-    from datetime import datetime, timezone
-
-    now = datetime.now(timezone.utc)
-    return {
-        "id": 1,
-        "trip_id": 1,
-        "origin": "LAX",
-        "destination": "NRT",
-        "airline": AirlineProvider.JAPAN_AIRLINES,
-        "departure_time": now + timedelta(days=30),
-        "arrival_time": now + timedelta(days=30, hours=12),  # 12 hour flight
-        "price": 1200.00,
-        "search_timestamp": now,
-        "booking_status": BookingStatus.VIEWED,
-        "data_source": DataSource.DUFFEL,
-        "segment_number": 1,
-    }
+    return FlightFactory.create()
 
 
 @pytest.fixture
 def sample_trip_dict():
     """Sample trip data for testing."""
-    today = date.today()
-    return {
-        "id": 1,
-        "user_id": 1,
-        "name": "Tokyo Adventure",
-        "description": "A wonderful trip to Tokyo",
-        "start_date": today + timedelta(days=30),
-        "end_date": today + timedelta(days=37),
-        "destination": "Tokyo, Japan",
-        "status": TripStatus.PLANNING,
-        "trip_type": TripType.LEISURE,
-        "visibility": TripVisibility.PRIVATE,
-        "budget": 5000.00,
-        "currency": CurrencyCode.USD,
-        "travelers_count": 2,
-    }
+    return TripFactory.create()
 
 
 @pytest.fixture
 def sample_user_dict():
     """Sample user data for testing."""
-    return {
-        "id": 1,
-        "email": "test@example.com",
-        "username": "testuser",
-        "first_name": "John",
-        "last_name": "Doe",
-        "role": UserRole.USER,
-        "is_active": True,
-        "preferred_currency": CurrencyCode.USD,
-        "timezone": "America/Los_Angeles",
-    }
+    return UserFactory.create()
+
+
+# Additional factory-based fixtures
+@pytest.fixture
+def sample_chat_message_dict():
+    """Sample chat message for testing."""
+    return ChatFactory.create_message()
+
+
+@pytest.fixture
+def sample_chat_conversation():
+    """Sample chat conversation with multiple messages."""
+    return ChatFactory.create_conversation()
+
+
+@pytest.fixture
+def sample_api_key_dict():
+    """Sample API key data for testing."""
+    return APIKeyFactory.create()
+
+
+@pytest.fixture
+def sample_destination_dict():
+    """Sample destination data for testing."""
+    return DestinationFactory.create()
+
+
+@pytest.fixture
+def sample_itinerary_dict():
+    """Sample itinerary data for testing."""
+    return ItineraryFactory.create()
+
+
+@pytest.fixture
+def sample_websocket_message():
+    """Sample WebSocket message for testing."""
+    return WebSocketFactory.create_chat_message()
+
+
+# Mock service fixtures
+@pytest.fixture
+def mock_database_service():
+    """Mock database service with async methods."""
+    mock = MagicMock()
+    mock.get_session = AsyncMock()
+    mock.execute = AsyncMock()
+    mock.fetch_one = AsyncMock()
+    mock.fetch_all = AsyncMock()
+    mock.save = AsyncMock()
+    mock.delete = AsyncMock()
+    mock.update = AsyncMock()
+    return mock
+
+
+@pytest.fixture
+def mock_cache_service():
+    """Mock cache service with async methods."""
+    mock = MagicMock()
+    mock.get = AsyncMock(return_value=None)
+    mock.set = AsyncMock(return_value=True)
+    mock.delete = AsyncMock(return_value=True)
+    mock.invalidate_pattern = AsyncMock(return_value=0)
+    mock.get_ttl = Mock(return_value=3600)
+    return mock
+
+
+@pytest.fixture
+def mock_auth_service():
+    """Mock authentication service."""
+    mock = MagicMock()
+    mock.verify_token = AsyncMock(return_value={"user_id": 1, "email": "test@example.com"})
+    mock.create_access_token = Mock(return_value="test-jwt-token")
+    mock.create_refresh_token = Mock(return_value="test-refresh-token")
+    mock.hash_password = Mock(return_value="hashed-password")
+    mock.verify_password = Mock(return_value=True)
+    return mock
+
+
+@pytest.fixture
+def mock_memory_service():
+    """Mock memory service (Mem0)."""
+    mock = MagicMock()
+    mock.add_memory = AsyncMock(return_value={"memory_id": "test-memory-id"})
+    mock.get_memories = AsyncMock(return_value=[])
+    mock.search_memories = AsyncMock(return_value=[])
+    mock.delete_memory = AsyncMock(return_value=True)
+    return mock
 
 
 # Validation test helpers
