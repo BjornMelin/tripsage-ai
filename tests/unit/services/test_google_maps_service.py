@@ -10,6 +10,7 @@ from unittest.mock import Mock, patch
 import pytest
 from googlemaps.exceptions import ApiError, HTTPError, Timeout, TransportError
 
+from tripsage_core.exceptions.exceptions import CoreServiceError
 from tripsage_core.services.external_apis.google_maps_service import (
     GoogleMapsService,
     GoogleMapsServiceError,
@@ -70,7 +71,7 @@ class TestGoogleMapsService:
             assert client == mock_client
 
     def test_client_initialization_no_api_key(self, mock_settings):
-        """Test that ValueError is raised when no API key is provided."""
+        """Test that CoreServiceError is raised when no API key is provided."""
         mock_settings.google_maps_api_key = None
 
         with patch(
@@ -78,7 +79,9 @@ class TestGoogleMapsService:
             return_value=mock_settings,
         ):
             service = GoogleMapsService()
-            with pytest.raises(ValueError, match="Google Maps API key is required"):
+            with pytest.raises(
+                CoreServiceError, match="Google Maps API key not configured"
+            ):
                 _ = service.client
 
     @pytest.mark.asyncio

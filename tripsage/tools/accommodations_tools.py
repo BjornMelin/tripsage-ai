@@ -23,7 +23,7 @@ logger = get_logger(__name__)
 
 
 @function_tool
-@with_error_handling
+@with_error_handling()
 async def search_airbnb_rentals_tool(
     location: str,
     service_registry: ServiceRegistry,
@@ -149,7 +149,7 @@ async def search_airbnb_rentals_tool(
 
 
 @function_tool
-@with_error_handling
+@with_error_handling()
 async def get_airbnb_listing_details_tool(
     listing_id: str,
     service_registry: ServiceRegistry,
@@ -217,7 +217,7 @@ async def get_airbnb_listing_details_tool(
 
 
 @function_tool
-@with_error_handling
+@with_error_handling()
 async def search_accommodations_tool(
     location: str,
     service_registry: ServiceRegistry,
@@ -281,7 +281,7 @@ async def search_accommodations_tool(
 
 
 @function_tool
-@with_error_handling
+@with_error_handling()
 async def book_accommodation_tool(
     listing_id: str,
     service_registry: ServiceRegistry,
