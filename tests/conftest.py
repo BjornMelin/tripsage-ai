@@ -99,15 +99,8 @@ from pydantic import BaseModel
 
 from tripsage_core.models.schemas_common.enums import (
     AccommodationType,
-    AirlineProvider,
     BookingStatus,
     CancellationPolicy,
-    CurrencyCode,
-    DataSource,
-    TripStatus,
-    TripType,
-    TripVisibility,
-    UserRole,
 )
 
 # Add the project root directory to the path so tests can import modules directly
@@ -371,8 +364,6 @@ from tests.factories import (
     DestinationFactory,
     FlightFactory,
     ItineraryFactory,
-    MemoryFactory,
-    SearchFactory,
     TripFactory,
     UserFactory,
     WebSocketFactory,
@@ -471,7 +462,9 @@ def mock_cache_service():
 def mock_auth_service():
     """Mock authentication service."""
     mock = MagicMock()
-    mock.verify_token = AsyncMock(return_value={"user_id": 1, "email": "test@example.com"})
+    mock.verify_token = AsyncMock(
+        return_value={"user_id": 1, "email": "test@example.com"}
+    )
     mock.create_access_token = Mock(return_value="test-jwt-token")
     mock.create_refresh_token = Mock(return_value="test-refresh-token")
     mock.hash_password = Mock(return_value="hashed-password")

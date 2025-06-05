@@ -88,6 +88,7 @@ lint.select = ["E", "F", "B", "I"]
 [tool.ruff.lint.per-file-ignores]
 "tripsage/api/routers/*.py" = ["B008"]  # Allow Depends() in FastAPI routers
 "tripsage/api/core/*.py" = ["B008"]  # Allow Depends() in FastAPI dependencies
+"tests/conftest.py" = ["E402"]  # Allow imports after code execution for environment setup
 
 [build-system]
 requires = ["hatchling"]
