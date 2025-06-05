@@ -1,6 +1,6 @@
 """Tests for PriceHistory model."""
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 import pytest
 from pydantic import ValidationError
@@ -20,7 +20,7 @@ def test_price_history_creation(sample_price_history_dict):
 
 def test_price_history_optional_fields():
     """Test creating a PriceHistory model with minimal required fields."""
-    now = datetime.now(datetime.UTC)
+    now = datetime.now(timezone.utc)
     minimal_price_history = PriceHistory(
         entity_type=EntityType.FLIGHT,
         entity_id=1,
@@ -36,7 +36,7 @@ def test_price_history_optional_fields():
 
 def test_price_history_validation_price():
     """Test price validation."""
-    now = datetime.now(datetime.UTC)
+    now = datetime.now(timezone.utc)
 
     # Test negative price
     with pytest.raises(ValidationError) as excinfo:
@@ -51,7 +51,7 @@ def test_price_history_validation_price():
 
 def test_price_history_validation_currency():
     """Test currency validation."""
-    now = datetime.now(datetime.UTC)
+    now = datetime.now(timezone.utc)
 
     # Test invalid currency code
     with pytest.raises(ValidationError) as excinfo:
@@ -77,40 +77,40 @@ def test_price_history_validation_currency():
         assert price_history.currency == currency
 
 
-def test_price_history_is_flight_property(sample_price_history_dict):
-    """Test the is_flight property."""
+def test_price_history_is_flight_price_property(sample_price_history_dict):
+    """Test the is_flight_price property."""
     price_history = PriceHistory(**sample_price_history_dict)
-    assert price_history.is_flight is True
+    assert price_history.is_flight_price is True
 
     price_history.entity_type = EntityType.ACCOMMODATION
-    assert price_history.is_flight is False
+    assert price_history.is_flight_price is False
 
 
-def test_price_history_is_accommodation_property(sample_price_history_dict):
-    """Test the is_accommodation property."""
+def test_price_history_is_accommodation_price_property(sample_price_history_dict):
+    """Test the is_accommodation_price property."""
     price_history = PriceHistory(**sample_price_history_dict)
-    assert price_history.is_accommodation is False
+    assert price_history.is_accommodation_price is False
 
     price_history.entity_type = EntityType.ACCOMMODATION
-    assert price_history.is_accommodation is True
+    assert price_history.is_accommodation_price is True
 
 
-def test_price_history_is_transportation_property(sample_price_history_dict):
-    """Test the is_transportation property."""
+def test_price_history_is_transportation_price_property(sample_price_history_dict):
+    """Test the is_transportation_price property."""
     price_history = PriceHistory(**sample_price_history_dict)
-    assert price_history.is_transportation is False
+    assert price_history.is_transportation_price is False
 
     price_history.entity_type = EntityType.TRANSPORTATION
-    assert price_history.is_transportation is True
+    assert price_history.is_transportation_price is True
 
 
-def test_price_history_is_activity_property(sample_price_history_dict):
-    """Test the is_activity property."""
+def test_price_history_is_activity_price_property(sample_price_history_dict):
+    """Test the is_activity_price property."""
     price_history = PriceHistory(**sample_price_history_dict)
-    assert price_history.is_activity is False
+    assert price_history.is_activity_price is False
 
     price_history.entity_type = EntityType.ACTIVITY
-    assert price_history.is_activity is True
+    assert price_history.is_activity_price is True
 
 
 def test_price_history_formatted_price(sample_price_history_dict):

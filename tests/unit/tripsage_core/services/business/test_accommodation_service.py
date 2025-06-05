@@ -57,7 +57,6 @@ class TestAccommodationService:
         """Create AccommodationService instance with mocked dependencies."""
         return AccommodationService(
             database_service=mock_database_service,
-            external_api_service=mock_external_api_service,
         )
 
     @pytest.fixture
@@ -202,6 +201,7 @@ class TestAccommodationService:
             metadata={"booking_source": "web", "payment_method": "credit_card"},
         )
 
+    @pytest.mark.asyncio
     async def test_search_accommodations_success(
         self,
         accommodation_service,
@@ -210,8 +210,6 @@ class TestAccommodationService:
         sample_accommodation_listing,
     ):
         """Test successful accommodation search."""
-        user_id = str(uuid4())
-
         # Mock external API response
         mock_external_api_service.search_accommodations.return_value = {
             "results": [sample_accommodation_listing.model_dump()],
@@ -219,7 +217,7 @@ class TestAccommodationService:
         }
 
         result = await accommodation_service.search_accommodations(
-            user_id, sample_search_request
+            sample_search_request
         )
 
         # Assertions
@@ -231,6 +229,7 @@ class TestAccommodationService:
         # Verify service calls
         mock_external_api_service.search_accommodations.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_search_accommodations_validation_error(self, accommodation_service):
         """Test accommodation search with validation errors."""
 
@@ -245,6 +244,7 @@ class TestAccommodationService:
                 guests=2,
             )
 
+    @pytest.mark.asyncio
     async def test_get_accommodation_details_success(
         self, accommodation_service, mock_database_service, sample_accommodation_listing
     ):
@@ -266,6 +266,7 @@ class TestAccommodationService:
             sample_accommodation_listing.id
         )
 
+    @pytest.mark.asyncio
     async def test_get_accommodation_details_not_found(
         self, accommodation_service, mock_database_service
     ):
@@ -277,6 +278,7 @@ class TestAccommodationService:
         with pytest.raises(NotFoundError, match="Accommodation not found"):
             await accommodation_service.get_accommodation_details(listing_id)
 
+    @pytest.mark.asyncio
     async def test_book_accommodation_success(
         self,
         accommodation_service,
@@ -332,6 +334,7 @@ class TestAccommodationService:
         mock_external_api_service.create_accommodation_booking.assert_called_once()
         mock_database_service.create_accommodation_booking.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_book_accommodation_not_available(
         self,
         accommodation_service,
@@ -361,6 +364,7 @@ class TestAccommodationService:
                 guests=2,
             )
 
+    @pytest.mark.asyncio
     async def test_get_user_bookings_success(
         self, accommodation_service, mock_database_service, sample_accommodation_booking
     ):
@@ -381,6 +385,7 @@ class TestAccommodationService:
             user_id
         )
 
+    @pytest.mark.asyncio
     async def test_cancel_booking_success(
         self,
         accommodation_service,
@@ -418,6 +423,7 @@ class TestAccommodationService:
         mock_external_api_service.cancel_accommodation_booking.assert_called_once()
         mock_database_service.update_accommodation_booking.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_cancel_booking_unauthorized(
         self, accommodation_service, mock_database_service, sample_accommodation_booking
     ):
@@ -433,6 +439,7 @@ class TestAccommodationService:
                 booking_id=sample_accommodation_booking.id, user_id=different_user_id
             )
 
+    @pytest.mark.asyncio
     async def test_modify_booking_success(
         self,
         accommodation_service,
@@ -477,11 +484,13 @@ class TestAccommodationService:
         mock_external_api_service.modify_accommodation_booking.assert_called_once()
         mock_database_service.update_accommodation_booking.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_get_accommodation_service_dependency(self):
         """Test the dependency injection function."""
         service = await get_accommodation_service()
         assert isinstance(service, AccommodationService)
 
+    @pytest.mark.asyncio
     async def test_search_with_filters_success(
         self,
         accommodation_service,
@@ -526,6 +535,7 @@ class TestAccommodationService:
         call_args = mock_external_api_service.search_accommodations.call_args
         assert call_args[0][0] == search_request
 
+    @pytest.mark.asyncio
     async def test_accommodation_scoring_logic(self, accommodation_service):
         """Test accommodation scoring and ranking logic."""
         # Test the internal scoring method if it exists
@@ -555,6 +565,7 @@ class TestAccommodationService:
             # First listing should have higher score due to better rating and location
             assert scores[0] > scores[1]
 
+    @pytest.mark.asyncio
     async def test_service_error_handling(
         self, accommodation_service, mock_external_api_service
     ):

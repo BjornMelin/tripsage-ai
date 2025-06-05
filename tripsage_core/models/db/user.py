@@ -7,9 +7,10 @@ used across different storage backends.
 from enum import Enum
 from typing import Any, Dict, Optional
 
-from pydantic import EmailStr, Field, field_validator
+from pydantic import Field
 
 from tripsage_core.models.base_core_model import TripSageModel
+from tripsage_core.models.schemas_common.common_validators import EmailLowercase
 
 
 class UserRole(str, Enum):
@@ -34,7 +35,7 @@ class User(TripSageModel):
 
     id: Optional[int] = Field(None, description="Unique identifier")
     name: Optional[str] = Field(None, description="User's display name")
-    email: Optional[EmailStr] = Field(None, description="User's email address")
+    email: EmailLowercase = Field(None, description="User's email address")
     password_hash: Optional[str] = Field(None, description="Hashed password")
     role: UserRole = Field(UserRole.USER, description="User's role")
     is_admin: bool = Field(False, description="Whether the user is an admin")
@@ -42,15 +43,6 @@ class User(TripSageModel):
     preferences_json: Optional[Dict[str, Any]] = Field(
         None, description="User preferences", alias="preferences"
     )
-
-    @field_validator("email")
-    @classmethod
-    def validate_email(cls, v: Optional[str]) -> Optional[str]:
-        """Validate the email address."""
-        if v is None:
-            return None
-        # Email is already validated by EmailStr, just ensure lowercase
-        return v.lower()
 
     @property
     def full_preferences(self) -> Dict[str, Any]:

@@ -1,11 +1,11 @@
 "use client";
 
-import { useMemo } from "react";
+import { cn } from "@/lib/utils";
+import { useAgentStatusStore } from "@/stores/agent-status-store";
+import { useChatStore } from "@/stores/chat-store";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { cn } from "@/lib/utils";
-import { useChatStore } from "@/stores/chat-store";
-import { useAgentStatusStore } from "@/stores/agent-status-store";
+import { useMemo } from "react";
 
 interface ChatSidebarProps extends React.HTMLAttributes<HTMLElement> {
   onNewChat?: () => void;
@@ -84,9 +84,7 @@ function ChatSidebar({ className, onNewChat, ...props }: ChatSidebarProps) {
                 )}
               >
                 <div className="font-medium truncate mb-1">{session.title}</div>
-                <div className="text-xs opacity-70 truncate">
-                  {session.lastMessage}
-                </div>
+                <div className="text-xs opacity-70 truncate">{session.lastMessage}</div>
               </Link>
             ))}
           </div>
@@ -164,10 +162,7 @@ function AgentStatusPanel({ className, ...props }: AgentStatusPanelProps) {
               Active ({activeAgents.length})
             </h4>
             {activeAgents.map((agent) => (
-              <div
-                key={agent.id}
-                className="p-3 bg-background rounded-lg border"
-              >
+              <div key={agent.id} className="p-3 bg-background rounded-lg border">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm font-medium">{agent.name}</span>
                   <span className="text-xs text-green-600 bg-green-100 px-2 py-1 rounded-full">
@@ -211,9 +206,7 @@ function AgentStatusPanel({ className, ...props }: AgentStatusPanelProps) {
               </svg>
             </div>
             <p className="text-sm">No active agents</p>
-            <p className="text-xs">
-              Start a conversation to see agent activity
-            </p>
+            <p className="text-xs">Start a conversation to see agent activity</p>
           </div>
         )}
 
@@ -224,16 +217,16 @@ function AgentStatusPanel({ className, ...props }: AgentStatusPanelProps) {
           </h4>
           <div className="space-y-2">
             <div className="text-xs p-2 bg-background rounded border">
-              <span className="text-muted-foreground">Flight Agent:</span> Found
-              12 results for Paris
+              <span className="text-muted-foreground">Flight Agent:</span> Found 12
+              results for Paris
             </div>
             <div className="text-xs p-2 bg-background rounded border">
-              <span className="text-muted-foreground">Budget Agent:</span>{" "}
-              Calculated trip estimate
+              <span className="text-muted-foreground">Budget Agent:</span> Calculated
+              trip estimate
             </div>
             <div className="text-xs p-2 bg-background rounded border">
-              <span className="text-muted-foreground">Weather Agent:</span>{" "}
-              Retrieved forecast data
+              <span className="text-muted-foreground">Weather Agent:</span> Retrieved
+              forecast data
             </div>
           </div>
         </div>

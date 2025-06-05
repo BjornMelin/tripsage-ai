@@ -9,7 +9,7 @@ from typing import List
 
 from tripsage.orchestration.nodes.base import BaseAgentNode
 from tripsage.orchestration.state import TravelPlanningState
-from tripsage.orchestration.tools.mcp_integration import MCPToolRegistry
+from tripsage.orchestration.tools.registry import get_tool_registry
 from tripsage_core.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)
@@ -23,14 +23,14 @@ class MemoryUpdateNode(BaseAgentNode):
     both the knowledge graph and session data for future reference.
     """
 
-    def __init__(self):
+    def __init__(self, service_registry):
         """Initialize the memory update node."""
-        super().__init__("memory_update")
+        super().__init__("memory_update", service_registry)
 
     def _initialize_tools(self) -> None:
         """Initialize memory management tools."""
-        self.tool_registry = MCPToolRegistry()
-        self.memory_tool = self.tool_registry.get_tool("add_memory")
+        self.tool_registry = get_tool_registry(self.service_registry)
+        self.memory_tool = self.tool_registry.get_tool("memory_add_memory")
 
     async def process(self, state: TravelPlanningState) -> TravelPlanningState:
         """
@@ -215,7 +215,8 @@ class MemoryUpdateNode(BaseAgentNode):
             )
 
         # Analyze error patterns
-        error_count = state.get("error_count", 0)
+        error_info = state.get("error_info", {})
+        error_count = error_info.get("error_count", 0)
         if error_count > 0:
             insights.append(f"Encountered {error_count} errors during session")
 

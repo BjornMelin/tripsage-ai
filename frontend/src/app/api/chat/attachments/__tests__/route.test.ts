@@ -1,14 +1,17 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { NextRequest } from "next/server";
-import { POST } from "../route";
-import * as fs from "fs/promises";
 import path from "path";
+import * as fs from "fs/promises";
+import { NextRequest } from "next/server";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { POST } from "../route";
 
 // Mock fs/promises
 vi.mock("fs/promises", () => ({
   writeFile: vi.fn(),
   mkdir: vi.fn(),
 }));
+
+// Mock fetch for backend API calls
+global.fetch = vi.fn();
 
 // Mock crypto for consistent UUIDs
 vi.mock("crypto", async (importOriginal) => {
@@ -20,8 +23,26 @@ vi.mock("crypto", async (importOriginal) => {
 });
 
 describe("/api/chat/attachments route", () => {
+  const mockFetch = vi.mocked(fetch);
+
   beforeEach(() => {
     vi.clearAllMocks();
+    // Setup default successful mock response
+    mockFetch.mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          file_id: "test-uuid-1234",
+          filename: "test.jpg",
+          file_size: 1000,
+          mime_type: "image/jpeg",
+          processing_status: "completed",
+        }),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }
+      )
+    );
   });
 
   afterEach(() => {
@@ -55,13 +76,14 @@ describe("/api/chat/attachments route", () => {
       const body = await response.json();
       expect(body.files).toHaveLength(1);
       expect(body.files[0]).toMatchObject({
-        url: "/uploads/test-uuid-1234.jpg",
+        url: "/api/attachments/test-uuid-1234/download",
         id: "test-uuid-1234",
         name: "test.jpg",
-        size: imageContent.length,
+        size: 1000,
         type: "image/jpeg",
+        status: "completed",
       });
-      expect(body.urls).toEqual(["/uploads/test-uuid-1234.jpg"]);
+      expect(body.urls).toEqual(["/api/attachments/test-uuid-1234/download"]);
     });
 
     it("should accept multiple files", async () => {
@@ -72,6 +94,38 @@ describe("/api/chat/attachments route", () => {
       const file2 = new File([Buffer.from("document")], "doc.pdf", {
         type: "application/pdf",
       });
+
+      // Mock batch upload response
+      mockFetch.mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            total_files: 2,
+            successful_count: 2,
+            failed_count: 0,
+            successful_uploads: [
+              {
+                file_id: "test-uuid-1",
+                filename: "photo1.png",
+                file_size: 6,
+                mime_type: "image/png",
+                processing_status: "completed",
+              },
+              {
+                file_id: "test-uuid-2",
+                filename: "doc.pdf",
+                file_size: 8,
+                mime_type: "application/pdf",
+                processing_status: "completed",
+              },
+            ],
+            failed_uploads: [],
+          }),
+          {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          }
+        )
+      );
 
       const formData = new FormData();
       formData.append("file-0", file1);
@@ -181,13 +235,9 @@ describe("/api/chat/attachments route", () => {
 
     it("should sanitize filenames", async () => {
       // Arrange
-      const file = new File(
-        [Buffer.from("content")],
-        "../../../etc/passwd.txt",
-        {
-          type: "text/plain",
-        }
-      );
+      const file = new File([Buffer.from("content")], "../../../etc/passwd.txt", {
+        type: "text/plain",
+      });
 
       const formData = new FormData();
       formData.append("file-0", file);

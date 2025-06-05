@@ -219,28 +219,3 @@ def log_exception(
         exc_info=True,
         extra=extra,
     )
-
-
-# Legacy aliases for backward compatibility
-def get_module_logger(
-    name: str, level: Optional[int] = None
-) -> Union[logging.Logger, logging.LoggerAdapter]:
-    """Legacy alias for get_logger.
-
-    Args:
-        name: The name of the module, typically __name__
-        level: Optional log level to set
-
-    Returns:
-        A configured logger instance
-    """
-    return get_logger(name, level)
-
-
-def setup_logging(level: Optional[int] = None) -> None:
-    """Legacy alias for configure_root_logger.
-
-    Args:
-        level: The log level to use (defaults to settings)
-    """
-    configure_root_logger(level)

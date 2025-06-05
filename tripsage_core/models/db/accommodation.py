@@ -4,46 +4,17 @@ This module provides the Accommodation model with business logic validation,
 used across different storage backends.
 """
 
-from datetime import date
-from enum import Enum
+from datetime import date, datetime
 from typing import Any, Dict, List, Optional
 
 from pydantic import Field, field_validator, model_validator
 
 from tripsage_core.models.base_core_model import TripSageModel
-
-
-class AccommodationType(str, Enum):
-    """Enum for accommodation type values."""
-
-    HOTEL = "hotel"
-    APARTMENT = "apartment"
-    HOSTEL = "hostel"
-    RESORT = "resort"
-    VILLA = "villa"
-    HOUSE = "house"
-    OTHER = "other"
-
-
-class BookingStatus(str, Enum):
-    """Enum for booking status values."""
-
-    VIEWED = "viewed"
-    SAVED = "saved"
-    BOOKED = "booked"
-    CANCELED = "canceled"
-
-
-class CancellationPolicy(str, Enum):
-    """Enum for cancellation policy values."""
-
-    FREE = "free"
-    PARTIAL_REFUND = "partial_refund"
-    NO_REFUND = "no_refund"
-    FLEXIBLE = "flexible"
-    MODERATE = "moderate"
-    STRICT = "strict"
-    UNKNOWN = "unknown"
+from tripsage_core.models.schemas_common.enums import (
+    AccommodationType,
+    BookingStatus,
+    CancellationPolicy,
+)
 
 
 class Accommodation(TripSageModel):
@@ -89,34 +60,37 @@ class Accommodation(TripSageModel):
     booking_link: Optional[str] = Field(
         None, description="URL for booking this accommodation"
     )
-    search_timestamp: date = Field(
-        ..., description="When this accommodation data was fetched"
+    search_timestamp: Optional[datetime] = Field(
+        None, description="When this accommodation data was fetched"
     )
     booking_status: BookingStatus = Field(
         BookingStatus.VIEWED, description="Status of the accommodation booking"
     )
-    cancellation_policy: Optional[CancellationPolicy] = Field(
-        None, description="Cancellation policy for the booking"
+    cancellation_policy: CancellationPolicy = Field(
+        CancellationPolicy.UNKNOWN, description="Cancellation policy for the booking"
     )
     distance_to_center: Optional[float] = Field(
         None, description="Distance to city center in kilometers"
     )
     neighborhood: Optional[str] = Field(None, description="Neighborhood or area name")
+    images: List[str] = Field(default_factory=list, description="List of image URLs")
 
     @field_validator("price_per_night", "total_price")
     @classmethod
     def validate_price(cls, v: float) -> float:
         """Validate that price is a positive number."""
-        if v < 0:
-            raise ValueError("Price must be non-negative")
+        if v <= 0:
+            raise ValueError("ensure this value is greater than 0")
         return v
 
     @field_validator("rating")
     @classmethod
     def validate_rating(cls, v: Optional[float]) -> Optional[float]:
         """Validate that rating is between 0 and 5 if provided."""
-        if v is not None and (v < 0 or v > 5):
-            raise ValueError("Rating must be between 0 and 5")
+        if v is not None and v < 0:
+            raise ValueError("ensure this value is greater than or equal to 0")
+        if v is not None and v > 5:
+            raise ValueError("ensure this value is less than or equal to 5")
         return v
 
     @field_validator("distance_to_center")
@@ -129,9 +103,9 @@ class Accommodation(TripSageModel):
 
     @model_validator(mode="after")
     def validate_dates(self) -> "Accommodation":
-        """Validate that check_out is not before check_in."""
-        if self.check_out < self.check_in:
-            raise ValueError("Check-out date must not be before check-in date")
+        """Validate that check_out is after check_in."""
+        if self.check_out <= self.check_in:
+            raise ValueError("Check-out date must be after check-in date")
         return self
 
     @model_validator(mode="after")
@@ -168,8 +142,8 @@ class Accommodation(TripSageModel):
 
     @property
     def is_canceled(self) -> bool:
-        """Check if the accommodation is canceled."""
-        return self.booking_status == BookingStatus.CANCELED
+        """Check if the accommodation is cancelled."""
+        return self.booking_status == BookingStatus.CANCELLED
 
     @property
     def is_active(self) -> bool:
@@ -223,8 +197,8 @@ class Accommodation(TripSageModel):
     def cancel(self) -> None:
         """Cancel this accommodation booking."""
         if self.booking_status != BookingStatus.BOOKED:
-            raise ValueError("Only booked accommodations can be canceled")
-        self.booking_status = BookingStatus.CANCELED
+            raise ValueError("Only booked accommodations can be cancelled")
+        self.booking_status = BookingStatus.CANCELLED
 
     def can_cancel(self) -> bool:
         """Check if the accommodation can be canceled."""
@@ -249,15 +223,15 @@ class Accommodation(TripSageModel):
             BookingStatus.VIEWED: [
                 BookingStatus.SAVED,
                 BookingStatus.BOOKED,
-                BookingStatus.CANCELED,
+                BookingStatus.CANCELLED,
             ],
             BookingStatus.SAVED: [
                 BookingStatus.BOOKED,
-                BookingStatus.CANCELED,
+                BookingStatus.CANCELLED,
                 BookingStatus.VIEWED,
             ],
-            BookingStatus.BOOKED: [BookingStatus.CANCELED],
-            BookingStatus.CANCELED: [],  # Cannot change from canceled
+            BookingStatus.BOOKED: [BookingStatus.CANCELLED],
+            BookingStatus.CANCELLED: [],  # Cannot change from cancelled
         }
 
         if new_status in valid_transitions.get(self.booking_status, []):

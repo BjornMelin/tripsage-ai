@@ -115,6 +115,21 @@ htmlcov/
 lcov.info
 *.lcov
 coverage.json
+# Playwright specific
+tests-examples/
+blob-report/
+allure-results/
+allure-report/
+# Screenshots and traces
+screenshots/
+*.png
+*.jpeg
+*.jpg
+!public/**/*.png
+!public/**/*.jpeg
+!public/**/*.jpg
+*.trace
+*.webm
 
 # Frontend build
 .next/
@@ -149,3 +164,4 @@ worktrees/
 
 # Archived local files
 .archived/
+repomix-output.*

@@ -36,8 +36,9 @@ class DuffelAPIError(CoreAPIError):
         super().__init__(
             message=message,
             code="DUFFEL_API_ERROR",
-            service="DuffelHTTPClient",
-            details={"status_code": status_code, "response_data": response_data or {}},
+            api_service="DuffelHTTPClient",
+            api_status_code=status_code,
+            api_response=response_data or {},
         )
         self.status_code = status_code
         self.response_data = response_data or {}
@@ -49,8 +50,8 @@ class DuffelRateLimitError(CoreRateLimitError):
     def __init__(self, message: str, retry_after: Optional[int] = None):
         super().__init__(
             message=message,
-            service="DuffelHTTPClient",
-            details={"retry_after": retry_after},
+            code="DUFFEL_RATE_LIMIT_EXCEEDED",
+            retry_after=retry_after,
         )
         self.retry_after = retry_after
 
@@ -307,6 +308,10 @@ class DuffelHTTPClient:
 
             except DuffelAPIError:
                 # Don't retry API errors (4xx), only network/server errors
+                raise
+
+            except DuffelRateLimitError:
+                # Don't retry rate limit errors, let them propagate
                 raise
 
             except Exception as e:

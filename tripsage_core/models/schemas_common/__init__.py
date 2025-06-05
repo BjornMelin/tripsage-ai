@@ -15,6 +15,13 @@ from .base_models import (
     ValidationErrorDetail,
     ValidationErrorResponse,
 )
+from .chat import (
+    ChatContext,
+    ChatMessage,
+    ChatSession,
+    ToolCall,
+)
+from .common_validators import CommonValidators
 from .enums import (
     AccommodationType,
     BookingStatus,
@@ -22,7 +29,10 @@ from .enums import (
     CancellationPolicy,
     CurrencyCode,
     PaymentType,
+    TransportationType,
     TripStatus,
+    TripType,
+    TripVisibility,
     UserRole,
 )
 from .financial import (
@@ -57,11 +67,6 @@ from .travel import (
     TripPreferences,
     TripSummary,
 )
-from .validators import (
-    validate_password_strength,
-    validate_passwords_different,
-    validate_passwords_match,
-)
 
 __all__ = [
     # Base models
@@ -72,6 +77,11 @@ __all__ = [
     "SuccessResponse",
     "ValidationErrorDetail",
     "ValidationErrorResponse",
+    # Chat models
+    "ChatContext",
+    "ChatMessage",
+    "ChatSession",
+    "ToolCall",
     # Enums
     "AccommodationType",
     "BookingStatus",
@@ -79,7 +89,10 @@ __all__ = [
     "CancellationPolicy",
     "CurrencyCode",
     "PaymentType",
+    "TransportationType",
     "TripStatus",
+    "TripType",
+    "TripVisibility",
     "UserRole",
     # Financial
     "Budget",
@@ -110,7 +123,5 @@ __all__ = [
     "TripPreferences",
     "TripSummary",
     # Validators
-    "validate_password_strength",
-    "validate_passwords_different",
-    "validate_passwords_match",
+    "CommonValidators",
 ]

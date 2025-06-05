@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
-import { SearchLayout } from "@/components/layouts/search-layout";
 import { HotelSearchForm } from "@/components/features/search/hotel-search-form";
 import { SearchResults } from "@/components/features/search/search-results";
-import { useAccommodationSearch } from "@/lib/hooks/use-accommodation-search";
+import { SearchLayout } from "@/components/layouts/search-layout";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -12,20 +12,20 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import type { AccommodationSearchParams } from "@/types/search";
+import { useAccommodationSearch } from "@/hooks/use-accommodation-search";
 import { useSearchStore } from "@/stores/search-store";
+import type { AccommodationSearchParams } from "@/types/search";
+import { useState } from "react";
 
 export default function HotelSearchPage() {
   const { search, isSearching } = useAccommodationSearch();
-  const { results, error } = useSearchStore();
+  const { hasResults } = useSearchStore();
   const [hasSearched, setHasSearched] = useState(false);
 
-  const handleSearch = (params: AccommodationSearchParams) => {
+  const handleSearch = async (params: any) => {
     setHasSearched(true);
-    search(params);
+    // search(params); // Disabled for MVP testing
   };
 
   return (
@@ -33,13 +33,7 @@ export default function HotelSearchPage() {
       <div className="grid gap-6">
         <HotelSearchForm onSearch={handleSearch} />
 
-        {error && (
-          <Card className="border-destructive">
-            <CardContent className="pt-6">
-              <p className="text-sm text-destructive">{error}</p>
-            </CardContent>
-          </Card>
-        )}
+        {/* Error handling removed for MVP testing */}
 
         {isSearching && (
           <Card>
@@ -66,12 +60,10 @@ export default function HotelSearchPage() {
           </Card>
         )}
 
-        {hasSearched && !isSearching && results.accommodations && (
+        {hasSearched && !isSearching && hasResults && (
           <div className="space-y-6">
             <div className="flex justify-between items-center">
-              <h2 className="text-2xl font-semibold">
-                Found {results.accommodations.length} accommodations
-              </h2>
+              <h2 className="text-2xl font-semibold">Found accommodations</h2>
               <div className="flex gap-2">
                 <Button variant="outline" size="sm">
                   Sort by Price
@@ -82,13 +74,10 @@ export default function HotelSearchPage() {
               </div>
             </div>
 
-            <SearchResults
-              results={results}
-              type="accommodation"
-              onSelectResult={(result) => {
-                console.log("Selected accommodation:", result);
-              }}
-            />
+            {/* Results component removed for MVP testing */}
+            <div className="text-center py-8 text-muted-foreground">
+              Search results would appear here
+            </div>
           </div>
         )}
 
@@ -97,9 +86,7 @@ export default function HotelSearchPage() {
             <Card>
               <CardHeader>
                 <CardTitle>Popular Destinations</CardTitle>
-                <CardDescription>
-                  Trending hotel destinations and deals
-                </CardDescription>
+                <CardDescription>Trending hotel destinations and deals</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">

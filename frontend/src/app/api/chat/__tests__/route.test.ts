@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { NextRequest } from "next/server";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { POST } from "../route";
 
 // Mock fetch globally
@@ -399,9 +399,7 @@ describe("/api/chat route", () => {
       const mockStream = new ReadableStream({
         start(controller) {
           controller.enqueue(
-            new TextEncoder().encode(
-              '{"content":"Response","finish_reason":"stop"}\n'
-            )
+            new TextEncoder().encode('{"content":"Response","finish_reason":"stop"}\n')
           );
           controller.close();
         },

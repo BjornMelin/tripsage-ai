@@ -15,7 +15,7 @@ class BookingStatus(str, Enum):
     VIEWED = "viewed"
     SAVED = "saved"
     BOOKED = "booked"
-    CANCELED = "canceled"
+    CANCELLED = "cancelled"
 
 
 class TripStatus(str, Enum):
@@ -25,8 +25,7 @@ class TripStatus(str, Enum):
     BOOKED = "booked"
     IN_PROGRESS = "in_progress"
     COMPLETED = "completed"
-    CANCELED = "canceled"  # Keep for backward compatibility
-    CANCELLED = "cancelled"  # API standard spelling
+    CANCELLED = "cancelled"
 
 
 class AccommodationType(str, Enum):
@@ -224,3 +223,75 @@ class NotificationType(str, Enum):
     PRICE_ALERT = "price_alert"
     TRIP_REMINDER = "trip_reminder"
     PAYMENT_REMINDER = "payment_reminder"
+
+
+class AirlineProvider(str, Enum):
+    """Airline providers for flight bookings."""
+
+    AMERICAN = "american"
+    DELTA = "delta"
+    UNITED = "united"
+    SOUTHWEST = "southwest"
+    JETBLUE = "jetblue"
+    ALASKA = "alaska"
+    SPIRIT = "spirit"
+    FRONTIER = "frontier"
+    LUFTHANSA = "lufthansa"
+    AIR_FRANCE = "air_france"
+    BRITISH_AIRWAYS = "british_airways"
+    JAPAN_AIRLINES = "japan_airlines"
+    EMIRATES = "emirates"
+    SINGAPORE_AIRLINES = "singapore_airlines"
+    OTHER = "other"
+
+
+class DataSource(str, Enum):
+    """Data source providers for travel information."""
+
+    EXPEDIA = "expedia"
+    KAYAK = "kayak"
+    SKYSCANNER = "skyscanner"
+    GOOGLE_FLIGHTS = "google_flights"
+    DUFFEL = "duffel"
+    AIRLINE_DIRECT = "airline_direct"
+    BOOKING_COM = "booking_com"
+    AIRBNB = "airbnb"
+    GOOGLE_MAPS = "google_maps"
+    TRIPADVISOR = "tripadvisor"
+    API_DIRECT = "api_direct"
+    OTHER = "other"
+
+
+class TransportationType(str, Enum):
+    """Types of transportation methods."""
+
+    CAR_RENTAL = "car_rental"
+    PUBLIC_TRANSIT = "public_transit"
+    TAXI = "taxi"
+    RIDESHARE = "rideshare"
+    SHUTTLE = "shuttle"
+    FERRY = "ferry"
+    TRAIN = "train"
+    BUS = "bus"
+    BIKE_RENTAL = "bike_rental"
+    SCOOTER = "scooter"
+    WALKING = "walking"
+    OTHER = "other"
+
+
+class TripType(str, Enum):
+    """Enum for trip type values."""
+
+    LEISURE = "leisure"
+    BUSINESS = "business"
+    FAMILY = "family"
+    SOLO = "solo"
+    OTHER = "other"
+
+
+class TripVisibility(str, Enum):
+    """Enum for trip visibility values."""
+
+    PRIVATE = "private"
+    PUBLIC = "public"
+    SHARED = "shared"

@@ -7,31 +7,25 @@ from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from api.deps import get_current_user
-from tripsage.api.models.destinations import (
-    DestinationDetails,
-    DestinationRecommendation,
+from tripsage.api.core.dependencies import get_principal_id, require_principal_dep
+from tripsage.api.middlewares.authentication import Principal
+from tripsage.api.schemas.requests.destinations import (
     DestinationSearchRequest,
-    DestinationSearchResponse,
-    PointOfInterestSearchRequest,
-    PointOfInterestSearchResponse,
-    SavedDestination,
 )
-
-# Note: DestinationService needs to be refactored to use the new pattern
-# For now, keeping the old import until it's refactored
-from tripsage.api.services.destination import DestinationService
+from tripsage.api.schemas.responses.destinations import (
+    DestinationDetailsResponse,
+    DestinationSearchResponse,
+    SavedDestinationResponse,
+)
+from tripsage.api.services.destination import (
+    DestinationService,
+    get_destination_service,
+)
 from tripsage_core.exceptions.exceptions import (
     CoreResourceNotFoundError as ResourceNotFoundError,
 )
-
-_destination_service_singleton = DestinationService()
-
-
-def get_destination_service() -> DestinationService:
-    """Dependency provider for the DestinationService singleton."""
-    return _destination_service_singleton
-
+from tripsage_core.models.schemas_common.geographic import Place as Destination
+from tripsage_core.models.schemas_common.geographic import Place as PointOfInterest
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -40,24 +34,24 @@ logger = logging.getLogger(__name__)
 @router.post("/search", response_model=DestinationSearchResponse)
 async def search_destinations(
     request: DestinationSearchRequest,
-    user_id: str = Depends(get_current_user),
+    principal: Principal = require_principal_dep,
+    destination_service: DestinationService = Depends(get_destination_service),
 ):
     """
     Search for destinations based on provided criteria.
     """
-    destination_service = get_destination_service()
     return await destination_service.search_destinations(request)
 
 
-@router.get("/{destination_id}", response_model=DestinationDetails)
+@router.get("/{destination_id}", response_model=DestinationDetailsResponse)
 async def get_destination_details(
     destination_id: str,
-    user_id: str = Depends(get_current_user),
+    principal: Principal = require_principal_dep,
+    destination_service: DestinationService = Depends(get_destination_service),
 ):
     """
     Get detailed information about a specific destination.
     """
-    destination_service = get_destination_service()
     try:
         return await destination_service.get_destination_details(destination_id)
     except ResourceNotFoundError as e:
@@ -68,17 +62,18 @@ async def get_destination_details(
         ) from e
 
 
-@router.post("/save/{destination_id}", response_model=SavedDestination)
+@router.post("/save/{destination_id}", response_model=SavedDestinationResponse)
 async def save_destination(
     destination_id: str,
     notes: Optional[str] = None,
-    user_id: str = Depends(get_current_user),
+    principal: Principal = require_principal_dep,
+    destination_service: DestinationService = Depends(get_destination_service),
 ):
     """
     Save a destination for a user.
     """
-    destination_service = get_destination_service()
     try:
+        user_id = get_principal_id(principal)
         return await destination_service.save_destination(
             user_id, destination_id, notes
         )
@@ -90,27 +85,29 @@ async def save_destination(
         ) from e
 
 
-@router.get("/saved", response_model=List[SavedDestination])
+@router.get("/saved", response_model=List[SavedDestinationResponse])
 async def get_saved_destinations(
-    user_id: str = Depends(get_current_user),
+    principal: Principal = require_principal_dep,
+    destination_service: DestinationService = Depends(get_destination_service),
 ):
     """
     Get all destinations saved by a user.
     """
-    destination_service = get_destination_service()
+    user_id = get_principal_id(principal)
     return await destination_service.get_saved_destinations(user_id)
 
 
 @router.delete("/saved/{destination_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_saved_destination(
     destination_id: str,
-    user_id: str = Depends(get_current_user),
+    principal: Principal = require_principal_dep,
+    destination_service: DestinationService = Depends(get_destination_service),
 ):
     """
     Delete a saved destination for a user.
     """
-    destination_service = get_destination_service()
     try:
+        user_id = get_principal_id(principal)
         await destination_service.delete_saved_destination(user_id, destination_id)
     except ResourceNotFoundError as e:
         logger.warning(f"Saved destination not found: {destination_id}")
@@ -120,24 +117,25 @@ async def delete_saved_destination(
         ) from e
 
 
-@router.post("/points-of-interest", response_model=PointOfInterestSearchResponse)
+@router.post("/points-of-interest", response_model=List[PointOfInterest])
 async def search_points_of_interest(
-    request: PointOfInterestSearchRequest,
-    user_id: str = Depends(get_current_user),
+    request: DestinationSearchRequest,
+    principal: Principal = require_principal_dep,
+    destination_service: DestinationService = Depends(get_destination_service),
 ):
     """
     Search for points of interest in a destination.
     """
-    destination_service = get_destination_service()
     return await destination_service.search_points_of_interest(request)
 
 
-@router.get("/recommendations", response_model=List[DestinationRecommendation])
+@router.get("/recommendations", response_model=List[Destination])
 async def get_destination_recommendations(
-    user_id: str = Depends(get_current_user),
+    principal: Principal = require_principal_dep,
+    destination_service: DestinationService = Depends(get_destination_service),
 ):
     """
     Get personalized destination recommendations for a user.
     """
-    destination_service = get_destination_service()
+    user_id = get_principal_id(principal)
     return await destination_service.get_destination_recommendations(user_id)

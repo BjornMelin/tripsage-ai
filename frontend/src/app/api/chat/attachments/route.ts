@@ -86,9 +86,7 @@ export async function POST(req: NextRequest) {
 
     // Determine upload endpoint based on file count
     const endpoint =
-      files.length === 1
-        ? "/api/attachments/upload"
-        : "/api/attachments/upload/batch";
+      files.length === 1 ? "/api/attachments/upload" : "/api/attachments/upload/batch";
 
     // Forward request to backend API
     const backendUrl = `${BACKEND_API_URL}${endpoint}`;
@@ -159,16 +157,14 @@ export async function POST(req: NextRequest) {
         } else {
           // Batch upload response
           const batchData = responseData;
-          const transformedFiles = batchData.successful_uploads.map(
-            (file: any) => ({
-              id: file.file_id,
-              name: file.filename,
-              size: file.file_size,
-              type: file.mime_type,
-              url: `/api/attachments/${file.file_id}/download`,
-              status: file.processing_status, // Use processing_status instead of upload_status
-            })
-          );
+          const transformedFiles = batchData.successful_uploads.map((file: any) => ({
+            id: file.file_id,
+            name: file.filename,
+            size: file.file_size,
+            type: file.mime_type,
+            url: `/api/attachments/${file.file_id}/download`,
+            status: file.processing_status, // Use processing_status instead of upload_status
+          }));
 
           return new Response(
             JSON.stringify({

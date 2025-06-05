@@ -56,7 +56,35 @@ class CacheService:
             # Get DragonflyDB URL from settings
             redis_url = self.settings.dragonfly.url
 
-            logger.info(f"Connecting to DragonflyDB at {redis_url}")
+            # Add password to URL if configured
+            if self.settings.dragonfly.password:
+                # Parse URL and add password
+                from urllib.parse import urlparse, urlunparse
+
+                parsed = urlparse(redis_url)
+                # Reconstruct with password
+                if parsed.username:
+                    netloc = (
+                        f"{parsed.username}:{self.settings.dragonfly.password}"
+                        f"@{parsed.hostname}"
+                    )
+                else:
+                    netloc = f":{self.settings.dragonfly.password}@{parsed.hostname}"
+                if parsed.port:
+                    netloc += f":{parsed.port}"
+                redis_url = urlunparse(
+                    (
+                        parsed.scheme,
+                        netloc,
+                        parsed.path,
+                        parsed.params,
+                        parsed.query,
+                        parsed.fragment,
+                    )
+                )
+
+            safe_url = redis_url.replace(self.settings.dragonfly.password or "", "***")
+            logger.info(f"Connecting to DragonflyDB at {safe_url}")
 
             # Create connection pool for better performance
             self._connection_pool = redis.ConnectionPool.from_url(

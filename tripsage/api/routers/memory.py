@@ -1,298 +1,289 @@
-"""
-Memory management API router.
+"""Memory management API router.
 
 This module provides REST API endpoints for managing user memory,
-conversation history, and travel preferences using the new Mem0-based
-memory system.
+conversation history, and travel preferences using the unified memory service.
 """
 
-# ruff: noqa: B008
-
-import datetime
+import logging
 from typing import Dict, List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel
+from fastapi import APIRouter, HTTPException, status
+from pydantic import BaseModel, Field
 
-from tripsage.config.feature_flags import IntegrationMode, feature_flags
-from tripsage.tools.memory_tools import (
-    ConversationMessage,
-    add_conversation_memory,
-    get_user_context,
-    search_user_memories,
-    update_user_preferences,
+from tripsage.api.core.dependencies import (
+    get_memory_service_dep,
+    get_principal_id,
+    require_principal_dep,
 )
-from tripsage_core.services.business.memory_service import MemoryService
+from tripsage.api.middlewares.authentication import Principal
+from tripsage.api.services.memory import MemoryService
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/memory", tags=["memory"])
 
 
 class ConversationMemoryRequest(BaseModel):
     """Request model for adding conversation memory."""
 
-    messages: List[Dict[str, str]]
-    user_id: str
-    session_id: Optional[str] = None
-    context_type: str = "travel_planning"
-
-
-class UserContextResponse(BaseModel):
-    """Response model for user context."""
-
-    user_id: str
-    context: Dict
-    preferences: Dict
-    conversation_insights: List[str]
-    status: str = "success"
+    messages: List[Dict[str, str]] = Field(..., description="Conversation messages")
+    session_id: Optional[str] = Field(None, description="Session ID")
+    context_type: str = Field("travel_planning", description="Context type")
 
 
 class SearchMemoryRequest(BaseModel):
     """Request model for searching user memories."""
 
-    query: str
-    user_id: str
-    limit: int = 10
-
-
-class SearchMemoryResponse(BaseModel):
-    """Response model for memory search results."""
-
-    results: List[Dict]
-    total_count: int
-    user_id: str
-    status: str = "success"
+    query: str = Field(..., description="Search query")
+    limit: int = Field(10, description="Maximum results to return")
 
 
 class UpdatePreferencesRequest(BaseModel):
     """Request model for updating user preferences."""
 
-    preferences: Dict
-    user_id: str
+    preferences: Dict = Field(..., description="User preferences to update")
 
 
-class UpdatePreferencesResponse(BaseModel):
-    """Response model for preference updates."""
-
-    updated_preferences: Dict
-    user_id: str
-    status: str = "success"
-
-
-async def get_memory_service() -> MemoryService:
-    """Dependency to get memory service instance."""
-    mode = feature_flags.memory_integration_mode
-    if mode == IntegrationMode.DISABLED:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Memory service is currently disabled",
-        )
-
-    return MemoryService()
-
-
-@router.post("/conversations", response_model=Dict)
-async def add_conversation(
+@router.post("/conversation")
+async def add_conversation_memory(
     request: ConversationMemoryRequest,
-    memory_service: MemoryService = Depends(get_memory_service),
-) -> Dict:
-    """
-    Add conversation messages to user memory.
+    principal: Principal = require_principal_dep,
+    memory_service: MemoryService = get_memory_service_dep,
+):
+    """Add conversation messages to user memory.
 
-    This endpoint stores conversation messages and extracts relevant
-    travel insights and preferences automatically.
+    Args:
+        request: Conversation memory request
+        principal: Current authenticated principal
+        memory_service: Unified memory service
+
+    Returns:
+        Operation result
     """
     try:
-        # Convert request to ConversationMessage objects
-        messages = [
-            ConversationMessage(
-                role=msg.get("role", "user"), content=msg.get("content", "")
-            )
-            for msg in request.messages
-        ]
-
-        result = await add_conversation_memory(
-            messages=messages,
-            user_id=request.user_id,
-            session_id=request.session_id,
-            context_type=request.context_type,
+        user_id = get_principal_id(principal)
+        result = await memory_service.add_conversation_memory(
+            user_id, request.messages, request.session_id
         )
-
         return result
 
     except Exception as e:
+        logger.error(f"Add conversation memory failed: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to add conversation memory: {str(e)}",
+            detail="Failed to add conversation memory",
         ) from e
 
 
-@router.get("/context/{user_id}", response_model=UserContextResponse)
-async def get_user_memory_context(
-    user_id: str, memory_service: MemoryService = Depends(get_memory_service)
-) -> UserContextResponse:
-    """
-    Get comprehensive user context including preferences and insights.
+@router.get("/context")
+async def get_user_context(
+    principal: Principal = require_principal_dep,
+    memory_service: MemoryService = get_memory_service_dep,
+):
+    """Get user context and preferences.
 
-    Returns the user's travel preferences, conversation insights,
-    and relevant context for personalized interactions.
+    Args:
+        principal: Current authenticated principal
+        memory_service: Unified memory service
+
+    Returns:
+        User context and preferences
     """
     try:
-        result = await get_user_context(user_id)
+        user_id = get_principal_id(principal)
+        context = await memory_service.get_user_context(user_id)
+        return context
 
-        if result.get("status") == "error":
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=result.get("message", "User context not found"),
-            )
-
-        return UserContextResponse(
-            user_id=user_id,
-            context=result.get("context", {}),
-            preferences=result.get("preferences", {}),
-            conversation_insights=result.get("conversation_insights", []),
-            status=result.get("status", "success"),
-        )
-
-    except HTTPException:
-        raise
     except Exception as e:
+        logger.error(f"Get user context failed: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to get user context: {str(e)}",
+            detail="Failed to get user context",
         ) from e
 
 
-@router.post("/search", response_model=SearchMemoryResponse)
+@router.post("/search")
 async def search_memories(
     request: SearchMemoryRequest,
-    memory_service: MemoryService = Depends(get_memory_service),
-) -> SearchMemoryResponse:
-    """
-    Search through user's conversation and travel memories.
+    principal: Principal = require_principal_dep,
+    memory_service: MemoryService = get_memory_service_dep,
+):
+    """Search user memories.
 
-    Performs semantic search through the user's stored conversations,
-    preferences, and travel history to find relevant information.
+    Args:
+        request: Search request
+        principal: Current authenticated principal
+        memory_service: Unified memory service
+
+    Returns:
+        List of matching memories
     """
     try:
-        result = await search_user_memories(
-            user_id=request.user_id, query=request.query, limit=request.limit
+        user_id = get_principal_id(principal)
+        memories = await memory_service.search_memories(
+            user_id, request.query, request.limit
         )
+        return {"memories": memories, "count": len(memories)}
 
-        if result.get("status") == "error":
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=result.get("message", "No memories found"),
-            )
-
-        return SearchMemoryResponse(
-            results=result.get("results", []),
-            total_count=result.get("total_count", 0),
-            user_id=request.user_id,
-            status=result.get("status", "success"),
-        )
-
-    except HTTPException:
-        raise
     except Exception as e:
+        logger.error(f"Search memories failed: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to search memories: {str(e)}",
+            detail="Failed to search memories",
         ) from e
 
 
-@router.put("/preferences/{user_id}", response_model=UpdatePreferencesResponse)
+@router.put("/preferences")
 async def update_preferences(
-    user_id: str,
     request: UpdatePreferencesRequest,
-    memory_service: MemoryService = Depends(get_memory_service),
-) -> UpdatePreferencesResponse:
-    """
-    Update user travel preferences.
+    principal: Principal = require_principal_dep,
+    memory_service: MemoryService = get_memory_service_dep,
+):
+    """Update user preferences.
 
-    Updates the user's travel preferences and stores them in the
-    memory system for future personalization.
+    Args:
+        request: Preferences update request
+        principal: Current authenticated principal
+        memory_service: Unified memory service
+
+    Returns:
+        Updated preferences
     """
     try:
-        result = await update_user_preferences(
-            user_id=user_id, preferences=request.preferences
+        user_id = get_principal_id(principal)
+        result = await memory_service.update_user_preferences(
+            user_id, request.preferences
         )
+        return result
 
-        if result.get("status") == "error":
+    except Exception as e:
+        logger.error(f"Update preferences failed: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to update preferences",
+        ) from e
+
+
+@router.post("/preference")
+async def add_preference(
+    key: str,
+    value: str,
+    category: str = "general",
+    principal: Principal = require_principal_dep,
+    memory_service: MemoryService = get_memory_service_dep,
+):
+    """Add or update a single user preference.
+
+    Args:
+        key: Preference key
+        value: Preference value
+        category: Preference category
+        principal: Current authenticated principal
+        memory_service: Unified memory service
+
+    Returns:
+        Updated preference
+    """
+    try:
+        user_id = get_principal_id(principal)
+        result = await memory_service.add_user_preference(user_id, key, value, category)
+        return result
+
+    except Exception as e:
+        logger.error(f"Add preference failed: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to add preference",
+        ) from e
+
+
+@router.delete("/memory/{memory_id}")
+async def delete_memory(
+    memory_id: str,
+    principal: Principal = require_principal_dep,
+    memory_service: MemoryService = get_memory_service_dep,
+):
+    """Delete a specific memory.
+
+    Args:
+        memory_id: Memory ID to delete
+        principal: Current authenticated principal
+        memory_service: Unified memory service
+
+    Returns:
+        Success message
+    """
+    try:
+        user_id = get_principal_id(principal)
+        success = await memory_service.delete_memory(user_id, memory_id)
+
+        if not success:
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=result.get("message", "Failed to update preferences"),
+                status_code=status.HTTP_404_NOT_FOUND, detail="Memory not found"
             )
 
-        return UpdatePreferencesResponse(
-            updated_preferences=result.get("updated_preferences", {}),
-            user_id=user_id,
-            status=result.get("status", "success"),
-        )
+        return {"message": "Memory deleted successfully"}
 
     except HTTPException:
         raise
     except Exception as e:
+        logger.error(f"Delete memory failed: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to update preferences: {str(e)}",
+            detail="Failed to delete memory",
         ) from e
 
 
-@router.delete("/user/{user_id}")
-async def delete_user_memories(
-    user_id: str, memory_service: MemoryService = Depends(get_memory_service)
-) -> Dict:
-    """
-    Delete all memories for a specific user.
+@router.get("/stats")
+async def get_memory_stats(
+    principal: Principal = require_principal_dep,
+    memory_service: MemoryService = get_memory_service_dep,
+):
+    """Get memory statistics for the user.
 
-    WARNING: This permanently removes all stored conversations,
-    preferences, and insights for the specified user.
+    Args:
+        principal: Current authenticated principal
+        memory_service: Unified memory service
+
+    Returns:
+        Memory statistics
     """
     try:
-        # Use the memory service to delete user memories
-        result = await memory_service.delete_user_memories(user_id)
-
-        return {
-            "user_id": user_id,
-            "status": "success",
-            "message": f"All memories deleted for user {user_id}",
-            "deleted_count": result.get("deleted_count", 0),
-        }
+        user_id = get_principal_id(principal)
+        stats = await memory_service.get_memory_stats(user_id)
+        return stats
 
     except Exception as e:
+        logger.error(f"Get memory stats failed: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to delete user memories: {str(e)}",
+            detail="Failed to get memory stats",
         ) from e
 
 
-@router.get("/health")
-async def memory_health_check(
-    memory_service: MemoryService = Depends(get_memory_service),
-) -> Dict:
-    """
-    Health check endpoint for memory service.
+@router.delete("/clear")
+async def clear_user_memory(
+    confirm: bool = False,
+    principal: Principal = require_principal_dep,
+    memory_service: MemoryService = get_memory_service_dep,
+):
+    """Clear all memories for the user.
 
-    Returns the current status and configuration of the memory system.
+    Args:
+        confirm: Confirmation flag
+        principal: Current authenticated principal
+        memory_service: Unified memory service
+
+    Returns:
+        Operation result
     """
     try:
-        mode = feature_flags.memory_integration_mode
-
-        # Test memory service connectivity
-        test_result = await memory_service.health_check()
-
-        return {
-            "status": "healthy" if test_result else "unhealthy",
-            "integration_mode": mode.value,
-            "service_available": test_result,
-            "timestamp": datetime.datetime.now(datetime.UTC),
-        }
+        user_id = get_principal_id(principal)
+        result = await memory_service.clear_user_memory(user_id, confirm)
+        return result
 
     except Exception as e:
-        return {
-            "status": "unhealthy",
-            "integration_mode": "unknown",
-            "service_available": False,
-            "error": str(e),
-            "timestamp": "2025-01-27T00:00:00Z",
-        }
+        logger.error(f"Clear memory failed: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to clear memory",
+        ) from e

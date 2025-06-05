@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect } from "react";
 import { ErrorFallback } from "@/components/error/error-fallback";
 import { errorService } from "@/lib/error-service";
+import { useEffect } from "react";
 
 /**
  * Authentication-level error boundary

@@ -148,9 +148,7 @@ export const CreateDealAlertRequestSchema = z.object({
   notificationType: z.enum(["email", "push", "both"]).default("both"),
 });
 
-export type CreateDealAlertRequest = z.infer<
-  typeof CreateDealAlertRequestSchema
->;
+export type CreateDealAlertRequest = z.infer<typeof CreateDealAlertRequestSchema>;
 
 // Stats
 export const DealStatsSchema = z.object({

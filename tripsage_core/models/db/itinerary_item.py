@@ -4,7 +4,7 @@ This module provides the ItineraryItem model with business logic validation,
 used across different storage backends.
 """
 
-from datetime import date
+from datetime import date as Date
 from datetime import time as dt_time
 from enum import Enum
 from typing import Optional
@@ -41,7 +41,7 @@ class ItineraryItem(TripSageModel):
     id: Optional[int] = Field(None, description="Unique identifier")
     trip_id: int = Field(..., description="Reference to the associated trip")
     item_type: ItemType = Field(..., description="Type of itinerary item")
-    date: date = Field(..., description="Date of the itinerary item")
+    date: Date = Field(..., description="Date of the itinerary item")
     scheduled_time: Optional[dt_time] = Field(
         None, description="Time of the itinerary item"
     )

@@ -6,26 +6,12 @@ entities. These models represent the essential accommodation data structures
 independent of storage implementation or API specifics.
 """
 
-from enum import Enum
 from typing import List, Optional
 
 from pydantic import Field
 
 from tripsage_core.models.base_core_model import TripSageDomainModel
-
-
-class PropertyType(str, Enum):
-    """Property type options for accommodations."""
-
-    HOTEL = "hotel"
-    APARTMENT = "apartment"
-    HOUSE = "house"
-    VILLA = "villa"
-    RESORT = "resort"
-    HOSTEL = "hostel"
-    BED_AND_BREAKFAST = "bed_and_breakfast"
-    GUEST_HOUSE = "guest_house"
-    OTHER = "other"
+from tripsage_core.models.schemas_common.enums import AccommodationType as PropertyType
 
 
 class AccommodationAmenity(TripSageDomainModel):

@@ -109,6 +109,7 @@ class TestChatService:
             estimated_tokens=12,
         )
 
+    @pytest.mark.asyncio
     async def test_create_session_success(
         self, chat_service, mock_database_service, sample_session_create_request
     ):
@@ -141,6 +142,7 @@ class TestChatService:
         # Verify database call
         mock_database_service.create_chat_session.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_get_session_success(
         self, chat_service, mock_database_service, sample_chat_session
     ):
@@ -174,6 +176,7 @@ class TestChatService:
             sample_chat_session.id, sample_chat_session.user_id
         )
 
+    @pytest.mark.asyncio
     async def test_get_session_not_found(self, chat_service, mock_database_service):
         """Test session retrieval when not found."""
         session_id = str(uuid4())
@@ -184,6 +187,7 @@ class TestChatService:
         result = await chat_service.get_session(session_id, user_id)
         assert result is None
 
+    @pytest.mark.asyncio
     async def test_add_message_success(
         self,
         chat_service,
@@ -241,6 +245,7 @@ class TestChatService:
             sample_chat_session.id
         )
 
+    @pytest.mark.asyncio
     async def test_add_message_rate_limited(
         self,
         chat_service,
@@ -267,11 +272,13 @@ class TestChatService:
                 sample_message_create_request,
             )
 
+    @pytest.mark.asyncio
     async def test_add_message_invalid_role(self, chat_service):
         """Test message creation with invalid role."""
         with pytest.raises(ValueError, match="Role must be one of"):
             MessageCreateRequest(role="invalid_role", content="Test message")
 
+    @pytest.mark.asyncio
     async def test_get_recent_messages_success(
         self,
         chat_service,
@@ -325,6 +332,7 @@ class TestChatService:
 
         mock_database_service.get_recent_messages_with_tokens.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_get_recent_messages_token_limit(
         self, chat_service, mock_database_service, sample_chat_session
     ):
@@ -376,6 +384,7 @@ class TestChatService:
         assert result.total_tokens == 1000
         assert result.truncated
 
+    @pytest.mark.asyncio
     async def test_add_tool_call_success(
         self, chat_service, mock_database_service, sample_message_response
     ):
@@ -413,6 +422,7 @@ class TestChatService:
 
         mock_database_service.create_tool_call.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_update_tool_call_status_success(
         self, chat_service, mock_database_service
     ):
@@ -438,6 +448,7 @@ class TestChatService:
 
         mock_database_service.update_tool_call.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_end_session_success(
         self, chat_service, mock_database_service, sample_chat_session
     ):
@@ -472,6 +483,7 @@ class TestChatService:
             sample_chat_session.id
         )
 
+    @pytest.mark.asyncio
     async def test_end_session_already_ended(
         self, chat_service, mock_database_service, sample_chat_session
     ):
@@ -499,6 +511,7 @@ class TestChatService:
                 sample_chat_session.id, sample_chat_session.user_id
             )
 
+    @pytest.mark.asyncio
     async def test_get_user_sessions_success(
         self, chat_service, mock_database_service, sample_chat_session
     ):
@@ -577,11 +590,13 @@ class TestChatService:
         limiter.reset_user(user_id)
         assert limiter.is_allowed(user_id) is True
 
+    @pytest.mark.asyncio
     async def test_get_chat_service_dependency(self):
         """Test the dependency injection function."""
         service = await get_chat_service()
         assert isinstance(service, ChatService)
 
+    @pytest.mark.asyncio
     async def test_concurrent_message_creation(
         self, chat_service, mock_database_service, sample_chat_session
     ):

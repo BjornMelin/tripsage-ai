@@ -1,16 +1,16 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import * as apiHooks from "@/hooks/use-api-keys";
+import { useApiKeyStore } from "@/stores/api-key-store";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiKeyForm } from "../api-key-form";
+import { ApiKeyInput } from "../api-key-input";
 import { ApiKeyList } from "../api-key-list";
 import { ApiKeySettings } from "../api-key-settings";
-import { ApiKeyInput } from "../api-key-input";
 import { ServiceSelector } from "../service-selector";
-import * as apiHooks from "@/lib/hooks/use-api-keys";
-import { useApiKeyStore } from "@/stores/api-key-store";
 
 // Mock the TanStack Query hooks
-vi.mock("@/lib/hooks/use-api-keys", () => ({
+vi.mock("@/hooks/use-api-keys", () => ({
   useApiKeys: vi.fn(),
   useAddApiKey: vi.fn(),
   useDeleteApiKey: vi.fn(),
@@ -105,9 +105,7 @@ describe("API Key Management Components", () => {
         />
       );
 
-      expect(
-        screen.getByPlaceholderText("Select a service")
-      ).toBeInTheDocument();
+      expect(screen.getByPlaceholderText("Select a service")).toBeInTheDocument();
     });
 
     it("calls onChange when a service is selected", async () => {
@@ -160,9 +158,7 @@ describe("API Key Management Components", () => {
 
       expect(screen.getByText("Service")).toBeInTheDocument();
       expect(screen.getByText("API Key")).toBeInTheDocument();
-      expect(
-        screen.getByText("Save API Key", { exact: false })
-      ).toBeInTheDocument();
+      expect(screen.getByText("Save API Key", { exact: false })).toBeInTheDocument();
     });
 
     it("submits the form with valid data", async () => {

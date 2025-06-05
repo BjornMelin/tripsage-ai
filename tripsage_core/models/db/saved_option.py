@@ -83,6 +83,11 @@ class SavedOption(TripSageModel):
         return self.option_type == OptionType.ACTIVITY
 
     @property
+    def type_display_name(self) -> str:
+        """Get a display-friendly name for the option type."""
+        return self.option_type.value.title()
+
+    @property
     def has_notes(self) -> bool:
         """Check if the option has notes."""
         return self.notes is not None and len(self.notes.strip()) > 0

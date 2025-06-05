@@ -22,7 +22,7 @@ class TestWithErrorHandling:
     async def test_async_function_success(self):
         """Test successful execution of async function with error handling."""
 
-        @with_error_handling
+        @with_error_handling()
         async def test_func(value: int) -> dict:
             return {"result": value * 2}
 
@@ -33,7 +33,7 @@ class TestWithErrorHandling:
     async def test_async_function_error(self):
         """Test error handling in async function."""
 
-        @with_error_handling
+        @with_error_handling()
         async def test_func(value: int) -> dict:
             if value < 0:
                 raise ValueError("Value cannot be negative")
@@ -47,7 +47,7 @@ class TestWithErrorHandling:
     async def test_async_function_non_dict_error(self):
         """Test error handling in async function that doesn't return a dict."""
 
-        @with_error_handling
+        @with_error_handling()
         async def test_func(value: int) -> int:
             if value < 0:
                 raise ValueError("Value cannot be negative")
@@ -60,7 +60,7 @@ class TestWithErrorHandling:
     def test_sync_function_success(self):
         """Test successful execution of sync function with error handling."""
 
-        @with_error_handling
+        @with_error_handling()
         def test_func(value: int) -> dict:
             return {"result": value * 2}
 
@@ -70,7 +70,7 @@ class TestWithErrorHandling:
     def test_sync_function_error(self):
         """Test error handling in sync function."""
 
-        @with_error_handling
+        @with_error_handling()
         def test_func(value: int) -> dict:
             if value < 0:
                 raise ValueError("Value cannot be negative")
@@ -83,7 +83,7 @@ class TestWithErrorHandling:
     def test_sync_function_non_dict_error(self):
         """Test error handling in sync function that doesn't return a dict."""
 
-        @with_error_handling
+        @with_error_handling()
         def test_func(value: int) -> int:
             if value < 0:
                 raise ValueError("Value cannot be negative")

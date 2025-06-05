@@ -91,6 +91,7 @@ class TestUserService:
             "preferences": {},
         }
 
+    @pytest.mark.asyncio
     async def test_create_user_success(
         self, user_service, mock_database_service, sample_user_create_request
     ):
@@ -129,6 +130,7 @@ class TestUserService:
         )
         mock_database_service.create_user.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_create_user_duplicate_email(
         self,
         user_service,
@@ -144,6 +146,7 @@ class TestUserService:
         with pytest.raises(ValidationError, match="already exists"):
             await user_service.create_user(sample_user_create_request)
 
+    @pytest.mark.asyncio
     async def test_create_user_duplicate_username(
         self,
         user_service,
@@ -160,6 +163,7 @@ class TestUserService:
         with pytest.raises(ValidationError, match="already taken"):
             await user_service.create_user(sample_user_create_request)
 
+    @pytest.mark.asyncio
     async def test_create_user_weak_password(self, user_service):
         """Test user creation with weak password."""
         # This should fail during request validation
@@ -168,6 +172,7 @@ class TestUserService:
                 email="test@example.com", password="weak", full_name="Test User"
             )
 
+    @pytest.mark.asyncio
     async def test_get_user_by_id_success(
         self, user_service, mock_database_service, sample_db_user_data
     ):
@@ -182,6 +187,7 @@ class TestUserService:
             sample_db_user_data["id"]
         )
 
+    @pytest.mark.asyncio
     async def test_get_user_by_id_not_found(self, user_service, mock_database_service):
         """Test user retrieval when user doesn't exist."""
         user_id = str(uuid4())
@@ -192,6 +198,7 @@ class TestUserService:
         assert result is None
         mock_database_service.get_user_by_id.assert_called_once_with(user_id)
 
+    @pytest.mark.asyncio
     async def test_get_user_by_email_success(
         self, user_service, mock_database_service, sample_db_user_data
     ):
@@ -205,6 +212,7 @@ class TestUserService:
             sample_db_user_data["email"]
         )
 
+    @pytest.mark.asyncio
     async def test_get_user_by_username_success(
         self, user_service, mock_database_service, sample_db_user_data
     ):
@@ -220,6 +228,7 @@ class TestUserService:
             sample_db_user_data["username"]
         )
 
+    @pytest.mark.asyncio
     async def test_update_user_success(
         self, user_service, mock_database_service, sample_db_user_data
     ):
@@ -241,6 +250,7 @@ class TestUserService:
         assert result.full_name == "Updated Name"
         mock_database_service.update_user.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_update_user_not_found(self, user_service, mock_database_service):
         """Test user update when user doesn't exist."""
         user_id = str(uuid4())
@@ -251,6 +261,7 @@ class TestUserService:
         with pytest.raises(NotFoundError, match="not found"):
             await user_service.update_user(user_id, update_request)
 
+    @pytest.mark.asyncio
     async def test_change_password_success(
         self, user_service, mock_database_service, sample_db_user_data
     ):
@@ -275,6 +286,7 @@ class TestUserService:
         assert result is True
         mock_database_service.update_user_password.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_change_password_wrong_current(
         self, user_service, mock_database_service, sample_db_user_data
     ):
@@ -295,6 +307,7 @@ class TestUserService:
                     sample_db_user_data["id"], password_data
                 )
 
+    @pytest.mark.asyncio
     async def test_change_password_user_not_found(
         self, user_service, mock_database_service
     ):
@@ -309,6 +322,7 @@ class TestUserService:
         with pytest.raises(NotFoundError, match="not found"):
             await user_service.change_password(user_id, password_data)
 
+    @pytest.mark.asyncio
     async def test_verify_user_credentials_success(
         self, user_service, mock_database_service, sample_db_user_data
     ):
@@ -329,6 +343,7 @@ class TestUserService:
         assert result is not None
         assert result.email == sample_db_user_data["email"]
 
+    @pytest.mark.asyncio
     async def test_verify_user_credentials_wrong_password(
         self, user_service, mock_database_service, sample_db_user_data
     ):
@@ -348,6 +363,7 @@ class TestUserService:
 
         assert result is None
 
+    @pytest.mark.asyncio
     async def test_verify_user_credentials_user_not_found(
         self, user_service, mock_database_service
     ):
@@ -360,6 +376,7 @@ class TestUserService:
 
         assert result is None
 
+    @pytest.mark.asyncio
     async def test_verify_user_credentials_inactive_user(
         self, user_service, mock_database_service, sample_db_user_data
     ):
@@ -380,6 +397,7 @@ class TestUserService:
 
         assert result is None
 
+    @pytest.mark.asyncio
     async def test_deactivate_user_success(
         self, user_service, mock_database_service, sample_db_user_data
     ):
@@ -392,6 +410,7 @@ class TestUserService:
         assert result is True
         mock_database_service.update_user.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_activate_user_success(
         self, user_service, mock_database_service, sample_db_user_data
     ):
@@ -429,6 +448,7 @@ class TestUserService:
         # Wrong password should not verify
         assert user_service._verify_password("wrongpassword", hashed) is False
 
+    @pytest.mark.asyncio
     async def test_get_user_service_dependency(self, mock_database_service):
         """Test the dependency injection function."""
         service = await get_user_service(database_service=mock_database_service)

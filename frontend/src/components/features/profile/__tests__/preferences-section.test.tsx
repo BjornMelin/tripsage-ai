@@ -1,9 +1,9 @@
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { toast } from "@/components/ui/use-toast";
+import { useCurrencyStore } from "@/stores/currency-store";
+import { useUserProfileStore } from "@/stores/user-store";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { vi } from "vitest";
 import { PreferencesSection } from "../preferences-section";
-import { useUserStore } from "@/stores/user-store";
-import { useCurrencyStore } from "@/stores/currency-store";
-import { toast } from "@/components/ui/use-toast";
 
 // Mock the stores and hooks
 vi.mock("@/stores/user-store");
@@ -34,7 +34,7 @@ const mockToast = vi.fn();
 describe("PreferencesSection", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    (useUserStore as any).mockReturnValue({
+    (useUserProfileStore as any).mockReturnValue({
       user: mockUser,
       updateUser: mockUpdateUser,
     });
@@ -248,7 +248,7 @@ describe("PreferencesSection", () => {
   });
 
   it("handles missing user preferences gracefully", () => {
-    (useUserStore as any).mockReturnValue({
+    (useUserProfileStore as any).mockReturnValue({
       user: { ...mockUser, preferences: undefined },
       updateUser: mockUpdateUser,
     });

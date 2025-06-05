@@ -1,16 +1,25 @@
+import { render, screen } from "@testing-library/react";
 /**
  * Integration tests for Next.js error boundaries
  * Tests the error.tsx and global-error.tsx files
  */
 import React from "react";
-import { render, screen } from "@testing-library/react";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
+// Mock React hooks for testing environment
+vi.mock("react", async () => {
+  const actual = await vi.importActual("react");
+  return {
+    ...actual,
+    useEffect: vi.fn((fn) => fn()),
+  };
+});
+
+import AuthError from "../(auth)/error";
+import DashboardError from "../(dashboard)/error";
 // Import the error boundary components
 import Error from "../error";
 import GlobalError from "../global-error";
-import DashboardError from "../(dashboard)/error";
-import AuthError from "../(auth)/error";
 
 // Mock the error service
 vi.mock("@/lib/error-service", () => ({
@@ -108,9 +117,7 @@ describe("Next.js Error Boundaries Integration", () => {
     });
 
     it("should include html and body tags", () => {
-      const { container } = render(
-        <GlobalError error={mockError} reset={mockReset} />
-      );
+      const { container } = render(<GlobalError error={mockError} reset={mockReset} />);
 
       // Check that the component renders html and body tags
       expect(container.querySelector("html")).toBeInTheDocument();
@@ -321,9 +328,7 @@ describe("Next.js Error Boundaries Integration", () => {
   describe("Error Boundary Hierarchy", () => {
     it("should show different UI for different error levels", () => {
       // Global error shows minimal UI
-      const { rerender } = render(
-        <GlobalError error={mockError} reset={mockReset} />
-      );
+      const { rerender } = render(<GlobalError error={mockError} reset={mockReset} />);
       expect(screen.getByText("Application Error")).toBeInTheDocument();
 
       // Page error shows more detailed UI

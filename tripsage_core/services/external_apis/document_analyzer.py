@@ -9,20 +9,21 @@ using AI models while following KISS principles and Core integration patterns.
 import asyncio
 import json
 import re
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
-# Import models from existing location (could be moved to Core later)
-from tripsage.models.attachments import (
-    DocumentAnalysisResult,
-    FileType,
-)
 from tripsage_core.config.base_app_settings import CoreAppSettings, get_settings
 from tripsage_core.exceptions.exceptions import CoreExternalAPIError as CoreAPIError
 from tripsage_core.exceptions.exceptions import CoreServiceError
+
+# Import models from existing location (could be moved to Core later)
+from tripsage_core.models.attachments import (
+    DocumentAnalysisResult,
+    FileType,
+)
 
 
 class DocumentAnalyzerError(CoreAPIError):
@@ -189,7 +190,7 @@ class DocumentAnalyzer:
         """
         await self.ensure_connected()
 
-        start_time = datetime.now(datetime.UTC)
+        start_time = datetime.now(timezone.utc)
 
         async with self._analysis_semaphore:
             try:
@@ -206,7 +207,7 @@ class DocumentAnalyzer:
 
                 # Calculate processing time
                 processing_time = int(
-                    (datetime.now(datetime.UTC) - start_time).total_seconds() * 1000
+                    (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
                 )
 
                 # Extract travel-specific information
@@ -228,7 +229,7 @@ class DocumentAnalyzer:
 
             except Exception as e:
                 processing_time = int(
-                    (datetime.now(datetime.UTC) - start_time).total_seconds() * 1000
+                    (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
                 )
 
                 raise DocumentAnalyzerError(

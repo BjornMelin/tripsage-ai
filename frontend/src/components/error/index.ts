@@ -24,4 +24,4 @@ export type {
 
 // Re-export error service utilities
 export { errorService, ErrorService } from "@/lib/error-service";
-export { useErrorHandler } from "@/lib/hooks/use-error-handler";
+export { useErrorHandler } from "@/hooks/use-error-handler";

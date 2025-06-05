@@ -6,7 +6,6 @@ validation, refresh operations, and user session management. It depends on
 the user service for user operations and follows clean architecture principles.
 """
 
-import logging
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
@@ -17,9 +16,9 @@ from tripsage_core.exceptions import (
     CoreAuthenticationError as AuthenticationError,
 )
 from tripsage_core.models.base_core_model import TripSageModel
+from tripsage_core.services.base_service import BaseService
 from tripsage_core.services.business.user_service import UserResponse, UserService
-
-logger = logging.getLogger(__name__)
+from tripsage_core.utils.decorator_utils import with_error_handling
 
 
 class TokenData(TripSageModel):
@@ -70,7 +69,7 @@ class PasswordResetConfirmRequest(TripSageModel):
     new_password: str = Field(..., min_length=8, description="New password")
 
 
-class AuthenticationService:
+class AuthenticationService(BaseService):
     """
     Comprehensive authentication service.
 
@@ -91,6 +90,7 @@ class AuthenticationService:
         algorithm: str = "HS256",
         access_token_expire_minutes: int = 30,
         refresh_token_expire_days: int = 7,
+        **kwargs,
     ):
         """
         Initialize the authentication service.
@@ -101,11 +101,17 @@ class AuthenticationService:
             algorithm: JWT signing algorithm
             access_token_expire_minutes: Access token expiration time
             refresh_token_expire_days: Refresh token expiration time
+            **kwargs: Additional arguments passed to BaseService
         """
-        # Import here to avoid circular imports
+        # Initialize base service
+        super().__init__(service_name="AuthenticationService", **kwargs)
+
+        # Initialize user service dependency
         if user_service is None:
             user_service = UserService()
+        self.user_service = user_service
 
+        # Initialize JWT configuration
         if secret_key is None:
             # Get from settings
             from tripsage_core.config.base_app_settings import get_settings
@@ -113,12 +119,16 @@ class AuthenticationService:
             settings = get_settings()
             secret_key = settings.jwt_secret_key
 
-        self.user_service = user_service
         self.secret_key = secret_key
         self.algorithm = algorithm
         self.access_token_expire_minutes = access_token_expire_minutes
         self.refresh_token_expire_days = refresh_token_expire_days
 
+    @with_error_handling(
+        operation_name="user_authentication",
+        expected_errors=(AuthenticationError,),
+        log_extra_func=lambda self, login_data: {"identifier": login_data.identifier},
+    )
     async def authenticate_user(self, login_data: LoginRequest) -> TokenResponse:
         """
         Authenticate user and generate tokens.
@@ -132,40 +142,29 @@ class AuthenticationService:
         Raises:
             AuthenticationError: If authentication fails
         """
-        try:
-            # Verify user credentials
-            user = await self.user_service.verify_user_credentials(
-                login_data.identifier, login_data.password
-            )
+        # Verify user credentials
+        user = await self.user_service.verify_user_credentials(
+            login_data.identifier, login_data.password
+        )
 
-            if not user:
-                raise AuthenticationError("Invalid credentials")
+        if not user:
+            raise AuthenticationError("Invalid credentials")
 
-            # Generate tokens
-            access_token = await self._create_access_token(user)
-            refresh_token = await self._create_refresh_token(user)
+        # Generate tokens
+        access_token = await self._create_access_token(user)
+        refresh_token = await self._create_refresh_token(user)
 
-            logger.info(
-                "User authenticated successfully",
-                extra={"user_id": user.id, "email": user.email},
-            )
+        return TokenResponse(
+            access_token=access_token,
+            refresh_token=refresh_token,
+            expires_in=self.access_token_expire_minutes * 60,
+            user=user,
+        )
 
-            return TokenResponse(
-                access_token=access_token,
-                refresh_token=refresh_token,
-                expires_in=self.access_token_expire_minutes * 60,
-                user=user,
-            )
-
-        except AuthenticationError:
-            raise
-        except Exception as e:
-            logger.error(
-                "Authentication failed",
-                extra={"identifier": login_data.identifier, "error": str(e)},
-            )
-            raise AuthenticationError("Authentication failed") from e
-
+    @with_error_handling(
+        operation_name="token_refresh",
+        expected_errors=(AuthenticationError,),
+    )
     async def refresh_token(
         self, refresh_request: RefreshTokenRequest
     ) -> TokenResponse:
@@ -181,35 +180,26 @@ class AuthenticationService:
         Raises:
             AuthenticationError: If refresh token is invalid
         """
-        try:
-            # Validate refresh token
-            token_data = await self._validate_token(
-                refresh_request.refresh_token, expected_type="refresh"
-            )
+        # Validate refresh token
+        token_data = await self._validate_token(
+            refresh_request.refresh_token, expected_type="refresh"
+        )
 
-            # Get current user information
-            user = await self.user_service.get_user_by_id(token_data.user_id)
-            if not user or not user.is_active:
-                raise AuthenticationError("User not found or inactive")
+        # Get current user information
+        user = await self.user_service.get_user_by_id(token_data.user_id)
+        if not user or not user.is_active:
+            raise AuthenticationError("User not found or inactive")
 
-            # Generate new tokens
-            access_token = await self._create_access_token(user)
-            new_refresh_token = await self._create_refresh_token(user)
+        # Generate new tokens
+        access_token = await self._create_access_token(user)
+        new_refresh_token = await self._create_refresh_token(user)
 
-            logger.info("Token refreshed successfully", extra={"user_id": user.id})
-
-            return TokenResponse(
-                access_token=access_token,
-                refresh_token=new_refresh_token,
-                expires_in=self.access_token_expire_minutes * 60,
-                user=user,
-            )
-
-        except AuthenticationError:
-            raise
-        except Exception as e:
-            logger.error("Token refresh failed", extra={"error": str(e)})
-            raise AuthenticationError("Token refresh failed") from e
+        return TokenResponse(
+            access_token=access_token,
+            refresh_token=new_refresh_token,
+            expires_in=self.access_token_expire_minutes * 60,
+            user=user,
+        )
 
     async def validate_access_token(self, token: str) -> TokenData:
         """
@@ -253,7 +243,7 @@ class AuthenticationService:
         except AuthenticationError:
             raise
         except Exception as e:
-            logger.error("Failed to get current user", extra={"error": str(e)})
+            self.logger.error("Failed to get current user", extra={"error": str(e)})
             raise AuthenticationError("Invalid token") from e
 
     async def initiate_password_reset(
@@ -273,7 +263,7 @@ class AuthenticationService:
             user = await self.user_service.get_user_by_email(reset_request.email)
             if not user:
                 # Don't reveal if email exists for security
-                logger.warning(
+                self.logger.warning(
                     "Password reset requested for non-existent email",
                     extra={"email": reset_request.email},
                 )
@@ -284,7 +274,7 @@ class AuthenticationService:
 
             # TODO: Send reset email
             # This would integrate with an email service
-            logger.info(
+            self.logger.info(
                 "Password reset initiated",
                 extra={
                     "user_id": user.id,
@@ -296,7 +286,7 @@ class AuthenticationService:
             return True
 
         except Exception as e:
-            logger.error(
+            self.logger.error(
                 "Failed to initiate password reset",
                 extra={"email": reset_request.email, "error": str(e)},
             )
@@ -338,14 +328,16 @@ class AuthenticationService:
             )
 
             if success:
-                logger.info("Password reset completed", extra={"user_id": user.id})
+                self.logger.info("Password reset completed", extra={"user_id": user.id})
 
             return success
 
         except AuthenticationError:
             raise
         except Exception as e:
-            logger.error("Password reset confirmation failed", extra={"error": str(e)})
+            self.logger.error(
+                "Password reset confirmation failed", extra={"error": str(e)}
+            )
             raise AuthenticationError("Password reset failed") from e
 
     async def logout_user(self, token: str) -> bool:
@@ -367,12 +359,12 @@ class AuthenticationService:
 
             # TODO: Add token to blacklist if implementing token revocation
             # For now, we just log the logout
-            logger.info("User logged out", extra={"user_id": token_data.user_id})
+            self.logger.info("User logged out", extra={"user_id": token_data.user_id})
 
             return True
 
         except Exception as e:
-            logger.error("Logout failed", extra={"error": str(e)})
+            self.logger.error("Logout failed", extra={"error": str(e)})
             return False
 
     async def _create_access_token(self, user: UserResponse) -> str:
@@ -512,7 +504,7 @@ class AuthenticationService:
             return success
 
         except Exception as e:
-            logger.error(
+            self.logger.error(
                 "Failed to reset password", extra={"user_id": user_id, "error": str(e)}
             )
             return False
@@ -526,11 +518,20 @@ async def get_auth_service() -> AuthenticationService:
     Returns:
         AuthenticationService instance
     """
+    from tripsage_core.config.base_app_settings import get_settings
     from tripsage_core.services.business.user_service import UserService
     from tripsage_core.services.infrastructure.database_service import (
         get_database_service,
     )
 
+    settings = get_settings()
     database_service = await get_database_service()
     user_service = UserService(database_service=database_service)
-    return AuthenticationService(user_service=user_service)
+
+    return AuthenticationService(
+        user_service=user_service,
+        secret_key=settings.secret_key,
+        algorithm=settings.algorithm,
+        access_token_expire_minutes=settings.access_token_expire_minutes,
+        refresh_token_expire_days=settings.refresh_token_expire_days,
+    )

@@ -5,7 +5,7 @@ comparison data between different trip options.
 """
 
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 from pydantic import Field
 
@@ -48,6 +48,42 @@ class TripComparison(TripSageModel):
         if isinstance(options, list):
             return len(options)
         return 0
+
+    @property
+    def has_selected_option(self) -> bool:
+        """Check if a selected option is present."""
+        return "selected_option_id" in self.comparison_json
+
+    @property
+    def selected_option_id(self) -> Optional[int]:
+        """Get the ID of the selected option."""
+        return self.comparison_json.get("selected_option_id")
+
+    @property
+    def comparison_type(self) -> Optional[str]:
+        """Get the type of comparison (flight, accommodation, etc.)."""
+        # Try to infer from options
+        options = self.comparison_json.get("options", [])
+        if options and isinstance(options, list) and len(options) > 0:
+            first_option = options[0]
+            if isinstance(first_option, dict):
+                return first_option.get("type")
+        # Fallback to explicit type field
+        return self.comparison_json.get("type")
+
+    @property
+    def has_criteria(self) -> bool:
+        """Check if comparison criteria are defined."""
+        criteria = self.comparison_json.get("criteria", [])
+        return isinstance(criteria, list) and len(criteria) > 0
+
+    @property
+    def criteria_list(self) -> List[str]:
+        """Get the list of comparison criteria."""
+        criteria = self.comparison_json.get("criteria", [])
+        if isinstance(criteria, list):
+            return criteria
+        return []
 
     @property
     def has_flights(self) -> bool:
@@ -104,3 +140,19 @@ class TripComparison(TripSageModel):
         components_str = ", ".join(components) if components else "no components"
 
         return f"Comparison of {options_count} options with {components_str}"
+
+    def get_option_by_id(self, option_id: int) -> Optional[Dict[str, Any]]:
+        """Get an option by its ID."""
+        options = self.comparison_json.get("options", [])
+        if isinstance(options, list):
+            for option in options:
+                if isinstance(option, dict) and option.get("id") == option_id:
+                    return option
+        return None
+
+    def get_selected_option(self) -> Optional[Dict[str, Any]]:
+        """Get the currently selected option."""
+        selected_id = self.selected_option_id
+        if selected_id is not None:
+            return self.get_option_by_id(selected_id)
+        return None

@@ -150,7 +150,10 @@ export class WebSocketClient {
   private isDestroyed = false;
 
   // Performance optimization properties
-  private messageQueue: Array<{ type: string; payload: Record<string, unknown> }> = [];
+  private messageQueue: Array<{
+    type: string;
+    payload: Record<string, unknown>;
+  }> = [];
   private batchTimer: NodeJS.Timeout | null = null;
   private performanceMetrics = {
     messagesSent: 0,
@@ -661,7 +664,10 @@ export class WebSocketClient {
       reconnectAttempt: attempt,
     });
 
-    this.emit("reconnect", { attempt, maxAttempts: this.config.reconnectAttempts });
+    this.emit("reconnect", {
+      attempt,
+      maxAttempts: this.config.reconnectAttempts,
+    });
 
     this.reconnectTimer = setTimeout(async () => {
       try {

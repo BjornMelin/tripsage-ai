@@ -1,10 +1,10 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
   errorBoundaryPropsSchema,
   errorStateSchema,
-  routeErrorPropsSchema,
   globalErrorPropsSchema,
   loadingStateSchema,
+  routeErrorPropsSchema,
   skeletonPropsSchema,
 } from "../error-boundary";
 
@@ -212,11 +212,7 @@ describe("skeletonPropsSchema", () => {
       height: 50,
     };
 
-    expect(() =>
-      skeletonPropsSchema.parse(propsWithStringDimensions)
-    ).not.toThrow();
-    expect(() =>
-      skeletonPropsSchema.parse(propsWithNumberDimensions)
-    ).not.toThrow();
+    expect(() => skeletonPropsSchema.parse(propsWithStringDimensions)).not.toThrow();
+    expect(() => skeletonPropsSchema.parse(propsWithNumberDimensions)).not.toThrow();
   });
 });

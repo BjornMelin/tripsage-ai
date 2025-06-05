@@ -1,10 +1,10 @@
 "use client";
 
-import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Star, Clock, MapPin, Users } from "lucide-react";
+import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import type { Activity } from "@/types/search";
+import { Clock, MapPin, Star, Users } from "lucide-react";
 
 interface ActivityCardProps {
   activity: Activity;
@@ -12,11 +12,7 @@ interface ActivityCardProps {
   onCompare?: (activity: Activity) => void;
 }
 
-export function ActivityCard({
-  activity,
-  onSelect,
-  onCompare,
-}: ActivityCardProps) {
+export function ActivityCard({ activity, onSelect, onCompare }: ActivityCardProps) {
   const formatDuration = (hours: number) => {
     if (hours < 1) {
       return `${Math.round(hours * 60)} mins`;
@@ -51,9 +47,7 @@ export function ActivityCard({
         <Star
           key={`star-${i}`}
           className={`h-4 w-4 ${
-            i < Math.floor(rating)
-              ? "fill-yellow-400 text-yellow-400"
-              : "text-gray-300"
+            i < Math.floor(rating) ? "fill-yellow-400 text-yellow-400" : "text-gray-300"
           }`}
         />
       );
@@ -89,9 +83,7 @@ export function ActivityCard({
 
       <CardContent className="p-4">
         <div className="space-y-2">
-          <h3 className="font-semibold text-lg line-clamp-1">
-            {activity.name}
-          </h3>
+          <h3 className="font-semibold text-lg line-clamp-1">{activity.name}</h3>
 
           <div className="flex items-center gap-1">
             {renderStars(activity.rating)}
@@ -136,11 +128,7 @@ export function ActivityCard({
         >
           Compare
         </Button>
-        <Button
-          size="sm"
-          onClick={() => onSelect?.(activity)}
-          className="flex-1"
-        >
+        <Button size="sm" onClick={() => onSelect?.(activity)} className="flex-1">
           Select
         </Button>
       </CardFooter>

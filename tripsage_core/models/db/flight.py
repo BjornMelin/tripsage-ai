@@ -4,50 +4,17 @@ This module provides the Flight model with business logic validation,
 used across different storage backends.
 """
 
-from datetime import datetime
-from enum import Enum
+from datetime import datetime, timedelta
 from typing import Optional
 
 from pydantic import Field, field_validator, model_validator
 
 from tripsage_core.models.base_core_model import TripSageModel
-
-
-class AirlineProvider(str, Enum):
-    """Enum for airline provider values."""
-
-    AMERICAN = "american"
-    DELTA = "delta"
-    UNITED = "united"
-    SOUTHWEST = "southwest"
-    JETBLUE = "jetblue"
-    ALASKA = "alaska"
-    SPIRIT = "spirit"
-    FRONTIER = "frontier"
-    LUFTHANSA = "lufthansa"
-    AIR_FRANCE = "air_france"
-    BRITISH_AIRWAYS = "british_airways"
-    OTHER = "other"
-
-
-class BookingStatus(str, Enum):
-    """Enum for booking status values."""
-
-    VIEWED = "viewed"
-    SAVED = "saved"
-    BOOKED = "booked"
-    CANCELED = "canceled"
-
-
-class DataSource(str, Enum):
-    """Enum for data source values."""
-
-    EXPEDIA = "expedia"
-    KAYAK = "kayak"
-    SKYSCANNER = "skyscanner"
-    GOOGLE_FLIGHTS = "google_flights"
-    AIRLINE_DIRECT = "airline_direct"
-    OTHER = "other"
+from tripsage_core.models.schemas_common.enums import (
+    AirlineProvider,
+    BookingStatus,
+    DataSource,
+)
 
 
 class Flight(TripSageModel):
@@ -103,8 +70,8 @@ class Flight(TripSageModel):
     @classmethod
     def validate_price(cls, v: float) -> float:
         """Validate that price is a positive number."""
-        if v < 0:
-            raise ValueError("Price must be non-negative")
+        if v <= 0:
+            raise ValueError("ensure this value is greater than 0")
         return v
 
     @field_validator("segment_number")
@@ -117,9 +84,9 @@ class Flight(TripSageModel):
 
     @model_validator(mode="after")
     def validate_dates(self) -> "Flight":
-        """Validate that arrival_time is not before departure_time."""
-        if self.arrival_time < self.departure_time:
-            raise ValueError("Arrival time must not be before departure time")
+        """Validate that arrival_time is after departure_time."""
+        if self.arrival_time <= self.departure_time:
+            raise ValueError("Arrival time must be after departure time")
         return self
 
     @model_validator(mode="after")
@@ -130,15 +97,27 @@ class Flight(TripSageModel):
         return self
 
     @property
+    def duration(self) -> timedelta:
+        """Get the flight duration as a timedelta object."""
+        return self.arrival_time - self.departure_time
+
+    @property
     def duration_minutes(self) -> float:
         """Get the flight duration in minutes."""
-        delta = self.arrival_time - self.departure_time
-        return delta.total_seconds() / 60
+        return self.duration.total_seconds() / 60
 
     @property
     def duration_hours(self) -> float:
         """Get the flight duration in hours."""
         return self.duration_minutes / 60
+
+    @property
+    def formatted_duration(self) -> str:
+        """Get the flight duration formatted as 'Xh Ym'."""
+        total_minutes = int(self.duration_minutes)
+        hours = total_minutes // 60
+        minutes = total_minutes % 60
+        return f"{hours}h {minutes}m"
 
     @property
     def is_domestic(self) -> bool:
@@ -158,8 +137,8 @@ class Flight(TripSageModel):
 
     @property
     def is_canceled(self) -> bool:
-        """Check if the flight is canceled."""
-        return self.booking_status == BookingStatus.CANCELED
+        """Check if the flight is cancelled."""
+        return self.booking_status == BookingStatus.CANCELLED
 
     @property
     def is_active(self) -> bool:
@@ -169,6 +148,16 @@ class Flight(TripSageModel):
             BookingStatus.SAVED,
             BookingStatus.BOOKED,
         ]
+
+    def book(self) -> None:
+        """Book this flight."""
+        self.booking_status = BookingStatus.BOOKED
+
+    def cancel(self) -> None:
+        """Cancel this flight booking."""
+        if self.booking_status != BookingStatus.BOOKED:
+            raise ValueError("Only booked flights can be cancelled")
+        self.booking_status = BookingStatus.CANCELLED
 
     def can_cancel(self) -> bool:
         """Check if the flight can be canceled."""
@@ -193,15 +182,15 @@ class Flight(TripSageModel):
             BookingStatus.VIEWED: [
                 BookingStatus.SAVED,
                 BookingStatus.BOOKED,
-                BookingStatus.CANCELED,
+                BookingStatus.CANCELLED,
             ],
             BookingStatus.SAVED: [
                 BookingStatus.BOOKED,
-                BookingStatus.CANCELED,
+                BookingStatus.CANCELLED,
                 BookingStatus.VIEWED,
             ],
-            BookingStatus.BOOKED: [BookingStatus.CANCELED],
-            BookingStatus.CANCELED: [],  # Cannot change from canceled
+            BookingStatus.BOOKED: [BookingStatus.CANCELLED],
+            BookingStatus.CANCELLED: [],  # Cannot change from cancelled
         }
 
         if new_status in valid_transitions.get(self.booking_status, []):

@@ -1,6 +1,6 @@
+import type { ApiKey } from "@/types/api-keys";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { ApiKey } from "@/types/api-keys";
 
 interface AuthState {
   isAuthenticated: boolean;
@@ -131,8 +131,7 @@ export const useApiKeyStore = create<ApiKeyState>()(
           });
           return isValid;
         } catch (error) {
-          const message =
-            error instanceof Error ? error.message : "Validation failed";
+          const message = error instanceof Error ? error.message : "Validation failed";
           set({ authError: message, isApiKeyValid: false });
           return false;
         }

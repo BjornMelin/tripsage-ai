@@ -1,314 +1,432 @@
 """
 Service for destination-related operations in the TripSage API.
+
+This service acts as a thin wrapper around the core destination service,
+handling API-specific concerns like model adaptation and FastAPI integration.
 """
 
 import logging
 from typing import List, Optional
 
-from tripsage.api.models.destinations import (
-    Destination,
-    DestinationDetails,
-    DestinationRecommendation,
+from fastapi import Depends
+
+from tripsage.api.schemas.requests.destinations import (
     DestinationSearchRequest,
-    DestinationSearchResponse,
     PointOfInterestSearchRequest,
-    PointOfInterestSearchResponse,
-    SavedDestination,
+)
+from tripsage.api.schemas.responses.destinations import (
+    DestinationDetailsResponse as DestinationDetails,
+)
+from tripsage.api.schemas.responses.destinations import (
+    DestinationSearchResponse,
+)
+from tripsage.api.schemas.responses.destinations import (
+    DestinationSuggestionResponse as DestinationRecommendation,
+)
+from tripsage.api.schemas.responses.destinations import (
+    SavedDestinationResponse as SavedDestination,
 )
 from tripsage_core.exceptions.exceptions import (
     CoreResourceNotFoundError as ResourceNotFoundError,
+)
+from tripsage_core.exceptions.exceptions import (
+    CoreServiceError as ServiceError,
+)
+from tripsage_core.exceptions.exceptions import (
+    CoreValidationError as ValidationError,
+)
+from tripsage_core.models.schemas_common.geographic import Place as Destination
+from tripsage_core.services.business.destination_service import (
+    DestinationService as CoreDestinationService,
+)
+from tripsage_core.services.business.destination_service import (
+    get_destination_service as get_core_destination_service,
 )
 
 logger = logging.getLogger(__name__)
 
 
 class DestinationService:
-    """Service for destination-related operations."""
+    """
+    API destination service that delegates to core business services.
 
-    _instance = None
+    This service acts as a façade, handling:
+    - Model adaptation between API and core models
+    - API-specific error handling
+    - FastAPI dependency integration
+    """
 
-    def __new__(cls):
-        """Create a singleton instance of the service."""
-        if cls._instance is None:
-            cls._instance = super(DestinationService, cls).__new__(cls)
-            cls._instance._init()
-        return cls._instance
+    def __init__(
+        self, core_destination_service: Optional[CoreDestinationService] = None
+    ):
+        """
+        Initialize the API destination service.
 
-    def _init(self) -> None:
-        """Initialize the service."""
-        self._saved_destinations = {}
-        logger.info("DestinationService initialized")
+        Args:
+            core_destination_service: Core destination service
+        """
+        self.core_destination_service = core_destination_service
+
+    async def _get_core_destination_service(self) -> CoreDestinationService:
+        """Get or create core destination service instance."""
+        if self.core_destination_service is None:
+            self.core_destination_service = await get_core_destination_service()
+        return self.core_destination_service
 
     async def search_destinations(
         self, request: DestinationSearchRequest
     ) -> DestinationSearchResponse:
-        """Search for destinations based on provided criteria."""
-        logger.info(f"Searching for destinations with query: {request.query}")
+        """Search for destinations based on provided criteria.
 
-        # Placeholder implementation - in a real app, this would query a database or API
-        destinations = [
-            Destination(
-                id="paris-france",
-                name="Paris",
-                country="France",
-                description="The City of Light, famous for art, fashion, and cuisine.",
-                image_url="https://example.com/paris.jpg",
-                rating=4.7,
-                category="city",
-            ),
-            Destination(
-                id="rome-italy",
-                name="Rome",
-                country="Italy",
-                description="The Eternal City with ancient ruins and vibrant culture.",
-                image_url="https://example.com/rome.jpg",
-                rating=4.6,
-                category="city",
-            ),
-            Destination(
-                id="bali-indonesia",
-                name="Bali",
-                country="Indonesia",
-                description="Island paradise with beaches, temples, and rice terraces.",
-                image_url="https://example.com/bali.jpg",
-                rating=4.5,
-                category="beach",
-            ),
-        ]
+        Args:
+            request: Destination search request
 
-        return DestinationSearchResponse(
-            results=destinations,
-            total_count=len(destinations),
-            page=1,
-            page_size=10,
-        )
+        Returns:
+            Destination search results
+
+        Raises:
+            ValidationError: If request data is invalid
+            ServiceError: If search fails
+        """
+        try:
+            logger.info(f"Searching for destinations with query: {request.query}")
+
+            # Adapt API request to core model
+            core_request = self._adapt_destination_search_request(request)
+
+            # Search via core service
+            core_service = await self._get_core_destination_service()
+            core_response = await core_service.search_destinations(core_request)
+
+            # Adapt core response to API model
+            return self._adapt_destination_search_response(core_response)
+
+        except (ValidationError, ServiceError) as e:
+            logger.error(f"Destination search failed: {str(e)}")
+            raise
+        except Exception as e:
+            logger.error(f"Unexpected error in destination search: {str(e)}")
+            raise ServiceError("Destination search failed") from e
 
     async def get_destination_details(self, destination_id: str) -> DestinationDetails:
-        """Get detailed information about a specific destination."""
-        logger.info(f"Getting details for destination ID: {destination_id}")
+        """Get detailed information about a specific destination.
 
-        # Placeholder implementation
-        if destination_id == "paris-france":
-            return DestinationDetails(
-                id="paris-france",
-                name="Paris",
-                country="France",
-                description="The City of Light, famous for art, fashion, and cuisine.",
-                long_description=(
-                    "Paris, the capital of France, is a major European city and a "
-                    "global center for art, fashion, gastronomy, and culture. Its "
-                    "19th-century cityscape features wide boulevards and the Seine."
-                ),
-                image_url="https://example.com/paris.jpg",
-                gallery_urls=[
-                    "https://example.com/paris1.jpg",
-                    "https://example.com/paris2.jpg",
-                    "https://example.com/paris3.jpg",
-                ],
-                rating=4.7,
-                category="city",
-                best_times_to_visit=["April-June", "September-October"],
-                coordinates={"latitude": 48.8566, "longitude": 2.3522},
-                currency="EUR",
-                languages=["French"],
-                timezone="Europe/Paris",
-                weather_summary="Mild, with occasional rain. Summers are warm.",
-                top_attractions=[
-                    {
-                        "name": "Eiffel Tower",
-                        "description": "Iconic iron tower on the Champ de Mars.",
-                        "image_url": "https://example.com/eiffel.jpg",
-                    },
-                    {
-                        "name": "Louvre Museum",
-                        "description": "World's largest art museum and monument.",
-                        "image_url": "https://example.com/louvre.jpg",
-                    },
-                ],
-                local_tips=[
-                    "Visit the Eiffel Tower early in the morning to avoid crowds",
-                    "Many museums are free on the first Sunday of the month",
-                ],
-            )
-        elif destination_id == "rome-italy":
-            return DestinationDetails(
-                id="rome-italy",
-                name="Rome",
-                country="Italy",
-                description="The Eternal City with ancient ruins and vibrant culture.",
-                long_description=(
-                    "Rome, Italy's capital, is a cosmopolitan city with nearly "
-                    "3,000 years of influential art, architecture, and culture."
-                ),
-                image_url="https://example.com/rome.jpg",
-                gallery_urls=[
-                    "https://example.com/rome1.jpg",
-                    "https://example.com/rome2.jpg",
-                ],
-                rating=4.6,
-                category="city",
-                best_times_to_visit=["April-May", "September-October"],
-                coordinates={"latitude": 41.9028, "longitude": 12.4964},
-                currency="EUR",
-                languages=["Italian"],
-                timezone="Europe/Rome",
-                weather_summary="Mediterranean with hot summers and mild winters",
-                top_attractions=[
-                    {
-                        "name": "Colosseum",
-                        "description": "Ancient amphitheater in the center of Rome.",
-                        "image_url": "https://example.com/colosseum.jpg",
-                    },
-                    {
-                        "name": "Vatican Museums",
-                        "description": "Museums with works from the papal collection.",
-                        "image_url": "https://example.com/vatican.jpg",
-                    },
-                ],
-                local_tips=[
-                    "Drink from the public water fountains for fresh, cold water",
-                    "Visit popular attractions later in the afternoon to avoid crowds",
-                ],
-            )
-        else:
-            msg = f"Destination with ID {destination_id} not found"
-            raise ResourceNotFoundError(msg)
+        Args:
+            destination_id: Destination ID
+
+        Returns:
+            Destination details
+
+        Raises:
+            ResourceNotFoundError: If destination not found
+            ServiceError: If retrieval fails
+        """
+        try:
+            logger.info(f"Getting details for destination ID: {destination_id}")
+
+            # Get details via core service
+            core_service = await self._get_core_destination_service()
+            core_response = await core_service.get_destination_details(destination_id)
+
+            # Adapt core response to API model
+            return self._adapt_destination_details(core_response)
+
+        except ResourceNotFoundError as e:
+            logger.error(f"Destination {destination_id} not found: {str(e)}")
+            raise
+        except Exception as e:
+            logger.error(f"Failed to get destination details: {str(e)}")
+            raise ServiceError("Failed to get destination details") from e
 
     async def save_destination(
         self, user_id: str, destination_id: str, notes: Optional[str] = None
     ) -> SavedDestination:
-        """Save a destination for a user."""
-        logger.info(f"Saving destination {destination_id} for user {user_id}")
+        """Save a destination for a user.
 
-        # In a real app, this would be stored in a database
-        if user_id not in self._saved_destinations:
-            self._saved_destinations[user_id] = {}
+        Args:
+            user_id: User ID
+            destination_id: Destination ID
+            notes: Optional notes
 
-        # Get destination details to fill in the saved destination
+        Returns:
+            Saved destination
+
+        Raises:
+            ResourceNotFoundError: If destination not found
+            ValidationError: If request data is invalid
+            ServiceError: If save fails
+        """
         try:
-            details = await self.get_destination_details(destination_id)
-        except ResourceNotFoundError:
-            raise
+            logger.info(f"Saving destination {destination_id} for user {user_id}")
 
-        saved = SavedDestination(
-            id=f"saved-{destination_id}-{user_id}",
-            user_id=user_id,
-            destination_id=destination_id,
-            destination_name=details.name,
-            destination_country=details.country,
-            date_saved="2025-05-20T10:00:00Z",  # Would be current time in production
-            notes=notes,
-        )
-
-        self._saved_destinations[user_id][destination_id] = saved
-        return saved
-
-    async def get_saved_destinations(self, user_id: str) -> List[SavedDestination]:
-        """Get all destinations saved by a user."""
-        logger.info(f"Getting saved destinations for user {user_id}")
-
-        # In a real app, this would query a database
-        if user_id not in self._saved_destinations:
-            return []
-
-        return list(self._saved_destinations[user_id].values())
-
-    async def delete_saved_destination(self, user_id: str, destination_id: str) -> None:
-        """Delete a saved destination for a user."""
-        logger.info(f"Deleting saved destination {destination_id} for user {user_id}")
-
-        if (
-            user_id not in self._saved_destinations
-            or destination_id not in self._saved_destinations[user_id]
-        ):
-            raise ResourceNotFoundError(
-                f"Saved destination {destination_id} not found for user {user_id}"
+            # Save via core service
+            core_service = await self._get_core_destination_service()
+            core_response = await core_service.save_destination(
+                user_id, destination_id, notes
             )
 
-        del self._saved_destinations[user_id][destination_id]
+            # Adapt core response to API model
+            return self._adapt_saved_destination(core_response)
+
+        except (ResourceNotFoundError, ValidationError, ServiceError) as e:
+            logger.error(f"Failed to save destination: {str(e)}")
+            raise
+        except Exception as e:
+            logger.error(f"Unexpected error saving destination: {str(e)}")
+            raise ServiceError("Failed to save destination") from e
+
+    async def get_saved_destinations(self, user_id: str) -> List[SavedDestination]:
+        """Get all destinations saved by a user.
+
+        Args:
+            user_id: User ID
+
+        Returns:
+            List of saved destinations
+
+        Raises:
+            ServiceError: If retrieval fails
+        """
+        try:
+            logger.info(f"Getting saved destinations for user {user_id}")
+
+            # Get saved destinations via core service
+            core_service = await self._get_core_destination_service()
+            core_destinations = await core_service.get_saved_destinations(user_id)
+
+            # Adapt core response to API model
+            return [
+                self._adapt_saved_destination(destination)
+                for destination in core_destinations
+            ]
+
+        except Exception as e:
+            logger.error(f"Failed to get saved destinations: {str(e)}")
+            raise ServiceError("Failed to get saved destinations") from e
+
+    async def delete_saved_destination(self, user_id: str, destination_id: str) -> None:
+        """Delete a saved destination for a user.
+
+        Args:
+            user_id: User ID
+            destination_id: Destination ID
+
+        Raises:
+            ResourceNotFoundError: If saved destination not found
+            ServiceError: If deletion fails
+        """
+        try:
+            logger.info(
+                f"Deleting saved destination {destination_id} for user {user_id}"
+            )
+
+            # Delete via core service
+            core_service = await self._get_core_destination_service()
+            await core_service.delete_saved_destination(user_id, destination_id)
+
+        except ResourceNotFoundError as e:
+            logger.error(f"Saved destination not found: {str(e)}")
+            raise
+        except Exception as e:
+            logger.error(f"Failed to delete saved destination: {str(e)}")
+            raise ServiceError("Failed to delete saved destination") from e
 
     async def search_points_of_interest(
         self, request: PointOfInterestSearchRequest
-    ) -> PointOfInterestSearchResponse:
-        """Search for points of interest in a destination."""
-        logger.info(
-            f"Searching for points of interest in {request.destination_id} "
-            f"with category: {request.category}"
-        )
+    ) -> DestinationSearchResponse:
+        """Search for points of interest in a destination.
 
-        # Placeholder implementation
-        if request.destination_id == "paris-france":
-            pois = [
-                {
-                    "id": "eiffel-tower",
-                    "name": "Eiffel Tower",
-                    "category": "attraction",
-                    "description": "Iconic iron lattice tower on the Champ de Mars.",
-                    "image_url": "https://example.com/eiffel.jpg",
-                    "rating": 4.7,
-                    "address": "Champ de Mars, 5 Av. Anatole France, 75007 Paris",
-                    "coordinates": {"latitude": 48.8584, "longitude": 2.2945},
-                },
-                {
-                    "id": "louvre-museum",
-                    "name": "Louvre Museum",
-                    "category": "museum",
-                    "description": "World's largest art museum and historic monument.",
-                    "image_url": "https://example.com/louvre.jpg",
-                    "rating": 4.8,
-                    "address": "Rue de Rivoli, 75001 Paris",
-                    "coordinates": {"latitude": 48.8606, "longitude": 2.3376},
-                },
-            ]
-        else:
-            pois = []
+        Args:
+            request: Point of interest search request
 
-        return PointOfInterestSearchResponse(
-            results=pois,
-            total_count=len(pois),
-            page=1,
-            page_size=10,
-        )
+        Returns:
+            Point of interest search results
+
+        Raises:
+            ValidationError: If request data is invalid
+            ServiceError: If search fails
+        """
+        try:
+            logger.info(
+                f"Searching for points of interest in {request.destination_id} "
+                f"with category: {request.category}"
+            )
+
+            # Adapt API request to core model
+            core_request = self._adapt_poi_search_request(request)
+
+            # Search via core service
+            core_service = await self._get_core_destination_service()
+            core_response = await core_service.search_points_of_interest(core_request)
+
+            # Adapt core response to API model
+            return self._adapt_poi_search_response(core_response)
+
+        except (ValidationError, ServiceError) as e:
+            logger.error(f"POI search failed: {str(e)}")
+            raise
+        except Exception as e:
+            logger.error(f"Unexpected error in POI search: {str(e)}")
+            raise ServiceError("POI search failed") from e
 
     async def get_destination_recommendations(
         self, user_id: str
     ) -> List[DestinationRecommendation]:
-        """Get personalized destination recommendations for a user."""
-        logger.info(f"Getting destination recommendations for user {user_id}")
+        """Get personalized destination recommendations for a user.
 
-        # Placeholder - in production this would be based on user preferences
-        recommendations = [
-            DestinationRecommendation(
-                destination=Destination(
-                    id="kyoto-japan",
-                    name="Kyoto",
-                    country="Japan",
-                    description="Ancient city with beautiful temples and gardens.",
-                    image_url="https://example.com/kyoto.jpg",
-                    rating=4.7,
-                    category="cultural",
-                ),
-                reasons=["Based on your interest in cultural destinations"],
-                match_score=0.92,
-            ),
-            DestinationRecommendation(
-                destination=Destination(
-                    id="barcelona-spain",
-                    name="Barcelona",
-                    country="Spain",
-                    description="Vibrant city known for architecture and beaches.",
-                    image_url="https://example.com/barcelona.jpg",
-                    rating=4.6,
-                    category="city",
-                ),
-                reasons=["Similar to cities you've viewed recently"],
-                match_score=0.88,
-            ),
-        ]
+        Args:
+            user_id: User ID
 
-        return recommendations
+        Returns:
+            List of destination recommendations
+
+        Raises:
+            ServiceError: If retrieval fails
+        """
+        try:
+            logger.info(f"Getting destination recommendations for user {user_id}")
+
+            # Get recommendations via core service
+            core_service = await self._get_core_destination_service()
+            core_recommendations = await core_service.get_destination_recommendations(
+                user_id
+            )
+
+            # Adapt core response to API model
+            return [
+                self._adapt_destination_recommendation(recommendation)
+                for recommendation in core_recommendations
+            ]
+
+        except Exception as e:
+            logger.error(f"Failed to get destination recommendations: {str(e)}")
+            raise ServiceError("Failed to get destination recommendations") from e
+
+    def _adapt_destination_search_request(
+        self, request: DestinationSearchRequest
+    ) -> dict:
+        """Adapt API destination search request to core model."""
+        return {
+            "query": request.query,
+            "category": getattr(request, "category", None),
+            "country": getattr(request, "country", None),
+            "limit": getattr(request, "limit", 10),
+            "offset": getattr(request, "offset", 0),
+        }
+
+    def _adapt_poi_search_request(self, request: PointOfInterestSearchRequest) -> dict:
+        """Adapt API POI search request to core model."""
+        return {
+            "destination_id": request.destination_id,
+            "category": request.category,
+            "query": getattr(request, "query", None),
+            "limit": getattr(request, "limit", 10),
+            "offset": getattr(request, "offset", 0),
+        }
+
+    def _adapt_destination_search_response(
+        self, core_response
+    ) -> DestinationSearchResponse:
+        """Adapt core destination search response to API model."""
+        destinations = []
+        for core_destination in core_response.get("destinations", []):
+            destination = self._adapt_destination(core_destination)
+            if destination:
+                destinations.append(destination)
+
+        return DestinationSearchResponse(
+            results=destinations,
+            total_count=core_response.get("total_count", len(destinations)),
+            page=core_response.get("page", 1),
+            page_size=core_response.get("page_size", 10),
+        )
+
+    def _adapt_poi_search_response(self, core_response) -> DestinationSearchResponse:
+        """Adapt core POI search response to API model."""
+        pois = core_response.get("pois", [])
+
+        return DestinationSearchResponse(
+            results=pois,
+            total_count=core_response.get("total_count", len(pois)),
+            page=core_response.get("page", 1),
+            page_size=core_response.get("page_size", 10),
+        )
+
+    def _adapt_destination(self, core_destination) -> Optional[Destination]:
+        """Adapt core destination to API model."""
+        if not core_destination:
+            return None
+
+        return Destination(
+            id=core_destination.get("id", ""),
+            name=core_destination.get("name", ""),
+            country=core_destination.get("country", ""),
+            description=core_destination.get("description", ""),
+            image_url=core_destination.get("image_url", ""),
+            rating=core_destination.get("rating", 0.0),
+            category=core_destination.get("category", ""),
+        )
+
+    def _adapt_destination_details(self, core_details) -> DestinationDetails:
+        """Adapt core destination details to API model."""
+        return DestinationDetails(
+            id=core_details.get("id", ""),
+            name=core_details.get("name", ""),
+            country=core_details.get("country", ""),
+            description=core_details.get("description", ""),
+            long_description=core_details.get("long_description", ""),
+            image_url=core_details.get("image_url", ""),
+            gallery_urls=core_details.get("gallery_urls", []),
+            rating=core_details.get("rating", 0.0),
+            category=core_details.get("category", ""),
+            best_times_to_visit=core_details.get("best_times_to_visit", []),
+            coordinates=core_details.get("coordinates", {}),
+            currency=core_details.get("currency", ""),
+            languages=core_details.get("languages", []),
+            timezone=core_details.get("timezone", ""),
+            weather_summary=core_details.get("weather_summary", ""),
+            top_attractions=core_details.get("top_attractions", []),
+            local_tips=core_details.get("local_tips", []),
+        )
+
+    def _adapt_saved_destination(self, core_saved_destination) -> SavedDestination:
+        """Adapt core saved destination to API model."""
+        return SavedDestination(
+            id=core_saved_destination.get("id", ""),
+            user_id=core_saved_destination.get("user_id", ""),
+            destination_id=core_saved_destination.get("destination_id", ""),
+            destination_name=core_saved_destination.get("destination_name", ""),
+            destination_country=core_saved_destination.get("destination_country", ""),
+            date_saved=core_saved_destination.get("date_saved", ""),
+            notes=core_saved_destination.get("notes"),
+        )
+
+    def _adapt_destination_recommendation(
+        self, core_recommendation
+    ) -> DestinationRecommendation:
+        """Adapt core destination recommendation to API model."""
+        return DestinationRecommendation(
+            destination=self._adapt_destination(core_recommendation.get("destination")),
+            reasons=core_recommendation.get("reasons", []),
+            match_score=core_recommendation.get("match_score", 0.0),
+        )
 
 
-def get_destination_service() -> DestinationService:
-    """Get the singleton instance of the destination service."""
-    return DestinationService()
+# Module-level dependency annotation
+_core_destination_service_dep = Depends(get_core_destination_service)
+
+
+# Dependency function for FastAPI
+async def get_destination_service(
+    core_destination_service: CoreDestinationService = _core_destination_service_dep,
+) -> DestinationService:
+    """
+    Get destination service instance for dependency injection.
+
+    Args:
+        core_destination_service: Core destination service
+
+    Returns:
+        DestinationService instance
+    """
+    return DestinationService(core_destination_service=core_destination_service)
