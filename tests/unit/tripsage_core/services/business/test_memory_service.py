@@ -12,13 +12,9 @@ from uuid import uuid4
 
 import pytest
 
-from tripsage_core.exceptions.exceptions import (
-    CoreServiceError as ServiceError,
-)
 from tripsage_core.services.business.memory_service import (
     ConversationMemoryRequest,
     MemorySearchRequest,
-    MemorySearchResult,
     MemoryService,
     PreferencesUpdateRequest,
     UserContextResponse,
@@ -134,9 +130,7 @@ class TestMemoryService:
         assert call_args[1]["messages"] == sample_conversation_request.messages
 
     @pytest.mark.asyncio
-    async def test_search_memories_success(
-        self, memory_service, mock_mem0_client
-    ):
+    async def test_search_memories_success(self, memory_service, mock_mem0_client):
         """Test successful memory search."""
         user_id = str(uuid4())
 
@@ -168,9 +162,7 @@ class TestMemoryService:
         mock_mem0_client.search.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_get_user_context_success(
-        self, memory_service, mock_mem0_client
-    ):
+    async def test_get_user_context_success(self, memory_service, mock_mem0_client):
         """Test successful user context retrieval."""
         user_id = str(uuid4())
 
@@ -210,9 +202,7 @@ class TestMemoryService:
         assert mock_mem0_client.search.call_count >= 2
 
     @pytest.mark.asyncio
-    async def test_update_preferences_success(
-        self, memory_service, mock_mem0_client
-    ):
+    async def test_update_preferences_success(self, memory_service, mock_mem0_client):
         """Test successful preferences update."""
         user_id = str(uuid4())
 
@@ -248,9 +238,7 @@ class TestMemoryService:
         assert "preferences_updated" in result
 
     @pytest.mark.asyncio
-    async def test_memory_service_connection_failure(
-        self, mock_mem0_client
-    ):
+    async def test_memory_service_connection_failure(self, mock_mem0_client):
         """Test memory service connection failure handling."""
         memory_service = MemoryService()
         memory_service.memory = mock_mem0_client
@@ -280,7 +268,9 @@ class TestMemoryService:
 
         # Add new memory (should invalidate cache)
         mock_mem0_client.add.return_value = {"results": [{"id": "mem0_2"}]}
-        await memory_service.add_conversation_memory(user_id, sample_conversation_request)
+        await memory_service.add_conversation_memory(
+            user_id, sample_conversation_request
+        )
 
         # Second search (should not use cache)
         mock_mem0_client.search.return_value = [
@@ -315,7 +305,9 @@ class TestMemoryService:
     @pytest.mark.asyncio
     async def test_get_memory_service_dependency(self):
         """Test the dependency injection function."""
-        with patch("tripsage_core.services.business.memory_service.MemoryService") as MockMemoryService:
+        with patch(
+            "tripsage_core.services.business.memory_service.MemoryService"
+        ) as MockMemoryService:
             mock_instance = MagicMock()
             MockMemoryService.return_value = mock_instance
 
@@ -323,9 +315,7 @@ class TestMemoryService:
             assert service == mock_instance
 
     @pytest.mark.asyncio
-    async def test_search_with_filters(
-        self, memory_service, mock_mem0_client
-    ):
+    async def test_search_with_filters(self, memory_service, mock_mem0_client):
         """Test memory search with various filters."""
         user_id = str(uuid4())
 
@@ -335,7 +325,9 @@ class TestMemoryService:
             filters={
                 "categories": ["preferences", "travel"],
                 "date_range": {
-                    "start": (datetime.now(timezone.utc) - timedelta(days=30)).isoformat(),
+                    "start": (
+                        datetime.now(timezone.utc) - timedelta(days=30)
+                    ).isoformat(),
                     "end": datetime.now(timezone.utc).isoformat(),
                 },
             },
@@ -354,9 +346,7 @@ class TestMemoryService:
         assert call_args[1]["limit"] == 20
 
     @pytest.mark.asyncio
-    async def test_memory_service_not_connected(
-        self, memory_service
-    ):
+    async def test_memory_service_not_connected(self, memory_service):
         """Test operations when memory service is not connected."""
         memory_service._connected = False
 
@@ -375,9 +365,7 @@ class TestMemoryService:
         assert result["error"] == "Memory service not available"
 
     @pytest.mark.asyncio
-    async def test_travel_context_enrichment(
-        self, memory_service, mock_mem0_client
-    ):
+    async def test_travel_context_enrichment(self, memory_service, mock_mem0_client):
         """Test travel-specific context enrichment."""
         user_id = str(uuid4())
 

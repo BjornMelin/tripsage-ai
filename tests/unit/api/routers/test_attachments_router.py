@@ -518,8 +518,8 @@ class TestAttachmentsRouter:
             headers={"Authorization": "Bearer test-token"},
         )
 
-        # Assert - Depending on FastAPI validation, this might be 422 or handled gracefully
-        # For now, we'll test that the request is handled appropriately
+        # Assert - Depending on FastAPI validation, this might be 422 or handled
+        # gracefully. For now, we'll test that the request is handled appropriately
         assert response.status_code in [
             status.HTTP_422_UNPROCESSABLE_ENTITY,
             status.HTTP_200_OK,
@@ -575,7 +575,8 @@ class TestAttachmentsRouter:
         service1 = get_file_processing_service()
         service2 = get_file_processing_service()
 
-        # Assert - Each call creates a new instance (not a true singleton in this implementation)
+        # Assert - Each call creates a new instance (not a true singleton in this
+        # implementation)
         assert service1 is not None
         assert service2 is not None
 

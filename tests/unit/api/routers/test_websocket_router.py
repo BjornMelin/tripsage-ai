@@ -7,6 +7,7 @@ from uuid import uuid4
 import pytest
 from fastapi import status
 from fastapi.testclient import TestClient
+from fastapi.websockets import WebSocketDisconnect
 
 from tests.factories import ChatFactory
 from tripsage.api.main import app
@@ -85,7 +86,7 @@ class TestWebSocketRouter:
         )
 
         # Act & Assert
-        with pytest.raises(Exception):  # WebSocket should close
+        with pytest.raises(WebSocketDisconnect):  # WebSocket should close
             with self.client.websocket_connect(
                 f"/api/ws/chat/{self.session_id}"
             ) as websocket:
@@ -117,13 +118,13 @@ class TestWebSocketRouter:
         mock_chat_service.add_message = AsyncMock()
         mock_get_chat_service.return_value = mock_chat_service
 
-        chat_message = {
+        _chat_message = {
             "type": "chat_message",
             "payload": {"content": "Hello, I need help planning a trip"},
         }
 
-        # This test would need a more complex setup to properly test WebSocket message flow
-        # For now, we test the components are properly mocked
+        # This test would need a more complex setup to properly test WebSocket
+        # message flow. For now, we test the components are properly mocked
         assert mock_chat_agent.run is not None
         assert mock_chat_service.add_message is not None
 
@@ -131,7 +132,7 @@ class TestWebSocketRouter:
     def test_chat_websocket_invalid_json_auth(self, mock_ws_manager):
         """Test WebSocket connection with invalid JSON authentication."""
         # Act & Assert
-        with pytest.raises(Exception):
+        with pytest.raises(WebSocketDisconnect):
             with self.client.websocket_connect(
                 f"/api/ws/chat/{self.session_id}"
             ) as websocket:
@@ -185,7 +186,7 @@ class TestWebSocketRouter:
         )
 
         # Act & Assert
-        with pytest.raises(Exception):  # Should close with user ID mismatch
+        with pytest.raises(WebSocketDisconnect):  # Should close with user ID mismatch
             with self.client.websocket_connect(
                 f"/api/ws/agent-status/{self.user_id}"
             ) as websocket:
@@ -205,7 +206,7 @@ class TestWebSocketRouter:
         mock_connection.update_heartbeat = Mock()
         mock_ws_manager.connections = {self.connection_id: mock_connection}
 
-        heartbeat_message = {"type": "heartbeat"}
+        _heartbeat_message = {"type": "heartbeat"}
 
         # The actual heartbeat handling would be tested in integration tests
         # Here we verify the mock setup
@@ -229,7 +230,7 @@ class TestWebSocketRouter:
         }
         mock_ws_manager.subscribe_connection.return_value = subscribe_response
 
-        subscribe_message = {
+        _subscribe_message = {
             "type": "subscribe",
             "payload": {"channels": ["test-channel"]},
         }

@@ -223,7 +223,9 @@ class TestTripPlanningJourney:
 
         # Step 3: Provide more details
         message_2 = {
-            "message": "Budget is $5000, looking for 5-star hotels and business class flights",
+            "message": (
+                "Budget is $5000, looking for 5-star hotels and business class flights"
+            ),
             "session_id": session_id,
         }
 
@@ -332,7 +334,9 @@ class TestTripPlanningJourney:
 
         # Step 2: Provide preferences through chat
         preferences_message = {
-            "message": "I prefer luxury hotels, business class flights, and I'm vegetarian",
+            "message": (
+                "I prefer luxury hotels, business class flights, and I'm vegetarian"
+            ),
             "session_id": session_id,
         }
 

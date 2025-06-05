@@ -7,22 +7,17 @@ and error recovery scenarios.
 """
 
 import asyncio
-import json
-from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, List, Optional
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
 from fastapi.testclient import TestClient
-from fastapi.websockets import WebSocketDisconnect
 
 from tests.factories import ChatFactory, UserFactory, WebSocketFactory
 from tripsage.api.main import app
 from tripsage_core.exceptions.exceptions import (
     CoreAuthenticationError,
     CoreRateLimitError,
-    CoreValidationError,
 )
 
 
@@ -75,9 +70,7 @@ class TestWebSocketIntegration:
     @pytest.fixture
     def websocket_auth_message(self, sample_auth_token):
         """Create WebSocket authentication message."""
-        return WebSocketFactory.create_auth_request(
-            access_token=sample_auth_token
-        )
+        return WebSocketFactory.create_auth_request(access_token=sample_auth_token)
 
     @pytest.mark.asyncio
     async def test_websocket_connection_lifecycle(
@@ -97,7 +90,10 @@ class TestWebSocketIntegration:
         mock_auth_service.get_current_user.return_value = sample_user
 
         with patch("tripsage.api.routers.websocket.auth_service", mock_auth_service):
-            with patch("tripsage.api.routers.websocket.websocket_manager", mock_websocket_manager):
+            with patch(
+                "tripsage.api.routers.websocket.websocket_manager",
+                mock_websocket_manager,
+            ):
                 with test_client.websocket_connect("/ws") as websocket:
                     # Send authentication message
                     auth_msg = {
@@ -108,7 +104,7 @@ class TestWebSocketIntegration:
 
                     # Verify connection was established
                     mock_websocket_manager.connect.assert_called_once()
-                    
+
                     # Send a chat message
                     chat_msg = {
                         "type": "chat_message",
@@ -130,7 +126,9 @@ class TestWebSocketIntegration:
         self, test_client, mock_websocket_manager
     ):
         """Test that authentication is required for WebSocket connection."""
-        with patch("tripsage.api.routers.websocket.websocket_manager", mock_websocket_manager):
+        with patch(
+            "tripsage.api.routers.websocket.websocket_manager", mock_websocket_manager
+        ):
             with test_client.websocket_connect("/ws") as websocket:
                 # Try to send message without authentication
                 chat_msg = {
@@ -155,7 +153,10 @@ class TestWebSocketIntegration:
         )
 
         with patch("tripsage.api.routers.websocket.auth_service", mock_auth_service):
-            with patch("tripsage.api.routers.websocket.websocket_manager", mock_websocket_manager):
+            with patch(
+                "tripsage.api.routers.websocket.websocket_manager",
+                mock_websocket_manager,
+            ):
                 with test_client.websocket_connect("/ws") as websocket:
                     # Send authentication with invalid token
                     auth_msg = {
@@ -181,25 +182,30 @@ class TestWebSocketIntegration:
     ):
         """Test message broadcasting to multiple clients."""
         session_id = str(uuid4())
-        
+
         # Mock authentication and chat service
         mock_auth_service.validate_access_token.return_value = {
             "user_id": sample_user["id"],
             "email": sample_user["email"],
         }
         mock_auth_service.get_current_user.return_value = sample_user
-        
+
         mock_chat_service.get_session.return_value = {
             "id": session_id,
             "user_id": sample_user["id"],
         }
-        
+
         message_response = ChatFactory.create_response(session_id=session_id)
         mock_chat_service.add_message.return_value = message_response
 
         with patch("tripsage.api.routers.websocket.auth_service", mock_auth_service):
-            with patch("tripsage.api.routers.websocket.chat_service", mock_chat_service):
-                with patch("tripsage.api.routers.websocket.websocket_manager", mock_websocket_manager):
+            with patch(
+                "tripsage.api.routers.websocket.chat_service", mock_chat_service
+            ):
+                with patch(
+                    "tripsage.api.routers.websocket.websocket_manager",
+                    mock_websocket_manager,
+                ):
                     # Connect first client
                     with test_client.websocket_connect("/ws") as ws1:
                         # Authenticate first client
@@ -245,7 +251,10 @@ class TestWebSocketIntegration:
         mock_auth_service.get_current_user.return_value = sample_user
 
         with patch("tripsage.api.routers.websocket.auth_service", mock_auth_service):
-            with patch("tripsage.api.routers.websocket.websocket_manager", mock_websocket_manager):
+            with patch(
+                "tripsage.api.routers.websocket.websocket_manager",
+                mock_websocket_manager,
+            ):
                 with test_client.websocket_connect("/ws") as websocket:
                     # Authenticate
                     auth_msg = {
@@ -262,7 +271,7 @@ class TestWebSocketIntegration:
                     websocket.send_json(subscribe_msg)
 
                     # Simulate agent status update
-                    status_update = {
+                    _status_update = {
                         "type": "agent_status",
                         "payload": {
                             "agent_id": "flight_agent",
@@ -271,7 +280,7 @@ class TestWebSocketIntegration:
                             "progress": 0.5,
                         },
                     }
-                    
+
                     # Verify subscription handling
                     await asyncio.sleep(0.1)
                     mock_websocket_manager.send_personal_message.assert_called()
@@ -293,15 +302,20 @@ class TestWebSocketIntegration:
             "email": sample_user["email"],
         }
         mock_auth_service.get_current_user.return_value = sample_user
-        
+
         # Mock rate limit error on chat service
         mock_chat_service.add_message.side_effect = CoreRateLimitError(
             "Rate limit exceeded"
         )
 
         with patch("tripsage.api.routers.websocket.auth_service", mock_auth_service):
-            with patch("tripsage.api.routers.websocket.chat_service", mock_chat_service):
-                with patch("tripsage.api.routers.websocket.websocket_manager", mock_websocket_manager):
+            with patch(
+                "tripsage.api.routers.websocket.chat_service", mock_chat_service
+            ):
+                with patch(
+                    "tripsage.api.routers.websocket.websocket_manager",
+                    mock_websocket_manager,
+                ):
                     with test_client.websocket_connect("/ws") as websocket:
                         # Authenticate
                         auth_msg = {
@@ -338,7 +352,7 @@ class TestWebSocketIntegration:
     ):
         """Test WebSocket reconnection handling."""
         connection_id = str(uuid4())
-        
+
         mock_auth_service.validate_access_token.return_value = {
             "user_id": sample_user["id"],
             "email": sample_user["email"],
@@ -346,7 +360,10 @@ class TestWebSocketIntegration:
         mock_auth_service.get_current_user.return_value = sample_user
 
         with patch("tripsage.api.routers.websocket.auth_service", mock_auth_service):
-            with patch("tripsage.api.routers.websocket.websocket_manager", mock_websocket_manager):
+            with patch(
+                "tripsage.api.routers.websocket.websocket_manager",
+                mock_websocket_manager,
+            ):
                 # First connection
                 with test_client.websocket_connect("/ws") as ws1:
                     # Authenticate with connection ID
@@ -366,7 +383,7 @@ class TestWebSocketIntegration:
                 with test_client.websocket_connect("/ws") as ws2:
                     # Re-authenticate with same connection ID
                     ws2.send_json(auth_msg)
-                    
+
                     # Should restore session state
                     assert mock_websocket_manager.connect.call_count == 2
 
@@ -387,7 +404,10 @@ class TestWebSocketIntegration:
         mock_auth_service.get_current_user.return_value = sample_user
 
         with patch("tripsage.api.routers.websocket.auth_service", mock_auth_service):
-            with patch("tripsage.api.routers.websocket.websocket_manager", mock_websocket_manager):
+            with patch(
+                "tripsage.api.routers.websocket.websocket_manager",
+                mock_websocket_manager,
+            ):
                 with test_client.websocket_connect("/ws") as websocket:
                     # Authenticate
                     auth_msg = {
@@ -415,7 +435,7 @@ class TestWebSocketIntegration:
     ):
         """Test typing indicator functionality."""
         session_id = str(uuid4())
-        
+
         mock_auth_service.validate_access_token.return_value = {
             "user_id": sample_user["id"],
             "email": sample_user["email"],
@@ -423,7 +443,10 @@ class TestWebSocketIntegration:
         mock_auth_service.get_current_user.return_value = sample_user
 
         with patch("tripsage.api.routers.websocket.auth_service", mock_auth_service):
-            with patch("tripsage.api.routers.websocket.websocket_manager", mock_websocket_manager):
+            with patch(
+                "tripsage.api.routers.websocket.websocket_manager",
+                mock_websocket_manager,
+            ):
                 with test_client.websocket_connect("/ws") as websocket:
                     # Authenticate
                     auth_msg = {
@@ -456,7 +479,7 @@ class TestWebSocketIntegration:
     ):
         """Test streaming message responses."""
         session_id = str(uuid4())
-        
+
         mock_auth_service.validate_access_token.return_value = {
             "user_id": sample_user["id"],
             "email": sample_user["email"],
@@ -482,8 +505,13 @@ class TestWebSocketIntegration:
         mock_chat_service.add_message.return_value = stream_response()
 
         with patch("tripsage.api.routers.websocket.auth_service", mock_auth_service):
-            with patch("tripsage.api.routers.websocket.chat_service", mock_chat_service):
-                with patch("tripsage.api.routers.websocket.websocket_manager", mock_websocket_manager):
+            with patch(
+                "tripsage.api.routers.websocket.chat_service", mock_chat_service
+            ):
+                with patch(
+                    "tripsage.api.routers.websocket.websocket_manager",
+                    mock_websocket_manager,
+                ):
                     with test_client.websocket_connect("/ws") as websocket:
                         # Authenticate
                         auth_msg = {
@@ -505,7 +533,9 @@ class TestWebSocketIntegration:
 
                         # Verify streaming chunks are sent
                         await asyncio.sleep(0.1)
-                        assert mock_websocket_manager.send_personal_message.call_count >= 4
+                        assert (
+                            mock_websocket_manager.send_personal_message.call_count >= 4
+                        )
 
     @pytest.mark.asyncio
     async def test_websocket_error_recovery(
@@ -523,13 +553,20 @@ class TestWebSocketIntegration:
             "email": sample_user["email"],
         }
         mock_auth_service.get_current_user.return_value = sample_user
-        
+
         # Mock service error
-        mock_chat_service.add_message.side_effect = Exception("Database connection lost")
+        mock_chat_service.add_message.side_effect = Exception(
+            "Database connection lost"
+        )
 
         with patch("tripsage.api.routers.websocket.auth_service", mock_auth_service):
-            with patch("tripsage.api.routers.websocket.chat_service", mock_chat_service):
-                with patch("tripsage.api.routers.websocket.websocket_manager", mock_websocket_manager):
+            with patch(
+                "tripsage.api.routers.websocket.chat_service", mock_chat_service
+            ):
+                with patch(
+                    "tripsage.api.routers.websocket.websocket_manager",
+                    mock_websocket_manager,
+                ):
                     with test_client.websocket_connect("/ws") as websocket:
                         # Authenticate
                         auth_msg = {
@@ -551,11 +588,11 @@ class TestWebSocketIntegration:
                         # Should handle error gracefully
                         await asyncio.sleep(0.1)
                         mock_websocket_manager.send_error.assert_called()
-                        
+
                         # Connection should remain open for retry
                         # Send another message
                         websocket.send_json(chat_msg)
-                        
+
                         # Verify connection wasn't terminated
                         assert mock_websocket_manager.disconnect.call_count == 0
 
@@ -574,14 +611,17 @@ class TestWebSocketIntegration:
             "email": sample_user["email"],
         }
         mock_auth_service.get_current_user.return_value = sample_user
-        
+
         # Mock connection stats
         mock_websocket_manager.get_connection_stats.return_value = (
             WebSocketFactory.create_connection_stats()
         )
 
         with patch("tripsage.api.routers.websocket.auth_service", mock_auth_service):
-            with patch("tripsage.api.routers.websocket.websocket_manager", mock_websocket_manager):
+            with patch(
+                "tripsage.api.routers.websocket.websocket_manager",
+                mock_websocket_manager,
+            ):
                 with test_client.websocket_connect("/ws") as websocket:
                     # Authenticate
                     auth_msg = {
@@ -600,7 +640,7 @@ class TestWebSocketIntegration:
                     # Should receive stats
                     await asyncio.sleep(0.1)
                     mock_websocket_manager.send_personal_message.assert_called()
-                    
+
                     # Verify stats structure
                     call_args = mock_websocket_manager.send_personal_message.call_args
                     assert call_args is not None
@@ -622,7 +662,10 @@ class TestWebSocketIntegration:
         mock_auth_service.get_current_user.return_value = sample_user
 
         with patch("tripsage.api.routers.websocket.auth_service", mock_auth_service):
-            with patch("tripsage.api.routers.websocket.websocket_manager", mock_websocket_manager):
+            with patch(
+                "tripsage.api.routers.websocket.websocket_manager",
+                mock_websocket_manager,
+            ):
                 with test_client.websocket_connect("/ws") as websocket:
                     # Authenticate
                     auth_msg = {

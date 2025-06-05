@@ -6,14 +6,14 @@ including error handling, logging, state management, and tool initialization.
 Tests use actual domain models with proper mocking and async patterns.
 """
 
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Any, Dict
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
 from tripsage.agents.service_registry import ServiceRegistry
-from tripsage.orchestration.nodes.base import BaseAgentNode, BaseAgentNodeError
+from tripsage.orchestration.nodes.base import BaseAgentNode
 from tripsage.orchestration.state import TravelPlanningState, create_initial_state
 
 
@@ -97,9 +97,7 @@ class TestBaseAgentNode:
             nonlocal initialized
             initialized = True
 
-        node = TestableAgentNode(
-            mock_service_registry, initialize_func=custom_init
-        )
+        _node = TestableAgentNode(mock_service_registry, initialize_func=custom_init)
 
         assert initialized is True
 
@@ -136,9 +134,7 @@ class TestBaseAgentNode:
             )
             return state
 
-        node = TestableAgentNode(
-            mock_service_registry, process_func=custom_process
-        )
+        node = TestableAgentNode(mock_service_registry, process_func=custom_process)
         result = await node(sample_state)
 
         assert result["custom_field"] == "custom_value"
@@ -151,9 +147,7 @@ class TestBaseAgentNode:
         async def failing_process(state):
             raise ValueError("Processing failed")
 
-        node = TestableAgentNode(
-            mock_service_registry, process_func=failing_process
-        )
+        node = TestableAgentNode(mock_service_registry, process_func=failing_process)
 
         # Process should handle error gracefully
         result = await node(sample_state)
@@ -180,9 +174,7 @@ class TestBaseAgentNode:
         async def failing_process(state):
             raise RuntimeError("Another error")
 
-        node = TestableAgentNode(
-            mock_service_registry, process_func=failing_process
-        )
+        node = TestableAgentNode(mock_service_registry, process_func=failing_process)
 
         # First error
         result1 = await node(sample_state)
@@ -259,9 +251,7 @@ class TestBaseAgentNode:
         assert service is None
 
     @pytest.mark.asyncio
-    async def test_logging_during_execution(
-        self, test_node, sample_state, caplog
-    ):
+    async def test_logging_during_execution(self, test_node, sample_state, caplog):
         """Test that proper logging occurs during execution."""
         # Process the state
         await test_node(sample_state)
@@ -277,9 +267,7 @@ class TestBaseAgentNode:
         async def failing_process(state):
             raise Exception("Test error")
 
-        node = TestableAgentNode(
-            mock_service_registry, process_func=failing_process
-        )
+        node = TestableAgentNode(mock_service_registry, process_func=failing_process)
 
         await node(sample_state)
 
@@ -299,9 +287,9 @@ class TestBaseAgentNode:
 
         # Timestamp should be updated
         assert result["updated_at"] != original_timestamp
-        assert datetime.fromisoformat(
-            result["updated_at"]
-        ) > datetime.fromisoformat(original_timestamp)
+        assert datetime.fromisoformat(result["updated_at"]) > datetime.fromisoformat(
+            original_timestamp
+        )
 
     @pytest.mark.asyncio
     async def test_inheritance_pattern(self, mock_service_registry):

@@ -7,7 +7,7 @@ test data for models, requests, and responses.
 """
 
 from datetime import date, datetime, timedelta, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 from uuid import uuid4
 
 from tripsage_core.models.schemas_common.enums import (
@@ -260,7 +260,10 @@ class ChatFactory(BaseFactory):
     def create_assistant_message(cls, **kwargs) -> Dict[str, Any]:
         """Create an assistant response message."""
         return cls.create_message(
-            content="I'd be happy to help you find a hotel in Tokyo! What's your budget and preferred area?",
+            content=(
+                "I'd be happy to help you find a hotel in Tokyo! "
+                "What's your budget and preferred area?"
+            ),
             role="assistant",
             **kwargs,
         )
@@ -294,7 +297,9 @@ class ChatFactory(BaseFactory):
     def create_response(cls, **kwargs) -> Dict[str, Any]:
         """Create a chat service response."""
         defaults = {
-            "response": "I'd be happy to help you plan your trip! Where would you like to go?",
+            "response": (
+                "I'd be happy to help you plan your trip! Where would you like to go?"
+            ),
             "session_id": cls.generate_id(),
             "user_id": 1,
             "timestamp": cls.future_datetime(),

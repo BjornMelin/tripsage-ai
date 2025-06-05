@@ -130,7 +130,9 @@ class TestWeatherServiceIntegration:
     ):
         """Test successful current weather retrieval."""
         # Mock HTTP response
-        weather_service._http_client.get.return_value.__aenter__.return_value.json.return_value = sample_current_weather_response
+        (
+            weather_service._http_client.get.return_value.__aenter__.return_value.json.return_value
+        ) = sample_current_weather_response
         weather_service._http_client.get.return_value.__aenter__.return_value.status = (
             200
         )
@@ -154,7 +156,9 @@ class TestWeatherServiceIntegration:
     ):
         """Test successful weather forecast retrieval."""
         # Mock HTTP response
-        weather_service._http_client.get.return_value.__aenter__.return_value.json.return_value = sample_forecast_response
+        (
+            weather_service._http_client.get.return_value.__aenter__.return_value.json.return_value
+        ) = sample_forecast_response
         weather_service._http_client.get.return_value.__aenter__.return_value.status = (
             200
         )
@@ -180,7 +184,9 @@ class TestWeatherServiceIntegration:
     ):
         """Test weather retrieval by coordinates."""
         # Mock HTTP response
-        weather_service._http_client.get.return_value.__aenter__.return_value.json.return_value = sample_current_weather_response
+        (
+            weather_service._http_client.get.return_value.__aenter__.return_value.json.return_value
+        ) = sample_current_weather_response
         weather_service._http_client.get.return_value.__aenter__.return_value.status = (
             200
         )
@@ -212,7 +218,9 @@ class TestWeatherServiceIntegration:
             ],
         }
 
-        weather_service._http_client.get.return_value.__aenter__.return_value.json.return_value = alerts_response
+        (
+            weather_service._http_client.get.return_value.__aenter__.return_value.json.return_value
+        ) = alerts_response
         weather_service._http_client.get.return_value.__aenter__.return_value.status = (
             200
         )
@@ -236,7 +244,9 @@ class TestWeatherServiceIntegration:
         weather_service._http_client.get.return_value.__aenter__.return_value.status = (
             401
         )
-        weather_service._http_client.get.return_value.__aenter__.return_value.json.return_value = {
+        (
+            weather_service._http_client.get.return_value.__aenter__.return_value.json.return_value
+        ) = {
             "cod": 401,
             "message": "Invalid API key",
         }
@@ -251,7 +261,9 @@ class TestWeatherServiceIntegration:
         weather_service._http_client.get.return_value.__aenter__.return_value.status = (
             404
         )
-        weather_service._http_client.get.return_value.__aenter__.return_value.json.return_value = {
+        (
+            weather_service._http_client.get.return_value.__aenter__.return_value.json.return_value
+        ) = {
             "cod": "404",
             "message": "city not found",
         }
@@ -266,7 +278,9 @@ class TestWeatherServiceIntegration:
         weather_service._http_client.get.return_value.__aenter__.return_value.status = (
             429
         )
-        weather_service._http_client.get.return_value.__aenter__.return_value.json.return_value = {
+        (
+            weather_service._http_client.get.return_value.__aenter__.return_value.json.return_value
+        ) = {
             "cod": 429,
             "message": "Rate limit exceeded",
         }
@@ -316,7 +330,9 @@ class TestWeatherServiceIntegration:
     ):
         """Test weather data caching."""
         # Mock HTTP response
-        weather_service._http_client.get.return_value.__aenter__.return_value.json.return_value = sample_current_weather_response
+        (
+            weather_service._http_client.get.return_value.__aenter__.return_value.json.return_value
+        ) = sample_current_weather_response
         weather_service._http_client.get.return_value.__aenter__.return_value.status = (
             200
         )
@@ -341,7 +357,9 @@ class TestWeatherServiceIntegration:
         cities = [("Paris", "FR"), ("London", "GB"), ("New York", "US")]
 
         # Mock HTTP responses
-        weather_service._http_client.get.return_value.__aenter__.return_value.json.return_value = sample_current_weather_response
+        (
+            weather_service._http_client.get.return_value.__aenter__.return_value.json.return_value
+        ) = sample_current_weather_response
         weather_service._http_client.get.return_value.__aenter__.return_value.status = (
             200
         )
