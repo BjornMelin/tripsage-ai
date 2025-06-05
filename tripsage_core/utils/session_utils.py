@@ -91,38 +91,35 @@ async def initialize_session_memory(user_id: Optional[str] = None) -> Dict[str, 
                 user_id=user_id, memory_type="user_preferences"
             )
 
-            if memories:
-                # Extract preferences from memories
-                preferences = {}
-                for memory in memories:
-                    if hasattr(memory, "content") and isinstance(memory.content, dict):
-                        preferences.update(memory.content)
+            # Extract preferences from memories
+            preferences = {}
+            for memory in memories:
+                if hasattr(memory, "content") and isinstance(memory.content, dict):
+                    preferences.update(memory.content)
 
-                # Get past trips
-                trip_memories = await memory_service.get_memories(
-                    user_id=user_id, memory_type="trip_history"
-                )
-                recent_trips = []
-                for memory in trip_memories[:5]:  # Limit to 5 most recent
-                    if hasattr(memory, "content"):
-                        recent_trips.append(memory.content)
+            # Get past trips
+            trip_memories = await memory_service.get_memories(
+                user_id=user_id, memory_type="trip_history"
+            )
+            recent_trips = []
+            for memory in trip_memories[:5]:  # Limit to 5 most recent
+                if hasattr(memory, "content"):
+                    recent_trips.append(memory.content)
 
-                # Update session data
-                session_data.update(
-                    {
-                        "user": {"id": user_id, "name": f"User {user_id}"},
-                        "preferences": preferences,
-                        "recent_trips": recent_trips,
-                        "insights": {},  # Populated from conversation context
-                    }
-                )
+            # Update session data
+            session_data.update(
+                {
+                    "user": {"id": user_id, "name": f"User {user_id}"},
+                    "preferences": preferences,
+                    "recent_trips": recent_trips,
+                    "insights": {},  # Populated from conversation context
+                }
+            )
 
-                logger.info(
-                    f"Loaded {len(preferences)} preferences and "
-                    f"{len(recent_trips)} trips for user {user_id}"
-                )
-            else:
-                logger.info(f"No existing memories found for user {user_id}")
+            logger.info(
+                f"Loaded {len(preferences)} preferences and "
+                f"{len(recent_trips)} trips for user {user_id}"
+            )
 
         except Exception as e:
             logger.error(f"Error loading user context for {user_id}: {str(e)}")
@@ -187,6 +184,10 @@ async def update_session_memory(
         logger.error(f"Error updating session memory: {str(e)}")
         result["success"] = False
         result["errors"].append(str(e))
+
+    # Check if any errors occurred in helper functions
+    if result["errors"]:
+        result["success"] = False
 
     return result
 
@@ -371,7 +372,7 @@ async def _process_conversation_context(
 
 # Simple SessionMemory utility class for API dependencies
 class SessionMemory:
-    """Simple session memory utility class for compatibility with existing API code.
+    """Simple session memory utility class for API integration.
 
     This is a lightweight utility class that provides a simple interface for
     session memory operations while the full domain models handle the data storage.
@@ -434,47 +435,6 @@ class SessionMemory:
         }
 
 
-# Legacy compatibility functions for gradual migration
-
-
-async def get_session_memory_legacy(user_id: str) -> Dict[str, Any]:
-    """Legacy wrapper for session memory initialization.
-
-    Provides backward compatibility for existing code that expects the old format.
-
-    Args:
-        user_id: User ID
-
-    Returns:
-        Session memory data in legacy format
-    """
-    logger.warning(
-        "Using legacy session memory function - consider updating to new API"
-    )
-    return await initialize_session_memory(user_id)
-
-
-async def update_memory_legacy(user_id: str, updates: Dict[str, Any]) -> Dict[str, Any]:
-    """Legacy wrapper for memory updates.
-
-    Args:
-        user_id: User ID
-        updates: Updates dictionary
-
-    Returns:
-        Update result in legacy format
-    """
-    logger.warning("Using legacy memory update function - consider updating to new API")
-    result = await update_session_memory(user_id, updates)
-
-    # Convert to legacy format
-    return {
-        "entities_created": 0,  # Not applicable in new system
-        "relations_created": 0,  # Not applicable in new system
-        "observations_added": result.get("memories_created", 0),
-    }
-
-
 __all__ = [
     "ConversationMessage",
     "SessionSummary",
@@ -483,6 +443,4 @@ __all__ = [
     "initialize_session_memory",
     "update_session_memory",
     "store_session_summary",
-    "get_session_memory_legacy",
-    "update_memory_legacy",
 ]

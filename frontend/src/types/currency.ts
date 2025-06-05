@@ -68,9 +68,7 @@ export type ExchangeRate = z.infer<typeof ExchangeRateSchema>;
 export type CurrencyPair = z.infer<typeof CurrencyPairSchema>;
 export type ConversionResult = z.infer<typeof ConversionResultSchema>;
 export type CurrencyState = z.infer<typeof CurrencyStateSchema>;
-export type FetchExchangeRatesRequest = z.infer<
-  typeof FetchExchangeRatesRequestSchema
->;
+export type FetchExchangeRatesRequest = z.infer<typeof FetchExchangeRatesRequestSchema>;
 export type UpdateExchangeRatesResponse = z.infer<
   typeof UpdateExchangeRatesResponseSchema
 >;

@@ -10,54 +10,48 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, status
 
-from tripsage.api.middlewares.auth import get_current_user
-from tripsage.api.models.accommodations import (
+from tripsage.api.core.dependencies import get_principal_id, require_principal_dep
+from tripsage.api.middlewares.authentication import Principal
+from tripsage.api.schemas.requests.accommodations import (
     AccommodationDetailsRequest,
-    AccommodationDetailsResponse,
     AccommodationSearchRequest,
-    AccommodationSearchResponse,
-    BookingStatus,
     SavedAccommodationRequest,
+)
+from tripsage.api.schemas.responses.accommodations import (
+    AccommodationDetailsResponse,
+    AccommodationSearchResponse,
     SavedAccommodationResponse,
 )
-
-# Note: AccommodationService needs to be refactored to use the new pattern
-# For now, keeping the old import until it's refactored
-from tripsage.api.services.accommodation import AccommodationService
+from tripsage.api.services.accommodation import (
+    AccommodationService,
+    get_accommodation_service,
+)
 from tripsage_core.exceptions.exceptions import (
     CoreResourceNotFoundError as ResourceNotFoundError,
 )
+from tripsage_core.models.schemas_common import BookingStatus
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
-_accommodation_service_singleton = AccommodationService()
-
-
-def get_accommodation_service() -> AccommodationService:
-    """Dependency provider for the AccommodationService singleton."""
-    return _accommodation_service_singleton
-
 
 @router.post("/search", response_model=AccommodationSearchResponse)
 async def search_accommodations(
     request: AccommodationSearchRequest,
-    user_id: str = Depends(get_current_user),
+    principal: Principal = require_principal_dep,
+    accommodation_service: AccommodationService = Depends(get_accommodation_service),
 ):
     """Search for accommodations based on the provided criteria.
 
     Args:
         request: Accommodation search parameters
-        user_id: Current user ID (from token)
+        principal: Current authenticated principal
+        accommodation_service: Injected accommodation service
 
     Returns:
         Accommodation search results
     """
-    # Get dependencies
-    accommodation_service = get_accommodation_service()
-
-    # Search for accommodations
     results = await accommodation_service.search_accommodations(request)
     return results
 
@@ -65,13 +59,15 @@ async def search_accommodations(
 @router.post("/details", response_model=AccommodationDetailsResponse)
 async def get_accommodation_details(
     request: AccommodationDetailsRequest,
-    user_id: str = Depends(get_current_user),
+    principal: Principal = require_principal_dep,
+    accommodation_service: AccommodationService = Depends(get_accommodation_service),
 ):
     """Get details of a specific accommodation listing.
 
     Args:
         request: Accommodation details parameters
-        user_id: Current user ID (from token)
+        principal: Current authenticated principal
+        accommodation_service: Injected accommodation service
 
     Returns:
         Accommodation details
@@ -79,10 +75,6 @@ async def get_accommodation_details(
     Raises:
         ResourceNotFoundError: If the accommodation listing is not found
     """
-    # Get dependencies
-    accommodation_service = get_accommodation_service()
-
-    # Get accommodation details
     details = await accommodation_service.get_accommodation_details(request)
     if not details:
         raise ResourceNotFoundError(
@@ -100,13 +92,15 @@ async def get_accommodation_details(
 )
 async def save_accommodation(
     request: SavedAccommodationRequest,
-    user_id: str = Depends(get_current_user),
+    principal: Principal = require_principal_dep,
+    accommodation_service: AccommodationService = Depends(get_accommodation_service),
 ):
     """Save an accommodation listing for a trip.
 
     Args:
         request: Save accommodation request
-        user_id: Current user ID (from token)
+        principal: Current authenticated principal
+        accommodation_service: Injected accommodation service
 
     Returns:
         Saved accommodation response
@@ -114,10 +108,7 @@ async def save_accommodation(
     Raises:
         ResourceNotFoundError: If the accommodation listing is not found
     """
-    # Get dependencies
-    accommodation_service = get_accommodation_service()
-
-    # Save the accommodation
+    user_id = get_principal_id(principal)
     result = await accommodation_service.save_accommodation(user_id, request)
     if not result:
         raise ResourceNotFoundError(
@@ -133,21 +124,20 @@ async def save_accommodation(
 )
 async def delete_saved_accommodation(
     saved_accommodation_id: UUID,
-    user_id: str = Depends(get_current_user),
+    principal: Principal = require_principal_dep,
+    accommodation_service: AccommodationService = Depends(get_accommodation_service),
 ):
     """Delete a saved accommodation.
 
     Args:
         saved_accommodation_id: Saved accommodation ID
-        user_id: Current user ID (from token)
+        principal: Current authenticated principal
+        accommodation_service: Injected accommodation service
 
     Raises:
         ResourceNotFoundError: If the saved accommodation is not found
     """
-    # Get dependencies
-    accommodation_service = get_accommodation_service()
-
-    # Delete the saved accommodation
+    user_id = get_principal_id(principal)
     success = await accommodation_service.delete_saved_accommodation(
         user_id, saved_accommodation_id
     )
@@ -161,21 +151,20 @@ async def delete_saved_accommodation(
 @router.get("/saved", response_model=List[SavedAccommodationResponse])
 async def list_saved_accommodations(
     trip_id: Optional[UUID] = None,
-    user_id: str = Depends(get_current_user),
+    principal: Principal = require_principal_dep,
+    accommodation_service: AccommodationService = Depends(get_accommodation_service),
 ):
     """List saved accommodations for a user, optionally filtered by trip.
 
     Args:
         trip_id: Optional trip ID to filter by
-        user_id: Current user ID (from token)
+        principal: Current authenticated principal
+        accommodation_service: Injected accommodation service
 
     Returns:
         List of saved accommodations
     """
-    # Get dependencies
-    accommodation_service = get_accommodation_service()
-
-    # List saved accommodations
+    user_id = get_principal_id(principal)
     return await accommodation_service.list_saved_accommodations(user_id, trip_id)
 
 
@@ -186,14 +175,16 @@ async def list_saved_accommodations(
 async def update_saved_accommodation_status(
     saved_accommodation_id: UUID,
     status: BookingStatus,
-    user_id: str = Depends(get_current_user),
+    principal: Principal = require_principal_dep,
+    accommodation_service: AccommodationService = Depends(get_accommodation_service),
 ):
     """Update the status of a saved accommodation.
 
     Args:
         saved_accommodation_id: Saved accommodation ID
         status: New status
-        user_id: Current user ID (from token)
+        principal: Current authenticated principal
+        accommodation_service: Injected accommodation service
 
     Returns:
         Updated saved accommodation
@@ -201,10 +192,7 @@ async def update_saved_accommodation_status(
     Raises:
         ResourceNotFoundError: If the saved accommodation is not found
     """
-    # Get dependencies
-    accommodation_service = get_accommodation_service()
-
-    # Update the status
+    user_id = get_principal_id(principal)
     result = await accommodation_service.update_saved_accommodation_status(
         user_id, saved_accommodation_id, status
     )

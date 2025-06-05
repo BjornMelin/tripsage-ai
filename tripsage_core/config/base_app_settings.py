@@ -21,6 +21,9 @@ class DragonflyConfig(BaseSettings):
     url: str = Field(
         default="redis://localhost:6379/0", description="DragonflyDB connection URL"
     )
+    password: Optional[str] = Field(
+        default=None, description="DragonflyDB password for authentication"
+    )
     ttl_short: int = Field(default=300, description="TTL for short-lived data (5m)")
     ttl_medium: int = Field(default=3600, description="TTL for medium-lived data (1h)")
     ttl_long: int = Field(default=86400, description="TTL for long-lived data (24h)")
@@ -29,10 +32,17 @@ class DragonflyConfig(BaseSettings):
     max_memory_policy: str = Field(
         default="allkeys-lru", description="Memory eviction policy"
     )
+    max_memory: str = Field(default="4gb", description="Maximum memory allocation")
     max_connections: int = Field(
         default=10000, description="Maximum concurrent connections"
     )
     thread_count: int = Field(default=4, description="Number of worker threads")
+    port: int = Field(default=6379, description="DragonflyDB port")
+
+    model_config = SettingsConfigDict(
+        env_prefix="DRAGONFLY_",
+        case_sensitive=False,
+    )
 
 
 class DatabaseConfig(BaseSettings):
@@ -296,6 +306,13 @@ class CoreAppSettings(BaseSettings):
         default=SecretStr("your-secret-key-here-change-in-production"),
         description="Secret key for signing JWT tokens",
     )
+    jwt_algorithm: str = Field(default="HS256", description="JWT signing algorithm")
+    access_token_expire_minutes: int = Field(
+        default=60, description="JWT access token expiration in minutes"
+    )
+    refresh_token_expire_days: int = Field(
+        default=7, description="JWT refresh token expiration in days"
+    )
     api_key_master_secret: SecretStr = Field(
         default=SecretStr("master-secret-for-byok-encryption"),
         description="Master secret for BYOK encryption",
@@ -385,6 +402,17 @@ class CoreAppSettings(BaseSettings):
         if secret and isinstance(secret, SecretStr):
             return secret.get_secret_value()
         return None
+
+    # Convenience properties for JWT authentication
+    @property
+    def secret_key(self) -> str:
+        """Get the JWT secret key."""
+        return self.jwt_secret_key.get_secret_value()
+
+    @property
+    def algorithm(self) -> str:
+        """Get the JWT algorithm."""
+        return self.jwt_algorithm
 
     def validate_critical_settings(self) -> List[str]:
         """

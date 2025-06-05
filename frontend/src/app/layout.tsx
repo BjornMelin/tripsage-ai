@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { ThemeProvider } from "@/components/providers/theme-provider";
+import { Navbar } from "@/components/layouts/navbar";
 import { TanStackQueryProvider } from "@/components/providers/query-provider";
-import { Navbar } from "@/components/layout/navbar";
+import { ThemeProvider } from "@/components/providers/theme-provider";
 import { Toaster } from "@/components/ui/toaster";
 
 const geistSans = Geist({
@@ -20,11 +20,14 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "TripSage AI - Intelligent Travel Planning",
-  description:
-    "Plan your perfect trip with AI-powered recommendations and insights",
+  description: "Plan your perfect trip with AI-powered recommendations and insights",
   keywords: ["travel", "AI", "planning", "trips", "budget", "itinerary"],
   authors: [{ name: "TripSage Team" }],
-  viewport: "width=device-width, initial-scale=1",
+};
+
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
 };
 
 export default function RootLayout({
@@ -38,7 +41,12 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased min-h-screen`}
       >
         <TanStackQueryProvider>
-          <ThemeProvider defaultTheme="system" storageKey="tripsage-theme">
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+          >
             <div className="flex flex-col min-h-screen">
               <Navbar />
               <main className="flex-1">{children}</main>

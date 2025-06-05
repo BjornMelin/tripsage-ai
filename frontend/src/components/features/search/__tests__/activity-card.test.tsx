@@ -2,10 +2,10 @@
  * @vitest-environment jsdom
  */
 
-import { describe, it, expect, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
-import { ActivityCard } from "../activity-card";
 import type { Activity } from "@/types/search";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
+import { ActivityCard } from "../activity-card";
 
 const mockActivity: Activity = {
   id: "activity-123",
@@ -143,9 +143,7 @@ describe("ActivityCard", () => {
     render(<ActivityCard activity={mockActivity} />);
 
     expect(screen.getByRole("button", { name: /select/i })).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: /compare/i })
-    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /compare/i })).toBeInTheDocument();
   });
 
   it("truncates long descriptions", () => {

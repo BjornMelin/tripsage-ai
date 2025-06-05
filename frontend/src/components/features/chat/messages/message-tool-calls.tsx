@@ -1,29 +1,29 @@
 "use client";
 
-import type React from "react";
-import { useState, useEffect } from "react";
-import type { ToolCall, ToolResult } from "@/types/chat";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useChatStore } from "@/stores/chat-store";
+import type { ToolCall, ToolResult } from "@/types/chat";
 import {
   AlertCircle,
+  Building,
+  Calendar,
   Check,
   ChevronDown,
   ChevronUp,
   Clock,
+  CloudSun,
   Loader2,
-  TerminalSquare,
   MapPin,
   Plane,
-  Building,
-  CloudSun,
-  Calendar,
-  Search,
-  X,
   RefreshCw,
+  Search,
+  TerminalSquare,
+  X,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { useChatStore } from "@/stores/chat-store";
+import type React from "react";
+import { useEffect, useState } from "react";
 
 interface MessageToolCallsProps {
   toolCalls: ToolCall[];
@@ -56,8 +56,7 @@ const getToolIcon = (toolName: string) => {
 
 // Get tool category for styling
 const getToolCategory = (toolName: string): string => {
-  if (toolName.includes("flight") || toolName.includes("Plane"))
-    return "flight";
+  if (toolName.includes("flight") || toolName.includes("Plane")) return "flight";
   if (toolName.includes("accommodation") || toolName.includes("hotel"))
     return "accommodation";
   if (toolName.includes("weather")) return "weather";
@@ -79,7 +78,7 @@ const getCategoryColor = (category: string): string => {
   return colorMap[category] || colorMap.general;
 };
 
-export default function MessageToolCalls({
+export function MessageToolCalls({
   toolCalls,
   toolResults,
   onRetryToolCall,
@@ -97,9 +96,7 @@ export default function MessageToolCalls({
         <ToolCallItem
           key={toolCall.id}
           toolCall={toolCall}
-          result={
-            toolResults?.find((result) => result.callId === toolCall.id)?.result
-          }
+          result={toolResults?.find((result) => result.callId === toolCall.id)?.result}
           onRetry={onRetryToolCall}
           onCancel={onCancelToolCall}
         />
@@ -115,12 +112,7 @@ interface ToolCallItemProps {
   onCancel?: (toolCallId: string) => void;
 }
 
-function ToolCallItem({
-  toolCall,
-  result,
-  onRetry,
-  onCancel,
-}: ToolCallItemProps) {
+function ToolCallItem({ toolCall, result, onRetry, onCancel }: ToolCallItemProps) {
   const [expanded, setExpanded] = useState(false);
   const [localStatus, setLocalStatus] = useState(toolCall.status || "pending");
   const { addToolResult } = useChatStore();
@@ -223,10 +215,7 @@ function ToolCallItem({
 
     if (hasError) {
       return (
-        <Badge
-          variant="destructive"
-          className="text-xs flex items-center gap-1"
-        >
+        <Badge variant="destructive" className="text-xs flex items-center gap-1">
           <AlertCircle className="h-3 w-3" />
           Error
         </Badge>
@@ -365,9 +354,7 @@ function ToolCallItem({
           {/* Error Display */}
           {toolCall.error && (
             <div className="mb-3">
-              <div className="text-xs font-medium text-red-600 mb-2">
-                Error:
-              </div>
+              <div className="text-xs font-medium text-red-600 mb-2">Error:</div>
               <div className="text-xs bg-red-50 text-red-800 rounded border border-red-200 p-2">
                 {toolCall.error}
               </div>

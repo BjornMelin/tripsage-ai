@@ -10,9 +10,13 @@ from typing import List
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from pydantic import BaseModel, Field
 
-from api.deps import get_current_user
-from tripsage_core.models.db.user import UserDB
-from tripsage_core.services.file_processor import FileProcessor
+from tripsage.api.core.dependencies import get_principal_id, require_principal_dep
+from tripsage.api.middlewares.authentication import Principal
+from tripsage_core.services.business.file_processing_service import (
+    FileProcessingService,
+    FileSearchRequest,
+    FileUploadRequest,
+)
 from tripsage_core.utils.file_utils import MAX_SESSION_SIZE, validate_file
 
 logger = logging.getLogger(__name__)
@@ -22,21 +26,21 @@ router = APIRouter()
 # File configuration now imported from centralized config
 
 # Module-level dependencies to avoid B008 warnings
-get_current_user_dep = Depends(get_current_user)
+require_principal_module_dep = require_principal_dep
 
 # Module-level dependency for file uploads
 file_upload_dep = File(...)
 files_upload_dep = File(...)
 
 
-def get_file_processor() -> FileProcessor:
-    """Get file processor singleton."""
+def get_file_processing_service() -> FileProcessingService:
+    """Get file processing service singleton."""
     # Choice: Using simple import pattern instead of complex DI
-    # Reason: KISS principle - FileProcessor is lightweight and stateless
-    return FileProcessor()
+    # Reason: KISS principle - FileProcessingService is lightweight and stateless
+    return FileProcessingService()
 
 
-get_file_processor_dep = Depends(get_file_processor)
+get_file_processing_service_dep = Depends(get_file_processing_service)
 
 
 class FileUploadResponse(BaseModel):
@@ -62,8 +66,8 @@ class BatchUploadResponse(BaseModel):
 @router.post("/upload", response_model=FileUploadResponse)
 async def upload_file(
     file: UploadFile = file_upload_dep,
-    current_user: UserDB = get_current_user_dep,
-    processor: FileProcessor = get_file_processor_dep,
+    principal: Principal = require_principal_module_dep,
+    service: FileProcessingService = get_file_processing_service_dep,
 ):
     """Upload and process a single file attachment.
 
@@ -88,19 +92,30 @@ async def upload_file(
 
     try:
         # Process file with user context
-        result = await processor.process_file(file, current_user.id)
+        user_id = get_principal_id(principal)
+
+        # Read file content
+        content = await file.read()
+
+        # Create upload request
+        upload_request = FileUploadRequest(
+            filename=file.filename, content=content, auto_analyze=True
+        )
+
+        # Process file
+        result = await service.upload_file(user_id, upload_request)
 
         logger.info(
             f"File uploaded successfully: {file.filename} "
-            f"({result.file_size} bytes) for user {current_user.id}"
+            f"({result.file_size} bytes) for user {user_id}"
         )
 
         return FileUploadResponse(
-            file_id=result.file_id,
+            file_id=result.id,
             filename=result.original_filename,
             file_size=result.file_size,
             mime_type=result.mime_type,
-            processing_status=result.processing_status,
+            processing_status=result.processing_status.value,
             upload_status="completed",
             message="Upload successful",
         )
@@ -116,8 +131,8 @@ async def upload_file(
 @router.post("/upload/batch", response_model=BatchUploadResponse)
 async def upload_files_batch(
     files: List[UploadFile] = files_upload_dep,
-    current_user: UserDB = get_current_user_dep,
-    processor: FileProcessor = get_file_processor_dep,
+    principal: Principal = require_principal_module_dep,
+    service: FileProcessingService = get_file_processing_service_dep,
 ):
     """Upload and process multiple files in a batch.
 
@@ -146,6 +161,7 @@ async def upload_files_batch(
 
     processed_files = []
     errors = []
+    user_id = get_principal_id(principal)
 
     # Process each file individually for better error isolation
     for file in files:
@@ -156,15 +172,23 @@ async def upload_files_batch(
                 errors.append(f"{file.filename}: {validation_result.error_message}")
                 continue
 
+            # Read file content
+            content = await file.read()
+
+            # Create upload request
+            upload_request = FileUploadRequest(
+                filename=file.filename, content=content, auto_analyze=True
+            )
+
             # Process file
-            result = await processor.process_file(file, current_user.id)
+            result = await service.upload_file(user_id, upload_request)
             processed_files.append(
                 FileUploadResponse(
-                    file_id=result.file_id,
+                    file_id=result.id,
                     filename=result.original_filename,
                     file_size=result.file_size,
                     mime_type=result.mime_type,
-                    processing_status=result.processing_status,
+                    processing_status=result.processing_status.value,
                     upload_status="completed",
                     message="Upload successful",
                 )
@@ -187,7 +211,7 @@ async def upload_files_batch(
 
     logger.info(
         f"Batch upload completed: {len(processed_files)}/{len(files)} files "
-        f"processed for user {current_user.id}"
+        f"processed for user {user_id}"
     )
 
     return BatchUploadResponse(
@@ -200,15 +224,16 @@ async def upload_files_batch(
 @router.get("/files/{file_id}")
 async def get_file_metadata(
     file_id: str,
-    current_user: UserDB = get_current_user_dep,
-    processor: FileProcessor = get_file_processor_dep,
+    principal: Principal = require_principal_module_dep,
+    service: FileProcessingService = get_file_processing_service_dep,
 ):
     """Get metadata and analysis results for an uploaded file.
 
     Only returns files owned by the current user for security.
     """
     try:
-        file_info = await processor.get_file_metadata(file_id, current_user.id)
+        user_id = get_principal_id(principal)
+        file_info = await service.get_file(file_id, user_id)
         if not file_info:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -228,22 +253,23 @@ async def get_file_metadata(
 @router.delete("/files/{file_id}")
 async def delete_file(
     file_id: str,
-    current_user: UserDB = get_current_user_dep,
-    processor: FileProcessor = get_file_processor_dep,
+    principal: Principal = require_principal_module_dep,
+    service: FileProcessingService = get_file_processing_service_dep,
 ):
     """Delete an uploaded file and its associated data.
 
     Only allows deletion of files owned by the current user.
     """
     try:
-        success = await processor.delete_file(file_id, current_user.id)
+        user_id = get_principal_id(principal)
+        success = await service.delete_file(file_id, user_id)
         if not success:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="File not found or access denied",
             )
 
-        logger.info(f"File {file_id} deleted by user {current_user.id}")
+        logger.info(f"File {file_id} deleted by user {user_id}")
         return {"message": "File deleted successfully", "file_id": file_id}
 
     except Exception as e:
@@ -256,16 +282,19 @@ async def delete_file(
 
 @router.get("/files")
 async def list_user_files(
-    current_user: UserDB = get_current_user_dep,
-    processor: FileProcessor = get_file_processor_dep,
+    principal: Principal = require_principal_module_dep,
+    service: FileProcessingService = get_file_processing_service_dep,
     limit: int = 50,
     offset: int = 0,
 ):
     """List files uploaded by the current user with pagination."""
     try:
-        files = await processor.list_user_files(
-            current_user.id, limit=limit, offset=offset
-        )
+        user_id = get_principal_id(principal)
+
+        # Create search request with basic pagination
+        search_request = FileSearchRequest(limit=limit, offset=offset)
+
+        files = await service.search_files(user_id, search_request)
 
         return {
             "files": files,
@@ -275,7 +304,7 @@ async def list_user_files(
         }
 
     except Exception as e:
-        logger.error(f"Failed to list files for user {current_user.id}: {str(e)}")
+        logger.error(f"Failed to list files for user {user_id}: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to retrieve file list",

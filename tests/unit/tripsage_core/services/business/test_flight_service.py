@@ -156,6 +156,7 @@ class TestFlightService:
             metadata={"booking_source": "web", "payment_method": "credit_card"},
         )
 
+    @pytest.mark.asyncio
     async def test_search_flights_success(
         self,
         flight_service,
@@ -192,6 +193,7 @@ class TestFlightService:
         mock_external_flight_service.search_flights.assert_called_once()
         mock_database_service.store_flight_search.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_search_flights_cached_results(
         self, flight_service, sample_flight_search_request, sample_flight_offer
     ):
@@ -210,6 +212,7 @@ class TestFlightService:
         # Should not call external service
         assert flight_service.external_service.search_flights.called is False
 
+    @pytest.mark.asyncio
     async def test_search_flights_validation_error(
         self, flight_service, sample_flight_passenger
     ):
@@ -227,6 +230,7 @@ class TestFlightService:
                 passengers=[sample_flight_passenger],
             )
 
+    @pytest.mark.asyncio
     async def test_search_flights_no_results(
         self, flight_service, mock_external_flight_service, sample_flight_search_request
     ):
@@ -238,6 +242,7 @@ class TestFlightService:
         assert len(result.offers) == 0
         assert result.total_results == 0
 
+    @pytest.mark.asyncio
     async def test_get_offer_details_success(
         self, flight_service, mock_database_service, sample_flight_offer
     ):
@@ -256,6 +261,7 @@ class TestFlightService:
             sample_flight_offer.id, user_id
         )
 
+    @pytest.mark.asyncio
     async def test_get_offer_details_not_found(
         self, flight_service, mock_database_service
     ):
@@ -269,6 +275,7 @@ class TestFlightService:
 
         assert result is None
 
+    @pytest.mark.asyncio
     async def test_book_flight_success(
         self,
         flight_service,
@@ -316,6 +323,7 @@ class TestFlightService:
         mock_external_flight_service.create_order.assert_called_once()
         mock_database_service.store_flight_booking.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_book_flight_offer_expired(
         self,
         flight_service,
@@ -340,6 +348,7 @@ class TestFlightService:
         with pytest.raises(ValidationError, match="Flight offer has expired"):
             await flight_service.book_flight(user_id, booking_request)
 
+    @pytest.mark.asyncio
     async def test_book_flight_hold_only(
         self,
         flight_service,
@@ -367,6 +376,7 @@ class TestFlightService:
         # Should not call external booking service for hold
         assert flight_service.external_service.create_order.called is False
 
+    @pytest.mark.asyncio
     async def test_get_user_bookings_success(
         self, flight_service, mock_database_service, sample_flight_booking
     ):
@@ -384,6 +394,7 @@ class TestFlightService:
         assert results[0].status == sample_flight_booking.status
         mock_database_service.get_flight_bookings.assert_called_once()
 
+    @pytest.mark.asyncio
     async def test_cancel_booking_success(
         self,
         flight_service,
@@ -406,6 +417,7 @@ class TestFlightService:
             sample_flight_booking.id, {"status": BookingStatus.CANCELLED.value}
         )
 
+    @pytest.mark.asyncio
     async def test_cancel_booking_already_cancelled(
         self, flight_service, mock_database_service, sample_flight_booking
     ):
@@ -424,6 +436,7 @@ class TestFlightService:
                 sample_flight_booking.id, sample_flight_booking.user_id
             )
 
+    @pytest.mark.asyncio
     async def test_search_flights_mock_offers(
         self, flight_service, sample_flight_search_request
     ):
@@ -437,6 +450,7 @@ class TestFlightService:
         assert len(result.offers) > 0
         assert all(offer.source == "mock" for offer in result.offers)
 
+    @pytest.mark.asyncio
     async def test_score_offers(self, flight_service, sample_flight_search_request):
         """Test offer scoring algorithm."""
         offers = [
@@ -540,6 +554,7 @@ class TestFlightService:
                 offer_id=str(uuid4()), passengers=[incomplete_passenger]
             )
 
+    @pytest.mark.asyncio
     async def test_service_error_handling(
         self, flight_service, mock_external_flight_service, sample_flight_search_request
     ):
@@ -552,6 +567,7 @@ class TestFlightService:
         with pytest.raises(ServiceError, match="Flight search failed"):
             await flight_service.search_flights(sample_flight_search_request)
 
+    @pytest.mark.asyncio
     async def test_get_flight_service_dependency(self):
         """Test the dependency injection function."""
         service = await get_flight_service()
@@ -570,6 +586,7 @@ class TestFlightService:
         key3 = flight_service._generate_search_cache_key(sample_flight_search_request)
         assert key1 != key3
 
+    @pytest.mark.asyncio
     async def test_external_api_conversion(
         self, flight_service, mock_external_flight_service, sample_flight_search_request
     ):

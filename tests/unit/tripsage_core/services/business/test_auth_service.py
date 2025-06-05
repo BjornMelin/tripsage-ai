@@ -3,6 +3,8 @@ Comprehensive tests for AuthenticationService.
 
 This module provides full test coverage for authentication operations
 including JWT token management, token validation, and refresh mechanisms.
+Compatible with refactored AuthenticationService using BaseService and
+enhanced error handling.
 """
 
 import os
@@ -15,6 +17,9 @@ import pytest
 
 from tripsage_core.exceptions.exceptions import (
     CoreAuthenticationError as AuthenticationError,
+)
+from tripsage_core.exceptions.exceptions import (
+    CoreServiceError,
 )
 from tripsage_core.services.business.auth_service import (
     AuthenticationService,
@@ -39,10 +44,28 @@ class TestAuthenticationService:
         return user_service
 
     @pytest.fixture
-    def auth_service(self, mock_user_service):
+    def mock_database_service(self):
+        """Mock database service for BaseService."""
+        database_service = AsyncMock()
+        database_service.health_check = AsyncMock()
+        return database_service
+
+    @pytest.fixture
+    def mock_cache_service(self):
+        """Mock cache service for BaseService."""
+        cache_service = AsyncMock()
+        cache_service.health_check = AsyncMock()
+        return cache_service
+
+    @pytest.fixture
+    def auth_service(
+        self, mock_user_service, mock_database_service, mock_cache_service
+    ):
         """Create AuthenticationService instance with mocked dependencies."""
         return AuthenticationService(
             user_service=mock_user_service,
+            database_service=mock_database_service,
+            cache_service=mock_cache_service,
             secret_key=os.getenv(
                 "TEST_JWT_SECRET_KEY", "dummy_test_secret_for_unit_tests"
             ),
@@ -73,6 +96,7 @@ class TestAuthenticationService:
         """Sample login request."""
         return LoginRequest(identifier="test@example.com", password="testpassword123")
 
+    @pytest.mark.asyncio
     async def test_authenticate_user_success(
         self,
         auth_service,
@@ -99,6 +123,7 @@ class TestAuthenticationService:
             sample_login_request.identifier, sample_login_request.password
         )
 
+    @pytest.mark.asyncio
     async def test_authenticate_user_invalid_credentials(
         self, auth_service, mock_user_service, sample_login_request
     ):
@@ -109,6 +134,7 @@ class TestAuthenticationService:
         with pytest.raises(AuthenticationError, match="Invalid credentials"):
             await auth_service.authenticate_user(sample_login_request)
 
+    @pytest.mark.asyncio
     async def test_refresh_token_success(
         self, auth_service, mock_user_service, sample_user_response
     ):
@@ -133,6 +159,7 @@ class TestAuthenticationService:
             sample_user_response.id
         )
 
+    @pytest.mark.asyncio
     async def test_refresh_token_invalid(self, auth_service):
         """Test refresh with invalid token."""
         refresh_request = RefreshTokenRequest(refresh_token="invalid_token")
@@ -140,6 +167,7 @@ class TestAuthenticationService:
         with pytest.raises(AuthenticationError, match="Invalid token"):
             await auth_service.refresh_token(refresh_request)
 
+    @pytest.mark.asyncio
     async def test_refresh_token_user_not_found(
         self, auth_service, mock_user_service, sample_user_response
     ):
@@ -155,6 +183,7 @@ class TestAuthenticationService:
         with pytest.raises(AuthenticationError, match="User not found or inactive"):
             await auth_service.refresh_token(refresh_request)
 
+    @pytest.mark.asyncio
     async def test_refresh_token_user_inactive(
         self, auth_service, mock_user_service, sample_user_response
     ):
@@ -174,6 +203,7 @@ class TestAuthenticationService:
         with pytest.raises(AuthenticationError, match="User not found or inactive"):
             await auth_service.refresh_token(refresh_request)
 
+    @pytest.mark.asyncio
     async def test_validate_access_token_success(
         self, auth_service, sample_user_response
     ):
@@ -189,6 +219,7 @@ class TestAuthenticationService:
         assert token_data.email == sample_user_response.email
         assert token_data.token_type == "access"
 
+    @pytest.mark.asyncio
     async def test_validate_access_token_expired(self, auth_service):
         """Test validation of expired token."""
         # Create an expired token
@@ -210,6 +241,7 @@ class TestAuthenticationService:
         with pytest.raises(AuthenticationError, match="Token has expired"):
             await auth_service.validate_access_token(token)
 
+    @pytest.mark.asyncio
     async def test_validate_access_token_wrong_type(
         self, auth_service, sample_user_response
     ):
@@ -221,6 +253,7 @@ class TestAuthenticationService:
         with pytest.raises(AuthenticationError, match="Invalid token type"):
             await auth_service.validate_access_token(refresh_token)
 
+    @pytest.mark.asyncio
     async def test_validate_access_token_invalid_signature(self, auth_service):
         """Test validation with invalid signature."""
         # Create token with different secret
@@ -242,6 +275,7 @@ class TestAuthenticationService:
         with pytest.raises(AuthenticationError, match="Invalid token"):
             await auth_service.validate_access_token(token)
 
+    @pytest.mark.asyncio
     async def test_get_current_user_success(
         self, auth_service, mock_user_service, sample_user_response
     ):
@@ -259,11 +293,13 @@ class TestAuthenticationService:
             sample_user_response.id
         )
 
+    @pytest.mark.asyncio
     async def test_get_current_user_invalid_token(self, auth_service):
         """Test current user retrieval with invalid token."""
         with pytest.raises(AuthenticationError, match="Invalid token"):
             await auth_service.get_current_user("invalid_token")
 
+    @pytest.mark.asyncio
     async def test_get_current_user_not_found(
         self, auth_service, mock_user_service, sample_user_response
     ):
@@ -277,6 +313,7 @@ class TestAuthenticationService:
         with pytest.raises(AuthenticationError, match="User not found or inactive"):
             await auth_service.get_current_user(access_token)
 
+    @pytest.mark.asyncio
     async def test_initiate_password_reset_success(
         self, auth_service, mock_user_service, sample_user_response
     ):
@@ -290,6 +327,7 @@ class TestAuthenticationService:
         assert result is True
         mock_user_service.get_user_by_email.assert_called_once_with("test@example.com")
 
+    @pytest.mark.asyncio
     async def test_initiate_password_reset_user_not_found(
         self, auth_service, mock_user_service
     ):
@@ -303,6 +341,7 @@ class TestAuthenticationService:
         # Should still return True for security
         assert result is True
 
+    @pytest.mark.asyncio
     async def test_confirm_password_reset_success(
         self, auth_service, mock_user_service, sample_user_response
     ):
@@ -327,6 +366,7 @@ class TestAuthenticationService:
             sample_user_response.id
         )
 
+    @pytest.mark.asyncio
     async def test_confirm_password_reset_invalid_token(self, auth_service):
         """Test password reset confirmation with invalid token."""
         confirm_request = PasswordResetConfirmRequest(
@@ -336,6 +376,7 @@ class TestAuthenticationService:
         with pytest.raises(AuthenticationError, match="Invalid token"):
             await auth_service.confirm_password_reset(confirm_request)
 
+    @pytest.mark.asyncio
     async def test_confirm_password_reset_expired_token(self, auth_service):
         """Test password reset confirmation with expired token."""
         # Create an expired reset token
@@ -361,6 +402,7 @@ class TestAuthenticationService:
         with pytest.raises(AuthenticationError, match="Token has expired"):
             await auth_service.confirm_password_reset(confirm_request)
 
+    @pytest.mark.asyncio
     async def test_logout_user_success(self, auth_service, sample_user_response):
         """Test successful user logout."""
         # Create a valid access token
@@ -370,6 +412,7 @@ class TestAuthenticationService:
 
         assert result is True
 
+    @pytest.mark.asyncio
     async def test_logout_user_invalid_token(self, auth_service):
         """Test logout with invalid token."""
         result = await auth_service.logout_user("invalid_token")
@@ -377,6 +420,7 @@ class TestAuthenticationService:
         # Should return False for invalid token
         assert result is False
 
+    @pytest.mark.asyncio
     async def test_create_access_token_structure(
         self, auth_service, sample_user_response
     ):
@@ -402,6 +446,7 @@ class TestAuthenticationService:
             exp_time - iat_time
         ).total_seconds() == auth_service.access_token_expire_minutes * 60
 
+    @pytest.mark.asyncio
     async def test_create_refresh_token_structure(
         self, auth_service, sample_user_response
     ):
@@ -427,6 +472,7 @@ class TestAuthenticationService:
             exp_time - iat_time
         ).total_seconds() == auth_service.refresh_token_expire_days * 24 * 60 * 60
 
+    @pytest.mark.asyncio
     async def test_create_password_reset_token_structure(
         self, auth_service, sample_user_response
     ):
@@ -474,6 +520,7 @@ class TestAuthenticationService:
             database_service=mock_db_service
         )
 
+    @pytest.mark.asyncio
     async def test_authenticate_user_exception_handling(
         self, auth_service, mock_user_service, sample_login_request
     ):
@@ -483,9 +530,14 @@ class TestAuthenticationService:
             "Database error"
         )
 
-        with pytest.raises(AuthenticationError, match="Authentication failed"):
+        # With the new error handling decorator, unexpected errors are
+        # wrapped as CoreServiceError
+        with pytest.raises(
+            CoreServiceError, match="Operation failed: user_authentication"
+        ):
             await auth_service.authenticate_user(sample_login_request)
 
+    @pytest.mark.asyncio
     async def test_refresh_token_exception_handling(
         self, auth_service, mock_user_service, sample_user_response
     ):
@@ -498,5 +550,39 @@ class TestAuthenticationService:
 
         refresh_request = RefreshTokenRequest(refresh_token=refresh_token)
 
-        with pytest.raises(AuthenticationError, match="Token refresh failed"):
+        # With the new error handling decorator, unexpected errors are
+        # wrapped as CoreServiceError
+        with pytest.raises(CoreServiceError, match="Operation failed: token_refresh"):
             await auth_service.refresh_token(refresh_request)
+
+    @pytest.mark.asyncio
+    async def test_service_initialization_with_base_service(
+        self, auth_service, mock_database_service, mock_cache_service
+    ):
+        """Test that the service initializes correctly with BaseService."""
+        # Test service properties from BaseService
+        assert auth_service.service_name == "AuthenticationService"
+        assert hasattr(auth_service, "logger")
+        assert hasattr(auth_service, "db")
+        assert hasattr(auth_service, "cache")
+
+        # Test JWT configuration
+        assert auth_service.algorithm == "HS256"
+        assert auth_service.access_token_expire_minutes == 30
+        assert auth_service.refresh_token_expire_days == 7
+
+    @pytest.mark.asyncio
+    async def test_health_check(
+        self, auth_service, mock_database_service, mock_cache_service
+    ):
+        """Test the health check functionality from BaseService."""
+        # Mock successful health checks
+        mock_database_service.health_check.return_value = None
+        mock_cache_service.health_check.return_value = None
+
+        health_status = await auth_service.health_check()
+
+        assert health_status["service"] == "AuthenticationService"
+        assert health_status["status"] == "healthy"
+        assert health_status["dependencies"]["database"] == "healthy"
+        assert health_status["dependencies"]["cache"] == "healthy"

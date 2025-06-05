@@ -1,8 +1,8 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
-import { UpcomingFlights } from "../upcoming-flights";
 import { useTripStore } from "@/stores/trip-store";
 import type { Trip } from "@/stores/trip-store";
+import { render, screen } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { UpcomingFlights } from "../upcoming-flights";
 
 // Mock the trip store
 vi.mock("@/stores/trip-store", () => ({
@@ -285,9 +285,7 @@ describe("UpcomingFlights", () => {
     const now = new Date();
     const futureTrip: Trip = {
       ...mockTrips[0],
-      startDate: new Date(
-        now.getTime() + 5 * 24 * 60 * 60 * 1000
-      ).toISOString(),
+      startDate: new Date(now.getTime() + 5 * 24 * 60 * 60 * 1000).toISOString(),
     };
 
     (useTripStore as any).mockReturnValue({

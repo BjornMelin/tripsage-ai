@@ -1,21 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useDeleteApiKey, useValidateApiKey } from "@/hooks/use-api-keys";
 import { useApiKeyStore } from "@/stores/api-key-store";
-import { useDeleteApiKey, useValidateApiKey } from "@/lib/hooks/use-api-keys";
 import type { ApiKey } from "@/types/api-keys";
 import { formatDistanceToNow } from "date-fns";
+import { useState } from "react";
 
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -27,7 +17,17 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Loader2, CheckCircle, XCircle, RefreshCw, Trash2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { CheckCircle, Loader2, RefreshCw, Trash2, XCircle } from "lucide-react";
 
 export function ApiKeyList() {
   const { keys } = useApiKeyStore();
@@ -36,9 +36,10 @@ export function ApiKeyList() {
   const { mutate: validateKey, isPending: isValidating } = useValidateApiKey();
 
   // Convert record to array for easier rendering
-  const keysList = Object.entries(keys).map(([service, keyData]) => ({
-    service,
+  const keysList = Object.entries(keys).map(([serviceName, keyData]) => ({
     ...keyData,
+    // Ensure service matches the key name
+    service: serviceName,
   }));
 
   // Format timestamp to readable format
@@ -54,7 +55,7 @@ export function ApiKeyList() {
   // Handle delete confirmation
   const handleDelete = () => {
     if (keyToDelete) {
-      deleteKey({ service: keyToDelete });
+      deleteKey(keyToDelete);
       setKeyToDelete(null);
     }
   };
@@ -73,8 +74,7 @@ export function ApiKeyList() {
       <div className="text-center p-8 border rounded-lg bg-muted/20">
         <h3 className="text-lg font-medium">No API Keys Added</h3>
         <p className="text-muted-foreground mt-2">
-          You haven't added any API keys yet. Add a key to use external
-          services.
+          You haven't added any API keys yet. Add a key to use external services.
         </p>
       </div>
     );
@@ -156,9 +156,8 @@ export function ApiKeyList() {
                       <AlertDialogHeader>
                         <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                         <AlertDialogDescription>
-                          This will permanently delete your {key.service} API
-                          key. You will need to add it again if you want to use
-                          this service.
+                          This will permanently delete your {key.service} API key. You
+                          will need to add it again if you want to use this service.
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>

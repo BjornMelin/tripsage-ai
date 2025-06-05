@@ -6,7 +6,6 @@ with structured details, HTTP status codes, and machine-readable error codes.
 """
 
 from tripsage_core.exceptions.exceptions import (
-    EXCEPTION_MAPPING,
     CoreAgentError,
     # Authentication and authorization
     CoreAuthenticationError,
@@ -28,7 +27,6 @@ from tripsage_core.exceptions.exceptions import (
     ErrorDetails,
     create_error_response,
     format_exception,
-    get_core_exception,
     safe_execute,
     with_error_handling,
 )
@@ -57,6 +55,4 @@ __all__ = [
     "create_error_response",
     "safe_execute",
     "with_error_handling",
-    "get_core_exception",
-    "EXCEPTION_MAPPING",
 ]

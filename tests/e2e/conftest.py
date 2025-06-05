@@ -34,8 +34,9 @@ os.environ.update(
         "OPENAI_API_KEY": "test-key",
         "WEBCRAWL_CRAWL4AI_API_KEY": "test-crawl-key",
         "WEBCRAWL_FIRECRAWL_API_KEY": "test-firecrawl-key",
-        # Redis configuration
-        "REDIS_URL": "redis://localhost:6379/0",
+        # DragonflyDB configuration
+        "DRAGONFLY_URL": "redis://localhost:6379/0",
+        "DRAGONFLY_PASSWORD": "test_dragonfly_password",
         # MCP Endpoints - All required MCP configurations
         "TIME_MCP_ENDPOINT": "http://localhost:3006",
         "WEATHER_MCP_ENDPOINT": "http://localhost:3007",
@@ -266,9 +267,9 @@ def mock_settings_and_redis(monkeypatch):
     mock_settings.database.supabase_url = "https://test.supabase.co"
     mock_settings.database.supabase_anon_key = "test_anon_key"
 
-    # Mock memory service (Mem0)
-    mock_settings.memory.service_type = "mem0"
-    mock_settings.memory.api_key = "test_mem0_key"
+    # Mock memory service (Mem0) - use actual fields from Mem0Config
+    mock_settings.mem0.vector_store_type = "pgvector"
+    mock_settings.mem0.embedding_model = "text-embedding-3-small"
 
     # Mock Redis client
     mock_redis_client = MagicMock()

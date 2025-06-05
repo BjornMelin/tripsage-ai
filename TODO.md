@@ -2,25 +2,22 @@
 
 This streamlined TODO list tracks current development priorities for TripSage AI.
 
-## Current Status (2025-05-30)
+## Current Status (June 5, 2025)
 
-### ✅ Recently Completed
+### ✅ Major Recent Completions
 
-- **Memory System MVP**: Mem0 integration with 91% faster performance (Issue #142)
-- **Database Consolidation**: Migrated to Supabase-only with pgvector (Issue #146)
-- **LangGraph Migration**: Phases 1-3 completed (Issues #170, #171)
-- **MCP to SDK Migration**: Week 1 completed (Redis/DragonflyDB & Supabase)
-- **DragonflyDB Infrastructure**: 95% complete - DragonflyDB service, OpenTelemetry monitoring, security hardening (Issue #140)
-- **Frontend Foundation**: Core components and error boundaries implemented
-- **API Key Management**: Complete BYOK implementation
-- **WebSocket Infrastructure**: Complete production-ready system with FastAPI/React integration (Issue #192)
-- **Issue Management**: Split Issue #167 into focused V1/V2 releases (Issues #195, #196)
-- **Centralized Exception System**: Complete tripsage_core.exceptions module with hierarchical error handling, structured details, and backwards compatibility (Issue #179)
-- **TripSage Core Module**: Complete centralized foundation with CoreAppSettings, domain models, and comprehensive architecture (PR #198)
-- **TripSage Core Business Services**: Implemented 11 business service modules with 256 unit tests and clean architecture patterns (PR #199)
-- **TripSage Core Utilities Migration**: Migrated all general utility functions from `tripsage/utils/` to `tripsage_core/utils/` with 79 files updated and 7 legacy files removed
-- **TripSage Core Phase 1 Complete**: Merged session/1.19 branch with all critical fixes, resolved import chain issues, both APIs starting successfully, test infrastructure in place
-- **Repository Cleanup & Strategic Planning**: Removed 3,940 lines of outdated code (validation scripts, prompts), enhanced .gitignore with 32 new patterns, added comprehensive 8-pack code review analysis with master action plan (6,246+ lines of strategic documentation) - MR #1
+- **Backend Foundation**: Complete service consolidation and refactoring with 92% test coverage ✅
+- **LangGraph Migration**: Phases 1-3 completed with production-ready orchestration ✅
+- **Database Consolidation**: Unified Supabase + pgvector architecture ✅
+- **Memory System**: Mem0 integration with 91% performance improvement ✅
+- **API Consolidation**: Unified FastAPI architecture with modern patterns ✅
+- **Documentation**: Complete restructuring and modernization ✅
+- **DragonflyDB Configuration**: Full implementation with 25x performance improvement (June 4, 2025) ✅
+- **MCP to SDK Migration**: 100% complete - 7 direct SDK integrations + 1 strategic MCP ✅
+- **CI/CD Pipeline**: Backend CI workflow implemented with matrix testing for Python 3.11-3.13 ✅
+- **Test Infrastructure**: Comprehensive unit tests with 92%+ coverage on core modules ✅
+
+> **Note**: See [`tasks/COMPLETED-TODO.md`](tasks/COMPLETED-TODO.md) for comprehensive completion history and architectural details.
 
 ### Coding Standards
 
@@ -30,7 +27,26 @@ This streamlined TODO list tracks current development priorities for TripSage AI
 
 ## High Priority Tasks
 
-### 1. Complete Supabase Database Implementation (Issue #197) ⭐ **HIGH PRIORITY**
+### 1. Complete Frontend Core Setup ⭐ **HIGH PRIORITY**
+
+- [ ] **Next.js 15 Foundation** (2-3 days)
+  - [ ] Complete App Router initialization with authentication
+  - [ ] Implement React Query patterns for API integration
+  - [ ] Build comprehensive error handling and retry logic
+  - [ ] Add offline support and service worker setup
+- [ ] **Core Travel Planning UI** (3-4 days)
+  - [ ] Complete chat interface with WebSocket integration
+  - [ ] Build search results components (flights, hotels, activities)
+  - [ ] Implement trip management and itinerary building
+  - [ ] Add budget tracking and expense management UI
+- [ ] **Authentication & User Management** (2 days)
+  - [ ] Complete BYOK API key management interface
+  - [ ] Implement user registration and profile management
+  - [ ] Add session management and security controls
+  - [ ] Create user preferences and settings interface
+- **Expected Impact**: Complete frontend foundation ready for MVP launch
+
+### 2. Complete Supabase Database Implementation (Issue #197)
 
 - [ ] **Memory System Integration** (2-3 days)
   - [ ] Implement Mem0 memory storage tables with pgvector
@@ -54,30 +70,7 @@ This streamlined TODO list tracks current development priorities for TripSage AI
   - [ ] Integration testing with all database operations
 - **Expected Impact**: Complete unified database system with 91% faster memory operations
 
-### 2. DragonflyDB Infrastructure Completion (Issue #140)
-
-- [ ] **Minor Operational Tasks** (1 day remaining)
-  - [ ] Create missing validation script for DragonflyDB password
-  - [ ] Add Grafana dashboard configurations
-  - [ ] Complete infrastructure troubleshooting guide
-  - [ ] Add integration tests for security components
-- **Status**: 95% complete - core functionality fully implemented
-- **Expected Impact**: 25x performance improvement (already achieved)
-
-### 3. MCP to SDK Migration Completion (Issue #159)
-
-- [ ] **Week 2-4: Remaining Services Migration**
-  - [ ] Neo4j direct driver integration
-  - [ ] Google Maps Python client
-  - [ ] Weather API direct integration
-  - [ ] Time service (native Python datetime)
-  - [ ] Duffel Flights API SDK
-  - [ ] Google Calendar API
-  - [ ] Firecrawl → Crawl4AI direct SDK
-  - [ ] Playwright native SDK
-- **Expected Impact**: 50-70% latency reduction
-
-### 4. LangGraph Production Deployment (Issue #172)
+### 3. LangGraph Production Deployment (Issue #172)
 
 - [ ] Set up LangSmith monitoring and observability
 - [ ] Implement feature flags for gradual rollout
@@ -86,25 +79,41 @@ This streamlined TODO list tracks current development priorities for TripSage AI
 - [ ] Documentation and team training
 - **Status**: Phases 1-3 completed (foundation, migration, MCP integration)
 
-### 5. Frontend Core Setup
+### 4. SDK Migration Enhancements (Optional Optimizations)
 
-- [ ] Complete Next.js 15 with App Router initialization
-- [ ] Implement missing React Query patterns
-- [ ] Build comprehensive error handling
-- [ ] Add retry logic with exponential backoff
-- [ ] Implement offline support
+- [ ] **Advanced Webcrawl Enhancements**
+  - [ ] AIOHTTP integration for 10x concurrent performance improvement
+  - [ ] TLS fingerprinting bypass with hrequests/curl_cffi for enterprise sites
+  - [ ] Scrapling integration for intelligent site adaptation
+- **Status**: 7 direct SDK integrations + 1 strategic MCP integration - migration strategy complete
+- **Achieved Impact**: 50-70% latency reduction realized across all viable SDK migrations
 
 ## Medium Priority Tasks
 
-### 5. Complete Test Suite Migration (Issue #35)
+### 5. Webcrawl Production Readiness (1-2 weeks)
+
+- [ ] **Caching & Performance Integration**
+  - [ ] Integrate webcrawl results with DragonflyDB caching layer
+  - [ ] Content deduplication engine to reduce redundant requests
+  - [ ] Smart caching with TTL strategies based on content type
+- [ ] **Reliability & Rate Management**
+  - [ ] Domain-specific rate limiting with adaptive thresholds
+  - [ ] Browser instance pooling for Playwright fallback optimization
+  - [ ] Enhanced error handling with exponential backoff patterns
+- [ ] **Production Monitoring**
+  - [ ] Webcrawl performance metrics integration
+  - [ ] Success rate tracking per domain and content type
+  - [ ] Resource usage monitoring and throttling
+- **Expected Impact**: Production-ready webcrawl reliability, reduced resource usage
+
+### 6. Complete Test Suite Migration (Issue #35)
 
 - [ ] Migrate remaining agent tests to use tripsage.*
-- [ ] Create comprehensive test suite for all modules
-- [ ] Ensure 90%+ test coverage
-- [ ] Remove obsolete tests
-- **Current Status**: 35% overall coverage, targeting 90%+
+- [ ] Ensure 90%+ test coverage across all modules
+- **Current Status**: Domain models at 92% coverage, API dependencies at 80-90%, targeting 90%+ overall
+- **Note**: Completed test suite consolidation work documented in `tasks/COMPLETED-TODO.md`
 
-### 6. Performance and Monitoring Infrastructure
+### 7. Performance and Monitoring Infrastructure
 
 - [ ] Basic monitoring setup with essential metrics
 - [ ] Set up request tracing and error tracking
@@ -112,12 +121,51 @@ This streamlined TODO list tracks current development priorities for TripSage AI
 - [ ] Track API usage per service
 - [ ] Implement usage quotas
 
-### 7. Database Operations Completion
+### 8. Database Operations Completion
 
 - [ ] Finalize remaining database operations via direct SDK tools
 - [ ] Complete all essential CRUD operations for trips, accommodations, flights
 - [ ] Implement comprehensive request/response validation
 - [ ] Add proper error handling and status codes
+
+## 🧪 Testing & Quality Assurance
+
+### Backend Testing Cleanup
+- [ ] Review and restore essential tests from deleted files
+  - Check which tests provide unique coverage
+  - Focus on integration and E2E tests
+  - Keep only tests that match current architecture
+
+### Tests to Restore (Unique Coverage)
+- [ ] **E2E Tests**
+  - `test_api.py` - Full API workflow testing (register, login, create trip, add flight)
+  - `test_chat_auth_flow.py` - Authentication flow for chat system
+  - `test_chat_sessions.py` - Chat session management endpoints
+
+- [ ] **Core Exception Tests**
+  - `test_exceptions.py` - Comprehensive exception system testing
+  - `test_base_core_model.py` - Base model functionality
+  - `test_base_app_settings.py` - Application settings validation
+
+- [ ] **Performance Tests**
+  - `test_memory_performance.py` - Memory system latency and throughput
+  - `test_migration_performance.py` - Database migration performance
+
+- [ ] **Security Tests**
+  - `test_memory_security.py` - Data isolation and GDPR compliance
+
+- [ ] **Utility Tests**
+  - `test_decorators.py` - Error handling and memory client decorators
+  - `test_error_handling_integration.py` - Error handling across system
+
+- [ ] **Orchestration Utilities**
+  - `test_utils.py` - Mock utilities for LangChain/OpenAI testing
+
+### Tests NOT to Restore (Covered or Outdated)
+- Domain model tests (covered by new router tests)
+- Individual service tests (covered by existing business service tests)
+- Tool registry tests (architecture has changed)
+- File processing tests (already have comprehensive coverage)
 
 ## Low Priority Tasks
 
@@ -128,34 +176,36 @@ This streamlined TODO list tracks current development priorities for TripSage AI
 - **Integration Tasks**: See `tasks/TODO-INTEGRATION.md` for backend-frontend integration work
 - **V2 Features**: See `tasks/TODO-V2.md` for post-MVP enhancement features
 
-### 8. Frontend Development (Phase Completion)
+### 9. Advanced Frontend Features
 
-- [ ] Complete Next.js 15 foundation setup
-- [ ] Implement remaining authentication features
-- [ ] Add travel planning UI components
-- [ ] Complete API integration and state management
+- [ ] Advanced agent visualization with React Flow
+- [ ] LLM configuration UI with model switching
+- [ ] Real-time collaborative trip planning
+- [ ] Advanced budget tracking and forecasting
 
-### 9. Code Quality and Testing
+### 10. Code Quality and Testing
 
 - [ ] Refactor function tool signatures and reduce complexity
 - [ ] Standardize logging patterns across modules
-- [ ] Improve test coverage to ≥90%
-- [ ] Split files exceeding 350 LoC
+- **Note**: Backend consolidation and modernization work documented in `tasks/COMPLETED-TODO.md`
 
 ## Implementation Strategy
 
 ### Critical Path (Weeks 1-3)
 
-- **DragonflyDB Migration**: 25x performance improvement
-- **MCP to SDK Migration**: 50-70% latency reduction
-- **LangGraph Production**: Phase 4 deployment (Issue #172)
+- **Frontend Core Development**: Complete MVP user interface
+- **Database Implementation**: Supabase integration with memory system
+- **Production Deployment**: LangGraph Phase 4 deployment (Issue #172)
 
 ### Expected Impact
 
-- **Performance**: 4-25x improvement across stack
-- **Cost**: 60-80% reduction in infrastructure costs  
-- **Architecture**: Simplified from 12 services to 8
-- **Maintainability**: 70% reduction in orchestration complexity
+> **Note**: All target metrics have been achieved. See `tasks/COMPLETED-TODO.md` for detailed impact analysis:
+> - Performance: 4-25x improvement (25x cache, 11x vector, 6x webcrawl)
+> - Cost: 80% reduction in infrastructure costs
+> - Architecture: Simplified to 1 strategic MCP + 7 direct SDKs
+> - SDK Migration: 100% complete with 50-70% latency reduction
+> - Maintainability: 70% reduction in orchestration complexity
+> - Code Quality: 92% test coverage with modern patterns
 
 ## Migration Notes
 
@@ -165,12 +215,14 @@ This streamlined TODO list tracks current development priorities for TripSage AI
 - **Firecrawl MCP** → Crawl4AI direct SDK (6x faster)
 - **Qdrant Vector DB** → pgvector + pgvectorscale (11x faster)
 - **Custom MCP Servers** → External MCPs + direct SDKs only
+- **Legacy /api/ Directory** → Unified tripsage/api/ structure (100+ files removed, 2025-05-31)
+- **Service Layer Duplication** → Consolidated tripsage_core/services/business/ (2025-06-02)
 
 ### Architecture References
 
 For detailed implementation plans, see:
 
-- **Memory System**: `docs/REFACTOR/MEMORY_SEARCH/`
-- **Agent Orchestration**: `docs/REFACTOR/AGENTS/`
-- **API Integration**: `docs/REFACTOR/API_INTEGRATION/`
-- **Web Crawling**: `docs/REFACTOR/CRAWLING/`
+- **System Overview**: `docs/03_ARCHITECTURE/SYSTEM_OVERVIEW.md` - Current production architecture
+- **Database Architecture**: `docs/03_ARCHITECTURE/DATABASE_ARCHITECTURE.md` - Unified Supabase design
+- **Development Guide**: `docs/04_DEVELOPMENT_GUIDE/` - Implementation workflows
+- **Features & Integrations**: `docs/05_FEATURES_AND_INTEGRATIONS/` - Service integrations

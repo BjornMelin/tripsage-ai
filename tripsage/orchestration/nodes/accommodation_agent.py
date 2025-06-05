@@ -3,17 +3,17 @@ Accommodation agent node implementation for LangGraph orchestration.
 
 This module implements the accommodation search and booking agent as a LangGraph node,
 replacing the OpenAI Agents SDK implementation with improved performance and
-capabilities.
+capabilities. Refactored to use dependency injection and service-based architecture.
 """
 
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
 
-from tripsage.orchestration.mcp_bridge import get_mcp_bridge
+from tripsage.agents.service_registry import ServiceRegistry
 from tripsage.orchestration.nodes.base import BaseAgentNode
 from tripsage.orchestration.state import TravelPlanningState
 from tripsage_core.config.base_app_settings import settings
@@ -27,12 +27,12 @@ class AccommodationAgentNode(BaseAgentNode):
     Accommodation search and booking agent node.
 
     This node handles all accommodation-related requests including search, booking,
-    and accommodation information using MCP tool integration.
+    and accommodation information using service-based integration.
     """
 
-    def __init__(self):
-        """Initialize the accommodation agent node with tools and language model."""
-        super().__init__("accommodation_agent")
+    def __init__(self, service_registry: ServiceRegistry):
+        """Initialize the accommodation agent node with service injection."""
+        super().__init__("accommodation_agent", service_registry)
 
         # Initialize LLM for accommodation-specific tasks
         self.llm = ChatOpenAI(
@@ -41,19 +41,13 @@ class AccommodationAgentNode(BaseAgentNode):
             api_key=settings.openai_api_key.get_secret_value(),
         )
 
-        # MCP bridge will be initialized async
-        self.mcp_bridge = None
+    def _initialize_tools(self) -> None:
+        """Initialize accommodation-specific tools and services."""
+        # Get required services
+        self.accommodation_service = self.get_service("accommodation_service")
+        self.memory_service = self.get_optional_service("memory_service")
 
-    async def _initialize_tools(self) -> None:
-        """Initialize accommodation-specific tools and MCP integrations."""
-        if not self.mcp_bridge:
-            self.mcp_bridge = await get_mcp_bridge()
-
-        self.available_tools = await self.mcp_bridge.get_tools()
-
-        logger.info(
-            f"Initialized accommodation agent with {len(self.available_tools)} tools"
-        )
+        logger.info("Initialized accommodation agent with service-based architecture")
 
     async def process(self, state: TravelPlanningState) -> TravelPlanningState:
         """
@@ -65,9 +59,6 @@ class AccommodationAgentNode(BaseAgentNode):
         Returns:
             Updated state with accommodation search results and response
         """
-        # Ensure tools are initialized
-        await self._initialize_tools()
-
         user_message = state["messages"][-1]["content"] if state["messages"] else ""
 
         # Extract accommodation search parameters from user message and context
@@ -76,12 +67,12 @@ class AccommodationAgentNode(BaseAgentNode):
         )
 
         if search_params:
-            # Perform accommodation search using MCP integration
+            # Perform accommodation search using service
             search_results = await self._search_accommodations(search_params)
 
             # Update state with results
             accommodation_search_record = {
-                "timestamp": datetime.now(datetime.UTC).isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
                 "parameters": search_params,
                 "results": search_results,
                 "agent": "accommodation_agent",
@@ -181,7 +172,7 @@ class AccommodationAgentNode(BaseAgentNode):
         self, search_params: Dict[str, Any]
     ) -> Dict[str, Any]:
         """
-        Perform accommodation search using MCP tools.
+        Perform accommodation search using service layer.
 
         Args:
             search_params: Accommodation search parameters
@@ -190,25 +181,16 @@ class AccommodationAgentNode(BaseAgentNode):
             Accommodation search results
         """
         try:
-            # Use MCP bridge to invoke accommodation search
-            # This assumes airbnb MCP server with search_accommodations method
-            result = await self.mcp_bridge.invoke_tool_direct(
-                "airbnb_search_accommodations", search_params
+            # Use accommodation service to search
+            result = await self.accommodation_service.search_accommodations(
+                **search_params
             )
 
-            properties_found = len(
-                result.get("accommodations", []) if isinstance(result, dict) else []
-            )
-            logger.info(f"Search completed: {properties_found} properties found")
-
-            # Ensure result is in expected format
-            if isinstance(result, str):
-                try:
-                    result = json.loads(result)
-                except json.JSONDecodeError:
-                    result = {"error": "Invalid response format from search service"}
-            elif not isinstance(result, dict):
-                result = {"error": "Unexpected response format from search service"}
+            if result.get("status") == "success":
+                properties_found = len(result.get("listings", []))
+                logger.info(f"Search completed: {properties_found} properties found")
+            else:
+                logger.warning(f"Accommodation search failed: {result.get('error')}")
 
             return result
 
@@ -239,7 +221,7 @@ class AccommodationAgentNode(BaseAgentNode):
                 f"{search_results['error']}. Let me help you try a different approach."
             )
         else:
-            accommodations = search_results.get("accommodations", [])
+            accommodations = search_results.get("listings", [])
 
             if accommodations:
                 # Format accommodation results
@@ -258,8 +240,10 @@ class AccommodationAgentNode(BaseAgentNode):
                     accommodations[:3], 1
                 ):  # Show top 3 results
                     name = property.get("name", "Unknown Property")
-                    property_type = property.get("type", "Property")
-                    price = property.get("price_per_night", "Price not available")
+                    property_type = property.get("property_type", "Property")
+                    price = property.get("price", {}).get(
+                        "per_night", "Price not available"
+                    )
                     rating = property.get("rating", "No rating")
 
                     content += (
@@ -295,7 +279,7 @@ class AccommodationAgentNode(BaseAgentNode):
             content,
             {
                 "search_params": search_params,
-                "results_count": len(search_results.get("accommodations", [])),
+                "results_count": len(search_results.get("listings", [])),
             },
         )
 

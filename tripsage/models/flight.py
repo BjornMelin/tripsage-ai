@@ -10,13 +10,13 @@ from typing import Any, Dict, List, Optional
 
 from pydantic import Field, field_validator, model_validator
 
+from tripsage.models.mcp import MCPRequestBase, MCPResponseBase
 from tripsage_core.models.domain.flight import (
     Airport,
     CabinClass,
     FlightOffer,
     FlightSegment,
 )
-from tripsage_core.models.mcp import MCPRequestBase, MCPResponseBase
 
 # CabinClass moved to tripsage_core.models.domain.flight
 

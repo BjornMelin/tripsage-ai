@@ -12,6 +12,22 @@ This document captures features that:
 - Can be implemented post-MVP based on user feedback
 - May be over-engineering for current scale
 
+## Docker & Infrastructure Enhancements (V2)
+
+- [ ] **Advanced Docker Orchestration**
+  - Kubernetes deployment configurations for production scaling
+  - Advanced service mesh integration (Istio/Linkerd)
+  - Multi-cluster deployment strategies
+  - Complex rolling update strategies with blue-green deployments
+  - Advanced load balancing with traffic shaping
+
+- [ ] **Enhanced Development Tooling**
+  - Docker Desktop extensions for TripSage development
+  - Advanced debugging configurations with remote debugging
+  - Performance profiling containers with APM integration
+  - Custom Docker Compose profiles for different development scenarios
+  - Automated testing environments with Docker-in-Docker
+
 ## Advanced Analytics & Monitoring
 
 - [ ] **Complex Performance Analytics**
@@ -29,6 +45,16 @@ This document captures features that:
   - Custom security dashboards
 
 ## Complex Optimization Features
+
+- [ ] **Advanced Web Scraping & Anti-Detection Suite**
+  - **Enterprise Proxy Management**: Residential/mobile/datacenter proxy rotation with health monitoring
+  - **Advanced Anti-Detection**: Browser fingerprint randomization, user-agent rotation, CAPTCHA handling
+  - **Sophisticated Rate Limiting**: ML-based adaptive rate adjustment, complex domain-specific rules
+  - **Advanced Session Management**: Persistent sessions, authentication handling, session pooling
+  - **Complex Browser Automation**: Stealth mode detection bypass, WebDriver property obfuscation
+  - **Next-Generation TLS Fingerprinting**: JA3/JA4 dynamic signature rotation, HTTP/2 fingerprint mimicking
+  - **AI-Powered Site Adaptation**: ML models for automatic site change adaptation, predictive crawling
+  - **Enterprise Streaming**: Large content streaming, parallel processing frameworks, distributed crawling
 
 - [ ] **Advanced Itinerary Optimization**
   - Multi-objective optimization algorithms (time, cost, satisfaction)
@@ -293,6 +319,14 @@ Before moving items from V2.0 to main TODO:
 - [ ] **Core Stability**: Are core features stable and well-tested?
 - [ ] **Team Capacity**: Does the team have bandwidth for additional complexity?
 - [ ] **Technical Debt**: Is current technical debt manageable?
+
+### Web Scraping Enhancement Research (December 2024)
+
+The Advanced Web Scraping & Anti-Detection Suite items above are based on comprehensive research documented in:
+- `docs/research/web_scraping_analysis_2024.md` - Detailed 10/10 upgrade recommendations
+- `docs/research/external_research_validation.md` - External research validation and consensus analysis
+
+**Key Finding**: V1.5 critical enhancements (AIOHTTP, TLS fingerprinting, Scrapling) provide immediate 8.5/10 solution with minimal investment, while full V2 features achieve enterprise-grade 10/10 capability but add significant complexity.
 
 ## Review Schedule
 

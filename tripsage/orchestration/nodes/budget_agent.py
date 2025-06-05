@@ -7,7 +7,7 @@ capabilities.
 """
 
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
 from langchain_core.messages import HumanMessage, SystemMessage
@@ -15,7 +15,7 @@ from langchain_openai import ChatOpenAI
 
 from tripsage.orchestration.nodes.base import BaseAgentNode
 from tripsage.orchestration.state import TravelPlanningState
-from tripsage.orchestration.tools.mcp_integration import MCPToolRegistry
+from tripsage.orchestration.tools.registry import get_tool_registry
 from tripsage_core.config.base_app_settings import settings
 from tripsage_core.utils.logging_utils import get_logger
 
@@ -31,9 +31,9 @@ class BudgetAgentNode(BaseAgentNode):
     integration.
     """
 
-    def __init__(self):
+    def __init__(self, service_registry):
         """Initialize the budget agent node with tools and language model."""
-        super().__init__("budget_agent")
+        super().__init__("budget_agent", service_registry)
 
         # Initialize LLM for budget-specific tasks
         self.llm = ChatOpenAI(
@@ -44,7 +44,7 @@ class BudgetAgentNode(BaseAgentNode):
 
     def _initialize_tools(self) -> None:
         """Initialize budget-specific tools and MCP integrations."""
-        self.tool_registry = MCPToolRegistry()
+        self.tool_registry = get_tool_registry(self.service_registry)
         self.available_tools = self.tool_registry.get_tools_for_agent("budget_agent")
 
         logger.info(f"Initialized budget agent with {len(self.available_tools)} tools")
@@ -86,7 +86,7 @@ class BudgetAgentNode(BaseAgentNode):
 
             # Update state with results
             budget_record = {
-                "timestamp": datetime.now(datetime.UTC).isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
                 "operation": operation_type,
                 "parameters": budget_params,
                 "analysis": budget_analysis,
@@ -292,7 +292,7 @@ class BudgetAgentNode(BaseAgentNode):
         """
         expenses = params.get("expenses", [])
         trip_id = params.get(
-            "trip_id", f"trip_{datetime.now(datetime.UTC).strftime('%Y%m%d')}"
+            "trip_id", f"trip_{datetime.now(timezone.utc).strftime('%Y%m%d')}"
         )
 
         # Categorize and sum expenses

@@ -1,41 +1,61 @@
 """
-Pytest configuration for TripSage tests.
+Global test configuration and fixtures.
 
-This module provides common fixtures and utilities used across all test suites.
+This module provides centralized test configuration, fixtures, and setup
+for the entire TripSage test suite with proper async support and mocking.
 """
 
 import asyncio
 import os
 import sys
+from datetime import date, timedelta
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
 
-# Load test environment variables FIRST
+# Load test environment variables FIRST - before any other imports
 from dotenv import load_dotenv
-from pydantic import BaseModel
 
+# Load test environment immediately
 load_dotenv(".env.test", override=True)
 
-# Add the project root directory to the path so tests can import modules directly
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-
-# Set up test environment before any imports
-os.environ.update(
-    {
-        # Core API
-        "SUPABASE_URL": "https://test.supabase.co",
-        "SUPABASE_ANON_KEY": "test-anon-key",
-        "SUPABASE_SERVICE_ROLE_KEY": "test-service-key",
-        # API Keys
-        "ANTHROPIC_API_KEY": "test-key",
-        "OPENAI_API_KEY": "test-key",
+# Set up test environment variables before any TripSage imports
+def setup_test_environment():
+    """Set up comprehensive test environment variables."""
+    test_env = {
+        # Core application settings
+        "TRIPSAGE_TEST_MODE": "true",
+        "ENVIRONMENT": "testing",
+        "DEBUG": "true",
+        "LOG_LEVEL": "INFO",
+        # Database configuration
+        "SUPABASE_URL": "https://test-project.supabase.co",
+        "SUPABASE_ANON_KEY": "test-anon-key-1234567890abcdef",
+        "SUPABASE_SERVICE_ROLE_KEY": "test-service-role-key-1234567890abcdef",
+        "SUPABASE_PROJECT_ID": "test-project-id",
+        # Cache configuration
+        "DRAGONFLY_URL": "redis://localhost:6379/1",
+        "DRAGONFLY_PASSWORD": "test_dragonfly_password",
+        # API Keys (safe test values)
+        "OPENAI_API_KEY": "sk-test-openai-key-1234567890abcdef",
+        "ANTHROPIC_API_KEY": "sk-ant-test-anthropic-key-1234567890abcdef",
+        "GOOGLE_MAPS_API_KEY": "test-google-maps-key-1234567890",
+        "GOOGLE_CLIENT_ID": "test-google-client-id",
+        "GOOGLE_CLIENT_SECRET": "test-google-client-secret",
+        "DUFFEL_API_KEY": "test-duffel-api-key-1234567890",
+        "OPENWEATHERMAP_API_KEY": "test-weather-api-key-1234567890",
+        "VISUAL_CROSSING_API_KEY": "test-visual-crossing-key-1234567890",
+        # Security
+        "JWT_SECRET_KEY": "test-jwt-secret-key-for-testing-only",
+        "API_KEY_MASTER_SECRET": "test-master-secret-for-byok-encryption",
+        # External services
+        "CRAWL4AI_API_URL": "http://localhost:8000/api",
+        "CRAWL4AI_API_KEY": "test-crawl4ai-key-1234567890",
         "WEBCRAWL_CRAWL4AI_API_KEY": "test-crawl-key",
         "WEBCRAWL_FIRECRAWL_API_KEY": "test-firecrawl-key",
-        # Redis configuration
-        "REDIS_URL": "redis://localhost:6379/0",
         # MCP Endpoints - All required MCP configurations
         "TIME_MCP_ENDPOINT": "http://localhost:3006",
         "WEATHER_MCP_ENDPOINT": "http://localhost:3007",
@@ -53,12 +73,71 @@ os.environ.update(
         "CALENDAR_MCP_GOOGLE_CLIENT_SECRET": "test-client-secret",
         "CALENDAR_MCP_GOOGLE_REDIRECT_URI": "http://localhost:3000/callback",
         "SUPABASE_MCP_ENDPOINT": "http://localhost:3016",
-        # Additional environment variables for compatibility
-        "ENVIRONMENT": "testing",
-        "DEBUG": "false",
-        "LOG_LEVEL": "INFO",
+        # Feature flags for testing
+        "ENABLE_STREAMING_RESPONSES": "false",
+        "ENABLE_RATE_LIMITING": "false",
+        "ENABLE_CACHING": "false",
+        "ENABLE_DEBUG_MODE": "true",
+        "ENABLE_TRACING": "false",
+        "ENABLE_AGENT_MEMORY": "true",
+        "ENABLE_PARALLEL_AGENTS": "true",
+        "ENABLE_CRAWL4AI": "true",
+        "ENABLE_MEM0": "true",
+        "ENABLE_LANGGRAPH": "true",
     }
+
+    # Apply all environment variables
+    for key, value in test_env.items():
+        os.environ[key] = value
+
+
+# Set up test environment immediately
+setup_test_environment()
+
+# Now safe to import pydantic and TripSage modules
+from pydantic import BaseModel
+
+from tripsage_core.models.schemas_common.enums import (
+    AccommodationType,
+    BookingStatus,
+    CancellationPolicy,
 )
+
+# Add the project root directory to the path so tests can import modules directly
+project_root = Path(__file__).parent.parent
+sys.path.insert(0, str(project_root))
+
+
+def mock_problematic_imports():
+    """Mock problematic imports that might cause test failures."""
+    import importlib.util
+
+    # Check and mock langchain modules
+    if importlib.util.find_spec("langchain_core") is None:
+        sys.modules["langchain_core"] = MagicMock()
+        sys.modules["langchain_core.language_models"] = MagicMock()
+        sys.modules["langchain_core.language_models.chat_models"] = MagicMock()
+
+    if importlib.util.find_spec("langchain_openai") is None:
+        sys.modules["langchain_openai"] = MagicMock()
+        sys.modules["langchain_openai.chat_models"] = MagicMock()
+        # Mock ChatOpenAI class
+        mock_chat_openai = MagicMock()
+        mock_chat_openai.return_value = AsyncMock()
+        sys.modules["langchain_openai"].ChatOpenAI = mock_chat_openai
+
+    if importlib.util.find_spec("langgraph") is None:
+        sys.modules["langgraph"] = MagicMock()
+        sys.modules["langgraph.graph"] = MagicMock()
+        sys.modules["langgraph.checkpoint"] = MagicMock()
+
+    if importlib.util.find_spec("mem0ai") is None:
+        sys.modules["mem0ai"] = MagicMock()
+        sys.modules["mem0"] = MagicMock()
+
+
+# Mock problematic imports immediately
+mock_problematic_imports()
 
 
 @pytest.fixture(autouse=True)
@@ -71,26 +150,22 @@ def mock_environment_variables():
 # Mock MCP manager for use in tests
 @pytest.fixture
 def mock_mcp_manager():
-    """Create a mock MCPManager for testing."""
+    """Create a mock MCPManager for testing (Airbnb only)."""
     manager = MagicMock()
     manager.invoke = AsyncMock(return_value={})
-    manager.initialize_mcp = AsyncMock()
-    manager.initialize_all_enabled = AsyncMock()
-    available_mcps = ["weather", "time", "googlemaps", "supabase"]
-    manager.get_available_mcps = Mock(return_value=available_mcps)
-    manager.get_initialized_mcps = Mock(return_value=[])
-    manager.load_configurations = Mock()
+    manager.initialize = AsyncMock()
+    manager.get_available_methods = Mock(
+        return_value=["search_listings", "get_listing_details", "check_availability"]
+    )
 
-    # Create a side effect that returns different responses based on the MCP type
-    def invoke_side_effect(mcp_name, method_name, params=None, **kwargs):
-        if mcp_name == "weather":
-            return {"temperature": 22.5, "conditions": "Sunny"}
-        elif mcp_name == "time":
-            return {"current_time": "2025-01-16T12:00:00Z", "timezone": "UTC"}
-        elif mcp_name == "googlemaps":
-            return {"latitude": 37.7749, "longitude": -122.4194}
-        elif mcp_name == "supabase":
-            return {"id": "123", "created_at": "2025-01-16T12:00:00Z"}
+    # Create a side effect that returns Airbnb-specific responses
+    def invoke_side_effect(method_name, params=None, **kwargs):
+        if method_name in ["search_listings", "search_accommodations", "search"]:
+            return {"listings": [], "count": 0}
+        elif method_name in ["get_listing_details", "get_listing", "get_details"]:
+            return {"id": "123", "name": "Test Listing", "price_per_night": 100}
+        elif method_name in ["check_availability", "check_listing_availability"]:
+            return {"available": True, "dates": []}
         return {}
 
     manager.invoke.side_effect = invoke_side_effect
@@ -102,30 +177,16 @@ def mock_mcp_manager():
 # Mock MCP registry for use in tests
 @pytest.fixture
 def mock_mcp_registry():
-    """Create a mock MCPClientRegistry for testing."""
+    """Create a mock MCPRegistry for testing (Airbnb only)."""
     registry = MagicMock()
-    registry._registry = {}  # Empty registry
-    registry._lazy_loaders = {}  # Empty lazy loaders
-    registry.register = Mock()
-    registry.register_lazy = Mock()
-    registry.get_wrapper_class = Mock()
-    registry.is_registered = Mock(return_value=False)
-    registry.get_registered_mcps = Mock(return_value=[])
+    registry._wrapper_class = None
+    registry.register_airbnb = Mock()
+    registry.get_airbnb_wrapper = Mock()
 
-    # Setup side_effect for get_wrapper_class
-    def get_wrapper_class_side_effect(mcp_name):
-        if mcp_name == "weather":
-            return MagicMock(__name__="WeatherMCPWrapper")
-        elif mcp_name == "time":
-            return MagicMock(__name__="TimeMCPWrapper")
-        elif mcp_name == "googlemaps":
-            return MagicMock(__name__="GoogleMapsMCPWrapper")
-        elif mcp_name == "supabase":
-            return MagicMock(__name__="SupabaseMCPWrapper")
-        else:
-            raise KeyError(f"MCP '{mcp_name}' not found in registry")
-
-    registry.get_wrapper_class.side_effect = get_wrapper_class_side_effect
+    # Mock the AirbnbMCPWrapper class
+    mock_wrapper_class = MagicMock()
+    mock_wrapper_class.__name__ = "AirbnbMCPWrapper"
+    registry.get_airbnb_wrapper.return_value = mock_wrapper_class
 
     with patch("tripsage.mcp_abstraction.registry.registry", registry):
         yield registry
@@ -293,6 +354,292 @@ def mock_settings_and_redis(monkeypatch):
             "settings": mock_settings,
             "redis": mock_redis_client,
         }
+
+
+# Sample data fixtures using factories
+from tests.factories import (
+    AccommodationFactory,
+    APIKeyFactory,
+    ChatFactory,
+    DestinationFactory,
+    FlightFactory,
+    ItineraryFactory,
+    TripFactory,
+    UserFactory,
+    WebSocketFactory,
+)
+
+
+@pytest.fixture
+def sample_accommodation_dict():
+    """Sample accommodation data for testing."""
+    return AccommodationFactory.create()
+
+
+@pytest.fixture
+def sample_flight_dict():
+    """Sample flight data for testing."""
+    return FlightFactory.create()
+
+
+@pytest.fixture
+def sample_trip_dict():
+    """Sample trip data for testing."""
+    return TripFactory.create()
+
+
+@pytest.fixture
+def sample_user_dict():
+    """Sample user data for testing."""
+    return UserFactory.create()
+
+
+# Additional factory-based fixtures
+@pytest.fixture
+def sample_chat_message_dict():
+    """Sample chat message for testing."""
+    return ChatFactory.create_message()
+
+
+@pytest.fixture
+def sample_chat_conversation():
+    """Sample chat conversation with multiple messages."""
+    return ChatFactory.create_conversation()
+
+
+@pytest.fixture
+def sample_api_key_dict():
+    """Sample API key data for testing."""
+    return APIKeyFactory.create()
+
+
+@pytest.fixture
+def sample_destination_dict():
+    """Sample destination data for testing."""
+    return DestinationFactory.create()
+
+
+@pytest.fixture
+def sample_itinerary_dict():
+    """Sample itinerary data for testing."""
+    return ItineraryFactory.create()
+
+
+@pytest.fixture
+def sample_websocket_message():
+    """Sample WebSocket message for testing."""
+    return WebSocketFactory.create_chat_message()
+
+
+# Mock service fixtures
+@pytest.fixture
+def mock_database_service():
+    """Mock database service with async methods."""
+    mock = MagicMock()
+    mock.get_session = AsyncMock()
+    mock.execute = AsyncMock()
+    mock.fetch_one = AsyncMock()
+    mock.fetch_all = AsyncMock()
+    mock.save = AsyncMock()
+    mock.delete = AsyncMock()
+    mock.update = AsyncMock()
+    return mock
+
+
+@pytest.fixture
+def mock_cache_service():
+    """Mock cache service with async methods."""
+    mock = MagicMock()
+    mock.get = AsyncMock(return_value=None)
+    mock.set = AsyncMock(return_value=True)
+    mock.delete = AsyncMock(return_value=True)
+    mock.invalidate_pattern = AsyncMock(return_value=0)
+    mock.get_ttl = Mock(return_value=3600)
+    return mock
+
+
+@pytest.fixture
+def mock_auth_service():
+    """Mock authentication service."""
+    mock = MagicMock()
+    mock.verify_token = AsyncMock(
+        return_value={"user_id": 1, "email": "test@example.com"}
+    )
+    mock.create_access_token = Mock(return_value="test-jwt-token")
+    mock.create_refresh_token = Mock(return_value="test-refresh-token")
+    mock.hash_password = Mock(return_value="hashed-password")
+    mock.verify_password = Mock(return_value=True)
+    return mock
+
+
+@pytest.fixture
+def mock_memory_service():
+    """Mock memory service (Mem0)."""
+    mock = MagicMock()
+    mock.add_memory = AsyncMock(return_value={"memory_id": "test-memory-id"})
+    mock.get_memories = AsyncMock(return_value=[])
+    mock.search_memories = AsyncMock(return_value=[])
+    mock.delete_memory = AsyncMock(return_value=True)
+    return mock
+
+
+# Validation test helpers
+class ValidationTestHelper:
+    """Helper class for testing Pydantic model validation."""
+
+    @staticmethod
+    def assert_validation_error(model_class, data, field_name, error_message_part):
+        """Assert that creating a model with invalid data raises ValidationError."""
+        from pydantic import ValidationError
+
+        with pytest.raises(ValidationError) as exc_info:
+            model_class(**data)
+
+        errors = exc_info.value.errors()
+        field_errors = [e for e in errors if e["loc"][0] == field_name]
+        assert len(field_errors) > 0, (
+            f"No validation error found for field '{field_name}'"
+        )
+        actual_msg = field_errors[0]["msg"]
+        assert error_message_part in str(actual_msg), (
+            f"Expected error message containing '{error_message_part}' "
+            f"but got '{actual_msg}'"
+        )
+
+    @staticmethod
+    def assert_field_valid(model_class, data, field_name, valid_value):
+        """Assert that a field accepts a valid value."""
+        test_data = data.copy()
+        test_data[field_name] = valid_value
+        instance = model_class(**test_data)
+        assert getattr(instance, field_name) == valid_value
+
+
+# Serialization test helpers
+class SerializationTestHelper:
+    """Helper class for testing model serialization."""
+
+    @staticmethod
+    def test_json_round_trip(model_instance):
+        """Test that a model can be serialized to JSON and back."""
+        json_str = model_instance.model_dump_json()
+        reconstructed = model_instance.__class__.model_validate_json(json_str)
+        return reconstructed
+
+    @staticmethod
+    def test_dict_round_trip(model_instance):
+        """Test that a model can be converted to dict and back."""
+        data_dict = model_instance.model_dump()
+        reconstructed = model_instance.__class__.model_validate(data_dict)
+        return reconstructed
+
+
+@pytest.fixture
+def validation_helper():
+    """Fixture providing validation test utilities."""
+    return ValidationTestHelper()
+
+
+@pytest.fixture
+def serialization_helper():
+    """Fixture providing serialization test utilities."""
+    return SerializationTestHelper()
+
+
+# Performance testing fixtures
+@pytest.fixture
+def large_dataset():
+    """Large dataset for performance testing."""
+    today = date.today()
+    return {
+        "accommodations": [
+            {
+                "id": i,
+                "trip_id": 1,
+                "name": f"Hotel {i}",
+                "accommodation_type": AccommodationType.HOTEL,
+                "check_in": today + timedelta(days=i),
+                "check_out": today + timedelta(days=i + 7),
+                "price_per_night": 100.0 + i,
+                "total_price": (100.0 + i) * 7,
+                "location": f"City {i}",
+                "rating": min(5.0, 3.0 + (i % 3)),
+                "booking_status": BookingStatus.VIEWED,
+            }
+            for i in range(1000)
+        ]
+    }
+
+
+# Edge case testing data
+@pytest.fixture
+def edge_case_data():
+    """Edge case data for testing boundary conditions."""
+    today = date.today()
+    return {
+        "min_price": 0.01,
+        "max_price": 99999.99,
+        "min_rating": 0.0,
+        "max_rating": 5.0,
+        "past_date": today - timedelta(days=365),
+        "far_future_date": today + timedelta(days=365 * 5),
+        "empty_string": "",
+        "very_long_string": "x" * 1000,
+        "unicode_string": "🏨🌟✈️🏝️",
+    }
+
+
+# Parametrized test data
+@pytest.fixture
+def accommodation_types():
+    """All accommodation types for parametrized testing."""
+    return list(AccommodationType)
+
+
+@pytest.fixture
+def booking_statuses():
+    """All booking statuses for parametrized testing."""
+    return list(BookingStatus)
+
+
+@pytest.fixture
+def cancellation_policies():
+    """All cancellation policies for parametrized testing."""
+    return list(CancellationPolicy)
+
+
+# Mock external API responses
+@pytest.fixture
+def mock_airbnb_search_response():
+    """Mock Airbnb search response."""
+    return {
+        "listings": [
+            {
+                "id": "12345",
+                "name": "Beautiful Apartment in Tokyo",
+                "price_per_night": 150.00,
+                "rating": 4.8,
+                "location": "Shibuya, Tokyo",
+                "amenities": ["wifi", "kitchen", "tv"],
+            }
+        ],
+        "count": 1,
+        "has_more": False,
+    }
+
+
+# Database mock fixtures
+@pytest.fixture
+def mock_database_session():
+    """Mock database session for testing."""
+    session = MagicMock()
+    session.add = Mock()
+    session.commit = Mock()
+    session.rollback = Mock()
+    session.close = Mock()
+    session.query = Mock()
+    session.execute = Mock()
+    return session
 
 
 # Clean up after tests

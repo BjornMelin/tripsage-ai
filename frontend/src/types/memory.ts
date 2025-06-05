@@ -223,9 +223,7 @@ export interface MemoryState {
     userId: string,
     preferences: Partial<UserPreferences>
   ) => Promise<void>;
-  addConversationMemory: (
-    request: AddConversationMemoryRequest
-  ) => Promise<void>;
+  addConversationMemory: (request: AddConversationMemoryRequest) => Promise<void>;
   clearMemories: (userId: string) => Promise<void>;
   clearError: () => void;
 }

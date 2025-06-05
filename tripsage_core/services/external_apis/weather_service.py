@@ -310,10 +310,37 @@ class WeatherService:
         Returns:
             Travel weather summary
         """
-        # Calculate trip duration
         trip_duration = (departure_date - arrival_date).days + 1
 
-        # Get forecasts
+        # Gather weather data
+        weather_data = await self._gather_travel_weather_data(
+            latitude, longitude, trip_duration, units
+        )
+
+        # Analyze weather patterns
+        weather_stats = self._analyze_weather_patterns(weather_data["forecast_data"])
+
+        # Generate recommendations
+        activity_info = self._generate_activity_recommendations(
+            activities, weather_stats, trip_duration
+        )
+
+        # Generate packing suggestions
+        packing_suggestions = self._generate_packing_suggestions(weather_stats)
+
+        return {
+            **weather_stats,
+            **activity_info,
+            "packing_suggestions": packing_suggestions,
+            "air_quality_forecast": weather_data["air_quality_aqi"],
+            "alerts": weather_data["alerts"],
+            "forecast_data": weather_data["forecast_data"],
+        }
+
+    async def _gather_travel_weather_data(
+        self, latitude: float, longitude: float, trip_duration: int, units: str
+    ) -> Dict[str, Any]:
+        """Gather all required weather data for travel summary."""
         forecast_data = await self.get_forecast(
             latitude=latitude,
             longitude=longitude,
@@ -322,19 +349,28 @@ class WeatherService:
             units=units,
         )
 
-        # Get air quality
         air_quality_data = await self.get_air_quality(latitude, longitude)
-
-        # Get weather alerts
         alerts = await self.get_weather_alerts(latitude, longitude)
 
-        # Calculate statistics from forecast data
+        return {
+            "forecast_data": forecast_data,
+            "air_quality_aqi": (
+                air_quality_data.get("list", [{}])[0].get("main", {}).get("aqi", 0)
+            ),
+            "alerts": alerts,
+        }
+
+    def _analyze_weather_patterns(
+        self, forecast_data: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Analyze weather patterns from forecast data."""
         daily_forecasts = forecast_data.get("daily", [])
 
         temps = []
         rain_days = 0
         snow_days = 0
         clear_days = 0
+        uv_range = (0, 0)
 
         for forecast in daily_forecasts:
             temp_data = forecast.get("temp", {})
@@ -350,67 +386,18 @@ class WeatherService:
             if weather_main in ["clear", "sunny"]:
                 clear_days += 1
 
+            # Track UV index
+            uvi = forecast.get("uvi", 0)
+            uv_range = (min(uv_range[0], uvi), max(uv_range[1], uvi))
+
         avg_temp = sum(temps) / len(temps) if temps else 0
         temp_range = (min(temps), max(temps)) if temps else (0, 0)
 
-        # Activity recommendations
-        recommendations = []
-        warnings = []
-
-        if activities:
-            for activity in activities:
-                activity_lower = activity.lower()
-
-                if "beach" in activity_lower or "swimming" in activity_lower:
-                    if avg_temp < 20:  # Celsius
-                        warnings.append(
-                            f"Cool temperatures for {activity} (avg {avg_temp:.1f}°)"
-                        )
-                    if rain_days > trip_duration * 0.3:
-                        warnings.append(f"Frequent rain may affect {activity}")
-                    else:
-                        recommendations.append(f"Good weather expected for {activity}")
-
-                elif "hiking" in activity_lower or "outdoor" in activity_lower:
-                    if rain_days > trip_duration * 0.5:
-                        warnings.append(f"Pack rain gear for {activity}")
-                    if avg_temp > 30:  # Celsius
-                        warnings.append(
-                            f"High temperatures - plan {activity} for early morning"
-                        )
-                    else:
-                        recommendations.append(f"Pleasant conditions for {activity}")
-
-                elif "skiing" in activity_lower or "snow" in activity_lower:
-                    if snow_days == 0:
-                        warnings.append(f"No snow forecast for {activity}")
-                    else:
-                        recommendations.append(
-                            f"Snow conditions expected for {activity}"
-                        )
-
-        # Packing suggestions
-        packing_suggestions = []
-
-        if rain_days > 0:
-            packing_suggestions.append("Rain jacket or umbrella")
-        if snow_days > 0:
-            packing_suggestions.append("Warm clothing and snow gear")
-        if temp_range[1] > 25:
-            packing_suggestions.append("Sun protection (hat, sunscreen)")
-        if temp_range[0] < 10:
-            packing_suggestions.append("Warm layers for cool evenings")
-
-        # Calculate UV index range
-        uv_range = (0, 0)
-        try:
-            for forecast in daily_forecasts:
-                uvi = forecast.get("uvi", 0)
-                if uvi > 6:
-                    packing_suggestions.append("High SPF sunscreen")
-                uv_range = (min(uv_range[0], uvi), max(uv_range[1], uvi))
-        except Exception:
-            pass
+        precipitation_chance = (
+            sum(f.get("pop", 0) for f in daily_forecasts) / len(daily_forecasts) * 100
+            if daily_forecasts
+            else 0
+        )
 
         return {
             "average_temperature": avg_temp,
@@ -418,21 +405,88 @@ class WeatherService:
             "total_rain_days": rain_days,
             "total_snow_days": snow_days,
             "total_clear_days": clear_days,
-            "precipitation_chance": sum(f.get("pop", 0) for f in daily_forecasts)
-            / len(daily_forecasts)
-            * 100
-            if daily_forecasts
-            else 0,
+            "precipitation_chance": precipitation_chance,
+            "uv_index_range": uv_range,
+        }
+
+    def _generate_activity_recommendations(
+        self,
+        activities: Optional[List[str]],
+        weather_stats: Dict[str, Any],
+        trip_duration: int,
+    ) -> Dict[str, List[str]]:
+        """Generate activity recommendations and warnings."""
+        recommendations = []
+        warnings = []
+
+        if not activities:
+            return {
+                "activity_recommendations": recommendations,
+                "weather_warnings": warnings,
+            }
+
+        avg_temp = weather_stats["average_temperature"]
+        rain_days = weather_stats["total_rain_days"]
+        snow_days = weather_stats["total_snow_days"]
+
+        for activity in activities:
+            activity_lower = activity.lower()
+
+            # Beach activities
+            if "beach" in activity_lower or "swimming" in activity_lower:
+                if avg_temp < 20:
+                    warnings.append(
+                        f"Cool temperatures for {activity} (avg {avg_temp:.1f}°)"
+                    )
+                elif rain_days > trip_duration * 0.3:
+                    warnings.append(f"Frequent rain may affect {activity}")
+                else:
+                    recommendations.append(f"Good weather expected for {activity}")
+
+            # Hiking/outdoor activities
+            elif "hiking" in activity_lower or "outdoor" in activity_lower:
+                if rain_days > trip_duration * 0.5:
+                    warnings.append(f"Pack rain gear for {activity}")
+                elif avg_temp > 30:
+                    warnings.append(
+                        f"High temperatures - plan {activity} for early morning"
+                    )
+                else:
+                    recommendations.append(f"Pleasant conditions for {activity}")
+
+            # Snow activities
+            elif "skiing" in activity_lower or "snow" in activity_lower:
+                if snow_days == 0:
+                    warnings.append(f"No snow forecast for {activity}")
+                else:
+                    recommendations.append(f"Snow conditions expected for {activity}")
+
+        return {
             "activity_recommendations": recommendations,
             "weather_warnings": warnings,
-            "packing_suggestions": packing_suggestions,
-            "air_quality_forecast": air_quality_data.get("list", [{}])[0]
-            .get("main", {})
-            .get("aqi", 0),
-            "uv_index_range": uv_range,
-            "alerts": alerts,
-            "forecast_data": forecast_data,
         }
+
+    def _generate_packing_suggestions(self, weather_stats: Dict[str, Any]) -> List[str]:
+        """Generate packing suggestions based on weather."""
+        suggestions = []
+
+        rain_days = weather_stats["total_rain_days"]
+        snow_days = weather_stats["total_snow_days"]
+        temp_range = weather_stats["temperature_range"]
+        uv_range = weather_stats["uv_index_range"]
+
+        if rain_days > 0:
+            suggestions.append("Rain jacket or umbrella")
+        if snow_days > 0:
+            suggestions.append("Warm clothing and snow gear")
+        if temp_range[1] > 25:
+            suggestions.append("Sun protection (hat, sunscreen)")
+        if temp_range[0] < 10:
+            suggestions.append("Warm layers for cool evenings")
+        if uv_range[1] > 6:
+            suggestions.append("High SPF sunscreen")
+
+        return suggestions
 
     async def get_multi_city_weather(
         self,
@@ -491,7 +545,7 @@ class WeatherService:
         Returns:
             Dictionary with suitability score and recommendations
         """
-        # Get forecast for the date
+        # Validate date range
         days_ahead = (travel_date - datetime.now()).days
         if days_ahead > 7:
             return {
@@ -500,22 +554,10 @@ class WeatherService:
                 "message": "Weather forecast not available for dates beyond 7 days",
             }
 
-        forecast_data = await self.get_forecast(
-            latitude=latitude,
-            longitude=longitude,
-            days=days_ahead + 1,
-            include_hourly=False,
+        # Get target forecast
+        target_forecast = await self._get_target_date_forecast(
+            latitude, longitude, travel_date, days_ahead
         )
-
-        # Find forecast for specific date
-        daily_forecasts = forecast_data.get("daily", [])
-        target_forecast = None
-
-        for forecast in daily_forecasts:
-            forecast_date = datetime.fromtimestamp(forecast.get("dt", 0))
-            if forecast_date.date() == travel_date.date():
-                target_forecast = forecast
-                break
 
         if not target_forecast:
             return {
@@ -524,100 +566,198 @@ class WeatherService:
                 "message": "No forecast available for this date",
             }
 
-        # Evaluate conditions based on activity
-        score = 0
-        recommendations = []
-        warnings = []
+        # Evaluate activity suitability
+        return self._evaluate_activity_suitability(target_forecast, activity_type)
 
-        activity_lower = activity_type.lower()
-        temp_day = target_forecast.get("temp", {}).get("day", 0)
-        weather_main = target_forecast.get("weather", [{}])[0].get("main", "").lower()
-        pop = target_forecast.get("pop", 0) * 100  # Precipitation probability
-        wind_speed = target_forecast.get("wind_speed", 0)
+    async def _get_target_date_forecast(
+        self, latitude: float, longitude: float, travel_date: datetime, days_ahead: int
+    ) -> Optional[Dict[str, Any]]:
+        """Get forecast for target date."""
+        forecast_data = await self.get_forecast(
+            latitude=latitude,
+            longitude=longitude,
+            days=days_ahead + 1,
+            include_hourly=False,
+        )
 
-        if "beach" in activity_lower or "swimming" in activity_lower:
-            # Ideal: warm, sunny, low wind
-            if 25 <= temp_day <= 32:
-                score += 3
-            elif 20 <= temp_day <= 35:
-                score += 2
-            else:
-                warnings.append("Temperature may not be ideal for beach activities")
+        daily_forecasts = forecast_data.get("daily", [])
 
-            if weather_main in ["clear", "sunny"]:
-                score += 2
-            elif weather_main == "clouds":
-                score += 1
-            else:
-                warnings.append("Weather conditions may not be ideal")
+        for forecast in daily_forecasts:
+            forecast_date = datetime.fromtimestamp(forecast.get("dt", 0))
+            if forecast_date.date() == travel_date.date():
+                return forecast
 
-            if wind_speed < 20:
-                score += 1
-            else:
-                warnings.append("High winds expected")
+        return None
 
-            if pop < 20:
-                score += 1
-            else:
-                warnings.append(f"{pop}% chance of rain")
+    def _evaluate_activity_suitability(
+        self, target_forecast: Dict[str, Any], activity_type: str
+    ) -> Dict[str, Any]:
+        """Evaluate weather suitability for specific activity."""
+        weather_conditions = self._extract_weather_conditions(target_forecast)
+        score, recommendations, warnings = self._calculate_activity_score(
+            weather_conditions, activity_type.lower()
+        )
 
-        elif "hiking" in activity_lower or "trekking" in activity_lower:
-            # Ideal: moderate temp, no rain, good visibility
-            if 10 <= temp_day <= 25:
-                score += 3
-            elif 5 <= temp_day <= 30:
-                score += 2
-            else:
-                warnings.append("Temperature may be challenging for hiking")
-
-            if pop < 30:
-                score += 2
-            else:
-                warnings.append("High chance of precipitation - pack rain gear")
-
-            if wind_speed < 30:
-                score += 1
-            else:
-                warnings.append("Strong winds expected")
-
-            if weather_main not in ["thunderstorm", "snow"]:
-                score += 1
-            else:
-                warnings.append("Potentially dangerous conditions")
-
-        elif "sightseeing" in activity_lower or "city" in activity_lower:
-            # More flexible conditions
-            if 5 <= temp_day <= 30:
-                score += 2
-            else:
-                recommendations.append("Dress appropriately for the temperature")
-
-            if pop < 50:
-                score += 2
-            else:
-                recommendations.append("Bring an umbrella")
-
-            if weather_main != "thunderstorm":
-                score += 2
-            else:
-                warnings.append("Thunderstorms expected - plan indoor activities")
-
-        # Generate overall recommendation
-        max_score = 7  # Adjust based on criteria above
+        max_score = 7
         suitability_percentage = (score / max_score) * 100
-
         suitable = suitability_percentage >= 60
 
         return {
             "suitable": suitable,
             "score": suitability_percentage,
-            "temperature": temp_day,
+            "temperature": weather_conditions["temp_day"],
             "condition": target_forecast.get("weather", [{}])[0].get("description", ""),
-            "precipitation_chance": pop,
+            "precipitation_chance": weather_conditions["pop"],
             "recommendations": recommendations,
             "warnings": warnings,
             "forecast": target_forecast,
         }
+
+    def _extract_weather_conditions(self, forecast: Dict[str, Any]) -> Dict[str, Any]:
+        """Extract relevant weather conditions from forecast."""
+        return {
+            "temp_day": forecast.get("temp", {}).get("day", 0),
+            "weather_main": forecast.get("weather", [{}])[0].get("main", "").lower(),
+            "pop": forecast.get("pop", 0) * 100,
+            "wind_speed": forecast.get("wind_speed", 0),
+        }
+
+    def _calculate_activity_score(
+        self, conditions: Dict[str, Any], activity: str
+    ) -> tuple[int, List[str], List[str]]:
+        """Calculate suitability score for activity based on conditions."""
+        score = 0
+        recommendations = []
+        warnings = []
+
+        activity_lower = activity.lower()
+
+        if "beach" in activity_lower or "swimming" in activity_lower:
+            score, recommendations, warnings = self._score_beach_activity(conditions)
+        elif "hiking" in activity_lower or "outdoor" in activity_lower:
+            score, recommendations, warnings = self._score_hiking_activity(conditions)
+        elif "sightseeing" in activity_lower or "city" in activity_lower:
+            score, recommendations, warnings = self._score_sightseeing_activity(
+                conditions
+            )
+
+        return score, recommendations, warnings
+
+    def _score_beach_activity(
+        self, conditions: Dict[str, Any]
+    ) -> tuple[int, List[str], List[str]]:
+        """Score beach activity conditions."""
+        score = 0
+        recommendations = []
+        warnings = []
+
+        temp = conditions["temp_day"]
+        weather = conditions["weather_main"]
+        pop = conditions["pop"]
+        wind = conditions["wind_speed"]
+
+        # Temperature scoring
+        if 25 <= temp <= 32:
+            score += 3
+        elif 20 <= temp <= 35:
+            score += 2
+        else:
+            warnings.append("Temperature may not be ideal for beach activities")
+
+        # Weather condition scoring
+        if weather in ["clear", "sunny"]:
+            score += 2
+        elif weather == "clouds":
+            score += 1
+        else:
+            warnings.append("Weather conditions may not be ideal")
+
+        # Wind scoring
+        if wind < 20:
+            score += 1
+        else:
+            warnings.append("High winds expected")
+
+        # Precipitation scoring
+        if pop < 20:
+            score += 1
+        else:
+            warnings.append(f"{pop}% chance of rain")
+
+        return score, recommendations, warnings
+
+    def _score_hiking_activity(
+        self, conditions: Dict[str, Any]
+    ) -> tuple[int, List[str], List[str]]:
+        """Score hiking activity conditions."""
+        score = 0
+        recommendations = []
+        warnings = []
+
+        temp = conditions["temp_day"]
+        weather = conditions["weather_main"]
+        pop = conditions["pop"]
+        wind = conditions["wind_speed"]
+
+        # Temperature scoring
+        if 10 <= temp <= 25:
+            score += 3
+        elif 5 <= temp <= 30:
+            score += 2
+        else:
+            warnings.append("Temperature may be challenging for hiking")
+
+        # Precipitation scoring
+        if pop < 30:
+            score += 2
+        else:
+            warnings.append("High chance of precipitation - pack rain gear")
+
+        # Wind scoring
+        if wind < 30:
+            score += 1
+        else:
+            warnings.append("Strong winds expected")
+
+        # Weather condition scoring
+        if weather not in ["thunderstorm", "snow"]:
+            score += 1
+        else:
+            warnings.append("Potentially dangerous conditions")
+
+        return score, recommendations, warnings
+
+    def _score_sightseeing_activity(
+        self, conditions: Dict[str, Any]
+    ) -> tuple[int, List[str], List[str]]:
+        """Score sightseeing activity conditions."""
+        score = 0
+        recommendations = []
+        warnings = []
+
+        temp = conditions["temp_day"]
+        weather = conditions["weather_main"]
+        pop = conditions["pop"]
+
+        # Temperature scoring (more flexible for sightseeing)
+        if 5 <= temp <= 30:
+            score += 2
+        else:
+            recommendations.append("Dress appropriately for the temperature")
+
+        # Precipitation scoring (more tolerant)
+        if pop < 50:
+            score += 2
+        else:
+            recommendations.append("Bring an umbrella")
+
+        # Weather condition scoring
+        if weather != "thunderstorm":
+            score += 2
+        else:
+            warnings.append("Thunderstorms expected - plan indoor activities")
+
+        return score, recommendations, warnings
 
     async def health_check(self) -> bool:
         """

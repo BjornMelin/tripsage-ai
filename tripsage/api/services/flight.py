@@ -1,220 +1,69 @@
 """Flight service for TripSage API.
 
-This module provides the FlightService class for flight-related operations
-using direct HTTP integration with the Duffel API.
+This service acts as a thin wrapper around the core flight service,
+handling API-specific concerns like model adaptation and FastAPI integration.
 """
 
 import logging
-import uuid
-from datetime import date, datetime
-from typing import Any, Dict, List, Optional
+from typing import List, Optional
 from uuid import UUID
 
-from tripsage.api.models.flights import (
-    Airport,
+from fastapi import Depends
+
+from tripsage.api.schemas.requests.flights import (
     AirportSearchRequest,
-    AirportSearchResponse,
-    FlightOffer,
     FlightSearchRequest,
-    FlightSearchResponse,
     MultiCityFlightSearchRequest,
     SavedFlightRequest,
+)
+from tripsage.api.schemas.responses.flights import (
+    Airport,
+    AirportSearchResponse,
+    FlightOffer,
+    FlightSearchResponse,
     SavedFlightResponse,
 )
-
-# from tripsage.tools.schemas.flights import FlightSearchParams  # TODO: Missing schema
-from tripsage_core.models.domain.flight import CabinClass
-from tripsage_core.services.external_apis import DuffelHTTPClient
-from tripsage_core.utils.decorator_utils import with_error_handling
+from tripsage_core.exceptions.exceptions import (
+    CoreServiceError as ServiceError,
+)
+from tripsage_core.exceptions.exceptions import (
+    CoreValidationError as ValidationError,
+)
+from tripsage_core.services.business.flight_service import (
+    FlightService as CoreFlightService,
+)
+from tripsage_core.services.business.flight_service import (
+    get_flight_service as get_core_flight_service,
+)
 
 logger = logging.getLogger(__name__)
 
 
 class FlightService:
-    """Service for flight-related operations using direct Duffel API integration."""
+    """
+    API flight service that delegates to core business services.
 
-    def __init__(self):
-        """Initialize the FlightService."""
-        try:
-            self.duffel_client = DuffelHTTPClient()
-            logger.info("FlightService initialized with direct HTTP client")
-        except Exception as e:
-            logger.warning(f"Failed to initialize DuffelHTTPClient: {str(e)}")
-            logger.info("FlightService will fall back to mock data")
-            self.duffel_client = None
+    This service acts as a façade, handling:
+    - Model adaptation between API and core models
+    - API-specific error handling
+    - FastAPI dependency integration
+    """
 
-    def _validate_flight_search_request(self, request: FlightSearchRequest) -> None:
-        """Validate flight search request parameters.
+    def __init__(self, core_flight_service: Optional[CoreFlightService] = None):
+        """
+        Initialize the API flight service.
 
         Args:
-            request: Flight search request to validate
-
-        Raises:
-            ValueError: When validation fails
+            core_flight_service: Core flight service
         """
-        from datetime import date, datetime
+        self.core_flight_service = core_flight_service
 
-        # Validate dates
-        today = date.today()
-        departure_date = request.departure_date
+    async def _get_core_flight_service(self) -> CoreFlightService:
+        """Get or create core flight service instance."""
+        if self.core_flight_service is None:
+            self.core_flight_service = await get_core_flight_service()
+        return self.core_flight_service
 
-        # Convert datetime to date if needed
-        if isinstance(departure_date, datetime):
-            departure_date = departure_date.date()
-        elif isinstance(departure_date, str):
-            try:
-                departure_date = datetime.fromisoformat(departure_date).date()
-            except ValueError as e:
-                raise ValueError(
-                    f"Invalid departure date format: {departure_date}"
-                ) from e
-
-        if departure_date < today:
-            raise ValueError("Departure date cannot be in the past")
-
-        # Validate return date if provided
-        if request.return_date:
-            return_date = request.return_date
-            if isinstance(return_date, datetime):
-                return_date = return_date.date()
-            elif isinstance(return_date, str):
-                try:
-                    return_date = datetime.fromisoformat(return_date).date()
-                except ValueError as e:
-                    raise ValueError(
-                        f"Invalid return date format: {return_date}"
-                    ) from e
-
-            if return_date < departure_date:
-                raise ValueError("Return date cannot be before departure date")
-
-        # Validate airport codes (basic IATA format)
-        if (
-            not request.origin
-            or len(request.origin) != 3
-            or not request.origin.isalpha()
-        ):
-            raise ValueError(f"Invalid origin airport code: {request.origin}")
-
-        if (
-            not request.destination
-            or len(request.destination) != 3
-            or not request.destination.isalpha()
-        ):
-            raise ValueError(f"Invalid destination airport code: {request.destination}")
-
-        # Validate passenger counts
-        adults = getattr(request, "adults", 1)
-        children = getattr(request, "children", 0)
-        infants = getattr(request, "infants", 0)
-
-        if adults < 1:
-            raise ValueError("At least one adult passenger is required")
-        if adults > 9:
-            raise ValueError("Maximum 9 adult passengers allowed")
-        if children < 0 or children > 8:
-            raise ValueError("Children count must be between 0 and 8")
-        if infants < 0 or infants > adults:
-            raise ValueError("Infants count cannot exceed adult count")
-
-        # Validate preferred airlines format if provided
-        preferred_airlines = getattr(request, "preferred_airlines", None)
-        if preferred_airlines:
-            for airline in preferred_airlines:
-                if not airline or len(airline) < 2 or len(airline) > 3:
-                    raise ValueError(f"Invalid airline code format: {airline}")
-
-    async def _convert_api_models_to_flight_search_params(
-        self, request: FlightSearchRequest
-    ) -> Dict[str, Any]:
-        """Convert API models to internal flight search params."""
-        return {
-            "origin": request.origin,
-            "destination": request.destination,
-            "departure_date": request.departure_date.isoformat()
-            if hasattr(request.departure_date, "isoformat")
-            else str(request.departure_date),
-            "return_date": request.return_date.isoformat()
-            if request.return_date and hasattr(request.return_date, "isoformat")
-            else str(request.return_date)
-            if request.return_date
-            else None,
-            "adults": getattr(request, "adults", 1),
-            "children": getattr(request, "children", 0),
-            "infants": getattr(request, "infants", 0),
-            "cabin_class": request.cabin_class,
-            "max_stops": getattr(request, "max_stops", None),
-            "max_price": getattr(request, "max_price", None),
-            "preferred_airlines": getattr(request, "preferred_airlines", None),
-        }
-
-    async def _convert_duffel_response_to_api_models(
-        self, duffel_response, request: FlightSearchRequest
-    ) -> FlightSearchResponse:
-        """Convert Duffel response to API models."""
-        flight_offers = []
-
-        for offer in duffel_response.offers:
-            # Extract basic flight information from Duffel offer
-            segments = []
-            if offer.get("slices"):
-                for slice_data in offer["slices"]:
-                    for segment in slice_data.get("segments", []):
-                        segments.append(
-                            {
-                                "departure_airport": segment.get("origin", {}).get(
-                                    "iata_code", ""
-                                ),
-                                "arrival_airport": segment.get("destination", {}).get(
-                                    "iata_code", ""
-                                ),
-                                "departure_time": segment.get("departing_at", ""),
-                                "arrival_time": segment.get("arriving_at", ""),
-                                "flight_number": segment.get(
-                                    "marketing_carrier_flight_number", ""
-                                ),
-                                "duration_minutes": 180,  # Default fallback
-                            }
-                        )
-
-            flight_offer = FlightOffer(
-                id=offer["id"],
-                origin=request.origin,
-                destination=request.destination,
-                departure_date=request.departure_date,
-                return_date=request.return_date,
-                airline=segments[0].get("flight_number", "").split()[0]
-                if segments
-                else "Unknown",
-                airline_name="Unknown Airline",  # Would need airline lookup
-                price=offer["total_amount"],
-                currency=offer["total_currency"],
-                cabin_class=request.cabin_class,
-                stops=max(0, len(segments) - 1) if segments else 0,
-                duration_minutes=sum(
-                    seg.get("duration_minutes", 180) for seg in segments
-                ),
-                segments=segments,
-                booking_link="https://duffel.com/book",  # Placeholder
-            )
-            flight_offers.append(flight_offer)
-
-        return FlightSearchResponse(
-            results=flight_offers,
-            count=len(flight_offers),
-            currency=flight_offers[0].currency if flight_offers else "USD",
-            search_id=duffel_response.search_id or str(uuid.uuid4()),
-            trip_id=request.trip_id,
-            min_price=min(offer.price for offer in flight_offers)
-            if flight_offers
-            else None,
-            max_price=max(offer.price for offer in flight_offers)
-            if flight_offers
-            else None,
-            search_request=request,
-        )
-
-    @with_error_handling
     async def search_flights(
         self, request: FlightSearchRequest
     ) -> FlightSearchResponse:
@@ -225,101 +74,33 @@ class FlightService:
 
         Returns:
             Flight search results
+
+        Raises:
+            ValidationError: If request data is invalid
+            ServiceError: If search fails
         """
-        logger.info(
-            f"Searching for flights from {request.origin} to {request.destination} "
-            f"on {request.departure_date}"
-        )
-
-        # Validate request parameters
         try:
-            self._validate_flight_search_request(request)
-        except ValueError as e:
-            logger.error(f"Flight search request validation failed: {str(e)}")
-            # Return empty response for invalid requests (validation error logged)
-            return FlightSearchResponse(
-                results=[],
-                count=0,
-                currency="USD",
-                search_id=str(uuid.uuid4()),
-                trip_id=request.trip_id,
-                min_price=None,
-                max_price=None,
-                search_request=request,
+            logger.info(
+                f"Searching for flights from {request.origin} to {request.destination} "
+                f"on {request.departure_date}"
             )
 
-        # Use direct HTTP client
-        if self.duffel_client is None:
-            try:
-                self.duffel_client = DuffelHTTPClient()
-            except Exception as e:
-                logger.error(f"Failed to initialize DuffelHTTPClient: {str(e)}")
-                return await self._get_mock_flight_response(request)
+            # Adapt API request to core model
+            core_request = self._adapt_flight_search_request(request)
 
-        try:
-            # Convert to internal format
-            search_params = await self._convert_api_models_to_flight_search_params(
-                request
-            )
+            # Search via core service
+            core_service = await self._get_core_flight_service()
+            core_response = await core_service.search_flights(core_request)
 
-            # Make direct API call
-            duffel_response = await self.duffel_client.search_flights(search_params)
+            # Adapt core response to API model
+            return self._adapt_flight_search_response(core_response, request)
 
-            # Convert back to API format
-            return await self._convert_duffel_response_to_api_models(
-                duffel_response, request
-            )
-
+        except (ValidationError, ServiceError) as e:
+            logger.error(f"Flight search failed: {str(e)}")
+            raise
         except Exception as e:
-            logger.error(f"Direct API flight search failed: {str(e)}")
-            # Fall back to mock data
-            return await self._get_mock_flight_response(request)
-
-    async def _get_mock_flight_response(
-        self, request: FlightSearchRequest
-    ) -> FlightSearchResponse:
-        """Generate mock flight response for fallback scenarios."""
-        logger.warning("Using mock flight data as fallback")
-
-        search_id = str(uuid.uuid4())
-
-        # Create a mock flight offer
-        offer = FlightOffer(
-            id=f"offer-{uuid.uuid4()}",
-            origin=request.origin,
-            destination=request.destination,
-            departure_date=request.departure_date,
-            return_date=request.return_date,
-            airline="AA",
-            airline_name="American Airlines",
-            price=499.99,
-            currency="USD",
-            cabin_class=request.cabin_class,
-            stops=0,
-            duration_minutes=180,
-            segments=[
-                {
-                    "departure_airport": request.origin,
-                    "arrival_airport": request.destination,
-                    "departure_time": f"{request.departure_date}T08:00:00",
-                    "arrival_time": f"{request.departure_date}T11:00:00",
-                    "flight_number": "AA123",
-                    "duration_minutes": 180,
-                }
-            ],
-            booking_link="https://example.com/book/12345",
-        )
-
-        return FlightSearchResponse(
-            results=[offer],
-            count=1,
-            currency="USD",
-            search_id=search_id,
-            trip_id=request.trip_id,
-            min_price=499.99,
-            max_price=499.99,
-            search_request=request,
-        )
+            logger.error(f"Unexpected error in flight search: {str(e)}")
+            raise ServiceError("Flight search failed") from e
 
     async def search_multi_city_flights(
         self, request: MultiCityFlightSearchRequest
@@ -331,55 +112,33 @@ class FlightService:
 
         Returns:
             Flight search results
+
+        Raises:
+            ValidationError: If request data is invalid
+            ServiceError: If search fails
         """
-        logger.info(
-            f"Searching for multi-city flights with {len(request.segments)} segments"
-        )
-
-        # Placeholder implementation
-        search_id = str(uuid.uuid4())
-
-        # Create a mock flight offer with multiple segments
-        segments = []
-        for i, segment in enumerate(request.segments):
-            segments.append(
-                {
-                    "departure_airport": segment.origin,
-                    "arrival_airport": segment.destination,
-                    "departure_time": f"{segment.departure_date}T08:00:00",
-                    "arrival_time": f"{segment.departure_date}T11:00:00",
-                    "flight_number": f"AA{1000 + i}",
-                    "duration_minutes": 180,
-                }
+        try:
+            logger.info(
+                f"Searching for multi-city flights with {len(request.segments)} "
+                f"segments"
             )
 
-        offer = FlightOffer(
-            id=f"offer-{uuid.uuid4()}",
-            origin=request.segments[0].origin,
-            destination=request.segments[-1].destination,
-            departure_date=request.segments[0].departure_date,
-            return_date=None,
-            airline="AA",
-            airline_name="American Airlines",
-            price=899.99,
-            currency="USD",
-            cabin_class=request.cabin_class,
-            stops=len(request.segments) - 1,
-            duration_minutes=180 * len(request.segments),
-            segments=segments,
-            booking_link="https://example.com/book/12345",
-        )
+            # Adapt API request to core model
+            core_request = self._adapt_multi_city_request(request)
 
-        return FlightSearchResponse(
-            results=[offer],
-            count=1,
-            currency="USD",
-            search_id=search_id,
-            trip_id=request.trip_id,
-            min_price=899.99,
-            max_price=899.99,
-            search_request=request,
-        )
+            # Search via core service
+            core_service = await self._get_core_flight_service()
+            core_response = await core_service.search_multi_city_flights(core_request)
+
+            # Adapt core response to API model
+            return self._adapt_flight_search_response(core_response, request)
+
+        except (ValidationError, ServiceError) as e:
+            logger.error(f"Multi-city flight search failed: {str(e)}")
+            raise
+        except Exception as e:
+            logger.error(f"Unexpected error in multi-city flight search: {str(e)}")
+            raise ServiceError("Multi-city flight search failed") from e
 
     async def search_airports(
         self, request: AirportSearchRequest
@@ -391,73 +150,26 @@ class FlightService:
 
         Returns:
             Airport search results
+
+        Raises:
+            ServiceError: If search fails
         """
-        logger.info(f"Searching for airports with query: '{request.query}'")
+        try:
+            logger.info(f"Searching for airports with query: '{request.query}'")
 
-        # Placeholder implementation with mock data
-        results = []
+            # Adapt API request to core model
+            core_request = self._adapt_airport_search_request(request)
 
-        # If the query looks like an IATA code, add a specific result
-        if len(request.query) == 3 and request.query.isalpha():
-            code = request.query.upper()
-            airport = Airport(
-                code=code,
-                name=f"{code} International Airport",
-                city="Sample City",
-                country="United States",
-                country_code="US",
-                latitude=37.7749,
-                longitude=-122.4194,
-            )
-            results.append(airport)
-        else:
-            # Add some sample airports
-            sample_airports = [
-                Airport(
-                    code="JFK",
-                    name="John F. Kennedy International Airport",
-                    city="New York",
-                    country="United States",
-                    country_code="US",
-                    latitude=40.6413,
-                    longitude=-73.7781,
-                ),
-                Airport(
-                    code="LAX",
-                    name="Los Angeles International Airport",
-                    city="Los Angeles",
-                    country="United States",
-                    country_code="US",
-                    latitude=33.9416,
-                    longitude=-118.4085,
-                ),
-                Airport(
-                    code="SFO",
-                    name="San Francisco International Airport",
-                    city="San Francisco",
-                    country="United States",
-                    country_code="US",
-                    latitude=37.6213,
-                    longitude=-122.3790,
-                ),
-            ]
+            # Search via core service
+            core_service = await self._get_core_flight_service()
+            core_response = await core_service.search_airports(core_request)
 
-            # Filter based on query
-            query_lower = request.query.lower()
-            results = [
-                airport
-                for airport in sample_airports
-                if (
-                    query_lower in airport.name.lower()
-                    or query_lower in airport.city.lower()
-                    or query_lower in airport.code.lower()
-                )
-            ][: request.limit]
+            # Adapt core response to API model
+            return self._adapt_airport_search_response(core_response)
 
-        return AirportSearchResponse(
-            results=results,
-            count=len(results),
-        )
+        except Exception as e:
+            logger.error(f"Airport search failed: {str(e)}")
+            raise ServiceError("Airport search failed") from e
 
     async def get_flight_offer(self, offer_id: str) -> Optional[FlightOffer]:
         """Get details of a specific flight offer.
@@ -467,39 +179,26 @@ class FlightService:
 
         Returns:
             Flight offer details if found, None otherwise
+
+        Raises:
+            ServiceError: If retrieval fails
         """
-        logger.info(f"Getting flight offer with ID: {offer_id}")
+        try:
+            logger.info(f"Getting flight offer with ID: {offer_id}")
 
-        # Placeholder implementation
-        if not offer_id.startswith("offer-"):
-            return None
+            # Get offer via core service
+            core_service = await self._get_core_flight_service()
+            core_offer = await core_service.get_flight_offer(offer_id)
 
-        # Create a mock flight offer
-        return FlightOffer(
-            id=offer_id,
-            origin="JFK",
-            destination="LAX",
-            departure_date=date.today(),
-            return_date=None,
-            airline="AA",
-            airline_name="American Airlines",
-            price=499.99,
-            currency="USD",
-            cabin_class=CabinClass.ECONOMY,
-            stops=0,
-            duration_minutes=360,
-            segments=[
-                {
-                    "departure_airport": "JFK",
-                    "arrival_airport": "LAX",
-                    "departure_time": f"{date.today()}T08:00:00",
-                    "arrival_time": f"{date.today()}T14:00:00",
-                    "flight_number": "AA123",
-                    "duration_minutes": 360,
-                }
-            ],
-            booking_link="https://example.com/book/12345",
-        )
+            if core_offer is None:
+                return None
+
+            # Adapt core response to API model
+            return self._adapt_flight_offer(core_offer)
+
+        except Exception as e:
+            logger.error(f"Failed to get flight offer {offer_id}: {str(e)}")
+            raise ServiceError("Failed to get flight offer") from e
 
     async def save_flight(
         self, user_id: str, request: SavedFlightRequest
@@ -512,29 +211,36 @@ class FlightService:
 
         Returns:
             Saved flight response if successful, None otherwise
+
+        Raises:
+            ValidationError: If request data is invalid
+            ServiceError: If save fails
         """
-        logger.info(
-            f"Saving flight offer {request.offer_id} for user {user_id} "
-            f"and trip {request.trip_id}"
-        )
+        try:
+            logger.info(
+                f"Saving flight offer {request.offer_id} for user {user_id} "
+                f"and trip {request.trip_id}"
+            )
 
-        # Get the flight offer
-        offer = await self.get_flight_offer(request.offer_id)
-        if not offer:
-            logger.warning(f"Flight offer {request.offer_id} not found")
-            return None
+            # Adapt API request to core model
+            core_request = self._adapt_save_flight_request(request)
 
-        # Placeholder implementation - in a real app, we would save to a database
-        saved_id = uuid.uuid4()
+            # Save via core service
+            core_service = await self._get_core_flight_service()
+            core_response = await core_service.save_flight(user_id, core_request)
 
-        return SavedFlightResponse(
-            id=saved_id,
-            user_id=user_id,
-            trip_id=request.trip_id,
-            offer=offer,
-            saved_at=datetime.now(datetime.UTC),
-            notes=request.notes,
-        )
+            if core_response is None:
+                return None
+
+            # Adapt core response to API model
+            return self._adapt_saved_flight_response(core_response)
+
+        except (ValidationError, ServiceError) as e:
+            logger.error(f"Failed to save flight: {str(e)}")
+            raise
+        except Exception as e:
+            logger.error(f"Unexpected error saving flight: {str(e)}")
+            raise ServiceError("Failed to save flight") from e
 
     async def delete_saved_flight(self, user_id: str, saved_flight_id: UUID) -> bool:
         """Delete a saved flight.
@@ -545,11 +251,20 @@ class FlightService:
 
         Returns:
             True if deleted, False otherwise
-        """
-        logger.info(f"Deleting saved flight {saved_flight_id} for user {user_id}")
 
-        # Placeholder implementation
-        return True
+        Raises:
+            ServiceError: If deletion fails
+        """
+        try:
+            logger.info(f"Deleting saved flight {saved_flight_id} for user {user_id}")
+
+            # Delete via core service
+            core_service = await self._get_core_flight_service()
+            return await core_service.delete_saved_flight(user_id, str(saved_flight_id))
+
+        except Exception as e:
+            logger.error(f"Failed to delete saved flight: {str(e)}")
+            raise ServiceError("Failed to delete saved flight") from e
 
     async def list_saved_flights(
         self, user_id: str, trip_id: Optional[UUID] = None
@@ -562,14 +277,30 @@ class FlightService:
 
         Returns:
             List of saved flights
-        """
-        logger.info(
-            f"Listing saved flights for user {user_id}"
-            + (f" and trip {trip_id}" if trip_id else "")
-        )
 
-        # Placeholder implementation - returns empty list
-        return []
+        Raises:
+            ServiceError: If listing fails
+        """
+        try:
+            logger.info(
+                f"Listing saved flights for user {user_id}"
+                + (f" and trip {trip_id}" if trip_id else "")
+            )
+
+            # List via core service
+            core_service = await self._get_core_flight_service()
+            core_flights = await core_service.list_saved_flights(
+                user_id, str(trip_id) if trip_id else None
+            )
+
+            # Adapt core response to API model
+            return [
+                self._adapt_saved_flight_response(flight) for flight in core_flights
+            ]
+
+        except Exception as e:
+            logger.error(f"Failed to list saved flights: {str(e)}")
+            raise ServiceError("Failed to list saved flights") from e
 
     async def health_check(self) -> bool:
         """Check if the flight service is operational.
@@ -577,15 +308,153 @@ class FlightService:
         Returns:
             True if service is operational, False otherwise
         """
-        if self.duffel_client is None:
-            try:
-                self.duffel_client = DuffelHTTPClient()
-            except Exception:
-                return False
-        return await self.duffel_client.health_check()
+        try:
+            core_service = await self._get_core_flight_service()
+            return await core_service.health_check()
+        except Exception:
+            return False
 
-    async def close(self) -> None:
-        """Close any open connections."""
-        if self.duffel_client:
-            await self.duffel_client.close()
-            logger.debug("FlightService connections closed")
+    def _adapt_flight_search_request(self, request: FlightSearchRequest) -> dict:
+        """Adapt API flight search request to core model."""
+        return {
+            "origin": request.origin,
+            "destination": request.destination,
+            "departure_date": request.departure_date,
+            "return_date": request.return_date,
+            "adults": getattr(request, "adults", 1),
+            "children": getattr(request, "children", 0),
+            "infants": getattr(request, "infants", 0),
+            "cabin_class": request.cabin_class,
+            "max_stops": getattr(request, "max_stops", None),
+            "max_price": getattr(request, "max_price", None),
+            "preferred_airlines": getattr(request, "preferred_airlines", None),
+        }
+
+    def _adapt_multi_city_request(self, request: MultiCityFlightSearchRequest) -> dict:
+        """Adapt API multi-city request to core model."""
+        return {
+            "segments": [
+                {
+                    "origin": segment.origin,
+                    "destination": segment.destination,
+                    "departure_date": segment.departure_date,
+                }
+                for segment in request.segments
+            ],
+            "adults": getattr(request, "adults", 1),
+            "children": getattr(request, "children", 0),
+            "infants": getattr(request, "infants", 0),
+            "cabin_class": request.cabin_class,
+        }
+
+    def _adapt_airport_search_request(self, request: AirportSearchRequest) -> dict:
+        """Adapt API airport search request to core model."""
+        return {
+            "query": request.query,
+            "limit": request.limit,
+        }
+
+    def _adapt_save_flight_request(self, request: SavedFlightRequest) -> dict:
+        """Adapt API save flight request to core model."""
+        return {
+            "offer_id": request.offer_id,
+            "trip_id": str(request.trip_id) if request.trip_id else None,
+            "notes": request.notes,
+        }
+
+    def _adapt_flight_search_response(
+        self, core_response, original_request
+    ) -> FlightSearchResponse:
+        """Adapt core flight search response to API model."""
+        # This is a simplified adaptation - in practice, you'd need detailed mapping
+        flight_offers = []
+        for core_offer in core_response.get("offers", []):
+            flight_offer = self._adapt_flight_offer(core_offer)
+            if flight_offer:
+                flight_offers.append(flight_offer)
+
+        return FlightSearchResponse(
+            results=flight_offers,
+            count=len(flight_offers),
+            currency=core_response.get("currency", "USD"),
+            search_id=core_response.get("search_id", ""),
+            trip_id=original_request.trip_id,
+            min_price=core_response.get("min_price"),
+            max_price=core_response.get("max_price"),
+            search_request=original_request,
+        )
+
+    def _adapt_airport_search_response(self, core_response) -> AirportSearchResponse:
+        """Adapt core airport search response to API model."""
+        airports = []
+        for core_airport in core_response.get("airports", []):
+            airport = Airport(
+                code=core_airport.get("code", ""),
+                name=core_airport.get("name", ""),
+                city=core_airport.get("city", ""),
+                country=core_airport.get("country", ""),
+                country_code=core_airport.get("country_code", ""),
+                latitude=core_airport.get("latitude", 0.0),
+                longitude=core_airport.get("longitude", 0.0),
+            )
+            airports.append(airport)
+
+        return AirportSearchResponse(
+            results=airports,
+            count=len(airports),
+        )
+
+    def _adapt_flight_offer(self, core_offer) -> Optional[FlightOffer]:
+        """Adapt core flight offer to API model."""
+        if not core_offer:
+            return None
+
+        # This is a simplified adaptation - real implementation would need
+        # detailed mapping
+        return FlightOffer(
+            id=core_offer.get("id", ""),
+            origin=core_offer.get("origin", ""),
+            destination=core_offer.get("destination", ""),
+            departure_date=core_offer.get("departure_date"),
+            return_date=core_offer.get("return_date"),
+            airline=core_offer.get("airline", ""),
+            airline_name=core_offer.get("airline_name", ""),
+            price=core_offer.get("price", 0.0),
+            currency=core_offer.get("currency", "USD"),
+            cabin_class=core_offer.get("cabin_class", "economy"),
+            stops=core_offer.get("stops", 0),
+            duration_minutes=core_offer.get("duration_minutes", 0),
+            segments=core_offer.get("segments", []),
+            booking_link=core_offer.get("booking_link", ""),
+        )
+
+    def _adapt_saved_flight_response(self, core_response) -> SavedFlightResponse:
+        """Adapt core saved flight response to API model."""
+        return SavedFlightResponse(
+            id=core_response.get("id"),
+            user_id=core_response.get("user_id", ""),
+            trip_id=core_response.get("trip_id"),
+            offer=self._adapt_flight_offer(core_response.get("offer")),
+            saved_at=core_response.get("saved_at"),
+            notes=core_response.get("notes"),
+        )
+
+
+# Module-level dependency annotation
+_core_flight_service_dep = Depends(get_core_flight_service)
+
+
+# Dependency function for FastAPI
+async def get_flight_service(
+    core_flight_service: CoreFlightService = _core_flight_service_dep,
+) -> FlightService:
+    """
+    Get flight service instance for dependency injection.
+
+    Args:
+        core_flight_service: Core flight service
+
+    Returns:
+        FlightService instance
+    """
+    return FlightService(core_flight_service=core_flight_service)

@@ -1,5 +1,3 @@
-import Link from "next/link";
-import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -9,6 +7,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import Image from "next/image";
+import Link from "next/link";
 
 export default function Home() {
   return (
@@ -35,8 +35,8 @@ export default function Home() {
               </h1>
               <p className="text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
                 Intelligent travel planning powered by AI. Get personalized
-                recommendations, budget optimization, and seamless booking - all
-                in one place.
+                recommendations, budget optimization, and seamless booking - all in one
+                place.
               </p>
               <div className="flex flex-col gap-2 min-[400px]:flex-row">
                 <Link href="/auth/register">
@@ -62,6 +62,7 @@ export default function Home() {
                 width={420}
                 height={420}
                 className="dark:invert"
+                style={{ width: "100%", height: "auto" }}
                 priority
               />
             </div>
@@ -75,8 +76,8 @@ export default function Home() {
                   Why Choose TripSage AI?
                 </h2>
                 <p className="mx-auto max-w-[700px] text-muted-foreground md:text-xl/relaxed lg:text-base/relaxed xl:text-xl/relaxed">
-                  Our AI-powered platform makes travel planning simpler,
-                  smarter, and more personalized than ever before.
+                  Our AI-powered platform makes travel planning simpler, smarter, and
+                  more personalized than ever before.
                 </p>
               </div>
             </div>
@@ -87,8 +88,8 @@ export default function Home() {
                 </CardHeader>
                 <CardContent>
                   <p>
-                    Get intelligent recommendations based on your preferences,
-                    budget, and travel style.
+                    Get intelligent recommendations based on your preferences, budget,
+                    and travel style.
                   </p>
                 </CardContent>
               </Card>
@@ -98,8 +99,8 @@ export default function Home() {
                 </CardHeader>
                 <CardContent>
                   <p>
-                    Find the best deals and optimize your spending across
-                    flights, hotels, and activities.
+                    Find the best deals and optimize your spending across flights,
+                    hotels, and activities.
                   </p>
                 </CardContent>
               </Card>
@@ -109,8 +110,7 @@ export default function Home() {
                 </CardHeader>
                 <CardContent>
                   <p>
-                    Plan, book, and manage your entire trip in one seamless
-                    experience.
+                    Plan, book, and manage your entire trip in one seamless experience.
                   </p>
                 </CardContent>
               </Card>

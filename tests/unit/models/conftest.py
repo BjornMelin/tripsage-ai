@@ -1,19 +1,20 @@
 """Test fixtures for database model tests."""
 
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from typing import Any, Dict
 
 import pytest
 
-from tripsage_core.models.db.flight import AirlineProvider, DataSource
 from tripsage_core.models.db.price_history import EntityType
 from tripsage_core.models.db.saved_option import OptionType
-from tripsage_core.models.db.transportation import TransportationType
 from tripsage_core.models.db.trip import TripType
-from tripsage_core.models.schemas_common import (
+from tripsage_core.models.schemas_common.enums import (
     AccommodationType,
+    AirlineProvider,
     BookingStatus,
     CancellationPolicy,
+    DataSource,
+    TransportationType,
     TripStatus,
     UserRole,
 )
@@ -32,9 +33,9 @@ def sample_user_dict() -> Dict[str, Any]:
         "display_name": "Test User",
         "profile_image": "https://example.com/profile.jpg",
         "role": UserRole.USER,
-        "created_at": datetime.now(datetime.UTC),
-        "updated_at": datetime.now(datetime.UTC),
-        "last_login": datetime.now(datetime.UTC),
+        "created_at": datetime.now(timezone.utc),
+        "updated_at": datetime.now(timezone.utc),
+        "last_login": datetime.now(timezone.utc),
         "preferences": {"theme": "dark", "notifications": True},
     }
 
@@ -53,8 +54,8 @@ def sample_trip_dict() -> Dict[str, Any]:
         "end_date": date.today() + timedelta(days=17),
         "destination": "Tokyo, Japan",
         "budget": 2500.00,
-        "created_at": datetime.now(datetime.UTC),
-        "updated_at": datetime.now(datetime.UTC),
+        "created_at": datetime.now(timezone.utc),
+        "updated_at": datetime.now(timezone.utc),
         "adults": 2,
         "children": 0,
         "tags": ["vacation", "winter"],
@@ -64,13 +65,13 @@ def sample_trip_dict() -> Dict[str, Any]:
 @pytest.fixture
 def sample_flight_dict() -> Dict[str, Any]:
     """Return a sample flight dict for testing."""
-    now = datetime.now(datetime.UTC)
+    now = datetime.now(timezone.utc)
     return {
         "id": 1,
         "trip_id": 1,
         "origin": "LAX",
         "destination": "NRT",
-        "airline": AirlineProvider.OTHER,
+        "airline": AirlineProvider.JAPAN_AIRLINES,
         "departure_time": now + timedelta(days=10),
         "arrival_time": now + timedelta(days=10, hours=12),
         "price": 1200.00,
@@ -78,7 +79,7 @@ def sample_flight_dict() -> Dict[str, Any]:
         "segment_number": 1,
         "search_timestamp": now,
         "booking_status": BookingStatus.VIEWED,
-        "data_source": DataSource.OTHER,
+        "data_source": DataSource.DUFFEL,
         "flight_number": "JL123",
         "cabin_class": "economy",
     }
@@ -100,7 +101,7 @@ def sample_accommodation_dict() -> Dict[str, Any]:
         "rating": 4.7,
         "amenities": {"wifi": True, "pool": True, "breakfast": True},
         "booking_link": "https://example.com/booking/456",
-        "search_timestamp": datetime.now(datetime.UTC),
+        "search_timestamp": datetime.now(timezone.utc),
         "booking_status": BookingStatus.VIEWED,
         "cancellation_policy": CancellationPolicy.FLEXIBLE,
         "images": ["https://example.com/hotel1.jpg", "https://example.com/hotel2.jpg"],
@@ -113,7 +114,7 @@ def sample_search_parameters_dict() -> Dict[str, Any]:
     return {
         "id": 1,
         "trip_id": 1,
-        "timestamp": datetime.now(datetime.UTC),
+        "timestamp": datetime.now(timezone.utc),
         "parameter_json": {
             "type": "flight",
             "origin": "LAX",
@@ -134,7 +135,7 @@ def sample_trip_note_dict() -> Dict[str, Any]:
     return {
         "id": 1,
         "trip_id": 1,
-        "timestamp": datetime.now(datetime.UTC),
+        "timestamp": datetime.now(timezone.utc),
         "content": "Remember to exchange currency before departure",
     }
 
@@ -146,7 +147,7 @@ def sample_price_history_dict() -> Dict[str, Any]:
         "id": 1,
         "entity_type": EntityType.FLIGHT,
         "entity_id": 1,
-        "timestamp": datetime.now(datetime.UTC),
+        "timestamp": datetime.now(timezone.utc),
         "price": 1200.00,
         "currency": "USD",
     }
@@ -160,7 +161,7 @@ def sample_saved_option_dict() -> Dict[str, Any]:
         "trip_id": 1,
         "option_type": OptionType.FLIGHT,
         "option_id": 1,
-        "timestamp": datetime.now(datetime.UTC),
+        "timestamp": datetime.now(timezone.utc),
         "notes": "Best price found so far",
     }
 
@@ -171,7 +172,7 @@ def sample_trip_comparison_dict() -> Dict[str, Any]:
     return {
         "id": 1,
         "trip_id": 1,
-        "timestamp": datetime.now(datetime.UTC),
+        "timestamp": datetime.now(timezone.utc),
         "comparison_json": {
             "options": [
                 {
@@ -191,7 +192,7 @@ def sample_trip_comparison_dict() -> Dict[str, Any]:
 @pytest.fixture
 def sample_transportation_dict() -> Dict[str, Any]:
     """Return a sample transportation dict for testing."""
-    now = datetime.now(datetime.UTC)
+    now = datetime.now(timezone.utc)
     return {
         "id": 1,
         "trip_id": 1,

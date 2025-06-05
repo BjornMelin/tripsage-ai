@@ -35,14 +35,14 @@ TEST_USER_PASSWORD = "password123"
 
 
 # Models for test data
-class TestUser(BaseModel):
+class UserModel(BaseModel):
     email: str
     password: str
     full_name: Optional[str] = None
     auth_token: Optional[str] = None
 
 
-class TestTrip(BaseModel):
+class TripModel(BaseModel):
     name: str
     start_date: date
     end_date: date
@@ -52,7 +52,7 @@ class TestTrip(BaseModel):
     id: Optional[str] = None
 
 
-class TestFlight(BaseModel):
+class FlightModel(BaseModel):
     trip_id: str
     origin: str
     destination: str
@@ -75,7 +75,7 @@ async def initialize_db():
     print("Database initialized successfully")
 
 
-async def register_user(client: httpx.AsyncClient, user: TestUser) -> bool:
+async def register_user(client: httpx.AsyncClient, user: UserModel) -> bool:
     """Register a test user."""
     response = await client.post(
         f"{API_BASE_URL}/auth/register",
@@ -97,7 +97,7 @@ async def register_user(client: httpx.AsyncClient, user: TestUser) -> bool:
         return False
 
 
-async def login_user(client: httpx.AsyncClient, user: TestUser) -> bool:
+async def login_user(client: httpx.AsyncClient, user: UserModel) -> bool:
     """Login a test user and get an access token."""
     response = await client.post(
         f"{API_BASE_URL}/auth/token",
@@ -115,7 +115,7 @@ async def login_user(client: httpx.AsyncClient, user: TestUser) -> bool:
 
 
 async def create_trip(
-    client: httpx.AsyncClient, user: TestUser, trip: TestTrip
+    client: httpx.AsyncClient, user: UserModel, trip: TripModel
 ) -> bool:
     """Create a test trip."""
     headers = {"Authorization": f"Bearer {user.auth_token}"}
@@ -143,7 +143,7 @@ async def create_trip(
         return False
 
 
-async def get_trips(client: httpx.AsyncClient, user: TestUser) -> List[Dict]:
+async def get_trips(client: httpx.AsyncClient, user: UserModel) -> List[Dict]:
     """Get all trips for the user."""
     headers = {"Authorization": f"Bearer {user.auth_token}"}
 
@@ -162,7 +162,7 @@ async def get_trips(client: httpx.AsyncClient, user: TestUser) -> List[Dict]:
 
 
 async def create_flight(
-    client: httpx.AsyncClient, user: TestUser, flight: TestFlight
+    client: httpx.AsyncClient, user: UserModel, flight: FlightModel
 ) -> bool:
     """Create a test flight."""
     headers = {"Authorization": f"Bearer {user.auth_token}"}
@@ -195,7 +195,7 @@ async def create_flight(
 
 
 async def get_flights_for_trip(
-    client: httpx.AsyncClient, user: TestUser, trip_id: str
+    client: httpx.AsyncClient, user: UserModel, trip_id: str
 ) -> List[Dict]:
     """Get all flights for a trip."""
     headers = {"Authorization": f"Bearer {user.auth_token}"}
@@ -223,7 +223,7 @@ async def run_tests():
         # Create a test client
         async with httpx.AsyncClient() as client:
             # Create a test user
-            test_user = TestUser(
+            test_user = UserModel(
                 email=TEST_USER_EMAIL,
                 password=TEST_USER_PASSWORD,
                 full_name="Test User",
@@ -237,7 +237,7 @@ async def run_tests():
 
             # Create a test trip
             today = date.today()
-            test_trip = TestTrip(
+            test_trip = TripModel(
                 name="Test Vacation",
                 start_date=today + timedelta(days=30),
                 end_date=today + timedelta(days=37),
@@ -260,7 +260,7 @@ async def run_tests():
             ) + timedelta(hours=10)
             arrival_time = departure_time + timedelta(hours=6)
 
-            test_flight = TestFlight(
+            test_flight = FlightModel(
                 trip_id=test_trip.id,
                 origin="SFO",
                 destination="HNL",

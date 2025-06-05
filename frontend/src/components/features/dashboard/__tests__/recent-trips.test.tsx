@@ -1,9 +1,9 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import { RecentTrips } from "../recent-trips";
 import { useTripStore } from "@/stores/trip-store";
 import type { Trip } from "@/stores/trip-store";
+import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { RecentTrips } from "../recent-trips";
 
 // Mock the trip store
 vi.mock("@/stores/trip-store", () => ({
@@ -90,9 +90,7 @@ describe("RecentTrips", () => {
     expect(screen.getByText("Recent Trips")).toBeInTheDocument();
     expect(screen.getByText("Your latest travel plans")).toBeInTheDocument();
     // Should show skeleton loading
-    expect(document.querySelectorAll(".animate-pulse").length).toBeGreaterThan(
-      0
-    );
+    expect(document.querySelectorAll(".animate-pulse").length).toBeGreaterThan(0);
   });
 
   it("renders empty state when no trips exist", () => {
@@ -132,9 +130,7 @@ describe("RecentTrips", () => {
     expect(screen.getByText("Tokyo")).toBeInTheDocument();
     expect(screen.getByText("7 days")).toBeInTheDocument();
     expect(screen.getByText("upcoming")).toBeInTheDocument();
-    expect(
-      screen.getByText("Exploring Japan's capital city")
-    ).toBeInTheDocument();
+    expect(screen.getByText("Exploring Japan's capital city")).toBeInTheDocument();
   });
 
   it("handles trips with multiple destinations", () => {
@@ -225,9 +221,7 @@ describe("RecentTrips", () => {
 
     const { rerender } = render(<RecentTrips showEmpty={false} />);
 
-    expect(
-      screen.queryByText("Create your first trip")
-    ).not.toBeInTheDocument();
+    expect(screen.queryByText("Create your first trip")).not.toBeInTheDocument();
     expect(screen.getByText("No recent trips yet.")).toBeInTheDocument();
 
     rerender(<RecentTrips showEmpty={true} />);
@@ -239,18 +233,14 @@ describe("RecentTrips", () => {
     const now = new Date();
     const pastTrip: Trip = {
       ...mockTrips[0],
-      startDate: new Date(
-        now.getTime() - 10 * 24 * 60 * 60 * 1000
-      ).toISOString(), // 10 days ago
+      startDate: new Date(now.getTime() - 10 * 24 * 60 * 60 * 1000).toISOString(), // 10 days ago
       endDate: new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000).toISOString(), // 5 days ago
     };
 
     const ongoingTrip: Trip = {
       ...mockTrips[0],
       id: "ongoing-trip",
-      startDate: new Date(
-        now.getTime() - 2 * 24 * 60 * 60 * 1000
-      ).toISOString(), // 2 days ago
+      startDate: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000).toISOString(), // 2 days ago
       endDate: new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000).toISOString(), // 3 days from now
     };
 

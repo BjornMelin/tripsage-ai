@@ -1,22 +1,20 @@
 """
 Accommodation search tools for TripSage agents.
 
-This module provides function tools for searching accommodations across
-different providers using the TripSage MCP Abstraction Layer.
+This module provides function tools for searching accommodations.
+Refactored to be lean wrappers that delegate to core services.
 """
 
 from typing import Any, Dict, List, Optional
 
-from tripsage.mcp_abstraction.exceptions import TripSageMCPError
-from tripsage.mcp_abstraction.manager import mcp_manager
-from tripsage.tools.schemas.accommodations import (
-    AccommodationSearchParams,
-    AccommodationType,
-    AirbnbListingDetails,
-    AirbnbSearchParams,
-    AirbnbSearchResult,
-)
-from tripsage_core.utils.cache_utils import redis_cache
+try:
+    from agents import function_tool
+except ImportError:
+    from unittest.mock import MagicMock
+
+    function_tool = MagicMock
+
+from tripsage.agents.service_registry import ServiceRegistry
 from tripsage_core.utils.decorator_utils import with_error_handling
 from tripsage_core.utils.logging_utils import get_logger
 
@@ -24,9 +22,11 @@ from tripsage_core.utils.logging_utils import get_logger
 logger = get_logger(__name__)
 
 
-@with_error_handling
+@function_tool
+@with_error_handling()
 async def search_airbnb_rentals_tool(
     location: str,
+    service_registry: ServiceRegistry,
     checkin: Optional[str] = None,
     checkout: Optional[str] = None,
     adults: int = 1,
@@ -45,6 +45,7 @@ async def search_airbnb_rentals_tool(
 
     Args:
         location: Location to search for accommodations
+        service_registry: Service registry for accessing services
         checkin: Check-in date in YYYY-MM-DD format
         checkout: Check-out date in YYYY-MM-DD format
         adults: Number of adults (default: 1)
@@ -62,151 +63,96 @@ async def search_airbnb_rentals_tool(
     Returns:
         Search results with available Airbnb rental options
     """
-    try:
-        logger.info(f"Searching Airbnb rentals in {location}")
+    logger.info(f"Searching Airbnb rentals in {location}")
 
-        # Convert property_type string to enum if provided
-        property_type_enum = None
-        if property_type:
-            try:
-                property_type_enum = AccommodationType(property_type.lower())
-            except ValueError:
-                logger.warning(
-                    f"Invalid property type: {property_type}. Using default (all)."
-                )
-                property_type_enum = AccommodationType.ALL
+    # Get accommodation service from registry
+    accommodation_service = service_registry.get_required_service(
+        "accommodation_service"
+    )
 
-        # Prepare search params
-        search_params = {
-            "location": location,
-            "adults": adults,
-        }
+    # Prepare search parameters
+    search_params = {
+        "location": location,
+        "adults": adults,
+        "source": "airbnb",
+    }
 
-        # Add optional parameters
-        if checkin:
-            search_params["checkin"] = checkin
-        if checkout:
-            search_params["checkout"] = checkout
-        if children is not None:
-            search_params["children"] = children
-        if min_price is not None:
-            search_params["min_price"] = min_price
-        if max_price is not None:
-            search_params["max_price"] = max_price
-        if property_type_enum:
-            search_params["property_type"] = property_type_enum
-        if superhost is not None:
-            search_params["superhost"] = superhost
-        if min_beds is not None:
-            search_params["min_beds"] = min_beds
-        if min_bedrooms is not None:
-            search_params["min_bedrooms"] = min_bedrooms
-        if min_bathrooms is not None:
-            search_params["min_bathrooms"] = min_bathrooms
-        if amenities:
-            search_params["amenities"] = amenities
+    # Add optional parameters
+    if checkin:
+        search_params["checkin"] = checkin
+    if checkout:
+        search_params["checkout"] = checkout
+    if children is not None:
+        search_params["children"] = children
+    if min_price is not None:
+        search_params["min_price"] = min_price
+    if max_price is not None:
+        search_params["max_price"] = max_price
+    if property_type:
+        search_params["property_type"] = property_type
+    if min_rating is not None:
+        search_params["min_rating"] = min_rating
+    if superhost is not None:
+        search_params["superhost"] = superhost
+    if min_beds is not None:
+        search_params["min_beds"] = min_beds
+    if min_bedrooms is not None:
+        search_params["min_bedrooms"] = min_bedrooms
+    if min_bathrooms is not None:
+        search_params["min_bathrooms"] = min_bathrooms
+    if amenities:
+        search_params["amenities"] = amenities
 
-        # Create validated model
-        validated_params = AirbnbSearchParams(**search_params)
+    # Use accommodation service to search
+    result = await accommodation_service.search_accommodations(**search_params)
 
-        # Generate cache key for results
-        cache_key = (
-            f"accommodation_search:airbnb:{location}:{checkin}:{checkout}:{adults}:"
-            f"{children}:{min_price}:{max_price}:{property_type}"
-        )
-
-        # Check cache first
-        cached_result = await redis_cache.get(cache_key)
-        if cached_result:
-            logger.info("Using cached Airbnb search results")
-            result = AirbnbSearchResult.model_validate(cached_result)
-            cache_hit = True
-        else:
-            # Call the MCP via MCPManager
-            result = await mcp_manager.invoke(
-                mcp_name="airbnb",
-                method_name="search_accommodations",
-                params=validated_params.model_dump(by_alias=True),
-            )
-
-            # Convert the result to the expected response model
-            result = AirbnbSearchResult.model_validate(result)
-
-            # Cache the result for 1 hour
-            await redis_cache.set(cache_key, result.model_dump(), ttl=3600)
-            cache_hit = False
-
-        # Apply post-search filtering for min_rating (if provided)
-        filtered_listings = result.listings
-        if min_rating is not None:
-            filtered_listings = [
-                listing
-                for listing in filtered_listings
-                if listing.rating is not None and listing.rating >= min_rating
-            ]
-
-        # Format results for agent consumption
+    # Format results for agent consumption
+    if result.get("status") == "success" and result.get("listings"):
         formatted_listings = []
-        for listing in filtered_listings[:20]:  # Limit to 20 listings for readability
+        for listing in result["listings"][:20]:  # Limit to 20 listings
             formatted_listing = {
-                "id": listing.id,
-                "name": listing.name,
-                "url": listing.url,
-                "image": listing.image,
-                "superhost": listing.superhost,
-                "price": {
-                    "total": listing.price_total,
-                    "per_night": listing.price_per_night,
-                    "currency": listing.currency,
-                    "formatted": listing.price_string,
-                },
-                "rating": listing.rating,
-                "reviews_count": listing.reviews_count,
-                "location": listing.location_info,
-                "property_type": listing.property_type,
-                "details": {
-                    "beds": listing.beds,
-                    "bedrooms": listing.bedrooms,
-                    "bathrooms": listing.bathrooms,
-                    "max_guests": listing.max_guests,
-                },
-                "amenities": listing.amenities if listing.amenities else [],
+                "id": listing.get("id"),
+                "name": listing.get("name"),
+                "url": listing.get("url"),
+                "image": listing.get("image"),
+                "superhost": listing.get("superhost"),
+                "price": listing.get("price", {}),
+                "rating": listing.get("rating"),
+                "reviews_count": listing.get("reviews_count"),
+                "location": listing.get("location"),
+                "property_type": listing.get("property_type"),
+                "details": listing.get("details", {}),
+                "amenities": listing.get("amenities", []),
             }
             formatted_listings.append(formatted_listing)
 
-        # Return search results
         return {
             "source": "airbnb",
             "location": location,
-            "count": len(filtered_listings),
-            "original_count": result.count,
+            "count": len(formatted_listings),
+            "original_count": result.get("total_count", len(formatted_listings)),
             "listings": formatted_listings,
-            "search_params": {
-                "location": location,
-                "checkin": checkin,
-                "checkout": checkout,
-                "adults": adults,
-                "children": children,
-                "min_price": min_price,
-                "max_price": max_price,
-                "property_type": property_type,
-                "min_rating": min_rating,
-            },
-            "error": result.error,
-            "cache_hit": cache_hit,
+            "search_params": search_params,
+            "error": None,
+            "cache_hit": result.get("cache_hit", False),
+        }
+    else:
+        return {
+            "source": "airbnb",
+            "location": location,
+            "count": 0,
+            "listings": [],
+            "search_params": search_params,
+            "error": result.get("error", "No results found"),
+            "cache_hit": False,
         }
 
-    except TripSageMCPError as e:
-        logger.error(f"MCP error searching Airbnb rentals: {str(e)}")
-        raise
-    except Exception as e:
-        logger.error(f"Error searching Airbnb rentals: {str(e)}")
-        raise
 
-
-@with_error_handling
+@function_tool
+@with_error_handling()
 async def get_airbnb_listing_details_tool(
     listing_id: str,
+    service_registry: ServiceRegistry,
     checkin: Optional[str] = None,
     checkout: Optional[str] = None,
     adults: int = 1,
@@ -215,6 +161,7 @@ async def get_airbnb_listing_details_tool(
 
     Args:
         listing_id: Airbnb listing ID
+        service_registry: Service registry for accessing services
         checkin: Check-in date in YYYY-MM-DD format
         checkout: Check-out date in YYYY-MM-DD format
         adults: Number of adults (default: 1)
@@ -222,102 +169,58 @@ async def get_airbnb_listing_details_tool(
     Returns:
         Detailed information about the Airbnb listing
     """
-    try:
-        logger.info(f"Getting details for Airbnb listing: {listing_id}")
+    logger.info(f"Getting details for Airbnb listing: {listing_id}")
 
-        # Prepare params
-        params = {
+    # Get accommodation service from registry
+    accommodation_service = service_registry.get_required_service(
+        "accommodation_service"
+    )
+
+    # Get listing details through service
+    result = await accommodation_service.get_accommodation_details(
+        listing_id=listing_id,
+        source="airbnb",
+        checkin=checkin,
+        checkout=checkout,
+        adults=adults,
+    )
+
+    if result.get("status") == "success" and result.get("details"):
+        details = result["details"]
+        return {
+            "id": details.get("id"),
+            "name": details.get("name"),
+            "url": details.get("url"),
+            "description": details.get("description"),
+            "host": details.get("host", {}),
+            "location": details.get("location"),
+            "coordinates": details.get("coordinates"),
+            "property_type": details.get("property_type"),
+            "details": details.get("details", {}),
+            "amenities": details.get("amenities", []),
+            "price": details.get("price", {}),
+            "rating": details.get("rating"),
+            "reviews_count": details.get("reviews_count"),
+            "reviews_summary": details.get("reviews_summary"),
+            "images": details.get("images", []),
+            "check_in_time": details.get("check_in_time"),
+            "check_out_time": details.get("check_out_time"),
+            "house_rules": details.get("house_rules", []),
+            "cancellation_policy": details.get("cancellation_policy"),
+            "cache_hit": result.get("cache_hit", False),
+        }
+    else:
+        return {
+            "error": result.get("error", "Failed to get listing details"),
             "listing_id": listing_id,
         }
 
-        # Add optional parameters
-        if checkin:
-            params["checkin"] = checkin
-        if checkout:
-            params["checkout"] = checkout
-        if adults:
-            params["adults"] = adults
 
-        # Generate cache key for results
-        cache_key = (
-            f"accommodation_details:airbnb:{listing_id}:{checkin}:{checkout}:{adults}"
-        )
-
-        # Check cache first
-        cached_result = await redis_cache.get(cache_key)
-        if cached_result:
-            logger.info("Using cached Airbnb listing details")
-            result = AirbnbListingDetails.model_validate(cached_result)
-            cache_hit = True
-        else:
-            # Call the MCP via MCPManager
-            result = await mcp_manager.invoke(
-                mcp_name="airbnb",
-                method_name="get_listing_details",
-                params=params,
-            )
-
-            # Convert the result to the expected response model
-            result = AirbnbListingDetails.model_validate(result)
-
-            # Cache the result for 24 hours
-            await redis_cache.set(cache_key, result.model_dump(), ttl=3600 * 24)
-            cache_hit = False
-
-        # Format results for agent consumption
-        formatted_details = {
-            "id": result.id,
-            "name": result.name,
-            "url": result.url,
-            "description": result.description,
-            "host": {
-                "name": result.host.name,
-                "image": result.host.image,
-                "superhost": result.host.superhost,
-                "response_rate": result.host.response_rate,
-                "response_time": result.host.response_time,
-                "joined_date": result.host.joined_date,
-                "languages": result.host.languages if result.host.languages else [],
-            },
-            "location": result.location,
-            "coordinates": result.coordinates,
-            "property_type": result.property_type,
-            "details": {
-                "bedrooms": result.bedrooms,
-                "beds": result.beds,
-                "bathrooms": result.bathrooms,
-                "max_guests": result.max_guests,
-            },
-            "amenities": result.amenities,
-            "price": {
-                "per_night": result.price_per_night,
-                "total": result.price_total,
-                "currency": result.currency,
-            },
-            "rating": result.rating,
-            "reviews_count": result.reviews_count,
-            "reviews_summary": result.reviews_summary,
-            "images": result.images,
-            "check_in_time": result.check_in_time,
-            "check_out_time": result.check_out_time,
-            "house_rules": result.house_rules if result.house_rules else [],
-            "cancellation_policy": result.cancellation_policy,
-            "cache_hit": cache_hit,
-        }
-
-        return formatted_details
-
-    except TripSageMCPError as e:
-        logger.error(f"MCP error getting Airbnb listing details: {str(e)}")
-        raise
-    except Exception as e:
-        logger.error(f"Error getting Airbnb listing details: {str(e)}")
-        raise
-
-
-@with_error_handling
+@function_tool
+@with_error_handling()
 async def search_accommodations_tool(
     location: str,
+    service_registry: ServiceRegistry,
     source: str = "airbnb",
     checkin: Optional[str] = None,
     checkout: Optional[str] = None,
@@ -329,11 +232,11 @@ async def search_accommodations_tool(
     min_rating: Optional[float] = None,
     amenities: Optional[List[str]] = None,
 ) -> Dict[str, Any]:
-    """Search for accommodations across different providers
-       based on location and filters.
+    """Search for accommodations across different providers.
 
     Args:
         location: Location to search for accommodations
+        service_registry: Service registry for accessing services
         source: Accommodation source (airbnb, booking, hotels)
         checkin: Check-in date in YYYY-MM-DD format
         checkout: Check-out date in YYYY-MM-DD format
@@ -348,80 +251,78 @@ async def search_accommodations_tool(
     Returns:
         Search results with available accommodation options
     """
-    try:
-        logger.info(f"Searching {source} accommodations in {location}")
+    logger.info(f"Searching {source} accommodations in {location}")
 
-        # Check if source is supported
-        if source.lower() != "airbnb":
-            return {
-                "error": f"Unsupported accommodation source: {source}",
-                "available_sources": ["airbnb"],
-                "message": (
-                    "Currently, only Airbnb is supported for accommodations "
-                    "search. Hotel search via Booking.com integration is planned "
-                    "for future releases."
-                ),
-            }
-
-        # Convert property_type string to enum if provided
-        property_type_enum = None
-        if property_type:
-            try:
-                property_type_enum = AccommodationType(property_type.lower())
-            except ValueError:
-                logger.warning(
-                    f"Invalid property type: {property_type}. Using default (all)."
-                )
-
-        # Prepare search params
-        search_params = {
-            "location": location,
-            "source": source,
-            "adults": adults,
+    # Currently, delegate to airbnb search
+    if source.lower() == "airbnb":
+        return await search_airbnb_rentals_tool(
+            location=location,
+            service_registry=service_registry,
+            checkin=checkin,
+            checkout=checkout,
+            adults=adults,
+            children=children,
+            min_price=min_price,
+            max_price=max_price,
+            property_type=property_type,
+            min_rating=min_rating,
+            amenities=amenities,
+        )
+    else:
+        return {
+            "error": f"Unsupported accommodation source: {source}",
+            "available_sources": ["airbnb"],
+            "message": (
+                "Currently, only Airbnb is supported for accommodations search. "
+                "Hotel search via Booking.com integration is planned for future "
+                "releases."
+            ),
         }
 
-        # Add optional parameters
-        if checkin:
-            search_params["checkin"] = checkin
-        if checkout:
-            search_params["checkout"] = checkout
-        if children is not None:
-            search_params["children"] = children
-        if min_price is not None:
-            search_params["min_price"] = min_price
-        if max_price is not None:
-            search_params["max_price"] = max_price
-        if property_type_enum:
-            search_params["property_type"] = property_type_enum
-        if min_rating is not None:
-            search_params["min_rating"] = min_rating
-        if amenities:
-            search_params["amenities"] = amenities
 
-        # Create validated model
-        _validated_params = AccommodationSearchParams(**search_params)
+@function_tool
+@with_error_handling()
+async def book_accommodation_tool(
+    listing_id: str,
+    service_registry: ServiceRegistry,
+    source: str = "airbnb",
+    checkin: str = None,
+    checkout: str = None,
+    adults: int = 1,
+    children: int = 0,
+    guest_details: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    """Initiate accommodation booking process.
 
-        # Call the appropriate specialized tool based on source
-        if source.lower() == "airbnb":
-            return await search_airbnb_rentals_tool(
-                location=location,
-                checkin=checkin,
-                checkout=checkout,
-                adults=adults,
-                children=children,
-                min_price=min_price,
-                max_price=max_price,
-                property_type=property_type,
-                min_rating=min_rating,
-                amenities=amenities,
-            )
+    Args:
+        listing_id: Accommodation listing ID
+        service_registry: Service registry for accessing services
+        source: Booking source (airbnb, booking, etc.)
+        checkin: Check-in date in YYYY-MM-DD format
+        checkout: Check-out date in YYYY-MM-DD format
+        adults: Number of adults
+        children: Number of children
+        guest_details: Guest information for booking
 
-        # For future sources, implement specific logic here
-        return {"error": "Unsupported source"}
+    Returns:
+        Booking initiation result
+    """
+    logger.info(f"Initiating booking for {source} listing: {listing_id}")
 
-    except TripSageMCPError as e:
-        logger.error(f"MCP error searching accommodations: {str(e)}")
-        raise
-    except Exception as e:
-        logger.error(f"Error searching accommodations: {str(e)}")
-        raise
+    # Get accommodation service from registry
+    accommodation_service = service_registry.get_required_service(
+        "accommodation_service"
+    )
+
+    # Initiate booking through service
+    result = await accommodation_service.book_accommodation(
+        listing_id=listing_id,
+        source=source,
+        checkin=checkin,
+        checkout=checkout,
+        adults=adults,
+        children=children,
+        guest_details=guest_details,
+    )
+
+    return result

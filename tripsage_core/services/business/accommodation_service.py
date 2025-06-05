@@ -374,7 +374,7 @@ class AccommodationService:
         if external_accommodation_service is None:
             # Try to import MCP accommodation client
             try:
-                from tripsage.clients.accommodations import AccommodationMCPClient
+                from tripsage_core.clients.accommodations import AccommodationMCPClient
 
                 external_accommodation_service = AccommodationMCPClient()
             except ImportError:

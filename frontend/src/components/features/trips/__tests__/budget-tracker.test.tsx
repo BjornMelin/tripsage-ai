@@ -1,7 +1,7 @@
-import { render, screen, fireEvent } from "@testing-library/react";
-import { describe, it, expect, vi } from "vitest";
-import { BudgetTracker } from "../budget-tracker";
 import type { Budget, BudgetSummary } from "@/stores/budget-store";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
+import { BudgetTracker } from "../budget-tracker";
 
 // Mock the stores
 const mockBudget: Budget = {
@@ -134,9 +134,7 @@ describe("BudgetTracker", () => {
     const onCreateBudget = vi.fn();
     render(<BudgetTracker tripId="trip-1" onCreateBudget={onCreateBudget} />);
 
-    expect(
-      screen.getByText("No budget found for this trip")
-    ).toBeInTheDocument();
+    expect(screen.getByText("No budget found for this trip")).toBeInTheDocument();
 
     fireEvent.click(screen.getByText("Create Budget"));
     expect(onCreateBudget).toHaveBeenCalled();

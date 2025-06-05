@@ -1,15 +1,20 @@
-import { create } from "zustand";
-import { persist } from "zustand/middleware";
 import type {
   Budget,
-  Expense,
-  CurrencyRate,
   BudgetAlert,
+  BudgetCategory,
   BudgetSummary,
   CurrencyCode,
+  CurrencyRate,
+  Expense,
   ExpenseCategory,
-  BudgetCategory,
 } from "@/types/budget";
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
+
+// Helper functions
+const generateId = () =>
+  Date.now().toString(36) + Math.random().toString(36).substring(2, 5);
+const getCurrentTimestamp = () => new Date().toISOString();
 
 interface BudgetState {
   // Budgets
@@ -51,11 +56,7 @@ interface BudgetState {
   // Expense actions
   setExpenses: (budgetId: string, expenses: Expense[]) => void;
   addExpense: (expense: Expense) => void;
-  updateExpense: (
-    id: string,
-    budgetId: string,
-    updates: Partial<Expense>
-  ) => void;
+  updateExpense: (id: string, budgetId: string, updates: Partial<Expense>) => void;
   removeExpense: (id: string, budgetId: string) => void;
 
   // Currency actions
@@ -70,20 +71,11 @@ interface BudgetState {
   clearAlerts: (budgetId: string) => void;
 }
 
-// Helper functions
-const generateId = () =>
-  Date.now().toString(36) + Math.random().toString(36).substring(2, 5);
-const getCurrentTimestamp = () => new Date().toISOString();
-
-const calculateBudgetSummary = (
-  budget: Budget,
-  expenses: Expense[]
-): BudgetSummary => {
+const calculateBudgetSummary = (budget: Budget, expenses: Expense[]): BudgetSummary => {
   const totalBudget = budget.totalAmount;
   const totalSpent = expenses.reduce((sum, expense) => sum + expense.amount, 0);
   const totalRemaining = totalBudget - totalSpent;
-  const percentageSpent =
-    totalBudget > 0 ? (totalSpent / totalBudget) * 100 : 0;
+  const percentageSpent = totalBudget > 0 ? (totalSpent / totalBudget) * 100 : 0;
 
   // Calculate spent by category
   const spentByCategory = expenses.reduce(
@@ -116,15 +108,11 @@ const calculateBudgetSummary = (
   if (startDate && endDate) {
     const totalDays = Math.max(
       1,
-      Math.ceil(
-        (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)
-      )
+      Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24))
     );
     const elapsedDays = Math.max(
       1,
-      Math.ceil(
-        (new Date().getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)
-      )
+      Math.ceil((new Date().getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24))
     );
 
     dailyAverage = elapsedDays > 0 ? totalSpent / elapsedDays : 0;
@@ -197,9 +185,7 @@ export const useBudgetStore = create<BudgetState>()(
         // Flatten all expenses and sort by date (newest first)
         return Object.values(expenses)
           .flat()
-          .sort(
-            (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-          )
+          .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
           .slice(0, 10); // Return the 10 most recent expenses
       },
 
@@ -222,9 +208,7 @@ export const useBudgetStore = create<BudgetState>()(
             },
             // If this is the first budget, set it as active
             activeBudgetId:
-              state.activeBudgetId === null
-                ? newBudget.id
-                : state.activeBudgetId,
+              state.activeBudgetId === null ? newBudget.id : state.activeBudgetId,
           };
         }),
 
@@ -333,9 +317,7 @@ export const useBudgetStore = create<BudgetState>()(
               ...state.budgets,
               [budgetId]: {
                 ...budget,
-                categories: budget.categories.filter(
-                  (cat) => cat.id !== categoryId
-                ),
+                categories: budget.categories.filter((cat) => cat.id !== categoryId),
                 updatedAt: getCurrentTimestamp(),
               },
             },
@@ -495,3 +477,9 @@ export const useBudgetStore = create<BudgetState>()(
     }
   )
 );
+
+// Selector hooks for computed properties
+export const useActiveBudget = () => useBudgetStore((state) => state.activeBudget);
+export const useBudgetSummary = () => useBudgetStore((state) => state.budgetSummary);
+export const useBudgetsByTrip = () => useBudgetStore((state) => state.budgetsByTrip);
+export const useRecentExpenses = () => useBudgetStore((state) => state.recentExpenses);

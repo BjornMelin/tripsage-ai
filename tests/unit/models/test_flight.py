@@ -1,216 +1,367 @@
-"""Tests for Flight model."""
+"""
+Comprehensive tests for flight models.
 
-from datetime import datetime, timedelta
+Tests validation, serialization, and business logic for flight-related models.
+"""
+
+from datetime import datetime, timedelta, timezone
+from decimal import Decimal
 
 import pytest
 from pydantic import ValidationError
 
-from tripsage_core.models.db.flight import (
+from tests.factories import FlightFactory
+from tripsage_core.models.db.flight import Flight
+from tripsage_core.models.schemas_common.enums import (
     AirlineProvider,
     BookingStatus,
     DataSource,
-    Flight,
 )
 
 
-def test_flight_creation(sample_flight_dict):
-    """Test creating a Flight model with valid data."""
-    flight = Flight(**sample_flight_dict)
-    assert flight.id == 1
-    assert flight.trip_id == 1
-    assert flight.origin == "LAX"
-    assert flight.destination == "NRT"
-    assert flight.airline == AirlineProvider.JAPAN_AIRLINES
-    assert flight.price == 1200.00
-    assert flight.booking_status == BookingStatus.VIEWED
-    assert flight.data_source == DataSource.DUFFEL
+class TestFlightModel:
+    """Test suite for Flight model validation and functionality."""
 
+    def test_flight_creation_basic(self, sample_flight_dict):
+        """Test basic flight creation with valid data."""
+        flight = Flight(**sample_flight_dict)
 
-def test_flight_optional_fields():
-    """Test creating a Flight model with minimal required fields."""
-    now = datetime.now(datetime.UTC)
-    minimal_flight = Flight(
-        trip_id=1,
-        origin="LAX",
-        destination="NRT",
-        airline=AirlineProvider.JAPAN_AIRLINES,
-        departure_time=now + timedelta(days=10),
-        arrival_time=now + timedelta(days=10, hours=12),
-        price=1200.00,
-        search_timestamp=now,
-        data_source=DataSource.DUFFEL,
+        assert flight.origin == "LAX"
+        assert flight.destination == "NRT"
+        assert flight.airline == AirlineProvider.JAPAN_AIRLINES
+        assert flight.price == 1200.00
+        assert flight.segment_number == 1
+
+    def test_flight_factory_data(self):
+        """Test flight creation using factory."""
+        data = FlightFactory.create()
+        flight = Flight(**data)
+
+        assert flight.origin == "LAX"
+        assert flight.destination == "NRT"
+        assert flight.booking_status == BookingStatus.VIEWED
+        assert flight.data_source == DataSource.DUFFEL
+
+    @pytest.mark.parametrize(
+        "airline",
+        [
+            AirlineProvider.AMERICAN,
+            AirlineProvider.DELTA,
+            AirlineProvider.UNITED,
+            AirlineProvider.JAPAN_AIRLINES,
+            AirlineProvider.LUFTHANSA,
+            AirlineProvider.BRITISH_AIRWAYS,
+            AirlineProvider.AIR_FRANCE,
+        ],
     )
+    def test_flight_airlines_valid(self, sample_flight_dict, airline):
+        """Test all valid airline providers."""
+        sample_flight_dict["airline"] = airline
+        flight = Flight(**sample_flight_dict)
+        assert flight.airline == airline
 
-    assert minimal_flight.trip_id == 1
-    assert minimal_flight.id is None
-    assert minimal_flight.booking_link is None
-    assert minimal_flight.segment_number == 1  # Default value
-    assert minimal_flight.booking_status == BookingStatus.VIEWED  # Default value
-
-
-def test_flight_validation_airport_codes():
-    """Test airport code validation."""
-    now = datetime.now(datetime.UTC)
-
-    # Test valid code
-    flight = Flight(
-        trip_id=1,
-        origin="LAX",
-        destination="NRT",
-        airline=AirlineProvider.JAPAN_AIRLINES,
-        departure_time=now + timedelta(days=10),
-        arrival_time=now + timedelta(days=10, hours=12),
-        price=1200.00,
-        search_timestamp=now,
-        data_source=DataSource.DUFFEL,
+    @pytest.mark.parametrize(
+        "price,should_pass",
+        [
+            (0.01, True),  # Minimum valid price
+            (50.00, True),  # Low price
+            (1500.00, True),  # High price
+            (99999.99, True),  # Very high price
+            (0.00, False),  # Zero price should fail
+            (-1.00, False),  # Negative price should fail
+            (-0.01, False),  # Small negative should fail
+        ],
     )
-    assert flight.origin == "LAX"
+    def test_flight_price_validation(
+        self, sample_flight_dict, price, should_pass, validation_helper
+    ):
+        """Test price validation with boundary values."""
+        sample_flight_dict["price"] = price
 
-    # Test invalid origin code
-    with pytest.raises(ValidationError) as excinfo:
-        Flight(
-            trip_id=1,
-            origin="INVALID",  # Too long
-            destination="NRT",
-            airline=AirlineProvider.JAPAN_AIRLINES,
-            departure_time=now + timedelta(days=10),
-            arrival_time=now + timedelta(days=10, hours=12),
-            price=1200.00,
-            search_timestamp=now,
-            data_source=DataSource.DUFFEL,
+        if should_pass:
+            flight = Flight(**sample_flight_dict)
+            assert flight.price == price
+        else:
+            validation_helper.assert_validation_error(
+                Flight, sample_flight_dict, "price", "greater than 0"
+            )
+
+    def test_flight_datetime_validation(self, sample_flight_dict):
+        """Test departure and arrival time validation."""
+        now = datetime.now(timezone.utc)
+        departure = now + timedelta(hours=2)
+        arrival = departure + timedelta(hours=12)
+
+        sample_flight_dict.update(
+            {
+                "departure_time": departure,
+                "arrival_time": arrival,
+            }
         )
-    assert "Airport code must be a 3-letter IATA code" in str(excinfo.value)
 
-    # Test invalid destination code
-    with pytest.raises(ValidationError) as excinfo:
-        Flight(
-            trip_id=1,
-            origin="LAX",
-            destination="12",  # Too short
-            airline=AirlineProvider.JAPAN_AIRLINES,
-            departure_time=now + timedelta(days=10),
-            arrival_time=now + timedelta(days=10, hours=12),
-            price=1200.00,
-            search_timestamp=now,
-            data_source=DataSource.DUFFEL,
+        flight = Flight(**sample_flight_dict)
+        assert flight.departure_time == departure
+        assert flight.arrival_time == arrival
+
+    def test_flight_datetime_logical_validation(self, sample_flight_dict):
+        """Test that arrival time must be after departure time."""
+        now = datetime.now(timezone.utc)
+        departure = now + timedelta(hours=12)
+        arrival = now + timedelta(hours=2)  # Before departure
+
+        sample_flight_dict.update(
+            {
+                "departure_time": departure,
+                "arrival_time": arrival,
+            }
         )
-    assert "Airport code must be a 3-letter IATA code" in str(excinfo.value)
 
+        with pytest.raises(ValidationError) as exc_info:
+            Flight(**sample_flight_dict)
 
-def test_flight_validation_dates():
-    """Test date validation."""
-    now = datetime.now(datetime.UTC)
+        errors = exc_info.value.errors()
+        assert any("arrival_time" in str(error) for error in errors)
 
-    # Test arrival before departure
-    with pytest.raises(ValidationError) as excinfo:
-        Flight(
-            trip_id=1,
-            origin="LAX",
-            destination="NRT",
-            airline=AirlineProvider.JAPAN_AIRLINES,
-            departure_time=now + timedelta(days=10),
-            arrival_time=now + timedelta(days=9),  # Before departure
-            price=1200.00,
-            search_timestamp=now,
-            data_source=DataSource.DUFFEL,
+    def test_flight_duration_calculation(self, sample_flight_dict):
+        """Test flight duration calculation."""
+        now = datetime.now(timezone.utc)
+        departure = now + timedelta(hours=2)
+        arrival = departure + timedelta(hours=8, minutes=30)  # 8.5 hour flight
+
+        sample_flight_dict.update(
+            {
+                "departure_time": departure,
+                "arrival_time": arrival,
+            }
         )
-    assert "Arrival time must be after departure time" in str(excinfo.value)
 
+        flight = Flight(**sample_flight_dict)
+        assert flight.duration_minutes == 510  # 8.5 hours = 510 minutes
 
-def test_flight_validation_price():
-    """Test price validation."""
-    now = datetime.now(datetime.UTC)
+    def test_flight_airport_codes_validation(
+        self, sample_flight_dict, validation_helper
+    ):
+        """Test airport code validation."""
+        # Test invalid origin codes
+        invalid_codes = ["", "A", "AB", "ABCD", "123", "ab1"]
 
-    # Test negative price
-    with pytest.raises(ValidationError) as excinfo:
-        Flight(
-            trip_id=1,
-            origin="LAX",
-            destination="NRT",
-            airline=AirlineProvider.JAPAN_AIRLINES,
-            departure_time=now + timedelta(days=10),
-            arrival_time=now + timedelta(days=10, hours=12),
-            price=-100.00,  # Negative price
-            search_timestamp=now,
-            data_source=DataSource.DUFFEL,
-        )
-    assert "ensure this value is greater than 0" in str(excinfo.value)
+        for invalid_code in invalid_codes:
+            sample_flight_dict["origin"] = invalid_code
+            validation_helper.assert_validation_error(
+                Flight, sample_flight_dict, "origin", "3 characters"
+            )
 
+        # Test valid codes
+        valid_codes = ["LAX", "JFK", "LHR", "CDG", "NRT"]
+        for valid_code in valid_codes:
+            sample_flight_dict["origin"] = valid_code
+            flight = Flight(**sample_flight_dict)
+            assert flight.origin == valid_code
 
-def test_flight_duration_property(sample_flight_dict):
-    """Test the duration property."""
-    flight = Flight(**sample_flight_dict)
-    assert flight.duration.total_seconds() == 12 * 3600  # 12 hours
+    @pytest.mark.parametrize("booking_status", list(BookingStatus))
+    def test_flight_booking_statuses(self, sample_flight_dict, booking_status):
+        """Test all booking status options."""
+        sample_flight_dict["booking_status"] = booking_status
+        flight = Flight(**sample_flight_dict)
+        assert flight.booking_status == booking_status
 
+    @pytest.mark.parametrize("data_source", list(DataSource))
+    def test_flight_data_sources(self, sample_flight_dict, data_source):
+        """Test all data source options."""
+        sample_flight_dict["data_source"] = data_source
+        flight = Flight(**sample_flight_dict)
+        assert flight.data_source == data_source
 
-def test_flight_formatted_duration(sample_flight_dict):
-    """Test the formatted_duration property."""
-    flight = Flight(**sample_flight_dict)
-    assert flight.formatted_duration == "12h 0m"
+    def test_flight_serialization_round_trip(
+        self, sample_flight_dict, serialization_helper
+    ):
+        """Test JSON serialization and deserialization."""
+        flight = Flight(**sample_flight_dict)
 
-    # Test with minutes
-    now = datetime.now(datetime.UTC)
-    flight = Flight(
-        trip_id=1,
-        origin="LAX",
-        destination="NRT",
-        airline=AirlineProvider.JAPAN_AIRLINES,
-        departure_time=now,
-        arrival_time=now + timedelta(hours=9, minutes=45),
-        price=1200.00,
-        search_timestamp=now,
-        data_source=DataSource.DUFFEL,
-    )
-    assert flight.formatted_duration == "9h 45m"
+        # Test JSON round trip
+        reconstructed = serialization_helper.test_json_round_trip(flight)
+        assert reconstructed.origin == flight.origin
+        assert reconstructed.destination == flight.destination
+        assert reconstructed.price == flight.price
 
+        # Test dict round trip
+        reconstructed = serialization_helper.test_dict_round_trip(flight)
+        assert reconstructed.airline == flight.airline
 
-def test_flight_is_booked_property(sample_flight_dict):
-    """Test the is_booked property."""
-    flight = Flight(**sample_flight_dict)
-    assert flight.is_booked is False
+    def test_flight_booking_workflow(self, sample_flight_dict):
+        """Test flight booking state transitions."""
+        flight = Flight(**sample_flight_dict)
 
-    flight.booking_status = BookingStatus.BOOKED
-    assert flight.is_booked is True
+        # Test initial state
+        assert flight.booking_status == BookingStatus.VIEWED
+        assert not flight.is_booked
+        assert not flight.is_canceled
 
+        # Test booking
+        flight.book()
+        assert flight.booking_status == BookingStatus.BOOKED
+        assert flight.is_booked
 
-def test_flight_is_canceled_property(sample_flight_dict):
-    """Test the is_canceled property."""
-    flight = Flight(**sample_flight_dict)
-    assert flight.is_canceled is False
-
-    flight.booking_status = BookingStatus.CANCELED
-    assert flight.is_canceled is True
-
-
-def test_flight_book(sample_flight_dict):
-    """Test booking a flight."""
-    flight = Flight(**sample_flight_dict)
-    flight.book()
-    assert flight.booking_status == BookingStatus.BOOKED
-
-
-def test_flight_cancel(sample_flight_dict):
-    """Test canceling a flight."""
-    flight = Flight(**sample_flight_dict)
-    flight.book()
-    flight.cancel()
-    assert flight.booking_status == BookingStatus.CANCELED
-
-    # Cannot cancel a viewed flight
-    flight = Flight(**sample_flight_dict)
-    with pytest.raises(ValueError) as excinfo:
+        # Test cancellation
         flight.cancel()
-    assert "Only booked flights can be canceled" in str(excinfo.value)
+        assert flight.booking_status == BookingStatus.CANCELED
+        assert flight.is_canceled
 
+    def test_flight_factory_variations(self):
+        """Test factory method variations."""
+        # Test return flight factory
+        return_flight_data = FlightFactory.create_return_flight()
+        return_flight = Flight(**return_flight_data)
+        assert return_flight.origin == "NRT"
+        assert return_flight.destination == "LAX"
+        assert return_flight.segment_number == 2
 
-def test_flight_model_dump(sample_flight_dict):
-    """Test model_dump method."""
-    flight = Flight(**sample_flight_dict)
-    flight_dict = flight.model_dump()
+        # Test domestic flight factory
+        domestic_data = FlightFactory.create_domestic_flight()
+        domestic = Flight(**domestic_data)
+        assert domestic.origin == "LAX"
+        assert domestic.destination == "SFO"
+        assert domestic.airline == AirlineProvider.AMERICAN
 
-    assert flight_dict["origin"] == "LAX"
-    assert flight_dict["destination"] == "NRT"
-    assert flight_dict["airline"] == AirlineProvider.JAPAN_AIRLINES
-    assert flight_dict["price"] == 1200.00
-    assert flight_dict["booking_status"] == BookingStatus.VIEWED
-    assert flight_dict["data_source"] == DataSource.DUFFEL
+    def test_flight_segment_number_validation(
+        self, sample_flight_dict, validation_helper
+    ):
+        """Test segment number validation."""
+        # Test invalid segment numbers
+        invalid_segments = [0, -1, -10]
+
+        for invalid_segment in invalid_segments:
+            sample_flight_dict["segment_number"] = invalid_segment
+            validation_helper.assert_validation_error(
+                Flight, sample_flight_dict, "segment_number", "greater than 0"
+            )
+
+        # Test valid segment numbers
+        valid_segments = [1, 2, 3, 10]
+        for valid_segment in valid_segments:
+            sample_flight_dict["segment_number"] = valid_segment
+            flight = Flight(**sample_flight_dict)
+            assert flight.segment_number == valid_segment
+
+    def test_flight_trip_id_validation(self, sample_flight_dict, validation_helper):
+        """Test trip_id validation."""
+        # Test invalid trip IDs
+        invalid_ids = [0, -1, -10]
+
+        for invalid_id in invalid_ids:
+            sample_flight_dict["trip_id"] = invalid_id
+            validation_helper.assert_validation_error(
+                Flight, sample_flight_dict, "trip_id", "greater than 0"
+            )
+
+    def test_flight_edge_cases(self, sample_flight_dict, edge_case_data):
+        """Test edge case values."""
+        # Test minimum price
+        sample_flight_dict["price"] = edge_case_data["min_price"]
+        flight = Flight(**sample_flight_dict)
+        assert flight.price == edge_case_data["min_price"]
+
+        # Test maximum price
+        sample_flight_dict["price"] = edge_case_data["max_price"]
+        flight = Flight(**sample_flight_dict)
+        assert flight.price == edge_case_data["max_price"]
+
+    def test_flight_decimal_precision(self, sample_flight_dict):
+        """Test price precision handling."""
+        # Test with high precision decimal
+        sample_flight_dict["price"] = Decimal("1199.999")
+
+        flight = Flight(**sample_flight_dict)
+        # Should handle decimal precision appropriately
+        assert isinstance(flight.price, (float, Decimal))
+        assert flight.price > 1199.99
+
+    def test_flight_search_timestamp_handling(self, sample_flight_dict):
+        """Test search timestamp field."""
+        now = datetime.now(timezone.utc)
+        sample_flight_dict["search_timestamp"] = now
+
+        flight = Flight(**sample_flight_dict)
+        assert flight.search_timestamp == now
+
+        # Test that search timestamp can be in the past
+        past_time = now - timedelta(days=1)
+        sample_flight_dict["search_timestamp"] = past_time
+        flight = Flight(**sample_flight_dict)
+        assert flight.search_timestamp == past_time
+
+    def test_flight_optional_fields(self, sample_flight_dict):
+        """Test that optional fields can be None or omitted."""
+        optional_fields = ["flight_number", "duration_minutes"]
+
+        for field in optional_fields:
+            test_data = sample_flight_dict.copy()
+            test_data[field] = None
+            flight = Flight(**test_data)
+            assert getattr(flight, field) is None
+
+            # Test omitting the field entirely
+            test_data = sample_flight_dict.copy()
+            if field in test_data:
+                del test_data[field]
+            flight = Flight(**test_data)
+            # Should not raise an error
+
+    def test_flight_business_logic_methods(self, sample_flight_dict):
+        """Test business logic methods."""
+        flight = Flight(**sample_flight_dict)
+
+        # Test booking workflow
+        assert not flight.is_booked
+        flight.book()
+        assert flight.is_booked
+        assert flight.booking_status == BookingStatus.BOOKED
+
+        # Test cancellation workflow
+        flight.cancel()
+        assert flight.is_canceled
+        assert flight.booking_status == BookingStatus.CANCELED
+
+        # Test that we can't book a canceled flight
+        with pytest.raises(ValueError, match="Cannot book a canceled flight"):
+            flight.book()
+
+    def test_flight_timezone_handling(self, sample_flight_dict):
+        """Test timezone-aware datetime handling."""
+        # Test with different timezones
+        utc_time = datetime.now(timezone.utc)
+
+        sample_flight_dict.update(
+            {
+                "departure_time": utc_time,
+                "arrival_time": utc_time + timedelta(hours=8),
+            }
+        )
+
+        flight = Flight(**sample_flight_dict)
+        assert flight.departure_time.tzinfo is not None
+        assert flight.arrival_time.tzinfo is not None
+
+    @pytest.mark.parametrize(
+        "field_name,invalid_value,expected_error",
+        [
+            ("origin", "ab", "3 characters"),
+            ("destination", "ABCD", "3 characters"),
+            ("flight_number", "", "at least 1 character"),
+            ("duration_minutes", -1, "greater than or equal to 0"),
+            ("duration_minutes", -60, "greater than or equal to 0"),
+        ],
+    )
+    def test_flight_field_validation(
+        self,
+        sample_flight_dict,
+        field_name,
+        invalid_value,
+        expected_error,
+        validation_helper,
+    ):
+        """Test individual field validation rules."""
+        sample_flight_dict[field_name] = invalid_value
+        validation_helper.assert_validation_error(
+            Flight, sample_flight_dict, field_name, expected_error
+        )
