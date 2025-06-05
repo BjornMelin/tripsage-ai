@@ -69,7 +69,7 @@ async def add_conversation_memory(
     if not user_id or user_id.strip() == "":
         raise ValueError("User ID cannot be empty")
 
-    @with_error_handling
+    @with_error_handling()
     async def _do_add_conversation_memory() -> Dict[str, Any]:
         logger.info(f"Adding conversation memory for user {user_id}")
 
@@ -114,7 +114,7 @@ async def add_conversation_memory(
 
 
 @function_tool
-@with_error_handling
+@with_error_handling()
 async def search_user_memories(
     search_query: MemorySearchQuery,
     service_registry: ServiceRegistry,
@@ -169,7 +169,7 @@ async def get_user_context(
     if not user_id:
         raise ValueError("User ID cannot be empty")
 
-    @with_error_handling
+    @with_error_handling()
     async def _do_get_user_context() -> Dict[str, Any]:
         logger.info(f"Getting user context for user {user_id}")
 
@@ -183,7 +183,7 @@ async def get_user_context(
 
 
 @function_tool
-@with_error_handling
+@with_error_handling()
 async def update_user_preferences(
     preferences: UserPreferences,
     service_registry: ServiceRegistry,
@@ -224,7 +224,7 @@ async def update_user_preferences(
 
 
 @function_tool
-@with_error_handling
+@with_error_handling()
 async def save_session_summary(
     session_summary: SessionSummary,
     service_registry: ServiceRegistry,
@@ -297,7 +297,7 @@ async def save_session_summary(
 
 
 @function_tool
-@with_error_handling
+@with_error_handling()
 async def get_travel_insights(
     user_id: str,
     service_registry: ServiceRegistry,
@@ -340,7 +340,7 @@ async def get_travel_insights(
 
 
 @function_tool
-@with_error_handling
+@with_error_handling()
 async def find_similar_travelers(
     user_id: str,
     service_registry: ServiceRegistry,
@@ -382,7 +382,7 @@ async def find_similar_travelers(
 
 
 @function_tool
-@with_error_handling
+@with_error_handling()
 async def get_destination_memories(
     destination: str,
     service_registry: ServiceRegistry,
@@ -427,7 +427,7 @@ async def get_destination_memories(
 
 
 @function_tool
-@with_error_handling
+@with_error_handling()
 async def track_user_activity(
     user_id: str,
     activity_type: str,
@@ -482,7 +482,7 @@ async def track_user_activity(
 
 # Health check function
 @function_tool
-@with_error_handling
+@with_error_handling()
 async def memory_health_check(service_registry: ServiceRegistry) -> Dict[str, Any]:
     """Check memory service health.
 

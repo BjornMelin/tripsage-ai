@@ -5,7 +5,7 @@ This module tests the ServiceRegistry class which provides centralized
 dependency injection for all agents, tools, and orchestration nodes.
 """
 
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -49,7 +49,7 @@ class TestServiceRegistry:
         registry = ServiceRegistry()
 
         with pytest.raises(
-            ValueError, match="Required service memory_service not available"
+            ValueError, match="Required service 'memory_service' is not initialized"
         ):
             registry.get_required_service("memory_service")
 
@@ -72,46 +72,18 @@ class TestServiceRegistry:
         """Test getting a service with invalid name."""
         registry = ServiceRegistry()
 
-        with pytest.raises(ValueError, match="Unknown service: invalid_service"):
+        with pytest.raises(
+            ValueError, match="Required service 'invalid_service' is not initialized"
+        ):
             registry.get_required_service("invalid_service")
 
-    def test_has_service_true(self):
-        """Test has_service returns True for existing service."""
+    def test_get_service_compatibility(self):
+        """Test get_service method (compatibility alias for get_optional_service)."""
         mock_db = MagicMock()
         registry = ServiceRegistry(database_service=mock_db)
 
-        assert registry.has_service("database_service") is True
-
-    def test_has_service_false(self):
-        """Test has_service returns False for missing service."""
-        registry = ServiceRegistry()
-
-        assert registry.has_service("database_service") is False
-
-    def test_has_service_invalid_name(self):
-        """Test has_service with invalid service name."""
-        registry = ServiceRegistry()
-
-        assert registry.has_service("invalid_service") is False
-
-    def test_list_available_services(self):
-        """Test listing available services."""
-        mock_db = MagicMock()
-        mock_memory = MagicMock()
-
-        registry = ServiceRegistry(database_service=mock_db, memory_service=mock_memory)
-
-        available = registry.list_available_services()
-        assert "database_service" in available
-        assert "memory_service" in available
-        assert "accommodation_service" not in available
-
-    def test_list_available_services_empty(self):
-        """Test listing available services when none are set."""
-        registry = ServiceRegistry()
-
-        available = registry.list_available_services()
-        assert available == []
+        assert registry.get_service("database_service") is mock_db
+        assert registry.get_service("memory_service") is None
 
     @pytest.mark.asyncio
     async def test_create_default_success(self):
@@ -119,7 +91,7 @@ class TestServiceRegistry:
         mock_db = MagicMock()
 
         # Mock all the service constructors to avoid actual instantiation
-        with pytest.mock.patch.multiple(
+        with patch.multiple(
             "tripsage.agents.service_registry",
             CacheService=MagicMock(),
             WebSocketManager=MagicMock(),

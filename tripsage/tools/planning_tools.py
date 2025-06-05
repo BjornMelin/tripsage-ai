@@ -60,7 +60,7 @@ class SearchResultInput(BaseModel):
     )
 
 
-@with_error_handling
+@with_error_handling()
 async def create_travel_plan(params: Dict[str, Any]) -> Dict[str, Any]:
     """Create a new travel plan with basic information.
 
@@ -168,7 +168,7 @@ async def create_travel_plan(params: Dict[str, Any]) -> Dict[str, Any]:
         return {"success": False, "error": f"Travel plan creation error: {str(e)}"}
 
 
-@with_error_handling
+@with_error_handling()
 async def update_travel_plan(params: Dict[str, Any]) -> Dict[str, Any]:
     """Update an existing travel plan with new information.
 
@@ -270,7 +270,7 @@ async def update_travel_plan(params: Dict[str, Any]) -> Dict[str, Any]:
         return {"success": False, "error": f"Travel plan update error: {str(e)}"}
 
 
-@with_error_handling
+@with_error_handling()
 async def combine_search_results(params: Dict[str, Any]) -> Dict[str, Any]:
     """Combine results from multiple search operations into a unified recommendation.
 
@@ -395,7 +395,7 @@ async def combine_search_results(params: Dict[str, Any]) -> Dict[str, Any]:
         return {"success": False, "error": f"Result combination error: {str(e)}"}
 
 
-@with_error_handling
+@with_error_handling()
 async def generate_travel_summary(params: Dict[str, Any]) -> Dict[str, Any]:
     """Generate a comprehensive summary of a travel plan.
 
@@ -570,7 +570,7 @@ def _generate_html_summary(travel_plan: Dict[str, Any]) -> str:
     return f"<html><body><p>{html}</p></body></html>"
 
 
-@with_error_handling
+@with_error_handling()
 async def save_travel_plan(params: Dict[str, Any]) -> Dict[str, Any]:
     """Save a travel plan to persistent storage.
 

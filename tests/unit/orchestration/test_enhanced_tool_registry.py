@@ -230,7 +230,7 @@ class TestMCPToolWrapper:
         ) as mock_invoke:
             mock_invoke.side_effect = Exception("Test error")
 
-            with pytest.raises(Exception):
+            with pytest.raises(Exception, match="Test error"):
                 await mcp_tool.execute(param1="value1")
 
             assert mcp_tool.metadata.usage_count == initial_usage + 1

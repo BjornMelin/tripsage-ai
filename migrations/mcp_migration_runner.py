@@ -38,7 +38,7 @@ class MCPMigrationRunner:
         self.migrations_dir = Path(__file__).parent
         self.logger = logger
 
-    @with_error_handling
+    @with_error_handling()
     async def apply_migration(
         self, migration_sql: str, name: str, project_id: Optional[str] = None
     ) -> bool:
@@ -95,7 +95,7 @@ class MCPMigrationRunner:
             self.logger.error(f"Migration '{name}' failed with error: {e}")
             raise MCPMigrationError(f"Migration '{name}' failed: {str(e)}") from e
 
-    @with_error_handling
+    @with_error_handling()
     async def create_neo4j_schema(
         self, schema_queries: List[str], clear_existing: bool = False
     ) -> bool:
@@ -160,7 +160,7 @@ class MCPMigrationRunner:
             self.logger.error(f"Neo4j schema creation failed: {e}")
             raise MCPMigrationError(f"Neo4j schema creation failed: {str(e)}") from e
 
-    @with_error_handling
+    @with_error_handling()
     async def run_migration_file(
         self, migration_file: str, project_id: Optional[str] = None
     ) -> bool:
@@ -201,7 +201,7 @@ class MCPMigrationRunner:
                 f"Failed to run migration file {migration_file}: {str(e)}"
             ) from e
 
-    @with_error_handling
+    @with_error_handling()
     async def get_migration_status(self, project_id: Optional[str] = None) -> Dict:
         """Get the current migration status from Supabase.
 
@@ -237,7 +237,7 @@ class MCPMigrationRunner:
             self.logger.error(f"Failed to get migration status: {e}")
             raise MCPMigrationError(f"Failed to get migration status: {str(e)}") from e
 
-    @with_error_handling
+    @with_error_handling()
     async def run_pending_migrations(
         self, project_id: Optional[str] = None, dry_run: bool = False
     ) -> List[str]:

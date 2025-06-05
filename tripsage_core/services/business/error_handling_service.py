@@ -138,7 +138,7 @@ class ErrorRecoveryService:
             },
         }
 
-    @with_error_handling
+    @with_error_handling()
     async def handle_mcp_error(
         self,
         error: Exception,
@@ -496,7 +496,7 @@ class ErrorRecoveryService:
         }
         return service_mapping.get(service, "general")
 
-    @with_error_handling
+    @with_error_handling()
     async def store_successful_result(
         self, service: str, method: str, params: Dict[str, Any], result: Any
     ) -> None:

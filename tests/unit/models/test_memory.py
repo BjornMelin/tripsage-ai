@@ -426,7 +426,8 @@ class TestMemoryCreateUpdate:
         )
 
         # Should remove empty strings, normalize to lowercase, and deduplicate
-        # Note: Current implementation checks original category for uniqueness before cleaning
+        # Note: Current implementation checks original category for
+        # uniqueness before cleaning
         assert memory_create.categories == ["travel", "travel", "flights"]
 
     def test_memory_update_categories_cleaning(self):
@@ -436,5 +437,6 @@ class TestMemoryCreateUpdate:
         )
 
         # Should remove empty strings, normalize to lowercase, and deduplicate
-        # Note: Current implementation checks original category for uniqueness before cleaning
+        # Note: Current implementation checks original category for
+        # uniqueness before cleaning
         assert memory_update.categories == ["updated", "updated", "category"]

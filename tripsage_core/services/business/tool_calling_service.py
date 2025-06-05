@@ -116,7 +116,7 @@ class ToolCallService:
         self.execution_history: List[ToolCallResponse] = []
         self.rate_limits: Dict[str, List[float]] = {}
 
-    @with_error_handling
+    @with_error_handling()
     async def execute_tool_call(self, request: ToolCallRequest) -> ToolCallResponse:
         """Execute a single tool call with comprehensive error handling.
 
@@ -195,7 +195,7 @@ class ToolCallService:
                 method=request.method,
             )
 
-    @with_error_handling
+    @with_error_handling()
     async def execute_parallel_tool_calls(
         self, requests: List[ToolCallRequest]
     ) -> List[ToolCallResponse]:
@@ -402,11 +402,11 @@ class ToolCallService:
 
             # Use error recovery service for comprehensive fallback handling
             fallback_result = await self.error_recovery.handle_mcp_error(
-                error=e,
-                service=request.service,
-                method=request.method,
-                params=params,
-                retry_count=request.retry_count,
+                e,  # Pass error as first positional argument
+                request.service,
+                request.method,
+                params,
+                request.retry_count,
             )
 
             if fallback_result.success and fallback_result.result:

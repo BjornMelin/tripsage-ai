@@ -8,6 +8,7 @@ for the entire TripSage test suite with proper async support and mocking.
 import asyncio
 import os
 import sys
+from datetime import date, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
@@ -17,6 +18,19 @@ import pytest
 # Load test environment variables FIRST
 from dotenv import load_dotenv
 from pydantic import BaseModel
+
+from tripsage_core.models.schemas_common.enums import (
+    AccommodationType,
+    AirlineProvider,
+    BookingStatus,
+    CancellationPolicy,
+    CurrencyCode,
+    DataSource,
+    TripStatus,
+    TripType,
+    TripVisibility,
+    UserRole,
+)
 
 load_dotenv(".env.test", override=True)
 
@@ -39,8 +53,8 @@ def setup_test_environment():
         "SUPABASE_SERVICE_ROLE_KEY": "test-service-role-key-1234567890abcdef",
         "SUPABASE_PROJECT_ID": "test-project-id",
         # Cache configuration
-        "REDIS_URL": "redis://localhost:6379/1",
         "DRAGONFLY_URL": "redis://localhost:6379/1",
+        "DRAGONFLY_PASSWORD": "test_dragonfly_password",
         # API Keys (safe test values)
         "OPENAI_API_KEY": "sk-test-openai-key-1234567890abcdef",
         "ANTHROPIC_API_KEY": "sk-ant-test-anthropic-key-1234567890abcdef",
@@ -343,20 +357,6 @@ def mock_settings_and_redis(monkeypatch):
 
 
 # Sample data fixtures for comprehensive model testing
-from datetime import date, timedelta
-
-from tripsage_core.models.schemas_common.enums import (
-    AccommodationType,
-    AirlineProvider,
-    BookingStatus,
-    CancellationPolicy,
-    CurrencyCode,
-    DataSource,
-    TripStatus,
-    TripType,
-    TripVisibility,
-    UserRole,
-)
 
 
 @pytest.fixture
@@ -460,8 +460,10 @@ class ValidationTestHelper:
         assert len(field_errors) > 0, (
             f"No validation error found for field '{field_name}'"
         )
-        assert error_message_part in str(field_errors[0]["msg"]), (
-            f"Expected error message containing '{error_message_part}' but got '{field_errors[0]['msg']}'"
+        actual_msg = field_errors[0]["msg"]
+        assert error_message_part in str(actual_msg), (
+            f"Expected error message containing '{error_message_part}' "
+            f"but got '{actual_msg}'"
         )
 
     @staticmethod

@@ -27,6 +27,7 @@ class TestCacheService:
         settings = Mock(spec=CoreAppSettings)
         settings.dragonfly = Mock()
         settings.dragonfly.url = "redis://localhost:6379/0"
+        settings.dragonfly.password = None  # No password for test environment
         settings.dragonfly.ttl_short = 300
         settings.dragonfly.ttl_medium = 3600
         settings.dragonfly.ttl_long = 86400

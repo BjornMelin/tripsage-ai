@@ -70,9 +70,9 @@ GRAFANA_URL=https://your-grafana.com
 
 ```python
 # Infrastructure Toggles
-FEATURE_REDIS_INTEGRATION: direct | mcp
-FEATURE_DATABASE_PROVIDER: supabase | neon
-FEATURE_VECTOR_SEARCH: pgvector | qdrant
+FEATURE_CACHE_PROVIDER: dragonfly  # DragonflyDB is now the default
+FEATURE_DATABASE_PROVIDER: supabase
+FEATURE_VECTOR_SEARCH: pgvector
 
 # AI Features
 FEATURE_MEMORY_SYSTEM: mem0 | neo4j | disabled
@@ -307,7 +307,8 @@ services:
     environment:
       - NODE_ENV=production
       - DATABASE_URL=${DATABASE_URL}
-      - REDIS_URL=${REDIS_URL}
+      - DRAGONFLY_URL=${DRAGONFLY_URL}
+      - DRAGONFLY_PASSWORD=${DRAGONFLY_PASSWORD}
     ports:
       - "8000:8000"
     depends_on:

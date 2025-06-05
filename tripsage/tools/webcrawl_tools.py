@@ -21,7 +21,7 @@ from tripsage_core.utils.logging_utils import get_logger
 logger = get_logger(__name__)
 
 
-@with_error_handling
+@with_error_handling()
 async def crawl_website_content(
     url: str,
     extract_structured_data: bool = False,
@@ -129,7 +129,7 @@ async def crawl_website_content(
         )
 
 
-@with_error_handling
+@with_error_handling()
 async def crawl_travel_blog(
     url: str, extract_insights: bool = True, use_cache: bool = True
 ) -> UnifiedCrawlResult:
@@ -155,7 +155,7 @@ async def crawl_travel_blog(
     )
 
 
-@with_error_handling
+@with_error_handling()
 async def crawl_booking_site(
     url: str, extract_prices: bool = True, use_cache: bool = True
 ) -> UnifiedCrawlResult:
@@ -181,7 +181,7 @@ async def crawl_booking_site(
     )
 
 
-@with_error_handling
+@with_error_handling()
 async def crawl_event_listing(
     url: str, extract_dates: bool = True, use_cache: bool = True
 ) -> UnifiedCrawlResult:

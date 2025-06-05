@@ -71,7 +71,7 @@ class ChatOrchestrationService:
             escaped = str_value.replace("'", "''")
             return f"'{escaped}'"
 
-    @with_error_handling
+    @with_error_handling()
     async def create_chat_session(
         self, user_id: int, metadata: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
@@ -129,7 +129,7 @@ class ChatOrchestrationService:
                 f"Failed to create chat session: {str(e)}"
             ) from e
 
-    @with_error_handling
+    @with_error_handling()
     async def save_message(
         self,
         session_id: str,
@@ -198,7 +198,7 @@ class ChatOrchestrationService:
             self.logger.error(f"Failed to save message: {e}")
             raise ChatOrchestrationError(f"Failed to save message: {str(e)}") from e
 
-    @with_error_handling
+    @with_error_handling()
     async def search_flights(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """Search flights using Duffel MCP.
 
@@ -234,7 +234,7 @@ class ChatOrchestrationService:
             self.logger.error(f"Flight search failed: {e}")
             raise ChatOrchestrationError(f"Flight search failed: {str(e)}") from e
 
-    @with_error_handling
+    @with_error_handling()
     async def search_accommodations(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """Search accommodations using Airbnb MCP.
 
@@ -272,7 +272,7 @@ class ChatOrchestrationService:
                 f"Accommodation search failed: {str(e)}"
             ) from e
 
-    @with_error_handling
+    @with_error_handling()
     async def get_location_info(self, location: str) -> Dict[str, Any]:
         """Get location information using Google Maps MCP.
 
@@ -308,7 +308,7 @@ class ChatOrchestrationService:
             self.logger.error(f"Location lookup failed: {e}")
             raise ChatOrchestrationError(f"Location lookup failed: {str(e)}") from e
 
-    @with_error_handling
+    @with_error_handling()
     async def execute_parallel_tools(self, tool_calls: List[Dict]) -> Dict[str, Any]:
         """Execute multiple tool calls in parallel using structured tool calling service
 
@@ -378,7 +378,7 @@ class ChatOrchestrationService:
                 f"Parallel tool execution failed: {str(e)}"
             ) from e
 
-    @with_error_handling
+    @with_error_handling()
     async def execute_structured_tool_call(
         self,
         service: str,
@@ -417,7 +417,7 @@ class ChatOrchestrationService:
                 f"Structured tool call failed: {str(e)}"
             ) from e
 
-    @with_error_handling
+    @with_error_handling()
     async def format_tool_response_for_chat(
         self, response: ToolCallResponse
     ) -> Dict[str, Any]:
@@ -473,7 +473,7 @@ class ChatOrchestrationService:
             params=params,
         )
 
-    @with_error_handling
+    @with_error_handling()
     async def _store_search_result(
         self, search_type: str, params: Dict[str, Any], results: Any
     ) -> None:
@@ -506,7 +506,7 @@ class ChatOrchestrationService:
         except Exception as e:
             self.logger.warning(f"Failed to store search result in memory: {e}")
 
-    @with_error_handling
+    @with_error_handling()
     async def _store_location_data(self, location: str, data: Dict[str, Any]) -> None:
         """Store location data in memory graph.
 
@@ -539,7 +539,7 @@ class ChatOrchestrationService:
         except Exception as e:
             self.logger.warning(f"Failed to store location data in memory: {e}")
 
-    @with_error_handling
+    @with_error_handling()
     async def get_chat_history(
         self, session_id: str, limit: int = 10, offset: int = 0
     ) -> List[Dict[str, Any]]:
@@ -595,7 +595,7 @@ class ChatOrchestrationService:
             self.logger.error(f"Failed to get chat history: {e}")
             raise ChatOrchestrationError(f"Failed to get chat history: {str(e)}") from e
 
-    @with_error_handling
+    @with_error_handling()
     async def end_chat_session(self, session_id: str) -> bool:
         """End a chat session using Supabase MCP.
 

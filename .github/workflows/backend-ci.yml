@@ -1,0 +1,180 @@
+name: Backend CI
+
+on:
+  push:
+    branches: [ main, dev, feat/* ]
+  pull_request:
+    branches: [ main, dev ]
+    paths:
+      - 'tripsage/**'
+      - 'tripsage_core/**'
+      - 'tests/**'
+      - 'requirements.txt'
+      - 'pyproject.toml'
+      - '.github/workflows/backend-ci.yml'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: tripsage_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      dragonfly:
+        image: docker.dragonflydb.io/dragonflydb/dragonfly:latest
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install uv
+      run: |
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+        echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
+    - name: Cache uv dependencies
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/uv
+        key: ${{ runner.os }}-uv-${{ hashFiles('**/requirements.txt', '**/pyproject.toml') }}
+        restore-keys: |
+          ${{ runner.os }}-uv-
+
+    - name: Install dependencies
+      run: |
+        uv venv
+        source .venv/bin/activate
+        uv pip install -r requirements.txt
+        uv pip install pytest pytest-cov pytest-asyncio
+
+    - name: Lint with ruff
+      run: |
+        source .venv/bin/activate
+        ruff check .
+        ruff format . --check
+
+    - name: Run tests with coverage
+      env:
+        ENV: test
+        PYTHONPATH: .
+        # Database
+        SUPABASE_URL: https://test-project.supabase.co
+        SUPABASE_ANON_KEY: test-anon-key
+        SUPABASE_SERVICE_KEY: test-service-key
+        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/tripsage_test
+        # DragonflyDB
+        DRAGONFLY_URL: redis://localhost:6379/0
+        DRAGONFLY_PASSWORD: ""
+        DRAGONFLY_TTL_SHORT: 300
+        DRAGONFLY_TTL_MEDIUM: 3600
+        DRAGONFLY_TTL_LONG: 86400
+        # API Keys
+        OPENAI_API_KEY: test-key
+        ANTHROPIC_API_KEY: test-key
+        DUFFEL_API_KEY: test-key
+        GOOGLE_MAPS_API_KEY: test-key
+      run: |
+        source .venv/bin/activate
+        uv run pytest tests/unit/ --cov=tripsage --cov=tripsage_core --cov-report=xml --cov-report=term-missing -v
+
+    - name: Upload coverage to Codecov
+      if: matrix.python-version == '3.11'
+      uses: codecov/codecov-action@v4
+      with:
+        file: ./coverage.xml
+        flags: unittests
+        name: codecov-umbrella
+        fail_ci_if_error: false
+
+  integration-tests:
+    runs-on: ubuntu-latest
+    needs: test
+    
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: tripsage_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      dragonfly:
+        image: docker.dragonflydb.io/dragonflydb/dragonfly:latest
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.11"
+
+    - name: Install uv
+      run: |
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+        echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
+    - name: Install dependencies
+      run: |
+        uv venv
+        source .venv/bin/activate
+        uv pip install -r requirements.txt
+
+    - name: Run integration tests
+      env:
+        ENV: test
+        PYTHONPATH: .
+        # Database
+        SUPABASE_URL: https://test-project.supabase.co
+        SUPABASE_ANON_KEY: test-anon-key
+        SUPABASE_SERVICE_KEY: test-service-key
+        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/tripsage_test
+        # DragonflyDB
+        DRAGONFLY_URL: redis://localhost:6379/0
+        DRAGONFLY_PASSWORD: ""
+        # API Keys
+        OPENAI_API_KEY: test-key
+        ANTHROPIC_API_KEY: test-key
+      run: |
+        source .venv/bin/activate
+        uv run pytest tests/integration/ -v --tb=short
