@@ -663,7 +663,12 @@ class TestWebSocketBroadcaster:
 
         assert count == 0
 
-    @pytest.mark.skip(reason="Test hangs due to complex async loop - needs refactoring for proper mocking")
+    @pytest.mark.skip(
+        reason=(
+            "Test hangs due to complex async loop - needs refactoring for "
+            "proper mocking"
+        )
+    )
     @pytest.mark.asyncio
     @pytest.mark.timeout(30)  # Explicit timeout for this test
     async def test_process_broadcast_queue_success(
@@ -677,7 +682,12 @@ class TestWebSocketBroadcaster:
         # or use a more sophisticated async mocking approach.
         pass
 
-    @pytest.mark.skip(reason="Test hangs due to complex async loop - needs refactoring for proper mocking")
+    @pytest.mark.skip(
+        reason=(
+            "Test hangs due to complex async loop - needs refactoring for "
+            "proper mocking"
+        )
+    )
     @pytest.mark.asyncio
     @pytest.mark.timeout(30)  # Explicit timeout for this test
     async def test_process_broadcast_queue_no_messages(
@@ -688,7 +698,12 @@ class TestWebSocketBroadcaster:
         # Needs proper async mocking strategy
         pass
 
-    @pytest.mark.skip(reason="Test hangs due to complex async loop - needs refactoring for proper mocking")
+    @pytest.mark.skip(
+        reason=(
+            "Test hangs due to complex async loop - needs refactoring for "
+            "proper mocking"
+        )
+    )
     @pytest.mark.asyncio
     @pytest.mark.timeout(30)  # Explicit timeout for this test
     async def test_process_broadcast_queue_invalid_message(
@@ -700,7 +715,12 @@ class TestWebSocketBroadcaster:
         # that's difficult to mock properly without hanging
         pass
 
-    @pytest.mark.skip(reason="Test hangs due to complex async loop - needs refactoring for proper mocking")
+    @pytest.mark.skip(
+        reason=(
+            "Test hangs due to complex async loop - needs refactoring for "
+            "proper mocking"
+        )
+    )
     @pytest.mark.asyncio
     @pytest.mark.timeout(30)  # Explicit timeout for this test
     async def test_process_broadcast_queue_without_redis(self, mock_settings):
@@ -868,7 +888,12 @@ class TestWebSocketBroadcaster:
         assert "channel3" in websocket_broadcaster._subscribers
         assert "channel2" not in websocket_broadcaster._subscribers
 
-    @pytest.mark.skip(reason="Test hangs due to complex async loop - needs refactoring for proper mocking")
+    @pytest.mark.skip(
+        reason=(
+            "Test hangs due to complex async loop - needs refactoring for "
+            "proper mocking"
+        )
+    )
     @pytest.mark.asyncio
     @pytest.mark.timeout(30)  # Explicit timeout for this test
     async def test_error_handling_in_background_tasks(
