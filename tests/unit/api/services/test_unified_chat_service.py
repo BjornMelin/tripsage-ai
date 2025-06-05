@@ -5,17 +5,62 @@ This module tests the unified ChatService that acts as a thin adaptation
 layer between API requests and core business logic.
 """
 
-from unittest.mock import AsyncMock, patch
-from uuid import uuid4
+from datetime import datetime, timezone
+from unittest.mock import AsyncMock
+from uuid import UUID
 
 import pytest
+from pydantic import BaseModel
 
-from tripsage.api.schemas.requests.chat import ChatRequest, SessionCreateRequest
-from tripsage.api.services.chat import ChatService
-from tripsage_core.services.business.auth_service import (
-    AuthenticationService as CoreAuthService,
+from tripsage.api.schemas.requests.chat import (
+    ChatRequest,
+    CreateMessageRequest,
+    SessionCreateRequest,
 )
-from tripsage_core.services.business.chat_service import ChatService as CoreChatService
+from tripsage.api.services.chat import (
+    ChatService,
+    ChatServiceError,
+    ChatServiceNotFoundError,
+    ChatServicePermissionError,
+    ChatServiceValidationError,
+    get_chat_service,
+    get_core_chat_service,
+)
+from tripsage_core.exceptions.exceptions import (
+    CoreAuthenticationError,
+    CoreResourceNotFoundError,
+    CoreValidationError,
+)
+from tripsage_core.services.business.chat_service import (
+    ChatService as CoreChatService,
+)
+
+
+# Mock models for testing
+class MockChatSession(BaseModel):
+    """Mock chat session model."""
+
+    id: str
+    user_id: str
+    title: str
+    trip_id: str | None = None
+    created_at: datetime
+    updated_at: datetime
+    metadata: dict | None = None
+    message_count: int = 0
+    last_message_at: datetime | None = None
+
+
+class MockMessage(BaseModel):
+    """Mock message model."""
+
+    id: str
+    session_id: str
+    role: str
+    content: str
+    created_at: datetime
+    metadata: dict | None = None
+    tool_calls: list | None = None
 
 
 class TestChatServiceAdapter:
@@ -27,272 +72,398 @@ class TestChatServiceAdapter:
         return AsyncMock(spec=CoreChatService)
 
     @pytest.fixture
-    def mock_core_auth_service(self):
-        """Mock core auth service."""
-        return AsyncMock(spec=CoreAuthService)
+    def chat_service(self, mock_core_chat_service):
+        """Create ChatService instance with mocked dependencies."""
+        return ChatService(core_chat_service=mock_core_chat_service)
 
     @pytest.fixture
-    def chat_service(self, mock_core_chat_service, mock_core_auth_service):
-        """Create ChatService instance with mocked dependencies."""
-        return ChatService(
-            core_chat_service=mock_core_chat_service,
-            core_auth_service=mock_core_auth_service,
+    def sample_session(self):
+        """Create sample session data."""
+        now = datetime.now(timezone.utc)
+        return MockChatSession(
+            id="session-123",
+            user_id="user-456",
+            title="Test Session",
+            trip_id="trip-789",
+            created_at=now,
+            updated_at=now,
+            metadata={"key": "value"},
+            message_count=5,
+            last_message_at=now,
+        )
+
+    @pytest.fixture
+    def sample_message(self):
+        """Create sample message data."""
+        return MockMessage(
+            id="msg-123",
+            session_id="session-123",
+            role="user",
+            content="Hello, world!",
+            created_at=datetime.now(timezone.utc),
+            metadata={"timestamp": "2025-06-04"},
+            tool_calls=None,
         )
 
     @pytest.mark.asyncio
-    async def test_chat_completion_delegates_to_core_service(
-        self, chat_service, mock_core_chat_service
-    ):
-        """Test that chat_completion delegates to core service."""
-        user_id = str(uuid4())
+    async def test_chat_completion_not_implemented(self, chat_service):
+        """Test that chat_completion raises ChatServiceError for NotImplementedError."""
         request = ChatRequest(
             messages=[{"role": "user", "content": "Hello"}],
             stream=False,
         )
 
-        # Mock core service response
-        mock_response = {"content": "Hello back!", "session_id": str(uuid4())}
-        mock_core_chat_service.chat_completion.return_value = mock_response
+        with pytest.raises(ChatServiceError, match="Internal service error"):
+            await chat_service.chat_completion("user-123", request)
 
-        result = await chat_service.chat_completion(user_id, request)
+    @pytest.mark.asyncio
+    async def test_create_session_success(
+        self, chat_service, mock_core_chat_service, sample_session
+    ):
+        """Test successful session creation."""
+        mock_core_chat_service.create_session.return_value = sample_session
 
-        # Verify core service was called
-        mock_core_chat_service.chat_completion.assert_called_once_with(
-            user_id=user_id, request=request
+        request = SessionCreateRequest(
+            title="Test Session",
+            metadata={"key": "value"},
         )
-        assert result == mock_response
+
+        result = await chat_service.create_session("user-456", request)
+
+        # Verify core service was called correctly
+        mock_core_chat_service.create_session.assert_called_once()
+        call_args = mock_core_chat_service.create_session.call_args
+        assert call_args[1]["user_id"] == "user-456"
+        assert call_args[1]["session_data"].title == "Test Session"
+        assert (
+            call_args[1]["session_data"].trip_id is None
+        )  # trip_id not in request schema
+
+        # Verify response format
+        assert result["id"] == "session-123"
+        assert result["user_id"] == "user-456"
+        assert result["title"] == "Test Session"
+        assert result["trip_id"] == "trip-789"  # From sample_session
+        assert "created_at" in result
+        assert "updated_at" in result
+        assert result["metadata"] == {"key": "value"}
 
     @pytest.mark.asyncio
-    async def test_create_session_delegates_to_core_service(
-        self, chat_service, mock_core_chat_service
+    async def test_create_session_validation_errors(self, chat_service):
+        """Test session creation validation errors."""
+        request = SessionCreateRequest(title="Test")
+
+        # Test empty user_id
+        with pytest.raises(ChatServiceValidationError, match="User ID is required"):
+            await chat_service.create_session("", request)
+
+        # Test empty title
+        request_no_title = SessionCreateRequest(title="")
+        with pytest.raises(
+            ChatServiceValidationError, match="Session title is required"
+        ):
+            await chat_service.create_session("user-123", request_no_title)
+
+    @pytest.mark.asyncio
+    async def test_list_sessions_success(
+        self, chat_service, mock_core_chat_service, sample_session
     ):
-        """Test that create_session delegates to core service."""
-        user_id = str(uuid4())
-        request = SessionCreateRequest(title="Test Session")
+        """Test successful session listing."""
+        mock_core_chat_service.get_user_sessions.return_value = [sample_session]
 
-        # Mock core service response
-        mock_session = {
-            "id": str(uuid4()),
-            "title": "Test Session",
-            "user_id": user_id,
-        }
-        mock_core_chat_service.create_session.return_value = mock_session
+        result = await chat_service.list_sessions("user-456")
 
-        result = await chat_service.create_session(user_id, request)
-
-        # Verify core service was called
-        mock_core_chat_service.create_session.assert_called_once_with(
-            user_id=user_id, request=request
+        # Verify core service was called correctly
+        mock_core_chat_service.get_user_sessions.assert_called_once_with(
+            user_id="user-456"
         )
-        assert result == mock_session
+
+        # Verify response format
+        assert len(result) == 1
+        session = result[0]
+        assert session["id"] == "session-123"
+        assert session["user_id"] == "user-456"
+        assert session["title"] == "Test Session"
+        assert session["message_count"] == 5
+        assert "last_message_at" in session
 
     @pytest.mark.asyncio
-    async def test_list_sessions_delegates_to_core_service(
-        self, chat_service, mock_core_chat_service
-    ):
-        """Test that list_sessions delegates to core service."""
-        user_id = str(uuid4())
-
-        # Mock core service response
-        mock_sessions = [
-            {"id": str(uuid4()), "title": "Session 1"},
-            {"id": str(uuid4()), "title": "Session 2"},
-        ]
-        mock_core_chat_service.list_sessions.return_value = mock_sessions
-
-        result = await chat_service.list_sessions(user_id)
-
-        # Verify core service was called
-        mock_core_chat_service.list_sessions.assert_called_once_with(user_id=user_id)
-        assert result == mock_sessions
+    async def test_list_sessions_validation_error(self, chat_service):
+        """Test session listing validation error."""
+        with pytest.raises(ChatServiceValidationError, match="User ID is required"):
+            await chat_service.list_sessions("")
 
     @pytest.mark.asyncio
-    async def test_get_session_delegates_to_core_service(
-        self, chat_service, mock_core_chat_service
+    async def test_get_session_success(
+        self, chat_service, mock_core_chat_service, sample_session
     ):
-        """Test that get_session delegates to core service."""
-        user_id = str(uuid4())
-        session_id = uuid4()
+        """Test successful session retrieval."""
+        mock_core_chat_service.get_session.return_value = sample_session
+        session_id = UUID("12345678-1234-5678-9abc-123456789012")
 
-        # Mock core service response
-        mock_session = {"id": str(session_id), "title": "Test Session"}
-        mock_core_chat_service.get_session.return_value = mock_session
+        result = await chat_service.get_session("user-456", session_id)
 
-        result = await chat_service.get_session(user_id, session_id)
-
-        # Verify core service was called
+        # Verify core service was called correctly
         mock_core_chat_service.get_session.assert_called_once_with(
-            user_id=user_id, session_id=session_id
+            session_id=str(session_id), user_id="user-456"
         )
-        assert result == mock_session
+
+        # Verify response format
+        assert result["id"] == "session-123"
+        assert result["user_id"] == "user-456"
+        assert result["title"] == "Test Session"
 
     @pytest.mark.asyncio
-    async def test_get_messages_delegates_to_core_service(
-        self, chat_service, mock_core_chat_service
+    async def test_get_session_not_found(self, chat_service, mock_core_chat_service):
+        """Test session not found."""
+        mock_core_chat_service.get_session.return_value = None
+        session_id = UUID("12345678-1234-5678-9abc-123456789012")
+
+        result = await chat_service.get_session("user-456", session_id)
+
+        assert result is None
+
+    @pytest.mark.asyncio
+    async def test_get_session_validation_errors(self, chat_service):
+        """Test session retrieval validation errors."""
+        session_id = UUID("12345678-1234-5678-9abc-123456789012")
+
+        # Test empty user_id
+        with pytest.raises(ChatServiceValidationError, match="User ID is required"):
+            await chat_service.get_session("", session_id)
+
+    @pytest.mark.asyncio
+    async def test_get_messages_success(
+        self, chat_service, mock_core_chat_service, sample_message
     ):
-        """Test that get_messages delegates to core service."""
-        user_id = str(uuid4())
-        session_id = uuid4()
-        limit = 50
+        """Test successful message retrieval."""
+        mock_core_chat_service.get_messages.return_value = [sample_message]
+        session_id = UUID("12345678-1234-5678-9abc-123456789012")
 
-        # Mock core service response
-        mock_messages = [
-            {"role": "user", "content": "Hello"},
-            {"role": "assistant", "content": "Hi there!"},
-        ]
-        mock_core_chat_service.get_messages.return_value = mock_messages
+        result = await chat_service.get_messages("user-456", session_id, limit=50)
 
-        result = await chat_service.get_messages(user_id, session_id, limit)
-
-        # Verify core service was called
+        # Verify core service was called correctly
         mock_core_chat_service.get_messages.assert_called_once_with(
-            user_id=user_id, session_id=session_id, limit=limit
+            session_id=str(session_id), user_id="user-456", limit=50
         )
-        assert result == mock_messages
+
+        # Verify response format
+        assert len(result) == 1
+        message = result[0]
+        assert message["id"] == "msg-123"
+        assert message["session_id"] == "session-123"
+        assert message["role"] == "user"
+        assert message["content"] == "Hello, world!"
 
     @pytest.mark.asyncio
-    async def test_delete_session_delegates_to_core_service(
-        self, chat_service, mock_core_chat_service
+    async def test_get_messages_validation_errors(self, chat_service):
+        """Test message retrieval validation errors."""
+        session_id = UUID("12345678-1234-5678-9abc-123456789012")
+
+        # Test empty user_id
+        with pytest.raises(ChatServiceValidationError, match="User ID is required"):
+            await chat_service.get_messages("", session_id)
+
+        # Test invalid limit
+        with pytest.raises(
+            ChatServiceValidationError, match="Limit must be between 1 and 1000"
+        ):
+            await chat_service.get_messages("user-123", session_id, limit=0)
+
+        with pytest.raises(
+            ChatServiceValidationError, match="Limit must be between 1 and 1000"
+        ):
+            await chat_service.get_messages("user-123", session_id, limit=1001)
+
+    @pytest.mark.asyncio
+    async def test_create_message_success(
+        self, chat_service, mock_core_chat_service, sample_message
     ):
-        """Test that delete_session delegates to core service."""
-        user_id = str(uuid4())
-        session_id = uuid4()
+        """Test successful message creation."""
+        mock_core_chat_service.add_message.return_value = sample_message
+        session_id = UUID("12345678-1234-5678-9abc-123456789012")
 
-        # Mock core service response
-        mock_core_chat_service.delete_session.return_value = True
-
-        result = await chat_service.delete_session(user_id, session_id)
-
-        # Verify core service was called
-        mock_core_chat_service.delete_session.assert_called_once_with(
-            user_id=user_id, session_id=session_id
+        request = CreateMessageRequest(
+            role="user",
+            content="Hello, world!",
+            metadata={"timestamp": "2025-06-04"},
         )
+
+        result = await chat_service.create_message("user-456", session_id, request)
+
+        # Verify core service was called correctly
+        mock_core_chat_service.add_message.assert_called_once()
+        call_args = mock_core_chat_service.add_message.call_args
+        assert call_args[1]["session_id"] == str(session_id)
+        assert call_args[1]["user_id"] == "user-456"
+        assert call_args[1]["message_data"].role == "user"
+        assert call_args[1]["message_data"].content == "Hello, world!"
+
+        # Verify response format
+        assert result["id"] == "msg-123"
+        assert result["session_id"] == "session-123"
+        assert result["role"] == "user"
+        assert result["content"] == "Hello, world!"
+
+    @pytest.mark.asyncio
+    async def test_create_message_validation_errors(self, chat_service):
+        """Test message creation validation errors."""
+        session_id = UUID("12345678-1234-5678-9abc-123456789012")
+
+        # Test empty user_id
+        request = CreateMessageRequest(role="user", content="Hello")
+        with pytest.raises(ChatServiceValidationError, match="User ID is required"):
+            await chat_service.create_message("", session_id, request)
+
+        # Test empty content
+        request_no_content = CreateMessageRequest(role="user", content="")
+        with pytest.raises(
+            ChatServiceValidationError, match="Message content is required"
+        ):
+            await chat_service.create_message(
+                "user-123", session_id, request_no_content
+            )
+
+        # Test empty role
+        request_no_role = CreateMessageRequest(role="", content="Hello")
+        with pytest.raises(
+            ChatServiceValidationError, match="Message role is required"
+        ):
+            await chat_service.create_message("user-123", session_id, request_no_role)
+
+    @pytest.mark.asyncio
+    async def test_delete_session_success(self, chat_service, mock_core_chat_service):
+        """Test successful session deletion."""
+        mock_core_chat_service.end_session.return_value = True
+        session_id = UUID("12345678-1234-5678-9abc-123456789012")
+
+        result = await chat_service.delete_session("user-456", session_id)
+
+        # Verify core service was called correctly
+        mock_core_chat_service.end_session.assert_called_once_with(
+            session_id=str(session_id), user_id="user-456"
+        )
+
         assert result is True
 
+    @pytest.mark.asyncio
+    async def test_delete_session_not_found(self, chat_service, mock_core_chat_service):
+        """Test session deletion when session not found."""
+        mock_core_chat_service.end_session.return_value = False
+        session_id = UUID("12345678-1234-5678-9abc-123456789012")
 
-class TestChatServiceDependencyInjection:
-    """Test ChatService dependency injection functionality."""
+        result = await chat_service.delete_session("user-456", session_id)
+
+        assert result is False
 
     @pytest.mark.asyncio
-    async def test_get_chat_service_creates_instance(self):
-        """Test that get_chat_service creates ChatService with proper dependencies."""
-        with (
-            patch(
-                "tripsage.api.services.chat.get_core_chat_service"
-            ) as mock_get_core_chat,
-            patch(
-                "tripsage.api.services.chat.get_core_auth_service"
-            ) as mock_get_core_auth,
-        ):
-            mock_core_chat = AsyncMock()
-            mock_core_auth = AsyncMock()
-            mock_get_core_chat.return_value = mock_core_chat
-            mock_get_core_auth.return_value = mock_core_auth
+    async def test_delete_session_validation_errors(self, chat_service):
+        """Test session deletion validation errors."""
+        session_id = UUID("12345678-1234-5678-9abc-123456789012")
 
-            from tripsage.api.services.chat import get_chat_service
-
-            result = await get_chat_service()
-
-            # Verify dependencies were retrieved
-            mock_get_core_chat.assert_called_once()
-            mock_get_core_auth.assert_called_once()
-
-            # Verify ChatService was created with proper dependencies
-            assert isinstance(result, ChatService)
-            assert result.core_chat_service == mock_core_chat
-            assert result.core_auth_service == mock_core_auth
+        # Test empty user_id
+        with pytest.raises(ChatServiceValidationError, match="User ID is required"):
+            await chat_service.delete_session("", session_id)
 
 
 class TestChatServiceErrorHandling:
-    """Test error handling in ChatService adapter."""
+    """Test error handling and exception conversion."""
 
     @pytest.fixture
-    def chat_service(self):
-        """Create ChatService with error-prone mocks."""
-        mock_core_chat = AsyncMock()
-        mock_core_auth = AsyncMock()
-        return ChatService(
-            core_chat_service=mock_core_chat,
-            core_auth_service=mock_core_auth,
-        )
-
-    @pytest.mark.asyncio
-    async def test_chat_completion_propagates_errors(self, chat_service):
-        """Test that chat_completion propagates core service errors."""
-        user_id = str(uuid4())
-        request = ChatRequest(messages=[{"role": "user", "content": "Hello"}])
-
-        # Mock core service to raise an error
-        chat_service.core_chat_service.chat_completion.side_effect = Exception(
-            "Core service error"
-        )
-
-        with pytest.raises(Exception) as exc_info:
-            await chat_service.chat_completion(user_id, request)
-
-        assert "Core service error" in str(exc_info.value)
-
-    @pytest.mark.asyncio
-    async def test_create_session_propagates_errors(self, chat_service):
-        """Test that create_session propagates core service errors."""
-        user_id = str(uuid4())
-        request = SessionCreateRequest(title="Test")
-
-        # Mock core service to raise an error
-        chat_service.core_chat_service.create_session.side_effect = Exception(
-            "Session creation failed"
-        )
-
-        with pytest.raises(Exception) as exc_info:
-            await chat_service.create_session(user_id, request)
-
-        assert "Session creation failed" in str(exc_info.value)
-
-
-class TestChatServiceModelAdaptation:
-    """Test model adaptation between API and core schemas."""
+    def mock_core_chat_service(self):
+        """Mock core chat service."""
+        return AsyncMock(spec=CoreChatService)
 
     @pytest.fixture
-    def chat_service(self):
-        """Create ChatService with mocked dependencies."""
-        mock_core_chat = AsyncMock()
-        mock_core_auth = AsyncMock()
-        return ChatService(
-            core_chat_service=mock_core_chat,
-            core_auth_service=mock_core_auth,
-        )
+    def chat_service(self, mock_core_chat_service):
+        """Create ChatService instance with mocked dependencies."""
+        return ChatService(core_chat_service=mock_core_chat_service)
 
     @pytest.mark.asyncio
-    async def test_api_models_are_passed_correctly_to_core(self, chat_service):
-        """Test that API models are correctly passed to core service."""
-        user_id = str(uuid4())
-
-        # Test ChatRequest adaptation
-        chat_request = ChatRequest(
-            messages=[{"role": "user", "content": "Hello"}],
-            stream=True,
-            save_history=True,
+    async def test_handle_core_validation_error(
+        self, chat_service, mock_core_chat_service
+    ):
+        """Test conversion of CoreValidationError."""
+        mock_core_chat_service.get_user_sessions.side_effect = CoreValidationError(
+            "Invalid input"
         )
 
-        await chat_service.chat_completion(user_id, chat_request)
-
-        # Verify that the request object is passed as-is (thin adapter pattern)
-        chat_service.core_chat_service.chat_completion.assert_called_once_with(
-            user_id=user_id, request=chat_request
-        )
+        with pytest.raises(ChatServiceValidationError, match="Invalid input"):
+            await chat_service.list_sessions("user-123")
 
     @pytest.mark.asyncio
-    async def test_session_create_request_adaptation(self, chat_service):
-        """Test SessionCreateRequest adaptation."""
-        user_id = str(uuid4())
-
-        session_request = SessionCreateRequest(
-            title="Test Session", metadata={"source": "api"}
+    async def test_handle_core_not_found_error(
+        self, chat_service, mock_core_chat_service
+    ):
+        """Test conversion of CoreResourceNotFoundError."""
+        mock_core_chat_service.get_user_sessions.side_effect = (
+            CoreResourceNotFoundError("Not found")
         )
 
-        await chat_service.create_session(user_id, session_request)
+        with pytest.raises(ChatServiceNotFoundError, match="Not found"):
+            await chat_service.list_sessions("user-123")
 
-        # Verify request is passed correctly
-        chat_service.core_chat_service.create_session.assert_called_once_with(
-            user_id=user_id, request=session_request
+    @pytest.mark.asyncio
+    async def test_handle_core_auth_error(self, chat_service, mock_core_chat_service):
+        """Test conversion of CoreAuthenticationError."""
+        mock_core_chat_service.get_user_sessions.side_effect = CoreAuthenticationError(
+            "Unauthorized"
         )
+
+        with pytest.raises(ChatServicePermissionError, match="Unauthorized"):
+            await chat_service.list_sessions("user-123")
+
+    @pytest.mark.asyncio
+    async def test_handle_generic_error(self, chat_service, mock_core_chat_service):
+        """Test conversion of generic exceptions."""
+        mock_core_chat_service.get_user_sessions.side_effect = RuntimeError(
+            "Unexpected error"
+        )
+
+        with pytest.raises(ChatServiceError, match="Internal service error"):
+            await chat_service.list_sessions("user-123")
+
+
+class TestChatServiceDependencyInjection:
+    """Test dependency injection functions."""
+
+    @pytest.mark.asyncio
+    async def test_get_core_chat_service_creates_instance(self):
+        """Test that get_core_chat_service creates a CoreChatService instance."""
+        service = await get_core_chat_service()
+        assert isinstance(service, CoreChatService)
+
+    @pytest.mark.asyncio
+    async def test_get_chat_service_creates_instance(self):
+        """Test that get_chat_service creates a ChatService instance."""
+        service = await get_chat_service()
+        assert isinstance(service, ChatService)
+        assert service.core_chat_service is not None
+
+
+class TestChatServiceExceptionTypes:
+    """Test custom exception classes."""
+
+    def test_chat_service_error_inheritance(self):
+        """Test that all custom exceptions inherit from base exception."""
+        error = ChatServiceError("Base error")
+        assert isinstance(error, Exception)
+        assert str(error) == "Base error"
+
+    def test_validation_error_inheritance(self):
+        """Test validation error inheritance."""
+        error = ChatServiceValidationError("Validation failed")
+        assert isinstance(error, ChatServiceError)
+        assert isinstance(error, Exception)
+
+    def test_not_found_error_inheritance(self):
+        """Test not found error inheritance."""
+        error = ChatServiceNotFoundError("Resource not found")
+        assert isinstance(error, ChatServiceError)
+        assert isinstance(error, Exception)
+
+    def test_permission_error_inheritance(self):
+        """Test permission error inheritance."""
+        error = ChatServicePermissionError("Access denied")
+        assert isinstance(error, ChatServiceError)
+        assert isinstance(error, Exception)

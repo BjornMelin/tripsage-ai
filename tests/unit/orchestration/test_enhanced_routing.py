@@ -382,7 +382,6 @@ class TestRoutingIntegration:
 
     def test_agent_mapping_consistency(self):
         """Test consistency between router and handoff coordinator agent mappings."""
-        router_node = RouterNode(MagicMock())
         handoff_coordinator = AgentHandoffCoordinator()
 
         # Get valid agents from router validation

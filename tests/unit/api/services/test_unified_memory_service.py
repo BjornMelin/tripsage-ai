@@ -403,28 +403,15 @@ class TestMemoryServiceValidation:
 
     @pytest.mark.asyncio
     async def test_empty_messages_handled_correctly(self, memory_service):
-        """Test that empty messages list is handled correctly."""
+        """Test that empty messages list raises validation error."""
         user_id = str(uuid4())
         messages = []
 
-        # Mock core service response
-        memory_service.core_memory_service.add_conversation_memory.return_value = {
-            "results": [],
-            "error": "No messages to store",
-        }
+        # Empty messages should raise MemoryServiceValidationError
+        from tripsage.api.services.memory import MemoryServiceValidationError
 
-        await memory_service.add_conversation_memory(user_id, messages, None)
-
-        # Verify core service was still called (validation happens at core level)
-        memory_service.core_memory_service.add_conversation_memory.assert_called_once()
-        call_args = memory_service.core_memory_service.add_conversation_memory.call_args
-        assert call_args.kwargs["user_id"] == user_id
-
-        # Verify the request is a ConversationMemoryRequest
-        memory_request = call_args.kwargs["memory_request"]
-        assert isinstance(memory_request, ConversationMemoryRequest)
-        assert memory_request.messages == messages
-        assert memory_request.session_id is None
+        with pytest.raises(MemoryServiceValidationError, match="Messages are required"):
+            await memory_service.add_conversation_memory(user_id, messages, None)
 
     @pytest.mark.asyncio
     async def test_empty_query_handled_correctly(self, memory_service):
@@ -432,11 +419,10 @@ class TestMemoryServiceValidation:
         user_id = str(uuid4())
         query = ""
 
-        # Empty query should raise ValidationError due to Pydantic validation
-        from pydantic import ValidationError
+        # Empty query should raise MemoryServiceValidationError
+        from tripsage.api.services.memory import MemoryServiceValidationError
 
-        with pytest.raises(ValidationError) as exc_info:
+        with pytest.raises(
+            MemoryServiceValidationError, match="Search query is required"
+        ):
             await memory_service.search_memories(user_id, query, 10)
-
-        # Verify the error is about query length validation
-        assert "String should have at least 1 character" in str(exc_info.value)

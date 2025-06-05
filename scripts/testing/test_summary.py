@@ -93,12 +93,12 @@ def main():
     print("\n" + "=" * 60)
     print("Overall Summary:")
     print(f"  Total Tests:  {total_stats['total']:4d}")
-    print(
-        f"  Passed:       {total_stats['passed']:4d} ({total_stats['passed'] / total_stats['total'] * 100:.1f}%)"
-    )
+    passed_pct = total_stats["passed"] / total_stats["total"] * 100
+    print(f"  Passed:       {total_stats['passed']:4d} ({passed_pct:.1f}%)")
     print(f"  Failed:       {total_stats['failed']:4d}")
     print(f"  Errors:       {total_stats['errors']:4d}")
-    print(f"  Success Rate: {total_stats['passed'] / total_stats['total'] * 100:.1f}%")
+    success_rate = total_stats["passed"] / total_stats["total"] * 100
+    print(f"  Success Rate: {success_rate:.1f}%")
 
     print("\n" + "=" * 60)
     print("Next Steps:")

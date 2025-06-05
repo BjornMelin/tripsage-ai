@@ -20,9 +20,9 @@ from tripsage_core.services.infrastructure.search_cache_mixin import (
 )
 
 
-# Test models for search functionality
-class TestSearchRequest(BaseModel):
-    """Test search request model."""
+# Mock models for search functionality
+class MockSearchRequest(BaseModel):
+    """Mock search request model for testing."""
 
     query: str = Field(..., description="Search query")
     filters: Optional[Dict[str, Any]] = Field(
@@ -32,8 +32,8 @@ class TestSearchRequest(BaseModel):
     page_size: int = Field(default=20, description="Page size")
 
 
-class TestSearchResponse(BaseModel):
-    """Test search response model."""
+class MockSearchResponse(BaseModel):
+    """Mock search response model for testing."""
 
     results: list[Dict[str, Any]] = Field(..., description="Search results")
     total_count: int = Field(..., description="Total result count")
@@ -42,15 +42,15 @@ class TestSearchResponse(BaseModel):
 
 
 # Concrete implementation for testing
-class TestSearchService(SearchCacheMixin[TestSearchRequest, TestSearchResponse]):
-    """Test service implementing SearchCacheMixin."""
+class MockSearchService(SearchCacheMixin[MockSearchRequest, MockSearchResponse]):
+    """Mock service implementing SearchCacheMixin for testing."""
 
     def __init__(self, cache_service: Optional[CacheService] = None):
         self._cache_service = cache_service
         self._cache_ttl = 300  # 5 minutes
         self._cache_prefix = "test_search"
 
-    def get_cache_fields(self, request: TestSearchRequest) -> Dict[str, Any]:
+    def get_cache_fields(self, request: MockSearchRequest) -> Dict[str, Any]:
         """Extract cacheable fields from request."""
         fields = {
             "query": request.query,
@@ -61,12 +61,12 @@ class TestSearchService(SearchCacheMixin[TestSearchRequest, TestSearchResponse])
             fields["filters"] = json.dumps(request.filters, sort_keys=True)
         return fields
 
-    def _get_response_class(self) -> type[TestSearchResponse]:
+    def _get_response_class(self) -> type[MockSearchResponse]:
         """Get response class for deserialization."""
-        return TestSearchResponse
+        return MockSearchResponse
 
 
-class TestSimpleService(SimpleCacheMixin):
+class MockSimpleService(SimpleCacheMixin):
     """Test service implementing SimpleCacheMixin."""
 
     def __init__(self, cache_service: Optional[CacheService] = None):
@@ -86,12 +86,12 @@ class TestSearchCacheMixin:
     @pytest.fixture
     def test_service(self, mock_cache_service):
         """Create test service with mocked cache."""
-        return TestSearchService(cache_service=mock_cache_service)
+        return MockSearchService(cache_service=mock_cache_service)
 
     @pytest.fixture
     def test_request(self):
         """Create test search request."""
-        return TestSearchRequest(
+        return MockSearchRequest(
             query="test query",
             filters={"category": "books", "price_max": 50},
             page=1,
@@ -101,7 +101,7 @@ class TestSearchCacheMixin:
     @pytest.fixture
     def test_response(self):
         """Create test search response."""
-        return TestSearchResponse(
+        return MockSearchResponse(
             results=[
                 {"id": 1, "title": "Test Item 1"},
                 {"id": 2, "title": "Test Item 2"},
@@ -124,7 +124,7 @@ class TestSearchCacheMixin:
         assert key == key2
 
         # Different request should generate different key
-        different_request = TestSearchRequest(query="different query")
+        different_request = MockSearchRequest(query="different query")
         different_key = test_service.generate_cache_key(different_request)
         assert key != different_key
 
@@ -152,7 +152,7 @@ class TestSearchCacheMixin:
 
         # Verify result
         assert result is not None
-        assert isinstance(result, TestSearchResponse)
+        assert isinstance(result, MockSearchResponse)
         assert result.total_count == test_response.total_count
         assert len(result.results) == len(test_response.results)
 
@@ -178,7 +178,7 @@ class TestSearchCacheMixin:
 
     async def test_get_cached_search_no_cache_service(self, test_request):
         """Test getting cached search with no cache service."""
-        service = TestSearchService(cache_service=None)
+        service = MockSearchService(cache_service=None)
         result = await service.get_cached_search(test_request)
         assert result is None
 
@@ -300,7 +300,7 @@ class TestSimpleCacheMixin:
     @pytest.fixture
     def test_service(self, mock_cache_service):
         """Create test service with mocked cache."""
-        return TestSimpleService(cache_service=mock_cache_service)
+        return MockSimpleService(cache_service=mock_cache_service)
 
     async def test_cache_get(self, test_service, mock_cache_service):
         """Test getting value from cache."""
@@ -394,7 +394,7 @@ class TestSimpleCacheMixin:
 
     async def test_no_cache_service(self):
         """Test operations with no cache service."""
-        service = TestSimpleService(cache_service=None)
+        service = MockSimpleService(cache_service=None)
 
         # All operations should handle gracefully
         assert await service.cache_get("key") is None
@@ -431,11 +431,11 @@ class TestIntegration:
         cache_service.delete.side_effect = mock_delete
 
         # Create service
-        service = TestSearchService(cache_service=cache_service)
+        service = MockSearchService(cache_service=cache_service)
 
         # Create request and response
-        request = TestSearchRequest(query="python books", page=1)
-        response = TestSearchResponse(
+        request = MockSearchRequest(query="python books", page=1)
+        response = MockSearchResponse(
             results=[{"id": 1, "title": "Learning Python"}],
             total_count=1,
             page=1,

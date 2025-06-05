@@ -80,7 +80,10 @@ class SearchParameters(TripSageModel):
             cabin_class = self.parameter_json.get("cabin_class", "Economy").title()
             adults = self.parameter_json.get("adults", 1)
             children = self.parameter_json.get("children", 0)
-            return f"Flight from {origin} to {destination} ({cabin_class}, {adults} adults, {children} children)"
+            return (
+                f"Flight from {origin} to {destination} "
+                f"({cabin_class}, {adults} adults, {children} children)"
+            )
 
         elif self.is_accommodation_search:
             location = self.parameter_json.get("location", "Unknown")
@@ -90,7 +93,10 @@ class SearchParameters(TripSageModel):
             accommodation_type = self.parameter_json.get(
                 "accommodation_type", "Hotel"
             ).title()
-            return f"{accommodation_type} in {location} ({check_in} to {check_out}, {adults} adults)"
+            return (
+                f"{accommodation_type} in {location} "
+                f"({check_in} to {check_out}, {adults} adults)"
+            )
 
         elif self.is_activity_search:
             location = self.parameter_json.get("location", "Unknown")

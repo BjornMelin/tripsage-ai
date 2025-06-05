@@ -24,7 +24,7 @@ class TestWithErrorHandling:
     async def test_async_function_success(self):
         """Test error handling decorator with successful async function."""
 
-        @with_error_handling
+        @with_error_handling()
         async def async_success():
             return {"result": "success"}
 
@@ -35,7 +35,7 @@ class TestWithErrorHandling:
         """Test error handling decorator with async function that fails and
         returns dict."""
 
-        @with_error_handling
+        @with_error_handling()
         async def async_fail_dict() -> dict:
             raise ValueError("Test error")
 
@@ -47,7 +47,7 @@ class TestWithErrorHandling:
         """Test error handling decorator with async function that fails and
         re-raises."""
 
-        @with_error_handling
+        @with_error_handling()
         async def async_fail_reraise() -> str:
             raise ValueError("Test error")
 
@@ -57,7 +57,7 @@ class TestWithErrorHandling:
     def test_sync_function_success(self):
         """Test error handling decorator with successful sync function."""
 
-        @with_error_handling
+        @with_error_handling()
         def sync_success():
             return {"result": "success"}
 
@@ -68,7 +68,7 @@ class TestWithErrorHandling:
         """Test error handling decorator with sync function that fails and
         returns dict."""
 
-        @with_error_handling
+        @with_error_handling()
         def sync_fail_dict() -> dict:
             raise ValueError("Test error")
 
@@ -80,7 +80,7 @@ class TestWithErrorHandling:
         """Test error handling decorator with sync function that fails and
         re-raises."""
 
-        @with_error_handling
+        @with_error_handling()
         def sync_fail_reraise() -> str:
             raise ValueError("Test error")
 
@@ -90,7 +90,7 @@ class TestWithErrorHandling:
     async def test_function_name_in_error_log(self, caplog):
         """Test that function name appears in error logs."""
 
-        @with_error_handling
+        @with_error_handling()
         async def test_function_name():
             raise RuntimeError("Function error")
 
@@ -105,7 +105,7 @@ class TestWithErrorHandling:
     def test_preserves_function_metadata(self):
         """Test that decorator preserves function metadata."""
 
-        @with_error_handling
+        @with_error_handling()
         def original_function():
             """Original docstring."""
             pass
@@ -116,7 +116,7 @@ class TestWithErrorHandling:
     async def test_with_args_and_kwargs(self):
         """Test error handling decorator with function arguments."""
 
-        @with_error_handling
+        @with_error_handling()
         async def function_with_args(arg1, arg2, kwarg1=None):
             return {"arg1": arg1, "arg2": arg2, "kwarg1": kwarg1}
 
@@ -133,7 +133,7 @@ class TestWithErrorHandling:
                 super().__init__(message)
                 self.code = code
 
-        @with_error_handling
+        @with_error_handling()
         async def fail_with_custom_exception() -> dict:
             raise CustomException("Custom error message", 500)
 
@@ -144,15 +144,15 @@ class TestWithErrorHandling:
     def test_return_annotation_detection(self):
         """Test that decorator correctly detects return type annotations."""
 
-        @with_error_handling
+        @with_error_handling()
         def dict_return() -> dict:
             raise ValueError("Test")
 
-        @with_error_handling
+        @with_error_handling()
         def str_return() -> str:
             raise ValueError("Test")
 
-        @with_error_handling
+        @with_error_handling()
         def no_annotation():
             raise ValueError("Test")
 
@@ -481,7 +481,7 @@ class TestEnsureMemoryClientInitialized:
         """Test combining memory decorator with error handling decorator."""
         call_count = 0
 
-        @with_error_handling
+        @with_error_handling()
         @ensure_memory_client_initialized
         async def combined_function() -> dict:
             nonlocal call_count
@@ -499,11 +499,11 @@ class TestEnsureMemoryClientInitialized:
         """Test that decorator order affects behavior."""
 
         @ensure_memory_client_initialized
-        @with_error_handling
+        @with_error_handling()
         async def order_test1() -> dict:
             raise ValueError("Test error")
 
-        @with_error_handling
+        @with_error_handling()
         @ensure_memory_client_initialized
         async def order_test2() -> dict:
             raise ValueError("Test error")
@@ -535,7 +535,7 @@ class TestDecoratorHelpers:
         """Test decorators with complex return type annotations."""
         from typing import Dict, List, Optional
 
-        @with_error_handling
+        @with_error_handling()
         async def complex_return() -> Optional[Dict[str, List[str]]]:
             raise ValueError("Complex type error")
 
@@ -547,7 +547,7 @@ class TestDecoratorHelpers:
         """Test performance impact of nested decorators."""
 
         @retry_on_failure(max_attempts=1)
-        @with_error_handling
+        @with_error_handling()
         @ensure_memory_client_initialized
         async def heavily_decorated() -> dict:
             return {"performance": "test"}
@@ -563,7 +563,7 @@ class TestDecoratorHelpers:
     async def test_decorator_with_generator_function(self):
         """Test that decorators work with generator functions."""
 
-        @with_error_handling
+        @with_error_handling()
         async def async_generator() -> dict:
             yield {"item": 1}
             yield {"item": 2}
@@ -588,7 +588,7 @@ class TestDecoratorHelpers:
     async def test_exception_chaining(self):
         """Test that decorators preserve exception chaining."""
 
-        @with_error_handling
+        @with_error_handling()
         async def chained_exception() -> dict:
             try:
                 raise ValueError("Original error")
