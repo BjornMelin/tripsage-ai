@@ -115,8 +115,8 @@ class TestAccommodationRouter:
         mock_auth.return_value = Mock(id="test-user-id")
         mock_service_dep.return_value = self.mock_service
         accommodation_id = "non-existent-id"
-        self.mock_service.get_accommodation_details.side_effect = CoreResourceNotFoundError(
-            "Accommodation not found"
+        self.mock_service.get_accommodation_details.side_effect = (
+            CoreResourceNotFoundError("Accommodation not found")
         )
 
         # Act
