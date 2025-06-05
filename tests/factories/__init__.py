@@ -230,7 +230,7 @@ class FlightFactory(BaseFactory):
         return cls.create(
             origin="LAX",
             destination="SFO",
-            airline=AirlineProvider.AMERICAN_AIRLINES,
+            airline=AirlineProvider.AMERICAN,
             departure_time=departure_time,
             arrival_time=departure_time + timedelta(hours=1.5),
             price=200.00,

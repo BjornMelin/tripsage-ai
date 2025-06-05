@@ -8,7 +8,7 @@ from fastapi.testclient import TestClient
 
 from tests.factories import AccommodationFactory
 from tripsage.api.main import app
-from tripsage_core.exceptions import ResourceNotFoundError
+from tripsage_core.exceptions import CoreResourceNotFoundError
 
 
 class TestAccommodationRouter:
@@ -115,7 +115,7 @@ class TestAccommodationRouter:
         mock_auth.return_value = Mock(id="test-user-id")
         mock_service_dep.return_value = self.mock_service
         accommodation_id = "non-existent-id"
-        self.mock_service.get_accommodation_details.side_effect = ResourceNotFoundError(
+        self.mock_service.get_accommodation_details.side_effect = CoreResourceNotFoundError(
             "Accommodation not found"
         )
 
