@@ -9,15 +9,13 @@ from fastapi import APIRouter, Depends, HTTPException, status
 
 from tripsage.api.core.dependencies import get_principal_id, require_principal_dep
 from tripsage.api.middlewares.authentication import Principal
-from tripsage.api.schemas.requests.itineraries import (
+from tripsage.api.schemas.itineraries import (
     ItineraryCreateRequest,
     ItineraryItemCreateRequest,
     ItineraryItemUpdateRequest,
     ItineraryOptimizeRequest,
     ItinerarySearchRequest,
     ItineraryUpdateRequest,
-)
-from tripsage.api.schemas.responses.itineraries import (
     ItineraryConflictCheckResponse,
     ItineraryItemResponse,
     ItineraryOptimizeResponse,

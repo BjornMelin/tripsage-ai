@@ -67,7 +67,7 @@ This document provides a comprehensive analysis of the TripSage AI codebase, ide
 
 **Recommendation**: Move archived docs to a separate documentation repository or wiki
 
-### 3. Over-Modularized Schema Structure (MEDIUM PRIORITY)
+### 3. Over-Modularized Schema Structure (COMPLETED ✅)
 
 **Issue**: Excessive separation of request/response schemas
 
@@ -81,7 +81,12 @@ This document provides a comprehensive analysis of the TripSage AI codebase, ide
 - Import complexity
 - Violates KISS principle
 
-**Recommendation**: Consolidate related schemas into domain-based files (e.g., `accommodations_schemas.py`)
+**Resolution**: 
+- ✅ Consolidated all schemas into domain-based files (e.g., `accommodations.py`, `flights.py`)
+- ✅ Updated all router imports to use consolidated schemas
+- ✅ Deleted old `requests/` and `responses/` directories
+- ✅ Applied linting and formatting to all new files
+- **Result**: Reduced from 22 files to 10 files, improved maintainability
 
 ### 4. TODO File Proliferation (LOW PRIORITY)
 

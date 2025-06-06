@@ -9,10 +9,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 
 from tripsage.api.core.dependencies import get_principal_id, require_principal_dep
 from tripsage.api.middlewares.authentication import Principal
-from tripsage.api.schemas.requests.destinations import (
+from tripsage.api.schemas.destinations import (
     DestinationSearchRequest,
-)
-from tripsage.api.schemas.responses.destinations import (
     DestinationDetailsResponse,
     DestinationSearchResponse,
     SavedDestinationResponse,
