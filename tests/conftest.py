@@ -346,6 +346,14 @@ def mock_settings_and_redis(monkeypatch):
     mock_settings.dragonfly.ttl_medium = 3600
     mock_settings.dragonfly.ttl_long = 86400
 
+    # Mock Airbnb MCP settings
+    mock_settings.airbnb = MagicMock()
+    mock_settings.airbnb.enabled = False  # Disable Airbnb for tests
+    mock_settings.airbnb.url = "http://localhost:3012"
+    mock_settings.airbnb.timeout = 30
+    mock_settings.airbnb.retry_attempts = 3
+    mock_settings.airbnb.retry_backoff = 5
+
     # Mock Redis client
     mock_redis_client = MagicMock()
     mock_redis_client.get = AsyncMock(return_value=None)
@@ -487,6 +495,10 @@ def sample_itinerary_dict():
 def sample_websocket_message():
     """Sample WebSocket message for testing."""
     return WebSocketFactory.create_chat_message()
+
+
+# Import MockCacheService for the client fixture
+from tests.test_cache_mock import MockCacheService
 
 
 # Mock service fixtures
@@ -745,6 +757,95 @@ def mock_supabase_client():
     # Patch Supabase client creation
     with patch("supabase.create_client", return_value=mock_client):
         yield mock_client
+
+
+# FastAPI TestClient fixture for E2E tests
+@pytest.fixture
+def client():
+    """Create a FastAPI TestClient for E2E testing."""
+    from unittest.mock import AsyncMock, MagicMock, patch
+
+    from fastapi.testclient import TestClient
+
+    from tripsage.api.main import app
+
+    # Create a mock MCP manager that matches the expected interface
+    mock_mcp_manager = MagicMock()
+    mock_mcp_manager.initialize_all_enabled = AsyncMock()
+    mock_mcp_manager.get_available_mcps = MagicMock(return_value=[])
+    mock_mcp_manager.get_initialized_mcps = MagicMock(return_value=[])
+    mock_mcp_manager.shutdown = AsyncMock()
+
+    # Mock all the services that the app tries to initialize
+    with (
+        # Mock authentication service and middleware
+        patch(
+            "tripsage_core.services.business.auth_service.get_auth_service",
+            return_value=AsyncMock(),
+        ),
+        # Mock database service
+        patch(
+            "tripsage_core.services.infrastructure.database_service.get_database_service",
+            return_value=AsyncMock(),
+        ),
+        # Mock cache service
+        patch(
+            "tripsage_core.services.infrastructure.cache_service.get_cache_service",
+            return_value=MockCacheService(),
+        ),
+        # Mock MCP manager - patch all possible import paths
+        patch("tripsage_core.mcp_abstraction.manager.mcp_manager", mock_mcp_manager),
+        patch("tripsage_core.mcp_abstraction.mcp_manager", mock_mcp_manager),
+        patch("tripsage.api.main.mcp_manager", mock_mcp_manager),
+        # Mock memory service
+        patch(
+            "tripsage_core.services.business.memory_service.get_memory_service",
+            return_value=AsyncMock(),
+        ),
+        # Mock all business services
+        patch(
+            "tripsage_core.services.business.chat_service.get_chat_service",
+            return_value=AsyncMock(),
+        ),
+        patch(
+            "tripsage_core.services.business.trip_service.get_trip_service",
+            return_value=AsyncMock(),
+        ),
+        patch(
+            "tripsage_core.services.business.flight_service.get_flight_service",
+            return_value=AsyncMock(),
+        ),
+        patch(
+            "tripsage_core.services.business.accommodation_service.get_accommodation_service",
+            return_value=AsyncMock(),
+        ),
+        patch(
+            "tripsage_core.services.business.destination_service.get_destination_service",
+            return_value=AsyncMock(),
+        ),
+        patch(
+            "tripsage_core.services.business.itinerary_service.get_itinerary_service",
+            return_value=AsyncMock(),
+        ),
+        patch(
+            "tripsage_core.services.business.key_management_service.get_key_management_service",
+            return_value=AsyncMock(),
+        ),
+        # Mock authentication middleware
+        patch(
+            "tripsage.api.middlewares.authentication.AuthenticationMiddleware._ensure_services",
+            new_callable=AsyncMock,
+        ),
+        # Mock WebSocket manager
+        patch(
+            "tripsage_core.services.infrastructure.websocket_manager.websocket_manager",
+            MagicMock(start=AsyncMock(), stop=AsyncMock()),
+        ),
+        # Mock Supabase client initialization
+        patch("supabase.create_client", return_value=MagicMock()),
+    ):
+        with TestClient(app) as test_client:
+            yield test_client
 
 
 # Clean up after tests
