@@ -9,17 +9,20 @@ import logging
 from typing import Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from tripsage.api.schemas.requests.search import (
     UnifiedSearchRequest,
-    SearchFilters,
 )
 from tripsage.api.schemas.responses.search import (
+    SearchFacet,
+    SearchMetadata,
     SearchResultItem,
     UnifiedSearchResponse,
-    SearchMetadata,
-    SearchFacet,
+)
+from tripsage_core.services.business.accommodation_service import (
+    AccommodationService,
+    get_accommodation_service,
 )
 from tripsage_core.services.business.auth_service import (
     AuthenticationService,
@@ -32,10 +35,6 @@ from tripsage_core.services.business.destination_service import (
 from tripsage_core.services.business.flight_service import (
     FlightService,
     get_flight_service,
-)
-from tripsage_core.services.business.accommodation_service import (
-    AccommodationService,
-    get_accommodation_service,
 )
 
 router = APIRouter()
@@ -82,45 +81,50 @@ async def unified_search(
         current_user = None
         if credentials:
             try:
-                current_user = await auth_service.get_current_user(credentials.credentials)
+                current_user = await auth_service.get_current_user(
+                    credentials.credentials
+                )
             except Exception:
                 # Continue as anonymous if auth fails
                 pass
-        
+
         results: List[SearchResultItem] = []
         facets: List[SearchFacet] = []
         errors: Dict[str, str] = {}
-        
+
         # Determine which types to search
-        search_types = search_request.types or ["destination", "flight", "accommodation", "activity"]
-        
+        search_types = search_request.types or [
+            "destination",
+            "flight",
+            "accommodation",
+            "activity",
+        ]
+
         # Create parallel search tasks
         tasks = []
-        
+
         if "destination" in search_types:
-            tasks.append(_search_destinations(
-                search_request, destination_service, skip, limit
-            ))
-        
+            tasks.append(
+                _search_destinations(search_request, destination_service, skip, limit)
+            )
+
         if "flight" in search_types and search_request.origin:
-            tasks.append(_search_flights(
-                search_request, flight_service, skip, limit
-            ))
-        
+            tasks.append(_search_flights(search_request, flight_service, skip, limit))
+
         if "accommodation" in search_types:
-            tasks.append(_search_accommodations(
-                search_request, accommodation_service, skip, limit
-            ))
-        
+            tasks.append(
+                _search_accommodations(
+                    search_request, accommodation_service, skip, limit
+                )
+            )
+
         if "activity" in search_types:
-            tasks.append(_search_activities(
-                search_request, skip, limit
-            ))
-        
+            tasks.append(_search_activities(search_request, skip, limit))
+
         # Execute searches in parallel
         if tasks:
             search_results = await asyncio.gather(*tasks, return_exceptions=True)
-            
+
             for result in search_results:
                 if isinstance(result, Exception):
                     logger.error(f"Search task failed: {str(result)}")
@@ -129,14 +133,14 @@ async def unified_search(
                     items, type_facets = result
                     results.extend(items)
                     facets.extend(type_facets)
-        
+
         # Sort results by relevance score if available
         results.sort(key=lambda x: x.relevance_score or 0, reverse=True)
-        
+
         # Apply overall pagination
         total_results = len(results)
         results = results[skip : skip + limit]
-        
+
         # Create search metadata
         metadata = SearchMetadata(
             total_results=total_results,
@@ -145,14 +149,14 @@ async def unified_search(
             cached_results=0,  # TODO: Implement caching
             user_id=current_user.id if current_user else None,
         )
-        
+
         return UnifiedSearchResponse(
             results=results,
             facets=facets,
             metadata=metadata,
             errors=errors if errors else None,
         )
-        
+
     except Exception as e:
         logger.error(f"Unified search failed: {str(e)}")
         raise HTTPException(
@@ -188,9 +192,9 @@ async def get_search_suggestions(
     try:
         # TODO: Implement actual suggestion logic
         # For now, return mock suggestions
-        
+
         suggestions = []
-        
+
         # Mock destination suggestions
         destinations = [
             "Paris, France",
@@ -204,17 +208,17 @@ async def get_search_suggestions(
             "Singapore",
             "Bangkok, Thailand",
         ]
-        
+
         # Filter suggestions based on query
         for dest in destinations:
             if query.lower() in dest.lower():
                 suggestions.append(dest)
-        
+
         # Limit results
         suggestions = suggestions[:limit]
-        
+
         return suggestions
-        
+
     except Exception as e:
         logger.error(f"Failed to get suggestions: {str(e)}")
         raise HTTPException(
@@ -248,10 +252,10 @@ async def get_recent_searches(
         # Get current user
         token = credentials.credentials
         current_user = await auth_service.get_current_user(token)
-        
+
         # TODO: Implement actual search history retrieval
         # For now, return mock data
-        
+
         recent_searches = [
             {
                 "id": "search-1",
@@ -275,9 +279,9 @@ async def get_recent_searches(
                 "results_count": 67,
             },
         ]
-        
+
         return recent_searches[:limit]
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -290,6 +294,7 @@ async def get_recent_searches(
 
 # Helper functions for searching different resource types
 
+
 async def _search_destinations(
     search_request: UnifiedSearchRequest,
     destination_service: DestinationService,
@@ -299,10 +304,10 @@ async def _search_destinations(
     """Search destinations."""
     results = []
     facets = []
-    
+
     # TODO: Implement actual destination search
     # For now, return mock data
-    
+
     mock_destinations = [
         SearchResultItem(
             id="dest-1",
@@ -321,10 +326,10 @@ async def _search_destinations(
             },
         ),
     ]
-    
+
     if "paris" in search_request.query.lower():
         results.extend(mock_destinations)
-    
+
     return results, facets
 
 
@@ -337,10 +342,10 @@ async def _search_flights(
     """Search flights."""
     results = []
     facets = []
-    
+
     # TODO: Implement actual flight search integration
     # For now, return empty results
-    
+
     return results, facets
 
 
@@ -353,10 +358,10 @@ async def _search_accommodations(
     """Search accommodations."""
     results = []
     facets = []
-    
+
     # TODO: Implement actual accommodation search integration
     # For now, return empty results
-    
+
     return results, facets
 
 
@@ -368,10 +373,10 @@ async def _search_activities(
     """Search activities."""
     results = []
     facets = []
-    
+
     # TODO: Implement actual activity search
     # For now, return mock data based on query
-    
+
     if "paris" in search_request.query.lower():
         results.append(
             SearchResultItem(
@@ -391,5 +396,5 @@ async def _search_activities(
                 },
             )
         )
-    
+
     return results, facets

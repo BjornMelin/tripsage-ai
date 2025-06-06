@@ -101,3 +101,57 @@ export function useTrips() {
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 }
+
+export interface UpcomingFlight {
+  id: string;
+  trip_id?: string;
+  trip_name?: string;
+  airline: string;
+  airline_name: string;
+  flight_number: string;
+  origin: string;
+  destination: string;
+  departure_time: string;
+  arrival_time: string;
+  duration: number;
+  stops: number;
+  price: number;
+  currency: string;
+  cabin_class: string;
+  seats_available?: number;
+  status: "upcoming" | "boarding" | "delayed" | "cancelled";
+  terminal?: string;
+  gate?: string;
+}
+
+interface UpcomingFlightsParams {
+  limit?: number;
+}
+
+/**
+ * Hook to fetch upcoming flights from the API
+ */
+export function useUpcomingFlights(params?: UpcomingFlightsParams) {
+  const { tokenInfo } = useAuthStore();
+  const isAuthenticated = !!tokenInfo?.access_token;
+
+  return useQuery<UpcomingFlight[]>({
+    queryKey: ["upcoming-flights", params],
+    queryFn: async () => {
+      if (!isAuthenticated) {
+        return [];
+      }
+
+      const response = await api.get<UpcomingFlight[]>("/api/flights/upcoming", {
+        params: {
+          limit: params?.limit ?? 10,
+        },
+      });
+
+      return response;
+    },
+    enabled: isAuthenticated,
+    staleTime: 2 * 60 * 1000, // 2 minutes (shorter for real-time data)
+    gcTime: 5 * 60 * 1000, // 5 minutes
+  });
+}

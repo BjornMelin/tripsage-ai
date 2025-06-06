@@ -216,3 +216,29 @@ class SavedFlightResponse(BaseModel):
     notes: Optional[str] = Field(
         default=None, description="Notes about this flight offer"
     )
+
+
+class UpcomingFlightResponse(BaseModel):
+    """Response model for upcoming flights with real-time status."""
+
+    id: str = Field(description="Flight ID")
+    trip_id: Optional[UUID] = Field(default=None, description="Associated trip ID")
+    trip_name: Optional[str] = Field(default=None, description="Trip name")
+    airline: str = Field(description="Airline code")
+    airline_name: str = Field(description="Airline name")
+    flight_number: str = Field(description="Flight number")
+    origin: str = Field(description="Origin airport code")
+    destination: str = Field(description="Destination airport code")
+    departure_time: datetime = Field(description="Departure time")
+    arrival_time: datetime = Field(description="Arrival time")
+    duration: int = Field(description="Flight duration in minutes")
+    stops: int = Field(description="Number of stops")
+    price: float = Field(description="Flight price")
+    currency: str = Field(description="Currency code", default="USD")
+    cabin_class: str = Field(description="Cabin class")
+    seats_available: Optional[int] = Field(default=None, description="Available seats")
+    status: str = Field(
+        description="Flight status", default="upcoming"
+    )  # upcoming, boarding, delayed, cancelled
+    terminal: Optional[str] = Field(default=None, description="Terminal")
+    gate: Optional[str] = Field(default=None, description="Gate")

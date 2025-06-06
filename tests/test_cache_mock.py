@@ -5,10 +5,9 @@ This module provides a mock implementation of the CacheService that can be used
 in tests without requiring a real DragonflyDB connection.
 """
 
-import asyncio
 import json
 from typing import Any, Dict, List, Optional, Union
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock
 
 
 class MockCacheService:
@@ -77,6 +76,7 @@ class MockCacheService:
             return list(self._storage.keys())
         # Simple pattern matching for tests
         import fnmatch
+
         return [k for k in self._storage.keys() if fnmatch.fnmatch(k, pattern)]
 
     async def delete_pattern(self, pattern: str) -> int:
@@ -118,16 +118,20 @@ class MockCacheService:
         """Mock mget_json."""
         return [await self.get_json(key) for key in keys]
 
-    async def mset_json(self, mapping: Dict[str, Any], ttl: Optional[int] = None) -> bool:
+    async def mset_json(
+        self, mapping: Dict[str, Any], ttl: Optional[int] = None
+    ) -> bool:
         """Mock mset_json."""
         for key, value in mapping.items():
             await self.set_json(key, value, ttl)
         return True
 
     # Additional methods for compatibility
-    async def set(self, key: str, value: Union[str, bytes], ttl: Optional[int] = None) -> bool:
+    async def set(
+        self, key: str, value: Union[str, bytes], ttl: Optional[int] = None
+    ) -> bool:
         """Mock set method."""
-        self._storage[key] = value if isinstance(value, str) else value.decode('utf-8')
+        self._storage[key] = value if isinstance(value, str) else value.decode("utf-8")
         if ttl:
             self._ttls[key] = ttl
         return True

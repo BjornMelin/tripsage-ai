@@ -8,7 +8,7 @@ import logging
 from typing import Dict
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from tripsage.api.schemas.auth import (
     ChangePasswordRequest,
@@ -24,11 +24,17 @@ from tripsage.api.schemas.auth import (
 )
 from tripsage_core.services.business.auth_service import (
     AuthenticationService,
-    LoginRequest as ServiceLoginRequest,
     PasswordResetConfirmRequest,
-    PasswordResetRequest as ServicePasswordResetRequest,
-    RefreshTokenRequest as ServiceRefreshTokenRequest,
     get_auth_service,
+)
+from tripsage_core.services.business.auth_service import (
+    LoginRequest as ServiceLoginRequest,
+)
+from tripsage_core.services.business.auth_service import (
+    PasswordResetRequest as ServicePasswordResetRequest,
+)
+from tripsage_core.services.business.auth_service import (
+    RefreshTokenRequest as ServiceRefreshTokenRequest,
 )
 from tripsage_core.services.business.user_service import (
     PasswordChangeRequest,
@@ -73,18 +79,18 @@ async def register(
             username=user_data.username,
             full_name=user_data.full_name,
         )
-        
+
         # Register user
         user = await user_service.create_user(create_request)
         return user
-        
+
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Registration failed: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Registration failed"
+            detail="Registration failed",
         )
 
 
@@ -115,18 +121,17 @@ async def login(
             identifier=login_data.username,  # Can be username or email
             password=login_data.password,
         )
-        
+
         # Authenticate user
         token_response = await auth_service.authenticate_user(service_login)
         return token_response
-        
+
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Login failed: {str(e)}")
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid credentials"
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials"
         )
 
 
@@ -156,18 +161,17 @@ async def refresh_token(
         service_refresh = ServiceRefreshTokenRequest(
             refresh_token=refresh_data.refresh_token
         )
-        
+
         # Refresh token
         token_response = await auth_service.refresh_token(service_refresh)
         return token_response
-        
+
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Token refresh failed: {str(e)}")
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid refresh token"
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token"
         )
 
 
@@ -192,27 +196,18 @@ async def logout(
     try:
         # Get token from credentials
         token = credentials.credentials
-        
+
         # Logout user
         success = await auth_service.logout_user(token)
-        
+
         if success:
-            return MessageResponse(
-                message="Logged out successfully",
-                success=True
-            )
+            return MessageResponse(message="Logged out successfully", success=True)
         else:
-            return MessageResponse(
-                message="Logout failed",
-                success=False
-            )
-            
+            return MessageResponse(message="Logout failed", success=False)
+
     except Exception as e:
         logger.error(f"Logout failed: {str(e)}")
-        return MessageResponse(
-            message="Logout failed",
-            success=False
-        )
+        return MessageResponse(message="Logout failed", success=False)
 
 
 @router.post(
@@ -235,19 +230,17 @@ async def forgot_password(
     """
     try:
         # Create service password reset request
-        service_reset = ServicePasswordResetRequest(
-            email=forgot_data.email
-        )
-        
+        service_reset = ServicePasswordResetRequest(email=forgot_data.email)
+
         # Initiate password reset
         await auth_service.initiate_password_reset(service_reset)
-        
+
         # Always return success for security (don't reveal if email exists)
         return PasswordResetResponse(
             message="Password reset instructions sent to email",
             email=forgot_data.email,
         )
-        
+
     except Exception as e:
         logger.error(f"Password reset request failed: {str(e)}")
         # Still return success for security
@@ -284,28 +277,24 @@ async def reset_password(
             token=reset_data.token,
             new_password=reset_data.new_password,
         )
-        
+
         # Confirm password reset
         success = await auth_service.confirm_password_reset(service_confirm)
-        
+
         if success:
-            return MessageResponse(
-                message="Password reset successfully",
-                success=True
-            )
+            return MessageResponse(message="Password reset successfully", success=True)
         else:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid or expired reset token"
+                detail="Invalid or expired reset token",
             )
-            
+
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Password reset failed: {str(e)}")
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Password reset failed"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Password reset failed"
         )
 
 
@@ -338,37 +327,33 @@ async def change_password(
         # Get current user from token
         token = credentials.credentials
         current_user = await auth_service.get_current_user(token)
-        
+
         # Create password change request
         password_change = PasswordChangeRequest(
             current_password=change_data.current_password,
             new_password=change_data.new_password,
         )
-        
+
         # Change password
-        success = await user_service.change_password(
-            current_user.id,
-            password_change
-        )
-        
+        success = await user_service.change_password(current_user.id, password_change)
+
         if success:
             return MessageResponse(
-                message="Password changed successfully",
-                success=True
+                message="Password changed successfully", success=True
             )
         else:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Failed to change password"
+                detail="Failed to change password",
             )
-            
+
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Password change failed: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Password change failed"
+            detail="Password change failed",
         )
 
 
@@ -398,14 +383,13 @@ async def get_me(
         token = credentials.credentials
         user = await auth_service.get_current_user(token)
         return user
-        
+
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Failed to get current user: {str(e)}")
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid token"
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token"
         )
 
 
@@ -438,21 +422,21 @@ async def update_profile(
         # Get current user from token
         token = credentials.credentials
         current_user = await auth_service.get_current_user(token)
-        
+
         # Create update request
         update_request = UserUpdateRequest(**update_data)
-        
+
         # Update user profile
         updated_user = await user_service.update_user(current_user.id, update_request)
         return updated_user
-        
+
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Profile update failed: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Profile update failed"
+            detail="Profile update failed",
         )
 
 
@@ -481,20 +465,19 @@ async def verify_email(
         # TODO: Implement email verification in UserService
         # For now, return a placeholder response
         logger.warning("Email verification not yet implemented")
-        
+
         return MessageResponse(
             message="Email verification feature coming soon",
             success=False,
-            details={"note": "Email verification not yet implemented"}
+            details={"note": "Email verification not yet implemented"},
         )
-            
+
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Email verification failed: {str(e)}")
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Email verification failed"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Email verification failed"
         )
 
 
@@ -522,20 +505,19 @@ async def resend_verification(
         # Get current user from token
         token = credentials.credentials
         current_user = await auth_service.get_current_user(token)
-        
+
         # TODO: Implement resend verification email in UserService
         # For now, return a placeholder response
         logger.warning("Resend verification email not yet implemented")
-        
+
         return MessageResponse(
             message="Email verification feature coming soon",
             success=False,
-            details={"note": "Resend verification not yet implemented"}
+            details={"note": "Resend verification not yet implemented"},
         )
-        
+
     except Exception as e:
         logger.error(f"Failed to resend verification: {str(e)}")
         return MessageResponse(
-            message="Failed to send verification email",
-            success=False
+            message="Failed to send verification email", success=False
         )
