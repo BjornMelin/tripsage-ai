@@ -3,7 +3,19 @@ import { type NextRequest, NextResponse } from "next/server";
 
 // Environment variables
 const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || "fallback-secret-for-development-only"
+  process.env.JWT_SECRET ?? (() => {
+    if (process.env.NODE_ENV === "development") {
+      console.warn(
+        "⚠️  JWT_SECRET not set. Using development-only secret. " +
+        "Set JWT_SECRET environment variable for production."
+      );
+      return "dev-only-secret-" + Math.random().toString(36);
+    }
+    throw new Error(
+      "SECURITY ERROR: JWT_SECRET environment variable is required in production. " +
+      "Please set a secure random string as JWT_SECRET."
+    );
+  })()
 );
 
 // Simple in-memory rate limiter
