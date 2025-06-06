@@ -17,15 +17,15 @@ from tripsage.api.schemas.responses.destinations import (
     DestinationSearchResponse,
     SavedDestinationResponse,
 )
-from tripsage.api.services.destination import (
-    DestinationService,
-    get_destination_service,
-)
 from tripsage_core.exceptions.exceptions import (
     CoreResourceNotFoundError as ResourceNotFoundError,
 )
 from tripsage_core.models.schemas_common.geographic import Place as Destination
 from tripsage_core.models.schemas_common.geographic import Place as PointOfInterest
+from tripsage_core.services.business.destination_service import (
+    DestinationService,
+    get_destination_service,
+)
 
 router = APIRouter()
 logger = logging.getLogger(__name__)

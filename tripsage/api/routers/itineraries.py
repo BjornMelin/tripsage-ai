@@ -24,9 +24,12 @@ from tripsage.api.schemas.responses.itineraries import (
     ItineraryResponse,
     ItinerarySearchResponse,
 )
-from tripsage.api.services.itinerary import ItineraryService, get_itinerary_service
 from tripsage_core.exceptions.exceptions import (
     CoreResourceNotFoundError as ResourceNotFoundError,
+)
+from tripsage_core.services.business.itinerary_service import (
+    ItineraryService,
+    get_itinerary_service,
 )
 
 router = APIRouter()

@@ -18,7 +18,7 @@ from tripsage.api.core.dependencies import (
 from tripsage.api.middlewares.authentication import Principal
 from tripsage.api.schemas.requests.chat import ChatRequest
 from tripsage.api.schemas.responses.chat import ChatResponse
-from tripsage.api.services.chat import ChatService
+from tripsage_core.services.business.chat_service import ChatService
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
