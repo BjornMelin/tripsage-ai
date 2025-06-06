@@ -4,7 +4,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { useChatAi } from "@/hooks/use-chat-ai";
 import { cn } from "@/lib/utils";
-import { useChatStore } from "@/stores";
+import { useChatStore, useAuthStore } from "@/stores";
 import type { Message } from "@/types/chat";
 import { AlertCircle, Key, PanelRightOpen, Wifi } from "lucide-react";
 import Link from "next/link";
@@ -109,18 +109,21 @@ export function ChatContainer({
     stopGeneration();
   }, [stopGeneration]);
 
+  // Get auth token from auth store
+  const { tokenInfo } = useAuthStore((state) => ({
+    tokenInfo: state.tokenInfo,
+  }));
+
   // Handle WebSocket connection
   const handleConnectWebSocket = useCallback(async () => {
-    if (chatSessionId && isAuthenticated) {
+    if (chatSessionId && isAuthenticated && tokenInfo?.accessToken) {
       try {
-        // Get auth token from storage or state
-        const token = localStorage.getItem("auth_token") || ""; // Adjust based on your auth implementation
-        await connectWebSocket(chatSessionId, token);
+        await connectWebSocket(chatSessionId, tokenInfo.accessToken);
       } catch (error) {
         console.error("Failed to connect WebSocket:", error);
       }
     }
-  }, [chatSessionId, isAuthenticated, connectWebSocket]);
+  }, [chatSessionId, isAuthenticated, tokenInfo?.accessToken, connectWebSocket]);
 
   // Auto-connect WebSocket when session is ready
   useEffect(() => {
