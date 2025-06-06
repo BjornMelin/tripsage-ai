@@ -2,8 +2,12 @@
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { Tooltip as TooltipUI, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useAgentStatus } from "@/hooks/use-agent-status";
+import { useAgentStatusWebSocket } from "@/hooks/use-agent-status-websocket";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   Activity,
@@ -14,7 +18,10 @@ import {
   Cpu,
   Gauge,
   Heart,
+  Loader2,
   TrendingUp,
+  Wifi,
+  WifiOff,
   Zap,
 } from "lucide-react";
 import type React from "react";
@@ -30,6 +37,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { EnhancedConnectionStatus } from "../communication/enhanced-connection-status";
 
 interface AgentMetrics {
   id: string;
@@ -214,7 +222,7 @@ const PredictiveCard: React.FC<{ indicator: PredictiveIndicator }> = ({
 };
 
 export const AgentStatusDashboard: React.FC<AgentStatusDashboardProps> = ({
-  agents: initialAgents,
+  agents: externalAgents,
   onAgentSelect,
   refreshInterval = 5000,
 }) => {
@@ -223,9 +231,49 @@ export const AgentStatusDashboard: React.FC<AgentStatusDashboardProps> = ({
   const [lastUpdateTime, setLastUpdateTime] = useState<string>("");
   const [isClient, setIsClient] = useState(false);
 
+  // Use WebSocket for real-time agent status updates
+  const {
+    isConnected,
+    connectionError,
+    reconnectAttempts,
+    connect,
+    disconnect,
+    startAgentMonitoring,
+    stopAgentMonitoring,
+  } = useAgentStatusWebSocket();
+
+  // Use agent status store
+  const {
+    agents: storeAgents,
+    activeAgents,
+    currentSession,
+    isMonitoring,
+    error,
+    startMonitoring,
+    stopMonitoring,
+  } = useAgentStatus();
+
+  // Convert store agents to metrics format
+  const agents: AgentMetrics[] = storeAgents.map(agent => ({
+    id: agent.id,
+    name: agent.name,
+    status: agent.status === "active" || agent.status === "working" ? "active" : 
+            agent.status === "waiting" || agent.status === "idle" ? "idle" :
+            agent.status === "error" || agent.status === "failed" ? "error" : "idle",
+    healthScore: agent.progress || 75,
+    cpuUsage: Math.random() * 100, // TODO: Get from resource usage
+    memoryUsage: Math.random() * 100, // TODO: Get from resource usage
+    tokensProcessed: 0, // TODO: Get from resource usage
+    averageResponseTime: 100,
+    errorRate: agent.status === "error" ? 15 : 2,
+    uptime: 3600,
+    tasksQueued: agent.tasks?.filter(t => t.status === "pending").length || 0,
+    lastUpdate: new Date(agent.updatedAt),
+  }));
+
   // Using React 19's useOptimistic for immediate UI updates
   const [optimisticAgents, updateOptimisticAgents] = useOptimistic(
-    initialAgents,
+    agents.length > 0 ? agents : externalAgents || [],
     (state, newAgents: AgentMetrics[]) => newAgents
   );
 
@@ -235,35 +283,15 @@ export const AgentStatusDashboard: React.FC<AgentStatusDashboardProps> = ({
     setLastUpdateTime(new Date().toLocaleTimeString());
   }, []);
 
-  // Simulate real-time updates
+  // Update optimistic agents when store agents change
   useEffect(() => {
-    const interval = setInterval(() => {
+    if (agents.length > 0) {
       startTransition(() => {
-        const now = new Date();
-        const updatedAgents = optimisticAgents.map((agent) => ({
-          ...agent,
-          healthScore: Math.max(
-            0,
-            Math.min(100, agent.healthScore + (Math.random() - 0.5) * 10)
-          ),
-          cpuUsage: Math.max(
-            0,
-            Math.min(100, agent.cpuUsage + (Math.random() - 0.5) * 20)
-          ),
-          memoryUsage: Math.max(
-            0,
-            Math.min(100, agent.memoryUsage + (Math.random() - 0.5) * 15)
-          ),
-          tokensProcessed: agent.tokensProcessed + Math.floor(Math.random() * 50),
-          lastUpdate: now,
-        }));
-        updateOptimisticAgents(updatedAgents);
-        setLastUpdateTime(now.toLocaleTimeString());
+        updateOptimisticAgents(agents);
+        setLastUpdateTime(new Date().toLocaleTimeString());
       });
-    }, refreshInterval);
-
-    return () => clearInterval(interval);
-  }, [optimisticAgents, refreshInterval, updateOptimisticAgents]);
+    }
+  }, [agents, updateOptimisticAgents]);
 
   const totalActiveAgents = optimisticAgents.filter(
     (a) => a.status === "active"
@@ -275,6 +303,14 @@ export const AgentStatusDashboard: React.FC<AgentStatusDashboardProps> = ({
 
   return (
     <div className="space-y-6 p-6">
+      {/* WebSocket Connection Status */}
+      <EnhancedConnectionStatus
+        status={isConnected ? "connected" : connectionError ? "error" : "disconnected"}
+        onReconnect={connect}
+        compact
+        className="mb-4"
+      />
+
       {/* Header Section */}
       <div className="flex items-center justify-between">
         <div>
@@ -284,9 +320,28 @@ export const AgentStatusDashboard: React.FC<AgentStatusDashboardProps> = ({
           </p>
         </div>
         <div className="flex items-center gap-4">
-          <Badge variant="outline" className="flex items-center gap-2">
-            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-            Live Updates
+          {!isMonitoring ? (
+            <Button
+              onClick={startMonitoring}
+              disabled={!isConnected}
+              className="flex items-center gap-2"
+            >
+              <Wifi className="h-4 w-4" />
+              Start Monitoring
+            </Button>
+          ) : (
+            <Button
+              onClick={stopMonitoring}
+              variant="outline"
+              className="flex items-center gap-2"
+            >
+              <WifiOff className="h-4 w-4" />
+              Stop Monitoring
+            </Button>
+          )}
+          <Badge variant={isConnected ? "default" : "secondary"} className="flex items-center gap-2">
+            <div className={`w-2 h-2 rounded-full ${isConnected ? "bg-green-500 animate-pulse" : "bg-gray-500"}`} />
+            {isConnected ? "Live Updates" : "Disconnected"}
           </Badge>
           <span className="text-sm text-gray-500">
             Last updated: {isClient ? lastUpdateTime : "--:--:--"}
@@ -496,15 +551,36 @@ export const AgentStatusDashboard: React.FC<AgentStatusDashboardProps> = ({
       </div>
 
       {/* Alerts Section */}
-      {optimisticAgents.some((a) => a.status === "error") && (
-        <Alert className="border-red-200 bg-red-50">
-          <AlertTriangle className="h-4 w-4 text-red-600" />
-          <AlertDescription className="text-red-800">
-            {optimisticAgents.filter((a) => a.status === "error").length} agent(s) are
-            experiencing errors and require attention.
-          </AlertDescription>
-        </Alert>
-      )}
+      <div className="space-y-3">
+        {connectionError && (
+          <Alert className="border-red-200 bg-red-50">
+            <AlertTriangle className="h-4 w-4 text-red-600" />
+            <AlertDescription className="text-red-800">
+              WebSocket connection error: {connectionError}
+              {reconnectAttempts > 0 && ` (Reconnect attempt ${reconnectAttempts}/5)`}
+            </AlertDescription>
+          </Alert>
+        )}
+        
+        {error && (
+          <Alert className="border-orange-200 bg-orange-50">
+            <AlertTriangle className="h-4 w-4 text-orange-600" />
+            <AlertDescription className="text-orange-800">
+              Agent monitoring error: {error}
+            </AlertDescription>
+          </Alert>
+        )}
+        
+        {optimisticAgents.some((a) => a.status === "error") && (
+          <Alert className="border-red-200 bg-red-50">
+            <AlertTriangle className="h-4 w-4 text-red-600" />
+            <AlertDescription className="text-red-800">
+              {optimisticAgents.filter((a) => a.status === "error").length} agent(s) are
+              experiencing errors and require attention.
+            </AlertDescription>
+          </Alert>
+        )}
+      </div>
     </div>
   );
 };
