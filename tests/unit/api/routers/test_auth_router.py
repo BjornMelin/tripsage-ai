@@ -148,8 +148,9 @@ class TestAuthRouter:
         # Assert
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
-    @patch("tripsage.api.routers.auth.get_auth_service")
-    def test_login_success(self, mock_get_auth_service):
+        # NOTE: JWT authentication tests removed - will be replaced with Supabase Auth tests
+        # @patch("tripsage.api.routers.auth.get_auth_service")
+        # def test_login_success(self, mock_get_auth_service):
         """Test successful user login."""
         # Arrange
         mock_auth_service = Mock()

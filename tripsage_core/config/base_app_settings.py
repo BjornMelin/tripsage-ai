@@ -302,17 +302,7 @@ class CoreAppSettings(BaseSettings):
     )
 
     # Security secrets
-    jwt_secret_key: SecretStr = Field(
-        default=SecretStr("your-secret-key-here-change-in-production"),
-        description="Secret key for signing JWT tokens",
-    )
-    jwt_algorithm: str = Field(default="HS256", description="JWT signing algorithm")
-    access_token_expire_minutes: int = Field(
-        default=60, description="JWT access token expiration in minutes"
-    )
-    refresh_token_expire_days: int = Field(
-        default=7, description="JWT refresh token expiration in days"
-    )
+    # JWT configuration removed - will be replaced with Supabase Auth
     api_key_master_secret: SecretStr = Field(
         default=SecretStr("master-secret-for-byok-encryption"),
         description="Master secret for BYOK encryption",
@@ -403,16 +393,7 @@ class CoreAppSettings(BaseSettings):
             return secret.get_secret_value()
         return None
 
-    # Convenience properties for JWT authentication
-    @property
-    def secret_key(self) -> str:
-        """Get the JWT secret key."""
-        return self.jwt_secret_key.get_secret_value()
-
-    @property
-    def algorithm(self) -> str:
-        """Get the JWT algorithm."""
-        return self.jwt_algorithm
+    # JWT convenience properties removed - will be replaced with Supabase Auth
 
     def validate_critical_settings(self) -> List[str]:
         """
@@ -456,11 +437,6 @@ class CoreAppSettings(BaseSettings):
                 errors.append("Crawl4AI is using localhost in production")
 
             # Check security secrets
-            if self.jwt_secret_key.get_secret_value() in [
-                "your-secret-key-here-change-in-production"
-            ]:
-                errors.append("JWT secret key must be changed in production")
-
             if self.api_key_master_secret.get_secret_value() in [
                 "master-secret-for-byok-encryption"
             ]:

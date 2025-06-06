@@ -2,7 +2,7 @@
 
 This streamlined TODO list tracks current development priorities for TripSage AI.
 
-## Current Status (June 5, 2025)
+## Current Status (June 6, 2025)
 
 ### ✅ Major Recent Completions
 
@@ -16,6 +16,9 @@ This streamlined TODO list tracks current development priorities for TripSage AI
 - **MCP to SDK Migration**: 100% complete - 7 direct SDK integrations + 1 strategic MCP ✅
 - **CI/CD Pipeline**: Backend CI workflow implemented with matrix testing for Python 3.11-3.13 ✅
 - **Test Infrastructure**: Comprehensive unit tests with 92%+ coverage on core modules ✅
+- **JWT Security Hardening**: Critical security vulnerabilities resolved - hardcoded secrets removed (June 6, 2025) ✅
+- **Frontend Authentication Foundation**: JWT middleware and server actions implemented with production security ✅
+- **JWT Complete Cleanup**: All JWT code removed, project reset to pre-JWT state for Supabase Auth implementation (June 6, 2025) ✅
 
 > **Note**: See [`tasks/COMPLETED-TODO.md`](tasks/COMPLETED-TODO.md) for comprehensive completion history and architectural details.
 
@@ -43,14 +46,50 @@ This streamlined TODO list tracks current development priorities for TripSage AI
   - [ ] Build search results components (flights, hotels, activities)
   - [ ] Implement trip management and itinerary building
   - [ ] Add budget tracking and expense management UI
-- [ ] **Authentication & User Management** (2 days)
+- [ ] **Authentication & User Management** (1-2 days) - **JWT Cleanup Complete**
+  - [x] Complete JWT code removal and cleanup (June 6, 2025) ✅
+    - [x] Deleted all JWT implementation files (frontend & backend)
+    - [x] Reverted files to pre-JWT state using git
+    - [x] Removed JWT dependencies from package.json and pyproject.toml
+    - [x] Cleaned up all JWT imports and references
+  - [ ] **Implement Supabase Auth** (HIGH PRIORITY - Greenfield Implementation)
+    - [ ] Review Supabase Auth implementation PRD v2.0
+    - [ ] Set up Supabase Auth configuration
+    - [ ] Implement frontend authentication with Supabase client
+    - [ ] Configure Row Level Security (RLS) policies
+    - [ ] Add OAuth provider support (Google, GitHub)
+  - [ ] **CRITICAL: Create Missing Dashboard Page** (Immediate - fixes 404 auth redirect)
+    - [ ] Implement `/frontend/src/app/dashboard/page.tsx` with authenticated layout
+    - [ ] Add user greeting, quick actions, and recent activity components
+    - [ ] Implement proper authentication checks using Supabase Auth
   - [ ] Complete BYOK API key management interface
   - [ ] Implement user registration and profile management
   - [ ] Add session management and security controls
   - [ ] Create user preferences and settings interface
 - **Expected Impact**: Complete frontend foundation ready for MVP launch
 
-### 2. Complete Supabase Database Implementation (Issue #197)
+### 2. Test Infrastructure & Pydantic Migration ⭐ **BLOCKING ISSUE**
+
+- [ ] **Fix Pydantic v1→v2 Migration** (1-2 days) - **527 tests failing**
+  - [ ] Install and run `bump-pydantic` automated migration tool
+    - [ ] `uv pip install bump-pydantic`
+    - [ ] `bump-pydantic tripsage/ --diff` (preview changes)
+    - [ ] `bump-pydantic tests/ --diff` (preview changes)
+    - [ ] Apply migrations after review
+  - [ ] Manual fixes for remaining issues:
+    - [ ] Update `Config` classes to `model_config`
+    - [ ] Fix field validators to use `@field_validator`
+    - [ ] Update async test patterns
+    - [ ] Remove deprecated Pydantic v1 patterns
+  - [ ] Ensure all tests pass with ≥90% coverage
+- [ ] **Commit Staged Changes** (30 mins)
+  - [ ] Review and commit 8 modified files:
+    - [ ] Security hardening (middleware.ts, server-actions.ts)
+    - [ ] Documentation updates (ARCHITECTURE_OVERVIEW.md, TODO.md, etc.)
+    - [ ] Test configurations (conftest.py, manager.py)
+- **Expected Impact**: Unblock development with passing test suite
+
+### 4. Complete Supabase Database Implementation (Issue #197)
 
 - [ ] **Memory System Integration** (2-3 days)
   - [ ] Implement Mem0 memory storage tables with pgvector
@@ -74,7 +113,7 @@ This streamlined TODO list tracks current development priorities for TripSage AI
   - [ ] Integration testing with all database operations
 - **Expected Impact**: Complete unified database system with 91% faster memory operations
 
-### 3. LangGraph Production Deployment (Issue #172)
+### 5. LangGraph Production Deployment (Issue #172)
 
 - [ ] Set up LangSmith monitoring and observability
 - [ ] Implement feature flags for gradual rollout
@@ -83,7 +122,7 @@ This streamlined TODO list tracks current development priorities for TripSage AI
 - [ ] Documentation and team training
 - **Status**: Phases 1-3 completed (foundation, migration, MCP integration)
 
-### 4. SDK Migration Enhancements (Optional Optimizations)
+### 6. SDK Migration Enhancements (Optional Optimizations)
 
 - [ ] **Advanced Webcrawl Enhancements**
   - [ ] AIOHTTP integration for 10x concurrent performance improvement
@@ -94,7 +133,7 @@ This streamlined TODO list tracks current development priorities for TripSage AI
 
 ## Medium Priority Tasks
 
-### 5. Webcrawl Production Readiness (1-2 weeks)
+### 7. Webcrawl Production Readiness (1-2 weeks)
 
 - [ ] **Caching & Performance Integration**
   - [ ] Integrate webcrawl results with DragonflyDB caching layer
@@ -110,14 +149,14 @@ This streamlined TODO list tracks current development priorities for TripSage AI
   - [ ] Resource usage monitoring and throttling
 - **Expected Impact**: Production-ready webcrawl reliability, reduced resource usage
 
-### 6. Complete Test Suite Migration (Issue #35)
+### 8. Complete Test Suite Migration (Issue #35)
 
 - [ ] Migrate remaining agent tests to use tripsage.*
 - [ ] Ensure 90%+ test coverage across all modules
 - **Current Status**: Domain models at 92% coverage, API dependencies at 80-90%, targeting 90%+ overall
 - **Note**: Completed test suite consolidation work documented in `tasks/COMPLETED-TODO.md`
 
-### 7. Performance and Monitoring Infrastructure
+### 9. Performance and Monitoring Infrastructure
 
 - [ ] Basic monitoring setup with essential metrics
 - [ ] Set up request tracing and error tracking
@@ -125,7 +164,7 @@ This streamlined TODO list tracks current development priorities for TripSage AI
 - [ ] Track API usage per service
 - [ ] Implement usage quotas
 
-### 8. Database Operations Completion
+### 10. Database Operations Completion
 
 - [ ] Finalize remaining database operations via direct SDK tools
 - [ ] Complete all essential CRUD operations for trips, accommodations, flights
@@ -179,14 +218,14 @@ This streamlined TODO list tracks current development priorities for TripSage AI
 - **Integration Tasks**: Chat and WebSocket integration - See Integration section below
 - **V2 Features**: Post-MVP enhancements archived for future consideration
 
-### 9. Advanced Frontend Features
+### 11. Advanced Frontend Features
 
 - [ ] Advanced agent visualization with React Flow
 - [ ] LLM configuration UI with model switching
 - [ ] Real-time collaborative trip planning
 - [ ] Advanced budget tracking and forecasting
 
-### 10. Code Quality and Testing
+### 12. Code Quality and Testing
 
 - [ ] Refactor function tool signatures and reduce complexity
 - [ ] Standardize logging patterns across modules
