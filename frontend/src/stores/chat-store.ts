@@ -774,61 +774,89 @@ export const useChatStore = create<ChatState>()(
           // Import WebSocketClient dynamically to avoid SSR issues
           const { WebSocketClient } = await import("@/lib/websocket/websocket-client");
 
+          // Construct proper WebSocket URL with /api prefix
+          const wsBaseUrl = process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:8000/api";
           const newClient = new WebSocketClient({
-            url: `${process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:8000"}/ws/chat/${sessionId}`,
-            reconnect: true,
-            maxReconnectAttempts: 5,
-            reconnectInterval: 1000,
+            url: `${wsBaseUrl}/ws/chat/${sessionId}`,
+            token,
+            sessionId,
+            channels: [`session:${sessionId}`],
+            reconnectAttempts: 5,
+            reconnectDelay: 1000,
+            heartbeatInterval: 30000,
+            debug: process.env.NODE_ENV === "development",
           });
 
           // Set up event handlers
-          newClient.on("open", () => {
+          newClient.on("connect", () => {
             set({ connectionStatus: "connected" });
+            console.log("WebSocket connected successfully");
           });
 
-          newClient.on("close", () => {
+          newClient.on("disconnect", () => {
             set({ connectionStatus: "disconnected" });
           });
 
-          newClient.on("connecting", () => {
-            set({ connectionStatus: "connecting" });
-          });
-
           newClient.on("error", (error) => {
+            console.error("WebSocket error:", error);
             set({
               connectionStatus: "error",
-              error: error.message || "WebSocket connection error",
+              error: error instanceof Error ? error.message : "WebSocket connection error",
             });
           });
 
+          newClient.on("reconnect", ({ attempt, maxAttempts }) => {
+            set({ connectionStatus: "connecting" });
+            console.log(`WebSocket reconnecting... Attempt ${attempt}/${maxAttempts}`);
+          });
+
           // Handle incoming messages
-          newClient.on("chat_message", (data) => {
-            get().handleRealtimeMessage(data);
+          newClient.on("chat_message", (event) => {
+            get().handleRealtimeMessage({
+              type: "chat_message",
+              sessionId,
+              content: event.payload.message?.content || "",
+              role: event.payload.message?.role,
+              messageId: event.payload.message?.id,
+            });
           });
 
-          newClient.on("chat_message_chunk", (data) => {
-            get().handleRealtimeMessage(data);
+          newClient.on("chat_message_chunk", (event) => {
+            get().handleRealtimeMessage({
+              type: "chat_message_chunk",
+              sessionId,
+              content: event.payload.content || "",
+              messageId: event.id,
+              isComplete: event.payload.is_final || false,
+            });
           });
 
-          newClient.on("agent_status_update", (data) => {
-            get().handleAgentStatusUpdate(data);
+          newClient.on("agent_status_update", (event) => {
+            get().handleAgentStatusUpdate({
+              type: "agent_status_update",
+              sessionId,
+              isActive: event.payload.is_active || false,
+              currentTask: event.payload.current_task,
+              progress: event.payload.progress || 0,
+              statusMessage: event.payload.status_message,
+            });
           });
 
-          newClient.on("user_typing", (data) => {
-            get().setUserTyping(data.sessionId, data.userId, data.username);
+          newClient.on("chat_typing_start", () => {
+            // Handle typing indicator start
+            set({ isStreaming: true });
           });
 
-          newClient.on("user_stop_typing", (data) => {
-            get().removeUserTyping(data.sessionId, data.userId);
+          newClient.on("chat_typing_stop", () => {
+            // Handle typing indicator stop
+            set({ isStreaming: false });
           });
 
-          // Authenticate and connect
+          // Store client and connect
           set({ websocketClient: newClient, connectionStatus: "connecting" });
           await newClient.connect();
-
-          // Send auth message
-          await newClient.send("auth", { token, sessionId });
         } catch (error) {
+          console.error("Failed to connect WebSocket:", error);
           set({
             connectionStatus: "error",
             error:
