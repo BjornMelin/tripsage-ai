@@ -11,7 +11,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { type Trip, useTripStore } from "@/stores/trip-store";
+import { useTrips } from "@/hooks/use-trips";
 import { Calendar, Clock, MapPin } from "lucide-react";
 import Link from "next/link";
 
@@ -43,7 +43,7 @@ function TripCardSkeleton() {
   );
 }
 
-function TripCard({ trip }: { trip: Trip }) {
+function TripCard({ trip }: { trip: any }) {
   const formatDate = (dateString?: string) => {
     if (!dateString) return "Not set";
     return new Date(dateString).toLocaleDateString("en-US", {
@@ -54,25 +54,25 @@ function TripCard({ trip }: { trip: Trip }) {
   };
 
   const getDestinationText = () => {
-    if (trip.destinations.length === 0) return "No destinations";
-    if (trip.destinations.length === 1) return trip.destinations[0].name;
-    return `${trip.destinations[0].name} (+${trip.destinations.length - 1} more)`;
+    if (!trip.destinations || trip.destinations.length === 0) return "No destinations";
+    if (trip.destinations.length === 1) return trip.destinations[0];
+    return `${trip.destinations[0]} (+${trip.destinations.length - 1} more)`;
   };
 
   const getTripDuration = () => {
-    if (!trip.startDate || !trip.endDate) return null;
-    const start = new Date(trip.startDate);
-    const end = new Date(trip.endDate);
+    if (!trip.start_date || !trip.end_date) return null;
+    const start = new Date(trip.start_date);
+    const end = new Date(trip.end_date);
     const diffTime = Math.abs(end.getTime() - start.getTime());
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     return `${diffDays} day${diffDays !== 1 ? "s" : ""}`;
   };
 
   const getTripStatus = () => {
-    if (!trip.startDate || !trip.endDate) return "draft";
+    if (!trip.start_date || !trip.end_date) return "draft";
     const now = new Date();
-    const start = new Date(trip.startDate);
-    const end = new Date(trip.endDate);
+    const start = new Date(trip.start_date);
+    const end = new Date(trip.end_date);
 
     if (now < start) return "upcoming";
     if (now >= start && now <= end) return "ongoing";
@@ -88,7 +88,7 @@ function TripCard({ trip }: { trip: Trip }) {
       className="block p-3 border border-border rounded-lg hover:bg-accent/50 transition-colors"
     >
       <div className="flex items-start justify-between mb-2">
-        <h4 className="font-medium text-sm truncate pr-2">{trip.name}</h4>
+        <h4 className="font-medium text-sm truncate pr-2">{trip.title}</h4>
         <Badge
           variant={
             status === "upcoming"
@@ -118,12 +118,12 @@ function TripCard({ trip }: { trip: Trip }) {
         )}
       </div>
 
-      {trip.startDate && (
+      {trip.start_date && (
         <div className="flex items-center gap-1 text-xs text-muted-foreground">
           <Calendar className="h-3 w-3" />
           <span>
-            {formatDate(trip.startDate)}
-            {trip.endDate && ` - ${formatDate(trip.endDate)}`}
+            {formatDate(trip.start_date)}
+            {trip.end_date && ` - ${formatDate(trip.end_date)}`}
           </span>
         </div>
       )}
@@ -152,13 +152,13 @@ function EmptyState() {
 }
 
 export function RecentTrips({ limit = 5, showEmpty = true }: RecentTripsProps) {
-  const { trips, isLoading } = useTripStore();
+  const { data: tripsResponse, isLoading } = useTrips();
 
-  // Sort trips by updatedAt/createdAt and take the most recent ones
-  const recentTrips = trips
-    .sort((a, b) => {
-      const dateA = new Date(a.updatedAt || a.createdAt);
-      const dateB = new Date(b.updatedAt || b.createdAt);
+  // Extract trips from the response and sort by updatedAt/createdAt, take the most recent ones
+  const recentTrips = (tripsResponse?.items || [])
+    .sort((a: any, b: any) => {
+      const dateA = new Date(a.updated_at || a.created_at);
+      const dateB = new Date(b.updated_at || b.created_at);
       return dateB.getTime() - dateA.getTime();
     })
     .slice(0, limit);
