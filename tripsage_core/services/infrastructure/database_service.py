@@ -94,7 +94,7 @@ class DatabaseService:
             options = ClientOptions(
                 auto_refresh_token=self.settings.database.supabase_auto_refresh_token,
                 persist_session=self.settings.database.supabase_persist_session,
-                timeout=self.settings.database.supabase_timeout,
+                postgrest_client_timeout=self.settings.database.supabase_timeout,
             )
 
             # Create Supabase client

@@ -6,10 +6,12 @@ This guide explains how to set up and run the TripSage AI travel planning platfo
 
 - **Python**: 3.12+ (required for modern async features)
 - **Node.js**: 18+ (required for Next.js 15)
-- **pnpm**: Latest version (preferred package manager)
-- **uv**: Latest version (Python package manager)
+- **pnpm**: Latest version (preferred package manager for frontend)
+- **uv**: Recommended but optional (modern Python package manager - 10-100x faster than pip)
 - **Git**: For cloning the repository
 - **Docker**: Optional, for local DragonflyDB
+
+> **Note**: While `uv` is recommended for its speed and reliability, you can use standard `pip` if preferred.
 
 ## Quick Start
 
@@ -20,12 +22,29 @@ This guide explains how to set up and run the TripSage AI travel planning platfo
 git clone <repository-url>
 cd tripsage-ai
 
-# Create Python virtual environment
-uv venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+# (Optional) Install uv if you want to use the recommended method:
+curl -LsSf https://astral.sh/uv/install.sh | sh
+# Or with pip: pip install uv
 
-# Install Python dependencies
-uv pip install -e .
+# Install Python dependencies using one of these methods:
+
+# Option 1: Using uv with pyproject.toml (Recommended - Fastest ~30 seconds)
+uv sync                    # Install core dependencies only
+uv sync --group dev       # Install all dependencies including dev tools
+
+# Option 2: Using uv with requirements.txt (Fast ~45 seconds)
+uv pip install -r requirements.txt      # Install core dependencies only
+uv pip install -r requirements-dev.txt  # Install all dependencies including dev tools
+
+# Option 3: Using pip directly (Traditional method ~2-5 minutes)
+# First create and activate a virtual environment:
+python -m venv .venv
+source .venv/bin/activate               # On Windows: .venv\Scripts\activate
+# Then install dependencies:
+pip install -r requirements.txt         # Install core dependencies only
+pip install -r requirements-dev.txt     # Install all dependencies including dev tools
+# Or install as editable package:
+pip install -e .                        # Editable install with core deps
 
 # Install frontend dependencies
 cd frontend
@@ -173,23 +192,63 @@ pnpm test:e2e
 uv run pytest tests/integration/ -v
 ```
 
-### Adding Dependencies
+### Dependency Management
+
+TripSage supports both modern (`pyproject.toml`) and traditional (`requirements.txt`) dependency management approaches to ensure maximum compatibility and developer flexibility.
+
+#### File Structure
+
+- **`pyproject.toml`**: The source of truth for all dependencies
+  - Core dependencies in `[project.dependencies]`
+  - Development dependencies in `[dependency-groups]`
+  
+- **`requirements.txt`**: Core dependencies only (production)
+  - Auto-generated from `pyproject.toml`
+  - Contains 37 packages needed to run the application
+  
+- **`requirements-dev.txt`**: All dependencies (core + dev + test + lint)
+  - Auto-generated from `pyproject.toml`
+  - Contains 50 packages for full development environment
+
+#### Adding New Dependencies
+
+⚠️ **Important**: Always update dependencies in `pyproject.toml` first, then regenerate the requirements files.
 
 **Python packages:**
 
 ```bash
-# Add to pyproject.toml dependencies, then:
-uv pip install -e .
+# Add to pyproject.toml in the appropriate section, then:
+uv sync                          # Install the new dependency
+
+# Manually update the corresponding requirements file(s)
+# For core dependencies, add to requirements.txt
+# For dev dependencies, add to requirements-dev.txt only
 ```
 
 **Frontend packages:**
 
 ```bash
 cd frontend
-pnpm add package-name
-# For dev dependencies:
-pnpm add -D package-name
+pnpm add package-name            # For production dependencies
+pnpm add -D package-name         # For dev dependencies
 ```
+
+#### Updating Dependencies
+
+```bash
+# Update all dependencies to latest compatible versions
+uv sync --resolution=highest
+
+# Update a specific package
+uv add package-name@latest
+```
+
+#### Why Both Approaches?
+
+1. **Backward Compatibility**: Many deployment pipelines and Docker containers expect `requirements.txt`
+2. **Team Flexibility**: Developers can use their preferred workflow
+3. **Tool Compatibility**: Some tools don't yet support `pyproject.toml`
+4. **Clear Separation**: Easy to see production vs development dependencies
 
 ## Production Deployment
 
