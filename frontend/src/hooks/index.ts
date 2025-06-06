@@ -6,6 +6,7 @@ export * from "./use-search";
 export * from "./use-budget";
 export * from "./use-currency";
 export * from "./use-deals";
+export * from "./use-trips";
 
 // WebSocket hooks
 export * from "./use-websocket";

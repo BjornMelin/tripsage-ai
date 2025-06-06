@@ -66,10 +66,23 @@ export async function fetchApi<T = any>(
   }
 
   // Add authentication header if available
-  const token =
-    typeof window !== "undefined" ? localStorage.getItem("auth-token") : null;
-  if (token) {
-    headers.set("Authorization", `Bearer ${token}`);
+  // Use auth store in the component that calls this,
+  // or pass token as a parameter to ensure proper auth handling
+  // This will be handled by the React Query hooks
+  if (typeof window !== "undefined") {
+    try {
+      // Get token from auth store - this should be passed from the hook
+      const storedAuth = localStorage.getItem("auth-store");
+      if (storedAuth) {
+        const authState = JSON.parse(storedAuth);
+        const token = authState?.state?.tokenInfo?.access_token;
+        if (token) {
+          headers.set("Authorization", `Bearer ${token}`);
+        }
+      }
+    } catch (error) {
+      // Ignore parsing errors
+    }
   }
 
   // Make the request
