@@ -22,14 +22,14 @@ from tripsage.api.schemas.responses.accommodations import (
     AccommodationSearchResponse,
     SavedAccommodationResponse,
 )
-from tripsage.api.services.accommodation import (
-    AccommodationService,
-    get_accommodation_service,
-)
 from tripsage_core.exceptions.exceptions import (
     CoreResourceNotFoundError as ResourceNotFoundError,
 )
 from tripsage_core.models.schemas_common import BookingStatus
+from tripsage_core.services.business.accommodation_service import (
+    AccommodationService,
+    get_accommodation_service,
+)
 
 logger = logging.getLogger(__name__)
 

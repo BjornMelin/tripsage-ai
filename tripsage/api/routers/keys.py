@@ -20,10 +20,10 @@ from tripsage.api.schemas.responses.api_keys import (
     ApiKeyResponse,
     ApiKeyValidateResponse,
 )
-from tripsage.api.services.key_management import (
+from tripsage_core.services.business.key_management_service import (
     KeyManagementService as KeyService,
 )
-from tripsage.api.services.key_management import (
+from tripsage_core.services.business.key_management_service import (
     get_key_management_service as get_key_service,
 )
 from tripsage_core.services.infrastructure.key_monitoring_service import (

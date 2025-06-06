@@ -10,7 +10,7 @@ from fastapi import APIRouter, Depends, status
 
 from tripsage.api.schemas.requests.auth import RegisterRequest
 from tripsage.api.schemas.responses.auth import UserResponse
-from tripsage.api.services.user import UserService, get_user_service
+from tripsage_core.services.business.user_service import UserService, get_user_service
 
 router = APIRouter()
 logger = logging.getLogger(__name__)

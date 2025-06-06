@@ -12,7 +12,7 @@ from tripsage.api.core.dependencies import require_principal_dep
 from tripsage.api.middlewares.authentication import Principal
 from tripsage.api.schemas.requests.trips import CreateTripRequest
 from tripsage.api.schemas.responses.trips import TripResponse
-from tripsage.api.services.trip import TripService, get_trip_service
+from tripsage_core.services.business.trip_service import TripService, get_trip_service
 
 logger = logging.getLogger(__name__)
 
