@@ -114,7 +114,7 @@ For detailed architecture information, see [ARCHITECTURE_OVERVIEW.md](./ARCHITEC
 
 ### **Prerequisites**
 - **Node.js** (v18+) - Any installation method (nvm, fnm, volta, etc.)
-- **Python** (v3.11+) with pip
+- **Python** (v3.12+) with pip
 - **uv** (recommended) - Modern Python package manager for faster installs
 - **Supabase Account** for database
 - **API Keys** for external services

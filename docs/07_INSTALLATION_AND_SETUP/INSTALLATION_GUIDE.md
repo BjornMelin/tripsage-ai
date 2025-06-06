@@ -19,7 +19,7 @@ This guide explains how to set up and run the TripSage AI travel planning platfo
 
 ```bash
 # Clone the repository
-git clone <repository-url>
+git clone https://github.com/BjornMelin/tripsage-ai.git
 cd tripsage-ai
 
 # (Optional) Install uv if you want to use the recommended method:
