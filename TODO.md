@@ -175,10 +175,9 @@ This streamlined TODO list tracks current development priorities for TripSage AI
 
 ### Reference Documentation
 
-- **Completed Work**: See `tasks/COMPLETED-TODO.md` for comprehensive implementation history
-- **Frontend Tasks**: See `tasks/TODO-FRONTEND.md` for detailed frontend implementation plans
-- **Integration Tasks**: See `tasks/TODO-INTEGRATION.md` for backend-frontend integration work
-- **V2 Features**: See `tasks/TODO-V2.md` for post-MVP enhancement features
+- **Frontend Implementation**: Phase 4 Agent Experience (30% complete) - See Frontend section below
+- **Integration Tasks**: Chat and WebSocket integration - See Integration section below
+- **V2 Features**: Post-MVP enhancements archived for future consideration
 
 ### 9. Advanced Frontend Features
 
@@ -230,3 +229,53 @@ For detailed implementation plans, see:
 - **Database Architecture**: `docs/03_ARCHITECTURE/DATABASE_ARCHITECTURE.md` - Unified Supabase design
 - **Development Guide**: `docs/04_DEVELOPMENT_GUIDE/` - Implementation workflows
 - **Features & Integrations**: `docs/05_FEATURES_AND_INTEGRATIONS/` - Service integrations
+
+## Frontend Implementation Details
+
+### Phase 4: Agent Experience (30% Complete)
+
+From the detailed frontend plan, key remaining tasks:
+
+- [ ] **Agent Status Modernization**
+  - [ ] Real-time monitoring dashboard with React 19 concurrent features
+  - [ ] Agent health indicators with optimistic updates
+  - [ ] Task queue visualization with Framer Motion
+  
+- [ ] **Dashboard Modernization** (20% Complete)
+  - [ ] Fintech-inspired metrics cards
+  - [ ] Advanced data visualizations
+  - [ ] Real-time updates with WebSocket
+
+- [ ] **Search Enhancement** (25% Complete)
+  - [ ] Unified search experience
+  - [ ] Advanced filters with instant results
+  - [ ] Search history and suggestions
+
+## Integration Tasks
+
+### WebSocket Integration
+
+- [ ] **Real-time Communication**
+  - [ ] Complete WebSocket integration for chat
+  - [ ] Implement presence indicators
+  - [ ] Add typing indicators and read receipts
+  
+### Authentication Flow
+
+- [ ] **Frontend-Backend Auth Integration**
+  - [ ] Complete JWT token management
+  - [ ] Implement refresh token logic
+  - [ ] Add session persistence
+
+## Post-MVP (V2) Features
+
+These features are intentionally deferred to avoid over-engineering:
+
+- Advanced Kubernetes orchestration
+- Multi-cluster deployments
+- Complex service mesh integration
+- Advanced APM and monitoring
+- Sophisticated caching strategies beyond current DragonflyDB setup
+
+Note: Full V2 feature list archived for future reference.
+EOF < /dev/null

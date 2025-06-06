@@ -1,16 +1,88 @@
-"""
-Response models for trip endpoints.
+"""Trip API schemas using Pydantic V2.
 
-This module defines Pydantic models for API responses related to trips.
+This module defines Pydantic models for trip-related API requests and responses.
+Consolidates both request and response schemas for trip operations.
 """
 
 from datetime import date, datetime
 from typing import Any, Dict, List, Optional
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from tripsage_core.models.schemas_common.travel import TripDestination, TripPreferences
+
+# ===== Request Schemas =====
+
+
+class CreateTripRequest(BaseModel):
+    """Request model for creating a trip."""
+
+    title: str = Field(
+        description="Trip title",
+        min_length=1,
+        max_length=100,
+    )
+    description: Optional[str] = Field(
+        default=None,
+        description="Trip description",
+        max_length=500,
+    )
+    start_date: date = Field(description="Trip start date")
+    end_date: date = Field(description="Trip end date")
+    destinations: List[TripDestination] = Field(
+        description="Trip destinations",
+        min_length=1,
+    )
+    preferences: Optional[TripPreferences] = Field(
+        default=None,
+        description="Trip preferences",
+    )
+
+    @model_validator(mode="after")
+    def validate_dates(self) -> "CreateTripRequest":
+        """Validate that end_date is after start_date."""
+        if self.start_date and self.end_date and self.end_date < self.start_date:
+            raise ValueError("End date must be after start date")
+        return self
+
+
+class UpdateTripRequest(BaseModel):
+    """Request model for updating a trip."""
+
+    title: Optional[str] = Field(
+        default=None,
+        description="Trip title",
+        min_length=1,
+        max_length=100,
+    )
+    description: Optional[str] = Field(
+        default=None,
+        description="Trip description",
+        max_length=500,
+    )
+    start_date: Optional[date] = Field(default=None, description="Trip start date")
+    end_date: Optional[date] = Field(default=None, description="Trip end date")
+    destinations: Optional[List[TripDestination]] = Field(
+        default=None,
+        description="Trip destinations",
+    )
+
+    @model_validator(mode="after")
+    def validate_dates(self) -> "UpdateTripRequest":
+        """Validate that end_date is after start_date if both are provided."""
+        if self.start_date and self.end_date and self.end_date < self.start_date:
+            raise ValueError("End date must be after start date")
+        return self
+
+
+class TripPreferencesRequest(TripPreferences):
+    """Request model for updating trip preferences."""
+
+    pass
+
+
+# ===== Response Schemas =====
 
 
 class TripResponse(BaseModel):
