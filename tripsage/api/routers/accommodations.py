@@ -12,14 +12,12 @@ from fastapi import APIRouter, Depends, status
 
 from tripsage.api.core.dependencies import get_principal_id, require_principal_dep
 from tripsage.api.middlewares.authentication import Principal
-from tripsage.api.schemas.requests.accommodations import (
+from tripsage.api.schemas.accommodations import (
     AccommodationDetailsRequest,
-    AccommodationSearchRequest,
-    SavedAccommodationRequest,
-)
-from tripsage.api.schemas.responses.accommodations import (
     AccommodationDetailsResponse,
+    AccommodationSearchRequest,
     AccommodationSearchResponse,
+    SavedAccommodationRequest,
     SavedAccommodationResponse,
 )
 from tripsage_core.exceptions.exceptions import (

@@ -21,7 +21,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from tripsage.agents.chat import ChatAgent
 from tripsage.agents.service_registry import ServiceRegistry
 from tripsage.api.core.dependencies import get_db
-from tripsage.api.schemas.requests.websocket import (
+from tripsage.api.schemas.websocket import (
     WebSocketAuthRequest,
     WebSocketSubscribeRequest,
 )
