@@ -254,3 +254,74 @@ class TripSummaryResponse(BaseModel):
         ge=0,
         le=100,
     )
+
+
+class TripSuggestionResponse(BaseModel):
+    """Response model for trip suggestions."""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "id": "suggestion-1",
+                "title": "Tokyo Cherry Blossom Adventure",
+                "destination": "Tokyo, Japan",
+                "description": "Experience the magic of cherry blossom season in Japan's vibrant capital city.",
+                "image_url": "https://example.com/tokyo-cherry-blossom.jpg",
+                "estimated_price": 2800,
+                "currency": "USD",
+                "duration": 7,
+                "rating": 4.8,
+                "category": "culture",
+                "best_time_to_visit": "March - May",
+                "highlights": [
+                    "Cherry Blossoms",
+                    "Temples",
+                    "Street Food",
+                    "Modern Culture",
+                ],
+                "difficulty": "moderate",
+                "trending": True,
+                "seasonal": True,
+                "relevance_score": 0.95,
+                "metadata": {
+                    "weather": "Mild spring weather",
+                    "visa_required": False,
+                    "language": "Japanese",
+                    "personalization_reasons": [
+                        "Based on your interest in cultural experiences",
+                        "Previous trips to Asia",
+                    ],
+                },
+            }
+        }
+    )
+
+    id: str = Field(description="Suggestion ID")
+    title: str = Field(description="Trip title")
+    destination: str = Field(description="Primary destination")
+    description: str = Field(description="Trip description")
+    image_url: Optional[str] = Field(default=None, description="Cover image URL")
+    estimated_price: float = Field(description="Estimated total price")
+    currency: str = Field(description="Price currency")
+    duration: int = Field(description="Trip duration in days")
+    rating: float = Field(description="Average rating", ge=0, le=5)
+    category: str = Field(
+        description="Trip category (adventure, relaxation, culture, nature, city, beach)"
+    )
+    best_time_to_visit: str = Field(description="Recommended time period")
+    highlights: List[str] = Field(description="Key highlights", max_length=10)
+    difficulty: Optional[str] = Field(
+        default=None, description="Trip difficulty (easy, moderate, challenging)"
+    )
+    trending: bool = Field(
+        default=False, description="Whether this is a trending destination"
+    )
+    seasonal: bool = Field(
+        default=False, description="Whether this is seasonal/time-sensitive"
+    )
+    relevance_score: Optional[float] = Field(
+        default=None, description="Personalization relevance score", ge=0, le=1
+    )
+    metadata: Optional[Dict[str, Any]] = Field(
+        default=None, description="Additional metadata"
+    )
