@@ -13,7 +13,8 @@
     "test:ui": "vitest --ui",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
-    "prepare": "husky"
+    "prepare": "husky",
+    "generate:jwt-secret": "node -e \"console.log('JWT_SECRET=' + require('crypto').randomBytes(32).toString('base64'))\""
   },
   "dependencies": {
     "@ai-sdk/openai": "^1.3.22",

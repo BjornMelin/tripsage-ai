@@ -2,6 +2,13 @@ import { middleware } from "@/middleware";
 import { NextRequest, NextResponse } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+// Mock JWT token for testing
+const TEST_TOKEN = "mock-jwt-token-for-testing";
+
+// Mock environment variables
+vi.stubEnv("JWT_SECRET", "test-jwt-secret-for-middleware-tests");
+vi.stubEnv("NODE_ENV", "test");
+
 describe("Rate Limiting Middleware", () => {
   beforeEach(() => {
     vi.clearAllMocks();
