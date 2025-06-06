@@ -12,22 +12,23 @@ from fastapi import APIRouter, Depends, status
 
 from tripsage.api.core.dependencies import get_principal_id, require_principal_dep
 from tripsage.api.middlewares.authentication import Principal
-from tripsage.api.schemas.requests.flights import (
+from tripsage.api.schemas.flights import (
     AirportSearchRequest,
+    AirportSearchResponse,
     FlightSearchRequest,
+    FlightSearchResponse,
     MultiCityFlightSearchRequest,
     SavedFlightRequest,
-)
-from tripsage.api.schemas.responses.flights import (
-    AirportSearchResponse,
-    FlightSearchResponse,
     SavedFlightResponse,
 )
-from tripsage.api.services.flight import FlightService, get_flight_service
 from tripsage_core.exceptions.exceptions import (
     CoreResourceNotFoundError as ResourceNotFoundError,
 )
 from tripsage_core.models.domain.flight import FlightOffer
+from tripsage_core.services.business.flight_service import (
+    FlightService,
+    get_flight_service,
+)
 
 logger = logging.getLogger(__name__)
 

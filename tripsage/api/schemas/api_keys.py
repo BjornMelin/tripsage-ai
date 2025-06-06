@@ -1,12 +1,41 @@
-"""API key response models using Pydantic V2.
+"""API Key API schemas using Pydantic V2.
 
-This module defines Pydantic models for API key-related responses.
+This module defines Pydantic models for API key-related API requests and responses.
+Consolidates both request and response schemas for API key operations.
 """
 
 from datetime import datetime
 from typing import List, Optional
 
 from pydantic import BaseModel, Field
+
+# ===== Request Schemas =====
+
+
+class ApiKeyCreate(BaseModel):
+    """API key creation request model."""
+
+    name: str = Field(min_length=1, max_length=255)
+    service: str = Field(min_length=1, max_length=255)
+    key: str
+    description: Optional[str] = None
+    expires_at: Optional[datetime] = None
+
+
+class ApiKeyValidateRequest(BaseModel):
+    """API key validation request model."""
+
+    key: str
+    service: str
+
+
+class ApiKeyRotateRequest(BaseModel):
+    """API key rotation request model."""
+
+    new_key: str
+
+
+# ===== Response Schemas =====
 
 
 class ApiKeyResponse(BaseModel):
