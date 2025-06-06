@@ -114,7 +114,8 @@ For detailed architecture information, see [ARCHITECTURE_OVERVIEW.md](./ARCHITEC
 
 ### **Prerequisites**
 - **Node.js** (v18+) - Any installation method (nvm, fnm, volta, etc.)
-- **Python** (v3.11+) with uv package manager
+- **Python** (v3.12+) with pip
+- **uv** (recommended) - Modern Python package manager for faster installs
 - **Supabase Account** for database
 - **API Keys** for external services
 
@@ -128,8 +129,25 @@ For detailed architecture information, see [ARCHITECTURE_OVERVIEW.md](./ARCHITEC
 
 2. **Install Dependencies**:
    ```bash
-   # Install Python dependencies with uv
-   uv sync
+   # Install Python dependencies (choose one method):
+   
+   # Option 1: Using uv with pyproject.toml (Recommended - Fastest)
+   uv sync                    # Core dependencies only
+   uv sync --group dev       # All dependencies including dev tools
+   
+   # Option 2: Using uv with requirements.txt
+   uv pip install -r requirements.txt      # Core dependencies only
+   uv pip install -r requirements-dev.txt  # All dependencies including dev tools
+   
+   # Option 3: Using pip directly (Traditional method)
+   # First create a virtual environment:
+   python -m venv .venv
+   source .venv/bin/activate               # On Windows: .venv\Scripts\activate
+   # Then install dependencies:
+   pip install -r requirements.txt         # Core dependencies only
+   pip install -r requirements-dev.txt     # All dependencies including dev tools
+   # Or install as editable package:
+   pip install -e .                        # Editable install with core deps
    
    # Install Frontend dependencies  
    cd frontend && pnpm install && cd ..

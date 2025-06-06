@@ -1,14 +1,14 @@
-# TripSage AI Core Dependencies
+# TripSage AI Development Dependencies
 # Auto-generated from pyproject.toml
-# 
-# This file provides an alternative installation method for users who prefer
-# traditional requirements.txt workflow. It contains the same dependencies
-# as defined in pyproject.toml [project.dependencies].
+#
+# This file includes ALL dependencies (core + development + testing + linting)
+# as defined in pyproject.toml. It provides an alternative installation method
+# for users who prefer traditional requirements.txt workflow.
 #
 # Installation methods:
-# - Using uv (recommended): uv sync
-# - Using uv with this file: uv pip install -r requirements.txt
-# - Using pip: pip install -r requirements.txt
+# - Using uv (recommended): uv sync --group dev
+# - Using uv with this file: uv pip install -r requirements-dev.txt
+# - Using pip: pip install -r requirements-dev.txt
 
 # Core web framework and async support
 aiofiles>=24.1.0
@@ -62,3 +62,26 @@ opentelemetry-sdk>=1.21.0
 opentelemetry-instrumentation-redis>=0.42b0
 opentelemetry-exporter-otlp>=1.21.0
 psutil>=5.9.0
+
+# Core testing framework
+pytest>=8.4.0
+pytest-asyncio>=1.0.0
+pytest-cov>=6.1.1
+pytest-mock>=3.14.1
+pytest-timeout>=2.3.1
+
+# Testing utilities and mocking
+pytest-benchmark>=4.0.0
+pytest-httpx>=0.35.0
+fakeredis>=2.29.0
+nest-asyncio>=1.6.0
+
+# Coverage reporting
+coverage[toml]>=7.6.9
+
+# Code formatting and linting
+ruff>=0.11.9
+mypy>=1.8.0
+
+# Additional development tools
+radon>=6.0.1

@@ -19,6 +19,10 @@ This streamlined TODO list tracks current development priorities for TripSage AI
 
 > **Note**: See [`tasks/COMPLETED-TODO.md`](tasks/COMPLETED-TODO.md) for comprehensive completion history and architectural details.
 
+### ⚠️ Breaking Changes (v0.1.0)
+
+- **Database Service**: Supabase client initialization parameter changed from `timeout` to `postgrest_client_timeout` in `database_service.py`. Update any custom database configurations accordingly.
+
 ### Coding Standards
 
 - Python 3.12, PEP-8 (88-char lines), mandatory type hints
