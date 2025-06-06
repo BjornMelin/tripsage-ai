@@ -11,14 +11,14 @@ from pydantic import BaseModel, Field
 
 class PriceRange(BaseModel):
     """Price range filter."""
-    
+
     min: float = Field(ge=0, description="Minimum price")
     max: float = Field(ge=0, description="Maximum price")
 
 
 class ActivitySearchRequest(BaseModel):
     """Activity search request model."""
-    
+
     destination: str = Field(
         ...,
         min_length=1,
@@ -32,7 +32,7 @@ class ActivitySearchRequest(BaseModel):
     adults: int = Field(1, ge=1, le=20, description="Number of adults")
     children: int = Field(0, ge=0, le=20, description="Number of children")
     infants: int = Field(0, ge=0, le=10, description="Number of infants")
-    
+
     # Filters
     categories: Optional[List[str]] = Field(
         None,
@@ -44,16 +44,14 @@ class ActivitySearchRequest(BaseModel):
         le=1440,
         description="Maximum duration in minutes",
     )
-    price_range: Optional[PriceRange] = Field(
-        None, description="Price range filter"
-    )
+    price_range: Optional[PriceRange] = Field(None, description="Price range filter")
     rating: Optional[float] = Field(
         None,
         ge=0,
         le=5,
         description="Minimum rating filter",
     )
-    
+
     # Additional preferences
     wheelchair_accessible: Optional[bool] = Field(
         None, description="Filter for wheelchair accessible activities"
@@ -68,7 +66,7 @@ class ActivitySearchRequest(BaseModel):
 
 class SaveActivityRequest(BaseModel):
     """Save activity to trip request model."""
-    
+
     activity_id: str = Field(..., description="Activity ID to save")
     trip_id: Optional[str] = Field(None, description="Trip ID to add activity to")
     notes: Optional[str] = Field(

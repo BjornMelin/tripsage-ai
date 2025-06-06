@@ -7,7 +7,7 @@ import logging
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from tripsage.api.schemas.requests.activities import (
     ActivitySearchRequest,
@@ -41,7 +41,9 @@ security = HTTPBearer()
 async def search_activities(
     search_request: ActivitySearchRequest,
     skip: int = Query(0, ge=0, description="Number of activities to skip"),
-    limit: int = Query(20, ge=1, le=100, description="Max number of activities to return"),
+    limit: int = Query(
+        20, ge=1, le=100, description="Max number of activities to return"
+    ),
     destination_service: DestinationService = Depends(get_destination_service),
 ):
     """Search for activities based on search criteria.
@@ -61,13 +63,13 @@ async def search_activities(
     try:
         # For now, we'll use the destination service to provide location context
         # In a full implementation, this would integrate with activity providers
-        
+
         # Mock response for initial implementation
         activities: List[ActivityResponse] = []
-        
+
         # TODO: Integrate with actual activity providers (Viator, GetYourGuide, etc.)
         # For now, return mock data based on destination
-        
+
         if search_request.destination:
             # Mock activities based on popular destinations
             mock_activities = {
@@ -130,30 +132,33 @@ async def search_activities(
                     ),
                 ],
             }
-            
+
             destination_key = search_request.destination.lower()
             for key, acts in mock_activities.items():
                 if key in destination_key:
                     activities = acts
                     break
-        
+
         # Apply filters if provided
         if search_request.categories:
             activities = [a for a in activities if a.type in search_request.categories]
-        
+
         if search_request.price_range:
             activities = [
-                a for a in activities
-                if search_request.price_range.min <= a.price <= search_request.price_range.max
+                a
+                for a in activities
+                if search_request.price_range.min
+                <= a.price
+                <= search_request.price_range.max
             ]
-        
+
         if search_request.rating:
             activities = [a for a in activities if a.rating >= search_request.rating]
-        
+
         # Apply pagination
         total = len(activities)
         activities = activities[skip : skip + limit]
-        
+
         return ActivitySearchResponse(
             activities=activities,
             total=total,
@@ -162,11 +167,13 @@ async def search_activities(
             filters_applied={
                 "destination": search_request.destination,
                 "categories": search_request.categories,
-                "price_range": search_request.price_range.model_dump() if search_request.price_range else None,
+                "price_range": search_request.price_range.model_dump()
+                if search_request.price_range
+                else None,
                 "rating": search_request.rating,
             },
         )
-        
+
     except Exception as e:
         logger.error(f"Activity search failed: {str(e)}")
         raise HTTPException(
@@ -197,7 +204,7 @@ async def get_activity(
     try:
         # TODO: Implement actual activity lookup
         # For now, return mock data
-        
+
         mock_activities = {
             "act-1": ActivityResponse(
                 id="act-1",
@@ -213,16 +220,16 @@ async def get_activity(
                 coordinates={"lat": 48.8584, "lng": 2.2945},
             ),
         }
-        
+
         activity = mock_activities.get(activity_id)
         if not activity:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Activity not found",
             )
-        
+
         return activity
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -261,10 +268,10 @@ async def save_activity(
         # Get current user
         token = credentials.credentials
         current_user = await auth_service.get_current_user(token)
-        
+
         # TODO: Implement actual activity saving to trip/wishlist
         # For now, return mock confirmation
-        
+
         return SavedActivityResponse(
             activity_id=save_request.activity_id,
             trip_id=save_request.trip_id,
@@ -272,7 +279,7 @@ async def save_activity(
             saved_at="2025-06-06T12:00:00Z",
             notes=save_request.notes,
         )
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -310,12 +317,12 @@ async def get_saved_activities(
         # Get current user
         token = credentials.credentials
         current_user = await auth_service.get_current_user(token)
-        
+
         # TODO: Implement actual saved activities retrieval
         # For now, return empty list
-        
+
         return []
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -350,12 +357,12 @@ async def remove_saved_activity(
         # Get current user
         token = credentials.credentials
         current_user = await auth_service.get_current_user(token)
-        
+
         # TODO: Implement actual activity removal
         # For now, just return success
-        
+
         logger.info(f"Removed activity {activity_id} for user {current_user.id}")
-        
+
     except HTTPException:
         raise
     except Exception as e:

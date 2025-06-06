@@ -10,17 +10,17 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from tripsage.api.core.dependencies import get_principal_id, require_principal_dep
 from tripsage.api.middlewares.authentication import Principal
 from tripsage.api.schemas.itineraries import (
+    ItineraryConflictCheckResponse,
     ItineraryCreateRequest,
     ItineraryItemCreateRequest,
+    ItineraryItemResponse,
     ItineraryItemUpdateRequest,
     ItineraryOptimizeRequest,
-    ItinerarySearchRequest,
-    ItineraryUpdateRequest,
-    ItineraryConflictCheckResponse,
-    ItineraryItemResponse,
     ItineraryOptimizeResponse,
     ItineraryResponse,
+    ItinerarySearchRequest,
     ItinerarySearchResponse,
+    ItineraryUpdateRequest,
 )
 from tripsage_core.exceptions.exceptions import (
     CoreResourceNotFoundError as ResourceNotFoundError,

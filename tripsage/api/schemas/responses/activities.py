@@ -3,7 +3,6 @@
 This module defines Pydantic models for activity-related API responses.
 """
 
-from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
@@ -11,14 +10,14 @@ from pydantic import BaseModel, Field
 
 class ActivityCoordinates(BaseModel):
     """Geographic coordinates."""
-    
+
     lat: float = Field(..., ge=-90, le=90, description="Latitude")
     lng: float = Field(..., ge=-180, le=180, description="Longitude")
 
 
 class ActivityResponse(BaseModel):
     """Activity response model."""
-    
+
     id: str = Field(..., description="Activity ID")
     name: str = Field(..., description="Activity name")
     type: str = Field(..., description="Activity type (tour, museum, adventure, etc.)")
@@ -32,7 +31,7 @@ class ActivityResponse(BaseModel):
     coordinates: Optional[ActivityCoordinates] = Field(
         None, description="Geographic coordinates"
     )
-    
+
     # Additional details
     provider: Optional[str] = Field(None, description="Activity provider name")
     availability: Optional[str] = Field(None, description="Availability status")
@@ -53,7 +52,7 @@ class ActivityResponse(BaseModel):
 
 class ActivitySearchResponse(BaseModel):
     """Activity search response model."""
-    
+
     activities: List[ActivityResponse] = Field(
         default_factory=list, description="List of activities"
     )
@@ -63,7 +62,7 @@ class ActivitySearchResponse(BaseModel):
     filters_applied: Optional[Dict[str, Any]] = Field(
         None, description="Applied search filters"
     )
-    
+
     # Search metadata
     search_id: Optional[str] = Field(None, description="Search session ID")
     cached: Optional[bool] = Field(None, description="Whether results are from cache")
@@ -74,13 +73,13 @@ class ActivitySearchResponse(BaseModel):
 
 class SavedActivityResponse(BaseModel):
     """Saved activity response model."""
-    
+
     activity_id: str = Field(..., description="Activity ID")
     trip_id: Optional[str] = Field(None, description="Associated trip ID")
     user_id: str = Field(..., description="User ID who saved the activity")
     saved_at: str = Field(..., description="When activity was saved (ISO format)")
     notes: Optional[str] = Field(None, description="User notes about the activity")
-    
+
     # Optional activity details (for list views)
     activity: Optional[ActivityResponse] = Field(
         None, description="Full activity details"
