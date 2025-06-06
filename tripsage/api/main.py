@@ -24,6 +24,7 @@ from tripsage.api.middlewares import (
 )
 from tripsage.api.routers import (
     accommodations,
+    activities,
     attachments,
     auth,
     chat,
@@ -33,6 +34,7 @@ from tripsage.api.routers import (
     itineraries,
     keys,
     memory,
+    search,
     trips,
     websocket,
 )
@@ -544,6 +546,8 @@ def create_app() -> FastAPI:
     app.include_router(
         itineraries.router, prefix="/api/itineraries", tags=["itineraries"]
     )
+    app.include_router(activities.router, prefix="/api/activities", tags=["activities"])
+    app.include_router(search.router, prefix="/api/search", tags=["search"])
     app.include_router(memory.router, prefix="/api", tags=["memory"])
     app.include_router(websocket.router, prefix="/api", tags=["websocket"])
 

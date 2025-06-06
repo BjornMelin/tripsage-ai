@@ -5,6 +5,7 @@ This package contains FastAPI router modules organized by domain.
 
 __all__ = [
     "accommodations",
+    "activities",
     "attachments",
     "auth",
     "chat",
@@ -14,6 +15,7 @@ __all__ = [
     "itineraries",
     "keys",
     "memory",
+    "search",
     "trips",
     "websocket",
 ]
