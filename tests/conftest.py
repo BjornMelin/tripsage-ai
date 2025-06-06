@@ -305,6 +305,9 @@ def mock_web_operations_cache():
 def mock_settings_and_redis(monkeypatch):
     """Mock settings and Redis client to avoid actual connections and
     validation errors."""
+    # Import the mock cache service
+    from tests.test_cache_mock import MockCacheService, mock_get_cache_service
+    
     # Set environment variables for testing
     monkeypatch.setenv("SUPABASE_URL", "https://test.supabase.co")
     monkeypatch.setenv("SUPABASE_ANON_KEY", "test_anon_key")
@@ -324,10 +327,22 @@ def mock_settings_and_redis(monkeypatch):
     # Mock database settings
     mock_settings.database.supabase_url = "https://test.supabase.co"
     mock_settings.database.supabase_anon_key = "test_anon_key"
+    mock_settings.database_url = "postgresql://postgres:password@localhost:5432/postgres"
+    mock_settings.database_password = "password"
 
     # Mock memory service (Mem0)
     mock_settings.memory.service_type = "mem0"
     mock_settings.memory.api_key = "test_mem0_key"
+    
+    # Mock cache settings
+    mock_settings.enable_caching = False  # Disable caching for tests
+    mock_settings.dragonfly = MagicMock()
+    mock_settings.dragonfly.url = "redis://localhost:6379/1"
+    mock_settings.dragonfly.password = "test_password"
+    mock_settings.dragonfly.max_connections = 10
+    mock_settings.dragonfly.ttl_short = 300
+    mock_settings.dragonfly.ttl_medium = 3600
+    mock_settings.dragonfly.ttl_long = 86400
 
     # Mock Redis client
     mock_redis_client = MagicMock()
@@ -339,6 +354,26 @@ def mock_settings_and_redis(monkeypatch):
     mock_redis_client.expire = AsyncMock(return_value=True)
 
     mock_from_url = MagicMock(return_value=mock_redis_client)
+    
+    # Create mock cache service instance
+    mock_cache_instance = MockCacheService()
+
+    # Create mock database service
+    mock_db_service = MagicMock()
+    mock_db_service.get_session = AsyncMock()
+    mock_db_service.execute = AsyncMock()
+    mock_db_service.fetch_one = AsyncMock()
+    mock_db_service.fetch_all = AsyncMock()
+    mock_db_service.save = AsyncMock()
+    mock_db_service.delete = AsyncMock()
+    mock_db_service.update = AsyncMock()
+    mock_db_service.create = AsyncMock()
+    mock_db_service.get_user_by_email = AsyncMock(return_value=None)
+    mock_db_service.get_user = AsyncMock(return_value=None)
+    
+    async def mock_get_database_service():
+        """Mock get_database_service function."""
+        return mock_db_service
 
     # Apply all the patches we need
     with (
@@ -349,10 +384,17 @@ def mock_settings_and_redis(monkeypatch):
         patch("tripsage_core.config.base_app_settings.settings", mock_settings),
         patch("redis.asyncio.from_url", mock_from_url),
         patch("redis.from_url", mock_from_url),
+        patch("tripsage_core.services.infrastructure.cache_service.get_cache_service", mock_get_cache_service),
+        patch("tripsage_core.services.infrastructure.get_cache_service", mock_get_cache_service),
+        patch("tripsage_core.utils.cache_utils.get_cache_instance", mock_get_cache_service),
+        patch("tripsage_core.services.infrastructure.database_service.get_database_service", mock_get_database_service),
+        patch("tripsage_core.services.infrastructure.get_database_service", mock_get_database_service),
     ):
         yield {
             "settings": mock_settings,
             "redis": mock_redis_client,
+            "cache": mock_cache_instance,
+            "database": mock_db_service,
         }
 
 
@@ -443,6 +485,11 @@ def mock_database_service():
     mock.save = AsyncMock()
     mock.delete = AsyncMock()
     mock.update = AsyncMock()
+    mock.create = AsyncMock()
+    mock.get_user_by_email = AsyncMock(return_value=None)
+    mock.get_user = AsyncMock(return_value=None)
+    mock.update_user = AsyncMock(return_value={"id": "test-id", "email": "test@example.com"})
+    mock.delete_user = AsyncMock(return_value=True)
     return mock
 
 
@@ -640,6 +687,37 @@ def mock_database_session():
     session.query = Mock()
     session.execute = Mock()
     return session
+
+
+# Mock Supabase client
+@pytest.fixture(autouse=True)
+def mock_supabase_client():
+    """Mock Supabase client to avoid connection issues during tests."""
+    mock_client = MagicMock()
+    
+    # Mock table operations
+    mock_table = MagicMock()
+    mock_table.select = MagicMock(return_value=mock_table)
+    mock_table.insert = MagicMock(return_value=mock_table)
+    mock_table.update = MagicMock(return_value=mock_table)
+    mock_table.delete = MagicMock(return_value=mock_table)
+    mock_table.eq = MagicMock(return_value=mock_table)
+    mock_table.execute = AsyncMock(return_value={"data": [], "error": None})
+    
+    # Mock auth operations
+    mock_auth = MagicMock()
+    mock_auth.sign_up = AsyncMock(return_value={"user": {"id": "test-user-id"}, "session": None})
+    mock_auth.sign_in_with_password = AsyncMock(return_value={"user": {"id": "test-user-id"}, "session": {"access_token": "test-token"}})
+    mock_auth.sign_out = AsyncMock(return_value=None)
+    mock_auth.get_user = AsyncMock(return_value={"user": {"id": "test-user-id", "email": "test@example.com"}})
+    
+    mock_client.table = MagicMock(return_value=mock_table)
+    mock_client.auth = mock_auth
+    mock_client.from_ = MagicMock(return_value=mock_table)
+    
+    # Patch Supabase client creation
+    with patch("supabase.create_client", return_value=mock_client):
+        yield mock_client
 
 
 # Clean up after tests
