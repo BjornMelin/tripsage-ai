@@ -1,5 +1,5 @@
-import path from "path";
-import * as fs from "fs/promises";
+import * as fs from "node:fs/promises";
+import path from "node:path";
 import { NextRequest } from "next/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { POST } from "../route";
@@ -15,9 +15,9 @@ global.fetch = vi.fn();
 
 // Mock crypto for consistent UUIDs
 vi.mock("crypto", async (importOriginal) => {
-  const actual = await importOriginal();
+  const actual = await importOriginal<typeof import("crypto")>();
   return {
-    ...actual,
+    ...(actual as object),
     randomUUID: vi.fn(() => "test-uuid-1234"),
   };
 });
