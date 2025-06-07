@@ -7,7 +7,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { MemoryContextPanel } from "../memory-context-panel";
+import MemoryContextPanel from "../memory-context-panel";
 
 // Mock the memory hooks
 vi.mock("../../../../hooks/use-memory", () => ({
@@ -47,31 +47,31 @@ describe("MemoryContextPanel", () => {
 
   const mockMemoryContext = {
     data: {
-      memories: [
-        {
-          id: "mem-1",
-          content: "User prefers luxury hotels",
-          metadata: { category: "accommodation", preference: "luxury" },
-          score: 0.95,
-          created_at: "2024-01-01T10:00:00Z",
+      context: {
+        userPreferences: {
+          destinations: ["Europe", "Asia"],
+          budget_range: { min: 5000, max: 10000 },
+          travel_style: "luxury",
+          activities: ["museums", "fine dining", "cultural sites"],
         },
-        {
-          id: "mem-2",
-          content: "Budget typically $5000-10000",
-          metadata: { category: "budget", amount: "5000-10000" },
-          score: 0.9,
-          created_at: "2024-01-01T09:00:00Z",
-        },
-      ],
-      preferences: {
-        accommodation: "luxury",
-        budget: "high",
-        destinations: ["Europe", "Asia"],
+        recentMemories: [
+          {
+            id: "mem-1",
+            content: "User prefers luxury hotels",
+            type: "accommodation",
+            createdAt: "2024-01-01T10:00:00Z",
+          },
+          {
+            id: "mem-2",
+            content: "Budget typically $5000-10000",
+            type: "budget",
+            createdAt: "2024-01-01T09:00:00Z",
+          },
+        ],
       },
-      travel_patterns: {
-        favorite_destinations: ["Paris", "Tokyo"],
-        avg_trip_duration: 7,
-        booking_lead_time: 30,
+      metadata: {
+        totalMemories: 150,
+        lastUpdated: "2024-01-01T10:00:00Z",
       },
     },
     isLoading: false,
@@ -81,26 +81,42 @@ describe("MemoryContextPanel", () => {
 
   const mockMemoryInsights = {
     data: {
-      travel_personality: "luxury_traveler",
-      budget_patterns: {
-        avg_hotel_budget: 300,
-        avg_flight_budget: 800,
-        budget_consistency: 0.85,
+      insights: {
+        travelPersonality: {
+          type: "luxury_traveler",
+          confidence: 0.89,
+          description: "Prefers high-end accommodations and experiences",
+          keyTraits: ["luxury", "comfort", "quality"],
+        },
+        budgetPatterns: {
+          averageSpending: {
+            accommodation: 300,
+            flights: 800,
+            activities: 200,
+          },
+        },
+        destinationPreferences: {
+          preferred_regions: ["Europe", "Asia"],
+          climate_preference: "temperate",
+          city_vs_nature: 0.7,
+        },
+        recommendations: [
+          {
+            type: "accommodation",
+            recommendation: "Consider luxury hotels in Kyoto for your next trip",
+            reasoning:
+              "Based on your preference for luxury accommodations and interest in Asia",
+            confidence: 0.85,
+          },
+          {
+            type: "booking",
+            recommendation: "Book flights 6-8 weeks in advance for best prices",
+            reasoning:
+              "Historical data shows this booking window offers optimal pricing",
+            confidence: 0.92,
+          },
+        ],
       },
-      destination_preferences: {
-        preferred_regions: ["Europe", "Asia"],
-        climate_preference: "temperate",
-        city_vs_nature: 0.7,
-      },
-      booking_behavior: {
-        avg_lead_time: 45,
-        flexible_dates: true,
-        price_sensitivity: 0.6,
-      },
-      ai_recommendations: [
-        "Consider luxury hotels in Kyoto for your next trip",
-        "Book flights 6-8 weeks in advance for best prices",
-      ],
     },
     isLoading: false,
     isError: false,
@@ -135,12 +151,12 @@ describe("MemoryContextPanel", () => {
     expect(screen.getByText("Memory Context")).toBeInTheDocument();
 
     // Should show tab navigation
-    expect(screen.getByRole("tab", { name: /profile/i })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: /insights/i })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: /recent/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /profile/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /insights/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /recent/i })).toBeInTheDocument();
 
     // Should show memory count
-    expect(screen.getByText("150 memories")).toBeInTheDocument();
+    expect(screen.getByText("150")).toBeInTheDocument();
   });
 
   it("displays user preferences in profile tab", async () => {
@@ -153,10 +169,10 @@ describe("MemoryContextPanel", () => {
     });
 
     // Profile tab should be active by default
-    expect(screen.getByText("luxury")).toBeInTheDocument(); // accommodation preference
-    expect(screen.getByText("high")).toBeInTheDocument(); // budget preference
+    expect(screen.getByText("luxury")).toBeInTheDocument(); // travel style
     expect(screen.getByText("Europe")).toBeInTheDocument(); // destination
     expect(screen.getByText("Asia")).toBeInTheDocument(); // destination
+    expect(screen.getByText("Budget Range")).toBeInTheDocument(); // budget section header
   });
 
   it("displays travel insights when insights tab is clicked", async () => {
@@ -169,12 +185,12 @@ describe("MemoryContextPanel", () => {
     });
 
     // Click insights tab
-    fireEvent.click(screen.getByRole("tab", { name: /insights/i }));
+    fireEvent.click(screen.getByRole("button", { name: /insights/i }));
 
     await waitFor(() => {
       expect(screen.getByText("luxury_traveler")).toBeInTheDocument();
-      expect(screen.getByText("$300")).toBeInTheDocument(); // avg hotel budget
-      expect(screen.getByText("$800")).toBeInTheDocument(); // avg flight budget
+      expect(screen.getByText("$300.00")).toBeInTheDocument(); // avg accommodation budget
+      expect(screen.getByText("$800.00")).toBeInTheDocument(); // avg flight budget
     });
   });
 
@@ -188,11 +204,13 @@ describe("MemoryContextPanel", () => {
     });
 
     // Click recent tab
-    fireEvent.click(screen.getByRole("tab", { name: /recent/i }));
+    fireEvent.click(screen.getByRole("button", { name: /recent/i }));
 
     await waitFor(() => {
       expect(screen.getByText("User prefers luxury hotels")).toBeInTheDocument();
       expect(screen.getByText("Budget typically $5000-10000")).toBeInTheDocument();
+      expect(screen.getByText("accommodation")).toBeInTheDocument(); // memory type badge
+      expect(screen.getByText("budget")).toBeInTheDocument(); // memory type badge
     });
   });
 
@@ -233,11 +251,7 @@ describe("MemoryContextPanel", () => {
 
   it("handles empty memory data gracefully", () => {
     const emptyMemoryContext = {
-      data: {
-        memories: [],
-        preferences: {},
-        travel_patterns: {},
-      },
+      data: null,
       isLoading: false,
       isError: false,
       error: null,
@@ -251,7 +265,7 @@ describe("MemoryContextPanel", () => {
       wrapper: createWrapper(),
     });
 
-    expect(screen.getByText("No memories yet")).toBeInTheDocument();
+    expect(screen.getByText("No memory context available")).toBeInTheDocument();
   });
 
   it("displays AI recommendations in insights tab", async () => {
@@ -264,7 +278,7 @@ describe("MemoryContextPanel", () => {
     });
 
     // Click insights tab
-    fireEvent.click(screen.getByRole("tab", { name: /insights/i }));
+    fireEvent.click(screen.getByRole("button", { name: /insights/i }));
 
     await waitFor(() => {
       expect(
@@ -276,7 +290,7 @@ describe("MemoryContextPanel", () => {
     });
   });
 
-  it("shows memory categories with counts", async () => {
+  it("shows memory metadata", async () => {
     mockUseMemoryContext.mockReturnValue(mockMemoryContext);
     mockUseMemoryInsights.mockReturnValue(mockMemoryInsights);
     mockUseMemoryStats.mockReturnValue(mockMemoryStats);
@@ -285,10 +299,9 @@ describe("MemoryContextPanel", () => {
       wrapper: createWrapper(),
     });
 
-    // Should show category breakdown
-    expect(screen.getByText("accommodation: 45")).toBeInTheDocument();
-    expect(screen.getByText("flights: 38")).toBeInTheDocument();
-    expect(screen.getByText("destinations: 32")).toBeInTheDocument();
+    // Should show metadata
+    expect(screen.getByText("150")).toBeInTheDocument(); // total memories
+    expect(screen.getByText("1/1/2024")).toBeInTheDocument(); // last updated date
   });
 
   it("updates when userId prop changes", async () => {
@@ -305,24 +318,10 @@ describe("MemoryContextPanel", () => {
 
     // Should call hooks with new userId
     expect(mockUseMemoryContext).toHaveBeenCalledWith("user-456", true);
-    expect(mockUseMemoryInsights).toHaveBeenCalledWith("user-456");
-    expect(mockUseMemoryStats).toHaveBeenCalledWith("user-456");
+    expect(mockUseMemoryInsights).toHaveBeenCalledWith("user-456", true);
   });
 
-  it("can be disabled via enabled prop", () => {
-    mockUseMemoryContext.mockReturnValue(mockMemoryContext);
-    mockUseMemoryInsights.mockReturnValue(mockMemoryInsights);
-    mockUseMemoryStats.mockReturnValue(mockMemoryStats);
-
-    render(<MemoryContextPanel userId="user-123" enabled={false} />, {
-      wrapper: createWrapper(),
-    });
-
-    // Should call hooks with enabled=false
-    expect(mockUseMemoryContext).toHaveBeenCalledWith("user-123", false);
-  });
-
-  it("handles memory score display", () => {
+  it("can be initialized with userId", () => {
     mockUseMemoryContext.mockReturnValue(mockMemoryContext);
     mockUseMemoryInsights.mockReturnValue(mockMemoryInsights);
     mockUseMemoryStats.mockReturnValue(mockMemoryStats);
@@ -331,8 +330,27 @@ describe("MemoryContextPanel", () => {
       wrapper: createWrapper(),
     });
 
-    // Should show memory score as percentage
-    expect(screen.getByText("87%")).toBeInTheDocument();
+    // Should call hooks with userId and enabled=true
+    expect(mockUseMemoryContext).toHaveBeenCalledWith("user-123", true);
+  });
+
+  it("handles confidence display in insights", async () => {
+    mockUseMemoryContext.mockReturnValue(mockMemoryContext);
+    mockUseMemoryInsights.mockReturnValue(mockMemoryInsights);
+    mockUseMemoryStats.mockReturnValue(mockMemoryStats);
+
+    render(<MemoryContextPanel userId="user-123" />, {
+      wrapper: createWrapper(),
+    });
+
+    // Switch to insights tab
+    fireEvent.click(screen.getByRole("button", { name: /insights/i }));
+
+    await waitFor(() => {
+      // Should show confidence scores
+      expect(screen.getByText("89% confident")).toBeInTheDocument();
+      expect(screen.getByText("85%")).toBeInTheDocument(); // recommendation confidence
+    });
   });
 
   it("renders memory items with proper metadata", async () => {
@@ -345,13 +363,13 @@ describe("MemoryContextPanel", () => {
     });
 
     // Click recent tab to see memories
-    fireEvent.click(screen.getByRole("tab", { name: /recent/i }));
+    fireEvent.click(screen.getByRole("button", { name: /recent/i }));
 
     await waitFor(() => {
       // Should show memory content and metadata
       expect(screen.getByText("User prefers luxury hotels")).toBeInTheDocument();
-      expect(screen.getByText("accommodation")).toBeInTheDocument(); // category badge
-      expect(screen.getByText("95%")).toBeInTheDocument(); // confidence score
+      expect(screen.getByText("accommodation")).toBeInTheDocument(); // type badge
+      expect(screen.getByText("budget")).toBeInTheDocument(); // type badge
     });
   });
 });

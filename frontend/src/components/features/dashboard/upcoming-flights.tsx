@@ -11,7 +11,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useUpcomingFlights, type UpcomingFlight } from "@/hooks/use-trips";
+import { type UpcomingFlight, useUpcomingFlights } from "@/hooks/use-trips";
 import { Calendar, Clock, Plane, Users } from "lucide-react";
 import Link from "next/link";
 

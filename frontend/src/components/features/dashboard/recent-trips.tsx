@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useTrips } from "@/hooks/use-trips";
+import type { Trip } from "@/stores/trip-store";
 import { Calendar, Clock, MapPin } from "lucide-react";
 import Link from "next/link";
 
@@ -43,7 +44,7 @@ function TripCardSkeleton() {
   );
 }
 
-function TripCard({ trip }: { trip: any }) {
+function TripCard({ trip }: { trip: Trip }) {
   const formatDate = (dateString?: string) => {
     if (!dateString) return "Not set";
     return new Date(dateString).toLocaleDateString("en-US", {
@@ -55,24 +56,24 @@ function TripCard({ trip }: { trip: any }) {
 
   const getDestinationText = () => {
     if (!trip.destinations || trip.destinations.length === 0) return "No destinations";
-    if (trip.destinations.length === 1) return trip.destinations[0];
-    return `${trip.destinations[0]} (+${trip.destinations.length - 1} more)`;
+    if (trip.destinations.length === 1) return trip.destinations[0].name;
+    return `${trip.destinations[0].name} (+${trip.destinations.length - 1} more)`;
   };
 
   const getTripDuration = () => {
-    if (!trip.start_date || !trip.end_date) return null;
-    const start = new Date(trip.start_date);
-    const end = new Date(trip.end_date);
+    if (!trip.startDate || !trip.endDate) return null;
+    const start = new Date(trip.startDate);
+    const end = new Date(trip.endDate);
     const diffTime = Math.abs(end.getTime() - start.getTime());
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     return `${diffDays} day${diffDays !== 1 ? "s" : ""}`;
   };
 
   const getTripStatus = () => {
-    if (!trip.start_date || !trip.end_date) return "draft";
+    if (!trip.startDate || !trip.endDate) return "draft";
     const now = new Date();
-    const start = new Date(trip.start_date);
-    const end = new Date(trip.end_date);
+    const start = new Date(trip.startDate);
+    const end = new Date(trip.endDate);
 
     if (now < start) return "upcoming";
     if (now >= start && now <= end) return "ongoing";
@@ -88,7 +89,7 @@ function TripCard({ trip }: { trip: any }) {
       className="block p-3 border border-border rounded-lg hover:bg-accent/50 transition-colors"
     >
       <div className="flex items-start justify-between mb-2">
-        <h4 className="font-medium text-sm truncate pr-2">{trip.title}</h4>
+        <h4 className="font-medium text-sm truncate pr-2">{trip.name}</h4>
         <Badge
           variant={
             status === "upcoming"
@@ -118,12 +119,12 @@ function TripCard({ trip }: { trip: any }) {
         )}
       </div>
 
-      {trip.start_date && (
+      {trip.startDate && (
         <div className="flex items-center gap-1 text-xs text-muted-foreground">
           <Calendar className="h-3 w-3" />
           <span>
-            {formatDate(trip.start_date)}
-            {trip.end_date && ` - ${formatDate(trip.end_date)}`}
+            {formatDate(trip.startDate)}
+            {trip.endDate && ` - ${formatDate(trip.endDate)}`}
           </span>
         </div>
       )}
@@ -199,7 +200,7 @@ export function RecentTrips({ limit = 5, showEmpty = true }: RecentTripsProps) {
           )
         ) : (
           <div className="space-y-3">
-            {recentTrips.map((trip) => (
+            {recentTrips.map((trip: Trip) => (
               <TripCard key={trip.id} trip={trip} />
             ))}
           </div>
