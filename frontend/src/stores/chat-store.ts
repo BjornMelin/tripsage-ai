@@ -801,7 +801,8 @@ export const useChatStore = create<ChatState>()(
             console.error("WebSocket error:", error);
             set({
               connectionStatus: "error",
-              error: error instanceof Error ? error.message : "WebSocket connection error",
+              error:
+                error instanceof Error ? error.message : "WebSocket connection error",
             });
           });
 

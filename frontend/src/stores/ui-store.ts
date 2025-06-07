@@ -358,10 +358,9 @@ export const useUIStore = create<UIState>()(
             }
 
             return id;
-          } else {
-            console.error("Invalid notification:", result.error);
-            return "";
           }
+          console.error("Invalid notification:", result.error);
+          return "";
         },
 
         removeNotification: (id) => {

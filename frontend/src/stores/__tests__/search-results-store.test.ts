@@ -58,16 +58,17 @@ describe("Search Results Store", () => {
 
       const context = result.current.currentContext;
       expect(context).not.toBeNull();
-      expect(context!.searchType).toBe("flight");
-      expect(context!.searchParams).toEqual(searchParams);
-      expect(context!.searchId).toBe(searchId);
-      expect(context!.startedAt).toBeDefined();
+      expect(context?.searchType).toBe("flight");
+      expect(context?.searchParams).toEqual(searchParams);
+      expect(context?.searchId).toBe(searchId);
+      expect(context?.startedAt).toBeDefined();
     });
 
     it("generates unique search IDs", () => {
       const { result } = renderHook(() => useSearchResultsStore());
 
-      let searchId1: string, searchId2: string;
+      let searchId1: string;
+      let searchId2: string;
 
       act(() => {
         searchId1 = result.current.startSearch("flight", {});
@@ -142,7 +143,7 @@ describe("Search Results Store", () => {
       expect(result.current.searchProgress).toBe(100);
 
       const context = result.current.currentContext;
-      expect(context!.completedAt).toBeDefined();
+      expect(context?.completedAt).toBeDefined();
     });
 
     it("fails search with error", () => {
@@ -160,8 +161,8 @@ describe("Search Results Store", () => {
       expect(result.current.error).toBe(errorMessage);
 
       const context = result.current.currentContext;
-      expect(context!.failedAt).toBeDefined();
-      expect(context!.error).toBe(errorMessage);
+      expect(context?.failedAt).toBeDefined();
+      expect(context?.error).toBe(errorMessage);
     });
 
     it("cancels search", () => {
@@ -177,7 +178,7 @@ describe("Search Results Store", () => {
       expect(result.current.isSearching).toBe(false);
 
       const context = result.current.currentContext;
-      expect(context!.cancelledAt).toBeDefined();
+      expect(context?.cancelledAt).toBeDefined();
     });
   });
 

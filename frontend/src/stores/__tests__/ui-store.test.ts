@@ -510,7 +510,9 @@ describe("UI Store", () => {
     it("computes unread notification count correctly", () => {
       const { result } = renderHook(() => useUIStore());
 
-      let id1: string, id2: string, id3: string;
+      let id1: string;
+      let id2: string;
+      let id3: string;
 
       act(() => {
         id1 = result.current.addNotification({ type: "info", title: "Info 1" });
@@ -818,7 +820,8 @@ describe("UI Store", () => {
       });
 
       // Add notifications
-      let infoId: string, warningId: string;
+      let infoId: string;
+      let warningId: string;
       act(() => {
         infoId = result.current.addNotification({
           type: "info",
@@ -921,7 +924,9 @@ describe("UI Store", () => {
       const { result } = renderHook(() => useUIStore());
 
       // Add different types of notifications
-      let successId: string, errorId: string, warningId: string;
+      let successId: string;
+      let errorId: string;
+      let warningId: string;
 
       act(() => {
         successId = result.current.addNotification({
