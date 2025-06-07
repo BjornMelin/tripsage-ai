@@ -20,7 +20,7 @@ async function handleResponse<T>(response: Response): Promise<T> {
   const contentType = response.headers.get("content-type");
 
   // Check if response is JSON
-  const isJson = contentType && contentType.includes("application/json");
+  const isJson = contentType?.includes("application/json");
   const data = isJson ? await response.json() : await response.text();
 
   if (!response.ok) {
@@ -131,3 +131,6 @@ export const api = {
       body: formData,
     }),
 };
+
+// Export as apiClient for backwards compatibility
+export const apiClient = api;
