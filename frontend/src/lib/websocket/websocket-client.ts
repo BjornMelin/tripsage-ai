@@ -356,7 +356,7 @@ export class WebSocketClient {
     if (!this.eventHandlers.has(event)) {
       this.eventHandlers.set(event, new Set());
     }
-    this.eventHandlers.get(event)!.add(handler as EventHandler);
+    this.eventHandlers.get(event)?.add(handler as EventHandler);
   }
 
   /**
@@ -654,7 +654,7 @@ export class WebSocketClient {
     }
 
     const attempt = this.state.reconnectAttempt + 1;
-    const delay = this.config.reconnectDelay * Math.pow(2, attempt - 1);
+    const delay = this.config.reconnectDelay * 2 ** (attempt - 1);
 
     this.log(
       `Reconnection attempt ${attempt}/${this.config.reconnectAttempts} in ${delay}ms`

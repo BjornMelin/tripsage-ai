@@ -110,7 +110,7 @@ export async function POST(req: NextRequest) {
     // Prepare headers for backend request
     const backendHeaders: HeadersInit = {};
     if (authHeader) {
-      backendHeaders["Authorization"] = authHeader;
+      backendHeaders.Authorization = authHeader;
     }
 
     // Forward to backend with timeout
@@ -154,49 +154,47 @@ export async function POST(req: NextRequest) {
               headers: { "Content-Type": "application/json" },
             }
           );
-        } else {
-          // Batch upload response
-          const batchData = responseData;
-          const transformedFiles = batchData.successful_uploads.map((file: any) => ({
-            id: file.file_id,
-            name: file.filename,
-            size: file.file_size,
-            type: file.mime_type,
-            url: `/api/attachments/${file.file_id}/download`,
-            status: file.processing_status, // Use processing_status instead of upload_status
-          }));
-
-          return new Response(
-            JSON.stringify({
-              files: transformedFiles,
-              urls: transformedFiles.map((f: any) => f.url),
-              batch_summary: {
-                total: batchData.total_files,
-                successful: batchData.successful_count,
-                failed: batchData.failed_count,
-                errors: batchData.failed_uploads,
-              },
-            }),
-            {
-              status: 200,
-              headers: { "Content-Type": "application/json" },
-            }
-          );
         }
-      } else {
-        // Forward backend error response
+        // Batch upload response
+        const batchData = responseData;
+        const transformedFiles = batchData.successful_uploads.map((file: any) => ({
+          id: file.file_id,
+          name: file.filename,
+          size: file.file_size,
+          type: file.mime_type,
+          url: `/api/attachments/${file.file_id}/download`,
+          status: file.processing_status, // Use processing_status instead of upload_status
+        }));
+
         return new Response(
           JSON.stringify({
-            error: responseData.detail || "Backend upload failed",
-            code: "BACKEND_ERROR",
-            backend_response: responseData,
+            files: transformedFiles,
+            urls: transformedFiles.map((f: any) => f.url),
+            batch_summary: {
+              total: batchData.total_files,
+              successful: batchData.successful_count,
+              failed: batchData.failed_count,
+              errors: batchData.failed_uploads,
+            },
           }),
           {
-            status: backendResponse.status,
+            status: 200,
             headers: { "Content-Type": "application/json" },
           }
         );
       }
+      // Forward backend error response
+      return new Response(
+        JSON.stringify({
+          error: responseData.detail || "Backend upload failed",
+          code: "BACKEND_ERROR",
+          backend_response: responseData,
+        }),
+        {
+          status: backendResponse.status,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
     } catch (fetchError) {
       clearTimeout(timeoutId);
 
@@ -259,7 +257,7 @@ export async function GET(req: NextRequest) {
 
     const backendHeaders: HeadersInit = {};
     if (authHeader) {
-      backendHeaders["Authorization"] = authHeader;
+      backendHeaders.Authorization = authHeader;
     }
 
     const backendResponse = await fetch(backendUrl, {
@@ -274,18 +272,17 @@ export async function GET(req: NextRequest) {
         status: 200,
         headers: { "Content-Type": "application/json" },
       });
-    } else {
-      return new Response(
-        JSON.stringify({
-          error: responseData.detail || "Failed to retrieve file metadata",
-          code: "BACKEND_ERROR",
-        }),
-        {
-          status: backendResponse.status,
-          headers: { "Content-Type": "application/json" },
-        }
-      );
     }
+    return new Response(
+      JSON.stringify({
+        error: responseData.detail || "Failed to retrieve file metadata",
+        code: "BACKEND_ERROR",
+      }),
+      {
+        status: backendResponse.status,
+        headers: { "Content-Type": "application/json" },
+      }
+    );
   } catch (error) {
     console.error("Error retrieving file metadata:", error);
     return new Response(

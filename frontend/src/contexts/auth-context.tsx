@@ -1,15 +1,18 @@
 "use client";
 
-import { type User, getCurrentUser, logoutAction } from "@/lib/auth/server-actions";
+// TODO: This is a temporary stub implementation pending Supabase Auth integration
+// All JWT-related functionality has been removed
+
 import { useRouter } from "next/navigation";
 import type React from "react";
-import {
-  createContext,
-  startTransition,
-  useContext,
-  useEffect,
-  useOptimistic,
-} from "react";
+import { createContext, startTransition, useContext, useState } from "react";
+
+// Temporary User type
+export interface User {
+  id: string;
+  email: string;
+  name?: string;
+}
 
 // Authentication context types
 interface AuthContextType {
@@ -51,57 +54,36 @@ interface AuthState {
 export function AuthProvider({ children, initialUser = null }: AuthProviderProps) {
   const router = useRouter();
 
-  // React 19 optimistic state management
-  const [authState, setAuthState] = useOptimistic<AuthState>(
-    {
-      user: initialUser,
-      isAuthenticated: !!initialUser,
-      isLoading: !initialUser,
-      error: null,
-    },
-    (currentState, optimisticValue: Partial<AuthState>) => ({
-      ...currentState,
-      ...optimisticValue,
-    })
-  );
+  // State management - will be replaced with Supabase Auth state
+  const [authState, setAuthStateInternal] = useState<AuthState>({
+    user: null, // Temporarily always null until Supabase Auth is implemented
+    isAuthenticated: false,
+    isLoading: false,
+    error: null,
+  });
 
-  // Load user on mount if not provided
-  useEffect(() => {
-    if (!initialUser) {
-      refreshUser();
-    }
-  }, [initialUser]);
+  const setAuthState = (update: Partial<AuthState>) => {
+    setAuthStateInternal((prev) => ({ ...prev, ...update }));
+  };
 
   // Refresh user data from server
   const refreshUser = async () => {
-    try {
-      setAuthState({ isLoading: true, error: null });
-
-      const user = await getCurrentUser();
-
-      startTransition(() => {
-        setAuthState({
-          user,
-          isAuthenticated: !!user,
-          isLoading: false,
-          error: null,
-        });
+    // TODO: Implement with Supabase Auth
+    console.log("refreshUser to be implemented with Supabase Auth");
+    startTransition(() => {
+      setAuthState({
+        user: null,
+        isAuthenticated: false,
+        isLoading: false,
+        error: null,
       });
-    } catch (error) {
-      console.error("Failed to refresh user:", error);
-      startTransition(() => {
-        setAuthState({
-          user: null,
-          isAuthenticated: false,
-          isLoading: false,
-          error: "Failed to load user data",
-        });
-      });
-    }
+    });
   };
 
   // Login function (optimistic)
   const login = (user: User) => {
+    // TODO: Implement with Supabase Auth
+    console.log("login to be implemented with Supabase Auth");
     startTransition(() => {
       setAuthState({
         user,
@@ -114,28 +96,15 @@ export function AuthProvider({ children, initialUser = null }: AuthProviderProps
 
   // Logout function
   const logout = async () => {
-    try {
-      // Optimistically clear user state
-      setAuthState({
-        user: null,
-        isAuthenticated: false,
-        isLoading: false,
-        error: null,
-      });
-
-      // Call server action to clear cookie
-      await logoutAction();
-
-      // Note: logoutAction redirects to "/" automatically
-    } catch (error) {
-      console.error("Logout failed:", error);
-      setAuthState({
-        error: "Failed to logout. Please try again.",
-      });
-
-      // Manual redirect on error
-      router.push("/");
-    }
+    // TODO: Implement with Supabase Auth
+    console.log("logout to be implemented with Supabase Auth");
+    setAuthState({
+      user: null,
+      isAuthenticated: false,
+      isLoading: false,
+      error: null,
+    });
+    router.push("/");
   };
 
   // Clear error
@@ -169,45 +138,14 @@ export function withAuth<P extends object>(
     const { user, isAuthenticated, isLoading } = useAuth();
     const router = useRouter();
 
-    useEffect(() => {
-      if (!isLoading && !isAuthenticated) {
-        const redirectUrl = options?.redirectTo || "/login";
-        router.push(redirectUrl);
-      }
-    }, [isLoading, isAuthenticated, router]);
-
-    // Show loading state while checking authentication
-    if (isLoading) {
-      return (
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-        </div>
-      );
-    }
-
-    // Don't render component if not authenticated
-    if (!isAuthenticated) {
-      return null;
-    }
-
-    // Check role-based access if specified
-    if (options?.allowedRoles && user) {
-      // This is a placeholder - implement role checking based on your user model
-      // if (!options.allowedRoles.includes(user.role)) {
-      //   return <div>Access Denied</div>;
-      // }
-    }
-
+    // TODO: Implement proper authentication check with Supabase Auth
+    // For now, allow access to all pages
     return <Component {...props} />;
   };
 }
 
 // Server component helper to get initial user
 export async function getServerUser(): Promise<User | null> {
-  try {
-    return await getCurrentUser();
-  } catch (error) {
-    console.error("Failed to get server user:", error);
-    return null;
-  }
+  // TODO: Implement with Supabase Auth
+  return null;
 }
