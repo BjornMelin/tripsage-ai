@@ -13,6 +13,8 @@ import type {
   DeleteKeyResponse,
   ValidateKeyResponse,
 } from "@/types/api-keys";
+import { useQueryClient } from "@tanstack/react-query";
+import { useEffect } from "react";
 
 /**
  * Hook for fetching all user API keys
@@ -20,16 +22,16 @@ import type {
 export function useApiKeys() {
   const { setKeys, setSupportedServices } = useApiKeyStore();
 
-  return useApiQuery<AllKeysResponse>(
-    "/api/user/keys",
-    {},
-    {
-      onSuccess: (data) => {
-        setKeys(data.keys);
-        setSupportedServices(data.supported_services);
-      },
+  const query = useApiQuery<AllKeysResponse>("/api/user/keys", {});
+
+  useEffect(() => {
+    if (query.data) {
+      setKeys(query.data.keys);
+      setSupportedServices(query.data.supported_services);
     }
-  );
+  }, [query.data, setKeys, setSupportedServices]);
+
+  return query;
 }
 
 /**
@@ -37,17 +39,24 @@ export function useApiKeys() {
  */
 export function useAddApiKey() {
   const { updateKey } = useApiKeyStore();
+  const queryClient = useQueryClient();
 
-  return useApiMutation<AddKeyResponse, AddKeyRequest>("/api/user/keys", {
-    onSuccess: (data) => {
-      updateKey(data.service, {
-        is_valid: data.is_valid,
+  const mutation = useApiMutation<AddKeyResponse, AddKeyRequest>("/api/user/keys");
+
+  useEffect(() => {
+    if (mutation.data) {
+      updateKey(mutation.data.service, {
+        is_valid: mutation.data.is_valid,
         has_key: true,
-        service: data.service,
+        service: mutation.data.service,
         last_validated: new Date().toISOString(),
       });
-    },
-  });
+      // Invalidate the API keys query to refetch the updated list
+      queryClient.invalidateQueries({ queryKey: ["/api/user/keys"] });
+    }
+  }, [mutation.data, updateKey, queryClient]);
+
+  return mutation;
 }
 
 /**
@@ -62,12 +71,17 @@ export function useValidateApiKey() {
  */
 export function useDeleteApiKey() {
   const { removeKey } = useApiKeyStore();
+  const queryClient = useQueryClient();
 
-  return useApiDeleteMutation<DeleteKeyResponse, string>("/api/user/keys", {
-    onSuccess: (data) => {
-      if (data.success) {
-        removeKey(data.service);
-      }
-    },
-  });
+  const mutation = useApiDeleteMutation<DeleteKeyResponse, string>("/api/user/keys");
+
+  useEffect(() => {
+    if (mutation.data?.success) {
+      removeKey(mutation.data.service);
+      // Invalidate the API keys query to refetch the updated list
+      queryClient.invalidateQueries({ queryKey: ["/api/user/keys"] });
+    }
+  }, [mutation.data, removeKey, queryClient]);
+
+  return mutation;
 }

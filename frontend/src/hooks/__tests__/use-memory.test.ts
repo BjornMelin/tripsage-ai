@@ -92,7 +92,8 @@ describe("Memory Hooks", () => {
       });
 
       expect(mockApiClient.get).not.toHaveBeenCalled();
-      expect(result.current.isIdle).toBe(true);
+      expect(result.current.isLoading).toBe(false);
+      expect(result.current.data).toBeUndefined();
     });
 
     it("should handle API errors gracefully", async () => {

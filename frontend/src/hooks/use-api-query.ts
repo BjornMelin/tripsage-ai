@@ -10,7 +10,7 @@ import {
 } from "@tanstack/react-query";
 
 type ApiQueryOptions<TData, TError> = Omit<
-  UseQueryOptions<TData, TError, TData, string[]>,
+  UseQueryOptions<TData, TError, TData, (string | Record<string, any>)[]>,
   "queryKey" | "queryFn"
 >;
 
@@ -25,7 +25,7 @@ export function useApiQuery<TData = any, TError = ApiError>(
   params?: Record<string, any>,
   options?: ApiQueryOptions<TData, TError>
 ) {
-  return useQuery<TData, TError, TData, string[]>({
+  return useQuery<TData, TError, TData, (string | Record<string, any>)[]>({
     queryKey: [endpoint, ...(params ? [params] : [])],
     queryFn: () => api.get<TData>(endpoint, { params }),
     ...options,
@@ -41,14 +41,7 @@ export function useApiMutation<TData = any, TVariables = any, TError = ApiError>
 
   return useMutation<TData, TError, TVariables, unknown>({
     mutationFn: (variables) => api.post<TData>(endpoint, variables),
-    onSuccess: (data, variables, context) => {
-      // Invalidate queries by default - override this in options if needed
-      if (options?.onSuccess) {
-        options.onSuccess(data, variables, context);
-      } else {
-        queryClient.invalidateQueries({ queryKey: [endpoint] });
-      }
-    },
+    // Remove onSuccess - let consumers handle it with useEffect
     ...options,
   });
 }
@@ -62,13 +55,7 @@ export function useApiPutMutation<TData = any, TVariables = any, TError = ApiErr
 
   return useMutation<TData, TError, TVariables, unknown>({
     mutationFn: (variables) => api.put<TData>(endpoint, variables),
-    onSuccess: (data, variables, context) => {
-      if (options?.onSuccess) {
-        options.onSuccess(data, variables, context);
-      } else {
-        queryClient.invalidateQueries({ queryKey: [endpoint] });
-      }
-    },
+    // Remove onSuccess - let consumers handle it with useEffect
     ...options,
   });
 }
@@ -82,13 +69,7 @@ export function useApiPatchMutation<TData = any, TVariables = any, TError = ApiE
 
   return useMutation<TData, TError, TVariables, unknown>({
     mutationFn: (variables) => api.patch<TData>(endpoint, variables),
-    onSuccess: (data, variables, context) => {
-      if (options?.onSuccess) {
-        options.onSuccess(data, variables, context);
-      } else {
-        queryClient.invalidateQueries({ queryKey: [endpoint] });
-      }
-    },
+    // Remove onSuccess - let consumers handle it with useEffect
     ...options,
   });
 }
@@ -102,13 +83,7 @@ export function useApiDeleteMutation<TData = any, TVariables = any, TError = Api
 
   return useMutation<TData, TError, TVariables, unknown>({
     mutationFn: (variables) => api.delete<TData>(`${endpoint}/${variables}`),
-    onSuccess: (data, variables, context) => {
-      if (options?.onSuccess) {
-        options.onSuccess(data, variables, context);
-      } else {
-        queryClient.invalidateQueries({ queryKey: [endpoint] });
-      }
-    },
+    // Remove onSuccess - let consumers handle it with useEffect
     ...options,
   });
 }
