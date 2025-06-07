@@ -1,9 +1,11 @@
 "use client";
 
 import { api } from "@/lib/api/client";
-import { useSearchStore } from "@/stores/search-store";
+import { useSearchParamsStore } from "@/stores/search-params-store";
+import { useSearchResultsStore } from "@/stores/search-results-store";
 import type { ActivitySearchParams, SearchResponse } from "@/types/search";
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { useEffect } from "react";
 
 interface ActivitySearchResponse extends SearchResponse {
   results: {
@@ -27,7 +29,11 @@ interface ActivitySearchResponse extends SearchResponse {
 }
 
 export function useActivitySearch() {
-  const { updateActivityParams, setResults, setIsLoading, setError } = useSearchStore();
+  const { updateActivityParams } = useSearchParamsStore();
+  const { startSearch, setSearchResults, setSearchError, completeSearch } =
+    useSearchResultsStore();
+
+  let currentSearchId: string | null = null;
 
   // Mutation for searching activities
   const searchMutation = useMutation({
@@ -38,22 +44,35 @@ export function useActivitySearch() {
       );
       return response;
     },
-    onMutate: () => {
-      setIsLoading(true);
-      setError(null);
-    },
-    onSuccess: (data) => {
-      setResults({
-        activities: data.results.activities || [],
-      });
-      setIsLoading(false);
-    },
-    onError: (error) => {
-      console.error("Activity search failed:", error);
-      setError("Failed to search activities. Please try again.");
-      setIsLoading(false);
+    onMutate: (params) => {
+      currentSearchId = startSearch("activity", { ...params } as Record<
+        string,
+        unknown
+      >);
     },
   });
+
+  // Handle search success
+  useEffect(() => {
+    if (searchMutation.data && currentSearchId) {
+      setSearchResults(currentSearchId, {
+        activities: searchMutation.data.results.activities || [],
+      });
+      completeSearch(currentSearchId);
+    }
+  }, [searchMutation.data, currentSearchId, setSearchResults, completeSearch]);
+
+  // Handle search error
+  useEffect(() => {
+    if (searchMutation.error && currentSearchId) {
+      setSearchError(currentSearchId, {
+        message: searchMutation.error.message || "Failed to search activities",
+        code: "SEARCH_ERROR",
+        occurredAt: new Date().toISOString(),
+        retryable: true,
+      });
+    }
+  }, [searchMutation.error, currentSearchId, setSearchError]);
 
   // Query for saved activity searches
   const savedSearchesQuery = useQuery({
@@ -74,10 +93,14 @@ export function useActivitySearch() {
       const response = await api.post("/api/activities/save-search", params);
       return response;
     },
-    onSuccess: () => {
-      savedSearchesQuery.refetch();
-    },
   });
+
+  // Handle save search success
+  useEffect(() => {
+    if (saveSearchMutation.data) {
+      savedSearchesQuery.refetch();
+    }
+  }, [saveSearchMutation.data, savedSearchesQuery]);
 
   // Function to get popular activities for a destination
   const popularActivitiesQuery = useQuery({

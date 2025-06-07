@@ -1,8 +1,9 @@
 "use client";
 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api/client";
 import { useAuthStore } from "@/stores";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect } from "react";
 
 export interface TripSuggestion {
   id: string;
@@ -35,7 +36,7 @@ interface TripSuggestionsParams {
  */
 export function useTripSuggestions(params?: TripSuggestionsParams) {
   const { tokenInfo } = useAuthStore();
-  const isAuthenticated = !!tokenInfo?.access_token;
+  const isAuthenticated = !!tokenInfo?.accessToken;
 
   return useQuery<TripSuggestion[]>({
     queryKey: ["trip-suggestions", params],
@@ -67,17 +68,22 @@ export function useTripSuggestions(params?: TripSuggestionsParams) {
 export function useCreateTrip() {
   const queryClient = useQueryClient();
 
-  return useMutation({
+  const mutation = useMutation({
     mutationFn: async (tripData: any) => {
       const response = await api.post("/api/trips", tripData);
       return response;
     },
-    onSuccess: () => {
+  });
+
+  useEffect(() => {
+    if (mutation.data) {
       // Invalidate trips list and suggestions
       queryClient.invalidateQueries({ queryKey: ["trips"] });
       queryClient.invalidateQueries({ queryKey: ["trip-suggestions"] });
-    },
-  });
+    }
+  }, [mutation.data, queryClient]);
+
+  return mutation;
 }
 
 /**
@@ -85,7 +91,7 @@ export function useCreateTrip() {
  */
 export function useTrips() {
   const { tokenInfo } = useAuthStore();
-  const isAuthenticated = !!tokenInfo?.access_token;
+  const isAuthenticated = !!tokenInfo?.accessToken;
 
   return useQuery({
     queryKey: ["trips"],
@@ -133,7 +139,7 @@ interface UpcomingFlightsParams {
  */
 export function useUpcomingFlights(params?: UpcomingFlightsParams) {
   const { tokenInfo } = useAuthStore();
-  const isAuthenticated = !!tokenInfo?.access_token;
+  const isAuthenticated = !!tokenInfo?.accessToken;
 
   return useQuery<UpcomingFlight[]>({
     queryKey: ["upcoming-flights", params],

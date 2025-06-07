@@ -1,13 +1,17 @@
 "use client";
 
-import { WebSocketClientFactory, WebSocketClient, WebSocketEventType } from "@/lib/websocket/websocket-client";
+import {
+  type WebSocketClient,
+  WebSocketClientFactory,
+  WebSocketEventType,
+} from "@/lib/websocket/websocket-client";
 import { useAuthStore } from "@/stores";
 import { useAgentStatusStore } from "@/stores/agent-status-store";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 /**
  * Hook for managing agent status via WebSocket connection
- * 
+ *
  * This hook provides real-time agent status updates through WebSocket,
  * replacing the polling mechanism with push-based updates.
  */
@@ -47,7 +51,7 @@ export function useAgentStatusWebSocket() {
 
   // Connect to agent status WebSocket
   const connect = useCallback(() => {
-    if (!tokenInfo?.access_token || !user?.id || !wsFactoryRef.current) {
+    if (!tokenInfo?.accessToken || !user?.id || !wsFactoryRef.current) {
       setConnectionError("Missing authentication or user information");
       return;
     }
@@ -62,7 +66,7 @@ export function useAgentStatusWebSocket() {
       // Create agent status WebSocket client
       wsClientRef.current = wsFactoryRef.current.createAgentStatusClient(
         user.id,
-        tokenInfo.access_token,
+        tokenInfo.accessToken,
         {
           enableCompression: true,
           batchMessages: true,
@@ -76,7 +80,7 @@ export function useAgentStatusWebSocket() {
         setIsConnected(true);
         setConnectionError(null);
         setReconnectAttempts(0);
-        
+
         // Start a new monitoring session
         startSession();
       });
@@ -91,9 +95,12 @@ export function useAgentStatusWebSocket() {
         setConnectionError(error.message);
       });
 
-      wsClientRef.current.on("reconnect", ({ attempt, maxAttempts }) => {
-        setReconnectAttempts(attempt);
-        console.log(`Reconnecting agent status WebSocket... (${attempt}/${maxAttempts})`);
+      wsClientRef.current.on("reconnect", (data: unknown) => {
+        const eventData = data as { attempt: number; maxAttempts: number };
+        setReconnectAttempts(eventData.attempt);
+        console.log(
+          `Reconnecting agent status WebSocket... (${eventData.attempt}/${eventData.maxAttempts})`
+        );
       });
 
       // Handle agent status events
@@ -115,7 +122,12 @@ export function useAgentStatusWebSocket() {
 
       wsClientRef.current.on(WebSocketEventType.AGENT_TASK_PROGRESS, (event: any) => {
         const { agentId, taskId, progress, status } = event.payload;
-        updateAgentTask(agentId, taskId, { status, progress });
+        // Update task status
+        updateAgentTask(agentId, taskId, { status });
+        // Update agent progress separately if needed
+        if (progress !== undefined) {
+          updateAgentProgress(agentId, progress);
+        }
       });
 
       wsClientRef.current.on(WebSocketEventType.AGENT_TASK_COMPLETE, (event: any) => {
@@ -172,6 +184,7 @@ export function useAgentStatusWebSocket() {
       addAgent({
         type: agentType,
         name: agentName,
+        status: "idle",
         metadata: config,
       });
 
@@ -223,7 +236,7 @@ export function useAgentStatusWebSocket() {
 
   // Auto-connect when auth is available
   useEffect(() => {
-    if (tokenInfo?.access_token && user?.id) {
+    if (tokenInfo?.accessToken && user?.id) {
       connect();
     }
 

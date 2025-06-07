@@ -9,7 +9,7 @@ import type {
   AgentTask,
   ResourceUsage,
 } from "@/types/agent-status";
-import { useCallback } from "react";
+import { useCallback, useEffect } from "react";
 
 /**
  * Hook for fetching and managing agent status
@@ -37,27 +37,39 @@ export function useAgentStatus() {
     {
       enabled: isMonitoring,
       refetchInterval: isMonitoring ? 2000 : false, // Poll every 2 seconds while monitoring
-      onSuccess: (data) => {
-        // Update local state with latest agent data
-        data.agents.forEach((agent) => {
-          if (agent.status !== "idle") {
-            updateAgentStatus(agent.id, agent.status);
-            updateAgentProgress(agent.id, agent.progress);
-          }
-        });
-      },
-      onError: (error: any) => {
-        setError(error.message || "Failed to fetch agent status");
-      },
     }
   );
+
+  // Handle status query data updates
+  useEffect(() => {
+    if (statusQuery.data?.agents) {
+      // Update local state with latest agent data
+      statusQuery.data.agents.forEach((agent) => {
+        if (agent.status !== "idle") {
+          updateAgentStatus(agent.id, agent.status);
+          updateAgentProgress(agent.id, agent.progress);
+        }
+      });
+    }
+  }, [statusQuery.data, updateAgentStatus, updateAgentProgress]);
+
+  // Handle status query errors
+  useEffect(() => {
+    if (statusQuery.error) {
+      setError(statusQuery.error.message || "Failed to fetch agent status");
+    }
+  }, [statusQuery.error, setError]);
 
   // Mutation for starting an agent
   const startAgentMutation = useApiMutation<
     { agent: Agent },
     { type: string; name: string; config?: Record<string, any> }
-  >("/api/agents/start", {
-    onSuccess: (data) => {
+  >("/api/agents/start");
+
+  // Handle start agent success
+  useEffect(() => {
+    if (startAgentMutation.data) {
+      const data = startAgentMutation.data;
       // If no session is active, start one
       if (!currentSession) {
         startSession();
@@ -67,28 +79,30 @@ export function useAgentStatus() {
       addAgent({
         name: data.agent.name,
         type: data.agent.type,
+        status: "initializing",
         metadata: data.agent.metadata,
       });
-    },
-    onError: (error: any) => {
-      setError(error.message || "Failed to start agent");
-    },
-  });
+    }
+  }, [startAgentMutation.data, currentSession, startSession, addAgent]);
+
+  // Handle start agent error
+  useEffect(() => {
+    if (startAgentMutation.error) {
+      setError(startAgentMutation.error.message || "Failed to start agent");
+    }
+  }, [startAgentMutation.error, setError]);
 
   // Mutation for stopping an agent
   const stopAgentMutation = useApiMutation<{ success: boolean }, { agentId: string }>(
-    "/api/agents/stop",
-    {
-      onSuccess: (data, variables) => {
-        if (data.success) {
-          updateAgentStatus(variables.agentId, "completed");
-        }
-      },
-      onError: (error: any) => {
-        setError(error.message || "Failed to stop agent");
-      },
-    }
+    "/api/agents/stop"
   );
+
+  // Handle stop agent error
+  useEffect(() => {
+    if (stopAgentMutation.error) {
+      setError(stopAgentMutation.error.message || "Failed to stop agent");
+    }
+  }, [stopAgentMutation.error, setError]);
 
   // Function to start monitoring agents
   const startMonitoring = useCallback(() => {
@@ -114,10 +128,17 @@ export function useAgentStatus() {
 
   // Function to stop an agent
   const stopAgent = useCallback(
-    (agentId: string) => {
-      stopAgentMutation.mutate({ agentId });
+    async (agentId: string) => {
+      try {
+        const result = await stopAgentMutation.mutateAsync({ agentId });
+        if (result.success) {
+          updateAgentStatus(agentId, "completed");
+        }
+      } catch (error) {
+        // Error handling is done in useEffect above
+      }
     },
-    [stopAgentMutation]
+    [stopAgentMutation, updateAgentStatus]
   );
 
   return {
