@@ -200,7 +200,7 @@ export async function uploadAttachments(files: File[]): Promise<{ urls: string[]
 
     const authHeaders = getAuthHeaders();
     // Remove Content-Type for FormData
-    authHeaders["Content-Type"] = undefined;
+    delete authHeaders["Content-Type"];
 
     const response = await fetch("/api/chat/attachments", {
       method: "POST",
