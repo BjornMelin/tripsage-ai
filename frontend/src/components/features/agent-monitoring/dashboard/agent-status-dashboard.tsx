@@ -5,7 +5,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Tooltip as TooltipUI, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+  Tooltip as TooltipUI,
+} from "@/components/ui/tooltip";
 import { useAgentStatus } from "@/hooks/use-agent-status";
 import { useAgentStatusWebSocket } from "@/hooks/use-agent-status-websocket";
 import { AnimatePresence, motion } from "framer-motion";
@@ -254,12 +259,17 @@ export const AgentStatusDashboard: React.FC<AgentStatusDashboardProps> = ({
   } = useAgentStatus();
 
   // Convert store agents to metrics format
-  const agents: AgentMetrics[] = storeAgents.map(agent => ({
+  const agents: AgentMetrics[] = storeAgents.map((agent) => ({
     id: agent.id,
     name: agent.name,
-    status: agent.status === "active" || agent.status === "working" ? "active" : 
-            agent.status === "waiting" || agent.status === "idle" ? "idle" :
-            agent.status === "error" || agent.status === "failed" ? "error" : "idle",
+    status:
+      agent.status === "executing" || agent.status === "thinking"
+        ? "active"
+        : agent.status === "idle" || agent.status === "initializing"
+          ? "idle"
+          : agent.status === "error"
+            ? "error"
+            : "idle",
     healthScore: agent.progress || 75,
     cpuUsage: Math.random() * 100, // TODO: Get from resource usage
     memoryUsage: Math.random() * 100, // TODO: Get from resource usage
@@ -267,7 +277,7 @@ export const AgentStatusDashboard: React.FC<AgentStatusDashboardProps> = ({
     averageResponseTime: 100,
     errorRate: agent.status === "error" ? 15 : 2,
     uptime: 3600,
-    tasksQueued: agent.tasks?.filter(t => t.status === "pending").length || 0,
+    tasksQueued: agent.tasks?.filter((t) => t.status === "pending").length || 0,
     lastUpdate: new Date(agent.updatedAt),
   }));
 
@@ -339,8 +349,13 @@ export const AgentStatusDashboard: React.FC<AgentStatusDashboardProps> = ({
               Stop Monitoring
             </Button>
           )}
-          <Badge variant={isConnected ? "default" : "secondary"} className="flex items-center gap-2">
-            <div className={`w-2 h-2 rounded-full ${isConnected ? "bg-green-500 animate-pulse" : "bg-gray-500"}`} />
+          <Badge
+            variant={isConnected ? "default" : "secondary"}
+            className="flex items-center gap-2"
+          >
+            <div
+              className={`w-2 h-2 rounded-full ${isConnected ? "bg-green-500 animate-pulse" : "bg-gray-500"}`}
+            />
             {isConnected ? "Live Updates" : "Disconnected"}
           </Badge>
           <span className="text-sm text-gray-500">
@@ -561,7 +576,7 @@ export const AgentStatusDashboard: React.FC<AgentStatusDashboardProps> = ({
             </AlertDescription>
           </Alert>
         )}
-        
+
         {error && (
           <Alert className="border-orange-200 bg-orange-50">
             <AlertTriangle className="h-4 w-4 text-orange-600" />
@@ -570,7 +585,7 @@ export const AgentStatusDashboard: React.FC<AgentStatusDashboardProps> = ({
             </AlertDescription>
           </Alert>
         )}
-        
+
         {optimisticAgents.some((a) => a.status === "error") && (
           <Alert className="border-red-200 bg-red-50">
             <AlertTriangle className="h-4 w-4 text-red-600" />

@@ -13,7 +13,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useMemoryContext, useMemoryInsights } from "@/hooks/use-memory";
-import { useTripSuggestions, type TripSuggestion } from "@/hooks/use-trips";
+import { type TripSuggestion, useTripSuggestions } from "@/hooks/use-trips";
 import { useBudgetStore } from "@/stores/budget-store";
 import { useDealsStore } from "@/stores/deals-store";
 import {
@@ -33,7 +33,6 @@ interface TripSuggestionsProps {
   userId?: string;
   showMemoryBased?: boolean;
 }
-
 
 function SuggestionCardSkeleton() {
   return (
@@ -204,12 +203,12 @@ export function TripSuggestions({
   userId,
   showMemoryBased = true,
 }: TripSuggestionsProps) {
-  const { budget } = useBudgetStore();
-  
+  const { activeBudget } = useBudgetStore();
+
   // Use React Query hook to fetch trip suggestions
   const { data: apiSuggestions, isLoading } = useTripSuggestions({
     limit: limit + 2, // Get extra in case we filter some out
-    budget_max: budget?.totalBudget,
+    budget_max: activeBudget?.totalAmount,
   });
 
   // Memory-based recommendations

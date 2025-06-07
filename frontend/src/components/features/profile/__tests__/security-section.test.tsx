@@ -1,7 +1,7 @@
 import { toast } from "@/components/ui/use-toast";
 import { useUserProfileStore } from "@/stores/user-store";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { SecuritySection } from "../security-section";
 
 // Mock the stores and hooks
