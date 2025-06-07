@@ -38,7 +38,7 @@ test.describe("Error Boundaries and Loading States", () => {
       await page.goto("/dashboard");
 
       // Check for dashboard-specific loading elements
-      await expect(page.locator('[role="status"]')).toHaveCount({ min: 5 });
+      await expect(page.locator('[role="status"]')).toHaveCount(5);
 
       // Wait for loading to complete
       await page.waitForLoadState("networkidle");
@@ -57,10 +57,10 @@ test.describe("Error Boundaries and Loading States", () => {
       });
 
       // Should show chat loading skeleton
-      await expect(page.locator('[role="status"]')).toHaveCount({ min: 3 });
+      await expect(page.locator('[role="status"]')).toHaveCount(3);
 
       // Check for typing indicator (if applicable)
-      await expect(page.locator(".animate-bounce")).toHaveCount({ min: 3 });
+      await expect(page.locator(".animate-bounce")).toHaveCount(3);
     });
 
     test("should show search results loading skeleton", async ({ page }) => {
@@ -82,7 +82,7 @@ test.describe("Error Boundaries and Loading States", () => {
       await page.click('button[type="submit"]');
 
       // Should show search results skeleton
-      await expect(page.locator('[role="status"]')).toHaveCount({ min: 10 });
+      await expect(page.locator('[role="status"]')).toHaveCount(10);
     });
   });
 

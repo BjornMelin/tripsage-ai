@@ -105,7 +105,7 @@ describe("Rate Limiting Middleware", () => {
 
   it("should prefer auth token over IP for rate limiting", async () => {
     // Arrange
-    const authToken = "Bearer " + TEST_TOKEN;
+    const authToken = `Bearer ${TEST_TOKEN}`;
     const request = new NextRequest("http://localhost:3000/api/chat", {
       method: "POST",
       headers: {
