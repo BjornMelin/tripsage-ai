@@ -183,7 +183,7 @@ describe("Trip Store", () => {
         await result.current.createTrip({ name: "Current Trip" });
       });
 
-      const tripId = result.current.currentTrip!.id;
+      const tripId = result.current.currentTrip?.id;
 
       // Update the trip
       await act(async () => {
@@ -254,7 +254,7 @@ describe("Trip Store", () => {
         await result.current.createTrip({ name: "Current Trip" });
       });
 
-      const currentTripId = result.current.currentTrip!.id;
+      const currentTripId = result.current.currentTrip?.id;
 
       // Delete the current trip
       await act(async () => {
@@ -273,7 +273,7 @@ describe("Trip Store", () => {
         await result.current.createTrip({ name: "Trip 1" });
       });
 
-      const trip1Id = result.current.currentTrip!.id;
+      const trip1Id = result.current.currentTrip?.id;
 
       await act(async () => {
         await result.current.createTrip({ name: "Trip 2" });

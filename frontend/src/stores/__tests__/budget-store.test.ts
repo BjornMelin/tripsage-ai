@@ -518,9 +518,9 @@ describe("useBudgetStore", () => {
         result.current.updateCurrencyRate("EUR", 0.85);
       });
 
-      expect(result.current.currencies["EUR"].rate).toBe(0.85);
-      expect(result.current.currencies["EUR"].code).toBe("EUR");
-      expect(result.current.currencies["EUR"].lastUpdated).toBeDefined();
+      expect(result.current.currencies.EUR.rate).toBe(0.85);
+      expect(result.current.currencies.EUR.code).toBe("EUR");
+      expect(result.current.currencies.EUR.lastUpdated).toBeDefined();
     });
   });
 

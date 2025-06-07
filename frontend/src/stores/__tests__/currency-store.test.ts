@@ -74,7 +74,7 @@ describe("useCurrencyStore", () => {
         result.current.addCurrency(newCurrency);
       });
 
-      expect(result.current.currencies["JPY"]).toEqual(newCurrency);
+      expect(result.current.currencies.JPY).toEqual(newCurrency);
     });
 
     it("removes a currency", () => {
@@ -84,7 +84,7 @@ describe("useCurrencyStore", () => {
         result.current.removeCurrency("GBP");
       });
 
-      expect(result.current.currencies["GBP"]).toBeUndefined();
+      expect(result.current.currencies.GBP).toBeUndefined();
     });
 
     it("does not remove the base currency", () => {
@@ -94,7 +94,7 @@ describe("useCurrencyStore", () => {
         result.current.removeCurrency("USD");
       });
 
-      expect(result.current.currencies["USD"]).toBeDefined();
+      expect(result.current.currencies.USD).toBeDefined();
     });
 
     it("sets the base currency", () => {
@@ -114,9 +114,9 @@ describe("useCurrencyStore", () => {
       expect(result.current.baseCurrency).toBe("EUR");
 
       // Exchange rates should be recalculated
-      expect(result.current.exchangeRates["USD"]).toBeDefined();
-      expect(result.current.exchangeRates["USD"]?.rate).toBeCloseTo(1 / 0.85);
-      expect(result.current.exchangeRates["GBP"]?.rate).toBeCloseTo(0.75 / 0.85);
+      expect(result.current.exchangeRates.USD).toBeDefined();
+      expect(result.current.exchangeRates.USD?.rate).toBeCloseTo(1 / 0.85);
+      expect(result.current.exchangeRates.GBP?.rate).toBeCloseTo(0.75 / 0.85);
     });
   });
 
@@ -128,10 +128,10 @@ describe("useCurrencyStore", () => {
         result.current.updateExchangeRate("EUR", 0.85);
       });
 
-      expect(result.current.exchangeRates["EUR"]).toBeDefined();
-      expect(result.current.exchangeRates["EUR"]?.rate).toBe(0.85);
-      expect(result.current.exchangeRates["EUR"]?.baseCurrency).toBe("USD");
-      expect(result.current.exchangeRates["EUR"]?.targetCurrency).toBe("EUR");
+      expect(result.current.exchangeRates.EUR).toBeDefined();
+      expect(result.current.exchangeRates.EUR?.rate).toBe(0.85);
+      expect(result.current.exchangeRates.EUR?.baseCurrency).toBe("USD");
+      expect(result.current.exchangeRates.EUR?.targetCurrency).toBe("EUR");
       expect(result.current.lastUpdated).not.toBeNull();
     });
 
@@ -142,7 +142,7 @@ describe("useCurrencyStore", () => {
         result.current.updateExchangeRate("USD", 1.0);
       });
 
-      expect(result.current.exchangeRates["USD"]).toBeUndefined();
+      expect(result.current.exchangeRates.USD).toBeUndefined();
     });
 
     it("updates all exchange rates at once", () => {
@@ -158,9 +158,9 @@ describe("useCurrencyStore", () => {
         result.current.updateAllExchangeRates(rates);
       });
 
-      expect(result.current.exchangeRates["EUR"]?.rate).toBe(0.85);
-      expect(result.current.exchangeRates["GBP"]?.rate).toBe(0.75);
-      expect(result.current.exchangeRates["JPY"]?.rate).toBe(110.25);
+      expect(result.current.exchangeRates.EUR?.rate).toBe(0.85);
+      expect(result.current.exchangeRates.GBP?.rate).toBe(0.75);
+      expect(result.current.exchangeRates.JPY?.rate).toBe(110.25);
       expect(result.current.lastUpdated).not.toBeNull();
     });
   });
