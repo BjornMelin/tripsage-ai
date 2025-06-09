@@ -1,6 +1,6 @@
-import type {
+import {
   ConnectionStatus,
-  WebSocketClient,
+  type WebSocketClient,
   WebSocketEventType,
 } from "@/lib/websocket/websocket-client";
 import type {
@@ -221,7 +221,7 @@ export const useChatStore = create<ChatState>()(
 
       // WebSocket integration defaults
       websocketClient: null,
-      connectionStatus: "disconnected",
+      connectionStatus: ConnectionStatus.DISCONNECTED,
       isRealtimeEnabled: true,
       typingUsers: {},
       pendingMessages: [],
@@ -361,7 +361,7 @@ export const useChatStore = create<ChatState>()(
         set({ isLoading: true, error: null });
 
         // Use WebSocket if available and connected
-        if (isRealtimeEnabled && websocketClient && connectionStatus === "connected") {
+        if (isRealtimeEnabled && websocketClient && connectionStatus === ConnectionStatus.CONNECTED) {
           try {
             await websocketClient.send("chat_message", {
               content,
@@ -789,30 +789,30 @@ export const useChatStore = create<ChatState>()(
 
           // Set up event handlers
           newClient.on("connect", () => {
-            set({ connectionStatus: "connected" });
+            set({ connectionStatus: ConnectionStatus.CONNECTED });
             console.log("WebSocket connected successfully");
           });
 
           newClient.on("disconnect", () => {
-            set({ connectionStatus: "disconnected" });
+            set({ connectionStatus: ConnectionStatus.DISCONNECTED });
           });
 
           newClient.on("error", (error) => {
             console.error("WebSocket error:", error);
             set({
-              connectionStatus: "error",
+              connectionStatus: ConnectionStatus.ERROR,
               error:
                 error instanceof Error ? error.message : "WebSocket connection error",
             });
           });
 
-          newClient.on("reconnect", ({ attempt, maxAttempts }) => {
-            set({ connectionStatus: "connecting" });
-            console.log(`WebSocket reconnecting... Attempt ${attempt}/${maxAttempts}`);
+          newClient.on("reconnect", (data: { attempt: number; maxAttempts: number }) => {
+            set({ connectionStatus: ConnectionStatus.RECONNECTING });
+            console.log(`WebSocket reconnecting... Attempt ${data.attempt}/${data.maxAttempts}`);
           });
 
           // Handle incoming messages
-          newClient.on("chat_message", (event) => {
+          newClient.on(WebSocketEventType.CHAT_MESSAGE, (event: any) => {
             get().handleRealtimeMessage({
               type: "chat_message",
               sessionId,
@@ -822,7 +822,7 @@ export const useChatStore = create<ChatState>()(
             });
           });
 
-          newClient.on("chat_message_chunk", (event) => {
+          newClient.on(WebSocketEventType.CHAT_MESSAGE_CHUNK, (event: any) => {
             get().handleRealtimeMessage({
               type: "chat_message_chunk",
               sessionId,
@@ -832,7 +832,7 @@ export const useChatStore = create<ChatState>()(
             });
           });
 
-          newClient.on("agent_status_update", (event) => {
+          newClient.on(WebSocketEventType.AGENT_STATUS_UPDATE, (event: any) => {
             get().handleAgentStatusUpdate({
               type: "agent_status_update",
               sessionId,
@@ -843,23 +843,23 @@ export const useChatStore = create<ChatState>()(
             });
           });
 
-          newClient.on("chat_typing_start", () => {
+          newClient.on(WebSocketEventType.CHAT_TYPING_START, () => {
             // Handle typing indicator start
             set({ isStreaming: true });
           });
 
-          newClient.on("chat_typing_stop", () => {
+          newClient.on(WebSocketEventType.CHAT_TYPING_STOP, () => {
             // Handle typing indicator stop
             set({ isStreaming: false });
           });
 
           // Store client and connect
-          set({ websocketClient: newClient, connectionStatus: "connecting" });
+          set({ websocketClient: newClient, connectionStatus: ConnectionStatus.CONNECTING });
           await newClient.connect();
         } catch (error) {
           console.error("Failed to connect WebSocket:", error);
           set({
-            connectionStatus: "error",
+            connectionStatus: ConnectionStatus.ERROR,
             error:
               error instanceof Error ? error.message : "Failed to connect WebSocket",
           });
@@ -872,7 +872,7 @@ export const useChatStore = create<ChatState>()(
           websocketClient.disconnect();
           set({
             websocketClient: null,
-            connectionStatus: "disconnected",
+            connectionStatus: ConnectionStatus.DISCONNECTED,
             typingUsers: {},
             pendingMessages: [],
           });
@@ -905,7 +905,7 @@ export const useChatStore = create<ChatState>()(
             .sessions.find((s) => s.id === currentSessionId)
             ?.messages.find((m) => m.id === event.messageId);
 
-          if (existingMessage) {
+          if (existingMessage && event.messageId) {
             // Update existing streaming message
             get().updateMessage(currentSessionId, event.messageId, {
               content: existingMessage.content + event.content,

@@ -27,7 +27,7 @@ interface ApiKeyState extends AuthState {
   setSelectedService: (service: string | null) => void;
   updateKey: (service: string, keyData: Partial<ApiKey>) => void;
   removeKey: (service: string) => void;
-  validateKey: (service: string) => Promise<boolean>;
+  validateKey: (service: string, apiKey?: string) => Promise<boolean>;
   loadKeys: () => Promise<void>;
 }
 
@@ -95,10 +95,10 @@ export const useApiKeyStore = create<ApiKeyState>()(
           return { keys: newKeys };
         }),
 
-      validateKey: async (service) => {
+      validateKey: async (service, apiKey?) => {
         const state = get();
         const key = state.keys[service];
-        if (!key || !key.api_key) {
+        if (!key || !apiKey) {
           set({ authError: `No API key found for ${service}` });
           return false;
         }
@@ -112,7 +112,7 @@ export const useApiKeyStore = create<ApiKeyState>()(
             },
             body: JSON.stringify({
               service,
-              api_key: key.api_key,
+              api_key: apiKey,
               save: false,
             }),
           });
