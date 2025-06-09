@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   ConnectionStatus,
   WebSocketClient,
+  WebSocketEventType,
   type WebSocketClientConfig,
 } from "../websocket-client";
 
@@ -243,11 +244,11 @@ describe("WebSocketClient", () => {
 
     it("should handle received messages", () => {
       const messageHandler = vi.fn();
-      client.on("chat_message", messageHandler);
+      client.on(WebSocketEventType.CHAT_MESSAGE, messageHandler);
 
       const testEvent = {
         id: "msg-1",
-        type: "chat_message",
+        type: "WebSocketEventType.CHAT_MESSAGE",
         timestamp: new Date().toISOString(),
         payload: { content: "Hello" },
       };
@@ -271,7 +272,7 @@ describe("WebSocketClient", () => {
   describe("Event System", () => {
     it("should register event listeners", () => {
       const handler = vi.fn();
-      client.on("chat_message", handler);
+      client.on(WebSocketEventType.CHAT_MESSAGE, handler);
 
       // Verify handler is registered (internal behavior test)
       expect(typeof handler).toBe("function");
@@ -279,13 +280,13 @@ describe("WebSocketClient", () => {
 
     it("should remove event listeners", () => {
       const handler = vi.fn();
-      client.on("chat_message", handler);
-      client.off("chat_message", handler);
+      client.on(WebSocketEventType.CHAT_MESSAGE, handler);
+      client.off(WebSocketEventType.CHAT_MESSAGE, handler);
 
       // Simulate message to verify handler was removed
       const testEvent = {
         id: "msg-1",
-        type: "chat_message",
+        type: "WebSocketEventType.CHAT_MESSAGE",
         timestamp: new Date().toISOString(),
         payload: { content: "Hello" },
       };
@@ -308,9 +309,9 @@ describe("WebSocketClient", () => {
       const handler1 = vi.fn();
       const handler2 = vi.fn();
 
-      client.on("chat_message", handler1);
-      client.on("chat_message", handler2);
-      client.removeAllListeners("chat_message");
+      client.on(WebSocketEventType.CHAT_MESSAGE, handler1);
+      client.on(WebSocketEventType.CHAT_MESSAGE, handler2);
+      client.removeAllListeners(WebSocketEventType.CHAT_MESSAGE);
 
       // Both handlers should be removed
       expect(typeof handler1).toBe("function");
@@ -365,7 +366,7 @@ describe("WebSocketClient", () => {
 
       expect(mockWebSocketInstance.send).toHaveBeenCalledWith(
         JSON.stringify({
-          type: "chat_message",
+          type: WebSocketEventType.CHAT_MESSAGE,
           payload: {
             content: "Hello",
             attachments: ["attachment1"],
