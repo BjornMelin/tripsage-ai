@@ -1,21 +1,19 @@
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { useSearchResultsStore } from "../search-results-store";
+import { 
+  useSearchResultsStore,
+  type SearchStatus,
+  type SearchMetrics,
+  type SearchContext,
+  type ErrorDetails 
+} from "../search-results-store";
+import type { SearchResults, SearchType } from "@/types/search";
 
 describe("Search Results Store", () => {
   beforeEach(() => {
+    // Reset store to initial state
     act(() => {
-      useSearchResultsStore.setState({
-        results: {},
-        status: "idle",
-        isSearching: false,
-        searchProgress: 0,
-        error: null,
-        currentSearchId: null,
-        currentSearchType: null,
-        currentContext: null,
-        resultsMetadata: {},
-      });
+      useSearchResultsStore.getState().reset();
     });
   });
 
@@ -23,14 +21,17 @@ describe("Search Results Store", () => {
     it("initializes with correct default values", () => {
       const { result } = renderHook(() => useSearchResultsStore());
 
-      expect(result.current.results).toEqual({});
       expect(result.current.status).toBe("idle");
+      expect(result.current.currentSearchId).toBeNull();
+      expect(result.current.currentSearchType).toBeNull();
+      expect(result.current.results).toEqual({});
       expect(result.current.isSearching).toBe(false);
       expect(result.current.searchProgress).toBe(0);
       expect(result.current.error).toBeNull();
-      expect(result.current.currentSearchId).toBeNull();
-      expect(result.current.currentSearchType).toBeNull();
-      expect(result.current.currentContext).toBeNull();
+      expect(result.current.hasResults).toBe(false);
+      expect(result.current.isEmptyResults).toBe(false);
+      expect(result.current.canRetry).toBe(false);
+      expect(result.current.searchDuration).toBeNull();
     });
   });
 
@@ -44,17 +45,19 @@ describe("Search Results Store", () => {
         departureDate: "2025-07-15",
       };
 
-      let searchId: string;
+      let searchId: string = "";
       act(() => {
         searchId = result.current.startSearch("flight", searchParams);
       });
 
+      expect(searchId).toBeTruthy();
       expect(result.current.status).toBe("searching");
       expect(result.current.isSearching).toBe(true);
       expect(result.current.currentSearchType).toBe("flight");
       expect(result.current.currentSearchId).toBe(searchId);
       expect(result.current.searchProgress).toBe(0);
       expect(result.current.error).toBeNull();
+      expect(result.current.results).toEqual({}); // Results cleared on new search
 
       const context = result.current.currentContext;
       expect(context).not.toBeNull();
@@ -67,8 +70,8 @@ describe("Search Results Store", () => {
     it("generates unique search IDs", () => {
       const { result } = renderHook(() => useSearchResultsStore());
 
-      let searchId1: string;
-      let searchId2: string;
+      let searchId1: string = "";
+      let searchId2: string = "";
 
       act(() => {
         searchId1 = result.current.startSearch("flight", {});
@@ -79,23 +82,26 @@ describe("Search Results Store", () => {
       });
 
       expect(searchId1).not.toBe(searchId2);
+      expect(searchId1).toBeTruthy();
+      expect(searchId2).toBeTruthy();
     });
 
     it("updates search progress", () => {
       const { result } = renderHook(() => useSearchResultsStore());
 
+      let searchId: string = "";
       act(() => {
-        result.current.startSearch("flight", {});
+        searchId = result.current.startSearch("flight", {});
       });
 
       act(() => {
-        result.current.setSearchProgress(25);
+        result.current.updateSearchProgress(searchId, 25);
       });
 
       expect(result.current.searchProgress).toBe(25);
 
       act(() => {
-        result.current.setSearchProgress(75);
+        result.current.updateSearchProgress(searchId, 75);
       });
 
       expect(result.current.searchProgress).toBe(75);
@@ -104,65 +110,96 @@ describe("Search Results Store", () => {
     it("clamps search progress between 0 and 100", () => {
       const { result } = renderHook(() => useSearchResultsStore());
 
+      let searchId: string = "";
       act(() => {
-        result.current.setSearchProgress(-10);
+        searchId = result.current.startSearch("flight", {});
+      });
+
+      act(() => {
+        result.current.updateSearchProgress(searchId, -10);
       });
 
       expect(result.current.searchProgress).toBe(0);
 
       act(() => {
-        result.current.setSearchProgress(150);
+        result.current.updateSearchProgress(searchId, 150);
       });
 
       expect(result.current.searchProgress).toBe(100);
     });
 
-    it("completes search successfully", () => {
+    it("sets search results successfully", () => {
       const { result } = renderHook(() => useSearchResultsStore());
 
       const searchId = result.current.startSearch("flight", {});
-      const mockResults = {
+      const mockResults: SearchResults = {
         flights: [
           {
             id: "flight-1",
             airline: "Test Airlines",
+            flightNumber: "TA123",
             price: 299,
-            departure: "08:00",
-            arrival: "11:00",
+            departureTime: "2025-07-15T08:00:00Z",
+            arrivalTime: "2025-07-15T11:00:00Z",
+            origin: "NYC",
+            destination: "LAX",
+            duration: 180,
+            stops: 0,
+            cabinClass: "economy",
+            seatsAvailable: 10,
           },
         ],
       };
 
+      const mockMetrics: SearchMetrics = {
+        totalResults: 1,
+        searchDuration: 1500,
+        provider: "test-provider",
+        requestId: "req-123",
+        resultsPerPage: 20,
+        currentPage: 1,
+        hasMoreResults: false,
+      };
+
       act(() => {
-        result.current.completeSearch(searchId, mockResults);
+        result.current.setSearchResults(searchId, mockResults, mockMetrics);
       });
 
-      expect(result.current.status).toBe("completed");
+      expect(result.current.status).toBe("success");
       expect(result.current.isSearching).toBe(false);
-      expect(result.current.results[searchId]).toEqual(mockResults);
+      expect(result.current.results).toEqual(mockResults);
       expect(result.current.searchProgress).toBe(100);
+      expect(result.current.hasResults).toBe(true);
+      expect(result.current.isEmptyResults).toBe(false);
+      expect(result.current.metrics).toEqual(mockMetrics);
 
-      const context = result.current.currentContext;
-      expect(context?.completedAt).toBeDefined();
+      // Check that results are stored by search ID
+      expect(result.current.resultsBySearch[searchId]).toEqual(mockResults);
     });
 
-    it("fails search with error", () => {
+    it("handles search errors", () => {
       const { result } = renderHook(() => useSearchResultsStore());
 
       const searchId = result.current.startSearch("flight", {});
-      const errorMessage = "Search failed due to network error";
+      const errorDetails: ErrorDetails = {
+        message: "Search failed due to network error",
+        code: "NETWORK_ERROR",
+        retryable: true,
+        occurredAt: new Date().toISOString(),
+      };
 
       act(() => {
-        result.current.failSearch(searchId, errorMessage);
+        result.current.setSearchError(searchId, errorDetails);
       });
 
-      expect(result.current.status).toBe("failed");
+      expect(result.current.status).toBe("error");
       expect(result.current.isSearching).toBe(false);
-      expect(result.current.error).toBe(errorMessage);
-
-      const context = result.current.currentContext;
-      expect(context?.failedAt).toBeDefined();
-      expect(context?.error).toBe(errorMessage);
+      expect(result.current.error).toMatchObject({
+        message: errorDetails.message,
+        code: errorDetails.code,
+        retryable: true,
+      });
+      expect(result.current.canRetry).toBe(true);
     });
 
     it("cancels search", () => {
@@ -176,50 +213,43 @@ describe("Search Results Store", () => {
 
       expect(result.current.status).toBe("cancelled");
       expect(result.current.isSearching).toBe(false);
+      expect(result.current.searchProgress).toBe(0);
+    });
 
-      const context = result.current.currentContext;
-      expect(context?.cancelledAt).toBeDefined();
+    it("completes search", () => {
+      const { result } = renderHook(() => useSearchResultsStore());
+
+      const searchId = result.current.startSearch("flight", {});
+
+      act(() => {
+        result.current.completeSearch(searchId);
+      });
+
+      expect(result.current.isSearching).toBe(false);
+      expect(result.current.currentContext?.completedAt).toBeDefined();
     });
   });
 
   describe("Results Management", () => {
-    it("stores results by search ID", () => {
-      const { result } = renderHook(() => useSearchResultsStore());
-
-      const searchId1 = result.current.startSearch("flight", {});
-      const searchId2 = result.current.startSearch("accommodation", {});
-
-      const flightResults = { flights: [{ id: "f1", price: 299 }] };
-      const hotelResults = { hotels: [{ id: "h1", price: 150 }] };
-
-      act(() => {
-        result.current.completeSearch(searchId1, flightResults);
-        result.current.completeSearch(searchId2, hotelResults);
-      });
-
-      expect(result.current.results[searchId1]).toEqual(flightResults);
-      expect(result.current.results[searchId2]).toEqual(hotelResults);
-    });
-
-    it("gets results by search ID", () => {
+    it("clears results by search type", () => {
       const { result } = renderHook(() => useSearchResultsStore());
 
       const searchId = result.current.startSearch("flight", {});
-      const mockResults = { flights: [{ id: "f1", price: 299 }] };
+      const mockResults: SearchResults = {
+        flights: [{ id: "f1" }] as any,
+        accommodations: [{ id: "a1" }] as any,
+      };
 
       act(() => {
-        result.current.completeSearch(searchId, mockResults);
+        result.current.setSearchResults(searchId, mockResults);
       });
 
-      const retrievedResults = result.current.getResults(searchId);
-      expect(retrievedResults).toEqual(mockResults);
-    });
+      act(() => {
+        result.current.clearResults("flight");
+      });
 
-    it("returns undefined for non-existent search ID", () => {
-      const { result } = renderHook(() => useSearchResultsStore());
-
-      const retrievedResults = result.current.getResults("non-existent-id");
-      expect(retrievedResults).toBeUndefined();
+      expect(result.current.results.flights).toEqual([]);
+      expect(result.current.results.accommodations).toEqual([{ id: "a1" }]);
     });
 
     it("clears all results", () => {
@@ -229,126 +259,182 @@ describe("Search Results Store", () => {
       const searchId2 = result.current.startSearch("accommodation", {});
 
       act(() => {
-        result.current.completeSearch(searchId1, { flights: [] });
-        result.current.completeSearch(searchId2, { hotels: [] });
+        result.current.setSearchResults(searchId1, { flights: [] });
+        result.current.setSearchResults(searchId2, { accommodations: [] });
       });
 
-      expect(Object.keys(result.current.results)).toHaveLength(2);
+      expect(Object.keys(result.current.resultsBySearch)).toHaveLength(2);
 
       act(() => {
         result.current.clearAllResults();
       });
 
       expect(result.current.results).toEqual({});
+      expect(result.current.resultsBySearch).toEqual({});
+      expect(result.current.status).toBe("idle");
       expect(result.current.currentSearchId).toBeNull();
       expect(result.current.currentSearchType).toBeNull();
-      expect(result.current.currentContext).toBeNull();
-      expect(result.current.status).toBe("idle");
     });
 
-    it("clears specific search results", () => {
-      const { result } = renderHook(() => useSearchResultsStore());
-
-      const searchId1 = result.current.startSearch("flight", {});
-      const searchId2 = result.current.startSearch("accommodation", {});
-
-      act(() => {
-        result.current.completeSearch(searchId1, { flights: [] });
-        result.current.completeSearch(searchId2, { hotels: [] });
-      });
-
-      expect(Object.keys(result.current.results)).toHaveLength(2);
-
-      act(() => {
-        result.current.clearResults(searchId1);
-      });
-
-      expect(result.current.results[searchId1]).toBeUndefined();
-      expect(result.current.results[searchId2]).toBeDefined();
-    });
-  });
-
-  describe("Metadata Management", () => {
-    it("sets and gets results metadata", () => {
+    it("appends results to existing results", () => {
       const { result } = renderHook(() => useSearchResultsStore());
 
       const searchId = result.current.startSearch("flight", {});
-      const metadata = {
-        totalResults: 25,
-        searchDuration: 1500,
-        providers: ["airline1", "airline2"],
+      const initialResults: SearchResults = {
+        flights: [{ id: "f1", price: { amount: 299, currency: "USD" } }] as any,
+      };
+      const newResults: SearchResults = {
+        flights: [{ id: "f2", price: { amount: 399, currency: "USD" } }] as any,
       };
 
       act(() => {
-        result.current.setResultsMetadata(searchId, metadata);
+        result.current.setSearchResults(searchId, initialResults);
       });
 
-      expect(result.current.resultsMetadata[searchId]).toEqual(metadata);
+      act(() => {
+        result.current.appendResults(searchId, newResults);
+      });
 
-      const retrievedMetadata = result.current.getResultsMetadata(searchId);
-      expect(retrievedMetadata).toEqual(metadata);
-    });
-
-    it("returns undefined for non-existent metadata", () => {
-      const { result } = renderHook(() => useSearchResultsStore());
-
-      const metadata = result.current.getResultsMetadata("non-existent-id");
-      expect(metadata).toBeUndefined();
+      expect(result.current.results.flights).toHaveLength(2);
+      expect(result.current.results.flights?.[0].id).toBe("f1");
+      expect(result.current.results.flights?.[1].id).toBe("f2");
     });
   });
 
-  describe("Search Context", () => {
-    it("maintains search context throughout lifecycle", () => {
+  describe("Pagination", () => {
+    it("sets page correctly", () => {
       const { result } = renderHook(() => useSearchResultsStore());
 
-      const searchParams = {
-        origin: "NYC",
-        destination: "LAX",
-        departureDate: "2025-07-15",
-      };
-
-      const searchId = result.current.startSearch("flight", searchParams);
-
-      // Verify initial context
-      let context = result.current.currentContext!;
-      expect(context.searchId).toBe(searchId);
-      expect(context.searchType).toBe("flight");
-      expect(context.searchParams).toEqual(searchParams);
-      expect(context.startedAt).toBeDefined();
-      expect(context.completedAt).toBeUndefined();
-
-      // Complete search and verify context update
+      // Set up pagination with multiple pages
       act(() => {
-        result.current.completeSearch(searchId, { flights: [] });
+        const searchId = result.current.startSearch("flight", {});
+        result.current.setSearchResults(searchId, { flights: [] }, {
+          totalResults: 100,
+          resultsPerPage: 20,
+          currentPage: 1,
+          hasMoreResults: true,
+        } as SearchMetrics);
       });
 
-      context = result.current.currentContext!;
-      expect(context.completedAt).toBeDefined();
-      expect(context.error).toBeUndefined();
+      act(() => {
+        result.current.setPage(3);
+      });
+
+      expect(result.current.pagination.currentPage).toBe(3);
+      expect(result.current.pagination.hasNextPage).toBe(true);
+      expect(result.current.pagination.hasPreviousPage).toBe(true);
+    });
+
+    it("navigates pages correctly", () => {
+      const { result } = renderHook(() => useSearchResultsStore());
+
+      // Set up pagination
+      act(() => {
+        const searchId = result.current.startSearch("flight", {});
+        result.current.setSearchResults(searchId, { flights: [] }, {
+          totalResults: 100,
+          resultsPerPage: 20,
+          currentPage: 1,
+          hasMoreResults: true,
+        } as SearchMetrics);
+      });
+
+      act(() => {
+        result.current.nextPage();
+      });
+
+      expect(result.current.pagination.currentPage).toBe(2);
+
+      act(() => {
+        result.current.previousPage();
+      });
+
+      expect(result.current.pagination.currentPage).toBe(1);
     });
   });
 
-  describe("Error Handling", () => {
-    it("sets general error", () => {
+  describe("Search History", () => {
+    it("retrieves search by ID", () => {
       const { result } = renderHook(() => useSearchResultsStore());
 
-      const errorMessage = "Network connection failed";
+      const searchId = result.current.startSearch("flight", { origin: "NYC" });
+      const mockResults: SearchResults = { flights: [] };
 
       act(() => {
-        result.current.setError(errorMessage);
+        result.current.setSearchResults(searchId, mockResults);
       });
 
-      expect(result.current.error).toBe(errorMessage);
+      const search = result.current.getSearchById(searchId);
+      expect(search).not.toBeNull();
+      expect(search?.searchId).toBe(searchId);
+      expect(search?.searchType).toBe("flight");
+
+      const results = result.current.getResultsById(searchId);
+      expect(results).toEqual(mockResults);
+    });
+
+    it("gets recent searches filtered by type", () => {
+      const { result } = renderHook(() => useSearchResultsStore());
+
+      act(() => {
+        const id1 = result.current.startSearch("flight", {});
+        result.current.setSearchResults(id1, { flights: [] });
+        
+        const id2 = result.current.startSearch("accommodation", {});
+        result.current.setSearchResults(id2, { accommodations: [] });
+        
+        const id3 = result.current.startSearch("flight", {});
+        result.current.setSearchResults(id3, { flights: [] });
+      });
+
+      const flightSearches = result.current.getRecentSearches("flight", 10);
+      expect(flightSearches).toHaveLength(2);
+      expect(flightSearches.every(s => s.searchType === "flight")).toBe(true);
+
+      const allSearches = result.current.getRecentSearches();
+      expect(allSearches.length).toBeGreaterThanOrEqual(3);
+    });
+  });
+
+  describe("Error Management", () => {
+    it("retries last search", async () => {
+      const { result } = renderHook(() => useSearchResultsStore());
+
+      const originalParams = { origin: "NYC", destination: "LAX" };
+      const searchId = result.current.startSearch("flight", originalParams);
+
+      act(() => {
+        result.current.setSearchError(searchId, {
+          message: "Network error",
+          retryable: true,
+          occurredAt: new Date().toISOString(),
+        });
+      });
+
+      let newSearchId: string | null = null;
+      await act(async () => {
+        newSearchId = await result.current.retryLastSearch();
+      });
+
+      expect(newSearchId).toBeTruthy();
+      expect(newSearchId).not.toBe(searchId);
+      expect(result.current.currentContext?.searchParams).toEqual(originalParams);
+      expect(result.current.status).toBe("searching");
     });
 
     it("clears error", () => {
       const { result } = renderHook(() => useSearchResultsStore());
 
+      const searchId = result.current.startSearch("flight", {});
       act(() => {
-        result.current.setError("Some error");
+        result.current.setSearchError(searchId, {
+          message: "Error",
+          occurredAt: new Date().toISOString(),
+          retryable: true,
+        });
       });
 
-      expect(result.current.error).toBe("Some error");
+      expect(result.current.error).not.toBeNull();
 
       act(() => {
         result.current.clearError();
@@ -358,32 +444,127 @@ describe("Search Results Store", () => {
     });
   });
 
-  describe.skip("Search Status", () => {
-    it("provides correct search status getters", () => {
+  describe("Performance Monitoring", () => {
+    it("calculates average search duration", () => {
       const { result } = renderHook(() => useSearchResultsStore());
 
-      // Initially idle
-      expect(result.current.isIdle).toBe(true);
-      expect(result.current.isSearching).toBe(false);
-      expect(result.current.isCompleted).toBe(false);
-      expect(result.current.isFailed).toBe(false);
-      expect(result.current.isCancelled).toBe(false);
-
-      // Start search
-      const searchId = result.current.startSearch("flight", {});
-
-      expect(result.current.isIdle).toBe(false);
-      expect(result.current.isSearching).toBe(true);
-      expect(result.current.isCompleted).toBe(false);
-
-      // Complete search
+      // Simulate multiple searches with different durations
       act(() => {
-        result.current.completeSearch(searchId, {});
+        const id1 = result.current.startSearch("flight", {});
+        result.current.setSearchResults(id1, { flights: [] }, {
+          searchDuration: 1000,
+          totalResults: 10,
+        } as SearchMetrics);
+
+        const id2 = result.current.startSearch("flight", {});
+        result.current.setSearchResults(id2, { flights: [] }, {
+          searchDuration: 2000,
+          totalResults: 20,
+        } as SearchMetrics);
       });
 
-      expect(result.current.isSearching).toBe(false);
-      expect(result.current.isCompleted).toBe(true);
-      expect(result.current.isFailed).toBe(false);
+      const avgDuration = result.current.getAverageSearchDuration("flight");
+      expect(avgDuration).toBe(1500); // (1000 + 2000) / 2
+    });
+
+    it("calculates search success rate", () => {
+      const { result } = renderHook(() => useSearchResultsStore());
+
+      act(() => {
+        // Successful search
+        const id1 = result.current.startSearch("flight", {});
+        result.current.setSearchResults(id1, { flights: [] });
+
+        // Failed search
+        const id2 = result.current.startSearch("flight", {});
+        result.current.setSearchError(id2, {
+          message: "Error",
+          occurredAt: new Date().toISOString(),
+          retryable: false,
+        });
+
+        // Another successful search
+        const id3 = result.current.startSearch("flight", {});
+        result.current.setSearchResults(id3, { flights: [] });
+      });
+
+      const successRate = result.current.getSearchSuccessRate("flight");
+      expect(successRate).toBeCloseTo(66.67, 1); // 2 out of 3 successful
+    });
+
+    it("provides performance insights", () => {
+      const { result } = renderHook(() => useSearchResultsStore());
+
+      act(() => {
+        const id1 = result.current.startSearch("flight", {});
+        result.current.setSearchResults(id1, { flights: [] }, {
+          searchDuration: 1500,
+          totalResults: 10,
+        } as SearchMetrics);
+
+        const id2 = result.current.startSearch("accommodation", {});
+        result.current.setSearchError(id2, {
+          message: "Error",
+          occurredAt: new Date().toISOString(),
+          retryable: true,
+        });
+      });
+
+      const insights = result.current.getPerformanceInsights();
+      expect(insights.totalSearches).toBe(2);
+      expect(insights.averageDuration).toBeGreaterThan(0);
+      expect(insights.successRate).toBe(50); // 1 success, 1 failure
+      expect(insights.errorRate).toBe(50);
+    });
+  });
+
+  describe("Utility Actions", () => {
+    it("resets entire store", () => {
+      const { result } = renderHook(() => useSearchResultsStore());
+
+      // Populate store with data
+      act(() => {
+        const searchId = result.current.startSearch("flight", {});
+        result.current.setSearchResults(searchId, { flights: [] });
+        result.current.setSearchError(searchId, {
+          message: "Test error",
+          occurredAt: new Date().toISOString(),
+          retryable: true,
+        });
+      });
+
+      expect(result.current.searchHistory.length).toBeGreaterThan(0);
+
+      act(() => {
+        result.current.reset();
+      });
+
+      expect(result.current.status).toBe("idle");
+      expect(result.current.currentSearchId).toBeNull();
+      expect(result.current.results).toEqual({});
+      expect(result.current.searchHistory).toEqual([]);
+      expect(result.current.error).toBeNull();
+    });
+
+    it("soft resets keeping history", () => {
+      const { result } = renderHook(() => useSearchResultsStore());
+
+      // Populate store
+      act(() => {
+        const searchId = result.current.startSearch("flight", {});
+        result.current.setSearchResults(searchId, { flights: [] });
+      });
+
+      const historyLength = result.current.searchHistory.length;
+
+      act(() => {
+        result.current.softReset();
+      });
+
+      expect(result.current.status).toBe("idle");
+      expect(result.current.currentSearchId).toBeNull();
+      expect(result.current.results).toEqual({});
+      expect(result.current.searchHistory.length).toBe(historyLength); // History preserved
     });
   });
 });
