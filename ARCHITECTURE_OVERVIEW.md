@@ -6,12 +6,17 @@ This document provides a comprehensive architectural overview of the TripSage AI
 
 - [Platform Overview](#platform-overview)
 - [System Architecture](#system-architecture)
-- [Component Overview](#component-overview)
+- [Component Architecture](#component-architecture)
+- [TripSage Core Layer](#tripsage-core-layer)
+- [TripSage Application Layer](#tripsage-application-layer)
+- [API Layer Architecture](#api-layer-architecture)
 - [Data Flow Architecture](#data-flow-architecture)
 - [Integration Architecture](#integration-architecture)
-- [Deployment Architecture](#deployment-architecture)
+- [Real-time Communication Architecture](#real-time-communication-architecture)
 - [Performance Architecture](#performance-architecture)
 - [Security Architecture](#security-architecture)
+- [Deployment Architecture](#deployment-architecture)
+- [Implementation Roadmap](#implementation-roadmap)
 
 ## Platform Overview
 
@@ -159,7 +164,7 @@ graph TD
     end
 ```
 
-## Component Overview
+## Component Architecture
 
 ### Frontend Layer (Next.js 15) - Grade A Implementation
 
@@ -230,51 +235,508 @@ graph TD
 - **Error Recovery** - Intelligent error handling and retry logic
 - **Handoff Coordination** - Seamless agent collaboration
 
-### TripSage Core Layer
+## TripSage Core Layer
 
-**Shared foundation providing:**
+The `tripsage_core` package provides the foundational business logic, domain models, and infrastructure services. It is designed as a **self-contained library** with no dependencies on the `tripsage` package.
 
-#### Business Services
+### Core Architecture Principles
 
-- **AuthService** - Authentication and authorization
-- **MemoryService** - Conversation memory and context (91% faster with Mem0)
-- **ChatService** - Chat orchestration and processing
-- **FlightService** - Flight operations and booking
-- **AccommodationService** - Hotel and lodging services
-- **DestinationService** - Research and recommendations
-- **TripService** - Trip planning and coordination
+- **Framework Agnostic** - Can be used with any Python web framework
+- **Pure Business Logic** - No HTTP or web concerns
+- **Clean Separation** - Business, infrastructure, and external concerns separated
+- **Dependency Injection** - Services receive dependencies, don't create them
 
-#### Infrastructure Services
+### Package Structure
 
-- **DatabaseService** - Supabase integration with transactions
-- **CacheService** - DragonflyDB with intelligent TTL (25x improvement)
-- **WebSocketManager** - Real-time communication
-- **KeyMonitoringService** - API key security and usage tracking
+```text
+tripsage_core/
+├── config/                    # Configuration management
+│   └── base_app_settings.py  # Environment-based settings
+│
+├── exceptions/               # Centralized exception hierarchy
+│   └── exceptions.py         # All core exceptions
+│
+├── models/                   # Data models and schemas
+│   ├── base_core_model.py   # Base model classes
+│   ├── db/                  # Database/persistence models
+│   ├── domain/              # Business domain entities
+│   └── schemas_common/      # Shared schemas and enums
+│
+├── services/                 # Service layer
+│   ├── business/            # Core business logic services
+│   ├── external_apis/       # Third-party API clients
+│   └── infrastructure/      # Infrastructure services
+│
+└── utils/                    # Cross-cutting utilities
+```
 
-### Infrastructure Layer
+### Foundation Layer
 
-#### Database (Supabase PostgreSQL)
+#### Configuration Management
 
-- **Primary Storage** - User data, trips, bookings, preferences
-- **pgvector Extension** - AI embeddings for similarity search
-- **Row Level Security** - Fine-grained access control
-- **Real-time Subscriptions** - Live data updates
-- **Migration System** - Version-controlled schema changes
+```python
+class BaseAppSettings(BaseSettings):
+    """Environment-based configuration with validation"""
+    
+    # Database
+    database_url: str
+    database_pool_size: int = 20
+    
+    # Cache
+    cache_url: str = "redis://localhost:6379"
+    cache_ttl_default: int = 3600
+    
+    # External APIs
+    duffel_api_key: str
+    google_maps_api_key: str
+    openweather_api_key: str
+```
 
-#### Cache (DragonflyDB)
+#### Exception Hierarchy
 
-- **High Performance** - 25x faster than Redis
-- **Multi-tier Strategy** - Hot/warm/cold data with intelligent TTL
-- **Redis Compatibility** - Drop-in Redis replacement
-- **Memory Efficiency** - Optimized for large datasets
+```python
+CoreTripSageError (500)
+├── CoreAuthenticationError (401)
+├── CoreAuthorizationError (403)
+├── CoreValidationError (422)
+├── CoreResourceNotFoundError (404)
+├── CoreServiceError (500)
+├── CoreDatabaseError (500)
+├── CoreExternalAPIError (502)
+└── CoreRateLimitError (429)
+```
 
-#### External Integrations
+### Model Layer Architecture
 
-- **Flight APIs** - Duffel for comprehensive flight data
-- **Accommodation** - Airbnb MCP integration for alternative lodging
-- **Maps & Location** - Google Maps for geographic services
-- **Weather** - OpenWeatherMap for travel conditions
-- **Calendar** - Google Calendar for trip scheduling
+#### Base Model Classes
+
+```python
+TripSageModel         # Base for all models
+├── TripSageDomainModel   # Business entities
+├── TripSageDBModel       # Database models
+└── TripSageSchemaModel   # API schemas
+```
+
+**Database Models (`models/db/`)**
+
+- SQLAlchemy-compatible models for persistence
+- Examples: `User`, `Trip`, `Flight`, `Accommodation`, `ApiKeyDB`
+
+**Domain Models (`models/domain/`)**
+
+- Pure business entities with rich behavior
+- Examples: `FlightOffer`, `AccommodationListing`, `Entity`, `Relation`
+
+**Common Schemas (`models/schemas_common/`)**
+
+- Shared enums and value objects
+- Examples: `CabinClass`, `BookingStatus`, `CurrencyCode`
+
+### Service Layer Organization
+
+#### Business Services (`services/business/`)
+
+Core business logic implementation:
+
+- **AuthService**: Authentication, authorization, token management
+- **MemoryService**: Context management, conversation memory (91% faster with Mem0)
+- **FlightService**: Flight search, booking, price tracking
+- **AccommodationService**: Hotel and lodging services
+- **TripService**: Trip planning and coordination
+- **ChatService**: Conversation management
+- **DestinationService**: Research and recommendations
+- **KeyManagementService**: API key management for BYOK
+
+#### External API Services (`services/external_apis/`)
+
+Third-party integrations:
+
+- **GoogleMapsService**: Location, geocoding, directions
+- **WeatherService**: Weather data and forecasts
+- **DuffelHttpClient**: Flight booking API
+- **CalendarService**: Calendar integration
+- **DocumentAnalyzer**: Document processing
+- **WebcrawlService**: Web scraping
+
+#### Infrastructure Services (`services/infrastructure/`)
+
+Low-level infrastructure management:
+
+- **DatabaseService**: Connection pooling, transactions
+- **CacheService**: DragonflyDB with intelligent TTL (25x improvement)
+- **WebSocketManager**: Real-time communication
+- **KeyMonitoringService**: API key security and usage tracking
+
+### Key Design Patterns
+
+#### Dependency Injection Pattern
+
+```python
+class FlightService:
+    def __init__(self, db_service: DatabaseService, cache_service: CacheService):
+        self.db = db_service
+        self.cache = cache_service
+```
+
+#### Repository Pattern
+
+```python
+class TripRepository:
+    async def get_user_trips(self, user_id: str) -> List[Trip]:
+        async with self.db as conn:
+            return await conn.query(Trip).filter_by(user_id=user_id).all()
+```
+
+#### Service Registry Pattern
+
+```python
+class ServiceRegistry:
+    def get_service(self, service_type: Type[T]) -> T:
+        if service_type not in self._services:
+            self._services[service_type] = service_type(self.settings)
+        return self._services[service_type]
+```
+
+## TripSage Application Layer
+
+The `tripsage` package is the main application layer that builds upon `tripsage_core` to deliver travel planning functionality through APIs and agent interfaces.
+
+### Application Architecture Principles
+
+- **Depends on** `tripsage_core` for all business logic
+- Provides FastAPI web application and agent orchestration
+- Handles HTTP concerns, routing, and middleware
+- Integrates MCP (Model Context Protocol) servers and AI agents
+- Manages real-time communication and tool orchestration
+
+### Package Structure - `tripsage_core`
+
+```text
+tripsage/
+├── api/                      # FastAPI application
+├── agents/                   # AI agent implementations
+├── orchestration/            # LangGraph orchestration
+├── tools/                    # Agent tools
+├── config/                   # Application configuration
+├── security/                 # Security utilities
+└── utils/                    # Application utilities
+```
+
+### Agent Layer Architecture
+
+#### Base Agent Architecture
+
+```python
+class BaseAgent:
+    """Foundation for all agents"""
+    
+    def __init__(self, service_registry: ServiceRegistry):
+        self.services = service_registry
+        self.tools = self._register_tools()
+    
+    @abstractmethod
+    async def process(self, input: AgentInput) -> AgentOutput:
+        """Process agent request"""
+```
+
+#### Specialized Agents
+
+- **TravelAgent**: Main travel planning orchestrator
+- **FlightAgent**: Flight search and booking specialist
+- **AccommodationAgent**: Hotel/lodging specialist with MCP integration
+- **DestinationResearchAgent**: Destination insights
+- **BudgetAgent**: Budget optimization
+- **ItineraryAgent**: Itinerary planning
+
+#### Agent Handoff Coordination
+
+```python
+class HandoffCoordinator:
+    async def handoff(
+        self,
+        from_agent: str,
+        to_agent: str,
+        context: HandoffContext
+    ) -> HandoffResult:
+        """Coordinate handoff between agents"""
+```
+
+### MCP Abstraction Layer
+
+#### MCP Manager
+
+```python
+class MCPManager:
+    async def invoke(
+        self,
+        server: str,
+        method: str,
+        params: dict,
+        user_key: Optional[str] = None
+    ) -> Any:
+        """Invoke MCP server method with user key fallback"""
+```
+
+#### Service Wrappers
+
+- **AirbnbMCPWrapper**: Airbnb search integration
+- Additional MCP wrappers as needed
+
+### LangGraph Orchestration
+
+Complex workflow orchestration:
+
+```python
+workflow = StateGraph(PlanningState)
+
+# Add nodes
+workflow.add_node("research", destination_research_node)
+workflow.add_node("flights", flight_search_node)
+workflow.add_node("hotels", hotel_search_node)
+
+# Add edges
+workflow.add_edge("research", "flights")
+workflow.add_conditional_edges(
+    "flights",
+    should_search_hotels,
+    {True: "hotels", False: END}
+)
+```
+
+### Tools Layer
+
+#### Tool Categories
+
+- **Search Tools**: Flight, hotel, destination search
+- **Memory Tools**: Context storage and retrieval
+- **Planning Tools**: Itinerary creation and optimization
+- **Web Tools**: Web search and crawling
+
+#### Tool Pattern
+
+```python
+@function_tool
+async def search_flights_tool(
+    origin: str,
+    destination: str,
+    date: str,
+    service_registry: ServiceRegistry
+) -> FlightSearchResults:
+    """Search for flights"""
+    flight_service = service_registry.get_service(FlightService)
+    return await flight_service.search(origin, destination, date)
+```
+
+### Dual Consumer Support
+
+#### Frontend Consumer
+
+- Clean REST APIs with OpenAPI docs
+- WebSocket for real-time updates
+- User-friendly error messages
+- UI hints in responses
+
+#### Agent Consumer
+
+- Structured data responses
+- Technical error details
+- Tool suggestions
+- Performance metrics
+
+## API Layer Architecture
+
+The TripSage API implements a unified architecture serving multiple consumer types with automatic adaptation and high performance.
+
+### Dual Consumer Architecture
+
+#### Consumer Detection and Adaptation
+
+```python
+class ConsumerDetector:
+    @staticmethod
+    def detect_consumer_type(request: Request) -> ConsumerType:
+        # Check User-Agent patterns
+        user_agent = request.headers.get("user-agent", "").lower()
+        
+        if "agent" in user_agent or "langgraph" in user_agent:
+            return ConsumerType.AGENT
+        elif "next.js" in user_agent or "browser" in user_agent:
+            return ConsumerType.FRONTEND
+        
+        # Check API key patterns
+        api_key = request.headers.get("x-api-key")
+        if api_key and api_key.startswith("agent_"):
+            return ConsumerType.AGENT
+        
+        # Check JWT token claims
+        auth_header = request.headers.get("authorization")
+        if auth_header:
+            token_claims = decode_jwt_token(auth_header)
+            return token_claims.get("consumer_type", ConsumerType.FRONTEND)
+        
+        return ConsumerType.FRONTEND
+```
+
+#### Consumer-Specific Response Formatting
+
+##### **Frontend Response Format**
+
+```python
+class FrontendResponseFormatter:
+    @staticmethod
+    def format_response(data: Any, request_context: RequestContext) -> dict:
+        return {
+            "data": data,
+            "meta": {
+                "ui_hints": {
+                    "loading_complete": True,
+                    "suggested_actions": ["save", "share", "book"],
+                    "display_priority": "high"
+                },
+                "pagination": {
+                    "page": request_context.page,
+                    "total_pages": request_context.total_pages,
+                    "has_next": request_context.has_next
+                },
+                "user_context": {
+                    "preferences_applied": True,
+                    "budget_constraints": request_context.budget_info
+                }
+            }
+        }
+```
+
+##### **Agent Response Format**
+
+```python
+class AgentResponseFormatter:
+    @staticmethod
+    def format_response(data: Any, request_context: RequestContext) -> dict:
+        return {
+            "data": data,
+            "agent_context": {
+                "reasoning_data": {
+                    "confidence_score": request_context.confidence,
+                    "data_freshness": request_context.cache_age,
+                    "alternative_options": request_context.alternatives
+                },
+                "tool_suggestions": [
+                    "search_alternatives",
+                    "check_price_history",
+                    "analyze_reviews"
+                ],
+                "next_actions": [
+                    "present_options",
+                    "await_user_choice",
+                    "refine_search"
+                ]
+            },
+            "performance_metrics": {
+                "processing_time_ms": request_context.processing_time,
+                "cache_hit_ratio": request_context.cache_stats,
+                "api_calls_made": request_context.external_calls
+            }
+        }
+```
+
+### Request Processing Architecture
+
+#### Request Flow Pipeline
+
+```mermaid
+graph TD
+    A[Client Request] --> B[Consumer Detection]
+    B --> C[Authentication]
+    C --> D[Rate Limiting]
+    D --> E[Input Validation]
+    E --> F[Router Dispatch]
+    F --> G[Service Processing]
+    G --> H[External API Calls]
+    H --> I[Data Processing]
+    I --> J[Cache Update]
+    J --> K[Response Formatting]
+    K --> L[Client Response]
+    
+    G --> M[Error Handling]
+    M --> N[Error Formatting]
+    N --> L
+    
+    H --> O[Retry Logic]
+    O --> H
+```
+
+#### Middleware Stack
+
+```python
+class MiddlewareStack:
+    MIDDLEWARE_ORDER = [
+        CORSMiddleware,                    # Cross-origin resource sharing
+        ConsumerDetectionMiddleware,       # Detect consumer type
+        AuthenticationMiddleware,          # JWT/API key validation
+        RateLimitingMiddleware,           # Consumer-aware rate limiting
+        RequestLoggingMiddleware,         # Structured logging
+        ErrorHandlingMiddleware,          # Exception processing
+        ResponseFormattingMiddleware      # Consumer-specific formatting
+    ]
+```
+
+### Authentication Architecture
+
+#### Multi-Modal Authentication System
+
+```python
+class AuthenticationSystem:
+    """Unified authentication supporting multiple methods"""
+    
+    async def authenticate_request(self, request: Request) -> AuthResult:
+        # Try JWT authentication first
+        auth_header = request.headers.get("authorization")
+        if auth_header and auth_header.startswith("Bearer "):
+            return await self.jwt_handler.verify_token(auth_header)
+        
+        # Try API key authentication
+        api_key = request.headers.get("x-api-key")
+        if api_key:
+            return await self.api_key_handler.verify_key(api_key)
+        
+        # Check for BYOK in request body (for key management endpoints)
+        if request.url.path.startswith("/api/v1/keys"):
+            return await self.byok_handler.verify_request(request)
+        
+        raise AuthenticationError("No valid authentication provided")
+```
+
+#### BYOK (Bring Your Own Key) System
+
+```python
+class BYOKSystem:
+    """Secure user-provided API key management"""
+    
+    async def store_user_key(
+        self,
+        user_id: str,
+        service: str,
+        api_key: str,
+        description: str = None
+    ) -> UserAPIKey:
+        # Validate API key with service
+        validator = self.SUPPORTED_SERVICES[service]["validator"]
+        is_valid = await validator.validate_key(api_key)
+        if not is_valid:
+            raise ValidationError(f"Invalid {service} API key")
+        
+        # Generate user-specific salt and encrypt
+        user_salt = self.generate_user_salt(user_id)
+        encrypted_key = self.encrypt_api_key(api_key, user_salt)
+        
+        # Store securely in database
+        return await self.db.create(UserAPIKey(
+            user_id=user_id,
+            service=service,
+            encrypted_key=encrypted_key,
+            description=description
+        ))
+```
 
 ## Data Flow Architecture
 
@@ -331,32 +793,32 @@ sequenceDiagram
     API->>AG: Agent-Optimized Response
 ```
 
-### Real-time Communication Flow
+### Caching Strategy
 
-```mermaid
-graph TD
-    A[User Action] --> B[WebSocket Manager]
-    B --> C[Event Router]
-    C --> D[Agent Orchestrator]
-    D --> E[Business Services]
-    E --> F[External APIs]
-    F --> G[Response Processing]
-    G --> H[Event Broadcasting]
-    H --> I[Connected Clients]
-    
-    J[Agent Processing] --> K[Status Updates]
-    K --> L[WebSocket Broadcast]
-    L --> M[Frontend Updates]
+Multi-tier caching for optimal performance:
+
+```python
+CACHE_TIERS = {
+    "hot": {
+        "ttl": 300,      # 5 minutes
+        "data_types": ["flight_prices", "availability", "user_sessions"]
+    },
+    "warm": {
+        "ttl": 3600,     # 1 hour  
+        "data_types": ["search_results", "destination_info", "weather"]
+    },
+    "cold": {
+        "ttl": 86400,    # 24 hours
+        "data_types": ["user_preferences", "historical_data", "static_content"]
+    }
+}
 ```
 
 ## Integration Architecture
 
 ### External Service Integration Pattern
 
-The platform uses a standardized pattern for integrating with external services:
-
 ```python
-# Unified external service integration
 class ExternalServiceIntegration:
     """Standardized pattern for external API integration"""
     
@@ -376,10 +838,7 @@ class ExternalServiceIntegration:
 
 ### Memory Integration Pattern
 
-Persistent memory across all components:
-
 ```python
-# Memory integration across the platform
 class MemoryIntegration:
     """Unified memory system for context persistence"""
     
@@ -398,37 +857,297 @@ class MemoryIntegration:
         await self.cache.update_user_context(user_id, interaction)
 ```
 
-### BYOK (Bring Your Own Key) Integration
-
-Secure user-provided API key management:
+### Service Orchestration Pattern
 
 ```python
-# BYOK system integration
-class BYOKIntegration:
-    """Secure user API key management"""
+class ServiceOrchestrator:
+    """Coordinate multiple services for complex operations"""
     
-    async def store_user_key(self, user_id: str, service: str, api_key: str):
-        # 1. Validate key with service
-        is_valid = await self.validate_key(service, api_key)
-        if not is_valid:
-            raise ValidationError("Invalid API key")
+    async def search_complete_trip(
+        self,
+        criteria: TripSearchCriteria,
+        context: RequestContext
+    ) -> CompleteSearchResults:
+        # Parallel service calls
+        tasks = []
         
-        # 2. Encrypt with user-specific salt
-        user_salt = self.generate_user_salt(user_id)
-        encrypted_key = self.encrypt(api_key, user_salt)
+        if criteria.include_flights:
+            tasks.append(self.services.get_flight_service().search_flights(criteria.flight_criteria))
         
-        # 3. Store securely
-        await self.db.store_encrypted_key(user_id, service, encrypted_key)
+        if criteria.include_accommodations:
+            tasks.append(self.services.get_accommodation_service().search_accommodations(criteria.accommodation_criteria))
         
-        # 4. Monitor usage
-        await self.monitoring.setup_key_monitoring(user_id, service)
+        if criteria.include_destination_info:
+            tasks.append(self.services.get_destination_service().get_destination_insights(criteria.destination))
+        
+        # Execute all searches concurrently
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        
+        # Process results and store in memory
+        processed_results = self.process_search_results(results, criteria)
+        await self.services.get_memory_service().store_search_memory(
+            user_id=context.user_id,
+            search_criteria=criteria,
+            results=processed_results
+        )
+        
+        return processed_results
 ```
+
+## Real-time Communication Architecture
+
+### WebSocket Management System
+
+```python
+class WebSocketArchitecture:
+    """Comprehensive WebSocket management for real-time features"""
+    
+    async def handle_websocket_connection(
+        self,
+        websocket: WebSocket,
+        user_id: str,
+        session_type: str
+    ):
+        await self.connection_manager.connect(websocket, user_id, session_type)
+        
+        try:
+            while True:
+                # Receive message from client
+                message = await websocket.receive_json()
+                
+                # Route message to appropriate handler
+                response = await self.message_router.route_message(
+                    message, user_id, session_type
+                )
+                
+                # Send response back to client
+                if response:
+                    await websocket.send_json(response)
+                    
+        except WebSocketDisconnect:
+            await self.connection_manager.disconnect(websocket, user_id)
+```
+
+### Real-time Event System
+
+```python
+class RealtimeEventSystem:
+    """Event-driven real-time updates"""
+    
+    EVENT_TYPES = {
+        "trip.created": "Trip planning started",
+        "flight.price_change": "Flight price updated", 
+        "booking.confirmed": "Booking confirmed",
+        "agent.status_update": "Agent processing update",
+        "chat.message": "New chat message",
+        "memory.updated": "Context updated"
+    }
+    
+    async def broadcast_event(
+        self,
+        event_type: str,
+        data: dict,
+        target_users: List[str] = None,
+        target_sessions: List[str] = None
+    ):
+        event = RealtimeEvent(
+            type=event_type,
+            data=data,
+            timestamp=time.time(),
+            target_users=target_users,
+            target_sessions=target_sessions
+        )
+        
+        await self.event_broadcaster.broadcast(event)
+```
+
+### Real-time Communication Flow
+
+```mermaid
+graph TD
+    A[User Action] --> B[WebSocket Manager]
+    B --> C[Event Router]
+    C --> D[Agent Orchestrator]
+    D --> E[Business Services]
+    E --> F[External APIs]
+    F --> G[Response Processing]
+    G --> H[Event Broadcasting]
+    H --> I[Connected Clients]
+    
+    J[Agent Processing] --> K[Status Updates]
+    K --> L[WebSocket Broadcast]
+    L --> M[Frontend Updates]
+```
+
+## Performance Architecture
+
+### Multi-Tier Caching Strategy
+
+```python
+class CacheArchitecture:
+    """Multi-tier caching with intelligent TTL management"""
+    
+    CACHE_TIERS = {
+        "hot": {
+            "ttl": 300,      # 5 minutes
+            "use_cases": ["flight_prices", "availability", "user_sessions"],
+            "storage": "memory"
+        },
+        "warm": {
+            "ttl": 3600,     # 1 hour
+            "use_cases": ["search_results", "destination_info", "weather"],
+            "storage": "dragonfly"
+        },
+        "cold": {
+            "ttl": 86400,    # 24 hours
+            "use_cases": ["static_data", "user_preferences", "historical_data"],
+            "storage": "dragonfly"
+        }
+    }
+```
+
+### Database Optimization
+
+- **Connection Pooling** - Efficient database connection management (20 connections default)
+- **Query Optimization** - Indexed searches and prepared statements
+- **Read Replicas** - Distributed read operations for scalability
+- **Partitioning** - Time-based partitioning for large datasets
+
+### Memory Optimization
+
+- **Vector Search** - pgvector for efficient similarity search
+- **Context Compression** - Intelligent context summarization
+- **Memory Tiering** - Hot/warm/cold memory management
+- **Garbage Collection** - Automatic cleanup of old memories
+
+### Database Performance Architecture
+
+```python
+class DatabasePerformanceArchitecture:
+    CONNECTION_POOL_CONFIG = {
+        "min_size": 5,
+        "max_size": 20,
+        "max_queries": 50000,
+        "max_inactive_connection_lifetime": 300,
+        "timeout": 60
+    }
+    
+    async def execute_optimized_query(
+        self,
+        query: str,
+        params: dict = None,
+        use_cache: bool = True
+    ) -> Any:
+        # Generate cache key for query
+        if use_cache:
+            cache_key = self.generate_query_cache_key(query, params)
+            cached_result = await self.get_cached_query_result(cache_key)
+            if cached_result:
+                return cached_result
+        
+        # Execute query with timing
+        start_time = time.time()
+        result = await self.execute_query(query, params)
+        execution_time = time.time() - start_time
+        
+        # Log slow queries
+        if execution_time > 1.0:  # 1 second threshold
+            logger.warning("Slow query detected", extra={
+                "query": query,
+                "execution_time": execution_time,
+                "params": params
+            })
+        
+        # Cache result if applicable
+        if use_cache and execution_time > 0.1:  # Cache queries > 100ms
+            await self.cache_query_result(cache_key, result)
+        
+        return result
+```
+
+## Security Architecture
+
+### Multi-Layer Security Model
+
+```python
+class SecurityArchitecture:
+    """Comprehensive security implementation"""
+    
+    SECURITY_LAYERS = [
+        "network_security",     # HTTPS, firewall rules
+        "authentication",       # JWT, API keys, BYOK
+        "authorization",        # Role-based access control
+        "input_validation",     # Request sanitization
+        "rate_limiting",        # Abuse prevention
+        "encryption",          # Data protection
+        "monitoring",          # Security event tracking
+        "audit_logging"        # Compliance and forensics
+    ]
+    
+    async def secure_request_pipeline(
+        self,
+        request: Request,
+        endpoint_config: EndpointConfig
+    ) -> SecurityContext:
+        security_context = SecurityContext()
+        
+        # 1. Authentication
+        auth_result = await self.authenticate_request(request)
+        security_context.user = auth_result.user
+        
+        # 2. Authorization
+        await self.authorize_request(auth_result.user, endpoint_config.required_permissions)
+        
+        # 3. Input validation
+        await self.validate_request_input(request, endpoint_config.schema)
+        
+        # 4. Rate limiting
+        await self.check_rate_limits(auth_result.principal, endpoint_config.rate_limits)
+        
+        # 5. Security monitoring
+        await self.log_security_event(request, auth_result, "access_granted")
+        
+        return security_context
+```
+
+### Data Protection
+
+```python
+class DataProtectionSystem:
+    """Data encryption and protection implementation"""
+    
+    ENCRYPTION_CONFIG = {
+        "algorithm": "AES-256-GCM",
+        "key_rotation_days": 90,
+        "backup_key_count": 3
+    }
+    
+    PII_FIELDS = [
+        "email", "phone", "passport_number",
+        "credit_card", "api_key", "password"
+    ]
+    
+    async def encrypt_sensitive_data(self, data: dict) -> dict:
+        """Encrypt PII and sensitive data"""
+        encrypted_data = data.copy()
+        
+        for field in self.PII_FIELDS:
+            if field in encrypted_data:
+                encrypted_data[field] = self.encrypt_field(encrypted_data[field])
+        
+        return encrypted_data
+```
+
+### Compliance
+
+- **GDPR Compliance** - European data protection regulations
+- **CCPA Compliance** - California consumer privacy protection
+- **SOC 2 Type II** - Security and availability controls
+- **Data Residency** - Geographic data storage controls
 
 ## Deployment Architecture
 
 ### Container Orchestration
-
-The platform is designed for containerized deployment with Kubernetes:
 
 ```yaml
 # Example deployment configuration
@@ -492,78 +1211,79 @@ Multi-environment deployment strategy:
 - **Staging** - Pre-production testing with reduced resources
 - **Production** - Full-scale deployment with monitoring and alerts
 
-## Performance Architecture
-
-### Caching Strategy
-
-Multi-tier caching for optimal performance:
+### Monitoring and Observability
 
 ```python
-# Intelligent caching strategy
-class CachingStrategy:
-    TIERS = {
-        "hot": {
-            "ttl": 300,  # 5 minutes
-            "data_types": ["flight_prices", "availability", "user_sessions"]
+class ObservabilityArchitecture:
+    """Comprehensive monitoring and observability"""
+    
+    METRICS_CONFIG = {
+        "request_duration": {
+            "type": "histogram",
+            "buckets": [0.1, 0.5, 1.0, 2.5, 5.0, 10.0]
         },
-        "warm": {
-            "ttl": 3600,  # 1 hour  
-            "data_types": ["search_results", "destination_info", "weather"]
+        "request_count": {
+            "type": "counter",
+            "labels": ["method", "endpoint", "status_code", "consumer_type"]
         },
-        "cold": {
-            "ttl": 86400,  # 24 hours
-            "data_types": ["user_preferences", "historical_data", "static_content"]
+        "error_rate": {
+            "type": "gauge",
+            "labels": ["service", "error_type"]
+        },
+        "cache_hit_ratio": {
+            "type": "gauge",
+            "labels": ["cache_tier", "data_type"]
         }
     }
 ```
 
-### Database Optimization
+## Implementation Roadmap
 
-- **Connection Pooling** - Efficient database connection management
-- **Query Optimization** - Indexed searches and prepared statements
-- **Read Replicas** - Distributed read operations for scalability
-- **Partitioning** - Time-based partitioning for large datasets
+### Critical Path to Production (5-6 Weeks)
 
-### Memory Optimization
+#### **Phase 1: Security & Authentication (Week 1)**
 
-- **Vector Search** - pgvector for efficient similarity search
-- **Context Compression** - Intelligent context summarization
-- **Memory Tiering** - Hot/warm/cold memory management
-- **Garbage Collection** - Automatic cleanup of old memories
+- ✅ Remove hardcoded JWT fallback secret (security vulnerability) - **Completed June 6, 2025**
+- ✅ Implement production JWT security patterns - **Completed June 6, 2025**
+- 🔄 Connect frontend authentication to backend JWT service
+- 🔄 Implement secure token refresh mechanism
 
-## Security Architecture
+#### **Phase 2: Backend API Completion (Week 2-3)**
 
-### Multi-Layer Security
+- Add missing activities.py router (search, booking, availability)
+- Add missing search.py router (unified search, suggestions)
+- Integrate service layer with existing patterns
 
-```python
-# Comprehensive security implementation
-class SecurityArchitecture:
-    LAYERS = [
-        "network_security",    # HTTPS, firewall, VPN
-        "authentication",      # JWT, API keys, BYOK
-        "authorization",       # RBAC, resource-level permissions
-        "input_validation",    # Request sanitization, SQL injection prevention
-        "rate_limiting",       # DDoS protection, abuse prevention
-        "encryption",         # AES-256 for sensitive data
-        "monitoring",         # Security event tracking
-        "audit_logging"       # Compliance and forensics
-    ]
-```
+#### **Phase 3: Real-time Feature Connection (Week 3-4)**
 
-### Data Protection
+- Connect WebSocket infrastructure (ready on both ends)
+- Replace mock agent data with real-time status updates
+- Implement chat functionality with backend message routing
 
-- **Encryption at Rest** - All sensitive data encrypted in database
-- **Encryption in Transit** - TLS 1.3 for all communications
-- **Key Rotation** - Automatic encryption key rotation
-- **Data Minimization** - Only collect and store necessary data
-- **Right to Deletion** - GDPR-compliant data deletion
+#### **Phase 4: Test Infrastructure Modernization (Week 4-5)**
 
-### Compliance
+- Fix 527 failing tests with Pydantic v1→v2 migration
+- Achieve ≥90% test coverage across frontend and backend
 
-- **GDPR Compliance** - European data protection regulations
-- **CCPA Compliance** - California consumer privacy protection
-- **SOC 2 Type II** - Security and availability controls
-- **Data Residency** - Geographic data storage controls
+#### **Phase 5: Performance & Production (Week 5-6)**
+
+- Enable React 19 Compiler for automatic optimizations
+- Move rate limiting to DragonflyDB
+- Production deployment with comprehensive monitoring
+
+### Future Enhancements
+
+1. **Mobile Applications** - Native iOS and Android apps
+2. **Advanced AI Features** - Enhanced agent collaboration
+3. **Global Expansion** - Multi-region deployment
+4. **Enterprise Features** - Advanced security and compliance
+
+### Success Metrics
+
+- **Frontend Quality**: Grade A maintained with 85-90% test coverage (on track for A+)
+- **Security**: JWT hardening completed, zero critical vulnerabilities remaining
+- **Performance**: Core Web Vitals in green zone, <100ms WebSocket latency (infrastructure ready)
+- **User Experience**: <2s authentication (foundation complete), real-time collaboration features ready
 
 ## Integration Benefits
 
@@ -589,53 +1309,5 @@ The unified architecture provides several key benefits:
 - **Monitoring & Observability** - Comprehensive metrics and logging
 - **High Availability** - Redundant systems and automatic failover
 - **Performance Optimization** - Intelligent caching and query optimization
-
-## Implementation Roadmap (Based on June 2025 Review)
-
-### Critical Path to Production (5-6 Weeks)
-
-**Phase 1: Security & Authentication (Week 1)**
-
-- ✅ Remove hardcoded JWT fallback secret (security vulnerability) - **Completed June 6, 2025**
-- ✅ Implement production JWT security patterns - **Completed June 6, 2025**
-- 🔄 Connect frontend authentication to backend JWT service
-- 🔄 Implement secure token refresh mechanism
-
-**Phase 2: Backend API Completion (Week 2-3)**
-
-- Add missing activities.py router (search, booking, availability)
-- Add missing search.py router (unified search, suggestions)
-- Integrate service layer with existing patterns
-
-**Phase 3: Real-time Feature Connection (Week 3-4)**
-
-- Connect WebSocket infrastructure (ready on both ends)
-- Replace mock agent data with real-time status updates
-- Implement chat functionality with backend message routing
-
-**Phase 4: Test Infrastructure Modernization (Week 4-5)**
-
-- Fix 527 failing tests with Pydantic v1→v2 migration
-- Achieve ≥90% test coverage across frontend and backend
-
-**Phase 5: Performance & Production (Week 5-6)**
-
-- Enable React 19 Compiler for automatic optimizations
-- Move rate limiting to DragonflyDB
-- Production deployment with comprehensive monitoring
-
-### Future Enhancements
-
-1. **Mobile Applications** - Native iOS and Android apps
-2. **Advanced AI Features** - Enhanced agent collaboration
-3. **Global Expansion** - Multi-region deployment
-4. **Enterprise Features** - Advanced security and compliance
-
-### Success Metrics
-
-- **Frontend Quality**: Grade A maintained with 85-90% test coverage (on track for A+)
-- **Security**: JWT hardening completed, zero critical vulnerabilities remaining
-- **Performance**: Core Web Vitals in green zone, <100ms WebSocket latency (infrastructure ready)
-- **User Experience**: <2s authentication (foundation complete), real-time collaboration features ready
 
 The TripSage architecture successfully balances cutting-edge technology with production reliability, demonstrating exceptional frontend implementation quality while addressing critical integration gaps for production readiness.
