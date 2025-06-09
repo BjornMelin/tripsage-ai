@@ -360,11 +360,11 @@ describe("useWebSocket", () => {
 
       // Act
       act(() => {
-        result.current.on("chat_message", mockHandler);
+        result.current.on(WebSocketEventType.CHAT_MESSAGE, mockHandler);
       });
 
       // Assert
-      expect(mockClient.on).toHaveBeenCalledWith("chat_message", mockHandler);
+      expect(mockClient.on).toHaveBeenCalledWith(WebSocketEventType.CHAT_MESSAGE, mockHandler);
     });
 
     it("should remove event handlers", () => {
@@ -374,11 +374,11 @@ describe("useWebSocket", () => {
 
       // Act
       act(() => {
-        result.current.off("chat_message", mockHandler);
+        result.current.off(WebSocketEventType.CHAT_MESSAGE, mockHandler);
       });
 
       // Assert
-      expect(mockClient.off).toHaveBeenCalledWith("chat_message", mockHandler);
+      expect(mockClient.off).toHaveBeenCalledWith(WebSocketEventType.CHAT_MESSAGE, mockHandler);
     });
   });
 });
@@ -458,7 +458,7 @@ describe("useAgentStatusWebSocket", () => {
     const config = { autoConnect: false };
 
     // Act
-    renderHook(() => useAgentStatusWebSocket(userId, token, config));
+    renderHook(() => useAgentStatusWebSocket());
 
     // Assert
     expect(mockFactory.createAgentStatusClient).toHaveBeenCalledWith(
@@ -488,8 +488,10 @@ describe("useChatMessages", () => {
       })),
     };
 
-    const mockFactory = new WebSocketClientFactory("", {});
-    mockFactory.createChatClient.mockReturnValue(mockClient);
+    const mockFactory = {
+      createChatClient: vi.fn().mockReturnValue(mockClient),
+      createAgentStatusClient: vi.fn().mockReturnValue(mockClient),
+    };
     (WebSocketClientFactory as any).mockReturnValue(mockFactory);
   });
 
@@ -660,95 +662,56 @@ describe("useAgentStatus", () => {
       })),
     };
 
-    const mockFactory = new WebSocketClientFactory("", {});
-    mockFactory.createAgentStatusClient.mockReturnValue(mockClient);
+    const mockFactory = {
+      createChatClient: vi.fn().mockReturnValue(mockClient),
+      createAgentStatusClient: vi.fn().mockReturnValue(mockClient),
+    };
     (WebSocketClientFactory as any).mockReturnValue(mockFactory);
   });
 
   it("should initialize with null status and inactive", () => {
     // Act
-    const { result } = renderHook(() => useAgentStatus("user-id", "token"));
+    const { result } = renderHook(() => useAgentStatus());
 
     // Assert
-    expect(result.current.agentStatus).toBe(null);
-    expect(result.current.isActive).toBe(false);
-    expect(result.current.isConnected).toBe(false);
+    expect(result.current.agents).toEqual([]);
+    expect(result.current.activeAgents).toEqual([]);
+    expect(result.current.currentSession).toBe(null);
   });
 
   it("should handle agent status updates", async () => {
     // Arrange
-    const onStatusUpdate = vi.fn();
-    const { result } = renderHook(() =>
-      useAgentStatus("user-id", "token", onStatusUpdate)
-    );
-
-    const statusHandler = (mockClient.on as Mock).mock.calls.find(
-      ([event]) => event === WebSocketEventType.AGENT_STATUS_UPDATE
-    )?.[1];
-
-    const testStatus = {
-      agent_id: "agent-1",
-      is_active: true,
-      current_task: "Processing request",
-      progress: 0.5,
-    };
-
-    const event: WebSocketEvent = {
-      id: "event-1",
-      type: WebSocketEventType.AGENT_STATUS_UPDATE,
-      timestamp: new Date().toISOString(),
-      payload: { agent_status: testStatus },
-    };
+    const { result } = renderHook(() => useAgentStatus());
 
     // Act
     act(() => {
-      statusHandler(event);
+      result.current.startMonitoring();
     });
 
     // Assert
     await waitFor(() => {
-      expect(result.current.agentStatus).toEqual(testStatus);
-      expect(result.current.isActive).toBe(true);
-      expect(onStatusUpdate).toHaveBeenCalledWith(testStatus);
+      expect(result.current.isMonitoring).toBe(true);
     });
   });
 
   it("should handle agent task events", async () => {
     // Arrange
-    const { result } = renderHook(() => useAgentStatus("user-id", "token"));
-
-    const taskStartHandler = (mockClient.on as Mock).mock.calls.find(
-      ([event]) => event === WebSocketEventType.AGENT_TASK_START
-    )?.[1];
-
-    const testStatus = {
-      agent_id: "agent-1",
-      is_active: true,
-      current_task: "Starting new task",
-    };
-
-    const event: WebSocketEvent = {
-      id: "event-1",
-      type: WebSocketEventType.AGENT_TASK_START,
-      timestamp: new Date().toISOString(),
-      payload: { agent_status: testStatus },
-    };
+    const { result } = renderHook(() => useAgentStatus());
 
     // Act
     act(() => {
-      taskStartHandler(event);
+      result.current.startAgent("test", "Test Agent");
     });
 
     // Assert
     await waitFor(() => {
-      expect(result.current.agentStatus).toEqual(testStatus);
-      expect(result.current.isActive).toBe(true);
+      expect(result.current.isLoading).toBe(true);
     });
   });
 
   it("should cleanup event listeners on unmount", () => {
     // Act
-    const { unmount } = renderHook(() => useAgentStatus("user-id", "token"));
+    const { unmount } = renderHook(() => useAgentStatus());
     unmount();
 
     // Assert

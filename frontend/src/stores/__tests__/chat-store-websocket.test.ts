@@ -28,7 +28,7 @@ vi.mock("@/lib/websocket/websocket-client", () => ({
 vi.stubEnv("NEXT_PUBLIC_WS_URL", "ws://localhost:8000");
 
 describe("Chat Store WebSocket Integration", () => {
-  let store: ReturnType<typeof useChatStore>;
+  let store: any;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -39,7 +39,7 @@ describe("Chat Store WebSocket Integration", () => {
 
     // Clear the store state
     act(() => {
-      store.sessions.forEach((session) => store.deleteSession(session.id));
+      store.sessions.forEach((session: any) => store.deleteSession(session.id));
     });
   });
 
@@ -302,7 +302,7 @@ describe("Chat Store WebSocket Integration", () => {
       });
 
       // Assert
-      const session = store.sessions.find((s) => s.id === sessionId);
+      const session = store.sessions.find((s: any) => s.id === sessionId);
       const lastMessage = session?.messages[session.messages.length - 1];
 
       expect(lastMessage).toBeDefined();
@@ -332,8 +332,8 @@ describe("Chat Store WebSocket Integration", () => {
       });
 
       // Assert
-      const session = store.sessions.find((s) => s.id === sessionId);
-      const message = session?.messages.find((m) => m.id === messageId);
+      const session = store.sessions.find((s: any) => s.id === sessionId);
+      const message = session?.messages.find((m: any) => m.id === messageId);
 
       expect(message?.content).toBe("Initial chunk");
       expect(message?.isStreaming).toBe(true);
@@ -355,7 +355,7 @@ describe("Chat Store WebSocket Integration", () => {
       });
 
       // Assert
-      const session = store.sessions.find((s) => s.id === sessionId);
+      const session = store.sessions.find((s: any) => s.id === sessionId);
       const lastMessage = session?.messages[session.messages.length - 1];
 
       expect(lastMessage?.content).toBe("New streaming message");
@@ -385,8 +385,8 @@ describe("Chat Store WebSocket Integration", () => {
       });
 
       // Assert
-      const session = store.sessions.find((s) => s.id === sessionId);
-      const message = session?.messages.find((m) => m.id === messageId);
+      const session = store.sessions.find((s: any) => s.id === sessionId);
+      const message = session?.messages.find((m: any) => m.id === messageId);
 
       expect(message?.content).toBe("Streaming complete");
       expect(message?.isStreaming).toBe(false);
@@ -427,7 +427,7 @@ describe("Chat Store WebSocket Integration", () => {
       });
 
       // Assert
-      const session = store.sessions.find((s) => s.id === sessionId);
+      const session = store.sessions.find((s: any) => s.id === sessionId);
       const lastMessage = session?.messages[session.messages.length - 1];
 
       expect(lastMessage?.toolCalls).toEqual(toolCalls);
@@ -438,7 +438,7 @@ describe("Chat Store WebSocket Integration", () => {
       // Arrange
       const otherSessionId = "other-session";
       const initialMessageCount =
-        store.sessions.find((s) => s.id === sessionId)?.messages.length || 0;
+        store.sessions.find((s: any) => s.id === sessionId)?.messages.length || 0;
 
       const event: WebSocketMessageEvent = {
         type: "chat_message",
@@ -453,7 +453,7 @@ describe("Chat Store WebSocket Integration", () => {
       });
 
       // Assert
-      const session = store.sessions.find((s) => s.id === sessionId);
+      const session = store.sessions.find((s: any) => s.id === sessionId);
       expect(session?.messages.length).toBe(initialMessageCount);
     });
   });
@@ -484,7 +484,7 @@ describe("Chat Store WebSocket Integration", () => {
       });
 
       // Assert
-      const session = store.sessions.find((s) => s.id === sessionId);
+      const session = store.sessions.find((s: any) => s.id === sessionId);
       expect(session?.agentStatus).toEqual({
         isActive: true,
         currentTask: "Processing request",
@@ -496,7 +496,7 @@ describe("Chat Store WebSocket Integration", () => {
     it("should ignore status updates for different sessions", () => {
       // Arrange
       const otherSessionId = "other-session";
-      const initialStatus = store.sessions.find((s) => s.id === sessionId)?.agentStatus;
+      const initialStatus = store.sessions.find((s: any) => s.id === sessionId)?.agentStatus;
 
       const event: WebSocketAgentStatusEvent = {
         type: "agent_status_update",
@@ -512,7 +512,7 @@ describe("Chat Store WebSocket Integration", () => {
       });
 
       // Assert
-      const session = store.sessions.find((s) => s.id === sessionId);
+      const session = store.sessions.find((s: any) => s.id === sessionId);
       expect(session?.agentStatus).toEqual(initialStatus);
     });
   });
@@ -537,7 +537,7 @@ describe("Chat Store WebSocket Integration", () => {
       });
     });
 
-    it("should auto-remove typing indicator after timeout", (done) => {
+    it("should auto-remove typing indicator after timeout", async () => {
       // Arrange
       vi.useFakeTimers();
 
@@ -554,11 +554,13 @@ describe("Chat Store WebSocket Integration", () => {
       });
 
       // Assert
-      setTimeout(() => {
-        expect(store.typingUsers[typingKey]).toBeUndefined();
-        vi.useRealTimers();
-        done();
-      }, 0);
+      await new Promise((resolve) => {
+        setTimeout(() => {
+          expect(store.typingUsers[typingKey]).toBeUndefined();
+          vi.useRealTimers();
+          resolve(undefined);
+        }, 0);
+      });
     });
 
     it("should remove user typing status", () => {
@@ -743,12 +745,12 @@ describe("Chat Store WebSocket Integration", () => {
 
       // Assert
       // Should add user message
-      const session = store.sessions.find((s) => s.id === sessionId);
-      const userMessage = session?.messages.find((m) => m.role === "user");
+      const session = store.sessions.find((s: any) => s.id === sessionId);
+      const userMessage = session?.messages.find((m: any) => m.role === "user");
       expect(userMessage?.content).toBe(content);
 
       // Should add assistant response (fallback behavior)
-      const assistantMessage = session?.messages.find((m) => m.role === "assistant");
+      const assistantMessage = session?.messages.find((m: any) => m.role === "assistant");
       expect(assistantMessage?.content).toContain("placeholder response");
     });
 
@@ -773,7 +775,7 @@ describe("Chat Store WebSocket Integration", () => {
       );
 
       // Should add messages via HTTP fallback
-      const session = store.sessions.find((s) => s.id === sessionId);
+      const session = store.sessions.find((s: any) => s.id === sessionId);
       expect(session?.messages).toHaveLength(2); // User + assistant
     });
 
@@ -882,7 +884,7 @@ describe("Chat Store WebSocket Integration", () => {
       });
 
       // Assert
-      const session = store.sessions.find((s) => s.id === sessionId);
+      const session = store.sessions.find((s: any) => s.id === sessionId);
       const lastMessage = session?.messages[session.messages.length - 1];
       expect(lastMessage?.content).toBe("WebSocket message");
     });
@@ -908,7 +910,7 @@ describe("Chat Store WebSocket Integration", () => {
       });
 
       // Assert
-      const session = store.sessions.find((s) => s.id === sessionId);
+      const session = store.sessions.find((s: any) => s.id === sessionId);
       expect(session?.agentStatus).toEqual({
         isActive: true,
         currentTask: "Processing",
