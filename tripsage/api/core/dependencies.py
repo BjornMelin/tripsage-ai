@@ -15,7 +15,6 @@ from tripsage_core.mcp_abstraction import MCPManager, mcp_manager
 from tripsage_core.services.business.accommodation_service import (
     get_accommodation_service,
 )
-from tripsage_core.services.business.auth_service import get_auth_service
 from tripsage_core.services.business.chat_service import get_chat_service
 from tripsage_core.services.business.destination_service import get_destination_service
 from tripsage_core.services.business.flight_service import get_flight_service
@@ -158,7 +157,6 @@ verify_service_access_dep = Depends(verify_service_access)
 
 # Unified API service dependencies
 get_accommodation_service_dep = Depends(get_accommodation_service)
-get_auth_service_dep = Depends(get_auth_service)
 get_chat_service_dep = Depends(get_chat_service)
 get_destination_service_dep = Depends(get_destination_service)
 get_flight_service_dep = Depends(get_flight_service)
