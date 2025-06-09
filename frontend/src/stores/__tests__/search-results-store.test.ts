@@ -1,11 +1,11 @@
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { 
+import {
   useSearchResultsStore,
   type SearchStatus,
   type SearchMetrics,
   type SearchContext,
-  type ErrorDetails 
+  type ErrorDetails,
 } from "../search-results-store";
 import type { SearchResults, SearchType } from "@/types/search";
 
@@ -45,7 +45,7 @@ describe("Search Results Store", () => {
         departureDate: "2025-07-15",
       };
 
-      let searchId: string = "";
+      let searchId = "";
       act(() => {
         searchId = result.current.startSearch("flight", searchParams);
       });
@@ -70,8 +70,8 @@ describe("Search Results Store", () => {
     it("generates unique search IDs", () => {
       const { result } = renderHook(() => useSearchResultsStore());
 
-      let searchId1: string = "";
-      let searchId2: string = "";
+      let searchId1 = "";
+      let searchId2 = "";
 
       act(() => {
         searchId1 = result.current.startSearch("flight", {});
@@ -89,7 +89,7 @@ describe("Search Results Store", () => {
     it("updates search progress", () => {
       const { result } = renderHook(() => useSearchResultsStore());
 
-      let searchId: string = "";
+      let searchId = "";
       act(() => {
         searchId = result.current.startSearch("flight", {});
       });
@@ -110,7 +110,7 @@ describe("Search Results Store", () => {
     it("clamps search progress between 0 and 100", () => {
       const { result } = renderHook(() => useSearchResultsStore());
 
-      let searchId: string = "";
+      let searchId = "";
       act(() => {
         searchId = result.current.startSearch("flight", {});
       });
@@ -379,17 +379,17 @@ describe("Search Results Store", () => {
       act(() => {
         const id1 = result.current.startSearch("flight", {});
         result.current.setSearchResults(id1, { flights: [] });
-        
+
         const id2 = result.current.startSearch("accommodation", {});
         result.current.setSearchResults(id2, { accommodations: [] });
-        
+
         const id3 = result.current.startSearch("flight", {});
         result.current.setSearchResults(id3, { flights: [] });
       });
 
       const flightSearches = result.current.getRecentSearches("flight", 10);
       expect(flightSearches).toHaveLength(2);
-      expect(flightSearches.every(s => s.searchType === "flight")).toBe(true);
+      expect(flightSearches.every((s) => s.searchType === "flight")).toBe(true);
 
       const allSearches = result.current.getRecentSearches();
       expect(allSearches.length).toBeGreaterThanOrEqual(3);

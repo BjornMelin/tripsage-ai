@@ -364,7 +364,10 @@ describe("useWebSocket", () => {
       });
 
       // Assert
-      expect(mockClient.on).toHaveBeenCalledWith(WebSocketEventType.CHAT_MESSAGE, mockHandler);
+      expect(mockClient.on).toHaveBeenCalledWith(
+        WebSocketEventType.CHAT_MESSAGE,
+        mockHandler
+      );
     });
 
     it("should remove event handlers", () => {
@@ -378,7 +381,10 @@ describe("useWebSocket", () => {
       });
 
       // Assert
-      expect(mockClient.off).toHaveBeenCalledWith(WebSocketEventType.CHAT_MESSAGE, mockHandler);
+      expect(mockClient.off).toHaveBeenCalledWith(
+        WebSocketEventType.CHAT_MESSAGE,
+        mockHandler
+      );
     });
   });
 });

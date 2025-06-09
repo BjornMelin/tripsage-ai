@@ -361,7 +361,11 @@ export const useChatStore = create<ChatState>()(
         set({ isLoading: true, error: null });
 
         // Use WebSocket if available and connected
-        if (isRealtimeEnabled && websocketClient && connectionStatus === ConnectionStatus.CONNECTED) {
+        if (
+          isRealtimeEnabled &&
+          websocketClient &&
+          connectionStatus === ConnectionStatus.CONNECTED
+        ) {
           try {
             await websocketClient.send("chat_message", {
               content,
@@ -806,10 +810,15 @@ export const useChatStore = create<ChatState>()(
             });
           });
 
-          newClient.on("reconnect", (data: { attempt: number; maxAttempts: number }) => {
-            set({ connectionStatus: ConnectionStatus.RECONNECTING });
-            console.log(`WebSocket reconnecting... Attempt ${data.attempt}/${data.maxAttempts}`);
-          });
+          newClient.on(
+            "reconnect",
+            (data: { attempt: number; maxAttempts: number }) => {
+              set({ connectionStatus: ConnectionStatus.RECONNECTING });
+              console.log(
+                `WebSocket reconnecting... Attempt ${data.attempt}/${data.maxAttempts}`
+              );
+            }
+          );
 
           // Handle incoming messages
           newClient.on(WebSocketEventType.CHAT_MESSAGE, (event: any) => {
@@ -854,7 +863,10 @@ export const useChatStore = create<ChatState>()(
           });
 
           // Store client and connect
-          set({ websocketClient: newClient, connectionStatus: ConnectionStatus.CONNECTING });
+          set({
+            websocketClient: newClient,
+            connectionStatus: ConnectionStatus.CONNECTING,
+          });
           await newClient.connect();
         } catch (error) {
           console.error("Failed to connect WebSocket:", error);
