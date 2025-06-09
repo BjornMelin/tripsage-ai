@@ -848,6 +848,32 @@ def client():
             yield test_client
 
 
+# AsyncClient fixture for async API testing
+@pytest.fixture
+async def async_client():
+    """Create an AsyncClient for async API testing."""
+    from httpx import AsyncClient
+    from unittest.mock import AsyncMock, MagicMock, patch
+
+    from tripsage.api.main import app
+
+    # Simple mock for basic async client functionality
+    # This doesn't mock all services to avoid dependency issues
+    with (
+        # Mock Supabase client initialization
+        patch("supabase.create_client", return_value=MagicMock()),
+        # Mock cache service
+        patch(
+            "tripsage_core.services.infrastructure.cache_service.get_cache_service",
+            return_value=MockCacheService(),
+        ),
+    ):
+        # For now, create a simple AsyncClient that can be used for basic HTTP testing
+        # The router tests should be simplified to not depend on the full app integration
+        async with AsyncClient(base_url="http://testserver") as client:
+            yield client
+
+
 # Clean up after tests
 @pytest.fixture(autouse=True)
 def cleanup_after_test():

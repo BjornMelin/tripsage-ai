@@ -11,50 +11,58 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-// import { loginAction } from "@/lib/auth/server-actions"; // TODO: Replace with Supabase Auth
+import { useAuth } from "@/contexts/auth-context";
 import { AlertCircle, Eye, EyeOff, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import React, { useState, useOptimistic, startTransition } from "react";
+import React, { useState, useEffect } from "react";
 
 interface LoginFormProps {
   redirectTo?: string;
   className?: string;
 }
 
-interface LoginState {
-  user: any | null;
-  isAuthenticated: boolean;
-  error: string | null;
-}
-
-export function LoginForm({ redirectTo = "/", className }: LoginFormProps) {
+export function LoginForm({ redirectTo = "/dashboard", className }: LoginFormProps) {
   const router = useRouter();
+  const { signIn, isLoading, error, isAuthenticated, clearError } = useAuth();
   const [showPassword, setShowPassword] = React.useState(false);
-
-  // Simplified state for MVP testing
-  const [state, setState] = useState({
-    success: false,
-    error: null as string | null,
-    user: null as any,
+  const [formData, setFormData] = useState({
+    email: "",
+    password: "",
   });
-  const [isPending, setIsPending] = useState(false);
 
-  // Simplified form handler for MVP testing
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      router.push(redirectTo);
+    }
+  }, [isAuthenticated, router, redirectTo]);
+
+  // Clear errors when component unmounts or form changes
+  useEffect(() => {
+    return () => clearError();
+  }, [clearError]);
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setIsPending(true);
+    
+    const { email, password } = formData;
+    
+    if (!email || !password) {
+      return;
+    }
 
-    // Mock authentication for testing
-    setTimeout(() => {
-      setState({
-        success: true,
-        error: null,
-        user: { name: "Test User" },
-      });
-      setIsPending(false);
-      router.push(redirectTo);
-    }, 1000);
+    await signIn(email, password);
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+    
+    // Clear errors when user starts typing
+    if (error) {
+      clearError();
+    }
   };
 
   return (
@@ -70,10 +78,10 @@ export function LoginForm({ redirectTo = "/", className }: LoginFormProps) {
       <CardContent className="space-y-6">
         <form onSubmit={handleSubmit} className="space-y-5">
           {/* Error Alert */}
-          {state.error && (
+          {error && (
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{state.error}</AlertDescription>
+              <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
 
@@ -87,9 +95,11 @@ export function LoginForm({ redirectTo = "/", className }: LoginFormProps) {
               name="email"
               type="email"
               placeholder="john@example.com"
+              value={formData.email}
+              onChange={handleInputChange}
               required
               autoComplete="email"
-              disabled={isPending}
+              disabled={isLoading}
               className="w-full h-11"
             />
           </div>
@@ -113,16 +123,18 @@ export function LoginForm({ redirectTo = "/", className }: LoginFormProps) {
                 name="password"
                 type={showPassword ? "text" : "password"}
                 placeholder="Enter your password"
+                value={formData.password}
+                onChange={handleInputChange}
                 required
                 autoComplete="current-password"
-                disabled={isPending}
+                disabled={isLoading}
                 className="w-full h-11 pr-10"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
                 className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                disabled={isPending}
+                disabled={isLoading}
                 aria-label={showPassword ? "Hide password" : "Show password"}
               >
                 {showPassword ? (
@@ -138,9 +150,9 @@ export function LoginForm({ redirectTo = "/", className }: LoginFormProps) {
           <Button
             type="submit"
             className="w-full h-11 text-base font-medium"
-            disabled={isPending}
+            disabled={isLoading || !formData.email || !formData.password}
           >
-            {isPending ? (
+            {isLoading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Signing in...
