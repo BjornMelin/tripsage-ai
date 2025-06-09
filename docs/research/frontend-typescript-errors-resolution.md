@@ -9,6 +9,7 @@ This document provides comprehensive research findings on resolving TypeScript c
 ### 1. React Query v5 Breaking Changes
 
 #### Major API Changes
+
 - **Single Object Signature**: All hooks now use a single object parameter instead of multiple overloads
 - **Removed Callbacks**: `onSuccess`, `onError`, and `onSettled` have been removed from hook options
 - **QueryKey Type Changes**: Query keys must properly type mixed arrays with `(string | Record<string, any>)[]`
@@ -17,6 +18,7 @@ This document provides comprehensive research findings on resolving TypeScript c
 #### Migration Patterns
 
 1. **Hook Signature Updates**:
+
 ```typescript
 // Old (v4)
 useQuery(key, fn, options)
@@ -26,6 +28,7 @@ useQuery({ queryKey, queryFn, ...options })
 ```
 
 2. **Callback Replacement Pattern**:
+
 ```typescript
 // Old (v4)
 useQuery({
@@ -50,6 +53,7 @@ useEffect(() => {
 ```
 
 3. **QueryKey Type Fix**:
+
 ```typescript
 // For mixed array types
 type ApiQueryOptions<TData, TError> = Omit<
@@ -61,6 +65,7 @@ type ApiQueryOptions<TData, TError> = Omit<
 ### 2. Common TypeScript Compilation Errors
 
 #### Error Categories
+
 1. **Missing Dependencies**: Radix UI packages not installed
 2. **Type Conflicts**: Component prop interfaces conflicting with HTML attributes
 3. **React 19 Hook Changes**: `useOptimistic` signature changes
@@ -70,11 +75,13 @@ type ApiQueryOptions<TData, TError> = Omit<
 #### Specific Solutions
 
 1. **Missing Radix UI Packages**:
+
 ```bash
 pnpm add @radix-ui/react-checkbox @radix-ui/react-dialog @radix-ui/react-dropdown-menu
 ```
 
 2. **Type Conflict Resolution**:
+
 ```typescript
 // Use Omit to exclude conflicting properties
 interface LoadingSpinnerProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'color'> {
@@ -83,6 +90,7 @@ interface LoadingSpinnerProps extends Omit<React.HTMLAttributes<HTMLDivElement>,
 ```
 
 3. **useOptimistic Hook Update**:
+
 ```typescript
 // React 19 pattern
 const [optimisticState, setOptimisticState] = useOptimistic(initialState);
@@ -92,11 +100,13 @@ const [optimisticState, setOptimisticState] = useOptimistic(initialState);
 ### 3. Next.js 15 + React 19 Considerations
 
 #### Known Issues
+
 - Some Radix UI packages may have peer dependency conflicts with React 19
 - TypeScript strict mode reveals more type issues
 - React Server Components compatibility concerns
 
 #### Recommended Approaches
+
 1. Use `--legacy-peer-deps` flag when necessary
 2. Update all Radix UI packages to latest versions
 3. Ensure proper "use client" directives for client components
@@ -164,6 +174,7 @@ pnpm add @radix-ui/react-checkbox @radix-ui/react-dialog @radix-ui/react-dropdow
 ## Tools and Resources
 
 1. **React Query v5 Codemod**:
+
 ```bash
 npx jscodeshift@latest ./src/ \
   --extensions=ts,tsx \
@@ -172,6 +183,7 @@ npx jscodeshift@latest ./src/ \
 ```
 
 2. **TypeScript Compiler Options**:
+
 ```json
 {
   "compilerOptions": {
@@ -183,6 +195,7 @@ npx jscodeshift@latest ./src/ \
 ```
 
 3. **Useful Commands**:
+
 ```bash
 # Type check only
 pnpm tsc --noEmit

@@ -34,6 +34,7 @@ This comprehensive research report analyzes authentication options for the TripS
 ### Updated Status (June 6, 2025)
 
 **✅ JWT Code Successfully Removed**
+
 - All custom JWT implementation files have been deleted
 - Project reverted to pre-JWT state using git history
 - JWT dependencies removed from package.json and pyproject.toml
@@ -400,6 +401,7 @@ Based on comprehensive analysis, Supabase Auth is the optimal choice for TripSag
 ### Current Status (June 6, 2025)
 
 ✅ **JWT Code Removal Complete**
+
 - All custom JWT code successfully removed
 - Project reset to pre-JWT state
 - No existing users to migrate

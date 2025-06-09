@@ -3,7 +3,9 @@
 ## Analysis Date: January 6, 2025
 
 ## Summary
+
 This document identifies test files that need modernization based on:
+
 1. Outdated patterns or Pydantic v1 usage
 2. Missing Google-style docstrings
 3. Redundant or overlapping tests
@@ -17,6 +19,7 @@ This document identifies test files that need modernization based on:
 ### Category 1: Outdated Patterns / Pydantic v1
 
 **Files using potentially outdated Pydantic patterns:**
+
 1. `/tests/unit/models/test_accommodation.py` - Uses `.dict()` method (line 222, 224)
 2. `/tests/unit/models/test_flight.py` - Uses `.dict()` method (line 189)
 3. `/tests/unit/tripsage_core/test_base_core_model.py` - May have old BaseModel patterns
@@ -25,6 +28,7 @@ This document identifies test files that need modernization based on:
 6. `/tests/unit/api/routers/` - Multiple router tests use `.json()` method which is deprecated in Pydantic v2
 
 **Recommended updates:**
+
 - Replace `.dict()` with `.model_dump()`
 - Replace `.json()` with `.model_dump_json()`
 - Replace `parse_obj()` with `model_validate()`
@@ -36,6 +40,7 @@ This document identifies test files that need modernization based on:
 ### Category 2: Missing Google-Style Docstrings
 
 **Files with missing or incomplete docstrings:**
+
 1. Most test fixture functions across all test files lack proper Google-style docstrings
 2. Many test methods have simple docstrings but not Google-style with Args/Returns/Raises sections
 3. Specific files with poor documentation:
@@ -46,6 +51,7 @@ This document identifies test files that need modernization based on:
    - `/tests/performance/conftest.py` - Performance fixtures lack documentation
 
 **Recommended updates:**
+
 - Add Google-style docstrings to all test classes and methods
 - Document test fixtures with Args, Returns, and purpose
 - Add module-level docstrings explaining test strategy
@@ -53,6 +59,7 @@ This document identifies test files that need modernization based on:
 ### Category 3: Redundant or Overlapping Tests
 
 **Files with redundant test coverage:**
+
 1. **Cache Service Tests** - Both regular and enhanced versions:
    - `/tests/unit/tripsage_core/services/infrastructure/test_cache_service.py`
    - `/tests/unit/tripsage_core/services/infrastructure/test_cache_service_enhanced.py`
@@ -151,18 +158,21 @@ This document identifies test files that need modernization based on:
 ## Priority Recommendations
 
 ### High Priority (Blocking/Flaky Tests)
+
 1. Fix hanging WebSocket broadcaster tests (currently skipped)
 2. Replace all `datetime.now()` with fixed timestamps or freezegun
 3. Mock all external API calls in unit tests
 4. Fix Pydantic v2 deprecation warnings
 
 ### Medium Priority (Code Quality)
+
 1. Consolidate duplicate test files (cache, database, utils)
 2. Add comprehensive Google-style docstrings
 3. Split overly comprehensive test files
 4. Align test structure with source code structure
 
 ### Low Priority (Nice to Have)
+
 1. Standardize fixture patterns across all test files
 2. Create shared test utilities for common patterns
 3. Add property-based tests for models
