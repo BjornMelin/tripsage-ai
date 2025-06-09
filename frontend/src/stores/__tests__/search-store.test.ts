@@ -56,7 +56,7 @@ describe("Search Store Orchestrator", () => {
 
       expect(result.current.currentSearchType).toBe("flight");
       expect(paramsResult.current.currentSearchType).toBe("flight");
-      
+
       // Check that default params are set
       expect(paramsResult.current.flightParams).toHaveProperty("adults", 1);
     });
@@ -82,38 +82,38 @@ describe("Search Store Orchestrator", () => {
     it("executes search with params", async () => {
       const { result } = renderHook(() => useSearchStore());
       const { result: resultsStore } = renderHook(() => useSearchResultsStore());
-      
+
       // Initialize search type first
       act(() => {
         result.current.initializeSearch("flight");
       });
 
       // Mock the actual search execution
-      vi.spyOn(resultsStore.current, 'startSearch').mockReturnValue('search-123');
+      vi.spyOn(resultsStore.current, "startSearch").mockReturnValue("search-123");
 
       let searchId: string | null = null;
       await act(async () => {
         searchId = await result.current.executeSearch({
           origin: "NYC",
           destination: "LAX",
-          departureDate: "2025-07-15"
+          departureDate: "2025-07-15",
         } as SearchParams);
       });
 
-      expect(searchId).toBe('search-123');
+      expect(searchId).toBe("search-123");
       expect(resultsStore.current.startSearch).toHaveBeenCalled();
     });
 
     it("validates before executing search", async () => {
       const { result } = renderHook(() => useSearchStore());
       const { result: paramsStore } = renderHook(() => useSearchParamsStore());
-      
+
       act(() => {
         result.current.initializeSearch("flight");
       });
 
       // Mock validation to return false
-      vi.spyOn(paramsStore.current, 'validateCurrentParams').mockResolvedValue(false);
+      vi.spyOn(paramsStore.current, "validateCurrentParams").mockResolvedValue(false);
 
       let searchId: string | null = null;
       await act(async () => {
@@ -135,7 +135,7 @@ describe("Search Store Orchestrator", () => {
         result.current.initializeSearch("flight");
         paramsStore.current.updateFlightParams({
           origin: "NYC",
-          destination: "LAX"
+          destination: "LAX",
         });
         filtersStore.current.setActiveFilter("price", { min: 100, max: 500 });
       });
@@ -187,19 +187,21 @@ describe("Search Store Orchestrator", () => {
         resultsStore.current.setSearchError(searchId, {
           message: "Network error",
           retryable: true,
-          occurredAt: new Date().toISOString()
+          occurredAt: new Date().toISOString(),
         });
       });
 
       // Mock retry
-      vi.spyOn(resultsStore.current, 'retryLastSearch').mockResolvedValue('new-search-id');
+      vi.spyOn(resultsStore.current, "retryLastSearch").mockResolvedValue(
+        "new-search-id"
+      );
 
       let newSearchId: string | null = null;
       await act(async () => {
         newSearchId = await result.current.retryLastSearch();
       });
 
-      expect(newSearchId).toBe('new-search-id');
+      expect(newSearchId).toBe("new-search-id");
       expect(resultsStore.current.retryLastSearch).toHaveBeenCalled();
     });
   });
@@ -218,14 +220,16 @@ describe("Search Store Orchestrator", () => {
       });
 
       // Mock search
-      vi.spyOn(resultsStore.current, 'startSearch').mockReturnValue('filtered-search-123');
+      vi.spyOn(resultsStore.current, "startSearch").mockReturnValue(
+        "filtered-search-123"
+      );
 
       let searchId: string | null = null;
       await act(async () => {
         searchId = await result.current.applyFiltersAndSearch();
       });
 
-      expect(searchId).toBe('filtered-search-123');
+      expect(searchId).toBe("filtered-search-123");
       expect(result.current.hasActiveFilters).toBe(true);
     });
   });
@@ -243,20 +247,20 @@ describe("Search Store Orchestrator", () => {
         params: {
           origin: "NYC",
           destination: "LAX",
-          departureDate: "2025-07-15"
+          departureDate: "2025-07-15",
         },
         tags: [],
         isPublic: false,
         isFavorite: false,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-        usageCount: 0
+        usageCount: 0,
       };
 
       // Mock savedSearches array to contain our test saved search
       historyStore.current.savedSearches = [mockSavedSearch];
 
-      let loaded: boolean = false;
+      let loaded = false;
       await act(async () => {
         loaded = await result.current.loadSavedSearch("saved-123");
       });
@@ -275,12 +279,12 @@ describe("Search Store Orchestrator", () => {
         result.current.initializeSearch("flight");
         paramsStore.current.updateFlightParams({
           origin: "NYC",
-          destination: "LAX"
+          destination: "LAX",
         });
       });
 
       // Mock save
-      vi.spyOn(historyStore.current, 'saveSearch').mockResolvedValue("new-saved-123");
+      vi.spyOn(historyStore.current, "saveSearch").mockResolvedValue("new-saved-123");
 
       let savedId: string | null = null;
       await act(async () => {
@@ -291,7 +295,7 @@ describe("Search Store Orchestrator", () => {
       expect(historyStore.current.saveSearch).toHaveBeenCalledWith(
         expect.objectContaining({
           name: "My NYC Flight",
-          searchType: "flight"
+          searchType: "flight",
         })
       );
     });
@@ -342,9 +346,9 @@ describe("Search Store Orchestrator", () => {
               stops: 0,
               price: 299,
               cabinClass: "economy",
-              seatsAvailable: 10
-            }
-          ]
+              seatsAvailable: 10,
+            },
+          ],
         });
       });
 

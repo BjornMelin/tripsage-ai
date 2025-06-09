@@ -496,7 +496,9 @@ describe("Chat Store WebSocket Integration", () => {
     it("should ignore status updates for different sessions", () => {
       // Arrange
       const otherSessionId = "other-session";
-      const initialStatus = store.sessions.find((s: any) => s.id === sessionId)?.agentStatus;
+      const initialStatus = store.sessions.find(
+        (s: any) => s.id === sessionId
+      )?.agentStatus;
 
       const event: WebSocketAgentStatusEvent = {
         type: "agent_status_update",
@@ -750,7 +752,9 @@ describe("Chat Store WebSocket Integration", () => {
       expect(userMessage?.content).toBe(content);
 
       // Should add assistant response (fallback behavior)
-      const assistantMessage = session?.messages.find((m: any) => m.role === "assistant");
+      const assistantMessage = session?.messages.find(
+        (m: any) => m.role === "assistant"
+      );
       expect(assistantMessage?.content).toContain("placeholder response");
     });
 

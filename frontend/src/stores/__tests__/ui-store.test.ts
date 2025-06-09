@@ -481,9 +481,21 @@ describe("UI Store", () => {
       const { result } = renderHook(() => useUIStore());
 
       act(() => {
-        result.current.addNotification({ type: "info", title: "Info 1", isRead: false });
-        result.current.addNotification({ type: "success", title: "Success 1", isRead: false });
-        result.current.addNotification({ type: "warning", title: "Warning 1", isRead: false });
+        result.current.addNotification({
+          type: "info",
+          title: "Info 1",
+          isRead: false,
+        });
+        result.current.addNotification({
+          type: "success",
+          title: "Success 1",
+          isRead: false,
+        });
+        result.current.addNotification({
+          type: "warning",
+          title: "Warning 1",
+          isRead: false,
+        });
       });
 
       expect(result.current.notifications).toHaveLength(3);
@@ -522,9 +534,21 @@ describe("UI Store", () => {
       let id3: string;
 
       act(() => {
-        id1 = result.current.addNotification({ type: "info", title: "Info 1", isRead: false });
-        id2 = result.current.addNotification({ type: "success", title: "Success 1", isRead: false });
-        id3 = result.current.addNotification({ type: "warning", title: "Warning 1", isRead: false });
+        id1 = result.current.addNotification({
+          type: "info",
+          title: "Info 1",
+          isRead: false,
+        });
+        id2 = result.current.addNotification({
+          type: "success",
+          title: "Success 1",
+          isRead: false,
+        });
+        id3 = result.current.addNotification({
+          type: "warning",
+          title: "Warning 1",
+          isRead: false,
+        });
       });
 
       expect(result.current.unreadNotificationCount).toBe(3);
