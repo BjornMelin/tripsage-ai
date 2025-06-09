@@ -1,3 +1,4 @@
+import { createServerClient } from '@supabase/ssr'
 import { type NextRequest, NextResponse } from "next/server";
 
 // Simple in-memory rate limiter
@@ -61,15 +62,59 @@ function checkRateLimit(
   };
 }
 
+async function updateSession(request: NextRequest) {
+  let supabaseResponse = NextResponse.next({
+    request,
+  })
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    console.warn('Missing Supabase environment variables')
+    return supabaseResponse
+  }
+
+  const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
+    cookies: {
+      getAll() {
+        return request.cookies.getAll()
+      },
+      setAll(cookiesToSet) {
+        cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
+        supabaseResponse = NextResponse.next({
+          request,
+        })
+        cookiesToSet.forEach(({ name, value, options }) =>
+          supabaseResponse.cookies.set(name, value, options)
+        )
+      },
+    },
+  })
+
+  // Refresh session if expired - required for Server Components
+  try {
+    await supabase.auth.getUser()
+  } catch (error) {
+    // Log the error but don't fail the request
+    console.warn('Supabase auth error:', error)
+  }
+
+  return supabaseResponse
+}
+
 export async function middleware(request: NextRequest) {
+  // Handle Supabase auth for all routes first
+  const response = await updateSession(request)
+
   // Only apply rate limiting to chat API
   if (!request.nextUrl.pathname.startsWith("/api/chat")) {
-    return NextResponse.next();
+    return response;
   }
 
   // Skip rate limiting for attachment uploads (different limits apply)
   if (request.nextUrl.pathname === "/api/chat/attachments") {
-    return NextResponse.next();
+    return response;
   }
 
   // Get identifier (IP address or authenticated user)
@@ -85,9 +130,9 @@ export async function middleware(request: NextRequest) {
   // Apply rate limiting
   const rateLimitResult = checkRateLimit(identifier);
 
-  // Create response
-  const response = rateLimitResult.success
-    ? NextResponse.next()
+  // Create rate limit response if needed
+  const rateLimitResponse = rateLimitResult.success
+    ? response
     : NextResponse.json(
         {
           error: "Too many requests. Please wait before trying again.",
@@ -98,22 +143,22 @@ export async function middleware(request: NextRequest) {
       );
 
   // Add rate limit headers
-  response.headers.set("X-RateLimit-Limit", rateLimitResult.limit.toString());
-  response.headers.set("X-RateLimit-Remaining", rateLimitResult.remaining.toString());
-  response.headers.set(
+  rateLimitResponse.headers.set("X-RateLimit-Limit", rateLimitResult.limit.toString());
+  rateLimitResponse.headers.set("X-RateLimit-Remaining", rateLimitResult.remaining.toString());
+  rateLimitResponse.headers.set(
     "X-RateLimit-Reset",
     Math.floor(rateLimitResult.reset / 1000).toString()
   );
 
   // Add retry-after header for 429 responses
   if (!rateLimitResult.success) {
-    response.headers.set(
+    rateLimitResponse.headers.set(
       "Retry-After",
       Math.ceil((rateLimitResult.reset - Date.now()) / 1000).toString()
     );
   }
 
-  return response;
+  return rateLimitResponse;
 }
 
 export const config = {

@@ -1,13 +1,12 @@
 """
-Web tools for TripSage.
+Fixed web tools for TripSage - working around missing agents dependency.
 
 This module provides wrappers and utilities for web-based operations,
-including caching for WebSearchTool from the OpenAI Agents SDK.
+using alternatives to the missing OpenAI Agents SDK.
 
 Features include:
-- CachedWebSearchTool - A WebSearchTool with direct Redis/DragonflyDB caching
+- MockWebSearchTool - A basic web search implementation for testing
 - Content-aware caching based on query characteristics
-- Batch caching operations for improved performance
 - Web cache statistics and management
 
 This module uses the direct Redis/DragonflyDB service for persistent caching,
@@ -16,62 +15,6 @@ allowing sharing of cached web search results across multiple application instan
 
 import time
 from typing import Any, Dict, List, Optional
-
-# NOTE: Temporarily using mock implementation due to missing agents dependency
-# from agents import WebSearchTool
-
-class MockWebSearchTool:
-    """Mock WebSearchTool for testing and development.
-    
-    This class provides a basic implementation to replace the missing
-    OpenAI Agents SDK WebSearchTool for testing purposes.
-    """
-
-    def __init__(
-        self,
-        user_location: Optional[Any] = None,
-        search_context_size: str = "medium",
-    ):
-        """Initialize the MockWebSearchTool.
-
-        Args:
-            user_location: Optional user location for geographic context
-            search_context_size: Context size ('low', 'medium', 'high')
-        """
-        self.user_location = user_location
-        self.search_context_size = search_context_size
-
-    async def _run(self, query: str, **kwargs: Any) -> Any:
-        """Execute a mock web search.
-
-        Args:
-            query: The search query
-            **kwargs: Additional search parameters
-
-        Returns:
-            Mock search results
-        """
-        # Return mock search results for testing
-        return {
-            "status": "success",
-            "search_results": [
-                {
-                    "title": f"Mock result for: {query}",
-                    "snippet": f"This is a mock search result for the query '{query}'. "
-                              "In a real implementation, this would contain actual web search results.",
-                    "link": f"https://example.com/search?q={query.replace(' ', '+')}"
-                }
-            ],
-            "query": query,
-            "search_metadata": {
-                "total_results": 1,
-                "search_time": "0.1s",
-                "provider": "MockSearchProvider"
-            }
-        }
-
-# Use the mock implementation
-WebSearchTool = MockWebSearchTool
 
 from tripsage_core.utils.cache_utils import (
     CacheStats,
@@ -96,10 +39,64 @@ logger = get_logger(__name__)
 WEB_CACHE_NAMESPACE = "web-search"
 
 
-class CachedWebSearchTool(WebSearchTool):
+class MockWebSearchTool:
+    """Mock WebSearchTool for testing and development.
+    
+    This class provides a basic implementation to replace the missing
+    OpenAI Agents SDK WebSearchTool for testing purposes.
+    """
+
+    def __init__(
+        self,
+        user_location: Optional[Any] = None,
+        search_context_size: str = "medium",
+    ):
+        """Initialize the MockWebSearchTool.
+
+        Args:
+            user_location: Optional user location for geographic context
+            search_context_size: Context size ('low', 'medium', 'high')
+        """
+        self.user_location = user_location
+        self.search_context_size = search_context_size
+        logger.info(f"Initialized MockWebSearchTool with context size '{search_context_size}'")
+
+    async def _run(self, query: str, **kwargs: Any) -> Any:
+        """Execute a mock web search.
+
+        Args:
+            query: The search query
+            **kwargs: Additional search parameters
+
+        Returns:
+            Mock search results
+        """
+        logger.info(f"Mock web search for: {query}")
+        
+        # Return mock search results for testing
+        return {
+            "status": "success",
+            "search_results": [
+                {
+                    "title": f"Mock result for: {query}",
+                    "snippet": f"This is a mock search result for the query '{query}'. "
+                              "In a real implementation, this would contain actual web search results.",
+                    "link": f"https://example.com/search?q={query.replace(' ', '+')}"
+                }
+            ],
+            "query": query,
+            "search_metadata": {
+                "total_results": 1,
+                "search_time": "0.1s",
+                "provider": "MockSearchProvider"
+            }
+        }
+
+
+class CachedWebSearchTool(MockWebSearchTool):
     """Wrapper for WebSearchTool with direct Redis/DragonflyDB caching.
 
-    This class extends the OpenAI WebSearchTool to provide content-aware
+    This class extends the MockWebSearchTool to provide content-aware
     caching based on the query and search parameters using direct Redis/DragonflyDB.
 
     Features:
@@ -410,6 +407,7 @@ def web_cached(content_type: ContentType, ttl: Optional[int] = None):
 # Export API
 __all__ = [
     "CachedWebSearchTool",
+    "MockWebSearchTool",
     "get_web_cache_stats",
     "invalidate_web_cache_for_query",
     "batch_web_search",
