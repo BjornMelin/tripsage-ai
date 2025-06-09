@@ -6,7 +6,6 @@ with authenticated entity information.
 """
 
 import logging
-from datetime import datetime, timezone
 from typing import Callable, Optional, Union
 
 from fastapi import Request, Response
@@ -22,10 +21,6 @@ from tripsage_core.exceptions.exceptions import (
     CoreKeyValidationError as KeyValidationError,
 )
 from tripsage_core.models.base_core_model import TripSageModel
-from tripsage_core.services.business.auth_service import (
-    AuthenticationService,
-    TokenData,
-)
 from tripsage_core.services.business.key_management_service import KeyManagementService
 
 logger = logging.getLogger(__name__)
@@ -57,7 +52,6 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
         self,
         app: ASGIApp,
         settings: Optional[Settings] = None,
-        auth_service: Optional[AuthenticationService] = None,
         key_service: Optional[KeyManagementService] = None,
     ):
         """Initialize AuthenticationMiddleware.
@@ -65,12 +59,10 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
         Args:
             app: The ASGI application
             settings: API settings or None to use the default
-            auth_service: Authentication service for JWT handling
             key_service: Key management service for API key handling
         """
         super().__init__(app)
         self.settings = settings or get_settings()
-        self.auth_service = auth_service
         self.key_service = key_service
 
         # Lazy initialization of services
@@ -79,13 +71,6 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
     async def _ensure_services(self):
         """Ensure services are initialized (lazy loading)."""
         if not self._services_initialized:
-            if self.auth_service is None:
-                from tripsage_core.services.business.auth_service import (
-                    get_auth_service,
-                )
-
-                self.auth_service = await get_auth_service()
-
             if self.key_service is None:
                 from tripsage_core.services.business.key_management_service import (
                     get_key_management_service,
@@ -210,31 +195,43 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
             AuthenticationError: If authentication fails
         """
         try:
-            # Validate token and get token data
-            token_data: TokenData = await self.auth_service.validate_access_token(token)
+            # Use the new Supabase auth validation
+            import jwt
 
-            # Get current user to ensure they're still active
-            user = await self.auth_service.get_current_user(token)
+            from tripsage_core.config.base_app_settings import get_settings
 
-            # Create principal
+            settings = get_settings()
+
+            # Local JWT validation for performance
+            payload = jwt.decode(
+                token,
+                settings.supabase_jwt_secret,
+                algorithms=["HS256"],
+                audience="authenticated",
+            )
+
+            # Extract user data from token
+            user_id = payload["sub"]
+            email = payload.get("email")
+            role = payload.get("role", "authenticated")
+
+            # Create principal from token data
             return Principal(
-                id=user.id,
+                id=user_id,
                 type="user",
-                email=user.email,
+                email=email,
                 auth_method="jwt",
-                scopes=[],  # TODO: Add scopes from token if needed
+                scopes=[],
                 metadata={
-                    "token_issued_at": datetime.fromtimestamp(
-                        token_data.iat, tz=timezone.utc
-                    ).isoformat(),
-                    "token_expires_at": datetime.fromtimestamp(
-                        token_data.exp, tz=timezone.utc
-                    ).isoformat(),
+                    "role": role,
+                    "aud": payload.get("aud", "authenticated"),
                 },
             )
 
-        except AuthenticationError:
-            raise
+        except jwt.ExpiredSignatureError:
+            raise AuthenticationError("Token has expired") from None
+        except jwt.InvalidTokenError:
+            raise AuthenticationError("Invalid token") from None
         except Exception as e:
             logger.error(f"JWT authentication error: {e}")
             raise AuthenticationError("Invalid authentication token") from e
