@@ -135,11 +135,11 @@ npx biome format . --write
 
 ### **Database Migration**
 
-1. Create migration file in `migrations/`
-2. Test migration locally
+1. Create migration file using `supabase migration new [migration_name]`
+2. Test migration locally with `supabase db reset`
 3. Update database models
 4. Add tests for new schema
-5. Deploy with rollback plan
+5. Deploy with `supabase db push`
 
 ## 📚 Learning Resources
 
