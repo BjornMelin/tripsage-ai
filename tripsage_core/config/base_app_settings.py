@@ -52,6 +52,10 @@ class DatabaseConfig(BaseSettings):
     supabase_url: str = Field(default="https://test-project.supabase.co")
     supabase_anon_key: SecretStr = Field(default=SecretStr("test-anon-key"))
     supabase_service_role_key: Optional[SecretStr] = Field(default=None)
+    supabase_jwt_secret: SecretStr = Field(
+        default=SecretStr("test-jwt-secret"),
+        description="Supabase JWT secret for local token validation"
+    )
     supabase_project_id: Optional[str] = Field(
         default=None, description="Supabase project ID"
     )
@@ -413,6 +417,8 @@ class CoreAppSettings(BaseSettings):
             errors.append("Supabase URL is missing")
         if not self.database.supabase_anon_key.get_secret_value():
             errors.append("Supabase anonymous key is missing")
+        if not self.database.supabase_jwt_secret.get_secret_value():
+            errors.append("Supabase JWT secret is missing")
 
         # Production-specific validations
         if self.is_production():
@@ -441,6 +447,12 @@ class CoreAppSettings(BaseSettings):
                 "master-secret-for-byok-encryption"
             ]:
                 errors.append("API key master secret must be changed in production")
+
+            # Check Supabase JWT secret
+            if self.database.supabase_jwt_secret.get_secret_value() in [
+                "test-jwt-secret", "fallback-secret-for-development-only"
+            ]:
+                errors.append("Supabase JWT secret must be changed in production")
 
         return errors
 
