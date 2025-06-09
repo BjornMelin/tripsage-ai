@@ -343,6 +343,7 @@ export const useUIStore = create<UIState>()(
             ...notification,
             id,
             createdAt: getCurrentTimestamp(),
+            isRead: notification.isRead ?? false,
           });
 
           if (result.success) {
