@@ -184,6 +184,7 @@ describe("Trip Store", () => {
       });
 
       const tripId = result.current.currentTrip?.id;
+      if (!tripId) throw new Error("No current trip");
 
       // Update the trip
       await act(async () => {
@@ -255,6 +256,7 @@ describe("Trip Store", () => {
       });
 
       const currentTripId = result.current.currentTrip?.id;
+      if (!currentTripId) throw new Error("No current trip");
 
       // Delete the current trip
       await act(async () => {
@@ -274,6 +276,7 @@ describe("Trip Store", () => {
       });
 
       const trip1Id = result.current.currentTrip?.id;
+      if (!trip1Id) throw new Error("No current trip");
 
       await act(async () => {
         await result.current.createTrip({ name: "Trip 2" });

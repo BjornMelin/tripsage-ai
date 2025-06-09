@@ -13,7 +13,7 @@ import {
 
 // Mock the store to avoid persistence issues in tests
 vi.mock("zustand/middleware", () => ({
-  persist: (fn) => fn,
+  persist: (fn: any) => fn,
 }));
 
 describe("useBudgetStore", () => {

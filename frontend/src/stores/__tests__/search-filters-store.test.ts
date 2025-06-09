@@ -110,6 +110,7 @@ describe("Search Filters Store", () => {
           label: "Price: Low to High",
           field: "price",
           direction: "asc",
+          isDefault: false,
         },
       ];
 
@@ -168,12 +169,14 @@ describe("Search Filters Store", () => {
           label: "Price Range",
           type: "range",
           category: "pricing",
+          required: false,
         },
         {
           id: "stops",
           label: "Number of Stops",
           type: "select",
           category: "routing",
+          required: false,
         },
       ];
 
@@ -201,6 +204,7 @@ describe("Search Filters Store", () => {
           label: "Price Range",
           type: "range",
           category: "pricing",
+          required: false,
         },
       ];
 
@@ -219,6 +223,7 @@ describe("Search Filters Store", () => {
         label: "Airlines",
         type: "multiselect",
         category: "airline",
+        required: false,
       };
 
       act(() => {
@@ -236,6 +241,7 @@ describe("Search Filters Store", () => {
         label: "Price Range",
         type: "range",
         category: "pricing",
+        required: false,
       };
 
       act(() => {
@@ -265,12 +271,14 @@ describe("Search Filters Store", () => {
           label: "Price Range",
           type: "range",
           category: "pricing",
+          required: false,
         },
         {
           id: "airline",
           label: "Airlines",
           type: "multiselect",
           category: "airline",
+          required: false,
         },
       ];
 
@@ -297,6 +305,7 @@ describe("Search Filters Store", () => {
           label: "Price: Low to High",
           field: "price",
           direction: "asc",
+          isDefault: false,
         },
       ];
 
@@ -315,6 +324,7 @@ describe("Search Filters Store", () => {
         label: "Duration",
         field: "totalDuration",
         direction: "asc",
+        isDefault: false,
       };
 
       act(() => {
@@ -332,6 +342,7 @@ describe("Search Filters Store", () => {
         label: "Price: Low to High",
         field: "price",
         direction: "asc",
+        isDefault: false,
       };
 
       act(() => {
@@ -361,12 +372,14 @@ describe("Search Filters Store", () => {
           label: "Price: Low to High",
           field: "price",
           direction: "asc",
+          isDefault: false,
         },
         {
           id: "duration",
           label: "Duration",
           field: "totalDuration",
           direction: "asc",
+          isDefault: false,
         },
       ];
 
@@ -391,6 +404,7 @@ describe("Search Filters Store", () => {
           label: "Price Range",
           type: "range",
           category: "pricing",
+          required: false,
           validation: { min: 0, max: 10000 },
         },
         {
@@ -398,6 +412,7 @@ describe("Search Filters Store", () => {
           label: "Airlines",
           type: "multiselect",
           category: "airline",
+          required: false,
         },
       ];
 
@@ -499,6 +514,7 @@ describe("Search Filters Store", () => {
             label: "Price: Low to High",
             field: "price",
             direction: "asc",
+            isDefault: false,
           },
         });
       });
@@ -576,6 +592,7 @@ describe("Search Filters Store", () => {
           label: "Price: Low to High",
           field: "price",
           direction: "asc",
+          isDefault: false,
         },
       ];
 
@@ -598,6 +615,7 @@ describe("Search Filters Store", () => {
         label: "Price: Low to High",
         field: "price",
         direction: "asc",
+        isDefault: false,
       };
 
       act(() => {
@@ -665,12 +683,14 @@ describe("Search Filters Store", () => {
           label: "Price Range",
           type: "range",
           category: "pricing",
+          required: false,
           validation: { min: 0, max: 10000 },
         },
         {
           id: "required_field",
           label: "Required Field",
           type: "text",
+          required: true,
           validation: { required: true },
         },
       ];
@@ -808,6 +828,7 @@ describe("Search Filters Store", () => {
             label: "Price: Low to High",
             field: "price",
             direction: "asc",
+            isDefault: false,
           },
         });
       });
@@ -970,6 +991,7 @@ describe("Search Filters Store", () => {
           label: "Price Range",
           type: "range",
           category: "pricing",
+          required: false,
         },
       ];
 
@@ -1031,6 +1053,7 @@ describe("Search Filters Store", () => {
             label: "Price: Low to High",
             field: "price",
             direction: "asc",
+            isDefault: false,
           },
         });
       });
@@ -1047,12 +1070,14 @@ describe("Search Filters Store", () => {
           label: "Price Range",
           type: "range",
           category: "pricing",
+          required: false,
         },
         {
           id: "airline",
           label: "Airlines",
           type: "multiselect",
           category: "airline",
+          required: false,
         },
       ];
 
