@@ -16,11 +16,11 @@ This streamlined TODO list tracks current development priorities for TripSage AI
 - **MCP to SDK Migration**: 100% complete - 7 direct SDK integrations + 1 strategic MCP ✅
 - **CI/CD Pipeline**: Backend CI workflow implemented with matrix testing for Python 3.11-3.13 ✅
 - **Test Infrastructure**: Comprehensive unit tests with 92%+ coverage on core modules ✅
-- **Backend Supabase Authentication**: 90% complete with optimized local JWT validation, auth service, middleware, and comprehensive tests (June 9, 2025) ✅
+- **Backend Supabase Authentication**: 90% complete with optimized local JWT validation ✅
 - **Frontend Authentication Foundation**: 60% complete with auth context ready for Supabase client integration ✅
-- **Security Hardening**: Complete - no critical vulnerabilities found, proper environment variable usage (June 9, 2025) ✅
-- **Frontend TypeScript Errors Complete Resolution**: All TypeScript errors fixed from 367→0 (100% complete), React Query v5 migration complete (June 9, 2025) ✅
-  - **📄 Details**: See `/docs/research/frontend-typescript-errors-resolution.md` and `/frontend/TYPESCRIPT_FIX_TRACKER.md`
+- **Security Hardening**: Complete - no critical vulnerabilities found ✅
+- **Frontend TypeScript Errors Complete Resolution**: All TypeScript errors fixed from 367→0 (100% complete) ✅
+- **JWT Cleanup**: All JWT code successfully removed from frontend and backend ✅
 
 > **Note**: See [`tasks/COMPLETED-TODO.md`](tasks/COMPLETED-TODO.md) for comprehensive completion history and architectural details.
 
@@ -50,18 +50,9 @@ This streamlined TODO list tracks current development priorities for TripSage AI
   - [ ] Build search results components (flights, hotels, activities)
   - [ ] Implement trip management and itinerary building
   - [ ] Add budget tracking and expense management UI
-- [ ] **Authentication & User Management** (1-2 days) - **JWT Cleanup Complete**
-  - [x] Complete JWT code removal and cleanup (June 6, 2025) ✅
-    - [x] Deleted all JWT implementation files (frontend & backend)
-    - [x] Reverted files to pre-JWT state using git
-    - [x] Removed JWT dependencies from package.json and pyproject.toml
-    - [x] Cleaned up all JWT imports and references
-  - [x] **Backend Supabase Auth Implementation** ✅ (90% Complete)
-    - [x] Optimized auth service with local JWT validation (<50ms vs 600ms+ network calls)
-    - [x] Authentication middleware with proper dependency injection
-    - [x] Comprehensive router tests and validation
-    - [x] Security hardening and environment variable configuration
-    - **📄 See**: `/docs/research/auth/supabase-auth-implementation-prd.md` for implementation details
+- [ ] **Authentication & User Management** (1-2 days)
+  - [x] Complete JWT code removal and cleanup ✅
+  - [x] Backend Supabase Auth Implementation (90% complete) ✅
   - [ ] **Frontend Supabase Auth Integration** (HIGH PRIORITY - 60% Complete)
     - [x] Auth context foundation with React 19 patterns
     - [ ] Connect auth context to Supabase client
@@ -72,29 +63,49 @@ This streamlined TODO list tracks current development priorities for TripSage AI
     - [ ] Configure Row Level Security (RLS) policies for all user tables
     - [ ] Set up OAuth providers in Supabase dashboard
     - [ ] Implement secure API key storage with RLS
-  - [x] **Dashboard Page** ✅ (Already exists at `/frontend/src/app/dashboard/page.tsx`)
+  - [x] Dashboard Page ✅ (Already exists at `/frontend/src/app/dashboard/page.tsx`)
   - [ ] Complete BYOK API key management interface
   - [ ] Implement user registration and profile management
   - [ ] Add session management and security controls
   - [ ] Create user preferences and settings interface
 - **Expected Impact**: Complete frontend foundation ready for MVP launch
 
-### 2. Test Infrastructure & Pydantic Migration ⭐ **BLOCKING ISSUE**
+### 2. Backend Code Quality & Error Handling ⭐ **HIGH PRIORITY**
 
-- [x] **Fix Frontend TypeScript Errors** ✅ (Completed June 9, 2025) - **0 errors remaining**
-  - **📄 Research**: `/docs/research/frontend-typescript-errors-resolution.md` for comprehensive fix strategy
-  - **📊 Status**: `/frontend/TYPESCRIPT_FIX_TRACKER.md` for completion details (100% complete)
-  - [x] Fixed all store type errors by rewriting outdated tests
-  - [x] Resolved all TypeScript compilation errors (367→0)
-  - [x] Verified `pnpm build` completes successfully
-- [ ] **Implement Real Services for Backend Routers** (1-2 days) - **Replace mock implementations**
+- [ ] **Implement Error Handling Decorator** (1-2 days)
+  - [ ] Create `@with_error_handling` decorator in `tripsage_core/utils/decorator_utils.py`
+  - [ ] Replace 50+ duplicate try-catch patterns across business services
+  - [ ] Update auth_service, user_service, flight_service, accommodation_service, memory_service
+  - [ ] Test error handling consistency
+- [ ] **Create BaseService Pattern** (1-2 days)
+  - [ ] Create `BaseService` class in `tripsage_core/services/base_service.py`
+  - [ ] Implement dependency injection pattern for database/external services
+  - [ ] Refactor all business services to inherit from `BaseService`
+  - [ ] Remove duplicate initialization code (219 lines in service registry)
+- [ ] **Backend Linting & Formatting Cleanup** (1 day)
+  - [ ] Run `ruff format .` on entire backend codebase
+  - [ ] Run `ruff check . --fix` to auto-fix issues
+  - [ ] Fix remaining manual linting issues
+  - [ ] Update import sorting with `ruff check --select I --fix .`
+- [ ] **Remove Legacy Backend Code** (1 day)
+  - [ ] Remove duplicate service registry in `tripsage/agents/service_registry.py` (219 lines)
+  - [ ] Keep config-based registry, deprecate agents registry
+  - [ ] Update all imports to use config registry pattern
+  - [ ] Clean duplicate dependencies in `pyproject.toml`
+- **Expected Impact**: Eliminate 200+ lines of duplicate error handling code, reduce service initialization duplication by 80%
+
+### 3. Test Infrastructure & Service Implementation ⭐ **BLOCKING ISSUE**
+
+- [x] Fix Frontend TypeScript Errors ✅ (Completed - 0 errors remaining)
+- [ ] **Implement Real Services for Backend Routers** (1-2 days)
   - [x] Backend routers exist: `tripsage/api/routers/activities.py` and `search.py` ✅
   - [ ] Replace mock data in activities router with real accommodation service integration
   - [ ] Replace mock data in search router with real flight/hotel search implementations
   - [ ] Add proper error handling and validation to existing endpoints
-- [ ] **Verify and Fix Any Remaining Test Issues** (1 day) - **Validate current test status**
+- [ ] **Verify and Fix Test Issues** (1-2 days)
   - [ ] Run full test suite to verify actual failure count vs documentation claims
   - [ ] Address any legitimate Pydantic v2 migration issues if they exist
+  - [ ] Use `bump-pydantic` tool for automated migration if needed
   - [ ] Ensure authentication tests pass with new Supabase auth implementation
   - [ ] Maintain ≥90% test coverage across all modules
 - [ ] **Final Integration and Testing** (1-2 days)
@@ -128,27 +139,33 @@ This streamlined TODO list tracks current development priorities for TripSage AI
   - [ ] Integration testing with all database operations
 - **Expected Impact**: Complete unified database system with 91% faster memory operations
 
-### 5. LangGraph Production Deployment (Issue #172)
-
-- [ ] Set up LangSmith monitoring and observability
-- [ ] Implement feature flags for gradual rollout
-- [ ] Performance validation and A/B testing
-- [ ] Production deployment with monitoring
-- [ ] Documentation and team training
-- **Status**: Phases 1-3 completed (foundation, migration, MCP integration)
-
-### 6. SDK Migration Enhancements (Optional Optimizations)
-
-- [ ] **Advanced Webcrawl Enhancements**
-  - [ ] AIOHTTP integration for 10x concurrent performance improvement
-  - [ ] TLS fingerprinting bypass with hrequests/curl_cffi for enterprise sites
-  - [ ] Scrapling integration for intelligent site adaptation
-- **Status**: 7 direct SDK integrations + 1 strategic MCP integration - migration strategy complete
-- **Achieved Impact**: 50-70% latency reduction realized across all viable SDK migrations
-
 ## Medium Priority Tasks
 
-### 7. Webcrawl Production Readiness (1-2 weeks)
+### 5. Backend Code Quality Improvements (Phase 2)
+
+- [ ] **Implement Common Validators** (1-2 days)
+  - [ ] Create `CommonValidators` class in `tripsage_core/models/schemas_common/validators.py`
+  - [ ] Extract duplicate validation logic (password, email, airport codes)
+  - [ ] Update all Pydantic models to use common validators
+  - [ ] Remove duplicate `@field_validator` implementations
+- [ ] **Create SearchCacheMixin** (1-2 days)
+  - [ ] Implement `SearchCacheMixin` in `tripsage_core/utils/cache_utils.py`
+  - [ ] Refactor flight service to use mixin
+  - [ ] Refactor accommodation service to use mixin
+  - [ ] Standardize cache key generation and cleanup logic
+- [ ] **Simplify Complex Backend Logic** (2-3 days)
+  - [ ] Refactor `chat_orchestration.py` (673 lines) - break into smaller focused services
+  - [ ] Extract `execute_parallel_tools` into separate utility class
+  - [ ] Simplify memory bridge `_map_session_to_state` method using strategy pattern
+  - [ ] Break down handoff coordinator condition evaluation (10+ cyclomatic complexity)
+- [ ] **Create BaseAPIService Pattern** (1-2 days)
+  - [ ] Implement `BaseAPIService` in `tripsage/api/services/base.py`
+  - [ ] Refactor API services to use common adapter pattern
+  - [ ] Standardize request/response transformation logic
+  - [ ] Eliminate duplicate error handling in API layer
+- **Expected Impact**: Eliminate validation code duplication across 15+ models, remove 100+ lines of duplicate cache management
+
+### 6. Webcrawl Production Readiness (1-2 weeks)
 
 - [ ] **Caching & Performance Integration**
   - [ ] Integrate webcrawl results with DragonflyDB caching layer
@@ -164,14 +181,13 @@ This streamlined TODO list tracks current development priorities for TripSage AI
   - [ ] Resource usage monitoring and throttling
 - **Expected Impact**: Production-ready webcrawl reliability, reduced resource usage
 
-### 8. Complete Test Suite Migration (Issue #35)
+### 7. Complete Test Suite Migration (Issue #35)
 
 - [ ] Migrate remaining agent tests to use tripsage.*
 - [ ] Ensure 90%+ test coverage across all modules
 - **Current Status**: Domain models at 92% coverage, API dependencies at 80-90%, targeting 90%+ overall
-- **Note**: Completed test suite consolidation work documented in `tasks/COMPLETED-TODO.md`
 
-### 9. Performance and Monitoring Infrastructure
+### 8. Performance and Monitoring Infrastructure
 
 - [ ] Basic monitoring setup with essential metrics
 - [ ] Set up request tracing and error tracking
@@ -179,96 +195,125 @@ This streamlined TODO list tracks current development priorities for TripSage AI
 - [ ] Track API usage per service
 - [ ] Implement usage quotas
 
-### 10. Database Operations Completion
+### 9. Database Operations Completion
 
 - [ ] Finalize remaining database operations via direct SDK tools
 - [ ] Complete all essential CRUD operations for trips, accommodations, flights
 - [ ] Implement comprehensive request/response validation
 - [ ] Add proper error handling and status codes
 
+### 10. LangGraph Production Deployment (Issue #172)
+
+- [ ] Set up LangSmith monitoring and observability
+- [ ] Implement feature flags for gradual rollout
+- [ ] Performance validation and A/B testing
+- [ ] Production deployment with monitoring
+- [ ] Documentation and team training
+- **Status**: Phases 1-3 completed (foundation, migration, MCP integration)
+
 ## 🧪 Testing & Quality Assurance
 
 ### Backend Testing Cleanup
+
 - [ ] Review and restore essential tests from deleted files
   - Check which tests provide unique coverage
   - Focus on integration and E2E tests
   - Keep only tests that match current architecture
 
 ### Tests to Restore (Unique Coverage)
+
 - [ ] **E2E Tests**
   - `test_api.py` - Full API workflow testing (register, login, create trip, add flight)
   - `test_chat_auth_flow.py` - Authentication flow for chat system
   - `test_chat_sessions.py` - Chat session management endpoints
-
 - [ ] **Core Exception Tests**
   - `test_exceptions.py` - Comprehensive exception system testing
   - `test_base_core_model.py` - Base model functionality
   - `test_base_app_settings.py` - Application settings validation
-
 - [ ] **Performance Tests**
   - `test_memory_performance.py` - Memory system latency and throughput
   - `test_migration_performance.py` - Database migration performance
-
 - [ ] **Security Tests**
   - `test_memory_security.py` - Data isolation and GDPR compliance
-
 - [ ] **Utility Tests**
   - `test_decorators.py` - Error handling and memory client decorators
   - `test_error_handling_integration.py` - Error handling across system
-
 - [ ] **Orchestration Utilities**
   - `test_utils.py` - Mock utilities for LangChain/OpenAI testing
 
-### Tests NOT to Restore (Covered or Outdated)
-- Domain model tests (covered by new router tests)
-- Individual service tests (covered by existing business service tests)
-- Tool registry tests (architecture has changed)
-- File processing tests (already have comprehensive coverage)
-
 ## Low Priority Tasks
 
-### Reference Documentation
+### 11. Frontend Code Quality Improvements (DEFERRED)
 
-- **Frontend Implementation**: Phase 4 Agent Experience (30% complete) - See Frontend section below
-- **Integration Tasks**: Chat and WebSocket integration - See Integration section below
-- **V2 Features**: Post-MVP enhancements archived for future consideration
+> **Note**: Frontend tasks documented for future implementation by frontend developer
 
-### 11. Advanced Frontend Features
+- [ ] **Create Generic Search Card Component**
+  - [ ] Implement `SearchCard<T>` component in `frontend/src/components/ui/search-card.tsx`
+  - [ ] Refactor accommodation, activity, destination, trip cards to use generic component
+- [ ] **Implement Generic Search Hook**
+  - [ ] Create `useGenericSearch<TParams, TResponse>` in `frontend/src/lib/hooks/use-generic-search.ts`
+  - [ ] Refactor accommodation, activity, destination search hooks
+- [ ] **Frontend Linting Cleanup**
+  - [ ] Run `npx biome format . --write` on frontend codebase
+  - [ ] Run `npx biome lint --apply .` to fix issues
+  - [ ] Remove console.log statements from production code (25+ files)
+- [ ] **Break Down Chat Store**
+  - [ ] Split 1000+ line chat store into domain stores (session, messages, WebSocket, memory)
+- [ ] **Create Common Form Components**
+  - [ ] Implement `NumberField`, `DateField`, `SelectField` components
+  - [ ] Standardize form validation patterns with Zod
 
-- [ ] Advanced agent visualization with React Flow
-- [ ] LLM configuration UI with model switching
-- [ ] Real-time collaborative trip planning
-- [ ] Advanced budget tracking and forecasting
+### 12. Documentation & Advanced Features
 
-### 12. Code Quality and Testing
+- [ ] **Backend Documentation**
+  - [ ] Create README.md for `tripsage/agents/` - agent architecture overview
+  - [ ] Create README.md for `tripsage_core/services/business/` - service patterns
+  - [ ] Create README.md for `tripsage_core/services/infrastructure/` - infrastructure setup
+  - [ ] Create README.md for `tripsage/orchestration/` - LangGraph workflows
+  - [ ] Create README.md for `tripsage/tools/` - agent tools documentation
+- [ ] **Advanced Frontend Features**
+  - [ ] Advanced agent visualization with React Flow
+  - [ ] LLM configuration UI with model switching
+  - [ ] Real-time collaborative trip planning
+  - [ ] Advanced budget tracking and forecasting
+- [ ] **Agent Status Modernization**
+  - [ ] Real-time monitoring dashboard with React 19 concurrent features
+  - [ ] Agent health indicators with optimistic updates
+  - [ ] Task queue visualization with Framer Motion
 
-- [ ] Refactor function tool signatures and reduce complexity
-- [ ] Standardize logging patterns across modules
-- **Note**: Backend consolidation and modernization work documented in `tasks/COMPLETED-TODO.md`
+### 13. SDK Migration Enhancements (Optional Optimizations)
+
+- [ ] **Advanced Webcrawl Enhancements**
+  - [ ] AIOHTTP integration for 10x concurrent performance improvement
+  - [ ] TLS fingerprinting bypass with hrequests/curl_cffi for enterprise sites
+  - [ ] Scrapling integration for intelligent site adaptation
+- **Status**: 7 direct SDK integrations + 1 strategic MCP integration - migration strategy complete
+- **Achieved Impact**: 50-70% latency reduction realized across all viable SDK migrations
 
 ## Implementation Strategy
 
 ### Critical Path (Days 1-5) - **Updated Based on Actual Implementation Status**
 
-- **Frontend-Backend Auth Integration** (Days 1-2): Connect existing auth context to Supabase client
-- **Service Implementation** (Day 3): Replace mock router implementations with real services  
-- **Database Security Setup** (Day 4): Configure RLS policies and OAuth providers
-- **Integration Testing** (Day 5): End-to-end auth flow and performance validation
+- **Backend Code Quality** (Days 1-2): Implement error handling decorator and BaseService pattern
+- **Frontend-Backend Auth Integration** (Days 3-4): Connect existing auth context to Supabase client
+- **Service Implementation** (Day 5): Replace mock router implementations with real services
 
 ### **Major Implementation Achievement Summary**
 
-> **CRITICAL UPDATE**: Previous TODO.md significantly underestimated our progress. Actual status:
+> **CRITICAL UPDATE**: Previous documentation significantly underestimated our progress. Actual status:
 >
 > - **Backend Supabase Auth**: 90% complete with optimized implementation ✅
 > - **Frontend Auth Foundation**: 60% complete, ready for client integration ✅  
 > - **Security**: No critical vulnerabilities found, proper configuration ✅
 > - **Backend Routers**: Exist and functional, need real service implementations ✅
+> - **TypeScript Errors**: 100% resolved (367→0) ✅
 >
-> **Reality**: We're 4-5 days from PR-ready, not weeks/months as previously documented.
+> **Reality**: We're 4-5 days from PR-ready with immediate focus on code quality and service implementation.
 
 ### Expected Impact
 
 > **Note**: All target metrics have been achieved. See `tasks/COMPLETED-TODO.md` for detailed impact analysis:
+>
 > - Performance: 4-25x improvement (25x cache, 11x vector, 6x webcrawl)
 > - Cost: 80% reduction in infrastructure costs
 > - Architecture: Simplified to 1 strategic MCP + 7 direct SDKs
@@ -296,43 +341,6 @@ For detailed implementation plans, see:
 - **Development Guide**: `docs/04_DEVELOPMENT_GUIDE/` - Implementation workflows
 - **Features & Integrations**: `docs/05_FEATURES_AND_INTEGRATIONS/` - Service integrations
 
-## Frontend Implementation Details
-
-### Phase 4: Agent Experience (30% Complete)
-
-From the detailed frontend plan, key remaining tasks:
-
-- [ ] **Agent Status Modernization**
-  - [ ] Real-time monitoring dashboard with React 19 concurrent features
-  - [ ] Agent health indicators with optimistic updates
-  - [ ] Task queue visualization with Framer Motion
-  
-- [ ] **Dashboard Modernization** (20% Complete)
-  - [ ] Fintech-inspired metrics cards
-  - [ ] Advanced data visualizations
-  - [ ] Real-time updates with WebSocket
-
-- [ ] **Search Enhancement** (25% Complete)
-  - [ ] Unified search experience
-  - [ ] Advanced filters with instant results
-  - [ ] Search history and suggestions
-
-## Integration Tasks
-
-### WebSocket Integration
-
-- [ ] **Real-time Communication**
-  - [ ] Complete WebSocket integration for chat
-  - [ ] Implement presence indicators
-  - [ ] Add typing indicators and read receipts
-  
-### Authentication Flow
-
-- [ ] **Frontend-Backend Auth Integration**
-  - [ ] Complete JWT token management
-  - [ ] Implement refresh token logic
-  - [ ] Add session persistence
-
 ## Post-MVP (V2) Features
 
 These features are intentionally deferred to avoid over-engineering:
@@ -340,8 +348,12 @@ These features are intentionally deferred to avoid over-engineering:
 - Advanced Kubernetes orchestration
 - Multi-cluster deployments
 - Complex service mesh integration
-- Advanced APM and monitoring
-- Sophisticated caching strategies beyond current DragonflyDB setup
+- Advanced APM and monitoring beyond current DragonflyDB setup
+- Sophisticated caching strategies
 
 Note: Full V2 feature list archived for future reference.
-EOF < /dev/null
+
+---
+
+*Last Updated: January 6, 2025*
+*Estimated Timeline: 4-5 days to production ready*
