@@ -61,6 +61,76 @@ supabase/
 
 ## 📊 Schema Overview
 
+### Database Entity Relationships
+
+```mermaid
+erDiagram
+    auth_users ||--o{ trips : owns
+    auth_users ||--o{ chat_sessions : creates
+    auth_users ||--o{ memories : has
+    auth_users ||--o{ api_keys : manages
+    
+    trips ||--o{ flights : contains
+    trips ||--o{ accommodations : includes
+    trips ||--o{ transportation : uses
+    trips ||--o{ itinerary_items : has
+    trips ||--o{ chat_sessions : discusses
+    
+    chat_sessions ||--o{ chat_messages : contains
+    chat_messages ||--o{ chat_tool_calls : triggers
+    
+    memories ||--o{ session_memories : creates
+    
+    auth_users {
+        uuid id PK
+        string email
+        timestamp created_at
+        timestamp updated_at
+    }
+    
+    trips {
+        uuid id PK
+        uuid user_id FK
+        string title
+        text description
+        date start_date
+        date end_date
+        jsonb metadata
+        timestamp created_at
+        timestamp updated_at
+    }
+    
+    chat_sessions {
+        uuid id PK
+        uuid user_id FK
+        uuid trip_id FK
+        string title
+        jsonb metadata
+        timestamp created_at
+        timestamp updated_at
+    }
+    
+    memories {
+        uuid id PK
+        uuid user_id FK
+        text content
+        vector embedding
+        jsonb metadata
+        timestamp created_at
+        timestamp updated_at
+    }
+    
+    api_keys {
+        uuid id PK
+        uuid user_id FK
+        string name
+        text encrypted_key
+        string provider
+        timestamp created_at
+        timestamp last_used_at
+    }
+```
+
 ### Core Business Tables
 
 | Table | Description | Key Features |
