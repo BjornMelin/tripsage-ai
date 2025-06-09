@@ -14,11 +14,13 @@
 - Ready for greenfield Supabase Auth implementation
 
 **Files Removed:**
+
 - `frontend/src/lib/auth/server-actions.ts`
 - `tripsage_core/services/business/auth_service.py`
 - All JWT test files
 
 **Files Reverted:**
+
 - `frontend/src/middleware.ts`
 - Multiple backend files to remove JWT imports
 
@@ -31,6 +33,7 @@
 - Test infrastructure fixed
 
 **Key Fixes:**
+
 - React Query v5 queryKey types
 - Component prop conflicts with HTML attributes
 - Test file Vitest imports
@@ -39,21 +42,25 @@
 ## Critical Blockers Identified
 
 ### 1. Frontend Build Errors 🚨 (1-2 hours)
+
 - **367 TypeScript errors remaining**
 - Agent-status-store.ts has critical type errors
 - Build currently fails preventing deployment
 
 ### 2. Dashboard Page Missing 🚨 (2 hours)
+
 - Authentication redirects to `/dashboard` which returns 404
 - Critical for user experience flow
 - Blocks all authenticated features
 
 ### 3. Backend Routers Missing 🚨 (2-3 hours)
+
 - `activities.py` router not implemented
 - `search.py` router not implemented
 - Frontend makes API calls that return 404
 
 ### 4. Pydantic v1→v2 Migration 🚨 (1-2 days)
+
 - **527 backend tests failing**
 - Blocks all backend development
 - Use `bump-pydantic` tool for automated migration
@@ -92,12 +99,14 @@
 ## Key Documentation References
 
 ### Implementation Guides
+
 - **Supabase Auth PRD**: `/docs/research/auth/supabase-auth-implementation-prd.md`
 - **Auth Research Report**: `/docs/research/auth/authentication-research-report-2025.md`
 - **TypeScript Migration**: `/docs/research/frontend-typescript-errors-resolution.md`
 - **Migration Status**: `/frontend/TYPESCRIPT_MIGRATION_STATUS.md`
 
 ### Architecture References
+
 - **Implementation Status**: `/docs/02_PROJECT_OVERVIEW/IMPLEMENTATION_STATUS.md`
 - **MVP Task List**: `/docs/10_RESEARCH/frontend/mvp-v1-prd-task-list.md`
 - **Main TODO**: `/TODO.md`
@@ -115,11 +124,13 @@
 ## Risk Assessment
 
 ### High Priority Risks
+
 1. **No Dashboard Page**: Users hit 404 after login
 2. **Frontend Won't Build**: Blocks all deployment
 3. **Backend Tests Failing**: Blocks feature development
 
 ### Mitigation Strategy
+
 1. Fix blockers in priority order
 2. Use automated tools (bump-pydantic)
 3. Create minimal dashboard first

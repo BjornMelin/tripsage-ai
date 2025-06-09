@@ -12,16 +12,19 @@ Following comprehensive research into current best practices for React 19 Compil
 ### Key Research Findings
 
 **🔒 Security Insights:**
+
 - CVE-2025-29927 vulnerability in Next.js middleware affecting pre-15.2.3 versions (TripSage uses 15.3.2 - safe)
 - Comprehensive JWT authentication patterns with FastAPI WebSocket dependency injection
 - Production-ready authentication flows with proper error handling and token refresh
 
 **⚡ Performance Optimizations:**
+
 - React 19 Compiler automatic memoization reducing developer overhead by 40-60%
 - Next.js 15 production setup with Turbopack achieving <2s build times
 - SWC optimizations targeting only JSX/React Hook files for minimal overhead
 
 **🔧 Automated Migration Tools:**
+
 - `bump-pydantic` official tool for V1→V2 migration with 90%+ automation rate
 - Comprehensive transformation rules covering all breaking changes
 - Incremental migration strategy for zero-downtime upgrades
@@ -31,6 +34,7 @@ Following comprehensive research into current best practices for React 19 Compil
 ## Research-Enhanced Architecture Design
 
 ### Optimized System Flow
+
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                    FRONTEND LAYER (Enhanced)                    │
@@ -81,6 +85,7 @@ const JWT_SECRET = new TextEncoder().encode(
 ```
 
 **Research-Based Security Enhancements:**
+
 - **CSP Headers**: Based on Next.js 15 security research
 - **Token Refresh**: Implementing FastAPI patterns from Context7 research
 - **Error Handling**: Following CVE-2025-29927 security guidelines
@@ -169,6 +174,7 @@ export default nextConfig
 ```
 
 **SWC Optimization Benefits (Research-Validated):**
+
 - **40-60% Reduction** in manual memoization code
 - **Automatic useMemo/useCallback** generation
 - **JSX-only targeting** for minimal overhead
@@ -217,6 +223,7 @@ bump-pydantic --disable BP001,BP002 tripsage/  # Custom rule selection
 ```
 
 **Research-Validated Transformation Rules:**
+
 - **BP001**: Add default `None` to `Optional[T]` fields
 - **BP002**: Replace `Config` class by `model_config` attribute  
 - **BP003**: Replace `Field` old parameters to new ones
@@ -435,25 +442,30 @@ npm install @lhci/cli --save-dev
 ## Implementation Timeline (Research-Enhanced)
 
 ### Week 1: Security & Authentication
+
 - [x] **Day 1-2**: Remove hardcoded JWT secrets (Critical)
 - [x] **Day 3-4**: Implement Context7-validated WebSocket authentication
 - [x] **Day 5**: Security headers and CSP configuration
 
 ### Week 2: React 19 Compiler & Performance  
+
 - [x] **Day 1-2**: Enable React Compiler with SWC optimizations
 - [x] **Day 3-4**: Implement automatic memoization patterns
 - [x] **Day 5**: Performance monitoring and Core Web Vitals
 
 ### Week 3: Pydantic v2 Migration
+
 - [x] **Day 1-2**: Run bump-pydantic automated migration
 - [x] **Day 3-4**: Manual migration of complex patterns
 - [x] **Day 5**: Test suite validation and coverage verification
 
 ### Week 4: WebSocket Implementation
+
 - [x] **Day 1-3**: Production WebSocket manager implementation
 - [x] **Day 4-5**: Agent status broadcasting and chat integration
 
 ### Week 5: Production Deployment
+
 - [x] **Day 1-3**: Security audit and compliance validation
 - [x] **Day 4-5**: Performance optimization and monitoring setup
 
@@ -462,18 +474,21 @@ npm install @lhci/cli --save-dev
 ## Research-Validated Success Metrics
 
 ### Technical Performance (Research-Based Targets)
+
 - **Build Time**: <2s with Turbopack (Research: Next.js 15 optimizations)
 - **Bundle Size**: <200KB main, <500KB vendor (Research: React 19 optimization)
 - **Core Web Vitals**: LCP <2.5s, FID <100ms, CLS <0.1 (Research: web-vitals standards)
 - **Test Coverage**: ≥90% (Research: Industry best practices)
 
 ### Security Compliance (Research-Enhanced)
+
 - **Zero Critical Vulnerabilities**: Validated against CVE-2025-29927
 - **JWT Security**: Following FastAPI Context7 patterns
 - **CSP Implementation**: Based on Next.js security research
 - **Authentication Flow**: <2s response time (Research benchmark)
 
 ### Migration Success (Tool-Validated)
+
 - **Automated Migration**: 90%+ with bump-pydantic (Research: Official tool capabilities)
 - **Test Suite**: 527 failing → 0 failing tests
 - **Zero Downtime**: Incremental migration strategy
@@ -498,7 +513,8 @@ The systematic approach ensures TripSage achieves production-ready status with c
 
 ---
 
-**Research Sources**: 
+**Research Sources**:
+
 - Firecrawl Deep Research: React 19 + Next.js 15 Production Integration
 - Context7 FastAPI Documentation: WebSocket JWT Authentication Patterns  
 - Tavily Search: Pydantic v2 Migration Tools and Strategies

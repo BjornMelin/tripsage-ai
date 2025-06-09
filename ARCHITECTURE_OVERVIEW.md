@@ -19,12 +19,14 @@ TripSage is an AI-powered travel planning platform that combines modern web tech
 
 ### Current Implementation Status (June 6, 2025)
 
-**Grade A Frontend Implementation**: 
+**Grade A Frontend Implementation**:
+
 - ✅ 70-75% complete with React 19 + Next.js 15 foundation
 - ✅ Advanced agent monitoring, authentication UI, and WebSocket infrastructure ready
 - ✅ Modern component architecture with shadcn-ui and comprehensive testing
 
 **Backend Integration Status**:
+
 - ✅ 92% complete with unified FastAPI architecture and direct SDK integrations
 - ✅ **JWT Security Hardening**: Critical security vulnerability resolved - hardcoded fallback secrets removed
 - ✅ **Frontend Authentication Foundation**: JWT middleware and server actions implemented with production security
@@ -44,73 +46,117 @@ TripSage is an AI-powered travel planning platform that combines modern web tech
 
 The TripSage platform follows a layered architecture with clear separation between presentation, application, business logic, and infrastructure layers.
 
-```plaintext
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                           TripSage AI Platform                             │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                          Presentation Layer                                │
-│  ┌─────────────────────┐    ┌─────────────────────┐    ┌─────────────────┐  │
-│  │     Frontend        │    │    AI Agents        │    │  External APIs  │  │
-│  │   (Next.js 15)      │    │   (LangGraph)       │    │  (Travel Svcs)  │  │
-│  │                     │    │                     │    │                 │  │
-│  │ • React Components  │    │ • Planning Agent    │    │ • Flight APIs   │  │
-│  │ • Real-time UI      │    │ • Flight Agent      │    │ • Hotel APIs    │  │
-│  │ • Chat Interface    │    │ • Hotel Agent       │    │ • Maps APIs     │  │
-│  │ • Trip Planning     │    │ • Budget Agent      │    │ • Weather APIs  │  │
-│  │ • User Management   │    │ • Memory Agent      │    │ • Calendar APIs │  │
-│  └─────────────────────┘    └─────────────────────┘    └─────────────────┘  │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                           Application Layer                                │
-│  ┌─────────────────────────────────────────────────────────────────────┐    │
-│  │                      Unified API (FastAPI)                         │    │
-│  │                                                                     │    │
-│  │ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐    │    │
-│  │ │ Consumer    │ │ Auth &      │ │ Rate        │ │ Response    │    │    │
-│  │ │ Detection   │ │ Security    │ │ Limiting    │ │ Formatting  │    │    │
-│  │ └─────────────┘ └─────────────┘ └─────────────┘ └─────────────┘    │    │
-│  │                                                                     │    │
-│  │ ┌─────────────────────────────────────────────────────────────┐    │    │
-│  │ │                    API Routers                              │    │    │
-│  │ │ Auth│Trips│Chat│Flights│Hotels│Destinations│Memory│WebSocket│    │    │
-│  │ └─────────────────────────────────────────────────────────────┘    │    │
-│  └─────────────────────────────────────────────────────────────────────┘    │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                           Business Logic Layer                             │
-│  ┌─────────────────────────────────────────────────────────────────────┐    │
-│  │                        TripSage Core                               │    │
-│  │                                                                     │    │
-│  │ ┌─────────────────┐ ┌─────────────────┐ ┌─────────────────────┐    │    │
-│  │ │ Business        │ │ External API    │ │ Infrastructure      │    │    │
-│  │ │ Services        │ │ Services        │ │ Services            │    │    │
-│  │ │                 │ │                 │ │                     │    │    │
-│  │ │ • Auth Service  │ │ • Google Maps   │ │ • Database Service  │    │    │
-│  │ │ • Memory Svc    │ │ • Weather API   │ │ • Cache Service     │    │    │
-│  │ │ • Chat Service  │ │ • Calendar API  │ │ • WebSocket Mgr     │    │    │
-│  │ │ • Flight Svc    │ │ • Document AI   │ │ • Key Monitoring    │    │    │
-│  │ │ • Hotel Service │ │ • WebCrawl Svc  │ │ • Security Service  │    │    │
-│  │ └─────────────────┘ └─────────────────┘ └─────────────────────┘    │    │
-│  │                                                                     │    │
-│  │ ┌─────────────────────────────────────────────────────────────┐    │    │
-│  │ │              Shared Models & Schemas                       │    │    │
-│  │ │ Database Models │ Domain Models │ API Schemas │ Validators │    │    │
-│  │ └─────────────────────────────────────────────────────────────┘    │    │
-│  └─────────────────────────────────────────────────────────────────────┘    │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                         Infrastructure Layer                               │
-│  ┌─────────────────┐ ┌─────────────────┐ ┌─────────────────────────────┐    │
-│  │   Database      │ │      Cache      │ │       External Services     │    │
-│  │   (Supabase)    │ │  (DragonflyDB)  │ │                             │    │
-│  │                 │ │                 │ │ ┌─────────┐ ┌─────────────┐ │    │
-│  │ • PostgreSQL    │ │ • Redis-compat  │ │ │ Duffel  │ │ Google      │ │    │
-│  │ • pgvector      │ │ • 25x faster    │ │ │ Flights │ │ Maps/Cal    │ │    │
-│  │ • Row Level     │ │ • Multi-tier    │ │ └─────────┘ └─────────────┘ │    │
-│  │   Security      │ │   TTL strategy  │ │                             │    │
-│  │ • Migrations    │ │ • Intelligent   │ │ ┌─────────┐ ┌─────────────┐ │    │
-│  │ • Backups       │ │   invalidation  │ │ │ Weather │ │ Airbnb MCP  │ │    │
-│  └─────────────────┘ └─────────────────┘ │ │   API   │ │ Integration │ │    │
-│                                          │ └─────────┘ └─────────────┘ │    │
-│                                          └─────────────────────────────┘    │
-└─────────────────────────────────────────────────────────────────────────────┘
+```mermaid
+graph TD
+    subgraph "TripSage AI Platform"
+        subgraph "Presentation Layer"
+            Frontend["Frontend (Next.js 15)"]
+            AIAgents["AI Agents (LangGraph)"]
+            ExternalAPIs["External APIs (Travel Svcs)"]
+            
+            Frontend --> |"React Components"| Frontend
+            Frontend --> |"Real-time UI"| Frontend
+            Frontend --> |"Chat Interface"| Frontend
+            Frontend --> |"Trip Planning"| Frontend
+            Frontend --> |"User Management"| Frontend
+            
+            AIAgents --> |"Planning Agent"| AIAgents
+            AIAgents --> |"Flight Agent"| AIAgents
+            AIAgents --> |"Hotel Agent"| AIAgents
+            AIAgents --> |"Budget Agent"| AIAgents
+            AIAgents --> |"Memory Agent"| AIAgents
+            
+            ExternalAPIs --> |"Flight APIs"| ExternalAPIs
+            ExternalAPIs --> |"Hotel APIs"| ExternalAPIs
+            ExternalAPIs --> |"Maps APIs"| ExternalAPIs
+            ExternalAPIs --> |"Weather APIs"| ExternalAPIs
+            ExternalAPIs --> |"Calendar APIs"| ExternalAPIs
+        end
+        
+        subgraph "Application Layer"
+            UnifiedAPI["Unified API (FastAPI)"]
+            
+            ConsumerDetection["Consumer Detection"]
+            AuthSecurity["Auth & Security"]
+            RateLimiting["Rate Limiting"]
+            ResponseFormatting["Response Formatting"]
+            
+            APIRouters["API Routers"]
+            APIRouters --> |"Auth"| APIRouters
+            APIRouters --> |"Trips"| APIRouters
+            APIRouters --> |"Chat"| APIRouters
+            APIRouters --> |"Flights"| APIRouters
+            APIRouters --> |"Hotels"| APIRouters
+            APIRouters --> |"Destinations"| APIRouters
+            APIRouters --> |"Memory"| APIRouters
+            APIRouters --> |"WebSocket"| APIRouters
+            
+            UnifiedAPI --> ConsumerDetection
+            UnifiedAPI --> AuthSecurity
+            UnifiedAPI --> RateLimiting
+            UnifiedAPI --> ResponseFormatting
+            UnifiedAPI --> APIRouters
+        end
+        
+        subgraph "Business Logic Layer"
+            TripSageCore["TripSage Core"]
+            
+            BusinessServices["Business Services"]
+            ExternalAPIServices["External API Services"]
+            InfrastructureServices["Infrastructure Services"]
+            
+            BusinessServices --> |"Auth Service"| BusinessServices
+            BusinessServices --> |"Memory Svc"| BusinessServices
+            BusinessServices --> |"Chat Service"| BusinessServices
+            BusinessServices --> |"Flight Svc"| BusinessServices
+            BusinessServices --> |"Hotel Service"| BusinessServices
+            
+            ExternalAPIServices --> |"Google Maps"| ExternalAPIServices
+            ExternalAPIServices --> |"Weather API"| ExternalAPIServices
+            ExternalAPIServices --> |"Calendar API"| ExternalAPIServices
+            ExternalAPIServices --> |"Document AI"| ExternalAPIServices
+            ExternalAPIServices --> |"WebCrawl Svc"| ExternalAPIServices
+            
+            InfrastructureServices --> |"Database Service"| InfrastructureServices
+            InfrastructureServices --> |"Cache Service"| InfrastructureServices
+            InfrastructureServices --> |"WebSocket Mgr"| InfrastructureServices
+            InfrastructureServices --> |"Key Monitoring"| InfrastructureServices
+            InfrastructureServices --> |"Security Service"| InfrastructureServices
+            
+            SharedModels["Shared Models & Schemas"]
+            SharedModels --> |"Database Models"| SharedModels
+            SharedModels --> |"Domain Models"| SharedModels
+            SharedModels --> |"API Schemas"| SharedModels
+            SharedModels --> |"Validators"| SharedModels
+            
+            TripSageCore --> BusinessServices
+            TripSageCore --> ExternalAPIServices
+            TripSageCore --> InfrastructureServices
+            TripSageCore --> SharedModels
+        end
+        
+        subgraph "Infrastructure Layer"
+            Database["Database (Supabase)"]
+            Cache["Cache (DragonflyDB)"]
+            ExternalServices["External Services"]
+            
+            Database --> |"PostgreSQL"| Database
+            Database --> |"pgvector"| Database
+            Database --> |"Row Level Security"| Database
+            Database --> |"Migrations"| Database
+            Database --> |"Backups"| Database
+            
+            Cache --> |"Redis-compat"| Cache
+            Cache --> |"25x faster"| Cache
+            Cache --> |"Multi-tier TTL strategy"| Cache
+            Cache --> |"Intelligent invalidation"| Cache
+            
+            ExternalServices --> |"Duffel Flights"| ExternalServices
+            ExternalServices --> |"Google Maps/Cal"| ExternalServices
+            ExternalServices --> |"Weather API"| ExternalServices
+            ExternalServices --> |"Airbnb MCP Integration"| ExternalServices
+        end
+    end
 ```
 
 ## Component Overview
@@ -549,26 +595,31 @@ The unified architecture provides several key benefits:
 ### Critical Path to Production (5-6 Weeks)
 
 **Phase 1: Security & Authentication (Week 1)**
+
 - ✅ Remove hardcoded JWT fallback secret (security vulnerability) - **Completed June 6, 2025**
 - ✅ Implement production JWT security patterns - **Completed June 6, 2025**
 - 🔄 Connect frontend authentication to backend JWT service
 - 🔄 Implement secure token refresh mechanism
 
 **Phase 2: Backend API Completion (Week 2-3)**
+
 - Add missing activities.py router (search, booking, availability)
 - Add missing search.py router (unified search, suggestions)
 - Integrate service layer with existing patterns
 
 **Phase 3: Real-time Feature Connection (Week 3-4)**
+
 - Connect WebSocket infrastructure (ready on both ends)
 - Replace mock agent data with real-time status updates
 - Implement chat functionality with backend message routing
 
 **Phase 4: Test Infrastructure Modernization (Week 4-5)**
+
 - Fix 527 failing tests with Pydantic v1→v2 migration
 - Achieve ≥90% test coverage across frontend and backend
 
 **Phase 5: Performance & Production (Week 5-6)**
+
 - Enable React 19 Compiler for automatic optimizations
 - Move rate limiting to DragonflyDB
 - Production deployment with comprehensive monitoring
