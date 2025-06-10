@@ -45,11 +45,16 @@ class UnifiedSearchServiceError(CoreServiceError):
     """Exception raised for unified search service errors."""
 
     def __init__(self, message: str, original_error: Optional[Exception] = None):
+        details = {
+            "additional_context": {
+                "original_error": str(original_error) if original_error else None
+            }
+        }
         super().__init__(
             message=message,
             code="UNIFIED_SEARCH_ERROR",
             service="UnifiedSearchService",
-            details={"original_error": str(original_error) if original_error else None},
+            details=details,
         )
         self.original_error = original_error
 
