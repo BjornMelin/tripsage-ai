@@ -23,10 +23,8 @@ import json
 import pytest
 from pydantic import ValidationError
 
-from tripsage_core.services.business.activity_service import (
-    ActivityService,
-    ActivityServiceError,
-)
+from tripsage_core.services.business.activity_service import ActivityService
+from tripsage_core.exceptions.exceptions import CoreServiceError
 from tripsage_core.services.external_apis.google_maps_service import GoogleMapsServiceError
 from tripsage.api.schemas.requests.activities import ActivitySearchRequest
 from tripsage.api.schemas.responses.activities import (
@@ -345,7 +343,7 @@ class TestActivityService:
         mock_google_maps_service.geocode.side_effect = GoogleMapsServiceError("Geocoding failed")
 
         # Execute and verify error
-        with pytest.raises(ActivityServiceError) as exc_info:
+        with pytest.raises(CoreServiceError) as exc_info:
             await activity_service.search_activities(sample_search_request)
         
         assert "Failed to geocode destination" in str(exc_info.value)
@@ -365,7 +363,7 @@ class TestActivityService:
         mock_google_maps_service.search_places.side_effect = GoogleMapsServiceError("API quota exceeded")
 
         # Execute and verify error
-        with pytest.raises(ActivityServiceError) as exc_info:
+        with pytest.raises(CoreServiceError) as exc_info:
             await activity_service.search_activities(sample_search_request)
         
         assert "Failed to search activities" in str(exc_info.value)
@@ -486,7 +484,7 @@ class TestActivityService:
         mock_google_maps_service.get_place_details.side_effect = GoogleMapsServiceError("API error")
 
         # Execute and verify error
-        with pytest.raises(ActivityServiceError) as exc_info:
+        with pytest.raises(CoreServiceError) as exc_info:
             await activity_service.get_activity_details("error_id")
         
         assert "Failed to get activity details" in str(exc_info.value)
@@ -645,7 +643,7 @@ class TestActivityService:
         )
 
         # Execute and verify error
-        with pytest.raises(ActivityServiceError) as exc_info:
+        with pytest.raises(CoreServiceError) as exc_info:
             await activity_service.search_activities(request)
         
         assert "Could not find location" in str(exc_info.value)
@@ -724,7 +722,7 @@ class TestActivityService:
             mock_google_maps_service.geocode.return_value = {"lat": 40.7, "lng": -74.0}
             mock_google_maps_service.search_places.side_effect = error
 
-            with pytest.raises(ActivityServiceError) as exc_info:
+            with pytest.raises(CoreServiceError) as exc_info:
                 await activity_service.search_activities(sample_search_request)
             
             assert expected_message in str(exc_info.value)

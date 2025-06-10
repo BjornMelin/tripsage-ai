@@ -20,31 +20,34 @@ from tripsage_core.models.db.chat import (
 @pytest.fixture
 def mock_chat_service():
     """Create a mock chat service."""
-    with patch("tripsage.api.routers.chat.ChatService") as mock:
-        yield mock
-
-
-@pytest.fixture
-def mock_travel_agent():
-    """Create a mock travel agent."""
-    with patch("tripsage.api.routers.chat.get_travel_agent") as mock:
-        agent = AsyncMock()
-        agent.run = AsyncMock(
+    with patch("tripsage_core.services.business.chat_service.ChatService") as mock:
+        # Create an instance mock
+        instance = AsyncMock()
+        
+        # Mock the chat_completion method to return a proper response
+        instance.chat_completion = AsyncMock(
             return_value={
                 "content": "I can help you plan your trip!",
-                "tool_calls": [],
+                "session_id": str(uuid4()),
                 "model": "gpt-4",
+                "usage": {
+                    "prompt_tokens": 10,
+                    "completion_tokens": 20,
+                    "total_tokens": 30
+                }
             }
         )
-        mock.return_value = agent
-        yield agent
+        
+        # Make the class return our instance
+        mock.return_value = instance
+        yield instance
 
 
 class TestChatSessionEndpoints:
     """Test cases for chat session endpoints."""
 
     def test_create_new_session(
-        self, client: TestClient, mock_chat_service, mock_travel_agent
+        self, client: TestClient, mock_chat_service
     ):
         """Test creating a new chat session on first message."""
         # Arrange
@@ -94,7 +97,7 @@ class TestChatSessionEndpoints:
         mock_service_instance.create_session.assert_called_once()
 
     def test_continue_existing_session(
-        self, client: TestClient, mock_chat_service, mock_travel_agent
+        self, client: TestClient, mock_chat_service
     ):
         """Test continuing an existing chat session."""
         # Arrange
@@ -189,7 +192,7 @@ class TestChatSessionEndpoints:
         assert "Session not found" in response.json()["detail"]
 
     def test_streaming_response(
-        self, client: TestClient, mock_chat_service, mock_travel_agent
+        self, client: TestClient, mock_chat_service
     ):
         """Test streaming chat response."""
         # Arrange
@@ -379,7 +382,7 @@ class TestChatSessionEndpoints:
         mock_service_instance.end_session.assert_called_once_with(session_id)
 
     def test_continue_session_endpoint(
-        self, client: TestClient, mock_chat_service, mock_travel_agent
+        self, client: TestClient, mock_chat_service
     ):
         """Test the continue session specific endpoint."""
         # Arrange

@@ -29,7 +29,7 @@ from tripsage.api.schemas.responses.activities import (
     ActivityCoordinates,
     SavedActivityResponse,
 )
-from tripsage_core.services.business.activity_service import ActivityServiceError
+from tripsage_core.exceptions.exceptions import CoreServiceError
 
 
 class TestActivitySearchEndpoint:
@@ -142,7 +142,7 @@ class TestActivitySearchEndpoint:
         """Test activity search with service error."""
         with patch('tripsage.api.routers.activities.get_activity_service') as mock_get_service:
             mock_service = AsyncMock()
-            mock_service.search_activities.side_effect = ActivityServiceError("Google Maps API error")
+            mock_service.search_activities.side_effect = CoreServiceError("Google Maps API error")
             mock_get_service.return_value = mock_service
             
             response = await async_client.post(
@@ -307,7 +307,7 @@ class TestActivityDetailsEndpoint:
         
         with patch('tripsage.api.routers.activities.get_activity_service') as mock_get_service:
             mock_service = AsyncMock()
-            mock_service.get_activity_details.side_effect = ActivityServiceError("Place details API error")
+            mock_service.get_activity_details.side_effect = CoreServiceError("Place details API error")
             mock_get_service.return_value = mock_service
             
             response = await async_client.get(f"/activities/{activity_id}")
@@ -576,7 +576,7 @@ class TestLogging:
              patch('tripsage.api.routers.activities.get_activity_service') as mock_get_service:
             
             mock_service = AsyncMock()
-            mock_service.search_activities.side_effect = ActivityServiceError("Test error")
+            mock_service.search_activities.side_effect = CoreServiceError("Test error")
             mock_get_service.return_value = mock_service
             
             await async_client.post(

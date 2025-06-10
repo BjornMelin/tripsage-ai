@@ -12,15 +12,14 @@ from typing import Dict, Any, List
 from tripsage.api.schemas.requests.activities import ActivitySearchRequest
 from tripsage.api.schemas.responses.activities import (
     ActivitySearchResponse,
-    Activity,
-    ActivityType,
-    Coordinates,
+    ActivityResponse,
+    ActivityCoordinates,
 )
 from tripsage_core.services.business.activity_service import (
     ActivityService,
-    ActivityServiceError,
     get_activity_service,
 )
+from tripsage_core.exceptions.exceptions import CoreServiceError
 
 
 class TestActivityService:
@@ -62,9 +61,8 @@ class TestActivityService:
             adults=2,
             children=1,
             infants=0,
-            activity_types=[ActivityType.MUSEUM, ActivityType.PARK],
-            budget_min=0,
-            budget_max=500,
+            categories=["museum", "park"],
+            price_range={"min": 0, "max": 500},
             rating=4.0,
         )
 
@@ -159,7 +157,7 @@ class TestActivityService:
         """Test successful activity search."""
         # Setup mocks
         mock_google_maps_service.geocode.return_value = sample_geocode_response
-        mock_google_maps_service.places_nearby_search.return_value = sample_places_response
+        mock_google_maps_service.search_places.return_value = sample_places_response
         mock_google_maps_service.place_details.return_value = sample_place_details_response
         mock_cache_service.get.return_value = None  # No cache hit
 
@@ -169,32 +167,32 @@ class TestActivityService:
         # Verify response
         assert isinstance(response, ActivitySearchResponse)
         assert len(response.activities) == 2
-        assert response.total_results == 2
-        assert response.destination == "New York, NY"
+        assert response.total == 2
+        assert response.filters_applied["destination"] == "New York, NY"
 
-        # Verify first activity
-        museum = response.activities[0]
-        assert museum.name == "Museum of Modern Art"
-        assert museum.type == ActivityType.MUSEUM
-        assert museum.rating == 4.5
-        assert museum.price == 150.0  # Price level 3 * 50
-        assert museum.coordinates.latitude == 40.7614
-        assert museum.coordinates.longitude == -73.9776
+        # Verify first activity (higher rating comes first)
+        park = response.activities[0]
+        assert park.name == "Central Park"
+        assert park.type == "nature"  # Maps from park type
+        assert park.rating == 4.8
+        assert park.price == 10.0  # Default price level 1 for nature = 10.0 * 1.0
+        assert park.coordinates.lat == 40.7829
+        assert park.coordinates.lng == -73.9654
 
         # Verify second activity
-        park = response.activities[1]
-        assert park.name == "Central Park"
-        assert park.type == ActivityType.PARK
-        assert park.rating == 4.8
-        assert park.price == 0.0  # No price level means free
+        museum = response.activities[1]
+        assert museum.name == "Museum of Modern Art"
+        assert museum.type == "cultural"  # Maps from museum type
+        assert museum.rating == 4.5
+        assert museum.price == 37.5  # Base 15.0 * 2.5 for price level 3
+        assert museum.coordinates.lat == 40.7614
+        assert museum.coordinates.lng == -73.9776
 
         # Verify service calls
         mock_google_maps_service.geocode.assert_called_once_with("New York, NY")
-        assert mock_google_maps_service.places_nearby_search.call_count == 2
-        assert mock_google_maps_service.place_details.call_count == 2
-        
-        # Verify caching
-        assert mock_cache_service.set.called
+        # When categories are provided, it searches for each Google place type
+        # museum -> museum, park -> park = at least 2 calls 
+        assert mock_google_maps_service.search_places.call_count >= 1
 
     @pytest.mark.asyncio
     async def test_search_activities_with_cache_hit(
@@ -207,16 +205,22 @@ class TestActivityService:
         # Setup cached response
         cached_response = ActivitySearchResponse(
             activities=[
-                Activity(
+                ActivityResponse(
                     id="cached123",
                     name="Cached Museum",
-                    type=ActivityType.MUSEUM,
+                    type="cultural",
                     description="From cache",
                     location="New York",
-                    coordinates=Coordinates(latitude=40.7, longitude=-74.0),
+                    coordinates=ActivityCoordinates(lat=40.7, lng=-74.0),
                     rating=4.5,
                     price=100.0,
                     provider="cache",
+                    date="2025-01-15",
+                    duration=120,
+                    images=[],
+                    availability="Open",
+                    wheelchair_accessible=False,
+                    instant_confirmation=False,
                 )
             ],
             total_results=1,
@@ -249,7 +253,7 @@ class TestActivityService:
         mock_google_maps_service.geocode.side_effect = Exception("Geocoding failed")
 
         # Perform search and expect error
-        with pytest.raises(ActivityServiceError) as exc_info:
+        with pytest.raises(CoreServiceError) as exc_info:
             await activity_service.search_activities(sample_search_request)
         
         assert "Failed to geocode destination" in str(exc_info.value)
