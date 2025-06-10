@@ -362,6 +362,111 @@ async def async_test_client():
         yield client
 
 
+# Validation test helpers
+class ValidationTestHelper:
+    """Helper class for testing Pydantic model validation."""
+    
+    @staticmethod
+    def assert_validation_error(model_class, data, field_name, error_message_part):
+        """Assert that creating a model with invalid data raises ValidationError."""
+        from pydantic import ValidationError
+        
+        with pytest.raises(ValidationError) as exc_info:
+            model_class(**data)
+        
+        errors = exc_info.value.errors()
+        field_errors = [e for e in errors if e["loc"][0] == field_name]
+        assert len(field_errors) > 0, (
+            f"No validation error found for field '{field_name}'"
+        )
+        actual_msg = field_errors[0]["msg"]
+        assert error_message_part in str(actual_msg), (
+            f"Expected error message containing '{error_message_part}' "
+            f"but got '{actual_msg}'"
+        )
+    
+    @staticmethod
+    def assert_field_valid(model_class, data, field_name, valid_value):
+        """Assert that a field accepts a valid value."""
+        test_data = data.copy()
+        test_data[field_name] = valid_value
+        instance = model_class(**test_data)
+        assert getattr(instance, field_name) == valid_value
+
+
+@pytest.fixture
+def validation_helper():
+    """Fixture providing validation test utilities."""
+    return ValidationTestHelper()
+
+
+# Serialization test helpers
+class SerializationTestHelper:
+    """Helper class for testing model serialization."""
+    
+    @staticmethod
+    def test_json_round_trip(model_instance):
+        """Test that a model can be serialized to JSON and back."""
+        json_str = model_instance.model_dump_json()
+        reconstructed = model_instance.__class__.model_validate_json(json_str)
+        return reconstructed
+    
+    @staticmethod
+    def test_dict_round_trip(model_instance):
+        """Test that a model can be converted to dict and back."""
+        data_dict = model_instance.model_dump()
+        reconstructed = model_instance.__class__.model_validate(data_dict)
+        return reconstructed
+
+
+@pytest.fixture
+def serialization_helper():
+    """Fixture providing serialization test utilities."""
+    return SerializationTestHelper()
+
+
+# Edge case testing data
+@pytest.fixture
+def edge_case_data():
+    """Edge case data for testing boundary conditions."""
+    from datetime import date, timedelta
+    
+    today = date.today()
+    return {
+        "min_price": 0.01,
+        "max_price": 99999.99,
+        "min_rating": 0.0,
+        "max_rating": 5.0,
+        "past_date": today - timedelta(days=365),
+        "far_future_date": today + timedelta(days=365 * 5),
+        "empty_string": "",
+        "very_long_string": "x" * 1000,
+        "unicode_string": "🏨🌟✈️🏝️",
+    }
+
+
+# Parametrized test data
+@pytest.fixture
+def accommodation_types():
+    """All accommodation types for parametrized testing."""
+    from tripsage_core.models.schemas_common.enums import AccommodationType
+    return list(AccommodationType)
+
+
+@pytest.fixture
+def booking_statuses():
+    """All booking statuses for parametrized testing."""
+    from tripsage_core.models.schemas_common.enums import BookingStatus
+    return list(BookingStatus)
+
+
+@pytest.fixture
+def cancellation_policies():
+    """All cancellation policies for parametrized testing."""
+    from tripsage_core.models.schemas_common.enums import CancellationPolicy
+    return list(CancellationPolicy)
+
+
 # Performance testing fixtures
 @pytest.fixture
 def performance_timer():
