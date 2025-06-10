@@ -17,7 +17,7 @@ class ChatSessionDB(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID = Field(..., description="Session ID")
-    user_id: int = Field(..., description="User ID from users table")
+    user_id: UUID = Field(..., description="User ID from auth.users table")
     created_at: datetime = Field(..., description="Creation timestamp")
     updated_at: datetime = Field(..., description="Last update timestamp")
     ended_at: Optional[datetime] = Field(None, description="Session end timestamp")
