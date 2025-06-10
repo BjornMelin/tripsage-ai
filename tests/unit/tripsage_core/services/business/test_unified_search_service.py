@@ -504,7 +504,7 @@ class TestUnifiedSearchService:
             filters=sample_search_filters,
         )
 
-        results = await unified_search_service._search_activities(request)
+        _results = await unified_search_service._search_activities(request)
 
         # Verify the activity service was called with filters
         mock_activity_service.search_activities.assert_called_once()

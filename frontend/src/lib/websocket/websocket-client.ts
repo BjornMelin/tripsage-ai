@@ -183,6 +183,7 @@ export class WebSocketClient {
     this.state = {
       status: ConnectionStatus.DISCONNECTED,
       reconnectAttempt: 0,
+      sessionId: config.sessionId,
     };
 
     this.log("WebSocket client initialized");
@@ -578,7 +579,7 @@ export class WebSocketClient {
     this.startHeartbeat();
 
     // Emit connect event
-    this.emit("connect", event);
+    this.emit("connect", new Event("connect"));
   }
 
   /**

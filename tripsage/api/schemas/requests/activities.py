@@ -36,7 +36,9 @@ class ActivitySearchRequest(BaseModel):
     # Filters
     categories: Optional[List[str]] = Field(
         None,
-        description="Activity categories (tour, museum, adventure, entertainment, etc.)",
+        description=(
+            "Activity categories (tour, museum, adventure, entertainment, etc.)"
+        ),
     )
     duration: Optional[int] = Field(
         None,

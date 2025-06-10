@@ -121,7 +121,8 @@ class TestDuffelAPIIntegration:
         # Assertions
         assert result is not None
         assert hasattr(result, "offers")
-        # Note: The mock returns an empty list since we haven't set up proper mock offers
+        # Note: The mock returns an empty list since we haven't set up proper mock
+        # offers
         # The test is mainly checking that the API integration works
         assert isinstance(result.offers, list)
 
@@ -174,7 +175,8 @@ class TestDuffelAPIIntegration:
     ):
         """Test getting flight offer details - method doesn't exist in FlightService."""
         # This test is for a method that doesn't exist in the current FlightService
-        # The service focuses on search and booking management, not individual offer details
+        # The service focuses on search and booking management, not individual offer
+        # details
         # Skipping this test as it's testing non-existent functionality
         pytest.skip("get_flight_details method not implemented in FlightService")
 

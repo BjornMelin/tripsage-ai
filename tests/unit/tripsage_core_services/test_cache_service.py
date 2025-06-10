@@ -97,7 +97,7 @@ class TestConnectionManagement:
     async def test_connect_failure(self, cache_service):
         """Test connection failure handling."""
         with (
-            patch("redis.asyncio.ConnectionPool.from_url") as mock_pool,
+            patch("redis.asyncio.ConnectionPool.from_url"),
             patch("redis.asyncio.Redis") as mock_redis,
         ):
             mock_client = AsyncMock()

@@ -262,7 +262,9 @@ class TestActivityDetailsEndpoint:
             duration=240,
             price=30.0,
             rating=4.8,
-            description="An amazing museum with detailed collections and interactive exhibits",
+            description=(
+                "An amazing museum with detailed collections and interactive exhibits"
+            ),
             images=["image1.jpg", "image2.jpg"],
             provider="Google Maps",
             availability="Open now",

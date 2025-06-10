@@ -1,7 +1,6 @@
 "use client";
 
-import { api } from "@/lib/api/client";
-import { useAuthStore } from "@/stores";
+import { useAuthenticatedApi } from "@/hooks/use-authenticated-api";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 
@@ -35,28 +34,24 @@ interface TripSuggestionsParams {
  * Hook to fetch trip suggestions from the API
  */
 export function useTripSuggestions(params?: TripSuggestionsParams) {
-  const { tokenInfo } = useAuthStore();
-  const isAuthenticated = !!tokenInfo?.accessToken;
+  const { makeAuthenticatedRequest } = useAuthenticatedApi();
 
   return useQuery<TripSuggestion[]>({
     queryKey: ["trip-suggestions", params],
     queryFn: async () => {
-      if (!isAuthenticated) {
-        // Return empty array if not authenticated
-        return [];
-      }
-
-      const response = await api.get<TripSuggestion[]>("/api/trips/suggestions", {
-        params: {
-          limit: params?.limit ?? 4,
-          ...(params?.budget_max && { budget_max: params.budget_max }),
-          ...(params?.category && { category: params.category }),
-        },
-      });
+      const response = await makeAuthenticatedRequest<TripSuggestion[]>(
+        "/api/trips/suggestions",
+        {
+          params: {
+            limit: params?.limit ?? 4,
+            ...(params?.budget_max && { budget_max: params.budget_max }),
+            ...(params?.category && { category: params.category }),
+          },
+        }
+      );
 
       return response;
     },
-    enabled: isAuthenticated,
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 10 * 60 * 1000, // 10 minutes
   });
@@ -67,10 +62,15 @@ export function useTripSuggestions(params?: TripSuggestionsParams) {
  */
 export function useCreateTrip() {
   const queryClient = useQueryClient();
+  const { makeAuthenticatedRequest } = useAuthenticatedApi();
 
   const mutation = useMutation({
     mutationFn: async (tripData: any) => {
-      const response = await api.post("/api/trips", tripData);
+      const response = await makeAuthenticatedRequest("/api/trips", {
+        method: "POST",
+        body: JSON.stringify(tripData),
+        headers: { "Content-Type": "application/json" },
+      });
       return response;
     },
   });
@@ -90,20 +90,14 @@ export function useCreateTrip() {
  * Hook to get user's trips
  */
 export function useTrips() {
-  const { tokenInfo } = useAuthStore();
-  const isAuthenticated = !!tokenInfo?.accessToken;
+  const { makeAuthenticatedRequest } = useAuthenticatedApi();
 
   return useQuery({
     queryKey: ["trips"],
     queryFn: async () => {
-      if (!isAuthenticated) {
-        return { items: [], total: 0 };
-      }
-
-      const response = await api.get("/api/trips");
+      const response = await makeAuthenticatedRequest("/api/trips");
       return response;
     },
-    enabled: isAuthenticated,
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 }
@@ -138,25 +132,22 @@ interface UpcomingFlightsParams {
  * Hook to fetch upcoming flights from the API
  */
 export function useUpcomingFlights(params?: UpcomingFlightsParams) {
-  const { tokenInfo } = useAuthStore();
-  const isAuthenticated = !!tokenInfo?.accessToken;
+  const { makeAuthenticatedRequest } = useAuthenticatedApi();
 
   return useQuery<UpcomingFlight[]>({
     queryKey: ["upcoming-flights", params],
     queryFn: async () => {
-      if (!isAuthenticated) {
-        return [];
-      }
-
-      const response = await api.get<UpcomingFlight[]>("/api/flights/upcoming", {
-        params: {
-          limit: params?.limit ?? 10,
-        },
-      });
+      const response = await makeAuthenticatedRequest<UpcomingFlight[]>(
+        "/api/flights/upcoming",
+        {
+          params: {
+            limit: params?.limit ?? 10,
+          },
+        }
+      );
 
       return response;
     },
-    enabled: isAuthenticated,
     staleTime: 2 * 60 * 1000, // 2 minutes (shorter for real-time data)
     gcTime: 5 * 60 * 1000, // 5 minutes
   });

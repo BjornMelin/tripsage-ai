@@ -187,7 +187,8 @@ class TestTripsRouter:
     ):
         """Test trip suggestions with zero limit."""
         # Note: The function has ge=1 validation, but let's test the edge case
-        # This would normally raise a validation error, but we're testing the function directly
+        # This would normally raise a validation error, but we're testing the
+        # function directly
         result = await get_trip_suggestions(
             limit=0,  # Edge case
             budget_max=None,
@@ -290,7 +291,10 @@ class TestTripsRouter:
     async def test_get_trip_suggestions_principal_extraction(
         self, mock_principal, mock_trip_service
     ):
-        """Test that principal ID is properly extracted (coverage for get_principal_id call)."""
+        """
+        Test that principal ID is properly extracted
+        (coverage for get_principal_id call).
+        """
         # This tests the get_principal_id(principal) call on line 65
         result = await get_trip_suggestions(
             limit=4,

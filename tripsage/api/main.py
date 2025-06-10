@@ -242,7 +242,8 @@ def create_app() -> FastAPI:
     )
 
     # Enhanced authentication middleware supporting JWT and API keys
-    # app.add_middleware(AuthenticationMiddleware, settings=settings)  # Temporarily disabled - awaiting Supabase Auth
+    # Temporarily disabled - awaiting Supabase Auth
+    # app.add_middleware(AuthenticationMiddleware, settings=settings)
 
     # Add key operation rate limiting middleware
     key_monitoring_service = KeyMonitoringService(settings)

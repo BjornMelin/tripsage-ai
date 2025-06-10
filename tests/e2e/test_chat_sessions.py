@@ -137,7 +137,10 @@ class TestChatEndpoints:
         # Arrange - mock the chat service response
         mock_service_instance = mock_chat_service
         mock_service_instance.chat_completion.return_value = {
-            "content": "I can help you plan your trip! What destinations are you interested in?",
+            "content": (
+                "I can help you plan your trip! What destinations are "
+                "you interested in?"
+            ),
             "session_id": str(uuid4()),
             "model": "gpt-4",
             "usage": {"prompt_tokens": 10, "completion_tokens": 20, "total_tokens": 30},

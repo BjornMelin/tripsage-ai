@@ -1,7 +1,8 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
-interface FetchOptions extends RequestInit {
+export interface FetchOptions extends RequestInit {
   params?: Record<string, string | number | boolean>;
+  auth?: string; // Optional authorization header value
 }
 
 export class ApiError extends Error {
@@ -38,7 +39,7 @@ export async function fetchApi<T = any>(
   endpoint: string,
   options: FetchOptions = {}
 ): Promise<T> {
-  const { params, ...fetchOptions } = options;
+  const { params, auth, ...fetchOptions } = options;
 
   // Handle query parameters
   let url = `${API_BASE_URL}${endpoint}`;
@@ -65,25 +66,13 @@ export async function fetchApi<T = any>(
     headers.set("Content-Type", "application/json");
   }
 
-  // Add authentication header if available
-  // Use auth store in the component that calls this,
-  // or pass token as a parameter to ensure proper auth handling
-  // This will be handled by the React Query hooks
-  if (typeof window !== "undefined") {
-    try {
-      // Get token from auth store - this should be passed from the hook
-      const storedAuth = localStorage.getItem("auth-store");
-      if (storedAuth) {
-        const authState = JSON.parse(storedAuth);
-        const token = authState?.state?.tokenInfo?.access_token;
-        if (token) {
-          headers.set("Authorization", `Bearer ${token}`);
-        }
-      }
-    } catch (error) {
-      // Ignore parsing errors
-    }
+  // Add authentication header if provided
+  if (auth) {
+    headers.set("Authorization", auth);
   }
+
+  // Note: For most authenticated endpoints, use the useAuthenticatedApi hook
+  // This auth parameter is mainly for internal use by the hook
 
   // Make the request
   const response = await fetch(url, {

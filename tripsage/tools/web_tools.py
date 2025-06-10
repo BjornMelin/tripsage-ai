@@ -59,7 +59,8 @@ class MockWebSearchTool:
                 {
                     "title": f"Mock result for: {query}",
                     "snippet": f"This is a mock search result for the query '{query}'. "
-                    "In a real implementation, this would contain actual web search results.",
+                    "In a real implementation, this would contain actual web search "
+                    "results.",
                     "link": f"https://example.com/search?q={query.replace(' ', '+')}",
                 }
             ],

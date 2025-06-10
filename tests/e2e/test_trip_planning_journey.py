@@ -277,7 +277,6 @@ class TestTripPlanningJourney:
     ):
         """Test trip creation with specific user preferences."""
         # Arrange
-        preferences = sample_trip_data["preferences"]
         mock_mcp_manager.invoke.return_value = {
             "listings": [
                 {

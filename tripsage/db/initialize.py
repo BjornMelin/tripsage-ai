@@ -14,7 +14,7 @@ from typing import Any, Dict
 
 from supabase import Client, create_client
 from tripsage.db.migrations import run_migrations
-from tripsage_core.config.base_app_settings import settings
+from tripsage_core.config.base_app_settings import get_settings
 from tripsage_core.utils.logging_utils import configure_logging
 
 logger = configure_logging(__name__)
@@ -22,6 +22,7 @@ logger = configure_logging(__name__)
 
 def get_supabase_client() -> Client:
     """Get a Supabase client instance."""
+    settings = get_settings()
     return create_client(
         settings.database.supabase_url,
         settings.database.supabase_anon_key.get_secret_value(),
