@@ -15,7 +15,7 @@ from langchain_openai import ChatOpenAI
 
 from tripsage.orchestration.nodes.base import BaseAgentNode
 from tripsage.orchestration.state import TravelPlanningState
-from tripsage_core.config.base_app_settings import settings
+from tripsage_core.config.base_app_settings import get_settings
 from tripsage_core.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)
@@ -42,6 +42,7 @@ class RouterNode(BaseAgentNode):
         super().__init__("router", service_registry)
 
         # Initialize classifier model with improved configuration
+        settings = get_settings()
         self.classifier = ChatOpenAI(
             model="gpt-4o-mini",  # Use smaller, faster model for classification
             temperature=0.1,  # Low temperature for consistent routing decisions
