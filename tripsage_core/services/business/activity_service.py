@@ -231,10 +231,10 @@ class ActivityService:
 
         except GoogleMapsServiceError as e:
             logger.error(f"Google Maps API error in activity search: {e}")
-            raise ActivityServiceError(f"Maps API error: {e}", e) from e
+            raise CoreServiceError(f"Maps API error: {e}", service="ActivityService") from e
         except Exception as e:
             logger.error(f"Unexpected error in activity search: {e}")
-            raise ActivityServiceError(f"Activity search failed: {e}", e) from e
+            raise CoreServiceError(f"Activity search failed: {e}", service="ActivityService") from e
 
     async def _search_places_by_type(
         self,
