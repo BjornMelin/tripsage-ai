@@ -1,6 +1,6 @@
 /**
  * Comprehensive WebSocket Integration Tests
- * 
+ *
  * Tests the WebSocket client, chat store integration, and real-time features
  * to ensure complete functionality with 90%+ coverage.
  */
@@ -8,7 +8,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
-import { ConnectionStatus, WebSocketClient, WebSocketClientFactory, WebSocketEventType } from "../websocket-client";
+import {
+  ConnectionStatus,
+  WebSocketClient,
+  WebSocketClientFactory,
+  WebSocketEventType,
+} from "../websocket-client";
 
 // Mock WebSocket implementation for testing
 class MockWebSocket {
@@ -38,7 +43,7 @@ class MockWebSocket {
     if (this.readyState !== MockWebSocket.OPEN) {
       throw new Error("WebSocket is not open");
     }
-    
+
     // Mock echo back for authentication only once
     if (!this.authResponseSent) {
       try {
@@ -47,15 +52,17 @@ class MockWebSocket {
           this.authResponseSent = true;
           // Mock successful authentication response immediately
           setImmediate(() => {
-            this.onmessage?.(new MessageEvent("message", {
-              data: JSON.stringify({
-                success: true,
-                connection_id: "test-connection-id",
-                user_id: "test-user-id",
-                session_id: "test-session-id",
-                available_channels: ["general", "notifications", "user:test-user-id"]
+            this.onmessage?.(
+              new MessageEvent("message", {
+                data: JSON.stringify({
+                  success: true,
+                  connection_id: "test-connection-id",
+                  user_id: "test-user-id",
+                  session_id: "test-session-id",
+                  available_channels: ["general", "notifications", "user:test-user-id"],
+                }),
               })
-            }));
+            );
           });
         }
       } catch (error) {
@@ -67,7 +74,9 @@ class MockWebSocket {
   close(code?: number, reason?: string) {
     this.readyState = MockWebSocket.CLOSED;
     setImmediate(() => {
-      this.onclose?.(new CloseEvent("close", { code: code || 1000, reason: reason || "" }));
+      this.onclose?.(
+        new CloseEvent("close", { code: code || 1000, reason: reason || "" })
+      );
     });
   }
 }
@@ -83,7 +92,7 @@ describe("WebSocket Integration", () => {
   beforeEach(() => {
     // Store original WebSocket for restoration
     originalWebSocket = global.WebSocket;
-    
+
     // Mock console.log for debug output
     mockConsoleLog = vi.spyOn(console, "log").mockImplementation(() => {});
 
@@ -113,9 +122,9 @@ describe("WebSocket Integration", () => {
       client.on("connect", connectHandler);
 
       await client.connect();
-      
+
       // Wait for authentication to complete
-      await new Promise(resolve => setTimeout(resolve, 50));
+      await new Promise((resolve) => setTimeout(resolve, 50));
 
       expect(client.getState().status).toBe(ConnectionStatus.CONNECTED);
       expect(client.getState().connectionId).toBe("test-connection-id");
@@ -149,12 +158,12 @@ describe("WebSocket Integration", () => {
       // Mock WebSocket that returns auth failure
       class MockAuthFailWebSocket extends MockWebSocket {
         private authResponseSent = false;
-        
+
         send(data: string) {
           if (this.readyState !== MockWebSocket.OPEN) {
             throw new Error("WebSocket is not open");
           }
-          
+
           if (!this.authResponseSent) {
             try {
               const message = JSON.parse(data);
@@ -162,13 +171,15 @@ describe("WebSocket Integration", () => {
                 this.authResponseSent = true;
                 // Mock failed authentication response immediately
                 setImmediate(() => {
-                  this.onmessage?.(new MessageEvent("message", {
-                    data: JSON.stringify({
-                      success: false,
-                      connection_id: "",
-                      error: "Invalid token"
+                  this.onmessage?.(
+                    new MessageEvent("message", {
+                      data: JSON.stringify({
+                        success: false,
+                        connection_id: "",
+                        error: "Invalid token",
+                      }),
                     })
-                  }));
+                  );
                 });
               }
             } catch (error) {
@@ -197,13 +208,13 @@ describe("WebSocket Integration", () => {
       }
 
       // Wait for auth response and error handling
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
 
       expect(authFailClient.getState().status).toBe(ConnectionStatus.ERROR);
       expect(errorHandler).toHaveBeenCalled();
 
       authFailClient.destroy();
-      
+
       // Restore original mock
       global.WebSocket = MockWebSocket as any;
     });
@@ -213,16 +224,18 @@ describe("WebSocket Integration", () => {
     beforeEach(async () => {
       await client.connect();
       // Wait for connection and authentication to be established
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
       // Ensure we're connected before proceeding
       let attempts = 0;
       while (client.getState().status !== ConnectionStatus.CONNECTED && attempts < 10) {
-        await new Promise(resolve => setTimeout(resolve, 50));
+        await new Promise((resolve) => setTimeout(resolve, 50));
         attempts++;
       }
-      
+
       if (client.getState().status !== ConnectionStatus.CONNECTED) {
-        throw new Error(`Failed to establish connection. Status: ${client.getState().status}`);
+        throw new Error(
+          `Failed to establish connection. Status: ${client.getState().status}`
+        );
       }
     });
 
@@ -231,16 +244,22 @@ describe("WebSocket Integration", () => {
     });
 
     it("should send generic messages", async () => {
-      await expect(client.send("test_message", { content: "test" })).resolves.not.toThrow();
+      await expect(
+        client.send("test_message", { content: "test" })
+      ).resolves.not.toThrow();
     });
 
     it("should handle message sending when disconnected", async () => {
       client.disconnect();
-      await expect(client.send("test_message")).rejects.toThrow("WebSocket is not connected");
+      await expect(client.send("test_message")).rejects.toThrow(
+        "WebSocket is not connected"
+      );
     });
 
     it("should handle channel subscriptions", async () => {
-      await expect(client.subscribeToChannels(["channel1", "channel2"])).resolves.not.toThrow();
+      await expect(
+        client.subscribeToChannels(["channel1", "channel2"])
+      ).resolves.not.toThrow();
     });
 
     it("should send heartbeat messages", async () => {
@@ -252,16 +271,18 @@ describe("WebSocket Integration", () => {
     beforeEach(async () => {
       await client.connect();
       // Wait for connection and authentication to be established
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
       // Ensure we're connected before proceeding
       let attempts = 0;
       while (client.getState().status !== ConnectionStatus.CONNECTED && attempts < 10) {
-        await new Promise(resolve => setTimeout(resolve, 50));
+        await new Promise((resolve) => setTimeout(resolve, 50));
         attempts++;
       }
-      
+
       if (client.getState().status !== ConnectionStatus.CONNECTED) {
-        throw new Error(`Failed to establish connection. Status: ${client.getState().status}`);
+        throw new Error(
+          `Failed to establish connection. Status: ${client.getState().status}`
+        );
       }
     });
 
@@ -282,36 +303,40 @@ describe("WebSocket Integration", () => {
         payload: {
           message: {
             content: "Hello from agent",
-            role: "assistant"
-          }
-        }
+            role: "assistant",
+          },
+        },
       };
 
       // Trigger the message handler directly to simulate server message
       const ws = (client as any).ws;
-      ws.onmessage(new MessageEvent("message", {
-        data: JSON.stringify(mockEvent)
-      }));
+      ws.onmessage(
+        new MessageEvent("message", {
+          data: JSON.stringify(mockEvent),
+        })
+      );
 
       expect(messageHandler).toHaveBeenCalledWith(mockEvent);
     });
 
     it("should handle event listener removal", () => {
       const handler = vi.fn();
-      
+
       client.on(WebSocketEventType.CHAT_MESSAGE, handler);
       client.off(WebSocketEventType.CHAT_MESSAGE, handler);
-      
+
       // Event should not be called after removal
       const ws = (client as any).ws;
-      ws.onmessage(new MessageEvent("message", {
-        data: JSON.stringify({
-          id: "test",
-          type: WebSocketEventType.CHAT_MESSAGE,
-          timestamp: new Date().toISOString(),
-          payload: {}
+      ws.onmessage(
+        new MessageEvent("message", {
+          data: JSON.stringify({
+            id: "test",
+            type: WebSocketEventType.CHAT_MESSAGE,
+            timestamp: new Date().toISOString(),
+            payload: {},
+          }),
         })
-      }));
+      );
 
       expect(handler).not.toHaveBeenCalled();
     });
@@ -319,22 +344,24 @@ describe("WebSocket Integration", () => {
     it("should handle removing all listeners", () => {
       const handler1 = vi.fn();
       const handler2 = vi.fn();
-      
+
       client.on(WebSocketEventType.CHAT_MESSAGE, handler1);
       client.on(WebSocketEventType.AGENT_STATUS_UPDATE, handler2);
-      
+
       client.removeAllListeners();
-      
+
       // No handlers should be called
       const ws = (client as any).ws;
-      ws.onmessage(new MessageEvent("message", {
-        data: JSON.stringify({
-          id: "test",
-          type: WebSocketEventType.CHAT_MESSAGE,
-          timestamp: new Date().toISOString(),
-          payload: {}
+      ws.onmessage(
+        new MessageEvent("message", {
+          data: JSON.stringify({
+            id: "test",
+            type: WebSocketEventType.CHAT_MESSAGE,
+            timestamp: new Date().toISOString(),
+            payload: {},
+          }),
         })
-      }));
+      );
 
       expect(handler1).not.toHaveBeenCalled();
       expect(handler2).not.toHaveBeenCalled();
@@ -346,8 +373,8 @@ describe("WebSocket Integration", () => {
       // This test is skipped due to complex mock WebSocket state management
       // The core reconnection logic is tested elsewhere and works in real scenarios
       await client.connect();
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
       expect(client.getState().status).toBe(ConnectionStatus.CONNECTED);
 
       const reconnectHandler = vi.fn();
@@ -358,7 +385,7 @@ describe("WebSocket Integration", () => {
       attemptReconnect();
 
       // Wait for reconnection event
-      await new Promise(resolve => setTimeout(resolve, 200));
+      await new Promise((resolve) => setTimeout(resolve, 200));
 
       expect(reconnectHandler).toHaveBeenCalled();
       expect(client.getState().reconnectAttempt).toBeGreaterThan(0);
@@ -366,7 +393,7 @@ describe("WebSocket Integration", () => {
 
     it("should not reconnect on normal disconnect", async () => {
       await client.connect();
-      await new Promise(resolve => setTimeout(resolve, 50));
+      await new Promise((resolve) => setTimeout(resolve, 50));
 
       const reconnectHandler = vi.fn();
       client.on("reconnect", reconnectHandler);
@@ -375,7 +402,7 @@ describe("WebSocket Integration", () => {
       client.disconnect();
 
       // Wait to ensure no reconnection attempt
-      await new Promise(resolve => setTimeout(resolve, 200));
+      await new Promise((resolve) => setTimeout(resolve, 200));
 
       expect(reconnectHandler).not.toHaveBeenCalled();
     });
@@ -397,7 +424,9 @@ describe("WebSocket Integration", () => {
       expect(limitedClient.getState().status).toBe(ConnectionStatus.CONNECTED);
 
       // Manually trigger reconnection attempts
-      const attemptReconnect = (limitedClient as any).attemptReconnect.bind(limitedClient);
+      const attemptReconnect = (limitedClient as any).attemptReconnect.bind(
+        limitedClient
+      );
       attemptReconnect(); // First attempt
       attemptReconnect(); // Should be blocked by max attempts
 
@@ -418,16 +447,21 @@ describe("WebSocket Integration", () => {
       });
 
       await batchClient.connect();
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
       // Ensure we're connected before proceeding
       let attempts = 0;
-      while (batchClient.getState().status !== ConnectionStatus.CONNECTED && attempts < 10) {
-        await new Promise(resolve => setTimeout(resolve, 50));
+      while (
+        batchClient.getState().status !== ConnectionStatus.CONNECTED &&
+        attempts < 10
+      ) {
+        await new Promise((resolve) => setTimeout(resolve, 50));
         attempts++;
       }
-      
+
       if (batchClient.getState().status !== ConnectionStatus.CONNECTED) {
-        throw new Error(`Failed to establish connection. Status: ${batchClient.getState().status}`);
+        throw new Error(
+          `Failed to establish connection. Status: ${batchClient.getState().status}`
+        );
       }
 
       // Send multiple messages
@@ -436,7 +470,7 @@ describe("WebSocket Integration", () => {
       await batchClient.send("message3", { content: "3" });
 
       // Wait for batch to be sent
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
 
       batchClient.destroy();
     });
@@ -451,16 +485,21 @@ describe("WebSocket Integration", () => {
       });
 
       await batchClient.connect();
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
       // Ensure we're connected before proceeding
       let attempts = 0;
-      while (batchClient.getState().status !== ConnectionStatus.CONNECTED && attempts < 10) {
-        await new Promise(resolve => setTimeout(resolve, 50));
+      while (
+        batchClient.getState().status !== ConnectionStatus.CONNECTED &&
+        attempts < 10
+      ) {
+        await new Promise((resolve) => setTimeout(resolve, 50));
         attempts++;
       }
-      
+
       if (batchClient.getState().status !== ConnectionStatus.CONNECTED) {
-        throw new Error(`Failed to establish connection. Status: ${batchClient.getState().status}`);
+        throw new Error(
+          `Failed to establish connection. Status: ${batchClient.getState().status}`
+        );
       }
 
       // Queue a message
@@ -470,7 +509,7 @@ describe("WebSocket Integration", () => {
       batchClient.setBatchingEnabled(false);
 
       // Wait for flush
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
 
       batchClient.destroy();
     });
@@ -480,16 +519,18 @@ describe("WebSocket Integration", () => {
     beforeEach(async () => {
       await client.connect();
       // Wait for connection and authentication to be established
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
       // Ensure we're connected before proceeding
       let attempts = 0;
       while (client.getState().status !== ConnectionStatus.CONNECTED && attempts < 10) {
-        await new Promise(resolve => setTimeout(resolve, 50));
+        await new Promise((resolve) => setTimeout(resolve, 50));
         attempts++;
       }
-      
+
       if (client.getState().status !== ConnectionStatus.CONNECTED) {
-        throw new Error(`Failed to establish connection. Status: ${client.getState().status}`);
+        throw new Error(
+          `Failed to establish connection. Status: ${client.getState().status}`
+        );
       }
     });
 
@@ -519,23 +560,27 @@ describe("WebSocket Integration", () => {
     it("should handle invalid JSON messages", async () => {
       await client.connect();
       // Wait for connection and authentication to be established
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
       // Ensure we're connected before proceeding
       let attempts = 0;
       while (client.getState().status !== ConnectionStatus.CONNECTED && attempts < 10) {
-        await new Promise(resolve => setTimeout(resolve, 50));
+        await new Promise((resolve) => setTimeout(resolve, 50));
         attempts++;
       }
-      
+
       if (client.getState().status !== ConnectionStatus.CONNECTED) {
-        throw new Error(`Failed to establish connection. Status: ${client.getState().status}`);
+        throw new Error(
+          `Failed to establish connection. Status: ${client.getState().status}`
+        );
       }
 
       // Simulate receiving invalid JSON
       const ws = (client as any).ws;
-      ws.onmessage(new MessageEvent("message", {
-        data: "invalid json{"
-      }));
+      ws.onmessage(
+        new MessageEvent("message", {
+          data: "invalid json{",
+        })
+      );
 
       // Should not crash
       expect(client.getState().status).toBe(ConnectionStatus.CONNECTED);
@@ -544,16 +589,18 @@ describe("WebSocket Integration", () => {
     it("should handle WebSocket errors", async () => {
       await client.connect();
       // Wait for connection and authentication to be established
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
       // Ensure we're connected before proceeding
       let attempts = 0;
       while (client.getState().status !== ConnectionStatus.CONNECTED && attempts < 10) {
-        await new Promise(resolve => setTimeout(resolve, 50));
+        await new Promise((resolve) => setTimeout(resolve, 50));
         attempts++;
       }
-      
+
       if (client.getState().status !== ConnectionStatus.CONNECTED) {
-        throw new Error(`Failed to establish connection. Status: ${client.getState().status}`);
+        throw new Error(
+          `Failed to establish connection. Status: ${client.getState().status}`
+        );
       }
 
       const errorHandler = vi.fn();
@@ -570,16 +617,18 @@ describe("WebSocket Integration", () => {
     it("should handle event handler errors gracefully", async () => {
       await client.connect();
       // Wait for connection and authentication to be established
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
       // Ensure we're connected before proceeding
       let attempts = 0;
       while (client.getState().status !== ConnectionStatus.CONNECTED && attempts < 10) {
-        await new Promise(resolve => setTimeout(resolve, 50));
+        await new Promise((resolve) => setTimeout(resolve, 50));
         attempts++;
       }
-      
+
       if (client.getState().status !== ConnectionStatus.CONNECTED) {
-        throw new Error(`Failed to establish connection. Status: ${client.getState().status}`);
+        throw new Error(
+          `Failed to establish connection. Status: ${client.getState().status}`
+        );
       }
 
       // Add handler that throws error
@@ -589,14 +638,16 @@ describe("WebSocket Integration", () => {
 
       // Should not crash when event is emitted
       const ws = (client as any).ws;
-      ws.onmessage(new MessageEvent("message", {
-        data: JSON.stringify({
-          id: "test",
-          type: WebSocketEventType.CHAT_MESSAGE,
-          timestamp: new Date().toISOString(),
-          payload: {}
+      ws.onmessage(
+        new MessageEvent("message", {
+          data: JSON.stringify({
+            id: "test",
+            type: WebSocketEventType.CHAT_MESSAGE,
+            timestamp: new Date().toISOString(),
+            payload: {},
+          }),
         })
-      }));
+      );
 
       // Client should still be connected
       expect(client.getState().status).toBe(ConnectionStatus.CONNECTED);
@@ -611,7 +662,7 @@ describe("WebSocket Integration", () => {
         timestamp: new Date().toISOString(),
         user_id: "test-user",
         session_id: "test-session",
-        payload: { content: "test message" }
+        payload: { content: "test message" },
       };
 
       // Import the schema from the client module for testing
@@ -633,7 +684,7 @@ describe("WebSocket Integration", () => {
         id: "test-id",
         type: "invalid_type",
         timestamp: "invalid-date",
-        payload: "not-an-object"
+        payload: "not-an-object",
       };
 
       const WebSocketEventSchema = z.object({
@@ -666,9 +717,11 @@ describe("WebSocket Integration", () => {
 
       // Should be marked as destroyed
       expect((cleanupClient as any).isDestroyed).toBe(true);
-      
+
       // Should not allow new connections
-      expect(cleanupClient.connect()).rejects.toThrow("WebSocket client has been destroyed");
+      expect(cleanupClient.connect()).rejects.toThrow(
+        "WebSocket client has been destroyed"
+      );
     });
 
     it("should handle multiple destroy calls", () => {
@@ -701,7 +754,7 @@ describe("WebSocket Client Factory", () => {
 
     expect(chatClient).toBeInstanceOf(WebSocketClient);
     expect(chatClient.getState().sessionId).toBe("test-session");
-    
+
     chatClient.destroy();
   });
 
@@ -714,7 +767,7 @@ describe("WebSocket Client Factory", () => {
     const agentClient = factory.createAgentStatusClient("test-user", "test-token");
 
     expect(agentClient).toBeInstanceOf(WebSocketClient);
-    
+
     agentClient.destroy();
   });
 });

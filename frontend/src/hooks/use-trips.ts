@@ -39,13 +39,16 @@ export function useTripSuggestions(params?: TripSuggestionsParams) {
   return useQuery<TripSuggestion[]>({
     queryKey: ["trip-suggestions", params],
     queryFn: async () => {
-      const response = await makeAuthenticatedRequest<TripSuggestion[]>("/api/trips/suggestions", {
-        params: {
-          limit: params?.limit ?? 4,
-          ...(params?.budget_max && { budget_max: params.budget_max }),
-          ...(params?.category && { category: params.category }),
-        },
-      });
+      const response = await makeAuthenticatedRequest<TripSuggestion[]>(
+        "/api/trips/suggestions",
+        {
+          params: {
+            limit: params?.limit ?? 4,
+            ...(params?.budget_max && { budget_max: params.budget_max }),
+            ...(params?.category && { category: params.category }),
+          },
+        }
+      );
 
       return response;
     },
@@ -66,7 +69,7 @@ export function useCreateTrip() {
       const response = await makeAuthenticatedRequest("/api/trips", {
         method: "POST",
         body: JSON.stringify(tripData),
-        headers: { "Content-Type": "application/json" }
+        headers: { "Content-Type": "application/json" },
       });
       return response;
     },
@@ -134,11 +137,14 @@ export function useUpcomingFlights(params?: UpcomingFlightsParams) {
   return useQuery<UpcomingFlight[]>({
     queryKey: ["upcoming-flights", params],
     queryFn: async () => {
-      const response = await makeAuthenticatedRequest<UpcomingFlight[]>("/api/flights/upcoming", {
-        params: {
-          limit: params?.limit ?? 10,
-        },
-      });
+      const response = await makeAuthenticatedRequest<UpcomingFlight[]>(
+        "/api/flights/upcoming",
+        {
+          params: {
+            limit: params?.limit ?? 10,
+          },
+        }
+      );
 
       return response;
     },

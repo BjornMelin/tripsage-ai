@@ -19,8 +19,11 @@ const getAuthHeaders = async () => {
   if (typeof window !== "undefined") {
     try {
       const supabase = createBrowserClient();
-      const { data: { session }, error } = await supabase.auth.getSession();
-      
+      const {
+        data: { session },
+        error,
+      } = await supabase.auth.getSession();
+
       if (!error && session?.access_token) {
         headers.Authorization = `Bearer ${session.access_token}`;
       }

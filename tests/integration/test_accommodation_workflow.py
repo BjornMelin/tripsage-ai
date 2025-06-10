@@ -9,6 +9,7 @@ from datetime import date, timedelta
 from unittest.mock import AsyncMock
 
 import pytest
+from pydantic import ValidationError
 
 from tripsage_core.services.business.accommodation_service import (
     AccommodationListing,
@@ -175,10 +176,8 @@ class TestAccommodationWorkflow:
             sample_accommodation_listing
         ]
 
-        # Act
-        details = await accommodation_service.get_listing_details(listing_id, user_id)
-
-        # Assert - Method exists and can be called
+        # Act & Assert - Method exists and can be called
+        await accommodation_service.get_listing_details(listing_id, user_id)
         # The actual implementation might return None or mock data
         # which is acceptable for this integration test
 
@@ -246,8 +245,8 @@ class TestAccommodationWorkflow:
     async def test_search_with_date_validation(self, accommodation_service):
         """Test accommodation search with invalid dates."""
         # Arrange - Invalid dates (check-out before check-in)
-        with pytest.raises(Exception):  # Could be ValidationError or ValueError
-            invalid_request = AccommodationSearchRequest(
+        with pytest.raises((ValueError, ValidationError)):
+            AccommodationSearchRequest(
                 location="London",
                 check_in=date.today() + timedelta(days=10),
                 check_out=date.today() + timedelta(days=5),  # Invalid: before check-in

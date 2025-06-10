@@ -229,7 +229,7 @@ class TestUnifiedSearchEndpoint:
             )
 
             assert response.status_code == status.HTTP_200_OK
-            data = response.json()
+            _data = response.json()
 
             # Verify filters were passed to service
             call_args = mock_service.unified_search.call_args[0][0]

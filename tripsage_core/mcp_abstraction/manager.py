@@ -42,8 +42,9 @@ class MCPManager:
 
         try:
             # Check if Airbnb MCP is enabled
-            from tripsage_core.config.base_app_settings import settings
+            from tripsage_core.config.base_app_settings import get_settings
 
+            settings = get_settings()
             if hasattr(settings, "airbnb") and not settings.airbnb.enabled:
                 logger.info("Airbnb MCP is disabled, skipping initialization")
                 return None

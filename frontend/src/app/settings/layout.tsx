@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 // Force dynamic rendering to avoid SSG issues with authentication
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
 const navItems = [
   { name: "API Keys", href: "/settings/api-keys" },

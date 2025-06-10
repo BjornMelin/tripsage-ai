@@ -126,7 +126,8 @@ class TestExampleIntegration:
             from tripsage_core.services.business.chat_service import ChatService
 
             # The service can now be instantiated without validation errors
-            # Note: This is just an example - the actual service may have different initialization
+            # Note: This is just an example - the actual service may have different
+            # initialization
             service = ChatService()
             assert service is not None
 
@@ -139,7 +140,8 @@ class TestExampleIntegration:
         assert len(errors) == 0
 
         # Test with missing required settings
-        # Note: We can't easily test this with None since it would fail Pydantic validation
+        # Note: We can't easily test this with None since it would fail Pydantic
+        # validation
         # This is just to show the testing pattern
         settings_invalid = create_test_settings(environment="production")
         errors = settings_invalid.validate_critical_settings()

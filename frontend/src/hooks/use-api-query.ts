@@ -44,11 +44,12 @@ export function useApiMutation<TData = any, TVariables = any, TError = ApiError>
   const { makeAuthenticatedRequest } = useAuthenticatedApi();
 
   return useMutation<TData, TError, TVariables, unknown>({
-    mutationFn: (variables) => makeAuthenticatedRequest<TData>(endpoint, { 
-      method: "POST", 
-      body: JSON.stringify(variables),
-      headers: { "Content-Type": "application/json" }
-    }),
+    mutationFn: (variables) =>
+      makeAuthenticatedRequest<TData>(endpoint, {
+        method: "POST",
+        body: JSON.stringify(variables),
+        headers: { "Content-Type": "application/json" },
+      }),
     // Remove onSuccess - let consumers handle it with useEffect
     ...options,
   });
@@ -63,11 +64,12 @@ export function useApiPutMutation<TData = any, TVariables = any, TError = ApiErr
   const { makeAuthenticatedRequest } = useAuthenticatedApi();
 
   return useMutation<TData, TError, TVariables, unknown>({
-    mutationFn: (variables) => makeAuthenticatedRequest<TData>(endpoint, { 
-      method: "PUT", 
-      body: JSON.stringify(variables),
-      headers: { "Content-Type": "application/json" }
-    }),
+    mutationFn: (variables) =>
+      makeAuthenticatedRequest<TData>(endpoint, {
+        method: "PUT",
+        body: JSON.stringify(variables),
+        headers: { "Content-Type": "application/json" },
+      }),
     // Remove onSuccess - let consumers handle it with useEffect
     ...options,
   });
@@ -82,11 +84,12 @@ export function useApiPatchMutation<TData = any, TVariables = any, TError = ApiE
   const { makeAuthenticatedRequest } = useAuthenticatedApi();
 
   return useMutation<TData, TError, TVariables, unknown>({
-    mutationFn: (variables) => makeAuthenticatedRequest<TData>(endpoint, { 
-      method: "PATCH", 
-      body: JSON.stringify(variables),
-      headers: { "Content-Type": "application/json" }
-    }),
+    mutationFn: (variables) =>
+      makeAuthenticatedRequest<TData>(endpoint, {
+        method: "PATCH",
+        body: JSON.stringify(variables),
+        headers: { "Content-Type": "application/json" },
+      }),
     // Remove onSuccess - let consumers handle it with useEffect
     ...options,
   });
@@ -101,9 +104,10 @@ export function useApiDeleteMutation<TData = any, TVariables = any, TError = Api
   const { makeAuthenticatedRequest } = useAuthenticatedApi();
 
   return useMutation<TData, TError, TVariables, unknown>({
-    mutationFn: (variables) => makeAuthenticatedRequest<TData>(`${endpoint}/${variables}`, { 
-      method: "DELETE"
-    }),
+    mutationFn: (variables) =>
+      makeAuthenticatedRequest<TData>(`${endpoint}/${variables}`, {
+        method: "DELETE",
+      }),
     // Remove onSuccess - let consumers handle it with useEffect
     ...options,
   });

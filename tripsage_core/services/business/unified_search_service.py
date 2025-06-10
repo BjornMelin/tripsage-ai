@@ -197,8 +197,8 @@ class UnifiedSearchService(
                 all_results = []
                 results_by_type = {}
 
-                for i, (search_type, result) in enumerate(
-                    zip(search_tasks.keys(), search_results, strict=False)
+                for search_type, result in zip(
+                    search_tasks.keys(), search_results, strict=False
                 ):
                     if isinstance(result, Exception):
                         logger.warning(f"Search failed for {search_type}: {result}")
@@ -272,7 +272,10 @@ class UnifiedSearchService(
                     id=f"dest_{uuid.uuid4().hex[:8]}",
                     type="destination",
                     title=destination_query.title(),
-                    description=f"Explore {destination_query} - discover attractions, activities, and local experiences",
+                    description=(
+                        f"Explore {destination_query} - discover attractions, "
+                        f"activities, and local experiences"
+                    ),
                     location=destination_query,
                     relevance_score=0.9,
                     match_reasons=["Query matches destination name"],

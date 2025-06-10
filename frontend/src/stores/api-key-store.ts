@@ -108,8 +108,11 @@ export const useApiKeyStore = create<ApiKeyState>()(
         try {
           // Get current Supabase session
           const supabase = createBrowserClient();
-          const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-          
+          const {
+            data: { session },
+            error: sessionError,
+          } = await supabase.auth.getSession();
+
           if (sessionError || !session?.access_token) {
             set({ authError: "Authentication required", isApiKeyValid: false });
             return false;
@@ -143,8 +146,11 @@ export const useApiKeyStore = create<ApiKeyState>()(
         try {
           // Get current Supabase session
           const supabase = createBrowserClient();
-          const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-          
+          const {
+            data: { session },
+            error: sessionError,
+          } = await supabase.auth.getSession();
+
           if (sessionError || !session?.access_token) {
             set({ authError: "Authentication required" });
             return;

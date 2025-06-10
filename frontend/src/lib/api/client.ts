@@ -70,7 +70,7 @@ export async function fetchApi<T = any>(
   if (auth) {
     headers.set("Authorization", auth);
   }
-  
+
   // Note: For most authenticated endpoints, use the useAuthenticatedApi hook
   // This auth parameter is mainly for internal use by the hook
 

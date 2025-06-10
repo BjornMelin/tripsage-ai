@@ -1,11 +1,15 @@
 /**
  * Simplified WebSocket Integration Tests
- * 
+ *
  * Focused tests for core WebSocket functionality with reliable mocks.
  */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ConnectionStatus, WebSocketClient, WebSocketEventType } from "../websocket-client";
+import {
+  ConnectionStatus,
+  WebSocketClient,
+  WebSocketEventType,
+} from "../websocket-client";
 
 // Simple mock WebSocket with immediate responses
 class SimpleWebSocket {
@@ -34,21 +38,23 @@ class SimpleWebSocket {
     if (this.readyState !== SimpleWebSocket.OPEN) {
       throw new Error("WebSocket is not open");
     }
-    
+
     // Immediately respond with auth success for any message containing auth data
     try {
       const message = JSON.parse(data);
       if (message.token || message.session_id) {
         setTimeout(() => {
-          this.onmessage?.(new MessageEvent("message", {
-            data: JSON.stringify({
-              success: true,
-              connection_id: "mock-connection-id",
-              user_id: "mock-user-id",
-              session_id: "mock-session-id",
-              available_channels: ["test"]
+          this.onmessage?.(
+            new MessageEvent("message", {
+              data: JSON.stringify({
+                success: true,
+                connection_id: "mock-connection-id",
+                user_id: "mock-user-id",
+                session_id: "mock-session-id",
+                available_channels: ["test"],
+              }),
             })
-          }));
+          );
         }, 1);
       }
     } catch (error) {
@@ -59,7 +65,9 @@ class SimpleWebSocket {
   close(code?: number, reason?: string) {
     this.readyState = SimpleWebSocket.CLOSED;
     setTimeout(() => {
-      this.onclose?.(new CloseEvent("close", { code: code || 1000, reason: reason || "" }));
+      this.onclose?.(
+        new CloseEvent("close", { code: code || 1000, reason: reason || "" })
+      );
     }, 1);
   }
 }
@@ -94,9 +102,9 @@ describe("WebSocket Simplified Integration", () => {
       client.on("connect", connectHandler);
 
       await client.connect();
-      
+
       // Wait for authentication
-      await new Promise(resolve => setTimeout(resolve, 50));
+      await new Promise((resolve) => setTimeout(resolve, 50));
 
       expect(client.getState().status).toBe(ConnectionStatus.CONNECTED);
       expect(client.getState().connectionId).toBe("mock-connection-id");
@@ -105,8 +113,8 @@ describe("WebSocket Simplified Integration", () => {
 
     it("should disconnect gracefully", async () => {
       await client.connect();
-      await new Promise(resolve => setTimeout(resolve, 50));
-      
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
       client.disconnect();
       expect(client.getState().status).toBe(ConnectionStatus.DISCONNECTED);
     });
@@ -120,7 +128,7 @@ describe("WebSocket Simplified Integration", () => {
   describe("Message Operations", () => {
     beforeEach(async () => {
       await client.connect();
-      await new Promise(resolve => setTimeout(resolve, 50));
+      await new Promise((resolve) => setTimeout(resolve, 50));
     });
 
     it("should send chat messages when connected", async () => {
@@ -130,7 +138,9 @@ describe("WebSocket Simplified Integration", () => {
 
     it("should send generic messages when connected", async () => {
       expect(client.getState().status).toBe(ConnectionStatus.CONNECTED);
-      await expect(client.send("test_message", { content: "test" })).resolves.not.toThrow();
+      await expect(
+        client.send("test_message", { content: "test" })
+      ).resolves.not.toThrow();
     });
 
     it("should send heartbeat messages", async () => {
@@ -140,14 +150,16 @@ describe("WebSocket Simplified Integration", () => {
 
     it("should handle channel subscriptions", async () => {
       expect(client.getState().status).toBe(ConnectionStatus.CONNECTED);
-      await expect(client.subscribeToChannels(["channel1", "channel2"])).resolves.not.toThrow();
+      await expect(
+        client.subscribeToChannels(["channel1", "channel2"])
+      ).resolves.not.toThrow();
     });
   });
 
   describe("Event Handling", () => {
     beforeEach(async () => {
       await client.connect();
-      await new Promise(resolve => setTimeout(resolve, 50));
+      await new Promise((resolve) => setTimeout(resolve, 50));
     });
 
     it("should register and call event handlers", () => {
@@ -159,14 +171,16 @@ describe("WebSocket Simplified Integration", () => {
         id: "test-event-id",
         type: WebSocketEventType.CHAT_MESSAGE,
         timestamp: new Date().toISOString(),
-        payload: { content: "test message" }
+        payload: { content: "test message" },
       };
 
       // Access private ws to trigger event
       const ws = (client as any).ws;
-      ws.onmessage(new MessageEvent("message", {
-        data: JSON.stringify(mockEvent)
-      }));
+      ws.onmessage(
+        new MessageEvent("message", {
+          data: JSON.stringify(mockEvent),
+        })
+      );
 
       expect(messageHandler).toHaveBeenCalledWith(mockEvent);
     });
@@ -177,14 +191,16 @@ describe("WebSocket Simplified Integration", () => {
       client.off(WebSocketEventType.CHAT_MESSAGE, handler);
 
       const ws = (client as any).ws;
-      ws.onmessage(new MessageEvent("message", {
-        data: JSON.stringify({
-          id: "test",
-          type: WebSocketEventType.CHAT_MESSAGE,
-          timestamp: new Date().toISOString(),
-          payload: {}
+      ws.onmessage(
+        new MessageEvent("message", {
+          data: JSON.stringify({
+            id: "test",
+            type: WebSocketEventType.CHAT_MESSAGE,
+            timestamp: new Date().toISOString(),
+            payload: {},
+          }),
         })
-      }));
+      );
 
       expect(handler).not.toHaveBeenCalled();
     });
@@ -193,7 +209,7 @@ describe("WebSocket Simplified Integration", () => {
   describe("Performance Metrics", () => {
     beforeEach(async () => {
       await client.connect();
-      await new Promise(resolve => setTimeout(resolve, 50));
+      await new Promise((resolve) => setTimeout(resolve, 50));
     });
 
     it("should track basic metrics", async () => {
@@ -222,7 +238,7 @@ describe("WebSocket Simplified Integration", () => {
 
     it("should handle invalid JSON gracefully", async () => {
       await client.connect();
-      await new Promise(resolve => setTimeout(resolve, 50));
+      await new Promise((resolve) => setTimeout(resolve, 50));
 
       const ws = (client as any).ws;
       ws.onmessage(new MessageEvent("message", { data: "invalid json{" }));

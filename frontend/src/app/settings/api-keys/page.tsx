@@ -3,7 +3,7 @@
 import { ApiKeySettings } from "@/components/api-key-management/api-key-settings";
 
 // Force dynamic rendering to avoid SSG issues with authentication
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
 export default function ApiKeysPage() {
   return (

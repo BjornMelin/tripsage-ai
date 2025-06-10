@@ -304,8 +304,8 @@ class ActivityService:
             # Get photos for images
             images = []
             if place.get("photos"):
-                # Note: In production, you'd need to generate photo URLs using the Places API
-                # For now, we'll leave this empty or use placeholder
+                # Note: In production, you'd need to generate photo URLs using the
+                # Places API.For now, we'll leave this empty or use placeholder
                 images = []
 
             # Get address
@@ -386,7 +386,8 @@ class ActivityService:
 
         base_price = base_prices.get(activity_type, 25.0)
 
-        # Multiply by price level (0=free, 1=inexpensive, 2=moderate, 3=expensive, 4=very expensive)
+        # Multiply by price level
+        # (0=free, 1=inexpensive, 2=moderate, 3=expensive, 4=very expensive)
         multipliers = [0.0, 1.0, 1.5, 2.5, 4.0]
         multiplier = multipliers[min(price_level, 4)]
 
@@ -527,10 +528,6 @@ class ActivityService:
 
         # Get duration
         duration = self._estimate_duration(activity_type, place_types)
-
-        # Get additional details
-        website = place.get("website")
-        phone = place.get("formatted_phone_number")
 
         # Build description from reviews or use default
         description = f"Popular {activity_type}"

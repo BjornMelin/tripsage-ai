@@ -1,6 +1,6 @@
 /**
  * Chat Store WebSocket Integration Tests (Simplified)
- * 
+ *
  * Tests the core integration between the chat store and WebSocket client
  * with reliable mocks for real-time messaging functionality.
  */
@@ -27,7 +27,7 @@ const mockWebSocketClient = {
   getState: vi.fn(() => ({
     status: ConnectionStatus.CONNECTED,
     connectionId: "test-connection-id",
-    userId: "test-user-id", 
+    userId: "test-user-id",
     sessionId: "test-session-id",
   })),
   getStats: vi.fn(() => ({})),
@@ -63,11 +63,11 @@ describe("Chat Store WebSocket Integration (Simplified)", () => {
   beforeEach(() => {
     // Reset all mocks
     vi.clearAllMocks();
-    
+
     // Get a fresh store instance
     const { result } = renderHook(() => useChatStore());
     store = result.current;
-    
+
     // Reset store state completely
     act(() => {
       store.disconnectWebSocket();
@@ -185,7 +185,7 @@ describe("Chat Store WebSocket Integration (Simplified)", () => {
 
       await act(async () => {
         await store.sendMessage(messageContent, {
-          attachments: [mockFile]
+          attachments: [mockFile],
         });
       });
 
@@ -197,16 +197,18 @@ describe("Chat Store WebSocket Integration (Simplified)", () => {
             expect.objectContaining({
               name: "test.txt",
               contentType: "text/plain",
-              size: 12
-            })
-          ])
+              size: 12,
+            }),
+          ]),
         })
       );
     });
 
     it("should fall back to HTTP when WebSocket fails", async () => {
       // Mock WebSocket send failure
-      mockWebSocketClient.send.mockRejectedValueOnce(new Error("WebSocket send failed"));
+      mockWebSocketClient.send.mockRejectedValueOnce(
+        new Error("WebSocket send failed")
+      );
 
       await act(async () => {
         await store.connectWebSocket("test-session", "test-token");
@@ -230,7 +232,7 @@ describe("Chat Store WebSocket Integration (Simplified)", () => {
 
       // Should have attempted WebSocket first
       expect(mockWebSocketClient.send).toHaveBeenCalled();
-      
+
       // Should fall back gracefully (checked by no error thrown and loading state)
       expect(store.isLoading).toBe(false);
     });
@@ -243,13 +245,34 @@ describe("Chat Store WebSocket Integration (Simplified)", () => {
       });
 
       // Verify event handlers are registered
-      expect(mockWebSocketClient.on).toHaveBeenCalledWith("connect", expect.any(Function));
-      expect(mockWebSocketClient.on).toHaveBeenCalledWith("disconnect", expect.any(Function));
-      expect(mockWebSocketClient.on).toHaveBeenCalledWith("error", expect.any(Function));
-      expect(mockWebSocketClient.on).toHaveBeenCalledWith("reconnect", expect.any(Function));
-      expect(mockWebSocketClient.on).toHaveBeenCalledWith(WebSocketEventType.CHAT_MESSAGE, expect.any(Function));
-      expect(mockWebSocketClient.on).toHaveBeenCalledWith(WebSocketEventType.CHAT_MESSAGE_CHUNK, expect.any(Function));
-      expect(mockWebSocketClient.on).toHaveBeenCalledWith(WebSocketEventType.AGENT_STATUS_UPDATE, expect.any(Function));
+      expect(mockWebSocketClient.on).toHaveBeenCalledWith(
+        "connect",
+        expect.any(Function)
+      );
+      expect(mockWebSocketClient.on).toHaveBeenCalledWith(
+        "disconnect",
+        expect.any(Function)
+      );
+      expect(mockWebSocketClient.on).toHaveBeenCalledWith(
+        "error",
+        expect.any(Function)
+      );
+      expect(mockWebSocketClient.on).toHaveBeenCalledWith(
+        "reconnect",
+        expect.any(Function)
+      );
+      expect(mockWebSocketClient.on).toHaveBeenCalledWith(
+        WebSocketEventType.CHAT_MESSAGE,
+        expect.any(Function)
+      );
+      expect(mockWebSocketClient.on).toHaveBeenCalledWith(
+        WebSocketEventType.CHAT_MESSAGE_CHUNK,
+        expect.any(Function)
+      );
+      expect(mockWebSocketClient.on).toHaveBeenCalledWith(
+        WebSocketEventType.AGENT_STATUS_UPDATE,
+        expect.any(Function)
+      );
     });
 
     it("should handle real-time message events", () => {
@@ -272,7 +295,7 @@ describe("Chat Store WebSocket Integration (Simplified)", () => {
 
       const session = store.sessions.find((s: any) => s.id === sessionId);
       const lastMessage = session?.messages[session.messages.length - 1];
-      
+
       expect(lastMessage).toBeDefined();
       expect(lastMessage.content).toBe("Hello from agent!");
       expect(lastMessage.role).toBe("assistant");

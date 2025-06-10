@@ -151,7 +151,9 @@ class TestActivityService:
             "formatted_phone_number": "(212) 535-7710",
             "wheelchair_accessible_entrance": True,
             "editorial_summary": {
-                "overview": "One of the world's largest and most comprehensive art museums."
+                "overview": (
+                    "One of the world's largest and most comprehensive art museums."
+                )
             },
             "reviews": [
                 {"rating": 5, "text": "Amazing collection!", "time": 1704153600}

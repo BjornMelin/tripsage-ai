@@ -1,7 +1,7 @@
 "use client";
 
 // Force dynamic rendering to avoid SSG issues with authentication
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
 import { DestinationCard } from "@/components/features/search/destination-card";
 import { DestinationSearchForm } from "@/components/features/search/destination-search-form";
