@@ -19,9 +19,28 @@ const mockWebSocket = {
   off: vi.fn(),
 };
 
-// Mock dynamic import of WebSocketClient
+// Mock dynamic import of WebSocketClient with all required exports
 vi.mock("@/lib/websocket/websocket-client", () => ({
   WebSocketClient: vi.fn(() => mockWebSocket),
+  ConnectionStatus: {
+    CONNECTING: "connecting",
+    CONNECTED: "connected",
+    DISCONNECTED: "disconnected",
+    RECONNECTING: "reconnecting",
+    ERROR: "error",
+  },
+  WebSocketEventType: {
+    CHAT_MESSAGE: "chat_message",
+    CHAT_MESSAGE_CHUNK: "chat_message_chunk",
+    CHAT_MESSAGE_COMPLETE: "chat_message_complete",
+    CHAT_TYPING_START: "chat_typing_start",
+    CHAT_TYPING_STOP: "chat_typing_stop",
+    AGENT_STATUS_UPDATE: "agent_status_update",
+    AGENT_TASK_START: "agent_task_start",
+    AGENT_TASK_PROGRESS: "agent_task_progress",
+    AGENT_TASK_COMPLETE: "agent_task_complete",
+    CONNECTION_HEARTBEAT: "connection_heartbeat",
+  },
 }));
 
 // Mock environment variables

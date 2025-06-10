@@ -305,6 +305,7 @@ describe("API Key Store", () => {
             openai: {
               id: "key-1",
               service: "openai",
+              api_key: "sk-test123",
               has_key: true,
               is_valid: true,
               last_validated: new Date().toISOString(),
@@ -329,7 +330,7 @@ describe("API Key Store", () => {
 
       let isValid: boolean;
       await act(async () => {
-        isValid = await result.current.validateKey("openai");
+        isValid = await result.current.validateKey("openai", "sk-test123");
       });
 
       expect(isValid!).toBe(true);
@@ -365,7 +366,7 @@ describe("API Key Store", () => {
 
       let isValid: boolean;
       await act(async () => {
-        isValid = await result.current.validateKey("openai");
+        isValid = await result.current.validateKey("openai", "sk-test123");
       });
 
       expect(isValid!).toBe(false);
@@ -383,7 +384,7 @@ describe("API Key Store", () => {
 
       let isValid: boolean;
       await act(async () => {
-        isValid = await result.current.validateKey("openai");
+        isValid = await result.current.validateKey("openai", "sk-test123");
       });
 
       expect(isValid!).toBe(false);
@@ -398,7 +399,7 @@ describe("API Key Store", () => {
 
       let isValid: boolean;
       await act(async () => {
-        isValid = await result.current.validateKey("openai");
+        isValid = await result.current.validateKey("openai", "sk-test123");
       });
 
       expect(isValid!).toBe(false);
@@ -428,7 +429,7 @@ describe("API Key Store", () => {
 
       let isValid: boolean;
       await act(async () => {
-        isValid = await result.current.validateKey("incomplete");
+        isValid = await result.current.validateKey("incomplete", "");
       });
 
       expect(isValid!).toBe(false);
@@ -445,7 +446,7 @@ describe("API Key Store", () => {
       });
 
       await act(async () => {
-        await result.current.validateKey("openai");
+        await result.current.validateKey("openai", "sk-test123");
       });
 
       expect(global.fetch).toHaveBeenCalledWith("/api/keys/validate", {
@@ -476,7 +477,7 @@ describe("API Key Store", () => {
       });
 
       await act(async () => {
-        await result.current.validateKey("openai");
+        await result.current.validateKey("openai", "sk-test123");
       });
 
       expect(global.fetch).toHaveBeenCalledWith("/api/keys/validate", {
@@ -607,6 +608,7 @@ describe("API Key Store", () => {
             openai: {
               id: "key-1",
               service: "openai",
+              api_key: "sk-test123",
               has_key: true,
               is_valid: true,
               last_validated: new Date().toISOString(),
@@ -620,7 +622,7 @@ describe("API Key Store", () => {
 
       let isValid: boolean;
       await act(async () => {
-        isValid = await result.current.validateKey("openai");
+        isValid = await result.current.validateKey("openai", "sk-test123");
       });
 
       expect(isValid!).toBe(false);
