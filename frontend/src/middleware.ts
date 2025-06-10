@@ -1,68 +1,58 @@
 import { createServerClient } from '@supabase/ssr'
 import { type NextRequest, NextResponse } from "next/server";
 
-// Simple in-memory rate limiter
-const rateLimitStore = new Map<string, { count: number; resetTime: number }>();
+// Simple in-memory rate limiter with automatic cleanup
+class RateLimiter {
+  private store = new Map<string, { count: number; resetTime: number }>();
+  private cleanupTimer: NodeJS.Timeout | null = null;
 
-// Clean up old entries periodically
-setInterval(() => {
-  const now = Date.now();
-  for (const [key, value] of rateLimitStore.entries()) {
-    if (now > value.resetTime) {
-      rateLimitStore.delete(key);
+  constructor() {
+    // Only set up cleanup in non-serverless environments
+    if (typeof process !== 'undefined' && process.env.NODE_ENV !== 'production') {
+      this.setupCleanup();
     }
   }
-}, 60000); // Clean up every minute
 
-function checkRateLimit(
-  identifier: string,
-  limit = 10,
-  windowMs = 60000
-): {
-  success: boolean;
-  limit: number;
-  remaining: number;
-  reset: number;
-} {
-  const now = Date.now();
-  const record = rateLimitStore.get(identifier);
-  const resetTime = now + windowMs;
-
-  if (!record || now > record.resetTime) {
-    // Create new record
-    rateLimitStore.set(identifier, {
-      count: 1,
-      resetTime,
-    });
-    return {
-      success: true,
-      limit,
-      remaining: limit - 1,
-      reset: resetTime,
-    };
+  private setupCleanup() {
+    this.cleanupTimer = setInterval(() => {
+      const now = Date.now();
+      for (const [key, value] of this.store.entries()) {
+        if (now > value.resetTime) {
+          this.store.delete(key);
+        }
+      }
+    }, 60000); // Clean up every minute
   }
 
-  if (record.count >= limit) {
-    // Rate limit exceeded
-    return {
-      success: false,
-      limit,
-      remaining: 0,
-      reset: record.resetTime,
-    };
+  check(identifier: string, limit = 10, windowMs = 60000) {
+    const now = Date.now();
+    const record = this.store.get(identifier);
+    const resetTime = now + windowMs;
+
+    if (!record || now > record.resetTime) {
+      this.store.set(identifier, { count: 1, resetTime });
+      return { success: true, limit, remaining: limit - 1, reset: resetTime };
+    }
+
+    if (record.count >= limit) {
+      return { success: false, limit, remaining: 0, reset: record.resetTime };
+    }
+
+    record.count++;
+    return { success: true, limit, remaining: limit - record.count, reset: record.resetTime };
   }
 
-  // Increment count
-  record.count++;
-  return {
-    success: true,
-    limit,
-    remaining: limit - record.count,
-    reset: record.resetTime,
-  };
+  cleanup() {
+    if (this.cleanupTimer) {
+      clearInterval(this.cleanupTimer);
+      this.cleanupTimer = null;
+    }
+  }
 }
 
-async function updateSession(request: NextRequest) {
+const rateLimiter = new RateLimiter();
+
+export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
     request,
   })
@@ -128,7 +118,7 @@ export async function middleware(request: NextRequest) {
   const identifier = authHeader ? `auth:${authHeader}` : `ip:${ip}`;
 
   // Apply rate limiting
-  const rateLimitResult = checkRateLimit(identifier);
+  const rateLimitResult = rateLimiter.check(identifier);
 
   // Create rate limit response if needed
   const rateLimitResponse = rateLimitResult.success
