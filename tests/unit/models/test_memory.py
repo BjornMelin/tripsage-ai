@@ -23,7 +23,7 @@ class TestMemoryModel:
         """Base data for creating memory instances."""
         return {
             "id": uuid4(),
-            "user_id": "user_123",
+            "user_id": uuid4(),
             "memory": "User prefers window seats on flights",
             "created_at": datetime.now(timezone.utc),
             "updated_at": datetime.now(timezone.utc),
@@ -40,7 +40,7 @@ class TestMemoryModel:
         memory = Memory(**memory_data)
 
         assert memory.id == memory_data["id"]
-        assert memory.user_id == "user_123"
+        assert memory.user_id == memory_data["user_id"]
         assert memory.memory == "User prefers window seats on flights"
         assert memory.metadata["preference_type"] == "flight"
         assert memory.categories == ["travel_preferences", "flights"]
@@ -51,7 +51,7 @@ class TestMemoryModel:
         """Test creating Memory with only required fields."""
         memory = Memory(**base_memory_data)
 
-        assert memory.user_id == "user_123"
+        assert memory.user_id == base_memory_data["user_id"]
         assert memory.memory == "User prefers window seats on flights"
         assert memory.metadata == {}
         assert memory.categories == []
@@ -72,19 +72,13 @@ class TestMemoryModel:
         with pytest.raises(ValidationError, match=expected_error):
             Memory(**{**base_memory_data, "memory": invalid_memory})
 
-    @pytest.mark.parametrize(
-        "invalid_user_id,expected_error",
-        [
-            ("", "User ID cannot be empty"),
-            ("   ", "User ID cannot be empty"),
-        ],
-    )
-    def test_memory_validation_empty_user_id(
-        self, base_memory_data, invalid_user_id, expected_error
-    ):
-        """Test validation for empty user ID."""
-        with pytest.raises(ValidationError, match=expected_error):
-            Memory(**{**base_memory_data, "user_id": invalid_user_id})
+    def test_memory_validation_empty_user_id(self, base_memory_data):
+        """Test validation for empty/invalid user ID."""
+        with pytest.raises(ValidationError):
+            Memory(**{**base_memory_data, "user_id": ""})
+        
+        with pytest.raises(ValidationError):
+            Memory(**{**base_memory_data, "user_id": "invalid-uuid"})
 
     @pytest.mark.parametrize(
         "invalid_score",
@@ -166,8 +160,8 @@ class TestSessionMemoryModel:
         now = datetime.now(timezone.utc)
         return {
             "id": uuid4(),
-            "session_id": "chat_session_123",
-            "user_id": "user_123",
+            "session_id": uuid4(),
+            "user_id": uuid4(),
             "message_index": 5,
             "role": "user",
             "content": "I want to book a flight to Paris",
@@ -179,8 +173,8 @@ class TestSessionMemoryModel:
         """Test creating SessionMemory with valid data."""
         session_memory = SessionMemory(**base_session_data)
 
-        assert session_memory.session_id == "chat_session_123"
-        assert session_memory.user_id == "user_123"
+        assert session_memory.session_id == base_session_data["session_id"]
+        assert session_memory.user_id == base_session_data["user_id"]
         assert session_memory.message_index == 5
         assert session_memory.role == "user"
         assert session_memory.content == "I want to book a flight to Paris"
@@ -232,21 +226,23 @@ class TestSessionMemoryModel:
         with pytest.raises(ValidationError, match=expected_error):
             SessionMemory(**{**base_session_data, "content": content_input})
 
-    @pytest.mark.parametrize(
-        "field,invalid_value,expected_error",
-        [
-            ("session_id", "", "Session ID cannot be empty"),
-            ("session_id", "   ", "Session ID cannot be empty"),
-            ("user_id", "", "User ID cannot be empty"),
-            ("user_id", "   ", "User ID cannot be empty"),
-        ],
-    )
-    def test_session_memory_string_field_validation(
-        self, base_session_data, field, invalid_value, expected_error
-    ):
-        """Test string field validation for SessionMemory."""
-        with pytest.raises(ValidationError, match=expected_error):
-            SessionMemory(**{**base_session_data, field: invalid_value})
+    def test_session_memory_uuid_field_validation(self, base_session_data):
+        """Test UUID field validation for SessionMemory."""
+        # Test empty session_id
+        with pytest.raises(ValidationError):
+            SessionMemory(**{**base_session_data, "session_id": ""})
+        
+        # Test invalid session_id UUID format
+        with pytest.raises(ValidationError):
+            SessionMemory(**{**base_session_data, "session_id": "invalid-uuid"})
+            
+        # Test empty user_id
+        with pytest.raises(ValidationError):
+            SessionMemory(**{**base_session_data, "user_id": ""})
+        
+        # Test invalid user_id UUID format
+        with pytest.raises(ValidationError):
+            SessionMemory(**{**base_session_data, "user_id": "invalid-uuid"})
 
 
 class TestMemorySearchResult:
@@ -258,7 +254,7 @@ class TestMemorySearchResult:
         now = datetime.now(timezone.utc)
         return Memory(
             id=uuid4(),
-            user_id="user_123",
+            user_id=uuid4(),
             memory="Test memory",
             created_at=now,
             updated_at=now,
@@ -312,15 +308,16 @@ class TestMemoryCreateUpdate:
 
     def test_memory_create_full_data(self):
         """Test MemoryCreate with all fields."""
+        user_uuid = uuid4()
         memory_create = MemoryCreate(
-            user_id="user_123",
+            user_id=user_uuid,
             memory="User prefers window seats",
             metadata={"preference_type": "flight"},
             categories=["travel_preferences"],
             relevance_score=0.9,
         )
 
-        assert memory_create.user_id == "user_123"
+        assert memory_create.user_id == user_uuid
         assert memory_create.memory == "User prefers window seats"
         assert memory_create.metadata["preference_type"] == "flight"
         assert memory_create.categories == ["travel_preferences"]
@@ -328,12 +325,13 @@ class TestMemoryCreateUpdate:
 
     def test_memory_create_minimal_data(self):
         """Test MemoryCreate with minimal required fields."""
+        user_uuid = uuid4()
         memory_create = MemoryCreate(
-            user_id="user_123",
+            user_id=user_uuid,
             memory="Simple memory",
         )
 
-        assert memory_create.user_id == "user_123"
+        assert memory_create.user_id == user_uuid
         assert memory_create.memory == "Simple memory"
         assert memory_create.metadata == {}
         assert memory_create.categories == []
@@ -376,8 +374,8 @@ class TestMemoryCreateUpdate:
         [
             (MemoryCreate, "memory", "", "Memory content cannot be empty"),
             (MemoryCreate, "memory", "   ", "Memory content cannot be empty"),
-            (MemoryCreate, "user_id", "", "User ID cannot be empty"),
-            (MemoryCreate, "user_id", "   ", "User ID cannot be empty"),
+            (MemoryCreate, "user_id", "", "Input should be a valid UUID"),
+            (MemoryCreate, "user_id", "   ", "Input should be a valid UUID"),
             (
                 MemoryCreate,
                 "relevance_score",
@@ -412,7 +410,7 @@ class TestMemoryCreateUpdate:
         """Test validation in MemoryCreate and MemoryUpdate models."""
         base_data = {}
         if model_class == MemoryCreate:
-            base_data = {"user_id": "user_123", "memory": "Valid memory"}
+            base_data = {"user_id": uuid4(), "memory": "Valid memory"}
 
         with pytest.raises(ValidationError, match=expected_error):
             model_class(**{**base_data, field: invalid_value})
@@ -420,7 +418,7 @@ class TestMemoryCreateUpdate:
     def test_memory_create_categories_cleaning(self):
         """Test categories cleaning in MemoryCreate."""
         memory_create = MemoryCreate(
-            user_id="user_123",
+            user_id=uuid4(),
             memory="Test memory",
             categories=["  Travel  ", "TRAVEL", "travel", "", "  flights  "],
         )
