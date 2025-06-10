@@ -88,16 +88,15 @@ def create_test_settings(**overrides) -> CoreAppSettings:
     if hasattr(get_settings, 'cache_clear'):
         get_settings.cache_clear()
     
-    # Create settings with test defaults
-    defaults = {
-        "environment": "testing",
-        "debug": True,
-        "log_level": "INFO",
-    }
-    defaults.update(overrides)
+    # Apply any overrides to environment variables
+    for key, value in overrides.items():
+        env_key = key.upper()
+        if isinstance(value, (str, int, float, bool)):
+            os.environ[env_key] = str(value)
     
-    # Create settings instance - Pydantic v2 will use environment variables automatically
-    return CoreAppSettings(**defaults)
+    # Create settings instance - Pydantic v2 reads from environment variables
+    # Don't pass any config to the constructor
+    return CoreAppSettings()
 
 
 class MockCacheService:

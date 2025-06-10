@@ -21,7 +21,7 @@ class TestServiceRegistry:
 
         # All services should be None by default
         assert registry.accommodation_service is None
-        assert registry.auth_service is None
+        assert registry.user_service is None
         assert registry.memory_service is None
         assert registry.database_service is None
 
