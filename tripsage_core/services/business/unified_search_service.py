@@ -550,6 +550,244 @@ class UnifiedSearchService(
             logger.error(f"Failed to get search suggestions: {e}")
             raise UnifiedSearchServiceError(f"Failed to get suggestions: {e}", e) from e
 
+    @with_error_handling()
+    async def save_search(
+        self,
+        user_id: str,
+        search_request: UnifiedSearchRequest,
+        search_id: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Save a user's search for later retrieval.
+
+        Args:
+            user_id: User ID
+            search_request: Search request to save
+            search_id: Optional search ID (uses UUID if not provided)
+
+        Returns:
+            Saved search data
+
+        Raises:
+            UnifiedSearchServiceError: If save operation fails
+        """
+        await self.ensure_services()
+
+        try:
+            import uuid
+
+            # Generate search ID if not provided
+            if not search_id:
+                search_id = str(uuid.uuid4())
+
+            # Prepare search data for saving
+            search_data = {
+                "id": search_id,
+                "user_id": user_id,
+                "search_type": "unified",
+                "query": search_request.query,
+                "search_params": search_request.model_dump(),
+                "created_at": datetime.now().isoformat(),
+                "title": f"Search: {search_request.query}",
+                "description": f"Unified search for '{search_request.query}'",
+                "metadata": {
+                    "types": search_request.types or DEFAULT_SEARCH_TYPES,
+                    "destination": search_request.destination,
+                    "has_filters": bool(search_request.filters),
+                },
+            }
+
+            # Use database service to save
+            from tripsage_core.services.infrastructure.database_service import (
+                get_database_service,
+            )
+
+            db_service = await get_database_service()
+            result = await db_service.save_user_search(search_data)
+
+            logger.info(
+                f"Search saved successfully for user {user_id}",
+                extra={
+                    "search_id": search_id,
+                    "query": search_request.query,
+                    "user_id": user_id,
+                },
+            )
+
+            return result
+
+        except Exception as e:
+            logger.error(f"Failed to save search for user {user_id}: {e}")
+            raise UnifiedSearchServiceError(f"Failed to save search: {e}", e) from e
+
+    @with_error_handling()
+    async def get_recent_searches(
+        self, user_id: str, limit: int = 20
+    ) -> List[Dict[str, Any]]:
+        """
+        Get user's recent searches.
+
+        Args:
+            user_id: User ID
+            limit: Maximum number of searches to return
+
+        Returns:
+            List of recent searches
+
+        Raises:
+            UnifiedSearchServiceError: If retrieval fails
+        """
+        await self.ensure_services()
+
+        try:
+            # Use database service to get recent searches
+            from tripsage_core.services.infrastructure.database_service import (
+                get_database_service,
+            )
+
+            db_service = await get_database_service()
+            recent_searches = await db_service.get_user_recent_searches(user_id, limit)
+
+            # Format the searches for response
+            formatted_searches = []
+            for search in recent_searches:
+                search_item = {
+                    "id": search.get("id"),
+                    "query": search.get("query"),
+                    "title": search.get("title"),
+                    "description": search.get("description"),
+                    "created_at": search.get("created_at"),
+                    "metadata": search.get("metadata", {}),
+                    "search_params": search.get("search_params", {}),
+                }
+                formatted_searches.append(search_item)
+
+            logger.info(
+                f"Retrieved {len(formatted_searches)} recent searches for user {user_id}",
+                extra={"user_id": user_id, "limit": limit},
+            )
+
+            return formatted_searches
+
+        except Exception as e:
+            logger.error(f"Failed to get recent searches for user {user_id}: {e}")
+            raise UnifiedSearchServiceError(
+                f"Failed to get recent searches: {e}", e
+            ) from e
+
+    @with_error_handling()
+    async def delete_saved_search(self, user_id: str, search_id: str) -> bool:
+        """
+        Delete a saved search.
+
+        Args:
+            user_id: User ID
+            search_id: Search ID to delete
+
+        Returns:
+            True if deleted successfully
+
+        Raises:
+            UnifiedSearchServiceError: If deletion fails
+        """
+        await self.ensure_services()
+
+        try:
+            # Use database service to delete search
+            from tripsage_core.services.infrastructure.database_service import (
+                get_database_service,
+            )
+
+            db_service = await get_database_service()
+            success = await db_service.delete_user_search(user_id, search_id)
+
+            if success:
+                logger.info(
+                    f"Search deleted successfully for user {user_id}",
+                    extra={
+                        "search_id": search_id,
+                        "user_id": user_id,
+                    },
+                )
+            else:
+                logger.warning(
+                    f"Search not found or already deleted for user {user_id}",
+                    extra={
+                        "search_id": search_id,
+                        "user_id": user_id,
+                    },
+                )
+
+            return success
+
+        except Exception as e:
+            logger.error(f"Failed to delete search {search_id} for user {user_id}: {e}")
+            raise UnifiedSearchServiceError(f"Failed to delete search: {e}", e) from e
+
+    @with_error_handling()
+    async def save_search_parameters(
+        self,
+        user_id: str,
+        search_request: UnifiedSearchRequest,
+        trip_id: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Save search parameters for analytics and search history.
+
+        Args:
+            user_id: User ID
+            search_request: Search request
+            trip_id: Optional trip ID
+
+        Returns:
+            Saved search parameters data
+
+        Raises:
+            UnifiedSearchServiceError: If save operation fails
+        """
+        await self.ensure_services()
+
+        try:
+            # Prepare search parameters data using SearchParameters model format
+            search_params_data = {
+                "user_id": user_id,
+                "trip_id": trip_id,
+                "timestamp": datetime.now().isoformat(),
+                "parameter_json": search_request.model_dump(),
+                "search_type": "unified",
+                "query": search_request.query,
+                "metadata": {
+                    "destination": search_request.destination,
+                    "types": search_request.types or DEFAULT_SEARCH_TYPES,
+                    "has_filters": bool(search_request.filters),
+                },
+            }
+
+            # Use database service to save parameters
+            from tripsage_core.services.infrastructure.database_service import (
+                get_database_service,
+            )
+
+            db_service = await get_database_service()
+            result = await db_service.save_search_parameters(search_params_data)
+
+            logger.debug(
+                f"Search parameters saved for user {user_id}",
+                extra={
+                    "user_id": user_id,
+                    "trip_id": trip_id,
+                    "query": search_request.query,
+                },
+            )
+
+            return result
+
+        except Exception as e:
+            logger.error(f"Failed to save search parameters for user {user_id}: {e}")
+            raise UnifiedSearchServiceError(
+                f"Failed to save search parameters: {e}", e
+            ) from e
+
 
 # Global service instance
 _unified_search_service: Optional[UnifiedSearchService] = None

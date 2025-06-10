@@ -569,6 +569,175 @@ class ActivityService:
             instant_confirmation=False,
         )
 
+    @with_error_handling()
+    async def save_activity(
+        self, user_id: str, activity_id: str, trip_id: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Save an activity to user's saved activities.
+
+        Args:
+            user_id: User ID
+            activity_id: Activity ID to save
+            trip_id: Optional trip ID to associate with
+
+        Returns:
+            Saved activity data
+
+        Raises:
+            ActivityServiceError: If save operation fails
+        """
+        await self.ensure_services()
+
+        try:
+            # Get activity details first to save complete information
+            activity_details = await self.get_activity_details(activity_id)
+            if not activity_details:
+                raise ActivityServiceError(f"Activity not found: {activity_id}")
+
+            # Prepare saved activity data
+            saved_activity_data = {
+                "user_id": user_id,
+                "activity_id": activity_id,
+                "trip_id": trip_id,
+                "activity_data": activity_details.model_dump(),
+                "created_at": datetime.now().isoformat(),
+                "notes": None,
+            }
+
+            # Use database service to save
+            from tripsage_core.services.infrastructure.database_service import (
+                get_database_service,
+            )
+
+            db_service = await get_database_service()
+            result = await db_service.save_activity_option(saved_activity_data)
+
+            logger.info(
+                f"Activity saved successfully for user {user_id}",
+                extra={
+                    "activity_id": activity_id,
+                    "trip_id": trip_id,
+                    "user_id": user_id,
+                },
+            )
+
+            return result
+
+        except Exception as e:
+            logger.error(
+                f"Failed to save activity {activity_id} for user {user_id}: {e}"
+            )
+            raise ActivityServiceError(f"Failed to save activity: {e}", e) from e
+
+    @with_error_handling()
+    async def get_saved_activities(
+        self, user_id: str, trip_id: Optional[str] = None
+    ) -> List[ActivityResponse]:
+        """
+        Get user's saved activities.
+
+        Args:
+            user_id: User ID
+            trip_id: Optional trip ID filter
+
+        Returns:
+            List of saved activities
+
+        Raises:
+            ActivityServiceError: If retrieval fails
+        """
+        await self.ensure_services()
+
+        try:
+            # Use database service to get saved activities
+            from tripsage_core.services.infrastructure.database_service import (
+                get_database_service,
+            )
+
+            db_service = await get_database_service()
+            saved_activities = await db_service.get_user_saved_activities(
+                user_id, trip_id
+            )
+
+            # Convert database records to ActivityResponse objects
+            activities = []
+            for saved_activity in saved_activities:
+                if saved_activity.get("activity_data"):
+                    try:
+                        activity = ActivityResponse(**saved_activity["activity_data"])
+                        activities.append(activity)
+                    except Exception as e:
+                        logger.warning(
+                            f"Failed to parse saved activity data: {e}",
+                            extra={"saved_activity_id": saved_activity.get("id")},
+                        )
+                        continue
+
+            logger.info(
+                f"Retrieved {len(activities)} saved activities for user {user_id}",
+                extra={"user_id": user_id, "trip_id": trip_id},
+            )
+
+            return activities
+
+        except Exception as e:
+            logger.error(f"Failed to get saved activities for user {user_id}: {e}")
+            raise ActivityServiceError(f"Failed to get saved activities: {e}", e) from e
+
+    @with_error_handling()
+    async def delete_saved_activity(self, user_id: str, activity_id: str) -> bool:
+        """
+        Delete a saved activity from user's saved activities.
+
+        Args:
+            user_id: User ID
+            activity_id: Activity ID to delete
+
+        Returns:
+            True if deleted successfully
+
+        Raises:
+            ActivityServiceError: If deletion fails
+        """
+        await self.ensure_services()
+
+        try:
+            # Use database service to delete saved activity
+            from tripsage_core.services.infrastructure.database_service import (
+                get_database_service,
+            )
+
+            db_service = await get_database_service()
+            success = await db_service.delete_saved_activity(user_id, activity_id)
+
+            if success:
+                logger.info(
+                    f"Activity deleted successfully for user {user_id}",
+                    extra={
+                        "activity_id": activity_id,
+                        "user_id": user_id,
+                    },
+                )
+            else:
+                logger.warning(
+                    f"Activity not found or already deleted for user {user_id}",
+                    extra={
+                        "activity_id": activity_id,
+                        "user_id": user_id,
+                    },
+                )
+
+            return success
+
+        except Exception as e:
+            logger.error(
+                f"Failed to delete saved activity {activity_id} for user {user_id}: {e}"
+            )
+            raise ActivityServiceError(
+                f"Failed to delete saved activity: {e}", e
+            ) from e
+
 
 # Global service instance
 _activity_service: Optional[ActivityService] = None

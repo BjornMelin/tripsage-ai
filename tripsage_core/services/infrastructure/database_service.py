@@ -491,6 +491,84 @@ class DatabaseService:
             "accommodation_searches", "*", {"user_id": user_id}, order_by="-created_at"
         )
 
+    # Activity operations
+    async def save_activity_option(self, option_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Save activity option to user's saved activities."""
+        result = await self.insert("saved_activities", option_data)
+        return result[0] if result else {}
+
+    async def get_user_saved_activities(
+        self, user_id: str, trip_id: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
+        """Get user's saved activities, optionally filtered by trip."""
+        filters = {"user_id": user_id}
+        if trip_id:
+            filters["trip_id"] = trip_id
+        return await self.select(
+            "saved_activities", "*", filters, order_by="-created_at"
+        )
+
+    async def delete_saved_activity(self, user_id: str, activity_id: str) -> bool:
+        """Delete a saved activity option."""
+        result = await self.delete(
+            "saved_activities", {"user_id": user_id, "activity_id": activity_id}
+        )
+        return bool(result)
+
+    async def save_activity_search(self, search_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Save activity search parameters."""
+        result = await self.insert("activity_searches", search_data)
+        return result[0] if result else {}
+
+    async def get_user_activity_searches(self, user_id: str) -> List[Dict[str, Any]]:
+        """Get user's activity searches."""
+        return await self.select(
+            "activity_searches", "*", {"user_id": user_id}, order_by="-created_at"
+        )
+
+    # Search operations (unified search)
+    async def save_user_search(self, search_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Save user search parameters for recent searches."""
+        result = await self.insert("user_searches", search_data)
+        return result[0] if result else {}
+
+    async def get_user_recent_searches(
+        self, user_id: str, limit: int = 20
+    ) -> List[Dict[str, Any]]:
+        """Get user's recent searches."""
+        return await self.select(
+            "user_searches",
+            "*",
+            {"user_id": user_id},
+            order_by="-created_at",
+            limit=limit,
+        )
+
+    async def delete_user_search(self, user_id: str, search_id: str) -> bool:
+        """Delete a user's saved search."""
+        result = await self.delete(
+            "user_searches", {"user_id": user_id, "id": search_id}
+        )
+        return bool(result)
+
+    async def save_search_parameters(
+        self, search_params_data: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Save search parameters for analytics and user history."""
+        result = await self.insert("search_parameters", search_params_data)
+        return result[0] if result else {}
+
+    async def get_user_search_history(
+        self, user_id: str, search_type: Optional[str] = None, limit: int = 50
+    ) -> List[Dict[str, Any]]:
+        """Get user's search history with optional type filter."""
+        filters = {"user_id": user_id}
+        if search_type:
+            filters["search_type"] = search_type
+        return await self.select(
+            "search_parameters", "*", filters, order_by="-timestamp", limit=limit
+        )
+
     # Chat operations
     async def create_chat_session(self, session_data: Dict[str, Any]) -> Dict[str, Any]:
         """Create chat session."""

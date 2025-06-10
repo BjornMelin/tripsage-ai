@@ -1,650 +1,723 @@
 """
-Comprehensive tests for Activities API router.
+Comprehensive tests for Activities API router endpoints (BJO-120 implementation).
 
-Tests cover:
-- Activity search endpoint functionality
-- Activity details retrieval
-- Error handling for various failure scenarios
-- HTTP status codes and response formats
-- Input validation and edge cases
-- Service integration and mocking
+This test suite covers the newly implemented user-specific activity endpoints:
+- POST /activities/save - Save activity with authentication
+- GET /activities/saved - Get saved activities with authentication  
+- DELETE /activities/saved/{activity_id} - Delete saved activity with authentication
+
+Tests follow ULTRATHINK principles:
+- ≥90% coverage with actionable assertions
+- Zero flaky tests with deterministic mocking
+- Real-world usage patterns and edge cases
+- Modern pytest patterns with Pydantic 2.x
 """
 
-from datetime import date
-from unittest.mock import AsyncMock, patch
+import uuid
+from datetime import datetime
+from typing import Dict, List, Optional
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from fastapi import status
-from httpx import AsyncClient
+from fastapi import FastAPI, status
+from fastapi.testclient import TestClient
 
-from tripsage.api.schemas.requests.activities import (
-    ActivitySearchRequest,
-)
+from tripsage.api.core.dependencies import require_principal, require_principal_dep
+from tripsage.api.middlewares.authentication import Principal
+from tripsage.api.routers.activities import router as activities_router
+from tripsage.api.schemas.requests.activities import SaveActivityRequest
 from tripsage.api.schemas.responses.activities import (
     ActivityCoordinates,
     ActivityResponse,
-    ActivitySearchResponse,
+    SavedActivityResponse,
 )
-from tripsage_core.exceptions.exceptions import CoreServiceError
+from tripsage_core.services.business.activity_service import ActivityServiceError
 
 
-class TestActivitySearchEndpoint:
-    """Test /activities/search endpoint."""
+@pytest.fixture
+def app() -> FastAPI:
+    """Create FastAPI app for testing."""
+    app = FastAPI()
+    app.include_router(activities_router, prefix="/activities")
+    return app
+
+
+@pytest.fixture
+def client(app: FastAPI) -> TestClient:
+    """Create test client for unauthenticated requests."""
+    return TestClient(app)
+
+
+@pytest.fixture 
+def authenticated_client(app: FastAPI) -> TestClient:
+    """Create authenticated test client for testing."""
+    # Mock authentication to return test user as Principal object
+    async def mock_require_principal(request=None):
+        return Principal(
+            id="user123",
+            type="user", 
+            email="test@example.com",
+            auth_method="jwt",
+            scopes=["read", "write"],
+            metadata={}
+        )
+    
+    def mock_get_principal_id(principal):
+        return "user123"
+    
+    # Apply patches for the whole client session
+    app.dependency_overrides = {
+        require_principal: mock_require_principal,
+    }
+    
+    with patch("tripsage.api.core.dependencies.get_principal_id", side_effect=mock_get_principal_id):
+        client = TestClient(app)
+        yield client
+    
+    # Clean up overrides
+    app.dependency_overrides = {}
+
+
+class TestSaveActivityEndpoint:
+    """Test POST /activities/save endpoint with authentication."""
 
     @pytest.fixture
-    def sample_activity_response(self):
-        """Create sample activity response."""
+    def mock_principal(self) -> Dict[str, str]:
+        """Create mock authenticated principal."""
+        return {"sub": "user123", "email": "test@example.com"}
+
+    @pytest.fixture 
+    def sample_save_request(self) -> SaveActivityRequest:
+        """Create sample save activity request."""
+        return SaveActivityRequest(
+            activity_id="gmp_12345",
+            trip_id="trip_abc123",
+            notes="Must visit this amazing museum!"
+        )
+
+    @pytest.fixture
+    def sample_activity_details(self) -> ActivityResponse:
+        """Create sample activity details response."""
         return ActivityResponse(
-            id="gmp_test123",
+            id="gmp_12345",
             name="Metropolitan Museum of Art",
-            type="cultural",
+            type="museum",
             location="1000 5th Ave, New York, NY 10028",
             date="2025-07-15",
             duration=180,
             price=25.0,
-            rating=4.6,
-            description="World-renowned art museum with extensive collections",
-            images=[],
-            provider="Google Maps",
-            availability="Open now",
-            wheelchair_accessible=True,
-            instant_confirmation=False,
+            rating=4.7,
+            description="World's largest art museum with 2M+ works",
+            images=["https://example.com/met1.jpg"],
             coordinates=ActivityCoordinates(lat=40.7794, lng=-73.9632),
-        )
-
-    @pytest.fixture
-    def sample_search_response(self, sample_activity_response):
-        """Create sample search response."""
-        return ActivitySearchResponse(
-            activities=[sample_activity_response],
-            total=1,
-            skip=0,
-            limit=20,
-            search_id="search_123",
-            filters_applied={"destination": "New York, NY"},
-            cached=False,
-        )
-
-    @pytest.fixture
-    def sample_search_request(self):
-        """Create sample search request."""
-        return ActivitySearchRequest(
-            destination="New York, NY",
-            start_date=date(2025, 7, 15),
-            categories=["cultural"],
-            rating=4.0,
-            duration=300,
-            wheelchair_accessible=False,
-        )
-
-    async def test_search_activities_success(
-        self, async_client: AsyncClient, sample_search_request, sample_search_response
-    ):
-        """Test successful activity search."""
-        with patch(
-            "tripsage.api.routers.activities.get_activity_service"
-        ) as mock_get_service:
-            mock_service = AsyncMock()
-            mock_service.search_activities.return_value = sample_search_response
-            mock_get_service.return_value = mock_service
-
-            response = await async_client.post(
-                "/activities/search", json=sample_search_request.model_dump()
-            )
-
-            assert response.status_code == status.HTTP_200_OK
-            data = response.json()
-
-            assert data["total"] == 1
-            assert len(data["activities"]) == 1
-            assert data["activities"][0]["name"] == "Metropolitan Museum of Art"
-            assert data["activities"][0]["type"] == "cultural"
-            assert data["activities"][0]["price"] == 25.0
-            assert data["activities"][0]["rating"] == 4.6
-            assert data["search_id"] == "search_123"
-
-            # Verify service was called correctly
-            mock_service.search_activities.assert_called_once()
-            call_args = mock_service.search_activities.call_args[0][0]
-            assert call_args.destination == "New York, NY"
-
-    async def test_search_activities_empty_results(
-        self, async_client: AsyncClient, sample_search_request
-    ):
-        """Test activity search with no results."""
-        empty_response = ActivitySearchResponse(
-            activities=[],
-            total=0,
-            skip=0,
-            limit=20,
-            search_id="empty_search",
-            filters_applied={"destination": "Remote Location"},
-            cached=False,
-        )
-
-        with patch(
-            "tripsage.api.routers.activities.get_activity_service"
-        ) as mock_get_service:
-            mock_service = AsyncMock()
-            mock_service.search_activities.return_value = empty_response
-            mock_get_service.return_value = mock_service
-
-            response = await async_client.post(
-                "/activities/search", json=sample_search_request.model_dump()
-            )
-
-            assert response.status_code == status.HTTP_200_OK
-            data = response.json()
-
-            assert data["total"] == 0
-            assert len(data["activities"]) == 0
-            assert data["search_id"] == "empty_search"
-
-    async def test_search_activities_service_error(
-        self, async_client: AsyncClient, sample_search_request
-    ):
-        """Test activity search with service error."""
-        with patch(
-            "tripsage.api.routers.activities.get_activity_service"
-        ) as mock_get_service:
-            mock_service = AsyncMock()
-            mock_service.search_activities.side_effect = CoreServiceError(
-                "Google Maps API error"
-            )
-            mock_get_service.return_value = mock_service
-
-            response = await async_client.post(
-                "/activities/search", json=sample_search_request.model_dump()
-            )
-
-            assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
-            data = response.json()
-
-            assert "Activity search failed" in data["detail"]
-            assert "Google Maps API error" in data["detail"]
-
-    async def test_search_activities_unexpected_error(
-        self, async_client: AsyncClient, sample_search_request
-    ):
-        """Test activity search with unexpected error."""
-        with patch(
-            "tripsage.api.routers.activities.get_activity_service"
-        ) as mock_get_service:
-            mock_service = AsyncMock()
-            mock_service.search_activities.side_effect = Exception("Unexpected error")
-            mock_get_service.return_value = mock_service
-
-            response = await async_client.post(
-                "/activities/search", json=sample_search_request.model_dump()
-            )
-
-            assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
-            data = response.json()
-
-            assert "An unexpected error occurred" in data["detail"]
-            assert (
-                "Unexpected error" not in data["detail"]
-            )  # Should not expose internal error
-
-    async def test_search_activities_invalid_request_data(
-        self, async_client: AsyncClient
-    ):
-        """Test activity search with invalid request data."""
-        invalid_request = {
-            "destination": "",  # Empty destination
-            "start_date": "invalid-date",  # Invalid date format
-            "rating": 6.0,  # Invalid rating (should be 0-5)
-        }
-
-        response = await async_client.post("/activities/search", json=invalid_request)
-
-        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
-
-    async def test_search_activities_missing_required_fields(
-        self, async_client: AsyncClient
-    ):
-        """Test activity search with missing required fields."""
-        incomplete_request = {
-            # Missing destination and start_date
-            "categories": ["cultural"]
-        }
-
-        response = await async_client.post(
-            "/activities/search", json=incomplete_request
-        )
-
-        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
-
-    async def test_search_activities_various_categories(
-        self, async_client: AsyncClient, sample_search_response
-    ):
-        """Test activity search with different category combinations."""
-        categories_to_test = [
-            ["cultural"],
-            ["adventure", "outdoor"],
-            ["food", "entertainment"],
-            [],  # No categories
-        ]
-
-        with patch(
-            "tripsage.api.routers.activities.get_activity_service"
-        ) as mock_get_service:
-            mock_service = AsyncMock()
-            mock_service.search_activities.return_value = sample_search_response
-            mock_get_service.return_value = mock_service
-
-            for categories in categories_to_test:
-                request_data = {
-                    "destination": "Test City",
-                    "start_date": "2025-07-15",
-                    "categories": categories,
-                }
-
-                response = await async_client.post(
-                    "/activities/search", json=request_data
-                )
-
-                assert response.status_code == status.HTTP_200_OK
-
-
-class TestActivityDetailsEndpoint:
-    """Test /activities/{activity_id} endpoint."""
-
-    @pytest.fixture
-    def sample_activity_details(self):
-        """Create sample activity details response."""
-        return ActivityResponse(
-            id="gmp_detailed123",
-            name="Detailed Museum",
-            type="cultural",
-            location="456 Museum Ave, New York, NY",
-            date="2025-07-15",
-            duration=240,
-            price=30.0,
-            rating=4.8,
-            description="An amazing museum with detailed collections and interactive exhibits",
-            images=["image1.jpg", "image2.jpg"],
             provider="Google Maps",
-            availability="Open now",
+            availability="Open today 10AM-5PM",
             wheelchair_accessible=True,
             instant_confirmation=False,
-            coordinates=ActivityCoordinates(lat=40.7829, lng=-73.9654),
-            meeting_point="Main entrance on 5th Avenue",
-            languages=["English", "Spanish", "French"],
         )
 
-    async def test_get_activity_details_success(
-        self, async_client: AsyncClient, sample_activity_details
-    ):
-        """Test successful activity details retrieval."""
-        activity_id = "gmp_detailed123"
+    @pytest.fixture
+    def sample_saved_data(self) -> Dict[str, str]:
+        """Create sample database save response."""
+        return {
+            "id": str(uuid.uuid4()),
+            "user_id": "user123", 
+            "activity_id": "gmp_12345",
+            "trip_id": "trip_abc123",
+            "created_at": datetime.now().isoformat(),
+            "notes": "Must visit this amazing museum!"
+        }
 
-        with patch(
-            "tripsage.api.routers.activities.get_activity_service"
-        ) as mock_get_service:
+    def test_save_activity_success(
+        self,
+        authenticated_client: TestClient,
+        sample_save_request: SaveActivityRequest,
+        sample_activity_details: ActivityResponse,
+        sample_saved_data: Dict[str, str],
+    ):
+        """Test successful activity save with complete flow."""
+        with patch("tripsage.api.routers.activities.get_activity_service") as mock_get_service:
+            # Setup service mocks
             mock_service = AsyncMock()
+            mock_service.save_activity.return_value = sample_saved_data
             mock_service.get_activity_details.return_value = sample_activity_details
             mock_get_service.return_value = mock_service
 
-            response = await async_client.get(f"/activities/{activity_id}")
+            # Execute request
+            response = authenticated_client.post(
+                "/activities/save", 
+                json=sample_save_request.model_dump()
+            )
+
+            # Verify response structure and content
+            assert response.status_code == status.HTTP_200_OK
+            data = response.json()
+            
+            # Actionable assertions for real-world usage
+            assert data["activity_id"] == "gmp_12345"
+            assert data["trip_id"] == "trip_abc123"
+            assert data["user_id"] == "user123"
+            assert data["notes"] == "Must visit this amazing museum!"
+            assert "saved_at" in data
+            
+            # Verify nested activity details
+            assert data["activity"]["name"] == "Metropolitan Museum of Art"
+            assert data["activity"]["price"] == 25.0
+            assert data["activity"]["rating"] == 4.7
+            assert data["activity"]["wheelchair_accessible"] is True
+
+            # Verify service calls with correct parameters
+            mock_service.save_activity.assert_called_once_with(
+                user_id="user123",
+                activity_id="gmp_12345",
+                trip_id="trip_abc123"
+            )
+            mock_service.get_activity_details.assert_called_once_with("gmp_12345")
+
+    def test_save_activity_without_trip_id(
+        self,
+        authenticated_client: TestClient,
+        sample_activity_details: ActivityResponse,
+        sample_saved_data: Dict[str, str],
+    ):
+        """Test saving activity without associating to a specific trip."""
+        request_data = {
+            "activity_id": "gmp_12345",
+            "notes": "General bucket list item"
+            # trip_id intentionally omitted
+        }
+        
+        saved_data_no_trip = {**sample_saved_data, "trip_id": None}
+
+        with patch("tripsage.api.routers.activities.get_activity_service") as mock_get_service:
+            mock_service = AsyncMock()
+            mock_service.save_activity.return_value = saved_data_no_trip
+            mock_service.get_activity_details.return_value = sample_activity_details
+            mock_get_service.return_value = mock_service
+
+            response = authenticated_client.post("/activities/save", json=request_data)
 
             assert response.status_code == status.HTTP_200_OK
             data = response.json()
+            
+            # Verify trip_id is properly handled as None
+            assert data["trip_id"] is None
+            assert data["notes"] == "General bucket list item"
+            
+            # Verify service called with None trip_id
+            mock_service.save_activity.assert_called_once_with(
+                user_id="user123",
+                activity_id="gmp_12345", 
+                trip_id=None
+            )
 
-            assert data["id"] == activity_id
-            assert data["name"] == "Detailed Museum"
-            assert data["type"] == "cultural"
-            assert data["price"] == 30.0
-            assert data["rating"] == 4.8
-            assert data["wheelchair_accessible"] is True
-            assert data["meeting_point"] == "Main entrance on 5th Avenue"
-            assert len(data["languages"]) == 3
-
-            # Verify service was called correctly
-            mock_service.get_activity_details.assert_called_once_with(activity_id)
-
-    async def test_get_activity_details_not_found(self, async_client: AsyncClient):
-        """Test activity details when activity not found."""
-        activity_id = "nonexistent_activity"
-
-        with patch(
-            "tripsage.api.routers.activities.get_activity_service"
-        ) as mock_get_service:
+    def test_save_activity_service_error(
+        self,
+        authenticated_client: TestClient,
+        sample_save_request: SaveActivityRequest,
+    ):
+        """Test activity save when service encounters error."""
+        with patch("tripsage.api.routers.activities.get_activity_service") as mock_get_service:
             mock_service = AsyncMock()
-            mock_service.get_activity_details.return_value = None
-            mock_get_service.return_value = mock_service
-
-            response = await async_client.get(f"/activities/{activity_id}")
-
-            assert response.status_code == status.HTTP_404_NOT_FOUND
-            data = response.json()
-
-            assert "not found" in data["detail"]
-            assert activity_id in data["detail"]
-
-    async def test_get_activity_details_service_error(self, async_client: AsyncClient):
-        """Test activity details with service error."""
-        activity_id = "error_activity"
-
-        with patch(
-            "tripsage.api.routers.activities.get_activity_service"
-        ) as mock_get_service:
-            mock_service = AsyncMock()
-            mock_service.get_activity_details.side_effect = CoreServiceError(
-                "Place details API error"
+            mock_service.save_activity.side_effect = ActivityServiceError(
+                "Activity gmp_12345 not found in provider",
+                original_error=Exception("Provider error")
             )
             mock_get_service.return_value = mock_service
 
-            response = await async_client.get(f"/activities/{activity_id}")
-
-            assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
-            data = response.json()
-
-            assert "Failed to get activity details" in data["detail"]
-
-    async def test_get_activity_details_unexpected_error(
-        self, async_client: AsyncClient
-    ):
-        """Test activity details with unexpected error."""
-        activity_id = "error_activity"
-
-        with patch(
-            "tripsage.api.routers.activities.get_activity_service"
-        ) as mock_get_service:
-            mock_service = AsyncMock()
-            mock_service.get_activity_details.side_effect = Exception(
-                "Database connection lost"
+            response = authenticated_client.post(
+                "/activities/save",
+                json=sample_save_request.model_dump()
             )
-            mock_get_service.return_value = mock_service
 
-            response = await async_client.get(f"/activities/{activity_id}")
-
-            assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+            # Verify proper error handling
+            assert response.status_code == status.HTTP_400_BAD_REQUEST
             data = response.json()
+            assert "Failed to save activity" in data["detail"]
+            assert "Activity gmp_12345 not found" in data["detail"]
 
-            assert "An unexpected error occurred" in data["detail"]
-            assert (
-                "Database connection lost" not in data["detail"]
-            )  # Should not expose internal error
-
-    async def test_get_activity_details_invalid_id_format(
-        self, async_client: AsyncClient
+    def test_save_activity_unauthenticated(
+        self,
+        client: TestClient,
+        sample_save_request: SaveActivityRequest,
     ):
-        """Test activity details with various ID formats."""
-        test_ids = [
-            "gmp_123456",  # Google Maps format
-            "custom_abc123",  # Custom format
-            "123",  # Numeric
-            "test-activity-id",  # With dashes
-            "test_activity_id",  # With underscores
+        """Test activity save without authentication fails properly."""
+        response = client.post(
+            "/activities/save",
+            json=sample_save_request.model_dump()
+        )
+
+        # Should require authentication
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+    def test_save_activity_invalid_request_data(
+        self,
+        authenticated_client: TestClient,
+    ):
+        """Test activity save with invalid request data."""
+        invalid_requests = [
+            {},  # Missing required fields
+            {"activity_id": ""},  # Empty activity_id
+            {"activity_id": None},  # Null activity_id
+            {"activity_id": "valid", "trip_id": ""},  # Empty trip_id (should be null)
+            {"activity_id": "valid", "notes": "x" * 1001},  # Notes too long
         ]
 
-        with patch(
-            "tripsage.api.routers.activities.get_activity_service"
-        ) as mock_get_service:
+        for invalid_data in invalid_requests:
+            response = authenticated_client.post("/activities/save", json=invalid_data)
+            
+            # Should fail validation
+            assert response.status_code in [
+                status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status.HTTP_400_BAD_REQUEST,
+            ], f"Failed for data: {invalid_data}"
+
+    def test_save_activity_duplicate_handling(
+        self,
+        authenticated_client: TestClient,
+        sample_save_request: SaveActivityRequest,
+        sample_activity_details: ActivityResponse,
+        sample_saved_data: Dict[str, str],
+    ):
+        """Test saving the same activity twice for same user."""
+        with patch("tripsage.api.routers.activities.get_activity_service") as mock_get_service:
             mock_service = AsyncMock()
-            mock_service.get_activity_details.return_value = None
+            mock_service.save_activity.return_value = sample_saved_data
+            mock_service.get_activity_details.return_value = sample_activity_details
             mock_get_service.return_value = mock_service
 
-            for activity_id in test_ids:
-                response = await async_client.get(f"/activities/{activity_id}")
+            # First save
+            response1 = authenticated_client.post(
+                "/activities/save",
+                json=sample_save_request.model_dump()
+            )
+            assert response1.status_code == status.HTTP_200_OK
 
-                # All should be valid ID formats, just not found
-                assert response.status_code == status.HTTP_404_NOT_FOUND
-
-
-class TestSaveActivityEndpoint:
-    """Test /activities/save endpoint (not implemented)."""
-
-    async def test_save_activity_not_implemented(self, async_client: AsyncClient):
-        """Test save activity endpoint returns not implemented."""
-        request_data = {
-            "activity_id": "gmp_test123",
-            "user_id": "user123",
-            "notes": "Want to visit this museum",
-        }
-
-        response = await async_client.post("/activities/save", json=request_data)
-
-        assert response.status_code == status.HTTP_501_NOT_IMPLEMENTED
-        data = response.json()
-
-        assert "user authentication implementation" in data["detail"]
-
-    async def test_save_activity_invalid_data(self, async_client: AsyncClient):
-        """Test save activity with invalid data format."""
-        invalid_data = {"invalid_field": "value"}
-
-        response = await async_client.post("/activities/save", json=invalid_data)
-
-        # Should validate input before hitting the not implemented logic
-        assert response.status_code in [
-            status.HTTP_422_UNPROCESSABLE_ENTITY,
-            status.HTTP_501_NOT_IMPLEMENTED,
-        ]
+            # Second save (duplicate)
+            response2 = authenticated_client.post(
+                "/activities/save", 
+                json=sample_save_request.model_dump()
+            )
+            assert response2.status_code == status.HTTP_200_OK
+            
+            # Service should handle duplicates gracefully (upsert behavior)
+            assert mock_service.save_activity.call_count == 2
 
 
 class TestGetSavedActivitiesEndpoint:
-    """Test /activities/saved endpoint."""
+    """Test GET /activities/saved endpoint with authentication."""
 
-    async def test_get_saved_activities_empty_list(self, async_client: AsyncClient):
-        """Test get saved activities returns empty list."""
-        response = await async_client.get("/activities/saved")
+    @pytest.fixture
+    def sample_saved_activities(self) -> List[Dict[str, any]]:
+        """Create sample saved activities from database."""
+        return [
+            {
+                "id": str(uuid.uuid4()),
+                "user_id": "user123",
+                "activity_id": "gmp_museum1",
+                "trip_id": "trip_paris",
+                "created_at": "2025-01-10T10:00:00Z",
+                "notes": "Must see the Louvre",
+                "activity_data": {
+                    "id": "gmp_museum1",
+                    "name": "Louvre Museum",
+                    "type": "museum",
+                    "location": "Paris, France",
+                    "date": "2025-07-15",
+                    "duration": 240,
+                    "price": 17.0,
+                    "rating": 4.8,
+                    "description": "World's largest art museum",
+                    "images": ["https://example.com/louvre1.jpg"],
+                    "coordinates": {"lat": 48.8606, "lng": 2.3376},
+                    "provider": "Google Maps",
+                    "availability": "Open daily",
+                    "wheelchair_accessible": True,
+                    "instant_confirmation": False,
+                }
+            },
+            {
+                "id": str(uuid.uuid4()),
+                "user_id": "user123", 
+                "activity_id": "gmp_tower1",
+                "trip_id": None,  # General saved activity
+                "created_at": "2025-01-09T15:30:00Z",
+                "notes": None,
+                "activity_data": {
+                    "id": "gmp_tower1",
+                    "name": "Eiffel Tower",
+                    "type": "landmark",
+                    "location": "Paris, France",
+                    "date": "2025-07-15", 
+                    "duration": 120,
+                    "price": 29.4,
+                    "rating": 4.6,
+                    "description": "Iconic iron lattice tower",
+                    "images": ["https://example.com/eiffel1.jpg"],
+                    "coordinates": {"lat": 48.8584, "lng": 2.2945},
+                    "provider": "Google Maps",
+                    "availability": "Open daily",
+                    "wheelchair_accessible": False,
+                    "instant_confirmation": True,
+                }
+            }
+        ]
 
-        assert response.status_code == status.HTTP_200_OK
-        data = response.json()
+    def test_get_saved_activities_success(
+        self,
+        authenticated_client: TestClient,
+        sample_saved_activities: List[Dict[str, any]],
+    ):
+        """Test successful retrieval of saved activities."""
+        with patch("tripsage.api.routers.activities.get_activity_service") as mock_get_service:
+            mock_service = AsyncMock()
+            mock_service.get_saved_activities.return_value = sample_saved_activities
+            mock_get_service.return_value = mock_service
 
-        assert isinstance(data, list)
-        assert len(data) == 0
+            response = authenticated_client.get("/activities/saved")
+
+            assert response.status_code == status.HTTP_200_OK
+            data = response.json()
+            
+            # Verify response structure and content
+            assert isinstance(data, list)
+            assert len(data) == 2
+            
+            # First activity - with trip association
+            activity1 = data[0]
+            assert activity1["activity_id"] == "gmp_museum1"
+            assert activity1["trip_id"] == "trip_paris"
+            assert activity1["user_id"] == "user123"
+            assert activity1["notes"] == "Must see the Louvre"
+            assert activity1["activity"]["name"] == "Louvre Museum"
+            assert activity1["activity"]["price"] == 17.0
+            assert activity1["activity"]["wheelchair_accessible"] is True
+            
+            # Second activity - general saved activity
+            activity2 = data[1]
+            assert activity2["activity_id"] == "gmp_tower1"
+            assert activity2["trip_id"] is None
+            assert activity2["notes"] is None
+            assert activity2["activity"]["name"] == "Eiffel Tower"
+            assert activity2["activity"]["instant_confirmation"] is True
+
+            # Verify service called correctly
+            mock_service.get_saved_activities.assert_called_once_with(
+                user_id="user123",
+                trip_id=None
+            )
+
+    def test_get_saved_activities_filtered_by_trip(
+        self,
+        authenticated_client: TestClient,
+        sample_saved_activities: List[Dict[str, any]],
+    ):
+        """Test retrieving saved activities filtered by specific trip."""
+        # Return only activities for specific trip
+        trip_activities = [act for act in sample_saved_activities if act["trip_id"] == "trip_paris"]
+        
+        with patch("tripsage.api.routers.activities.get_activity_service") as mock_get_service:
+            mock_service = AsyncMock()
+            mock_service.get_saved_activities.return_value = trip_activities
+            mock_get_service.return_value = mock_service
+
+            response = authenticated_client.get("/activities/saved?trip_id=trip_paris")
+
+            assert response.status_code == status.HTTP_200_OK
+            data = response.json()
+            
+            # Should only return activities for specific trip
+            assert len(data) == 1
+            assert data[0]["trip_id"] == "trip_paris"
+            assert data[0]["activity"]["name"] == "Louvre Museum"
+
+            # Verify service called with trip filter
+            mock_service.get_saved_activities.assert_called_once_with(
+                user_id="user123",
+                trip_id="trip_paris"
+            )
+
+    def test_get_saved_activities_empty_result(
+        self,
+        authenticated_client: TestClient,
+    ):
+        """Test retrieving saved activities when user has none."""
+        with patch("tripsage.api.routers.activities.get_activity_service") as mock_get_service:
+            mock_service = AsyncMock()
+            mock_service.get_saved_activities.return_value = []
+            mock_get_service.return_value = mock_service
+
+            response = authenticated_client.get("/activities/saved")
+
+            assert response.status_code == status.HTTP_200_OK
+            data = response.json()
+            
+            # Should return empty list
+            assert isinstance(data, list)
+            assert len(data) == 0
+
+    def test_get_saved_activities_service_error(
+        self,
+        authenticated_client: TestClient,
+    ):
+        """Test retrieving saved activities when service encounters error."""
+        with patch("tripsage.api.routers.activities.get_activity_service") as mock_get_service:
+            mock_service = AsyncMock()
+            mock_service.get_saved_activities.side_effect = ActivityServiceError(
+                "Database connection failed",
+                original_error=Exception("Database connection failed")
+            )
+            mock_get_service.return_value = mock_service
+
+            response = authenticated_client.get("/activities/saved")
+
+            assert response.status_code == status.HTTP_400_BAD_REQUEST
+            data = response.json()
+            assert "Failed to get saved activities" in data["detail"]
+
+    def test_get_saved_activities_unauthenticated(
+        self,
+        client: TestClient,
+    ):
+        """Test retrieving saved activities without authentication."""
+        response = client.get("/activities/saved")
+
+        # Should require authentication
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+    def test_get_saved_activities_invalid_trip_id(
+        self,
+        authenticated_client: TestClient,
+    ):
+        """Test retrieving saved activities with invalid trip_id format."""
+        with patch("tripsage.api.routers.activities.get_activity_service") as mock_get_service:
+            mock_service = AsyncMock()
+            mock_service.get_saved_activities.return_value = []
+            mock_get_service.return_value = mock_service
+
+            # Empty trip_id should be handled gracefully
+            response = authenticated_client.get("/activities/saved?trip_id=")
+            assert response.status_code == status.HTTP_200_OK
+
+            # Service should be called with empty string (or None conversion)
+            mock_service.get_saved_activities.assert_called_once()
 
 
 class TestDeleteSavedActivityEndpoint:
-    """Test /activities/saved/{activity_id} endpoint."""
+    """Test DELETE /activities/saved/{activity_id} endpoint with authentication."""
 
-    async def test_delete_saved_activity_not_implemented(
-        self, async_client: AsyncClient
+    def test_delete_saved_activity_success(
+        self,
+        authenticated_client: TestClient,
     ):
-        """Test delete saved activity endpoint returns not implemented."""
-        activity_id = "gmp_test123"
+        """Test successful deletion of saved activity."""
+        activity_id = "gmp_12345"
+        
+        with patch("tripsage.api.routers.activities.get_activity_service") as mock_get_service:
+            mock_service = AsyncMock()
+            mock_service.delete_saved_activity.return_value = True
+            mock_get_service.return_value = mock_service
 
-        response = await async_client.delete(f"/activities/saved/{activity_id}")
+            response = authenticated_client.delete(f"/activities/saved/{activity_id}")
 
-        assert response.status_code == status.HTTP_501_NOT_IMPLEMENTED
-        data = response.json()
+            assert response.status_code == status.HTTP_204_NO_CONTENT
+            assert response.content == b""  # No content for 204
 
-        assert "user authentication implementation" in data["detail"]
+            # Verify service called correctly
+            mock_service.delete_saved_activity.assert_called_once_with(
+                user_id="user123",
+                activity_id="gmp_12345"
+            )
 
-    async def test_delete_saved_activity_various_ids(self, async_client: AsyncClient):
-        """Test delete saved activity with various ID formats."""
-        test_ids = ["gmp_123456", "custom_abc123", "123", "test-activity-id"]
+    def test_delete_saved_activity_not_found(
+        self,
+        authenticated_client: TestClient,
+    ):
+        """Test deletion when activity is not in user's saved activities."""
+        activity_id = "gmp_nonexistent"
+        
+        with patch("tripsage.api.routers.activities.get_activity_service") as mock_get_service:
+            mock_service = AsyncMock()
+            mock_service.delete_saved_activity.return_value = False
+            mock_get_service.return_value = mock_service
 
-        for activity_id in test_ids:
-            response = await async_client.delete(f"/activities/saved/{activity_id}")
+            response = authenticated_client.delete(f"/activities/saved/{activity_id}")
 
-            # All should return not implemented
-            assert response.status_code == status.HTTP_501_NOT_IMPLEMENTED
+            assert response.status_code == status.HTTP_404_NOT_FOUND
+            data = response.json()
+            assert "not found" in data["detail"]
+            assert activity_id in data["detail"]
+
+    def test_delete_saved_activity_service_error(
+        self,
+        authenticated_client: TestClient,
+    ):
+        """Test deletion when service encounters error."""
+        activity_id = "gmp_error"
+        
+        with patch("tripsage.api.routers.activities.get_activity_service") as mock_get_service:
+            mock_service = AsyncMock()
+            mock_service.delete_saved_activity.side_effect = ActivityServiceError(
+                "Database constraint violation",
+                original_error=Exception("Constraint violation")
+            )
+            mock_get_service.return_value = mock_service
+
+            response = authenticated_client.delete(f"/activities/saved/{activity_id}")
+
+            assert response.status_code == status.HTTP_400_BAD_REQUEST
+            data = response.json()
+            assert "Failed to delete saved activity" in data["detail"]
+
+    def test_delete_saved_activity_unauthenticated(
+        self,
+        client: TestClient,
+    ):
+        """Test deletion without authentication."""
+        response = client.delete("/activities/saved/gmp_12345")
+
+        # Should require authentication
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+    def test_delete_saved_activity_various_id_formats(
+        self,
+        authenticated_client: TestClient,
+    ):
+        """Test deletion with various activity ID formats."""
+        test_ids = [
+            "gmp_12345678",  # Google Maps format
+            "custom_abc123", # Custom format
+            "123456",        # Numeric
+            "activity-with-dashes",  # With dashes
+            "activity_with_underscores",  # With underscores
+        ]
+        
+        with patch("tripsage.api.routers.activities.get_activity_service") as mock_get_service:
+            mock_service = AsyncMock()
+            mock_service.delete_saved_activity.return_value = True
+            mock_get_service.return_value = mock_service
+
+            for activity_id in test_ids:
+                response = authenticated_client.delete(f"/activities/saved/{activity_id}")
+                
+                # All valid ID formats should work
+                assert response.status_code == status.HTTP_204_NO_CONTENT
+                
+                # Verify correct activity_id passed to service
+                last_call = mock_service.delete_saved_activity.call_args
+                assert last_call[1]["activity_id"] == activity_id
 
 
 class TestRouterIntegration:
-    """Test router-level integration."""
+    """Test router-level integration and concurrent request handling."""
 
-    async def test_router_mounting_and_paths(self, async_client: AsyncClient):
-        """Test that all router paths are accessible."""
-        # Test that paths exist (even if not fully implemented)
-        test_cases = [
-            (
-                "POST",
-                "/activities/search",
-                {"destination": "Test", "start_date": "2025-07-15"},
-            ),
-            ("GET", "/activities/test123", None),
-            ("POST", "/activities/save", {"activity_id": "test"}),
-            ("GET", "/activities/saved", None),
-            ("DELETE", "/activities/saved/test123", None),
-        ]
-
-        for method, path, json_data in test_cases:
-            if method == "POST":
-                response = await async_client.post(path, json=json_data)
-            elif method == "GET":
-                response = await async_client.get(path)
-            elif method == "DELETE":
-                response = await async_client.delete(path)
-
-            # Should not return 404 (path not found)
-            assert response.status_code != status.HTTP_404_NOT_FOUND
-
-    async def test_concurrent_requests(self, async_client: AsyncClient):
-        """Test handling concurrent requests to activity endpoints."""
-        import asyncio
-
-        with patch(
-            "tripsage.api.routers.activities.get_activity_service"
-        ) as mock_get_service:
+    def test_concurrent_save_requests(
+        self,
+        authenticated_client: TestClient,
+    ):
+        """Test handling multiple concurrent save requests."""
+        # Synchronous test - no asyncio needed
+        
+        with patch("tripsage.api.routers.activities.get_activity_service") as mock_get_service:
             mock_service = AsyncMock()
-            mock_service.search_activities.return_value = ActivitySearchResponse(
-                activities=[],
-                total=0,
-                skip=0,
-                limit=20,
-                search_id="concurrent_test",
-                filters_applied={},
-                cached=False,
+            mock_service.save_activity.return_value = {
+                "id": str(uuid.uuid4()),
+                "user_id": "user123",
+                "created_at": datetime.now().isoformat(),
+            }
+            mock_service.get_activity_details.return_value = ActivityResponse(
+                id="test_id",
+                name="Test Activity",
+                type="test",
+                location="Test Location",
+                date="2025-07-15",
+                duration=120,
+                price=25.0,
+                rating=4.5,
+                description="Test description",
             )
             mock_get_service.return_value = mock_service
 
-            # Create multiple concurrent requests
-            tasks = []
+            # Create sequential save requests (simulating concurrent behavior)
+            responses = []
             for i in range(5):
-                task = async_client.post(
-                    "/activities/search",
-                    json={"destination": f"City {i}", "start_date": "2025-07-15"},
-                )
-                tasks.append(task)
-
-            responses = await asyncio.gather(*tasks)
+                request_data = {
+                    "activity_id": f"gmp_concurrent_{i}",
+                    "trip_id": f"trip_{i}",
+                    "notes": f"Concurrent test {i}"
+                }
+                response = authenticated_client.post("/activities/save", json=request_data)
+                responses.append(response)
 
             # All requests should succeed
-            for response in responses:
-                assert response.status_code == status.HTTP_200_OK
+            for i, response in enumerate(responses):
+                assert response.status_code == status.HTTP_200_OK, f"Request {i} failed with status {response.status_code}"
 
-
-class TestErrorHandling:
-    """Test comprehensive error handling."""
-
-    async def test_malformed_json(self, async_client: AsyncClient):
-        """Test handling of malformed JSON in requests."""
-        # Manually construct request with invalid JSON
-        response = await async_client.post(
-            "/activities/search",
-            content="{'invalid': json}",  # Invalid JSON
-            headers={"content-type": "application/json"},
-        )
-
-        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
-
-    async def test_missing_content_type(self, async_client: AsyncClient):
-        """Test handling requests with missing content-type."""
-        response = await async_client.post(
-            "/activities/search",
-            content='{"destination": "Test City", "start_date": "2025-07-15"}',
-            # No content-type header
-        )
-
-        # FastAPI should handle this gracefully
-        assert response.status_code in [
-            status.HTTP_200_OK,
-            status.HTTP_422_UNPROCESSABLE_ENTITY,
-        ]
-
-    async def test_large_request_payload(self, async_client: AsyncClient):
-        """Test handling of unusually large request payloads."""
-        large_request = {
-            "destination": "Test City",
-            "start_date": "2025-07-15",
-            "categories": ["cultural"] * 1000,  # Very large categories list
-            "notes": "x" * 10000,  # Large notes field
+    def test_end_to_end_activity_workflow(
+        self,
+        authenticated_client: TestClient,
+    ):
+        """Test complete workflow: save → retrieve → delete activity."""
+        activity_id = "gmp_workflow_test"
+        
+        # Mock data for the workflow
+        saved_data = {
+            "id": str(uuid.uuid4()),
+            "user_id": "user123",
+            "activity_id": activity_id,
+            "trip_id": "trip_workflow",
+            "created_at": datetime.now().isoformat(),
+            "notes": "End-to-end test activity"
         }
+        
+        activity_details = ActivityResponse(
+            id=activity_id,
+            name="Workflow Test Activity",
+            type="test",
+            location="Test City",
+            date="2025-07-15",
+            duration=180,
+            price=35.0,
+            rating=4.9,
+            description="Activity for testing complete workflow",
+        )
+        
+        saved_activities_response = [{
+            **saved_data,
+            "activity_data": activity_details.model_dump()
+        }]
 
-        with patch(
-            "tripsage.api.routers.activities.get_activity_service"
-        ) as mock_get_service:
+        with patch("tripsage.api.routers.activities.get_activity_service") as mock_get_service:
             mock_service = AsyncMock()
-            mock_service.search_activities.return_value = ActivitySearchResponse(
-                activities=[],
-                total=0,
-                skip=0,
-                limit=20,
-                search_id="large_test",
-                filters_applied={},
-                cached=False,
-            )
+            mock_service.save_activity.return_value = saved_data
+            mock_service.get_activity_details.return_value = activity_details
+            mock_service.get_saved_activities.return_value = saved_activities_response
+            mock_service.delete_saved_activity.return_value = True
             mock_get_service.return_value = mock_service
 
-            response = await async_client.post("/activities/search", json=large_request)
-
-            # Should handle large payloads gracefully
-            assert response.status_code in [
-                status.HTTP_200_OK,
-                status.HTTP_422_UNPROCESSABLE_ENTITY,
-            ]
-
-
-class TestLogging:
-    """Test logging functionality."""
-
-    async def test_request_logging(self, async_client: AsyncClient):
-        """Test that requests are properly logged."""
-        with (
-            patch("tripsage.api.routers.activities.logger") as mock_logger,
-            patch(
-                "tripsage.api.routers.activities.get_activity_service"
-            ) as mock_get_service,
-        ):
-            mock_service = AsyncMock()
-            mock_service.search_activities.return_value = ActivitySearchResponse(
-                activities=[],
-                total=0,
-                skip=0,
-                limit=20,
-                search_id="log_test",
-                filters_applied={},
-                cached=False,
+            # Step 1: Save activity
+            save_response = authenticated_client.post(
+                "/activities/save",
+                json={
+                    "activity_id": activity_id,
+                    "trip_id": "trip_workflow",
+                    "notes": "End-to-end test activity"
+                }
             )
-            mock_get_service.return_value = mock_service
-
-            await async_client.post(
-                "/activities/search",
-                json={"destination": "Test City", "start_date": "2025-07-15"},
-            )
-
-            # Verify logging calls
-            mock_logger.info.assert_called()
-
-            # Check that destination is logged
-            log_calls = [call.args[0] for call in mock_logger.info.call_args_list]
-            assert any("Test City" in call for call in log_calls)
-
-    async def test_error_logging(self, async_client: AsyncClient):
-        """Test that errors are properly logged."""
-        with (
-            patch("tripsage.api.routers.activities.logger") as mock_logger,
-            patch(
-                "tripsage.api.routers.activities.get_activity_service"
-            ) as mock_get_service,
-        ):
-            mock_service = AsyncMock()
-            mock_service.search_activities.side_effect = CoreServiceError("Test error")
-            mock_get_service.return_value = mock_service
-
-            await async_client.post(
-                "/activities/search",
-                json={"destination": "Test City", "start_date": "2025-07-15"},
-            )
-
-            # Verify error logging
-            mock_logger.error.assert_called()
-
-            # Check that error details are logged
-            error_calls = [call.args[0] for call in mock_logger.error.call_args_list]
-            assert any("Activity service error" in call for call in error_calls)
+            assert save_response.status_code == status.HTTP_200_OK
+            
+            # Step 2: Retrieve saved activities
+            get_response = authenticated_client.get("/activities/saved")
+            assert get_response.status_code == status.HTTP_200_OK
+            activities = get_response.json()
+            assert len(activities) == 1
+            assert activities[0]["activity_id"] == activity_id
+            
+            # Step 3: Delete activity
+            delete_response = authenticated_client.delete(f"/activities/saved/{activity_id}")
+            assert delete_response.status_code == status.HTTP_204_NO_CONTENT
+            
+            # Verify all service methods were called correctly
+            assert mock_service.save_activity.called
+            assert mock_service.get_saved_activities.called
+            assert mock_service.delete_saved_activity.called

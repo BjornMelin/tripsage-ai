@@ -38,8 +38,70 @@ async def create_trip(
     Returns:
         Created trip
     """
-    # TODO: Implement trip creation logic
-    pass
+    from datetime import datetime, timezone
+
+    from tripsage_core.services.business.trip_service import (
+        TripCreateRequest as ServiceTripCreateRequest,
+    )
+    from tripsage_core.services.business.trip_service import (
+        TripLocation,
+    )
+
+    # Extract user ID from principal
+    user_id = get_principal_id(principal)
+
+    # Convert API destinations to service TripLocation format
+    service_destinations = []
+    for dest in trip_request.destinations:
+        trip_location = TripLocation(
+            name=dest.name,
+            country=dest.country,
+            city=dest.city,
+            coordinates=dest.coordinates.model_dump() if dest.coordinates else None,
+            timezone=None,  # Not provided in API request
+        )
+        service_destinations.append(trip_location)
+
+    # Convert dates from date to datetime (start of day UTC)
+    start_datetime = datetime.combine(
+        trip_request.start_date, datetime.min.time()
+    ).replace(tzinfo=timezone.utc)
+    end_datetime = datetime.combine(trip_request.end_date, datetime.min.time()).replace(
+        tzinfo=timezone.utc
+    )
+
+    # Convert preferences to dict format expected by service
+    preferences_dict = {}
+    if trip_request.preferences:
+        preferences_dict = trip_request.preferences.model_dump()
+
+    # Create service layer request
+    service_request = ServiceTripCreateRequest(
+        title=trip_request.title,
+        description=trip_request.description,
+        start_date=start_datetime,
+        end_date=end_datetime,
+        destinations=service_destinations,
+        preferences=preferences_dict,
+        # Use defaults for fields not in API request
+        budget=None,
+        visibility="private",  # Default visibility
+        tags=[],  # No tags in API request
+    )
+
+    # Call service to create trip
+    trip_response = await trip_service.create_trip(user_id, service_request)
+
+    logger.info(
+        f"Trip created successfully for user {user_id}",
+        extra={
+            "trip_id": trip_response.id,
+            "title": trip_response.title,
+            "user_id": user_id,
+        },
+    )
+
+    return trip_response
 
 
 @router.get("/suggestions", response_model=List[TripSuggestionResponse])

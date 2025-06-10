@@ -3,10 +3,12 @@ Router for unified search endpoints in the TripSage API.
 """
 
 import logging
-from typing import List
+from typing import Any, Dict, List
 
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 
+from tripsage.api.core.dependencies import get_principal_id, require_principal_dep
+from tripsage.api.middlewares.authentication import Principal
 from tripsage.api.schemas.requests.search import UnifiedSearchRequest
 from tripsage.api.schemas.responses.search import UnifiedSearchResponse
 from tripsage_core.services.business.unified_search_service import (
@@ -89,52 +91,151 @@ async def search_suggestions(
         ) from e
 
 
-@router.get("/recent")
-async def get_recent_searches():
+@router.get("/recent", response_model=List[Dict[str, Any]])
+async def get_recent_searches(
+    limit: int = Query(
+        20, ge=1, le=50, description="Maximum number of recent searches"
+    ),
+    principal: Principal = require_principal_dep,
+    search_service=Depends(get_unified_search_service),
+):
     """
     Get recent searches for the authenticated user.
 
-    Note: This endpoint requires user authentication and database integration
-    to store and retrieve user search history.
+    Args:
+        limit: Maximum number of recent searches to return
+        principal: Current authenticated principal
+        search_service: Injected unified search service
+
+    Returns:
+        List of recent searches with metadata
     """
-    logger.info("Get recent searches request")
+    user_id = get_principal_id(principal)
+    logger.info(f"Get recent searches request for user {user_id}, limit: {limit}")
 
-    # TODO: Implement user authentication and search history storage
-    # For now, return empty list to maintain API contract
-    return []
+    try:
+        # Get recent searches using service
+        recent_searches = await search_service.get_recent_searches(
+            user_id=user_id,
+            limit=limit,
+        )
+
+        logger.info(
+            f"Retrieved {len(recent_searches)} recent searches for user {user_id}"
+        )
+        return recent_searches
+
+    except UnifiedSearchServiceError as e:
+        logger.error(f"Failed to get recent searches for user {user_id}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Failed to get recent searches: {str(e)}",
+        )
+    except Exception as e:
+        logger.error(
+            f"Unexpected error getting recent searches for user {user_id}: {e}"
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error",
+        )
 
 
-@router.post("/save")
-async def save_search(request: UnifiedSearchRequest):
+@router.post("/save", response_model=Dict[str, Any])
+async def save_search(
+    request: UnifiedSearchRequest,
+    principal: Principal = require_principal_dep,
+    search_service=Depends(get_unified_search_service),
+):
     """
     Save a search query for the authenticated user.
 
-    Note: This endpoint requires user authentication and database integration
-    to persist user search preferences and history.
-    """
-    logger.info(f"Save search request: {request.query}")
+    Args:
+        request: Unified search request to save
+        principal: Current authenticated principal
+        search_service: Injected unified search service
 
-    # TODO: Implement user authentication and search history storage
-    # For now, return 501 to maintain API contract
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="Save search endpoint requires user authentication implementation",
-    )
+    Returns:
+        Saved search data with ID and metadata
+    """
+    user_id = get_principal_id(principal)
+    logger.info(f"Save search request: '{request.query}' for user {user_id}")
+
+    try:
+        # Save search using service
+        saved_search = await search_service.save_search(
+            user_id=user_id,
+            search_request=request,
+        )
+
+        logger.info(f"Search '{request.query}' saved successfully for user {user_id}")
+        return saved_search
+
+    except UnifiedSearchServiceError as e:
+        logger.error(f"Failed to save search for user {user_id}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Failed to save search: {str(e)}",
+        )
+    except Exception as e:
+        logger.error(f"Unexpected error saving search for user {user_id}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error",
+        )
 
 
 @router.delete("/saved/{search_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_saved_search(search_id: str):
+async def delete_saved_search(
+    search_id: str,
+    principal: Principal = require_principal_dep,
+    search_service=Depends(get_unified_search_service),
+):
     """
     Delete a saved search for the authenticated user.
 
-    Note: This endpoint requires user authentication and database integration
-    to manage user search history.
-    """
-    logger.info(f"Delete saved search request: {search_id}")
+    Args:
+        search_id: Search ID to delete
+        principal: Current authenticated principal
+        search_service: Injected unified search service
 
-    # TODO: Implement user authentication and search history management
-    # For now, return 501 to maintain API contract
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="Delete saved search endpoint requires user authentication implementation",
-    )
+    Returns:
+        204 No Content on successful deletion
+    """
+    user_id = get_principal_id(principal)
+    logger.info(f"Delete saved search request: {search_id} for user {user_id}")
+
+    try:
+        # Delete saved search using service
+        success = await search_service.delete_saved_search(
+            user_id=user_id,
+            search_id=search_id,
+        )
+
+        if not success:
+            logger.warning(f"Search {search_id} not found for user {user_id}")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Saved search {search_id} not found",
+            )
+
+        logger.info(f"Search {search_id} deleted successfully for user {user_id}")
+        # Return 204 No Content (FastAPI handles this automatically with the status_code)
+
+    except UnifiedSearchServiceError as e:
+        logger.error(f"Failed to delete search {search_id} for user {user_id}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Failed to delete saved search: {str(e)}",
+        )
+    except HTTPException:
+        # Re-raise HTTP exceptions as-is
+        raise
+    except Exception as e:
+        logger.error(
+            f"Unexpected error deleting search {search_id} for user {user_id}: {e}"
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal server error",
+        )
