@@ -30,7 +30,7 @@ describe('RegisterForm', () => {
     vi.clearAllMocks()
     
     // Reset environment
-    process.env.NODE_ENV = originalEnv
+    vi.stubEnv('NODE_ENV', originalEnv)
     
     // Setup router mock
     vi.mocked(useRouter).mockReturnValue({
@@ -435,7 +435,7 @@ describe('RegisterForm', () => {
   })
 
   it('should show demo information in development environment', () => {
-    process.env.NODE_ENV = 'development'
+    vi.stubEnv('NODE_ENV', 'development')
     render(<RegisterForm />)
 
     expect(screen.getByText('Development Mode - Test Registration')).toBeInTheDocument()
@@ -445,7 +445,7 @@ describe('RegisterForm', () => {
   })
 
   it('should not show demo information in production environment', () => {
-    process.env.NODE_ENV = 'production'
+    vi.stubEnv('NODE_ENV', 'production')
     render(<RegisterForm />)
 
     expect(screen.queryByText('Development Mode - Test Registration')).not.toBeInTheDocument()

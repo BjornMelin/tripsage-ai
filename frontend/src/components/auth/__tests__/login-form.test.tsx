@@ -30,7 +30,7 @@ describe('LoginForm', () => {
     vi.clearAllMocks()
     
     // Reset environment
-    process.env.NODE_ENV = originalEnv
+    vi.stubEnv('NODE_ENV', originalEnv)
     
     // Setup router mock
     vi.mocked(useRouter).mockReturnValue({
@@ -344,7 +344,7 @@ describe('LoginForm', () => {
   })
 
   it('should show demo credentials in development environment', () => {
-    process.env.NODE_ENV = 'development'
+    vi.stubEnv('NODE_ENV', 'development')
     render(<LoginForm />)
 
     expect(screen.getByText('Demo Credentials (Development Only)')).toBeInTheDocument()
@@ -353,7 +353,7 @@ describe('LoginForm', () => {
   })
 
   it('should not show demo credentials in production environment', () => {
-    process.env.NODE_ENV = 'production'
+    vi.stubEnv('NODE_ENV', 'production')
     render(<LoginForm />)
 
     expect(screen.queryByText('Demo Credentials (Development Only)')).not.toBeInTheDocument()
