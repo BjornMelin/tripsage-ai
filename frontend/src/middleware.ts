@@ -1,5 +1,5 @@
-import { createServerClient } from "@supabase/ssr";
 import { type NextRequest, NextResponse } from "next/server";
+import { jwtVerify } from "jose";
 
 // Simple in-memory rate limiter with automatic cleanup
 class RateLimiter {
@@ -57,58 +57,74 @@ class RateLimiter {
 
 const rateLimiter = new RateLimiter();
 
-export async function updateSession(request: NextRequest) {
-  let supabaseResponse = NextResponse.next({
-    request,
-  });
-
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-  if (!supabaseUrl || !supabaseAnonKey) {
-    console.warn("Missing Supabase environment variables");
-    return supabaseResponse;
-  }
-
-  const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
-    cookies: {
-      getAll() {
-        return request.cookies.getAll();
-      },
-      setAll(cookiesToSet) {
-        cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
-        supabaseResponse = NextResponse.next({
-          request,
-        });
-        cookiesToSet.forEach(({ name, value, options }) =>
-          supabaseResponse.cookies.set(name, value, options)
-        );
-      },
-    },
-  });
-
-  // Refresh session if expired - required for Server Components
+// JWT verification helper
+async function verifyJwtToken(token: string): Promise<boolean> {
   try {
-    await supabase.auth.getUser();
-  } catch (error) {
-    // Log the error but don't fail the request
-    console.warn("Supabase auth error:", error);
-  }
+    const jwtSecret = process.env.JWT_SECRET;
+    if (!jwtSecret) {
+      console.warn("JWT_SECRET environment variable is not set");
+      return false;
+    }
 
-  return supabaseResponse;
+    const secret = new TextEncoder().encode(jwtSecret);
+    await jwtVerify(token, secret);
+    return true;
+  } catch (error) {
+    console.warn("JWT verification failed:", error);
+    return false;
+  }
 }
 
+// Protected routes configuration
+const protectedRoutes = [
+  "/dashboard",
+  "/chat",
+  "/trips",
+  "/profile",
+  "/search",
+  "/settings",
+];
+
+const authRoutes = ["/login", "/register", "/reset-password"];
+
 export async function middleware(request: NextRequest) {
-  // Handle Supabase auth for all routes first
-  const response = await updateSession(request);
+  const { pathname } = request.nextUrl;
+  const response = NextResponse.next();
+
+  // Handle authentication for protected routes
+  if (protectedRoutes.some(route => pathname.startsWith(route))) {
+    // Check for JWT token in Authorization header or cookie
+    const authHeader = request.headers.get("authorization");
+    const token = authHeader?.replace("Bearer ", "") || 
+                  request.cookies.get("auth-token")?.value;
+
+    if (!token || !(await verifyJwtToken(token))) {
+      // Redirect to login if not authenticated
+      const loginUrl = new URL("/login", request.url);
+      loginUrl.searchParams.set("redirectTo", pathname);
+      return NextResponse.redirect(loginUrl);
+    }
+  }
+
+  // Redirect authenticated users away from auth pages
+  if (authRoutes.some(route => pathname.startsWith(route))) {
+    const authHeader = request.headers.get("authorization");
+    const token = authHeader?.replace("Bearer ", "") || 
+                  request.cookies.get("auth-token")?.value;
+
+    if (token && (await verifyJwtToken(token))) {
+      const redirectTo = request.nextUrl.searchParams.get("redirectTo") || "/dashboard";
+      return NextResponse.redirect(new URL(redirectTo, request.url));
+    }
+  }
 
   // Only apply rate limiting to chat API
-  if (!request.nextUrl.pathname.startsWith("/api/chat")) {
+  if (!pathname.startsWith("/api/chat")) {
     return response;
   }
 
   // Skip rate limiting for attachment uploads (different limits apply)
-  if (request.nextUrl.pathname === "/api/chat/attachments") {
+  if (pathname === "/api/chat/attachments") {
     return response;
   }
 

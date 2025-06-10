@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useAuth } from "@/contexts/auth-context";
+import { useAuth, useAuthErrors } from "@/stores/auth-store";
 import { AlertCircle, Eye, EyeOff, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -24,11 +24,13 @@ interface LoginFormProps {
 
 export function LoginForm({ redirectTo = "/dashboard", className }: LoginFormProps) {
   const router = useRouter();
-  const { signIn, isLoading, error, isAuthenticated, clearError } = useAuth();
+  const { login, isAuthenticated, isLoading } = useAuth();
+  const { loginError } = useAuthErrors();
   const [showPassword, setShowPassword] = React.useState(false);
   const [formData, setFormData] = useState({
     email: "",
     password: "",
+    rememberMe: false,
   });
 
   // Redirect if already authenticated
@@ -38,31 +40,32 @@ export function LoginForm({ redirectTo = "/dashboard", className }: LoginFormPro
     }
   }, [isAuthenticated, router, redirectTo]);
 
-  // Clear errors when component unmounts or form changes
-  useEffect(() => {
-    return () => clearError();
-  }, [clearError]);
-
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    const { email, password } = formData;
+    const { email, password, rememberMe } = formData;
 
     if (!email || !password) {
       return;
     }
 
-    await signIn(email, password);
+    const success = await login({
+      email,
+      password,
+      rememberMe,
+    });
+
+    if (success) {
+      router.push(redirectTo);
+    }
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-
-    // Clear errors when user starts typing
-    if (error) {
-      clearError();
-    }
+    const { name, value, type, checked } = e.target;
+    setFormData((prev) => ({ 
+      ...prev, 
+      [name]: type === "checkbox" ? checked : value 
+    }));
   };
 
   return (
@@ -78,10 +81,10 @@ export function LoginForm({ redirectTo = "/dashboard", className }: LoginFormPro
       <CardContent className="space-y-6">
         <form onSubmit={handleSubmit} className="space-y-5">
           {/* Error Alert */}
-          {error && (
+          {loginError && (
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{error}</AlertDescription>
+              <AlertDescription>{loginError}</AlertDescription>
             </Alert>
           )}
 

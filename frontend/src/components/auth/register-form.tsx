@@ -12,7 +12,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
-import { useAuth } from "@/contexts/auth-context";
+import { useAuth, useAuthErrors } from "@/stores/auth-store";
 import {
   AlertCircle,
   CheckCircle2,
@@ -41,12 +41,14 @@ export function RegisterForm({
   className,
 }: RegisterFormProps) {
   const router = useRouter();
-  const { signUp, isLoading, error, isAuthenticated, clearError } = useAuth();
+  const { register, isAuthenticated, isLoading } = useAuth();
+  const { registerError } = useAuthErrors();
   const [showPassword, setShowPassword] = React.useState(false);
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
     password: "",
+    acceptTerms: false,
   });
 
   // Redirect if already authenticated
@@ -55,11 +57,6 @@ export function RegisterForm({
       router.push(redirectTo);
     }
   }, [isAuthenticated, router, redirectTo]);
-
-  // Clear errors when component unmounts or form changes
-  useEffect(() => {
-    return () => clearError();
-  }, [clearError]);
 
   // Password strength calculator
   const passwordStrength = useMemo((): PasswordStrength => {
@@ -110,9 +107,9 @@ export function RegisterForm({
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    const { email, password, fullName } = formData;
+    const { email, password, fullName, acceptTerms } = formData;
 
-    if (!email || !password || !fullName) {
+    if (!email || !password || !fullName || !acceptTerms) {
       return;
     }
 
@@ -122,17 +119,31 @@ export function RegisterForm({
       console.warn("Weak password, but allowing registration");
     }
 
-    await signUp(email, password, fullName);
+    // Split fullName into firstName and lastName
+    const nameParts = fullName.trim().split(" ");
+    const firstName = nameParts[0] || "";
+    const lastName = nameParts.slice(1).join(" ") || "";
+
+    const success = await register({
+      email,
+      password,
+      confirmPassword: password, // For now, use the same password
+      firstName,
+      lastName,
+      acceptTerms,
+    });
+
+    if (success) {
+      router.push(redirectTo);
+    }
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-
-    // Clear errors when user starts typing
-    if (error) {
-      clearError();
-    }
+    const { name, value, type, checked } = e.target;
+    setFormData((prev) => ({ 
+      ...prev, 
+      [name]: type === "checkbox" ? checked : value 
+    }));
   };
 
   return (
@@ -149,10 +160,10 @@ export function RegisterForm({
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Error Alert */}
-          {error && (
+          {registerError && (
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{error}</AlertDescription>
+              <AlertDescription>{registerError}</AlertDescription>
             </Alert>
           )}
 

@@ -241,42 +241,40 @@ export const useAuthStore = create<AuthState>()(
               throw new Error("Email and password are required");
             }
 
-            // Mock API call - replace with actual implementation
-            await new Promise((resolve) => setTimeout(resolve, 1000));
+            // Call real authentication API
+            const response = await fetch("/api/auth/login", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                email: credentials.email,
+                password: credentials.password,
+                rememberMe: credentials.rememberMe,
+              }),
+            });
 
-            // Mock successful login
-            const now = getCurrentTimestamp();
-            const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(); // 24 hours
+            if (!response.ok) {
+              const errorData = await response.json();
+              throw new Error(errorData.error || "Login failed");
+            }
 
-            const mockUser: User = {
-              id: generateId(),
-              email: credentials.email,
-              displayName: credentials.email.split("@")[0],
-              isEmailVerified: true,
-              createdAt: now,
-              updatedAt: now,
-            };
+            const authData = await response.json();
 
-            const mockTokenInfo: TokenInfo = {
-              accessToken: `mock_token_${generateId()}`,
-              refreshToken: `mock_refresh_${generateId()}`,
-              expiresAt,
-              tokenType: "Bearer",
-            };
+            // Validate response data
+            const userResult = UserSchema.safeParse(authData.user);
+            const tokenResult = TokenInfoSchema.safeParse(authData.tokenInfo);
+            const sessionResult = SessionSchema.safeParse(authData.session);
 
-            const mockSession: Session = {
-              id: generateId(),
-              userId: mockUser.id,
-              createdAt: now,
-              lastActivity: now,
-              expiresAt,
-            };
+            if (!userResult.success || !tokenResult.success || !sessionResult.success) {
+              throw new Error("Invalid response data from server");
+            }
 
             set({
               isAuthenticated: true,
-              user: mockUser,
-              tokenInfo: mockTokenInfo,
-              session: mockSession,
+              user: userResult.data,
+              tokenInfo: tokenResult.data,
+              session: sessionResult.data,
               isLoggingIn: false,
               loginError: null,
             });
@@ -354,8 +352,18 @@ export const useAuthStore = create<AuthState>()(
           set({ isLoading: true });
 
           try {
-            // Mock API call to invalidate token
-            await new Promise((resolve) => setTimeout(resolve, 500));
+            const { tokenInfo } = get();
+            
+            // Call logout API if we have a token
+            if (tokenInfo?.accessToken) {
+              await fetch("/api/auth/logout", {
+                method: "POST",
+                headers: {
+                  "Authorization": `Bearer ${tokenInfo.accessToken}`,
+                  "Content-Type": "application/json",
+                },
+              });
+            }
 
             set({
               isAuthenticated: false,
@@ -481,20 +489,31 @@ export const useAuthStore = create<AuthState>()(
           set({ isRefreshingToken: true });
 
           try {
-            // Mock API call
-            await new Promise((resolve) => setTimeout(resolve, 500));
+            // Call refresh token API
+            const response = await fetch("/api/auth/refresh", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                refreshToken: tokenInfo.refreshToken,
+              }),
+            });
 
-            const newExpiresAt = new Date(
-              Date.now() + 24 * 60 * 60 * 1000
-            ).toISOString();
-            const newTokenInfo: TokenInfo = {
-              ...tokenInfo,
-              accessToken: `mock_token_${generateId()}`,
-              expiresAt: newExpiresAt,
-            };
+            if (!response.ok) {
+              throw new Error("Token refresh failed");
+            }
+
+            const newTokenData = await response.json();
+
+            // Validate response data
+            const tokenResult = TokenInfoSchema.safeParse(newTokenData);
+            if (!tokenResult.success) {
+              throw new Error("Invalid token data from server");
+            }
 
             set({
-              tokenInfo: newTokenInfo,
+              tokenInfo: tokenResult.data,
               isRefreshingToken: false,
             });
 

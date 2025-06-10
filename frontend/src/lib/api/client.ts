@@ -72,10 +72,10 @@ export async function fetchApi<T = any>(
   if (typeof window !== "undefined") {
     try {
       // Get token from auth store - this should be passed from the hook
-      const storedAuth = localStorage.getItem("auth-store");
+      const storedAuth = localStorage.getItem("auth-storage");
       if (storedAuth) {
         const authState = JSON.parse(storedAuth);
-        const token = authState?.state?.tokenInfo?.access_token;
+        const token = authState?.state?.tokenInfo?.accessToken;
         if (token) {
           headers.set("Authorization", `Bearer ${token}`);
         }
