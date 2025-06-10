@@ -16,6 +16,10 @@ import {
 } from "@/lib/websocket/websocket-client";
 import { useCallback, useEffect, useRef, useState } from "react";
 
+// Re-export from separate hooks for backwards compatibility
+export { useAgentStatus } from "./use-agent-status";
+export { useAgentStatusWebSocket } from "./use-agent-status-websocket";
+
 // Hook configuration
 export interface UseWebSocketConfig {
   url: string;
@@ -270,24 +274,6 @@ export function useChatWebSocket(
 }
 
 /**
- * Agent status WebSocket hook
- */
-export function useAgentStatusWebSocket(
-  userId: string,
-  token: string,
-  config: Partial<UseWebSocketConfig> = {}
-) {
-  const factory = new WebSocketClientFactory(
-    process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:8000/api",
-    { debug: process.env.NODE_ENV === "development" }
-  );
-
-  const client = factory.createAgentStatusClient(userId, token, config);
-
-  return useWebSocketWithClient(client, config.autoConnect !== false);
-}
-
-/**
  * WebSocket hook with existing client
  */
 function useWebSocketWithClient(
@@ -507,46 +493,5 @@ export function useChatMessages(
     isTyping,
     isConnected,
     sendMessage: sendChatMessage,
-  };
-}
-
-/**
- * Agent status listener hook
- */
-export function useAgentStatus(
-  userId: string,
-  token: string,
-  onStatusUpdate?: (status: any) => void
-) {
-  const [agentStatus, setAgentStatus] = useState<any>(null);
-  const [isActive, setIsActive] = useState(false);
-
-  const { isConnected, on, off } = useAgentStatusWebSocket(userId, token);
-
-  useEffect(() => {
-    const handleStatusUpdate = (event: WebSocketEvent) => {
-      const status = event.payload.agent_status;
-      setAgentStatus(status);
-      setIsActive(status?.is_active || false);
-      onStatusUpdate?.(status);
-    };
-
-    on(WebSocketEventType.AGENT_STATUS_UPDATE, handleStatusUpdate);
-    on(WebSocketEventType.AGENT_TASK_START, handleStatusUpdate);
-    on(WebSocketEventType.AGENT_TASK_PROGRESS, handleStatusUpdate);
-    on(WebSocketEventType.AGENT_TASK_COMPLETE, handleStatusUpdate);
-
-    return () => {
-      off(WebSocketEventType.AGENT_STATUS_UPDATE, handleStatusUpdate);
-      off(WebSocketEventType.AGENT_TASK_START, handleStatusUpdate);
-      off(WebSocketEventType.AGENT_TASK_PROGRESS, handleStatusUpdate);
-      off(WebSocketEventType.AGENT_TASK_COMPLETE, handleStatusUpdate);
-    };
-  }, [on, off, onStatusUpdate]);
-
-  return {
-    agentStatus,
-    isActive,
-    isConnected,
   };
 }

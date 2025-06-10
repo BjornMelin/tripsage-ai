@@ -89,7 +89,11 @@ describe("useErrorHandler", () => {
 
     it("should log error in development mode", async () => {
       const originalEnv = process.env.NODE_ENV;
-      process.env.NODE_ENV = "development";
+      Object.defineProperty(process.env, "NODE_ENV", {
+        value: "development",
+        writable: true,
+        configurable: true,
+      });
 
       const { result } = renderHook(() => useErrorHandler());
       const testError = new Error("Test error");
@@ -105,12 +109,20 @@ describe("useErrorHandler", () => {
         additionalInfo
       );
 
-      process.env.NODE_ENV = originalEnv;
+      Object.defineProperty(process.env, "NODE_ENV", {
+        value: originalEnv,
+        writable: true,
+        configurable: true,
+      });
     });
 
     it("should not log error in production mode", async () => {
       const originalEnv = process.env.NODE_ENV;
-      process.env.NODE_ENV = "production";
+      Object.defineProperty(process.env, "NODE_ENV", {
+        value: "production",
+        writable: true,
+        configurable: true,
+      });
 
       const { result } = renderHook(() => useErrorHandler());
       const testError = new Error("Test error");
@@ -121,7 +133,11 @@ describe("useErrorHandler", () => {
 
       expect(consoleErrorSpy).not.toHaveBeenCalled();
 
-      process.env.NODE_ENV = originalEnv;
+      Object.defineProperty(process.env, "NODE_ENV", {
+        value: originalEnv,
+        writable: true,
+        configurable: true,
+      });
     });
 
     it("should generate session ID when not present", async () => {
@@ -180,11 +196,11 @@ describe("useErrorHandler", () => {
       );
 
       // Cleanup
-      delete (window as any).__USER_STORE__;
+      (window as any).__USER_STORE__ = undefined;
     });
 
     it("should handle missing user store gracefully", async () => {
-      delete (window as any).__USER_STORE__;
+      (window as any).__USER_STORE__ = undefined;
 
       const { result } = renderHook(() => useErrorHandler());
       const testError = new Error("Test error");
@@ -323,7 +339,7 @@ describe("useErrorHandler", () => {
 
     it("should handle window access errors gracefully", async () => {
       const originalWindow = global.window;
-      delete (global as any).window;
+      (global as any).window = undefined;
 
       const { result } = renderHook(() => useErrorHandler());
       const testError = new Error("Test error");

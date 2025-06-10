@@ -3,12 +3,12 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import type { ConnectionStatus } from "@/lib/websocket/websocket-client";
+import type { ConnectionStatus as ConnectionStatusType } from "@/lib/websocket/websocket-client";
 import { AlertTriangle, CheckCircle2, Loader2, Wifi, WifiOff } from "lucide-react";
 import React, { useEffect, useState } from "react";
 
 interface ConnectionStatusProps {
-  status: ConnectionStatus;
+  status: ConnectionStatusType;
   onReconnect?: () => void;
   className?: string;
   compact?: boolean;
@@ -30,9 +30,8 @@ export function ConnectionStatus({
       // Hide status after 2 seconds when connected
       const timer = setTimeout(() => setShowStatus(false), 2000);
       return () => clearTimeout(timer);
-    } else {
-      setShowStatus(true);
     }
+    setShowStatus(true);
   }, [status]);
 
   // Auto-hide connected status after a delay

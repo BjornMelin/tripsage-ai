@@ -90,12 +90,14 @@ export function useWebSocketAgent(
 
   // Heartbeat mechanism to detect broken connections
   const heartbeat = useCallback(() => {
-    clearTimeout(pingTimeoutRef.current);
+    if (pingTimeoutRef.current) {
+      clearTimeout(pingTimeoutRef.current);
+    }
     // Use a conservative assumption of latency plus server ping interval
     pingTimeoutRef.current = setTimeout(() => {
       if (wsRef.current) {
-        console.warn("WebSocket heartbeat timeout - terminating connection");
-        wsRef.current.terminate?.() || wsRef.current.close();
+        console.warn("WebSocket heartbeat timeout - closing connection");
+        wsRef.current.close();
       }
     }, heartbeatInterval + 1000);
   }, [heartbeatInterval]);
@@ -133,7 +135,7 @@ export function useWebSocketAgent(
     setConnectionStatus("reconnecting");
 
     // Exponential backoff: 1s, 2s, 4s, 8s, 16s, 32s, etc.
-    const delay = Math.min(reconnectInterval * Math.pow(2, reconnectCount), 30000);
+    const delay = Math.min(reconnectInterval * 2 ** reconnectCount, 30000);
 
     reconnectTimeoutRef.current = setTimeout(() => {
       setReconnectCount((prev) => prev + 1);
@@ -266,10 +268,9 @@ export function useWebSocketAgent(
           `Message queued (${messageQueueRef.current.length}/${messageQueueSize})`
         );
         return false;
-      } else {
-        console.warn("Message queue is full, dropping message");
-        return false;
       }
+      console.warn("Message queue is full, dropping message");
+      return false;
     },
     [generateMessageId, messageQueueSize]
   );

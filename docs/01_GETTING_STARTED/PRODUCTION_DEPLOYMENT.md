@@ -29,12 +29,15 @@
 supabase login
 supabase projects list
 
-# Enable extensions via dashboard or CLI
+# Link to your project
+supabase link --project-ref [your-project-ref]
+
+# Apply migrations to enable extensions
+supabase db push
+
+# OR enable extensions via dashboard or CLI
 supabase extensions enable vector
 supabase extensions enable vectorscale  # If available
-
-# OR run SQL migration
-psql -h [supabase-host] -U postgres -d postgres -f migrations/20250526_01_enable_pgvector_extensions.sql
 ```
 
 ### 2. Application Deployment
@@ -85,10 +88,12 @@ If issues arise, follow this rollback sequence:
 
 ### Database Rollback (If Needed)
 
-1. **Extension Removal**: Run rollback script if vector extensions cause issues
+1. **Migration Rollback**: Use Supabase CLI to rollback migrations if needed
 
    ```bash
-   psql -f migrations/20250526_01_enable_pgvector_extensions_rollback.sql
+   supabase db reset
+   # Or create a rollback migration
+   supabase migration new rollback_pgvector_extensions
    ```
 
 2. **Data Restoration**: Restore from backup if data corruption occurs
@@ -153,7 +158,8 @@ If issues arise, follow this rollback sequence:
 - [Supabase pgvector Documentation](https://supabase.com/docs/guides/database/extensions/pgvector)
 - [pgvector Performance Tuning Guide](https://github.com/pgvector/pgvector#performance)
 - [Migration Summary Documentation](./MIGRATION_SUMMARY.md)
-- [Rollback Script](../migrations/20250526_01_enable_pgvector_extensions_rollback.sql)
+- [Supabase Migration Guide](https://supabase.com/docs/guides/cli/local-development#database-migrations)
+- [Supabase CLI Reference](https://supabase.com/docs/reference/cli)
 
 ---
 

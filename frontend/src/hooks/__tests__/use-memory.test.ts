@@ -92,7 +92,8 @@ describe("Memory Hooks", () => {
       });
 
       expect(mockApiClient.get).not.toHaveBeenCalled();
-      expect(result.current.isIdle).toBe(true);
+      expect(result.current.isLoading).toBe(false);
+      expect(result.current.data).toBeUndefined();
     });
 
     it("should handle API errors gracefully", async () => {
@@ -127,15 +128,9 @@ describe("Memory Hooks", () => {
 
       mockApiClient.get.mockResolvedValueOnce({ data: mockResults });
 
-      const { result } = renderHook(
-        () =>
-          useSearchMemories("user-123", {
-            query: "travel preferences",
-            limit: 10,
-            filters: { category: "accommodation" },
-          }),
-        { wrapper: createWrapper() }
-      );
+      const { result } = renderHook(() => useSearchMemories(), {
+        wrapper: createWrapper(),
+      });
 
       await waitFor(() => {
         expect(result.current.isSuccess).toBe(true);
@@ -154,13 +149,9 @@ describe("Memory Hooks", () => {
     it("should handle search without filters", async () => {
       mockApiClient.get.mockResolvedValueOnce({ data: [] });
 
-      const { result } = renderHook(
-        () =>
-          useSearchMemories("user-123", {
-            query: "hotels",
-          }),
-        { wrapper: createWrapper() }
-      );
+      const { result } = renderHook(() => useSearchMemories(), {
+        wrapper: createWrapper(),
+      });
 
       await waitFor(() => {
         expect(result.current.isSuccess).toBe(true);
@@ -197,10 +188,8 @@ describe("Memory Hooks", () => {
             timestamp: "2024-01-01T10:01:00Z",
           },
         ],
-        metadata: {
-          sessionId: "session-123",
-          userId: "user-123",
-        },
+        userId: "user-123",
+        sessionId: "session-123",
       };
 
       result.current.mutate(conversationData);
@@ -225,7 +214,8 @@ describe("Memory Hooks", () => {
 
       const conversationData = {
         messages: [],
-        metadata: { sessionId: "test", userId: "test" },
+        userId: "test",
+        sessionId: "test",
       };
 
       result.current.mutate(conversationData);
@@ -243,7 +233,7 @@ describe("Memory Hooks", () => {
       const mockResponse = { status: "success" };
       mockApiClient.put.mockResolvedValueOnce({ data: mockResponse });
 
-      const { result } = renderHook(() => useUpdatePreferences(), {
+      const { result } = renderHook(() => useUpdatePreferences("user-123"), {
         wrapper: createWrapper(),
       });
 
@@ -364,7 +354,8 @@ describe("Memory Hooks", () => {
         messages: [
           { role: "user", content: "test", timestamp: "2024-01-01T10:00:00Z" },
         ],
-        metadata: { sessionId: "test", userId: "user-123" },
+        userId: "user-123",
+        sessionId: "test",
       });
 
       await waitFor(() => {
@@ -381,10 +372,9 @@ describe("Memory Hooks", () => {
       });
 
       // Search memories
-      const { result: searchResult } = renderHook(
-        () => useSearchMemories("user-123", { query: "test" }),
-        { wrapper: createWrapper() }
-      );
+      const { result: searchResult } = renderHook(() => useSearchMemories(), {
+        wrapper: createWrapper(),
+      });
 
       await waitFor(() => {
         expect(searchResult.current.isSuccess).toBe(true);

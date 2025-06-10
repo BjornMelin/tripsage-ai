@@ -128,11 +128,12 @@ export function useDeals() {
           case "price":
             comparison = a.price - b.price;
             break;
-          case "discount":
+          case "discount": {
             const discountA = a.discountPercentage || 0;
             const discountB = b.discountPercentage || 0;
             comparison = discountA - discountB;
             break;
+          }
           case "expiry":
             comparison =
               new Date(a.expiryDate).getTime() - new Date(b.expiryDate).getTime();

@@ -203,8 +203,6 @@ class FlightFactory(BaseFactory):
             "booking_status": BookingStatus.VIEWED,
             "data_source": DataSource.DUFFEL,
             "segment_number": 1,
-            "flight_number": "JL061",
-            "duration_minutes": 720,  # 12 hours
         }
         return {**defaults, **kwargs}
 
@@ -218,7 +216,6 @@ class FlightFactory(BaseFactory):
             destination="LAX",
             departure_time=departure_time,
             arrival_time=departure_time + timedelta(hours=11),
-            flight_number="JL062",
             segment_number=2,
             **kwargs,
         )
@@ -234,8 +231,6 @@ class FlightFactory(BaseFactory):
             departure_time=departure_time,
             arrival_time=departure_time + timedelta(hours=1.5),
             price=200.00,
-            duration_minutes=90,
-            flight_number="AA1234",
             **kwargs,
         )
 

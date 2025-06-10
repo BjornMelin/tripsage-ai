@@ -190,9 +190,9 @@ export default function FlightResultsPage() {
                             {flight.duration}
                           </div>
                           <div className="flex items-center">
-                            <div className="w-16 h-px bg-border"></div>
+                            <div className="w-16 h-px bg-border" />
                             <ArrowRight className="h-3 w-3 mx-1 text-muted-foreground" />
-                            <div className="w-16 h-px bg-border"></div>
+                            <div className="w-16 h-px bg-border" />
                           </div>
                           <div className="text-xs text-muted-foreground">
                             {flight.stops === 0
