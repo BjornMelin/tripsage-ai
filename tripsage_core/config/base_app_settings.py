@@ -54,7 +54,7 @@ class DatabaseConfig(BaseSettings):
     supabase_service_role_key: Optional[SecretStr] = Field(default=None)
     supabase_jwt_secret: SecretStr = Field(
         default=SecretStr("test-jwt-secret"),
-        description="Supabase JWT secret for local token validation"
+        description="Supabase JWT secret for local token validation",
     )
     supabase_project_id: Optional[str] = Field(
         default=None, description="Supabase project ID"
@@ -450,7 +450,8 @@ class CoreAppSettings(BaseSettings):
 
             # Check Supabase JWT secret
             if self.database.supabase_jwt_secret.get_secret_value() in [
-                "test-jwt-secret", "fallback-secret-for-development-only"
+                "test-jwt-secret",
+                "fallback-secret-for-development-only",
             ]:
                 errors.append("Supabase JWT secret must be changed in production")
 
@@ -474,18 +475,21 @@ def settings() -> CoreAppSettings:
     """Get the core application settings instance."""
     return get_settings()
 
+
 # For backward compatibility, create a module-level attribute
 class _SettingsProxy:
     """Proxy object that lazily loads settings on first access."""
+
     _instance = None
-    
+
     def __getattr__(self, name):
         if self._instance is None:
             self._instance = get_settings()
         return getattr(self._instance, name)
-    
+
     def __repr__(self):
         return f"<SettingsProxy({get_settings()})>"
+
 
 settings = _SettingsProxy()
 

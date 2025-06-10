@@ -16,7 +16,9 @@ class TestAccommodationRouter:
     def setup_method(self):
         """Set up test client and mocks."""
         # Mock cache service before importing app
-        self.cache_patch = patch("tripsage_core.services.infrastructure.cache_service.get_cache_service")
+        self.cache_patch = patch(
+            "tripsage_core.services.infrastructure.cache_service.get_cache_service"
+        )
         mock_get_cache = self.cache_patch.start()
         mock_cache = AsyncMock()
         mock_cache.get = AsyncMock(return_value=None)
@@ -26,13 +28,14 @@ class TestAccommodationRouter:
         mock_cache.ping = AsyncMock(return_value=True)
         mock_cache._connected = True
         mock_get_cache.return_value = mock_cache
-        
+
         # Import app after patching
         from tripsage.api.main import app
+
         self.client = TestClient(app)
         self.mock_service = Mock()
         self.sample_accommodation = AccommodationFactory.create()
-        
+
     def teardown_method(self):
         """Clean up patches."""
         self.cache_patch.stop()

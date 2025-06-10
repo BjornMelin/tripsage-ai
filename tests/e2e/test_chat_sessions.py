@@ -1,94 +1,108 @@
 """Tests for chat session management endpoints."""
 
 from datetime import datetime, timezone
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
 import pytest
 from fastapi import status
 from fastapi.testclient import TestClient
 
-from tripsage_core.models.db.chat import (
-    ChatMessageDB,
-    ChatSessionDB,
-    ChatSessionWithStats,
-    MessageWithTokenEstimate,
-    RecentMessagesResponse,
-)
-
 
 def create_test_client(mock_settings_and_redis, mock_chat_service_instance):
     """Create FastAPI test client with minimal middleware for testing."""
     from fastapi import FastAPI
+
     from tests.test_config import MockCacheService, MockDatabaseService
-    
+
     # Create comprehensive mock instances
     mock_cache = MockCacheService()
     mock_db = MockDatabaseService()
-    
+
     # Create a mock principal for authentication
     from tripsage.api.middlewares.authentication import Principal
+
     mock_principal = Principal(
         id="test-user-123",
         type="user",
         email="test@example.com",
         auth_method="jwt",
         scopes=["chat", "search"],
-        metadata={"test": True}
+        metadata={"test": True},
     )
-    
+
     # Mock all external services
     with (
         # Mock all service getters globally
-        patch("tripsage_core.services.infrastructure.cache_service.get_cache_service", 
-              return_value=mock_cache),
-        patch("tripsage_core.services.infrastructure.database_service.get_database_service", 
-              return_value=mock_db),
-        
+        patch(
+            "tripsage_core.services.infrastructure.cache_service.get_cache_service",
+            return_value=mock_cache,
+        ),
+        patch(
+            "tripsage_core.services.infrastructure.database_service.get_database_service",
+            return_value=mock_db,
+        ),
         # Mock settings
-        patch("tripsage_core.config.base_app_settings.get_settings", 
-              side_effect=lambda: mock_settings_and_redis["settings"]),
-        patch("tripsage.api.core.config.get_settings", 
-              side_effect=lambda: mock_settings_and_redis["settings"]),
-        
+        patch(
+            "tripsage_core.config.base_app_settings.get_settings",
+            side_effect=lambda: mock_settings_and_redis["settings"],
+        ),
+        patch(
+            "tripsage.api.core.config.get_settings",
+            side_effect=lambda: mock_settings_and_redis["settings"],
+        ),
         # Mock authentication dependencies - patch the underlying functions
-        patch("tripsage.api.core.dependencies.require_principal", 
-              return_value=mock_principal),
-        patch("tripsage.api.core.dependencies.get_current_principal", 
-              return_value=mock_principal),
+        patch(
+            "tripsage.api.core.dependencies.require_principal",
+            return_value=mock_principal,
+        ),
+        patch(
+            "tripsage.api.core.dependencies.get_current_principal",
+            return_value=mock_principal,
+        ),
     ):
         # Create a minimal FastAPI app for testing, bypassing all middlewares
         app = FastAPI(title="Test TripSage API")
-        
+
         # Include only the chat router we want to test
         from tripsage.api.routers import chat
+
         app.include_router(chat.router, prefix="/api/v1/chat", tags=["chat"])
-        
+
         # Override dependencies directly on the app
-        from tripsage.api.core.dependencies import require_principal_dep, get_chat_service_dep
-        
+        from tripsage.api.core.dependencies import (
+            get_chat_service_dep,
+            require_principal_dep,
+        )
+
         # Create mock functions for dependencies
         async def mock_require_principal():
             return mock_principal
-        
+
         async def mock_get_chat_service():
             # Return the mocked chat service instance
             return mock_chat_service_instance
-        
+
         # Override dependencies
-        app.dependency_overrides[require_principal_dep.dependency] = mock_require_principal
-        app.dependency_overrides[get_chat_service_dep.dependency] = mock_get_chat_service
-        
+        app.dependency_overrides[require_principal_dep.dependency] = (
+            mock_require_principal
+        )
+        app.dependency_overrides[get_chat_service_dep.dependency] = (
+            mock_get_chat_service
+        )
+
         return TestClient(app)
 
 
 @pytest.fixture
 def mock_chat_service():
     """Create a mock chat service."""
-    with patch("tripsage_core.services.business.chat_service.get_chat_service") as mock_get:
+    with patch(
+        "tripsage_core.services.business.chat_service.get_chat_service"
+    ) as mock_get:
         # Create an instance mock
         instance = AsyncMock()
-        
+
         # Mock all the chat service methods
         instance.chat_completion = AsyncMock(
             return_value={
@@ -98,18 +112,18 @@ def mock_chat_service():
                 "usage": {
                     "prompt_tokens": 10,
                     "completion_tokens": 20,
-                    "total_tokens": 30
-                }
+                    "total_tokens": 30,
+                },
             }
         )
-        
+
         instance.create_session = AsyncMock()
         instance.list_sessions = AsyncMock(return_value=[])
         instance.get_session = AsyncMock()
         instance.get_messages = AsyncMock(return_value=[])
         instance.create_message = AsyncMock()
         instance.delete_session = AsyncMock(return_value=True)
-        
+
         # Make get_chat_service return our instance
         mock_get.return_value = instance
         yield instance
@@ -126,11 +140,7 @@ class TestChatEndpoints:
             "content": "I can help you plan your trip! What destinations are you interested in?",
             "session_id": str(uuid4()),
             "model": "gpt-4",
-            "usage": {
-                "prompt_tokens": 10,
-                "completion_tokens": 20,
-                "total_tokens": 30
-            }
+            "usage": {"prompt_tokens": 10, "completion_tokens": 20, "total_tokens": 30},
         }
 
         # Create test client with the mock dependencies
@@ -149,7 +159,10 @@ class TestChatEndpoints:
         # Assert
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
-        assert data["content"] == "I can help you plan your trip! What destinations are you interested in?"
+        assert (
+            data["content"]
+            == "I can help you plan your trip! What destinations are you interested in?"
+        )
         mock_service_instance.chat_completion.assert_called_once()
 
     def test_list_sessions_endpoint(self, mock_settings_and_redis, mock_chat_service):
@@ -165,7 +178,7 @@ class TestChatEndpoints:
             }
         ]
         mock_service_instance.list_sessions.return_value = mock_sessions
-        
+
         # Create test client with the mock dependencies
         client = create_test_client(mock_settings_and_redis, mock_chat_service)
 
@@ -194,7 +207,7 @@ class TestChatEndpoints:
             "updated_at": datetime.now(timezone.utc).isoformat(),
         }
         mock_service_instance.get_session.return_value = mock_session
-        
+
         # Create test client with the mock dependencies
         client = create_test_client(mock_settings_and_redis, mock_chat_service)
 
@@ -217,7 +230,7 @@ class TestChatEndpoints:
         session_id = uuid4()
         mock_service_instance = mock_chat_service
         mock_service_instance.get_session.return_value = None
-        
+
         # Create test client with the mock dependencies
         client = create_test_client(mock_settings_and_redis, mock_chat_service)
 
@@ -244,7 +257,7 @@ class TestChatEndpoints:
             "updated_at": datetime.now(timezone.utc).isoformat(),
         }
         mock_service_instance.create_session.return_value = mock_session
-        
+
         # Create test client with the mock dependencies
         client = create_test_client(mock_settings_and_redis, mock_chat_service)
 
@@ -282,7 +295,7 @@ class TestChatEndpoints:
             },
         ]
         mock_service_instance.get_messages.return_value = mock_messages
-        
+
         # Create test client with the mock dependencies
         client = create_test_client(mock_settings_and_redis, mock_chat_service)
 
@@ -306,7 +319,7 @@ class TestChatEndpoints:
         session_id = uuid4()
         mock_service_instance = mock_chat_service
         mock_service_instance.delete_session.return_value = True
-        
+
         # Create test client with the mock dependencies
         client = create_test_client(mock_settings_and_redis, mock_chat_service)
 

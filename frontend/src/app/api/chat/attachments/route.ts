@@ -31,16 +31,22 @@ export async function POST(req: NextRequest) {
 
     if (files.length > MAX_FILES_PER_REQUEST) {
       return Response.json(
-        { error: `Maximum ${MAX_FILES_PER_REQUEST} files allowed per request`, code: "TOO_MANY_FILES" },
+        {
+          error: `Maximum ${MAX_FILES_PER_REQUEST} files allowed per request`,
+          code: "TOO_MANY_FILES",
+        },
         { status: 400 }
       );
     }
 
     // Check file sizes
-    const oversizedFile = files.find(file => file.size > MAX_FILE_SIZE);
+    const oversizedFile = files.find((file) => file.size > MAX_FILE_SIZE);
     if (oversizedFile) {
       return Response.json(
-        { error: `File "${oversizedFile.name}" exceeds maximum size of ${MAX_FILE_SIZE / 1024 / 1024}MB`, code: "FILE_TOO_LARGE" },
+        {
+          error: `File "${oversizedFile.name}" exceeds maximum size of ${MAX_FILE_SIZE / 1024 / 1024}MB`,
+          code: "FILE_TOO_LARGE",
+        },
         { status: 400 }
       );
     }
@@ -50,11 +56,12 @@ export async function POST(req: NextRequest) {
     if (files.length === 1) {
       backendFormData.append("file", files[0]);
     } else {
-      files.forEach(file => backendFormData.append("files", file));
+      files.forEach((file) => backendFormData.append("files", file));
     }
 
     // Call backend API
-    const endpoint = files.length === 1 ? "/api/attachments/upload" : "/api/attachments/upload/batch";
+    const endpoint =
+      files.length === 1 ? "/api/attachments/upload" : "/api/attachments/upload/batch";
     const headers: HeadersInit = {};
     const authHeader = req.headers.get("authorization");
     if (authHeader) {
@@ -79,14 +86,16 @@ export async function POST(req: NextRequest) {
     // Transform response
     if (files.length === 1) {
       return Response.json({
-        files: [{
-          id: data.file_id,
-          name: data.filename,
-          size: data.file_size,
-          type: data.mime_type,
-          url: `/api/attachments/${data.file_id}/download`,
-          status: data.processing_status,
-        }],
+        files: [
+          {
+            id: data.file_id,
+            name: data.filename,
+            size: data.file_size,
+            type: data.mime_type,
+            url: `/api/attachments/${data.file_id}/download`,
+            status: data.processing_status,
+          },
+        ],
         urls: [`/api/attachments/${data.file_id}/download`],
       });
     }
@@ -105,7 +114,6 @@ export async function POST(req: NextRequest) {
       files: transformedFiles,
       urls: transformedFiles.map((f: any) => f.url),
     });
-
   } catch (error) {
     console.error("File upload error:", error);
     return Response.json(

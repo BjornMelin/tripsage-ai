@@ -20,7 +20,7 @@ class TestCoreAppSettings:
             "DEBUG": "false",
             "LOG_LEVEL": "INFO",
         }
-        
+
         with patch.dict(os.environ, clean_env, clear=True):
             settings = CoreAppSettings(_env_file=None)
 
@@ -32,7 +32,10 @@ class TestCoreAppSettings:
 
             # Database connections - defaults
             assert settings.database.supabase_url == "https://test-project.supabase.co"
-            assert settings.database.supabase_anon_key.get_secret_value() == "test-anon-key"
+            assert (
+                settings.database.supabase_anon_key.get_secret_value()
+                == "test-anon-key"
+            )
             assert settings.database.supabase_service_role_key is None
             assert settings.dragonfly.url == "redis://localhost:6379/0"
 
@@ -121,10 +124,11 @@ class TestCoreAppSettings:
         assert errors == []
 
         # Missing critical settings - create with environment variables
-        with patch.dict(os.environ, {
-            "OPENAI_API_KEY": "",
-            "DATABASE__SUPABASE_ANON_KEY": ""
-        }, clear=False):
+        with patch.dict(
+            os.environ,
+            {"OPENAI_API_KEY": "", "DATABASE__SUPABASE_ANON_KEY": ""},
+            clear=False,
+        ):
             settings = CoreAppSettings(_env_file=None)
             errors = settings.validate_critical_settings()
             assert "OpenAI API key is missing" in errors
@@ -187,7 +191,10 @@ class TestCoreAppSettings:
             assert settings.debug is True
             assert settings.log_level == "DEBUG"
             assert settings.openai_api_key.get_secret_value() == "test-key-123"
-            assert settings.database.supabase_jwt_secret.get_secret_value() == "my-jwt-secret"
+            assert (
+                settings.database.supabase_jwt_secret.get_secret_value()
+                == "my-jwt-secret"
+            )
 
     def test_get_settings_caching(self):
         """Test that get_settings returns cached instance."""
@@ -235,7 +242,7 @@ class TestCoreAppSettings:
             "DRAGONFLY__URL": "redis://prod-cache:6379/0",
             "CRAWL4AI__API_URL": "https://crawl4ai.prod/api",
         }
-        
+
         with patch.dict(os.environ, env_vars, clear=False):
             settings = CoreAppSettings(_env_file=None)
 
@@ -247,4 +254,7 @@ class TestCoreAppSettings:
             assert settings.get_secret_value("openai_api_key") == "prod-openai-key"
             assert settings.get_secret_value("google_maps_api_key") == "prod-google-key"
             assert settings.get_secret_value("duffel_api_key") == "prod-duffel-key"
-            assert settings.database.supabase_jwt_secret.get_secret_value() == "prod-jwt-secret"
+            assert (
+                settings.database.supabase_jwt_secret.get_secret_value()
+                == "prod-jwt-secret"
+            )

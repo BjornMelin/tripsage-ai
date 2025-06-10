@@ -75,7 +75,7 @@ export function AuthProvider({ children, initialUser = null }: AuthProviderProps
   const convertSupabaseUser = (supabaseUser: SupabaseUser): User => ({
     id: supabaseUser.id,
     email: supabaseUser.email!,
-    name: supabaseUser.user_metadata?.full_name || supabaseUser.email!.split('@')[0],
+    name: supabaseUser.user_metadata?.full_name || supabaseUser.email!.split("@")[0],
     full_name: supabaseUser.user_metadata?.full_name,
     avatar_url: supabaseUser.user_metadata?.avatar_url,
     created_at: supabaseUser.created_at,
@@ -137,8 +137,11 @@ export function AuthProvider({ children, initialUser = null }: AuthProviderProps
   const refreshUser = async () => {
     try {
       setAuthState({ isLoading: true, error: null });
-      const { data: { user }, error } = await supabase.auth.getUser();
-      
+      const {
+        data: { user },
+        error,
+      } = await supabase.auth.getUser();
+
       if (error) {
         setAuthState({ error: error.message, isLoading: false });
         return;
@@ -161,9 +164,9 @@ export function AuthProvider({ children, initialUser = null }: AuthProviderProps
         });
       }
     } catch (error) {
-      setAuthState({ 
-        error: error instanceof Error ? error.message : 'Failed to refresh user',
-        isLoading: false
+      setAuthState({
+        error: error instanceof Error ? error.message : "Failed to refresh user",
+        isLoading: false,
       });
     }
   };
@@ -172,7 +175,7 @@ export function AuthProvider({ children, initialUser = null }: AuthProviderProps
   const signIn = async (email: string, password: string) => {
     try {
       setAuthState({ isLoading: true, error: null });
-      
+
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -186,9 +189,9 @@ export function AuthProvider({ children, initialUser = null }: AuthProviderProps
       // User state will be updated by the auth state change listener
       setAuthState({ isLoading: false, error: null });
     } catch (error) {
-      setAuthState({ 
-        error: error instanceof Error ? error.message : 'Failed to sign in',
-        isLoading: false
+      setAuthState({
+        error: error instanceof Error ? error.message : "Failed to sign in",
+        isLoading: false,
       });
     }
   };
@@ -197,7 +200,7 @@ export function AuthProvider({ children, initialUser = null }: AuthProviderProps
   const signUp = async (email: string, password: string, fullName?: string) => {
     try {
       setAuthState({ isLoading: true, error: null });
-      
+
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -216,9 +219,9 @@ export function AuthProvider({ children, initialUser = null }: AuthProviderProps
       // User state will be updated by the auth state change listener
       setAuthState({ isLoading: false, error: null });
     } catch (error) {
-      setAuthState({ 
-        error: error instanceof Error ? error.message : 'Failed to sign up',
-        isLoading: false
+      setAuthState({
+        error: error instanceof Error ? error.message : "Failed to sign up",
+        isLoading: false,
       });
     }
   };
@@ -227,7 +230,7 @@ export function AuthProvider({ children, initialUser = null }: AuthProviderProps
   const signOut = async () => {
     try {
       setAuthState({ isLoading: true, error: null });
-      
+
       const { error } = await supabase.auth.signOut();
 
       if (error) {
@@ -239,9 +242,9 @@ export function AuthProvider({ children, initialUser = null }: AuthProviderProps
       setAuthState({ isLoading: false, error: null });
       router.push("/");
     } catch (error) {
-      setAuthState({ 
-        error: error instanceof Error ? error.message : 'Failed to sign out',
-        isLoading: false
+      setAuthState({
+        error: error instanceof Error ? error.message : "Failed to sign out",
+        isLoading: false,
       });
     }
   };

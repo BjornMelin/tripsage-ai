@@ -1,25 +1,25 @@
 import { middleware, config } from "@/middleware";
 import { NextRequest, NextResponse } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { createServerClient } from '@supabase/ssr'
+import { createServerClient } from "@supabase/ssr";
 
 // Mock JWT token for testing
 const TEST_TOKEN = "mock-jwt-token-for-testing";
 
 // Mock Next.js server components
-vi.mock('next/server', () => ({
+vi.mock("next/server", () => ({
   NextRequest: globalThis.Request,
   NextResponse: {
     next: vi.fn(),
     json: vi.fn(),
-    redirect: vi.fn()
-  }
-}))
+    redirect: vi.fn(),
+  },
+}));
 
 // Mock Supabase SSR client
-vi.mock('@supabase/ssr', () => ({
-  createServerClient: vi.fn()
-}))
+vi.mock("@supabase/ssr", () => ({
+  createServerClient: vi.fn(),
+}));
 
 // Mock environment variables
 vi.stubEnv("JWT_SECRET", "test-jwt-secret-for-middleware-tests");
@@ -28,29 +28,32 @@ vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://test.supabase.co");
 vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "test-anon-key");
 
 // Helper function to create NextRequest with proper Headers
-function createRequest(url: string, options: { method?: string; headers?: Record<string, string> } = {}) {
+function createRequest(
+  url: string,
+  options: { method?: string; headers?: Record<string, string> } = {}
+) {
   const headers = new Headers();
   if (options.headers) {
     Object.entries(options.headers).forEach(([key, value]) => {
       headers.set(key, value);
     });
   }
-  
+
   // Use standard Request since we're mocking NextRequest
   const request = new Request(url, {
     method: options.method || "GET",
     headers,
   });
-  
+
   // Add NextRequest-specific properties
   Object.assign(request, {
     nextUrl: new URL(url),
     cookies: {
       getAll: vi.fn().mockReturnValue([]),
-      set: vi.fn()
-    }
+      set: vi.fn(),
+    },
   });
-  
+
   return request as any;
 }
 
@@ -75,229 +78,245 @@ describe("Middleware", () => {
         forEach: vi.fn(),
         entries: vi.fn(),
         keys: vi.fn(),
-        values: vi.fn()
+        values: vi.fn(),
       },
       json: vi.fn().mockResolvedValue({}),
       cookies: {
-        set: vi.fn()
-      }
+        set: vi.fn(),
+      },
     };
-    
+
     // Setup NextResponse mocks
     vi.mocked(NextResponse.next).mockReturnValue(mockResponse);
     vi.mocked(NextResponse.json).mockImplementation((body, init) => ({
       ...mockResponse,
       status: init?.status || 200,
-      json: vi.fn().mockResolvedValue(body)
+      json: vi.fn().mockResolvedValue(body),
     }));
 
     // Setup mock Supabase client
     mockSupabase = {
       auth: {
-        getUser: vi.fn().mockResolvedValue({ data: { user: null } })
-      }
+        getUser: vi.fn().mockResolvedValue({ data: { user: null } }),
+      },
     };
     vi.mocked(createServerClient).mockReturnValue(mockSupabase);
   });
 
   describe("Rate Limiting", () => {
-
-  it("should allow requests under the rate limit", async () => {
-    // Arrange
-    const request = createRequest("http://localhost:3000/api/chat", {
-      method: "POST",
-      headers: { "x-forwarded-for": "192.168.1.1" }
-    });
-
-    // Act
-    const response = await middleware(request);
-
-    // Assert
-    expect(response.status).toBe(200);
-    expect(response.headers.set).toHaveBeenCalledWith("X-RateLimit-Limit", "10");
-    expect(response.headers.set).toHaveBeenCalledWith("X-RateLimit-Remaining", "9");
-    expect(response.headers.set).toHaveBeenCalledWith("X-RateLimit-Reset", expect.any(String));
-  });
-
-  it("should reject requests over the rate limit", async () => {
-    // Arrange
-    const ip = "192.168.1.2";
-    const requests = [];
-
-    // Make 10 requests to hit the limit
-    for (let i = 0; i < 10; i++) {
+    it("should allow requests under the rate limit", async () => {
+      // Arrange
       const request = createRequest("http://localhost:3000/api/chat", {
         method: "POST",
-        headers: { "x-forwarded-for": ip }
+        headers: { "x-forwarded-for": "192.168.1.1" },
       });
+
+      // Act
       const response = await middleware(request);
-      requests.push(response);
-    }
 
-    // Make one more request that should be rejected
-    const blockedRequest = createRequest("http://localhost:3000/api/chat", {
-      method: "POST",
-      headers: { "x-forwarded-for": ip }
+      // Assert
+      expect(response.status).toBe(200);
+      expect(response.headers.set).toHaveBeenCalledWith("X-RateLimit-Limit", "10");
+      expect(response.headers.set).toHaveBeenCalledWith("X-RateLimit-Remaining", "9");
+      expect(response.headers.set).toHaveBeenCalledWith(
+        "X-RateLimit-Reset",
+        expect.any(String)
+      );
     });
 
-    // Act
-    const blockedResponse = await middleware(blockedRequest);
+    it("should reject requests over the rate limit", async () => {
+      // Arrange
+      const ip = "192.168.1.2";
+      const requests = [];
 
-    // Assert
-    expect(blockedResponse.status).toBe(429);
-    expect(blockedResponse.headers.set).toHaveBeenCalledWith("X-RateLimit-Remaining", "0");
-    expect(blockedResponse.headers.set).toHaveBeenCalledWith("Retry-After", expect.any(String));
-
-    // Check that NextResponse.json was called with the right error body
-    expect(NextResponse.json).toHaveBeenCalledWith(
-      {
-        error: "Too many requests. Please wait before trying again.",
-        code: "RATE_LIMITED",
-        retryAfter: expect.any(Number)
-      },
-      { status: 429 }
-    );
-  });
-
-  it("should track rate limits per IP address", async () => {
-    // Arrange
-    const ip1 = "192.168.1.3";
-    const ip2 = "192.168.1.4";
-
-    // Make 5 requests from IP1
-    for (let i = 0; i < 5; i++) {
-      const request = createRequest("http://localhost:3000/api/chat", {
-        method: "POST",
-        headers: { "x-forwarded-for": ip1 }
-      });
-      await middleware(request);
-    }
-
-    // Act - Make request from IP2
-    const request2 = createRequest("http://localhost:3000/api/chat", {
-      method: "POST",
-      headers: { "x-forwarded-for": ip2 }
-    });
-    const response2 = await middleware(request2);
-
-    // Assert - IP2 should have full limit available
-    expect(response2.status).toBe(200);
-    expect(response2.headers.set).toHaveBeenCalledWith("X-RateLimit-Remaining", "9");
-  });
-
-  it("should prefer auth token over IP for rate limiting", async () => {
-    // Arrange
-    const authToken = `Bearer ${TEST_TOKEN}`;
-    const request = createRequest("http://localhost:3000/api/chat", {
-      method: "POST",
-      headers: {
-        "x-forwarded-for": "192.168.1.5",
-        "authorization": authToken
+      // Make 10 requests to hit the limit
+      for (let i = 0; i < 10; i++) {
+        const request = createRequest("http://localhost:3000/api/chat", {
+          method: "POST",
+          headers: { "x-forwarded-for": ip },
+        });
+        const response = await middleware(request);
+        requests.push(response);
       }
+
+      // Make one more request that should be rejected
+      const blockedRequest = createRequest("http://localhost:3000/api/chat", {
+        method: "POST",
+        headers: { "x-forwarded-for": ip },
+      });
+
+      // Act
+      const blockedResponse = await middleware(blockedRequest);
+
+      // Assert
+      expect(blockedResponse.status).toBe(429);
+      expect(blockedResponse.headers.set).toHaveBeenCalledWith(
+        "X-RateLimit-Remaining",
+        "0"
+      );
+      expect(blockedResponse.headers.set).toHaveBeenCalledWith(
+        "Retry-After",
+        expect.any(String)
+      );
+
+      // Check that NextResponse.json was called with the right error body
+      expect(NextResponse.json).toHaveBeenCalledWith(
+        {
+          error: "Too many requests. Please wait before trying again.",
+          code: "RATE_LIMITED",
+          retryAfter: expect.any(Number),
+        },
+        { status: 429 }
+      );
     });
 
-    // Act
-    const response = await middleware(request);
+    it("should track rate limits per IP address", async () => {
+      // Arrange
+      const ip1 = "192.168.1.3";
+      const ip2 = "192.168.1.4";
 
-    // Assert
-    expect(response.status).toBe(200);
-    expect(response.headers.set).toHaveBeenCalledWith("X-RateLimit-Limit", "10");
-  });
+      // Make 5 requests from IP1
+      for (let i = 0; i < 5; i++) {
+        const request = createRequest("http://localhost:3000/api/chat", {
+          method: "POST",
+          headers: { "x-forwarded-for": ip1 },
+        });
+        await middleware(request);
+      }
 
-  it("should not apply rate limiting to non-chat endpoints", async () => {
-    // Arrange
-    const request = createRequest("http://localhost:3000/api/health", {
-      method: "GET",
-      headers: { "x-forwarded-for": "192.168.1.6" }
+      // Act - Make request from IP2
+      const request2 = createRequest("http://localhost:3000/api/chat", {
+        method: "POST",
+        headers: { "x-forwarded-for": ip2 },
+      });
+      const response2 = await middleware(request2);
+
+      // Assert - IP2 should have full limit available
+      expect(response2.status).toBe(200);
+      expect(response2.headers.set).toHaveBeenCalledWith("X-RateLimit-Remaining", "9");
     });
 
-    // Act
-    const response = await middleware(request);
-
-    // Assert
-    expect(response.status).toBe(200);
-    expect(response.headers.set).not.toHaveBeenCalledWith("X-RateLimit-Limit", expect.any(String));
-  });
-
-  it("should skip rate limiting for attachment uploads", async () => {
-    // Arrange
-    const request = createRequest("http://localhost:3000/api/chat/attachments", {
-      method: "POST",
-      headers: { "x-forwarded-for": "192.168.1.7" }
-    });
-
-    // Act
-    const response = await middleware(request);
-
-    // Assert
-    expect(response.status).toBe(200);
-    expect(response.headers.set).not.toHaveBeenCalledWith("X-RateLimit-Limit", expect.any(String));
-  });
-
-  it("should handle x-real-ip header", async () => {
-    // Arrange
-    const request = createRequest("http://localhost:3000/api/chat", {
-      method: "POST",
-      headers: { "x-real-ip": "192.168.1.8" }
-    });
-
-    // Act
-    const response = await middleware(request);
-
-    // Assert
-    expect(response.status).toBe(200);
-    expect(response.headers.set).toHaveBeenCalledWith("X-RateLimit-Remaining", "9");
-  });
-
-  it("should parse first IP from x-forwarded-for list", async () => {
-    // Arrange
-    const request = createRequest("http://localhost:3000/api/chat", {
-      method: "POST",
-      headers: { "x-forwarded-for": "192.168.1.9, 10.0.0.1, 172.16.0.1" }
-    });
-
-    // Act
-    const response = await middleware(request);
-
-    // Assert
-    expect(response.status).toBe(200);
-    expect(response.headers.set).toHaveBeenCalledWith("X-RateLimit-Remaining", "9");
-  });
-
-  it("should provide retry-after in seconds", async () => {
-    // Arrange
-    const ip = "192.168.1.10";
-
-    // Hit rate limit
-    for (let i = 0; i < 10; i++) {
+    it("should prefer auth token over IP for rate limiting", async () => {
+      // Arrange
+      const authToken = `Bearer ${TEST_TOKEN}`;
       const request = createRequest("http://localhost:3000/api/chat", {
         method: "POST",
-        headers: { "x-forwarded-for": ip }
+        headers: {
+          "x-forwarded-for": "192.168.1.5",
+          authorization: authToken,
+        },
       });
-      await middleware(request);
-    }
 
-    // Act - Make blocked request
-    const blockedRequest = createRequest("http://localhost:3000/api/chat", {
-      method: "POST",
-      headers: { "x-forwarded-for": ip }
+      // Act
+      const response = await middleware(request);
+
+      // Assert
+      expect(response.status).toBe(200);
+      expect(response.headers.set).toHaveBeenCalledWith("X-RateLimit-Limit", "10");
     });
-    const blockedResponse = await middleware(blockedRequest);
 
-    // Assert
-    expect(blockedResponse.headers.set).toHaveBeenCalledWith("Retry-After", expect.any(String));
+    it("should not apply rate limiting to non-chat endpoints", async () => {
+      // Arrange
+      const request = createRequest("http://localhost:3000/api/health", {
+        method: "GET",
+        headers: { "x-forwarded-for": "192.168.1.6" },
+      });
 
-    // Check that NextResponse.json was called with the right error body
-    expect(NextResponse.json).toHaveBeenCalledWith(
-      {
-        error: "Too many requests. Please wait before trying again.",
-        code: "RATE_LIMITED",
-        retryAfter: expect.any(Number)
-      },
-      { status: 429 }
-    );
-  });
+      // Act
+      const response = await middleware(request);
 
+      // Assert
+      expect(response.status).toBe(200);
+      expect(response.headers.set).not.toHaveBeenCalledWith(
+        "X-RateLimit-Limit",
+        expect.any(String)
+      );
+    });
+
+    it("should skip rate limiting for attachment uploads", async () => {
+      // Arrange
+      const request = createRequest("http://localhost:3000/api/chat/attachments", {
+        method: "POST",
+        headers: { "x-forwarded-for": "192.168.1.7" },
+      });
+
+      // Act
+      const response = await middleware(request);
+
+      // Assert
+      expect(response.status).toBe(200);
+      expect(response.headers.set).not.toHaveBeenCalledWith(
+        "X-RateLimit-Limit",
+        expect.any(String)
+      );
+    });
+
+    it("should handle x-real-ip header", async () => {
+      // Arrange
+      const request = createRequest("http://localhost:3000/api/chat", {
+        method: "POST",
+        headers: { "x-real-ip": "192.168.1.8" },
+      });
+
+      // Act
+      const response = await middleware(request);
+
+      // Assert
+      expect(response.status).toBe(200);
+      expect(response.headers.set).toHaveBeenCalledWith("X-RateLimit-Remaining", "9");
+    });
+
+    it("should parse first IP from x-forwarded-for list", async () => {
+      // Arrange
+      const request = createRequest("http://localhost:3000/api/chat", {
+        method: "POST",
+        headers: { "x-forwarded-for": "192.168.1.9, 10.0.0.1, 172.16.0.1" },
+      });
+
+      // Act
+      const response = await middleware(request);
+
+      // Assert
+      expect(response.status).toBe(200);
+      expect(response.headers.set).toHaveBeenCalledWith("X-RateLimit-Remaining", "9");
+    });
+
+    it("should provide retry-after in seconds", async () => {
+      // Arrange
+      const ip = "192.168.1.10";
+
+      // Hit rate limit
+      for (let i = 0; i < 10; i++) {
+        const request = createRequest("http://localhost:3000/api/chat", {
+          method: "POST",
+          headers: { "x-forwarded-for": ip },
+        });
+        await middleware(request);
+      }
+
+      // Act - Make blocked request
+      const blockedRequest = createRequest("http://localhost:3000/api/chat", {
+        method: "POST",
+        headers: { "x-forwarded-for": ip },
+      });
+      const blockedResponse = await middleware(blockedRequest);
+
+      // Assert
+      expect(blockedResponse.headers.set).toHaveBeenCalledWith(
+        "Retry-After",
+        expect.any(String)
+      );
+
+      // Check that NextResponse.json was called with the right error body
+      expect(NextResponse.json).toHaveBeenCalledWith(
+        {
+          error: "Too many requests. Please wait before trying again.",
+          code: "RATE_LIMITED",
+          retryAfter: expect.any(Number),
+        },
+        { status: 429 }
+      );
+    });
   });
 
   describe("Supabase Session Management", () => {
@@ -305,7 +324,7 @@ describe("Middleware", () => {
       // Arrange
       const request = createRequest("http://localhost:3000/dashboard", {
         method: "GET",
-        headers: { "cookie": "sb-access-token=token123; sb-refresh-token=refresh123" }
+        headers: { cookie: "sb-access-token=token123; sb-refresh-token=refresh123" },
       });
 
       // Act
@@ -318,8 +337,8 @@ describe("Middleware", () => {
         expect.objectContaining({
           cookies: expect.objectContaining({
             getAll: expect.any(Function),
-            setAll: expect.any(Function)
-          })
+            setAll: expect.any(Function),
+          }),
         })
       );
       expect(mockSupabase.auth.getUser).toHaveBeenCalled();
@@ -330,18 +349,18 @@ describe("Middleware", () => {
       // Arrange
       vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "");
       vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "");
-      
-      const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
       const request = createRequest("http://localhost:3000/dashboard");
 
       // Act
       const response = await middleware(request);
 
       // Assert
-      expect(consoleSpy).toHaveBeenCalledWith('Missing Supabase environment variables');
+      expect(consoleSpy).toHaveBeenCalledWith("Missing Supabase environment variables");
       expect(createServerClient).not.toHaveBeenCalled();
       expect(response.status).toBe(200);
-      
+
       consoleSpy.mockRestore();
       // Restore env vars for other tests
       vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://test.supabase.co");
@@ -350,7 +369,7 @@ describe("Middleware", () => {
 
     it("should handle Supabase auth errors gracefully", async () => {
       // Arrange
-      mockSupabase.auth.getUser.mockRejectedValue(new Error('Auth error'));
+      mockSupabase.auth.getUser.mockRejectedValue(new Error("Auth error"));
       const request = createRequest("http://localhost:3000/dashboard");
 
       // Act - Should not throw and return a response
@@ -370,7 +389,7 @@ describe("Middleware", () => {
       });
 
       const request = createRequest("http://localhost:3000/dashboard", {
-        headers: { "cookie": "test=value" }
+        headers: { cookie: "test=value" },
       });
 
       // Act
@@ -378,8 +397,8 @@ describe("Middleware", () => {
 
       // Assert
       expect(capturedCookieHandlers).toBeTruthy();
-      expect(typeof capturedCookieHandlers.getAll).toBe('function');
-      expect(typeof capturedCookieHandlers.setAll).toBe('function');
+      expect(typeof capturedCookieHandlers.getAll).toBe("function");
+      expect(typeof capturedCookieHandlers.setAll).toBe("function");
 
       // Test getAll functionality
       const cookies = capturedCookieHandlers.getAll();
@@ -388,7 +407,7 @@ describe("Middleware", () => {
       // Test setAll functionality - should not throw
       expect(() => {
         capturedCookieHandlers.setAll([
-          { name: 'new1', value: 'val1', options: { httpOnly: true } }
+          { name: "new1", value: "val1", options: { httpOnly: true } },
         ]);
       }).not.toThrow();
     });
@@ -398,7 +417,7 @@ describe("Middleware", () => {
     it("should have correct matcher configuration", () => {
       expect(config).toBeDefined();
       expect(config.matcher).toEqual([
-        '/((?!_next/static|_next/image|favicon.ico|public).*)'
+        "/((?!_next/static|_next/image|favicon.ico|public).*)",
       ]);
     });
 
@@ -407,34 +426,34 @@ describe("Middleware", () => {
       // The regex pattern has the structure /(pattern)/
       const pattern = matcher.slice(2, -1); // Remove /( and )
       const regex = new RegExp(pattern);
-      
-      expect(regex.test('/api/chat')).toBe(true);
-      expect(regex.test('/api/auth')).toBe(true);
-      expect(regex.test('/dashboard')).toBe(true);
+
+      expect(regex.test("/api/chat")).toBe(true);
+      expect(regex.test("/api/auth")).toBe(true);
+      expect(regex.test("/dashboard")).toBe(true);
     });
 
     it("should test with middleware matcher behavior", () => {
       const matcher = config.matcher[0];
-      
+
       // Test with full pattern matching behavior (like Next.js does)
       const testPaths = [
-        '/_next/static/chunks/webpack.js',
-        '/_next/image/optimize', 
-        '/favicon.ico',
-        '/public/logo.png',
-        '/api/chat',
-        '/dashboard'
+        "/_next/static/chunks/webpack.js",
+        "/_next/image/optimize",
+        "/favicon.ico",
+        "/public/logo.png",
+        "/api/chat",
+        "/dashboard",
       ];
-      
-      testPaths.forEach(path => {
+
+      testPaths.forEach((path) => {
         const match = path.match(matcher);
-        
+
         // These should NOT match (be excluded)
-        if (path === '/favicon.ico') {
+        if (path === "/favicon.ico") {
           expect(match).toBeNull();
         }
         // These SHOULD match (be included)
-        else if (path === '/api/chat' || path === '/dashboard') {
+        else if (path === "/api/chat" || path === "/dashboard") {
           expect(match).toBeTruthy();
         }
         // The behavior for _next and public paths depends on exact implementation
@@ -448,7 +467,7 @@ describe("Middleware", () => {
       // Arrange
       const request = createRequest("http://localhost:3000/api/chat", {
         method: "POST",
-        headers: { "x-forwarded-for": "" } // Empty string
+        headers: { "x-forwarded-for": "" }, // Empty string
       });
 
       // Act & Assert - Should not throw
@@ -457,10 +476,10 @@ describe("Middleware", () => {
 
     it("should handle very long auth headers", async () => {
       // Arrange
-      const longToken = 'Bearer ' + 'x'.repeat(1000);
+      const longToken = "Bearer " + "x".repeat(1000);
       const request = createRequest("http://localhost:3000/api/chat", {
         method: "POST",
-        headers: { "authorization": longToken }
+        headers: { authorization: longToken },
       });
 
       // Act & Assert - Should handle long tokens without issues
@@ -469,19 +488,21 @@ describe("Middleware", () => {
 
     it("should handle concurrent requests properly", async () => {
       // Arrange
-      const requests = Array(5).fill(null).map(() => 
-        createRequest("http://localhost:3000/api/chat", {
-          method: "POST",
-          headers: { "x-forwarded-for": "192.168.1.100" }
-        })
-      );
+      const requests = Array(5)
+        .fill(null)
+        .map(() =>
+          createRequest("http://localhost:3000/api/chat", {
+            method: "POST",
+            headers: { "x-forwarded-for": "192.168.1.100" },
+          })
+        );
 
       // Act - Make multiple concurrent requests
-      const promises = requests.map(req => middleware(req));
+      const promises = requests.map((req) => middleware(req));
       const responses = await Promise.all(promises);
 
       // Assert - All should succeed and handle concurrent access properly
-      responses.forEach(response => {
+      responses.forEach((response) => {
         expect(response.status).toBe(200);
       });
     });
@@ -489,7 +510,7 @@ describe("Middleware", () => {
     it("should handle requests without any IP headers", async () => {
       // Arrange
       const request = createRequest("http://localhost:3000/api/chat", {
-        method: "POST"
+        method: "POST",
         // No IP headers - should fallback to localhost
       });
 
@@ -500,22 +521,25 @@ describe("Middleware", () => {
       expect(response.status).toBe(200);
       expect(response.headers.set).toHaveBeenCalledWith("X-RateLimit-Limit", "10");
       // Since rate limit store is shared, we need to check what remaining count was actually set
-      expect(response.headers.set).toHaveBeenCalledWith("X-RateLimit-Remaining", expect.any(String));
+      expect(response.headers.set).toHaveBeenCalledWith(
+        "X-RateLimit-Remaining",
+        expect.any(String)
+      );
     });
 
     it("should handle rate limit window expiry correctly", async () => {
       // Arrange
       const ip = "192.168.1.200";
-      const mockDateNow = vi.spyOn(Date, 'now');
-      
+      const mockDateNow = vi.spyOn(Date, "now");
+
       // Set initial time
       mockDateNow.mockReturnValue(1000000);
-      
+
       // Make 10 requests (hit the limit)
       for (let i = 0; i < 10; i++) {
         const request = createRequest("http://localhost:3000/api/chat", {
           method: "POST",
-          headers: { "x-forwarded-for": ip }
+          headers: { "x-forwarded-for": ip },
         });
         await middleware(request);
       }
@@ -526,27 +550,27 @@ describe("Middleware", () => {
       // Act - Make another request (should succeed with fresh window)
       const request = createRequest("http://localhost:3000/api/chat", {
         method: "POST",
-        headers: { "x-forwarded-for": ip }
+        headers: { "x-forwarded-for": ip },
       });
       const response = await middleware(request);
 
       // Assert
       expect(response.status).toBe(200);
       expect(response.headers.set).toHaveBeenCalledWith("X-RateLimit-Remaining", "9");
-      
+
       mockDateNow.mockRestore();
     });
 
     it("should handle different HTTP methods consistently", async () => {
       // Arrange
-      const methods = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'];
+      const methods = ["GET", "POST", "PUT", "DELETE", "PATCH"];
       const ip = "192.168.1.300";
 
       // Act & Assert
       for (const method of methods) {
         const request = createRequest("http://localhost:3000/api/chat", {
           method,
-          headers: { "x-forwarded-for": ip }
+          headers: { "x-forwarded-for": ip },
         });
         const response = await middleware(request);
         expect(response.status).toBe(200);

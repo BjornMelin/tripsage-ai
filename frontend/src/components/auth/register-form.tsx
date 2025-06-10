@@ -36,7 +36,10 @@ interface PasswordStrength {
   color: string;
 }
 
-export function RegisterForm({ redirectTo = "/dashboard", className }: RegisterFormProps) {
+export function RegisterForm({
+  redirectTo = "/dashboard",
+  className,
+}: RegisterFormProps) {
   const router = useRouter();
   const { signUp, isLoading, error, isAuthenticated, clearError } = useAuth();
   const [showPassword, setShowPassword] = React.useState(false);
@@ -106,9 +109,9 @@ export function RegisterForm({ redirectTo = "/dashboard", className }: RegisterF
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    
+
     const { email, password, fullName } = formData;
-    
+
     if (!email || !password || !fullName) {
       return;
     }
@@ -116,7 +119,7 @@ export function RegisterForm({ redirectTo = "/dashboard", className }: RegisterF
     // Check password strength
     if (passwordStrength.score < 75) {
       // You might want to show a warning but still allow registration
-      console.warn('Weak password, but allowing registration');
+      console.warn("Weak password, but allowing registration");
     }
 
     await signUp(email, password, fullName);
@@ -124,8 +127,8 @@ export function RegisterForm({ redirectTo = "/dashboard", className }: RegisterF
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-    
+    setFormData((prev) => ({ ...prev, [name]: value }));
+
     // Clear errors when user starts typing
     if (error) {
       clearError();
@@ -273,7 +276,9 @@ export function RegisterForm({ redirectTo = "/dashboard", className }: RegisterF
           <Button
             type="submit"
             className="w-full"
-            disabled={isLoading || !formData.email || !formData.password || !formData.fullName}
+            disabled={
+              isLoading || !formData.email || !formData.password || !formData.fullName
+            }
           >
             {isLoading ? (
               <>

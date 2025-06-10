@@ -7,23 +7,19 @@ and web crawling for additional information.
 """
 
 import asyncio
-import logging
 import uuid
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 from tripsage.api.schemas.requests.activities import (
     ActivitySearchRequest,
-    SaveActivityRequest,
 )
 from tripsage.api.schemas.responses.activities import (
     ActivityCoordinates,
     ActivityResponse,
     ActivitySearchResponse,
-    SavedActivityResponse,
 )
 from tripsage.tools.web_tools import CachedWebSearchTool
-from tripsage.tools.webcrawl_tools import crawl_website_content
 from tripsage_core.exceptions.exceptions import CoreServiceError
 from tripsage_core.services.external_apis.google_maps_service import (
     GoogleMapsService,
@@ -231,10 +227,14 @@ class ActivityService:
 
         except GoogleMapsServiceError as e:
             logger.error(f"Google Maps API error in activity search: {e}")
-            raise CoreServiceError(f"Maps API error: {e}", service="ActivityService") from e
+            raise CoreServiceError(
+                f"Maps API error: {e}", service="ActivityService"
+            ) from e
         except Exception as e:
             logger.error(f"Unexpected error in activity search: {e}")
-            raise CoreServiceError(f"Activity search failed: {e}", service="ActivityService") from e
+            raise CoreServiceError(
+                f"Activity search failed: {e}", service="ActivityService"
+            ) from e
 
     async def _search_places_by_type(
         self,

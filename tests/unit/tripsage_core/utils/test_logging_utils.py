@@ -9,7 +9,7 @@ import logging
 import os
 import tempfile
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -123,7 +123,7 @@ class TestLoggingUtils:
         # Add a dummy handler
         dummy_handler = logging.StreamHandler()
         root_logger.addHandler(dummy_handler)
-        
+
         initial_count = len(root_logger.handlers)
         assert initial_count >= 1
 
@@ -150,7 +150,7 @@ class TestLoggingUtils:
         """Test that configure_logging clears existing handlers."""
         logger_name = "test.clear_handlers"
         logger = logging.getLogger(logger_name)
-        
+
         # Add dummy handler
         dummy_handler = logging.StreamHandler()
         logger.addHandler(dummy_handler)
@@ -170,9 +170,7 @@ class TestLoggingUtils:
 
         # Should only have console handler
         handlers = adapter.logger.handlers
-        console_handlers = [
-            h for h in handlers if isinstance(h, logging.StreamHandler)
-        ]
+        console_handlers = [h for h in handlers if isinstance(h, logging.StreamHandler)]
         file_handlers = [h for h in handlers if isinstance(h, logging.FileHandler)]
 
         assert len(console_handlers) == 1
@@ -216,6 +214,7 @@ class TestLoggingUtils:
         mock_settings.return_value.log_level = "WARNING"
 
         from tripsage_core.utils.logging_utils import _get_log_level
+
         level = _get_log_level()
 
         assert level == logging.WARNING
@@ -226,6 +225,7 @@ class TestLoggingUtils:
         mock_settings.return_value.log_level = "INVALID"
 
         from tripsage_core.utils.logging_utils import _get_log_level
+
         level = _get_log_level()
 
         assert level == logging.INFO  # Default fallback
@@ -236,6 +236,7 @@ class TestLoggingUtils:
         mock_settings.return_value.log_level = "debug"
 
         from tripsage_core.utils.logging_utils import _get_log_level
+
         level = _get_log_level()
 
         assert level == logging.DEBUG
@@ -255,7 +256,7 @@ class TestLoggingUtils:
         """Test ContextAdapter in real logging scenario."""
         base_logger = logging.getLogger("test.real")
         base_logger.setLevel(logging.INFO)
-        
+
         adapter = ContextAdapter(base_logger, {"context": {"request_id": "123"}})
         adapter.info("Test message", extra={"user_id": "456"})
 
@@ -283,13 +284,13 @@ class TestLoggingUtils:
     def test_configure_logging_file_handling(self, temp_log_dir):
         """Test file handler creation when not in testing mode."""
         with patch.dict(os.environ, {}, clear=True):  # Clear TESTING env
-            with patch("tripsage_core.utils.logging_utils.get_settings") as mock_settings:
+            with patch(
+                "tripsage_core.utils.logging_utils.get_settings"
+            ) as mock_settings:
                 mock_settings.return_value.is_testing.return_value = False
 
                 adapter = configure_logging(
-                    "test.file.handler",
-                    log_to_file=True,
-                    log_dir=str(temp_log_dir)
+                    "test.file.handler", log_to_file=True, log_dir=str(temp_log_dir)
                 )
 
                 # Should have both console and file handlers
@@ -313,12 +314,12 @@ class TestLoggingUtils:
         # Empty context dict is falsy, so returns regular Logger
         logger = get_logger("test.empty_context", context={})
         assert isinstance(logger, logging.Logger)
-        
+
         # Non-empty context should return ContextAdapter
         logger_with_context = get_logger("test.with_context", context={"key": "value"})
         assert isinstance(logger_with_context, ContextAdapter)
         assert logger_with_context.extra == {"context": {"key": "value"}}
-        
+
         # Without context parameter, should return regular Logger
         logger_no_context = get_logger("test.no_context_param")
         assert isinstance(logger_no_context, logging.Logger)
@@ -326,14 +327,14 @@ class TestLoggingUtils:
     def test_logger_name_normalization(self, temp_log_dir):
         """Test that logger names are normalized for file paths."""
         with patch.dict(os.environ, {}, clear=True):
-            with patch("tripsage_core.utils.logging_utils.get_settings") as mock_settings:
+            with patch(
+                "tripsage_core.utils.logging_utils.get_settings"
+            ) as mock_settings:
                 mock_settings.return_value.is_testing.return_value = False
 
                 # Use a name with dots that should be converted to underscores
                 adapter = configure_logging(
-                    "test.module.submodule",
-                    log_to_file=True,
-                    log_dir=str(temp_log_dir)
+                    "test.module.submodule", log_to_file=True, log_dir=str(temp_log_dir)
                 )
 
                 # Log a message to trigger file creation
@@ -342,7 +343,7 @@ class TestLoggingUtils:
                 # Check that log file was created with proper naming
                 log_files = list(temp_log_dir.glob("*.log"))
                 assert len(log_files) >= 1
-                
+
                 # Verify filename format (dots should be replaced with underscores)
                 log_file = log_files[0]
                 assert "test_module_submodule" in log_file.name

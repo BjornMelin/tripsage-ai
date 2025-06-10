@@ -4,32 +4,30 @@ Clean, focused test suite for TripSage exception system.
 Tests core exception functionality with proper Pydantic v2 compatibility.
 """
 
-import pytest
 from fastapi import status
-from unittest.mock import Mock
 
 from tripsage_core.exceptions.exceptions import (
-    ErrorDetails,
-    CoreTripSageError,
+    CoreAgentError,
     CoreAuthenticationError,
     CoreAuthorizationError,
-    CoreResourceNotFoundError,
-    CoreValidationError,
-    CoreServiceError,
-    CoreRateLimitError,
-    CoreKeyValidationError,
     CoreDatabaseError,
     CoreExternalAPIError,
+    CoreKeyValidationError,
     CoreMCPError,
-    CoreAgentError,
-    format_exception,
-    create_error_response,
-    safe_execute,
-    with_error_handling,
+    CoreRateLimitError,
+    CoreResourceNotFoundError,
+    CoreServiceError,
+    CoreTripSageError,
+    CoreValidationError,
+    ErrorDetails,
     create_authentication_error,
     create_authorization_error,
-    create_validation_error,
+    create_error_response,
     create_not_found_error,
+    create_validation_error,
+    format_exception,
+    safe_execute,
+    with_error_handling,
 )
 
 
@@ -51,7 +49,7 @@ class TestErrorDetails:
             resource_id="resource123",
             user_id="user456",
             request_id="req789",
-            additional_context={"key": "value"}
+            additional_context={"key": "value"},
         )
         assert details.service == "test_service"
         assert details.operation == "test_operation"
@@ -65,13 +63,13 @@ class TestErrorDetails:
         details = ErrorDetails(
             service="test_service",
             operation="test_operation",
-            additional_context={"nested": {"data": 123}}
+            additional_context={"nested": {"data": 123}},
         )
         serialized = details.model_dump(exclude_none=True)
         expected = {
             "service": "test_service",
             "operation": "test_operation",
-            "additional_context": {"nested": {"data": 123}}
+            "additional_context": {"nested": {"data": 123}},
         }
         assert serialized == expected
 
@@ -94,7 +92,7 @@ class TestCoreTripSageError:
             message="Custom message",
             code="CUSTOM_ERROR",
             status_code=status.HTTP_400_BAD_REQUEST,
-            details=details
+            details=details,
         )
         assert error.message == "Custom message"
         assert error.code == "CUSTOM_ERROR"
@@ -104,8 +102,7 @@ class TestCoreTripSageError:
     def test_initialization_with_dict_details(self):
         """Test error initialization with dict details."""
         error = CoreTripSageError(
-            message="Test",
-            details={"service": "test_service", "operation": "test_op"}
+            message="Test", details={"service": "test_service", "operation": "test_op"}
         )
         assert isinstance(error.details, ErrorDetails)
         assert error.details.service == "test_service"
@@ -117,7 +114,7 @@ class TestCoreTripSageError:
             message="Test message",
             code="TEST_ERROR",
             status_code=status.HTTP_400_BAD_REQUEST,
-            details={"service": "test_service"}
+            details={"service": "test_service"},
         )
         result = error.to_dict()
         expected = {
@@ -125,7 +122,7 @@ class TestCoreTripSageError:
             "message": "Test message",
             "code": "TEST_ERROR",
             "status_code": status.HTTP_400_BAD_REQUEST,
-            "details": {"service": "test_service", "additional_context": {}}
+            "details": {"service": "test_service", "additional_context": {}},
         }
         assert result == expected
 
@@ -210,7 +207,9 @@ class TestSpecificExceptions:
         """Test CoreMCPError."""
         error = CoreMCPError("MCP operation failed", tool="test_tool")
         assert error.code == "MCP_ERROR"
-        assert error.status_code == status.HTTP_502_BAD_GATEWAY  # Inherits from CoreServiceError
+        assert (
+            error.status_code == status.HTTP_502_BAD_GATEWAY
+        )  # Inherits from CoreServiceError
         assert error.message == "MCP operation failed"
         assert error.details.additional_context["tool"] == "test_tool"
 
@@ -218,7 +217,9 @@ class TestSpecificExceptions:
         """Test CoreAgentError."""
         error = CoreAgentError("Agent failed", agent_type="test_agent")
         assert error.code == "AGENT_ERROR"
-        assert error.status_code == status.HTTP_502_BAD_GATEWAY  # Inherits from CoreServiceError
+        assert (
+            error.status_code == status.HTTP_502_BAD_GATEWAY
+        )  # Inherits from CoreServiceError
         assert error.message == "Agent failed"
         assert error.details.service == "test_agent"
 
@@ -235,7 +236,7 @@ class TestUtilityFunctions:
             "message": "Test validation error",
             "code": "VALIDATION_ERROR",
             "status_code": status.HTTP_422_UNPROCESSABLE_ENTITY,
-            "details": {"additional_context": {}}
+            "details": {"additional_context": {}},
         }
         assert result == expected
 
@@ -243,7 +244,7 @@ class TestUtilityFunctions:
         """Test formatting standard Python exceptions."""
         error = ValueError("Standard error")
         result = format_exception(error)
-        
+
         # Check the basic structure without relying on traceback details
         assert result["error"] == "ValueError"
         assert result["message"] == "Standard error"
@@ -256,7 +257,7 @@ class TestUtilityFunctions:
         """Test error response creation."""
         error = CoreAuthenticationError("Auth failed")
         response = create_error_response(error)
-        
+
         # Should return a dict with error information
         assert response["error"] == "CoreAuthenticationError"
         assert response["message"] == "Auth failed"
@@ -265,35 +266,39 @@ class TestUtilityFunctions:
 
     def test_safe_execute_success(self):
         """Test safe_execute with successful operation."""
+
         def success_func():
             return "success"
-        
+
         result = safe_execute(success_func)
         assert result == "success"
 
     def test_safe_execute_failure(self):
         """Test safe_execute with failing operation."""
+
         def failing_func():
             raise ValueError("Test error")
-        
+
         result = safe_execute(failing_func, fallback="default_value")
         assert result == "default_value"
 
     def test_with_error_handling_decorator_success(self):
         """Test with_error_handling decorator on successful function."""
+
         @with_error_handling()
         def success_func():
             return "success"
-        
+
         result = success_func()
         assert result == "success"
 
     def test_with_error_handling_decorator_failure(self):
         """Test with_error_handling decorator on failing function."""
+
         @with_error_handling(fallback="default", re_raise=False)
         def failing_func():
             raise ValueError("Test error")
-        
+
         result = failing_func()
         assert result == "default"
 
@@ -348,7 +353,7 @@ class TestErrorInheritance:
             CoreMCPError("test"),
             CoreAgentError("test"),
         ]
-        
+
         for error in errors:
             assert isinstance(error, CoreTripSageError)
             assert isinstance(error, Exception)
@@ -357,7 +362,7 @@ class TestErrorInheritance:
         """Test that service-specific errors inherit from CoreServiceError."""
         mcp_error = CoreMCPError("test")
         agent_error = CoreAgentError("test")
-        
+
         assert isinstance(mcp_error, CoreServiceError)
         assert isinstance(agent_error, CoreServiceError)
         assert isinstance(mcp_error, CoreTripSageError)
@@ -374,13 +379,13 @@ class TestErrorWithComplexDetails:
             "operation": "complex_operation",
             "additional_context": {
                 "nested": {"data": 123, "items": [1, 2, 3]},
-                "metadata": {"timestamp": "2023-01-01", "version": "1.0"}
-            }
+                "metadata": {"timestamp": "2023-01-01", "version": "1.0"},
+            },
         }
-        
+
         error = CoreServiceError("Complex error", details=details)
         result = error.to_dict()
-        
+
         assert result["details"]["service"] == "test_service"
         assert result["details"]["operation"] == "complex_operation"
         assert result["details"]["additional_context"]["nested"]["data"] == 123
@@ -392,14 +397,14 @@ class TestErrorWithComplexDetails:
             service="test_service",
             operation=None,  # This should be excluded
             resource_id="123",
-            user_id=None,    # This should be excluded
+            user_id=None,  # This should be excluded
         )
-        
+
         serialized = details.model_dump(exclude_none=True)
         expected = {
             "service": "test_service",
             "resource_id": "123",
-            "additional_context": {}
+            "additional_context": {},
         }
         assert serialized == expected
         assert "operation" not in serialized

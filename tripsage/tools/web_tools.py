@@ -20,9 +20,10 @@ from typing import Any, Dict, List, Optional
 # NOTE: Temporarily using mock implementation due to missing agents dependency
 # from agents import WebSearchTool
 
+
 class MockWebSearchTool:
     """Mock WebSearchTool for testing and development.
-    
+
     This class provides a basic implementation to replace the missing
     OpenAI Agents SDK WebSearchTool for testing purposes.
     """
@@ -58,17 +59,18 @@ class MockWebSearchTool:
                 {
                     "title": f"Mock result for: {query}",
                     "snippet": f"This is a mock search result for the query '{query}'. "
-                              "In a real implementation, this would contain actual web search results.",
-                    "link": f"https://example.com/search?q={query.replace(' ', '+')}"
+                    "In a real implementation, this would contain actual web search results.",
+                    "link": f"https://example.com/search?q={query.replace(' ', '+')}",
                 }
             ],
             "query": query,
             "search_metadata": {
                 "total_results": 1,
                 "search_time": "0.1s",
-                "provider": "MockSearchProvider"
-            }
+                "provider": "MockSearchProvider",
+            },
         }
+
 
 # Use the mock implementation
 WebSearchTool = MockWebSearchTool
