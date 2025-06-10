@@ -105,7 +105,6 @@ class TestServiceRegistry:
             PlaywrightService=MagicMock(),
             WebCrawlService=MagicMock(),
             UserService=MagicMock(),
-            AuthenticationService=MagicMock(),
             KeyManagementService=MagicMock(),
             MemoryService=MagicMock(),
             ChatService=MagicMock(),

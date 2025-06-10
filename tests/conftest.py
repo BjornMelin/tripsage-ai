@@ -780,7 +780,7 @@ def client():
     with (
         # Mock authentication service and middleware
         patch(
-            "tripsage_core.services.business.auth_service.get_auth_service",
+            "tripsage_core.services.business.auth_service.get_current_user",
             return_value=AsyncMock(),
         ),
         # Mock database service

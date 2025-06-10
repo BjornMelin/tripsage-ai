@@ -16,7 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from tripsage.api.main import app
 from tripsage_core.models.db.trip import Trip
 from tripsage_core.models.db.user import User
-from tripsage_core.services.business.auth_service import AuthenticationService
+from tripsage_core.services.business.user_service import UserService
 from tripsage_core.services.business.trip_service import TripService
 from tripsage_core.services.infrastructure.database_service import DatabaseService
 
@@ -68,12 +68,13 @@ class TestApiDatabaseFlow:
         return session
 
     @pytest.fixture
-    def mock_auth_service(self, mock_user):
-        """Mock auth service."""
-        service = AsyncMock(spec=AuthenticationService)
+    def mock_user_service(self, mock_user):
+        """Mock user service."""
+        service = AsyncMock(spec=UserService)
         service.get_user_by_id.return_value = mock_user
-        service.validate_api_key.return_value = mock_user
+        service.get_user_by_email.return_value = mock_user
         service.create_user.return_value = mock_user
+        service.update_user.return_value = mock_user
         return service
 
     @pytest.fixture
@@ -100,13 +101,13 @@ class TestApiDatabaseFlow:
 
     @pytest.mark.asyncio
     async def test_user_registration_flow(
-        self, client, mock_auth_service, mock_database_service, mock_user
+        self, client, mock_user_service, mock_database_service, mock_user
     ):
-        """Test complete user registration flow: API → Auth Service → Database."""
+        """Test complete user registration flow: API → User Service → Database."""
         with patch(
-            "tripsage_core.services.business.auth_service.AuthenticationService"
+            "tripsage_core.services.business.user_service.UserService"
         ) as mock_service_class:
-            mock_service_class.return_value = mock_auth_service
+            mock_service_class.return_value = mock_user_service
 
             with patch(
                 "tripsage_core.services.infrastructure.database_service.get_database_service"
@@ -132,8 +133,8 @@ class TestApiDatabaseFlow:
                 assert response_data["user"]["email"] == "test@example.com"
 
                 # Verify service was called
-                mock_auth_service.create_user.assert_called_once()
-                call_args = mock_auth_service.create_user.call_args[0][0]
+                mock_user_service.create_user.assert_called_once()
+                call_args = mock_user_service.create_user.call_args[0][0]
                 assert call_args.email == "test@example.com"
 
     @pytest.mark.asyncio
@@ -261,10 +262,8 @@ class TestApiDatabaseFlow:
                     mock_trip_service.create_trip.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_authentication_failure_flow(self, client, mock_auth_service):
+    async def test_authentication_failure_flow(self, client):
         """Test authentication failure in API flow."""
-        # Configure auth service to reject the API key
-        mock_auth_service.validate_api_key.side_effect = Exception("Invalid API key")
 
         with patch("tripsage.api.core.dependencies.verify_api_key") as mock_verify:
             mock_verify.side_effect = Exception("Invalid API key")

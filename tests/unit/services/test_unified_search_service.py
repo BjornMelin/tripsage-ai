@@ -19,9 +19,8 @@ from tripsage.api.schemas.responses.search import (
 )
 from tripsage.api.schemas.responses.activities import (
     ActivitySearchResponse,
-    Activity,
-    ActivityType,
-    Coordinates,
+    ActivityResponse,
+    ActivityCoordinates,
 )
 from tripsage_core.services.business.unified_search_service import (
     UnifiedSearchService,
@@ -92,27 +91,39 @@ class TestUnifiedSearchService:
         """Create a sample activity search response."""
         return ActivitySearchResponse(
             activities=[
-                Activity(
+                ActivityResponse(
                     id="act1",
                     name="Museum of Modern Art",
-                    type=ActivityType.MUSEUM,
+                    type="cultural",
                     description="World-class modern art museum",
                     location="New York, NY",
-                    coordinates=Coordinates(latitude=40.7614, longitude=-73.9776),
+                    coordinates=ActivityCoordinates(lat=40.7614, lng=-73.9776),
                     rating=4.5,
                     price=25.0,
                     provider="google_maps",
+                    date="2025-01-15",
+                    duration=120,
+                    images=[],
+                    availability="Open",
+                    wheelchair_accessible=False,
+                    instant_confirmation=False,
                 ),
-                Activity(
+                ActivityResponse(
                     id="act2",
                     name="Metropolitan Museum",
-                    type=ActivityType.MUSEUM,
+                    type="cultural",
                     description="One of the world's largest art museums",
                     location="New York, NY",
-                    coordinates=Coordinates(latitude=40.7794, longitude=-73.9632),
+                    coordinates=ActivityCoordinates(lat=40.7794, lng=-73.9632),
                     rating=4.8,
                     price=30.0,
                     provider="google_maps",
+                    date="2025-01-15",
+                    duration=180,
+                    images=[],
+                    availability="Open",
+                    wheelchair_accessible=True,
+                    instant_confirmation=False,
                 ),
             ],
             total_results=2,
@@ -208,15 +219,21 @@ class TestUnifiedSearchService:
     ):
         """Test unified search with price and rating filters."""
         # Add expensive activity that should be filtered out
-        expensive_activity = Activity(
+        expensive_activity = ActivityResponse(
             id="act3",
             name="Expensive Tour",
-            type=ActivityType.TOUR,
+            type="tour",
             description="Very expensive tour",
             location="New York, NY",
             rating=4.9,
             price=300.0,  # Above max price filter
             provider="google_maps",
+            date="2025-01-15",
+            duration=240,
+            images=[],
+            availability="Open",
+            wheelchair_accessible=False,
+            instant_confirmation=True,
         )
         sample_activity_response.activities.append(expensive_activity)
         mock_activity_service.search_activities.return_value = sample_activity_response

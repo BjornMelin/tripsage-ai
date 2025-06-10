@@ -129,9 +129,9 @@ dev = [
     # Include test and lint groups
     {include-group = "test"},
     {include-group = "lint"},
-    
     # Additional development tools
     "radon>=6.0.1",
+    "python-jose[cryptography]>=3.5.0",
 ]
 
 [tool.coverage.run]
