@@ -6,7 +6,7 @@ export async function POST(request: NextRequest) {
   try {
     // Get authorization header
     const authHeader = request.headers.get("authorization");
-    
+
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
       return NextResponse.json(
         { error: "No valid authorization token provided" },
@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": authHeader,
+        Authorization: authHeader,
       },
     });
 
@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Logout API error:", error);
-    
+
     // Return success anyway since logout should always succeed on client
     return NextResponse.json({ success: true });
   }

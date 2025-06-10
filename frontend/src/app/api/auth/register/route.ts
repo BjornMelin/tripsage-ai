@@ -4,21 +4,31 @@ import { z } from "zod";
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 // Request validation schema
-const LoginRequestSchema = z.object({
-  email: z.string().email("Invalid email format"),
-  password: z.string().min(1, "Password is required"),
-  rememberMe: z.boolean().optional(),
-});
+const RegisterRequestSchema = z
+  .object({
+    email: z.string().email("Invalid email format"),
+    password: z.string().min(8, "Password must be at least 8 characters"),
+    confirmPassword: z.string().min(1, "Password confirmation is required"),
+    firstName: z.string().optional(),
+    lastName: z.string().optional(),
+    acceptTerms: z
+      .boolean()
+      .refine((val) => val === true, "You must accept the terms and conditions"),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords do not match",
+    path: ["confirmPassword"],
+  });
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
     // Validate request body
-    const validatedData = LoginRequestSchema.parse(body);
+    const validatedData = RegisterRequestSchema.parse(body);
 
     // Make request to FastAPI backend
-    const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
+    const response = await fetch(`${API_BASE_URL}/api/auth/register`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -26,16 +36,18 @@ export async function POST(request: NextRequest) {
       body: JSON.stringify({
         email: validatedData.email,
         password: validatedData.password,
-        remember_me: validatedData.rememberMe,
+        first_name: validatedData.firstName,
+        last_name: validatedData.lastName,
+        accept_terms: validatedData.acceptTerms,
       }),
     });
 
     if (!response.ok) {
       const errorData = await response
         .json()
-        .catch(() => ({ message: "Login failed" }));
+        .catch(() => ({ message: "Registration failed" }));
       return NextResponse.json(
-        { error: errorData.message || "Authentication failed" },
+        { error: errorData.message || "Registration failed" },
         { status: response.status }
       );
     }
@@ -84,7 +96,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(responseData);
   } catch (error) {
-    console.error("Login API error:", error);
+    console.error("Register API error:", error);
 
     if (error instanceof z.ZodError) {
       return NextResponse.json(

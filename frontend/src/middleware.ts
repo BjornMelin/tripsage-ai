@@ -62,8 +62,7 @@ async function verifyJwtToken(token: string): Promise<boolean> {
   try {
     const jwtSecret = process.env.JWT_SECRET;
     if (!jwtSecret) {
-      console.warn("JWT_SECRET environment variable is not set");
-      return false;
+      throw new Error("JWT_SECRET environment variable is required");
     }
 
     const secret = new TextEncoder().encode(jwtSecret);
@@ -92,11 +91,11 @@ export async function middleware(request: NextRequest) {
   const response = NextResponse.next();
 
   // Handle authentication for protected routes
-  if (protectedRoutes.some(route => pathname.startsWith(route))) {
+  if (protectedRoutes.some((route) => pathname.startsWith(route))) {
     // Check for JWT token in Authorization header or cookie
     const authHeader = request.headers.get("authorization");
-    const token = authHeader?.replace("Bearer ", "") || 
-                  request.cookies.get("auth-token")?.value;
+    const token =
+      authHeader?.replace("Bearer ", "") || request.cookies.get("auth-token")?.value;
 
     if (!token || !(await verifyJwtToken(token))) {
       // Redirect to login if not authenticated
@@ -107,10 +106,10 @@ export async function middleware(request: NextRequest) {
   }
 
   // Redirect authenticated users away from auth pages
-  if (authRoutes.some(route => pathname.startsWith(route))) {
+  if (authRoutes.some((route) => pathname.startsWith(route))) {
     const authHeader = request.headers.get("authorization");
-    const token = authHeader?.replace("Bearer ", "") || 
-                  request.cookies.get("auth-token")?.value;
+    const token =
+      authHeader?.replace("Bearer ", "") || request.cookies.get("auth-token")?.value;
 
     if (token && (await verifyJwtToken(token))) {
       const redirectTo = request.nextUrl.searchParams.get("redirectTo") || "/dashboard";

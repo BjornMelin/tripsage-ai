@@ -311,27 +311,43 @@ export const useAuthStore = create<AuthState>()(
               throw new Error("You must accept the terms and conditions");
             }
 
-            // Mock API call - replace with actual implementation
-            await new Promise((resolve) => setTimeout(resolve, 1000));
+            // Call real registration API
+            const response = await fetch("/api/auth/register", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                email: credentials.email,
+                password: credentials.password,
+                confirmPassword: credentials.confirmPassword,
+                firstName: credentials.firstName,
+                lastName: credentials.lastName,
+                acceptTerms: credentials.acceptTerms,
+              }),
+            });
 
-            // Mock successful registration
-            const now = getCurrentTimestamp();
+            if (!response.ok) {
+              const errorData = await response.json();
+              throw new Error(errorData.error || "Registration failed");
+            }
 
-            const mockUser: User = {
-              id: generateId(),
-              email: credentials.email,
-              firstName: credentials.firstName,
-              lastName: credentials.lastName,
-              displayName: credentials.firstName
-                ? `${credentials.firstName} ${credentials.lastName || ""}`.trim()
-                : credentials.email.split("@")[0],
-              isEmailVerified: false, // Requires email verification
-              createdAt: now,
-              updatedAt: now,
-            };
+            const authData = await response.json();
+
+            // Validate response data
+            const userResult = UserSchema.safeParse(authData.user);
+            const tokenResult = TokenInfoSchema.safeParse(authData.tokenInfo);
+            const sessionResult = SessionSchema.safeParse(authData.session);
+
+            if (!userResult.success || !tokenResult.success || !sessionResult.success) {
+              throw new Error("Invalid response data from server");
+            }
 
             set({
-              user: mockUser,
+              isAuthenticated: true,
+              user: userResult.data,
+              tokenInfo: tokenResult.data,
+              session: sessionResult.data,
               isRegistering: false,
               registerError: null,
             });
@@ -353,13 +369,13 @@ export const useAuthStore = create<AuthState>()(
 
           try {
             const { tokenInfo } = get();
-            
+
             // Call logout API if we have a token
             if (tokenInfo?.accessToken) {
               await fetch("/api/auth/logout", {
                 method: "POST",
                 headers: {
-                  "Authorization": `Bearer ${tokenInfo.accessToken}`,
+                  Authorization: `Bearer ${tokenInfo.accessToken}`,
                   "Content-Type": "application/json",
                 },
               });
@@ -392,8 +408,18 @@ export const useAuthStore = create<AuthState>()(
           set({ isLoading: true });
 
           try {
-            // Mock API call to invalidate all sessions
-            await new Promise((resolve) => setTimeout(resolve, 1000));
+            const { tokenInfo } = get();
+
+            // Call logout all devices API if we have a token
+            if (tokenInfo?.accessToken) {
+              await fetch("/api/auth/logout-all-devices", {
+                method: "POST",
+                headers: {
+                  Authorization: `Bearer ${tokenInfo.accessToken}`,
+                  "Content-Type": "application/json",
+                },
+              });
+            }
 
             await get().logout();
           } catch (error) {
@@ -412,8 +438,21 @@ export const useAuthStore = create<AuthState>()(
               throw new Error("Email is required");
             }
 
-            // Mock API call
-            await new Promise((resolve) => setTimeout(resolve, 1000));
+            // Call real password reset request API
+            const response = await fetch("/api/auth/request-password-reset", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                email: request.email,
+              }),
+            });
+
+            if (!response.ok) {
+              const errorData = await response.json();
+              throw new Error(errorData.error || "Password reset request failed");
+            }
 
             set({ isResettingPassword: false });
             return true;
@@ -440,8 +479,23 @@ export const useAuthStore = create<AuthState>()(
               throw new Error("Passwords do not match");
             }
 
-            // Mock API call
-            await new Promise((resolve) => setTimeout(resolve, 1000));
+            // Call real password reset API
+            const response = await fetch("/api/auth/reset-password", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                token: reset.token,
+                newPassword: reset.newPassword,
+                confirmPassword: reset.confirmPassword,
+              }),
+            });
+
+            if (!response.ok) {
+              const errorData = await response.json();
+              throw new Error(errorData.error || "Password reset failed");
+            }
 
             set({ isResettingPassword: false });
             return true;

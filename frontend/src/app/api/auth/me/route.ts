@@ -6,7 +6,7 @@ export async function GET(request: NextRequest) {
   try {
     // Get authorization header
     const authHeader = request.headers.get("authorization");
-    
+
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
       return NextResponse.json(
         { error: "No valid authorization token provided" },
@@ -18,12 +18,14 @@ export async function GET(request: NextRequest) {
     const response = await fetch(`${API_BASE_URL}/api/auth/me`, {
       method: "GET",
       headers: {
-        "Authorization": authHeader,
+        Authorization: authHeader,
       },
     });
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ message: "Failed to get user info" }));
+      const errorData = await response
+        .json()
+        .catch(() => ({ message: "Failed to get user info" }));
       return NextResponse.json(
         { error: errorData.message || "Authentication failed" },
         { status: response.status }
@@ -53,10 +55,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(responseData);
   } catch (error) {
     console.error("Get user API error:", error);
-    
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
