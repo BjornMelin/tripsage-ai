@@ -36,6 +36,54 @@ This streamlined TODO list tracks current development priorities for TripSage AI
 - `ruff check . --fix && ruff format .` on all changes
 - Test coverage ≥90%, pre-commit hooks enabled
 
+## 🚨 CRITICAL INTEGRATION BLOCKERS (Must Complete Before Merge)
+
+### 0. Critical Authentication & API Integration Issues ⭐ **CRITICAL BLOCKERS**
+
+**Status**: BRANCH NOT READY FOR MERGE - Critical integration gaps identified
+
+These issues MUST be resolved before the current branch can be merged to main. Each requires comprehensive research phase before implementation:
+
+- [ ] **[BJO-119](https://linear.app/bjorn-dev/issue/BJO-119)** - feat(auth): unify frontend Supabase Auth with backend JWT system integration ⚠️ **P0 - CRITICAL BLOCKER**
+  - **Issue**: Authentication systems completely disconnected - frontend uses Supabase Auth, backend uses separate JWT
+  - **Impact**: Users cannot authenticate, API calls fail, application non-functional
+  - **Research Required**: Determine auth leadership (frontend vs backend), token format unification
+  - **Effort**: 2-3 days after research phase
+  - **Blocks**: All user workflows and API operations
+
+- [ ] **[BJO-120](https://linear.app/bjorn-dev/issue/BJO-120)** - feat(api): complete implementation of core router endpoints ⚠️ **P0 - CRITICAL BLOCKER**
+  - **Issue**: Core endpoints return 501 Not Implemented (create_trip, save_activity, search_history)
+  - **Impact**: Basic user workflows completely broken
+  - **Research Required**: Core service integration patterns after service layer removal
+  - **Effort**: 3-4 days after research phase
+  - **Blocks**: Trip creation, activity management, search functionality
+
+- [ ] **[BJO-121](https://linear.app/bjorn-dev/issue/BJO-121)** - fix(database): correct Supabase schema foreign key constraints and UUID references ⚠️ **P1 - HIGH**
+  - **Issue**: Memory tables use TEXT user_id instead of proper UUID foreign keys
+  - **Impact**: Data integrity risk, potential orphaned records
+  - **Research Required**: Schema audit, cascading behavior decisions, migration strategy
+  - **Effort**: 2-3 days with research phase
+  - **Blocks**: Data integrity and referential consistency
+
+- [ ] **[BJO-122](https://linear.app/bjorn-dev/issue/BJO-122)** - fix(frontend): resolve API client token format mismatch with backend authentication ⚠️ **P1 - HIGH**
+  - **Issue**: Frontend API client token format incompatible with backend JWT validation
+  - **Impact**: All authenticated API operations fail silently
+  - **Research Required**: Token unification strategy, auth context integration
+  - **Effort**: 2-3 days with research phase
+  - **Blocks**: Frontend-backend API communication
+
+- [ ] **[BJO-123](https://linear.app/bjorn-dev/issue/BJO-123)** - test(integration): comprehensive end-to-end integration testing for auth and API flows ⚠️ **P1 - HIGH**
+  - **Issue**: No validation of complete integration after core fixes
+  - **Impact**: Cannot confidently validate integration fixes
+  - **Research Required**: Integration testing strategy, environment setup
+  - **Effort**: 3-4 days after dependencies complete
+  - **Dependencies**: BJO-119 through BJO-122 must be complete
+
+**Total Estimated Effort**: 10-12 days focused development
+**Dependencies**: BJO-119 & BJO-120 (parallel) → BJO-121 & BJO-122 → BJO-123
+
+> **IMPORTANT**: This branch represents exceptional architectural modernization work but has critical integration gaps that prevent immediate merge. The foundation is Grade A quality - the integration work needed is clear and achievable.
+
 ## High Priority Tasks
 
 ### 1. Complete Frontend Core Setup ⭐ **HIGH PRIORITY**
