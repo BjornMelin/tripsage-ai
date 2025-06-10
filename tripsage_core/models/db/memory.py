@@ -20,7 +20,7 @@ class Memory(BaseModel):
             "examples": [
                 {
                     "id": "123e4567-e89b-12d3-a456-426614174000",
-                    "user_id": "user_123",
+                    "user_id": "123e4567-e89b-12d3-a456-426614174000",
                     "memory": "User prefers window seats on flights",
                     "metadata": {"preference_type": "flight", "category": "seating"},
                     "categories": ["travel_preferences", "flights"],
@@ -35,7 +35,7 @@ class Memory(BaseModel):
     )
 
     id: UUID = Field(description="Unique identifier for the memory")
-    user_id: str = Field(description="ID of the user this memory belongs to")
+    user_id: UUID = Field(description="ID of the user this memory belongs to")
     memory: str = Field(description="The actual memory content")
     embedding: Optional[List[float]] = Field(
         None,
@@ -68,11 +68,11 @@ class Memory(BaseModel):
 
     @field_validator("user_id")
     @classmethod
-    def validate_user_id(cls, v: str) -> str:
+    def validate_user_id(cls, v: UUID) -> UUID:
         """Validate user ID format."""
-        if not v or not v.strip():
+        if not v:
             raise ValueError("User ID cannot be empty")
-        return v.strip()
+        return v
 
     @field_validator("categories")
     @classmethod
@@ -141,7 +141,7 @@ class SessionMemory(BaseModel):
                 {
                     "id": "123e4567-e89b-12d3-a456-426614174000",
                     "session_id": "chat_session_123",
-                    "user_id": "user_123",
+                    "user_id": "123e4567-e89b-12d3-a456-426614174000",
                     "message_index": 5,
                     "role": "user",
                     "content": "I want to book a flight to Paris",
@@ -154,8 +154,8 @@ class SessionMemory(BaseModel):
     )
 
     id: UUID = Field(description="Unique identifier for the session memory")
-    session_id: str = Field(description="ID of the session this memory belongs to")
-    user_id: str = Field(description="ID of the user this memory belongs to")
+    session_id: UUID = Field(description="ID of the session this memory belongs to")
+    user_id: UUID = Field(description="ID of the user this memory belongs to")
     message_index: int = Field(description="Index of the message within the session")
     role: str = Field(description="Role of the message (user, assistant, system)")
     content: str = Field(description="Content of the message")
@@ -188,19 +188,19 @@ class SessionMemory(BaseModel):
 
     @field_validator("session_id")
     @classmethod
-    def validate_session_id(cls, v: str) -> str:
+    def validate_session_id(cls, v: UUID) -> UUID:
         """Validate session ID format."""
-        if not v or not v.strip():
+        if not v:
             raise ValueError("Session ID cannot be empty")
-        return v.strip()
+        return v
 
     @field_validator("user_id")
     @classmethod
-    def validate_user_id(cls, v: str) -> str:
+    def validate_user_id(cls, v: UUID) -> UUID:
         """Validate user ID format."""
-        if not v or not v.strip():
+        if not v:
             raise ValueError("User ID cannot be empty")
-        return v.strip()
+        return v
 
     @field_validator("message_index")
     @classmethod
@@ -287,7 +287,7 @@ class MemoryCreate(BaseModel):
         }
     )
 
-    user_id: str = Field(description="ID of the user this memory belongs to")
+    user_id: UUID = Field(description="ID of the user this memory belongs to")
     memory: str = Field(description="The actual memory content")
     metadata: dict[str, Any] = Field(
         default_factory=dict, description="Additional metadata for the memory"
@@ -309,11 +309,11 @@ class MemoryCreate(BaseModel):
 
     @field_validator("user_id")
     @classmethod
-    def validate_user_id(cls, v: str) -> str:
+    def validate_user_id(cls, v: UUID) -> UUID:
         """Validate user ID format."""
-        if not v or not v.strip():
+        if not v:
             raise ValueError("User ID cannot be empty")
-        return v.strip()
+        return v
 
     @field_validator("categories")
     @classmethod
