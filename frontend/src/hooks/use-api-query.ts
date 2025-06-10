@@ -1,6 +1,6 @@
 "use client";
 
-import { type ApiError, api } from "@/lib/api/client";
+import { type ApiError } from "@/lib/api/client";
 import {
   type UseMutationOptions,
   type UseQueryOptions,
@@ -8,6 +8,7 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
+import { useAuthenticatedApi } from "./use-authenticated-api";
 
 type ApiQueryOptions<TData, TError> = Omit<
   UseQueryOptions<TData, TError, TData, (string | Record<string, any>)[]>,
@@ -25,9 +26,11 @@ export function useApiQuery<TData = any, TError = ApiError>(
   params?: Record<string, any>,
   options?: ApiQueryOptions<TData, TError>
 ) {
+  const { makeAuthenticatedRequest } = useAuthenticatedApi();
+
   return useQuery<TData, TError, TData, (string | Record<string, any>)[]>({
     queryKey: [endpoint, ...(params ? [params] : [])],
-    queryFn: () => api.get<TData>(endpoint, { params }),
+    queryFn: () => makeAuthenticatedRequest<TData>(endpoint, { params }),
     ...options,
   });
 }
@@ -38,9 +41,14 @@ export function useApiMutation<TData = any, TVariables = any, TError = ApiError>
   options?: ApiMutationOptions<TData, TVariables, TError>
 ) {
   const queryClient = useQueryClient();
+  const { makeAuthenticatedRequest } = useAuthenticatedApi();
 
   return useMutation<TData, TError, TVariables, unknown>({
-    mutationFn: (variables) => api.post<TData>(endpoint, variables),
+    mutationFn: (variables) => makeAuthenticatedRequest<TData>(endpoint, { 
+      method: "POST", 
+      body: JSON.stringify(variables),
+      headers: { "Content-Type": "application/json" }
+    }),
     // Remove onSuccess - let consumers handle it with useEffect
     ...options,
   });
@@ -52,9 +60,14 @@ export function useApiPutMutation<TData = any, TVariables = any, TError = ApiErr
   options?: ApiMutationOptions<TData, TVariables, TError>
 ) {
   const queryClient = useQueryClient();
+  const { makeAuthenticatedRequest } = useAuthenticatedApi();
 
   return useMutation<TData, TError, TVariables, unknown>({
-    mutationFn: (variables) => api.put<TData>(endpoint, variables),
+    mutationFn: (variables) => makeAuthenticatedRequest<TData>(endpoint, { 
+      method: "PUT", 
+      body: JSON.stringify(variables),
+      headers: { "Content-Type": "application/json" }
+    }),
     // Remove onSuccess - let consumers handle it with useEffect
     ...options,
   });
@@ -66,9 +79,14 @@ export function useApiPatchMutation<TData = any, TVariables = any, TError = ApiE
   options?: ApiMutationOptions<TData, TVariables, TError>
 ) {
   const queryClient = useQueryClient();
+  const { makeAuthenticatedRequest } = useAuthenticatedApi();
 
   return useMutation<TData, TError, TVariables, unknown>({
-    mutationFn: (variables) => api.patch<TData>(endpoint, variables),
+    mutationFn: (variables) => makeAuthenticatedRequest<TData>(endpoint, { 
+      method: "PATCH", 
+      body: JSON.stringify(variables),
+      headers: { "Content-Type": "application/json" }
+    }),
     // Remove onSuccess - let consumers handle it with useEffect
     ...options,
   });
@@ -80,9 +98,12 @@ export function useApiDeleteMutation<TData = any, TVariables = any, TError = Api
   options?: ApiMutationOptions<TData, TVariables, TError>
 ) {
   const queryClient = useQueryClient();
+  const { makeAuthenticatedRequest } = useAuthenticatedApi();
 
   return useMutation<TData, TError, TVariables, unknown>({
-    mutationFn: (variables) => api.delete<TData>(`${endpoint}/${variables}`),
+    mutationFn: (variables) => makeAuthenticatedRequest<TData>(`${endpoint}/${variables}`, { 
+      method: "DELETE"
+    }),
     // Remove onSuccess - let consumers handle it with useEffect
     ...options,
   });
