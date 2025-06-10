@@ -5,12 +5,12 @@
  */
 
 import { vi } from "vitest";
-import type { 
-  User, 
-  TokenInfo, 
-  Session, 
-  LoginCredentials, 
-  RegisterCredentials 
+import type {
+  User,
+  TokenInfo,
+  Session,
+  LoginCredentials,
+  RegisterCredentials,
 } from "@/stores/auth-store";
 
 // Test User Data Templates
@@ -87,21 +87,26 @@ export const createUnauthenticatedState = () => ({
   userDisplayName: "",
 });
 
-export const createLoadingState = (loadingType: 'login' | 'register' | 'general' = 'general') => ({
+export const createLoadingState = (
+  loadingType: "login" | "register" | "general" = "general"
+) => ({
   ...createUnauthenticatedState(),
-  isLoading: loadingType === 'general',
-  isLoggingIn: loadingType === 'login',
-  isRegistering: loadingType === 'register',
+  isLoading: loadingType === "general",
+  isLoggingIn: loadingType === "login",
+  isRegistering: loadingType === "register",
 });
 
-export const createErrorState = (errorType: 'login' | 'register' | 'general', message: string) => {
+export const createErrorState = (
+  errorType: "login" | "register" | "general",
+  message: string
+) => {
   const state = createUnauthenticatedState();
   switch (errorType) {
-    case 'login':
+    case "login":
       return { ...state, loginError: message };
-    case 'register':
+    case "register":
       return { ...state, registerError: message };
-    case 'general':
+    case "general":
       return { ...state, error: message };
   }
 };
@@ -181,16 +186,8 @@ export const mockAuthApiResponse = {
     tokenInfo: createMockTokenInfo(),
     session: createMockSession(),
   }),
-  unauthorized: createMockApiResponse(
-    { error: "Invalid credentials" },
-    false,
-    401
-  ),
-  serverError: createMockApiResponse(
-    { error: "Internal server error" },
-    false,
-    500
-  ),
+  unauthorized: createMockApiResponse({ error: "Invalid credentials" }, false, 401),
+  serverError: createMockApiResponse({ error: "Internal server error" }, false, 500),
   validationError: createMockApiResponse(
     { error: "Email and password are required" },
     false,
@@ -212,7 +209,7 @@ export const createMockRouter = () => ({
 export const createMockAuthStore = (initialState = createUnauthenticatedState()) => {
   const actions = createMockAuthActions();
   const errorActions = createMockErrorActions();
-  
+
   return {
     ...initialState,
     ...actions,
@@ -231,19 +228,19 @@ export const authTestScenarios = {
     description: "User is not logged in",
   },
   loggingIn: {
-    state: createLoadingState('login'),
+    state: createLoadingState("login"),
     description: "User is in the process of logging in",
   },
   registering: {
-    state: createLoadingState('register'),
+    state: createLoadingState("register"),
     description: "User is in the process of registering",
   },
   loginError: {
-    state: createErrorState('login', 'Invalid email or password'),
+    state: createErrorState("login", "Invalid email or password"),
     description: "Login failed with error message",
   },
   registerError: {
-    state: createErrorState('register', 'Email already exists'),
+    state: createErrorState("register", "Email already exists"),
     description: "Registration failed with error message",
   },
   expiredToken: {
@@ -282,7 +279,7 @@ export const restoreAllMocks = () => {
 export const waitForAuthAction = async (mockFn: any, timeout = 1000) => {
   const start = Date.now();
   while (!mockFn.mock.calls.length && Date.now() - start < timeout) {
-    await new Promise(resolve => setTimeout(resolve, 10));
+    await new Promise((resolve) => setTimeout(resolve, 10));
   }
   return mockFn.mock.calls.length > 0;
 };

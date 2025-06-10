@@ -44,9 +44,9 @@ describe("Auth Integration Tests", () => {
     user = setupUserEvent();
     fetchMock = setupFetchMock();
     localStorage = mockLocalStorage();
-    
+
     // Mock localStorage
-    Object.defineProperty(window, 'localStorage', {
+    Object.defineProperty(window, "localStorage", {
       value: localStorage,
       writable: true,
     });
@@ -68,7 +68,7 @@ describe("Auth Integration Tests", () => {
 
       // Fill and submit login form
       await fillLoginForm(user, validLoginCredentials);
-      await submitForm(user, 'login');
+      await submitForm(user, "login");
 
       // Verify API call
       await waitFor(() => {
@@ -96,13 +96,13 @@ describe("Auth Integration Tests", () => {
       render(<LoginForm />);
 
       await fillLoginForm(user, validLoginCredentials);
-      await submitForm(user, 'login');
+      await submitForm(user, "login");
 
       // Should not redirect on error
       await waitFor(() => {
         expect(fetchMock).toHaveBeenCalled();
       });
-      
+
       // Should not redirect to dashboard
       expect(mockPush).not.toHaveBeenCalledWith("/dashboard");
     });
@@ -114,7 +114,7 @@ describe("Auth Integration Tests", () => {
       render(<LoginForm />);
 
       await fillLoginForm(user, validLoginCredentials);
-      await submitForm(user, 'login');
+      await submitForm(user, "login");
 
       // Should handle error without crashing
       await waitFor(() => {
@@ -137,7 +137,7 @@ describe("Auth Integration Tests", () => {
       render(<LoginForm />);
 
       await fillLoginForm(user, validLoginCredentials);
-      await submitForm(user, 'login');
+      await submitForm(user, "login");
 
       // Should handle validation error gracefully
       await waitFor(() => {
@@ -158,7 +158,7 @@ describe("Auth Integration Tests", () => {
       };
 
       await fillRegisterForm(user, registerData);
-      await submitForm(user, 'register');
+      await submitForm(user, "register");
 
       // Registration currently uses mock implementation
       // This test validates the form interaction works correctly
@@ -172,7 +172,7 @@ describe("Auth Integration Tests", () => {
       render(<RegisterForm />);
 
       // Try to submit with empty fields
-      await submitForm(user, 'register');
+      await submitForm(user, "register");
 
       // Should prevent submission
       const submitButton = screen.getByRole("button", { name: "Create Account" });
@@ -231,7 +231,7 @@ describe("Auth Integration Tests", () => {
       render(<LoginForm />);
 
       await fillLoginForm(user, validLoginCredentials);
-      await submitForm(user, 'login');
+      await submitForm(user, "login");
 
       // Wait for API call
       await waitFor(() => {
@@ -262,7 +262,7 @@ describe("Auth Integration Tests", () => {
       render(<LoginForm />);
 
       await fillLoginForm(user, validLoginCredentials);
-      await submitForm(user, 'login');
+      await submitForm(user, "login");
 
       // Verify initial login
       await waitFor(() => {
@@ -277,7 +277,7 @@ describe("Auth Integration Tests", () => {
   describe("Security Scenarios", () => {
     it("should handle SQL injection attempts safely", async () => {
       const maliciousInput = "'; DROP TABLE users; --";
-      
+
       fetchMock.mockResolvedValueOnce(mockAuthApiResponse.unauthorized);
 
       render(<LoginForm />);
@@ -286,7 +286,7 @@ describe("Auth Integration Tests", () => {
         email: maliciousInput,
         password: maliciousInput,
       });
-      await submitForm(user, 'login');
+      await submitForm(user, "login");
 
       // Should send the malicious input as-is to the API
       // (The API should handle sanitization)
@@ -307,7 +307,7 @@ describe("Auth Integration Tests", () => {
 
     it("should handle XSS attempts safely", async () => {
       const xssInput = "<script>alert('xss')</script>";
-      
+
       fetchMock.mockResolvedValueOnce(mockAuthApiResponse.unauthorized);
 
       render(<LoginForm />);
@@ -316,19 +316,19 @@ describe("Auth Integration Tests", () => {
         email: xssInput,
         password: "password123",
       });
-      await submitForm(user, 'login');
+      await submitForm(user, "login");
 
       // Form should handle XSS input safely
       const emailInput = screen.getByPlaceholderText("john@example.com");
       expect(emailInput).toHaveValue(xssInput);
-      
+
       // Should not execute script
       expect(document.querySelectorAll("script")).toHaveLength(0);
     });
 
     it("should handle extremely long input gracefully", async () => {
       const longInput = "a".repeat(10000);
-      
+
       render(<LoginForm />);
 
       const emailInput = screen.getByPlaceholderText("john@example.com");
@@ -346,7 +346,7 @@ describe("Auth Integration Tests", () => {
       render(<LoginForm />);
 
       await fillLoginForm(user, validLoginCredentials);
-      
+
       // Submit multiple times rapidly
       const submitButton = screen.getByRole("button", { name: "Sign In" });
       await user.click(submitButton);
@@ -361,24 +361,28 @@ describe("Auth Integration Tests", () => {
 
     it("should handle slow API responses", async () => {
       // Mock slow response
-      fetchMock.mockImplementationOnce(() =>
-        new Promise(resolve => 
-          setTimeout(() => resolve(mockAuthApiResponse.success), 2000)
-        )
+      fetchMock.mockImplementationOnce(
+        () =>
+          new Promise((resolve) =>
+            setTimeout(() => resolve(mockAuthApiResponse.success), 2000)
+          )
       );
 
       render(<LoginForm />);
 
       await fillLoginForm(user, validLoginCredentials);
-      await submitForm(user, 'login');
+      await submitForm(user, "login");
 
       // Should show loading state
       expect(screen.getByText("Signing in...")).toBeInTheDocument();
 
       // Wait for response
-      await waitFor(() => {
-        expect(fetchMock).toHaveBeenCalled();
-      }, { timeout: 3000 });
+      await waitFor(
+        () => {
+          expect(fetchMock).toHaveBeenCalled();
+        },
+        { timeout: 3000 }
+      );
     });
   });
 
@@ -403,7 +407,7 @@ describe("Auth Integration Tests", () => {
 
       // Submit corrected form
       fetchMock.mockResolvedValueOnce(mockAuthApiResponse.success);
-      await submitForm(user, 'login');
+      await submitForm(user, "login");
 
       await waitFor(() => {
         expect(fetchMock).toHaveBeenCalledWith("/api/auth/login", {
@@ -435,7 +439,7 @@ describe("Auth Integration Tests", () => {
       await user.keyboard(validLoginCredentials.password);
 
       fetchMock.mockResolvedValueOnce(mockAuthApiResponse.success);
-      await submitForm(user, 'login');
+      await submitForm(user, "login");
 
       await waitFor(() => {
         expect(fetchMock).toHaveBeenCalled();
@@ -470,7 +474,7 @@ describe("Auth Integration Tests", () => {
       render(<LoginForm />);
 
       await fillLoginForm(user, validLoginCredentials);
-      await submitForm(user, 'login');
+      await submitForm(user, "login");
 
       // Wait for error
       await waitFor(() => {
@@ -479,8 +483,8 @@ describe("Auth Integration Tests", () => {
 
       // Second attempt succeeds
       fetchMock.mockResolvedValueOnce(mockAuthApiResponse.success);
-      
-      await submitForm(user, 'login');
+
+      await submitForm(user, "login");
 
       await waitFor(() => {
         expect(fetchMock).toHaveBeenCalledTimes(2);
@@ -514,7 +518,7 @@ describe("Auth Integration Tests", () => {
       const { rerender } = render(<LoginForm />);
 
       await fillLoginForm(user, validLoginCredentials);
-      await submitForm(user, 'login');
+      await submitForm(user, "login");
 
       // Wait for login to complete
       await waitFor(() => {

@@ -9,7 +9,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useRouter } from "next/navigation";
 import { RegisterForm, RegisterFormSkeleton } from "../register-form";
-import { useAuth, useAuthErrors } from "@/stores/auth-store";
+import { useAuth, useAuthErrors, useAuthLoading } from "@/stores/auth-store";
 import {
   createMockUser,
   createMockAuthActions,
@@ -53,6 +53,7 @@ vi.mock("next/navigation", () => ({
 vi.mock("@/stores/auth-store", () => ({
   useAuth: vi.fn(),
   useAuthErrors: vi.fn(),
+  useAuthLoading: vi.fn(),
 }));
 
 describe("RegisterForm", () => {
@@ -83,6 +84,14 @@ describe("RegisterForm", () => {
       ...authTestScenarios.unauthenticated.state,
       ...mockAuthErrors,
     });
+
+    // Setup auth loading state (not loading by default)
+    vi.mocked(useAuthLoading).mockReturnValue({
+      isLoading: false,
+      isLoggingIn: false,
+      isRegistering: false,
+      isResettingPassword: false,
+    });
   });
 
   afterEach(() => {
@@ -95,7 +104,9 @@ describe("RegisterForm", () => {
 
       // Header content
       expect(screen.getByText("Create your account")).toBeInTheDocument();
-      expect(screen.getByText("Join TripSage to start planning your perfect trips")).toBeInTheDocument();
+      expect(
+        screen.getByText("Join TripSage to start planning your perfect trips")
+      ).toBeInTheDocument();
 
       // Form fields
       expect(screen.getByLabelText("Full Name")).toBeInTheDocument();
@@ -103,15 +114,21 @@ describe("RegisterForm", () => {
       expect(screen.getByLabelText("Password")).toBeInTheDocument();
       expect(screen.getByPlaceholderText("John Doe")).toBeInTheDocument();
       expect(screen.getByPlaceholderText("john@example.com")).toBeInTheDocument();
-      expect(screen.getByPlaceholderText("Create a strong password")).toBeInTheDocument();
+      expect(
+        screen.getByPlaceholderText("Create a strong password")
+      ).toBeInTheDocument();
 
       // Buttons and links
-      expect(screen.getByRole("button", { name: "Create Account" })).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "Create Account" })
+      ).toBeInTheDocument();
       expect(screen.getByText("Already have an account?")).toBeInTheDocument();
 
       // Terms and privacy
-      expect(screen.getByText("By creating an account, you agree to our")).toBeInTheDocument();
-      expectCorrectLinks('register');
+      expect(
+        screen.getByText(/By creating an account, you agree to our/)
+      ).toBeInTheDocument();
+      expectCorrectLinks("register");
     });
 
     it("should render with custom className", () => {
@@ -122,65 +139,66 @@ describe("RegisterForm", () => {
 
     it("should have proper form structure and accessibility", () => {
       render(<RegisterForm />);
-      expectFormAccessibility('register');
+      expectFormAccessibility("register");
     });
 
     it("should show development information in development environment", () => {
       mockDevelopmentEnv();
       render(<RegisterForm />);
-      expectDevelopmentInfo('register');
+      expectDevelopmentInfo("register");
     });
 
     it("should not show development information in production environment", () => {
       mockProductionEnv();
       render(<RegisterForm />);
-      expectNoDevelopmentInfo('register');
+      expectNoDevelopmentInfo("register");
     });
   });
 
   describe("Form Validation", () => {
     it("should disable submit button when fields are empty", () => {
       render(<RegisterForm />);
-      expectSubmitButtonToBeDisabled('register');
+      expectSubmitButtonToBeDisabled("register");
     });
 
     it("should disable submit button when only name is filled", async () => {
       render(<RegisterForm />);
-      
+
       const nameInput = screen.getByPlaceholderText("John Doe");
       await user.type(nameInput, "Test User");
 
-      expectSubmitButtonToBeDisabled('register');
+      expectSubmitButtonToBeDisabled("register");
     });
 
     it("should disable submit button when name and email are filled but password is missing", async () => {
       render(<RegisterForm />);
-      
+
       const nameInput = screen.getByPlaceholderText("John Doe");
       const emailInput = screen.getByPlaceholderText("john@example.com");
 
       await user.type(nameInput, "Test User");
       await user.type(emailInput, "test@example.com");
 
-      expectSubmitButtonToBeDisabled('register');
+      expectSubmitButtonToBeDisabled("register");
     });
 
     it("should enable submit button when all fields are filled", async () => {
       render(<RegisterForm />);
-      
+
       await fillRegisterForm(user, {
-        fullName: validRegisterCredentials.firstName + " " + validRegisterCredentials.lastName,
+        fullName:
+          validRegisterCredentials.firstName + " " + validRegisterCredentials.lastName,
         email: validRegisterCredentials.email,
         password: validRegisterCredentials.password,
       });
 
-      expectSubmitButtonToBeEnabled('register');
+      expectSubmitButtonToBeEnabled("register");
     });
 
     it("should not call register when fields are empty", async () => {
       render(<RegisterForm />);
-      
-      await submitForm(user, 'register');
+
+      await submitForm(user, "register");
       expect(mockAuth.register).not.toHaveBeenCalled();
     });
   });
@@ -215,9 +233,9 @@ describe("RegisterForm", () => {
 
     it("should show missing requirements for weak passwords", async () => {
       render(<RegisterForm />);
-      
+
       const passwordInput = screen.getByPlaceholderText("Create a strong password");
-      await user.type(passwordInput, "weak");
+      await user.type(passwordInput, passwordScenarios.weak);
 
       expect(screen.getByText("Password strength")).toBeInTheDocument();
       expect(screen.getByText("Weak")).toBeInTheDocument();
@@ -234,12 +252,14 @@ describe("RegisterForm", () => {
         email: "test@example.com",
         password: "1", // Weak password
       });
-      
-      await submitForm(user, 'register');
+
+      await submitForm(user, "register");
 
       await waitForAuthAction(mockAuth.register);
-      expect(consoleSpy).toHaveBeenCalledWith("Weak password, but allowing registration");
-      
+      expect(consoleSpy).toHaveBeenCalledWith(
+        "Weak password, but allowing registration"
+      );
+
       consoleSpy.mockRestore();
     });
   });
@@ -256,7 +276,7 @@ describe("RegisterForm", () => {
       };
 
       await fillRegisterForm(user, registerData);
-      await submitForm(user, 'register');
+      await submitForm(user, "register");
 
       await waitForAuthAction(mockAuth.register);
       expect(mockAuth.register).toHaveBeenCalledWith({
@@ -280,7 +300,7 @@ describe("RegisterForm", () => {
       };
 
       await fillRegisterForm(user, registerData);
-      await submitForm(user, 'register');
+      await submitForm(user, "register");
 
       await waitForAuthAction(mockAuth.register);
       expect(mockAuth.register).toHaveBeenCalledWith({
@@ -297,7 +317,7 @@ describe("RegisterForm", () => {
       mockAuth.register.mockResolvedValue(true);
       render(<RegisterForm />);
 
-      await testFormSubmissionWithEnter(user, mockAuth.register, 'register');
+      await testFormSubmissionWithEnter(user, mockAuth.register, "register");
     });
 
     it("should redirect if already authenticated", async () => {
@@ -330,15 +350,29 @@ describe("RegisterForm", () => {
         ...mockAuth,
       });
 
+      vi.mocked(useAuthLoading).mockReturnValue({
+        isLoading: false,
+        isLoggingIn: false,
+        isRegistering: true, // This is the key change
+        isResettingPassword: false,
+      });
+
       render(<RegisterForm />);
 
-      expectLoadingState('register');
+      expectLoadingState("register");
     });
 
     it("should disable password toggle when loading", () => {
       vi.mocked(useAuth).mockReturnValue({
         ...authTestScenarios.registering.state,
         ...mockAuth,
+      });
+
+      vi.mocked(useAuthLoading).mockReturnValue({
+        isLoading: false,
+        isLoggingIn: false,
+        isRegistering: true,
+        isResettingPassword: false,
       });
 
       render(<RegisterForm />);
@@ -431,8 +465,8 @@ describe("RegisterForm", () => {
         email: "test@example.com",
         password: "SecurePassword123!",
       });
-      
-      await submitForm(user, 'register');
+
+      await submitForm(user, "register");
 
       await waitForAuthAction(mockAuth.register);
       expect(mockAuth.register).toHaveBeenCalledWith({
@@ -454,8 +488,8 @@ describe("RegisterForm", () => {
         email: "test@example.com",
         password: "SecurePassword123!",
       });
-      
-      await submitForm(user, 'register');
+
+      await submitForm(user, "register");
 
       await waitForAuthAction(mockAuth.register);
       expect(mockAuth.register).toHaveBeenCalledWith({
@@ -477,8 +511,8 @@ describe("RegisterForm", () => {
         email: "test@example.com",
         password: "SecurePassword123!",
       });
-      
-      await submitForm(user, 'register');
+
+      await submitForm(user, "register");
 
       await waitForAuthAction(mockAuth.register);
       expect(mockAuth.register).toHaveBeenCalledWith({
@@ -502,8 +536,8 @@ describe("RegisterForm", () => {
         email: "test@example.com",
         password: "SecurePassword123!",
       });
-      
-      await submitForm(user, 'register');
+
+      await submitForm(user, "register");
 
       await waitForAuthAction(mockAuth.register);
       // Should not redirect on failed registration
@@ -519,8 +553,8 @@ describe("RegisterForm", () => {
         email: "test@example.com",
         password: "SecurePassword123!",
       });
-      
-      await submitForm(user, 'register');
+
+      await submitForm(user, "register");
 
       await waitForAuthAction(mockAuth.register);
       // Should handle the error gracefully
@@ -537,13 +571,19 @@ describe("RegisterForm", () => {
         password: "weak",
       });
 
-      expectSubmitButtonToBeDisabled('register');
+      expectSubmitButtonToBeDisabled("register");
     });
   });
 
   describe("Edge Cases", () => {
     it("should handle rapid successive clicks", async () => {
-      mockAuth.register.mockResolvedValue(true);
+      // Create a longer delay to test rapid clicks properly
+      let resolveRegister: () => void;
+      const registerPromise = new Promise<boolean>((resolve) => {
+        resolveRegister = () => resolve(true);
+      });
+      mockAuth.register.mockReturnValue(registerPromise);
+
       render(<RegisterForm />);
 
       await fillRegisterForm(user, {
@@ -551,15 +591,19 @@ describe("RegisterForm", () => {
         email: "test@example.com",
         password: "SecurePassword123!",
       });
-      
+
       const submitButton = screen.getByRole("button", { name: "Create Account" });
-      
-      // Click multiple times rapidly
+
+      // Click multiple times rapidly while first call is pending
       await user.click(submitButton);
       await user.click(submitButton);
       await user.click(submitButton);
 
-      // Should only call register once
+      // Should only call register once even with rapid clicks
+      expect(mockAuth.register).toHaveBeenCalledTimes(1);
+
+      // Complete the registration
+      resolveRegister!();
       await waitFor(() => {
         expect(mockAuth.register).toHaveBeenCalledTimes(1);
       });
@@ -570,9 +614,9 @@ describe("RegisterForm", () => {
 
       const longName = "A".repeat(200) + " " + "B".repeat(200);
       const nameInput = screen.getByPlaceholderText("John Doe");
-      
+
       await user.type(nameInput, longName);
-      
+
       expect(nameInput).toHaveValue(longName);
     });
 
@@ -586,24 +630,31 @@ describe("RegisterForm", () => {
       };
 
       await fillRegisterForm(user, formData);
-      
+
       // Change auth state to loading
       vi.mocked(useAuth).mockReturnValue({
         ...authTestScenarios.registering.state,
         ...mockAuth,
       });
-      
+
+      vi.mocked(useAuthLoading).mockReturnValue({
+        isLoading: false,
+        isLoggingIn: false,
+        isRegistering: true,
+        isResettingPassword: false,
+      });
+
       rerender(<RegisterForm />);
-      
+
       // Form should maintain input values but be disabled
       const nameInput = screen.getByPlaceholderText("John Doe");
       const emailInput = screen.getByPlaceholderText("john@example.com");
       const passwordInput = screen.getByPlaceholderText("Create a strong password");
-      
+
       expect(nameInput).toHaveValue(formData.fullName);
       expect(emailInput).toHaveValue(formData.email);
       expect(passwordInput).toHaveValue(formData.password);
-      expectFormToBeDisabled('register');
+      expectFormToBeDisabled("register");
     });
 
     it("should handle special characters in names", async () => {
@@ -615,8 +666,8 @@ describe("RegisterForm", () => {
         email: "test@example.com",
         password: "SecurePassword123!",
       });
-      
-      await submitForm(user, 'register');
+
+      await submitForm(user, "register");
 
       await waitForAuthAction(mockAuth.register);
       expect(mockAuth.register).toHaveBeenCalledWith({
@@ -645,10 +696,10 @@ describe("RegisterFormSkeleton", () => {
 
   it("should have proper skeleton structure for form fields", () => {
     render(<RegisterFormSkeleton />);
-    
+
     const fieldSkeletons = document.querySelectorAll(".space-y-2");
     expect(fieldSkeletons.length).toBeGreaterThan(0);
-    
+
     const skeletonElements = document.querySelectorAll(".animate-pulse");
     // Should have skeletons for header, name, email, password + strength, terms, button, links
     expect(skeletonElements.length).toBeGreaterThanOrEqual(7);

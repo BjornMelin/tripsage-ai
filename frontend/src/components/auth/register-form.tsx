@@ -12,7 +12,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
-import { useAuth, useAuthErrors } from "@/stores/auth-store";
+import { useAuth, useAuthErrors, useAuthLoading } from "@/stores/auth-store";
 import {
   AlertCircle,
   CheckCircle2,
@@ -41,9 +41,12 @@ export function RegisterForm({
   className,
 }: RegisterFormProps) {
   const router = useRouter();
-  const { register, isAuthenticated, isLoading } = useAuth();
-  const { registerError } = useAuthErrors();
+  const { register, isAuthenticated } = useAuth();
+  const { isRegistering } = useAuthLoading();
+  const { registerError, clearError } = useAuthErrors();
   const [showPassword, setShowPassword] = React.useState(false);
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const isSubmittingRef = React.useRef(false);
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
@@ -57,6 +60,13 @@ export function RegisterForm({
       router.push(redirectTo);
     }
   }, [isAuthenticated, router, redirectTo]);
+
+  // Clear errors on component unmount
+  useEffect(() => {
+    return () => {
+      clearError();
+    };
+  }, [clearError]);
 
   // Password strength calculator
   const passwordStrength = useMemo((): PasswordStrength => {
@@ -109,41 +119,63 @@ export function RegisterForm({
 
     const { email, password, fullName, acceptTerms } = formData;
 
-    if (!email || !password || !fullName || !acceptTerms) {
+    // Check if already submitting (using ref for immediate check)
+    if (
+      !email ||
+      !password ||
+      !fullName ||
+      isRegistering ||
+      isSubmitting ||
+      isSubmittingRef.current
+    ) {
       return;
     }
 
-    // Check password strength
-    if (passwordStrength.score < 75) {
-      // You might want to show a warning but still allow registration
-      console.warn("Weak password, but allowing registration");
-    }
+    // Set ref immediately to prevent rapid clicks
+    isSubmittingRef.current = true;
+    setIsSubmitting(true);
 
-    // Split fullName into firstName and lastName
-    const nameParts = fullName.trim().split(" ");
-    const firstName = nameParts[0] || "";
-    const lastName = nameParts.slice(1).join(" ") || "";
+    try {
+      // Check password strength
+      if (passwordStrength.score < 75) {
+        // You might want to show a warning but still allow registration
+        console.warn("Weak password, but allowing registration");
+      }
 
-    const success = await register({
-      email,
-      password,
-      confirmPassword: password, // For now, use the same password
-      firstName,
-      lastName,
-      acceptTerms,
-    });
+      // Split fullName into firstName and lastName
+      const nameParts = fullName.trim().split(/\s+/);
+      const firstName = nameParts[0] || "";
+      const lastName = nameParts.slice(1).join(" ") || "";
 
-    if (success) {
-      router.push(redirectTo);
+      const success = await register({
+        email,
+        password,
+        confirmPassword: password, // For now, use the same password
+        firstName,
+        lastName,
+        acceptTerms: true, // Implicit acceptance since terms are displayed
+      });
+
+      if (success) {
+        router.push(redirectTo);
+      }
+    } finally {
+      isSubmittingRef.current = false;
+      setIsSubmitting(false);
     }
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
-    setFormData((prev) => ({ 
-      ...prev, 
-      [name]: type === "checkbox" ? checked : value 
+    setFormData((prev) => ({
+      ...prev,
+      [name]: type === "checkbox" ? checked : value,
     }));
+
+    // Clear any existing errors when user starts typing
+    if (registerError) {
+      clearError();
+    }
   };
 
   return (
@@ -179,7 +211,7 @@ export function RegisterForm({
               onChange={handleInputChange}
               required
               autoComplete="name"
-              disabled={isLoading}
+              disabled={isRegistering || isSubmitting}
               className="w-full"
             />
           </div>
@@ -196,7 +228,7 @@ export function RegisterForm({
               onChange={handleInputChange}
               required
               autoComplete="email"
-              disabled={isLoading}
+              disabled={isRegistering || isSubmitting}
               className="w-full"
             />
           </div>
@@ -212,7 +244,7 @@ export function RegisterForm({
                 placeholder="Create a strong password"
                 required
                 autoComplete="new-password"
-                disabled={isLoading}
+                disabled={isRegistering || isSubmitting}
                 className="w-full pr-10"
                 value={formData.password}
                 onChange={handleInputChange}
@@ -221,7 +253,7 @@ export function RegisterForm({
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
                 className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                disabled={isLoading}
+                disabled={isRegistering || isSubmitting}
                 aria-label={showPassword ? "Hide password" : "Show password"}
               >
                 {showPassword ? (
@@ -288,10 +320,14 @@ export function RegisterForm({
             type="submit"
             className="w-full"
             disabled={
-              isLoading || !formData.email || !formData.password || !formData.fullName
+              isRegistering ||
+              isSubmitting ||
+              !formData.email ||
+              !formData.password ||
+              !formData.fullName
             }
           >
-            {isLoading ? (
+            {isRegistering || isSubmitting ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Creating account...

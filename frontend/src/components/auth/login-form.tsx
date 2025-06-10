@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useAuth, useAuthErrors } from "@/stores/auth-store";
+import { useAuth, useAuthErrors, useAuthLoading } from "@/stores/auth-store";
 import { AlertCircle, Eye, EyeOff, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -24,9 +24,12 @@ interface LoginFormProps {
 
 export function LoginForm({ redirectTo = "/dashboard", className }: LoginFormProps) {
   const router = useRouter();
-  const { login, isAuthenticated, isLoading } = useAuth();
-  const { loginError } = useAuthErrors();
+  const { login, isAuthenticated } = useAuth();
+  const { isLoggingIn } = useAuthLoading();
+  const { loginError, clearError } = useAuthErrors();
   const [showPassword, setShowPassword] = React.useState(false);
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const isSubmittingRef = React.useRef(false);
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -40,32 +43,54 @@ export function LoginForm({ redirectTo = "/dashboard", className }: LoginFormPro
     }
   }, [isAuthenticated, router, redirectTo]);
 
+  // Clear errors on component unmount
+  useEffect(() => {
+    return () => {
+      clearError();
+    };
+  }, [clearError]);
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     const { email, password, rememberMe } = formData;
 
-    if (!email || !password) {
+    // Check if already submitting (using ref for immediate check)
+    if (!email || !password || isLoggingIn || isSubmitting || isSubmittingRef.current) {
       return;
     }
 
-    const success = await login({
-      email,
-      password,
-      rememberMe,
-    });
+    // Set ref immediately to prevent rapid clicks
+    isSubmittingRef.current = true;
+    setIsSubmitting(true);
 
-    if (success) {
-      router.push(redirectTo);
+    try {
+      const success = await login({
+        email,
+        password,
+        rememberMe,
+      });
+
+      if (success) {
+        router.push(redirectTo);
+      }
+    } finally {
+      isSubmittingRef.current = false;
+      setIsSubmitting(false);
     }
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
-    setFormData((prev) => ({ 
-      ...prev, 
-      [name]: type === "checkbox" ? checked : value 
+    setFormData((prev) => ({
+      ...prev,
+      [name]: type === "checkbox" ? checked : value,
     }));
+
+    // Clear any existing errors when user starts typing
+    if (loginError) {
+      clearError();
+    }
   };
 
   return (
@@ -102,7 +127,7 @@ export function LoginForm({ redirectTo = "/dashboard", className }: LoginFormPro
               onChange={handleInputChange}
               required
               autoComplete="email"
-              disabled={isLoading}
+              disabled={isLoggingIn}
               className="w-full h-11"
             />
           </div>
@@ -130,14 +155,14 @@ export function LoginForm({ redirectTo = "/dashboard", className }: LoginFormPro
                 onChange={handleInputChange}
                 required
                 autoComplete="current-password"
-                disabled={isLoading}
+                disabled={isLoggingIn || isSubmitting}
                 className="w-full h-11 pr-10"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
                 className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                disabled={isLoading}
+                disabled={isLoggingIn || isSubmitting}
                 aria-label={showPassword ? "Hide password" : "Show password"}
               >
                 {showPassword ? (
@@ -153,9 +178,11 @@ export function LoginForm({ redirectTo = "/dashboard", className }: LoginFormPro
           <Button
             type="submit"
             className="w-full h-11 text-base font-medium"
-            disabled={isLoading || !formData.email || !formData.password}
+            disabled={
+              isLoggingIn || isSubmitting || !formData.email || !formData.password
+            }
           >
-            {isLoading ? (
+            {isLoggingIn || isSubmitting ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Signing in...

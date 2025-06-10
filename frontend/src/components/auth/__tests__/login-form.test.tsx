@@ -9,7 +9,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useRouter } from "next/navigation";
 import { LoginForm, LoginFormSkeleton } from "../login-form";
-import { useAuth, useAuthErrors } from "@/stores/auth-store";
+import { useAuth, useAuthErrors, useAuthLoading } from "@/stores/auth-store";
 import {
   createMockUser,
   createMockTokenInfo,
@@ -54,6 +54,7 @@ vi.mock("next/navigation", () => ({
 vi.mock("@/stores/auth-store", () => ({
   useAuth: vi.fn(),
   useAuthErrors: vi.fn(),
+  useAuthLoading: vi.fn(),
 }));
 
 describe("LoginForm", () => {
@@ -84,6 +85,14 @@ describe("LoginForm", () => {
       ...authTestScenarios.unauthenticated.state,
       ...mockAuthErrors,
     });
+
+    // Setup auth loading state (not loading by default)
+    vi.mocked(useAuthLoading).mockReturnValue({
+      isLoading: false,
+      isLoggingIn: false,
+      isRegistering: false,
+      isResettingPassword: false,
+    });
   });
 
   afterEach(() => {
@@ -96,7 +105,9 @@ describe("LoginForm", () => {
 
       // Header content
       expect(screen.getByText("Sign in to TripSage")).toBeInTheDocument();
-      expect(screen.getByText("Enter your credentials to access your account")).toBeInTheDocument();
+      expect(
+        screen.getByText("Enter your credentials to access your account")
+      ).toBeInTheDocument();
 
       // Form fields
       expect(screen.getByLabelText("Email")).toBeInTheDocument();
@@ -109,7 +120,7 @@ describe("LoginForm", () => {
       expect(screen.getByText("Don't have an account?")).toBeInTheDocument();
 
       // Verify links
-      expectCorrectLinks('login');
+      expectCorrectLinks("login");
     });
 
     it("should render with custom className", () => {
@@ -120,57 +131,57 @@ describe("LoginForm", () => {
 
     it("should have proper form structure and accessibility", () => {
       render(<LoginForm />);
-      expectFormAccessibility('login');
+      expectFormAccessibility("login");
     });
 
     it("should show development credentials in development environment", () => {
       mockDevelopmentEnv();
       render(<LoginForm />);
-      expectDevelopmentInfo('login');
+      expectDevelopmentInfo("login");
     });
 
     it("should not show development credentials in production environment", () => {
       mockProductionEnv();
       render(<LoginForm />);
-      expectNoDevelopmentInfo('login');
+      expectNoDevelopmentInfo("login");
     });
   });
 
   describe("Form Validation", () => {
     it("should disable submit button when fields are empty", () => {
       render(<LoginForm />);
-      expectSubmitButtonToBeDisabled('login');
+      expectSubmitButtonToBeDisabled("login");
     });
 
     it("should disable submit button when only email is filled", async () => {
       render(<LoginForm />);
-      
+
       const emailInput = screen.getByPlaceholderText("john@example.com");
       await user.type(emailInput, "test@example.com");
 
-      expectSubmitButtonToBeDisabled('login');
+      expectSubmitButtonToBeDisabled("login");
     });
 
     it("should disable submit button when only password is filled", async () => {
       render(<LoginForm />);
-      
+
       const passwordInput = screen.getByPlaceholderText("Enter your password");
       await user.type(passwordInput, "password123");
 
-      expectSubmitButtonToBeDisabled('login');
+      expectSubmitButtonToBeDisabled("login");
     });
 
     it("should enable submit button when both fields are filled", async () => {
       render(<LoginForm />);
-      
+
       await fillLoginForm(user, validLoginCredentials);
-      expectSubmitButtonToBeEnabled('login');
+      expectSubmitButtonToBeEnabled("login");
     });
 
     it("should not call login when fields are empty", async () => {
       render(<LoginForm />);
-      
-      await submitForm(user, 'login');
+
+      await submitForm(user, "login");
       expect(mockAuth.login).not.toHaveBeenCalled();
     });
   });
@@ -181,7 +192,7 @@ describe("LoginForm", () => {
       render(<LoginForm />);
 
       await fillLoginForm(user, validLoginCredentials);
-      await submitForm(user, 'login');
+      await submitForm(user, "login");
 
       await waitForAuthAction(mockAuth.login);
       expect(mockAuth.login).toHaveBeenCalledWith({
@@ -196,7 +207,7 @@ describe("LoginForm", () => {
       render(<LoginForm redirectTo="/custom-path" />);
 
       await fillLoginForm(user, validLoginCredentials);
-      await submitForm(user, 'login');
+      await submitForm(user, "login");
 
       await waitForAuthAction(mockAuth.login);
       expect(mockAuth.login).toHaveBeenCalledWith({
@@ -210,7 +221,7 @@ describe("LoginForm", () => {
       mockAuth.login.mockResolvedValue(true);
       render(<LoginForm />);
 
-      await testFormSubmissionWithEnter(user, mockAuth.login, 'login');
+      await testFormSubmissionWithEnter(user, mockAuth.login, "login");
     });
 
     it("should redirect if already authenticated", async () => {
@@ -243,15 +254,29 @@ describe("LoginForm", () => {
         ...mockAuth,
       });
 
+      vi.mocked(useAuthLoading).mockReturnValue({
+        isLoading: false,
+        isLoggingIn: true, // This is the key change
+        isRegistering: false,
+        isResettingPassword: false,
+      });
+
       render(<LoginForm />);
 
-      expectLoadingState('login');
+      expectLoadingState("login");
     });
 
     it("should disable password toggle when loading", () => {
       vi.mocked(useAuth).mockReturnValue({
         ...authTestScenarios.loggingIn.state,
         ...mockAuth,
+      });
+
+      vi.mocked(useAuthLoading).mockReturnValue({
+        isLoading: false,
+        isLoggingIn: true,
+        isRegistering: false,
+        isResettingPassword: false,
       });
 
       render(<LoginForm />);
@@ -325,7 +350,7 @@ describe("LoginForm", () => {
       render(<LoginForm />);
 
       await fillLoginForm(user, validLoginCredentials);
-      await submitForm(user, 'login');
+      await submitForm(user, "login");
 
       await waitForAuthAction(mockAuth.login);
       // Should not redirect on failed login
@@ -337,7 +362,7 @@ describe("LoginForm", () => {
       render(<LoginForm />);
 
       await fillLoginForm(user, validLoginCredentials);
-      await submitForm(user, 'login');
+      await submitForm(user, "login");
 
       await waitForAuthAction(mockAuth.login);
       // Should handle the error gracefully
@@ -349,29 +374,39 @@ describe("LoginForm", () => {
 
       // Test empty email
       await fillLoginForm(user, invalidCredentials.emptyEmail);
-      expectSubmitButtonToBeDisabled('login');
+      expectSubmitButtonToBeDisabled("login");
 
       // Test empty password
       await fillLoginForm(user, invalidCredentials.emptyPassword);
-      expectSubmitButtonToBeDisabled('login');
+      expectSubmitButtonToBeDisabled("login");
     });
   });
 
   describe("Edge Cases", () => {
     it("should handle rapid successive clicks", async () => {
-      mockAuth.login.mockResolvedValue(true);
+      // Create a longer delay to test rapid clicks properly
+      let resolveLogin: () => void;
+      const loginPromise = new Promise<boolean>((resolve) => {
+        resolveLogin = () => resolve(true);
+      });
+      mockAuth.login.mockReturnValue(loginPromise);
+
       render(<LoginForm />);
 
       await fillLoginForm(user, validLoginCredentials);
-      
+
       const submitButton = screen.getByRole("button", { name: "Sign In" });
-      
-      // Click multiple times rapidly
+
+      // Click multiple times rapidly while first call is pending
       await user.click(submitButton);
       await user.click(submitButton);
       await user.click(submitButton);
 
-      // Should only call login once
+      // Should only call login once even with rapid clicks
+      expect(mockAuth.login).toHaveBeenCalledTimes(1);
+
+      // Complete the login
+      resolveLogin!();
       await waitFor(() => {
         expect(mockAuth.login).toHaveBeenCalledTimes(1);
       });
@@ -382,9 +417,9 @@ describe("LoginForm", () => {
 
       const longEmail = "a".repeat(200) + "@example.com";
       const emailInput = screen.getByPlaceholderText("john@example.com");
-      
+
       await user.type(emailInput, longEmail);
-      
+
       expect(emailInput).toHaveValue(longEmail);
     });
 
@@ -392,22 +427,30 @@ describe("LoginForm", () => {
       const { rerender } = render(<LoginForm />);
 
       await fillLoginForm(user, validLoginCredentials);
-      
+
       // Change auth state to loading
       vi.mocked(useAuth).mockReturnValue({
         ...authTestScenarios.loggingIn.state,
         ...mockAuth,
       });
-      
+
+      // CRITICAL: Also update the useAuthLoading mock to match the loading state
+      vi.mocked(useAuthLoading).mockReturnValue({
+        isLoading: false,
+        isLoggingIn: true, // This is what makes form inputs disabled
+        isRegistering: false,
+        isResettingPassword: false,
+      });
+
       rerender(<LoginForm />);
-      
+
       // Form should maintain input values but be disabled
       const emailInput = screen.getByPlaceholderText("john@example.com");
       const passwordInput = screen.getByPlaceholderText("Enter your password");
-      
+
       expect(emailInput).toHaveValue(validLoginCredentials.email);
       expect(passwordInput).toHaveValue(validLoginCredentials.password);
-      expectFormToBeDisabled('login');
+      expectFormToBeDisabled("login");
     });
   });
 });
@@ -426,10 +469,10 @@ describe("LoginFormSkeleton", () => {
 
   it("should have skeleton elements for form fields", () => {
     render(<LoginFormSkeleton />);
-    
+
     const skeletonElements = document.querySelectorAll(".animate-pulse");
     expect(skeletonElements.length).toBeGreaterThan(0);
-    
+
     // Should have skeletons for header, email, password, button, links
     expect(skeletonElements.length).toBeGreaterThanOrEqual(5);
   });
