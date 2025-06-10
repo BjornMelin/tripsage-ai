@@ -135,7 +135,7 @@ class TestSessionUtilityFunctions:
     @pytest.mark.asyncio
     async def test_initialize_session_memory_with_user_id(self):
         """Test initialize_session_memory with user ID."""
-        with patch("tripsage_core.utils.session_utils.logger") as mock_logger:
+        with patch("tripsage_core.utils.session_utils.logger"):
             result = await initialize_session_memory(user_id="user123")
 
             # Should return a dictionary structure with expected keys
@@ -149,13 +149,13 @@ class TestSessionUtilityFunctions:
             }
             assert expected_keys.issubset(result.keys())
 
-            # Function should complete (may have errors due to missing config in test env)
-            # Just ensure it returns expected structure
+            # Function should complete (may have errors due to missing config
+            # in test env). Just ensure it returns expected structure
 
     @pytest.mark.asyncio
     async def test_initialize_session_memory_without_user_id(self):
         """Test initialize_session_memory without user ID."""
-        with patch("tripsage_core.utils.session_utils.logger") as mock_logger:
+        with patch("tripsage_core.utils.session_utils.logger"):
             result = await initialize_session_memory()
 
             # Should return a dictionary
@@ -164,7 +164,7 @@ class TestSessionUtilityFunctions:
     @pytest.mark.asyncio
     async def test_update_session_memory_basic(self):
         """Test update_session_memory with basic parameters."""
-        with patch("tripsage_core.utils.session_utils.logger") as mock_logger:
+        with patch("tripsage_core.utils.session_utils.logger"):
             updates = {
                 "preferences": {"budget": 2000},
                 "learned_facts": ["User likes budget travel"],
@@ -186,7 +186,7 @@ class TestSessionUtilityFunctions:
     @pytest.mark.asyncio
     async def test_store_session_summary_basic(self):
         """Test store_session_summary with basic data."""
-        with patch("tripsage_core.utils.session_utils.logger") as mock_logger:
+        with patch("tripsage_core.utils.session_utils.logger"):
             result = await store_session_summary(
                 user_id="user123",
                 summary="Test session summary",

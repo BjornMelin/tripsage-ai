@@ -78,12 +78,14 @@ class TestMemorySystemIntegration:
             name="Test User",
         )
 
-    @patch("tripsage.api.routers.memory.memory_service")
+    @patch("tripsage.api.core.dependencies.get_memory_service_dep")
     def test_store_conversation_memory_endpoint(
-        self, mock_service, client, sample_user
+        self, mock_get_service, client, sample_user, mock_settings_and_redis
     ):
         """Test storing conversation memory through API."""
-        # Setup mock
+        # Setup mock service
+        mock_service = AsyncMock()
+        mock_get_service.return_value = mock_service
         mock_service.store_conversation_memory.return_value = {
             "status": "success",
             "memory_id": "test-123",
@@ -99,7 +101,8 @@ class TestMemorySystemIntegration:
                 },
                 {
                     "role": "assistant",
-                    "content": "I found some excellent luxury hotels in Paris. The Four Seasons and Ritz are highly recommended.",
+                    "content": "I found some excellent luxury hotels in Paris. "
+                    "The Four Seasons and Ritz are highly recommended.",
                     "timestamp": "2024-01-01T10:01:00Z",
                 },
             ],
@@ -118,10 +121,14 @@ class TestMemorySystemIntegration:
         # Verify service was called with correct parameters
         mock_service.store_conversation_memory.assert_called_once()
 
-    @patch("tripsage.api.routers.memory.memory_service")
-    def test_get_user_context_endpoint(self, mock_service, client, mock_memory_service):
+    @patch("tripsage.api.core.dependencies.get_memory_service_dep")
+    def test_get_user_context_endpoint(
+        self, mock_get_service, client, mock_memory_service
+    ):
         """Test getting user memory context through API."""
-        # Setup mock
+        # Setup mock service
+        mock_service = AsyncMock()
+        mock_get_service.return_value = mock_service
         mock_service.get_user_context.return_value = (
             mock_memory_service.get_user_context.return_value
         )
@@ -150,10 +157,14 @@ class TestMemorySystemIntegration:
         assert "accommodation_type" in preferences
         assert "preferred_locations" in preferences
 
-    @patch("tripsage.api.routers.memory.memory_service")
-    def test_search_memories_endpoint(self, mock_service, client, mock_memory_service):
+    @patch("tripsage.api.core.dependencies.get_memory_service_dep")
+    def test_search_memories_endpoint(
+        self, mock_get_service, client, mock_memory_service
+    ):
         """Test searching memories through API."""
-        # Setup mock
+        # Setup mock service
+        mock_service = AsyncMock()
+        mock_get_service.return_value = mock_service
         mock_service.search_memories.return_value = (
             mock_memory_service.search_memories.return_value
         )
@@ -207,14 +218,16 @@ class TestMemorySystemIntegration:
         assert "preferences" in context
         assert context["preferences"]["accommodation_type"] == "luxury"
 
-    @patch("tripsage.api.routers.memory.memory_service")
-    def test_memory_error_handling(self, mock_service, client):
+    @patch("tripsage.api.core.dependencies.get_memory_service_dep")
+    def test_memory_error_handling(self, mock_get_service, client):
         """Test API error handling for memory endpoints."""
         # Test invalid query parameters
         response = client.get("/api/memory/search/123")  # No query
         assert response.status_code == 422  # Validation error
 
         # Test service errors
+        mock_service = AsyncMock()
+        mock_get_service.return_value = mock_service
         mock_service.search_memories.side_effect = Exception("Service error")
         response = client.get("/api/memory/search/123?query=test")
         assert response.status_code == 500
@@ -235,7 +248,12 @@ class TestMemorySystemIntegration:
 
     def test_memory_frontend_compatibility(self, client):
         """Test that API responses match frontend TypeScript interfaces."""
-        with patch("tripsage.api.routers.memory.memory_service") as mock_service:
+        with patch(
+            "tripsage.api.core.dependencies.get_memory_service_dep"
+        ) as mock_get_service:
+            # Setup mock service
+            mock_service = AsyncMock()
+            mock_get_service.return_value = mock_service
             # Mock response matching frontend MemoryContext interface
             mock_service.get_user_context.return_value = {
                 "memories": [
@@ -296,7 +314,7 @@ class TestMemorySystemIntegration:
 
     def test_memory_data_validation(self, client):
         """Test that API properly validates input data."""
-        with patch("tripsage.api.routers.memory.memory_service") as mock_service:
+        with patch("tripsage.api.core.dependencies.get_memory_service_dep"):
             # Test invalid message format
             invalid_data = {
                 "messages": [

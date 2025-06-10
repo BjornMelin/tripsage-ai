@@ -143,5 +143,8 @@ async def delete_saved_activity(activity_id: str):
     # For now, return 501 to maintain API contract
     raise HTTPException(
         status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="Delete saved activity endpoint requires user authentication implementation",
+        detail=(
+            "Delete saved activity endpoint requires user authentication "
+            "implementation"
+        ),
     )

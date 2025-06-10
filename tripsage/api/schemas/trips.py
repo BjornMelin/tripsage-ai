@@ -265,7 +265,10 @@ class TripSuggestionResponse(BaseModel):
                 "id": "suggestion-1",
                 "title": "Tokyo Cherry Blossom Adventure",
                 "destination": "Tokyo, Japan",
-                "description": "Experience the magic of cherry blossom season in Japan's vibrant capital city.",
+                "description": (
+                    "Experience the magic of cherry blossom season in Japan's "
+                    "vibrant capital city."
+                ),
                 "image_url": "https://example.com/tokyo-cherry-blossom.jpg",
                 "estimated_price": 2800,
                 "currency": "USD",
@@ -306,7 +309,9 @@ class TripSuggestionResponse(BaseModel):
     duration: int = Field(description="Trip duration in days")
     rating: float = Field(description="Average rating", ge=0, le=5)
     category: str = Field(
-        description="Trip category (adventure, relaxation, culture, nature, city, beach)"
+        description=(
+            "Trip category (adventure, relaxation, culture, nature, city, beach)"
+        )
     )
     best_time_to_visit: str = Field(description="Recommended time period")
     highlights: List[str] = Field(description="Key highlights", max_length=10)

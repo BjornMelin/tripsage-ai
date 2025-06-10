@@ -156,11 +156,11 @@ class MockActivityService:
 
         except Exception as e:
             if isinstance(e, MockGoogleMapsServiceError):
-                raise MockActivityServiceError(f"Maps API error: {e}", e)
+                raise MockActivityServiceError(f"Maps API error: {e}", e) from e
             else:
                 raise MockActivityServiceError(
                     f"Failed to get activity details: {e}", e
-                )
+                ) from e
 
     async def _convert_place_to_activity(
         self, place: Dict[str, Any], request: ActivitySearchRequest
@@ -607,7 +607,7 @@ class TestActivityService:
             MockGoogleMapsServiceError("Geocoding failed")
         )
 
-        with raises(Exception):  # Should raise an exception
+        with raises(MockGoogleMapsServiceError):  # Should raise an exception
             await activity_service.search_activities(sample_activity_request)
 
     async def test_get_activity_details_success(self, activity_service):

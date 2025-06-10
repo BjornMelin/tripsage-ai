@@ -139,7 +139,8 @@ class TestUnifiedSearchService:
                 assert result.metadata.search_id is not None
 
                 # Verify that activity service was called
-                # Note: destination service is not called in current implementation - it creates hardcoded results
+                # Note: destination service is not called in current implementation
+                # - it creates hardcoded results
                 mock_activity_service.search_activities.assert_called_once()
 
     @pytest.mark.asyncio

@@ -27,8 +27,8 @@ describe("Supabase Server Client", () => {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = mockSupabaseAnonKey;
 
     // Dynamically import after setting env vars
-    const module = await import("../server");
-    createClient = module.createClient;
+    const serverModule = await import("../server");
+    createClient = serverModule.createClient;
   });
 
   it("should create a server client with cookie handling", async () => {
@@ -106,8 +106,8 @@ describe("Supabase Server Client", () => {
 
     // Re-import module with missing env vars
     vi.resetModules();
-    const module = await import("../server");
-    createClient = module.createClient;
+    const serverModule = await import("../server");
+    createClient = serverModule.createClient;
 
     const mockCookieStore = {
       getAll: vi.fn().mockReturnValue([]),

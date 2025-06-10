@@ -293,5 +293,6 @@ class TestKeysRouter:
         await get_audit_log(mock_principal, 50, mock_monitoring_service)
 
         # Verify the custom limit was used
-        # Note: The actual audit log call would be tested in the monitoring service tests
+        # Note: The actual audit log call would be tested in the monitoring service
+        # tests
         assert True  # This test verifies the endpoint accepts the parameter

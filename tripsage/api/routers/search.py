@@ -63,8 +63,9 @@ async def search_suggestions(
     """
     Get search suggestions based on partial query.
 
-    This endpoint provides intelligent search suggestions including popular destinations,
-    activity types, and common search patterns to help users discover travel options.
+    This endpoint provides intelligent search suggestions including popular
+    destinations, activity types, and common search patterns to help users
+    discover travel options.
     """
     logger.info(f"Search suggestions request: '{query}' (limit: {limit})")
 
@@ -136,5 +137,8 @@ async def delete_saved_search(search_id: str):
     # For now, return 501 to maintain API contract
     raise HTTPException(
         status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="Delete saved search endpoint requires user authentication implementation",
+        detail=(
+            "Delete saved search endpoint requires user authentication "
+            "implementation"
+        ),
     )

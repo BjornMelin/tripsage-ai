@@ -225,7 +225,7 @@ async def get_upcoming_flights(
     Returns:
         List of upcoming flights with status information
     """
-    user_id = get_principal_id(principal)
+    _user_id = get_principal_id(principal)
 
     # TODO: Implement actual upcoming flights logic in flight_service
     # For now, return mock data similar to the frontend component

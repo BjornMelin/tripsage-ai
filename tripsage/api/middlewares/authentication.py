@@ -205,9 +205,10 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
             # Local JWT validation for performance
             payload = jwt.decode(
                 token,
-                settings.supabase_jwt_secret,
+                settings.database.supabase_jwt_secret.get_secret_value(),
                 algorithms=["HS256"],
                 audience="authenticated",
+                leeway=30,  # Allow 30 seconds clock skew
             )
 
             # Extract user data from token
@@ -230,7 +231,8 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
 
         except jwt.ExpiredSignatureError:
             raise AuthenticationError("Token has expired") from None
-        except jwt.InvalidTokenError:
+        except jwt.InvalidTokenError as e:
+            logger.error(f"JWT InvalidTokenError: {e}")
             raise AuthenticationError("Invalid token") from None
         except Exception as e:
             logger.error(f"JWT authentication error: {e}")

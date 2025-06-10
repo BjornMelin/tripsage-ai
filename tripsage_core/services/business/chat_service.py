@@ -758,7 +758,10 @@ class ChatService:
 
             # Mock AI response - replace with actual AI integration
             return {
-                "content": "I can help you plan your trip! What destinations are you interested in?",
+                "content": (
+                    "I can help you plan your trip! What destinations "
+                    "are you interested in?"
+                ),
                 "session_id": session_id,
                 "model": "gpt-4",
                 "usage": {

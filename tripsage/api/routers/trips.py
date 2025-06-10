@@ -62,7 +62,7 @@ async def get_trip_suggestions(
     Returns:
         List of trip suggestions
     """
-    user_id = get_principal_id(principal)
+    _user_id = get_principal_id(principal)
 
     # TODO: Implement actual trip suggestions logic using memory service
     # For now, return mock data that matches the frontend structure
@@ -72,7 +72,10 @@ async def get_trip_suggestions(
             id="suggestion-1",
             title="Tokyo Cherry Blossom Adventure",
             destination="Tokyo, Japan",
-            description="Experience the magic of cherry blossom season in Japan's vibrant capital city.",
+            description=(
+                "Experience the magic of cherry blossom season in Japan's vibrant "
+                "capital city."
+            ),
             estimated_price=2800,
             currency="USD",
             duration=7,
@@ -87,7 +90,10 @@ async def get_trip_suggestions(
             id="suggestion-2",
             title="Bali Tropical Retreat",
             destination="Bali, Indonesia",
-            description="Relax on pristine beaches and explore ancient temples in this tropical paradise.",
+            description=(
+                "Relax on pristine beaches and explore ancient temples in this "
+                "tropical paradise."
+            ),
             estimated_price=1500,
             currency="USD",
             duration=10,
@@ -101,7 +107,10 @@ async def get_trip_suggestions(
             id="suggestion-3",
             title="Swiss Alps Hiking Experience",
             destination="Interlaken, Switzerland",
-            description="Challenge yourself with breathtaking alpine hikes and stunning mountain views.",
+            description=(
+                "Challenge yourself with breathtaking alpine hikes and stunning "
+                "mountain views."
+            ),
             estimated_price=3200,
             currency="USD",
             duration=5,
@@ -120,7 +129,10 @@ async def get_trip_suggestions(
             id="suggestion-4",
             title="Santorini Sunset Romance",
             destination="Santorini, Greece",
-            description="Watch spectacular sunsets from clifftop villages in this iconic Greek island.",
+            description=(
+                "Watch spectacular sunsets from clifftop villages in this iconic "
+                "Greek island."
+            ),
             estimated_price=2100,
             currency="USD",
             duration=6,
@@ -139,7 +151,10 @@ async def get_trip_suggestions(
             id="suggestion-5",
             title="Iceland Northern Lights",
             destination="Reykjavik, Iceland",
-            description="Chase the aurora borealis and explore dramatic landscapes of fire and ice.",
+            description=(
+                "Chase the aurora borealis and explore dramatic landscapes of fire "
+                "and ice."
+            ),
             estimated_price=2500,
             currency="USD",
             duration=8,

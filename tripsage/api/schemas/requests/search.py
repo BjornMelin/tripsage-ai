@@ -45,7 +45,9 @@ class UnifiedSearchRequest(BaseModel):
 
     types: Optional[List[str]] = Field(
         None,
-        description="Resource types to search (destination, flight, accommodation, activity)",
+        description=(
+            "Resource types to search (destination, flight, accommodation, activity)"
+        ),
     )
 
     # Common parameters
