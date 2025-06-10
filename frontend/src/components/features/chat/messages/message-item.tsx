@@ -61,10 +61,10 @@ export function MessageItem({
   isStreaming = false,
   showActions = true,
 }: MessageItemProps) {
-  const isUser = message.role === "user";
-  const isAssistant = message.role === "assistant";
-  const isSystem = message.role === "system";
-  const isTool = false; // 'tool' role not supported in current Message type
+  const isUser = message.role === "USER";
+  const isAssistant = message.role === "ASSISTANT";
+  const isSystem = message.role === "SYSTEM";
+  const isTool = message.role === "TOOL";
 
   const hasAttachments = message.attachments && message.attachments.length > 0;
   const hasToolCalls = message.toolCalls && message.toolCalls.length > 0;
@@ -159,10 +159,9 @@ export function MessageItem({
 
   // Handle copy message content
   const handleCopyMessage = useCallback(() => {
-    const content = message.content;
-    if (content) {
+    if (message.content) {
       startTransition(() => {
-        navigator.clipboard.writeText(content);
+        navigator.clipboard.writeText(message.content);
       });
     }
   }, [message.content]);
@@ -315,9 +314,7 @@ export function MessageItem({
                 exit={{ opacity: 0, height: 0 }}
                 transition={{ duration: 0.3 }}
               >
-                <MessageAttachments
-                  attachments={message.attachments.map((a) => a.url)}
-                />
+                <MessageAttachments attachments={message.attachments} />
               </motion.div>
             )}
           </AnimatePresence>

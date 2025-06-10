@@ -11,18 +11,8 @@ describe("Search Params Store", () => {
         accommodationParams: {},
         activityParams: {},
         destinationParams: {},
-        validationErrors: {
-          flight: null,
-          accommodation: null,
-          activity: null,
-          destination: null,
-        },
-        isValidating: {
-          flight: false,
-          accommodation: false,
-          activity: false,
-          destination: false,
-        },
+        validationErrors: {},
+        isValidating: false,
       });
     });
   });
@@ -71,11 +61,12 @@ describe("Search Params Store", () => {
         children: 0,
         infants: 0,
         rooms: 1,
+        propertyTypes: [],
         amenities: [],
       });
     });
 
-    it("resets all parameters", () => {
+    it("clears search type", () => {
       const { result } = renderHook(() => useSearchParamsStore());
 
       act(() => {
@@ -85,7 +76,7 @@ describe("Search Params Store", () => {
       expect(result.current.currentSearchType).toBe("flight");
 
       act(() => {
-        result.current.reset();
+        result.current.clearSearchType();
       });
 
       expect(result.current.currentSearchType).toBeNull();
@@ -137,7 +128,7 @@ describe("Search Params Store", () => {
       expect(result.current.flightParams.origin).toBe("NYC");
 
       act(() => {
-        result.current.resetParams("flight");
+        result.current.resetFlightParams();
       });
 
       const defaultParams = {
@@ -168,22 +159,22 @@ describe("Search Params Store", () => {
       act(() => {
         result.current.updateAccommodationParams({
           destination: "Paris",
-          checkIn: "2025-08-01",
-          checkOut: "2025-08-07",
+          checkInDate: "2025-08-01",
+          checkOutDate: "2025-08-07",
           adults: 2,
           rooms: 2,
-          propertyType: "hotel",
+          propertyTypes: ["hotel", "apartment"],
           amenities: ["wifi", "pool"],
         });
       });
 
       const params = result.current.accommodationParams;
       expect(params.destination).toBe("Paris");
-      expect(params.checkIn).toBe("2025-08-01");
-      expect(params.checkOut).toBe("2025-08-07");
+      expect(params.checkInDate).toBe("2025-08-01");
+      expect(params.checkOutDate).toBe("2025-08-07");
       expect(params.adults).toBe(2);
       expect(params.rooms).toBe(2);
-      expect(params.propertyType).toBe("hotel");
+      expect(params.propertyTypes).toEqual(["hotel", "apartment"]);
       expect(params.amenities).toEqual(["wifi", "pool"]);
     });
 
@@ -200,7 +191,7 @@ describe("Search Params Store", () => {
       expect(result.current.accommodationParams.destination).toBe("Paris");
 
       act(() => {
-        result.current.resetParams("accommodation");
+        result.current.resetAccommodationParams();
       });
 
       const defaultParams = {
@@ -208,6 +199,7 @@ describe("Search Params Store", () => {
         children: 0,
         infants: 0,
         rooms: 1,
+        propertyTypes: [],
         amenities: [],
       };
 
@@ -230,18 +222,18 @@ describe("Search Params Store", () => {
         result.current.updateActivityParams({
           destination: "Tokyo",
           date: "2025-09-15",
-          duration: { min: 120, max: 240 },
-          category: "cultural",
-          difficulty: "moderate",
+          duration: "half-day",
+          categories: ["cultural", "outdoor"],
+          priceRange: { min: 50, max: 200 },
         });
       });
 
       const params = result.current.activityParams;
       expect(params.destination).toBe("Tokyo");
       expect(params.date).toBe("2025-09-15");
-      expect(params.duration).toEqual({ min: 120, max: 240 });
-      expect(params.category).toBe("cultural");
-      expect(params.difficulty).toBe("moderate");
+      expect(params.duration).toBe("half-day");
+      expect(params.categories).toEqual(["cultural", "outdoor"]);
+      expect(params.priceRange).toEqual({ min: 50, max: 200 });
     });
 
     it("resets activity parameters", () => {
@@ -250,23 +242,17 @@ describe("Search Params Store", () => {
       act(() => {
         result.current.updateActivityParams({
           destination: "Tokyo",
-          category: "cultural",
+          categories: ["cultural"],
         });
       });
 
       expect(result.current.activityParams.destination).toBe("Tokyo");
 
       act(() => {
-        result.current.resetParams("activity");
+        result.current.resetActivityParams();
       });
 
-      const defaultParams = {
-        adults: 1,
-        children: 0,
-        infants: 0,
-      };
-
-      expect(result.current.activityParams).toEqual(defaultParams);
+      expect(result.current.activityParams).toEqual({});
     });
   });
 
@@ -283,18 +269,20 @@ describe("Search Params Store", () => {
 
       act(() => {
         result.current.updateDestinationParams({
-          query: "Europe",
-          limit: 20,
-          types: ["locality", "country", "landmark"],
-          countryCode: "FR",
+          region: "Europe",
+          budget: "moderate",
+          interests: ["culture", "food"],
+          climate: "temperate",
+          duration: "week",
         });
       });
 
       const params = result.current.destinationParams;
-      expect(params.query).toBe("Europe");
-      expect(params.limit).toBe(20);
-      expect(params.types).toEqual(["locality", "country", "landmark"]);
-      expect(params.countryCode).toBe("FR");
+      expect(params.region).toBe("Europe");
+      expect(params.budget).toBe("moderate");
+      expect(params.interests).toEqual(["culture", "food"]);
+      expect(params.climate).toBe("temperate");
+      expect(params.duration).toBe("week");
     });
 
     it("resets destination parameters", () => {
@@ -302,24 +290,18 @@ describe("Search Params Store", () => {
 
       act(() => {
         result.current.updateDestinationParams({
-          query: "Asia",
-          limit: 30,
+          region: "Asia",
+          budget: "luxury",
         });
       });
 
-      expect(result.current.destinationParams.query).toBe("Asia");
+      expect(result.current.destinationParams.region).toBe("Asia");
 
       act(() => {
-        result.current.resetParams("destination");
+        result.current.resetDestinationParams();
       });
 
-      const defaultParams = {
-        query: "",
-        limit: 10,
-        types: ["locality", "country"],
-      };
-
-      expect(result.current.destinationParams).toEqual(defaultParams);
+      expect(result.current.destinationParams).toEqual({});
     });
   });
 
@@ -372,6 +354,7 @@ describe("Search Params Store", () => {
         children: 0,
         infants: 0,
         rooms: 1,
+        propertyTypes: [],
         amenities: [],
       });
     });
@@ -396,12 +379,7 @@ describe("Search Params Store", () => {
         expect(isValid).toBe(true);
       });
 
-      expect(result.current.validationErrors).toEqual({
-        flight: null,
-        accommodation: null,
-        activity: null,
-        destination: null,
-      });
+      expect(result.current.validationErrors).toEqual({});
     });
 
     it("handles validation errors", async () => {
@@ -454,7 +432,7 @@ describe("Search Params Store", () => {
       expect(result.current.accommodationParams.destination).toBe("Paris");
 
       act(() => {
-        result.current.reset();
+        result.current.resetAllParams();
       });
 
       expect(result.current.flightParams).toEqual({});

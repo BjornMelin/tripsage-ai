@@ -109,11 +109,12 @@ describe("useActivitySearch", () => {
 
     const searchParams: ActivitySearchParams = {
       destination: "New York",
-      date: "2024-07-01",
+      startDate: "2024-07-01",
+      endDate: "2024-07-03",
       adults: 2,
       children: 0,
       infants: 0,
-      category: "cultural",
+      categories: ["cultural"],
     };
 
     await act(async () => {
@@ -142,7 +143,8 @@ describe("useActivitySearch", () => {
 
     const searchParams: ActivitySearchParams = {
       destination: "Paris",
-      date: "2024-08-01",
+      startDate: "2024-08-01",
+      endDate: "2024-08-05",
       adults: 1,
       children: 0,
       infants: 0,
@@ -168,7 +170,7 @@ describe("useActivitySearch", () => {
         name: "NYC Cultural Activities",
         searchParams: {
           destination: "New York",
-          category: "cultural",
+          categories: ["cultural"],
         },
       },
     ];
@@ -197,11 +199,12 @@ describe("useActivitySearch", () => {
 
     const searchParams: ActivitySearchParams = {
       destination: "Tokyo",
-      date: "2024-09-01",
+      startDate: "2024-09-01",
+      endDate: "2024-09-05",
       adults: 2,
       children: 1,
       infants: 0,
-      category: "food",
+      categories: ["food", "cultural"],
     };
 
     await act(async () => {
@@ -260,7 +263,8 @@ describe("useActivitySearch", () => {
 
     const searchParams: ActivitySearchParams = {
       destination: "Remote Location",
-      date: "2024-12-01",
+      startDate: "2024-12-01",
+      endDate: "2024-12-03",
       adults: 1,
       children: 0,
       infants: 0,
@@ -305,15 +309,18 @@ describe("useActivitySearch", () => {
 
     const comprehensiveSearchParams: ActivitySearchParams = {
       destination: "Mountain Resort",
-      date: "2024-07-15",
+      startDate: "2024-07-15",
+      endDate: "2024-07-16",
       adults: 2,
       children: 1,
       infants: 0,
-      category: "outdoor",
-      duration: {
-        min: 6,
-        max: 6,
+      categories: ["outdoor", "adventure"],
+      duration: 6,
+      priceRange: {
+        min: 100,
+        max: 200,
       },
+      rating: 4.5,
     };
 
     await act(async () => {
@@ -340,7 +347,8 @@ describe("useActivitySearch", () => {
 
     const searchParams: ActivitySearchParams = {
       destination: "Test",
-      date: "2024-07-01",
+      startDate: "2024-07-01",
+      endDate: "2024-07-02",
       adults: 1,
       children: 0,
       infants: 0,

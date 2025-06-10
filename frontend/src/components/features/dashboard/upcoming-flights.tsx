@@ -11,13 +11,25 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { type UpcomingFlight, useUpcomingFlights } from "@/hooks/use-trips";
+import { useSearchStore } from "@/stores/search-store";
+import { useTripStore } from "@/stores/trip-store";
+import type { Flight } from "@/types/search";
 import { Calendar, Clock, Plane, Users } from "lucide-react";
 import Link from "next/link";
 
 interface UpcomingFlightsProps {
   limit?: number;
   showEmpty?: boolean;
+}
+
+// Mock upcoming flights based on trip data
+interface MockFlight extends Omit<Flight, "id"> {
+  id: string;
+  tripId?: string;
+  tripName?: string;
+  status: "upcoming" | "boarding" | "delayed" | "cancelled";
+  terminal?: string;
+  gate?: string;
 }
 
 function FlightCardSkeleton() {
@@ -48,7 +60,7 @@ function FlightCardSkeleton() {
   );
 }
 
-function FlightCard({ flight }: { flight: UpcomingFlight }) {
+function FlightCard({ flight }: { flight: MockFlight }) {
   const formatTime = (timeString: string) => {
     return new Date(timeString).toLocaleTimeString("en-US", {
       hour: "2-digit",
@@ -64,7 +76,7 @@ function FlightCard({ flight }: { flight: UpcomingFlight }) {
     });
   };
 
-  const getStatusColor = (status: UpcomingFlight["status"]) => {
+  const getStatusColor = (status: MockFlight["status"]) => {
     switch (status) {
       case "upcoming":
         return "default";
@@ -91,7 +103,7 @@ function FlightCard({ flight }: { flight: UpcomingFlight }) {
         <div className="flex items-center gap-2">
           <Plane className="h-4 w-4 text-primary" />
           <span className="font-medium text-sm">
-            {flight.airline_name} {flight.flight_number}
+            {flight.airline} {flight.flightNumber}
           </span>
         </div>
         <Badge variant={getStatusColor(flight.status)} className="text-xs">
@@ -104,14 +116,14 @@ function FlightCard({ flight }: { flight: UpcomingFlight }) {
           <p className="text-xs text-muted-foreground mb-1">Departure</p>
           <p className="font-medium text-sm">{flight.origin}</p>
           <p className="text-xs text-muted-foreground">
-            {formatTime(flight.departure_time)} • {formatDate(flight.departure_time)}
+            {formatTime(flight.departureTime)} • {formatDate(flight.departureTime)}
           </p>
         </div>
         <div>
           <p className="text-xs text-muted-foreground mb-1">Arrival</p>
           <p className="font-medium text-sm">{flight.destination}</p>
           <p className="text-xs text-muted-foreground">
-            {formatTime(flight.arrival_time)} • {formatDate(flight.arrival_time)}
+            {formatTime(flight.arrivalTime)} • {formatDate(flight.arrivalTime)}
           </p>
         </div>
       </div>
@@ -133,15 +145,15 @@ function FlightCard({ flight }: { flight: UpcomingFlight }) {
         </div>
       </div>
 
-      {flight.trip_name && (
+      {flight.tripName && (
         <div className="mt-2 pt-2 border-t border-border">
           <p className="text-xs text-muted-foreground">
             Part of:{" "}
             <Link
-              href={`/dashboard/trips/${flight.trip_id}`}
+              href={`/dashboard/trips/${flight.tripId}`}
               className="text-primary hover:underline"
             >
-              {flight.trip_name}
+              {flight.tripName}
             </Link>
           </p>
         </div>
@@ -174,9 +186,93 @@ function EmptyState() {
 }
 
 export function UpcomingFlights({ limit = 3, showEmpty = true }: UpcomingFlightsProps) {
-  const { data: upcomingFlights = [], isLoading } = useUpcomingFlights({
-    limit: limit,
-  });
+  const { trips } = useTripStore();
+
+  // Generate mock upcoming flights from trips
+  const generateMockFlights = (): MockFlight[] => {
+    const flights: MockFlight[] = [];
+    const now = new Date();
+
+    trips.forEach((trip) => {
+      if (!trip.startDate) return;
+
+      const startDate = new Date(trip.startDate);
+      if (startDate <= now) return; // Skip past trips
+
+      // Generate a mock outbound flight for each upcoming trip
+      const mockFlight: MockFlight = {
+        id: `flight-${trip.id}-outbound`,
+        tripId: trip.id,
+        tripName: trip.name,
+        airline: ["American Airlines", "Delta", "United", "JetBlue"][
+          Math.floor(Math.random() * 4)
+        ],
+        flightNumber: `${["AA", "DL", "UA", "B6"][Math.floor(Math.random() * 4)]}${Math.floor(Math.random() * 9000) + 1000}`,
+        origin: "JFK", // Mock origin
+        destination: trip.destinations[0]?.name?.slice(0, 3).toUpperCase() || "LAX",
+        departureTime: new Date(
+          startDate.getTime() - Math.random() * 7 * 24 * 60 * 60 * 1000
+        ).toISOString(),
+        arrivalTime: new Date(
+          startDate.getTime() -
+            Math.random() * 7 * 24 * 60 * 60 * 1000 +
+            (3 + Math.random() * 8) * 60 * 60 * 1000
+        ).toISOString(),
+        duration: 180 + Math.floor(Math.random() * 300), // 3-8 hours
+        stops: Math.floor(Math.random() * 3),
+        price: 300 + Math.floor(Math.random() * 500),
+        cabinClass: "economy",
+        seatsAvailable: Math.floor(Math.random() * 50) + 10,
+        status: ["upcoming", "boarding", "delayed"][
+          Math.floor(Math.random() * 3)
+        ] as MockFlight["status"],
+        terminal:
+          Math.random() > 0.5
+            ? ["A", "B", "C"][Math.floor(Math.random() * 3)]
+            : undefined,
+        gate:
+          Math.random() > 0.5
+            ? (Math.floor(Math.random() * 50) + 1).toString()
+            : undefined,
+      };
+
+      flights.push(mockFlight);
+
+      // Add return flight if trip has end date
+      if (trip.endDate) {
+        const endDate = new Date(trip.endDate);
+        if (endDate > now) {
+          const returnFlight: MockFlight = {
+            ...mockFlight,
+            id: `flight-${trip.id}-return`,
+            origin: mockFlight.destination,
+            destination: mockFlight.origin,
+            departureTime: new Date(
+              endDate.getTime() + Math.random() * 2 * 24 * 60 * 60 * 1000
+            ).toISOString(),
+            arrivalTime: new Date(
+              endDate.getTime() +
+                Math.random() * 2 * 24 * 60 * 60 * 1000 +
+                (3 + Math.random() * 8) * 60 * 60 * 1000
+            ).toISOString(),
+          };
+          flights.push(returnFlight);
+        }
+      }
+    });
+
+    // Sort by departure time and take upcoming flights
+    return flights
+      .filter((flight) => new Date(flight.departureTime) > now)
+      .sort(
+        (a, b) =>
+          new Date(a.departureTime).getTime() - new Date(b.departureTime).getTime()
+      )
+      .slice(0, limit);
+  };
+
+  const upcomingFlights = generateMockFlights();
+  const isLoading = false; // Mock loading state
 
   if (isLoading) {
     return (

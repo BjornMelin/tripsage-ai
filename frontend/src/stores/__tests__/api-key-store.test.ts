@@ -111,10 +111,10 @@ describe("API Key Store", () => {
           openai: {
             id: "key-1",
             service: "openai",
-            has_key: true,
-            is_valid: true,
-            last_validated: new Date().toISOString(),
-            last_used: new Date().toISOString(),
+            api_key: "sk-test123",
+            status: "active",
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
           },
         });
         result.current.setSelectedService("openai");
@@ -177,18 +177,18 @@ describe("API Key Store", () => {
         openai: {
           id: "key-1",
           service: "openai",
-          has_key: true,
-          is_valid: true,
-          last_validated: new Date().toISOString(),
-          last_used: new Date().toISOString(),
+          api_key: "sk-test123",
+          status: "active",
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
         },
         anthropic: {
           id: "key-2",
           service: "anthropic",
-          has_key: true,
-          is_valid: true,
-          last_validated: new Date().toISOString(),
-          last_used: new Date().toISOString(),
+          api_key: "cl-test456",
+          status: "active",
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
         },
       };
 
@@ -205,10 +205,10 @@ describe("API Key Store", () => {
       const initialKey: ApiKey = {
         id: "key-1",
         service: "openai",
-        has_key: true,
-        is_valid: true,
-        last_validated: new Date().toISOString(),
-        last_used: new Date().toISOString(),
+        api_key: "sk-test123",
+        status: "active",
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
       };
 
       // Set initial key
@@ -219,13 +219,13 @@ describe("API Key Store", () => {
       // Update the key
       act(() => {
         result.current.updateKey("openai", {
-          has_key: true,
-          is_valid: false,
+          api_key: "sk-updated456",
+          status: "pending",
         });
       });
 
-      expect(result.current.keys.openai.has_key).toBe(true);
-      expect(result.current.keys.openai.is_valid).toBe(false);
+      expect(result.current.keys.openai.api_key).toBe("sk-updated456");
+      expect(result.current.keys.openai.status).toBe("pending");
       expect(result.current.keys.openai.id).toBe("key-1"); // Should preserve original ID
     });
 
@@ -234,14 +234,14 @@ describe("API Key Store", () => {
 
       act(() => {
         result.current.updateKey("openai", {
-          has_key: true,
-          is_valid: true,
+          api_key: "sk-new123",
+          status: "active",
         });
       });
 
       expect(result.current.keys.openai).toBeDefined();
-      expect(result.current.keys.openai.has_key).toBe(true);
-      expect(result.current.keys.openai.is_valid).toBe(true);
+      expect(result.current.keys.openai.api_key).toBe("sk-new123");
+      expect(result.current.keys.openai.status).toBe("active");
     });
 
     it("removes key correctly", () => {
@@ -251,18 +251,18 @@ describe("API Key Store", () => {
         openai: {
           id: "key-1",
           service: "openai",
-          has_key: true,
-          is_valid: true,
-          last_validated: new Date().toISOString(),
-          last_used: new Date().toISOString(),
+          api_key: "sk-test123",
+          status: "active",
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
         },
         anthropic: {
           id: "key-2",
           service: "anthropic",
-          has_key: true,
-          is_valid: true,
-          last_validated: new Date().toISOString(),
-          last_used: new Date().toISOString(),
+          api_key: "cl-test456",
+          status: "active",
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
         },
       };
 
@@ -306,10 +306,9 @@ describe("API Key Store", () => {
               id: "key-1",
               service: "openai",
               api_key: "sk-test123",
-              has_key: true,
-              is_valid: true,
-              last_validated: new Date().toISOString(),
-              last_used: new Date().toISOString(),
+              status: "active",
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
             },
           },
         });
@@ -330,7 +329,7 @@ describe("API Key Store", () => {
 
       let isValid: boolean;
       await act(async () => {
-        isValid = await result.current.validateKey("openai", "sk-test123");
+        isValid = await result.current.validateKey("openai");
       });
 
       expect(isValid!).toBe(true);
@@ -366,7 +365,7 @@ describe("API Key Store", () => {
 
       let isValid: boolean;
       await act(async () => {
-        isValid = await result.current.validateKey("openai", "sk-test123");
+        isValid = await result.current.validateKey("openai");
       });
 
       expect(isValid!).toBe(false);
@@ -384,7 +383,7 @@ describe("API Key Store", () => {
 
       let isValid: boolean;
       await act(async () => {
-        isValid = await result.current.validateKey("openai", "sk-test123");
+        isValid = await result.current.validateKey("openai");
       });
 
       expect(isValid!).toBe(false);
@@ -399,7 +398,7 @@ describe("API Key Store", () => {
 
       let isValid: boolean;
       await act(async () => {
-        isValid = await result.current.validateKey("openai", "sk-test123");
+        isValid = await result.current.validateKey("openai");
       });
 
       expect(isValid!).toBe(false);
@@ -424,12 +423,12 @@ describe("API Key Store", () => {
       const { result } = renderHook(() => useApiKeyStore());
 
       act(() => {
-        result.current.updateKey("incomplete", { is_valid: true });
+        result.current.updateKey("incomplete", { status: "active" });
       });
 
       let isValid: boolean;
       await act(async () => {
-        isValid = await result.current.validateKey("incomplete", "");
+        isValid = await result.current.validateKey("incomplete");
       });
 
       expect(isValid!).toBe(false);
@@ -446,7 +445,7 @@ describe("API Key Store", () => {
       });
 
       await act(async () => {
-        await result.current.validateKey("openai", "sk-test123");
+        await result.current.validateKey("openai");
       });
 
       expect(global.fetch).toHaveBeenCalledWith("/api/keys/validate", {
@@ -477,7 +476,7 @@ describe("API Key Store", () => {
       });
 
       await act(async () => {
-        await result.current.validateKey("openai", "sk-test123");
+        await result.current.validateKey("openai");
       });
 
       expect(global.fetch).toHaveBeenCalledWith("/api/keys/validate", {
@@ -609,10 +608,9 @@ describe("API Key Store", () => {
               id: "key-1",
               service: "openai",
               api_key: "sk-test123",
-              has_key: true,
-              is_valid: true,
-              last_validated: new Date().toISOString(),
-              last_used: new Date().toISOString(),
+              status: "active",
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
             },
           },
         });
@@ -622,7 +620,7 @@ describe("API Key Store", () => {
 
       let isValid: boolean;
       await act(async () => {
-        isValid = await result.current.validateKey("openai", "sk-test123");
+        isValid = await result.current.validateKey("openai");
       });
 
       expect(isValid!).toBe(false);

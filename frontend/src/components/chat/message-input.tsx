@@ -61,10 +61,11 @@ export function MessageInput({
         if (e.shiftKey) {
           // Allow new line with Shift+Enter
           return;
+        } else {
+          // Send message with Enter
+          e.preventDefault();
+          handleSubmit();
         }
-        // Send message with Enter
-        e.preventDefault();
-        handleSubmit();
       }
     },
     [handleSubmit]

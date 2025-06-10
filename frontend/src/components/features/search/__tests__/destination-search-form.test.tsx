@@ -159,12 +159,7 @@ describe("DestinationSearchForm", () => {
   it("uses initial values when provided", () => {
     const initialValues = {
       query: "Tokyo",
-      types: ["establishment"] as (
-        | "country"
-        | "locality"
-        | "administrative_area"
-        | "establishment"
-      )[],
+      types: ["establishment"] as const,
       limit: 5,
     };
 

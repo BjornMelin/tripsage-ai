@@ -212,7 +212,6 @@ const getDefaultFilters = (searchType: SearchType): ValidatedFilterOption[] => {
           id: "price_range",
           label: "Price Range",
           type: "range",
-          required: false,
           category: "pricing",
           validation: { min: 0, max: 10000 },
         },
@@ -220,7 +219,6 @@ const getDefaultFilters = (searchType: SearchType): ValidatedFilterOption[] => {
           id: "stops",
           label: "Number of Stops",
           type: "select",
-          required: false,
           category: "routing",
           options: [
             { value: "0", label: "Direct flights only" },
@@ -232,7 +230,6 @@ const getDefaultFilters = (searchType: SearchType): ValidatedFilterOption[] => {
           id: "airlines",
           label: "Airlines",
           type: "multiselect",
-          required: false,
           category: "airline",
           options: [], // Would be populated dynamically
         },
@@ -240,7 +237,6 @@ const getDefaultFilters = (searchType: SearchType): ValidatedFilterOption[] => {
           id: "departure_time",
           label: "Departure Time",
           type: "select",
-          required: false,
           category: "timing",
           options: [
             { value: "early_morning", label: "Early Morning (6:00-9:00)" },
@@ -256,7 +252,6 @@ const getDefaultFilters = (searchType: SearchType): ValidatedFilterOption[] => {
           id: "price_range",
           label: "Price per Night",
           type: "range",
-          required: false,
           category: "pricing",
           validation: { min: 0, max: 2000 },
         },
@@ -264,7 +259,6 @@ const getDefaultFilters = (searchType: SearchType): ValidatedFilterOption[] => {
           id: "rating",
           label: "Minimum Rating",
           type: "select",
-          required: false,
           category: "quality",
           options: [
             { value: "3", label: "3+ stars" },
@@ -276,7 +270,6 @@ const getDefaultFilters = (searchType: SearchType): ValidatedFilterOption[] => {
           id: "property_type",
           label: "Property Type",
           type: "multiselect",
-          required: false,
           category: "type",
           options: [
             { value: "hotel", label: "Hotel" },
@@ -289,7 +282,6 @@ const getDefaultFilters = (searchType: SearchType): ValidatedFilterOption[] => {
           id: "amenities",
           label: "Amenities",
           type: "multiselect",
-          required: false,
           category: "features",
           options: [
             { value: "wifi", label: "Free WiFi" },
@@ -307,7 +299,6 @@ const getDefaultFilters = (searchType: SearchType): ValidatedFilterOption[] => {
           id: "price_range",
           label: "Price Range",
           type: "range",
-          required: false,
           category: "pricing",
           validation: { min: 0, max: 500 },
         },
@@ -315,7 +306,6 @@ const getDefaultFilters = (searchType: SearchType): ValidatedFilterOption[] => {
           id: "duration",
           label: "Duration",
           type: "range",
-          required: false,
           category: "timing",
           validation: { min: 1, max: 480 }, // minutes
         },
@@ -323,7 +313,6 @@ const getDefaultFilters = (searchType: SearchType): ValidatedFilterOption[] => {
           id: "difficulty",
           label: "Difficulty Level",
           type: "select",
-          required: false,
           category: "experience",
           options: [
             { value: "easy", label: "Easy" },
@@ -336,7 +325,6 @@ const getDefaultFilters = (searchType: SearchType): ValidatedFilterOption[] => {
           id: "category",
           label: "Activity Type",
           type: "multiselect",
-          required: false,
           category: "type",
           options: [
             { value: "outdoor", label: "Outdoor Adventures" },
@@ -353,7 +341,6 @@ const getDefaultFilters = (searchType: SearchType): ValidatedFilterOption[] => {
           id: "destination_type",
           label: "Destination Type",
           type: "multiselect",
-          required: false,
           category: "type",
           options: [
             { value: "city", label: "Cities" },
@@ -366,7 +353,6 @@ const getDefaultFilters = (searchType: SearchType): ValidatedFilterOption[] => {
           id: "population",
           label: "Population Size",
           type: "select",
-          required: false,
           category: "demographics",
           options: [
             { value: "small", label: "Small (< 100k)" },
@@ -394,14 +380,12 @@ const getDefaultSortOptions = (searchType: SearchType): ValidatedSortOption[] =>
       label: "Price: Low to High",
       field: "price",
       direction: "asc" as SortDirection,
-      isDefault: false,
     },
     {
       id: "price_high",
       label: "Price: High to Low",
       field: "price",
       direction: "desc" as SortDirection,
-      isDefault: false,
     },
   ];
 
@@ -414,28 +398,24 @@ const getDefaultSortOptions = (searchType: SearchType): ValidatedSortOption[] =>
           label: "Duration",
           field: "totalDuration",
           direction: "asc" as SortDirection,
-          isDefault: false,
         },
         {
           id: "departure",
           label: "Departure Time",
           field: "departureTime",
           direction: "asc" as SortDirection,
-          isDefault: false,
         },
         {
           id: "arrival",
           label: "Arrival Time",
           field: "arrivalTime",
           direction: "asc" as SortDirection,
-          isDefault: false,
         },
         {
           id: "stops",
           label: "Fewest Stops",
           field: "stops",
           direction: "asc" as SortDirection,
-          isDefault: false,
         },
       ];
     case "accommodation":
@@ -446,21 +426,18 @@ const getDefaultSortOptions = (searchType: SearchType): ValidatedSortOption[] =>
           label: "Highest Rated",
           field: "rating",
           direction: "desc" as SortDirection,
-          isDefault: false,
         },
         {
           id: "distance",
           label: "Distance",
           field: "distance",
           direction: "asc" as SortDirection,
-          isDefault: false,
         },
         {
           id: "reviews",
           label: "Most Reviews",
           field: "reviewCount",
           direction: "desc" as SortDirection,
-          isDefault: false,
         },
       ];
     case "activity":
@@ -471,21 +448,18 @@ const getDefaultSortOptions = (searchType: SearchType): ValidatedSortOption[] =>
           label: "Highest Rated",
           field: "rating",
           direction: "desc" as SortDirection,
-          isDefault: false,
         },
         {
           id: "duration",
           label: "Duration",
           field: "duration",
           direction: "asc" as SortDirection,
-          isDefault: false,
         },
         {
           id: "popularity",
           label: "Most Popular",
           field: "bookingCount",
           direction: "desc" as SortDirection,
-          isDefault: false,
         },
       ];
     case "destination":
@@ -502,21 +476,18 @@ const getDefaultSortOptions = (searchType: SearchType): ValidatedSortOption[] =>
           label: "Alphabetical",
           field: "name",
           direction: "asc" as SortDirection,
-          isDefault: false,
         },
         {
           id: "population",
           label: "Population",
           field: "population",
           direction: "desc" as SortDirection,
-          isDefault: false,
         },
         {
           id: "distance",
           label: "Distance",
           field: "distance",
           direction: "asc" as SortDirection,
-          isDefault: false,
         },
       ];
     default:
@@ -838,23 +809,7 @@ export const useSearchFiltersStore = create<SearchFiltersState>()(
         },
 
         applyFiltersFromObject: async (filterObject) => {
-          // Convert Record<string, unknown> to Record<string, FilterValue>
-          const validatedFilters: Record<string, FilterValue> = {};
-          for (const [key, value] of Object.entries(filterObject)) {
-            // Only include values that match FilterValue type
-            if (
-              typeof value === "string" ||
-              typeof value === "number" ||
-              typeof value === "boolean" ||
-              Array.isArray(value) ||
-              (typeof value === "object" &&
-                value !== null &&
-                ("min" in value || "max" in value))
-            ) {
-              validatedFilters[key] = value as FilterValue;
-            }
-          }
-          return await get().setMultipleFilters(validatedFilters);
+          return await get().setMultipleFilters(filterObject);
         },
 
         resetFiltersToDefault: (searchType) => {
@@ -945,9 +900,10 @@ export const useSearchFiltersStore = create<SearchFiltersState>()(
                 filterPresets: [...state.filterPresets, result.data],
               }));
               return presetId;
+            } else {
+              console.error("Invalid filter preset:", result.error);
+              return null;
             }
-            console.error("Invalid filter preset:", result.error);
-            return null;
           } catch (error) {
             console.error("Failed to save filter preset:", error);
             return null;

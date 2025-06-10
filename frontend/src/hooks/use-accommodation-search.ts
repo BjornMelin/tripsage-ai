@@ -1,11 +1,9 @@
 "use client";
 
 import { api } from "@/lib/api/client";
-import { useSearchParamsStore } from "@/stores/search-params-store";
-import { useSearchResultsStore } from "@/stores/search-results-store";
+import { useSearchStore } from "@/stores/search-store";
 import type { Accommodation, AccommodationSearchParams } from "@/types/search";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { useEffect } from "react";
 
 export interface AccommodationSearchResponse {
   results: Accommodation[];
@@ -15,11 +13,8 @@ export interface AccommodationSearchResponse {
 }
 
 export function useAccommodationSearch() {
-  const { updateAccommodationParams } = useSearchParamsStore();
-  const { startSearch, setSearchResults, setSearchError, completeSearch } =
-    useSearchResultsStore();
-
-  let currentSearchId: string | null = null;
+  const { updateAccommodationParams, setResults, setIsLoading, setError } =
+    useSearchStore();
 
   const searchMutation = useMutation({
     mutationFn: async (params: AccommodationSearchParams) => {
@@ -29,35 +24,19 @@ export function useAccommodationSearch() {
       );
       return response;
     },
-    onMutate: (params) => {
-      currentSearchId = startSearch("accommodation", { ...params } as Record<
-        string,
-        unknown
-      >);
+    onSuccess: (data) => {
+      setResults({ accommodations: data.results });
+      setIsLoading(false);
+    },
+    onError: (error: Error) => {
+      setError(error.message || "Failed to search accommodations");
+      setIsLoading(false);
+    },
+    onMutate: () => {
+      setIsLoading(true);
+      setError(null);
     },
   });
-
-  // Handle search success
-  useEffect(() => {
-    if (searchMutation.data && currentSearchId) {
-      setSearchResults(currentSearchId, {
-        accommodations: searchMutation.data.results,
-      });
-      completeSearch(currentSearchId);
-    }
-  }, [searchMutation.data, currentSearchId, setSearchResults, completeSearch]);
-
-  // Handle search error
-  useEffect(() => {
-    if (searchMutation.error && currentSearchId) {
-      setSearchError(currentSearchId, {
-        message: searchMutation.error.message || "Failed to search accommodations",
-        code: "SEARCH_ERROR",
-        occurredAt: new Date().toISOString(),
-        retryable: true,
-      });
-    }
-  }, [searchMutation.error, currentSearchId, setSearchError]);
 
   const getSuggestions = useQuery({
     queryKey: ["accommodation-suggestions"],

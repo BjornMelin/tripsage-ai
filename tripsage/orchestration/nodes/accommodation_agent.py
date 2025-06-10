@@ -16,7 +16,7 @@ from langchain_openai import ChatOpenAI
 from tripsage.agents.service_registry import ServiceRegistry
 from tripsage.orchestration.nodes.base import BaseAgentNode
 from tripsage.orchestration.state import TravelPlanningState
-from tripsage_core.config.base_app_settings import get_settings
+from tripsage_core.config.base_app_settings import settings
 from tripsage_core.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)
@@ -35,7 +35,6 @@ class AccommodationAgentNode(BaseAgentNode):
         super().__init__("accommodation_agent", service_registry)
 
         # Initialize LLM for accommodation-specific tasks
-        settings = get_settings()
         self.llm = ChatOpenAI(
             model=settings.agent.model_name,
             temperature=settings.agent.temperature,

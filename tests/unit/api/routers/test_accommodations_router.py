@@ -1,12 +1,13 @@
 """Comprehensive unit tests for accommodation router."""
 
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import Mock, patch
 
 import pytest
 from fastapi import status
 from fastapi.testclient import TestClient
 
 from tests.factories import AccommodationFactory
+from tripsage.api.main import app
 from tripsage_core.exceptions import CoreResourceNotFoundError
 
 
@@ -15,30 +16,9 @@ class TestAccommodationRouter:
 
     def setup_method(self):
         """Set up test client and mocks."""
-        # Mock cache service before importing app
-        self.cache_patch = patch(
-            "tripsage_core.services.infrastructure.cache_service.get_cache_service"
-        )
-        mock_get_cache = self.cache_patch.start()
-        mock_cache = AsyncMock()
-        mock_cache.get = AsyncMock(return_value=None)
-        mock_cache.set = AsyncMock(return_value=True)
-        mock_cache.delete = AsyncMock(return_value=True)
-        mock_cache.exists = AsyncMock(return_value=False)
-        mock_cache.ping = AsyncMock(return_value=True)
-        mock_cache._connected = True
-        mock_get_cache.return_value = mock_cache
-
-        # Import app after patching
-        from tripsage.api.main import app
-
         self.client = TestClient(app)
         self.mock_service = Mock()
         self.sample_accommodation = AccommodationFactory.create()
-
-    def teardown_method(self):
-        """Clean up patches."""
-        self.cache_patch.stop()
 
     @patch("tripsage.api.routers.accommodations.get_accommodation_service")
     @patch("tripsage.api.routers.accommodations.require_principal_dep")

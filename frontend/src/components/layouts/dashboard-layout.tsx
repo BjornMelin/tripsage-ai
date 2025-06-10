@@ -4,7 +4,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
-// import { logoutAction } from "@/lib/auth/server-actions"; // TODO: Replace with Supabase Auth
+import { logoutAction } from "@/lib/auth/server-actions";
 import { cn } from "@/lib/utils";
 import { ChevronDown, LogOut, Settings, User as UserIcon } from "lucide-react";
 import Link from "next/link";
@@ -85,9 +85,7 @@ function UserNav() {
   const handleLogout = () => {
     startTransition(async () => {
       setIsOpen(false);
-      // TODO: Replace with Supabase Auth logout
-      // await logoutAction();
-      console.log("Logout functionality to be implemented with Supabase Auth");
+      await logoutAction();
     });
   };
 

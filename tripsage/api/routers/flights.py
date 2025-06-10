@@ -12,24 +12,22 @@ from fastapi import APIRouter, Depends, status
 
 from tripsage.api.core.dependencies import get_principal_id, require_principal_dep
 from tripsage.api.middlewares.authentication import Principal
-from tripsage.api.schemas.flights import (
+from tripsage.api.schemas.requests.flights import (
     AirportSearchRequest,
-    AirportSearchResponse,
     FlightSearchRequest,
-    FlightSearchResponse,
     MultiCityFlightSearchRequest,
     SavedFlightRequest,
-    SavedFlightResponse,
-    UpcomingFlightResponse,
 )
+from tripsage.api.schemas.responses.flights import (
+    AirportSearchResponse,
+    FlightSearchResponse,
+    SavedFlightResponse,
+)
+from tripsage.api.services.flight import FlightService, get_flight_service
 from tripsage_core.exceptions.exceptions import (
     CoreResourceNotFoundError as ResourceNotFoundError,
 )
 from tripsage_core.models.domain.flight import FlightOffer
-from tripsage_core.services.business.flight_service import (
-    FlightService,
-    get_flight_service,
-)
 
 logger = logging.getLogger(__name__)
 
@@ -207,89 +205,3 @@ async def list_saved_flights(
     # List saved flights
     user_id = get_principal_id(principal)
     return await flight_service.list_saved_flights(user_id, trip_id)
-
-
-@router.get("/upcoming", response_model=List[UpcomingFlightResponse])
-async def get_upcoming_flights(
-    limit: int = 10,
-    principal: Principal = require_principal_dep,
-    flight_service: FlightService = Depends(get_flight_service),
-):
-    """Get upcoming flights for a user with real-time status.
-
-    Args:
-        limit: Maximum number of flights to return
-        principal: Current authenticated principal
-        flight_service: Injected flight service
-
-    Returns:
-        List of upcoming flights with status information
-    """
-    _user_id = get_principal_id(principal)
-
-    # TODO: Implement actual upcoming flights logic in flight_service
-    # For now, return mock data similar to the frontend component
-
-    import random
-    from datetime import datetime, timedelta
-
-    mock_flights = []
-    current_time = datetime.now()
-
-    # Generate some mock upcoming flights
-    airlines = [
-        ("AA", "American Airlines"),
-        ("DL", "Delta Air Lines"),
-        ("UA", "United Airlines"),
-        ("B6", "JetBlue Airways"),
-    ]
-
-    airports = [
-        ("JFK", "LGA", "EWR"),  # NYC area
-        ("LAX", "SFO", "ORD"),  # Major destinations
-        ("MIA", "ATL", "DFW"),
-    ]
-
-    statuses = ["upcoming", "boarding", "delayed", "cancelled"]
-    terminals = ["A", "B", "C", "D"]
-
-    for i in range(min(limit, 5)):  # Generate up to 5 mock flights
-        airline_code, airline_name = random.choice(airlines)
-        origin = random.choice(airports)[0]
-        destination = random.choice(airports)[1]
-
-        departure_time = current_time + timedelta(
-            days=random.randint(1, 30),
-            hours=random.randint(6, 22),
-            minutes=random.choice([0, 15, 30, 45]),
-        )
-
-        duration_minutes = random.randint(120, 480)  # 2-8 hours
-        arrival_time = departure_time + timedelta(minutes=duration_minutes)
-
-        flight = UpcomingFlightResponse(
-            id=f"flight-{i + 1}",
-            airline=airline_code,
-            airline_name=airline_name,
-            flight_number=f"{airline_code}{random.randint(1000, 9999)}",
-            origin=origin,
-            destination=destination,
-            departure_time=departure_time,
-            arrival_time=arrival_time,
-            duration=duration_minutes,
-            stops=random.randint(0, 2),
-            price=random.randint(300, 1200),
-            currency="USD",
-            cabin_class="economy",
-            seats_available=random.randint(10, 50),
-            status=random.choice(statuses),
-            terminal=random.choice(terminals) if random.random() > 0.3 else None,
-            gate=str(random.randint(1, 50)) if random.random() > 0.3 else None,
-        )
-
-        mock_flights.append(flight)
-
-    # Sort by departure time
-    mock_flights.sort(key=lambda f: f.departure_time)
-
-    return mock_flights

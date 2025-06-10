@@ -183,12 +183,12 @@ export function ModernFlightResults({
             <div className="animate-pulse space-y-4">
               <div className="flex justify-between">
                 <div className="space-y-2">
-                  <div className="h-4 bg-muted rounded w-32" />
-                  <div className="h-3 bg-muted rounded w-24" />
+                  <div className="h-4 bg-muted rounded w-32"></div>
+                  <div className="h-3 bg-muted rounded w-24"></div>
                 </div>
-                <div className="h-6 bg-muted rounded w-20" />
+                <div className="h-6 bg-muted rounded w-20"></div>
               </div>
-              <div className="h-2 bg-muted rounded" />
+              <div className="h-2 bg-muted rounded"></div>
             </div>
           </Card>
         ))}
@@ -341,7 +341,7 @@ export function ModernFlightResults({
 
                     <div className="flex-1 mx-4">
                       <div className="relative">
-                        <div className="h-0.5 bg-muted-foreground/30 w-full" />
+                        <div className="h-0.5 bg-muted-foreground/30 w-full"></div>
                         <Plane className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       </div>
                       <div className="text-center mt-2">
@@ -428,7 +428,7 @@ export function ModernFlightResults({
                                   ? "bg-yellow-500"
                                   : "bg-red-500"
                             )}
-                          />
+                          ></div>
                           <span className="text-muted-foreground">
                             {flight.emissions.kg}kg CO₂
                           </span>

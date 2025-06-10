@@ -41,10 +41,10 @@ export function MessageBubble({
 }: MessageBubbleProps) {
   const contentRef = useRef<HTMLDivElement>(null);
 
-  const isUser = message.role === "user";
-  const isAssistant = message.role === "assistant";
-  const isSystem = message.role === "system";
-  const isTool = false; // 'tool' role not supported in current Message type
+  const isUser = message.role === "USER";
+  const isAssistant = message.role === "ASSISTANT";
+  const isSystem = message.role === "SYSTEM";
+  const isTool = message.role === "TOOL";
 
   // Enhanced role-based styling configuration
   const bubbleConfig = useMemo(() => {

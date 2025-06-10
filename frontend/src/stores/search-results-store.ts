@@ -258,18 +258,14 @@ export const useSearchResultsStore = create<SearchResultsState>()(
               new Date(currentContext.startedAt).getTime();
 
             const finalMetrics: SearchMetrics = {
+              ...metrics,
+              searchDuration: duration,
               totalResults: Object.values(results).reduce((total, typeResults) => {
                 if (Array.isArray(typeResults)) {
                   return total + typeResults.length;
                 }
                 return total;
               }, 0),
-              resultsPerPage: metrics?.resultsPerPage ?? 20,
-              currentPage: metrics?.currentPage ?? 1,
-              hasMoreResults: metrics?.hasMoreResults ?? false,
-              searchDuration: duration,
-              provider: metrics?.provider,
-              requestId: metrics?.requestId,
             };
 
             const updatedContext: SearchContext = {

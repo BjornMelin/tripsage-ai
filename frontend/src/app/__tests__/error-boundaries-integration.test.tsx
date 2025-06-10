@@ -18,7 +18,7 @@ vi.mock("react", async () => {
 import AuthError from "../(auth)/error";
 import DashboardError from "../(dashboard)/error";
 // Import the error boundary components
-import ErrorComponent from "../error";
+import Error from "../error";
 import GlobalError from "../global-error";
 
 // Mock the error service
@@ -55,7 +55,7 @@ describe("Next.js Error Boundaries Integration", () => {
 
   describe("Root Error Boundary (error.tsx)", () => {
     it("should render PageErrorFallback for root errors", () => {
-      render(<ErrorComponent error={mockError} reset={mockReset} />);
+      render(<Error error={mockError} reset={mockReset} />);
 
       expect(screen.getByText("Page Error")).toBeInTheDocument();
       expect(
@@ -68,7 +68,7 @@ describe("Next.js Error Boundaries Integration", () => {
     it("should report error on mount", () => {
       const { errorService } = require("@/lib/error-service");
 
-      render(<ErrorComponent error={mockError} reset={mockReset} />);
+      render(<Error error={mockError} reset={mockReset} />);
 
       expect(errorService.createErrorReport).toHaveBeenCalledWith(
         mockError,
@@ -82,30 +82,22 @@ describe("Next.js Error Boundaries Integration", () => {
 
     it("should log error in development mode", () => {
       const originalEnv = process.env.NODE_ENV;
-      Object.defineProperty(process.env, "NODE_ENV", {
-        value: "development",
-        writable: true,
-        configurable: true,
-      });
+      process.env.NODE_ENV = "development";
 
-      render(<ErrorComponent error={mockError} reset={mockReset} />);
+      render(<Error error={mockError} reset={mockReset} />);
 
       expect(consoleErrorSpy).toHaveBeenCalledWith(
         "Root error boundary caught error:",
         mockError
       );
 
-      Object.defineProperty(process.env, "NODE_ENV", {
-        value: originalEnv,
-        writable: true,
-        configurable: true,
-      });
+      process.env.NODE_ENV = originalEnv;
     });
 
     it("should handle error with digest", () => {
       const errorWithDigest = { ...mockError, digest: "root_error_123" };
 
-      render(<ErrorComponent error={errorWithDigest} reset={mockReset} />);
+      render(<Error error={errorWithDigest} reset={mockReset} />);
 
       // Should still render and report the error
       expect(screen.getByText("Page Error")).toBeInTheDocument();
@@ -143,11 +135,7 @@ describe("Next.js Error Boundaries Integration", () => {
 
     it("should always log critical errors", () => {
       const originalEnv = process.env.NODE_ENV;
-      Object.defineProperty(process.env, "NODE_ENV", {
-        value: "production",
-        writable: true,
-        configurable: true,
-      });
+      process.env.NODE_ENV = "production";
 
       render(<GlobalError error={mockError} reset={mockReset} />);
 
@@ -156,11 +144,7 @@ describe("Next.js Error Boundaries Integration", () => {
         mockError
       );
 
-      Object.defineProperty(process.env, "NODE_ENV", {
-        value: originalEnv,
-        writable: true,
-        configurable: true,
-      });
+      process.env.NODE_ENV = originalEnv;
     });
   });
 
@@ -187,11 +171,7 @@ describe("Next.js Error Boundaries Integration", () => {
 
     it("should log error in development mode", () => {
       const originalEnv = process.env.NODE_ENV;
-      Object.defineProperty(process.env, "NODE_ENV", {
-        value: "development",
-        writable: true,
-        configurable: true,
-      });
+      process.env.NODE_ENV = "development";
 
       render(<DashboardError error={mockError} reset={mockReset} />);
 
@@ -200,11 +180,7 @@ describe("Next.js Error Boundaries Integration", () => {
         mockError
       );
 
-      Object.defineProperty(process.env, "NODE_ENV", {
-        value: originalEnv,
-        writable: true,
-        configurable: true,
-      });
+      process.env.NODE_ENV = originalEnv;
     });
   });
 
@@ -240,11 +216,7 @@ describe("Next.js Error Boundaries Integration", () => {
 
     it("should log error in development mode", () => {
       const originalEnv = process.env.NODE_ENV;
-      Object.defineProperty(process.env, "NODE_ENV", {
-        value: "development",
-        writable: true,
-        configurable: true,
-      });
+      process.env.NODE_ENV = "development";
 
       render(<AuthError error={mockError} reset={mockReset} />);
 
@@ -253,11 +225,7 @@ describe("Next.js Error Boundaries Integration", () => {
         mockError
       );
 
-      Object.defineProperty(process.env, "NODE_ENV", {
-        value: originalEnv,
-        writable: true,
-        configurable: true,
-      });
+      process.env.NODE_ENV = originalEnv;
     });
   });
 
@@ -265,7 +233,7 @@ describe("Next.js Error Boundaries Integration", () => {
     it("should generate session ID when not present", () => {
       mockSessionStorage.getItem.mockReturnValue(null);
 
-      render(<ErrorComponent error={mockError} reset={mockReset} />);
+      render(<Error error={mockError} reset={mockReset} />);
 
       expect(mockSessionStorage.setItem).toHaveBeenCalledWith(
         "session_id",
@@ -276,7 +244,7 @@ describe("Next.js Error Boundaries Integration", () => {
     it("should use existing session ID", () => {
       mockSessionStorage.getItem.mockReturnValue("existing_session_id");
 
-      render(<ErrorComponent error={mockError} reset={mockReset} />);
+      render(<Error error={mockError} reset={mockReset} />);
 
       const { errorService } = require("@/lib/error-service");
       expect(errorService.createErrorReport).toHaveBeenCalledWith(
@@ -293,7 +261,7 @@ describe("Next.js Error Boundaries Integration", () => {
         throw new Error("SessionStorage error");
       });
 
-      render(<ErrorComponent error={mockError} reset={mockReset} />);
+      render(<Error error={mockError} reset={mockReset} />);
 
       // Should still render without crashing
       expect(screen.getByText("Page Error")).toBeInTheDocument();
@@ -318,11 +286,11 @@ describe("Next.js Error Boundaries Integration", () => {
       );
 
       // Cleanup
-      (window as any).__USER_STORE__ = undefined;
+      delete (window as any).__USER_STORE__;
     });
 
     it("should handle missing user store gracefully", () => {
-      (window as any).__USER_STORE__ = undefined;
+      delete (window as any).__USER_STORE__;
 
       render(<DashboardError error={mockError} reset={mockReset} />);
 
@@ -335,7 +303,7 @@ describe("Next.js Error Boundaries Integration", () => {
     it("should create error reports with consistent format", () => {
       const { errorService } = require("@/lib/error-service");
 
-      render(<ErrorComponent error={mockError} reset={mockReset} />);
+      render(<Error error={mockError} reset={mockReset} />);
 
       expect(errorService.createErrorReport).toHaveBeenCalledWith(
         mockError,
@@ -352,7 +320,7 @@ describe("Next.js Error Boundaries Integration", () => {
 
       // Should not throw when error reporting fails
       expect(() => {
-        render(<ErrorComponent error={mockError} reset={mockReset} />);
+        render(<Error error={mockError} reset={mockReset} />);
       }).not.toThrow();
     });
   });
@@ -364,7 +332,7 @@ describe("Next.js Error Boundaries Integration", () => {
       expect(screen.getByText("Application Error")).toBeInTheDocument();
 
       // Page error shows more detailed UI
-      rerender(<ErrorComponent error={mockError} reset={mockReset} />);
+      rerender(<Error error={mockError} reset={mockReset} />);
       expect(screen.getByText("Page Error")).toBeInTheDocument();
 
       // Component error shows standard UI

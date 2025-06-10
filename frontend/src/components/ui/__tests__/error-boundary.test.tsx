@@ -67,11 +67,7 @@ describe("ErrorBoundary", () => {
 
   it("shows error details in development mode", () => {
     const originalEnv = process.env.NODE_ENV;
-    Object.defineProperty(process.env, "NODE_ENV", {
-      value: "development",
-      writable: true,
-      configurable: true,
-    });
+    process.env.NODE_ENV = "development";
 
     render(
       <ErrorBoundary>
@@ -81,11 +77,7 @@ describe("ErrorBoundary", () => {
 
     expect(screen.getByText("Test error message")).toBeInTheDocument();
 
-    Object.defineProperty(process.env, "NODE_ENV", {
-      value: originalEnv,
-      writable: true,
-      configurable: true,
-    });
+    process.env.NODE_ENV = originalEnv;
   });
 
   it("resets error state when try again is clicked", () => {
@@ -138,8 +130,7 @@ describe("ErrorBoundary", () => {
 
 describe("MinimalErrorFallback", () => {
   it("renders minimal error message", () => {
-    const error = new Error("Test error");
-    render(<MinimalErrorFallback error={error} />);
+    render(<MinimalErrorFallback />);
 
     expect(screen.getByText("Error")).toBeInTheDocument();
   });
@@ -154,42 +145,42 @@ describe("MinimalErrorFallback", () => {
 
 describe("ErrorFallback", () => {
   it("renders error message", () => {
-    const error = new Error("Test error");
-    render(<ErrorFallback error={error} />);
+    render(<ErrorFallback />);
 
-    expect(screen.getByText("Something went wrong")).toBeInTheDocument();
+    expect(screen.getByText(/oops! something went wrong/i)).toBeInTheDocument();
+    expect(screen.getByText(/we encountered an unexpected error/i)).toBeInTheDocument();
   });
 
   it("renders with custom error", () => {
     const error = new Error("Custom error");
     render(<ErrorFallback error={error} />);
 
-    expect(screen.getByText("Something went wrong")).toBeInTheDocument();
+    expect(screen.getByText(/oops! something went wrong/i)).toBeInTheDocument();
   });
 
-  it("calls reset when try again is clicked", () => {
-    const reset = vi.fn();
-    const error = new Error("Test error");
-    render(<ErrorFallback error={error} reset={reset} />);
+  it("calls onReset when try again is clicked", () => {
+    const onReset = vi.fn();
+    render(<ErrorFallback onReset={onReset} />);
 
     fireEvent.click(screen.getByRole("button", { name: /try again/i }));
-    expect(reset).toHaveBeenCalled();
+    expect(onReset).toHaveBeenCalled();
   });
 
-  it("renders without className prop", () => {
-    const error = new Error("Test error");
-    render(<ErrorFallback error={error} />);
+  it("applies custom className", () => {
+    render(<ErrorFallback className="custom-class" />);
 
-    expect(screen.getByText("Something went wrong")).toBeInTheDocument();
+    const errorContainer = screen
+      .getByText(/oops! something went wrong/i)
+      .closest("div");
+    expect(errorContainer).toHaveClass("custom-class");
   });
 });
 
 describe("PageErrorFallback", () => {
   it("renders with default message", () => {
-    const error = new Error("Test error");
-    render(<PageErrorFallback error={error} />);
+    render(<PageErrorFallback />);
 
-    expect(screen.getByText("Test error")).toBeInTheDocument();
+    expect(screen.getByText("Something went wrong")).toBeInTheDocument();
   });
 
   it("renders with custom error", () => {
@@ -201,8 +192,7 @@ describe("PageErrorFallback", () => {
 
   it("calls reset when reset button is clicked", () => {
     const reset = vi.fn();
-    const error = new Error("Test error");
-    render(<PageErrorFallback error={error} reset={reset} />);
+    render(<PageErrorFallback reset={reset} />);
 
     const button = screen.queryByRole("button", { name: /try again/i });
     if (button) {

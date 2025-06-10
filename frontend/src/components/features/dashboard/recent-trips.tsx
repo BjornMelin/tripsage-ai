@@ -11,8 +11,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useTrips } from "@/hooks/use-trips";
-import type { Trip } from "@/stores/trip-store";
+import { type Trip, useTripStore } from "@/stores/trip-store";
 import { Calendar, Clock, MapPin } from "lucide-react";
 import Link from "next/link";
 
@@ -55,7 +54,7 @@ function TripCard({ trip }: { trip: Trip }) {
   };
 
   const getDestinationText = () => {
-    if (!trip.destinations || trip.destinations.length === 0) return "No destinations";
+    if (trip.destinations.length === 0) return "No destinations";
     if (trip.destinations.length === 1) return trip.destinations[0].name;
     return `${trip.destinations[0].name} (+${trip.destinations.length - 1} more)`;
   };
@@ -153,13 +152,13 @@ function EmptyState() {
 }
 
 export function RecentTrips({ limit = 5, showEmpty = true }: RecentTripsProps) {
-  const { data: tripsResponse, isLoading } = useTrips();
+  const { trips, isLoading } = useTripStore();
 
-  // Extract trips from the response and sort by updatedAt/createdAt, take the most recent ones
-  const recentTrips = (tripsResponse?.items || [])
-    .sort((a: any, b: any) => {
-      const dateA = new Date(a.updated_at || a.created_at);
-      const dateB = new Date(b.updated_at || b.created_at);
+  // Sort trips by updatedAt/createdAt and take the most recent ones
+  const recentTrips = trips
+    .sort((a, b) => {
+      const dateA = new Date(a.updatedAt || a.createdAt);
+      const dateB = new Date(b.updatedAt || b.createdAt);
       return dateB.getTime() - dateA.getTime();
     })
     .slice(0, limit);
@@ -200,7 +199,7 @@ export function RecentTrips({ limit = 5, showEmpty = true }: RecentTripsProps) {
           )
         ) : (
           <div className="space-y-3">
-            {recentTrips.map((trip: Trip) => (
+            {recentTrips.map((trip) => (
               <TripCard key={trip.id} trip={trip} />
             ))}
           </div>

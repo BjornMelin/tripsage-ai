@@ -1,8 +1,7 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
-export interface FetchOptions extends RequestInit {
+interface FetchOptions extends RequestInit {
   params?: Record<string, string | number | boolean>;
-  auth?: string; // Optional authorization header value
 }
 
 export class ApiError extends Error {
@@ -21,7 +20,7 @@ async function handleResponse<T>(response: Response): Promise<T> {
   const contentType = response.headers.get("content-type");
 
   // Check if response is JSON
-  const isJson = contentType?.includes("application/json");
+  const isJson = contentType && contentType.includes("application/json");
   const data = isJson ? await response.json() : await response.text();
 
   if (!response.ok) {
@@ -39,7 +38,7 @@ export async function fetchApi<T = any>(
   endpoint: string,
   options: FetchOptions = {}
 ): Promise<T> {
-  const { params, auth, ...fetchOptions } = options;
+  const { params, ...fetchOptions } = options;
 
   // Handle query parameters
   let url = `${API_BASE_URL}${endpoint}`;
@@ -66,13 +65,12 @@ export async function fetchApi<T = any>(
     headers.set("Content-Type", "application/json");
   }
 
-  // Add authentication header if provided
-  if (auth) {
-    headers.set("Authorization", auth);
+  // Add authentication header if available
+  const token =
+    typeof window !== "undefined" ? localStorage.getItem("auth-token") : null;
+  if (token) {
+    headers.set("Authorization", `Bearer ${token}`);
   }
-
-  // Note: For most authenticated endpoints, use the useAuthenticatedApi hook
-  // This auth parameter is mainly for internal use by the hook
 
   // Make the request
   const response = await fetch(url, {
@@ -120,6 +118,3 @@ export const api = {
       body: formData,
     }),
 };
-
-// Export as apiClient for backwards compatibility
-export const apiClient = api;

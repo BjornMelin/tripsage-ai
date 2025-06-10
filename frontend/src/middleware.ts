@@ -1,115 +1,105 @@
-import { createServerClient } from "@supabase/ssr";
+import { jwtVerify } from "jose";
 import { type NextRequest, NextResponse } from "next/server";
 
-// Simple in-memory rate limiter with automatic cleanup
-class RateLimiter {
-  private store = new Map<string, { count: number; resetTime: number }>();
-  private cleanupTimer: NodeJS.Timeout | null = null;
+// Environment variables
+const JWT_SECRET = new TextEncoder().encode(
+  process.env.JWT_SECRET || "fallback-secret-for-development-only"
+);
 
-  constructor() {
-    // Only set up cleanup in non-serverless environments
-    if (typeof process !== "undefined" && process.env.NODE_ENV !== "production") {
-      this.setupCleanup();
+// Simple in-memory rate limiter
+const rateLimitStore = new Map<string, { count: number; resetTime: number }>();
+
+// Define protected routes that require authentication
+const PROTECTED_ROUTES = [
+  "/dashboard",
+  "/chat",
+  "/trips",
+  "/profile",
+  "/settings",
+  "/search/flights",
+  "/search/hotels",
+  "/search/activities",
+];
+
+// Define public routes that should redirect authenticated users
+const AUTH_ROUTES = ["/login", "/register", "/reset-password"];
+
+// API routes that require authentication
+const PROTECTED_API_ROUTES = [
+  "/api/chat",
+  "/api/trips",
+  "/api/search",
+  "/api/user",
+  "/api/settings",
+];
+
+// Clean up old entries periodically
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, value] of rateLimitStore.entries()) {
+    if (now > value.resetTime) {
+      rateLimitStore.delete(key);
     }
   }
+}, 60000); // Clean up every minute
 
-  private setupCleanup() {
-    this.cleanupTimer = setInterval(() => {
-      const now = Date.now();
-      for (const [key, value] of this.store.entries()) {
-        if (now > value.resetTime) {
-          this.store.delete(key);
-        }
-      }
-    }, 60000); // Clean up every minute
-  }
+function checkRateLimit(
+  identifier: string,
+  limit = 10,
+  windowMs = 60000
+): {
+  success: boolean;
+  limit: number;
+  remaining: number;
+  reset: number;
+} {
+  const now = Date.now();
+  const record = rateLimitStore.get(identifier);
+  const resetTime = now + windowMs;
 
-  check(identifier: string, limit = 10, windowMs = 60000) {
-    const now = Date.now();
-    const record = this.store.get(identifier);
-    const resetTime = now + windowMs;
-
-    if (!record || now > record.resetTime) {
-      this.store.set(identifier, { count: 1, resetTime });
-      return { success: true, limit, remaining: limit - 1, reset: resetTime };
-    }
-
-    if (record.count >= limit) {
-      return { success: false, limit, remaining: 0, reset: record.resetTime };
-    }
-
-    record.count++;
+  if (!record || now > record.resetTime) {
+    // Create new record
+    rateLimitStore.set(identifier, {
+      count: 1,
+      resetTime,
+    });
     return {
       success: true,
       limit,
-      remaining: limit - record.count,
+      remaining: limit - 1,
+      reset: resetTime,
+    };
+  }
+
+  if (record.count >= limit) {
+    // Rate limit exceeded
+    return {
+      success: false,
+      limit,
+      remaining: 0,
       reset: record.resetTime,
     };
   }
 
-  cleanup() {
-    if (this.cleanupTimer) {
-      clearInterval(this.cleanupTimer);
-      this.cleanupTimer = null;
-    }
-  }
+  // Increment count
+  record.count++;
+  return {
+    success: true,
+    limit,
+    remaining: limit - record.count,
+    reset: record.resetTime,
+  };
 }
 
-const rateLimiter = new RateLimiter();
-
-export async function updateSession(request: NextRequest) {
-  let supabaseResponse = NextResponse.next({
-    request,
-  });
-
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-  if (!supabaseUrl || !supabaseAnonKey) {
-    console.warn("Missing Supabase environment variables");
-    return supabaseResponse;
-  }
-
-  const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
-    cookies: {
-      getAll() {
-        return request.cookies.getAll();
-      },
-      setAll(cookiesToSet) {
-        cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
-        supabaseResponse = NextResponse.next({
-          request,
-        });
-        cookiesToSet.forEach(({ name, value, options }) =>
-          supabaseResponse.cookies.set(name, value, options)
-        );
-      },
-    },
-  });
-
-  // Refresh session if expired - required for Server Components
-  try {
-    await supabase.auth.getUser();
-  } catch (error) {
-    // Log the error but don't fail the request
-    console.warn("Supabase auth error:", error);
-  }
-
-  return supabaseResponse;
-}
-
-export async function middleware(request: NextRequest) {
-  // Handle Supabase auth for all routes first
-  const response = await updateSession(request);
-
+async function handleRateLimiting(request: NextRequest): Promise<NextResponse> {
   // Only apply rate limiting to chat API
   if (!request.nextUrl.pathname.startsWith("/api/chat")) {
-    return response;
+    return NextResponse.next();
   }
 
   // Skip rate limiting for attachment uploads (different limits apply)
   if (request.nextUrl.pathname === "/api/chat/attachments") {
-    return response;
+    return NextResponse.next();
   }
 
   // Get identifier (IP address or authenticated user)
@@ -123,11 +113,11 @@ export async function middleware(request: NextRequest) {
   const identifier = authHeader ? `auth:${authHeader}` : `ip:${ip}`;
 
   // Apply rate limiting
-  const rateLimitResult = rateLimiter.check(identifier);
+  const rateLimitResult = checkRateLimit(identifier);
 
-  // Create rate limit response if needed
-  const rateLimitResponse = rateLimitResult.success
-    ? response
+  // Create response
+  const response = rateLimitResult.success
+    ? NextResponse.next()
     : NextResponse.json(
         {
           error: "Too many requests. Please wait before trying again.",
@@ -138,25 +128,108 @@ export async function middleware(request: NextRequest) {
       );
 
   // Add rate limit headers
-  rateLimitResponse.headers.set("X-RateLimit-Limit", rateLimitResult.limit.toString());
-  rateLimitResponse.headers.set(
-    "X-RateLimit-Remaining",
-    rateLimitResult.remaining.toString()
-  );
-  rateLimitResponse.headers.set(
+  response.headers.set("X-RateLimit-Limit", rateLimitResult.limit.toString());
+  response.headers.set("X-RateLimit-Remaining", rateLimitResult.remaining.toString());
+  response.headers.set(
     "X-RateLimit-Reset",
     Math.floor(rateLimitResult.reset / 1000).toString()
   );
 
   // Add retry-after header for 429 responses
   if (!rateLimitResult.success) {
-    rateLimitResponse.headers.set(
+    response.headers.set(
       "Retry-After",
       Math.ceil((rateLimitResult.reset - Date.now()) / 1000).toString()
     );
   }
 
-  return rateLimitResponse;
+  return response;
+}
+
+/**
+ * Verify JWT token from cookies
+ */
+async function verifyToken(token: string): Promise<boolean> {
+  try {
+    await jwtVerify(token, JWT_SECRET);
+    return true;
+  } catch (error) {
+    return false;
+  }
+}
+
+/**
+ * Check if the pathname matches any of the patterns
+ */
+function matchesPattern(pathname: string, patterns: string[]): boolean {
+  return patterns.some((pattern) => {
+    // Exact match or starts with pattern (for nested routes)
+    return pathname === pattern || pathname.startsWith(`${pattern}/`);
+  });
+}
+
+async function handleAuthentication(
+  request: NextRequest
+): Promise<NextResponse | null> {
+  const { pathname } = request.nextUrl;
+  const authToken = request.cookies.get("auth-token");
+
+  // Skip authentication for static files and public assets
+  if (
+    pathname.startsWith("/_next") ||
+    pathname.startsWith("/static") ||
+    pathname.includes(".") || // Files with extensions
+    pathname === "/" // Home page is public
+  ) {
+    return null;
+  }
+
+  // Verify authentication status
+  const isAuthenticated = authToken ? await verifyToken(authToken.value) : false;
+
+  // Handle protected routes
+  if (matchesPattern(pathname, PROTECTED_ROUTES)) {
+    if (!isAuthenticated) {
+      // Redirect to login with return URL
+      const loginUrl = new URL("/login", request.url);
+      loginUrl.searchParams.set("from", pathname);
+      return NextResponse.redirect(loginUrl);
+    }
+  }
+
+  // Handle auth routes (login, register, reset-password)
+  if (matchesPattern(pathname, AUTH_ROUTES)) {
+    if (isAuthenticated) {
+      // Redirect authenticated users away from auth pages
+      const returnUrl = request.nextUrl.searchParams.get("from") || "/dashboard";
+      return NextResponse.redirect(new URL(returnUrl, request.url));
+    }
+  }
+
+  // Handle protected API routes
+  if (matchesPattern(pathname, PROTECTED_API_ROUTES)) {
+    if (!isAuthenticated) {
+      // Return 401 for unauthenticated API requests
+      return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+    }
+  }
+
+  // Add authentication status to request headers for server components
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set("x-is-authenticated", isAuthenticated ? "true" : "false");
+
+  return null;
+}
+
+export async function middleware(request: NextRequest) {
+  // First, handle authentication
+  const authResponse = await handleAuthentication(request);
+  if (authResponse) {
+    return authResponse;
+  }
+
+  // Then apply rate limiting
+  return handleRateLimiting(request);
 }
 
 export const config = {

@@ -4,7 +4,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { useChatAi } from "@/hooks/use-chat-ai";
 import { cn } from "@/lib/utils";
-import { useAuthStore, useChatStore } from "@/stores";
+import { useChatStore } from "@/stores";
 import type { Message } from "@/types/chat";
 import { AlertCircle, Key, PanelRightOpen, Wifi } from "lucide-react";
 import Link from "next/link";
@@ -51,15 +51,9 @@ export function ChatContainer({
     initialMessages,
   });
 
-  // Transform messages to ensure they have the correct type
-  const typedMessages: Message[] = baseMessages.map((msg: any) => ({
-    ...msg,
-    createdAt: msg.createdAt || msg.timestamp || new Date().toISOString(),
-  }));
-
   // React 19 optimistic updates for instant message display
   const [optimisticMessages, addOptimisticMessage] = useOptimistic(
-    typedMessages,
+    baseMessages,
     (state: Message[], newMessage: Message) => [...state, newMessage]
   );
 
@@ -86,20 +80,17 @@ export function ChatContainer({
   // Handle sending messages with React 19 optimistic updates
   const handleSendMessage = useCallback(
     (content: string, attachments: string[] = []) => {
-      // Convert string URLs to Attachment objects
-      const attachmentObjects = attachments.map((url, index) => ({
-        id: `temp-attachment-${index}`,
-        url,
-        name: url.split("/").pop() || "Attachment",
-      }));
-
       // Create optimistic message for instant UI feedback
       const optimisticMessage: Message = {
         id: `temp-${Date.now()}`,
         role: "user",
         content,
-        createdAt: new Date().toISOString(),
-        attachments: attachmentObjects,
+        timestamp: new Date().toISOString(),
+        attachments: attachments.map((url, index) => ({
+          id: `temp-attachment-${index}`,
+          url,
+          name: url.split("/").pop() || "Attachment",
+        })),
       };
 
       // Add optimistic message immediately
@@ -107,7 +98,7 @@ export function ChatContainer({
 
       // Use startTransition for better performance
       startTransition(() => {
-        sendMessage(content, attachmentObjects);
+        sendMessage(content, attachments);
       });
     },
     [sendMessage, addOptimisticMessage]
@@ -118,21 +109,18 @@ export function ChatContainer({
     stopGeneration();
   }, [stopGeneration]);
 
-  // Get auth token from auth store
-  const { tokenInfo } = useAuthStore((state) => ({
-    tokenInfo: state.tokenInfo,
-  }));
-
   // Handle WebSocket connection
   const handleConnectWebSocket = useCallback(async () => {
-    if (chatSessionId && isAuthenticated && tokenInfo?.accessToken) {
+    if (chatSessionId && isAuthenticated) {
       try {
-        await connectWebSocket(chatSessionId, tokenInfo.accessToken);
+        // Get auth token from storage or state
+        const token = localStorage.getItem("auth_token") || ""; // Adjust based on your auth implementation
+        await connectWebSocket(chatSessionId, token);
       } catch (error) {
         console.error("Failed to connect WebSocket:", error);
       }
     }
-  }, [chatSessionId, isAuthenticated, tokenInfo?.accessToken, connectWebSocket]);
+  }, [chatSessionId, isAuthenticated, connectWebSocket]);
 
   // Auto-connect WebSocket when session is ready
   useEffect(() => {
@@ -308,9 +296,8 @@ export function ChatContainer({
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
-              {authError ||
-                (error instanceof Error ? error.message : String(error || ""))}
-              {authError?.includes("API key") && (
+              {authError || error?.message || String(error)}
+              {authError && authError.includes("API key") && (
                 <div className="mt-2">
                   <Link href="/settings/api-keys">
                     <Button variant="outline" size="sm">

@@ -13,12 +13,11 @@
 # Core web framework and async support
 aiofiles>=24.1.0
 fastapi>=0.115.12
-uvicorn>=0.34.3
+uvicorn>=0.34.2
 httpx>=0.28.1
 python-multipart>=0.0.20
 
 # Authentication and security
-PyJWT>=2.10.1  # For Supabase JWT token validation
 passlib[bcrypt]>=1.7.4
 python-jose[cryptography]>=3.5.0
 cryptography>=45.0.3
@@ -31,19 +30,19 @@ python-dotenv>=1.1.0
 
 # Database and caching
 sqlalchemy[asyncio]>=2.0.41
-greenlet>=3.2.3
+greenlet>=3.1.1
 redis>=6.2.0
 supabase>=2.15.2
 
 # AI and LLM ecosystem
-langchain-core>=0.3.64
-langchain-openai>=0.3.21
+langchain-core>=0.3.63
+langchain-openai>=0.3.19
 langgraph>=0.4.8
-langsmith>=0.3.45
-openai>=1.84.0
-mem0ai>=0.1.106
+langsmith>=0.3.42
+openai>=1.78.0
+mem0ai>=0.1.104
 tenacity>=9.1.2
-typing-extensions>=4.14.0
+typing-extensions>=4.13.2
 
 # Web scraping and automation
 crawl4ai>=0.6.3
@@ -58,31 +57,31 @@ googlemaps>=4.10.0
 duffel-api>=0.6.2
 
 # Observability and monitoring
-opentelemetry-api>=1.34.0
-opentelemetry-sdk>=1.34.0
-opentelemetry-instrumentation-redis>=0.55b0
-opentelemetry-exporter-otlp>=1.34.0
-psutil>=7.0.0
+opentelemetry-api>=1.21.0
+opentelemetry-sdk>=1.21.0
+opentelemetry-instrumentation-redis>=0.42b0
+opentelemetry-exporter-otlp>=1.21.0
+psutil>=5.9.0
 
 # Core testing framework
 pytest>=8.4.0
 pytest-asyncio>=1.0.0
 pytest-cov>=6.1.1
 pytest-mock>=3.14.1
-pytest-timeout>=2.4.0
+pytest-timeout>=2.3.1
 
 # Testing utilities and mocking
-pytest-benchmark>=5.1.0
+pytest-benchmark>=4.0.0
 pytest-httpx>=0.35.0
 fakeredis>=2.29.0
 nest-asyncio>=1.6.0
 
 # Coverage reporting
-coverage[toml]>=7.8.2
+coverage[toml]>=7.6.9
 
 # Code formatting and linting
-ruff>=0.11.13
-mypy>=1.16.0
+ruff>=0.11.9
+mypy>=1.8.0
 
 # Additional development tools
 radon>=6.0.1
