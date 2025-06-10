@@ -1,15 +1,21 @@
 "use client";
 
-import { type User, getCurrentUser, logoutAction } from "@/lib/auth/server-actions";
+import { createClient as createBrowserClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import type React from "react";
-import {
-  createContext,
-  startTransition,
-  useContext,
-  useEffect,
-  useOptimistic,
-} from "react";
+import { createContext, useContext, useEffect, useState } from "react";
+import type { User as SupabaseUser } from "@supabase/supabase-js";
+
+// User type extending Supabase User with additional fields
+export interface User {
+  id: string;
+  email: string;
+  name?: string;
+  full_name?: string;
+  avatar_url?: string;
+  created_at?: string;
+  updated_at?: string;
+}
 
 // Authentication context types
 interface AuthContextType {
@@ -17,8 +23,9 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
-  login: (user: User) => void;
-  logout: () => Promise<void>;
+  signIn: (email: string, password: string) => Promise<void>;
+  signUp: (email: string, password: string, fullName?: string) => Promise<void>;
+  signOut: () => Promise<void>;
   refreshUser: () => Promise<void>;
   clearError: () => void;
 }
@@ -50,91 +57,195 @@ interface AuthState {
 
 export function AuthProvider({ children, initialUser = null }: AuthProviderProps) {
   const router = useRouter();
+  const supabase = createBrowserClient();
 
-  // React 19 optimistic state management
-  const [authState, setAuthState] = useOptimistic<AuthState>(
-    {
-      user: initialUser,
-      isAuthenticated: !!initialUser,
-      isLoading: !initialUser,
-      error: null,
-    },
-    (currentState, optimisticValue: Partial<AuthState>) => ({
-      ...currentState,
-      ...optimisticValue,
-    })
-  );
+  // State management with Supabase Auth
+  const [authState, setAuthStateInternal] = useState<AuthState>({
+    user: initialUser,
+    isAuthenticated: !!initialUser,
+    isLoading: true,
+    error: null,
+  });
 
-  // Load user on mount if not provided
+  const setAuthState = (update: Partial<AuthState>) => {
+    setAuthStateInternal((prev) => ({ ...prev, ...update }));
+  };
+
+  // Convert Supabase user to our User type
+  const convertSupabaseUser = (supabaseUser: SupabaseUser): User => ({
+    id: supabaseUser.id,
+    email: supabaseUser.email!,
+    name: supabaseUser.user_metadata?.full_name || supabaseUser.email!.split("@")[0],
+    full_name: supabaseUser.user_metadata?.full_name,
+    avatar_url: supabaseUser.user_metadata?.avatar_url,
+    created_at: supabaseUser.created_at,
+    updated_at: supabaseUser.updated_at,
+  });
+
+  // Listen for auth state changes
   useEffect(() => {
-    if (!initialUser) {
-      refreshUser();
-    }
-  }, [initialUser]);
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session?.user) {
+        const user = convertSupabaseUser(session.user);
+        setAuthState({
+          user,
+          isAuthenticated: true,
+          isLoading: false,
+          error: null,
+        });
+      } else {
+        setAuthState({
+          user: null,
+          isAuthenticated: false,
+          isLoading: false,
+          error: null,
+        });
+      }
+    });
+
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
+      if (error) {
+        setAuthState({ error: error.message, isLoading: false });
+        return;
+      }
+
+      if (session?.user) {
+        const user = convertSupabaseUser(session.user);
+        setAuthState({
+          user,
+          isAuthenticated: true,
+          isLoading: false,
+          error: null,
+        });
+      } else {
+        setAuthState({
+          user: null,
+          isAuthenticated: false,
+          isLoading: false,
+          error: null,
+        });
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [supabase.auth]);
 
   // Refresh user data from server
   const refreshUser = async () => {
     try {
       setAuthState({ isLoading: true, error: null });
+      const {
+        data: { user },
+        error,
+      } = await supabase.auth.getUser();
 
-      const user = await getCurrentUser();
+      if (error) {
+        setAuthState({ error: error.message, isLoading: false });
+        return;
+      }
 
-      startTransition(() => {
+      if (user) {
+        const convertedUser = convertSupabaseUser(user);
         setAuthState({
-          user,
-          isAuthenticated: !!user,
+          user: convertedUser,
+          isAuthenticated: true,
           isLoading: false,
           error: null,
         });
-      });
-    } catch (error) {
-      console.error("Failed to refresh user:", error);
-      startTransition(() => {
+      } else {
         setAuthState({
           user: null,
           isAuthenticated: false,
           isLoading: false,
-          error: "Failed to load user data",
+          error: null,
         });
+      }
+    } catch (error) {
+      setAuthState({
+        error: error instanceof Error ? error.message : "Failed to refresh user",
+        isLoading: false,
       });
     }
   };
 
-  // Login function (optimistic)
-  const login = (user: User) => {
-    startTransition(() => {
-      setAuthState({
-        user,
-        isAuthenticated: true,
-        isLoading: false,
-        error: null,
+  // Sign in function
+  const signIn = async (email: string, password: string) => {
+    try {
+      setAuthState({ isLoading: true, error: null });
+
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
       });
-    });
+
+      if (error) {
+        setAuthState({ error: error.message, isLoading: false });
+        return;
+      }
+
+      // User state will be updated by the auth state change listener
+      setAuthState({ isLoading: false, error: null });
+    } catch (error) {
+      setAuthState({
+        error: error instanceof Error ? error.message : "Failed to sign in",
+        isLoading: false,
+      });
+    }
   };
 
-  // Logout function
-  const logout = async () => {
+  // Sign up function
+  const signUp = async (email: string, password: string, fullName?: string) => {
     try {
-      // Optimistically clear user state
-      setAuthState({
-        user: null,
-        isAuthenticated: false,
-        isLoading: false,
-        error: null,
+      setAuthState({ isLoading: true, error: null });
+
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            full_name: fullName,
+          },
+        },
       });
 
-      // Call server action to clear cookie
-      await logoutAction();
+      if (error) {
+        setAuthState({ error: error.message, isLoading: false });
+        return;
+      }
 
-      // Note: logoutAction redirects to "/" automatically
+      // User state will be updated by the auth state change listener
+      setAuthState({ isLoading: false, error: null });
     } catch (error) {
-      console.error("Logout failed:", error);
       setAuthState({
-        error: "Failed to logout. Please try again.",
+        error: error instanceof Error ? error.message : "Failed to sign up",
+        isLoading: false,
       });
+    }
+  };
 
-      // Manual redirect on error
+  // Sign out function
+  const signOut = async () => {
+    try {
+      setAuthState({ isLoading: true, error: null });
+
+      const { error } = await supabase.auth.signOut();
+
+      if (error) {
+        setAuthState({ error: error.message, isLoading: false });
+        return;
+      }
+
+      // User state will be updated by the auth state change listener
+      setAuthState({ isLoading: false, error: null });
       router.push("/");
+    } catch (error) {
+      setAuthState({
+        error: error instanceof Error ? error.message : "Failed to sign out",
+        isLoading: false,
+      });
     }
   };
 
@@ -148,8 +259,9 @@ export function AuthProvider({ children, initialUser = null }: AuthProviderProps
     isAuthenticated: authState.isAuthenticated,
     isLoading: authState.isLoading,
     error: authState.error,
-    login,
-    logout,
+    signIn,
+    signUp,
+    signOut,
     refreshUser,
     clearError,
   };
@@ -171,43 +283,18 @@ export function withAuth<P extends object>(
 
     useEffect(() => {
       if (!isLoading && !isAuthenticated) {
-        const redirectUrl = options?.redirectTo || "/login";
-        router.push(redirectUrl);
+        router.push(options?.redirectTo || "/login");
       }
-    }, [isLoading, isAuthenticated, router]);
+    }, [isAuthenticated, isLoading, router, options?.redirectTo]);
 
-    // Show loading state while checking authentication
     if (isLoading) {
-      return (
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-        </div>
-      );
+      return <div>Loading...</div>;
     }
 
-    // Don't render component if not authenticated
     if (!isAuthenticated) {
-      return null;
-    }
-
-    // Check role-based access if specified
-    if (options?.allowedRoles && user) {
-      // This is a placeholder - implement role checking based on your user model
-      // if (!options.allowedRoles.includes(user.role)) {
-      //   return <div>Access Denied</div>;
-      // }
+      return null; // Will redirect via useEffect
     }
 
     return <Component {...props} />;
   };
-}
-
-// Server component helper to get initial user
-export async function getServerUser(): Promise<User | null> {
-  try {
-    return await getCurrentUser();
-  } catch (error) {
-    console.error("Failed to get server user:", error);
-    return null;
-  }
 }

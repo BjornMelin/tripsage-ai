@@ -51,7 +51,7 @@ describe("ChatContainer Authentication", () => {
 
   it("shows authentication required when not authenticated", () => {
     mockUseChatAi.mockReturnValue({
-      sessionId: null,
+      sessionId: "test-session",
       messages: [],
       isLoading: false,
       error: null,
@@ -64,6 +64,10 @@ describe("ChatContainer Authentication", () => {
       isInitialized: false,
       isApiKeyValid: false,
       authError: null,
+      activeToolCalls: [],
+      toolResults: [],
+      retryToolCall: vi.fn(),
+      cancelToolCall: vi.fn(),
     });
 
     render(<ChatContainer />);
@@ -93,6 +97,10 @@ describe("ChatContainer Authentication", () => {
       isInitialized: true,
       isApiKeyValid: false,
       authError: null,
+      activeToolCalls: [],
+      toolResults: [],
+      retryToolCall: vi.fn(),
+      cancelToolCall: vi.fn(),
     });
 
     render(<ChatContainer />);
@@ -107,7 +115,7 @@ describe("ChatContainer Authentication", () => {
 
   it("shows loading state when initializing", () => {
     mockUseChatAi.mockReturnValue({
-      sessionId: null,
+      sessionId: "test-session",
       messages: [],
       isLoading: false,
       error: null,
@@ -120,6 +128,10 @@ describe("ChatContainer Authentication", () => {
       isInitialized: false,
       isApiKeyValid: true,
       authError: null,
+      activeToolCalls: [],
+      toolResults: [],
+      retryToolCall: vi.fn(),
+      cancelToolCall: vi.fn(),
     });
 
     render(<ChatContainer />);
@@ -142,6 +154,10 @@ describe("ChatContainer Authentication", () => {
       isInitialized: true,
       isApiKeyValid: true,
       authError: null,
+      activeToolCalls: [],
+      toolResults: [],
+      retryToolCall: vi.fn(),
+      cancelToolCall: vi.fn(),
     });
 
     render(<ChatContainer />);
@@ -170,6 +186,10 @@ describe("ChatContainer Authentication", () => {
       isInitialized: true,
       isApiKeyValid: false,
       authError,
+      activeToolCalls: [],
+      toolResults: [],
+      retryToolCall: vi.fn(),
+      cancelToolCall: vi.fn(),
     });
 
     render(<ChatContainer />);
@@ -195,6 +215,10 @@ describe("ChatContainer Authentication", () => {
       isInitialized: true,
       isApiKeyValid: true,
       authError: null,
+      activeToolCalls: [],
+      toolResults: [],
+      retryToolCall: vi.fn(),
+      cancelToolCall: vi.fn(),
     });
 
     render(<ChatContainer />);

@@ -52,7 +52,7 @@ export type {
   SkeletonConfig,
   LoadingSpinnerConfig,
   SkeletonProps,
-  LoadingSpinnerProps,
+  LoadingSpinnerBaseProps,
   LoadingOverlayProps,
   LoadingStateProps,
   LoadingContextValue,

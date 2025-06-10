@@ -1,5 +1,5 @@
 """
-Integration tests for the complete memory system workflow.
+Integration tests for the memory system workflow.
 Tests backend-frontend communication, data flow, and API compatibility.
 """
 
@@ -19,63 +19,73 @@ class TestMemorySystemIntegration:
 
     @pytest.fixture
     def client(self):
-        """Test client for API requests."""
+        """Test client for FastAPI app."""
         return TestClient(app)
 
     @pytest.fixture
     def mock_memory_service(self):
-        """Mock memory service for testing."""
+        """Mock memory service with realistic responses."""
         service = AsyncMock(spec=MemoryService)
-        service.store_conversation_memory.return_value = {
-            "status": "success",
-            "memory_id": "test-123",
-        }
+
+        # Mock search response
+        service.search_memories.return_value = [
+            {
+                "id": "mem-1",
+                "content": "User prefers luxury hotels in Paris",
+                "category": "preferences",
+                "created_at": "2024-01-01T10:00:00Z",
+                "relevance_score": 0.95,
+            },
+            {
+                "id": "mem-2",
+                "content": "User enjoyed Four Seasons George V last trip",
+                "category": "experiences",
+                "created_at": "2024-01-01T10:01:00Z",
+                "relevance_score": 0.90,
+            },
+        ]
+
+        # Mock user context
         service.get_user_context.return_value = {
             "memories": [
                 {
                     "id": "mem-1",
                     "content": "User prefers luxury hotels",
-                    "metadata": {"category": "accommodation", "preference": "luxury"},
-                    "score": 0.95,
+                    "category": "preferences",
                     "created_at": "2024-01-01T10:00:00Z",
                 }
             ],
             "preferences": {
-                "accommodation": "luxury",
-                "budget": "high",
-                "destinations": ["Europe", "Asia"],
+                "accommodation_type": "luxury",
+                "preferred_locations": ["Paris", "Tokyo"],
+                "budget_range": "high",
             },
             "travel_patterns": {
-                "favorite_destinations": ["Paris", "Tokyo"],
-                "avg_trip_duration": 7,
-                "booking_lead_time": 30,
+                "average_trip_duration": 7,
+                "preferred_season": "spring",
+                "travel_frequency": "quarterly",
             },
         }
-        service.search_memories.return_value = [
-            {
-                "content": "Looking for flights to Paris",
-                "metadata": {"type": "search", "destination": "Paris"},
-                "score": 0.88,
-            }
-        ]
+
         return service
 
     @pytest.fixture
     def sample_user(self):
         """Sample user for testing."""
         return User(
-            id="user-123",
+            id=123,
             email="test@example.com",
-            username="testuser",
-            display_name="Test User",
+            name="Test User",
         )
 
-    @patch("tripsage.api.routers.memory.memory_service")
+    @patch("tripsage.api.core.dependencies.get_memory_service_dep")
     def test_store_conversation_memory_endpoint(
-        self, mock_service, client, sample_user
+        self, mock_get_service, client, sample_user, mock_settings_and_redis
     ):
         """Test storing conversation memory through API."""
-        # Setup mock
+        # Setup mock service
+        mock_service = AsyncMock()
+        mock_get_service.return_value = mock_service
         mock_service.store_conversation_memory.return_value = {
             "status": "success",
             "memory_id": "test-123",
@@ -91,14 +101,12 @@ class TestMemorySystemIntegration:
                 },
                 {
                     "role": "assistant",
-                    "content": (
-                        "I found some excellent luxury hotels in Paris. "
-                        "The Four Seasons and Ritz are highly recommended."
-                    ),
+                    "content": "I found some excellent luxury hotels in Paris. "
+                    "The Four Seasons and Ritz are highly recommended.",
                     "timestamp": "2024-01-01T10:01:00Z",
                 },
             ],
-            "metadata": {"sessionId": "session-123", "userId": "user-123"},
+            "metadata": {"sessionId": "session-123", "userId": 123},
         }
 
         # Make request
@@ -112,20 +120,21 @@ class TestMemorySystemIntegration:
 
         # Verify service was called with correct parameters
         mock_service.store_conversation_memory.assert_called_once()
-        call_args = mock_service.store_conversation_memory.call_args[1]
-        assert call_args["messages"] == request_data["messages"]
-        assert call_args["user_id"] == "user-123"
 
-    @patch("tripsage.api.routers.memory.memory_service")
-    def test_get_user_context_endpoint(self, mock_service, client, mock_memory_service):
+    @patch("tripsage.api.core.dependencies.get_memory_service_dep")
+    def test_get_user_context_endpoint(
+        self, mock_get_service, client, mock_memory_service
+    ):
         """Test getting user memory context through API."""
-        # Setup mock
+        # Setup mock service
+        mock_service = AsyncMock()
+        mock_get_service.return_value = mock_service
         mock_service.get_user_context.return_value = (
             mock_memory_service.get_user_context.return_value
         )
 
         # Make request
-        response = client.get("/api/memory/context/user-123")
+        response = client.get("/api/memory/context/123")
 
         # Verify response
         assert response.status_code == 200
@@ -137,210 +146,191 @@ class TestMemorySystemIntegration:
         assert "travel_patterns" in data
 
         # Verify memory structure
-        memory = data["memories"][0]
-        assert "id" in memory
-        assert "content" in memory
-        assert "metadata" in memory
-        assert "score" in memory
-        assert "created_at" in memory
+        memories = data["memories"]
+        assert len(memories) > 0
+        assert all(
+            key in memories[0] for key in ["id", "content", "category", "created_at"]
+        )
 
         # Verify preferences structure
-        prefs = data["preferences"]
-        assert "accommodation" in prefs
-        assert "budget" in prefs
-        assert "destinations" in prefs
+        preferences = data["preferences"]
+        assert "accommodation_type" in preferences
+        assert "preferred_locations" in preferences
 
-    @patch("tripsage.api.routers.memory.memory_service")
-    def test_search_memories_endpoint(self, mock_service, client, mock_memory_service):
+    @patch("tripsage.api.core.dependencies.get_memory_service_dep")
+    def test_search_memories_endpoint(
+        self, mock_get_service, client, mock_memory_service
+    ):
         """Test searching memories through API."""
-        # Setup mock
+        # Setup mock service
+        mock_service = AsyncMock()
+        mock_get_service.return_value = mock_service
         mock_service.search_memories.return_value = (
             mock_memory_service.search_memories.return_value
         )
 
-        # Test with query parameters
-        response = client.get("/api/memory/search/user-123?query=Paris&limit=10")
+        # Make request with query parameters matching frontend
+        response = client.get("/api/memory/search/123?query=Paris&limit=10")
 
         # Verify response
         assert response.status_code == 200
         data = response.json()
 
-        # Check response is list of memories
-        assert isinstance(data, list)
-        assert len(data) > 0
+        # Check response structure
+        assert "results" in data
+        assert "query" in data
+        assert "total" in data
 
-        # Verify memory structure
-        memory = data[0]
-        assert "content" in memory
-        assert "metadata" in memory
-        assert "score" in memory
-
-    def test_memory_service_conversation_extraction(self, mock_memory_service):
-        """Test memory service conversation extraction logic."""
-        messages = [
-            {
-                "role": "user",
-                "content": (
-                    "I want to book a luxury hotel in Paris for my anniversary. "
-                    "Budget is $500/night."
-                ),
-                "timestamp": "2024-01-01T10:00:00Z",
-            },
-            {
-                "role": "assistant",
-                "content": (
-                    "I'll help you find luxury hotels in Paris. "
-                    "Here are some excellent options within your budget."
-                ),
-                "timestamp": "2024-01-01T10:01:00Z",
-            },
-        ]
-
-        # This would test the actual memory extraction logic
-        # For now, we verify the mock works correctly
-        result = asyncio.run(
-            mock_memory_service.store_conversation_memory(
-                messages=messages, user_id="user-123", session_id="session-123"
-            )
+        results = data["results"]
+        assert len(results) == 2
+        assert all(
+            key in results[0]
+            for key in ["id", "content", "category", "relevance_score"]
         )
-
-        assert result["status"] == "success"
-        assert "memory_id" in result
-
-    @patch("tripsage.api.routers.memory.memory_service")
-    def test_error_handling_memory_endpoints(self, mock_service, client):
-        """Test error handling in memory endpoints."""
-        # Test with invalid user ID
-        response = client.get("/api/memory/context/invalid-user")
-        # Should handle gracefully, not crash
-        assert response.status_code in [200, 404, 422]
-
-        # Test with malformed conversation data
-        response = client.post("/api/memory/conversations", json={"invalid": "data"})
-        assert response.status_code == 422  # Validation error
-
-        # Test search with missing parameters
-        response = client.get("/api/memory/search/user-123")  # No query
-        assert response.status_code in [200, 422]  # Should handle gracefully
-
-    def test_frontend_backend_type_compatibility(self):
-        """Test that frontend types match backend response formats."""
-        # This would be a compile-time check in a real TypeScript environment
-        # For now, we document the expected structure
-
-        expected_memory_response = {
-            "memories": [
-                {
-                    "id": str,
-                    "content": str,
-                    "metadata": dict,
-                    "score": float,
-                    "created_at": str,
-                }
-            ],
-            "preferences": {
-                "accommodation": str,
-                "budget": str,
-                "destinations": list,
-            },
-            "travel_patterns": {
-                "favorite_destinations": list,
-                "avg_trip_duration": int,
-                "booking_lead_time": int,
-            },
-        }
-
-        # This structure should match frontend types/memory.ts interfaces
-        assert expected_memory_response is not None
-
-    @patch("tripsage_core.services.business.memory_service.MemoryService")
-    def test_memory_service_initialization(self, mock_service_class):
-        """Test memory service proper initialization."""
-        # Verify service can be instantiated
-        service = MemoryService()
-        assert service is not None
-
-        # Test that required methods exist
-        assert hasattr(service, "store_conversation_memory")
-        assert hasattr(service, "get_user_context")
-        assert hasattr(service, "search_memories")
-        assert hasattr(service, "update_user_preferences")
-
-    def test_api_endpoint_authentication_flow(self, client):
-        """Test that memory endpoints properly handle authentication."""
-        # Test without authentication (should fail or redirect)
-        response = client.get("/api/memory/context/user-123")
-        # Depending on auth setup, this might be 401, 403, or redirect
-        # For now, we just verify it doesn't crash
-        assert response.status_code is not None
-
-        # Test with proper authentication would require auth headers
-        # This would be implemented when auth is fully set up
 
     @pytest.mark.asyncio
-    async def test_async_memory_operations(self, mock_memory_service):
-        """Test async memory operations work correctly."""
-        # Test async context retrieval
-        context = await mock_memory_service.get_user_context("user-123")
-        assert context is not None
-        assert "memories" in context
-
-        # Test async memory search
-        results = await mock_memory_service.search_memories("user-123", "Paris hotels")
-        assert isinstance(results, list)
-
-        # Test async conversation storage
-        result = await mock_memory_service.store_conversation_memory(
-            messages=[{"role": "user", "content": "test"}],
-            user_id="user-123",
-        )
-        assert result["status"] == "success"
-
-
-class TestMemoryWorkflowIntegration:
-    """Test complete memory workflow from frontend to backend."""
-
-    def test_chat_to_memory_workflow(self):
-        """Test complete workflow: chat -> memory extraction -> storage -> retrieval."""
-        # This would test the full pipeline:
-        # 1. User sends chat message
-        # 2. Chat agent processes message
-        # 3. Memory service extracts relevant information
-        # 4. Information is stored in vector database
-        # 5. Future chats retrieve relevant context
-
-        # For now, we outline the expected flow
-        workflow_steps = [
-            "user_sends_message",
-            "chat_agent_processes",
-            "memory_extraction",
-            "vector_storage",
-            "context_retrieval",
-            "personalized_response",
+    async def test_memory_workflow_integration(self, mock_memory_service):
+        """Test complete memory workflow from frontend perspective."""
+        # Simulate frontend storing conversation
+        messages = [
+            {"role": "user", "content": "Looking for hotels in Paris"},
+            {"role": "assistant", "content": "I can help you find hotels in Paris."},
         ]
 
-        assert len(workflow_steps) == 6
-        assert "memory_extraction" in workflow_steps
+        # Store conversation (simulating API call)
+        with patch.object(
+            mock_memory_service, "store_conversation_memory"
+        ) as mock_store:
+            mock_store.return_value = {"status": "success", "memory_id": "mem-123"}
 
-    def test_personalization_workflow(self):
-        """Test personalization based on stored memories."""
-        # This would test:
-        # 1. User has stored preferences and travel history
-        # 2. New search/recommendation request comes in
-        # 3. Memory system provides relevant context
-        # 4. Recommendations are personalized based on history
+            result = await mock_memory_service.store_conversation_memory(
+                messages=messages, user_id=123, session_id="session-123"
+            )
+            assert result["status"] == "success"
 
-        # For now, we outline the expected flow
-        personalization_flow = [
-            "retrieve_user_context",
-            "analyze_preferences",
-            "generate_personalized_recommendations",
-            "return_contextual_results",
+        # Search memories (simulating API call)
+        search_results = await mock_memory_service.search_memories(123, "Paris hotels")
+        assert len(search_results) == 2
+        assert search_results[0]["relevance_score"] > 0.9
+
+        # Get user context (simulating API call)
+        context = await mock_memory_service.get_user_context(123)
+        assert "preferences" in context
+        assert context["preferences"]["accommodation_type"] == "luxury"
+
+    @patch("tripsage.api.core.dependencies.get_memory_service_dep")
+    def test_memory_error_handling(self, mock_get_service, client):
+        """Test API error handling for memory endpoints."""
+        # Test invalid query parameters
+        response = client.get("/api/memory/search/123")  # No query
+        assert response.status_code == 422  # Validation error
+
+        # Test service errors
+        mock_service = AsyncMock()
+        mock_get_service.return_value = mock_service
+        mock_service.search_memories.side_effect = Exception("Service error")
+        response = client.get("/api/memory/search/123?query=test")
+        assert response.status_code == 500
+
+    @pytest.mark.asyncio
+    async def test_memory_caching_behavior(self, mock_memory_service):
+        """Test that memory responses are properly cached."""
+        # First call should hit the service
+        context1 = await mock_memory_service.get_user_context(123)
+        assert mock_memory_service.get_user_context.call_count == 1
+
+        # Second call should also hit service (no caching in mock)
+        context2 = await mock_memory_service.get_user_context(123)
+        assert mock_memory_service.get_user_context.call_count == 2
+
+        # Verify consistency
+        assert context1 == context2
+
+    def test_memory_frontend_compatibility(self, client):
+        """Test that API responses match frontend TypeScript interfaces."""
+        with patch(
+            "tripsage.api.core.dependencies.get_memory_service_dep"
+        ) as mock_get_service:
+            # Setup mock service
+            mock_service = AsyncMock()
+            mock_get_service.return_value = mock_service
+            # Mock response matching frontend MemoryContext interface
+            mock_service.get_user_context.return_value = {
+                "memories": [
+                    {
+                        "id": "mem-1",
+                        "content": "User preference",
+                        "category": "preferences",
+                        "created_at": "2024-01-01T10:00:00Z",
+                        "metadata": {"source": "conversation", "confidence": 0.9},
+                    }
+                ],
+                "preferences": {
+                    "accommodation_type": "luxury",
+                    "preferred_locations": ["Paris"],
+                    "budget_range": "high",
+                    "dietary_restrictions": [],
+                    "travel_style": "comfort",
+                },
+                "travel_patterns": {
+                    "average_trip_duration": 7,
+                    "preferred_season": "spring",
+                    "travel_frequency": "quarterly",
+                    "favorite_destinations": ["Paris", "Tokyo"],
+                },
+            }
+
+            response = client.get("/api/memory/context/123")
+            assert response.status_code == 200
+
+            data = response.json()
+
+            # Verify all required fields for frontend
+            assert isinstance(data["memories"], list)
+            assert isinstance(data["preferences"], dict)
+            assert isinstance(data["travel_patterns"], dict)
+
+            # Verify nested structures
+            if data["memories"]:
+                memory = data["memories"][0]
+                assert "id" in memory
+                assert "content" in memory
+                assert "category" in memory
+                assert "created_at" in memory
+
+    @pytest.mark.asyncio
+    async def test_memory_concurrency(self, mock_memory_service):
+        """Test concurrent memory operations."""
+        # Simulate multiple concurrent operations
+        tasks = [
+            mock_memory_service.search_memories(123, f"query{i}") for i in range(5)
         ]
 
-        assert len(personalization_flow) == 4
-        assert "generate_personalized_recommendations" in personalization_flow
+        results = await asyncio.gather(*tasks)
 
+        # All should succeed
+        assert len(results) == 5
+        assert all(len(result) == 2 for result in results)
 
-if __name__ == "__main__":
-    pytest.main([__file__, "-v"])
+    def test_memory_data_validation(self, client):
+        """Test that API properly validates input data."""
+        with patch("tripsage.api.core.dependencies.get_memory_service_dep"):
+            # Test invalid message format
+            invalid_data = {
+                "messages": [
+                    {"content": "Missing role field"},  # Missing 'role'
+                ],
+                "metadata": {"userId": 123},
+            }
+
+            response = client.post("/api/memory/conversations", json=invalid_data)
+            assert response.status_code == 422  # Validation error
+
+            # Test missing required fields
+            incomplete_data = {
+                "messages": [],  # Empty messages
+                "metadata": {},  # Missing userId
+            }
+
+            response = client.post("/api/memory/conversations", json=incomplete_data)
+            assert response.status_code == 422

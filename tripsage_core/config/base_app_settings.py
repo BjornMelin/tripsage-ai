@@ -52,6 +52,10 @@ class DatabaseConfig(BaseSettings):
     supabase_url: str = Field(default="https://test-project.supabase.co")
     supabase_anon_key: SecretStr = Field(default=SecretStr("test-anon-key"))
     supabase_service_role_key: Optional[SecretStr] = Field(default=None)
+    supabase_jwt_secret: SecretStr = Field(
+        default=SecretStr("test-jwt-secret"),
+        description="Supabase JWT secret for local token validation",
+    )
     supabase_project_id: Optional[str] = Field(
         default=None, description="Supabase project ID"
     )
@@ -302,17 +306,7 @@ class CoreAppSettings(BaseSettings):
     )
 
     # Security secrets
-    jwt_secret_key: SecretStr = Field(
-        default=SecretStr("your-secret-key-here-change-in-production"),
-        description="Secret key for signing JWT tokens",
-    )
-    jwt_algorithm: str = Field(default="HS256", description="JWT signing algorithm")
-    access_token_expire_minutes: int = Field(
-        default=60, description="JWT access token expiration in minutes"
-    )
-    refresh_token_expire_days: int = Field(
-        default=7, description="JWT refresh token expiration in days"
-    )
+    # JWT configuration removed - will be replaced with Supabase Auth
     api_key_master_secret: SecretStr = Field(
         default=SecretStr("master-secret-for-byok-encryption"),
         description="Master secret for BYOK encryption",
@@ -403,16 +397,7 @@ class CoreAppSettings(BaseSettings):
             return secret.get_secret_value()
         return None
 
-    # Convenience properties for JWT authentication
-    @property
-    def secret_key(self) -> str:
-        """Get the JWT secret key."""
-        return self.jwt_secret_key.get_secret_value()
-
-    @property
-    def algorithm(self) -> str:
-        """Get the JWT algorithm."""
-        return self.jwt_algorithm
+    # JWT convenience properties removed - will be replaced with Supabase Auth
 
     def validate_critical_settings(self) -> List[str]:
         """
@@ -432,6 +417,8 @@ class CoreAppSettings(BaseSettings):
             errors.append("Supabase URL is missing")
         if not self.database.supabase_anon_key.get_secret_value():
             errors.append("Supabase anonymous key is missing")
+        if not self.database.supabase_jwt_secret.get_secret_value():
+            errors.append("Supabase JWT secret is missing")
 
         # Production-specific validations
         if self.is_production():
@@ -456,15 +443,17 @@ class CoreAppSettings(BaseSettings):
                 errors.append("Crawl4AI is using localhost in production")
 
             # Check security secrets
-            if self.jwt_secret_key.get_secret_value() in [
-                "your-secret-key-here-change-in-production"
-            ]:
-                errors.append("JWT secret key must be changed in production")
-
             if self.api_key_master_secret.get_secret_value() in [
                 "master-secret-for-byok-encryption"
             ]:
                 errors.append("API key master secret must be changed in production")
+
+            # Check Supabase JWT secret
+            if self.database.supabase_jwt_secret.get_secret_value() in [
+                "test-jwt-secret",
+                "fallback-secret-for-development-only",
+            ]:
+                errors.append("Supabase JWT secret must be changed in production")
 
         return errors
 
@@ -478,10 +467,6 @@ def get_settings() -> CoreAppSettings:
         Cached CoreAppSettings instance
     """
     return CoreAppSettings()
-
-
-# Export convenience instance
-settings = get_settings()
 
 
 def init_settings() -> CoreAppSettings:
@@ -499,6 +484,9 @@ def init_settings() -> CoreAppSettings:
     """
     # Log settings initialization
     logging.info("Initializing core application settings")
+
+    # Get settings instance
+    settings = get_settings()
 
     # Check environment
     env = settings.environment

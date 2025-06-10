@@ -8,7 +8,6 @@ management of services while enabling easy testing through dependency injection.
 from typing import Optional
 
 from tripsage_core.services.business.accommodation_service import AccommodationService
-from tripsage_core.services.business.auth_service import AuthenticationService
 from tripsage_core.services.business.chat_service import ChatService
 from tripsage_core.services.business.destination_service import DestinationService
 from tripsage_core.services.business.file_processing_service import (
@@ -49,7 +48,6 @@ class ServiceRegistry:
         self,
         # Business services
         accommodation_service: Optional[AccommodationService] = None,
-        auth_service: Optional[AuthenticationService] = None,
         chat_service: Optional[ChatService] = None,
         destination_service: Optional[DestinationService] = None,
         file_processing_service: Optional[FileProcessingService] = None,
@@ -81,7 +79,6 @@ class ServiceRegistry:
         """
         # Business services
         self.accommodation_service = accommodation_service
-        self.auth_service = auth_service
         self.chat_service = chat_service
         self.destination_service = destination_service
         self.file_processing_service = file_processing_service
@@ -138,7 +135,6 @@ class ServiceRegistry:
 
         # Initialize business services with dependencies
         user_service = UserService(db_service)
-        auth_service = AuthenticationService(db_service, user_service)
         key_management_service = KeyManagementService(db_service)
         memory_service = MemoryService(db_service)
         chat_service = ChatService(db_service, memory_service)
@@ -163,7 +159,6 @@ class ServiceRegistry:
         return cls(
             # Business services
             accommodation_service=accommodation_service,
-            auth_service=auth_service,
             chat_service=chat_service,
             destination_service=destination_service,
             file_processing_service=file_processing_service,

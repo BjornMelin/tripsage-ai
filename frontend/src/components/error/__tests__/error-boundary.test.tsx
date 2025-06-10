@@ -123,7 +123,11 @@ describe("ErrorBoundary", () => {
 
     it("should log errors in development mode", () => {
       const originalEnv = process.env.NODE_ENV;
-      process.env.NODE_ENV = "development";
+      Object.defineProperty(process.env, "NODE_ENV", {
+        value: "development",
+        writable: true,
+        configurable: true,
+      });
 
       render(
         <ErrorBoundary>
@@ -135,7 +139,11 @@ describe("ErrorBoundary", () => {
       expect(consoleSpy.group).toHaveBeenCalledWith("🚨 Error Boundary Caught Error");
       expect(consoleSpy.groupEnd).toHaveBeenCalled();
 
-      process.env.NODE_ENV = originalEnv;
+      Object.defineProperty(process.env, "NODE_ENV", {
+        value: originalEnv,
+        writable: true,
+        configurable: true,
+      });
     });
   });
 
@@ -330,7 +338,7 @@ describe("ErrorBoundary", () => {
       );
 
       // Cleanup
-      delete (window as any).__USER_STORE__;
+      (window as any).__USER_STORE__ = undefined;
     });
   });
 });

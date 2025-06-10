@@ -63,4 +63,10 @@ global.console = {
 };
 
 // Mock environment variables for testing
-process.env.NODE_ENV = "test";
+if (!process.env.NODE_ENV) {
+  Object.defineProperty(process.env, "NODE_ENV", {
+    value: "test",
+    writable: true,
+    configurable: true,
+  });
+}

@@ -1,15 +1,56 @@
+import type { Agent } from "@/types/agent-status";
 import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AgentCollaborationHub } from "../communication/agent-collaboration-hub";
 import { EnhancedConnectionStatus } from "../communication/enhanced-connection-status";
 import { AgentStatusDashboard } from "../dashboard/agent-status-dashboard";
-import type {
-  AgentMetrics,
-  CollaborationAgent,
-  ConnectionAnalytics,
-  NetworkMetrics,
-} from "../types";
+
+// Define test-specific types that match the expected component interfaces
+interface AgentMetrics {
+  id: string;
+  name: string;
+  status: "active" | "idle" | "error";
+  healthScore: number;
+  cpuUsage: number;
+  memoryUsage: number;
+  tokensProcessed: number;
+  averageResponseTime: number;
+  errorRate: number;
+  uptime: number;
+  tasksQueued: number;
+  lastUpdate: Date;
+}
+
+interface CollaborationAgent {
+  id: string;
+  name: string;
+  avatar?: string;
+  status: "active" | "busy" | "idle" | "offline";
+  specialization: string;
+  currentTask?: string;
+  performance: { accuracy: number; speed: number; efficiency: number };
+  workload: number;
+  lastActive: Date;
+}
+
+interface ConnectionAnalytics {
+  connectionTime: number;
+  reconnectCount: number;
+  totalMessages: number;
+  failedMessages: number;
+  avgResponseTime: number;
+  uptime: number;
+}
+
+interface NetworkMetrics {
+  bandwidth: number;
+  latency: number;
+  packetLoss: number;
+  jitter: number;
+  quality: "excellent" | "good" | "fair" | "poor";
+  signalStrength: number;
+}
 
 // Mock Recharts components to avoid canvas rendering issues in tests
 vi.mock("recharts", () => ({
@@ -101,6 +142,29 @@ describe("Agent Workflow Integration Tests", () => {
       performance: { accuracy: 78, speed: 74, efficiency: 83 },
       workload: 78,
       lastActive: new Date(),
+    },
+  ];
+
+  const mockHandoffs = [
+    {
+      id: "handoff-1",
+      fromAgent: "agent-1",
+      toAgent: "agent-2",
+      task: "Create itinerary from research data",
+      reason: "Research completed, planning phase needed",
+      timestamp: new Date(),
+      status: "pending" as const,
+      confidence: 0.89,
+    },
+    {
+      id: "handoff-2",
+      fromAgent: "agent-2",
+      toAgent: "agent-1",
+      task: "Review completed bookings",
+      reason: "Quality assurance check",
+      timestamp: new Date(Date.now() - 180000),
+      status: "completed" as const,
+      confidence: 0.92,
     },
   ];
 
@@ -235,6 +299,7 @@ describe("Agent Workflow Integration Tests", () => {
       render(
         <AgentCollaborationHub
           agents={mockCollaborationAgents}
+          handoffs={mockHandoffs}
           onAgentSelect={onAgentSelect}
         />
       );
@@ -252,6 +317,7 @@ describe("Agent Workflow Integration Tests", () => {
       render(
         <AgentCollaborationHub
           agents={mockCollaborationAgents}
+          handoffs={mockHandoffs}
           onAgentSelect={onAgentSelect}
         />
       );
@@ -269,6 +335,7 @@ describe("Agent Workflow Integration Tests", () => {
       render(
         <AgentCollaborationHub
           agents={mockCollaborationAgents}
+          handoffs={mockHandoffs}
           onAgentSelect={onAgentSelect}
         />
       );
@@ -285,6 +352,7 @@ describe("Agent Workflow Integration Tests", () => {
       render(
         <AgentCollaborationHub
           agents={mockCollaborationAgents}
+          handoffs={mockHandoffs}
           onAgentSelect={onAgentSelect}
         />
       );
@@ -448,6 +516,7 @@ describe("Agent Workflow Integration Tests", () => {
           />
           <AgentCollaborationHub
             agents={mockCollaborationAgents}
+            handoffs={mockHandoffs}
             onAgentSelect={handleAgentSelect}
           />
         </div>
