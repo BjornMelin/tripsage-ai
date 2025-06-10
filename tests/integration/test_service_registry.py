@@ -222,16 +222,6 @@ class TestServiceRegistry:
 class TestCacheServiceIntegration:
     """Test Core cache service integration."""
 
-    @pytest.mark.skip(reason="Legacy DragonflyAdapter migrated to Core architecture")
-    async def test_adapter_mcp_mode(self):
-        """Test adapter in MCP mode - DEPRECATED."""
-        pass
-
-    @pytest.mark.skip(reason="Legacy DragonflyAdapter migrated to Core architecture")
-    async def test_adapter_direct_mode(self):
-        """Test adapter in direct mode - DEPRECATED."""
-        pass
-
     async def test_cache_service_integration(self):
         """Test cache service integration with adapter."""
         # Get Core cache service for testing

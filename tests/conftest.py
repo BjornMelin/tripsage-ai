@@ -3,17 +3,15 @@ Simplified, reliable test configuration for TripSage.
 
 This conftest provides a clean, minimal test setup that:
 1. Uses environment variables exclusively
-2. Avoids import-time configuration instantiation  
+2. Avoids import-time configuration instantiation
 3. Provides simple, effective mocking
 4. Works seamlessly with Pydantic v2
 5. Eliminates validation errors
 """
 
 import asyncio
-import os
 import sys
 from pathlib import Path
-from typing import Any, Dict, List
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
@@ -25,8 +23,7 @@ sys.path.insert(0, str(project_root))
 # Import our clean test configuration
 from tests.test_config import (
     MockCacheService,
-    MockDatabaseService, 
-    clean_test_environment,
+    MockDatabaseService,
     create_mock_api_settings,
     create_test_settings,
     setup_test_environment,
@@ -58,7 +55,7 @@ def event_loop():
     loop.close()
 
 
-@pytest.fixture  
+@pytest.fixture
 def mock_settings():
     """Provide clean test settings."""
     return create_test_settings()
@@ -95,7 +92,7 @@ def sample_flight():
     return FlightFactory.create()
 
 
-@pytest.fixture  
+@pytest.fixture
 def sample_chat_message():
     """Sample chat message."""
     return ChatFactory.create_message()
@@ -157,11 +154,13 @@ def mock_memory_service():
     return service
 
 
-@pytest.fixture  
+@pytest.fixture
 def mock_auth_service():
     """Mock authentication service."""
     service = MagicMock()
-    service.verify_token = AsyncMock(return_value={"user_id": "test-user", "email": "test@example.com"})
+    service.verify_token = AsyncMock(
+        return_value={"user_id": "test-user", "email": "test@example.com"}
+    )
     service.create_access_token = Mock(return_value="test-token")
     service.hash_password = Mock(return_value="hashed-password")
     service.verify_password = Mock(return_value=True)
@@ -172,12 +171,14 @@ def mock_auth_service():
 @pytest.fixture
 def mock_chat_service():
     """Mock chat service."""
-    service = MagicMock() 
-    service.process_message = AsyncMock(return_value={
-        "response": "Test response",
-        "session_id": "test-session",
-        "status": "completed"
-    })
+    service = MagicMock()
+    service.process_message = AsyncMock(
+        return_value={
+            "response": "Test response",
+            "session_id": "test-session",
+            "status": "completed",
+        }
+    )
     service.get_conversation = AsyncMock(return_value=[])
     service.health_check = AsyncMock(return_value=True)
     return service
@@ -210,18 +211,26 @@ def mock_flight_service():
 def mock_accommodation_service():
     """Mock accommodation service."""
     service = MagicMock()
-    service.search_accommodations = AsyncMock(return_value={"accommodations": [], "total": 0})
-    service.get_accommodation_details = AsyncMock(return_value=AccommodationFactory.create())
+    service.search_accommodations = AsyncMock(
+        return_value={"accommodations": [], "total": 0}
+    )
+    service.get_accommodation_details = AsyncMock(
+        return_value=AccommodationFactory.create()
+    )
     service.health_check = AsyncMock(return_value=True)
     return service
 
 
 @pytest.fixture
 def mock_destination_service():
-    """Mock destination service.""" 
+    """Mock destination service."""
     service = MagicMock()
-    service.search_destinations = AsyncMock(return_value={"destinations": [], "total": 0})
-    service.get_destination_details = AsyncMock(return_value=DestinationFactory.create())
+    service.search_destinations = AsyncMock(
+        return_value={"destinations": [], "total": 0}
+    )
+    service.get_destination_details = AsyncMock(
+        return_value=DestinationFactory.create()
+    )
     service.health_check = AsyncMock(return_value=True)
     return service
 
@@ -278,20 +287,20 @@ def mock_websocket_manager():
 def mock_httpx_client():
     """Mock HTTPX client."""
     client = AsyncMock()
-    
+
     # Mock response
     mock_response = MagicMock()
     mock_response.status_code = 200
     mock_response.json.return_value = {"success": True, "data": {}}
     mock_response.text = "mock response"
-    
+
     client.request = AsyncMock(return_value=mock_response)
     client.get = AsyncMock(return_value=mock_response)
     client.post = AsyncMock(return_value=mock_response)
     client.put = AsyncMock(return_value=mock_response)
     client.delete = AsyncMock(return_value=mock_response)
     client.aclose = AsyncMock()
-    
+
     return client
 
 
@@ -316,18 +325,14 @@ def mock_successful_response():
     return {
         "success": True,
         "data": {"message": "Operation successful"},
-        "status_code": 200
+        "status_code": 200,
     }
 
 
 @pytest.fixture
 def mock_error_response():
     """Mock error API response."""
-    return {
-        "success": False,
-        "error": "Test error",
-        "status_code": 400
-    }
+    return {"success": False, "error": "Test error", "status_code": 400}
 
 
 # Test client fixtures for FastAPI
@@ -335,18 +340,25 @@ def mock_error_response():
 def test_client():
     """Create FastAPI test client with mocked dependencies."""
     from fastapi.testclient import TestClient
-    
+
     # Import the app with all dependencies mocked
     with (
-        patch("tripsage_core.config.base_app_settings.get_settings", 
-              side_effect=lambda: create_test_settings()),
-        patch("tripsage_core.services.infrastructure.cache_service.get_cache_service",
-              return_value=MockCacheService()),
-        patch("tripsage_core.services.infrastructure.database_service.get_database_service", 
-              return_value=MockDatabaseService()),
+        patch(
+            "tripsage_core.config.base_app_settings.get_settings",
+            side_effect=lambda: create_test_settings(),
+        ),
+        patch(
+            "tripsage_core.services.infrastructure.cache_service.get_cache_service",
+            return_value=MockCacheService(),
+        ),
+        patch(
+            "tripsage_core.services.infrastructure.database_service.get_database_service",
+            return_value=MockDatabaseService(),
+        ),
         patch("supabase.create_client", return_value=MagicMock()),
     ):
         from tripsage.api.main import app
+
         with TestClient(app) as client:
             yield client
 
@@ -355,7 +367,7 @@ def test_client():
 async def async_test_client():
     """Create async test client."""
     from httpx import AsyncClient
-    
+
     # For async testing, create a simple client
     # Full app integration should use the sync test_client above
     async with AsyncClient(base_url="http://testserver") as client:
@@ -365,15 +377,15 @@ async def async_test_client():
 # Validation test helpers
 class ValidationTestHelper:
     """Helper class for testing Pydantic model validation."""
-    
+
     @staticmethod
     def assert_validation_error(model_class, data, field_name, error_message_part):
         """Assert that creating a model with invalid data raises ValidationError."""
         from pydantic import ValidationError
-        
+
         with pytest.raises(ValidationError) as exc_info:
             model_class(**data)
-        
+
         errors = exc_info.value.errors()
         field_errors = [e for e in errors if e["loc"][0] == field_name]
         assert len(field_errors) > 0, (
@@ -384,7 +396,7 @@ class ValidationTestHelper:
             f"Expected error message containing '{error_message_part}' "
             f"but got '{actual_msg}'"
         )
-    
+
     @staticmethod
     def assert_field_valid(model_class, data, field_name, valid_value):
         """Assert that a field accepts a valid value."""
@@ -403,14 +415,14 @@ def validation_helper():
 # Serialization test helpers
 class SerializationTestHelper:
     """Helper class for testing model serialization."""
-    
+
     @staticmethod
     def test_json_round_trip(model_instance):
         """Test that a model can be serialized to JSON and back."""
         json_str = model_instance.model_dump_json()
         reconstructed = model_instance.__class__.model_validate_json(json_str)
         return reconstructed
-    
+
     @staticmethod
     def test_dict_round_trip(model_instance):
         """Test that a model can be converted to dict and back."""
@@ -430,7 +442,7 @@ def serialization_helper():
 def edge_case_data():
     """Edge case data for testing boundary conditions."""
     from datetime import date, timedelta
-    
+
     today = date.today()
     return {
         "min_price": 0.01,
@@ -450,6 +462,7 @@ def edge_case_data():
 def accommodation_types():
     """All accommodation types for parametrized testing."""
     from tripsage_core.models.schemas_common.enums import AccommodationType
+
     return list(AccommodationType)
 
 
@@ -457,6 +470,7 @@ def accommodation_types():
 def booking_statuses():
     """All booking statuses for parametrized testing."""
     from tripsage_core.models.schemas_common.enums import BookingStatus
+
     return list(BookingStatus)
 
 
@@ -464,6 +478,7 @@ def booking_statuses():
 def cancellation_policies():
     """All cancellation policies for parametrized testing."""
     from tripsage_core.models.schemas_common.enums import CancellationPolicy
+
     return list(CancellationPolicy)
 
 
@@ -472,24 +487,24 @@ def cancellation_policies():
 def performance_timer():
     """Timer for performance testing."""
     import time
-    
+
     class Timer:
         def __init__(self):
             self.start_time = None
             self.end_time = None
-        
+
         def start(self):
             self.start_time = time.time()
-        
+
         def stop(self):
             self.end_time = time.time()
-            
+
         @property
         def elapsed(self):
             if self.start_time and self.end_time:
                 return self.end_time - self.start_time
             return 0
-    
+
     return Timer()
 
 

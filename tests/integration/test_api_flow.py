@@ -6,9 +6,7 @@ to database operations, ensuring proper data flow and error handling.
 Uses modern Principal-based authentication.
 """
 
-import asyncio
 from unittest.mock import AsyncMock, patch
-from uuid import uuid4
 
 import pytest
 from fastapi.testclient import TestClient
@@ -19,8 +17,8 @@ from tripsage.api.middlewares.authentication import Principal
 from tripsage_core.models.db.trip import Trip
 from tripsage_core.models.db.user import User
 from tripsage_core.models.schemas_common.enums import TripStatus, TripType
-from tripsage_core.services.business.user_service import UserService
 from tripsage_core.services.business.trip_service import TripService
+from tripsage_core.services.business.user_service import UserService
 from tripsage_core.services.infrastructure.database_service import DatabaseService
 
 
@@ -53,13 +51,14 @@ class TestApiDatabaseFlow:
             email=mock_user.email,
             auth_method="jwt",
             scopes=[],
-            metadata={}
+            metadata={},
         )
 
     @pytest.fixture
     def mock_trip(self):
         """Mock trip for testing."""
         from datetime import date
+
         return Trip(
             id=67890,  # Use integer ID as required by Trip model
             name="Test Trip",
@@ -148,7 +147,12 @@ class TestApiDatabaseFlow:
 
     @pytest.mark.asyncio
     async def test_trip_creation_flow(
-        self, client, mock_trip_service, mock_database_service, mock_trip, mock_principal
+        self,
+        client,
+        mock_trip_service,
+        mock_database_service,
+        mock_trip,
+        mock_principal,
     ):
         """Test complete trip creation flow: API → Trip Service → Database."""
         with patch(
@@ -191,7 +195,12 @@ class TestApiDatabaseFlow:
 
     @pytest.mark.asyncio
     async def test_trip_retrieval_flow(
-        self, client, mock_trip_service, mock_database_service, mock_trip, mock_principal
+        self,
+        client,
+        mock_trip_service,
+        mock_database_service,
+        mock_trip,
+        mock_principal,
     ):
         """Test complete trip retrieval flow: API → Trip Service → Database."""
         with patch(
@@ -246,7 +255,9 @@ class TestApiDatabaseFlow:
                     mock_auth.return_value = mock_principal
 
                     # Configure service to raise exception
-                    mock_trip_service.create_trip.side_effect = Exception("Database error")
+                    mock_trip_service.create_trip.side_effect = Exception(
+                        "Database error"
+                    )
 
                     # Test trip creation with database error
                     response = client.post(
@@ -269,17 +280,15 @@ class TestApiDatabaseFlow:
     @pytest.mark.asyncio
     async def test_authentication_failure_flow(self, client):
         """Test authentication failure in API flow."""
-        with patch(
-            "tripsage.api.core.dependencies.require_principal"
-        ) as mock_auth:
+        with patch("tripsage.api.core.dependencies.require_principal") as mock_auth:
             # Configure authentication to fail
             from tripsage_core.exceptions.exceptions import CoreAuthenticationError
+
             mock_auth.side_effect = CoreAuthenticationError("Invalid token")
 
             # Test API call with invalid authentication
             response = client.get(
-                "/api/trips", 
-                headers={"Authorization": "Bearer invalid-token"}
+                "/api/trips", headers={"Authorization": "Bearer invalid-token"}
             )
 
             # Verify authentication error response
@@ -329,9 +338,7 @@ class TestApiDatabaseFlow:
     @pytest.mark.asyncio
     async def test_data_validation_flow(self, client, mock_principal):
         """Test data validation in API flow."""
-        with patch(
-            "tripsage.api.core.dependencies.require_principal"
-        ) as mock_auth:
+        with patch("tripsage.api.core.dependencies.require_principal") as mock_auth:
             mock_auth.return_value = mock_principal
 
             # Test with invalid trip data

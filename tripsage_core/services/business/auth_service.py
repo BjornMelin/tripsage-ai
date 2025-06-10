@@ -18,8 +18,8 @@ from typing import Optional
 import jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from supabase import Client, create_client
 
+from supabase import Client, create_client
 from tripsage_core.config.base_app_settings import get_settings
 from tripsage_core.models.base_core_model import TripSageModel
 
@@ -46,8 +46,8 @@ def get_supabase_client() -> Client:
     """
     settings = get_settings()
     return create_client(
-        settings.database.supabase_url, 
-        settings.database.supabase_service_role_key.get_secret_value()
+        settings.database.supabase_url,
+        settings.database.supabase_service_role_key.get_secret_value(),
     )
 
 

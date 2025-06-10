@@ -746,14 +746,14 @@ class ChatService:
             # For now, return a mock response
             # TODO: Implement actual AI chat completion logic
             session_id = str(request.session_id) if request.session_id else str(uuid4())
-            
+
             logger.info(
                 "Chat completion request",
                 extra={
                     "user_id": user_id,
                     "session_id": session_id,
                     "message_count": len(request.messages),
-                }
+                },
             )
 
             # Mock AI response - replace with actual AI integration
@@ -764,9 +764,9 @@ class ChatService:
                 "usage": {
                     "prompt_tokens": 10,
                     "completion_tokens": 20,
-                    "total_tokens": 30
+                    "total_tokens": 30,
                 },
-                "finish_reason": "stop"
+                "finish_reason": "stop",
             }
 
         except Exception as e:
@@ -789,7 +789,9 @@ class ChatService:
         sessions = await self.get_user_sessions(user_id)
         return [session.model_dump() for session in sessions]
 
-    async def create_message(self, user_id: str, session_id: str, message_request) -> Dict[str, Any]:
+    async def create_message(
+        self, user_id: str, session_id: str, message_request
+    ) -> Dict[str, Any]:
         """
         Create a message in a session (router compatibility method).
 
@@ -806,7 +808,7 @@ class ChatService:
             role=message_request.role,
             content=message_request.content,
         )
-        
+
         message = await self.add_message(session_id, user_id, service_request)
         return message.model_dump()
 
@@ -904,29 +906,33 @@ class ChatService:
             return []
 
     # Router-compatible methods with simplified signatures
-    async def get_session(self, user_id: str, session_id: str) -> Optional[Dict[str, Any]]:
+    async def get_session(
+        self, user_id: str, session_id: str
+    ) -> Optional[Dict[str, Any]]:
         """
         Get chat session (router-compatible method).
-        
+
         Args:
             user_id: User ID (router parameter order)
             session_id: Session ID (router parameter order)
-            
+
         Returns:
             Chat session data as dictionary or None if not found
         """
         session = await self._get_session_internal(session_id, user_id)
         return session.model_dump() if session else None
 
-    async def get_messages(self, user_id: str, session_id: str, limit: Optional[int] = None) -> List[Dict[str, Any]]:
+    async def get_messages(
+        self, user_id: str, session_id: str, limit: Optional[int] = None
+    ) -> List[Dict[str, Any]]:
         """
         Get messages (router-compatible method).
-        
+
         Args:
             user_id: User ID (router parameter order)
             session_id: Session ID (router parameter order)
             limit: Maximum number of messages
-            
+
         Returns:
             List of messages as dictionaries
         """

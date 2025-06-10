@@ -1,37 +1,37 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
-import { useRouter } from 'next/navigation'
-import { LoginForm, LoginFormSkeleton } from '../login-form'
-import { useAuth } from '@/contexts/auth-context'
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { useRouter } from "next/navigation";
+import { LoginForm, LoginFormSkeleton } from "../login-form";
+import { useAuth } from "@/contexts/auth-context";
 
 // Mock next/navigation
-vi.mock('next/navigation', () => ({
-  useRouter: vi.fn()
-}))
+vi.mock("next/navigation", () => ({
+  useRouter: vi.fn(),
+}));
 
 // Mock auth context
-vi.mock('@/contexts/auth-context', () => ({
-  useAuth: vi.fn()
-}))
+vi.mock("@/contexts/auth-context", () => ({
+  useAuth: vi.fn(),
+}));
 
 // Mock environment for demo credentials test
-const originalEnv = process.env.NODE_ENV
+const originalEnv = process.env.NODE_ENV;
 
-describe('LoginForm', () => {
-  const mockPush = vi.fn()
-  const mockSignIn = vi.fn()
-  const mockClearError = vi.fn()
-  const mockSignUp = vi.fn()
-  const mockSignOut = vi.fn()
-  const mockRefreshUser = vi.fn()
+describe("LoginForm", () => {
+  const mockPush = vi.fn();
+  const mockSignIn = vi.fn();
+  const mockClearError = vi.fn();
+  const mockSignUp = vi.fn();
+  const mockSignOut = vi.fn();
+  const mockRefreshUser = vi.fn();
 
   beforeEach(() => {
-    vi.clearAllMocks()
-    
+    vi.clearAllMocks();
+
     // Reset environment
-    vi.stubEnv('NODE_ENV', originalEnv)
-    
+    vi.stubEnv("NODE_ENV", originalEnv);
+
     // Setup router mock
     vi.mocked(useRouter).mockReturnValue({
       push: mockPush,
@@ -39,8 +39,8 @@ describe('LoginForm', () => {
       forward: vi.fn(),
       refresh: vi.fn(),
       replace: vi.fn(),
-      prefetch: vi.fn()
-    })
+      prefetch: vi.fn(),
+    });
 
     // Setup auth mock - default unauthenticated state
     vi.mocked(useAuth).mockReturnValue({
@@ -52,72 +52,74 @@ describe('LoginForm', () => {
       signUp: mockSignUp,
       signOut: mockSignOut,
       refreshUser: mockRefreshUser,
-      clearError: mockClearError
-    })
-  })
+      clearError: mockClearError,
+    });
+  });
 
-  it('should render login form with all fields', () => {
-    render(<LoginForm />)
+  it("should render login form with all fields", () => {
+    render(<LoginForm />);
 
-    expect(screen.getByText('Sign in to TripSage')).toBeInTheDocument()
-    expect(screen.getByText('Enter your credentials to access your account')).toBeInTheDocument()
-    expect(screen.getByLabelText('Email')).toBeInTheDocument()
-    expect(screen.getByLabelText('Password')).toBeInTheDocument()
-    expect(screen.getByPlaceholderText('john@example.com')).toBeInTheDocument()
-    expect(screen.getByPlaceholderText('Enter your password')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Sign In' })).toBeInTheDocument()
-    expect(screen.getByText("Don't have an account?")).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Create one here' })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Forgot password?' })).toBeInTheDocument()
-  })
+    expect(screen.getByText("Sign in to TripSage")).toBeInTheDocument();
+    expect(
+      screen.getByText("Enter your credentials to access your account")
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText("Email")).toBeInTheDocument();
+    expect(screen.getByLabelText("Password")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("john@example.com")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("Enter your password")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Sign In" })).toBeInTheDocument();
+    expect(screen.getByText("Don't have an account?")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Create one here" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Forgot password?" })).toBeInTheDocument();
+  });
 
-  it('should render with custom className', () => {
-    render(<LoginForm className="custom-class" />)
-    const card = screen.getByText('Sign in to TripSage').closest('.custom-class')
-    expect(card).toBeInTheDocument()
-  })
+  it("should render with custom className", () => {
+    render(<LoginForm className="custom-class" />);
+    const card = screen.getByText("Sign in to TripSage").closest(".custom-class");
+    expect(card).toBeInTheDocument();
+  });
 
-  it('should handle successful login with default redirect', async () => {
-    mockSignIn.mockResolvedValue(undefined)
-    const user = userEvent.setup()
+  it("should handle successful login with default redirect", async () => {
+    mockSignIn.mockResolvedValue(undefined);
+    const user = userEvent.setup();
 
-    render(<LoginForm />)
+    render(<LoginForm />);
 
-    const emailInput = screen.getByPlaceholderText('john@example.com')
-    const passwordInput = screen.getByPlaceholderText('Enter your password')
-    const submitButton = screen.getByRole('button', { name: 'Sign In' })
+    const emailInput = screen.getByPlaceholderText("john@example.com");
+    const passwordInput = screen.getByPlaceholderText("Enter your password");
+    const submitButton = screen.getByRole("button", { name: "Sign In" });
 
-    await user.type(emailInput, 'test@example.com')
-    await user.type(passwordInput, 'password123')
-    await user.click(submitButton)
-
-    await waitFor(() => {
-      expect(mockSignIn).toHaveBeenCalledWith('test@example.com', 'password123')
-    })
-  })
-
-  it('should handle successful login with custom redirect', async () => {
-    mockSignIn.mockResolvedValue(undefined)
-    const user = userEvent.setup()
-
-    render(<LoginForm redirectTo="/custom-path" />)
-
-    const emailInput = screen.getByPlaceholderText('john@example.com')
-    const passwordInput = screen.getByPlaceholderText('Enter your password')
-    const submitButton = screen.getByRole('button', { name: 'Sign In' })
-
-    await user.type(emailInput, 'test@example.com')
-    await user.type(passwordInput, 'password123')
-    await user.click(submitButton)
+    await user.type(emailInput, "test@example.com");
+    await user.type(passwordInput, "password123");
+    await user.click(submitButton);
 
     await waitFor(() => {
-      expect(mockSignIn).toHaveBeenCalledWith('test@example.com', 'password123')
-    })
-  })
+      expect(mockSignIn).toHaveBeenCalledWith("test@example.com", "password123");
+    });
+  });
 
-  it('should redirect if already authenticated', async () => {
+  it("should handle successful login with custom redirect", async () => {
+    mockSignIn.mockResolvedValue(undefined);
+    const user = userEvent.setup();
+
+    render(<LoginForm redirectTo="/custom-path" />);
+
+    const emailInput = screen.getByPlaceholderText("john@example.com");
+    const passwordInput = screen.getByPlaceholderText("Enter your password");
+    const submitButton = screen.getByRole("button", { name: "Sign In" });
+
+    await user.type(emailInput, "test@example.com");
+    await user.type(passwordInput, "password123");
+    await user.click(submitButton);
+
+    await waitFor(() => {
+      expect(mockSignIn).toHaveBeenCalledWith("test@example.com", "password123");
+    });
+  });
+
+  it("should redirect if already authenticated", async () => {
     vi.mocked(useAuth).mockReturnValue({
-      user: { id: '1', email: 'test@example.com' },
+      user: { id: "1", email: "test@example.com" },
       isAuthenticated: true,
       isLoading: false,
       error: null,
@@ -125,19 +127,19 @@ describe('LoginForm', () => {
       signUp: mockSignUp,
       signOut: mockSignOut,
       refreshUser: mockRefreshUser,
-      clearError: mockClearError
-    })
+      clearError: mockClearError,
+    });
 
-    render(<LoginForm />)
+    render(<LoginForm />);
 
     await waitFor(() => {
-      expect(mockPush).toHaveBeenCalledWith('/dashboard')
-    })
-  })
+      expect(mockPush).toHaveBeenCalledWith("/dashboard");
+    });
+  });
 
-  it('should redirect to custom path if already authenticated', async () => {
+  it("should redirect to custom path if already authenticated", async () => {
     vi.mocked(useAuth).mockReturnValue({
-      user: { id: '1', email: 'test@example.com' },
+      user: { id: "1", email: "test@example.com" },
       isAuthenticated: true,
       isLoading: false,
       error: null,
@@ -145,17 +147,17 @@ describe('LoginForm', () => {
       signUp: mockSignUp,
       signOut: mockSignOut,
       refreshUser: mockRefreshUser,
-      clearError: mockClearError
-    })
+      clearError: mockClearError,
+    });
 
-    render(<LoginForm redirectTo="/custom-dashboard" />)
+    render(<LoginForm redirectTo="/custom-dashboard" />);
 
     await waitFor(() => {
-      expect(mockPush).toHaveBeenCalledWith('/custom-dashboard')
-    })
-  })
+      expect(mockPush).toHaveBeenCalledWith("/custom-dashboard");
+    });
+  });
 
-  it('should show loading state during submission', async () => {
+  it("should show loading state during submission", async () => {
     vi.mocked(useAuth).mockReturnValue({
       user: null,
       isAuthenticated: false,
@@ -165,156 +167,156 @@ describe('LoginForm', () => {
       signUp: mockSignUp,
       signOut: mockSignOut,
       refreshUser: mockRefreshUser,
-      clearError: mockClearError
-    })
+      clearError: mockClearError,
+    });
 
-    render(<LoginForm />)
+    render(<LoginForm />);
 
-    const submitButton = screen.getByRole('button', { name: /Signing in/ })
-    expect(submitButton).toBeDisabled()
-    expect(screen.getByText('Signing in...')).toBeInTheDocument()
-    
-    const emailInput = screen.getByPlaceholderText('john@example.com')
-    const passwordInput = screen.getByPlaceholderText('Enter your password')
-    expect(emailInput).toBeDisabled()
-    expect(passwordInput).toBeDisabled()
-  })
+    const submitButton = screen.getByRole("button", { name: /Signing in/ });
+    expect(submitButton).toBeDisabled();
+    expect(screen.getByText("Signing in...")).toBeInTheDocument();
 
-  it('should display auth error', async () => {
+    const emailInput = screen.getByPlaceholderText("john@example.com");
+    const passwordInput = screen.getByPlaceholderText("Enter your password");
+    expect(emailInput).toBeDisabled();
+    expect(passwordInput).toBeDisabled();
+  });
+
+  it("should display auth error", async () => {
     vi.mocked(useAuth).mockReturnValue({
       user: null,
       isAuthenticated: false,
       isLoading: false,
-      error: 'Invalid email or password',
+      error: "Invalid email or password",
       signIn: mockSignIn,
       signUp: mockSignUp,
       signOut: mockSignOut,
       refreshUser: mockRefreshUser,
-      clearError: mockClearError
-    })
+      clearError: mockClearError,
+    });
 
-    render(<LoginForm />)
+    render(<LoginForm />);
 
-    const errorAlert = screen.getByRole('alert')
-    expect(errorAlert).toHaveTextContent('Invalid email or password')
-  })
+    const errorAlert = screen.getByRole("alert");
+    expect(errorAlert).toHaveTextContent("Invalid email or password");
+  });
 
-  it('should clear error when typing in email field', async () => {
+  it("should clear error when typing in email field", async () => {
     vi.mocked(useAuth).mockReturnValue({
       user: null,
       isAuthenticated: false,
       isLoading: false,
-      error: 'Previous error',
+      error: "Previous error",
       signIn: mockSignIn,
       signUp: mockSignUp,
       signOut: mockSignOut,
       refreshUser: mockRefreshUser,
-      clearError: mockClearError
-    })
+      clearError: mockClearError,
+    });
 
-    const user = userEvent.setup()
-    render(<LoginForm />)
+    const user = userEvent.setup();
+    render(<LoginForm />);
 
-    const emailInput = screen.getByPlaceholderText('john@example.com')
-    await user.type(emailInput, 'a')
+    const emailInput = screen.getByPlaceholderText("john@example.com");
+    await user.type(emailInput, "a");
 
-    expect(mockClearError).toHaveBeenCalled()
-  })
+    expect(mockClearError).toHaveBeenCalled();
+  });
 
-  it('should clear error when typing in password field', async () => {
+  it("should clear error when typing in password field", async () => {
     vi.mocked(useAuth).mockReturnValue({
       user: null,
       isAuthenticated: false,
       isLoading: false,
-      error: 'Previous error',
+      error: "Previous error",
       signIn: mockSignIn,
       signUp: mockSignUp,
       signOut: mockSignOut,
       refreshUser: mockRefreshUser,
-      clearError: mockClearError
-    })
+      clearError: mockClearError,
+    });
 
-    const user = userEvent.setup()
-    render(<LoginForm />)
+    const user = userEvent.setup();
+    render(<LoginForm />);
 
-    const passwordInput = screen.getByPlaceholderText('Enter your password')
-    await user.type(passwordInput, 'a')
+    const passwordInput = screen.getByPlaceholderText("Enter your password");
+    await user.type(passwordInput, "a");
 
-    expect(mockClearError).toHaveBeenCalled()
-  })
+    expect(mockClearError).toHaveBeenCalled();
+  });
 
-  it('should disable submit button when fields are empty', async () => {
-    render(<LoginForm />)
+  it("should disable submit button when fields are empty", async () => {
+    render(<LoginForm />);
 
-    const submitButton = screen.getByRole('button', { name: 'Sign In' })
-    expect(submitButton).toBeDisabled()
-  })
+    const submitButton = screen.getByRole("button", { name: "Sign In" });
+    expect(submitButton).toBeDisabled();
+  });
 
-  it('should disable submit button when only email is filled', async () => {
-    const user = userEvent.setup()
-    render(<LoginForm />)
+  it("should disable submit button when only email is filled", async () => {
+    const user = userEvent.setup();
+    render(<LoginForm />);
 
-    const emailInput = screen.getByPlaceholderText('john@example.com')
-    await user.type(emailInput, 'test@example.com')
+    const emailInput = screen.getByPlaceholderText("john@example.com");
+    await user.type(emailInput, "test@example.com");
 
-    const submitButton = screen.getByRole('button', { name: 'Sign In' })
-    expect(submitButton).toBeDisabled()
-  })
+    const submitButton = screen.getByRole("button", { name: "Sign In" });
+    expect(submitButton).toBeDisabled();
+  });
 
-  it('should disable submit button when only password is filled', async () => {
-    const user = userEvent.setup()
-    render(<LoginForm />)
+  it("should disable submit button when only password is filled", async () => {
+    const user = userEvent.setup();
+    render(<LoginForm />);
 
-    const passwordInput = screen.getByPlaceholderText('Enter your password')
-    await user.type(passwordInput, 'password123')
+    const passwordInput = screen.getByPlaceholderText("Enter your password");
+    await user.type(passwordInput, "password123");
 
-    const submitButton = screen.getByRole('button', { name: 'Sign In' })
-    expect(submitButton).toBeDisabled()
-  })
+    const submitButton = screen.getByRole("button", { name: "Sign In" });
+    expect(submitButton).toBeDisabled();
+  });
 
-  it('should enable submit button when both fields are filled', async () => {
-    const user = userEvent.setup()
-    render(<LoginForm />)
+  it("should enable submit button when both fields are filled", async () => {
+    const user = userEvent.setup();
+    render(<LoginForm />);
 
-    const emailInput = screen.getByPlaceholderText('john@example.com')
-    const passwordInput = screen.getByPlaceholderText('Enter your password')
-    
-    await user.type(emailInput, 'test@example.com')
-    await user.type(passwordInput, 'password123')
+    const emailInput = screen.getByPlaceholderText("john@example.com");
+    const passwordInput = screen.getByPlaceholderText("Enter your password");
 
-    const submitButton = screen.getByRole('button', { name: 'Sign In' })
-    expect(submitButton).toBeEnabled()
-  })
+    await user.type(emailInput, "test@example.com");
+    await user.type(passwordInput, "password123");
 
-  it('should not call signIn when fields are empty', async () => {
-    const user = userEvent.setup()
-    render(<LoginForm />)
+    const submitButton = screen.getByRole("button", { name: "Sign In" });
+    expect(submitButton).toBeEnabled();
+  });
 
-    const form = screen.getByRole('button', { name: 'Sign In' }).closest('form')
-    await user.click(screen.getByRole('button', { name: 'Sign In' }))
+  it("should not call signIn when fields are empty", async () => {
+    const user = userEvent.setup();
+    render(<LoginForm />);
 
-    expect(mockSignIn).not.toHaveBeenCalled()
-  })
+    const form = screen.getByRole("button", { name: "Sign In" }).closest("form");
+    await user.click(screen.getByRole("button", { name: "Sign In" }));
 
-  it('should toggle password visibility', async () => {
-    const user = userEvent.setup()
-    render(<LoginForm />)
+    expect(mockSignIn).not.toHaveBeenCalled();
+  });
 
-    const passwordInput = screen.getByPlaceholderText('Enter your password')
-    expect(passwordInput).toHaveAttribute('type', 'password')
+  it("should toggle password visibility", async () => {
+    const user = userEvent.setup();
+    render(<LoginForm />);
 
-    const toggleButton = screen.getByLabelText('Show password')
-    await user.click(toggleButton)
+    const passwordInput = screen.getByPlaceholderText("Enter your password");
+    expect(passwordInput).toHaveAttribute("type", "password");
 
-    expect(passwordInput).toHaveAttribute('type', 'text')
-    expect(screen.getByLabelText('Hide password')).toBeInTheDocument()
+    const toggleButton = screen.getByLabelText("Show password");
+    await user.click(toggleButton);
 
-    await user.click(screen.getByLabelText('Hide password'))
-    expect(passwordInput).toHaveAttribute('type', 'password')
-    expect(screen.getByLabelText('Show password')).toBeInTheDocument()
-  })
+    expect(passwordInput).toHaveAttribute("type", "text");
+    expect(screen.getByLabelText("Hide password")).toBeInTheDocument();
 
-  it('should disable password toggle when loading', async () => {
+    await user.click(screen.getByLabelText("Hide password"));
+    expect(passwordInput).toHaveAttribute("type", "password");
+    expect(screen.getByLabelText("Show password")).toBeInTheDocument();
+  });
+
+  it("should disable password toggle when loading", async () => {
     vi.mocked(useAuth).mockReturnValue({
       user: null,
       isAuthenticated: false,
@@ -324,98 +326,100 @@ describe('LoginForm', () => {
       signUp: mockSignUp,
       signOut: mockSignOut,
       refreshUser: mockRefreshUser,
-      clearError: mockClearError
-    })
+      clearError: mockClearError,
+    });
 
-    render(<LoginForm />)
+    render(<LoginForm />);
 
-    const toggleButton = screen.getByLabelText('Show password')
-    expect(toggleButton).toBeDisabled()
-  })
+    const toggleButton = screen.getByLabelText("Show password");
+    expect(toggleButton).toBeDisabled();
+  });
 
-  it('should have correct links', () => {
-    render(<LoginForm />)
+  it("should have correct links", () => {
+    render(<LoginForm />);
 
-    const registerLink = screen.getByRole('link', { name: 'Create one here' })
-    expect(registerLink).toHaveAttribute('href', '/register')
+    const registerLink = screen.getByRole("link", { name: "Create one here" });
+    expect(registerLink).toHaveAttribute("href", "/register");
 
-    const forgotPasswordLink = screen.getByRole('link', { name: 'Forgot password?' })
-    expect(forgotPasswordLink).toHaveAttribute('href', '/reset-password')
-  })
+    const forgotPasswordLink = screen.getByRole("link", { name: "Forgot password?" });
+    expect(forgotPasswordLink).toHaveAttribute("href", "/reset-password");
+  });
 
-  it('should show demo credentials in development environment', () => {
-    vi.stubEnv('NODE_ENV', 'development')
-    render(<LoginForm />)
+  it("should show demo credentials in development environment", () => {
+    vi.stubEnv("NODE_ENV", "development");
+    render(<LoginForm />);
 
-    expect(screen.getByText('Demo Credentials (Development Only)')).toBeInTheDocument()
-    expect(screen.getByText('demo@example.com')).toBeInTheDocument()
-    expect(screen.getByText('password123')).toBeInTheDocument()
-  })
+    expect(screen.getByText("Demo Credentials (Development Only)")).toBeInTheDocument();
+    expect(screen.getByText("demo@example.com")).toBeInTheDocument();
+    expect(screen.getByText("password123")).toBeInTheDocument();
+  });
 
-  it('should not show demo credentials in production environment', () => {
-    vi.stubEnv('NODE_ENV', 'production')
-    render(<LoginForm />)
+  it("should not show demo credentials in production environment", () => {
+    vi.stubEnv("NODE_ENV", "production");
+    render(<LoginForm />);
 
-    expect(screen.queryByText('Demo Credentials (Development Only)')).not.toBeInTheDocument()
-    expect(screen.queryByText('demo@example.com')).not.toBeInTheDocument()
-    expect(screen.queryByText('password123')).not.toBeInTheDocument()
-  })
+    expect(
+      screen.queryByText("Demo Credentials (Development Only)")
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText("demo@example.com")).not.toBeInTheDocument();
+    expect(screen.queryByText("password123")).not.toBeInTheDocument();
+  });
 
-  it('should clear error on component unmount', () => {
-    const { unmount } = render(<LoginForm />)
-    unmount()
-    expect(mockClearError).toHaveBeenCalled()
-  })
+  it("should clear error on component unmount", () => {
+    const { unmount } = render(<LoginForm />);
+    unmount();
+    expect(mockClearError).toHaveBeenCalled();
+  });
 
-  it('should handle form submission with Enter key', async () => {
-    mockSignIn.mockResolvedValue(undefined)
-    const user = userEvent.setup()
+  it("should handle form submission with Enter key", async () => {
+    mockSignIn.mockResolvedValue(undefined);
+    const user = userEvent.setup();
 
-    render(<LoginForm />)
+    render(<LoginForm />);
 
-    const emailInput = screen.getByPlaceholderText('john@example.com')
-    const passwordInput = screen.getByPlaceholderText('Enter your password')
+    const emailInput = screen.getByPlaceholderText("john@example.com");
+    const passwordInput = screen.getByPlaceholderText("Enter your password");
 
-    await user.type(emailInput, 'test@example.com')
-    await user.type(passwordInput, 'password123')
-    await user.keyboard('{Enter}')
+    await user.type(emailInput, "test@example.com");
+    await user.type(passwordInput, "password123");
+    await user.keyboard("{Enter}");
 
     await waitFor(() => {
-      expect(mockSignIn).toHaveBeenCalledWith('test@example.com', 'password123')
-    })
-  })
+      expect(mockSignIn).toHaveBeenCalledWith("test@example.com", "password123");
+    });
+  });
 
-  it('should have proper form structure and accessibility', () => {
-    render(<LoginForm />)
+  it("should have proper form structure and accessibility", () => {
+    render(<LoginForm />);
 
-    const form = screen.getByRole('button', { name: 'Sign In' }).closest('form')
-    expect(form).toBeInTheDocument()
+    const form = screen.getByRole("button", { name: "Sign In" }).closest("form");
+    expect(form).toBeInTheDocument();
 
-    const emailInput = screen.getByLabelText('Email')
-    expect(emailInput).toHaveAttribute('type', 'email')
-    expect(emailInput).toHaveAttribute('required')
-    expect(emailInput).toHaveAttribute('autoComplete', 'email')
+    const emailInput = screen.getByLabelText("Email");
+    expect(emailInput).toHaveAttribute("type", "email");
+    expect(emailInput).toHaveAttribute("required");
+    expect(emailInput).toHaveAttribute("autoComplete", "email");
 
-    const passwordInput = screen.getByLabelText('Password')
-    expect(passwordInput).toHaveAttribute('required')
-    expect(passwordInput).toHaveAttribute('autoComplete', 'current-password')
-  })
-})
+    const passwordInput = screen.getByLabelText("Password");
+    expect(passwordInput).toHaveAttribute("required");
+    expect(passwordInput).toHaveAttribute("autoComplete", "current-password");
+  });
+});
 
-describe('LoginFormSkeleton', () => {
-  it('should render skeleton loading state', () => {
-    render(<LoginFormSkeleton />)
-    
+describe("LoginFormSkeleton", () => {
+  it("should render skeleton loading state", () => {
+    render(<LoginFormSkeleton />);
+
     // Check that skeleton elements are present (they typically have animate-pulse class)
-    const skeletonElements = document.querySelectorAll('.animate-pulse')
-    expect(skeletonElements.length).toBeGreaterThan(0)
-  })
+    const skeletonElements = document.querySelectorAll(".animate-pulse");
+    expect(skeletonElements.length).toBeGreaterThan(0);
+  });
 
-  it('should render card structure', () => {
-    render(<LoginFormSkeleton />)
-    
+  it("should render card structure", () => {
+    render(<LoginFormSkeleton />);
+
     // Check for the card structure
-    const card = document.querySelector('.w-full.max-w-md')
-    expect(card).toBeInTheDocument()
-  })
-})
+    const card = document.querySelector(".w-full.max-w-md");
+    expect(card).toBeInTheDocument();
+  });
+});

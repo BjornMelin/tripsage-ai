@@ -4,23 +4,21 @@ Comprehensive unit tests for UnifiedSearchService.
 Tests cover unified search functionality, result aggregation, filtering, and caching.
 """
 
-import pytest
-from datetime import date, datetime
-from unittest.mock import AsyncMock, MagicMock, patch
-from typing import Dict, Any, List
-import uuid
+from datetime import date
+from unittest.mock import AsyncMock, patch
 
-from tripsage.api.schemas.requests.search import UnifiedSearchRequest, SearchFilters
-from tripsage.api.schemas.responses.search import (
-    UnifiedSearchResponse,
-    SearchResultItem,
-    SearchFacet,
-    SearchMetadata,
-)
+import pytest
+
+from tripsage.api.schemas.requests.search import SearchFilters, UnifiedSearchRequest
 from tripsage.api.schemas.responses.activities import (
-    ActivitySearchResponse,
-    ActivityResponse,
     ActivityCoordinates,
+    ActivityResponse,
+    ActivitySearchResponse,
+)
+from tripsage.api.schemas.responses.search import (
+    SearchMetadata,
+    SearchResultItem,
+    UnifiedSearchResponse,
 )
 from tripsage_core.services.business.unified_search_service import (
     UnifiedSearchService,
@@ -205,7 +203,7 @@ class TestUnifiedSearchService:
         assert len(response.results) == 1
         assert response.results[0].title == "Cached Destination"
         assert response.metadata.search_id == "cached-id"
-        
+
         # Verify no service calls made
         unified_search_service._activity_service.search_activities.assert_not_called()
 
@@ -259,7 +257,7 @@ class TestUnifiedSearchService:
         # Change sort criteria
         sample_search_request.sort_by = "price"
         sample_search_request.sort_order = "asc"
-        
+
         mock_activity_service.search_activities.return_value = sample_activity_response
 
         # Perform search
@@ -282,7 +280,7 @@ class TestUnifiedSearchService:
         # Change sort criteria
         sample_search_request.sort_by = "rating"
         sample_search_request.sort_order = "desc"
-        
+
         mock_activity_service.search_activities.return_value = sample_activity_response
 
         # Perform search
@@ -309,20 +307,20 @@ class TestUnifiedSearchService:
 
         # Verify facets
         assert len(response.facets) > 0
-        
+
         # Check type facet
         type_facet = next((f for f in response.facets if f.field == "type"), None)
         assert type_facet is not None
         assert type_facet.type == "terms"
         assert len(type_facet.values) == 2  # destination and activity
-        
+
         # Check price facet
         price_facet = next((f for f in response.facets if f.field == "price"), None)
         assert price_facet is not None
         assert price_facet.type == "range"
         assert price_facet.values[0]["min"] == 25.0
         assert price_facet.values[0]["max"] == 30.0
-        
+
         # Check rating facet
         rating_facet = next((f for f in response.facets if f.field == "rating"), None)
         assert rating_facet is not None
@@ -337,7 +335,9 @@ class TestUnifiedSearchService:
     ):
         """Test error handling in unified search."""
         # Setup activity service to raise exception
-        mock_activity_service.search_activities.side_effect = Exception("Activity API Error")
+        mock_activity_service.search_activities.side_effect = Exception(
+            "Activity API Error"
+        )
 
         # Perform search - should handle error gracefully
         response = await unified_search_service.unified_search(sample_search_request)
@@ -345,7 +345,7 @@ class TestUnifiedSearchService:
         # Should still return destination results
         assert len(response.results) == 1  # Only destination
         assert response.results[0].type == "destination"
-        
+
         # Should record provider error
         assert "activity" in response.metadata.provider_errors
         assert "Activity API Error" in response.metadata.provider_errors["activity"]
@@ -391,15 +391,19 @@ class TestUnifiedSearchService:
     ):
         """Test search suggestions generation."""
         # Test with partial query
-        suggestions = await unified_search_service.get_search_suggestions("par", limit=5)
+        suggestions = await unified_search_service.get_search_suggestions(
+            "par", limit=5
+        )
 
         # Verify suggestions
         assert isinstance(suggestions, list)
         assert len(suggestions) <= 5
         assert any("Paris" in s for s in suggestions)
-        
+
         # Test with longer query
-        suggestions = await unified_search_service.get_search_suggestions("new y", limit=10)
+        suggestions = await unified_search_service.get_search_suggestions(
+            "new y", limit=10
+        )
         assert any("New York" in s for s in suggestions)
 
     @pytest.mark.asyncio
@@ -409,7 +413,11 @@ class TestUnifiedSearchService:
     ):
         """Test error handling in search suggestions."""
         # Mock an internal error
-        with patch.object(unified_search_service, '_get_destination_suggestions', side_effect=Exception("Error")):
+        with patch.object(
+            unified_search_service,
+            "_get_destination_suggestions",
+            side_effect=Exception("Error"),
+        ):
             with pytest.raises(UnifiedSearchServiceError):
                 await unified_search_service.get_search_suggestions("test")
 
@@ -421,16 +429,16 @@ class TestUnifiedSearchService:
             destination="New York",
             types=["activity"],
         )
-        
+
         request2 = UnifiedSearchRequest(
             query="museums",
             destination="Boston",
             types=["activity"],
         )
-        
+
         fields1 = unified_search_service.get_cache_fields(request1)
         fields2 = unified_search_service.get_cache_fields(request2)
-        
+
         # Keys should be different due to different destinations
         assert fields1["destination"] != fields2["destination"]
         assert fields1["query"] == fields2["query"]
@@ -445,19 +453,19 @@ class TestUnifiedSearchService:
     ):
         """Test that searches execute in parallel."""
         import asyncio
-        
+
         # Add delay to activity service
         async def delayed_search(*args, **kwargs):
             await asyncio.sleep(0.1)
             return sample_activity_response
-        
+
         mock_activity_service.search_activities = delayed_search
-        
+
         # Time the search
         start_time = asyncio.get_event_loop().time()
         response = await unified_search_service.unified_search(sample_search_request)
         end_time = asyncio.get_event_loop().time()
-        
+
         # Should complete faster than sequential execution would
         # (destination search is instant, activity search has 0.1s delay)
         assert end_time - start_time < 0.2  # Would be ~0.2s if sequential
@@ -468,5 +476,5 @@ class TestUnifiedSearchService:
         """Test that get_unified_search_service returns singleton instance."""
         service1 = await get_unified_search_service()
         service2 = await get_unified_search_service()
-        
+
         assert service1 is service2

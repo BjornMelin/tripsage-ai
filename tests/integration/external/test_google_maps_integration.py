@@ -5,7 +5,7 @@ This module tests the integration with Google Maps API for location services,
 geocoding, place details, and direction calculations.
 """
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -168,9 +168,7 @@ class TestGoogleMapsIntegration:
         ]
 
     @pytest.mark.asyncio
-    async def test_geocode_success(
-        self, google_maps_service, sample_geocode_response
-    ):
+    async def test_geocode_success(self, google_maps_service, sample_geocode_response):
         """Test successful address geocoding."""
         # Mock Google Maps client
         google_maps_service._client.geocode.return_value = sample_geocode_response
@@ -329,13 +327,13 @@ class TestGoogleMapsIntegration:
         # Mock API error
         import googlemaps.exceptions
 
-        google_maps_service._client.geocode.side_effect = googlemaps.exceptions.ApiError(
-            "OVER_QUERY_LIMIT"
+        google_maps_service._client.geocode.side_effect = (
+            googlemaps.exceptions.ApiError("OVER_QUERY_LIMIT")
         )
 
         with pytest.raises(GoogleMapsServiceError) as exc_info:
             await google_maps_service.geocode("Paris, France")
-        
+
         assert "Geocoding failed" in str(exc_info.value)
 
     @pytest.mark.asyncio
@@ -344,7 +342,9 @@ class TestGoogleMapsIntegration:
         import googlemaps.exceptions
 
         # Mock timeout error
-        google_maps_service._client.geocode.side_effect = googlemaps.exceptions.Timeout()
+        google_maps_service._client.geocode.side_effect = (
+            googlemaps.exceptions.Timeout()
+        )
 
         with pytest.raises(GoogleMapsServiceError):
             await google_maps_service.geocode("Paris, France")
@@ -365,8 +365,8 @@ class TestGoogleMapsIntegration:
         # Mock API error
         import googlemaps.exceptions
 
-        google_maps_service._client.geocode.side_effect = googlemaps.exceptions.ApiError(
-            "API_KEY_INVALID"
+        google_maps_service._client.geocode.side_effect = (
+            googlemaps.exceptions.ApiError("API_KEY_INVALID")
         )
 
         result = await google_maps_service.health_check()

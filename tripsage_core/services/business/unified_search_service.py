@@ -198,7 +198,7 @@ class UnifiedSearchService(
                 results_by_type = {}
 
                 for i, (search_type, result) in enumerate(
-                    zip(search_tasks.keys(), search_results)
+                    zip(search_tasks.keys(), search_results, strict=False)
                 ):
                     if isinstance(result, Exception):
                         logger.warning(f"Search failed for {search_type}: {result}")

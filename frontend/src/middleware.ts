@@ -1,4 +1,4 @@
-import { createServerClient } from '@supabase/ssr'
+import { createServerClient } from "@supabase/ssr";
 import { type NextRequest, NextResponse } from "next/server";
 
 // Simple in-memory rate limiter with automatic cleanup
@@ -8,7 +8,7 @@ class RateLimiter {
 
   constructor() {
     // Only set up cleanup in non-serverless environments
-    if (typeof process !== 'undefined' && process.env.NODE_ENV !== 'production') {
+    if (typeof process !== "undefined" && process.env.NODE_ENV !== "production") {
       this.setupCleanup();
     }
   }
@@ -39,7 +39,12 @@ class RateLimiter {
     }
 
     record.count++;
-    return { success: true, limit, remaining: limit - record.count, reset: record.resetTime };
+    return {
+      success: true,
+      limit,
+      remaining: limit - record.count,
+      reset: record.resetTime,
+    };
   }
 
   cleanup() {
@@ -55,47 +60,47 @@ const rateLimiter = new RateLimiter();
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
     request,
-  })
+  });
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   if (!supabaseUrl || !supabaseAnonKey) {
-    console.warn('Missing Supabase environment variables')
-    return supabaseResponse
+    console.warn("Missing Supabase environment variables");
+    return supabaseResponse;
   }
 
   const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
     cookies: {
       getAll() {
-        return request.cookies.getAll()
+        return request.cookies.getAll();
       },
       setAll(cookiesToSet) {
-        cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
+        cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
         supabaseResponse = NextResponse.next({
           request,
-        })
+        });
         cookiesToSet.forEach(({ name, value, options }) =>
           supabaseResponse.cookies.set(name, value, options)
-        )
+        );
       },
     },
-  })
+  });
 
   // Refresh session if expired - required for Server Components
   try {
-    await supabase.auth.getUser()
+    await supabase.auth.getUser();
   } catch (error) {
     // Log the error but don't fail the request
-    console.warn('Supabase auth error:', error)
+    console.warn("Supabase auth error:", error);
   }
 
-  return supabaseResponse
+  return supabaseResponse;
 }
 
 export async function middleware(request: NextRequest) {
   // Handle Supabase auth for all routes first
-  const response = await updateSession(request)
+  const response = await updateSession(request);
 
   // Only apply rate limiting to chat API
   if (!request.nextUrl.pathname.startsWith("/api/chat")) {
@@ -134,7 +139,10 @@ export async function middleware(request: NextRequest) {
 
   // Add rate limit headers
   rateLimitResponse.headers.set("X-RateLimit-Limit", rateLimitResult.limit.toString());
-  rateLimitResponse.headers.set("X-RateLimit-Remaining", rateLimitResult.remaining.toString());
+  rateLimitResponse.headers.set(
+    "X-RateLimit-Remaining",
+    rateLimitResult.remaining.toString()
+  );
   rateLimitResponse.headers.set(
     "X-RateLimit-Reset",
     Math.floor(rateLimitResult.reset / 1000).toString()

@@ -1,6 +1,6 @@
 /**
  * Clean, focused test suite for WebSocket client.
- * 
+ *
  * Tests WebSocket functionality with proper mocking and realistic scenarios.
  */
 
@@ -67,9 +67,9 @@ const MockWebSocketConstructor = vi.fn().mockImplementation((url: string) => {
   return mockWebSocketInstance;
 });
 
-Object.defineProperty(global, 'WebSocket', {
+Object.defineProperty(global, "WebSocket", {
   value: MockWebSocketConstructor,
-  writable: true
+  writable: true,
 });
 
 describe("WebSocketClient", () => {
@@ -159,14 +159,16 @@ describe("WebSocketClient", () => {
 
       // Check that client handles the error (might start reconnecting)
       const state = client.getState();
-      expect([ConnectionStatus.ERROR, ConnectionStatus.RECONNECTING]).toContain(state.status);
+      expect([ConnectionStatus.ERROR, ConnectionStatus.RECONNECTING]).toContain(
+        state.status
+      );
     });
 
     it("should disconnect properly", async () => {
       // First connect
       const connectPromise = client.connect();
       await vi.advanceTimersByTimeAsync(10);
-      
+
       mockWebSocketInstance.simulateOpen();
       mockWebSocketInstance.simulateMessage(
         JSON.stringify({
@@ -179,7 +181,10 @@ describe("WebSocketClient", () => {
 
       // Then disconnect
       client.disconnect();
-      expect(mockWebSocketInstance.close).toHaveBeenCalledWith(1000, "Client disconnect");
+      expect(mockWebSocketInstance.close).toHaveBeenCalledWith(
+        1000,
+        "Client disconnect"
+      );
       expect(client.getState().status).toBe(ConnectionStatus.DISCONNECTED);
     });
 
@@ -197,7 +202,7 @@ describe("WebSocketClient", () => {
       mockWebSocketInstance.simulateMessage(
         JSON.stringify({ success: true, connection_id: "test" })
       );
-      
+
       await vi.advanceTimersByTimeAsync(10);
       await Promise.all([connectPromise1, connectPromise2]);
     });
@@ -208,7 +213,7 @@ describe("WebSocketClient", () => {
       // Setup connected state for message tests
       const connectPromise = client.connect();
       await vi.advanceTimersByTimeAsync(10);
-      
+
       mockWebSocketInstance.simulateOpen();
       mockWebSocketInstance.simulateMessage(
         JSON.stringify({
@@ -218,7 +223,7 @@ describe("WebSocketClient", () => {
       );
       await vi.advanceTimersByTimeAsync(10);
       await connectPromise;
-      
+
       // Clear send calls from authentication
       mockWebSocketInstance.send.mockClear();
     });
@@ -269,12 +274,12 @@ describe("WebSocketClient", () => {
     it("should handle authentication failures", async () => {
       // Create new client for this test
       const newClient = new WebSocketClient(config);
-      
+
       newClient.connect(); // Don't await, let it fail
       await vi.advanceTimersByTimeAsync(10);
-      
+
       mockWebSocketInstance.simulateOpen();
-      
+
       // Send auth failure
       mockWebSocketInstance.simulateMessage(
         JSON.stringify({
@@ -282,17 +287,19 @@ describe("WebSocketClient", () => {
           error: "Invalid token",
         })
       );
-      
+
       await vi.advanceTimersByTimeAsync(10);
-      
+
       // Check that client handles the auth failure (might start reconnecting)
       const state = newClient.getState();
-      expect([ConnectionStatus.ERROR, ConnectionStatus.RECONNECTING]).toContain(state.status);
+      expect([ConnectionStatus.ERROR, ConnectionStatus.RECONNECTING]).toContain(
+        state.status
+      );
       // Error message might be in state.error or cleared during reconnection
       if (state.error) {
         expect(state.error).toContain("Invalid");
       }
-      
+
       newClient.destroy();
     });
   });
@@ -315,55 +322,55 @@ describe("WebSocketClient", () => {
 
     it("should remove event listeners", () => {
       const handler = vi.fn();
-      
+
       client.on(WebSocketEventType.CHAT_MESSAGE, handler);
       client.off(WebSocketEventType.CHAT_MESSAGE, handler);
 
       // Handler should be removed, no easy way to test without internals
       // Just verify the methods exist and don't throw
-      expect(typeof client.on).toBe('function');
-      expect(typeof client.off).toBe('function');
+      expect(typeof client.on).toBe("function");
+      expect(typeof client.off).toBe("function");
     });
 
     it("should remove all listeners for an event", () => {
       const handler1 = vi.fn();
       const handler2 = vi.fn();
-      
+
       client.on(WebSocketEventType.CHAT_MESSAGE, handler1);
       client.on(WebSocketEventType.CHAT_MESSAGE, handler2);
       client.removeAllListeners(WebSocketEventType.CHAT_MESSAGE);
 
       // Verify method exists and completes
-      expect(typeof client.removeAllListeners).toBe('function');
+      expect(typeof client.removeAllListeners).toBe("function");
     });
   });
 
   describe("Connection State", () => {
     it("should provide current state", () => {
       const state = client.getState();
-      
-      expect(state).toHaveProperty('status');
-      expect(state).toHaveProperty('reconnectAttempt');
-      expect(typeof state.status).toBe('string');
-      expect(typeof state.reconnectAttempt).toBe('number');
+
+      expect(state).toHaveProperty("status");
+      expect(state).toHaveProperty("reconnectAttempt");
+      expect(typeof state.status).toBe("string");
+      expect(typeof state.reconnectAttempt).toBe("number");
     });
 
     it("should provide connection statistics", () => {
       const stats = client.getStats();
-      
-      expect(stats).toHaveProperty('status');
-      expect(stats).toHaveProperty('reconnectAttempt');
+
+      expect(stats).toHaveProperty("status");
+      expect(stats).toHaveProperty("reconnectAttempt");
       expect(stats.status).toBe(ConnectionStatus.DISCONNECTED);
     });
 
     it("should provide performance metrics", () => {
       const metrics = client.getPerformanceMetrics();
-      
-      expect(metrics).toHaveProperty('messagesSent');
-      expect(metrics).toHaveProperty('messagesReceived');
-      expect(metrics).toHaveProperty('connectionDuration');
-      expect(typeof metrics.messagesSent).toBe('number');
-      expect(typeof metrics.messagesReceived).toBe('number');
+
+      expect(metrics).toHaveProperty("messagesSent");
+      expect(metrics).toHaveProperty("messagesReceived");
+      expect(metrics).toHaveProperty("connectionDuration");
+      expect(typeof metrics.messagesSent).toBe("number");
+      expect(typeof metrics.messagesReceived).toBe("number");
     });
   });
 
@@ -372,14 +379,14 @@ describe("WebSocketClient", () => {
       // Setup connected state
       const connectPromise = client.connect();
       await vi.advanceTimersByTimeAsync(10);
-      
+
       mockWebSocketInstance.simulateOpen();
       mockWebSocketInstance.simulateMessage(
         JSON.stringify({ success: true, connection_id: "test" })
       );
       await vi.advanceTimersByTimeAsync(10);
       await connectPromise;
-      
+
       mockWebSocketInstance.send.mockClear();
     });
 
@@ -425,7 +432,7 @@ describe("WebSocketClient", () => {
       // First connect
       const connectPromise = client.connect();
       await vi.advanceTimersByTimeAsync(10);
-      
+
       mockWebSocketInstance.simulateOpen();
       mockWebSocketInstance.simulateMessage(
         JSON.stringify({ success: true, connection_id: "test" })
@@ -438,11 +445,13 @@ describe("WebSocketClient", () => {
 
       // Should start reconnection (might be RECONNECTING immediately)
       const state = client.getState();
-      expect([ConnectionStatus.DISCONNECTED, ConnectionStatus.RECONNECTING]).toContain(state.status);
-      
+      expect([ConnectionStatus.DISCONNECTED, ConnectionStatus.RECONNECTING]).toContain(
+        state.status
+      );
+
       // Advance timers to trigger reconnection attempt
       await vi.advanceTimersByTimeAsync(200); // reconnectDelay is 100ms
-      
+
       // Should attempt to reconnect
       expect(MockWebSocketConstructor).toHaveBeenCalledTimes(2);
     });
@@ -457,7 +466,7 @@ describe("WebSocketClient", () => {
       // Connect initially
       const connectPromise = shortReconnectClient.connect();
       await vi.advanceTimersByTimeAsync(10);
-      
+
       mockWebSocketInstance.simulateOpen();
       mockWebSocketInstance.simulateMessage(
         JSON.stringify({ success: true, connection_id: "test" })
@@ -470,18 +479,18 @@ describe("WebSocketClient", () => {
 
       // Simulate disconnect and failed reconnection
       mockWebSocketInstance.simulateClose(1006, "Connection lost");
-      
+
       // First reconnection attempt
       await vi.advanceTimersByTimeAsync(20);
       expect(MockWebSocketConstructor).toHaveBeenCalledTimes(1);
-      
+
       // Simulate failure
       mockWebSocketInstance.simulateError();
-      
+
       // Should not attempt again (max attempts = 1)
       await vi.advanceTimersByTimeAsync(100);
       expect(MockWebSocketConstructor).toHaveBeenCalledTimes(1);
-      
+
       shortReconnectClient.destroy();
     });
   });
@@ -489,10 +498,10 @@ describe("WebSocketClient", () => {
   describe("Cleanup and Resource Management", () => {
     it("should cleanup resources on destroy", () => {
       const newClient = new WebSocketClient(config);
-      
+
       // Destroy should not throw
       expect(() => newClient.destroy()).not.toThrow();
-      
+
       // Should prevent further operations
       expect(newClient.connect()).rejects.toThrow("destroyed");
     });
@@ -500,9 +509,9 @@ describe("WebSocketClient", () => {
     it("should handle batching configuration", () => {
       client.setBatchingEnabled(true);
       client.setBatchingEnabled(false);
-      
+
       // Should not throw and method should exist
-      expect(typeof client.setBatchingEnabled).toBe('function');
+      expect(typeof client.setBatchingEnabled).toBe("function");
     });
   });
 });

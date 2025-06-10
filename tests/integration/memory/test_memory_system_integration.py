@@ -26,7 +26,7 @@ class TestMemorySystemIntegration:
     def mock_memory_service(self):
         """Mock memory service with realistic responses."""
         service = AsyncMock(spec=MemoryService)
-        
+
         # Mock search response
         service.search_memories.return_value = [
             {
@@ -37,14 +37,14 @@ class TestMemorySystemIntegration:
                 "relevance_score": 0.95,
             },
             {
-                "id": "mem-2", 
+                "id": "mem-2",
                 "content": "User enjoyed Four Seasons George V last trip",
                 "category": "experiences",
                 "created_at": "2024-01-01T10:01:00Z",
                 "relevance_score": 0.90,
-            }
+            },
         ]
-        
+
         # Mock user context
         service.get_user_context.return_value = {
             "memories": [
@@ -58,15 +58,15 @@ class TestMemorySystemIntegration:
             "preferences": {
                 "accommodation_type": "luxury",
                 "preferred_locations": ["Paris", "Tokyo"],
-                "budget_range": "high"
+                "budget_range": "high",
             },
             "travel_patterns": {
                 "average_trip_duration": 7,
                 "preferred_season": "spring",
-                "travel_frequency": "quarterly"
-            }
+                "travel_frequency": "quarterly",
+            },
         }
-        
+
         return service
 
     @pytest.fixture
@@ -142,8 +142,7 @@ class TestMemorySystemIntegration:
         memories = data["memories"]
         assert len(memories) > 0
         assert all(
-            key in memories[0]
-            for key in ["id", "content", "category", "created_at"]
+            key in memories[0] for key in ["id", "content", "category", "created_at"]
         )
 
         # Verify preferences structure
@@ -192,7 +191,7 @@ class TestMemorySystemIntegration:
             mock_memory_service, "store_conversation_memory"
         ) as mock_store:
             mock_store.return_value = {"status": "success", "memory_id": "mem-123"}
-            
+
             result = await mock_memory_service.store_conversation_memory(
                 messages=messages, user_id=123, session_id="session-123"
             )
@@ -267,7 +266,7 @@ class TestMemorySystemIntegration:
             assert response.status_code == 200
 
             data = response.json()
-            
+
             # Verify all required fields for frontend
             assert isinstance(data["memories"], list)
             assert isinstance(data["preferences"], dict)
@@ -286,12 +285,11 @@ class TestMemorySystemIntegration:
         """Test concurrent memory operations."""
         # Simulate multiple concurrent operations
         tasks = [
-            mock_memory_service.search_memories(123, f"query{i}")
-            for i in range(5)
+            mock_memory_service.search_memories(123, f"query{i}") for i in range(5)
         ]
-        
+
         results = await asyncio.gather(*tasks)
-        
+
         # All should succeed
         assert len(results) == 5
         assert all(len(result) == 2 for result in results)

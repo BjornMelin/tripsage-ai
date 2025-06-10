@@ -41,7 +41,7 @@ WEB_CACHE_NAMESPACE = "web-search"
 
 class MockWebSearchTool:
     """Mock WebSearchTool for testing and development.
-    
+
     This class provides a basic implementation to replace the missing
     OpenAI Agents SDK WebSearchTool for testing purposes.
     """
@@ -59,7 +59,9 @@ class MockWebSearchTool:
         """
         self.user_location = user_location
         self.search_context_size = search_context_size
-        logger.info(f"Initialized MockWebSearchTool with context size '{search_context_size}'")
+        logger.info(
+            f"Initialized MockWebSearchTool with context size '{search_context_size}'"
+        )
 
     async def _run(self, query: str, **kwargs: Any) -> Any:
         """Execute a mock web search.
@@ -72,7 +74,7 @@ class MockWebSearchTool:
             Mock search results
         """
         logger.info(f"Mock web search for: {query}")
-        
+
         # Return mock search results for testing
         return {
             "status": "success",
@@ -80,16 +82,16 @@ class MockWebSearchTool:
                 {
                     "title": f"Mock result for: {query}",
                     "snippet": f"This is a mock search result for the query '{query}'. "
-                              "In a real implementation, this would contain actual web search results.",
-                    "link": f"https://example.com/search?q={query.replace(' ', '+')}"
+                    "In a real implementation, this would contain actual web search results.",
+                    "link": f"https://example.com/search?q={query.replace(' ', '+')}",
                 }
             ],
             "query": query,
             "search_metadata": {
                 "total_results": 1,
                 "search_time": "0.1s",
-                "provider": "MockSearchProvider"
-            }
+                "provider": "MockSearchProvider",
+            },
         }
 
 

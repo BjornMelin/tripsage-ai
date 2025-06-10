@@ -40,7 +40,9 @@ describe("ResetPasswordForm", () => {
       // Check form elements
       expect(screen.getByLabelText("Email Address")).toBeInTheDocument();
       expect(screen.getByPlaceholderText("john@example.com")).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: /send reset instructions/i })).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: /send reset instructions/i })
+      ).toBeInTheDocument();
 
       // Check helper text
       expect(
@@ -48,11 +50,17 @@ describe("ResetPasswordForm", () => {
       ).toBeInTheDocument();
 
       // Check footer links
-      expect(screen.getByRole("link", { name: /back to sign in/i })).toBeInTheDocument();
-      expect(screen.getByRole("link", { name: /contact support/i })).toBeInTheDocument();
+      expect(
+        screen.getByRole("link", { name: /back to sign in/i })
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("link", { name: /contact support/i })
+      ).toBeInTheDocument();
 
       // Check that development info is NOT shown in production
-      expect(screen.queryByText("Development Mode - Test Password Reset")).not.toBeInTheDocument();
+      expect(
+        screen.queryByText("Development Mode - Test Password Reset")
+      ).not.toBeInTheDocument();
     });
 
     it("should accept custom className prop", () => {
@@ -65,9 +73,15 @@ describe("ResetPasswordForm", () => {
       vi.stubEnv("NODE_ENV", "development");
       render(<ResetPasswordForm />);
 
-      expect(screen.getByText("Development Mode - Test Password Reset")).toBeInTheDocument();
-      expect(screen.getByText("Reset instructions will be logged to console")).toBeInTheDocument();
-      expect(screen.getByText("Check browser console for mock email content")).toBeInTheDocument();
+      expect(
+        screen.getByText("Development Mode - Test Password Reset")
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText("Reset instructions will be logged to console")
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText("Check browser console for mock email content")
+      ).toBeInTheDocument();
     });
   });
 
@@ -84,7 +98,9 @@ describe("ResetPasswordForm", () => {
 
     it("should enable submit button when email is empty (validation happens on submit)", () => {
       render(<ResetPasswordForm />);
-      const submitButton = screen.getByRole("button", { name: /send reset instructions/i });
+      const submitButton = screen.getByRole("button", {
+        name: /send reset instructions/i,
+      });
 
       expect(submitButton).toBeEnabled();
     });
@@ -93,7 +109,9 @@ describe("ResetPasswordForm", () => {
       const user = userEvent.setup();
       render(<ResetPasswordForm />);
       const emailInput = screen.getByLabelText("Email Address");
-      const submitButton = screen.getByRole("button", { name: /send reset instructions/i });
+      const submitButton = screen.getByRole("button", {
+        name: /send reset instructions/i,
+      });
 
       await user.type(emailInput, "test@example.com");
 
@@ -108,10 +126,10 @@ describe("ResetPasswordForm", () => {
 
       // Clear the input and submit the form directly
       await user.clear(emailInput);
-      
+
       // Debug: check if input is actually empty
       expect(emailInput).toHaveValue("");
-      
+
       // Submit the form directly instead of clicking the button
       fireEvent.submit(form!);
 
@@ -127,7 +145,9 @@ describe("ResetPasswordForm", () => {
       render(<ResetPasswordForm />);
 
       const emailInput = screen.getByLabelText("Email Address");
-      const submitButton = screen.getByRole("button", { name: /send reset instructions/i });
+      const submitButton = screen.getByRole("button", {
+        name: /send reset instructions/i,
+      });
 
       await user.type(emailInput, "test@example.com");
       await user.click(submitButton);
@@ -159,7 +179,9 @@ describe("ResetPasswordForm", () => {
     it("should have proper form structure and labels", () => {
       render(<ResetPasswordForm />);
 
-      const form = screen.getByRole("button", { name: /send reset instructions/i }).closest("form");
+      const form = screen
+        .getByRole("button", { name: /send reset instructions/i })
+        .closest("form");
       expect(form).toBeInTheDocument();
 
       const emailInput = screen.getByLabelText("Email Address");
@@ -237,15 +259,15 @@ describe("ResetPasswordFormSkeleton", () => {
 
   it("should have proper card structure", () => {
     const { container } = render(<ResetPasswordFormSkeleton />);
-    
+
     // Check for card structure classes
     const card = container.querySelector(".rounded-lg.border");
     expect(card).toBeInTheDocument();
-    
+
     // Check for header and content sections
     const headerSection = container.querySelector(".flex.flex-col.p-6.space-y-1");
     const contentSection = container.querySelector(".p-6.pt-0");
-    
+
     expect(headerSection).toBeInTheDocument();
     expect(contentSection).toBeInTheDocument();
   });

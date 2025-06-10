@@ -15,9 +15,6 @@ from tripsage_core.exceptions.exceptions import (
     CoreResourceNotFoundError as NotFoundError,
 )
 from tripsage_core.exceptions.exceptions import (
-    CoreServiceError as ServiceError,
-)
-from tripsage_core.exceptions.exceptions import (
     CoreValidationError as ValidationError,
 )
 from tripsage_core.services.business.accommodation_service import (
@@ -220,7 +217,7 @@ class TestAccommodationService:
         assert isinstance(result, AccommodationSearchResponse)
         assert len(result.listings) == 3
         assert result.total_results == 3
-        
+
         # Verify mock data characteristics
         assert all(listing.location.city == "Paris" for listing in result.listings)
         assert all(listing.is_available for listing in result.listings)
@@ -252,8 +249,7 @@ class TestAccommodationService:
         )
 
         result = await accommodation_service.get_listing_details(
-            sample_accommodation_listing.id,
-            user_id="test-user-id"
+            sample_accommodation_listing.id, user_id="test-user-id"
         )
 
         assert result is not None
@@ -261,8 +257,7 @@ class TestAccommodationService:
         assert result.name == sample_accommodation_listing.name
 
         mock_database_service.get_accommodation_listing.assert_called_once_with(
-            sample_accommodation_listing.id,
-            "test-user-id"
+            sample_accommodation_listing.id, "test-user-id"
         )
 
     @pytest.mark.asyncio
@@ -274,7 +269,9 @@ class TestAccommodationService:
 
         mock_database_service.get_accommodation_listing.return_value = None
 
-        result = await accommodation_service.get_listing_details(listing_id, user_id="test-user-id")
+        result = await accommodation_service.get_listing_details(
+            listing_id, user_id="test-user-id"
+        )
         assert result is None
 
     @pytest.mark.asyncio
@@ -317,7 +314,9 @@ class TestAccommodationService:
         assert isinstance(result, AccommodationBooking)
         assert result.user_id == user_id
         assert result.listing_id == sample_accommodation_listing.id
-        assert result.status == BookingStatus.BOOKED  # Default status when not hold_only
+        assert (
+            result.status == BookingStatus.BOOKED
+        )  # Default status when not hold_only
 
         # Verify database calls
         mock_database_service.get_accommodation_listing.assert_called_once_with(
@@ -424,12 +423,11 @@ class TestAccommodationService:
 
         # When user_id doesn't match, get_accommodation_booking returns None
         mock_database_service.get_accommodation_booking.return_value = None
-        
+
         with pytest.raises(NotFoundError, match="Accommodation booking not found"):
             await accommodation_service.cancel_booking(
                 booking_id=sample_accommodation_booking.id, user_id=different_user_id
             )
-
 
     @pytest.mark.asyncio
     async def test_get_accommodation_service_dependency(self):
@@ -470,9 +468,7 @@ class TestAccommodationService:
             "total": 1,
         }
 
-        result = await accommodation_service.search_accommodations(
-            search_request
-        )
+        result = await accommodation_service.search_accommodations(search_request)
 
         # Since no external_service is set, it will use mock listings
         assert isinstance(result, AccommodationSearchResponse)

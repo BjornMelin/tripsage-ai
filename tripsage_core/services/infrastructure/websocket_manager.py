@@ -14,8 +14,8 @@ from datetime import datetime
 from typing import Deque, Dict, List, Optional, Set
 from uuid import UUID, uuid4
 
-from fastapi import WebSocket
 import jwt
+from fastapi import WebSocket
 from pydantic import BaseModel, Field
 
 from tripsage_core.config.base_app_settings import get_settings

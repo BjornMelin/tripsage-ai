@@ -6,17 +6,16 @@ ensuring proper authentication, search functionality, and booking workflows.
 """
 
 from datetime import datetime, timedelta
-from decimal import Decimal
 from unittest.mock import AsyncMock
 
 import pytest
 
 from tripsage_core.services.business.flight_service import (
-    FlightService,
-    FlightSearchRequest,
-    FlightPassenger,
-    PassengerType,
     CabinClass,
+    FlightPassenger,
+    FlightSearchRequest,
+    FlightService,
+    PassengerType,
 )
 from tripsage_core.services.external_apis.duffel_http_client import DuffelHTTPClient
 
@@ -34,7 +33,9 @@ class TestDuffelAPIIntegration:
     def flights_service(self, mock_duffel_client):
         """Create flights service with mocked Duffel client."""
         mock_db = AsyncMock()
-        service = FlightService(database_service=mock_db, external_flight_service=mock_duffel_client)
+        service = FlightService(
+            database_service=mock_db, external_flight_service=mock_duffel_client
+        )
         return service
 
     @pytest.fixture
@@ -46,9 +47,7 @@ class TestDuffelAPIIntegration:
             destination="JFK",
             departure_date=tomorrow,
             return_date=tomorrow + timedelta(days=7),
-            passengers=[
-                FlightPassenger(type=PassengerType.ADULT)
-            ],
+            passengers=[FlightPassenger(type=PassengerType.ADULT)],
             cabin_class=CabinClass.ECONOMY,
         )
 
@@ -121,11 +120,11 @@ class TestDuffelAPIIntegration:
 
         # Assertions
         assert result is not None
-        assert hasattr(result, 'offers')
+        assert hasattr(result, "offers")
         # Note: The mock returns an empty list since we haven't set up proper mock offers
         # The test is mainly checking that the API integration works
         assert isinstance(result.offers, list)
-        
+
         # Verify search metadata
         assert result.search_id is not None
         assert result.total_results == 0  # No mock offers were created
@@ -149,7 +148,7 @@ class TestDuffelAPIIntegration:
         result = await flights_service.search_flights(sample_flight_search_request)
 
         assert result is not None
-        assert hasattr(result, 'offers')
+        assert hasattr(result, "offers")
         assert len(result.offers) == 0
         assert result.total_results == 0
 
@@ -163,9 +162,9 @@ class TestDuffelAPIIntegration:
 
         # The service handles errors gracefully and returns empty results
         result = await flights_service.search_flights(sample_flight_search_request)
-        
+
         assert result is not None
-        assert hasattr(result, 'offers')
+        assert hasattr(result, "offers")
         assert len(result.offers) == 0
         assert result.total_results == 0
 
@@ -201,21 +200,27 @@ class TestDuffelAPIIntegration:
             "status": "booked",
             "offer_id": "off_123",
             "trip_id": "trip_123",
-            "passengers": [{"type": "adult", "given_name": "John", "family_name": "Doe"}],
-            "outbound_segments": [{
-                "origin": "LAX",
-                "destination": "JFK",
-                "departure_date": "2024-06-01T10:00:00Z",
-                "arrival_date": "2024-06-01T18:00:00Z"
-            }],
+            "passengers": [
+                {"type": "adult", "given_name": "John", "family_name": "Doe"}
+            ],
+            "outbound_segments": [
+                {
+                    "origin": "LAX",
+                    "destination": "JFK",
+                    "departure_date": "2024-06-01T10:00:00Z",
+                    "arrival_date": "2024-06-01T18:00:00Z",
+                }
+            ],
             "total_price": 300.0,
             "currency": "USD",
-            "booked_at": "2024-05-01T10:00:00Z"
+            "booked_at": "2024-05-01T10:00:00Z",
         }
-        
+
         # Mock get_flight_booking
-        flights_service.db.get_flight_booking = AsyncMock(return_value=mock_booking_data)
-        
+        flights_service.db.get_flight_booking = AsyncMock(
+            return_value=mock_booking_data
+        )
+
         # Mock update_flight_booking to return True (success)
         flights_service.db.update_flight_booking = AsyncMock(return_value=True)
 
@@ -223,9 +228,11 @@ class TestDuffelAPIIntegration:
 
         # The cancel_booking method returns a boolean
         assert result is True
-        
+
         # Verify database was called correctly
-        flights_service.db.get_flight_booking.assert_called_once_with(booking_id, user_id)
+        flights_service.db.get_flight_booking.assert_called_once_with(
+            booking_id, user_id
+        )
         flights_service.db.update_flight_booking.assert_called_once_with(
             booking_id, {"status": "cancelled"}
         )
@@ -244,9 +251,9 @@ class TestDuffelAPIIntegration:
 
         # The service handles authentication errors gracefully
         result = await flights_service.search_flights(sample_flight_search_request)
-        
+
         assert result is not None
-        assert hasattr(result, 'offers')
+        assert hasattr(result, "offers")
         assert len(result.offers) == 0
 
     @pytest.mark.asyncio
@@ -259,9 +266,9 @@ class TestDuffelAPIIntegration:
 
         # The service handles rate limit errors gracefully
         result = await flights_service.search_flights(sample_flight_search_request)
-        
+
         assert result is not None
-        assert hasattr(result, 'offers')
+        assert hasattr(result, "offers")
         assert len(result.offers) == 0
 
     @pytest.mark.asyncio
@@ -276,9 +283,9 @@ class TestDuffelAPIIntegration:
 
         # The service handles timeout errors gracefully
         result = await flights_service.search_flights(sample_flight_search_request)
-        
+
         assert result is not None
-        assert hasattr(result, 'offers')
+        assert hasattr(result, "offers")
         assert len(result.offers) == 0
 
     @pytest.mark.asyncio
@@ -287,12 +294,13 @@ class TestDuffelAPIIntegration:
         # Create a valid FlightSearchRequest (validation happens at Pydantic level)
         # Use valid 3-letter airport codes but simulate API rejection
         from datetime import datetime, timedelta
+
         request = FlightSearchRequest(
             origin="XXX",  # Valid format but non-existent airport
             destination="YYY",  # Valid format but non-existent airport
             departure_date=datetime.now() + timedelta(days=1),
             passengers=[FlightPassenger(type=PassengerType.ADULT)],
-            cabin_class=CabinClass.ECONOMY
+            cabin_class=CabinClass.ECONOMY,
         )
 
         # Mock API validation error for non-existent airports
@@ -302,9 +310,9 @@ class TestDuffelAPIIntegration:
 
         # The service handles validation errors gracefully
         result = await flights_service.search_flights(request)
-        
+
         assert result is not None
-        assert hasattr(result, 'offers')
+        assert hasattr(result, "offers")
         assert len(result.offers) == 0
 
     @pytest.mark.asyncio
@@ -321,7 +329,7 @@ class TestDuffelAPIIntegration:
 
         # The service handles network errors gracefully
         result = await flights_service.search_flights(sample_flight_search_request)
-        
+
         assert result is not None
-        assert hasattr(result, 'offers')
+        assert hasattr(result, "offers")
         assert len(result.offers) == 0

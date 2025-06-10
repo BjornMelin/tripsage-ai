@@ -6,15 +6,12 @@ message handling, persistence, and cleanup across the application stack.
 Uses modern Principal-based authentication.
 """
 
-import asyncio
-import json
 from datetime import datetime
 from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from tripsage.agents.chat import ChatAgent
 from tripsage.api.main import app
@@ -53,7 +50,7 @@ class TestChatSessionFlow:
             email=mock_user.email,
             auth_method="jwt",
             scopes=[],
-            metadata={}
+            metadata={},
         )
 
     @pytest.fixture
@@ -111,9 +108,7 @@ class TestChatSessionFlow:
         ) as mock_service_dep:
             mock_service_dep.return_value = mock_chat_service
 
-            with patch(
-                "tripsage.api.core.dependencies.require_principal"
-            ) as mock_auth:
+            with patch("tripsage.api.core.dependencies.require_principal") as mock_auth:
                 mock_auth.return_value = mock_principal
 
                 # Test session creation
@@ -142,9 +137,7 @@ class TestChatSessionFlow:
         ) as mock_service_dep:
             mock_service_dep.return_value = mock_chat_service
 
-            with patch(
-                "tripsage.agents.chat.ChatAgent"
-            ) as mock_agent_class:
+            with patch("tripsage.agents.chat.ChatAgent") as mock_agent_class:
                 mock_agent_class.return_value = mock_chat_agent
 
                 with patch(
@@ -165,7 +158,10 @@ class TestChatSessionFlow:
                     assert response.status_code == 200
                     response_data = response.json()
                     assert "message" in response_data
-                    assert response_data["message"]["content"] == "Hello, can you help me plan a trip?"
+                    assert (
+                        response_data["message"]["content"]
+                        == "Hello, can you help me plan a trip?"
+                    )
 
                     # Verify services were called
                     mock_chat_service.send_message.assert_called_once()
@@ -181,9 +177,7 @@ class TestChatSessionFlow:
         ) as mock_service_dep:
             mock_service_dep.return_value = mock_chat_service
 
-            with patch(
-                "tripsage.api.core.dependencies.require_principal"
-            ) as mock_auth:
+            with patch("tripsage.api.core.dependencies.require_principal") as mock_auth:
                 mock_auth.return_value = mock_principal
 
                 session_id = str(uuid4())
@@ -213,9 +207,7 @@ class TestChatSessionFlow:
         ) as mock_service_dep:
             mock_service_dep.return_value = mock_chat_service
 
-            with patch(
-                "tripsage.api.core.dependencies.require_principal"
-            ) as mock_auth:
+            with patch("tripsage.api.core.dependencies.require_principal") as mock_auth:
                 mock_auth.return_value = mock_principal
 
                 session_id = str(uuid4())
@@ -244,13 +236,13 @@ class TestChatSessionFlow:
         ) as mock_service_dep:
             mock_service_dep.return_value = mock_chat_service
 
-            with patch(
-                "tripsage.api.core.dependencies.require_principal"
-            ) as mock_auth:
+            with patch("tripsage.api.core.dependencies.require_principal") as mock_auth:
                 mock_auth.return_value = mock_principal
 
                 # Configure service to raise exception
-                mock_chat_service.send_message.side_effect = Exception("Chat service error")
+                mock_chat_service.send_message.side_effect = Exception(
+                    "Chat service error"
+                )
 
                 session_id = str(uuid4())
 
@@ -268,17 +260,15 @@ class TestChatSessionFlow:
     @pytest.mark.asyncio
     async def test_chat_authentication_flow(self, client):
         """Test authentication in chat flow."""
-        with patch(
-            "tripsage.api.core.dependencies.require_principal"
-        ) as mock_auth:
+        with patch("tripsage.api.core.dependencies.require_principal") as mock_auth:
             # Configure authentication to fail
             from tripsage_core.exceptions.exceptions import CoreAuthenticationError
+
             mock_auth.side_effect = CoreAuthenticationError("Invalid token")
 
             # Test API call with invalid authentication
             response = client.get(
-                "/api/chat/sessions",
-                headers={"Authorization": "Bearer invalid-token"}
+                "/api/chat/sessions", headers={"Authorization": "Bearer invalid-token"}
             )
 
             # Verify authentication error response
@@ -294,9 +284,7 @@ class TestChatSessionFlow:
         ) as mock_service_dep:
             mock_service_dep.return_value = mock_chat_service
 
-            with patch(
-                "tripsage.agents.chat.ChatAgent"
-            ) as mock_agent_class:
+            with patch("tripsage.agents.chat.ChatAgent") as mock_agent_class:
                 mock_agent_class.return_value = mock_chat_agent
 
                 with patch(
@@ -322,9 +310,7 @@ class TestChatSessionFlow:
     @pytest.mark.asyncio
     async def test_chat_validation_flow(self, client, mock_principal):
         """Test data validation in chat flow."""
-        with patch(
-            "tripsage.api.core.dependencies.require_principal"
-        ) as mock_auth:
+        with patch("tripsage.api.core.dependencies.require_principal") as mock_auth:
             mock_auth.return_value = mock_principal
 
             session_id = str(uuid4())
@@ -351,9 +337,7 @@ class TestChatSessionFlow:
         ) as mock_service_dep:
             mock_service_dep.return_value = mock_chat_service
 
-            with patch(
-                "tripsage.api.core.dependencies.require_principal"
-            ) as mock_auth:
+            with patch("tripsage.api.core.dependencies.require_principal") as mock_auth:
                 mock_auth.return_value = mock_principal
 
                 # Test WebSocket connection endpoint

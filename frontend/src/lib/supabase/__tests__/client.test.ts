@@ -1,197 +1,197 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { createBrowserClient } from '@supabase/ssr'
-import { createClient } from '../client'
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { createBrowserClient } from "@supabase/ssr";
+import { createClient } from "../client";
 
 // Mock the @supabase/ssr module
-vi.mock('@supabase/ssr', () => ({
-  createBrowserClient: vi.fn()
-}))
+vi.mock("@supabase/ssr", () => ({
+  createBrowserClient: vi.fn(),
+}));
 
-describe('Supabase Browser Client', () => {
-  const mockSupabaseUrl = 'https://test.supabase.co'
-  const mockSupabaseAnonKey = 'test-anon-key'
+describe("Supabase Browser Client", () => {
+  const mockSupabaseUrl = "https://test.supabase.co";
+  const mockSupabaseAnonKey = "test-anon-key";
 
   beforeEach(() => {
-    vi.resetAllMocks()
+    vi.resetAllMocks();
     // Reset environment variables
-    vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', '')
-    vi.stubEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY', '')
-  })
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "");
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "");
+  });
 
-  it('should create a browser client with valid environment variables', () => {
+  it("should create a browser client with valid environment variables", () => {
     // Set environment variables
-    vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', mockSupabaseUrl)
-    vi.stubEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY', mockSupabaseAnonKey)
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", mockSupabaseUrl);
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", mockSupabaseAnonKey);
 
-    const mockClient = { auth: {}, from: vi.fn() }
-    vi.mocked(createBrowserClient).mockReturnValue(mockClient as any)
+    const mockClient = { auth: {}, from: vi.fn() };
+    vi.mocked(createBrowserClient).mockReturnValue(mockClient as any);
 
-    const client = createClient()
+    const client = createClient();
 
     expect(createBrowserClient).toHaveBeenCalledWith(
       mockSupabaseUrl,
       mockSupabaseAnonKey
-    )
-    expect(client).toBe(mockClient)
-  })
+    );
+    expect(client).toBe(mockClient);
+  });
 
-  it('should throw an error when NEXT_PUBLIC_SUPABASE_URL is missing', () => {
-    vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', '')
-    vi.stubEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY', mockSupabaseAnonKey)
-
-    expect(() => createClient()).toThrow(
-      'Missing Supabase environment variables. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY'
-    )
-    
-    expect(createBrowserClient).not.toHaveBeenCalled()
-  })
-
-  it('should throw an error when NEXT_PUBLIC_SUPABASE_ANON_KEY is missing', () => {
-    vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', mockSupabaseUrl)
-    vi.stubEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY', '')
+  it("should throw an error when NEXT_PUBLIC_SUPABASE_URL is missing", () => {
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "");
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", mockSupabaseAnonKey);
 
     expect(() => createClient()).toThrow(
-      'Missing Supabase environment variables. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY'
-    )
-    
-    expect(createBrowserClient).not.toHaveBeenCalled()
-  })
+      "Missing Supabase environment variables. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY"
+    );
 
-  it('should throw an error when both environment variables are missing', () => {
-    vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', '')
-    vi.stubEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY', '')
+    expect(createBrowserClient).not.toHaveBeenCalled();
+  });
 
-    expect(() => createClient()).toThrow(
-      'Missing Supabase environment variables. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY'
-    )
-    
-    expect(createBrowserClient).not.toHaveBeenCalled()
-  })
-
-  it('should throw error when environment variables are undefined', () => {
-    vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', undefined)
-    vi.stubEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY', undefined)
+  it("should throw an error when NEXT_PUBLIC_SUPABASE_ANON_KEY is missing", () => {
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", mockSupabaseUrl);
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "");
 
     expect(() => createClient()).toThrow(
-      'Missing Supabase environment variables. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY'
-    )
-    
-    expect(createBrowserClient).not.toHaveBeenCalled()
-  })
+      "Missing Supabase environment variables. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY"
+    );
 
-  it('should handle production-like environment variables', () => {
-    const prodUrl = 'https://abcdefghijklmnop.supabase.co'
-    const prodKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.test-key'
+    expect(createBrowserClient).not.toHaveBeenCalled();
+  });
 
-    vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', prodUrl)
-    vi.stubEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY', prodKey)
+  it("should throw an error when both environment variables are missing", () => {
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "");
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "");
 
-    const mockClient = { auth: {}, from: vi.fn() }
-    vi.mocked(createBrowserClient).mockReturnValue(mockClient as any)
+    expect(() => createClient()).toThrow(
+      "Missing Supabase environment variables. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY"
+    );
 
-    const client = createClient()
+    expect(createBrowserClient).not.toHaveBeenCalled();
+  });
 
-    expect(createBrowserClient).toHaveBeenCalledWith(prodUrl, prodKey)
-    expect(client).toBe(mockClient)
-  })
+  it("should throw error when environment variables are undefined", () => {
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", undefined);
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", undefined);
 
-  it('should handle local development environment variables', () => {
-    const localUrl = 'http://localhost:54321'
-    const localKey = 'local-anon-key'
+    expect(() => createClient()).toThrow(
+      "Missing Supabase environment variables. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY"
+    );
 
-    vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', localUrl)
-    vi.stubEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY', localKey)
+    expect(createBrowserClient).not.toHaveBeenCalled();
+  });
 
-    const mockClient = { auth: {}, from: vi.fn() }
-    vi.mocked(createBrowserClient).mockReturnValue(mockClient as any)
+  it("should handle production-like environment variables", () => {
+    const prodUrl = "https://abcdefghijklmnop.supabase.co";
+    const prodKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.test-key";
 
-    const client = createClient()
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", prodUrl);
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", prodKey);
 
-    expect(createBrowserClient).toHaveBeenCalledWith(localUrl, localKey)
-    expect(client).toBe(mockClient)
-  })
+    const mockClient = { auth: {}, from: vi.fn() };
+    vi.mocked(createBrowserClient).mockReturnValue(mockClient as any);
 
-  it('should create new client instance on each call', () => {
-    vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', mockSupabaseUrl)
-    vi.stubEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY', mockSupabaseAnonKey)
+    const client = createClient();
 
-    const mockClient1 = { auth: {}, from: vi.fn(), id: 1 }
-    const mockClient2 = { auth: {}, from: vi.fn(), id: 2 }
-    
+    expect(createBrowserClient).toHaveBeenCalledWith(prodUrl, prodKey);
+    expect(client).toBe(mockClient);
+  });
+
+  it("should handle local development environment variables", () => {
+    const localUrl = "http://localhost:54321";
+    const localKey = "local-anon-key";
+
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", localUrl);
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", localKey);
+
+    const mockClient = { auth: {}, from: vi.fn() };
+    vi.mocked(createBrowserClient).mockReturnValue(mockClient as any);
+
+    const client = createClient();
+
+    expect(createBrowserClient).toHaveBeenCalledWith(localUrl, localKey);
+    expect(client).toBe(mockClient);
+  });
+
+  it("should create new client instance on each call", () => {
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", mockSupabaseUrl);
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", mockSupabaseAnonKey);
+
+    const mockClient1 = { auth: {}, from: vi.fn(), id: 1 };
+    const mockClient2 = { auth: {}, from: vi.fn(), id: 2 };
+
     vi.mocked(createBrowserClient)
       .mockReturnValueOnce(mockClient1 as any)
-      .mockReturnValueOnce(mockClient2 as any)
+      .mockReturnValueOnce(mockClient2 as any);
 
-    const client1 = createClient()
-    const client2 = createClient()
+    const client1 = createClient();
+    const client2 = createClient();
 
-    expect(createBrowserClient).toHaveBeenCalledTimes(2)
-    expect(client1).toBe(mockClient1)
-    expect(client2).toBe(mockClient2)
-  })
+    expect(createBrowserClient).toHaveBeenCalledTimes(2);
+    expect(client1).toBe(mockClient1);
+    expect(client2).toBe(mockClient2);
+  });
 
-  it('should handle client creation errors from createBrowserClient', () => {
-    vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', mockSupabaseUrl)
-    vi.stubEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY', mockSupabaseAnonKey)
+  it("should handle client creation errors from createBrowserClient", () => {
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", mockSupabaseUrl);
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", mockSupabaseAnonKey);
 
-    const error = new Error('Failed to create Supabase client')
+    const error = new Error("Failed to create Supabase client");
     vi.mocked(createBrowserClient).mockImplementation(() => {
-      throw error
-    })
+      throw error;
+    });
 
-    expect(() => createClient()).toThrow('Failed to create Supabase client')
-  })
+    expect(() => createClient()).toThrow("Failed to create Supabase client");
+  });
 
-  it('should validate URL format by passing it to createBrowserClient', () => {
-    const invalidUrl = 'not-a-url'
-    const validKey = 'test-anon-key'
+  it("should validate URL format by passing it to createBrowserClient", () => {
+    const invalidUrl = "not-a-url";
+    const validKey = "test-anon-key";
 
-    vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', invalidUrl)
-    vi.stubEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY', validKey)
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", invalidUrl);
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", validKey);
 
-    const mockClient = { auth: {}, from: vi.fn() }
-    vi.mocked(createBrowserClient).mockReturnValue(mockClient as any)
+    const mockClient = { auth: {}, from: vi.fn() };
+    vi.mocked(createBrowserClient).mockReturnValue(mockClient as any);
 
-    const client = createClient()
+    const client = createClient();
 
     // The client creation should still work - URL validation is handled by Supabase
-    expect(createBrowserClient).toHaveBeenCalledWith(invalidUrl, validKey)
-    expect(client).toBe(mockClient)
-  })
+    expect(createBrowserClient).toHaveBeenCalledWith(invalidUrl, validKey);
+    expect(client).toBe(mockClient);
+  });
 
-  it('should handle empty string but defined environment variables', () => {
-    vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', '')
-    vi.stubEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY', mockSupabaseAnonKey)
+  it("should handle empty string but defined environment variables", () => {
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "");
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", mockSupabaseAnonKey);
 
     expect(() => createClient()).toThrow(
-      'Missing Supabase environment variables. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY'
-    )
-  })
+      "Missing Supabase environment variables. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY"
+    );
+  });
 
-  it('should handle client with complex auth methods', () => {
-    vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', mockSupabaseUrl)
-    vi.stubEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY', mockSupabaseAnonKey)
+  it("should handle client with complex auth methods", () => {
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", mockSupabaseUrl);
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", mockSupabaseAnonKey);
 
     const mockAuth = {
       signInWithPassword: vi.fn(),
       signUp: vi.fn(),
       signOut: vi.fn(),
       getUser: vi.fn(),
-      onAuthStateChange: vi.fn()
-    }
-    const mockClient = { 
-      auth: mockAuth, 
+      onAuthStateChange: vi.fn(),
+    };
+    const mockClient = {
+      auth: mockAuth,
       from: vi.fn(),
       storage: { from: vi.fn() },
-      realtime: { channel: vi.fn() }
-    }
-    vi.mocked(createBrowserClient).mockReturnValue(mockClient as any)
+      realtime: { channel: vi.fn() },
+    };
+    vi.mocked(createBrowserClient).mockReturnValue(mockClient as any);
 
-    const client = createClient()
+    const client = createClient();
 
-    expect(client.auth).toBe(mockAuth)
-    expect(client.from).toBeDefined()
-    expect(client.storage).toBeDefined()
-    expect(client.realtime).toBeDefined()
-  })
-})
+    expect(client.auth).toBe(mockAuth);
+    expect(client.from).toBeDefined();
+    expect(client.storage).toBeDefined();
+    expect(client.realtime).toBeDefined();
+  });
+});

@@ -6,12 +6,11 @@ Tests core functionality with proper mocking and realistic scenarios.
 
 import json
 from unittest.mock import AsyncMock, MagicMock, patch
-from typing import Any, Dict
 
 import pytest
 
-from tripsage_core.services.infrastructure.cache_service import CacheService
 from tripsage_core.exceptions.exceptions import CoreServiceError
+from tripsage_core.services.infrastructure.cache_service import CacheService
 
 
 @pytest.fixture
@@ -68,7 +67,9 @@ class TestCacheServiceBasics:
 
     def test_initialization_without_settings(self):
         """Test CacheService with default settings."""
-        with patch('tripsage_core.services.infrastructure.cache_service.get_settings') as mock_get_settings:
+        with patch(
+            "tripsage_core.services.infrastructure.cache_service.get_settings"
+        ) as mock_get_settings:
             mock_get_settings.return_value = MagicMock()
             service = CacheService()
             assert service.settings is not None
@@ -80,30 +81,32 @@ class TestConnectionManagement:
     @pytest.mark.asyncio
     async def test_connect_success(self, cache_service, mock_redis_client):
         """Test successful connection to DragonflyDB."""
-        with patch('redis.asyncio.ConnectionPool.from_url') as mock_pool, \
-             patch('redis.asyncio.Redis') as mock_redis:
-            
+        with (
+            patch("redis.asyncio.ConnectionPool.from_url") as mock_pool,
+            patch("redis.asyncio.Redis") as mock_redis,
+        ):
             mock_pool.return_value = MagicMock()
             mock_redis.return_value = mock_redis_client
-            
+
             await cache_service.connect()
-            
+
             assert cache_service.is_connected
             mock_redis_client.ping.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_connect_failure(self, cache_service):
         """Test connection failure handling."""
-        with patch('redis.asyncio.ConnectionPool.from_url') as mock_pool, \
-             patch('redis.asyncio.Redis') as mock_redis:
-            
+        with (
+            patch("redis.asyncio.ConnectionPool.from_url") as mock_pool,
+            patch("redis.asyncio.Redis") as mock_redis,
+        ):
             mock_client = AsyncMock()
             mock_client.ping.side_effect = Exception("Connection failed")
             mock_redis.return_value = mock_client
-            
+
             with pytest.raises(CoreServiceError) as exc_info:
                 await cache_service.connect()
-            
+
             assert exc_info.value.code == "CACHE_CONNECTION_FAILED"
             assert not cache_service.is_connected
 
@@ -114,17 +117,19 @@ class TestConnectionManagement:
         cache_service._client = mock_redis_client
         cache_service._connection_pool = AsyncMock()
         cache_service._is_connected = True
-        
+
         await cache_service.disconnect()
-        
+
         assert not cache_service.is_connected
         assert cache_service._client is None
         mock_redis_client.close.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_ensure_connected_when_disconnected(self, cache_service, mock_redis_client):
+    async def test_ensure_connected_when_disconnected(
+        self, cache_service, mock_redis_client
+    ):
         """Test ensure_connected when not connected."""
-        with patch.object(cache_service, 'connect') as mock_connect:
+        with patch.object(cache_service, "connect") as mock_connect:
             await cache_service.ensure_connected()
             mock_connect.assert_called_once()
 
@@ -137,15 +142,13 @@ class TestJSONOperations:
         """Test setting JSON values."""
         cache_service._client = mock_redis_client
         cache_service._is_connected = True
-        
+
         test_data = {"key": "value", "number": 42}
         result = await cache_service.set_json("test_key", test_data, ttl=3600)
-        
+
         assert result is True
         mock_redis_client.set.assert_called_once_with(
-            "test_key", 
-            json.dumps(test_data, default=str), 
-            ex=3600
+            "test_key", json.dumps(test_data, default=str), ex=3600
         )
 
     @pytest.mark.asyncio
@@ -153,14 +156,14 @@ class TestJSONOperations:
         """Test setting JSON values with default TTL."""
         cache_service._client = mock_redis_client
         cache_service._is_connected = True
-        
+
         test_data = {"key": "value"}
         await cache_service.set_json("test_key", test_data)
-        
+
         mock_redis_client.set.assert_called_once_with(
-            "test_key", 
-            json.dumps(test_data, default=str), 
-            ex=3600  # default medium TTL
+            "test_key",
+            json.dumps(test_data, default=str),
+            ex=3600,  # default medium TTL
         )
 
     @pytest.mark.asyncio
@@ -168,12 +171,12 @@ class TestJSONOperations:
         """Test getting JSON values."""
         cache_service._client = mock_redis_client
         cache_service._is_connected = True
-        
+
         test_data = {"key": "value", "number": 42}
         mock_redis_client.get.return_value = json.dumps(test_data)
-        
+
         result = await cache_service.get_json("test_key")
-        
+
         assert result == test_data
         mock_redis_client.get.assert_called_once_with("test_key")
 
@@ -182,11 +185,13 @@ class TestJSONOperations:
         """Test getting non-existent JSON values."""
         cache_service._client = mock_redis_client
         cache_service._is_connected = True
-        
+
         mock_redis_client.get.return_value = None
-        
-        result = await cache_service.get_json("nonexistent_key", default={"default": "value"})
-        
+
+        result = await cache_service.get_json(
+            "nonexistent_key", default={"default": "value"}
+        )
+
         assert result == {"default": "value"}
 
     @pytest.mark.asyncio
@@ -194,11 +199,11 @@ class TestJSONOperations:
         """Test handling invalid JSON data."""
         cache_service._client = mock_redis_client
         cache_service._is_connected = True
-        
+
         mock_redis_client.get.return_value = "invalid json data"
-        
+
         result = await cache_service.get_json("test_key", default="default_value")
-        
+
         assert result == "default_value"
 
 
@@ -210,9 +215,9 @@ class TestStringOperations:
         """Test setting string values."""
         cache_service._client = mock_redis_client
         cache_service._is_connected = True
-        
+
         result = await cache_service.set("test_key", "test_value", ttl=1800)
-        
+
         assert result is True
         mock_redis_client.setex.assert_called_once_with("test_key", 1800, "test_value")
 
@@ -221,11 +226,11 @@ class TestStringOperations:
         """Test getting string values."""
         cache_service._client = mock_redis_client
         cache_service._is_connected = True
-        
+
         mock_redis_client.get.return_value = b"test_value"
-        
+
         result = await cache_service.get("test_key")
-        
+
         assert result == "test_value"
         mock_redis_client.get.assert_called_once_with("test_key")
 
@@ -238,11 +243,11 @@ class TestKeyOperations:
         """Test deleting keys."""
         cache_service._client = mock_redis_client
         cache_service._is_connected = True
-        
+
         mock_redis_client.delete.return_value = 2
-        
+
         result = await cache_service.delete("key1", "key2")
-        
+
         assert result == 2
         mock_redis_client.delete.assert_called_once_with("key1", "key2")
 
@@ -251,11 +256,11 @@ class TestKeyOperations:
         """Test checking key existence."""
         cache_service._client = mock_redis_client
         cache_service._is_connected = True
-        
+
         mock_redis_client.exists.return_value = 1
-        
+
         result = await cache_service.exists("test_key")
-        
+
         assert result == 1
         mock_redis_client.exists.assert_called_once_with("test_key")
 
@@ -264,9 +269,9 @@ class TestKeyOperations:
         """Test setting key expiration."""
         cache_service._client = mock_redis_client
         cache_service._is_connected = True
-        
+
         result = await cache_service.expire("test_key", 3600)
-        
+
         assert result is True
         mock_redis_client.expire.assert_called_once_with("test_key", 3600)
 
@@ -275,11 +280,11 @@ class TestKeyOperations:
         """Test getting key TTL."""
         cache_service._client = mock_redis_client
         cache_service._is_connected = True
-        
+
         mock_redis_client.ttl.return_value = 1800
-        
+
         result = await cache_service.ttl("test_key")
-        
+
         assert result == 1800
         mock_redis_client.ttl.assert_called_once_with("test_key")
 
@@ -292,11 +297,11 @@ class TestBatchOperations:
         """Test getting multiple keys."""
         cache_service._client = mock_redis_client
         cache_service._is_connected = True
-        
+
         mock_redis_client.mget.return_value = [b"value1", None, b"value3"]
-        
+
         result = await cache_service.mget(["key1", "key2", "key3"])
-        
+
         assert result == ["value1", None, "value3"]
         mock_redis_client.mget.assert_called_once_with(["key1", "key2", "key3"])
 
@@ -305,10 +310,10 @@ class TestBatchOperations:
         """Test setting multiple keys."""
         cache_service._client = mock_redis_client
         cache_service._is_connected = True
-        
+
         mapping = {"key1": "value1", "key2": "value2"}
         result = await cache_service.mset(mapping)
-        
+
         assert result is True
         mock_redis_client.mset.assert_called_once_with(mapping)
 
@@ -321,9 +326,9 @@ class TestHealthAndMaintenance:
         """Test health check when connected."""
         cache_service._client = mock_redis_client
         cache_service._is_connected = True
-        
+
         result = await cache_service.health_check()
-        
+
         assert result is True
         mock_redis_client.ping.assert_called_once()
 
@@ -331,7 +336,7 @@ class TestHealthAndMaintenance:
     async def test_health_check_disconnected(self, cache_service):
         """Test health check when disconnected."""
         result = await cache_service.health_check()
-        
+
         assert result is False
 
     @pytest.mark.asyncio
@@ -339,9 +344,9 @@ class TestHealthAndMaintenance:
         """Test flushing database."""
         cache_service._client = mock_redis_client
         cache_service._is_connected = True
-        
+
         result = await cache_service.flushdb()
-        
+
         assert result is True
         mock_redis_client.flushdb.assert_called_once()
 
@@ -354,15 +359,15 @@ class TestConvenienceMethods:
         """Test setting value with short TTL."""
         cache_service._client = mock_redis_client
         cache_service._is_connected = True
-        
+
         test_data = {"key": "value"}
         result = await cache_service.set_short("test_key", test_data)
-        
+
         assert result is True
         mock_redis_client.set.assert_called_once_with(
-            "test_key", 
-            json.dumps(test_data, default=str), 
-            ex=300  # short TTL
+            "test_key",
+            json.dumps(test_data, default=str),
+            ex=300,  # short TTL
         )
 
     @pytest.mark.asyncio
@@ -370,15 +375,15 @@ class TestConvenienceMethods:
         """Test setting value with medium TTL."""
         cache_service._client = mock_redis_client
         cache_service._is_connected = True
-        
+
         test_data = {"key": "value"}
         result = await cache_service.set_medium("test_key", test_data)
-        
+
         assert result is True
         mock_redis_client.set.assert_called_once_with(
-            "test_key", 
-            json.dumps(test_data, default=str), 
-            ex=3600  # medium TTL
+            "test_key",
+            json.dumps(test_data, default=str),
+            ex=3600,  # medium TTL
         )
 
     @pytest.mark.asyncio
@@ -386,15 +391,15 @@ class TestConvenienceMethods:
         """Test setting value with long TTL."""
         cache_service._client = mock_redis_client
         cache_service._is_connected = True
-        
+
         test_data = {"key": "value"}
         result = await cache_service.set_long("test_key", test_data)
-        
+
         assert result is True
         mock_redis_client.set.assert_called_once_with(
-            "test_key", 
-            json.dumps(test_data, default=str), 
-            ex=86400  # long TTL
+            "test_key",
+            json.dumps(test_data, default=str),
+            ex=86400,  # long TTL
         )
 
 
@@ -406,12 +411,12 @@ class TestErrorHandling:
         """Test error handling in set_json."""
         cache_service._client = mock_redis_client
         cache_service._is_connected = True
-        
+
         mock_redis_client.set.side_effect = Exception("Redis error")
-        
+
         with pytest.raises(CoreServiceError) as exc_info:
             await cache_service.set_json("test_key", {"data": "value"})
-        
+
         assert exc_info.value.code == "CACHE_SET_FAILED"
 
     @pytest.mark.asyncio
@@ -419,10 +424,10 @@ class TestErrorHandling:
         """Test error handling in get_json."""
         cache_service._client = mock_redis_client
         cache_service._is_connected = True
-        
+
         mock_redis_client.get.side_effect = Exception("Redis error")
-        
+
         with pytest.raises(CoreServiceError) as exc_info:
             await cache_service.get_json("test_key")
-        
+
         assert exc_info.value.code == "CACHE_GET_FAILED"

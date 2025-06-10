@@ -1,6 +1,6 @@
 /**
  * Simple test suite for WebSocket hooks.
- * 
+ *
  * Tests WebSocket hook public interfaces without deep mocking.
  */
 
@@ -10,8 +10,8 @@ import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Mock environment variables
-vi.stubEnv('NEXT_PUBLIC_WS_URL', 'ws://localhost:8000/api');
-vi.stubEnv('NODE_ENV', 'test');
+vi.stubEnv("NEXT_PUBLIC_WS_URL", "ws://localhost:8000/api");
+vi.stubEnv("NODE_ENV", "test");
 
 // Simple mock of the WebSocket client that focuses on structure
 vi.mock("@/lib/websocket/websocket-client", () => {
@@ -183,25 +183,21 @@ describe("WebSocket Hooks Integration", () => {
   describe("Hook Integration", () => {
     it("should allow multiple hooks to be used together", () => {
       const wrapper = createWrapper();
-      
-      const { result: agentResult } = renderHook(
-        () => useAgentStatus(),
-        { wrapper }
-      );
-      
-      const { result: wsResult } = renderHook(
-        () => useAgentStatusWebSocket(),
-        { wrapper }
-      );
+
+      const { result: agentResult } = renderHook(() => useAgentStatus(), { wrapper });
+
+      const { result: wsResult } = renderHook(() => useAgentStatusWebSocket(), {
+        wrapper,
+      });
 
       // Both hooks should provide their interfaces
-      expect(agentResult.current.startMonitoring).toBeTypeOf('function');
-      expect(wsResult.current.connect).toBeTypeOf('function');
+      expect(agentResult.current.startMonitoring).toBeTypeOf("function");
+      expect(wsResult.current.connect).toBeTypeOf("function");
     });
 
     it("should handle hook dependencies properly", () => {
       const wrapper = createWrapper();
-      
+
       // Should not throw when rendering hooks together
       expect(() => {
         renderHook(() => useAgentStatus(), { wrapper });
@@ -213,11 +209,11 @@ describe("WebSocket Hooks Integration", () => {
   describe("Error Handling", () => {
     it("should handle rendering without errors", () => {
       const wrapper = createWrapper();
-      
+
       expect(() => {
         renderHook(() => useAgentStatus(), { wrapper });
       }).not.toThrow();
-      
+
       expect(() => {
         renderHook(() => useAgentStatusWebSocket());
       }).not.toThrow();
@@ -226,11 +222,11 @@ describe("WebSocket Hooks Integration", () => {
     it("should provide stable function references", () => {
       const wrapper = createWrapper();
       const { result, rerender } = renderHook(() => useAgentStatus(), { wrapper });
-      
+
       const initialStartMonitoring = result.current.startMonitoring;
-      
+
       rerender();
-      
+
       // Functions should remain stable across rerenders
       expect(result.current.startMonitoring).toBe(initialStartMonitoring);
     });
@@ -240,7 +236,7 @@ describe("WebSocket Hooks Integration", () => {
     it("should maintain state consistency", () => {
       const wrapper = createWrapper();
       const { result } = renderHook(() => useAgentStatus(), { wrapper });
-      
+
       // State should be consistent
       expect(result.current.agents).toEqual(result.current.agents);
       expect(result.current.isMonitoring).toBe(result.current.isMonitoring);
@@ -248,13 +244,13 @@ describe("WebSocket Hooks Integration", () => {
 
     it("should handle state updates gracefully", () => {
       const { result } = renderHook(() => useAgentStatusWebSocket());
-      
+
       // Should not throw when accessing state properties
       expect(() => {
         const { status, isConnected, isDisconnected } = result.current;
-        expect(typeof status).toBe('string');
-        expect(typeof isConnected).toBe('boolean');
-        expect(typeof isDisconnected).toBe('boolean');
+        expect(typeof status).toBe("string");
+        expect(typeof isConnected).toBe("boolean");
+        expect(typeof isDisconnected).toBe("boolean");
       }).not.toThrow();
     });
   });
@@ -263,25 +259,28 @@ describe("WebSocket Hooks Integration", () => {
     it("should not cause excessive re-renders", () => {
       const wrapper = createWrapper();
       const renderCount = vi.fn();
-      
-      const { rerender } = renderHook(() => {
-        renderCount();
-        return useAgentStatus();
-      }, { wrapper });
-      
+
+      const { rerender } = renderHook(
+        () => {
+          renderCount();
+          return useAgentStatus();
+        },
+        { wrapper }
+      );
+
       const initialRenderCount = renderCount.mock.calls.length;
-      
+
       // Multiple rerenders should not cause exponential re-renders
       rerender();
       rerender();
-      
+
       expect(renderCount.mock.calls.length).toBeLessThan(initialRenderCount + 10);
     });
 
     it("should handle cleanup efficiently", () => {
       const wrapper = createWrapper();
       const { unmount } = renderHook(() => useAgentStatus(), { wrapper });
-      
+
       // Should not throw during cleanup
       expect(() => unmount()).not.toThrow();
     });

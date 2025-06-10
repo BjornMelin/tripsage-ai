@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { NextRequest } from "next/server";
+import type { NextRequest } from "next/server";
 import { POST } from "../route";
 
 // Mock global fetch
@@ -58,8 +58,8 @@ describe("/api/chat/attachments route", () => {
 
   it("should handle valid single file upload", async () => {
     // Create a real File object for better instanceof check
-    const validFile = new File(['test content'], 'test.jpg', { type: 'image/jpeg' });
-    
+    const validFile = new File(["test content"], "test.jpg", { type: "image/jpeg" });
+
     const mockRequest = {
       headers: {
         get: vi.fn((key) => {
@@ -118,8 +118,8 @@ describe("/api/chat/attachments route", () => {
       )
     );
 
-    const file1 = new File(['content1'], 'file1.png', { type: 'image/png' });
-    const file2 = new File(['content2'], 'file2.pdf', { type: 'application/pdf' });
+    const file1 = new File(["content1"], "file1.png", { type: "image/png" });
+    const file2 = new File(["content2"], "file2.pdf", { type: "application/pdf" });
 
     const mockRequest = {
       headers: {
@@ -149,10 +149,10 @@ describe("/api/chat/attachments route", () => {
 
   it("should reject files exceeding size limit", async () => {
     // Create a file with large size
-    const largeFile = new File(['content'], 'large.jpg', { type: 'image/jpeg' });
-    Object.defineProperty(largeFile, 'size', {
+    const largeFile = new File(["content"], "large.jpg", { type: "image/jpeg" });
+    Object.defineProperty(largeFile, "size", {
       value: 11 * 1024 * 1024, // 11MB
-      writable: false
+      writable: false,
     });
 
     const mockRequest = {
@@ -173,8 +173,9 @@ describe("/api/chat/attachments route", () => {
   });
 
   it("should reject more than 5 files", async () => {
-    const files = Array.from({ length: 6 }, (_, i) => 
-      new File(['content'], `file${i}.txt`, { type: 'text/plain' })
+    const files = Array.from(
+      { length: 6 },
+      (_, i) => new File(["content"], `file${i}.txt`, { type: "text/plain" })
     );
 
     const mockRequest = {
@@ -196,13 +197,10 @@ describe("/api/chat/attachments route", () => {
 
   it("should handle backend errors", async () => {
     mockFetch.mockResolvedValueOnce(
-      new Response(
-        JSON.stringify({ detail: "Backend error" }),
-        { status: 500 }
-      )
+      new Response(JSON.stringify({ detail: "Backend error" }), { status: 500 })
     );
 
-    const validFile = new File(['content'], 'test.jpg', { type: 'image/jpeg' });
+    const validFile = new File(["content"], "test.jpg", { type: "image/jpeg" });
 
     const mockRequest = {
       headers: {
@@ -228,7 +226,7 @@ describe("/api/chat/attachments route", () => {
   it("should handle network errors", async () => {
     mockFetch.mockRejectedValueOnce(new Error("Network error"));
 
-    const validFile = new File(['content'], 'test.jpg', { type: 'image/jpeg' });
+    const validFile = new File(["content"], "test.jpg", { type: "image/jpeg" });
 
     const mockRequest = {
       headers: {
@@ -252,7 +250,7 @@ describe("/api/chat/attachments route", () => {
   });
 
   it("should include authorization header when provided", async () => {
-    const validFile = new File(['content'], 'test.jpg', { type: 'image/jpeg' });
+    const validFile = new File(["content"], "test.jpg", { type: "image/jpeg" });
 
     const mockRequest = {
       headers: {

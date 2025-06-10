@@ -45,9 +45,9 @@ export function LoginForm({ redirectTo = "/dashboard", className }: LoginFormPro
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    
+
     const { email, password } = formData;
-    
+
     if (!email || !password) {
       return;
     }
@@ -57,8 +57,8 @@ export function LoginForm({ redirectTo = "/dashboard", className }: LoginFormPro
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-    
+    setFormData((prev) => ({ ...prev, [name]: value }));
+
     // Clear errors when user starts typing
     if (error) {
       clearError();
