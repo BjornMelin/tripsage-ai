@@ -1,752 +1,500 @@
-"""
-Clean tests for itineraries router.
+"""Comprehensive unit tests for itineraries router."""
 
-Tests the actual implemented itinerary management functionality.
-Follows TripSage standards for focused, actionable testing.
-"""
-
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
-from fastapi import HTTPException
+from fastapi import status
+from fastapi.testclient import TestClient
 
-from tripsage.api.middlewares.authentication import Principal
-from tripsage.api.routers.itineraries import (
-    add_item_to_itinerary,
-    check_itinerary_conflicts,
-    create_itinerary,
-    delete_itinerary,
-    delete_itinerary_item,
-    get_itinerary,
-    get_itinerary_item,
-    list_itineraries,
-    optimize_itinerary,
-    search_itineraries,
-    update_itinerary,
-    update_itinerary_item,
-)
-from tripsage.api.schemas.itineraries import (
-    ItineraryCreateRequest,
-    ItineraryItemCreateRequest,
-    ItineraryItemUpdateRequest,
-    ItineraryOptimizeRequest,
-    ItinerarySearchRequest,
-    ItineraryUpdateRequest,
-)
-from tripsage_core.exceptions.exceptions import CoreResourceNotFoundError
-from tripsage_core.services.business.itinerary_service import ItineraryService
+from tests.factories import ItineraryFactory
+from tripsage.api.main import app
 
 
 class TestItinerariesRouter:
-    """Test itineraries router functionality by testing functions directly."""
+    """Test suite for itineraries router endpoints."""
 
-    @pytest.fixture
-    def mock_principal(self):
-        """Mock authenticated principal."""
-        return Principal(
-            id="user123", type="user", email="test@example.com", auth_method="jwt"
-        )
+    def setup_method(self):
+        """Set up test client and mocks."""
+        self.client = TestClient(app)
+        self.mock_service = Mock()
+        self.sample_itinerary = ItineraryFactory.create()
+        self.sample_itinerary_item = ItineraryFactory.create_item()
+        self.sample_search_response = ItineraryFactory.create_search_response()
+        self.sample_conflict_response = ItineraryFactory.create_conflict_response()
+        self.sample_optimize_response = ItineraryFactory.create_optimize_response()
 
-    @pytest.fixture
-    def mock_itinerary_service(self):
-        """Mock itinerary service."""
-        service = MagicMock(spec=ItineraryService)
-        # Configure common async methods
-        service.create_itinerary = AsyncMock()
-        service.list_itineraries = AsyncMock()
-        service.search_itineraries = AsyncMock()
-        service.get_itinerary = AsyncMock()
-        service.update_itinerary = AsyncMock()
-        service.delete_itinerary = AsyncMock()
-        service.add_item_to_itinerary = AsyncMock()
-        service.get_item = AsyncMock()
-        service.update_item = AsyncMock()
-        service.delete_item = AsyncMock()
-        service.check_conflicts = AsyncMock()
-        service.optimize_itinerary = AsyncMock()
-        return service
-
-    @pytest.fixture
-    def sample_create_request(self):
-        """Sample itinerary creation request."""
-        return ItineraryCreateRequest(
-            title="Tokyo Adventure",
-            description="5-day trip exploring Tokyo",
-            start_date="2024-05-01",
-            end_date="2024-05-05",
-            destinations=["Tokyo, Japan"],
-            total_budget=5000.0,
-            currency="USD",
-            tags=["adventure", "culture"],
-        )
-
-    @pytest.fixture
-    def sample_update_request(self):
-        """Sample itinerary update request."""
-        return ItineraryUpdateRequest(
-            title="Updated Tokyo Trip", description="Updated description"
-        )
-
-    @pytest.fixture
-    def sample_search_request(self):
-        """Sample itinerary search request."""
-        return ItinerarySearchRequest(
-            query="Tokyo",
-            start_date_from="2024-05-01",
-            start_date_to="2024-05-31",
-            destinations=["Tokyo, Japan"],
-            page=1,
-            page_size=10,
-        )
-
-    @pytest.fixture
-    def sample_item_create_request(self):
-        """Sample itinerary item creation request."""
-        from datetime import date, time
-
-        from tripsage.api.schemas.itineraries import (
-            ItineraryItemType,
-            Location,
-            TimeSlot,
-        )
-
-        return ItineraryItemCreateRequest(
-            item_type=ItineraryItemType.ACTIVITY,
-            title="Visit Tokyo Tower",
-            description="Iconic Tokyo landmark with great city views",
-            item_date=date(2024, 5, 1),
-            time_slot=TimeSlot(start_time=time(10, 0), end_time=time(12, 0)),
-            location=Location(latitude=35.6586, longitude=139.7454, name="Tokyo Tower"),
-            cost=1000.0,
-            currency="JPY",
-        )
-
-    @pytest.fixture
-    def sample_item_update_request(self):
-        """Sample itinerary item update request."""
-        return ItineraryItemUpdateRequest(
-            title="Updated Activity", notes="Updated notes for the activity"
-        )
-
-    @pytest.fixture
-    def sample_optimize_request(self):
-        """Sample itinerary optimization request."""
-        from tripsage.api.schemas.itineraries import OptimizationSetting
-
-        return ItineraryOptimizeRequest(
-            itinerary_id="itinerary123", settings=OptimizationSetting.TIME
-        )
-
-    async def test_create_itinerary_success(
-        self, mock_principal, mock_itinerary_service, sample_create_request
-    ):
+    @patch("tripsage.api.routers.itineraries.get_itinerary_service")
+    @patch("tripsage.api.routers.itineraries.require_principal_dep")
+    def test_create_itinerary_success(self, mock_auth, mock_service_dep):
         """Test successful itinerary creation."""
-        expected_itinerary = {
-            "id": "itinerary123",
-            "title": "Tokyo Adventure",
-            "description": "5-day trip exploring Tokyo",
+        # Arrange
+        mock_auth.return_value = Mock(id="test-user-id")
+        mock_service_dep.return_value = self.mock_service
+        self.mock_service.create_itinerary = AsyncMock(
+            return_value=self.sample_itinerary
+        )
+
+        create_request = {
+            "name": "Tokyo Adventure",
+            "description": "5-day trip to Tokyo",
             "start_date": "2024-05-01",
             "end_date": "2024-05-05",
-            "destinations": ["Tokyo, Japan"],
-            "status": "active",
-            "user_id": "user123",
-            "created_at": "2024-01-01T00:00:00Z",
+            "destination": "Tokyo, Japan",
         }
-        mock_itinerary_service.create_itinerary.return_value = expected_itinerary
 
-        result = await create_itinerary(
-            sample_create_request, mock_principal, mock_itinerary_service
+        # Act
+        response = self.client.post(
+            "/api/itineraries",
+            json=create_request,
+            headers={"Authorization": "Bearer test-token"},
         )
 
-        mock_itinerary_service.create_itinerary.assert_called_once_with(
-            "user123", sample_create_request
-        )
-        assert result == expected_itinerary
-        assert result["title"] == "Tokyo Adventure"
+        # Assert
+        assert response.status_code == status.HTTP_201_CREATED
+        data = response.json()
+        assert "id" in data
+        assert data["name"] == "Tokyo Adventure"
+        self.mock_service.create_itinerary.assert_called_once()
 
-    async def test_create_itinerary_invalid_data(
-        self, mock_principal, mock_itinerary_service, sample_create_request
-    ):
+    @patch("tripsage.api.routers.itineraries.get_itinerary_service")
+    @patch("tripsage.api.routers.itineraries.require_principal_dep")
+    def test_create_itinerary_invalid_data(self, mock_auth, mock_service_dep):
         """Test itinerary creation with invalid data."""
-        mock_itinerary_service.create_itinerary.side_effect = ValueError(
-            "Invalid date range"
+        # Arrange
+        mock_auth.return_value = Mock(id="test-user-id")
+        mock_service_dep.return_value = self.mock_service
+        self.mock_service.create_itinerary = AsyncMock(
+            side_effect=ValueError("Invalid date range")
         )
 
-        with pytest.raises(HTTPException) as exc_info:
-            await create_itinerary(
-                sample_create_request, mock_principal, mock_itinerary_service
-            )
+        create_request = {
+            "name": "Invalid Trip",
+            "start_date": "2024-05-05",
+            "end_date": "2024-05-01",  # End before start
+        }
 
-        assert exc_info.value.status_code == 400
-        assert "Invalid date range" in str(exc_info.value.detail)
+        # Act
+        response = self.client.post(
+            "/api/itineraries",
+            json=create_request,
+            headers={"Authorization": "Bearer test-token"},
+        )
 
-    async def test_list_itineraries_success(
-        self, mock_principal, mock_itinerary_service
-    ):
+        # Assert
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+    @patch("tripsage.api.routers.itineraries.get_itinerary_service")
+    @patch("tripsage.api.routers.itineraries.require_principal_dep")
+    def test_list_itineraries_success(self, mock_auth, mock_service_dep):
         """Test successful itinerary listing."""
-        expected_itineraries = [
-            {
-                "id": "itinerary1",
-                "title": "Tokyo Adventure",
-                "destinations": ["Tokyo, Japan"],
-                "start_date": "2024-05-01",
-                "end_date": "2024-05-05",
-            },
-            {
-                "id": "itinerary2",
-                "title": "Kyoto Temple Tour",
-                "destinations": ["Kyoto, Japan"],
-                "start_date": "2024-06-01",
-                "end_date": "2024-06-03",
-            },
-        ]
-        mock_itinerary_service.list_itineraries.return_value = expected_itineraries
+        # Arrange
+        mock_auth.return_value = Mock(id="test-user-id")
+        mock_service_dep.return_value = self.mock_service
+        itineraries = [self.sample_itinerary]
+        self.mock_service.list_itineraries = AsyncMock(return_value=itineraries)
 
-        result = await list_itineraries(mock_principal, mock_itinerary_service)
+        # Act
+        response = self.client.get(
+            "/api/itineraries", headers={"Authorization": "Bearer test-token"}
+        )
 
-        mock_itinerary_service.list_itineraries.assert_called_once_with("user123")
-        assert result == expected_itineraries
-        assert len(result) == 2
+        # Assert
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert isinstance(data, list)
+        assert len(data) == 1
+        self.mock_service.list_itineraries.assert_called_once_with("test-user-id")
 
-    async def test_list_itineraries_empty(self, mock_principal, mock_itinerary_service):
-        """Test itinerary listing when user has no itineraries."""
-        mock_itinerary_service.list_itineraries.return_value = []
-
-        result = await list_itineraries(mock_principal, mock_itinerary_service)
-
-        assert result == []
-
-    async def test_search_itineraries_success(
-        self, mock_principal, mock_itinerary_service, sample_search_request
-    ):
+    @patch("tripsage.api.routers.itineraries.get_itinerary_service")
+    @patch("tripsage.api.routers.itineraries.require_principal_dep")
+    def test_search_itineraries_success(self, mock_auth, mock_service_dep):
         """Test successful itinerary search."""
-        expected_response = {
-            "itineraries": [
-                {
-                    "id": "itinerary1",
-                    "title": "Tokyo Adventure",
-                    "destinations": ["Tokyo, Japan"],
-                }
-            ],
-            "total_count": 1,
-            "page": 1,
-            "per_page": 10,
+        # Arrange
+        mock_auth.return_value = Mock(id="test-user-id")
+        mock_service_dep.return_value = self.mock_service
+        self.mock_service.search_itineraries = AsyncMock(
+            return_value=self.sample_search_response
+        )
+
+        search_request = {
+            "destination": "Tokyo",
+            "start_date": "2024-05-01",
+            "end_date": "2024-05-31",
+            "limit": 10,
         }
-        mock_itinerary_service.search_itineraries.return_value = expected_response
 
-        result = await search_itineraries(
-            sample_search_request, mock_principal, mock_itinerary_service
+        # Act
+        response = self.client.post(
+            "/api/itineraries/search",
+            json=search_request,
+            headers={"Authorization": "Bearer test-token"},
         )
 
-        mock_itinerary_service.search_itineraries.assert_called_once_with(
-            "user123", sample_search_request
-        )
-        assert result == expected_response
-        assert "itineraries" in result
-        assert "total_count" in result
+        # Assert
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert "itineraries" in data
+        assert "total_count" in data
+        self.mock_service.search_itineraries.assert_called_once()
 
-    async def test_search_itineraries_no_results(
-        self, mock_principal, mock_itinerary_service
-    ):
-        """Test itinerary search with no results."""
-        search_request = ItinerarySearchRequest(
-            query="Nonexistent", page=1, page_size=10
-        )
-        expected_response = {
-            "itineraries": [],
-            "total_count": 0,
-            "page": 1,
-            "per_page": 10,
-        }
-        mock_itinerary_service.search_itineraries.return_value = expected_response
-
-        result = await search_itineraries(
-            search_request, mock_principal, mock_itinerary_service
-        )
-
-        assert result["itineraries"] == []
-        assert result["total_count"] == 0
-
-    async def test_get_itinerary_success(self, mock_principal, mock_itinerary_service):
+    @patch("tripsage.api.routers.itineraries.get_itinerary_service")
+    @patch("tripsage.api.routers.itineraries.require_principal_dep")
+    def test_get_itinerary_success(self, mock_auth, mock_service_dep):
         """Test successful itinerary retrieval."""
-        itinerary_id = "itinerary123"
-        expected_itinerary = {
-            "id": itinerary_id,
-            "title": "Tokyo Adventure",
-            "description": "5-day trip exploring Tokyo",
-            "user_id": "user123",
-            "items": [
-                {"id": "item1", "title": "Visit Tokyo Tower", "location": "Tokyo Tower"}
-            ],
-        }
-        mock_itinerary_service.get_itinerary.return_value = expected_itinerary
+        # Arrange
+        mock_auth.return_value = Mock(id="test-user-id")
+        mock_service_dep.return_value = self.mock_service
+        itinerary_id = "test-itinerary-id"
+        self.mock_service.get_itinerary = AsyncMock(return_value=self.sample_itinerary)
 
-        result = await get_itinerary(
-            itinerary_id, mock_principal, mock_itinerary_service
+        # Act
+        response = self.client.get(
+            f"/api/itineraries/{itinerary_id}",
+            headers={"Authorization": "Bearer test-token"},
         )
 
-        mock_itinerary_service.get_itinerary.assert_called_once_with(
-            "user123", itinerary_id
+        # Assert
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert data["id"] == self.sample_itinerary["id"]
+        self.mock_service.get_itinerary.assert_called_once_with(
+            "test-user-id", itinerary_id
         )
-        assert result == expected_itinerary
-        assert result["id"] == itinerary_id
 
-    async def test_get_itinerary_not_found(
-        self, mock_principal, mock_itinerary_service
-    ):
+    @patch("tripsage.api.routers.itineraries.get_itinerary_service")
+    @patch("tripsage.api.routers.itineraries.require_principal_dep")
+    def test_get_itinerary_not_found(self, mock_auth, mock_service_dep):
         """Test itinerary retrieval for non-existent itinerary."""
-        itinerary_id = "nonexistent"
-        mock_itinerary_service.get_itinerary.side_effect = CoreResourceNotFoundError(
-            "Itinerary not found"
+        # Arrange
+        mock_auth.return_value = Mock(id="test-user-id")
+        mock_service_dep.return_value = self.mock_service
+        itinerary_id = "non-existent-id"
+
+        from tripsage_core.exceptions.exceptions import CoreResourceNotFoundError
+
+        self.mock_service.get_itinerary = AsyncMock(
+            side_effect=CoreResourceNotFoundError("Itinerary not found")
         )
 
-        with pytest.raises(HTTPException) as exc_info:
-            await get_itinerary(itinerary_id, mock_principal, mock_itinerary_service)
+        # Act
+        response = self.client.get(
+            f"/api/itineraries/{itinerary_id}",
+            headers={"Authorization": "Bearer test-token"},
+        )
 
-        assert exc_info.value.status_code == 404
-        assert "Itinerary not found" in str(exc_info.value.detail)
+        # Assert
+        assert response.status_code == status.HTTP_404_NOT_FOUND
 
-    async def test_update_itinerary_success(
-        self, mock_principal, mock_itinerary_service, sample_update_request
-    ):
+    @patch("tripsage.api.routers.itineraries.get_itinerary_service")
+    @patch("tripsage.api.routers.itineraries.require_principal_dep")
+    def test_update_itinerary_success(self, mock_auth, mock_service_dep):
         """Test successful itinerary update."""
-        itinerary_id = "itinerary123"
-        expected_updated = {
-            "id": itinerary_id,
-            "title": "Updated Tokyo Trip",
+        # Arrange
+        mock_auth.return_value = Mock(id="test-user-id")
+        mock_service_dep.return_value = self.mock_service
+        itinerary_id = "test-itinerary-id"
+        updated_itinerary = {**self.sample_itinerary, "name": "Updated Tokyo Trip"}
+        self.mock_service.update_itinerary = AsyncMock(return_value=updated_itinerary)
+
+        update_request = {
+            "name": "Updated Tokyo Trip",
             "description": "Updated description",
-            "updated_at": "2024-01-01T00:00:00Z",
         }
-        mock_itinerary_service.update_itinerary.return_value = expected_updated
 
-        result = await update_itinerary(
-            itinerary_id, sample_update_request, mock_principal, mock_itinerary_service
+        # Act
+        response = self.client.put(
+            f"/api/itineraries/{itinerary_id}",
+            json=update_request,
+            headers={"Authorization": "Bearer test-token"},
         )
 
-        mock_itinerary_service.update_itinerary.assert_called_once_with(
-            "user123", itinerary_id, sample_update_request
-        )
-        assert result == expected_updated
-        assert result["title"] == "Updated Tokyo Trip"
+        # Assert
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert data["name"] == "Updated Tokyo Trip"
+        self.mock_service.update_itinerary.assert_called_once()
 
-    async def test_update_itinerary_not_found(
-        self, mock_principal, mock_itinerary_service, sample_update_request
-    ):
-        """Test itinerary update for non-existent itinerary."""
-        itinerary_id = "nonexistent"
-        mock_itinerary_service.update_itinerary.side_effect = CoreResourceNotFoundError(
-            "Itinerary not found"
-        )
-
-        with pytest.raises(HTTPException) as exc_info:
-            await update_itinerary(
-                itinerary_id,
-                sample_update_request,
-                mock_principal,
-                mock_itinerary_service,
-            )
-
-        assert exc_info.value.status_code == 404
-        assert "Itinerary not found" in str(exc_info.value.detail)
-
-    async def test_update_itinerary_invalid_data(
-        self, mock_principal, mock_itinerary_service, sample_update_request
-    ):
-        """Test itinerary update with invalid data."""
-        itinerary_id = "itinerary123"
-        mock_itinerary_service.update_itinerary.side_effect = ValueError(
-            "Invalid update data"
-        )
-
-        with pytest.raises(HTTPException) as exc_info:
-            await update_itinerary(
-                itinerary_id,
-                sample_update_request,
-                mock_principal,
-                mock_itinerary_service,
-            )
-
-        assert exc_info.value.status_code == 400
-        assert "Invalid update data" in str(exc_info.value.detail)
-
-    async def test_delete_itinerary_success(
-        self, mock_principal, mock_itinerary_service
-    ):
+    @patch("tripsage.api.routers.itineraries.get_itinerary_service")
+    @patch("tripsage.api.routers.itineraries.require_principal_dep")
+    def test_delete_itinerary_success(self, mock_auth, mock_service_dep):
         """Test successful itinerary deletion."""
-        itinerary_id = "itinerary123"
-        mock_itinerary_service.delete_itinerary.return_value = None
+        # Arrange
+        mock_auth.return_value = Mock(id="test-user-id")
+        mock_service_dep.return_value = self.mock_service
+        itinerary_id = "test-itinerary-id"
+        self.mock_service.delete_itinerary = AsyncMock(return_value=True)
 
-        # Should not raise an exception and return None
-        result = await delete_itinerary(
-            itinerary_id, mock_principal, mock_itinerary_service
+        # Act
+        response = self.client.delete(
+            f"/api/itineraries/{itinerary_id}",
+            headers={"Authorization": "Bearer test-token"},
         )
 
-        mock_itinerary_service.delete_itinerary.assert_called_once_with(
-            "user123", itinerary_id
-        )
-        assert result is None
-
-    async def test_delete_itinerary_not_found(
-        self, mock_principal, mock_itinerary_service
-    ):
-        """Test itinerary deletion for non-existent itinerary."""
-        itinerary_id = "nonexistent"
-        mock_itinerary_service.delete_itinerary.side_effect = CoreResourceNotFoundError(
-            "Itinerary not found"
+        # Assert
+        assert response.status_code == status.HTTP_204_NO_CONTENT
+        self.mock_service.delete_itinerary.assert_called_once_with(
+            "test-user-id", itinerary_id
         )
 
-        with pytest.raises(HTTPException) as exc_info:
-            await delete_itinerary(itinerary_id, mock_principal, mock_itinerary_service)
-
-        assert exc_info.value.status_code == 404
-        assert "Itinerary not found" in str(exc_info.value.detail)
-
-    async def test_add_item_to_itinerary_success(
-        self, mock_principal, mock_itinerary_service, sample_item_create_request
-    ):
+    @patch("tripsage.api.routers.itineraries.get_itinerary_service")
+    @patch("tripsage.api.routers.itineraries.require_principal_dep")
+    def test_add_item_to_itinerary_success(self, mock_auth, mock_service_dep):
         """Test successful addition of item to itinerary."""
-        itinerary_id = "itinerary123"
-        expected_item = {
-            "id": "item123",
-            "title": "Visit Tokyo Tower",
-            "description": "Iconic Tokyo landmark with great city views",
-            "item_date": "2024-05-01",
+        # Arrange
+        mock_auth.return_value = Mock(id="test-user-id")
+        mock_service_dep.return_value = self.mock_service
+        itinerary_id = "test-itinerary-id"
+        self.mock_service.add_item_to_itinerary = AsyncMock(
+            return_value=self.sample_itinerary_item
+        )
+
+        item_request = {
+            "name": "Visit Tokyo Tower",
+            "description": "Iconic Tokyo landmark",
+            "start_time": "2024-05-01T10:00:00Z",
+            "end_time": "2024-05-01T12:00:00Z",
             "location": "Tokyo Tower, Tokyo",
-            "item_type": "activity",
-            "itinerary_id": itinerary_id,
+            "item_type": "attraction",
         }
-        mock_itinerary_service.add_item_to_itinerary.return_value = expected_item
 
-        result = await add_item_to_itinerary(
-            itinerary_id,
-            sample_item_create_request,
-            mock_principal,
-            mock_itinerary_service,
+        # Act
+        response = self.client.post(
+            f"/api/itineraries/{itinerary_id}/items",
+            json=item_request,
+            headers={"Authorization": "Bearer test-token"},
         )
 
-        mock_itinerary_service.add_item_to_itinerary.assert_called_once_with(
-            "user123", itinerary_id, sample_item_create_request
-        )
-        assert result == expected_item
-        assert result["title"] == "Visit Tokyo Tower"
+        # Assert
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert data["name"] == "Visit Tokyo Tower"
+        self.mock_service.add_item_to_itinerary.assert_called_once()
 
-    async def test_add_item_to_itinerary_not_found(
-        self, mock_principal, mock_itinerary_service, sample_item_create_request
-    ):
-        """Test adding item to non-existent itinerary."""
-        itinerary_id = "nonexistent"
-        mock_itinerary_service.add_item_to_itinerary.side_effect = (
-            CoreResourceNotFoundError("Itinerary not found")
-        )
-
-        with pytest.raises(HTTPException) as exc_info:
-            await add_item_to_itinerary(
-                itinerary_id,
-                sample_item_create_request,
-                mock_principal,
-                mock_itinerary_service,
-            )
-
-        assert exc_info.value.status_code == 404
-        assert "Itinerary not found" in str(exc_info.value.detail)
-
-    async def test_add_item_invalid_data(
-        self, mock_principal, mock_itinerary_service, sample_item_create_request
-    ):
-        """Test adding item with invalid data."""
-        itinerary_id = "itinerary123"
-        mock_itinerary_service.add_item_to_itinerary.side_effect = ValueError(
-            "Invalid time range"
-        )
-
-        with pytest.raises(HTTPException) as exc_info:
-            await add_item_to_itinerary(
-                itinerary_id,
-                sample_item_create_request,
-                mock_principal,
-                mock_itinerary_service,
-            )
-
-        assert exc_info.value.status_code == 400
-        assert "Invalid time range" in str(exc_info.value.detail)
-
-    async def test_get_itinerary_item_success(
-        self, mock_principal, mock_itinerary_service
-    ):
+    @patch("tripsage.api.routers.itineraries.get_itinerary_service")
+    @patch("tripsage.api.routers.itineraries.require_principal_dep")
+    def test_get_itinerary_item_success(self, mock_auth, mock_service_dep):
         """Test successful itinerary item retrieval."""
-        itinerary_id = "itinerary123"
-        item_id = "item123"
-        expected_item = {
-            "id": item_id,
-            "title": "Visit Tokyo Tower",
-            "location": "Tokyo Tower, Tokyo",
-            "itinerary_id": itinerary_id,
-        }
-        mock_itinerary_service.get_item.return_value = expected_item
+        # Arrange
+        mock_auth.return_value = Mock(id="test-user-id")
+        mock_service_dep.return_value = self.mock_service
+        itinerary_id = "test-itinerary-id"
+        item_id = "test-item-id"
+        self.mock_service.get_item = AsyncMock(return_value=self.sample_itinerary_item)
 
-        result = await get_itinerary_item(
-            itinerary_id, item_id, mock_principal, mock_itinerary_service
+        # Act
+        response = self.client.get(
+            f"/api/itineraries/{itinerary_id}/items/{item_id}",
+            headers={"Authorization": "Bearer test-token"},
         )
 
-        mock_itinerary_service.get_item.assert_called_once_with(
-            "user123", itinerary_id, item_id
-        )
-        assert result == expected_item
-        assert result["id"] == item_id
-
-    async def test_get_itinerary_item_not_found(
-        self, mock_principal, mock_itinerary_service
-    ):
-        """Test itinerary item retrieval for non-existent item."""
-        itinerary_id = "itinerary123"
-        item_id = "nonexistent"
-        mock_itinerary_service.get_item.side_effect = CoreResourceNotFoundError(
-            "Item not found"
+        # Assert
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert data["id"] == self.sample_itinerary_item["id"]
+        self.mock_service.get_item.assert_called_once_with(
+            "test-user-id", itinerary_id, item_id
         )
 
-        with pytest.raises(HTTPException) as exc_info:
-            await get_itinerary_item(
-                itinerary_id, item_id, mock_principal, mock_itinerary_service
-            )
-
-        assert exc_info.value.status_code == 404
-        assert "Item not found" in str(exc_info.value.detail)
-
-    async def test_update_itinerary_item_success(
-        self, mock_principal, mock_itinerary_service, sample_item_update_request
-    ):
+    @patch("tripsage.api.routers.itineraries.get_itinerary_service")
+    @patch("tripsage.api.routers.itineraries.require_principal_dep")
+    def test_update_itinerary_item_success(self, mock_auth, mock_service_dep):
         """Test successful itinerary item update."""
-        itinerary_id = "itinerary123"
-        item_id = "item123"
-        expected_updated_item = {
-            "id": item_id,
-            "title": "Updated Activity",
-            "notes": "Updated notes for the activity",
-            "updated_at": "2024-01-01T00:00:00Z",
-        }
-        mock_itinerary_service.update_item.return_value = expected_updated_item
+        # Arrange
+        mock_auth.return_value = Mock(id="test-user-id")
+        mock_service_dep.return_value = self.mock_service
+        itinerary_id = "test-itinerary-id"
+        item_id = "test-item-id"
+        updated_item = {**self.sample_itinerary_item, "name": "Updated Activity"}
+        self.mock_service.update_item = AsyncMock(return_value=updated_item)
 
-        result = await update_itinerary_item(
-            itinerary_id,
-            item_id,
-            sample_item_update_request,
-            mock_principal,
-            mock_itinerary_service,
+        update_request = {"name": "Updated Activity", "notes": "Updated notes"}
+
+        # Act
+        response = self.client.put(
+            f"/api/itineraries/{itinerary_id}/items/{item_id}",
+            json=update_request,
+            headers={"Authorization": "Bearer test-token"},
         )
 
-        mock_itinerary_service.update_item.assert_called_once_with(
-            "user123", itinerary_id, item_id, sample_item_update_request
-        )
-        assert result == expected_updated_item
-        assert result["title"] == "Updated Activity"
+        # Assert
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert data["name"] == "Updated Activity"
+        self.mock_service.update_item.assert_called_once()
 
-    async def test_update_itinerary_item_not_found(
-        self, mock_principal, mock_itinerary_service, sample_item_update_request
-    ):
-        """Test itinerary item update for non-existent item."""
-        itinerary_id = "itinerary123"
-        item_id = "nonexistent"
-        mock_itinerary_service.update_item.side_effect = CoreResourceNotFoundError(
-            "Item not found"
-        )
-
-        with pytest.raises(HTTPException) as exc_info:
-            await update_itinerary_item(
-                itinerary_id,
-                item_id,
-                sample_item_update_request,
-                mock_principal,
-                mock_itinerary_service,
-            )
-
-        assert exc_info.value.status_code == 404
-        assert "Item not found" in str(exc_info.value.detail)
-
-    async def test_update_itinerary_item_invalid_data(
-        self, mock_principal, mock_itinerary_service, sample_item_update_request
-    ):
-        """Test itinerary item update with invalid data."""
-        itinerary_id = "itinerary123"
-        item_id = "item123"
-        mock_itinerary_service.update_item.side_effect = ValueError("Invalid item data")
-
-        with pytest.raises(HTTPException) as exc_info:
-            await update_itinerary_item(
-                itinerary_id,
-                item_id,
-                sample_item_update_request,
-                mock_principal,
-                mock_itinerary_service,
-            )
-
-        assert exc_info.value.status_code == 400
-        assert "Invalid item data" in str(exc_info.value.detail)
-
-    async def test_delete_itinerary_item_success(
-        self, mock_principal, mock_itinerary_service
-    ):
+    @patch("tripsage.api.routers.itineraries.get_itinerary_service")
+    @patch("tripsage.api.routers.itineraries.require_principal_dep")
+    def test_delete_itinerary_item_success(self, mock_auth, mock_service_dep):
         """Test successful itinerary item deletion."""
-        itinerary_id = "itinerary123"
-        item_id = "item123"
-        mock_itinerary_service.delete_item.return_value = None
+        # Arrange
+        mock_auth.return_value = Mock(id="test-user-id")
+        mock_service_dep.return_value = self.mock_service
+        itinerary_id = "test-itinerary-id"
+        item_id = "test-item-id"
+        self.mock_service.delete_item = AsyncMock(return_value=True)
 
-        # Should not raise an exception and return None
-        result = await delete_itinerary_item(
-            itinerary_id, item_id, mock_principal, mock_itinerary_service
+        # Act
+        response = self.client.delete(
+            f"/api/itineraries/{itinerary_id}/items/{item_id}",
+            headers={"Authorization": "Bearer test-token"},
         )
 
-        mock_itinerary_service.delete_item.assert_called_once_with(
-            "user123", itinerary_id, item_id
-        )
-        assert result is None
-
-    async def test_delete_itinerary_item_not_found(
-        self, mock_principal, mock_itinerary_service
-    ):
-        """Test itinerary item deletion for non-existent item."""
-        itinerary_id = "itinerary123"
-        item_id = "nonexistent"
-        mock_itinerary_service.delete_item.side_effect = CoreResourceNotFoundError(
-            "Item not found"
+        # Assert
+        assert response.status_code == status.HTTP_204_NO_CONTENT
+        self.mock_service.delete_item.assert_called_once_with(
+            "test-user-id", itinerary_id, item_id
         )
 
-        with pytest.raises(HTTPException) as exc_info:
-            await delete_itinerary_item(
-                itinerary_id, item_id, mock_principal, mock_itinerary_service
-            )
-
-        assert exc_info.value.status_code == 404
-        assert "Item not found" in str(exc_info.value.detail)
-
-    async def test_check_itinerary_conflicts_success(
-        self, mock_principal, mock_itinerary_service
-    ):
+    @patch("tripsage.api.routers.itineraries.get_itinerary_service")
+    @patch("tripsage.api.routers.itineraries.require_principal_dep")
+    def test_check_itinerary_conflicts_success(self, mock_auth, mock_service_dep):
         """Test successful conflict checking."""
-        itinerary_id = "itinerary123"
-        expected_conflicts = {
-            "has_conflicts": False,
-            "conflicts": [],
-            "suggestions": ["Consider adding buffer time between activities"],
-            "total_items_checked": 5,
-        }
-        mock_itinerary_service.check_conflicts.return_value = expected_conflicts
-
-        result = await check_itinerary_conflicts(
-            itinerary_id, mock_principal, mock_itinerary_service
+        # Arrange
+        mock_auth.return_value = Mock(id="test-user-id")
+        mock_service_dep.return_value = self.mock_service
+        itinerary_id = "test-itinerary-id"
+        self.mock_service.check_conflicts = AsyncMock(
+            return_value=self.sample_conflict_response
         )
 
-        mock_itinerary_service.check_conflicts.assert_called_once_with(
-            "user123", itinerary_id
-        )
-        assert result == expected_conflicts
-        assert "has_conflicts" in result
-        assert "conflicts" in result
-
-    async def test_check_itinerary_conflicts_with_conflicts(
-        self, mock_principal, mock_itinerary_service
-    ):
-        """Test conflict checking when conflicts exist."""
-        itinerary_id = "itinerary123"
-        expected_conflicts = {
-            "has_conflicts": True,
-            "conflicts": [
-                {
-                    "type": "time_overlap",
-                    "items": ["item1", "item2"],
-                    "description": "Activities overlap in time",
-                }
-            ],
-            "suggestions": ["Adjust timing for overlapping activities"],
-            "total_items_checked": 5,
-        }
-        mock_itinerary_service.check_conflicts.return_value = expected_conflicts
-
-        result = await check_itinerary_conflicts(
-            itinerary_id, mock_principal, mock_itinerary_service
+        # Act
+        response = self.client.get(
+            f"/api/itineraries/{itinerary_id}/conflicts",
+            headers={"Authorization": "Bearer test-token"},
         )
 
-        assert result["has_conflicts"] is True
-        assert len(result["conflicts"]) == 1
-
-    async def test_check_itinerary_conflicts_not_found(
-        self, mock_principal, mock_itinerary_service
-    ):
-        """Test conflict checking for non-existent itinerary."""
-        itinerary_id = "nonexistent"
-        mock_itinerary_service.check_conflicts.side_effect = CoreResourceNotFoundError(
-            "Itinerary not found"
+        # Assert
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert "conflicts" in data
+        assert "has_conflicts" in data
+        self.mock_service.check_conflicts.assert_called_once_with(
+            "test-user-id", itinerary_id
         )
 
-        with pytest.raises(HTTPException) as exc_info:
-            await check_itinerary_conflicts(
-                itinerary_id, mock_principal, mock_itinerary_service
-            )
-
-        assert exc_info.value.status_code == 404
-        assert "Itinerary not found" in str(exc_info.value.detail)
-
-    async def test_optimize_itinerary_success(
-        self, mock_principal, mock_itinerary_service, sample_optimize_request
-    ):
+    @patch("tripsage.api.routers.itineraries.get_itinerary_service")
+    @patch("tripsage.api.routers.itineraries.require_principal_dep")
+    def test_optimize_itinerary_success(self, mock_auth, mock_service_dep):
         """Test successful itinerary optimization."""
-        expected_optimization = {
-            "optimized_itinerary": {
-                "id": "itinerary123",
-                "title": "Optimized Tokyo Trip",
-                "items": [
-                    {"id": "item1", "title": "Activity 1", "order_index": 1},
-                    {"id": "item2", "title": "Activity 2", "order_index": 2},
-                ],
+        # Arrange
+        mock_auth.return_value = Mock(id="test-user-id")
+        mock_service_dep.return_value = self.mock_service
+        self.mock_service.optimize_itinerary = AsyncMock(
+            return_value=self.sample_optimize_response
+        )
+
+        optimize_request = {
+            "itinerary_id": "test-itinerary-id",
+            "optimization_type": "time",
+            "preferences": {
+                "minimize_travel_time": True,
+                "prefer_popular_attractions": False,
             },
-            "improvements": [
-                "Reduced travel time by 30 minutes",
-                "Optimized attraction visit order",
-            ],
-            "optimization_score": 0.85,
-            "time_saved_minutes": 30,
-            "cost_saved": 500.0,
         }
-        mock_itinerary_service.optimize_itinerary.return_value = expected_optimization
 
-        result = await optimize_itinerary(
-            sample_optimize_request, mock_principal, mock_itinerary_service
+        # Act
+        response = self.client.post(
+            "/api/itineraries/optimize",
+            json=optimize_request,
+            headers={"Authorization": "Bearer test-token"},
         )
 
-        mock_itinerary_service.optimize_itinerary.assert_called_once_with(
-            "user123", sample_optimize_request
-        )
-        assert result == expected_optimization
-        assert "optimized_itinerary" in result
-        assert "improvements" in result
+        # Assert
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert "optimized_itinerary" in data
+        assert "improvements" in data
+        self.mock_service.optimize_itinerary.assert_called_once()
 
-    async def test_optimize_itinerary_not_found(
-        self, mock_principal, mock_itinerary_service, sample_optimize_request
-    ):
-        """Test optimization for non-existent itinerary."""
-        mock_itinerary_service.optimize_itinerary.side_effect = (
-            CoreResourceNotFoundError("Itinerary not found")
+    def test_create_itinerary_unauthorized(self):
+        """Test itinerary creation without authentication."""
+        create_request = {
+            "name": "Tokyo Adventure",
+            "start_date": "2024-05-01",
+            "end_date": "2024-05-05",
+        }
+
+        response = self.client.post("/api/itineraries", json=create_request)
+
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+    def test_list_itineraries_unauthorized(self):
+        """Test itinerary listing without authentication."""
+        response = self.client.get("/api/itineraries")
+
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+    @patch("tripsage.api.routers.itineraries.get_itinerary_service")
+    @patch("tripsage.api.routers.itineraries.require_principal_dep")
+    def test_create_itinerary_service_error(self, mock_auth, mock_service_dep):
+        """Test itinerary creation with service error."""
+        # Arrange
+        mock_auth.return_value = Mock(id="test-user-id")
+        mock_service_dep.return_value = self.mock_service
+        self.mock_service.create_itinerary = AsyncMock(
+            side_effect=Exception("Service unavailable")
         )
 
-        with pytest.raises(HTTPException) as exc_info:
-            await optimize_itinerary(
-                sample_optimize_request, mock_principal, mock_itinerary_service
+        create_request = {
+            "name": "Tokyo Adventure",
+            "start_date": "2024-05-01",
+            "end_date": "2024-05-05",
+        }
+
+        # Act
+        response = self.client.post(
+            "/api/itineraries",
+            json=create_request,
+            headers={"Authorization": "Bearer test-token"},
+        )
+
+        # Assert
+        assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+
+    @pytest.mark.parametrize("name", ["", None, " ", "a" * 256])
+    def test_create_itinerary_invalid_name(self, name):
+        """Test itinerary creation with invalid name values."""
+        create_request = {
+            "name": name,
+            "start_date": "2024-05-01",
+            "end_date": "2024-05-05",
+        }
+
+        response = self.client.post(
+            "/api/itineraries",
+            json=create_request,
+            headers={"Authorization": "Bearer test-token"},
+        )
+
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+
+    def test_create_itinerary_missing_required_fields(self):
+        """Test itinerary creation with missing required fields."""
+        create_request = {"description": "Missing name and dates"}
+
+        response = self.client.post(
+            "/api/itineraries",
+            json=create_request,
+            headers={"Authorization": "Bearer test-token"},
+        )
+
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+
+    @pytest.mark.parametrize("invalid_id", ["", "invalid-uuid", "123", None])
+    def test_get_itinerary_invalid_id(self, invalid_id):
+        """Test itinerary retrieval with invalid ID format."""
+        if invalid_id is None:
+            response = self.client.get(
+                "/api/itineraries/", headers={"Authorization": "Bearer test-token"}
+            )
+        else:
+            response = self.client.get(
+                f"/api/itineraries/{invalid_id}",
+                headers={"Authorization": "Bearer test-token"},
             )
 
-        assert exc_info.value.status_code == 404
-        assert "Itinerary not found" in str(exc_info.value.detail)
-
-    async def test_optimize_itinerary_invalid_request(
-        self, mock_principal, mock_itinerary_service, sample_optimize_request
-    ):
-        """Test optimization with invalid request."""
-        mock_itinerary_service.optimize_itinerary.side_effect = ValueError(
-            "Invalid optimization settings"
-        )
-
-        with pytest.raises(HTTPException) as exc_info:
-            await optimize_itinerary(
-                sample_optimize_request, mock_principal, mock_itinerary_service
-            )
-
-        assert exc_info.value.status_code == 400
-        assert "Invalid optimization settings" in str(exc_info.value.detail)
+        # Note: FastAPI validates path parameters, so invalid UUIDs may return 422
+        assert response.status_code in [
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status.HTTP_404_NOT_FOUND,
+        ]

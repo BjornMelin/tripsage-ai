@@ -50,10 +50,10 @@ async function forwardToBackend(
 
     // Forward authorization header if present
     if (authToken) {
-      headers.Authorization = authToken;
+      headers["Authorization"] = authToken;
     } else if (process.env.API_KEY) {
       // Fallback to server-side API key if no user token
-      headers.Authorization = `Bearer ${process.env.API_KEY}`;
+      headers["Authorization"] = `Bearer ${process.env.API_KEY}`;
     }
 
     const response = await fetch(`${API_BASE_URL}/api/v1/chat/`, {

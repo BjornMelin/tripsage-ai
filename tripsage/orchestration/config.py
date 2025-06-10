@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Dict, Optional
 
-from tripsage_core.config.base_app_settings import get_settings
+from tripsage_core.config.base_app_settings import settings
 
 
 class CheckpointStorage(Enum):
@@ -140,7 +140,6 @@ class LangGraphConfig:
         Returns:
             LangGraphConfig instance derived from app settings
         """
-        settings = get_settings()
         return cls(
             # Use existing agent settings
             default_model=settings.agent.model_name,

@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import React from "react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   ErrorFallback,
   MinimalErrorFallback,
@@ -53,42 +53,26 @@ describe("Error Fallback Components", () => {
 
     it("should show error message in development mode", () => {
       const originalEnv = process.env.NODE_ENV;
-      Object.defineProperty(process.env, "NODE_ENV", {
-        value: "development",
-        writable: true,
-        configurable: true,
-      });
+      process.env.NODE_ENV = "development";
 
       render(<ErrorFallback error={mockError} reset={mockReset} />);
 
       expect(screen.getByText("Test error message")).toBeInTheDocument();
       expect(screen.getByTestId("bug-icon")).toBeInTheDocument();
 
-      Object.defineProperty(process.env, "NODE_ENV", {
-        value: originalEnv,
-        writable: true,
-        configurable: true,
-      });
+      process.env.NODE_ENV = originalEnv;
     });
 
     it("should not show error message in production mode", () => {
       const originalEnv = process.env.NODE_ENV;
-      Object.defineProperty(process.env, "NODE_ENV", {
-        value: "production",
-        writable: true,
-        configurable: true,
-      });
+      process.env.NODE_ENV = "production";
 
       render(<ErrorFallback error={mockError} reset={mockReset} />);
 
       expect(screen.queryByText("Test error message")).not.toBeInTheDocument();
       expect(screen.queryByTestId("bug-icon")).not.toBeInTheDocument();
 
-      Object.defineProperty(process.env, "NODE_ENV", {
-        value: originalEnv,
-        writable: true,
-        configurable: true,
-      });
+      process.env.NODE_ENV = originalEnv;
     });
 
     it("should show error digest when available", () => {
@@ -229,11 +213,7 @@ describe("Error Fallback Components", () => {
 
     it("should show error stack in development mode", () => {
       const originalEnv = process.env.NODE_ENV;
-      Object.defineProperty(process.env, "NODE_ENV", {
-        value: "development",
-        writable: true,
-        configurable: true,
-      });
+      process.env.NODE_ENV = "development";
 
       const errorWithStack = { ...mockError };
       errorWithStack.stack = "Error: Test error\n    at Component (Component.tsx:10:5)";
@@ -246,20 +226,12 @@ describe("Error Fallback Components", () => {
       fireEvent.click(screen.getByText("Error Details (Development)"));
       expect(screen.getByText(/Error: Test error/)).toBeInTheDocument();
 
-      Object.defineProperty(process.env, "NODE_ENV", {
-        value: originalEnv,
-        writable: true,
-        configurable: true,
-      });
+      process.env.NODE_ENV = originalEnv;
     });
 
     it("should not show error stack in production mode", () => {
       const originalEnv = process.env.NODE_ENV;
-      Object.defineProperty(process.env, "NODE_ENV", {
-        value: "production",
-        writable: true,
-        configurable: true,
-      });
+      process.env.NODE_ENV = "production";
 
       const errorWithStack = { ...mockError };
       errorWithStack.stack = "Error: Test error\n    at Component (Component.tsx:10:5)";
@@ -268,11 +240,7 @@ describe("Error Fallback Components", () => {
 
       expect(screen.queryByText("Error Details (Development)")).not.toBeInTheDocument();
 
-      Object.defineProperty(process.env, "NODE_ENV", {
-        value: originalEnv,
-        writable: true,
-        configurable: true,
-      });
+      process.env.NODE_ENV = originalEnv;
     });
 
     it("should not render try again button when reset function not provided", () => {

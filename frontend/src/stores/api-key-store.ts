@@ -1,6 +1,4 @@
 import type { ApiKey } from "@/types/api-keys";
-import { fetchApi } from "@/lib/api/client";
-import { createClient as createBrowserClient } from "@/lib/supabase/client";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
@@ -29,7 +27,7 @@ interface ApiKeyState extends AuthState {
   setSelectedService: (service: string | null) => void;
   updateKey: (service: string, keyData: Partial<ApiKey>) => void;
   removeKey: (service: string) => void;
-  validateKey: (service: string, apiKey?: string) => Promise<boolean>;
+  validateKey: (service: string) => Promise<boolean>;
   loadKeys: () => Promise<void>;
 }
 
@@ -97,38 +95,35 @@ export const useApiKeyStore = create<ApiKeyState>()(
           return { keys: newKeys };
         }),
 
-      validateKey: async (service, apiKey?) => {
+      validateKey: async (service) => {
         const state = get();
         const key = state.keys[service];
-        if (!key || !apiKey) {
+        if (!key || !key.api_key) {
           set({ authError: `No API key found for ${service}` });
           return false;
         }
 
         try {
-          // Get current Supabase session
-          const supabase = createBrowserClient();
-          const {
-            data: { session },
-            error: sessionError,
-          } = await supabase.auth.getSession();
-
-          if (sessionError || !session?.access_token) {
-            set({ authError: "Authentication required", isApiKeyValid: false });
-            return false;
-          }
-
-          const result = await fetchApi("/api/keys/validate", {
+          const response = await fetch("/api/keys/validate", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
-            auth: `Bearer ${session.access_token}`,
+            headers: {
+              "Content-Type": "application/json",
+              ...(state.token && { Authorization: `Bearer ${state.token}` }),
+            },
             body: JSON.stringify({
               service,
-              api_key: apiKey,
+              api_key: key.api_key,
               save: false,
             }),
           });
 
+          if (!response.ok) {
+            const error = await response.text();
+            set({ authError: error, isApiKeyValid: false });
+            return false;
+          }
+
+          const result = await response.json();
           const isValid = result.is_valid;
           set({
             isApiKeyValid: isValid,
@@ -143,27 +138,26 @@ export const useApiKeyStore = create<ApiKeyState>()(
       },
 
       loadKeys: async () => {
+        const state = get();
+        if (!state.isAuthenticated || !state.token) {
+          return;
+        }
+
         try {
-          // Get current Supabase session
-          const supabase = createBrowserClient();
-          const {
-            data: { session },
-            error: sessionError,
-          } = await supabase.auth.getSession();
-
-          if (sessionError || !session?.access_token) {
-            set({ authError: "Authentication required" });
-            return;
-          }
-
-          const data = await fetchApi("/api/keys", {
-            auth: `Bearer ${session.access_token}`,
+          const response = await fetch("/api/keys", {
+            headers: {
+              Authorization: `Bearer ${state.token}`,
+            },
           });
 
+          if (!response.ok) {
+            throw new Error("Failed to load keys");
+          }
+
+          const data = await response.json();
           set({
             keys: data.keys,
             supportedServices: data.supported_services,
-            authError: null,
           });
         } catch (error) {
           const message =

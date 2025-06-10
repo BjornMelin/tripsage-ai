@@ -65,24 +65,15 @@ describe("User Profile Store", () => {
       travelPreferences: {
         preferredCabinClass: "business",
         preferredAirlines: ["Delta", "United"],
-        excludedAirlines: [],
         maxLayovers: 1,
         preferredAccommodationType: "hotel",
-        preferredHotelChains: [],
         requireWifi: true,
         requireBreakfast: true,
-        requireParking: false,
-        requireGym: false,
-        requirePool: false,
-        accessibilityRequirements: [],
-        dietaryRestrictions: [],
       },
       privacySettings: {
         profileVisibility: "friends",
         showTravelHistory: true,
         allowDataSharing: false,
-        enableAnalytics: true,
-        enableLocationTracking: false,
       },
       favoriteDestinations: [],
       travelDocuments: [],
@@ -319,7 +310,7 @@ describe("User Profile Store", () => {
         type: "image/jpeg",
       });
 
-      let uploadResult: string | null = null;
+      let uploadResult: string | null;
       await act(async () => {
         uploadResult = await result.current.uploadAvatar(mockFile);
       });
@@ -338,7 +329,7 @@ describe("User Profile Store", () => {
         type: "text/plain",
       });
 
-      let uploadResult: string | null = null;
+      let uploadResult: string | null;
       await act(async () => {
         uploadResult = await result.current.uploadAvatar(mockFile);
       });
@@ -355,7 +346,7 @@ describe("User Profile Store", () => {
         type: "image/jpeg",
       });
 
-      let uploadResult: string | null = null;
+      let uploadResult: string | null;
       await act(async () => {
         uploadResult = await result.current.uploadAvatar(mockFile);
       });
@@ -756,7 +747,6 @@ describe("User Profile Store", () => {
             excludedAirlines: [],
             maxLayovers: 2,
             preferredAccommodationType: "hotel",
-            preferredHotelChains: [],
             requireWifi: true,
             requireBreakfast: false,
             requireParking: false,
@@ -1143,7 +1133,6 @@ describe("User Profile Store", () => {
           excludedAirlines: [],
           maxLayovers: 1,
           preferredAccommodationType: "hotel",
-          preferredHotelChains: [],
           requireWifi: true,
           requireBreakfast: false,
           requireParking: false,

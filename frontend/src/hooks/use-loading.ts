@@ -52,7 +52,7 @@ export function useLoading(options: UseLoadingOptions = {}): UseLoadingReturn {
     error: undefined,
   });
 
-  const timeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
+  const timeoutRef = useRef<NodeJS.Timeout>();
 
   // Clear timeout on unmount
   useEffect(() => {
@@ -208,7 +208,7 @@ export function useAsyncLoading<T>(
  */
 export function useDebouncedLoading(delay = 300): UseLoadingReturn {
   const loading = useLoading();
-  const debounceRef = useRef<NodeJS.Timeout | undefined>(undefined);
+  const debounceRef = useRef<NodeJS.Timeout>();
 
   const debouncedStartLoading = useCallback(
     (message?: string) => {

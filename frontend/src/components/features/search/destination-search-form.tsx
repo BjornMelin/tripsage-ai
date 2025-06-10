@@ -30,12 +30,12 @@ import { z } from "zod";
 
 const destinationSearchFormSchema = z.object({
   query: z.string().min(1, { message: "Destination is required" }),
-  types: z.array(
-    z.enum(["locality", "country", "administrative_area", "establishment"])
-  ),
+  types: z
+    .array(z.enum(["locality", "country", "administrative_area", "establishment"]))
+    .default(["locality", "country"]),
   language: z.string().optional(),
   region: z.string().optional(),
-  limit: z.number().min(1).max(20),
+  limit: z.number().min(1).max(20).default(10),
 });
 
 type DestinationSearchFormValues = z.infer<typeof destinationSearchFormSchema>;
@@ -112,12 +112,7 @@ export function DestinationSearchForm({
 
   const form = useForm<DestinationSearchFormValues>({
     resolver: zodResolver(destinationSearchFormSchema),
-    defaultValues: {
-      query: "",
-      types: ["locality", "country"],
-      limit: 10,
-      ...initialValues,
-    },
+    defaultValues: initialValues,
     mode: "onChange",
   });
 
@@ -214,18 +209,15 @@ export function DestinationSearchForm({
               <FormField
                 control={form.control}
                 name="query"
-                render={({ field: { ref, ...fieldProps } }) => (
+                render={({ field }) => (
                   <FormItem className="relative">
                     <FormLabel>Destination</FormLabel>
                     <FormControl>
                       <div className="relative">
                         <Input
-                          ref={(el) => {
-                            ref(el);
-                            inputRef.current = el;
-                          }}
+                          ref={inputRef}
                           placeholder="Search for cities, countries, or landmarks..."
-                          {...fieldProps}
+                          {...field}
                           autoComplete="off"
                           onFocus={() => {
                             if (suggestions.length > 0) {

@@ -126,7 +126,13 @@ function ChatSidebar({ className, onNewChat, ...props }: ChatSidebarProps) {
 interface AgentStatusPanelProps extends React.HTMLAttributes<HTMLElement> {}
 
 function AgentStatusPanel({ className, ...props }: AgentStatusPanelProps) {
-  const { activeAgents, isMonitoring } = useAgentStatusStore();
+  const { agents, isLoading } = useAgentStatusStore();
+
+  // Get active agents
+  const activeAgents = useMemo(
+    () => agents.filter((agent) => agent.status === "active"),
+    [agents]
+  );
 
   return (
     <div
@@ -140,7 +146,7 @@ function AgentStatusPanel({ className, ...props }: AgentStatusPanelProps) {
           <div
             className={cn(
               "w-2 h-2 rounded-full",
-              isMonitoring
+              isLoading
                 ? "bg-yellow-500"
                 : activeAgents.length > 0
                   ? "bg-green-500"
@@ -164,10 +170,7 @@ function AgentStatusPanel({ className, ...props }: AgentStatusPanelProps) {
                   </span>
                 </div>
                 <div className="text-xs text-muted-foreground">
-                  {agent.currentTaskId
-                    ? agent.tasks.find((t) => t.id === agent.currentTaskId)
-                        ?.description || "Task in progress..."
-                    : "Waiting for tasks..."}
+                  {agent.currentTask || "Waiting for tasks..."}
                 </div>
                 {agent.progress && (
                   <div className="mt-2">

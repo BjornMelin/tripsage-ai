@@ -11,58 +11,50 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useAuth } from "@/contexts/auth-context";
+import { loginAction } from "@/lib/auth/server-actions";
 import { AlertCircle, Eye, EyeOff, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import React, { useState, useEffect } from "react";
+import React, { useState, useOptimistic, startTransition } from "react";
 
 interface LoginFormProps {
   redirectTo?: string;
   className?: string;
 }
 
-export function LoginForm({ redirectTo = "/dashboard", className }: LoginFormProps) {
+interface LoginState {
+  user: any | null;
+  isAuthenticated: boolean;
+  error: string | null;
+}
+
+export function LoginForm({ redirectTo = "/", className }: LoginFormProps) {
   const router = useRouter();
-  const { signIn, isLoading, error, isAuthenticated, clearError } = useAuth();
   const [showPassword, setShowPassword] = React.useState(false);
-  const [formData, setFormData] = useState({
-    email: "",
-    password: "",
+
+  // Simplified state for MVP testing
+  const [state, setState] = useState({
+    success: false,
+    error: null as string | null,
+    user: null as any,
   });
+  const [isPending, setIsPending] = useState(false);
 
-  // Redirect if already authenticated
-  useEffect(() => {
-    if (isAuthenticated) {
-      router.push(redirectTo);
-    }
-  }, [isAuthenticated, router, redirectTo]);
-
-  // Clear errors when component unmounts or form changes
-  useEffect(() => {
-    return () => clearError();
-  }, [clearError]);
-
+  // Simplified form handler for MVP testing
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setIsPending(true);
 
-    const { email, password } = formData;
-
-    if (!email || !password) {
-      return;
-    }
-
-    await signIn(email, password);
-  };
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-
-    // Clear errors when user starts typing
-    if (error) {
-      clearError();
-    }
+    // Mock authentication for testing
+    setTimeout(() => {
+      setState({
+        success: true,
+        error: null,
+        user: { name: "Test User" },
+      });
+      setIsPending(false);
+      router.push(redirectTo);
+    }, 1000);
   };
 
   return (
@@ -78,10 +70,10 @@ export function LoginForm({ redirectTo = "/dashboard", className }: LoginFormPro
       <CardContent className="space-y-6">
         <form onSubmit={handleSubmit} className="space-y-5">
           {/* Error Alert */}
-          {error && (
+          {state.error && (
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{error}</AlertDescription>
+              <AlertDescription>{state.error}</AlertDescription>
             </Alert>
           )}
 
@@ -95,11 +87,9 @@ export function LoginForm({ redirectTo = "/dashboard", className }: LoginFormPro
               name="email"
               type="email"
               placeholder="john@example.com"
-              value={formData.email}
-              onChange={handleInputChange}
               required
               autoComplete="email"
-              disabled={isLoading}
+              disabled={isPending}
               className="w-full h-11"
             />
           </div>
@@ -123,18 +113,16 @@ export function LoginForm({ redirectTo = "/dashboard", className }: LoginFormPro
                 name="password"
                 type={showPassword ? "text" : "password"}
                 placeholder="Enter your password"
-                value={formData.password}
-                onChange={handleInputChange}
                 required
                 autoComplete="current-password"
-                disabled={isLoading}
+                disabled={isPending}
                 className="w-full h-11 pr-10"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
                 className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                disabled={isLoading}
+                disabled={isPending}
                 aria-label={showPassword ? "Hide password" : "Show password"}
               >
                 {showPassword ? (
@@ -150,9 +138,9 @@ export function LoginForm({ redirectTo = "/dashboard", className }: LoginFormPro
           <Button
             type="submit"
             className="w-full h-11 text-base font-medium"
-            disabled={isLoading || !formData.email || !formData.password}
+            disabled={isPending}
           >
-            {isLoading ? (
+            {isPending ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Signing in...

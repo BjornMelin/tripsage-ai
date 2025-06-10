@@ -95,7 +95,7 @@ export function MessageList({
 
       // Auto-scroll if at bottom or a new message arrives from the user
       const lastMessage = messages[messages.length - 1];
-      const isNewUserMessage = lastMessage && lastMessage.role === "user";
+      const isNewUserMessage = lastMessage && lastMessage.role === "USER";
 
       if (isAtBottom || isNewUserMessage || isStreaming) {
         bottomRef.current.scrollIntoView({

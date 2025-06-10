@@ -1,8 +1,9 @@
 """
-Updated test suite for tripsage.api.core.config module.
+Comprehensive test suite for tripsage.api.core.config module.
 
 This module provides comprehensive tests for the unified API configuration system,
-updated for the removal of JWT settings and modernized for Pydantic v2.
+including JWT settings, CORS configuration, rate limiting, BYOK functionality,
+and validation logic. Designed to achieve 80%+ code coverage.
 """
 
 import os
@@ -24,6 +25,7 @@ class TestSettings:
         # Should have CoreAppSettings attributes
         assert hasattr(settings, "app_name")
         assert hasattr(settings, "environment")
+        assert hasattr(settings, "jwt_secret_key")
         assert hasattr(settings, "openai_api_key")
 
         # Should have API-specific attributes
@@ -31,11 +33,6 @@ class TestSettings:
         assert hasattr(settings, "cors_origins")
         assert hasattr(settings, "rate_limit_enabled")
         assert hasattr(settings, "enable_byok")
-
-        # JWT settings should NOT be present (removed for Supabase Auth)
-        assert not hasattr(settings, "jwt_secret_key")
-        assert not hasattr(settings, "access_token_expire_minutes")
-        assert not hasattr(settings, "jwt_algorithm")
 
     def test_default_values(self):
         """Test that all default values are set correctly."""
@@ -46,6 +43,11 @@ class TestSettings:
         assert settings.api_title == "TripSage API"
         assert settings.api_version == "1.0.0"
         assert settings.api_description == "TripSage AI Travel Planning API"
+
+        # JWT Settings
+        assert settings.access_token_expire_minutes == 60
+        assert settings.refresh_token_expire_days == 7
+        assert settings.jwt_algorithm == "HS256"
 
         # CORS Settings
         expected_origins = [
@@ -83,6 +85,7 @@ class TestSettings:
             os.environ,
             {
                 "TRIPSAGE_API_API_PREFIX": "/api/v2",
+                "TRIPSAGE_API_ACCESS_TOKEN_EXPIRE_MINUTES": "120",
                 "TRIPSAGE_API_RATE_LIMIT_REQUESTS": "200",
                 "TRIPSAGE_API_ENABLE_BYOK": "false",
             },
@@ -90,12 +93,13 @@ class TestSettings:
             settings = Settings()
 
             assert settings.api_prefix == "/api/v2"
+            assert settings.access_token_expire_minutes == 120
             assert settings.rate_limit_requests == 200
             assert settings.enable_byok is False
 
     def test_cors_origins_validation_development(self):
         """Test CORS origins validation in development environment."""
-        with patch.dict(os.environ, {"ENVIRONMENT": "development"}):
+        with patch.dict(os.environ, {"environment": "development"}):
             # Should allow wildcard in development
             settings = Settings(cors_origins=["*"])
             assert settings.cors_origins == ["*"]
@@ -128,6 +132,33 @@ class TestSettings:
             ValidationError, match="Unknown BYOK service: invalid_service"
         ):
             Settings(byok_services=["openai", "invalid_service"])
+
+    def test_jwt_algorithm_validation_valid(self):
+        """Test JWT algorithm validation with valid algorithms."""
+        valid_algorithms = ["HS256", "HS384", "HS512", "RS256", "RS384", "RS512"]
+
+        for algorithm in valid_algorithms:
+            settings = Settings(jwt_algorithm=algorithm)
+            assert settings.jwt_algorithm == algorithm
+
+    def test_jwt_algorithm_validation_invalid(self):
+        """Test JWT algorithm validation with invalid algorithm."""
+        with pytest.raises(ValidationError, match="Unsupported JWT algorithm: INVALID"):
+            Settings(jwt_algorithm="INVALID")
+
+    def test_secret_key_property(self):
+        """Test that secret_key property returns the JWT secret."""
+        settings = Settings()
+        secret_key = settings.secret_key
+
+        assert isinstance(secret_key, str)
+        assert len(secret_key) > 0
+        assert secret_key == settings.jwt_secret_key.get_secret_value()
+
+    def test_algorithm_property(self):
+        """Test that algorithm property returns the JWT algorithm."""
+        settings = Settings()
+        assert settings.algorithm == settings.jwt_algorithm
 
     def test_get_cors_config(self):
         """Test CORS configuration dictionary generation."""
@@ -344,6 +375,8 @@ class TestConfigurationIntegration:
         """Test loading a complete configuration from environment variables."""
         env_vars = {
             "TRIPSAGE_API_API_PREFIX": "/api/v2",
+            "TRIPSAGE_API_ACCESS_TOKEN_EXPIRE_MINUTES": "90",
+            "TRIPSAGE_API_REFRESH_TOKEN_EXPIRE_DAYS": "14",
             "TRIPSAGE_API_RATE_LIMIT_REQUESTS": "150",
             "TRIPSAGE_API_ENABLE_BYOK": "true",
             "TRIPSAGE_API_BYOK_ENCRYPTION_ENABLED": "true",
@@ -354,6 +387,8 @@ class TestConfigurationIntegration:
             settings = Settings()
 
             assert settings.api_prefix == "/api/v2"
+            assert settings.access_token_expire_minutes == 90
+            assert settings.refresh_token_expire_days == 14
             assert settings.rate_limit_requests == 150
             assert settings.enable_byok is True
             assert settings.byok_encryption_enabled is True
@@ -454,3 +489,96 @@ class TestErrorHandling:
         settings = Settings()
         assert settings.api_prefix is not None  # Has default
         assert settings.cors_origins is not None  # Has default
+
+
+class TestPerformance:
+    """Test performance characteristics of the configuration system."""
+
+    def test_settings_instantiation_speed(self):
+        """Test that settings instantiation is reasonably fast."""
+        import time
+
+        start_time = time.time()
+        for _ in range(100):
+            Settings()
+        end_time = time.time()
+
+        # Should instantiate 100 settings in under 1 second
+        assert (end_time - start_time) < 1.0
+
+    def test_get_settings_cache_performance(self):
+        """Test that cached settings retrieval is fast."""
+        import time
+
+        # Prime the cache
+        get_settings()
+
+        start_time = time.time()
+        for _ in range(1000):
+            get_settings()
+        end_time = time.time()
+
+        # Should retrieve 1000 cached settings in under 0.1 seconds
+        assert (end_time - start_time) < 0.1
+
+    def test_validation_performance(self):
+        """Test that validation is reasonably fast."""
+        import time
+
+        large_cors_list = [f"https://domain{i}.com" for i in range(100)]
+        large_byok_list = ["openai", "google_maps"] * 50  # Valid services repeated
+
+        start_time = time.time()
+        Settings(
+            cors_origins=large_cors_list, byok_services=large_byok_list[:7]
+        )  # Keep valid
+        end_time = time.time()
+
+        # Should validate large lists quickly
+        assert (end_time - start_time) < 0.5
+
+
+class TestDocumentation:
+    """Test that configuration includes proper documentation."""
+
+    def test_field_descriptions_present(self):
+        """Test that all fields have descriptions."""
+        # Check that field info includes descriptions for API-specific fields
+        api_fields = [
+            "api_prefix",
+            "api_title",
+            "api_version",
+            "access_token_expire_minutes",
+            "cors_origins",
+            "rate_limit_enabled",
+            "enable_byok",
+        ]
+
+        for field_name in api_fields:
+            field_info = Settings.model_fields[field_name]
+            assert field_info.description is not None
+            assert len(field_info.description) > 10  # Meaningful description
+
+    def test_validator_documentation(self):
+        """Test that validators have proper docstrings."""
+        validators = [
+            Settings.validate_cors_origins,
+            Settings.validate_byok_services,
+            Settings.validate_jwt_algorithm,
+        ]
+
+        for validator in validators:
+            assert validator.__doc__ is not None
+            assert len(validator.__doc__.strip()) > 20  # Meaningful docstring
+
+    def test_method_documentation(self):
+        """Test that utility methods have proper docstrings."""
+        methods = [
+            Settings.get_cors_config,
+            Settings.is_byok_service_enabled,
+            Settings.get_rate_limit_for_endpoint,
+        ]
+
+        for method in methods:
+            assert method.__doc__ is not None
+            assert len(method.__doc__.strip()) > 20  # Meaningful docstring

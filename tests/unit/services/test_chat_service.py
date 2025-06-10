@@ -10,7 +10,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from tests.factories import ChatFactory
-from tripsage.api.schemas.chat import ChatResponse
+from tripsage.api.schemas.responses.chat import ChatResponse
 from tripsage_core.services.business.chat_service import ChatService
 
 

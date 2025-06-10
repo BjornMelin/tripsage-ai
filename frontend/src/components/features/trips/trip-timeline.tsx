@@ -82,7 +82,7 @@ export function TripTimeline({
               ? new Date(
                   startDate.getTime() +
                     ((activityIndex + 1) * (endDate.getTime() - startDate.getTime())) /
-                      ((destination.activities?.length ?? 0) + 1)
+                      (destination.activities!.length + 1)
                 )
               : startDate || new Date();
 

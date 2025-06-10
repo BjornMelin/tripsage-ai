@@ -70,7 +70,7 @@ export interface SkeletonProps {
   "aria-label"?: string;
 }
 
-export interface LoadingSpinnerBaseProps {
+export interface LoadingSpinnerProps {
   size?: "sm" | "md" | "lg" | "xl";
   variant?: "default" | "dots" | "bars" | "pulse";
   color?: string;
@@ -82,14 +82,14 @@ export interface LoadingOverlayProps {
   isVisible: boolean;
   message?: string;
   progress?: number;
-  spinner?: LoadingSpinnerBaseProps;
+  spinner?: LoadingSpinnerProps;
   className?: string;
 }
 
 export interface LoadingStateProps {
   isLoading: boolean;
   skeleton?: React.ReactNode;
-  spinner?: LoadingSpinnerBaseProps;
+  spinner?: LoadingSpinnerProps;
   children: React.ReactNode;
   className?: string;
 }

@@ -7,7 +7,7 @@ This wrapper provides a standardized interface for the Airbnb MCP client.
 from typing import List, Optional
 
 from tripsage_core.clients.airbnb_mcp_client import AirbnbMCPClient
-from tripsage_core.config.base_app_settings import get_settings
+from tripsage_core.config.base_app_settings import settings
 from tripsage_core.mcp_abstraction.base_wrapper import BaseMCPWrapper
 
 
@@ -23,7 +23,6 @@ class AirbnbMCPWrapper(BaseMCPWrapper):
         """
         if client is None:
             # Create client from configuration
-            settings = get_settings()
             config = settings.airbnb
             if not config.enabled:
                 raise ValueError("Airbnb MCP is not enabled in configuration")

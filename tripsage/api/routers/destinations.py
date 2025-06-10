@@ -9,21 +9,23 @@ from fastapi import APIRouter, Depends, HTTPException, status
 
 from tripsage.api.core.dependencies import get_principal_id, require_principal_dep
 from tripsage.api.middlewares.authentication import Principal
-from tripsage.api.schemas.destinations import (
-    DestinationDetailsResponse,
+from tripsage.api.schemas.requests.destinations import (
     DestinationSearchRequest,
+)
+from tripsage.api.schemas.responses.destinations import (
+    DestinationDetailsResponse,
     DestinationSearchResponse,
     SavedDestinationResponse,
+)
+from tripsage.api.services.destination import (
+    DestinationService,
+    get_destination_service,
 )
 from tripsage_core.exceptions.exceptions import (
     CoreResourceNotFoundError as ResourceNotFoundError,
 )
 from tripsage_core.models.schemas_common.geographic import Place as Destination
 from tripsage_core.models.schemas_common.geographic import Place as PointOfInterest
-from tripsage_core.services.business.destination_service import (
-    DestinationService,
-    get_destination_service,
-)
 
 router = APIRouter()
 logger = logging.getLogger(__name__)

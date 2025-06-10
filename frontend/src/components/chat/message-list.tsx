@@ -235,14 +235,14 @@ function formatDateSeparator(dateString: string): string {
 
   if (date.toDateString() === today.toDateString()) {
     return "Today";
-  }
-  if (date.toDateString() === yesterday.toDateString()) {
+  } else if (date.toDateString() === yesterday.toDateString()) {
     return "Yesterday";
+  } else {
+    return date.toLocaleDateString("en-US", {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
   }
-  return date.toLocaleDateString("en-US", {
-    weekday: "long",
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
 }

@@ -1,9 +1,15 @@
 """
-Clean, focused test suite for TripSage exception system.
+Comprehensive tests for TripSage exception system.
 
-Tests core exception functionality with proper Pydantic v2 compatibility.
+Tests the centralized exception hierarchy and error handling utilities
+with modern pytest patterns and complete coverage.
 """
 
+import asyncio
+import json
+from unittest.mock import Mock
+
+import pytest
 from fastapi import status
 
 from tripsage_core.exceptions.exceptions import (
@@ -32,380 +38,631 @@ from tripsage_core.exceptions.exceptions import (
 
 
 class TestErrorDetails:
-    """Test ErrorDetails model."""
+    """Test ErrorDetails model with modern patterns."""
 
-    def test_error_details_creation_minimal(self):
-        """Test ErrorDetails with minimal data."""
-        details = ErrorDetails()
-        assert details.service is None
-        assert details.operation is None
-        assert details.additional_context == {}
-
-    def test_error_details_creation_full(self):
-        """Test ErrorDetails with all fields."""
+    def test_error_details_creation(self):
+        """Test ErrorDetails creation with all fields."""
         details = ErrorDetails(
             service="test_service",
             operation="test_operation",
             resource_id="resource123",
             user_id="user456",
             request_id="req789",
-            additional_context={"key": "value"},
+            additional_context={"key": "value", "count": 42},
         )
+
         assert details.service == "test_service"
         assert details.operation == "test_operation"
         assert details.resource_id == "resource123"
         assert details.user_id == "user456"
         assert details.request_id == "req789"
-        assert details.additional_context == {"key": "value"}
+        assert details.additional_context["key"] == "value"
+        assert details.additional_context["count"] == 42
 
-    def test_error_details_serialization(self):
-        """Test ErrorDetails model serialization."""
+    def test_error_details_optional_fields(self):
+        """Test ErrorDetails with optional fields."""
+        details = ErrorDetails()
+
+        assert details.service is None
+        assert details.operation is None
+        assert details.resource_id is None
+        assert details.user_id is None
+        assert details.request_id is None
+        assert details.additional_context == {}
+
+    def test_error_details_json_serialization(self):
+        """Test ErrorDetails JSON serialization."""
         details = ErrorDetails(
-            service="test_service",
-            operation="test_operation",
-            additional_context={"nested": {"data": 123}},
+            service="api",
+            operation="create_user",
+            additional_context={"timestamp": "2025-06-04T12:00:00Z"},
         )
-        serialized = details.model_dump(exclude_none=True)
-        expected = {
-            "service": "test_service",
-            "operation": "test_operation",
-            "additional_context": {"nested": {"data": 123}},
-        }
-        assert serialized == expected
+
+        json_data = details.model_dump_json()
+        parsed = json.loads(json_data)
+
+        assert parsed["service"] == "api"
+        assert parsed["operation"] == "create_user"
+        assert parsed["additional_context"]["timestamp"] == "2025-06-04T12:00:00Z"
 
 
-class TestCoreTripSageError:
-    """Test base CoreTripSageError class."""
+class TestCoreExceptions:
+    """Test core exception hierarchy."""
 
-    def test_basic_initialization(self):
-        """Test basic error initialization."""
-        error = CoreTripSageError("Test message")
-        assert error.message == "Test message"
+    def test_core_tripsage_error_basic(self):
+        """Test basic CoreTripSageError creation."""
+        error = CoreTripSageError("Test error")
+
+        assert str(error) == "Test error"
         assert error.code == "INTERNAL_ERROR"
         assert error.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
-        assert isinstance(error.details, ErrorDetails)
+        assert error.details == {}
 
-    def test_full_initialization(self):
-        """Test error with all parameters."""
-        details = ErrorDetails(service="test_service")
+    def test_core_tripsage_error_with_details(self):
+        """Test CoreTripSageError with full details."""
+        details = ErrorDetails(service="test", operation="testing")
         error = CoreTripSageError(
-            message="Custom message",
-            code="CUSTOM_ERROR",
+            message="Detailed error",
+            code="TEST_ERROR",
             status_code=status.HTTP_400_BAD_REQUEST,
             details=details,
         )
-        assert error.message == "Custom message"
-        assert error.code == "CUSTOM_ERROR"
+
+        assert error.message == "Detailed error"
+        assert error.code == "TEST_ERROR"
         assert error.status_code == status.HTTP_400_BAD_REQUEST
-        assert error.details.service == "test_service"
+        assert error.details["service"] == "test"
+        assert error.details["operation"] == "testing"
 
-    def test_initialization_with_dict_details(self):
-        """Test error initialization with dict details."""
-        error = CoreTripSageError(
-            message="Test", details={"service": "test_service", "operation": "test_op"}
+    def test_core_validation_error(self):
+        """Test CoreValidationError specifics."""
+        error = CoreValidationError(
+            message="Invalid input",
+            field="email",
+            value="invalid-email",
+            details={"format": "email"},
         )
-        assert isinstance(error.details, ErrorDetails)
-        assert error.details.service == "test_service"
-        assert error.details.operation == "test_op"
 
-    def test_to_dict(self):
-        """Test error dictionary conversion."""
-        error = CoreTripSageError(
-            message="Test message",
-            code="TEST_ERROR",
-            status_code=status.HTTP_400_BAD_REQUEST,
-            details={"service": "test_service"},
-        )
-        result = error.to_dict()
-        expected = {
-            "error": "CoreTripSageError",
-            "message": "Test message",
-            "code": "TEST_ERROR",
-            "status_code": status.HTTP_400_BAD_REQUEST,
-            "details": {"service": "test_service", "additional_context": {}},
-        }
-        assert result == expected
-
-    def test_string_representation(self):
-        """Test error string representations."""
-        error = CoreTripSageError("Test message", "TEST_ERROR")
-        assert str(error) == "TEST_ERROR: Test message"
-        assert "CoreTripSageError" in repr(error)
-        assert "TEST_ERROR" in repr(error)
-        assert "Test message" in repr(error)
-
-
-class TestSpecificExceptions:
-    """Test specific exception types."""
-
-    def test_authentication_error(self):
-        """Test CoreAuthenticationError."""
-        error = CoreAuthenticationError("Invalid credentials")
-        assert error.code == "AUTHENTICATION_ERROR"
-        assert error.status_code == status.HTTP_401_UNAUTHORIZED
-        assert error.message == "Invalid credentials"
-
-    def test_authorization_error(self):
-        """Test CoreAuthorizationError."""
-        error = CoreAuthorizationError("Access denied")
-        assert error.code == "AUTHORIZATION_ERROR"
-        assert error.status_code == status.HTTP_403_FORBIDDEN
-        assert error.message == "Access denied"
-
-    def test_resource_not_found_error(self):
-        """Test CoreResourceNotFoundError."""
-        error = CoreResourceNotFoundError("Resource not found")
-        assert error.code == "RESOURCE_NOT_FOUND"
-        assert error.status_code == status.HTTP_404_NOT_FOUND
-        assert error.message == "Resource not found"
-
-    def test_validation_error(self):
-        """Test CoreValidationError."""
-        error = CoreValidationError("Invalid data")
+        assert error.message == "Invalid input"
         assert error.code == "VALIDATION_ERROR"
         assert error.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
-        assert error.message == "Invalid data"
+        # Access field through details since it's stored there
+        assert error.details["additional_context"]["field"] == "email"
+        assert error.details["additional_context"]["value"] == "invalid-email"
 
-    def test_service_error(self):
-        """Test CoreServiceError."""
-        error = CoreServiceError("Service failed", service="test_service")
-        assert error.code == "SERVICE_ERROR"
-        assert error.status_code == status.HTTP_502_BAD_GATEWAY
-        assert error.message == "Service failed"
-        assert error.details.service == "test_service"
+    def test_core_authentication_error(self):
+        """Test CoreAuthenticationError specifics."""
+        error = CoreAuthenticationError(
+            message="Invalid credentials",
+            method="jwt",
+            details={"realm": "api"},
+        )
 
-    def test_rate_limit_error(self):
-        """Test CoreRateLimitError."""
-        error = CoreRateLimitError("Rate limit exceeded")
+        assert error.message == "Invalid credentials"
+        assert error.code == "AUTHENTICATION_ERROR"
+        assert error.status_code == status.HTTP_401_UNAUTHORIZED
+        # Method is stored in additional_context
+        assert error.details["additional_context"]["method"] == "jwt"
+
+    def test_core_authorization_error(self):
+        """Test CoreAuthorizationError specifics."""
+        error = CoreAuthorizationError(
+            message="Insufficient permissions",
+            resource="trips",
+            action="delete",
+            required_permissions=["admin", "owner"],
+        )
+
+        assert error.message == "Insufficient permissions"
+        assert error.code == "AUTHORIZATION_ERROR"
+        assert error.status_code == status.HTTP_403_FORBIDDEN
+        # Check fields in additional_context
+        assert error.details["additional_context"]["resource"] == "trips"
+        assert error.details["additional_context"]["action"] == "delete"
+
+    def test_core_resource_not_found_error(self):
+        """Test CoreResourceNotFoundError specifics."""
+        error = CoreResourceNotFoundError(
+            message="Trip not found",
+            resource_type="trip",
+            resource_id="trip123",
+        )
+
+        assert error.message == "Trip not found"
+        assert error.code == "RESOURCE_NOT_FOUND"
+        assert error.status_code == status.HTTP_404_NOT_FOUND
+        # Check fields in additional_context
+        assert error.details["additional_context"]["resource_type"] == "trip"
+        assert error.details["additional_context"]["resource_id"] == "trip123"
+
+    def test_core_rate_limit_error(self):
+        """Test CoreRateLimitError specifics."""
+        error = CoreRateLimitError(
+            message="Rate limit exceeded",
+            limit=100,
+            window_seconds=3600,
+            retry_after=1800,
+        )
+
+        assert error.message == "Rate limit exceeded"
         assert error.code == "RATE_LIMIT_EXCEEDED"
         assert error.status_code == status.HTTP_429_TOO_MANY_REQUESTS
-        assert error.message == "Rate limit exceeded"
+        # Check fields in additional_context
+        assert error.details["additional_context"]["limit"] == 100
+        assert error.details["additional_context"]["window_seconds"] == 3600
 
-    def test_key_validation_error(self):
-        """Test CoreKeyValidationError."""
-        error = CoreKeyValidationError("Invalid API key")
-        assert error.code == "INVALID_API_KEY"
-        assert error.status_code == status.HTTP_400_BAD_REQUEST
-        assert error.message == "Invalid API key"
+    def test_core_database_error(self):
+        """Test CoreDatabaseError specifics."""
+        error = CoreDatabaseError(
+            message="Database connection failed",
+            operation="connect",
+            table="users",
+            database="tripsage",
+        )
 
-    def test_database_error(self):
-        """Test CoreDatabaseError."""
-        error = CoreDatabaseError("Database connection failed")
-        assert error.code == "DATABASE_ERROR"
-        assert error.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
         assert error.message == "Database connection failed"
+        assert error.code == "DATABASE_ERROR"
+        assert error.status_code == status.HTTP_503_SERVICE_UNAVAILABLE
+        # Check fields in additional_context
+        assert error.details["additional_context"]["operation"] == "connect"
+        assert error.details["additional_context"]["table"] == "users"
 
-    def test_external_api_error(self):
-        """Test CoreExternalAPIError."""
-        error = CoreExternalAPIError("API call failed", api_service="test_api")
+    def test_core_external_api_error(self):
+        """Test CoreExternalAPIError specifics."""
+        error = CoreExternalAPIError(
+            message="External API failed",
+            service_name="weather_api",
+            endpoint="/forecast",
+            response_status=500,
+            response_body={"error": "Internal server error"},
+        )
+
+        assert error.message == "External API failed"
         assert error.code == "EXTERNAL_API_ERROR"
         assert error.status_code == status.HTTP_502_BAD_GATEWAY
-        assert error.message == "API call failed"
-        assert error.details.service == "test_api"
+        # Check fields in additional_context
+        assert error.details["additional_context"]["service_name"] == "weather_api"
+        assert error.details["additional_context"]["endpoint"] == "/forecast"
 
-    def test_mcp_error(self):
-        """Test CoreMCPError."""
-        error = CoreMCPError("MCP operation failed", tool="test_tool")
-        assert error.code == "MCP_ERROR"
-        assert (
-            error.status_code == status.HTTP_502_BAD_GATEWAY
-        )  # Inherits from CoreServiceError
-        assert error.message == "MCP operation failed"
-        assert error.details.additional_context["tool"] == "test_tool"
+    def test_core_service_error(self):
+        """Test CoreServiceError specifics."""
+        error = CoreServiceError(
+            message="Service operation failed",
+            service="FlightService",
+        )
 
-    def test_agent_error(self):
-        """Test CoreAgentError."""
-        error = CoreAgentError("Agent failed", agent_type="test_agent")
+        assert error.message == "Service operation failed"
+        assert error.code == "SERVICE_ERROR"
+        assert error.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+        assert error.details["service"] == "FlightService"
+
+    def test_core_agent_error(self):
+        """Test CoreAgentError specifics."""
+        error = CoreAgentError(
+            message="Agent execution failed",
+            agent_name="flight_agent",
+        )
+
+        assert error.message == "Agent execution failed"
         assert error.code == "AGENT_ERROR"
-        assert (
-            error.status_code == status.HTTP_502_BAD_GATEWAY
-        )  # Inherits from CoreServiceError
-        assert error.message == "Agent failed"
-        assert error.details.service == "test_agent"
+        assert error.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+        # Check fields in additional_context
+        assert error.details["additional_context"]["agent_name"] == "flight_agent"
 
+    def test_core_mcp_error(self):
+        """Test CoreMCPError specifics."""
+        error = CoreMCPError(
+            message="MCP invocation failed",
+            mcp_name="weather",
+            method="get_forecast",
+        )
 
-class TestUtilityFunctions:
-    """Test utility functions."""
+        assert error.message == "MCP invocation failed"
+        assert error.code == "MCP_ERROR"
+        assert error.status_code == status.HTTP_502_BAD_GATEWAY
+        # Check fields in additional_context
+        assert error.details["additional_context"]["mcp_name"] == "weather"
+        assert error.details["additional_context"]["method"] == "get_forecast"
 
-    def test_format_exception_core_error(self):
-        """Test formatting TripSage core errors."""
-        error = CoreValidationError("Test validation error")
-        result = format_exception(error)
-        expected = {
-            "error": "CoreValidationError",
-            "message": "Test validation error",
-            "code": "VALIDATION_ERROR",
-            "status_code": status.HTTP_422_UNPROCESSABLE_ENTITY,
-            "details": {"additional_context": {}},
-        }
-        assert result == expected
+    def test_core_key_validation_error(self):
+        """Test CoreKeyValidationError specifics."""
+        error = CoreKeyValidationError(
+            message="Invalid API key format",
+            key_type="openai",
+        )
 
-    def test_format_exception_standard_error(self):
-        """Test formatting standard Python exceptions."""
-        error = ValueError("Standard error")
-        result = format_exception(error)
-
-        # Check the basic structure without relying on traceback details
-        assert result["error"] == "ValueError"
-        assert result["message"] == "Standard error"
-        assert result["code"] == "SYSTEM_ERROR"
-        assert result["status_code"] == 500
-        assert "details" in result
-        assert "traceback" in result["details"]
-
-    def test_create_error_response(self):
-        """Test error response creation."""
-        error = CoreAuthenticationError("Auth failed")
-        response = create_error_response(error)
-
-        # Should return a dict with error information
-        assert response["error"] == "CoreAuthenticationError"
-        assert response["message"] == "Auth failed"
-        assert response["code"] == "AUTHENTICATION_ERROR"
-        assert response["status_code"] == status.HTTP_401_UNAUTHORIZED
-
-    def test_safe_execute_success(self):
-        """Test safe_execute with successful operation."""
-
-        def success_func():
-            return "success"
-
-        result = safe_execute(success_func)
-        assert result == "success"
-
-    def test_safe_execute_failure(self):
-        """Test safe_execute with failing operation."""
-
-        def failing_func():
-            raise ValueError("Test error")
-
-        result = safe_execute(failing_func, fallback="default_value")
-        assert result == "default_value"
-
-    def test_with_error_handling_decorator_success(self):
-        """Test with_error_handling decorator on successful function."""
-
-        @with_error_handling()
-        def success_func():
-            return "success"
-
-        result = success_func()
-        assert result == "success"
-
-    def test_with_error_handling_decorator_failure(self):
-        """Test with_error_handling decorator on failing function."""
-
-        @with_error_handling(fallback="default", re_raise=False)
-        def failing_func():
-            raise ValueError("Test error")
-
-        result = failing_func()
-        assert result == "default"
+        assert error.message == "Invalid API key format"
+        assert error.code == "KEY_VALIDATION_ERROR"
+        assert error.status_code == status.HTTP_400_BAD_REQUEST
+        # Check fields in additional_context
+        assert error.details["additional_context"]["key_type"] == "openai"
 
 
 class TestErrorCreationHelpers:
     """Test error creation helper functions."""
 
+    def test_create_validation_error(self):
+        """Test create_validation_error helper."""
+        error = create_validation_error(
+            field="age",
+            value=-5,
+            message="Age must be positive",
+        )
+
+        assert isinstance(error, CoreValidationError)
+        assert error.details["additional_context"]["field"] == "age"
+        assert error.details["additional_context"]["value"] == -5
+        assert "Age must be positive" in error.message
+
     def test_create_authentication_error(self):
-        """Test authentication error creation helper."""
-        error = create_authentication_error("Invalid token")
+        """Test create_authentication_error helper."""
+        error = create_authentication_error(
+            message="Token expired",
+            method="bearer",
+        )
+
         assert isinstance(error, CoreAuthenticationError)
-        assert error.message == "Invalid token"
-        assert error.code == "AUTHENTICATION_ERROR"
+        assert error.details["additional_context"]["method"] == "bearer"
+        assert "Token expired" in error.message
 
     def test_create_authorization_error(self):
-        """Test authorization error creation helper."""
-        error = create_authorization_error("No permission")
-        assert isinstance(error, CoreAuthorizationError)
-        assert error.message == "No permission"
-        assert error.code == "AUTHORIZATION_ERROR"
+        """Test create_authorization_error helper."""
+        error = create_authorization_error(
+            resource="users",
+            action="update",
+        )
 
-    def test_create_validation_error(self):
-        """Test validation error creation helper."""
-        error = create_validation_error("Invalid input")
-        assert isinstance(error, CoreValidationError)
-        assert error.message == "Invalid input"
-        assert error.code == "VALIDATION_ERROR"
+        assert isinstance(error, CoreAuthorizationError)
+        assert error.details["additional_context"]["resource"] == "users"
+        assert error.details["additional_context"]["action"] == "update"
 
     def test_create_not_found_error(self):
-        """Test not found error creation helper."""
-        error = create_not_found_error("Resource missing")
+        """Test create_not_found_error helper."""
+        error = create_not_found_error(
+            resource_type="flight",
+            resource_id="FL123",
+        )
+
         assert isinstance(error, CoreResourceNotFoundError)
-        assert error.message == "Resource missing"
-        assert error.code == "RESOURCE_NOT_FOUND"
+        assert error.details["additional_context"]["resource_type"] == "flight"
+        assert error.details["additional_context"]["resource_id"] == "FL123"
 
 
-class TestErrorInheritance:
-    """Test exception inheritance relationships."""
+class TestErrorResponseCreation:
+    """Test error response creation utilities."""
 
-    def test_all_errors_inherit_from_base(self):
-        """Test that all errors inherit from CoreTripSageError."""
-        errors = [
+    def test_create_error_response_basic(self):
+        """Test basic error response creation."""
+        error = CoreValidationError("Invalid input", field="email")
+        response = create_error_response(error)
+
+        assert response["error"]["code"] == "VALIDATION_ERROR"
+        assert response["error"]["message"] == "Invalid input"
+        assert "timestamp" in response["error"]
+        assert response["status"] == "error"
+
+    def test_create_error_response_with_request_id(self):
+        """Test error response with request ID."""
+        error = CoreServiceError("Service failed")
+        response = create_error_response(error, request_id="req123")
+
+        assert response["error"]["request_id"] == "req123"
+
+    def test_create_error_response_with_path(self):
+        """Test error response with request path."""
+        error = CoreResourceNotFoundError("Not found")
+        response = create_error_response(error, path="/api/v1/trips/123")
+
+        assert response["error"]["path"] == "/api/v1/trips/123"
+
+
+class TestExceptionFormatting:
+    """Test exception formatting utilities."""
+
+    def test_format_exception_basic(self):
+        """Test basic exception formatting."""
+        try:
+            raise ValueError("Test error")
+        except Exception as e:
+            formatted = format_exception(e)
+
+            assert "ValueError: Test error" in str(formatted)
+            assert "traceback" in formatted
+            assert "test_format_exception_basic" in formatted["traceback"]
+
+    def test_format_exception_with_cause(self):
+        """Test formatting exception with cause."""
+        try:
+            try:
+                raise KeyError("Original error")
+            except Exception as original:
+                raise ValueError("Wrapped error") from original
+        except Exception as e:
+            formatted = format_exception(e)
+
+            assert "ValueError: Wrapped error" in str(formatted["exception"])
+            assert "KeyError: Original error" in formatted["traceback"]
+
+
+class TestSafeExecute:
+    """Test safe_execute decorator with async support."""
+
+    @pytest.mark.asyncio
+    async def test_safe_execute_success(self):
+        """Test safe_execute with successful execution."""
+
+        @safe_execute(default_return="default")
+        async def successful_func():
+            return "success"
+
+        result = await successful_func()
+        assert result == "success"
+
+    @pytest.mark.asyncio
+    async def test_safe_execute_with_exception(self):
+        """Test safe_execute catching exceptions."""
+
+        @safe_execute(default_return="fallback")
+        async def failing_func():
+            raise ValueError("Test error")
+
+        result = await failing_func()
+        assert result == "fallback"
+
+    @pytest.mark.asyncio
+    async def test_safe_execute_with_logger(self):
+        """Test safe_execute with custom logger."""
+        mock_logger = Mock()
+
+        @safe_execute(default_return=None, logger=mock_logger)
+        async def failing_func():
+            raise RuntimeError("Test error")
+
+        result = await failing_func()
+        assert result is None
+        mock_logger.error.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_safe_execute_reraise(self):
+        """Test safe_execute with reraise option."""
+
+        @safe_execute(default_return=None, reraise=True)
+        async def failing_func():
+            raise ValueError("Test error")
+
+        with pytest.raises(ValueError, match="Test error"):
+            await failing_func()
+
+    def test_safe_execute_sync_function(self):
+        """Test safe_execute with synchronous function."""
+
+        @safe_execute(default_return="default")
+        def sync_func():
+            return "sync_result"
+
+        result = sync_func()
+        assert result == "sync_result"
+
+    def test_safe_execute_sync_with_exception(self):
+        """Test safe_execute with sync function that raises."""
+
+        @safe_execute(default_return="fallback")
+        def sync_failing_func():
+            raise KeyError("Missing key")
+
+        result = sync_failing_func()
+        assert result == "fallback"
+
+
+class TestWithErrorHandling:
+    """Test with_error_handling decorator."""
+
+    @pytest.mark.asyncio
+    async def test_with_error_handling_success(self):
+        """Test with_error_handling with successful execution."""
+
+        @with_error_handling()()
+        async def successful_operation():
+            return {"status": "success", "data": [1, 2, 3]}
+
+        result = await successful_operation()
+        assert result == {"status": "success", "data": [1, 2, 3]}
+
+    @pytest.mark.asyncio
+    async def test_with_error_handling_core_exception(self):
+        """Test with_error_handling with CoreTripSageError."""
+
+        @with_error_handling()
+        async def failing_operation():
+            raise CoreServiceError(
+                message="Service unavailable",
+                code="SERVICE_UNAVAILABLE",
+                service="TestService",
+            )
+
+        with pytest.raises(CoreServiceError) as exc_info:
+            await failing_operation()
+
+        assert exc_info.value.code == "SERVICE_UNAVAILABLE"
+        assert exc_info.value.details["service"] == "TestService"
+
+    @pytest.mark.asyncio
+    async def test_with_error_handling_generic_error(self):
+        """Test with_error_handling converting generic exception."""
+
+        @with_error_handling()
+        async def generic_error_operation():
+            raise RuntimeError("Unexpected failure")
+
+        with pytest.raises(CoreServiceError) as exc_info:
+            await generic_error_operation()
+
+        assert exc_info.value.message == "Unexpected failure"
+
+    def test_with_error_handling_sync_function(self):
+        """Test with_error_handling with synchronous function."""
+
+        @with_error_handling()
+        def sync_operation():
+            return "sync_result"
+
+        result = sync_operation()
+        assert result == "sync_result"
+
+    def test_with_error_handling_sync_with_error(self):
+        """Test with_error_handling with sync function that raises."""
+
+        @with_error_handling()
+        def sync_error_operation():
+            raise KeyError("not_found")
+
+        with pytest.raises(CoreServiceError):
+            sync_error_operation()
+
+
+class TestExceptionInheritance:
+    """Test exception inheritance and isinstance checks."""
+
+    def test_exception_inheritance_chain(self):
+        """Test that all exceptions inherit from CoreTripSageError."""
+        exceptions = [
+            CoreValidationError("test"),
             CoreAuthenticationError("test"),
             CoreAuthorizationError("test"),
             CoreResourceNotFoundError("test"),
-            CoreValidationError("test"),
-            CoreServiceError("test"),
             CoreRateLimitError("test"),
-            CoreKeyValidationError("test"),
             CoreDatabaseError("test"),
             CoreExternalAPIError("test"),
-            CoreMCPError("test"),
+            CoreServiceError("test"),
             CoreAgentError("test"),
+            CoreMCPError("test"),
+            CoreKeyValidationError("test"),
         ]
 
-        for error in errors:
-            assert isinstance(error, CoreTripSageError)
-            assert isinstance(error, Exception)
+        for exc in exceptions:
+            assert isinstance(exc, CoreTripSageError)
+            assert isinstance(exc, Exception)
 
-    def test_service_specific_errors_inherit_from_service_error(self):
-        """Test that service-specific errors inherit from CoreServiceError."""
-        mcp_error = CoreMCPError("test")
-        agent_error = CoreAgentError("test")
+    def test_exception_type_checking(self):
+        """Test exception type checking for error handling."""
+        validation_error = CoreValidationError("Invalid")
+        auth_error = CoreAuthenticationError("Unauthorized")
 
-        assert isinstance(mcp_error, CoreServiceError)
-        assert isinstance(agent_error, CoreServiceError)
-        assert isinstance(mcp_error, CoreTripSageError)
-        assert isinstance(agent_error, CoreTripSageError)
+        # Check specific types
+        assert isinstance(validation_error, CoreValidationError)
+        assert not isinstance(validation_error, CoreAuthenticationError)
+
+        assert isinstance(auth_error, CoreAuthenticationError)
+        assert not isinstance(auth_error, CoreValidationError)
+
+        # Both are CoreTripSageError
+        assert isinstance(validation_error, CoreTripSageError)
+        assert isinstance(auth_error, CoreTripSageError)
 
 
-class TestErrorWithComplexDetails:
-    """Test errors with complex detail structures."""
+class TestExceptionSerialization:
+    """Test exception serialization for API responses."""
 
-    def test_error_with_nested_details(self):
-        """Test error with nested detail structures."""
-        details = {
-            "service": "test_service",
-            "operation": "complex_operation",
-            "additional_context": {
-                "nested": {"data": 123, "items": [1, 2, 3]},
-                "metadata": {"timestamp": "2023-01-01", "version": "1.0"},
-            },
-        }
-
-        error = CoreServiceError("Complex error", details=details)
-        result = error.to_dict()
-
-        assert result["details"]["service"] == "test_service"
-        assert result["details"]["operation"] == "complex_operation"
-        assert result["details"]["additional_context"]["nested"]["data"] == 123
-        assert result["details"]["additional_context"]["metadata"]["version"] == "1.0"
-
-    def test_error_details_exclude_none(self):
-        """Test that None values are excluded from serialization."""
-        details = ErrorDetails(
-            service="test_service",
-            operation=None,  # This should be excluded
-            resource_id="123",
-            user_id=None,  # This should be excluded
+    def test_exception_to_dict(self):
+        """Test converting exception to dictionary."""
+        error = CoreServiceError(
+            message="Service failed",
+            code="SERVICE_FAILURE",
+            service="TestService",
+            details={"request_id": "123", "retry_count": 3},
         )
 
-        serialized = details.model_dump(exclude_none=True)
-        expected = {
-            "service": "test_service",
-            "resource_id": "123",
-            "additional_context": {},
-        }
-        assert serialized == expected
-        assert "operation" not in serialized
-        assert "user_id" not in serialized
+        # Test to_dict method
+        error_dict = error.to_dict()
+
+        assert error_dict["code"] == "SERVICE_FAILURE"
+        assert error_dict["message"] == "Service failed"
+        assert error_dict["service"] == "TestService"
+
+    def test_exception_json_serialization(self):
+        """Test JSON serialization of exceptions."""
+        error = CoreValidationError(
+            message="Invalid email",
+            field="email",
+            value="not-an-email",
+        )
+
+        error_dict = error.to_dict()
+        json_str = json.dumps(error_dict)
+        parsed = json.loads(json_str)
+
+        assert parsed["code"] == "VALIDATION_ERROR"
+        assert parsed["message"] == "Invalid email"
+
+
+class TestComplexErrorScenarios:
+    """Test complex error handling scenarios."""
+
+    @pytest.mark.asyncio
+    async def test_nested_error_handling(self):
+        """Test nested error handling with multiple decorators."""
+
+        @with_error_handling()
+        async def outer_operation():
+            @with_error_handling()
+            async def inner_operation():
+                raise ValueError("Inner error")
+
+            await inner_operation()
+
+        with pytest.raises(CoreServiceError):
+            await outer_operation()
+
+    @pytest.mark.asyncio
+    async def test_concurrent_error_handling(self):
+        """Test error handling with concurrent operations."""
+
+        @safe_execute(default_return=None)
+        async def maybe_failing_operation(should_fail: bool):
+            if should_fail:
+                raise RuntimeError("Deliberate failure")
+            return "success"
+
+        # Run concurrent operations with mixed success/failure
+        results = await asyncio.gather(
+            maybe_failing_operation(False),
+            maybe_failing_operation(True),
+            maybe_failing_operation(False),
+            maybe_failing_operation(True),
+        )
+
+        assert results[0] == "success"
+        assert results[1] is None  # Failed, returned default
+        assert results[2] == "success"
+        assert results[3] is None  # Failed, returned default
+
+
+# Test module initialization and exports
+def test_module_exports():
+    """Test that all expected exceptions and utilities are exported."""
+    from tripsage_core.exceptions import exceptions
+
+    # Check exception classes
+    assert hasattr(exceptions, "CoreTripSageError")
+    assert hasattr(exceptions, "CoreValidationError")
+    assert hasattr(exceptions, "CoreAuthenticationError")
+    assert hasattr(exceptions, "CoreAuthorizationError")
+    assert hasattr(exceptions, "CoreResourceNotFoundError")
+    assert hasattr(exceptions, "CoreRateLimitError")
+    assert hasattr(exceptions, "CoreDatabaseError")
+    assert hasattr(exceptions, "CoreExternalAPIError")
+    assert hasattr(exceptions, "CoreServiceError")
+    assert hasattr(exceptions, "CoreAgentError")
+    assert hasattr(exceptions, "CoreMCPError")
+    assert hasattr(exceptions, "CoreKeyValidationError")
+
+    # Check utilities
+    assert hasattr(exceptions, "ErrorDetails")
+    assert hasattr(exceptions, "create_validation_error")
+    assert hasattr(exceptions, "create_authentication_error")
+    assert hasattr(exceptions, "create_authorization_error")
+    assert hasattr(exceptions, "create_not_found_error")
+    assert hasattr(exceptions, "create_error_response")
+    assert hasattr(exceptions, "format_exception")
+    assert hasattr(exceptions, "safe_execute")
+    assert hasattr(exceptions, "with_error_handling")

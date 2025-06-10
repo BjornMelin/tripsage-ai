@@ -1,22 +1,15 @@
 """
 API schemas for TripSage.
 
-This package contains consolidated Pydantic V2 schemas organized by domain:
+This package contains organized Pydantic V2 schemas with clear separation:
 
-- accommodations.py : Accommodation search and booking schemas
-- api_keys.py      : API key management schemas
-- auth.py          : Authentication schemas
-- chat.py          : Chat interaction schemas
-- destinations.py  : Destination search and info schemas
-- flights.py       : Flight search and booking schemas
-- itineraries.py   : Itinerary planning schemas
-- trips.py         : Trip management schemas
-- websocket.py     : WebSocket communication schemas
+- requests/   : API request schemas and validation models
+- responses/  : API response schemas and output models
 
-Import directly from the consolidated schema files:
+Import directly from the appropriate subdirectory:
 
-    from tripsage.api.schemas.auth import LoginRequest, UserResponse
-    from tripsage.api.schemas.chat import ChatRequest, ChatResponse
+    from tripsage.api.schemas.requests.auth import LoginRequest
+    from tripsage.api.schemas.responses.auth import UserResponse
 
 For shared types from tripsage_core:
     from tripsage_core.models.schemas_common import BookingStatus

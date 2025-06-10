@@ -173,8 +173,8 @@ describe("useAccommodationSearch", () => {
     act(() => {
       result.current.search({
         destination: "New York",
-        checkIn: "2024-03-15",
-        checkOut: "2024-03-18",
+        startDate: "2024-03-15",
+        endDate: "2024-03-18",
         adults: 2,
         children: 0,
         infants: 0,
@@ -188,7 +188,7 @@ describe("useAccommodationSearch", () => {
 
     // Resolve the promise
     await act(async () => {
-      resolvePromise?.({
+      resolvePromise!({
         results: [],
         totalResults: 0,
       });

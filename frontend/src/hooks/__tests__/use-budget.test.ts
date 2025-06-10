@@ -1,6 +1,11 @@
 import { act, renderHook } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { useAlerts, useBudget, useBudgetActions, useExpenses } from "../use-budget";
+import {
+  useAlerts,
+  useBudget,
+  useBudgetActions,
+  useCurrency,
+  useExpenses,
+} from "../use-budget";
 import {
   useAddExpense,
   useCreateAlert,
@@ -214,6 +219,18 @@ describe("Budget Hooks", () => {
       const { result } = renderHook(() => useAlerts());
 
       expect(result.current.alerts).toEqual([]);
+    });
+  });
+
+  describe("useCurrency", () => {
+    it("returns currency data and actions", () => {
+      const { result } = renderHook(() => useCurrency());
+
+      expect(result.current.baseCurrency).toBe("USD");
+      expect(result.current.currencies).toBeDefined();
+      expect(result.current.currencies.EUR.rate).toBe(0.85);
+      expect(result.current.setBaseCurrency).toBeDefined();
+      expect(result.current.updateCurrencyRate).toBeDefined();
     });
   });
 

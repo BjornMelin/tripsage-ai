@@ -136,7 +136,7 @@ export function useWebSocketChat({
 
         // Attempt to reconnect with exponential backoff
         if (retryOnError && retryCount < maxRetries && !event.wasClean) {
-          const delay = Math.min(1000 * 2 ** retryCount, 30000);
+          const delay = Math.min(1000 * Math.pow(2, retryCount), 30000);
           console.log(`Reconnecting in ${delay}ms... (attempt ${retryCount + 1})`);
 
           reconnectTimeoutRef.current = setTimeout(() => {

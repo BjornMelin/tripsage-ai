@@ -182,13 +182,13 @@ const getDefaultDestinationParams = (): Partial<ValidatedDestinationParams> => (
 const getDefaultParams = (type: SearchType): Partial<SearchParams> => {
   switch (type) {
     case "flight":
-      return getDefaultFlightParams() as Partial<SearchParams>;
+      return getDefaultFlightParams();
     case "accommodation":
-      return getDefaultAccommodationParams() as Partial<SearchParams>;
+      return getDefaultAccommodationParams();
     case "activity":
-      return getDefaultActivityParams() as Partial<SearchParams>;
+      return getDefaultActivityParams();
     case "destination":
-      return getDefaultDestinationParams() as Partial<SearchParams>;
+      return getDefaultDestinationParams();
     default:
       return {};
   }
@@ -326,7 +326,7 @@ export const useSearchParamsStore = create<SearchParamsState>()(
               currentParams = activityParams;
               break;
             case "destination":
-              currentParams = destinationParams as Partial<SearchParams>;
+              currentParams = destinationParams;
               break;
             default:
               return false;
@@ -391,8 +391,9 @@ export const useSearchParamsStore = create<SearchParamsState>()(
                 isValidating: { ...state.isValidating, flight: false },
               }));
               return true;
+            } else {
+              throw new Error("Invalid flight parameters");
             }
-            throw new Error("Invalid flight parameters");
           } catch (error) {
             const message =
               error instanceof Error ? error.message : "Validation failed";
@@ -420,8 +421,9 @@ export const useSearchParamsStore = create<SearchParamsState>()(
                 isValidating: { ...state.isValidating, accommodation: false },
               }));
               return true;
+            } else {
+              throw new Error("Invalid accommodation parameters");
             }
-            throw new Error("Invalid accommodation parameters");
           } catch (error) {
             const message =
               error instanceof Error ? error.message : "Validation failed";
@@ -449,8 +451,9 @@ export const useSearchParamsStore = create<SearchParamsState>()(
                 isValidating: { ...state.isValidating, activity: false },
               }));
               return true;
+            } else {
+              throw new Error("Invalid activity parameters");
             }
-            throw new Error("Invalid activity parameters");
           } catch (error) {
             const message =
               error instanceof Error ? error.message : "Validation failed";
@@ -478,8 +481,9 @@ export const useSearchParamsStore = create<SearchParamsState>()(
                 isValidating: { ...state.isValidating, destination: false },
               }));
               return true;
+            } else {
+              throw new Error("Invalid destination parameters");
             }
-            throw new Error("Invalid destination parameters");
           } catch (error) {
             const message =
               error instanceof Error ? error.message : "Validation failed";
@@ -583,7 +587,7 @@ export const useSearchParamsStore = create<SearchParamsState>()(
               params = activityParams;
               break;
             case "destination":
-              params = destinationParams as Partial<SearchParams>;
+              params = destinationParams;
               break;
             default:
               return false;

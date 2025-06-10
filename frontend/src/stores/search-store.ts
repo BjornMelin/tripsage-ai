@@ -106,10 +106,7 @@ export const useSearchStore = create<SearchOrchestratorState>()(
         }
 
         // Start the search
-        const searchId = resultsStore.startSearch(
-          searchType,
-          searchParams as Record<string, unknown>
-        );
+        const searchId = resultsStore.startSearch(searchType, searchParams);
 
         try {
           // Add to recent searches
@@ -166,9 +163,6 @@ export const useSearchStore = create<SearchOrchestratorState>()(
           // Set the results
           resultsStore.setSearchResults(searchId, mockResults, {
             totalResults: Object.values(mockResults).flat().length,
-            resultsPerPage: 20,
-            currentPage: 1,
-            hasMoreResults: false,
             searchDuration: 1500,
             provider: "MockProvider",
             requestId: searchId,

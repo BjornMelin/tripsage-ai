@@ -10,9 +10,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { useBudgetStore } from "@/stores/budget-store";
+import { type Budget, type BudgetSummary, useBudgetStore } from "@/stores/budget-store";
 import { useCurrencyStore } from "@/stores/currency-store";
-import type { Budget, BudgetSummary } from "@/types/budget";
 import {
   AlertTriangle,
   DollarSign,
@@ -43,7 +42,7 @@ export function BudgetTracker({
   const { budgets, activeBudget, budgetSummary, budgetsByTrip, setActiveBudget } =
     useBudgetStore();
 
-  const { baseCurrency } = useCurrencyStore();
+  const { convertCurrency, baseCurrency } = useCurrencyStore();
 
   const targetBudget = useMemo(() => {
     if (budgetId) {

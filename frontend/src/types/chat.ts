@@ -50,7 +50,9 @@ export const TextPartSchema = z.object({
 export type TextPart = z.infer<typeof TextPartSchema>;
 
 // Union of message part types (simplified without legacy tool invocation)
-export const MessagePartSchema = z.discriminatedUnion("type", [TextPartSchema]);
+export const MessagePartSchema = z.discriminatedUnion("type", [
+  TextPartSchema,
+]);
 export type MessagePart = z.infer<typeof MessagePartSchema>;
 
 // Attachment schema for files

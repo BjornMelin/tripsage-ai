@@ -16,6 +16,7 @@ import {
   useIsTokenExpired,
   useSessionTimeRemaining,
   useUser,
+  useUserDisplayName,
 } from "../auth-store";
 
 // Mock setTimeout to make tests run faster
@@ -818,7 +819,7 @@ describe("Auth Store", () => {
 
     it("correctly computes user display name", () => {
       const { result } = renderHook(() => ({
-        userDisplayName: useAuthStore((state) => state.userDisplayName),
+        userDisplayName: useUserDisplayName(),
         user: useAuthStore((state) => state.user),
       }));
 
@@ -1016,7 +1017,7 @@ describe("Auth Store", () => {
       const { result: authResult } = renderHook(() => ({
         isAuthenticated: useIsAuthenticated(),
         user: useUser(),
-        userDisplayName: useAuthStore((state) => state.userDisplayName),
+        userDisplayName: useUserDisplayName(),
         isTokenExpired: useIsTokenExpired(),
         sessionTimeRemaining: useSessionTimeRemaining(),
       }));

@@ -9,7 +9,7 @@ import type {
   CurrencyPair,
   UpdateExchangeRatesResponse,
 } from "@/types/currency";
-import { useCallback, useEffect } from "react";
+import { useCallback } from "react";
 import { z } from "zod";
 
 /**
@@ -135,28 +135,23 @@ export function useFetchExchangeRates() {
     timestamp: z.string().datetime(),
   });
 
-  const query = useApiQuery<UpdateExchangeRatesResponse>(
+  return useApiQuery<UpdateExchangeRatesResponse>(
     "/api/currencies/rates",
     {},
     {
+      onSuccess: (data) => {
+        try {
+          // Validate the response
+          const validated = responseSchema.parse(data);
+          updateAllExchangeRates(validated.rates, validated.timestamp);
+        } catch (error) {
+          console.error("Invalid exchange rate data:", error);
+        }
+      },
       // Refresh rates every hour
       refetchInterval: 60 * 60 * 1000,
     }
   );
-
-  useEffect(() => {
-    if (query.data) {
-      try {
-        // Validate the response
-        const validated = responseSchema.parse(query.data);
-        updateAllExchangeRates(validated.rates, validated.timestamp);
-      } catch (error) {
-        console.error("Invalid exchange rate data:", error);
-      }
-    }
-  }, [query.data, updateAllExchangeRates]);
-
-  return query;
 }
 
 /**
@@ -165,19 +160,14 @@ export function useFetchExchangeRates() {
 export function useFetchExchangeRate(targetCurrency: CurrencyCode) {
   const { baseCurrency, updateExchangeRate } = useCurrencyStore();
 
-  const query = useApiQuery<{ rate: number; timestamp: string }>(
+  return useApiQuery<{ rate: number; timestamp: string }>(
     `/api/currencies/rates/${targetCurrency}`,
     {},
     {
+      onSuccess: (data) => {
+        updateExchangeRate(targetCurrency, data.rate, data.timestamp);
+      },
       enabled: !!targetCurrency && targetCurrency !== baseCurrency,
     }
   );
-
-  useEffect(() => {
-    if (query.data) {
-      updateExchangeRate(targetCurrency, query.data.rate, query.data.timestamp);
-    }
-  }, [query.data, targetCurrency, updateExchangeRate]);
-
-  return query;
 }

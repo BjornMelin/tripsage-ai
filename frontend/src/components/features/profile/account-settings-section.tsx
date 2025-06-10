@@ -45,13 +45,13 @@ const emailUpdateSchema = z.object({
 type EmailUpdateFormData = z.infer<typeof emailUpdateSchema>;
 
 export function AccountSettingsSection() {
-  const { profile, updatePersonalInfo } = useUserProfileStore();
+  const { user, updateUser } = useUserProfileStore();
   const { toast } = useToast();
 
   const emailForm = useForm<EmailUpdateFormData>({
     resolver: zodResolver(emailUpdateSchema),
     defaultValues: {
-      email: profile?.email || "",
+      email: user?.email || "",
     },
   });
 
@@ -60,7 +60,11 @@ export function AccountSettingsSection() {
       // Simulate API call
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
-      // Note: In a real app, this would update the auth email, not the profile
+      updateUser({
+        email: data.email,
+        isEmailVerified: false, // Email verification required after change
+      });
+
       toast({
         title: "Email updated",
         description: "Please check your inbox to verify your new email address.",
@@ -115,7 +119,17 @@ export function AccountSettingsSection() {
       // Simulate API call to update notification settings
       await new Promise((resolve) => setTimeout(resolve, 500));
 
-      // This would be updated when implementing real notification preferences
+      // Update user preferences (extend user type as needed)
+      updateUser({
+        preferences: {
+          ...user?.preferences,
+          notifications: {
+            ...user?.preferences?.notifications,
+            [setting]: enabled,
+          },
+        },
+      });
+
       toast({
         title: "Settings updated",
         description: `${setting} notifications ${enabled ? "enabled" : "disabled"}.`,
@@ -145,14 +159,23 @@ export function AccountSettingsSection() {
         <CardContent className="space-y-4">
           <div className="flex items-center gap-2">
             <span className="text-sm font-medium">Current Email:</span>
-            <span className="text-sm">{profile?.email}</span>
-            <Badge variant="default">
-              <Check className="h-3 w-3 mr-1" />
-              Verified
+            <span className="text-sm">{user?.email}</span>
+            <Badge variant={user?.isEmailVerified ? "default" : "secondary"}>
+              {user?.isEmailVerified ? (
+                <>
+                  <Check className="h-3 w-3 mr-1" />
+                  Verified
+                </>
+              ) : (
+                <>
+                  <X className="h-3 w-3 mr-1" />
+                  Unverified
+                </>
+              )}
             </Badge>
           </div>
 
-          {false && (
+          {!user?.isEmailVerified && (
             <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-4">
               <div className="flex justify-between items-center">
                 <div>
@@ -217,7 +240,7 @@ export function AccountSettingsSection() {
                 </div>
               </div>
               <Switch
-                defaultChecked={true}
+                checked={user?.preferences?.notifications?.email ?? true}
                 onCheckedChange={(enabled) =>
                   toggleNotificationSetting("email", enabled)
                 }
@@ -232,7 +255,7 @@ export function AccountSettingsSection() {
                 </div>
               </div>
               <Switch
-                defaultChecked={true}
+                checked={user?.preferences?.notifications?.tripReminders ?? true}
                 onCheckedChange={(enabled) =>
                   toggleNotificationSetting("tripReminders", enabled)
                 }
@@ -247,7 +270,7 @@ export function AccountSettingsSection() {
                 </div>
               </div>
               <Switch
-                defaultChecked={true}
+                checked={user?.preferences?.notifications?.priceAlerts ?? true}
                 onCheckedChange={(enabled) =>
                   toggleNotificationSetting("priceAlerts", enabled)
                 }
@@ -262,7 +285,7 @@ export function AccountSettingsSection() {
                 </div>
               </div>
               <Switch
-                defaultChecked={false}
+                checked={user?.preferences?.notifications?.marketing ?? false}
                 onCheckedChange={(enabled) =>
                   toggleNotificationSetting("marketing", enabled)
                 }

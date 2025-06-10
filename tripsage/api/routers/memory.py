@@ -16,7 +16,7 @@ from tripsage.api.core.dependencies import (
     require_principal_dep,
 )
 from tripsage.api.middlewares.authentication import Principal
-from tripsage_core.services.business.memory_service import MemoryService
+from tripsage.api.services.memory import MemoryService
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/memory", tags=["memory"])

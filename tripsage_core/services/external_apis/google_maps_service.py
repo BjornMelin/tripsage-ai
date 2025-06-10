@@ -31,7 +31,7 @@ class GoogleMapsServiceError(CoreAPIError):
         super().__init__(
             message=message,
             code="GOOGLE_MAPS_API_ERROR",
-            api_service="GoogleMapsService",
+            service="GoogleMapsService",
             details={"original_error": str(original_error) if original_error else None},
         )
         self.original_error = original_error

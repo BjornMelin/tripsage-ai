@@ -49,19 +49,19 @@ const personalInfoSchema = z.object({
 type PersonalInfoFormData = z.infer<typeof personalInfoSchema>;
 
 export function PersonalInfoSection() {
-  const { profile, updatePersonalInfo, uploadAvatar } = useUserProfileStore();
+  const { user, updateUser } = useUserProfileStore();
   const { toast } = useToast();
   const [isUploading, setIsUploading] = useState(false);
 
   const form = useForm<PersonalInfoFormData>({
     resolver: zodResolver(personalInfoSchema),
     defaultValues: {
-      firstName: profile?.personalInfo?.firstName || "",
-      lastName: profile?.personalInfo?.lastName || "",
-      displayName: profile?.personalInfo?.displayName || "",
-      bio: profile?.personalInfo?.bio || "",
-      location: profile?.personalInfo?.location || "",
-      website: profile?.personalInfo?.website || "",
+      firstName: user?.firstName || "",
+      lastName: user?.lastName || "",
+      displayName: user?.displayName || "",
+      bio: user?.bio || "",
+      location: user?.location || "",
+      website: user?.website || "",
     },
   });
 
@@ -70,7 +70,7 @@ export function PersonalInfoSection() {
       // Simulate API call
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
-      await updatePersonalInfo(data);
+      updateUser(data);
       toast({
         title: "Profile updated",
         description: "Your personal information has been successfully updated.",
@@ -110,16 +110,17 @@ export function PersonalInfoSection() {
 
     setIsUploading(true);
     try {
-      const avatarUrl = await uploadAvatar(file);
+      // Simulate file upload
+      await new Promise((resolve) => setTimeout(resolve, 2000));
 
-      if (avatarUrl) {
-        toast({
-          title: "Avatar updated",
-          description: "Your profile picture has been successfully updated.",
-        });
-      } else {
-        throw new Error("Upload failed");
-      }
+      // Create a local URL for the uploaded image
+      const avatarUrl = URL.createObjectURL(file);
+      updateUser({ avatarUrl });
+
+      toast({
+        title: "Avatar updated",
+        description: "Your profile picture has been successfully updated.",
+      });
     } catch (error) {
       toast({
         title: "Upload failed",
@@ -141,7 +142,7 @@ export function PersonalInfoSection() {
         ? `${parts[0][0]}${parts[1][0]}`.toUpperCase()
         : displayName.slice(0, 2).toUpperCase();
     }
-    return profile?.email?.slice(0, 2).toUpperCase() || "U";
+    return user?.email?.slice(0, 2).toUpperCase() || "U";
   };
 
   return (
@@ -157,13 +158,9 @@ export function PersonalInfoSection() {
         <div className="flex items-center gap-6">
           <div className="relative">
             <Avatar className="h-24 w-24">
-              <AvatarImage src={profile?.avatarUrl} alt="Profile picture" />
+              <AvatarImage src={user?.avatarUrl} alt="Profile picture" />
               <AvatarFallback className="text-lg">
-                {getInitials(
-                  profile?.personalInfo?.firstName,
-                  profile?.personalInfo?.lastName,
-                  profile?.personalInfo?.displayName
-                )}
+                {getInitials(user?.firstName, user?.lastName, user?.displayName)}
               </AvatarFallback>
             </Avatar>
             <div className="absolute -bottom-2 -right-2">

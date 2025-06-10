@@ -157,7 +157,7 @@ export function SearchResults({
 
         {loading ? (
           <div className="py-8 flex justify-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
           </div>
         ) : resultsArray.length === 0 ? (
           <div className="py-8 text-center">

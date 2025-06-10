@@ -10,12 +10,10 @@ global.ResizeObserver = class ResizeObserver {
 
 // Mock IntersectionObserver for tests
 global.IntersectionObserver = class IntersectionObserver {
+  constructor() {}
   observe() {}
   unobserve() {}
   disconnect() {}
-  takeRecords() {
-    return [];
-  }
   root = null;
   rootMargin = "";
   thresholds = [];

@@ -37,7 +37,16 @@ describe("API Key Management Components", () => {
 
   describe("ApiKeyInput Component", () => {
     it("renders correctly with default props", () => {
-      render(<ApiKeyInput value="" onChange={() => {}} onBlur={() => {}} error="" />);
+      render(
+        <ApiKeyInput
+          value=""
+          onChange={() => {}}
+          onBlur={() => {}}
+          isVisible={false}
+          onVisibilityToggle={() => {}}
+          error=""
+        />
+      );
 
       expect(screen.getByPlaceholderText("Enter API key")).toBeInTheDocument();
       expect(
@@ -46,6 +55,7 @@ describe("API Key Management Components", () => {
     });
 
     it("toggles visibility when button is clicked", async () => {
+      const mockToggle = vi.fn();
       const user = userEvent.setup();
 
       render(
@@ -53,19 +63,18 @@ describe("API Key Management Components", () => {
           value="test-api-key"
           onChange={() => {}}
           onBlur={() => {}}
+          isVisible={false}
+          onVisibilityToggle={mockToggle}
           error=""
         />
       );
 
-      const input = screen.getByDisplayValue("test-api-key");
-      expect(input).toHaveAttribute("type", "password");
-
       const toggleButton = screen.getByRole("button", {
-        name: /show api key/i,
+        name: /toggle visibility/i,
       });
       await user.click(toggleButton);
 
-      expect(input).toHaveAttribute("type", "text");
+      expect(mockToggle).toHaveBeenCalledTimes(1);
     });
 
     it("displays error message when provided", () => {
@@ -74,6 +83,8 @@ describe("API Key Management Components", () => {
           value=""
           onChange={() => {}}
           onBlur={() => {}}
+          isVisible={false}
+          onVisibilityToggle={() => {}}
           error="API key is required"
         />
       );
