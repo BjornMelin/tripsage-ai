@@ -468,8 +468,26 @@ def get_settings() -> CoreAppSettings:
     return CoreAppSettings()
 
 
-# Export convenience instance
-settings = get_settings()
+# Export convenience property for lazy loading
+@property
+def settings() -> CoreAppSettings:
+    """Get the core application settings instance."""
+    return get_settings()
+
+# For backward compatibility, create a module-level attribute
+class _SettingsProxy:
+    """Proxy object that lazily loads settings on first access."""
+    _instance = None
+    
+    def __getattr__(self, name):
+        if self._instance is None:
+            self._instance = get_settings()
+        return getattr(self._instance, name)
+    
+    def __repr__(self):
+        return f"<SettingsProxy({get_settings()})>"
+
+settings = _SettingsProxy()
 
 
 def init_settings() -> CoreAppSettings:
