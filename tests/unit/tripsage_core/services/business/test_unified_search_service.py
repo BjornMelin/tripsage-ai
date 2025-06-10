@@ -55,8 +55,8 @@ class TestUnifiedSearchServiceError:
         
         assert error.message == "Test error message"
         assert error.code == "UNIFIED_SEARCH_ERROR"
-        assert error.service == "UnifiedSearchService"
-        assert error.details == {"original_error": None}
+        assert error.details.service == "UnifiedSearchService"
+        assert error.details.additional_context == {"original_error": None}
         assert error.original_error is None
 
     def test_unified_search_service_error_with_original_error(self):
@@ -66,8 +66,8 @@ class TestUnifiedSearchServiceError:
         
         assert error.message == "Test error message"
         assert error.code == "UNIFIED_SEARCH_ERROR"
-        assert error.service == "UnifiedSearchService"
-        assert error.details == {"original_error": "Original error"}
+        assert error.details.service == "UnifiedSearchService"
+        assert error.details.additional_context == {"original_error": "Original error"}
         assert error.original_error == original_error
 
     def test_unified_search_service_error_inheritance(self):
@@ -514,8 +514,8 @@ class TestUnifiedSearchService:
         """Test _apply_unified_filters without filters."""
         results = [
             SearchResultItem(
-                id="1", type="activity", title="Test", relevance_score=0.8,
-                price=50.0, rating=4.0
+                id="1", type="activity", title="Test", description="Test activity",
+                relevance_score=0.8, price=50.0, rating=4.0
             )
         ]
         
@@ -528,9 +528,9 @@ class TestUnifiedSearchService:
     def test_apply_unified_filters_price_range(self, unified_search_service):
         """Test _apply_unified_filters with price range."""
         results = [
-            SearchResultItem(id="1", type="activity", title="Expensive", relevance_score=0.8, price=150.0),
-            SearchResultItem(id="2", type="activity", title="Affordable", relevance_score=0.7, price=25.0),
-            SearchResultItem(id="3", type="activity", title="Free", relevance_score=0.6, price=None),
+            SearchResultItem(id="1", type="activity", title="Expensive", description="Expensive activity", relevance_score=0.8, price=150.0),
+            SearchResultItem(id="2", type="activity", title="Affordable", description="Affordable activity", relevance_score=0.7, price=25.0),
+            SearchResultItem(id="3", type="activity", title="Free", description="Free activity", relevance_score=0.6, price=None),
         ]
         
         filters = SearchFilters(price_min=20.0, price_max=100.0)
@@ -547,9 +547,9 @@ class TestUnifiedSearchService:
     def test_apply_unified_filters_rating(self, unified_search_service):
         """Test _apply_unified_filters with rating filter."""
         results = [
-            SearchResultItem(id="1", type="activity", title="High Rated", relevance_score=0.8, rating=4.5),
-            SearchResultItem(id="2", type="activity", title="Low Rated", relevance_score=0.7, rating=3.0),
-            SearchResultItem(id="3", type="activity", title="No Rating", relevance_score=0.6, rating=None),
+            SearchResultItem(id="1", type="activity", title="High Rated", description="High rated activity", relevance_score=0.8, rating=4.5),
+            SearchResultItem(id="2", type="activity", title="Low Rated", description="Low rated activity", relevance_score=0.7, rating=3.0),
+            SearchResultItem(id="3", type="activity", title="No Rating", description="No rating activity", relevance_score=0.6, rating=None),
         ]
         
         filters = SearchFilters(rating_min=4.0)
@@ -566,9 +566,9 @@ class TestUnifiedSearchService:
     def test_sort_unified_results_by_price(self, unified_search_service):
         """Test _sort_unified_results by price."""
         results = [
-            SearchResultItem(id="1", type="activity", title="Expensive", relevance_score=0.8, price=100.0),
-            SearchResultItem(id="2", type="activity", title="Cheap", relevance_score=0.7, price=20.0),
-            SearchResultItem(id="3", type="activity", title="Free", relevance_score=0.6, price=None),
+            SearchResultItem(id="1", type="activity", title="Expensive", description="Expensive activity", relevance_score=0.8, price=100.0),
+            SearchResultItem(id="2", type="activity", title="Cheap", description="Cheap activity", relevance_score=0.7, price=20.0),
+            SearchResultItem(id="3", type="activity", title="Free", description="Free activity", relevance_score=0.6, price=None),
         ]
         
         request = UnifiedSearchRequest(query="test", sort_by="price", sort_order="asc")
@@ -583,9 +583,9 @@ class TestUnifiedSearchService:
     def test_sort_unified_results_by_price_desc(self, unified_search_service):
         """Test _sort_unified_results by price descending."""
         results = [
-            SearchResultItem(id="1", type="activity", title="Expensive", relevance_score=0.8, price=100.0),
-            SearchResultItem(id="2", type="activity", title="Cheap", relevance_score=0.7, price=20.0),
-            SearchResultItem(id="3", type="activity", title="Free", relevance_score=0.6, price=None),
+            SearchResultItem(id="1", type="activity", title="Expensive", description="Expensive activity", relevance_score=0.8, price=100.0),
+            SearchResultItem(id="2", type="activity", title="Cheap", description="Cheap activity", relevance_score=0.7, price=20.0),
+            SearchResultItem(id="3", type="activity", title="Free", description="Free activity", relevance_score=0.6, price=None),
         ]
         
         request = UnifiedSearchRequest(query="test", sort_by="price", sort_order="desc")
@@ -600,9 +600,9 @@ class TestUnifiedSearchService:
     def test_sort_unified_results_by_rating(self, unified_search_service):
         """Test _sort_unified_results by rating."""
         results = [
-            SearchResultItem(id="1", type="activity", title="High Rated", relevance_score=0.8, rating=4.5),
-            SearchResultItem(id="2", type="activity", title="Low Rated", relevance_score=0.7, rating=3.0),
-            SearchResultItem(id="3", type="activity", title="No Rating", relevance_score=0.6, rating=None),
+            SearchResultItem(id="1", type="activity", title="High Rated", description="High rated activity", relevance_score=0.8, rating=4.5),
+            SearchResultItem(id="2", type="activity", title="Low Rated", description="Low rated activity", relevance_score=0.7, rating=3.0),
+            SearchResultItem(id="3", type="activity", title="No Rating", description="No rating activity", relevance_score=0.6, rating=None),
         ]
         
         request = UnifiedSearchRequest(query="test", sort_by="rating", sort_order="desc")
@@ -617,9 +617,9 @@ class TestUnifiedSearchService:
     def test_sort_unified_results_by_relevance(self, unified_search_service):
         """Test _sort_unified_results by relevance (default)."""
         results = [
-            SearchResultItem(id="1", type="activity", title="Medium", relevance_score=0.5),
-            SearchResultItem(id="2", type="activity", title="High", relevance_score=0.9),
-            SearchResultItem(id="3", type="activity", title="Low", relevance_score=0.2),
+            SearchResultItem(id="1", type="activity", title="Medium", description="Medium relevance", relevance_score=0.5),
+            SearchResultItem(id="2", type="activity", title="High", description="High relevance", relevance_score=0.9),
+            SearchResultItem(id="3", type="activity", title="Low", description="Low relevance", relevance_score=0.2),
         ]
         
         request = UnifiedSearchRequest(query="test")  # Default sort
@@ -641,9 +641,9 @@ class TestUnifiedSearchService:
     def test_generate_facets_with_results(self, unified_search_service):
         """Test _generate_facets with various results."""
         results = [
-            SearchResultItem(id="1", type="activity", title="Museum", price=25.0, rating=4.5),
-            SearchResultItem(id="2", type="activity", title="Tour", price=50.0, rating=4.0),
-            SearchResultItem(id="3", type="destination", title="City", price=None, rating=None),
+            SearchResultItem(id="1", type="activity", title="Museum", description="Local museum", price=25.0, rating=4.5),
+            SearchResultItem(id="2", type="activity", title="Tour", description="City tour", price=50.0, rating=4.0),
+            SearchResultItem(id="3", type="destination", title="City", description="City destination", price=None, rating=None),
         ]
         
         facets = unified_search_service._generate_facets(results)
@@ -671,8 +671,8 @@ class TestUnifiedSearchService:
     def test_generate_facets_no_prices_or_ratings(self, unified_search_service):
         """Test _generate_facets with results having no prices or ratings."""
         results = [
-            SearchResultItem(id="1", type="activity", title="Free Activity", price=None, rating=None),
-            SearchResultItem(id="2", type="destination", title="City", price=None, rating=None),
+            SearchResultItem(id="1", type="activity", title="Free Activity", description="Free outdoor activity", price=None, rating=None),
+            SearchResultItem(id="2", type="destination", title="City", description="Popular city", price=None, rating=None),
         ]
         
         facets = unified_search_service._generate_facets(results)
