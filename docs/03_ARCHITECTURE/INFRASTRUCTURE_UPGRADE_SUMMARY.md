@@ -115,7 +115,7 @@ Successfully implemented comprehensive infrastructure upgrade including Dragonfl
 
 2. **Migration Complete**:
    - DragonflyDB fully operational with 25x performance improvement
-   - All REDIS_*environment variables migrated to DRAGONFLY_*
+   - All REDIS_* environment variables migrated to DRAGONFLY_*
    - Password authentication implemented for security
 
 3. **Extend Monitoring**:

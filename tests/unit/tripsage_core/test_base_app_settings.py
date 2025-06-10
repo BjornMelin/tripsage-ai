@@ -14,39 +14,28 @@ class TestCoreAppSettings:
 
     def test_default_settings(self):
         """Test default settings initialization."""
-        # Test with clean environment to verify defaults
-        clean_env = {
-            "ENVIRONMENT": "development",
-            "DEBUG": "false",
-            "LOG_LEVEL": "INFO",
-        }
+        settings = CoreAppSettings(_env_file=None)
 
-        with patch.dict(os.environ, clean_env, clear=True):
-            settings = CoreAppSettings(_env_file=None)
+        # Application metadata
+        assert settings.app_name == "TripSage"
+        assert settings.environment == "development"
+        assert settings.debug is False
+        assert settings.log_level == "INFO"
 
-            # Application metadata
-            assert settings.app_name == "TripSage"
-            assert settings.environment == "development"
-            assert settings.debug is False
-            assert settings.log_level == "INFO"
+        # Database connections
+        assert settings.database.supabase_url == "https://test-project.supabase.co"
+        assert settings.database.supabase_anon_key.get_secret_value() == "test-anon-key"
+        assert settings.database.supabase_service_role_key is None
+        assert settings.dragonfly.url == "redis://localhost:6379/0"
 
-            # Database connections - defaults
-            assert settings.database.supabase_url == "https://test-project.supabase.co"
-            assert (
-                settings.database.supabase_anon_key.get_secret_value()
-                == "test-anon-key"
-            )
-            assert settings.database.supabase_service_role_key is None
-            assert settings.dragonfly.url == "redis://localhost:6379/0"
+        # External services
+        assert settings.openai_api_key.get_secret_value() == "test-openai-key"
+        assert settings.google_maps_api_key is None
+        assert settings.crawl4ai.api_url == "http://localhost:8000/api"
 
-            # External services - defaults
-            assert settings.openai_api_key.get_secret_value() == "test-openai-key"
-            assert settings.google_maps_api_key is None
-            assert settings.crawl4ai.api_url == "http://localhost:8000/api"
-
-            # Feature flags
-            assert settings.feature_flags.enable_agent_memory is True
-            assert settings.feature_flags.enable_caching is True
+        # Feature flags
+        assert settings.feature_flags.enable_agent_memory is True
+        assert settings.feature_flags.enable_caching is True
 
     def test_environment_validation(self):
         """Test environment field validation."""
@@ -123,16 +112,15 @@ class TestCoreAppSettings:
         errors = settings.validate_critical_settings()
         assert errors == []
 
-        # Missing critical settings - create with environment variables
-        with patch.dict(
-            os.environ,
-            {"OPENAI_API_KEY": "", "DATABASE__SUPABASE_ANON_KEY": ""},
-            clear=False,
-        ):
-            settings = CoreAppSettings(_env_file=None)
-            errors = settings.validate_critical_settings()
-            assert "OpenAI API key is missing" in errors
-            assert "Supabase anonymous key is missing" in errors
+        # Missing critical settings
+        settings = CoreAppSettings(
+            _env_file=None,
+            openai_api_key=SecretStr(""),
+            database={"supabase_anon_key": SecretStr("")},
+        )
+        errors = settings.validate_critical_settings()
+        assert "OpenAI API key is missing" in errors
+        assert "Supabase anonymous key is missing" in errors
 
     def test_production_validation(self):
         """Test production-specific validations."""
@@ -146,10 +134,11 @@ class TestCoreAppSettings:
             _env_file=None,
             environment="production",
             debug=False,
+            jwt_secret_key=SecretStr("your-secret-key-here-change-in-production"),
             api_key_master_secret=SecretStr("master-secret-for-byok-encryption"),
         )
         errors = settings.validate_critical_settings()
-        # Note: JWT secret key validation was removed in favor of Supabase JWT
+        assert "JWT secret key must be changed in production" in errors
         assert "API key master secret must be changed in production" in errors
 
     def test_nested_configurations(self):
@@ -180,7 +169,7 @@ class TestCoreAppSettings:
             "DEBUG": "true",
             "LOG_LEVEL": "DEBUG",
             "OPENAI_API_KEY": "test-key-123",
-            "DATABASE__SUPABASE_JWT_SECRET": "my-jwt-secret",
+            "JWT_SECRET_KEY": "my-jwt-secret",
         }
 
         with patch.dict(os.environ, env_vars, clear=False):
@@ -191,10 +180,7 @@ class TestCoreAppSettings:
             assert settings.debug is True
             assert settings.log_level == "DEBUG"
             assert settings.openai_api_key.get_secret_value() == "test-key-123"
-            assert (
-                settings.database.supabase_jwt_secret.get_secret_value()
-                == "my-jwt-secret"
-            )
+            assert settings.jwt_secret_key.get_secret_value() == "my-jwt-secret"
 
     def test_get_settings_caching(self):
         """Test that get_settings returns cached instance."""
@@ -228,33 +214,30 @@ class TestCoreAppSettings:
 
     def test_complete_production_settings(self):
         """Test fully configured production settings."""
-        env_vars = {
-            "ENVIRONMENT": "production",
-            "DEBUG": "false",
-            "API_KEY_MASTER_SECRET": "prod-master-secret",
-            "OPENAI_API_KEY": "prod-openai-key",
-            "GOOGLE_MAPS_API_KEY": "prod-google-key",
-            "DUFFEL_API_KEY": "prod-duffel-key",
-            "OPENWEATHERMAP_API_KEY": "prod-weather-key",
-            "DATABASE__SUPABASE_URL": "https://prod.supabase.co",
-            "DATABASE__SUPABASE_ANON_KEY": "prod-anon-key",
-            "DATABASE__SUPABASE_JWT_SECRET": "prod-jwt-secret",
-            "DRAGONFLY__URL": "redis://prod-cache:6379/0",
-            "CRAWL4AI__API_URL": "https://crawl4ai.prod/api",
-        }
+        settings = CoreAppSettings(
+            _env_file=None,
+            environment="production",
+            debug=False,
+            jwt_secret_key=SecretStr("prod-jwt-secret"),
+            api_key_master_secret=SecretStr("prod-master-secret"),
+            openai_api_key=SecretStr("prod-openai-key"),
+            google_maps_api_key=SecretStr("prod-google-key"),
+            duffel_api_key=SecretStr("prod-duffel-key"),
+            openweathermap_api_key=SecretStr("prod-weather-key"),
+            database={
+                "supabase_url": "https://prod.supabase.co",
+                "supabase_anon_key": SecretStr("prod-anon-key"),
+            },
+            dragonfly={"url": "redis://prod-cache:6379/0"},
+            crawl4ai={"api_url": "https://crawl4ai.prod/api"},
+        )
 
-        with patch.dict(os.environ, env_vars, clear=False):
-            settings = CoreAppSettings(_env_file=None)
+        # Should have no validation errors
+        errors = settings.validate_critical_settings()
+        assert errors == []
 
-            # Should have no validation errors
-            errors = settings.validate_critical_settings()
-            assert errors == []
-
-            # All secrets should be accessible
-            assert settings.get_secret_value("openai_api_key") == "prod-openai-key"
-            assert settings.get_secret_value("google_maps_api_key") == "prod-google-key"
-            assert settings.get_secret_value("duffel_api_key") == "prod-duffel-key"
-            assert (
-                settings.database.supabase_jwt_secret.get_secret_value()
-                == "prod-jwt-secret"
-            )
+        # All secrets should be accessible
+        assert settings.get_secret_value("openai_api_key") == "prod-openai-key"
+        assert settings.get_secret_value("google_maps_api_key") == "prod-google-key"
+        assert settings.get_secret_value("duffel_api_key") == "prod-duffel-key"
+        assert settings.get_secret_value("jwt_secret_key") == "prod-jwt-secret"

@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List
 
 from tripsage.tools.webcrawl.models import UnifiedCrawlResult
-from tripsage_core.services.external_apis.webcrawl_service import WebCrawlResult
+from tripsage_core.services.webcrawl_service import WebCrawlResult
 from tripsage_core.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)

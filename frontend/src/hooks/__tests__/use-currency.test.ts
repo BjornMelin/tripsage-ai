@@ -1,6 +1,5 @@
 import { useCurrencyStore } from "@/stores/currency-store";
 import { act, renderHook } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   useCurrency,
   useCurrencyActions,
@@ -11,7 +10,7 @@ import {
 
 // Mock the store to avoid persistence issues in tests
 vi.mock("zustand/middleware", () => ({
-  persist: (fn: any) => fn,
+  persist: (fn) => fn,
 }));
 
 // Mock API query hooks
@@ -112,8 +111,8 @@ describe("Currency Hooks", () => {
       expect(newState.baseCurrency).toBe("EUR");
 
       // Exchange rates should be recalculated
-      expect(newState.exchangeRates.USD).toBeDefined();
-      expect(newState.exchangeRates.USD?.rate).toBeCloseTo(1 / 0.85);
+      expect(newState.exchangeRates["USD"]).toBeDefined();
+      expect(newState.exchangeRates["USD"]?.rate).toBeCloseTo(1 / 0.85);
     });
 
     it("can add a new currency", () => {
@@ -133,7 +132,7 @@ describe("Currency Hooks", () => {
 
       // Check that the currency was added
       const newState = useCurrencyStore.getState();
-      expect(newState.currencies.JPY).toEqual(newCurrency);
+      expect(newState.currencies["JPY"]).toEqual(newCurrency);
     });
 
     it("validates currency data before adding", () => {
@@ -154,7 +153,7 @@ describe("Currency Hooks", () => {
       // Check that the currency was not added
       expect(success).toBe(false);
       const newState = useCurrencyStore.getState();
-      expect(newState.currencies.INVALID).toBeUndefined();
+      expect(newState.currencies["INVALID"]).toBeUndefined();
     });
   });
 
@@ -179,8 +178,8 @@ describe("Currency Hooks", () => {
 
       // Check that the rate was updated
       const newState = useCurrencyStore.getState();
-      expect(newState.exchangeRates.EUR?.rate).toBe(0.9);
-      expect(newState.exchangeRates.EUR?.timestamp).toBe("2025-05-21T12:00:00Z");
+      expect(newState.exchangeRates["EUR"]?.rate).toBe(0.9);
+      expect(newState.exchangeRates["EUR"]?.timestamp).toBe("2025-05-21T12:00:00Z");
     });
 
     it("can update all exchange rates", () => {
@@ -198,9 +197,9 @@ describe("Currency Hooks", () => {
 
       // Check that rates were updated
       const newState = useCurrencyStore.getState();
-      expect(newState.exchangeRates.EUR?.rate).toBe(0.9);
-      expect(newState.exchangeRates.GBP?.rate).toBe(0.8);
-      expect(newState.exchangeRates.JPY?.rate).toBe(110.0);
+      expect(newState.exchangeRates["EUR"]?.rate).toBe(0.9);
+      expect(newState.exchangeRates["GBP"]?.rate).toBe(0.8);
+      expect(newState.exchangeRates["JPY"]?.rate).toBe(110.0);
       expect(newState.lastUpdated).toBe("2025-05-21T12:00:00Z");
     });
   });

@@ -57,8 +57,8 @@ All database operations were refactored to be performed through MCP tools:
 #### Migration System Infrastructure
 
 - ✅ **SQL Migrations Runner**:
-  - Updated to use Supabase CLI migration system.
-  - Uses `supabase db push` and `supabase migration` commands for schema management.
+  - Updated or replaced the old `src/db/migrations.py`.
+  - Uses `execute_sql` tool (for Supabase/Neon) to apply migration scripts.
 - ✅ **Neo4j Migrations Runner**:
   - Introduced or updated scripts for Neo4j schema setup.
   - Applies constraints, creates indexes, etc.
@@ -201,8 +201,8 @@ This migration completed the consolidation from a dual database architecture (Ne
 
 #### New Migration Scripts
 
-- `supabase/migrations/20250526_01_enable_pgvector_extensions.sql`
-- `supabase/migrations/20250527_01_mem0_memory_system.sql`
+- `migrations/20250526_01_enable_pgvector_extensions.sql`
+- `migrations/20250527_01_mem0_memory_system.sql`
 
 #### New Validation Scripts
 
@@ -352,126 +352,3 @@ The complete architectural unification represents a transformative achievement f
 - ✅ 25x faster caching performance
 - ✅ <100ms target latency achieved
 - ✅ 471+ QPS throughput capability
-
----
-
-## Modern Database Operations with Supabase CLI
-
-**Status**: CURRENT OPERATIONAL STANDARD (June 2025)  
-**Migration Path**: From legacy migrations/ to supabase/ directory structure
-
-### Current Development Workflow
-
-#### 1. Local Development Setup
-
-```bash
-# Initialize Supabase in project (if not already done)
-supabase init
-
-# Start local development environment
-supabase start
-
-# Link to remote project
-supabase link --project-ref [your-project-ref]
-
-# Pull remote schema to local
-supabase db pull
-```
-
-#### 2. Creating and Managing Migrations
-
-```bash
-# Create a new migration
-supabase migration new add_travel_preferences
-
-# This creates: supabase/migrations/[timestamp]_add_travel_preferences.sql
-
-# Edit the migration file, then apply locally
-supabase db reset
-
-# Generate TypeScript types from schema
-supabase gen types typescript --local > database.types.ts
-```
-
-#### 3. Production Deployment
-
-```bash
-# Push migrations to production
-supabase db push
-
-# Verify deployment
-supabase projects list
-supabase db inspect
-```
-
-### Migration File Organization
-
-**Current Structure:**
-```
-supabase/
-├── config.toml
-├── migrations/
-│   ├── 20250526_01_enable_pgvector_extensions.sql
-│   ├── 20250527_01_mem0_memory_system.sql
-│   └── [timestamp]_[description].sql
-├── functions/ (Edge Functions)
-└── seed.sql (Development seed data)
-```
-
-**Legacy Structure (Deprecated):**
-```
-migrations/ (REMOVED)
-├── 20250508_01_initial_schema_core_tables.sql
-├── 20250508_02_dependent_tables.sql
-└── rollbacks/ (REMOVED)
-```
-
-### Best Practices for Modern Schema Management
-
-1. **Use Supabase CLI exclusively** for all database operations
-2. **Test locally first** with `supabase db reset` before pushing
-3. **Generate types** after schema changes with `supabase gen types`
-4. **Version control** all migration files in supabase/migrations/
-5. **Use descriptive names** for migration files
-6. **Never edit applied migrations** - create new ones for changes
-
-### Environment Configuration
-
-```toml
-# supabase/config.toml
-[db]
-port = 54322
-shadow_port = 54320
-major_version = 15
-
-[db.extensions]
-enabled = ["vector", "uuid-ossp", "pg_stat_statements"]
-
-[auth]
-enabled = true
-external_providers = ["google", "github"]
-
-[storage]
-enabled = true
-bucket_limit = 100
-```
-
-### Common Operations
-
-```bash
-# Reset local database to match remote
-supabase db pull
-supabase db reset
-
-# Check migration status
-supabase migration list
-
-# Validate schema
-supabase db lint
-
-# Generate seed data
-supabase db dump --data-only > supabase/seed.sql
-
-# Backup production data
-supabase db dump --remote > backup.sql
-```

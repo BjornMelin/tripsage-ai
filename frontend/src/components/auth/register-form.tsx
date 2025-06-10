@@ -12,7 +12,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
-import { useAuth } from "@/contexts/auth-context";
 import {
   AlertCircle,
   CheckCircle2,
@@ -23,11 +22,17 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo } from "react";
 
 interface RegisterFormProps {
   redirectTo?: string;
   className?: string;
+}
+
+interface RegisterState {
+  user: any | null;
+  isAuthenticated: boolean;
+  error: string | null;
 }
 
 interface PasswordStrength {
@@ -36,34 +41,22 @@ interface PasswordStrength {
   color: string;
 }
 
-export function RegisterForm({
-  redirectTo = "/dashboard",
-  className,
-}: RegisterFormProps) {
+export function RegisterForm({ redirectTo = "/", className }: RegisterFormProps) {
   const router = useRouter();
-  const { signUp, isLoading, error, isAuthenticated, clearError } = useAuth();
   const [showPassword, setShowPassword] = React.useState(false);
-  const [formData, setFormData] = useState({
-    fullName: "",
-    email: "",
-    password: "",
+  const [password, setPassword] = React.useState("");
+
+  // Simplified state for MVP testing
+  const [state, setState] = useState({
+    success: false,
+    error: null as string | null,
+    user: null as any,
   });
-
-  // Redirect if already authenticated
-  useEffect(() => {
-    if (isAuthenticated) {
-      router.push(redirectTo);
-    }
-  }, [isAuthenticated, router, redirectTo]);
-
-  // Clear errors when component unmounts or form changes
-  useEffect(() => {
-    return () => clearError();
-  }, [clearError]);
+  const [isPending, setIsPending] = useState(false);
 
   // Password strength calculator
   const passwordStrength = useMemo((): PasswordStrength => {
-    if (!formData.password) {
+    if (!password) {
       return { score: 0, feedback: [], color: "bg-gray-200" };
     }
 
@@ -71,32 +64,32 @@ export function RegisterForm({
     const feedback: string[] = [];
 
     // Length check
-    if (formData.password.length >= 8) {
+    if (password.length >= 8) {
       score += 25;
     } else {
       feedback.push("At least 8 characters");
     }
 
     // Uppercase check
-    if (/[A-Z]/.test(formData.password)) {
+    if (/[A-Z]/.test(password)) {
       score += 25;
     } else {
       feedback.push("One uppercase letter");
     }
 
     // Lowercase check
-    if (/[a-z]/.test(formData.password)) {
+    if (/[a-z]/.test(password)) {
       score += 25;
     } else {
       feedback.push("One lowercase letter");
     }
 
     // Number and special character check
-    if (/\d/.test(formData.password) && /[@$!%*?&]/.test(formData.password)) {
+    if (/\d/.test(password) && /[@$!%*?&]/.test(password)) {
       score += 25;
     } else {
-      if (!/\d/.test(formData.password)) feedback.push("One number");
-      if (!/[@$!%*?&]/.test(formData.password)) feedback.push("One special character");
+      if (!/\d/.test(password)) feedback.push("One number");
+      if (!/[@$!%*?&]/.test(password)) feedback.push("One special character");
     }
 
     let color = "bg-red-500";
@@ -105,34 +98,23 @@ export function RegisterForm({
     else if (score >= 25) color = "bg-orange-500";
 
     return { score, feedback, color };
-  }, [formData.password]);
+  }, [password]);
 
+  // Simplified form handler for MVP testing
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setIsPending(true);
 
-    const { email, password, fullName } = formData;
-
-    if (!email || !password || !fullName) {
-      return;
-    }
-
-    // Check password strength
-    if (passwordStrength.score < 75) {
-      // You might want to show a warning but still allow registration
-      console.warn("Weak password, but allowing registration");
-    }
-
-    await signUp(email, password, fullName);
-  };
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-
-    // Clear errors when user starts typing
-    if (error) {
-      clearError();
-    }
+    // Mock registration for testing
+    setTimeout(() => {
+      setState({
+        success: true,
+        error: null,
+        user: { name: "Test User" },
+      });
+      setIsPending(false);
+      router.push(redirectTo);
+    }, 1000);
   };
 
   return (
@@ -149,26 +131,34 @@ export function RegisterForm({
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Error Alert */}
-          {error && (
+          {state.error && (
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{error}</AlertDescription>
+              <AlertDescription>{state.error}</AlertDescription>
+            </Alert>
+          )}
+
+          {/* Success Alert (if registration was successful) */}
+          {state.success && state.user && (
+            <Alert className="border-green-200 bg-green-50">
+              <CheckCircle2 className="h-4 w-4 text-green-600" />
+              <AlertDescription className="text-green-800">
+                Account created successfully! Redirecting...
+              </AlertDescription>
             </Alert>
           )}
 
           {/* Name Field */}
           <div className="space-y-2">
-            <Label htmlFor="fullName">Full Name</Label>
+            <Label htmlFor="name">Full Name</Label>
             <Input
-              id="fullName"
-              name="fullName"
+              id="name"
+              name="name"
               type="text"
               placeholder="John Doe"
-              value={formData.fullName}
-              onChange={handleInputChange}
               required
               autoComplete="name"
-              disabled={isLoading}
+              disabled={isPending}
               className="w-full"
             />
           </div>
@@ -181,11 +171,9 @@ export function RegisterForm({
               name="email"
               type="email"
               placeholder="john@example.com"
-              value={formData.email}
-              onChange={handleInputChange}
               required
               autoComplete="email"
-              disabled={isLoading}
+              disabled={isPending}
               className="w-full"
             />
           </div>
@@ -201,16 +189,16 @@ export function RegisterForm({
                 placeholder="Create a strong password"
                 required
                 autoComplete="new-password"
-                disabled={isLoading}
+                disabled={isPending}
                 className="w-full pr-10"
-                value={formData.password}
-                onChange={handleInputChange}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
                 className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                disabled={isLoading}
+                disabled={isPending}
                 aria-label={showPassword ? "Hide password" : "Show password"}
               >
                 {showPassword ? (
@@ -222,7 +210,7 @@ export function RegisterForm({
             </div>
 
             {/* Password Strength Indicator */}
-            {formData.password && (
+            {password && (
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-muted-foreground">Password strength</span>
@@ -276,11 +264,9 @@ export function RegisterForm({
           <Button
             type="submit"
             className="w-full"
-            disabled={
-              isLoading || !formData.email || !formData.password || !formData.fullName
-            }
+            disabled={isPending || passwordStrength.score < 75}
           >
-            {isLoading ? (
+            {isPending ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Creating account...

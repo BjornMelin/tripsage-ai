@@ -12,15 +12,6 @@ const compat = new FlatCompat({
 /** @type {import('eslint').Linter.FlatConfig[]} */
 const eslintConfig = [
   ...compat.extends("next/core-web-vitals"),
-  {
-    rules: {
-      // Temporarily disable some rules to get build working
-      "react/display-name": "off",
-      "react/no-unescaped-entities": "off",
-      "react-hooks/exhaustive-deps": "warn",
-      "@next/next/no-img-element": "warn",
-    },
-  },
 ];
 
 export default eslintConfig;

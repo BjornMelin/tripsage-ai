@@ -394,7 +394,6 @@ describe("UI Store", () => {
         type: "success" as const,
         title: "Success",
         message: "Operation completed successfully",
-        isRead: false,
       };
 
       let notificationId: string;
@@ -409,14 +408,13 @@ describe("UI Store", () => {
       expect(result.current.unreadNotificationCount).toBe(1);
     });
 
-    it("adds notification with duration and auto-removes", async () => {
+    it("adds notification with duration and auto-removes", (done) => {
       const { result } = renderHook(() => useUIStore());
 
       const notification = {
         type: "info" as const,
         title: "Info",
         duration: 100,
-        isRead: false,
       };
 
       act(() => {
@@ -426,12 +424,10 @@ describe("UI Store", () => {
       expect(result.current.notifications).toHaveLength(1);
 
       // Since setTimeout is mocked to execute immediately, check if removal was scheduled
-      await new Promise((resolve) => {
-        setTimeout(() => {
-          expect(result.current.notifications).toHaveLength(0);
-          resolve(undefined);
-        }, 0);
-      });
+      setTimeout(() => {
+        expect(result.current.notifications).toHaveLength(0);
+        done();
+      }, 0);
     });
 
     it("removes notification by ID", () => {
@@ -442,7 +438,6 @@ describe("UI Store", () => {
         notificationId = result.current.addNotification({
           type: "warning",
           title: "Warning",
-          isRead: false,
         });
       });
 
@@ -463,7 +458,6 @@ describe("UI Store", () => {
         notificationId = result.current.addNotification({
           type: "error",
           title: "Error",
-          isRead: false,
         });
       });
 
@@ -481,21 +475,9 @@ describe("UI Store", () => {
       const { result } = renderHook(() => useUIStore());
 
       act(() => {
-        result.current.addNotification({
-          type: "info",
-          title: "Info 1",
-          isRead: false,
-        });
-        result.current.addNotification({
-          type: "success",
-          title: "Success 1",
-          isRead: false,
-        });
-        result.current.addNotification({
-          type: "warning",
-          title: "Warning 1",
-          isRead: false,
-        });
+        result.current.addNotification({ type: "info", title: "Info 1" });
+        result.current.addNotification({ type: "success", title: "Success 1" });
+        result.current.addNotification({ type: "warning", title: "Warning 1" });
       });
 
       expect(result.current.notifications).toHaveLength(3);
@@ -516,7 +498,6 @@ describe("UI Store", () => {
           result.current.addNotification({
             type: "info",
             title: `Notification ${i}`,
-            isRead: false,
           });
         }
       });
@@ -529,26 +510,12 @@ describe("UI Store", () => {
     it("computes unread notification count correctly", () => {
       const { result } = renderHook(() => useUIStore());
 
-      let id1: string;
-      let id2: string;
-      let id3: string;
+      let id1: string, id2: string, id3: string;
 
       act(() => {
-        id1 = result.current.addNotification({
-          type: "info",
-          title: "Info 1",
-          isRead: false,
-        });
-        id2 = result.current.addNotification({
-          type: "success",
-          title: "Success 1",
-          isRead: false,
-        });
-        id3 = result.current.addNotification({
-          type: "warning",
-          title: "Warning 1",
-          isRead: false,
-        });
+        id1 = result.current.addNotification({ type: "info", title: "Info 1" });
+        id2 = result.current.addNotification({ type: "success", title: "Success 1" });
+        id3 = result.current.addNotification({ type: "warning", title: "Warning 1" });
       });
 
       expect(result.current.unreadNotificationCount).toBe(3);
@@ -572,10 +539,10 @@ describe("UI Store", () => {
       const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
       act(() => {
+        // @ts-expect-error Testing invalid notification
         result.current.addNotification({
-          type: "invalid-type" as any,
+          type: "invalid-type",
           title: "Invalid",
-          isRead: false,
         });
       });
 
@@ -796,7 +763,7 @@ describe("UI Store", () => {
       act(() => {
         result.current.setSidebarOpen(false);
         result.current.setActiveRoute("/custom");
-        result.current.addNotification({ type: "info", title: "Test", isRead: false });
+        result.current.addNotification({ type: "info", title: "Test" });
         result.current.openModal("TestModal");
         result.current.openCommandPalette();
         result.current.setLoadingState("test", "loading");
@@ -851,18 +818,15 @@ describe("UI Store", () => {
       });
 
       // Add notifications
-      let infoId: string;
-      let warningId: string;
+      let infoId: string, warningId: string;
       act(() => {
         infoId = result.current.addNotification({
           type: "info",
           title: "Data Loading",
-          isRead: false,
         });
         warningId = result.current.addNotification({
           type: "warning",
           title: "Network Slow",
-          isRead: false,
         });
       });
 
@@ -957,30 +921,25 @@ describe("UI Store", () => {
       const { result } = renderHook(() => useUIStore());
 
       // Add different types of notifications
-      let successId: string;
-      let errorId: string;
-      let warningId: string;
+      let successId: string, errorId: string, warningId: string;
 
       act(() => {
         successId = result.current.addNotification({
           type: "success",
           title: "Upload Complete",
           message: "File uploaded successfully",
-          isRead: false,
         });
 
         errorId = result.current.addNotification({
           type: "error",
           title: "Upload Failed",
           message: "Network error occurred",
-          isRead: false,
         });
 
         warningId = result.current.addNotification({
           type: "warning",
           title: "Storage Almost Full",
           message: "Consider upgrading your plan",
-          isRead: false,
           action: {
             label: "Upgrade",
             onClick: () => {},
@@ -1066,7 +1025,7 @@ describe("UI Store", () => {
       act(() => {
         result.current.setTheme("dark");
         result.current.setSidebarOpen(false);
-        result.current.addNotification({ type: "info", title: "Test", isRead: false });
+        result.current.addNotification({ type: "info", title: "Test" });
       });
 
       expect(themeResult.current).toBe("dark");

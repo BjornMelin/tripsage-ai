@@ -68,7 +68,7 @@ graph TD
 Pydantic v2 models for type-safe WebSocket communication:
 
 ```python
-from tripsage.api.schemas.websocket import (
+from tripsage.api.schemas.requests.websocket import (
     WebSocketEvent,
     WebSocketEventType,
     WebSocketAuthRequest,

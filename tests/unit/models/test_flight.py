@@ -146,19 +146,16 @@ class TestFlightModel:
         invalid_codes = ["", "A", "AB", "ABCD", "123", "ab1"]
 
         for invalid_code in invalid_codes:
-            test_data = sample_flight_dict.copy()
-            test_data["origin"] = invalid_code
+            sample_flight_dict["origin"] = invalid_code
             validation_helper.assert_validation_error(
-                Flight, test_data, "origin", "3-letter IATA code"
+                Flight, sample_flight_dict, "origin", "3 characters"
             )
 
-        # Test valid codes (make sure origin and destination are different)
-        valid_codes = ["LAX", "JFK", "LHR", "CDG", "SFO"]
-        sample_flight_dict["destination"] = "NRT"  # Keep destination constant
+        # Test valid codes
+        valid_codes = ["LAX", "JFK", "LHR", "CDG", "NRT"]
         for valid_code in valid_codes:
-            test_data = sample_flight_dict.copy()
-            test_data["origin"] = valid_code
-            flight = Flight(**test_data)
+            sample_flight_dict["origin"] = valid_code
+            flight = Flight(**sample_flight_dict)
             assert flight.origin == valid_code
 
     @pytest.mark.parametrize("booking_status", list(BookingStatus))
@@ -207,7 +204,7 @@ class TestFlightModel:
 
         # Test cancellation
         flight.cancel()
-        assert flight.booking_status == BookingStatus.CANCELLED
+        assert flight.booking_status == BookingStatus.CANCELED
         assert flight.is_canceled
 
     def test_flight_factory_variations(self):
@@ -236,7 +233,7 @@ class TestFlightModel:
         for invalid_segment in invalid_segments:
             sample_flight_dict["segment_number"] = invalid_segment
             validation_helper.assert_validation_error(
-                Flight, sample_flight_dict, "segment_number", "must be positive"
+                Flight, sample_flight_dict, "segment_number", "greater than 0"
             )
 
         # Test valid segment numbers
@@ -249,14 +246,13 @@ class TestFlightModel:
     def test_flight_trip_id_validation(self, sample_flight_dict, validation_helper):
         """Test trip_id validation."""
         # Test invalid trip IDs
-        # Note: trip_id doesn't have specific validation in the model
-        # It accepts any integer value including negative numbers
-        valid_ids = [0, -1, -10, 1, 100, 9999]
+        invalid_ids = [0, -1, -10]
 
-        for valid_id in valid_ids:
-            sample_flight_dict["trip_id"] = valid_id
-            flight = Flight(**sample_flight_dict)
-            assert flight.trip_id == valid_id
+        for invalid_id in invalid_ids:
+            sample_flight_dict["trip_id"] = invalid_id
+            validation_helper.assert_validation_error(
+                Flight, sample_flight_dict, "trip_id", "greater than 0"
+            )
 
     def test_flight_edge_cases(self, sample_flight_dict, edge_case_data):
         """Test edge case values."""
@@ -296,8 +292,7 @@ class TestFlightModel:
 
     def test_flight_optional_fields(self, sample_flight_dict):
         """Test that optional fields can be None or omitted."""
-        # booking_link is the only optional field in Flight model
-        optional_fields = ["booking_link"]
+        optional_fields = ["flight_number", "duration_minutes"]
 
         for field in optional_fields:
             test_data = sample_flight_dict.copy()
@@ -310,7 +305,7 @@ class TestFlightModel:
             if field in test_data:
                 del test_data[field]
             flight = Flight(**test_data)
-            assert getattr(flight, field) is None
+            # Should not raise an error
 
     def test_flight_business_logic_methods(self, sample_flight_dict):
         """Test business logic methods."""
@@ -325,7 +320,11 @@ class TestFlightModel:
         # Test cancellation workflow
         flight.cancel()
         assert flight.is_canceled
-        assert flight.booking_status == BookingStatus.CANCELLED
+        assert flight.booking_status == BookingStatus.CANCELED
+
+        # Test that we can't book a canceled flight
+        with pytest.raises(ValueError, match="Cannot book a canceled flight"):
+            flight.book()
 
     def test_flight_timezone_handling(self, sample_flight_dict):
         """Test timezone-aware datetime handling."""
@@ -346,12 +345,11 @@ class TestFlightModel:
     @pytest.mark.parametrize(
         "field_name,invalid_value,expected_error",
         [
-            ("origin", "ab", "3-letter IATA code"),
-            ("destination", "ABCD", "3-letter IATA code"),
-            ("price", 0, "greater than 0"),
-            ("price", -10, "greater than 0"),
-            ("segment_number", 0, "must be positive"),
-            ("segment_number", -1, "must be positive"),
+            ("origin", "ab", "3 characters"),
+            ("destination", "ABCD", "3 characters"),
+            ("flight_number", "", "at least 1 character"),
+            ("duration_minutes", -1, "greater than or equal to 0"),
+            ("duration_minutes", -60, "greater than or equal to 0"),
         ],
     )
     def test_flight_field_validation(

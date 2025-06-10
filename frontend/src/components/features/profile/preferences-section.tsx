@@ -28,7 +28,6 @@ import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/components/ui/use-toast";
 import { useCurrencyStore } from "@/stores/currency-store";
 import { useUserProfileStore } from "@/stores/user-store";
-import type { CurrencyCode } from "@/types/currency";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Globe, MapPin, Palette, Zap } from "lucide-react";
 import { useForm } from "react-hook-form";
@@ -47,20 +46,21 @@ const preferencesSchema = z.object({
 type PreferencesFormData = z.infer<typeof preferencesSchema>;
 
 export function PreferencesSection() {
-  const { profile } = useUserProfileStore();
-  const { baseCurrency, setBaseCurrency } = useCurrencyStore();
+  const { user, updateUser } = useUserProfileStore();
+  const { currency, setCurrency } = useCurrencyStore();
   const { toast } = useToast();
 
   const form = useForm<PreferencesFormData>({
     resolver: zodResolver(preferencesSchema),
     defaultValues: {
-      language: "en",
-      currency: baseCurrency || "USD",
-      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-      theme: "system",
-      units: "metric",
-      dateFormat: "MM/DD/YYYY",
-      timeFormat: "12h",
+      language: user?.preferences?.language || "en",
+      currency: currency || "USD",
+      timezone:
+        user?.preferences?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone,
+      theme: user?.preferences?.theme || "system",
+      units: user?.preferences?.units || "metric",
+      dateFormat: user?.preferences?.dateFormat || "MM/DD/YYYY",
+      timeFormat: user?.preferences?.timeFormat || "12h",
     },
   });
 
@@ -69,9 +69,17 @@ export function PreferencesSection() {
       // Simulate API call
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
+      // Update user preferences
+      updateUser({
+        preferences: {
+          ...user?.preferences,
+          ...data,
+        },
+      });
+
       // Update currency store if changed
-      if (data.currency !== baseCurrency) {
-        setBaseCurrency(data.currency as CurrencyCode);
+      if (data.currency !== currency) {
+        setCurrency(data.currency);
       }
 
       toast({
@@ -91,6 +99,13 @@ export function PreferencesSection() {
     try {
       // Simulate API call
       await new Promise((resolve) => setTimeout(resolve, 500));
+
+      updateUser({
+        preferences: {
+          ...user?.preferences,
+          [setting]: enabled,
+        },
+      });
 
       toast({
         title: "Setting updated",
@@ -359,7 +374,7 @@ export function PreferencesSection() {
               </div>
             </div>
             <Switch
-              defaultChecked={true}
+              checked={user?.preferences?.autoSaveSearches ?? true}
               onCheckedChange={(enabled) =>
                 toggleAdvancedSetting("autoSaveSearches", enabled)
               }
@@ -374,7 +389,7 @@ export function PreferencesSection() {
               </div>
             </div>
             <Switch
-              defaultChecked={true}
+              checked={user?.preferences?.smartSuggestions ?? true}
               onCheckedChange={(enabled) =>
                 toggleAdvancedSetting("smartSuggestions", enabled)
               }
@@ -389,7 +404,7 @@ export function PreferencesSection() {
               </div>
             </div>
             <Switch
-              defaultChecked={false}
+              checked={user?.preferences?.locationServices ?? false}
               onCheckedChange={(enabled) =>
                 toggleAdvancedSetting("locationServices", enabled)
               }
@@ -404,7 +419,7 @@ export function PreferencesSection() {
               </div>
             </div>
             <Switch
-              defaultChecked={true}
+              checked={user?.preferences?.analytics ?? true}
               onCheckedChange={(enabled) => toggleAdvancedSetting("analytics", enabled)}
             />
           </div>

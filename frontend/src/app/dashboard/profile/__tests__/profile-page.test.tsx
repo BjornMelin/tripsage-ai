@@ -1,6 +1,6 @@
 import { useUserProfileStore } from "@/stores/user-store";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { vi } from "vitest";
 import ProfilePage from "../page";
 
 // Mock the stores and profile components
@@ -47,7 +47,7 @@ describe("ProfilePage", () => {
     render(<ProfilePage />);
 
     // Check for skeleton loading elements
-    expect(screen.getAllByTestId("skeleton").length).toBeGreaterThan(0);
+    expect(screen.getAllByTestId("skeleton")).toHaveLength.greaterThan(0);
   });
 
   it("renders not found state when user is not logged in", () => {

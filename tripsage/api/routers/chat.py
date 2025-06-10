@@ -16,8 +16,9 @@ from tripsage.api.core.dependencies import (
     require_principal_dep,
 )
 from tripsage.api.middlewares.authentication import Principal
-from tripsage.api.schemas.chat import ChatRequest, ChatResponse
-from tripsage_core.services.business.chat_service import ChatService
+from tripsage.api.schemas.requests.chat import ChatRequest
+from tripsage.api.schemas.responses.chat import ChatResponse
+from tripsage.api.services.chat import ChatService
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -73,7 +74,7 @@ async def create_session(
     try:
         user_id = get_principal_id(principal)
 
-        from tripsage.api.schemas.chat import SessionCreateRequest
+        from tripsage.api.schemas.requests.chat import SessionCreateRequest
 
         session_request = SessionCreateRequest(title=title)
 
@@ -206,7 +207,7 @@ async def create_message(
     try:
         user_id = get_principal_id(principal)
 
-        from tripsage.api.schemas.chat import CreateMessageRequest
+        from tripsage.api.schemas.requests.chat import CreateMessageRequest
 
         message_request = CreateMessageRequest(content=content, role=role)
 

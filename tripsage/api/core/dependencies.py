@@ -10,21 +10,20 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from tripsage.api.core.config import Settings, get_settings
 from tripsage.api.middlewares.authentication import Principal
+from tripsage.api.services import (
+    get_accommodation_service,
+    get_auth_service,
+    get_chat_service,
+    get_destination_service,
+    get_flight_service,
+    get_itinerary_service,
+    get_key_management_service,
+    get_memory_service,
+    get_trip_service,
+    get_user_service,
+)
 from tripsage_core.exceptions.exceptions import CoreAuthenticationError
 from tripsage_core.mcp_abstraction import MCPManager, mcp_manager
-from tripsage_core.services.business.accommodation_service import (
-    get_accommodation_service,
-)
-from tripsage_core.services.business.chat_service import get_chat_service
-from tripsage_core.services.business.destination_service import get_destination_service
-from tripsage_core.services.business.flight_service import get_flight_service
-from tripsage_core.services.business.itinerary_service import get_itinerary_service
-from tripsage_core.services.business.key_management_service import (
-    get_key_management_service,
-)
-from tripsage_core.services.business.memory_service import get_memory_service
-from tripsage_core.services.business.trip_service import get_trip_service
-from tripsage_core.services.business.user_service import get_user_service
 from tripsage_core.services.infrastructure import get_cache_service
 from tripsage_core.services.infrastructure.database_service import get_database_service
 from tripsage_core.utils.session_utils import SessionMemory
@@ -157,6 +156,7 @@ verify_service_access_dep = Depends(verify_service_access)
 
 # Unified API service dependencies
 get_accommodation_service_dep = Depends(get_accommodation_service)
+get_auth_service_dep = Depends(get_auth_service)
 get_chat_service_dep = Depends(get_chat_service)
 get_destination_service_dep = Depends(get_destination_service)
 get_flight_service_dep = Depends(get_flight_service)

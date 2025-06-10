@@ -3,32 +3,29 @@ import {
   type ChatCompletionResponse,
   Message,
 } from "@/types/chat";
-import { createClient as createBrowserClient } from "@/lib/supabase/client";
 import { z } from "zod";
 
 // The base URL for API requests
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "";
 
 // Helper function to get auth headers
-const getAuthHeaders = async () => {
+const getAuthHeaders = () => {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
   };
 
-  // Get auth token from Supabase
+  // Get auth token from localStorage or store
   if (typeof window !== "undefined") {
-    try {
-      const supabase = createBrowserClient();
-      const {
-        data: { session },
-        error,
-      } = await supabase.auth.getSession();
-
-      if (!error && session?.access_token) {
-        headers.Authorization = `Bearer ${session.access_token}`;
+    const authState = localStorage.getItem("api-key-storage");
+    if (authState) {
+      try {
+        const parsed = JSON.parse(authState);
+        if (parsed.state?.token) {
+          headers.Authorization = `Bearer ${parsed.state.token}`;
+        }
+      } catch (error) {
+        console.warn("Failed to parse auth state from localStorage");
       }
-    } catch (error) {
-      console.warn("Failed to get Supabase session:", error);
     }
   }
 
@@ -62,12 +59,11 @@ export async function sendChatRequest(
   request: ChatCompletionRequest
 ): Promise<ChatCompletionResponse> {
   try {
-    const headers = await getAuthHeaders();
     const response = await fetchWithTimeout(
       "/api/chat",
       {
         method: "POST",
-        headers,
+        headers: getAuthHeaders(),
         body: JSON.stringify(request),
       },
       60000
@@ -115,11 +111,10 @@ export function streamChatRequest(
     try {
       if (onStart) onStart();
 
-      const headers = await getAuthHeaders();
       const response = await fetch("/api/chat", {
         // Updated to use /api/chat instead of /api/chat/stream
         method: "POST",
-        headers,
+        headers: getAuthHeaders(),
         body: JSON.stringify(request),
         signal,
       });
@@ -203,7 +198,7 @@ export async function uploadAttachments(files: File[]): Promise<{ urls: string[]
       formData.append(`file-${i}`, file);
     });
 
-    const authHeaders = await getAuthHeaders();
+    const authHeaders = getAuthHeaders();
     // Remove Content-Type for FormData
     delete authHeaders["Content-Type"];
 

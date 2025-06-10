@@ -13,6 +13,7 @@ from typing import Any, Dict, List, Optional, Union
 
 from supabase import Client, create_client
 from supabase.lib.client_options import ClientOptions
+
 from tripsage_core.config.base_app_settings import CoreAppSettings, get_settings
 from tripsage_core.exceptions.exceptions import (
     CoreDatabaseError,

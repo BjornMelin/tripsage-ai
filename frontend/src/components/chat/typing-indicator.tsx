@@ -20,14 +20,13 @@ export const TypingIndicator = memo(function TypingIndicator({
   const getTypingText = () => {
     if (users.length === 1) {
       return `${users[0]} is typing...`;
-    }
-    if (users.length === 2) {
+    } else if (users.length === 2) {
       return `${users[0]} and ${users[1]} are typing...`;
-    }
-    if (users.length === 3) {
+    } else if (users.length === 3) {
       return `${users[0]}, ${users[1]}, and ${users[2]} are typing...`;
+    } else {
+      return `${users[0]}, ${users[1]}, and ${users.length - 2} others are typing...`;
     }
-    return `${users[0]}, ${users[1]}, and ${users.length - 2} others are typing...`;
   };
 
   return (

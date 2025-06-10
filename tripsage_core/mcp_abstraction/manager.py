@@ -27,12 +27,12 @@ class MCPManager:
         """Initialize the MCP manager."""
         self._wrapper: Optional[AirbnbMCPWrapper] = None
 
-    async def initialize(self) -> AirbnbMCPWrapper | None:
+    async def initialize(self) -> AirbnbMCPWrapper:
         """
         Initialize the Airbnb MCP wrapper.
 
         Returns:
-            The initialized Airbnb wrapper, or None if disabled
+            The initialized Airbnb wrapper
 
         Raises:
             MCPInvocationError: If initialization fails
@@ -41,14 +41,6 @@ class MCPManager:
             return self._wrapper
 
         try:
-            # Check if Airbnb MCP is enabled
-            from tripsage_core.config.base_app_settings import get_settings
-
-            settings = get_settings()
-            if hasattr(settings, "airbnb") and not settings.airbnb.enabled:
-                logger.info("Airbnb MCP is disabled, skipping initialization")
-                return None
-
             self._wrapper = AirbnbMCPWrapper()
             logger.info("Initialized Airbnb MCP wrapper")
             return self._wrapper
@@ -108,14 +100,6 @@ class MCPManager:
             # Initialize if not already done
             if self._wrapper is None:
                 await self.initialize()
-
-            # Check if wrapper is still None (Airbnb disabled)
-            if self._wrapper is None:
-                raise MCPInvocationError(
-                    "Airbnb MCP is disabled",
-                    mcp_name="airbnb",
-                    method_name=method_name,
-                )
 
             # Prepare parameters
             call_params = params or {}
@@ -217,53 +201,6 @@ class MCPManager:
         except Exception as e:
             logger.warning(f"Airbnb MCP health check failed: {e}")
             return False
-
-    async def initialize_all_enabled(self) -> None:
-        """
-        Initialize all enabled MCP services.
-
-        For the simplified manager, this just initializes the Airbnb wrapper.
-        """
-        logger.info("Initializing all enabled MCP services (Airbnb only)")
-        await self.initialize()
-
-    def get_available_mcps(self) -> list[str]:
-        """
-        Get list of available MCP services.
-
-        Returns:
-            List of available MCP service names
-        """
-        return ["airbnb"]
-
-    def get_initialized_mcps(self) -> list[str]:
-        """
-        Get list of initialized MCP services.
-
-        Returns:
-            List of initialized MCP service names
-        """
-        # Only return airbnb if the wrapper is actually initialized
-        # (not None due to being disabled)
-        if self._wrapper is not None:
-            return ["airbnb"]
-        return []
-
-    async def shutdown(self) -> None:
-        """
-        Shutdown the MCP manager and clean up resources.
-        """
-        logger.info("Shutting down MCP manager")
-        if self._wrapper is not None:
-            # If the wrapper has a shutdown method, call it
-            if hasattr(self._wrapper, "shutdown"):
-                try:
-                    await self._wrapper.shutdown()
-                except Exception as e:
-                    logger.warning(f"Error shutting down Airbnb wrapper: {e}")
-
-            self._wrapper = None
-            logger.info("Airbnb MCP wrapper shutdown complete")
 
 
 # Global manager instance

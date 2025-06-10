@@ -259,18 +259,18 @@ describe("useDeals Hook", () => {
     const { result } = renderHook(() => useDeals());
 
     expect(Object.keys(result.current.dealsByDestination)).toHaveLength(3);
-    expect(result.current.dealsByDestination.Paris).toHaveLength(1);
-    expect(result.current.dealsByDestination.Rome).toHaveLength(1);
-    expect(result.current.dealsByDestination.Barcelona).toHaveLength(1);
+    expect(result.current.dealsByDestination["Paris"]).toHaveLength(1);
+    expect(result.current.dealsByDestination["Rome"]).toHaveLength(1);
+    expect(result.current.dealsByDestination["Barcelona"]).toHaveLength(1);
   });
 
   it("should group deals by type", () => {
     const { result } = renderHook(() => useDeals());
 
     expect(Object.keys(result.current.dealsByType)).toHaveLength(3);
-    expect(result.current.dealsByType.flight).toHaveLength(1);
-    expect(result.current.dealsByType.accommodation).toHaveLength(1);
-    expect(result.current.dealsByType.package).toHaveLength(1);
+    expect(result.current.dealsByType["flight"]).toHaveLength(1);
+    expect(result.current.dealsByType["accommodation"]).toHaveLength(1);
+    expect(result.current.dealsByType["package"]).toHaveLength(1);
   });
 
   it("should provide unique destinations", () => {
@@ -321,8 +321,8 @@ describe("useDealAlerts Hook", () => {
     const { result } = renderHook(() => useDealAlerts());
 
     expect(Object.keys(result.current.alertsByType)).toHaveLength(2);
-    expect(result.current.alertsByType.flight).toHaveLength(1);
-    expect(result.current.alertsByType.accommodation).toHaveLength(1);
+    expect(result.current.alertsByType["flight"]).toHaveLength(1);
+    expect(result.current.alertsByType["accommodation"]).toHaveLength(1);
   });
 
   it("should toggle alert active state", () => {

@@ -1,4 +1,4 @@
-import type { Budget, BudgetSummary } from "@/types/budget";
+import type { Budget, BudgetSummary } from "@/stores/budget-store";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { BudgetTracker } from "../budget-tracker";
@@ -27,10 +27,6 @@ const mockSummary: BudgetSummary = {
     flights: 400,
     accommodations: 300,
     food: 100,
-    transportation: 0,
-    activities: 0,
-    shopping: 0,
-    other: 0,
   },
   dailyAverage: 80,
   dailyLimit: 120,

@@ -44,14 +44,14 @@ class Settings(CoreAppSettings):
         description="API description for OpenAPI documentation",
     )
 
-    # JWT Authentication Settings - removed, will be replaced with Supabase Auth
-    # access_token_expire_minutes: int = Field(
-    #     default=60, description="JWT access token expiration in minutes"
-    # )
-    # refresh_token_expire_days: int = Field(
-    #     default=7, description="JWT refresh token expiration in days"
-    # )
-    # jwt_algorithm: str = Field(default="HS256", description="JWT signing algorithm")
+    # JWT Authentication Settings
+    access_token_expire_minutes: int = Field(
+        default=60, description="JWT access token expiration in minutes"
+    )
+    refresh_token_expire_days: int = Field(
+        default=7, description="JWT refresh token expiration in days"
+    )
+    jwt_algorithm: str = Field(default="HS256", description="JWT signing algorithm")
 
     # CORS Configuration (supports both Next.js frontend and direct API access)
     cors_origins: List[str] = Field(
@@ -181,25 +181,24 @@ class Settings(CoreAppSettings):
                 raise ValueError(f"Unknown BYOK service: {service}")
         return v
 
-    # JWT validators and properties removed - will be replaced with Supabase Auth
-    # @field_validator("jwt_algorithm")
-    # @classmethod
-    # def validate_jwt_algorithm(cls, v: str) -> str:
-    #     """Validate JWT algorithm."""
-    #     allowed_algorithms = {"HS256", "HS384", "HS512", "RS256", "RS384", "RS512"}
-    #     if v not in allowed_algorithms:
-    #         raise ValueError(f"Unsupported JWT algorithm: {v}")
-    #     return v
+    @field_validator("jwt_algorithm")
+    @classmethod
+    def validate_jwt_algorithm(cls, v: str) -> str:
+        """Validate JWT algorithm."""
+        allowed_algorithms = {"HS256", "HS384", "HS512", "RS256", "RS384", "RS512"}
+        if v not in allowed_algorithms:
+            raise ValueError(f"Unsupported JWT algorithm: {v}")
+        return v
 
-    # @property
-    # def secret_key(self) -> str:
-    #     """Get the JWT secret key from CoreAppSettings."""
-    #     return self.jwt_secret_key.get_secret_value()
+    @property
+    def secret_key(self) -> str:
+        """Get the JWT secret key from CoreAppSettings."""
+        return self.jwt_secret_key.get_secret_value()
 
-    # @property
-    # def algorithm(self) -> str:
-    #     """Get the JWT algorithm."""
-    #     return self.jwt_algorithm
+    @property
+    def algorithm(self) -> str:
+        """Get the JWT algorithm."""
+        return self.jwt_algorithm
 
     def get_cors_config(self) -> dict:
         """Get CORS configuration as a dictionary for FastAPI."""
