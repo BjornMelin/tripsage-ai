@@ -150,12 +150,27 @@ def api_test_client(mock_cache_service, mock_database_service, mock_principal):
 
         def mock_search_accommodations(request):
             """Mock search accommodations method that returns API response format."""
+            # Create a valid AccommodationSearchRequest for the response
+            from datetime import date
+
+            from tripsage.api.schemas.accommodations import (
+                AccommodationSearchRequest as APISearchRequest,
+            )
+
+            # Create a mock API request with default values
+            api_request = APISearchRequest(
+                location="Tokyo",
+                check_in=date(2024, 3, 15),
+                check_out=date(2024, 3, 18),
+                adults=2,
+            )
+
             return AccommodationSearchResponse(
                 listings=[],
                 count=0,
                 currency="USD",
                 search_id="mock-search-id",
-                search_request=request,  # Echo back the request
+                search_request=api_request,
             )
 
         mock_accommodation_service.search_accommodations = AsyncMock(
