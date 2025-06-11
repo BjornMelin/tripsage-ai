@@ -42,6 +42,11 @@ class Principal(TripSageModel):
     scopes: list[str] = []
     metadata: dict = {}
 
+    @property
+    def user_id(self) -> str:
+        """Get user ID (alias for id field)."""
+        return self.id
+
 
 class AuthenticationMiddleware(BaseHTTPMiddleware):
     """Enhanced middleware for JWT and API Key authentication.
