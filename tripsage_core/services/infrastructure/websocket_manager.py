@@ -58,7 +58,10 @@ class WebSocketEventType:
 
     # Chat events
     CHAT_MESSAGE = "chat.message"
+    CHAT_MESSAGE_COMPLETE = "chat.message_complete"
     CHAT_TYPING = "chat.typing"
+    CHAT_TYPING_START = "chat.typing_start"
+    CHAT_TYPING_STOP = "chat.typing_stop"
     CHAT_STATUS = "chat.status"
 
     # Agent events

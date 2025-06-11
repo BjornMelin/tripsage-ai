@@ -10,6 +10,7 @@ from fastapi.testclient import TestClient
 from fastapi.websockets import WebSocketDisconnect
 
 from tests.factories import ChatFactory
+from tests.test_config import MockCacheService, MockDatabaseService
 from tripsage.api.main import app
 
 
@@ -18,19 +19,47 @@ class TestWebSocketRouter:
 
     def setup_method(self):
         """Set up test client and mocks."""
+        # Create mocks for external services
+        self.mock_cache = MockCacheService()
+        self.mock_db = MockDatabaseService()
+        
+        # Mock external dependencies to prevent real connections at all levels
+        self.patchers = [
+            # Core services
+            patch(
+                "tripsage_core.services.infrastructure.database_service.get_database_service",
+                return_value=self.mock_db
+            ),
+            patch(
+                "tripsage_core.services.infrastructure.cache_service.get_cache_service",
+                return_value=self.mock_cache
+            ),
+            patch("tripsage.api.core.dependencies.get_db", return_value=self.mock_db),
+            # Middleware cache dependencies (patch the actual import path)
+            patch(
+                "tripsage_core.services.infrastructure.get_cache_service",
+                return_value=self.mock_cache
+            ),
+        ]
+        
+        # Start all patches
+        for patcher in self.patchers:
+            patcher.start()
+
         self.client = TestClient(app)
         self.mock_websocket_manager = Mock()
         self.mock_chat_service = Mock()
         self.mock_chat_agent = Mock()
         self.session_id = str(uuid4())
-        self.user_id = str(uuid4())
+        self.user_id_str = str(uuid4())
+        self.user_id = uuid4()  # This will be the UUID object for API calls
         self.connection_id = "test-connection-123"
 
         # Sample test data
         self.sample_auth_request = {
-            "access_token": "test-token",
-            "user_id": self.user_id,
+            "token": "test-token",
             "session_id": self.session_id,
+            "channels": [],
         }
 
         self.sample_auth_response = Mock()
@@ -42,6 +71,11 @@ class TestWebSocketRouter:
             "connection_id": self.connection_id,
             "user_id": self.user_id,
         }
+
+    def teardown_method(self):
+        """Clean up patches."""
+        for patcher in self.patchers:
+            patcher.stop()
 
     @patch("tripsage.api.routers.websocket.websocket_manager")
     @patch("tripsage.api.routers.websocket.get_chat_agent")
@@ -238,8 +272,16 @@ class TestWebSocketRouter:
         # Verify subscription components are set up
         assert mock_ws_manager.subscribe_connection is not None
 
-    def test_websocket_health_endpoint(self):
+    @patch("tripsage.api.routers.websocket.websocket_manager")
+    def test_websocket_health_endpoint(self, mock_ws_manager):
         """Test WebSocket health check endpoint."""
+        # Arrange
+        mock_ws_manager._running = True
+        mock_ws_manager.get_connection_stats.return_value = {
+            "total_connections": 0,
+            "active_connections": 0,
+        }
+
         # Act
         response = self.client.get("/api/ws/health")
 
@@ -364,11 +406,12 @@ class TestWebSocketRouter:
         )
 
         # Test ChatMessageEvent
-        message_data = ChatFactory.create_message()
+        message_data = ChatFactory.create_websocket_message()
         chat_event = ChatMessageEvent(
             message=message_data, user_id=self.user_id, session_id=self.session_id
         )
         assert chat_event.message == message_data
+        assert chat_event.type == "chat.message"
 
         # Test ChatMessageChunkEvent
         chunk_event = ChatMessageChunkEvent(
@@ -381,6 +424,7 @@ class TestWebSocketRouter:
         assert chunk_event.content == "Hello"
         assert chunk_event.chunk_index == 1
         assert chunk_event.is_final is False
+        assert chunk_event.type == "chat.typing"
 
         # Test ConnectionEvent
         conn_event = ConnectionEvent(
@@ -391,6 +435,7 @@ class TestWebSocketRouter:
         )
         assert conn_event.status == "connected"
         assert conn_event.connection_id == self.connection_id
+        assert conn_event.type == "connection.established"
 
         # Test ErrorEvent
         error_event = ErrorEvent(
@@ -401,6 +446,7 @@ class TestWebSocketRouter:
         )
         assert error_event.error_code == "test_error"
         assert error_event.error_message == "Test error message"
+        assert error_event.type == "connection.error"
 
     def test_websocket_endpoints_no_authentication_required_for_health(self):
         """Test that WebSocket health endpoint doesn't require authentication."""
