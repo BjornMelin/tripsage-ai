@@ -10,7 +10,7 @@ import logging
 from typing import Any, Dict, Optional
 from urllib.parse import urlparse
 
-from tripsage_core.config.base_app_settings import settings
+from tripsage_core.config.base_app_settings import get_settings
 
 # Try to import PostgreSQL checkpoint classes, fallback to MemorySaver if not available
 try:
@@ -61,6 +61,7 @@ class SupabaseCheckpointManager:
 
         try:
             # Get Supabase configuration
+            settings = get_settings()
             supabase_url = settings.database.supabase_url
             supabase_key = (
                 settings.database.supabase_service_role_key.get_secret_value()
@@ -107,6 +108,7 @@ class SupabaseCheckpointManager:
             return
 
         conn_string = self._build_connection_string()
+        settings = get_settings()
 
         pool_config = {
             "conninfo": conn_string,

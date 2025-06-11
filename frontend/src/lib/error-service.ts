@@ -95,7 +95,7 @@ class ErrorService {
     } catch (error) {
       if (retryCount < maxRetries) {
         // Exponential backoff
-        const delay = Math.pow(2, retryCount) * 1000;
+        const delay = 2 ** retryCount * 1000;
         setTimeout(() => {
           this.sendErrorReport(report, retryCount + 1);
         }, delay);

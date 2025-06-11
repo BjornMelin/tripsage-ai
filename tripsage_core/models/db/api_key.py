@@ -26,7 +26,7 @@ class ApiKeyDB(BaseModel):
             "examples": [
                 {
                     "id": "123e4567-e89b-12d3-a456-426614174000",
-                    "user_id": 1,
+                    "user_id": "123e4567-e89b-12d3-a456-426614174000",
                     "name": "OpenAI API Key",
                     "service": "openai",
                     "encrypted_key": "gAAAAABh...",
@@ -42,7 +42,7 @@ class ApiKeyDB(BaseModel):
     )
 
     id: UUID = Field(description="Unique identifier for the API key")
-    user_id: int = Field(gt=0, description="ID of the user who owns this API key")
+    user_id: UUID = Field(description="ID of the user who owns this API key")
     name: str = Field(
         min_length=1,
         max_length=255,
@@ -128,7 +128,7 @@ class ApiKeyCreate(BaseModel):
         json_schema_extra={
             "examples": [
                 {
-                    "user_id": 1,
+                    "user_id": "123e4567-e89b-12d3-a456-426614174000",
                     "name": "OpenAI API Key",
                     "service": "openai",
                     "encrypted_key": "gAAAAABh...",
@@ -139,7 +139,7 @@ class ApiKeyCreate(BaseModel):
         },
     )
 
-    user_id: int = Field(gt=0, description="ID of the user who owns this API key")
+    user_id: UUID = Field(description="ID of the user who owns this API key")
     name: str = Field(
         min_length=1,
         max_length=255,

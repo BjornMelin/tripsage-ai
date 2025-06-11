@@ -422,41 +422,53 @@ ORDER BY idx_scan DESC;
 ### **Database Migration Management**
 
 ```python
-# Migration execution pattern
-from tripsage_core.services.infrastructure.database_service import DatabaseService
+# Supabase CLI-based migration management
+import subprocess
+import logging
 
-class DatabaseMigration:
-    async def apply_migration(self, version: str, sql_file: str):
-        """Apply database migration with transaction safety."""
+class SupabaseMigration:
+    def create_migration(self, name: str) -> str:
+        """Create a new migration file using Supabase CLI."""
         
-        async with self.db_service.transaction() as tx:
-            # Check if migration already applied
-            existing = await tx.fetch_one(
-                "SELECT version FROM schema_migrations WHERE version = %s",
-                version
+        result = subprocess.run(
+            ["supabase", "migration", "new", name],
+            capture_output=True,
+            text=True
+        )
+        
+        if result.returncode == 0:
+            logging.info(f"Migration {name} created successfully")
+            return result.stdout.strip()
+        else:
+            raise Exception(f"Failed to create migration: {result.stderr}")
+    
+    def apply_migrations(self, environment: str = "local"):
+        """Apply all pending migrations."""
+        
+        if environment == "local":
+            # Apply to local development database
+            result = subprocess.run(
+                ["supabase", "db", "reset"],
+                capture_output=True,
+                text=True
             )
-            
-            if existing:
-                logger.info(f"Migration {version} already applied")
-                return
-            
-            # Apply migration SQL
-            with open(sql_file, 'r') as f:
-                migration_sql = f.read()
-            
-            await tx.execute(migration_sql)
-            
-            # Record migration
-            await tx.execute(
-                "INSERT INTO schema_migrations (version, description) VALUES (%s, %s)",
-                version, f"Applied migration {version}"
+        else:
+            # Apply to remote database
+            result = subprocess.run(
+                ["supabase", "db", "push"],
+                capture_output=True,
+                text=True
             )
-            
-            logger.info(f"Migration {version} applied successfully")
+        
+        if result.returncode == 0:
+            logging.info(f"Migrations applied successfully to {environment}")
+        else:
+            raise Exception(f"Failed to apply migrations: {result.stderr}")
 
 # Usage
-migration = DatabaseMigration()
-await migration.apply_migration("20250601_001", "migrations/add_travel_preferences.sql")
+migration = SupabaseMigration()
+migration.create_migration("add_travel_preferences")
+migration.apply_migrations("local")
 ```
 
 ### **Backup and Recovery**

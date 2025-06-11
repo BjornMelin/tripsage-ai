@@ -1,13 +1,15 @@
 import { useUserProfileStore } from "@/stores/user-store";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { PersonalInfoSection } from "../personal-info-section";
 
 // Mock the stores and hooks
 vi.mock("@/stores/user-store");
+
+const mockToast = vi.fn();
 vi.mock("@/components/ui/use-toast", () => ({
   useToast: () => ({
-    toast: vi.fn(),
+    toast: mockToast,
   }),
 }));
 
@@ -29,6 +31,7 @@ const mockUpdateUser = vi.fn();
 describe("PersonalInfoSection", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockToast.mockClear();
     (useUserProfileStore as any).mockReturnValue({
       user: mockUser,
       updateUser: mockUpdateUser,

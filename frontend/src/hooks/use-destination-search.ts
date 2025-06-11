@@ -1,9 +1,10 @@
 "use client";
 
 import { api } from "@/lib/api/client";
-import { useSearchStore } from "@/stores/search-store";
+import { useSearchParamsStore, useSearchResultsStore } from "@/stores/search-store";
 import type { Destination, DestinationSearchParams } from "@/types/search";
 import { useMutation } from "@tanstack/react-query";
+import { useEffect } from "react";
 
 interface DestinationSearchResponse {
   destinations: Destination[];
@@ -39,15 +40,12 @@ interface DestinationAutocompleteResponse {
 }
 
 export function useDestinationSearch() {
-  const { updateDestinationParams, setResults, setIsLoading, setError } =
-    useSearchStore();
+  const { updateDestinationParams } = useSearchParamsStore();
+  const { setSearchResults: setResults } = useSearchResultsStore();
 
   // Main destination search mutation
   const searchMutation = useMutation({
     mutationFn: async (params: DestinationSearchParams) => {
-      setIsLoading(true);
-      setError(null);
-
       try {
         const response = await api.post<DestinationSearchResponse>(
           "/api/destinations/search",
@@ -59,19 +57,37 @@ export function useDestinationSearch() {
         throw error;
       }
     },
-    onSuccess: (data) => {
-      setResults({ destinations: data.destinations });
-      updateDestinationParams({
-        query: data.metadata?.source || "",
-      });
-      setIsLoading(false);
-    },
-    onError: (error) => {
-      console.error("Search failed:", error);
-      setError(error instanceof Error ? error.message : "Search failed");
-      setIsLoading(false);
-    },
   });
+
+  // Handle search success
+  useEffect(() => {
+    if (searchMutation.data) {
+      // Use the proper search results format expected by the store
+      setResults(
+        "destination",
+        { destinations: searchMutation.data.destinations },
+        {
+          totalResults: searchMutation.data.total,
+          resultsPerPage: 20,
+          currentPage: 1,
+          hasMoreResults: searchMutation.data.hasMore,
+          searchDuration: searchMutation.data.metadata?.searchTime || 0,
+          provider: "DestinationService",
+          requestId: `dest_${Date.now()}`,
+        }
+      );
+      updateDestinationParams({
+        query: searchMutation.data.metadata?.source || "",
+      });
+    }
+  }, [searchMutation.data, setResults, updateDestinationParams]);
+
+  // Handle search error
+  useEffect(() => {
+    if (searchMutation.error) {
+      console.error("Search failed:", searchMutation.error);
+    }
+  }, [searchMutation.error]);
 
   // Autocomplete mutation for real-time suggestions
   const autocompleteMutation = useMutation({
@@ -106,29 +122,17 @@ export function useDestinationSearch() {
 
   // Helper function to search destinations
   const searchDestinations = async (params: DestinationSearchParams) => {
-    try {
-      return await searchMutation.mutateAsync(params);
-    } catch (error) {
-      throw error;
-    }
+    return await searchMutation.mutateAsync(params);
   };
 
   // Helper function to get autocomplete suggestions
   const getAutocompleteSuggestions = async (params: DestinationAutocompleteParams) => {
-    try {
-      return await autocompleteMutation.mutateAsync(params);
-    } catch (error) {
-      throw error;
-    }
+    return await autocompleteMutation.mutateAsync(params);
   };
 
   // Helper function to get place details
   const getPlaceDetails = async (placeId: string) => {
-    try {
-      return await placeDetailsMutation.mutateAsync(placeId);
-    } catch (error) {
-      throw error;
-    }
+    return await placeDetailsMutation.mutateAsync(placeId);
   };
 
   // Generate a session token for autocomplete sessions
@@ -228,9 +232,6 @@ export function useDestinationSearch() {
 
   // Mock search for development
   const searchDestinationsMock = async (params: DestinationSearchParams) => {
-    setIsLoading(true);
-    setError(null);
-
     try {
       // Simulate API delay
       await new Promise((resolve) => setTimeout(resolve, 800));
@@ -248,15 +249,25 @@ export function useDestinationSearch() {
         },
       };
 
-      setResults({ destinations: response.destinations });
+      setResults(
+        "destination",
+        { destinations: response.destinations },
+        {
+          totalResults: response.total,
+          resultsPerPage: 20,
+          currentPage: 1,
+          hasMoreResults: response.hasMore,
+          searchDuration: response.metadata?.searchTime || 0,
+          provider: "MockDestinationService",
+          requestId: `mock_dest_${Date.now()}`,
+        }
+      );
       updateDestinationParams(params);
-      setIsLoading(false);
 
       return response;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Search failed";
-      setError(errorMessage);
-      setIsLoading(false);
+      console.error("Mock search failed:", errorMessage);
       throw error;
     }
   };
@@ -286,7 +297,6 @@ export function useDestinationSearch() {
     // Reset functions
     resetSearch: () => {
       searchMutation.reset();
-      setError(null);
     },
     resetAutocomplete: () => autocompleteMutation.reset(),
     resetDetails: () => placeDetailsMutation.reset(),

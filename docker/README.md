@@ -128,6 +128,7 @@ SUPABASE_URL=http://supabase:8000
 ### Eliminated Legacy Components
 
 **Removed from Docker environment** (migrated to direct SDKs):
+
 - ❌ Neo4j MCP (replaced by Mem0)
 - ❌ Redis MCP (replaced by DragonflyDB)
 - ❌ Firecrawl MCP (replaced by Crawl4AI SDK)
@@ -137,6 +138,7 @@ SUPABASE_URL=http://supabase:8000
 - ❌ 8+ other legacy MCP services
 
 **Retained Essential Services**:
+
 - ✅ Airbnb MCP (only remaining - no official SDK)
 - ✅ Modern monitoring stack (Jaeger, Prometheus, Grafana)
 - ✅ High-performance infrastructure (Supabase, DragonflyDB)
@@ -154,6 +156,7 @@ SUPABASE_URL=http://supabase:8000
 ### Common Issues
 
 **Service Won't Start**:
+
 ```bash
 # Check service health
 docker compose -f docker/docker-compose.mcp.yml ps
@@ -164,6 +167,7 @@ env | grep -E '(POSTGRES|DUFFEL|GOOGLE|AIRBNB)'
 ```
 
 **Database Connection Issues**:
+
 ```bash
 # Test PostgreSQL connection
 docker exec -it tripsage-supabase-local psql -U postgres -d tripsage_dev
@@ -173,6 +177,7 @@ docker exec -it tripsage-supabase-local psql -U postgres -d tripsage_dev -c "SEL
 ```
 
 **Cache Performance Issues**:
+
 ```bash
 # Test DragonflyDB connection
 docker exec -it tripsage-dragonfly redis-cli ping
@@ -191,6 +196,7 @@ docker exec -it tripsage-dragonfly redis-cli info memory
 ### Production Alignment
 
 This development environment mirrors the production architecture:
+
 - Same database technology (Supabase + pgvector)
 - Same caching solution (DragonflyDB)
 - Same memory system (Mem0)
@@ -202,17 +208,20 @@ This ensures development-production parity and prevents environment-specific iss
 ## Migration Notes
 
 **From Legacy MCP Architecture**:
+
 - Docker environment has been streamlined to match the current high-performance architecture
 - Legacy MCP services have been removed in favor of direct SDK integrations
 - Only Airbnb MCP remains due to lack of official SDK
 - Performance improvements are immediately visible in the development environment
 
 **Database Migration**:
+
 - Neo4j → Mem0 with pgvector backend
 - Multiple databases → Single Supabase instance
 - Complex vector setup → Unified pgvector + pgvectorscale
 
 **Cache Migration**:
+
 - Redis → DragonflyDB for 25x performance improvement
 - No configuration changes needed (Redis-compatible)
 - Dramatic performance improvements in development environment

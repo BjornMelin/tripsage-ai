@@ -48,12 +48,12 @@ export default function DestinationsSearchPage() {
       const isAlreadySelected = prev.some((d) => d.id === destination.id);
       if (isAlreadySelected) {
         return prev.filter((d) => d.id !== destination.id);
-      } else if (prev.length < 3) {
-        return [...prev, destination];
-      } else {
-        alert("You can compare up to 3 destinations at once");
-        return prev;
       }
+      if (prev.length < 3) {
+        return [...prev, destination];
+      }
+      alert("You can compare up to 3 destinations at once");
+      return prev;
     });
   };
 
