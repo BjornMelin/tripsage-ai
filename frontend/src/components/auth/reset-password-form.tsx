@@ -112,7 +112,13 @@ export function ResetPasswordForm({ className }: ResetPasswordFormProps) {
                 disabled={isLoading}
                 className="w-full"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  // Clear error when user starts typing
+                  if (error) {
+                    setError(null);
+                  }
+                }}
               />
               <p className="text-xs text-muted-foreground">
                 We&apos;ll send password reset instructions to this email address
@@ -120,7 +126,7 @@ export function ResetPasswordForm({ className }: ResetPasswordFormProps) {
             </div>
 
             {/* Submit Button */}
-            <Button type="submit" className="w-full" disabled={isLoading || !email}>
+            <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />

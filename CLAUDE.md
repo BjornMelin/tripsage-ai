@@ -15,7 +15,7 @@ TripSage is an AI travel-planning platform that integrates flight, accommodation
 stores it in **Supabase PostgreSQL with pgvector embeddings** (Mem0 memory system),
 and optimizes itineraries against budget & user constraints across sessions.
 
-## Current Status & Priorities
+## Current Status & Priorities (Updated June 6, 2025)
 
 **Completed Components:**
 
@@ -27,19 +27,26 @@ and optimizes itineraries against budget & user constraints across sessions.
 - ✅ Direct SDK integrations (Duffel, Google Maps, Crawl4AI)
 - ✅ DragonflyDB caching layer (fully configured with 25x performance improvement)
 - ✅ Backend testing infrastructure (2154 tests, 90%+ coverage achieved)
+- ✅ **Frontend Grade A Implementation** - 60-70% complete with modern React 19 + Next.js 15
+- ✅ **WebSocket Infrastructure** - Complete client (804 lines) and backend infrastructure ready
+- ✅ **Authentication UI** - Complete JWT-based frontend authentication system
+- ✅ **Agent Monitoring Dashboard** - Revolutionary real-time interface ready for connection
 
-**In Progress:**
+**Critical Security Issues Identified:**
 
-- 🔄 Frontend authentication integration (UI built, needs connection)
-- 🔄 SDK migration completion (only Airbnb MCP remains)
-- 🔄 WebSocket real-time features
+- 🚨 **Hardcoded JWT Secret**: Production middleware.ts contains fallback secret (IMMEDIATE FIX REQUIRED)
+- 🚨 **Authentication Disconnect**: Frontend JWT system not connected to backend
+- 🚨 **Missing Backend Routers**: activities.py and search.py endpoints missing
 
-**Next Priority Tasks:**
+**Immediate Priorities (Week 1):**
 
-1. Complete frontend-backend authentication integration
-2. Migrate remaining Airbnb MCP to direct SDK
-3. Implement WebSocket functionality for real-time updates
-4. Deploy production environment
+1. **CRITICAL**: Remove hardcoded JWT fallback secret from production code
+2. **HIGH**: Connect frontend authentication to backend JWT service  
+3. **HIGH**: Add missing backend routers (activities.py, search.py)
+4. **HIGH**: Fix 527 failing tests due to Pydantic v1→v2 migration
+5. **MEDIUM**: Connect WebSocket real-time features (infrastructure ready)
+
+**Production Readiness Status**: 75% complete, blocked by authentication integration and security fixes
 
 ## MCP Tool Integration & Auto-Invocation
 
@@ -128,52 +135,75 @@ _Commits_ Conventional format — `feat` · `fix` · `docs` · `style` · `refac
 
 Real keys live in `.env`; commit only `.env.example` placeholders.
 
-## Important Implementation Notes
+## Critical Implementation Notes (Updated June 6, 2025)
+
+### 🚨 Security Priority Actions
+
+1. **Immediate Security Fix Required:**
+   ```typescript
+   // REMOVE this from middleware.ts and server-actions.ts:
+   const JWT_SECRET = new TextEncoder().encode(
+     process.env.JWT_SECRET || "fallback-secret-for-development-only" // ← SECURITY RISK
+   );
+   
+   // REPLACE with proper environment validation:
+   if (!process.env.JWT_SECRET) {
+     throw new Error("JWT_SECRET environment variable is required");
+   }
+   ```
+
+2. **Frontend-Backend Authentication Integration:**
+   - Replace mock authentication in `server-actions.ts` with real backend calls
+   - Connect frontend JWT middleware to backend authentication service
+   - Implement secure token refresh mechanism
+
+### Implementation Workflow Updates
 
 1. **MCP-First Development:** ALWAYS search before implementing:
    - Unknown API → Search with `exa` + `firecrawl`
    - Framework feature → Check `context7` documentation
    - Error/Issue → Search with `tavily` (recent) + `exa` (solutions)
 
-2. **Parallel MCP Execution:** Batch all related searches:
-   ```python
-   # GOOD: Parallel execution
-   results = await asyncio.gather(
-       mcp__context7__get_library_docs("fastapi", "authentication"),
-       mcp__exa__github_search("FastAPI JWT implementation"),
-       mcp__firecrawl__firecrawl_deep_research("FastAPI security 2024")
-   )
-   ```
+2. **Frontend Development Priorities:**
+   - **Quality**: Maintain Grade A implementation standard (currently 60-70% complete)
+   - **Integration**: Connect existing UI to backend APIs
+   - **Real-time**: Activate WebSocket features (infrastructure ready)
+   - **Performance**: Enable React 19 Compiler optimizations
 
-3. **Tool Chain Patterns:**
-   - **Research**: `firecrawl` (deep) → `clear-thought` (analyze) → implement
-   - **Debug**: `tavily` (error) → `debuggingapproach` → `context7` (docs)
-   - **Optimize**: `stochasticalgorithm` → `exa` (benchmarks) → apply
-
-4. **TripSage Specifics:**
-   - **MCP Manager**: Only for Airbnb operations (`MCPManager.invoke()`)
-   - **Storage**: Single Supabase PostgreSQL with pgvector
-   - **Error Handling**: `@with_error_handling` decorator + error search
-   - **Caching**: DragonflyDB (Redis-compatible) with content-aware TTLs
-   - **Validation**: Pydantic v2 models + schema validation
+3. **TripSage Current State:**
+   - **Frontend**: Grade A React 19 + Next.js 15 implementation ready for production
+   - **Backend**: 92% complete, missing 2 routers (activities.py, search.py)
+   - **WebSocket**: Complete infrastructure ready for activation
+   - **Testing**: 527 failing tests requiring Pydantic v1→v2 migration
+   - **Security**: Critical JWT secret vulnerability requires immediate fix
 
 ## Quick Reference Paths
 
 - **TODO Files:** `/TODO.md`, `/tasks/TODO-*.md`
 - **Documentation:** `/docs/`
+- **Implementation Roadmap:** `/docs/research/reviews/implementation-roadmap-2025.md`
+- **Frontend Architecture Review:** `/docs/research/reviews/frontend-architecture-review-2025.md`
 - **API:** `/tripsage/api/`
+- **Frontend:** `/frontend/` (React 19 + Next.js 15, Grade A implementation)
 - **Core Services:** `/tripsage_core/services/`
 - **Agents/Orchestration:** `/tripsage/orchestration/`
 - **MCP Abstraction:** `/tripsage_core/mcp_abstraction/`
-- **Tests:** `/tests/`
+- **Tests:** `/tests/` (backend), `/frontend/src/__tests__/` (frontend)
 
 ## Common Commands
 
 ```bash
 # Development
 uv run python -m tripsage.api.main  # Start API server
-uv run pytest                        # Run tests
+uv run pytest                        # Run tests (527 currently failing - Pydantic v1→v2)
 ruff check . --fix && ruff format .  # Lint and format
+
+# Frontend Development
+cd frontend
+pnpm dev                            # Start Next.js development server
+pnpm test                           # Run Vitest tests (85-90% coverage)
+pnpm test:e2e                      # Run Playwright E2E tests
+npx biome lint --apply .            # Format TypeScript
 
 # Database
 uv run python scripts/database/run_migrations.py  # Run migrations
@@ -183,6 +213,10 @@ docker run -d --name tripsage-dragonfly -p 6379:6379 \
   docker.dragonflydb.io/dragonflydb/dragonfly:latest \
   --logtostderr --cache_mode --requirepass tripsage_secure_password
 uv run python scripts/verification/verify_dragonfly.py  # Verify cache connection
+
+# Security Testing
+# IMPORTANT: Verify no hardcoded secrets before commit
+git grep -i "fallback-secret\|development-only" .  # Should return empty
 ```
 
 ## TripSage-Specific Cognitive Patterns
@@ -209,5 +243,21 @@ For caching strategies or query optimization:
 → AUTO-INVOKE: stochasticalgorithm(bandit) for A/B testing
 → AUTO-INVOKE: mentalmodel(pareto_principle) for 80/20 analysis
 ```
+
+## Current Critical Path Summary
+
+**Week 1 Priorities:**
+1. 🚨 **Security Fix**: Remove hardcoded JWT secrets (CRITICAL)
+2. 🔗 **Authentication**: Connect frontend to backend JWT service
+3. 📡 **Backend APIs**: Add activities.py and search.py routers
+4. 🧪 **Testing**: Fix 527 failing tests (Pydantic v1→v2)
+5. ⚡ **WebSocket**: Activate real-time features (infrastructure ready)
+
+**Success Metrics:**
+- Zero critical security vulnerabilities
+- Complete end-to-end authentication flow
+- 90%+ test coverage maintained
+- Real-time agent monitoring functional
+- Grade A frontend quality preserved
 
 _End of TripSage project instructions._

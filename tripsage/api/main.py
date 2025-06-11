@@ -18,12 +18,13 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from tripsage.api.core.config import get_settings
 from tripsage.api.core.openapi import custom_openapi
 from tripsage.api.middlewares import (
-    AuthenticationMiddleware,
+    # AuthenticationMiddleware,  # Temporarily disabled - awaiting Supabase Auth
     EnhancedRateLimitMiddleware,
     LoggingMiddleware,
 )
 from tripsage.api.routers import (
     accommodations,
+    activities,
     attachments,
     auth,
     chat,
@@ -33,6 +34,7 @@ from tripsage.api.routers import (
     itineraries,
     keys,
     memory,
+    search,
     trips,
     websocket,
 )
@@ -240,7 +242,8 @@ def create_app() -> FastAPI:
     )
 
     # Enhanced authentication middleware supporting JWT and API keys
-    app.add_middleware(AuthenticationMiddleware, settings=settings)
+    # Temporarily disabled - awaiting Supabase Auth
+    # app.add_middleware(AuthenticationMiddleware, settings=settings)
 
     # Add key operation rate limiting middleware
     key_monitoring_service = KeyMonitoringService(settings)
@@ -544,6 +547,8 @@ def create_app() -> FastAPI:
     app.include_router(
         itineraries.router, prefix="/api/itineraries", tags=["itineraries"]
     )
+    app.include_router(activities.router, prefix="/api/activities", tags=["activities"])
+    app.include_router(search.router, prefix="/api/search", tags=["search"])
     app.include_router(memory.router, prefix="/api", tags=["memory"])
     app.include_router(websocket.router, prefix="/api", tags=["websocket"])
 

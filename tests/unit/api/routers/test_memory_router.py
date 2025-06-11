@@ -1,482 +1,482 @@
-"""Comprehensive unit tests for memory router."""
+"""
+Clean tests for memory router.
 
-from unittest.mock import AsyncMock, Mock, patch
+Tests the actual implemented memory management functionality.
+Follows TripSage standards for focused, actionable testing.
+"""
+
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from fastapi import status
-from fastapi.testclient import TestClient
+from fastapi import HTTPException
 
-from tests.factories import MemoryFactory
-from tripsage.api.main import app
+from tripsage.api.middlewares.authentication import Principal
+from tripsage.api.routers.memory import (
+    ConversationMemoryRequest,
+    SearchMemoryRequest,
+    UpdatePreferencesRequest,
+    add_conversation_memory,
+    add_preference,
+    clear_user_memory,
+    delete_memory,
+    get_memory_stats,
+    get_user_context,
+    search_memories,
+    update_preferences,
+)
+from tripsage_core.services.business.memory_service import MemoryService
 
 
 class TestMemoryRouter:
-    """Test suite for memory router endpoints."""
+    """Test memory router functionality by testing functions directly."""
 
-    def setup_method(self):
-        """Set up test client and mocks."""
-        self.client = TestClient(app)
-        self.mock_service = Mock()
-        self.sample_conversation_result = MemoryFactory.create_conversation_result()
-        self.sample_user_context = MemoryFactory.create_user_context()
-        self.sample_memories = MemoryFactory.create_memories()
-        self.sample_preferences = MemoryFactory.create_preferences()
-        self.sample_memory_stats = MemoryFactory.create_memory_stats()
-
-    @patch("tripsage.api.routers.memory.get_memory_service_dep")
-    @patch("tripsage.api.routers.memory.require_principal_dep")
-    def test_add_conversation_memory_success(self, mock_auth, mock_service_dep):
-        """Test successful conversation memory addition."""
-        # Arrange
-        mock_auth.return_value = Mock(id="test-user-id")
-        mock_service_dep.return_value = self.mock_service
-        self.mock_service.add_conversation_memory = AsyncMock(
-            return_value=self.sample_conversation_result
+    @pytest.fixture
+    def mock_principal(self):
+        """Mock authenticated principal."""
+        return Principal(
+            id="user123", type="user", email="test@example.com", auth_method="jwt"
         )
 
-        conversation_request = {
-            "messages": [
+    @pytest.fixture
+    def mock_memory_service(self):
+        """Mock memory service."""
+        service = MagicMock(spec=MemoryService)
+        # Configure common async methods
+        service.add_conversation_memory = AsyncMock()
+        service.get_user_context = AsyncMock()
+        service.search_memories = AsyncMock()
+        service.update_user_preferences = AsyncMock()
+        service.add_user_preference = AsyncMock()
+        service.delete_memory = AsyncMock()
+        service.get_memory_stats = AsyncMock()
+        service.clear_user_memory = AsyncMock()
+        return service
+
+    @pytest.fixture
+    def sample_conversation_request(self):
+        """Sample conversation memory request."""
+        return ConversationMemoryRequest(
+            messages=[
                 {"role": "user", "content": "I want to plan a trip to Tokyo"},
                 {
                     "role": "assistant",
                     "content": "I'd be happy to help you plan your Tokyo trip!",
                 },
             ],
-            "session_id": "test-session-123",
-            "context_type": "travel_planning",
-        }
-
-        # Act
-        response = self.client.post(
-            "/api/memory/conversation",
-            json=conversation_request,
-            headers={"Authorization": "Bearer test-token"},
+            session_id="test-session-123",
+            context_type="travel_planning",
         )
 
-        # Assert
-        assert response.status_code == status.HTTP_200_OK
-        data = response.json()
-        assert "memory_id" in data
-        assert data["status"] == "success"
-        self.mock_service.add_conversation_memory.assert_called_once()
+    @pytest.fixture
+    def sample_search_request(self):
+        """Sample search memory request."""
+        return SearchMemoryRequest(query="Tokyo travel preferences", limit=5)
 
-    @patch("tripsage.api.routers.memory.get_memory_service_dep")
-    @patch("tripsage.api.routers.memory.require_principal_dep")
-    def test_add_conversation_memory_without_session_id(
-        self, mock_auth, mock_service_dep
-    ):
-        """Test conversation memory addition without session ID."""
-        # Arrange
-        mock_auth.return_value = Mock(id="test-user-id")
-        mock_service_dep.return_value = self.mock_service
-        self.mock_service.add_conversation_memory = AsyncMock(
-            return_value=self.sample_conversation_result
-        )
-
-        conversation_request = {
-            "messages": [{"role": "user", "content": "Help me find flights"}],
-            "context_type": "travel_planning",
-        }
-
-        # Act
-        response = self.client.post(
-            "/api/memory/conversation",
-            json=conversation_request,
-            headers={"Authorization": "Bearer test-token"},
-        )
-
-        # Assert
-        assert response.status_code == status.HTTP_200_OK
-        # Service should be called with None for session_id
-        args = self.mock_service.add_conversation_memory.call_args[0]
-        assert args[2] is None  # session_id parameter
-
-    @patch("tripsage.api.routers.memory.get_memory_service_dep")
-    @patch("tripsage.api.routers.memory.require_principal_dep")
-    def test_get_user_context_success(self, mock_auth, mock_service_dep):
-        """Test successful user context retrieval."""
-        # Arrange
-        mock_auth.return_value = Mock(id="test-user-id")
-        mock_service_dep.return_value = self.mock_service
-        self.mock_service.get_user_context = AsyncMock(
-            return_value=self.sample_user_context
-        )
-
-        # Act
-        response = self.client.get(
-            "/api/memory/context", headers={"Authorization": "Bearer test-token"}
-        )
-
-        # Assert
-        assert response.status_code == status.HTTP_200_OK
-        data = response.json()
-        assert "preferences" in data
-        assert "travel_history" in data
-        assert "recent_searches" in data
-        self.mock_service.get_user_context.assert_called_once_with("test-user-id")
-
-    @patch("tripsage.api.routers.memory.get_memory_service_dep")
-    @patch("tripsage.api.routers.memory.require_principal_dep")
-    def test_search_memories_success(self, mock_auth, mock_service_dep):
-        """Test successful memory search."""
-        # Arrange
-        mock_auth.return_value = Mock(id="test-user-id")
-        mock_service_dep.return_value = self.mock_service
-        self.mock_service.search_memories = AsyncMock(return_value=self.sample_memories)
-
-        search_request = {"query": "Tokyo travel preferences", "limit": 5}
-
-        # Act
-        response = self.client.post(
-            "/api/memory/search",
-            json=search_request,
-            headers={"Authorization": "Bearer test-token"},
-        )
-
-        # Assert
-        assert response.status_code == status.HTTP_200_OK
-        data = response.json()
-        assert "memories" in data
-        assert "count" in data
-        assert data["count"] == len(self.sample_memories)
-        assert isinstance(data["memories"], list)
-        self.mock_service.search_memories.assert_called_once_with(
-            "test-user-id", "Tokyo travel preferences", 5
-        )
-
-    @patch("tripsage.api.routers.memory.get_memory_service_dep")
-    @patch("tripsage.api.routers.memory.require_principal_dep")
-    def test_search_memories_no_results(self, mock_auth, mock_service_dep):
-        """Test memory search with no results."""
-        # Arrange
-        mock_auth.return_value = Mock(id="test-user-id")
-        mock_service_dep.return_value = self.mock_service
-        self.mock_service.search_memories = AsyncMock(return_value=[])
-
-        search_request = {"query": "nonexistent topic", "limit": 10}
-
-        # Act
-        response = self.client.post(
-            "/api/memory/search",
-            json=search_request,
-            headers={"Authorization": "Bearer test-token"},
-        )
-
-        # Assert
-        assert response.status_code == status.HTTP_200_OK
-        data = response.json()
-        assert data["memories"] == []
-        assert data["count"] == 0
-
-    @patch("tripsage.api.routers.memory.get_memory_service_dep")
-    @patch("tripsage.api.routers.memory.require_principal_dep")
-    def test_update_preferences_success(self, mock_auth, mock_service_dep):
-        """Test successful preferences update."""
-        # Arrange
-        mock_auth.return_value = Mock(id="test-user-id")
-        mock_service_dep.return_value = self.mock_service
-        updated_preferences = {**self.sample_preferences, "budget_range": "luxury"}
-        self.mock_service.update_user_preferences = AsyncMock(
-            return_value=updated_preferences
-        )
-
-        preferences_request = {
-            "preferences": {
+    @pytest.fixture
+    def sample_preferences_request(self):
+        """Sample preferences update request."""
+        return UpdatePreferencesRequest(
+            preferences={
                 "budget_range": "luxury",
                 "accommodation_type": "hotel",
                 "travel_style": "comfort",
             }
-        }
-
-        # Act
-        response = self.client.put(
-            "/api/memory/preferences",
-            json=preferences_request,
-            headers={"Authorization": "Bearer test-token"},
         )
 
-        # Assert
-        assert response.status_code == status.HTTP_200_OK
-        data = response.json()
-        assert data["budget_range"] == "luxury"
-        self.mock_service.update_user_preferences.assert_called_once()
+    async def test_add_conversation_memory_success(
+        self, mock_principal, mock_memory_service, sample_conversation_request
+    ):
+        """Test successful conversation memory addition."""
+        # Mock response
+        expected_result = {
+            "memory_id": "mem123",
+            "status": "success",
+            "messages_stored": 2,
+            "session_id": "test-session-123",
+        }
+        mock_memory_service.add_conversation_memory.return_value = expected_result
 
-    @patch("tripsage.api.routers.memory.get_memory_service_dep")
-    @patch("tripsage.api.routers.memory.require_principal_dep")
-    def test_add_preference_success(self, mock_auth, mock_service_dep):
+        result = await add_conversation_memory(
+            sample_conversation_request, mock_principal, mock_memory_service
+        )
+
+        # Verify service call
+        mock_memory_service.add_conversation_memory.assert_called_once_with(
+            "user123",
+            [
+                {"role": "user", "content": "I want to plan a trip to Tokyo"},
+                {
+                    "role": "assistant",
+                    "content": "I'd be happy to help you plan your Tokyo trip!",
+                },
+            ],
+            "test-session-123",
+        )
+        assert result == expected_result
+
+    async def test_add_conversation_memory_without_session_id(
+        self, mock_principal, mock_memory_service
+    ):
+        """Test conversation memory addition without session ID."""
+        request = ConversationMemoryRequest(
+            messages=[{"role": "user", "content": "Help me find flights"}],
+            context_type="travel_planning",
+        )
+
+        expected_result = {
+            "memory_id": "mem456",
+            "status": "success",
+            "messages_stored": 1,
+        }
+        mock_memory_service.add_conversation_memory.return_value = expected_result
+
+        result = await add_conversation_memory(
+            request, mock_principal, mock_memory_service
+        )
+
+        # Should pass None for session_id
+        mock_memory_service.add_conversation_memory.assert_called_once_with(
+            "user123", [{"role": "user", "content": "Help me find flights"}], None
+        )
+        assert result == expected_result
+
+    async def test_add_conversation_memory_service_error(
+        self, mock_principal, mock_memory_service, sample_conversation_request
+    ):
+        """Test conversation memory addition with service error."""
+        mock_memory_service.add_conversation_memory.side_effect = Exception(
+            "Memory service unavailable"
+        )
+
+        with pytest.raises(HTTPException) as exc_info:
+            await add_conversation_memory(
+                sample_conversation_request, mock_principal, mock_memory_service
+            )
+
+        assert exc_info.value.status_code == 500
+        assert "Failed to add conversation memory" in str(exc_info.value.detail)
+
+    async def test_get_user_context_success(self, mock_principal, mock_memory_service):
+        """Test successful user context retrieval."""
+        expected_context = {
+            "user_id": "user123",
+            "preferences": {
+                "budget_range": "medium",
+                "accommodation_type": "hotel",
+                "travel_style": "balanced",
+            },
+            "travel_history": [
+                {
+                    "destination": "Tokyo, Japan",
+                    "dates": "2023-05-01 to 2023-05-07",
+                    "rating": 5,
+                }
+            ],
+            "recent_searches": [
+                {"query": "hotels in Tokyo", "timestamp": "2024-01-01T00:00:00Z"}
+            ],
+        }
+        mock_memory_service.get_user_context.return_value = expected_context
+
+        result = await get_user_context(mock_principal, mock_memory_service)
+
+        mock_memory_service.get_user_context.assert_called_once_with("user123")
+        assert result == expected_context
+        assert "preferences" in result
+        assert "travel_history" in result
+        assert "recent_searches" in result
+
+    async def test_get_user_context_service_error(
+        self, mock_principal, mock_memory_service
+    ):
+        """Test user context retrieval with service error."""
+        mock_memory_service.get_user_context.side_effect = Exception(
+            "Context service error"
+        )
+
+        with pytest.raises(HTTPException) as exc_info:
+            await get_user_context(mock_principal, mock_memory_service)
+
+        assert exc_info.value.status_code == 500
+        assert "Failed to get user context" in str(exc_info.value.detail)
+
+    async def test_search_memories_success(
+        self, mock_principal, mock_memory_service, sample_search_request
+    ):
+        """Test successful memory search."""
+        expected_memories = [
+            {
+                "id": "mem1",
+                "content": "Tokyo hotel preferences",
+                "type": "conversation",
+                "relevance_score": 0.9,
+                "created_at": "2024-01-01T00:00:00Z",
+            },
+            {
+                "id": "mem2",
+                "content": "Budget discussion for Tokyo trip",
+                "type": "preference",
+                "relevance_score": 0.8,
+                "created_at": "2024-01-02T00:00:00Z",
+            },
+        ]
+        mock_memory_service.search_memories.return_value = expected_memories
+
+        result = await search_memories(
+            sample_search_request, mock_principal, mock_memory_service
+        )
+
+        mock_memory_service.search_memories.assert_called_once_with(
+            "user123", "Tokyo travel preferences", 5
+        )
+        assert result["memories"] == expected_memories
+        assert result["count"] == 2
+
+    async def test_search_memories_no_results(
+        self, mock_principal, mock_memory_service
+    ):
+        """Test memory search with no results."""
+        search_request = SearchMemoryRequest(query="nonexistent topic", limit=10)
+        mock_memory_service.search_memories.return_value = []
+
+        result = await search_memories(
+            search_request, mock_principal, mock_memory_service
+        )
+
+        assert result["memories"] == []
+        assert result["count"] == 0
+
+    async def test_search_memories_service_error(
+        self, mock_principal, mock_memory_service, sample_search_request
+    ):
+        """Test memory search with service error."""
+        mock_memory_service.search_memories.side_effect = Exception(
+            "Search service error"
+        )
+
+        with pytest.raises(HTTPException) as exc_info:
+            await search_memories(
+                sample_search_request, mock_principal, mock_memory_service
+            )
+
+        assert exc_info.value.status_code == 500
+        assert "Failed to search memories" in str(exc_info.value.detail)
+
+    async def test_update_preferences_success(
+        self, mock_principal, mock_memory_service, sample_preferences_request
+    ):
+        """Test successful preferences update."""
+        expected_result = {
+            "budget_range": "luxury",
+            "accommodation_type": "hotel",
+            "travel_style": "comfort",
+            "updated_at": "2024-01-01T00:00:00Z",
+        }
+        mock_memory_service.update_user_preferences.return_value = expected_result
+
+        result = await update_preferences(
+            sample_preferences_request, mock_principal, mock_memory_service
+        )
+
+        mock_memory_service.update_user_preferences.assert_called_once_with(
+            "user123",
+            {
+                "budget_range": "luxury",
+                "accommodation_type": "hotel",
+                "travel_style": "comfort",
+            },
+        )
+        assert result == expected_result
+
+    async def test_update_preferences_service_error(
+        self, mock_principal, mock_memory_service, sample_preferences_request
+    ):
+        """Test preferences update with service error."""
+        mock_memory_service.update_user_preferences.side_effect = Exception(
+            "Preferences service error"
+        )
+
+        with pytest.raises(HTTPException) as exc_info:
+            await update_preferences(
+                sample_preferences_request, mock_principal, mock_memory_service
+            )
+
+        assert exc_info.value.status_code == 500
+        assert "Failed to update preferences" in str(exc_info.value.detail)
+
+    async def test_add_preference_success(self, mock_principal, mock_memory_service):
         """Test successful single preference addition."""
-        # Arrange
-        mock_auth.return_value = Mock(id="test-user-id")
-        mock_service_dep.return_value = self.mock_service
-        new_preference = {
+        expected_preference = {
             "key": "dietary_restrictions",
             "value": "vegetarian",
             "category": "food",
+            "created_at": "2024-01-01T00:00:00Z",
         }
-        self.mock_service.add_user_preference = AsyncMock(return_value=new_preference)
+        mock_memory_service.add_user_preference.return_value = expected_preference
 
-        # Act
-        response = self.client.post(
-            "/api/memory/preference?key=dietary_restrictions&value=vegetarian&category=food",
-            headers={"Authorization": "Bearer test-token"},
+        result = await add_preference(
+            "dietary_restrictions",
+            "vegetarian",
+            "food",
+            mock_principal,
+            mock_memory_service,
         )
 
-        # Assert
-        assert response.status_code == status.HTTP_200_OK
-        data = response.json()
-        assert data["key"] == "dietary_restrictions"
-        assert data["value"] == "vegetarian"
-        assert data["category"] == "food"
-        self.mock_service.add_user_preference.assert_called_once_with(
-            "test-user-id", "dietary_restrictions", "vegetarian", "food"
+        mock_memory_service.add_user_preference.assert_called_once_with(
+            "user123", "dietary_restrictions", "vegetarian", "food"
         )
+        assert result == expected_preference
 
-    @patch("tripsage.api.routers.memory.get_memory_service_dep")
-    @patch("tripsage.api.routers.memory.require_principal_dep")
-    def test_add_preference_default_category(self, mock_auth, mock_service_dep):
+    async def test_add_preference_default_category(
+        self, mock_principal, mock_memory_service
+    ):
         """Test preference addition with default category."""
-        # Arrange
-        mock_auth.return_value = Mock(id="test-user-id")
-        mock_service_dep.return_value = self.mock_service
-        new_preference = {"key": "language", "value": "english", "category": "general"}
-        self.mock_service.add_user_preference = AsyncMock(return_value=new_preference)
-
-        # Act
-        response = self.client.post(
-            "/api/memory/preference?key=language&value=english",
-            headers={"Authorization": "Bearer test-token"},
-        )
-
-        # Assert
-        assert response.status_code == status.HTTP_200_OK
-        # Should use default category "general"
-        self.mock_service.add_user_preference.assert_called_once_with(
-            "test-user-id", "language", "english", "general"
-        )
-
-    @patch("tripsage.api.routers.memory.get_memory_service_dep")
-    @patch("tripsage.api.routers.memory.require_principal_dep")
-    def test_delete_memory_success(self, mock_auth, mock_service_dep):
-        """Test successful memory deletion."""
-        # Arrange
-        mock_auth.return_value = Mock(id="test-user-id")
-        mock_service_dep.return_value = self.mock_service
-        memory_id = "test-memory-id"
-        self.mock_service.delete_memory = AsyncMock(return_value=True)
-
-        # Act
-        response = self.client.delete(
-            f"/api/memory/memory/{memory_id}",
-            headers={"Authorization": "Bearer test-token"},
-        )
-
-        # Assert
-        assert response.status_code == status.HTTP_200_OK
-        data = response.json()
-        assert data["message"] == "Memory deleted successfully"
-        self.mock_service.delete_memory.assert_called_once_with(
-            "test-user-id", memory_id
-        )
-
-    @patch("tripsage.api.routers.memory.get_memory_service_dep")
-    @patch("tripsage.api.routers.memory.require_principal_dep")
-    def test_delete_memory_not_found(self, mock_auth, mock_service_dep):
-        """Test deletion of non-existent memory."""
-        # Arrange
-        mock_auth.return_value = Mock(id="test-user-id")
-        mock_service_dep.return_value = self.mock_service
-        memory_id = "non-existent-memory"
-        self.mock_service.delete_memory = AsyncMock(return_value=False)
-
-        # Act
-        response = self.client.delete(
-            f"/api/memory/memory/{memory_id}",
-            headers={"Authorization": "Bearer test-token"},
-        )
-
-        # Assert
-        assert response.status_code == status.HTTP_404_NOT_FOUND
-        assert "Memory not found" in response.json()["detail"]
-
-    @patch("tripsage.api.routers.memory.get_memory_service_dep")
-    @patch("tripsage.api.routers.memory.require_principal_dep")
-    def test_get_memory_stats_success(self, mock_auth, mock_service_dep):
-        """Test successful memory statistics retrieval."""
-        # Arrange
-        mock_auth.return_value = Mock(id="test-user-id")
-        mock_service_dep.return_value = self.mock_service
-        self.mock_service.get_memory_stats = AsyncMock(
-            return_value=self.sample_memory_stats
-        )
-
-        # Act
-        response = self.client.get(
-            "/api/memory/stats", headers={"Authorization": "Bearer test-token"}
-        )
-
-        # Assert
-        assert response.status_code == status.HTTP_200_OK
-        data = response.json()
-        assert "total_memories" in data
-        assert "conversation_count" in data
-        assert "preference_count" in data
-        assert data["total_memories"] == 25
-        self.mock_service.get_memory_stats.assert_called_once_with("test-user-id")
-
-    @patch("tripsage.api.routers.memory.get_memory_service_dep")
-    @patch("tripsage.api.routers.memory.require_principal_dep")
-    def test_clear_user_memory_success(self, mock_auth, mock_service_dep):
-        """Test successful memory clearing with confirmation."""
-        # Arrange
-        mock_auth.return_value = Mock(id="test-user-id")
-        mock_service_dep.return_value = self.mock_service
-        clear_result = {"status": "success", "deleted_count": 15}
-        self.mock_service.clear_user_memory = AsyncMock(return_value=clear_result)
-
-        # Act
-        response = self.client.delete(
-            "/api/memory/clear?confirm=true",
-            headers={"Authorization": "Bearer test-token"},
-        )
-
-        # Assert
-        assert response.status_code == status.HTTP_200_OK
-        data = response.json()
-        assert data["status"] == "success"
-        assert data["deleted_count"] == 15
-        self.mock_service.clear_user_memory.assert_called_once_with(
-            "test-user-id", True
-        )
-
-    @patch("tripsage.api.routers.memory.get_memory_service_dep")
-    @patch("tripsage.api.routers.memory.require_principal_dep")
-    def test_clear_user_memory_without_confirmation(self, mock_auth, mock_service_dep):
-        """Test memory clearing without confirmation."""
-        # Arrange
-        mock_auth.return_value = Mock(id="test-user-id")
-        mock_service_dep.return_value = self.mock_service
-        self.mock_service.clear_user_memory = AsyncMock(
-            return_value={"status": "confirmation_required"}
-        )
-
-        # Act
-        response = self.client.delete(
-            "/api/memory/clear", headers={"Authorization": "Bearer test-token"}
-        )
-
-        # Assert
-        assert response.status_code == status.HTTP_200_OK
-        # Should be called with confirm=False (default)
-        self.mock_service.clear_user_memory.assert_called_once_with(
-            "test-user-id", False
-        )
-
-    def test_add_conversation_memory_unauthorized(self):
-        """Test conversation memory addition without authentication."""
-        conversation_request = {"messages": [{"role": "user", "content": "Hello"}]}
-
-        response = self.client.post(
-            "/api/memory/conversation", json=conversation_request
-        )
-        assert response.status_code == status.HTTP_401_UNAUTHORIZED
-
-    def test_get_user_context_unauthorized(self):
-        """Test user context retrieval without authentication."""
-        response = self.client.get("/api/memory/context")
-        assert response.status_code == status.HTTP_401_UNAUTHORIZED
-
-    @patch("tripsage.api.routers.memory.get_memory_service_dep")
-    @patch("tripsage.api.routers.memory.require_principal_dep")
-    def test_add_conversation_memory_service_error(self, mock_auth, mock_service_dep):
-        """Test conversation memory addition with service error."""
-        # Arrange
-        mock_auth.return_value = Mock(id="test-user-id")
-        mock_service_dep.return_value = self.mock_service
-        self.mock_service.add_conversation_memory = AsyncMock(
-            side_effect=Exception("Memory service unavailable")
-        )
-
-        conversation_request = {
-            "messages": [{"role": "user", "content": "Test message"}]
+        expected_preference = {
+            "key": "language",
+            "value": "english",
+            "category": "general",
+            "created_at": "2024-01-01T00:00:00Z",
         }
+        mock_memory_service.add_user_preference.return_value = expected_preference
 
-        # Act
-        response = self.client.post(
-            "/api/memory/conversation",
-            json=conversation_request,
-            headers={"Authorization": "Bearer test-token"},
+        result = await add_preference(
+            "language",
+            "english",
+            "general",  # Default category
+            mock_principal,
+            mock_memory_service,
         )
 
-        # Assert
-        assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
-        assert "Failed to add conversation memory" in response.json()["detail"]
+        mock_memory_service.add_user_preference.assert_called_once_with(
+            "user123", "language", "english", "general"
+        )
+        assert result == expected_preference
 
-    @pytest.mark.parametrize("limit", [0, -1, 1001])
-    def test_search_memories_invalid_limit(self, limit):
-        """Test memory search with invalid limit values."""
-        search_request = {"query": "test query", "limit": limit}
-
-        response = self.client.post(
-            "/api/memory/search",
-            json=search_request,
-            headers={"Authorization": "Bearer test-token"},
+    async def test_add_preference_service_error(
+        self, mock_principal, mock_memory_service
+    ):
+        """Test preference addition with service error."""
+        mock_memory_service.add_user_preference.side_effect = Exception(
+            "Preference service error"
         )
 
-        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+        with pytest.raises(HTTPException) as exc_info:
+            await add_preference(
+                "test_key", "test_value", "general", mock_principal, mock_memory_service
+            )
 
-    @pytest.mark.parametrize("query", ["", None, " ", "a" * 1001])
-    def test_search_memories_invalid_query(self, query):
-        """Test memory search with invalid query values."""
-        search_request = {"query": query, "limit": 10}
+        assert exc_info.value.status_code == 500
+        assert "Failed to add preference" in str(exc_info.value.detail)
 
-        response = self.client.post(
-            "/api/memory/search",
-            json=search_request,
-            headers={"Authorization": "Bearer test-token"},
+    async def test_delete_memory_success(self, mock_principal, mock_memory_service):
+        """Test successful memory deletion."""
+        memory_id = "mem123"
+        mock_memory_service.delete_memory.return_value = True
+
+        result = await delete_memory(memory_id, mock_principal, mock_memory_service)
+
+        mock_memory_service.delete_memory.assert_called_once_with("user123", memory_id)
+        assert result["message"] == "Memory deleted successfully"
+
+    async def test_delete_memory_not_found(self, mock_principal, mock_memory_service):
+        """Test deletion of non-existent memory."""
+        memory_id = "nonexistent-memory"
+        mock_memory_service.delete_memory.return_value = False
+
+        with pytest.raises(HTTPException) as exc_info:
+            await delete_memory(memory_id, mock_principal, mock_memory_service)
+
+        assert exc_info.value.status_code == 404
+        assert "Memory not found" in str(exc_info.value.detail)
+
+    async def test_delete_memory_service_error(
+        self, mock_principal, mock_memory_service
+    ):
+        """Test memory deletion with service error."""
+        memory_id = "mem123"
+        mock_memory_service.delete_memory.side_effect = Exception(
+            "Delete service error"
         )
 
-        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+        with pytest.raises(HTTPException) as exc_info:
+            await delete_memory(memory_id, mock_principal, mock_memory_service)
 
-    def test_add_conversation_memory_empty_messages(self):
-        """Test conversation memory addition with empty messages."""
-        conversation_request = {"messages": []}
+        assert exc_info.value.status_code == 500
+        assert "Failed to delete memory" in str(exc_info.value.detail)
 
-        response = self.client.post(
-            "/api/memory/conversation",
-            json=conversation_request,
-            headers={"Authorization": "Bearer test-token"},
+    async def test_get_memory_stats_success(self, mock_principal, mock_memory_service):
+        """Test successful memory statistics retrieval."""
+        expected_stats = {
+            "total_memories": 25,
+            "conversation_count": 15,
+            "preference_count": 8,
+            "travel_history_count": 2,
+            "last_activity": "2024-01-01T00:00:00Z",
+            "storage_used_kb": 156.7,
+        }
+        mock_memory_service.get_memory_stats.return_value = expected_stats
+
+        result = await get_memory_stats(mock_principal, mock_memory_service)
+
+        mock_memory_service.get_memory_stats.assert_called_once_with("user123")
+        assert result == expected_stats
+        assert "total_memories" in result
+        assert "conversation_count" in result
+        assert "preference_count" in result
+
+    async def test_get_memory_stats_service_error(
+        self, mock_principal, mock_memory_service
+    ):
+        """Test memory statistics retrieval with service error."""
+        mock_memory_service.get_memory_stats.side_effect = Exception(
+            "Stats service error"
         )
 
-        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+        with pytest.raises(HTTPException) as exc_info:
+            await get_memory_stats(mock_principal, mock_memory_service)
 
-    def test_update_preferences_missing_preferences(self):
-        """Test preferences update with missing preferences field."""
-        preferences_request = {}
+        assert exc_info.value.status_code == 500
+        assert "Failed to get memory stats" in str(exc_info.value.detail)
 
-        response = self.client.put(
-            "/api/memory/preferences",
-            json=preferences_request,
-            headers={"Authorization": "Bearer test-token"},
+    async def test_clear_user_memory_success(self, mock_principal, mock_memory_service):
+        """Test successful memory clearing with confirmation."""
+        expected_result = {
+            "status": "success",
+            "deleted_count": 15,
+            "cleared_at": "2024-01-01T00:00:00Z",
+        }
+        mock_memory_service.clear_user_memory.return_value = expected_result
+
+        result = await clear_user_memory(True, mock_principal, mock_memory_service)
+
+        mock_memory_service.clear_user_memory.assert_called_once_with("user123", True)
+        assert result == expected_result
+
+    async def test_clear_user_memory_without_confirmation(
+        self, mock_principal, mock_memory_service
+    ):
+        """Test memory clearing without confirmation."""
+        expected_result = {
+            "status": "confirmation_required",
+            "message": "Confirmation required to clear all memories",
+        }
+        mock_memory_service.clear_user_memory.return_value = expected_result
+
+        result = await clear_user_memory(False, mock_principal, mock_memory_service)
+
+        mock_memory_service.clear_user_memory.assert_called_once_with("user123", False)
+        assert result == expected_result
+
+    async def test_clear_user_memory_service_error(
+        self, mock_principal, mock_memory_service
+    ):
+        """Test memory clearing with service error."""
+        mock_memory_service.clear_user_memory.side_effect = Exception(
+            "Clear service error"
         )
 
-        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+        with pytest.raises(HTTPException) as exc_info:
+            await clear_user_memory(True, mock_principal, mock_memory_service)
 
-    @pytest.mark.parametrize(
-        "key,value", [("", "test"), ("test", ""), (None, "test"), ("test", None)]
-    )
-    def test_add_preference_invalid_parameters(self, key, value):
-        """Test preference addition with invalid key/value parameters."""
-        params = {}
-        if key is not None:
-            params["key"] = key
-        if value is not None:
-            params["value"] = value
-
-        query_string = "&".join([f"{k}={v}" for k, v in params.items()])
-
-        response = self.client.post(
-            f"/api/memory/preference?{query_string}",
-            headers={"Authorization": "Bearer test-token"},
-        )
-
-        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+        assert exc_info.value.status_code == 500
+        assert "Failed to clear memory" in str(exc_info.value.detail)

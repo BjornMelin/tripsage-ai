@@ -120,7 +120,9 @@ export function SearchFilters({
                                     } else {
                                       handleFilterChange(
                                         filter.id,
-                                        currentValues.filter((v) => v !== option.value)
+                                        currentValues.filter(
+                                          (v: string) => v !== option.value
+                                        )
                                       );
                                     }
                                   }}
@@ -207,7 +209,7 @@ export function SearchFilters({
                           >
                             <option value="">Select {filter.label}</option>
                             {filter.options.map((option, index) => (
-                              <option key={index} value={option.value}>
+                              <option key={index} value={String(option.value)}>
                                 {option.label}
                               </option>
                             ))}

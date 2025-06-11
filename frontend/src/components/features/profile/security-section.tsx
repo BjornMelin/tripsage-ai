@@ -68,7 +68,7 @@ interface SecurityDevice {
 }
 
 export function SecuritySection() {
-  const { user, updateUser } = useUserProfileStore();
+  const { profile } = useUserProfileStore();
   const { toast } = useToast();
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
@@ -136,13 +136,7 @@ export function SecuritySection() {
       // Simulate API call
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
-      updateUser({
-        security: {
-          ...user?.security,
-          twoFactorEnabled: enabled,
-        },
-      });
-
+      // Note: This would be updated when implementing real 2FA settings
       toast({
         title: enabled ? "2FA enabled" : "2FA disabled",
         description: enabled
@@ -323,20 +317,13 @@ export function SecuritySection() {
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
                   <h3 className="text-sm font-medium">Two-Factor Authentication</h3>
-                  <Badge
-                    variant={user?.security?.twoFactorEnabled ? "default" : "secondary"}
-                  >
-                    {user?.security?.twoFactorEnabled ? "Enabled" : "Disabled"}
-                  </Badge>
+                  <Badge variant="secondary">Disabled</Badge>
                 </div>
                 <p className="text-sm text-muted-foreground">
                   Add an extra layer of security to your account with 2FA.
                 </p>
               </div>
-              <Switch
-                checked={user?.security?.twoFactorEnabled ?? false}
-                onCheckedChange={toggle2FA}
-              />
+              <Switch checked={false} onCheckedChange={toggle2FA} />
             </div>
           </div>
         </CardContent>

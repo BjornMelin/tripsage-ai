@@ -3,6 +3,7 @@
 Simple steps to deploy TripSage AI frontend to Vercel.
 
 ## Prerequisites
+
 - GitHub account with repository access
 - Vercel account (free tier available)
 - Environment variables configured
@@ -10,11 +11,13 @@ Simple steps to deploy TripSage AI frontend to Vercel.
 ## Deploy in 3 Steps
 
 ### 1. Import to Vercel
+
 1. Visit [vercel.com/new](https://vercel.com/new)
 2. Import your GitHub repository
 3. Vercel will auto-detect Next.js settings
 
 ### 2. Configure Environment Variables
+
 Add these in Vercel Dashboard → Project → Settings → Environment Variables:
 
 ```bash
@@ -29,20 +32,25 @@ SENTRY_DSN=your_sentry_dsn
 ```
 
 ### 3. Deploy
+
 Click "Deploy" - Vercel handles the build and deployment automatically.
 
 ## CI/CD Setup
+
 Add these repository secrets for automated deployments:
+
 - `VERCEL_TOKEN` - From Vercel → Settings → Tokens
 - `VERCEL_ORG_ID` - From Vercel → Settings → General  
 - `VERCEL_PROJECT_ID` - From Project → Settings → General
 
 ## Cost Estimates
+
 - **Free tier**: Personal projects, ~10K monthly visitors
 - **Pro ($20/month)**: Commercial use, ~100K-500K monthly visitors
 - **Enterprise**: High-traffic applications, custom pricing
 
 ## Need More Help?
+
 - 📖 **Comprehensive Guide**: [docs/deployment/comprehensive-guide.md](../docs/deployment/comprehensive-guide.md)
 - 💰 **Cost Planning**: [docs/deployment/cost-planning.md](../docs/deployment/cost-planning.md)
 - 🛠 **Troubleshooting**: Check Vercel deployment logs

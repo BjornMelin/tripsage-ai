@@ -590,9 +590,8 @@ export const useUserProfileStore = create<UserProfileState>()(
               if (result.success) {
                 set({ profile: result.data });
                 return true;
-              } else {
-                throw new Error("Invalid profile data");
               }
+              throw new Error("Invalid profile data");
             }
 
             return false;

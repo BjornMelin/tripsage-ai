@@ -49,8 +49,8 @@ export const ServiceKeySchema = z.object({
       lastUsed: z.string().optional(),
       dailyLimit: z.number().optional(),
       monthlyLimit: z.number().optional(),
-      dailyUsage: z.number().default(0),
-      monthlyUsage: z.number().default(0),
+      dailyUsage: z.number().optional(),
+      monthlyUsage: z.number().optional(),
     })
     .optional(),
 });
@@ -367,10 +367,9 @@ export const useServiceKeysStore = create<ServiceKeysState>()(
                   [serviceId]: result.data,
                 },
               };
-            } else {
-              console.error("Invalid service config update:", result.error);
-              return state;
             }
+            console.error("Invalid service config update:", result.error);
+            return state;
           });
         },
 
