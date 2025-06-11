@@ -3,7 +3,7 @@
 This module provides endpoints for trip management, including creating,
 retrieving, updating, and deleting trips.
 
-Supports both simple implementation (hardcoded responses) and enhanced 
+Supports both simple implementation (hardcoded responses) and enhanced
 service layer implementation with full CRUD operations.
 """
 
@@ -28,13 +28,19 @@ try:
         TripResponse,
         TripSummaryResponse,
     )
+
     ENHANCED_SCHEMAS_AVAILABLE = True
 except ImportError:
     # Fall back to simple schemas
     from tripsage.api.schemas.trips import (
         CreateTripRequest,
+        TripListResponse,
+        TripPreferencesRequest,
         TripResponse,
+        TripSummaryResponse,
+        UpdateTripRequest,
     )
+
     ENHANCED_SCHEMAS_AVAILABLE = False
 
 # Always import these schemas (they exist in both approaches)
@@ -42,7 +48,8 @@ from tripsage.api.schemas.trips import TripSuggestionResponse
 
 # Try to import enhanced service layer, fall back to core service
 try:
-    from tripsage.api.services.trip import TripService as EnhancedTripService, get_trip_service as get_enhanced_trip_service
+    from tripsage.api.services.trip import get_trip_service as get_enhanced_trip_service
+
     ENHANCED_SERVICE_AVAILABLE = True
 except ImportError:
     ENHANCED_SERVICE_AVAILABLE = False
@@ -62,7 +69,7 @@ async def create_trip(
     trip_service: TripService = Depends(get_trip_service),
 ):
     """Create a new trip.
-    
+
     Uses enhanced service layer if available, otherwise uses simple implementation.
 
     Args:
@@ -76,25 +83,27 @@ async def create_trip(
     if ENHANCED_SERVICE_AVAILABLE:
         # Use enhanced service layer implementation
         logger.info(f"Creating trip for user: {principal.user_id} (enhanced service)")
-        
+
         try:
             enhanced_service = get_enhanced_trip_service()
             trip_response = await enhanced_service.create_trip(
                 user_id=principal.user_id, request=trip_request
             )
-            
+
             logger.info(f"Trip created successfully: {trip_response.id}")
             return trip_response
-            
+
         except Exception as e:
             logger.error(f"Failed to create trip: {str(e)}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Failed to create trip",
-            )
+            ) from e
     else:
         # Simple implementation (currently not implemented)
-        logger.info(f"Creating trip for user: {principal.user_id} (simple implementation)")
+        logger.info(
+            f"Creating trip for user: {principal.user_id} (simple implementation)"
+        )
         # TODO: Implement simple trip creation logic
         pass
 
@@ -136,7 +145,7 @@ async def get_trip(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to get trip",
-        )
+        ) from e
 
 
 @router.get("/", response_model=TripListResponse)
@@ -194,7 +203,7 @@ async def list_trips(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to list trips",
-        )
+        ) from e
 
 
 @router.put("/{trip_id}", response_model=TripResponse)
@@ -236,7 +245,7 @@ async def update_trip(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to update trip",
-        )
+        ) from e
 
 
 @router.delete("/{trip_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -271,7 +280,7 @@ async def delete_trip(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to delete trip",
-        )
+        ) from e
 
 
 @router.get("/{trip_id}/summary", response_model=TripSummaryResponse)
@@ -311,7 +320,7 @@ async def get_trip_summary(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to get trip summary",
-        )
+        ) from e
 
 
 @router.put("/{trip_id}/preferences", response_model=TripResponse)
@@ -353,7 +362,7 @@ async def update_trip_preferences(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to update trip preferences",
-        )
+        ) from e
 
 
 @router.post(
@@ -397,7 +406,7 @@ async def duplicate_trip(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to duplicate trip",
-        )
+        ) from e
 
 
 @router.get("/search", response_model=TripListResponse)
@@ -461,7 +470,7 @@ async def search_trips(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to search trips",
-        )
+        ) from e
 
 
 @router.get("/{trip_id}/itinerary")
@@ -502,7 +511,7 @@ async def get_trip_itinerary(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to get trip itinerary",
-        )
+        ) from e
 
 
 @router.post("/{trip_id}/export")
@@ -544,12 +553,12 @@ async def export_trip(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to export trip",
-        )
+        ) from e
 
 
 # Enhanced endpoints (only available when enhanced service layer is present)
 if ENHANCED_SERVICE_AVAILABLE:
-    
+
     @router.get("/{trip_id}", response_model=TripResponse)
     async def get_trip(
         trip_id: UUID,
@@ -560,12 +569,12 @@ if ENHANCED_SERVICE_AVAILABLE:
         trip_response = await enhanced_service.get_trip(
             user_id=principal.user_id, trip_id=trip_id
         )
-        
+
         if not trip_response:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Trip not found"
             )
-        
+
         return trip_response
 
 

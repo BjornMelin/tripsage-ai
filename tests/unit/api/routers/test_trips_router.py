@@ -1,12 +1,12 @@
 """
 Comprehensive unit tests for trips router with dual testing approach.
 
-Tests both simple router implementation (target branch approach) and enhanced 
+Tests both simple router implementation (target branch approach) and enhanced
 service layer implementation (our branch approach) for maximum compatibility.
 """
 
 from datetime import date
-from unittest.mock import AsyncMock, MagicMock, Mock, patch
+from unittest.mock import AsyncMock, MagicMock, Mock
 from uuid import uuid4
 
 import pytest
@@ -17,9 +17,11 @@ from tripsage.api.middlewares.authentication import Principal
 try:
     from tripsage.api.schemas.requests.trips import CreateTripRequest, UpdateTripRequest
     from tripsage.api.schemas.responses.trips import TripResponse
+
     ENHANCED_SCHEMAS_AVAILABLE = True
 except ImportError:
     from tripsage.api.schemas.trips import CreateTripRequest, TripResponse
+
     ENHANCED_SCHEMAS_AVAILABLE = False
 
 # Always available schemas
@@ -28,20 +30,20 @@ from tripsage.api.schemas.trips import TripSuggestionResponse
 # Test enhanced service if available
 try:
     from tripsage.api.services.trip import TripService as EnhancedTripService
+
     ENHANCED_SERVICE_AVAILABLE = True
 except ImportError:
     ENHANCED_SERVICE_AVAILABLE = False
 
 # Core service (always available)
-from tripsage_core.services.business.trip_service import TripService
-from tripsage_core.models.schemas_common.geographic import Coordinates
-from tripsage_core.models.schemas_common.travel import TripDestination
-
 # Router functions for direct testing
 from tripsage.api.routers.trips import (
     create_trip,
     get_trip_suggestions,
 )
+from tripsage_core.models.schemas_common.geographic import Coordinates
+from tripsage_core.models.schemas_common.travel import TripDestination
+from tripsage_core.services.business.trip_service import TripService
 
 
 class TestTripsRouterSimple:
@@ -202,9 +204,11 @@ class TestTripsRouterSimple:
                 assert isinstance(suggestion.highlights, list)
 
 
-@pytest.mark.skipif(not ENHANCED_SERVICE_AVAILABLE, reason="Enhanced service layer not available")
+@pytest.mark.skipif(
+    not ENHANCED_SERVICE_AVAILABLE, reason="Enhanced service layer not available"
+)
 class TestTripsRouterEnhanced:
-    """Test trips router functionality using enhanced service layer (our branch style)."""
+    """Test trips router functionality using enhanced service layer (our branch)."""
 
     def setup_method(self):
         """Set up test data and mocks."""
@@ -263,7 +267,7 @@ class TestTripsRouterEnhanced:
         """Test successful trip creation through enhanced service layer."""
         if not ENHANCED_SERVICE_AVAILABLE:
             pytest.skip("Enhanced service layer not available")
-            
+
         # Arrange
         self.mock_core_service.create_trip = AsyncMock(
             return_value=self.sample_core_response
@@ -293,7 +297,7 @@ class TestTripsRouterEnhanced:
         """Test successful trip retrieval."""
         if not ENHANCED_SERVICE_AVAILABLE:
             pytest.skip("Enhanced service layer not available")
-            
+
         # Arrange
         self.mock_core_service.get_trip = AsyncMock(
             return_value=self.sample_core_response
@@ -317,7 +321,7 @@ class TestTripsRouterEnhanced:
         """Test trip retrieval when trip doesn't exist."""
         if not ENHANCED_SERVICE_AVAILABLE:
             pytest.skip("Enhanced service layer not available")
-            
+
         # Arrange
         self.mock_core_service.get_trip = AsyncMock(return_value=None)
 
@@ -331,7 +335,7 @@ class TestTripsRouterEnhanced:
         """Test request adaptation to core model."""
         if not ENHANCED_SERVICE_AVAILABLE:
             pytest.skip("Enhanced service layer not available")
-            
+
         # Act
         core_request = self.service._adapt_create_trip_request(
             self.sample_create_request
@@ -348,7 +352,7 @@ class TestTripsRouterEnhanced:
         """Test response adaptation from core model."""
         if not ENHANCED_SERVICE_AVAILABLE:
             pytest.skip("Enhanced service layer not available")
-            
+
         # Act
         api_response = self.service._adapt_trip_response(self.sample_core_response)
 
@@ -369,12 +373,12 @@ class TestTripsRouterCompatibility:
         assert CreateTripRequest is not None
         assert TripResponse is not None
         assert TripSuggestionResponse is not None
-        
+
         # Test enhanced schemas availability
         if ENHANCED_SCHEMAS_AVAILABLE:
             # Enhanced schemas should be available
             assert UpdateTripRequest is not None
-        
+
         # Test enhanced service availability
         if ENHANCED_SERVICE_AVAILABLE:
             assert EnhancedTripService is not None
@@ -384,7 +388,7 @@ class TestTripsRouterCompatibility:
         # This test ensures our hybrid approach can detect what's available
         assert isinstance(ENHANCED_SERVICE_AVAILABLE, bool)
         assert isinstance(ENHANCED_SCHEMAS_AVAILABLE, bool)
-        
+
         # Log the current state for debugging
         print(f"Enhanced service available: {ENHANCED_SERVICE_AVAILABLE}")
         print(f"Enhanced schemas available: {ENHANCED_SCHEMAS_AVAILABLE}")
