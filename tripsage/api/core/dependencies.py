@@ -38,7 +38,7 @@ def get_settings_dependency() -> Settings:
 # Database dependency
 async def get_db():
     """Get database service as a dependency.
-    
+
     Note: This returns DatabaseService, not AsyncSession.
     The name is kept for compatibility but the return type has changed.
     """

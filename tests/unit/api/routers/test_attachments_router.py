@@ -1,9 +1,7 @@
 """Comprehensive unit tests for attachments router."""
 
-from unittest.mock import AsyncMock, Mock
 from io import BytesIO
 
-import pytest
 from fastapi import status
 
 
@@ -23,7 +21,7 @@ class TestAttachmentsRouter:
         """Test successful file upload."""
         # Create test file data
         file_data = ("test.txt", BytesIO(b"Test file content"), "text/plain")
-        
+
         # Act
         response = api_test_client.post(
             "/api/attachments/upload",
@@ -41,7 +39,7 @@ class TestAttachmentsRouter:
             ("files", ("test1.txt", BytesIO(b"Test file 1"), "text/plain")),
             ("files", ("test2.txt", BytesIO(b"Test file 2"), "text/plain")),
         ]
-        
+
         # Act
         response = api_test_client.post(
             "/api/attachments/upload-batch",
@@ -55,7 +53,7 @@ class TestAttachmentsRouter:
     def test_get_file_metadata_success(self, api_test_client):
         """Test successful file metadata retrieval."""
         file_id = "test-file-id"
-        
+
         # Act
         response = api_test_client.get(f"/api/attachments/{file_id}/metadata")
 
@@ -65,7 +63,7 @@ class TestAttachmentsRouter:
     def test_delete_file_success(self, api_test_client):
         """Test successful file deletion."""
         file_id = "test-file-id"
-        
+
         # Act
         response = api_test_client.delete(f"/api/attachments/{file_id}")
 
@@ -84,8 +82,7 @@ class TestAttachmentsRouter:
         """Test user files listing with pagination parameters."""
         # Act
         response = api_test_client.get(
-            "/api/attachments/",
-            params={"skip": 0, "limit": 10}
+            "/api/attachments/", params={"skip": 0, "limit": 10}
         )
 
         # Assert
@@ -97,7 +94,7 @@ class TestAttachmentsRouter:
         """Test file upload with validation failure."""
         # Missing required trip_id
         file_data = ("test.txt", BytesIO(b"Test content"), "text/plain")
-        
+
         # Act
         response = api_test_client.post(
             "/api/attachments/upload",
@@ -125,8 +122,10 @@ class TestAttachmentsRouter:
         # Create many test files (assuming limit is around 10)
         files = []
         for i in range(15):  # Exceed typical batch limit
-            files.append(("files", (f"test{i}.txt", BytesIO(b"Test content"), "text/plain")))
-        
+            files.append(
+                ("files", (f"test{i}.txt", BytesIO(b"Test content"), "text/plain"))
+            )
+
         # Act
         response = api_test_client.post(
             "/api/attachments/upload-batch",
@@ -143,7 +142,7 @@ class TestAttachmentsRouter:
         """Test file upload with processing error."""
         # The mock service handles processing errors gracefully
         file_data = ("test.txt", BytesIO(b"Test content"), "text/plain")
-        
+
         # Act
         response = api_test_client.post(
             "/api/attachments/upload",
@@ -160,7 +159,7 @@ class TestAttachmentsRouter:
             ("files", ("test1.txt", BytesIO(b"Good file"), "text/plain")),
             ("files", ("test2.txt", BytesIO(b"Another good file"), "text/plain")),
         ]
-        
+
         # Act
         response = api_test_client.post(
             "/api/attachments/upload-batch",
@@ -174,7 +173,7 @@ class TestAttachmentsRouter:
     def test_get_file_metadata_service_error(self, api_test_client):
         """Test file metadata with service error."""
         file_id = "test-file-id"
-        
+
         # Act
         response = api_test_client.get(f"/api/attachments/{file_id}/metadata")
 
@@ -184,7 +183,7 @@ class TestAttachmentsRouter:
     def test_delete_file_service_error(self, api_test_client):
         """Test file deletion with service error."""
         file_id = "test-file-id"
-        
+
         # Act
         response = api_test_client.delete(f"/api/attachments/{file_id}")
 
@@ -204,9 +203,11 @@ class TestAttachmentsRouter:
     def test_get_file_metadata_unauthorized(self, unauthenticated_test_client):
         """Test file metadata without authentication."""
         file_id = "test-file-id"
-        
+
         # Act
-        response = unauthenticated_test_client.get(f"/api/attachments/{file_id}/metadata")
+        response = unauthenticated_test_client.get(
+            f"/api/attachments/{file_id}/metadata"
+        )
 
         # Assert
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
@@ -214,7 +215,7 @@ class TestAttachmentsRouter:
     def test_upload_file_unauthorized(self, unauthenticated_test_client):
         """Test file upload without authentication."""
         file_data = ("test.txt", BytesIO(b"Test content"), "text/plain")
-        
+
         # Act
         response = unauthenticated_test_client.post(
             "/api/attachments/upload",
@@ -230,7 +231,7 @@ class TestAttachmentsRouter:
         files = [
             ("files", ("test1.txt", BytesIO(b"Test content"), "text/plain")),
         ]
-        
+
         # Act
         response = unauthenticated_test_client.post(
             "/api/attachments/upload-batch",
@@ -244,7 +245,7 @@ class TestAttachmentsRouter:
     def test_delete_file_unauthorized(self, unauthenticated_test_client):
         """Test file deletion without authentication."""
         file_id = "test-file-id"
-        
+
         # Act
         response = unauthenticated_test_client.delete(f"/api/attachments/{file_id}")
 

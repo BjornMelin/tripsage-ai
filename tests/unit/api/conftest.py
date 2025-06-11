@@ -29,15 +29,15 @@ def setup_test_environment():
         "DRAGONFLY_URL": "redis://localhost:6379/1",
         "DRAGONFLY_PASSWORD": "test-password",
     }
-    
+
     # Apply environment variables
     original_env = {}
     for key, value in test_env.items():
         original_env[key] = os.environ.get(key)
         os.environ[key] = value
-    
+
     yield
-    
+
     # Restore original environment
     for key, value in original_env.items():
         if value is None:
@@ -92,41 +92,62 @@ def api_test_client(mock_cache_service, mock_database_service, mock_principal):
         # Mock Supabase client
         patch("supabase.create_client", return_value=Mock()),
         # Mock MCP manager to prevent initialization issues
-        patch("tripsage_core.mcp_abstraction.manager.MCPManager.initialize_all_enabled", new_callable=AsyncMock),
-        patch("tripsage_core.mcp_abstraction.manager.MCPManager.initialize", new_callable=AsyncMock),
+        patch(
+            "tripsage_core.mcp_abstraction.manager.MCPManager.initialize_all_enabled",
+            new_callable=AsyncMock,
+        ),
+        patch(
+            "tripsage_core.mcp_abstraction.manager.MCPManager.initialize",
+            new_callable=AsyncMock,
+        ),
         # Mock rate limiting middleware to disable it
-        patch("tripsage.api.middlewares.rate_limiting.EnhancedRateLimitMiddleware.dispatch") as mock_rate_limit,
+        patch(
+            "tripsage.api.middlewares.rate_limiting.EnhancedRateLimitMiddleware.dispatch"
+        ) as mock_rate_limit,
         # Mock the authentication dependency to return a valid principal
-        patch("tripsage.api.core.dependencies.get_current_principal", return_value=mock_principal),
+        patch(
+            "tripsage.api.core.dependencies.get_current_principal",
+            return_value=mock_principal,
+        ),
         # Mock all service dependencies to prevent real service calls
-        patch("tripsage_core.services.business.accommodation_service.get_accommodation_service") as mock_acc_service,
-        patch("tripsage_core.services.business.trip_service.get_trip_service") as mock_trip_service,
-        patch("tripsage_core.services.business.flight_service.get_flight_service") as mock_flight_service,
-        patch("tripsage_core.services.business.destination_service.get_destination_service") as mock_dest_service,
-        patch("tripsage_core.services.business.chat_service.get_chat_service") as mock_chat_service,
-        patch("tripsage_core.services.business.memory_service.get_memory_service") as mock_memory_service,
-        patch("tripsage_core.services.business.key_management_service.get_key_management_service") as mock_key_service,
-        patch("tripsage_core.services.business.user_service.get_user_service") as mock_user_service,
-        patch("tripsage_core.services.business.itinerary_service.get_itinerary_service") as mock_itinerary_service,
+        patch(
+            "tripsage_core.services.business.accommodation_service.get_accommodation_service"
+        ) as mock_acc_service,
+        patch("tripsage_core.services.business.trip_service.get_trip_service"),
+        patch("tripsage_core.services.business.flight_service.get_flight_service"),
+        patch(
+            "tripsage_core.services.business.destination_service.get_destination_service"
+        ),
+        patch("tripsage_core.services.business.chat_service.get_chat_service"),
+        patch("tripsage_core.services.business.memory_service.get_memory_service"),
+        patch(
+            "tripsage_core.services.business.key_management_service.get_key_management_service"
+        ),
+        patch("tripsage_core.services.business.user_service.get_user_service"),
+        patch(
+            "tripsage_core.services.business.itinerary_service.get_itinerary_service"
+        ),
     ):
         # Configure mock settings
         from tests.test_config import create_test_settings
+
         mock_settings.return_value = create_test_settings()
-        
+
         # Configure rate limiting middleware to pass through
         async def pass_through_middleware(request, call_next):
             return await call_next(request)
+
         mock_rate_limit.side_effect = pass_through_middleware
-        
+
         # Import app after all patches are in place
         # Configure service mocks to return mock instances
         mock_accommodation_service = AsyncMock()
         mock_acc_service.return_value = mock_accommodation_service
-        
+
         # Configure default mock responses that match the expected API response schema
+
         from tripsage.api.schemas.accommodations import AccommodationSearchResponse
-        from datetime import date
-        
+
         def mock_search_accommodations(request):
             """Mock search accommodations method that returns API response format."""
             return AccommodationSearchResponse(
@@ -136,11 +157,11 @@ def api_test_client(mock_cache_service, mock_database_service, mock_principal):
                 search_id="mock-search-id",
                 search_request=request,  # Echo back the request
             )
-        
+
         mock_accommodation_service.search_accommodations = AsyncMock(
             side_effect=mock_search_accommodations
         )
-        
+
         mock_accommodation_service.get_accommodation_details = AsyncMock(
             return_value={
                 "listing": {
@@ -165,7 +186,7 @@ def api_test_client(mock_cache_service, mock_database_service, mock_principal):
                 "availability": True,
             }
         )
-        
+
         mock_accommodation_service.save_accommodation = AsyncMock(
             return_value={
                 "id": "saved-123",
@@ -178,9 +199,9 @@ def api_test_client(mock_cache_service, mock_database_service, mock_principal):
                 "status": "SAVED",
             }
         )
-        
+
         from tripsage.api.main import app
-        
+
         with TestClient(app) as client:
             yield client
 
@@ -204,25 +225,37 @@ def unauthenticated_test_client(mock_cache_service, mock_database_service):
         # Mock Supabase client
         patch("supabase.create_client", return_value=Mock()),
         # Mock MCP manager to prevent initialization issues
-        patch("tripsage_core.mcp_abstraction.manager.MCPManager.initialize_all_enabled", new_callable=AsyncMock),
-        patch("tripsage_core.mcp_abstraction.manager.MCPManager.initialize", new_callable=AsyncMock),
+        patch(
+            "tripsage_core.mcp_abstraction.manager.MCPManager.initialize_all_enabled",
+            new_callable=AsyncMock,
+        ),
+        patch(
+            "tripsage_core.mcp_abstraction.manager.MCPManager.initialize",
+            new_callable=AsyncMock,
+        ),
         # Mock rate limiting middleware to disable it
-        patch("tripsage.api.middlewares.rate_limiting.EnhancedRateLimitMiddleware.dispatch") as mock_rate_limit,
+        patch(
+            "tripsage.api.middlewares.rate_limiting.EnhancedRateLimitMiddleware.dispatch"
+        ) as mock_rate_limit,
         # Mock the authentication dependency to return None (unauthenticated)
-        patch("tripsage.api.core.dependencies.get_current_principal", return_value=None),
+        patch(
+            "tripsage.api.core.dependencies.get_current_principal", return_value=None
+        ),
     ):
         # Configure mock settings
         from tests.test_config import create_test_settings
+
         mock_settings.return_value = create_test_settings()
-        
+
         # Configure rate limiting middleware to pass through
         async def pass_through_middleware(request, call_next):
             return await call_next(request)
+
         mock_rate_limit.side_effect = pass_through_middleware
-        
+
         # Import app after all patches are in place
         from tripsage.api.main import app
-        
+
         with TestClient(app) as client:
             yield client
 
@@ -259,14 +292,44 @@ def invalid_accommodation_search_data():
     """Invalid accommodation search request data for validation testing."""
     return [
         # Invalid adults count
-        {"location": "Tokyo", "check_in": "2024-03-15", "check_out": "2024-03-18", "adults": 0},
-        {"location": "Tokyo", "check_in": "2024-03-15", "check_out": "2024-03-18", "adults": -1},
-        {"location": "Tokyo", "check_in": "2024-03-15", "check_out": "2024-03-18", "adults": 17},
+        {
+            "location": "Tokyo",
+            "check_in": "2024-03-15",
+            "check_out": "2024-03-18",
+            "adults": 0,
+        },
+        {
+            "location": "Tokyo",
+            "check_in": "2024-03-15",
+            "check_out": "2024-03-18",
+            "adults": -1,
+        },
+        {
+            "location": "Tokyo",
+            "check_in": "2024-03-15",
+            "check_out": "2024-03-18",
+            "adults": 17,
+        },
         # Invalid location
-        {"location": "", "check_in": "2024-03-15", "check_out": "2024-03-18", "adults": 2},
-        {"location": " ", "check_in": "2024-03-15", "check_out": "2024-03-18", "adults": 2},
+        {
+            "location": "",
+            "check_in": "2024-03-15",
+            "check_out": "2024-03-18",
+            "adults": 2,
+        },
+        {
+            "location": " ",
+            "check_in": "2024-03-15",
+            "check_out": "2024-03-18",
+            "adults": 2,
+        },
         # Invalid dates
-        {"location": "Tokyo", "check_in": "2024-03-18", "check_out": "2024-03-15", "adults": 2},
+        {
+            "location": "Tokyo",
+            "check_in": "2024-03-18",
+            "check_out": "2024-03-15",
+            "adults": 2,
+        },
     ]
 
 
@@ -291,6 +354,7 @@ def valid_save_accommodation():
 
 
 # === FLIGHTS FIXTURES ===
+
 
 @pytest.fixture
 def valid_flight_search():
@@ -331,6 +395,7 @@ def valid_save_flight():
 
 # === DESTINATIONS FIXTURES ===
 
+
 @pytest.fixture
 def valid_destination_search():
     """Valid destination search request data."""
@@ -364,6 +429,7 @@ def valid_destination_recommendations():
 
 
 # === TRIPS FIXTURES ===
+
 
 @pytest.fixture
 def valid_trip_create():

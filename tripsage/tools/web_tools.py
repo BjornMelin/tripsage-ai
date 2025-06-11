@@ -17,6 +17,23 @@ allowing sharing of cached web search results across multiple application instan
 import time
 from typing import Any, Dict, List, Optional
 
+from tripsage_core.utils.cache_utils import (
+    CacheStats,
+    batch_cache_get,
+    cache_lock,
+    cached,
+    determine_content_type,
+    generate_cache_key,
+    get_cache,
+    get_cache_stats,
+    invalidate_pattern,
+    prefetch_cache_keys,
+    set_cache,
+)
+from tripsage_core.utils.content_utils import ContentType
+from tripsage_core.utils.error_handling_utils import log_exception
+from tripsage_core.utils.logging_utils import get_logger
+
 # NOTE: Temporarily using mock implementation due to missing agents dependency
 # from agents import WebSearchTool
 
@@ -75,23 +92,6 @@ class MockWebSearchTool:
 
 # Use the mock implementation
 WebSearchTool = MockWebSearchTool
-
-from tripsage_core.utils.cache_utils import (
-    CacheStats,
-    batch_cache_get,
-    cache_lock,
-    cached,
-    determine_content_type,
-    generate_cache_key,
-    get_cache,
-    get_cache_stats,
-    invalidate_pattern,
-    prefetch_cache_keys,
-    set_cache,
-)
-from tripsage_core.utils.content_utils import ContentType
-from tripsage_core.utils.error_handling_utils import log_exception
-from tripsage_core.utils.logging_utils import get_logger
 
 logger = get_logger(__name__)
 

@@ -55,13 +55,17 @@ class ChatMessageChunkEvent(WebSocketEvent):
 
 
 class ConnectionEvent(WebSocketEvent):
-    type: str = Field(default=WebSocketEventType.CONNECTION_ESTABLISHED, description="Event type")
+    type: str = Field(
+        default=WebSocketEventType.CONNECTION_ESTABLISHED, description="Event type"
+    )
     status: str = Field(..., description="Connection status")
     connection_id: str = Field(..., description="Connection ID")
 
 
 class ErrorEvent(WebSocketEvent):
-    type: str = Field(default=WebSocketEventType.CONNECTION_ERROR, description="Event type")
+    type: str = Field(
+        default=WebSocketEventType.CONNECTION_ERROR, description="Event type"
+    )
     error_code: str
     error_message: str
 
@@ -92,7 +96,7 @@ def get_chat_agent() -> ChatAgent:
     return _chat_agent
 
 
-async def get_core_chat_service(db = Depends(get_db)) -> CoreChatService:
+async def get_core_chat_service(db=Depends(get_db)) -> CoreChatService:
     """Get CoreChatService instance with database dependency.
 
     Args:
@@ -108,7 +112,7 @@ async def get_core_chat_service(db = Depends(get_db)) -> CoreChatService:
 async def chat_websocket(
     websocket: WebSocket,
     session_id: UUID,
-    db = Depends(get_db),
+    db=Depends(get_db),
     chat_service: CoreChatService = Depends(get_core_chat_service),
 ):
     """WebSocket endpoint for real-time chat communication.

@@ -132,26 +132,27 @@ class TestChatService:
         """Test that messages are properly stored in database."""
         # Arrange
         from tripsage_core.services.business.chat_service import MessageCreateRequest
-        
+
         message_data = ChatFactory.create_message()
         user_id = str(uuid4())
         session_id = str(uuid4())
-        
+
         # Mock the internal methods and database calls that ChatService actually uses
         chat_service._get_session_internal = AsyncMock()
-        chat_service.db.create_chat_message = AsyncMock(return_value={
-            "id": "test-id",
-            "session_id": session_id,
-            "role": message_data["role"],
-            "content": message_data["content"],
-            "created_at": datetime.now(timezone.utc).isoformat(),
-            "metadata": {}
-        })
+        chat_service.db.create_chat_message = AsyncMock(
+            return_value={
+                "id": "test-id",
+                "session_id": session_id,
+                "role": message_data["role"],
+                "content": message_data["content"],
+                "created_at": datetime.now(timezone.utc).isoformat(),
+                "metadata": {},
+            }
+        )
         chat_service.db.update_session_timestamp = AsyncMock()
-        
+
         message_request = MessageCreateRequest(
-            role=message_data["role"],
-            content=message_data["content"]
+            role=message_data["role"], content=message_data["content"]
         )
 
         # Act
@@ -250,18 +251,17 @@ class TestChatService:
         """Test error handling when database operations fail."""
         # Arrange
         from tripsage_core.services.business.chat_service import MessageCreateRequest
-        
+
         message_data = ChatFactory.create_message()
         user_id = str(uuid4())
         session_id = str(uuid4())
-        
+
         # Mock the internal methods to trigger database error
         chat_service._get_session_internal = AsyncMock()
         chat_service.db.create_chat_message.side_effect = Exception("Database error")
-        
+
         message_request = MessageCreateRequest(
-            role=message_data["role"],
-            content=message_data["content"]
+            role=message_data["role"], content=message_data["content"]
         )
 
         # Act & Assert
