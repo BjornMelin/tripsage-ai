@@ -806,7 +806,7 @@ class AccommodationService:
                 "min_price": search_request.min_price,
                 "max_price": search_request.max_price,
                 "amenities": search_request.amenities,
-                "instant_book": getattr(search_request, 'instant_book', None),
+                "instant_book": getattr(search_request, "instant_book", None),
             }
 
             # Call external API
@@ -879,7 +879,7 @@ class AccommodationService:
                 ),
                 price_per_night=base_price + (i * 30),
                 total_price=(base_price + (i * 30)) * nights,
-                currency=getattr(search_request, 'currency', 'USD'),
+                currency=getattr(search_request, "currency", "USD"),
                 rating=4.0 + (i * 0.3),
                 review_count=50 + (i * 25),
                 max_guests=search_request.adults + search_request.children + i,
@@ -966,7 +966,8 @@ class AccommodationService:
 
         key_data = (
             f"{search_request.location}:{search_request.check_in}:"
-            f"{search_request.check_out}:{search_request.adults + search_request.children}:"
+            f"{search_request.check_out}:"
+            f"{search_request.adults + search_request.children}:"
             f"{search_request.min_price}:{search_request.max_price}"
         )
 

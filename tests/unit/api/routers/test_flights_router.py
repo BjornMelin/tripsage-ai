@@ -1,8 +1,5 @@
 """Comprehensive unit tests for flights router."""
 
-from unittest.mock import AsyncMock, Mock
-
-import pytest
 from fastapi import status
 
 from tests.factories import FlightFactory
@@ -82,7 +79,7 @@ class TestFlightsRouter:
         """Test flight search with invalid passenger count."""
         search_request = {
             "origin": "LAX",
-            "destination": "NRT", 
+            "destination": "NRT",
             "departure_date": "2024-03-15",
             "passengers": {
                 "adults": 0,  # Invalid - need at least 1 adult
@@ -118,7 +115,7 @@ class TestFlightsRouter:
 
         # Act
         response = api_test_client.post(
-            "/api/flights/search", 
+            "/api/flights/search",
             json=search_request,
         )
 

@@ -14,8 +14,6 @@ This version uses a mock implementation to work around the missing agents depend
 """
 
 import asyncio
-
-# Create mock modules to avoid import errors
 import sys
 import uuid
 from datetime import date, datetime
@@ -25,19 +23,16 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 from pytest import raises
 
-# Mock the problematic modules
-sys.modules["agents"] = MagicMock()
-
-# Import the schemas we'll need for testing
-from tripsage.api.schemas.requests.activities import (
-    ActivitySearchRequest,
-)
+from tripsage.api.schemas.requests.activities import ActivitySearchRequest
 from tripsage.api.schemas.responses.activities import (
     ActivityCoordinates,
     ActivityResponse,
     ActivitySearchResponse,
 )
 from tripsage_core.exceptions.exceptions import CoreServiceError
+
+# Create mock modules to avoid import errors - must be after imports
+sys.modules["agents"] = MagicMock()
 
 
 # Create mock classes for testing

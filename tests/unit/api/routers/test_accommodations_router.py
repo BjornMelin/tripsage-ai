@@ -1,12 +1,9 @@
 """Comprehensive unit tests for accommodation router with proper validation testing."""
 
-from unittest.mock import AsyncMock, Mock
-
 import pytest
 from fastapi import status
 
 from tests.factories import AccommodationFactory
-from tripsage_core.exceptions import CoreResourceNotFoundError
 
 
 class TestAccommodationRouter:
@@ -22,7 +19,7 @@ class TestAccommodationRouter:
         self, api_test_client, valid_accommodation_search
     ):
         """Test successful accommodation search."""
-        # The conftest already mocks the accommodation service with default return values
+        # The conftest already mocks the accommodation service with default values
         # Act
         response = api_test_client.post(
             "/api/accommodations/search",
@@ -42,7 +39,7 @@ class TestAccommodationRouter:
         self, api_test_client, valid_accommodation_details
     ):
         """Test successful accommodation details retrieval."""
-        # The conftest already mocks the accommodation service with default return values
+        # The conftest already mocks the accommodation service with default values
         # Act
         response = api_test_client.post(
             "/api/accommodations/details",
@@ -56,7 +53,7 @@ class TestAccommodationRouter:
         self, api_test_client, valid_save_accommodation
     ):
         """Test successful accommodation saving."""
-        # The conftest already mocks the accommodation service with default return values
+        # The conftest already mocks the accommodation service with default values
         # Act
         response = api_test_client.post(
             "/api/accommodations/saved",
@@ -69,9 +66,7 @@ class TestAccommodationRouter:
     # === VALIDATION TESTS ===
 
     @pytest.mark.parametrize("adults", [0, -1, 17])  # Schema allows 1-16
-    def test_search_accommodations_invalid_adults(
-        self, api_test_client, adults
-    ):
+    def test_search_accommodations_invalid_adults(self, api_test_client, adults):
         """Test accommodation search with invalid adults count."""
         search_request = {
             "location": "Tokyo",
@@ -90,9 +85,7 @@ class TestAccommodationRouter:
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
     @pytest.mark.parametrize("location", ["", " "])  # Schema requires min_length=1
-    def test_search_accommodations_invalid_location(
-        self, api_test_client, location
-    ):
+    def test_search_accommodations_invalid_location(self, api_test_client, location):
         """Test accommodation search with invalid location."""
         search_request = {
             "location": location,
@@ -110,9 +103,7 @@ class TestAccommodationRouter:
         # Assert
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
-    def test_search_accommodations_invalid_dates(
-        self, api_test_client
-    ):
+    def test_search_accommodations_invalid_dates(self, api_test_client):
         """Test accommodation search with check-out date before check-in."""
         search_request = {
             "location": "Tokyo",
@@ -131,9 +122,7 @@ class TestAccommodationRouter:
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
     @pytest.mark.parametrize("children", [-1, 11])  # Schema allows 0-10
-    def test_search_accommodations_invalid_children(
-        self, api_test_client, children
-    ):
+    def test_search_accommodations_invalid_children(self, api_test_client, children):
         """Test accommodation search with invalid children count."""
         search_request = {
             "location": "Tokyo",
@@ -153,9 +142,7 @@ class TestAccommodationRouter:
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
     @pytest.mark.parametrize("rooms", [0, 9])  # Schema allows 1-8
-    def test_search_accommodations_invalid_rooms(
-        self, api_test_client, rooms
-    ):
+    def test_search_accommodations_invalid_rooms(self, api_test_client, rooms):
         """Test accommodation search with invalid rooms count."""
         search_request = {
             "location": "Tokyo",

@@ -9,6 +9,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi import Request
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from tripsage.api.core.dependencies import (
     get_cache_service_dep,
@@ -56,7 +57,7 @@ class TestDatabaseDependency:
 
             # Use the dependency
             result = await get_db()
-            
+
             # Should return the database service directly
             assert result == mock_service
             mock_get_service.assert_called_once()

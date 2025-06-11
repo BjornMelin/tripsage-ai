@@ -1,7 +1,5 @@
 """Comprehensive unit tests for destinations router."""
 
-from unittest.mock import AsyncMock, Mock
-
 import pytest
 from fastapi import status
 
@@ -20,7 +18,9 @@ class TestDestinationsRouter:
 
     # === SUCCESS TESTS ===
 
-    def test_search_destinations_success(self, api_test_client, valid_destination_search):
+    def test_search_destinations_success(
+        self, api_test_client, valid_destination_search
+    ):
         """Test successful destination search."""
         # Act
         response = api_test_client.post(
@@ -49,7 +49,9 @@ class TestDestinationsRouter:
         # Assert - should return validation error for empty query
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
-    def test_get_destination_details_success(self, api_test_client, valid_destination_details):
+    def test_get_destination_details_success(
+        self, api_test_client, valid_destination_details
+    ):
         """Test successful destination details retrieval."""
         # Act
         response = api_test_client.post(
@@ -60,7 +62,9 @@ class TestDestinationsRouter:
         # Assert
         assert response.status_code == status.HTTP_200_OK
 
-    def test_get_destination_recommendations_success(self, api_test_client, valid_destination_recommendations):
+    def test_get_destination_recommendations_success(
+        self, api_test_client, valid_destination_recommendations
+    ):
         """Test successful destination recommendations."""
         # Act
         response = api_test_client.post(
@@ -73,7 +77,9 @@ class TestDestinationsRouter:
 
     # === ERROR HANDLING TESTS ===
 
-    def test_search_destinations_service_error(self, api_test_client, valid_destination_search):
+    def test_search_destinations_service_error(
+        self, api_test_client, valid_destination_search
+    ):
         """Test destination search with service error."""
         # Act
         response = api_test_client.post(
@@ -122,7 +128,9 @@ class TestDestinationsRouter:
 
     # === AUTHENTICATION TESTS ===
 
-    def test_search_destinations_unauthorized(self, unauthenticated_test_client, valid_destination_search):
+    def test_search_destinations_unauthorized(
+        self, unauthenticated_test_client, valid_destination_search
+    ):
         """Test destination search without authentication."""
         # Act
         response = unauthenticated_test_client.post(
@@ -133,7 +141,9 @@ class TestDestinationsRouter:
         # Assert
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
-    def test_get_destination_details_unauthorized(self, unauthenticated_test_client, valid_destination_details):
+    def test_get_destination_details_unauthorized(
+        self, unauthenticated_test_client, valid_destination_details
+    ):
         """Test destination details without authentication."""
         # Act
         response = unauthenticated_test_client.post(
@@ -144,7 +154,9 @@ class TestDestinationsRouter:
         # Assert
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
-    def test_get_destination_recommendations_unauthorized(self, unauthenticated_test_client, valid_destination_recommendations):
+    def test_get_destination_recommendations_unauthorized(
+        self, unauthenticated_test_client, valid_destination_recommendations
+    ):
         """Test destination recommendations without authentication."""
         # Act
         response = unauthenticated_test_client.post(

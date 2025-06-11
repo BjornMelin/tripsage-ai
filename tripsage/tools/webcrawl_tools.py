@@ -26,6 +26,7 @@ def get_performance_metrics():
     """Mock performance metrics function."""
     return {"enabled": True, "timeout": 30}
 
+
 logger = get_logger(__name__)
 
 

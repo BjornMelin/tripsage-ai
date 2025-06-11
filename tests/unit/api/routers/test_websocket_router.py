@@ -22,26 +22,26 @@ class TestWebSocketRouter:
         # Create mocks for external services
         self.mock_cache = MockCacheService()
         self.mock_db = MockDatabaseService()
-        
+
         # Mock external dependencies to prevent real connections at all levels
         self.patchers = [
             # Core services
             patch(
                 "tripsage_core.services.infrastructure.database_service.get_database_service",
-                return_value=self.mock_db
+                return_value=self.mock_db,
             ),
             patch(
                 "tripsage_core.services.infrastructure.cache_service.get_cache_service",
-                return_value=self.mock_cache
+                return_value=self.mock_cache,
             ),
             patch("tripsage.api.core.dependencies.get_db", return_value=self.mock_db),
             # Middleware cache dependencies (patch the actual import path)
             patch(
                 "tripsage_core.services.infrastructure.get_cache_service",
-                return_value=self.mock_cache
+                return_value=self.mock_cache,
             ),
         ]
-        
+
         # Start all patches
         for patcher in self.patchers:
             patcher.start()

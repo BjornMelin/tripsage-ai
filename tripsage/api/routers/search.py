@@ -138,7 +138,6 @@ async def delete_saved_search(search_id: str):
     raise HTTPException(
         status_code=status.HTTP_501_NOT_IMPLEMENTED,
         detail=(
-            "Delete saved search endpoint requires user authentication "
-            "implementation"
+            "Delete saved search endpoint requires user authentication implementation"
         ),
     )

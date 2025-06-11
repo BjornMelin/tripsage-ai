@@ -255,7 +255,6 @@ class ChatFactory(BaseFactory):
     def create_websocket_message(cls, **kwargs):
         """Create a WebSocket message object for event tests."""
         from tripsage_core.models.schemas_common.chat import ChatMessage, MessageRole
-        from uuid import UUID
 
         defaults = {
             "role": MessageRole.USER,
