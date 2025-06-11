@@ -839,6 +839,271 @@ class DatabaseService:
                 details={"error": str(e)},
             ) from e
 
+    # Additional trip operations required by TripService
+
+    async def get_trip_by_id(self, trip_id: str) -> Optional[Dict[str, Any]]:
+        """Get trip by ID - alias for get_trip for compatibility.
+
+        Args:
+            trip_id: Trip ID to retrieve
+
+        Returns:
+            Trip data if found, None otherwise
+
+        Raises:
+            CoreDatabaseError: If database operation fails
+        """
+        try:
+            result = await self.select("trips", "*", {"id": trip_id})
+            return result[0] if result else None
+        except Exception as e:
+            logger.error(f"Failed to get trip by ID {trip_id}: {e}")
+            return None
+
+    async def search_trips(
+        self, search_filters: Dict[str, Any], limit: int = 50, offset: int = 0
+    ) -> List[Dict[str, Any]]:
+        """Search trips with text and filters.
+
+        Args:
+            search_filters: Dictionary containing search criteria:
+                - query: Text search query
+                - user_id: User ID for user-specific search
+                - destinations: List of destination names to filter by
+                - tags: List of tags to filter by
+                - date_range: Dictionary with start_date and end_date
+                - status: Trip status filter
+                - visibility: Trip visibility filter
+            limit: Maximum number of results
+            offset: Offset for pagination
+
+        Returns:
+            List of matching trip records
+
+        Raises:
+            CoreDatabaseError: If search fails
+        """
+        await self.ensure_connected()
+
+        try:
+            query = self.client.table("trips").select("*")
+
+            # Apply basic filters
+            if "user_id" in search_filters:
+                query = query.eq("user_id", search_filters["user_id"])
+
+            if "status" in search_filters:
+                query = query.eq("status", search_filters["status"])
+
+            if "visibility" in search_filters:
+                query = query.eq("visibility", search_filters["visibility"])
+
+            # Text search on name and destination
+            if "query" in search_filters and search_filters["query"]:
+                search_text = search_filters["query"]
+                query = query.or_(
+                    f"name.ilike.%{search_text}%,destination.ilike.%{search_text}%"
+                )
+
+            # Filter by destinations (checking if any destination matches)
+            if "destinations" in search_filters and search_filters["destinations"]:
+                destination_filters = []
+                for dest in search_filters["destinations"]:
+                    destination_filters.append(f"destination.ilike.%{dest}%")
+                if destination_filters:
+                    query = query.or_(",".join(destination_filters))
+
+            # Filter by tags (checking if any tag matches)
+            if "tags" in search_filters and search_filters["tags"]:
+                # Use overlap operator for array fields
+                query = query.overlaps("notes", search_filters["tags"])
+
+            # Date range filter
+            if "date_range" in search_filters:
+                date_range = search_filters["date_range"]
+                if "start_date" in date_range:
+                    query = query.gte(
+                        "start_date", date_range["start_date"].isoformat()
+                    )
+                if "end_date" in date_range:
+                    query = query.lte("end_date", date_range["end_date"].isoformat())
+
+            # Apply pagination and ordering
+            query = query.order("created_at", desc=True)
+            if limit:
+                query = query.limit(limit)
+            if offset:
+                query = query.offset(offset)
+
+            result = await asyncio.to_thread(lambda: query.execute())
+            return result.data
+
+        except Exception as e:
+            logger.error(f"Trip search failed: {e}")
+            raise CoreDatabaseError(
+                message="Failed to search trips",
+                code="TRIP_SEARCH_FAILED",
+                operation="SEARCH_TRIPS",
+                details={"error": str(e), "filters": search_filters},
+            ) from e
+
+    async def get_trip_collaborators(self, trip_id: str) -> List[Dict[str, Any]]:
+        """Get trip collaborators.
+
+        Args:
+            trip_id: Trip ID
+
+        Returns:
+            List of collaborator records
+
+        Raises:
+            CoreDatabaseError: If operation fails
+        """
+        try:
+            return await self.select("trip_collaborators", "*", {"trip_id": trip_id})
+        except Exception as e:
+            logger.error(f"Failed to get trip collaborators for trip {trip_id}: {e}")
+            raise CoreDatabaseError(
+                message=f"Failed to get collaborators for trip {trip_id}",
+                code="GET_COLLABORATORS_FAILED",
+                operation="GET_TRIP_COLLABORATORS",
+                table="trip_collaborators",
+                details={"error": str(e), "trip_id": trip_id},
+            ) from e
+
+    async def get_trip_related_counts(self, trip_id: str) -> Dict[str, int]:
+        """Get counts of related trip data.
+
+        Args:
+            trip_id: Trip ID
+
+        Returns:
+            Dictionary with counts for itinerary_items, flights, accommodations, etc.
+
+        Raises:
+            CoreDatabaseError: If operation fails
+        """
+        try:
+            # Get counts for different related entities
+            results = {}
+
+            # Count itinerary items
+            results["itinerary_count"] = await self.count(
+                "itinerary_items", {"trip_id": trip_id}
+            )
+
+            # Count flights
+            results["flight_count"] = await self.count("flights", {"trip_id": trip_id})
+
+            # Count accommodations
+            results["accommodation_count"] = await self.count(
+                "accommodations", {"trip_id": trip_id}
+            )
+
+            # Count transportation
+            results["transportation_count"] = await self.count(
+                "transportation", {"trip_id": trip_id}
+            )
+
+            # Count collaborators
+            results["collaborator_count"] = await self.count(
+                "trip_collaborators", {"trip_id": trip_id}
+            )
+
+            return results
+
+        except Exception as e:
+            logger.error(f"Failed to get trip related counts for trip {trip_id}: {e}")
+            raise CoreDatabaseError(
+                message=f"Failed to get related counts for trip {trip_id}",
+                code="GET_TRIP_COUNTS_FAILED",
+                operation="GET_TRIP_RELATED_COUNTS",
+                details={"error": str(e), "trip_id": trip_id},
+            ) from e
+
+    async def add_trip_collaborator(
+        self, collaborator_data: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Add trip collaborator.
+
+        Args:
+            collaborator_data: Collaborator data including:
+                - trip_id: Trip ID
+                - user_id: User ID to add as collaborator
+                - permission_level: Permission level ('view', 'edit', 'admin')
+                - added_by: User ID who added the collaborator
+                - added_at: Timestamp when added (optional)
+
+        Returns:
+            Created collaborator record
+
+        Raises:
+            CoreDatabaseError: If operation fails
+        """
+        try:
+            # Ensure required fields are present
+            required_fields = ["trip_id", "user_id", "permission_level", "added_by"]
+            for field in required_fields:
+                if field not in collaborator_data:
+                    raise CoreDatabaseError(
+                        message=f"Missing required field: {field}",
+                        code="MISSING_REQUIRED_FIELD",
+                        operation="ADD_TRIP_COLLABORATOR",
+                        details={"missing_field": field},
+                    )
+
+            # Use upsert to handle duplicates gracefully
+            result = await self.upsert(
+                "trip_collaborators", collaborator_data, on_conflict="trip_id,user_id"
+            )
+            return result[0] if result else {}
+
+        except CoreDatabaseError:
+            # Re-raise CoreDatabaseError as-is (like validation errors)
+            raise
+        except Exception as e:
+            logger.error(f"Failed to add trip collaborator: {e}")
+            raise CoreDatabaseError(
+                message="Failed to add trip collaborator",
+                code="ADD_COLLABORATOR_FAILED",
+                operation="ADD_TRIP_COLLABORATOR",
+                table="trip_collaborators",
+                details={"error": str(e), "collaborator_data": collaborator_data},
+            ) from e
+
+    async def get_trip_collaborator(
+        self, trip_id: str, user_id: str
+    ) -> Optional[Dict[str, Any]]:
+        """Get specific trip collaborator.
+
+        Args:
+            trip_id: Trip ID
+            user_id: User ID
+
+        Returns:
+            Collaborator record if found, None otherwise
+
+        Raises:
+            CoreDatabaseError: If operation fails
+        """
+        try:
+            result = await self.select(
+                "trip_collaborators", "*", {"trip_id": trip_id, "user_id": user_id}
+            )
+            return result[0] if result else None
+
+        except Exception as e:
+            logger.error(
+                f"Failed to get trip collaborator for trip {trip_id}, user {user_id}: {e}"
+            )
+            raise CoreDatabaseError(
+                message=f"Failed to get collaborator for trip {trip_id} and user {user_id}",
+                code="GET_COLLABORATOR_FAILED",
+                operation="GET_TRIP_COLLABORATOR",
+                table="trip_collaborators",
+                details={"error": str(e), "trip_id": trip_id, "user_id": user_id},
+            ) from e
+
 
 # Global database service instance
 _database_service: Optional[DatabaseService] = None

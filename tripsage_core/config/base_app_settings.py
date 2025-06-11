@@ -40,28 +40,39 @@ class DragonflyConfig(BaseSettings):
     port: int = Field(default=6379, description="DragonflyDB port")
 
     model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
         env_prefix="DRAGONFLY_",
         case_sensitive=False,
+        extra="ignore",
     )
 
 
 class DatabaseConfig(BaseSettings):
     """Database configuration for Supabase PostgreSQL connections."""
 
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        env_prefix="SUPABASE_",
+        case_sensitive=False,
+        extra="ignore",
+    )
+
     # Supabase configuration
-    supabase_url: str = Field(default="https://test-project.supabase.co")
-    supabase_anon_key: SecretStr = Field(default=SecretStr("test-anon-key"))
-    supabase_service_role_key: Optional[SecretStr] = Field(default=None)
-    supabase_jwt_secret: SecretStr = Field(
+    url: str = Field(default="https://test-project.supabase.co")
+    anon_key: SecretStr = Field(default=SecretStr("test-anon-key"))
+    service_role_key: Optional[SecretStr] = Field(default=None)
+    jwt_secret: SecretStr = Field(
         default=SecretStr("test-jwt-secret"),
         description="Supabase JWT secret for local token validation",
     )
-    supabase_project_id: Optional[str] = Field(
+    project_id: Optional[str] = Field(
         default=None, description="Supabase project ID"
     )
-    supabase_timeout: float = Field(default=60.0)
-    supabase_auto_refresh_token: bool = Field(default=True)
-    supabase_persist_session: bool = Field(default=True)
+    timeout: float = Field(default=60.0)
+    auto_refresh_token: bool = Field(default=True)
+    persist_session: bool = Field(default=True)
 
     # pgvector configuration
     pgvector_enabled: bool = Field(
@@ -70,6 +81,71 @@ class DatabaseConfig(BaseSettings):
     vector_dimensions: int = Field(
         default=1536, description="Default vector dimensions for embeddings"
     )
+
+    # Backward compatibility properties
+    @property
+    def supabase_url(self) -> str:
+        return self.url
+
+    @supabase_url.setter
+    def supabase_url(self, value: str) -> None:
+        self.url = value
+
+    @property
+    def supabase_anon_key(self) -> SecretStr:
+        return self.anon_key
+
+    @supabase_anon_key.setter
+    def supabase_anon_key(self, value: SecretStr) -> None:
+        self.anon_key = value
+
+    @property
+    def supabase_service_role_key(self) -> Optional[SecretStr]:
+        return self.service_role_key
+
+    @supabase_service_role_key.setter
+    def supabase_service_role_key(self, value: Optional[SecretStr]) -> None:
+        self.service_role_key = value
+
+    @property
+    def supabase_jwt_secret(self) -> SecretStr:
+        return self.jwt_secret
+
+    @supabase_jwt_secret.setter
+    def supabase_jwt_secret(self, value: SecretStr) -> None:
+        self.jwt_secret = value
+
+    @property
+    def supabase_project_id(self) -> Optional[str]:
+        return self.project_id
+
+    @supabase_project_id.setter
+    def supabase_project_id(self, value: Optional[str]) -> None:
+        self.project_id = value
+
+    @property
+    def supabase_timeout(self) -> float:
+        return self.timeout
+
+    @supabase_timeout.setter
+    def supabase_timeout(self, value: float) -> None:
+        self.timeout = value
+
+    @property
+    def supabase_auto_refresh_token(self) -> bool:
+        return self.auto_refresh_token
+
+    @supabase_auto_refresh_token.setter
+    def supabase_auto_refresh_token(self, value: bool) -> None:
+        self.auto_refresh_token = value
+
+    @property
+    def supabase_persist_session(self) -> bool:
+        return self.persist_session
+
+    @supabase_persist_session.setter
+    def supabase_persist_session(self, value: bool) -> None:
+        self.persist_session = value
 
 
 class Mem0Config(BaseSettings):
