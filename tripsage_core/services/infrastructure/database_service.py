@@ -535,12 +535,83 @@ class DatabaseService:
         )
         return result[0] if result else None
 
-    async def delete_api_key(self, user_id: str, service_name: str) -> bool:
-        """Delete API key."""
+    async def delete_api_key(self, key_id: str, user_id: str) -> bool:
+        """Delete API key by ID with user authorization."""
+        result = await self.delete(
+            "api_keys", {"id": key_id, "user_id": user_id}
+        )
+        return len(result) > 0
+
+    async def delete_api_key_by_service(self, user_id: str, service_name: str) -> bool:
+        """Delete API key by service name (legacy method)."""
         result = await self.delete(
             "api_keys", {"user_id": user_id, "service_name": service_name}
         )
         return len(result) > 0
+
+    # Additional API key methods required by KeyManagementService
+    async def create_api_key(self, key_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Create a new API key."""
+        result = await self.insert("api_keys", key_data)
+        return result[0] if result else {}
+
+    async def get_api_key_for_service(
+        self, user_id: str, service: str
+    ) -> Optional[Dict[str, Any]]:
+        """Get API key for specific service - alias for get_api_key."""
+        return await self.get_api_key(user_id, service)
+
+    async def get_api_key_by_id(
+        self, key_id: str, user_id: str
+    ) -> Optional[Dict[str, Any]]:
+        """Get API key by ID with user authorization."""
+        result = await self.select(
+            "api_keys", "*", {"id": key_id, "user_id": user_id}
+        )
+        return result[0] if result else None
+
+    async def update_api_key_last_used(self, key_id: str) -> bool:
+        """Update the last_used timestamp for an API key."""
+        from datetime import datetime, timezone
+        
+        result = await self.update(
+            "api_keys",
+            {"id": key_id},
+            {
+                "last_used": datetime.now(timezone.utc).isoformat(),
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+            }
+        )
+        return len(result) > 0
+
+    async def update_api_key_validation(
+        self, key_id: str, is_valid: bool, validated_at: datetime
+    ) -> bool:
+        """Update API key validation status."""
+        from datetime import datetime, timezone
+        
+        result = await self.update(
+            "api_keys",
+            {"id": key_id},
+            {
+                "is_valid": is_valid,
+                "last_validated": validated_at.isoformat(),
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+            }
+        )
+        return len(result) > 0
+
+    async def update_api_key(
+        self, key_id: str, update_data: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Update an API key with new data."""
+        result = await self.update("api_keys", {"id": key_id}, update_data)
+        return result[0] if result else {}
+
+    async def log_api_key_usage(self, usage_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Log API key usage for audit trail."""
+        result = await self.insert("api_key_usage_logs", usage_data)
+        return result[0] if result else {}
 
     # Vector search operations (pgvector)
     async def vector_search(

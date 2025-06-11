@@ -1,10 +1,21 @@
 import { createBrowserClient } from "@supabase/ssr";
+import { useMemo } from "react";
+import type { Database } from "./database.types";
+import type { SupabaseClient } from "@supabase/supabase-js";
+
+export type TypedSupabaseClient = SupabaseClient<Database>;
+
+let client: TypedSupabaseClient | undefined;
 
 /**
- * Create a Supabase client for browser use
- * This client is used in Client Components and browser-side operations
+ * Create a singleton Supabase client for browser use
+ * This ensures we only have one client instance throughout the app
  */
-export function createClient() {
+function getSupabaseBrowserClient(): TypedSupabaseClient {
+  if (client) {
+    return client;
+  }
+
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
@@ -14,5 +25,22 @@ export function createClient() {
     );
   }
 
-  return createBrowserClient(supabaseUrl, supabaseAnonKey);
+  client = createBrowserClient<Database>(supabaseUrl, supabaseAnonKey);
+  return client;
+}
+
+/**
+ * React hook to get the Supabase client
+ * Memoizes the client to prevent unnecessary re-renders
+ */
+export function useSupabase(): TypedSupabaseClient {
+  return useMemo(getSupabaseBrowserClient, []);
+}
+
+/**
+ * Create a new Supabase client instance (for special cases)
+ * Use useSupabase() hook in components instead
+ */
+export function createClient(): TypedSupabaseClient {
+  return getSupabaseBrowserClient();
 }

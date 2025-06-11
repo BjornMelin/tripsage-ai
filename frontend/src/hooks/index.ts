@@ -1,4 +1,22 @@
 // Export all hooks for easy import
+
+// Supabase core hooks
+export * from "./use-supabase-query";
+export * from "./use-supabase-realtime";
+
+// Trip management hooks (Supabase-powered)
+export * from "./use-trips-supabase";
+
+// Chat hooks (Supabase-powered)
+export * from "./use-chat-supabase";
+
+// File storage hooks
+export * from "./use-file-storage";
+
+// Search hooks (with caching)
+export * from "./use-search-supabase";
+
+// Legacy hooks (to be migrated)
 export * from "./use-api-query";
 export * from "./use-api-keys";
 export * from "./use-agent-status";

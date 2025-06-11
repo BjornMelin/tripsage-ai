@@ -260,13 +260,13 @@ INSERT INTO memories (
     metadata
 ) VALUES 
 (
-    '00000000-0000-0000-0000-000000000001',
+    '00000000-0000-0000-0000-000000000001'::UUID,
     'user_preference',
     'User prefers economy class flights and values authentic cultural experiences over luxury accommodations.',
     '{"confidence": 0.8, "source": "trip_history"}'
 ),
 (
-    '00000000-0000-0000-0000-000000000001',
+    '00000000-0000-0000-0000-000000000001'::UUID,
     'trip_history',
     'Previously traveled to Europe and Southeast Asia, enjoys planning trips 3-6 months in advance.',
     '{"confidence": 0.9, "source": "conversation_analysis"}'

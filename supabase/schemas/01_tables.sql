@@ -202,7 +202,7 @@ CREATE TABLE IF NOT EXISTS api_keys (
 -- Create memories table (for long-term user preferences and history)
 CREATE TABLE IF NOT EXISTS memories (
     id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    user_id TEXT NOT NULL, -- Using TEXT to store UUID from auth.users
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
     memory_type TEXT NOT NULL DEFAULT 'user_preference',
     content TEXT NOT NULL,
     embedding vector(1536),
@@ -217,7 +217,7 @@ CREATE TABLE IF NOT EXISTS memories (
 CREATE TABLE IF NOT EXISTS session_memories (
     id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     session_id UUID NOT NULL REFERENCES chat_sessions(id) ON DELETE CASCADE,
-    user_id TEXT NOT NULL, -- Using TEXT to store UUID from auth.users
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
     content TEXT NOT NULL,
     embedding vector(1536),
     metadata JSONB DEFAULT '{}',
@@ -242,4 +242,114 @@ CREATE TABLE IF NOT EXISTS trip_collaborators (
     
     CONSTRAINT trip_collaborators_permission_check CHECK (permission_level IN ('view', 'edit', 'admin')),
     CONSTRAINT trip_collaborators_unique UNIQUE (trip_id, user_id)
+);
+
+-- ===========================
+-- FILE STORAGE TABLES
+-- ===========================
+
+-- Create file_attachments table (for Supabase Storage integration)
+CREATE TABLE IF NOT EXISTS file_attachments (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    trip_id BIGINT REFERENCES trips(id) ON DELETE CASCADE,
+    chat_message_id BIGINT REFERENCES chat_messages(id) ON DELETE CASCADE,
+    filename TEXT NOT NULL,
+    original_filename TEXT NOT NULL,
+    file_size BIGINT NOT NULL,
+    mime_type TEXT NOT NULL,
+    file_path TEXT NOT NULL,
+    bucket_name TEXT NOT NULL DEFAULT 'attachments',
+    upload_status TEXT NOT NULL DEFAULT 'uploading',
+    virus_scan_status TEXT DEFAULT 'pending',
+    virus_scan_result JSONB DEFAULT '{}',
+    metadata JSONB DEFAULT '{}',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    
+    CONSTRAINT file_attachments_size_check CHECK (file_size > 0),
+    CONSTRAINT file_attachments_upload_status_check CHECK (upload_status IN ('uploading', 'completed', 'failed')),
+    CONSTRAINT file_attachments_virus_status_check CHECK (virus_scan_status IN ('pending', 'clean', 'infected', 'failed'))
+);
+
+-- ===========================
+-- SEARCH CACHE TABLES
+-- ===========================
+
+-- Create search_destinations table (for destination search caching)
+CREATE TABLE IF NOT EXISTS search_destinations (
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    query TEXT NOT NULL,
+    query_hash TEXT NOT NULL,
+    results JSONB NOT NULL,
+    source TEXT NOT NULL,
+    search_metadata JSONB DEFAULT '{}',
+    expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    
+    CONSTRAINT search_destinations_source_check CHECK (source IN ('google_maps', 'external_api', 'cached'))
+);
+
+-- Create search_activities table (for activity search caching)
+CREATE TABLE IF NOT EXISTS search_activities (
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    destination TEXT NOT NULL,
+    activity_type TEXT,
+    query_parameters JSONB NOT NULL,
+    query_hash TEXT NOT NULL,
+    results JSONB NOT NULL,
+    source TEXT NOT NULL,
+    search_metadata JSONB DEFAULT '{}',
+    expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    
+    CONSTRAINT search_activities_source_check CHECK (source IN ('viator', 'getyourguide', 'external_api', 'cached'))
+);
+
+-- Create search_flights table (for flight search caching)
+CREATE TABLE IF NOT EXISTS search_flights (
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    origin TEXT NOT NULL,
+    destination TEXT NOT NULL,
+    departure_date DATE NOT NULL,
+    return_date DATE,
+    passengers INTEGER NOT NULL DEFAULT 1,
+    cabin_class TEXT NOT NULL DEFAULT 'economy',
+    query_parameters JSONB NOT NULL,
+    query_hash TEXT NOT NULL,
+    results JSONB NOT NULL,
+    source TEXT NOT NULL,
+    search_metadata JSONB DEFAULT '{}',
+    expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    
+    CONSTRAINT search_flights_passengers_check CHECK (passengers > 0),
+    CONSTRAINT search_flights_cabin_check CHECK (cabin_class IN ('economy', 'premium_economy', 'business', 'first')),
+    CONSTRAINT search_flights_source_check CHECK (source IN ('duffel', 'amadeus', 'external_api', 'cached'))
+);
+
+-- Create search_hotels table (for hotel search caching)
+CREATE TABLE IF NOT EXISTS search_hotels (
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    destination TEXT NOT NULL,
+    check_in_date DATE NOT NULL,
+    check_out_date DATE NOT NULL,
+    guests INTEGER NOT NULL DEFAULT 1,
+    rooms INTEGER NOT NULL DEFAULT 1,
+    query_parameters JSONB NOT NULL,
+    query_hash TEXT NOT NULL,
+    results JSONB NOT NULL,
+    source TEXT NOT NULL,
+    search_metadata JSONB DEFAULT '{}',
+    expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    
+    CONSTRAINT search_hotels_guests_check CHECK (guests > 0),
+    CONSTRAINT search_hotels_rooms_check CHECK (rooms > 0),
+    CONSTRAINT search_hotels_dates_check CHECK (check_out_date > check_in_date),
+    CONSTRAINT search_hotels_source_check CHECK (source IN ('booking', 'expedia', 'airbnb_mcp', 'external_api', 'cached'))
 );

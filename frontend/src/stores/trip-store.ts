@@ -28,16 +28,26 @@ export interface Destination {
 
 export interface Trip {
   id: string;
+  user_id?: string;
   name: string;
+  title?: string; // For API compatibility
   description?: string;
-  startDate?: string;
-  endDate?: string;
+  start_date?: string; // Snake case for API compatibility
+  end_date?: string; // Snake case for API compatibility
+  startDate?: string; // Camel case for frontend compatibility
+  endDate?: string; // Camel case for frontend compatibility
   destinations: Destination[];
   budget?: number;
   currency?: string;
-  isPublic: boolean;
-  createdAt: string;
-  updatedAt: string;
+  visibility?: 'private' | 'shared' | 'public';
+  isPublic?: boolean; // Legacy field
+  tags?: string[];
+  preferences?: Record<string, any>;
+  status?: string;
+  created_at?: string; // Snake case for API compatibility
+  updated_at?: string; // Snake case for API compatibility
+  createdAt?: string; // Camel case for frontend compatibility
+  updatedAt?: string; // Camel case for frontend compatibility
 }
 
 interface TripState {
