@@ -444,6 +444,70 @@ class TripService:
             )
             return False
 
+    async def duplicate_trip(self, user_id: str, trip_id: str) -> TripResponse:
+        """
+        Duplicate an existing trip.
+
+        Creates a copy of the specified trip with a "Copy of " prefix in the title.
+        The new trip will be owned by the requesting user and will have the same
+        destinations, budget, tags, and preferences as the original.
+
+        Args:
+            user_id: User ID who is duplicating the trip
+            trip_id: ID of the trip to duplicate
+
+        Returns:
+            The newly created duplicate trip
+
+        Raises:
+            NotFoundError: If the original trip is not found
+            PermissionError: If user doesn't have access to the original trip
+            ValidationError: If trip data is invalid
+        """
+        try:
+            # Get the original trip and check access
+            original_trip = await self.get_trip(trip_id, user_id)
+            if not original_trip:
+                raise NotFoundError(
+                    f"Trip with ID {trip_id} not found or not accessible"
+                )
+
+            # Create trip data for the duplicate
+            duplicate_data = TripCreateRequest(
+                title=f"Copy of {original_trip.title}",
+                description=original_trip.description,
+                start_date=original_trip.start_date,
+                end_date=original_trip.end_date,
+                destinations=original_trip.destinations,
+                budget=original_trip.budget,
+                visibility=TripVisibility.PRIVATE,  # New copies are private by default
+                tags=original_trip.tags,
+                preferences=original_trip.preferences,
+            )
+
+            # Create the duplicate trip
+            duplicate_trip = await self.create_trip(user_id, duplicate_data)
+
+            logger.info(
+                "Trip duplicated successfully",
+                extra={
+                    "original_trip_id": trip_id,
+                    "duplicate_trip_id": duplicate_trip.id,
+                    "user_id": user_id,
+                },
+            )
+
+            return duplicate_trip
+
+        except (NotFoundError, PermissionError, ValidationError):
+            raise
+        except Exception as e:
+            logger.error(
+                "Failed to duplicate trip",
+                extra={"trip_id": trip_id, "user_id": user_id, "error": str(e)},
+            )
+            raise
+
     async def share_trip(
         self, trip_id: str, owner_id: str, share_request: TripShareRequest
     ) -> List[TripCollaborator]:
