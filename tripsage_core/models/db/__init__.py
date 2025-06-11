@@ -70,6 +70,12 @@ from .trip import Trip
 from .trip_comparison import TripComparison
 
 # Trip management models
+from .trip_collaborator import (
+    PermissionLevel,
+    TripCollaboratorCreate,
+    TripCollaboratorDB,
+    TripCollaboratorUpdate,
+)
 from .trip_note import TripNote
 from .user import User, UserRole
 
@@ -107,6 +113,11 @@ __all__ = [
     "SearchParameters",
     # Trip Note
     "TripNote",
+    # Trip Collaborator
+    "TripCollaboratorDB",
+    "TripCollaboratorCreate",
+    "TripCollaboratorUpdate",
+    "PermissionLevel",
     # Price History
     "PriceHistory",
     "EntityType",

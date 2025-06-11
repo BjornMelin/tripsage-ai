@@ -1094,10 +1094,13 @@ class DatabaseService:
 
         except Exception as e:
             logger.error(
-                f"Failed to get trip collaborator for trip {trip_id}, user {user_id}: {e}"
+                f"Failed to get trip collaborator for trip {trip_id}, "
+                f"user {user_id}: {e}"
             )
             raise CoreDatabaseError(
-                message=f"Failed to get collaborator for trip {trip_id} and user {user_id}",
+                message=(
+                    f"Failed to get collaborator for trip {trip_id} and user {user_id}"
+                ),
                 code="GET_COLLABORATOR_FAILED",
                 operation="GET_TRIP_COLLABORATOR",
                 table="trip_collaborators",

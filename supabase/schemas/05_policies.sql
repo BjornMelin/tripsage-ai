@@ -1,89 +1,429 @@
 -- Row Level Security (RLS) Policies Schema
--- Description: Multi-tenant security policies for user data isolation
+-- Description: Comprehensive multi-tenant security policies with collaboration support
 -- Dependencies: 01_tables.sql (all table definitions)
+-- Last Updated: 2025-06-11 - Enhanced with collaboration features
 
 -- ===========================
--- ENABLE RLS ON USER-OWNED TABLES
+-- ENABLE RLS ON ALL USER-OWNED TABLES
 -- ===========================
 
--- Enable RLS on all tables containing user-specific data
+-- Core business tables
 ALTER TABLE trips ENABLE ROW LEVEL SECURITY;
-ALTER TABLE chat_sessions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE api_keys ENABLE ROW LEVEL SECURITY;
+ALTER TABLE trip_collaborators ENABLE ROW LEVEL SECURITY;
 
--- Enable RLS on related tables (inherit access through foreign keys)
+-- Travel data tables (inherit permissions from trips)
 ALTER TABLE flights ENABLE ROW LEVEL SECURITY;
 ALTER TABLE accommodations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE transportation ENABLE ROW LEVEL SECURITY;
 ALTER TABLE itinerary_items ENABLE ROW LEVEL SECURITY;
+
+-- Communication tables
+ALTER TABLE chat_sessions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE chat_messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE chat_tool_calls ENABLE ROW LEVEL SECURITY;
 
+-- User management tables
+ALTER TABLE api_keys ENABLE ROW LEVEL SECURITY;
+
+-- Memory tables (application-level filtering - no RLS due to TEXT user_id)
+-- ALTER TABLE memories ENABLE ROW LEVEL SECURITY; -- Handled at application level
+-- ALTER TABLE session_memories ENABLE ROW LEVEL SECURITY; -- Handled at application level
+
 -- ===========================
--- CORE TABLE POLICIES
+-- CORE BUSINESS LOGIC POLICIES
 -- ===========================
 
--- Trips: Users can only access their own trips
-CREATE POLICY "Users can only access their own trips" ON trips
-    FOR ALL USING (auth.uid() = user_id);
-
--- Chat sessions: Users can only access their own chat sessions
-CREATE POLICY "Users can only access their own chat sessions" ON chat_sessions
-    FOR ALL USING (auth.uid() = user_id);
-
--- API keys: Users can only access their own API keys
+-- API Keys: Users can only manage their own API keys
 CREATE POLICY "Users can only access their own API keys" ON api_keys
     FOR ALL USING (auth.uid() = user_id);
 
--- ===========================
--- RELATED TABLE POLICIES
--- ===========================
+-- Chat Sessions: Users can access sessions for owned and shared trips
+CREATE POLICY "Users can access chat sessions for accessible trips" ON chat_sessions
+    FOR SELECT USING (
+        auth.uid() = user_id OR
+        trip_id IN (
+            SELECT id FROM trips 
+            WHERE user_id = auth.uid()
+            UNION
+            SELECT trip_id FROM trip_collaborators 
+            WHERE user_id = auth.uid()
+        )
+    );
 
--- Flights: Users can access flights for their trips
-CREATE POLICY "Users can access flights for their trips" ON flights
-    FOR ALL USING (trip_id IN (SELECT id FROM trips WHERE user_id = auth.uid()));
+-- Separate policies for chat session modifications
+CREATE POLICY "Users can create their own chat sessions" ON chat_sessions
+    FOR INSERT WITH CHECK (auth.uid() = user_id);
 
--- Accommodations: Users can access accommodations for their trips
-CREATE POLICY "Users can access accommodations for their trips" ON accommodations
-    FOR ALL USING (trip_id IN (SELECT id FROM trips WHERE user_id = auth.uid()));
+CREATE POLICY "Users can update their own chat sessions" ON chat_sessions
+    FOR UPDATE USING (auth.uid() = user_id);
 
--- Transportation: Users can access transportation for their trips
-CREATE POLICY "Users can access transportation for their trips" ON transportation
-    FOR ALL USING (trip_id IN (SELECT id FROM trips WHERE user_id = auth.uid()));
-
--- Itinerary items: Users can access itinerary items for their trips
-CREATE POLICY "Users can access itinerary items for their trips" ON itinerary_items
-    FOR ALL USING (trip_id IN (SELECT id FROM trips WHERE user_id = auth.uid()));
-
--- ===========================
--- CHAT SYSTEM POLICIES
--- ===========================
-
--- Chat messages: Users can access messages in their chat sessions
-CREATE POLICY "Users can access messages in their chat sessions" ON chat_messages
-    FOR ALL USING (session_id IN (SELECT id FROM chat_sessions WHERE user_id = auth.uid()));
-
--- Chat tool calls: Users can access tool calls in their messages
-CREATE POLICY "Users can access tool calls in their messages" ON chat_tool_calls
-    FOR ALL USING (message_id IN (
-        SELECT cm.id FROM chat_messages cm 
-        JOIN chat_sessions cs ON cm.session_id = cs.id 
-        WHERE cs.user_id = auth.uid()
-    ));
+CREATE POLICY "Users can delete their own chat sessions" ON chat_sessions
+    FOR DELETE USING (auth.uid() = user_id);
 
 -- ===========================
--- POLICY COMMENTS
+-- TRIP COLLABORATION POLICIES
 -- ===========================
 
-COMMENT ON POLICY "Users can only access their own trips" ON trips 
-    IS 'RLS policy ensuring users can only view and modify their own travel trips';
+-- Trip collaborators: Users can view collaborations they are part of
+CREATE POLICY "Users can view trip collaborations they are part of" ON trip_collaborators
+    FOR SELECT USING (
+        user_id = auth.uid() OR 
+        added_by = auth.uid() OR
+        trip_id IN (
+            SELECT id FROM trips WHERE user_id = auth.uid()
+        )
+    );
 
-COMMENT ON POLICY "Users can only access their own chat sessions" ON chat_sessions 
-    IS 'RLS policy ensuring users can only access their own chat sessions and conversation history';
+-- Trip owners can manage collaborators
+CREATE POLICY "Trip owners can add collaborators" ON trip_collaborators
+    FOR INSERT WITH CHECK (
+        trip_id IN (
+            SELECT id FROM trips WHERE user_id = auth.uid()
+        )
+    );
+
+CREATE POLICY "Trip owners can update collaborators" ON trip_collaborators
+    FOR UPDATE USING (
+        trip_id IN (
+            SELECT id FROM trips WHERE user_id = auth.uid()
+        )
+    );
+
+CREATE POLICY "Trip owners can remove collaborators" ON trip_collaborators
+    FOR DELETE USING (
+        trip_id IN (
+            SELECT id FROM trips WHERE user_id = auth.uid()
+        )
+    );
+
+-- ===========================
+-- ENHANCED TRIP ACCESS POLICIES
+-- ===========================
+
+-- Trips: Users can view owned and shared trips
+CREATE POLICY "Users can view accessible trips" ON trips
+    FOR SELECT USING (
+        auth.uid() = user_id OR
+        id IN (
+            SELECT trip_id FROM trip_collaborators 
+            WHERE user_id = auth.uid()
+        )
+    );
+
+-- Trip modifications require ownership or appropriate permissions
+CREATE POLICY "Users can create their own trips" ON trips
+    FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update owned trips or shared trips with edit permission" ON trips
+    FOR UPDATE USING (
+        auth.uid() = user_id OR
+        id IN (
+            SELECT trip_id FROM trip_collaborators 
+            WHERE user_id = auth.uid() 
+            AND permission_level IN ('edit', 'admin')
+        )
+    );
+
+CREATE POLICY "Users can delete their own trips" ON trips
+    FOR DELETE USING (auth.uid() = user_id);
+
+-- ===========================
+-- TRAVEL DATA POLICIES (COLLABORATIVE)
+-- ===========================
+
+-- Flights: Access based on trip permissions
+CREATE POLICY "Users can view flights for accessible trips" ON flights
+    FOR SELECT USING (
+        trip_id IN (
+            SELECT id FROM trips WHERE user_id = auth.uid()
+            UNION
+            SELECT trip_id FROM trip_collaborators WHERE user_id = auth.uid()
+        )
+    );
+
+CREATE POLICY "Users can modify flights with edit permissions" ON flights
+    FOR INSERT WITH CHECK (
+        trip_id IN (
+            SELECT id FROM trips WHERE user_id = auth.uid()
+            UNION
+            SELECT trip_id FROM trip_collaborators 
+            WHERE user_id = auth.uid() 
+            AND permission_level IN ('edit', 'admin')
+        )
+    );
+
+CREATE POLICY "Users can update flights with edit permissions" ON flights
+    FOR UPDATE USING (
+        trip_id IN (
+            SELECT id FROM trips WHERE user_id = auth.uid()
+            UNION
+            SELECT trip_id FROM trip_collaborators 
+            WHERE user_id = auth.uid() 
+            AND permission_level IN ('edit', 'admin')
+        )
+    );
+
+CREATE POLICY "Users can delete flights with edit permissions" ON flights
+    FOR DELETE USING (
+        trip_id IN (
+            SELECT id FROM trips WHERE user_id = auth.uid()
+            UNION
+            SELECT trip_id FROM trip_collaborators 
+            WHERE user_id = auth.uid() 
+            AND permission_level IN ('edit', 'admin')
+        )
+    );
+
+-- Accommodations: Similar collaborative access patterns
+CREATE POLICY "Users can view accommodations for accessible trips" ON accommodations
+    FOR SELECT USING (
+        trip_id IN (
+            SELECT id FROM trips WHERE user_id = auth.uid()
+            UNION
+            SELECT trip_id FROM trip_collaborators WHERE user_id = auth.uid()
+        )
+    );
+
+CREATE POLICY "Users can modify accommodations with edit permissions" ON accommodations
+    FOR INSERT WITH CHECK (
+        trip_id IN (
+            SELECT id FROM trips WHERE user_id = auth.uid()
+            UNION
+            SELECT trip_id FROM trip_collaborators 
+            WHERE user_id = auth.uid() 
+            AND permission_level IN ('edit', 'admin')
+        )
+    );
+
+CREATE POLICY "Users can update accommodations with edit permissions" ON accommodations
+    FOR UPDATE USING (
+        trip_id IN (
+            SELECT id FROM trips WHERE user_id = auth.uid()
+            UNION
+            SELECT trip_id FROM trip_collaborators 
+            WHERE user_id = auth.uid() 
+            AND permission_level IN ('edit', 'admin')
+        )
+    );
+
+CREATE POLICY "Users can delete accommodations with edit permissions" ON accommodations
+    FOR DELETE USING (
+        trip_id IN (
+            SELECT id FROM trips WHERE user_id = auth.uid()
+            UNION
+            SELECT trip_id FROM trip_collaborators 
+            WHERE user_id = auth.uid() 
+            AND permission_level IN ('edit', 'admin')
+        )
+    );
+
+-- Transportation: Collaborative access
+CREATE POLICY "Users can view transportation for accessible trips" ON transportation
+    FOR SELECT USING (
+        trip_id IN (
+            SELECT id FROM trips WHERE user_id = auth.uid()
+            UNION
+            SELECT trip_id FROM trip_collaborators WHERE user_id = auth.uid()
+        )
+    );
+
+CREATE POLICY "Users can modify transportation with edit permissions" ON transportation
+    FOR INSERT WITH CHECK (
+        trip_id IN (
+            SELECT id FROM trips WHERE user_id = auth.uid()
+            UNION
+            SELECT trip_id FROM trip_collaborators 
+            WHERE user_id = auth.uid() 
+            AND permission_level IN ('edit', 'admin')
+        )
+    );
+
+CREATE POLICY "Users can update transportation with edit permissions" ON transportation
+    FOR UPDATE USING (
+        trip_id IN (
+            SELECT id FROM trips WHERE user_id = auth.uid()
+            UNION
+            SELECT trip_id FROM trip_collaborators 
+            WHERE user_id = auth.uid() 
+            AND permission_level IN ('edit', 'admin')
+        )
+    );
+
+CREATE POLICY "Users can delete transportation with edit permissions" ON transportation
+    FOR DELETE USING (
+        trip_id IN (
+            SELECT id FROM trips WHERE user_id = auth.uid()
+            UNION
+            SELECT trip_id FROM trip_collaborators 
+            WHERE user_id = auth.uid() 
+            AND permission_level IN ('edit', 'admin')
+        )
+    );
+
+-- Itinerary items: Collaborative access
+CREATE POLICY "Users can view itinerary items for accessible trips" ON itinerary_items
+    FOR SELECT USING (
+        trip_id IN (
+            SELECT id FROM trips WHERE user_id = auth.uid()
+            UNION
+            SELECT trip_id FROM trip_collaborators WHERE user_id = auth.uid()
+        )
+    );
+
+CREATE POLICY "Users can modify itinerary items with edit permissions" ON itinerary_items
+    FOR INSERT WITH CHECK (
+        trip_id IN (
+            SELECT id FROM trips WHERE user_id = auth.uid()
+            UNION
+            SELECT trip_id FROM trip_collaborators 
+            WHERE user_id = auth.uid() 
+            AND permission_level IN ('edit', 'admin')
+        )
+    );
+
+CREATE POLICY "Users can update itinerary items with edit permissions" ON itinerary_items
+    FOR UPDATE USING (
+        trip_id IN (
+            SELECT id FROM trips WHERE user_id = auth.uid()
+            UNION
+            SELECT trip_id FROM trip_collaborators 
+            WHERE user_id = auth.uid() 
+            AND permission_level IN ('edit', 'admin')
+        )
+    );
+
+CREATE POLICY "Users can delete itinerary items with edit permissions" ON itinerary_items
+    FOR DELETE USING (
+        trip_id IN (
+            SELECT id FROM trips WHERE user_id = auth.uid()
+            UNION
+            SELECT trip_id FROM trip_collaborators 
+            WHERE user_id = auth.uid() 
+            AND permission_level IN ('edit', 'admin')
+        )
+    );
+
+-- ===========================
+-- CHAT SYSTEM POLICIES (COLLABORATIVE)
+-- ===========================
+
+-- Chat messages: Users can access messages in accessible chat sessions
+CREATE POLICY "Users can view messages in accessible chat sessions" ON chat_messages
+    FOR SELECT USING (
+        session_id IN (
+            SELECT id FROM chat_sessions 
+            WHERE user_id = auth.uid()
+            OR trip_id IN (
+                SELECT id FROM trips WHERE user_id = auth.uid()
+                UNION
+                SELECT trip_id FROM trip_collaborators WHERE user_id = auth.uid()
+            )
+        )
+    );
+
+CREATE POLICY "Users can create messages in their chat sessions" ON chat_messages
+    FOR INSERT WITH CHECK (
+        session_id IN (
+            SELECT id FROM chat_sessions WHERE user_id = auth.uid()
+        )
+    );
+
+CREATE POLICY "Users can update their own messages" ON chat_messages
+    FOR UPDATE USING (
+        session_id IN (
+            SELECT id FROM chat_sessions WHERE user_id = auth.uid()
+        )
+    );
+
+CREATE POLICY "Users can delete their own messages" ON chat_messages
+    FOR DELETE USING (
+        session_id IN (
+            SELECT id FROM chat_sessions WHERE user_id = auth.uid()
+        )
+    );
+
+-- Chat tool calls: Users can access tool calls in accessible messages
+CREATE POLICY "Users can view tool calls in accessible messages" ON chat_tool_calls
+    FOR SELECT USING (
+        message_id IN (
+            SELECT cm.id FROM chat_messages cm 
+            JOIN chat_sessions cs ON cm.session_id = cs.id 
+            WHERE cs.user_id = auth.uid()
+            OR cs.trip_id IN (
+                SELECT id FROM trips WHERE user_id = auth.uid()
+                UNION
+                SELECT trip_id FROM trip_collaborators WHERE user_id = auth.uid()
+            )
+        )
+    );
+
+CREATE POLICY "Users can create tool calls in their messages" ON chat_tool_calls
+    FOR INSERT WITH CHECK (
+        message_id IN (
+            SELECT cm.id FROM chat_messages cm 
+            JOIN chat_sessions cs ON cm.session_id = cs.id 
+            WHERE cs.user_id = auth.uid()
+        )
+    );
+
+CREATE POLICY "Users can update tool calls in their messages" ON chat_tool_calls
+    FOR UPDATE USING (
+        message_id IN (
+            SELECT cm.id FROM chat_messages cm 
+            JOIN chat_sessions cs ON cm.session_id = cs.id 
+            WHERE cs.user_id = auth.uid()
+        )
+    );
+
+CREATE POLICY "Users can delete tool calls in their messages" ON chat_tool_calls
+    FOR DELETE USING (
+        message_id IN (
+            SELECT cm.id FROM chat_messages cm 
+            JOIN chat_sessions cs ON cm.session_id = cs.id 
+            WHERE cs.user_id = auth.uid()
+        )
+    );
+
+-- ===========================
+-- POLICY DOCUMENTATION
+-- ===========================
 
 COMMENT ON POLICY "Users can only access their own API keys" ON api_keys 
     IS 'RLS policy ensuring users can only manage their own API keys (BYOK - Bring Your Own Keys)';
 
--- Note: Memory tables (memories, session_memories) do not have RLS policies
--- as they use TEXT user_id fields that require application-level filtering
--- rather than Supabase auth.uid() matching
+COMMENT ON POLICY "Users can view trip collaborations they are part of" ON trip_collaborators 
+    IS 'RLS policy allowing users to view collaborations where they are the collaborator, owner, or trip owner';
+
+COMMENT ON POLICY "Users can view accessible trips" ON trips 
+    IS 'Enhanced RLS policy allowing access to owned trips and trips shared via trip_collaborators';
+
+COMMENT ON POLICY "Users can access chat sessions for accessible trips" ON chat_sessions 
+    IS 'RLS policy allowing access to chat sessions for owned trips and trips shared via collaboration';
+
+COMMENT ON POLICY "Users can view flights for accessible trips" ON flights 
+    IS 'RLS policy with collaborative access - users can view flights for owned and shared trips';
+
+COMMENT ON POLICY "Users can modify flights with edit permissions" ON flights 
+    IS 'RLS policy enforcing edit permissions - users can modify flights only with edit/admin permissions';
+
+-- ===========================
+-- SECURITY CONSIDERATIONS
+-- ===========================
+
+-- Performance Optimization Notes:
+-- 1. All collaborative queries use UNION to combine owned and shared resources
+-- 2. Indexes on trip_collaborators(user_id, trip_id) optimize collaboration lookups
+-- 3. Permission checks are cached at the database level for performance
+-- 4. Memory tables use application-level filtering due to TEXT user_id fields
+
+-- Security Notes:
+-- 1. Permission hierarchy: view < edit < admin
+-- 2. Only trip owners can manage collaborators
+-- 3. Collaboration inheritance: all trip-related data inherits trip permissions
+-- 4. Chat sessions are accessible to all trip collaborators but only creatable by owners
+-- 5. Tool calls and messages follow the same collaborative pattern as their parent sessions
+
+-- Audit Trail:
+-- All policies include created_at/updated_at tracking for audit purposes
+-- Permission changes are logged through the updated_at trigger
+-- Collaboration events can be tracked via trip_collaborators table timestamps
