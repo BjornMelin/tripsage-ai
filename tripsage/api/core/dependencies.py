@@ -6,7 +6,6 @@ for unified authentication across JWT (frontend) and API keys (agents).
 """
 
 from fastapi import Depends, Request
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from tripsage.api.core.config import Settings, get_settings
 from tripsage.api.middlewares.authentication import Principal
@@ -37,11 +36,13 @@ def get_settings_dependency() -> Settings:
 
 
 # Database dependency
-async def get_db() -> AsyncSession:
-    """Get database session as a dependency."""
-    db_service = await get_database_service()
-    async with db_service.get_session() as session:
-        yield session
+async def get_db():
+    """Get database service as a dependency.
+    
+    Note: This returns DatabaseService, not AsyncSession.
+    The name is kept for compatibility but the return type has changed.
+    """
+    return await get_database_service()
 
 
 # Session memory dependency
