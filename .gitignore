@@ -164,4 +164,5 @@ worktrees/
 
 # Archived local files
 .archived/
+ARCHIVED_DOCS/
 repomix-output.*
