@@ -85,3 +85,76 @@ CREATE INDEX idx_session_memories_user_id ON session_memories(user_id);
 CREATE INDEX idx_session_memories_embedding ON session_memories 
 USING ivfflat (embedding vector_cosine_ops) 
 WITH (lists = 100);
+
+-- ===========================
+-- TRIP COLLABORATION INDEXES
+-- ===========================
+
+-- Trip collaborators table indexes
+CREATE INDEX idx_trip_collaborators_trip_id ON trip_collaborators(trip_id);
+CREATE INDEX idx_trip_collaborators_user_id ON trip_collaborators(user_id);
+CREATE INDEX idx_trip_collaborators_added_by ON trip_collaborators(added_by);
+CREATE INDEX idx_trip_collaborators_permission ON trip_collaborators(permission_level);
+CREATE INDEX idx_trip_collaborators_added_at ON trip_collaborators(added_at DESC);
+
+-- Composite indexes for optimal collaboration query performance
+CREATE INDEX idx_trip_collaborators_user_trip ON trip_collaborators(user_id, trip_id);
+CREATE INDEX idx_trip_collaborators_trip_permission ON trip_collaborators(trip_id, permission_level);
+CREATE INDEX idx_trip_collaborators_user_permission ON trip_collaborators(user_id, permission_level);
+
+-- Index for permission hierarchy queries
+CREATE INDEX idx_trip_collaborators_permission_hierarchy ON trip_collaborators(
+    user_id, 
+    trip_id, 
+    CASE permission_level 
+        WHEN 'admin' THEN 3 
+        WHEN 'edit' THEN 2 
+        WHEN 'view' THEN 1 
+        ELSE 0 
+    END DESC
+);
+
+-- ===========================
+-- PERFORMANCE MONITORING INDEXES
+-- ===========================
+
+-- Indexes for common query patterns and performance monitoring
+
+-- Cross-table collaboration query optimization
+CREATE INDEX idx_trips_collaborators_join ON trips(id) 
+WHERE id IN (SELECT trip_id FROM trip_collaborators);
+
+-- Active sessions tracking
+CREATE INDEX idx_active_chat_sessions ON chat_sessions(user_id, trip_id, created_at DESC) 
+WHERE ended_at IS NULL;
+
+-- Recent activity tracking
+CREATE INDEX idx_recent_activity_trips ON trips(user_id, updated_at DESC) 
+WHERE status IN ('planning', 'booked');
+
+CREATE INDEX idx_recent_activity_messages ON chat_messages(created_at DESC) 
+WHERE created_at > NOW() - INTERVAL '24 hours';
+
+-- Booking status tracking
+CREATE INDEX idx_pending_bookings_flights ON flights(trip_id, booking_status, created_at DESC) 
+WHERE booking_status IN ('available', 'reserved');
+
+CREATE INDEX idx_pending_bookings_accommodations ON accommodations(trip_id, booking_status, created_at DESC) 
+WHERE booking_status IN ('available', 'reserved');
+
+-- ===========================
+-- INDEX MAINTENANCE COMMENTS
+-- ===========================
+
+-- Performance Notes:
+-- 1. Collaboration indexes are optimized for the most common query patterns
+-- 2. Composite indexes follow the selectivity order: most selective columns first
+-- 3. Partial indexes are used where appropriate to reduce index size
+-- 4. Vector indexes use IVFFlat with list counts optimized for expected data volume
+-- 5. GIN indexes are used for JSONB and text search functionality
+-- 6. All date/time columns use DESC ordering for recent-first queries
+
+-- Monitoring:
+-- Use pg_stat_user_indexes to monitor index usage
+-- Use EXPLAIN ANALYZE to verify index usage in query plans
+-- Regular ANALYZE is recommended for optimal query planning
