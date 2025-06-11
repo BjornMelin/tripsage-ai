@@ -6,14 +6,12 @@ including collaboration features, permission-based access control, multi-user
 trip sharing scenarios, error handling, authentication, and authorization.
 """
 
-import json
 from datetime import date, datetime, timezone
-from unittest.mock import AsyncMock, MagicMock, Mock
+from unittest.mock import AsyncMock, MagicMock
 from uuid import UUID, uuid4
 
 import pytest
-from fastapi import HTTPException, status
-from httpx import AsyncClient
+from fastapi import HTTPException
 
 from tripsage.api.middlewares.authentication import Principal
 from tripsage.api.routers.trips import (
@@ -304,7 +302,9 @@ class TestTripsRouterComprehensive:
         )
 
         mock_trip_service.update_trip.assert_called_once_with(
-            user_id="user456", trip_id=str(trip_id), request={"title": "Updated by Collaborator"}
+            user_id="user456",
+            trip_id=str(trip_id),
+            request={"title": "Updated by Collaborator"},
         )
         assert result.title == "Tokyo Adventure"
 
@@ -392,7 +392,9 @@ class TestTripsRouterComprehensive:
         # Mock the duplication result
         mock_trip_service.create_trip.return_value = sample_shared_trip_response
 
-        result = await duplicate_trip(trip_id, mock_secondary_principal, mock_trip_service)
+        result = await duplicate_trip(
+            trip_id, mock_secondary_principal, mock_trip_service
+        )
 
         # Verify get_trip was called for access check
         mock_trip_service.get_trip.assert_called_once_with(
@@ -482,7 +484,9 @@ class TestTripsRouterComprehensive:
         mock_trip_service.update_trip.return_value = None
 
         with pytest.raises(HTTPException) as exc_info:
-            await update_trip(trip_id, update_request, mock_principal, mock_trip_service)
+            await update_trip(
+                trip_id, update_request, mock_principal, mock_trip_service
+            )
 
         assert exc_info.value.status_code == 404
         assert exc_info.value.detail == "Trip not found"
@@ -496,7 +500,9 @@ class TestTripsRouterComprehensive:
         )
 
         with pytest.raises(ValueError, match="End date must be after start date"):
-            await update_trip(trip_id, update_request, mock_principal, mock_trip_service)
+            await update_trip(
+                trip_id, update_request, mock_principal, mock_trip_service
+            )
 
     async def test_get_trip_service_error(self, mock_principal, mock_trip_service):
         """Test get trip with service error."""
@@ -617,7 +623,9 @@ class TestTripsRouterComprehensive:
         )
         mock_trip_service.create_trip.return_value = sample_shared_trip_response
 
-        created_trip = await create_trip(trip_request, mock_principal, mock_trip_service)
+        created_trip = await create_trip(
+            trip_request, mock_principal, mock_trip_service
+        )
         assert created_trip.title == "Tokyo Adventure"
 
         # Step 2: Update trip
@@ -653,7 +661,9 @@ class TestTripsRouterComprehensive:
         assert owner_view.user_id == "user123"
 
         # Step 2: Collaborator accesses trip
-        collaborator_view = await get_trip(trip_id, mock_secondary_principal, mock_trip_service)
+        collaborator_view = await get_trip(
+            trip_id, mock_secondary_principal, mock_trip_service
+        )
         assert collaborator_view.user_id == "user123"  # Still owned by original user
 
         # Step 3: Collaborator duplicates trip
@@ -675,8 +685,8 @@ class TestTripsRouterComprehensive:
         mock_trip_service.share_trip.return_value = sample_collaborators
         mock_trip_service.get_trip_collaborators.return_value = sample_collaborators
 
-        # Note: These would be actual collaboration endpoints if they existed in the router
-        # For now, we test that the service supports the functionality
+        # Note: These would be actual collaboration endpoints if they existed in the
+        # router. For now, we test that the service supports the functionality
 
         share_request = TripShareRequest(
             user_emails=["collaborator1@example.com", "collaborator2@example.com"],
@@ -826,9 +836,7 @@ class TestTripsRouterComprehensive:
         assert result["total"] == 0
         assert len(result["items"]) == 0
 
-    async def test_trip_with_no_destinations(
-        self, mock_principal, mock_trip_service
-    ):
+    async def test_trip_with_no_destinations(self, mock_principal, mock_trip_service):
         """Test handling trip with no destinations."""
         # Create minimal trip request
         minimal_request = CreateTripRequest(
@@ -836,9 +844,7 @@ class TestTripsRouterComprehensive:
             description="Trip with minimal data",
             start_date=date(2024, 6, 1),
             end_date=date(2024, 6, 2),
-            destinations=[
-                TripDestination(name="Unknown", country=None, city=None)
-            ],
+            destinations=[TripDestination(name="Unknown", country=None, city=None)],
         )
 
         mock_trip_response = MagicMock()

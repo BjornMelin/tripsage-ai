@@ -67,9 +67,7 @@ class DatabaseConfig(BaseSettings):
         default=SecretStr("test-jwt-secret"),
         description="Supabase JWT secret for local token validation",
     )
-    project_id: Optional[str] = Field(
-        default=None, description="Supabase project ID"
-    )
+    project_id: Optional[str] = Field(default=None, description="Supabase project ID")
     timeout: float = Field(default=60.0)
     auto_refresh_token: bool = Field(default=True)
     persist_session: bool = Field(default=True)

@@ -243,5 +243,9 @@ class UpcomingFlightResponse(BaseModel):
     terminal: Optional[str] = Field(default=None, description="Terminal")
     gate: Optional[str] = Field(default=None, description="Gate")
     # Enhanced trip context fields
-    is_shared_trip: Optional[bool] = Field(default=False, description="Whether the trip is shared")
-    collaborator_count: Optional[int] = Field(default=0, description="Number of trip collaborators")
+    is_shared_trip: Optional[bool] = Field(
+        default=False, description="Whether the trip is shared"
+    )
+    collaborator_count: Optional[int] = Field(
+        default=0, description="Number of trip collaborators"
+    )
