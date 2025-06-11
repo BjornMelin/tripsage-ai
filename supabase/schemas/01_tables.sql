@@ -225,3 +225,21 @@ CREATE TABLE IF NOT EXISTS session_memories (
     
     CONSTRAINT session_memories_content_length CHECK (length(content) <= 8192)
 );
+
+-- ===========================
+-- TRIP COLLABORATION TABLES
+-- ===========================
+
+-- Create trip_collaborators table (for sharing trips with other users)
+CREATE TABLE IF NOT EXISTS trip_collaborators (
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    trip_id BIGINT NOT NULL REFERENCES trips(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    permission_level TEXT NOT NULL DEFAULT 'view',
+    added_by UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    added_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    
+    CONSTRAINT trip_collaborators_permission_check CHECK (permission_level IN ('view', 'edit', 'admin')),
+    CONSTRAINT trip_collaborators_unique UNIQUE (trip_id, user_id)
+);
