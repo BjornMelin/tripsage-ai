@@ -17,9 +17,13 @@ from tripsage.api.middlewares.authentication import Principal
 # Import schemas
 from tripsage.api.schemas.trips import (
     CreateTripRequest,
+    TripCollaboratorResponse,
+    TripCollaboratorsListResponse,
+    TripCollaboratorUpdateRequest,
     TripListResponse,
     TripPreferencesRequest,
     TripResponse,
+    TripShareRequest,
     TripSuggestionResponse,
     TripSummaryResponse,
     UpdateTripRequest,
@@ -902,3 +906,311 @@ def _adapt_trip_response(core_response) -> TripResponse:
         created_at=created_at,
         updated_at=updated_at,
     )
+
+
+# ===== Trip Collaboration Endpoints =====
+
+
+@router.post("/{trip_id}/share", response_model=List[TripCollaboratorResponse])
+async def share_trip(
+    trip_id: UUID,
+    share_request: TripShareRequest,
+    principal: Principal = require_principal_dep,
+    trip_service: TripService = Depends(get_trip_service),
+):
+    """Share a trip with other users.
+
+    Only the trip owner can share their trip with others.
+
+    Args:
+        trip_id: Trip ID
+        share_request: Share request with user emails and permissions
+        principal: Current authenticated principal
+        trip_service: Trip service instance
+
+    Returns:
+        List of successfully added collaborators
+
+    Raises:
+        HTTPException: If not authorized or trip not found
+    """
+    logger.info(f"Sharing trip {trip_id} by user: {principal.user_id}")
+
+    try:
+        # Import the core model for sharing
+        from tripsage_core.services.business.trip_service import (
+            TripShareRequest as CoreTripShareRequest,
+        )
+
+        # Convert core service response to API response
+        core_share_request = CoreTripShareRequest(
+            user_emails=share_request.user_emails,
+            permission_level=share_request.permission_level,
+            message=share_request.message,
+        )
+
+        collaborators = await trip_service.share_trip(
+            trip_id=str(trip_id),
+            owner_id=principal.user_id,
+            share_request=core_share_request,
+        )
+
+        # Convert to API response models
+        response_collaborators = []
+        for collab in collaborators:
+            response_collaborators.append(
+                TripCollaboratorResponse(
+                    user_id=UUID(collab.user_id),
+                    email=collab.email,
+                    name=None,  # TODO: Get from user service
+                    permission_level=collab.permission_level,
+                    added_by=UUID(principal.user_id),
+                    added_at=collab.added_at,
+                    is_active=True,
+                )
+            )
+
+        return response_collaborators
+
+    except Exception as e:
+        logger.error(f"Failed to share trip: {str(e)}")
+        if "permission" in str(e).lower() or "authorization" in str(e).lower():
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=str(e),
+            ) from e
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to share trip",
+        ) from e
+
+
+@router.get("/{trip_id}/collaborators", response_model=TripCollaboratorsListResponse)
+async def list_trip_collaborators(
+    trip_id: UUID,
+    principal: Principal = require_principal_dep,
+    trip_service: TripService = Depends(get_trip_service),
+):
+    """List all collaborators for a trip.
+
+    Accessible by trip owner and collaborators with appropriate permissions.
+
+    Args:
+        trip_id: Trip ID
+        principal: Current authenticated principal
+        trip_service: Trip service instance
+
+    Returns:
+        List of trip collaborators with their permissions
+
+    Raises:
+        HTTPException: If not authorized or trip not found
+    """
+    logger.info(
+        f"Listing collaborators for trip {trip_id} by user: {principal.user_id}"
+    )
+
+    try:
+        # Get trip to verify access and get owner ID
+        trip = await trip_service.get_trip(
+            trip_id=str(trip_id),
+            user_id=principal.user_id,
+        )
+
+        if not trip:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Trip not found",
+            )
+
+        # Get collaborators
+        collaborators = await trip_service.get_trip_collaborators(
+            trip_id=str(trip_id),
+            user_id=principal.user_id,
+        )
+
+        # Convert to API response models
+        response_collaborators = []
+        for collab in collaborators:
+            response_collaborators.append(
+                TripCollaboratorResponse(
+                    user_id=UUID(collab.user_id),
+                    email=collab.email,
+                    name=None,  # TODO: Get from user service
+                    permission_level=collab.permission_level,
+                    added_by=UUID(
+                        trip.user_id
+                    ),  # TODO: Track who added each collaborator
+                    added_at=collab.added_at,
+                    is_active=True,
+                )
+            )
+
+        return TripCollaboratorsListResponse(
+            collaborators=response_collaborators,
+            total=len(response_collaborators),
+            owner_id=UUID(trip.user_id),
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to list trip collaborators: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to list trip collaborators",
+        ) from e
+
+
+@router.put(
+    "/{trip_id}/collaborators/{user_id}", response_model=TripCollaboratorResponse
+)
+async def update_collaborator_permissions(
+    trip_id: UUID,
+    user_id: UUID,
+    update_request: TripCollaboratorUpdateRequest,
+    principal: Principal = require_principal_dep,
+    trip_service: TripService = Depends(get_trip_service),
+):
+    """Update collaborator permissions for a trip.
+
+    Only the trip owner can update collaborator permissions.
+
+    Args:
+        trip_id: Trip ID
+        user_id: Collaborator user ID to update
+        update_request: New permission level
+        principal: Current authenticated principal
+        trip_service: Trip service instance
+
+    Returns:
+        Updated collaborator information
+
+    Raises:
+        HTTPException: If not authorized or collaborator not found
+    """
+    logger.info(
+        f"Updating collaborator {user_id} permissions for trip {trip_id} "
+        f"by user: {principal.user_id}"
+    )
+
+    try:
+        # Verify ownership
+        trip = await trip_service.get_trip(
+            trip_id=str(trip_id),
+            user_id=principal.user_id,
+        )
+
+        if not trip or trip.user_id != principal.user_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Only trip owner can update collaborator permissions",
+            )
+
+        # Update collaborator permissions
+        success = await trip_service.update_collaborator_permissions(
+            trip_id=str(trip_id),
+            collaborator_id=str(user_id),
+            permission_level=update_request.permission_level,
+        )
+
+        if not success:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Collaborator not found",
+            )
+
+        # Get updated collaborator info
+        collaborators = await trip_service.get_trip_collaborators(
+            trip_id=str(trip_id),
+            user_id=principal.user_id,
+        )
+
+        # Find the updated collaborator
+        for collab in collaborators:
+            if collab.user_id == str(user_id):
+                return TripCollaboratorResponse(
+                    user_id=user_id,
+                    email=collab.email,
+                    name=None,
+                    permission_level=update_request.permission_level,
+                    added_by=UUID(trip.user_id),
+                    added_at=collab.added_at,
+                    is_active=True,
+                )
+
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Collaborator not found",
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to update collaborator permissions: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to update collaborator permissions",
+        ) from e
+
+
+@router.delete(
+    "/{trip_id}/collaborators/{user_id}", status_code=status.HTTP_204_NO_CONTENT
+)
+async def remove_collaborator(
+    trip_id: UUID,
+    user_id: UUID,
+    principal: Principal = require_principal_dep,
+    trip_service: TripService = Depends(get_trip_service),
+):
+    """Remove a collaborator from a trip.
+
+    Only the trip owner can remove collaborators.
+
+    Args:
+        trip_id: Trip ID
+        user_id: Collaborator user ID to remove
+        principal: Current authenticated principal
+        trip_service: Trip service instance
+
+    Raises:
+        HTTPException: If not authorized or collaborator not found
+    """
+    logger.info(
+        f"Removing collaborator {user_id} from trip {trip_id} "
+        f"by user: {principal.user_id}"
+    )
+
+    try:
+        # Verify ownership
+        trip = await trip_service.get_trip(
+            trip_id=str(trip_id),
+            user_id=principal.user_id,
+        )
+
+        if not trip or trip.user_id != principal.user_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Only trip owner can remove collaborators",
+            )
+
+        # Remove collaborator
+        success = await trip_service.remove_collaborator(
+            trip_id=str(trip_id),
+            collaborator_id=str(user_id),
+        )
+
+        if not success:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Collaborator not found",
+            )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to remove collaborator: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to remove collaborator",
+        ) from e

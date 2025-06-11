@@ -25,9 +25,9 @@ ALTER TABLE chat_tool_calls ENABLE ROW LEVEL SECURITY;
 -- User management tables
 ALTER TABLE api_keys ENABLE ROW LEVEL SECURITY;
 
--- Memory tables (application-level filtering - no RLS due to TEXT user_id)
--- ALTER TABLE memories ENABLE ROW LEVEL SECURITY; -- Handled at application level
--- ALTER TABLE session_memories ENABLE ROW LEVEL SECURITY; -- Handled at application level
+-- Memory tables (now using UUID user_id with proper foreign key constraints)
+ALTER TABLE memories ENABLE ROW LEVEL SECURITY;
+ALTER TABLE session_memories ENABLE ROW LEVEL SECURITY;
 
 -- ===========================
 -- CORE BUSINESS LOGIC POLICIES
@@ -35,6 +35,13 @@ ALTER TABLE api_keys ENABLE ROW LEVEL SECURITY;
 
 -- API Keys: Users can only manage their own API keys
 CREATE POLICY "Users can only access their own API keys" ON api_keys
+    FOR ALL USING (auth.uid() = user_id);
+
+-- Memory System: Users can only access their own memories
+CREATE POLICY "Users can only access their own memories" ON memories
+    FOR ALL USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can only access their own session memories" ON session_memories
     FOR ALL USING (auth.uid() = user_id);
 
 -- Chat Sessions: Users can access sessions for owned and shared trips
@@ -383,6 +390,78 @@ CREATE POLICY "Users can delete tool calls in their messages" ON chat_tool_calls
             WHERE cs.user_id = auth.uid()
         )
     );
+
+-- ===========================
+-- FILE ATTACHMENTS POLICIES
+-- ===========================
+
+-- Enable RLS on file attachments
+ALTER TABLE file_attachments ENABLE ROW LEVEL SECURITY;
+
+-- File attachments: Users can view files they uploaded or files attached to accessible trips
+CREATE POLICY "Users can view accessible file attachments" ON file_attachments
+    FOR SELECT USING (
+        auth.uid() = user_id OR
+        trip_id IN (
+            SELECT id FROM trips WHERE user_id = auth.uid()
+            UNION
+            SELECT trip_id FROM trip_collaborators WHERE user_id = auth.uid()
+        )
+    );
+
+-- Users can upload files to their own trips or shared trips with edit permission
+CREATE POLICY "Users can upload files to accessible trips" ON file_attachments
+    FOR INSERT WITH CHECK (
+        auth.uid() = user_id AND (
+            trip_id IS NULL OR
+            trip_id IN (
+                SELECT id FROM trips WHERE user_id = auth.uid()
+                UNION
+                SELECT trip_id FROM trip_collaborators 
+                WHERE user_id = auth.uid() 
+                AND permission_level IN ('edit', 'admin')
+            )
+        )
+    );
+
+-- Users can update their own file attachments
+CREATE POLICY "Users can update their own file attachments" ON file_attachments
+    FOR UPDATE USING (auth.uid() = user_id);
+
+-- Users can delete their own file attachments or files from trips they own
+CREATE POLICY "Users can delete accessible file attachments" ON file_attachments
+    FOR DELETE USING (
+        auth.uid() = user_id OR
+        trip_id IN (
+            SELECT id FROM trips WHERE user_id = auth.uid()
+        )
+    );
+
+-- ===========================
+-- SEARCH CACHE POLICIES
+-- ===========================
+
+-- Enable RLS on search cache tables
+ALTER TABLE search_destinations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE search_activities ENABLE ROW LEVEL SECURITY;
+ALTER TABLE search_flights ENABLE ROW LEVEL SECURITY;
+ALTER TABLE search_hotels ENABLE ROW LEVEL SECURITY;
+
+-- Search destinations: Users can only access their own search cache
+CREATE POLICY "Users can only access their own destination searches" ON search_destinations
+    FOR ALL USING (auth.uid() = user_id);
+
+-- Search activities: Users can only access their own search cache
+CREATE POLICY "Users can only access their own activity searches" ON search_activities
+    FOR ALL USING (auth.uid() = user_id);
+
+-- Search flights: Users can only access their own search cache
+CREATE POLICY "Users can only access their own flight searches" ON search_flights
+    FOR ALL USING (auth.uid() = user_id);
+
+-- Search hotels: Users can only access their own search cache
+CREATE POLICY "Users can only access their own hotel searches" ON search_hotels
+    FOR ALL USING (auth.uid() = user_id);
 
 -- ===========================
 -- POLICY DOCUMENTATION
