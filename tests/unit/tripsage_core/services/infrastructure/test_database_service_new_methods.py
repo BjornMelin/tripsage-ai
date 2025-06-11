@@ -18,17 +18,14 @@ Tests include:
 - Business logic validation
 """
 
-import asyncio
 from datetime import datetime, timezone
-from typing import Any, Dict, List
-from uuid import UUID, uuid4
+from unittest.mock import AsyncMock, Mock, patch
+from uuid import uuid4
 
 import pytest
-from unittest.mock import AsyncMock, Mock, patch
 
 from tripsage_core.exceptions.exceptions import (
     CoreDatabaseError,
-    CoreResourceNotFoundError,
     CoreServiceError,
 )
 from tripsage_core.services.infrastructure.database_service import DatabaseService
@@ -40,7 +37,9 @@ class TestDatabaseServiceNewMethods:
     @pytest.fixture
     def mock_database_service(self):
         """Create mock database service for testing."""
-        with patch('tripsage_core.services.infrastructure.database_service.get_settings'):
+        with patch(
+            "tripsage_core.services.infrastructure.database_service.get_settings"
+        ):
             service = DatabaseService()
             service._connected = True
             service._client = Mock()
@@ -81,7 +80,9 @@ class TestGetTripById:
     """Test get_trip_by_id method."""
 
     @pytest.mark.asyncio
-    async def test_get_trip_by_id_success(self, mock_database_service, sample_trip_data):
+    async def test_get_trip_by_id_success(
+        self, mock_database_service, sample_trip_data
+    ):
         """Test successful trip retrieval by ID."""
         # Mock the select method to return trip data
         mock_database_service.select = AsyncMock(return_value=[sample_trip_data])
@@ -133,7 +134,9 @@ class TestGetTripById:
         assert result is None
 
     @pytest.mark.asyncio
-    async def test_get_trip_by_id_with_uuid(self, mock_database_service, sample_trip_data):
+    async def test_get_trip_by_id_with_uuid(
+        self, mock_database_service, sample_trip_data
+    ):
         """Test trip retrieval with UUID string."""
         trip_uuid = str(uuid4())
         sample_trip_data["id"] = trip_uuid
@@ -153,7 +156,9 @@ class TestSearchTrips:
     """Test search_trips method."""
 
     @pytest.mark.asyncio
-    async def test_search_trips_basic_text_search(self, mock_database_service, sample_trip_data):
+    async def test_search_trips_basic_text_search(
+        self, mock_database_service, sample_trip_data
+    ):
         """Test basic text search functionality."""
         mock_client = Mock()
         mock_query = Mock()
@@ -163,7 +168,9 @@ class TestSearchTrips:
         mock_query.offset = Mock(return_value=mock_query)
         mock_query.execute = Mock(return_value=Mock(data=[sample_trip_data]))
 
-        mock_client.table = Mock(return_value=Mock(select=Mock(return_value=mock_query)))
+        mock_client.table = Mock(
+            return_value=Mock(select=Mock(return_value=mock_query))
+        )
         mock_database_service._client = mock_client
 
         # Mock asyncio.to_thread to return the query result directly
@@ -176,7 +183,9 @@ class TestSearchTrips:
         assert result[0]["destination"] == "Paris, France"
 
     @pytest.mark.asyncio
-    async def test_search_trips_user_filter(self, mock_database_service, sample_trip_data):
+    async def test_search_trips_user_filter(
+        self, mock_database_service, sample_trip_data
+    ):
         """Test search with user ID filter."""
         user_id = str(uuid4())
         sample_trip_data["user_id"] = user_id
@@ -188,7 +197,9 @@ class TestSearchTrips:
         mock_query.limit = Mock(return_value=mock_query)
         mock_query.offset = Mock(return_value=mock_query)
 
-        mock_client.table = Mock(return_value=Mock(select=Mock(return_value=mock_query)))
+        mock_client.table = Mock(
+            return_value=Mock(select=Mock(return_value=mock_query))
+        )
         mock_database_service._client = mock_client
 
         with patch("asyncio.to_thread", return_value=Mock(data=[sample_trip_data])):
@@ -199,7 +210,9 @@ class TestSearchTrips:
         assert result[0]["user_id"] == user_id
 
     @pytest.mark.asyncio
-    async def test_search_trips_status_filter(self, mock_database_service, sample_trip_data):
+    async def test_search_trips_status_filter(
+        self, mock_database_service, sample_trip_data
+    ):
         """Test search with status filter."""
         mock_client = Mock()
         mock_query = Mock()
@@ -208,16 +221,20 @@ class TestSearchTrips:
         mock_query.limit = Mock(return_value=mock_query)
         mock_query.offset = Mock(return_value=mock_query)
 
-        mock_client.table = Mock(return_value=Mock(select=Mock(return_value=mock_query)))
+        mock_client.table = Mock(
+            return_value=Mock(select=Mock(return_value=mock_query))
+        )
         mock_database_service._client = mock_client
 
         with patch("asyncio.to_thread", return_value=Mock(data=[sample_trip_data])):
-            result = await mock_database_service.search_trips({"status": "planning"})
+            _result = await mock_database_service.search_trips({"status": "planning"})
 
         mock_query.eq.assert_called_with("status", "planning")
 
     @pytest.mark.asyncio
-    async def test_search_trips_destination_filter(self, mock_database_service, sample_trip_data):
+    async def test_search_trips_destination_filter(
+        self, mock_database_service, sample_trip_data
+    ):
         """Test search with destinations filter."""
         mock_client = Mock()
         mock_query = Mock()
@@ -226,11 +243,13 @@ class TestSearchTrips:
         mock_query.limit = Mock(return_value=mock_query)
         mock_query.offset = Mock(return_value=mock_query)
 
-        mock_client.table = Mock(return_value=Mock(select=Mock(return_value=mock_query)))
+        mock_client.table = Mock(
+            return_value=Mock(select=Mock(return_value=mock_query))
+        )
         mock_database_service._client = mock_client
 
         with patch("asyncio.to_thread", return_value=Mock(data=[sample_trip_data])):
-            result = await mock_database_service.search_trips(
+            _result = await mock_database_service.search_trips(
                 {"destinations": ["Paris", "France"]}
             )
 
@@ -239,7 +258,9 @@ class TestSearchTrips:
         mock_query.or_.assert_called_with(expected_filters)
 
     @pytest.mark.asyncio
-    async def test_search_trips_date_range_filter(self, mock_database_service, sample_trip_data):
+    async def test_search_trips_date_range_filter(
+        self, mock_database_service, sample_trip_data
+    ):
         """Test search with date range filter."""
         mock_client = Mock()
         mock_query = Mock()
@@ -249,15 +270,18 @@ class TestSearchTrips:
         mock_query.limit = Mock(return_value=mock_query)
         mock_query.offset = Mock(return_value=mock_query)
 
-        mock_client.table = Mock(return_value=Mock(select=Mock(return_value=mock_query)))
+        mock_client.table = Mock(
+            return_value=Mock(select=Mock(return_value=mock_query))
+        )
         mock_database_service._client = mock_client
 
         from datetime import date
+
         start_date = date(2025, 7, 1)
         end_date = date(2025, 7, 31)
 
         with patch("asyncio.to_thread", return_value=Mock(data=[sample_trip_data])):
-            result = await mock_database_service.search_trips(
+            _result = await mock_database_service.search_trips(
                 {"date_range": {"start_date": start_date, "end_date": end_date}}
             )
 
@@ -265,7 +289,9 @@ class TestSearchTrips:
         mock_query.lte.assert_called_with("end_date", end_date.isoformat())
 
     @pytest.mark.asyncio
-    async def test_search_trips_tags_filter(self, mock_database_service, sample_trip_data):
+    async def test_search_trips_tags_filter(
+        self, mock_database_service, sample_trip_data
+    ):
         """Test search with tags filter."""
         mock_client = Mock()
         mock_query = Mock()
@@ -274,18 +300,22 @@ class TestSearchTrips:
         mock_query.limit = Mock(return_value=mock_query)
         mock_query.offset = Mock(return_value=mock_query)
 
-        mock_client.table = Mock(return_value=Mock(select=Mock(return_value=mock_query)))
+        mock_client.table = Mock(
+            return_value=Mock(select=Mock(return_value=mock_query))
+        )
         mock_database_service._client = mock_client
 
         with patch("asyncio.to_thread", return_value=Mock(data=[sample_trip_data])):
-            result = await mock_database_service.search_trips(
+            _result = await mock_database_service.search_trips(
                 {"tags": ["vacation", "europe"]}
             )
 
         mock_query.overlaps.assert_called_with("notes", ["vacation", "europe"])
 
     @pytest.mark.asyncio
-    async def test_search_trips_pagination(self, mock_database_service, sample_trip_data):
+    async def test_search_trips_pagination(
+        self, mock_database_service, sample_trip_data
+    ):
         """Test search with pagination."""
         mock_client = Mock()
         mock_query = Mock()
@@ -293,13 +323,13 @@ class TestSearchTrips:
         mock_query.limit = Mock(return_value=mock_query)
         mock_query.offset = Mock(return_value=mock_query)
 
-        mock_client.table = Mock(return_value=Mock(select=Mock(return_value=mock_query)))
+        mock_client.table = Mock(
+            return_value=Mock(select=Mock(return_value=mock_query))
+        )
         mock_database_service._client = mock_client
 
         with patch("asyncio.to_thread", return_value=Mock(data=[sample_trip_data])):
-            result = await mock_database_service.search_trips(
-                {}, limit=20, offset=40
-            )
+            _result = await mock_database_service.search_trips({}, limit=20, offset=40)
 
         mock_query.limit.assert_called_with(20)
         mock_query.offset.assert_called_with(40)
@@ -324,7 +354,9 @@ class TestGetTripCollaborators:
     """Test get_trip_collaborators method."""
 
     @pytest.mark.asyncio
-    async def test_get_trip_collaborators_success(self, mock_database_service, sample_collaborator_data):
+    async def test_get_trip_collaborators_success(
+        self, mock_database_service, sample_collaborator_data
+    ):
         """Test successful collaborator retrieval."""
         collaborators = [
             sample_collaborator_data,
@@ -412,9 +444,7 @@ class TestGetTripRelatedCounts:
     @pytest.mark.asyncio
     async def test_get_trip_related_counts_error(self, mock_database_service):
         """Test error handling."""
-        mock_database_service.count = AsyncMock(
-            side_effect=Exception("Database error")
-        )
+        mock_database_service.count = AsyncMock(side_effect=Exception("Database error"))
 
         with pytest.raises(CoreDatabaseError) as exc_info:
             await mock_database_service.get_trip_related_counts("trip-123")
@@ -428,20 +458,30 @@ class TestAddTripCollaborator:
     """Test add_trip_collaborator method."""
 
     @pytest.mark.asyncio
-    async def test_add_trip_collaborator_success(self, mock_database_service, sample_collaborator_data):
+    async def test_add_trip_collaborator_success(
+        self, mock_database_service, sample_collaborator_data
+    ):
         """Test successful collaborator addition."""
-        mock_database_service.upsert = AsyncMock(return_value=[sample_collaborator_data])
+        mock_database_service.upsert = AsyncMock(
+            return_value=[sample_collaborator_data]
+        )
 
-        result = await mock_database_service.add_trip_collaborator(sample_collaborator_data)
+        result = await mock_database_service.add_trip_collaborator(
+            sample_collaborator_data
+        )
 
         mock_database_service.upsert.assert_called_once_with(
-            "trip_collaborators", sample_collaborator_data, on_conflict="trip_id,user_id"
+            "trip_collaborators",
+            sample_collaborator_data,
+            on_conflict="trip_id,user_id",
         )
 
         assert result == sample_collaborator_data
 
     @pytest.mark.asyncio
-    async def test_add_trip_collaborator_missing_required_field(self, mock_database_service):
+    async def test_add_trip_collaborator_missing_required_field(
+        self, mock_database_service
+    ):
         """Test validation for missing required fields."""
         # Missing trip_id
         incomplete_data = {
@@ -458,7 +498,9 @@ class TestAddTripCollaborator:
         assert "Missing required field: trip_id" in error.message
 
     @pytest.mark.asyncio
-    async def test_add_trip_collaborator_all_required_fields_missing(self, mock_database_service):
+    async def test_add_trip_collaborator_all_required_fields_missing(
+        self, mock_database_service
+    ):
         """Test when multiple required fields are missing."""
         # Only has permission_level
         incomplete_data = {"permission_level": "edit"}
@@ -472,7 +514,9 @@ class TestAddTripCollaborator:
         assert "Missing required field:" in error.message
 
     @pytest.mark.asyncio
-    async def test_add_trip_collaborator_upsert_error(self, mock_database_service, sample_collaborator_data):
+    async def test_add_trip_collaborator_upsert_error(
+        self, mock_database_service, sample_collaborator_data
+    ):
         """Test upsert operation error handling."""
         mock_database_service.upsert = AsyncMock(
             side_effect=Exception("Constraint violation")
@@ -487,11 +531,15 @@ class TestAddTripCollaborator:
         assert "Constraint violation" in str(error.details)
 
     @pytest.mark.asyncio
-    async def test_add_trip_collaborator_empty_result(self, mock_database_service, sample_collaborator_data):
+    async def test_add_trip_collaborator_empty_result(
+        self, mock_database_service, sample_collaborator_data
+    ):
         """Test when upsert returns empty result."""
         mock_database_service.upsert = AsyncMock(return_value=[])
 
-        result = await mock_database_service.add_trip_collaborator(sample_collaborator_data)
+        result = await mock_database_service.add_trip_collaborator(
+            sample_collaborator_data
+        )
 
         assert result == {}
 
@@ -519,9 +567,13 @@ class TestGetTripCollaborator:
     """Test get_trip_collaborator method."""
 
     @pytest.mark.asyncio
-    async def test_get_trip_collaborator_success(self, mock_database_service, sample_collaborator_data):
+    async def test_get_trip_collaborator_success(
+        self, mock_database_service, sample_collaborator_data
+    ):
         """Test successful specific collaborator retrieval."""
-        mock_database_service.select = AsyncMock(return_value=[sample_collaborator_data])
+        mock_database_service.select = AsyncMock(
+            return_value=[sample_collaborator_data]
+        )
 
         result = await mock_database_service.get_trip_collaborator(
             "trip-123", sample_collaborator_data["user_id"]
@@ -561,10 +613,15 @@ class TestGetTripCollaborator:
 
         error = exc_info.value
         assert error.code == "GET_COLLABORATOR_FAILED"
-        assert f"Failed to get collaborator for trip {trip_id} and user {user_id}" in error.message
+        assert (
+            f"Failed to get collaborator for trip {trip_id} and user {user_id}"
+            in error.message
+        )
 
     @pytest.mark.asyncio
-    async def test_get_trip_collaborator_with_uuid_objects(self, mock_database_service, sample_collaborator_data):
+    async def test_get_trip_collaborator_with_uuid_objects(
+        self, mock_database_service, sample_collaborator_data
+    ):
         """Test with UUID objects for trip_id and user_id."""
         trip_uuid = uuid4()
         user_uuid = uuid4()
@@ -572,7 +629,9 @@ class TestGetTripCollaborator:
         sample_collaborator_data["trip_id"] = str(trip_uuid)
         sample_collaborator_data["user_id"] = str(user_uuid)
 
-        mock_database_service.select = AsyncMock(return_value=[sample_collaborator_data])
+        mock_database_service.select = AsyncMock(
+            return_value=[sample_collaborator_data]
+        )
 
         result = await mock_database_service.get_trip_collaborator(
             str(trip_uuid), str(user_uuid)
@@ -623,10 +682,18 @@ class TestMethodIntegration:
 
         # Mock all method calls
         mock_database_service.get_trip_by_id = AsyncMock(return_value=trip_data)
-        mock_database_service.get_trip_collaborators = AsyncMock(return_value=[collaborator_data])
-        mock_database_service.get_trip_related_counts = AsyncMock(return_value=related_counts)
-        mock_database_service.add_trip_collaborator = AsyncMock(return_value=collaborator_data)
-        mock_database_service.get_trip_collaborator = AsyncMock(return_value=collaborator_data)
+        mock_database_service.get_trip_collaborators = AsyncMock(
+            return_value=[collaborator_data]
+        )
+        mock_database_service.get_trip_related_counts = AsyncMock(
+            return_value=related_counts
+        )
+        mock_database_service.add_trip_collaborator = AsyncMock(
+            return_value=collaborator_data
+        )
+        mock_database_service.get_trip_collaborator = AsyncMock(
+            return_value=collaborator_data
+        )
 
         # Execute workflow
         # 1. Get trip
@@ -691,7 +758,9 @@ class TestMethodIntegration:
         # Setup mocks
         mock_database_service.search_trips = AsyncMock(return_value=search_results)
         mock_database_service.get_trip_by_id = AsyncMock(return_value=trip_details)
-        mock_database_service.get_trip_collaborators = AsyncMock(return_value=collaborators)
+        mock_database_service.get_trip_collaborators = AsyncMock(
+            return_value=collaborators
+        )
         mock_database_service.get_trip_related_counts = AsyncMock(return_value=counts)
 
         # Execute workflow
@@ -705,7 +774,9 @@ class TestMethodIntegration:
         assert detailed_trip["destination"] == "Paris"
 
         # 3. Get collaborators and counts
-        trip_collaborators = await mock_database_service.get_trip_collaborators(first_trip_id)
+        trip_collaborators = await mock_database_service.get_trip_collaborators(
+            first_trip_id
+        )
         trip_counts = await mock_database_service.get_trip_related_counts(first_trip_id)
 
         assert len(trip_collaborators) == 2
@@ -719,7 +790,9 @@ class TestErrorHandlingAndEdgeCases:
     @pytest.mark.asyncio
     async def test_all_methods_not_connected(self):
         """Test all methods handle not connected state."""
-        with patch('tripsage_core.services.infrastructure.database_service.get_settings'):
+        with patch(
+            "tripsage_core.services.infrastructure.database_service.get_settings"
+        ):
             service = DatabaseService()
             service._connected = False
 
@@ -727,20 +800,35 @@ class TestErrorHandlingAndEdgeCases:
             result = await service.get_trip_by_id("trip-123")
             assert result is None
 
-            # Test methods that call ensure_connected - they should raise when connection fails
+            # Test methods that call ensure_connected - they should raise when
+            # connection fails
             methods_to_test = [
                 ("search_trips", ({"query": "test"},)),
                 ("get_trip_collaborators", ("trip-123",)),
                 ("get_trip_related_counts", ("trip-123",)),
-                ("add_trip_collaborator", ({"trip_id": 123, "user_id": str(uuid4()), "permission_level": "edit", "added_by": str(uuid4())},)),
+                (
+                    "add_trip_collaborator",
+                    (
+                        {
+                            "trip_id": 123,
+                            "user_id": str(uuid4()),
+                            "permission_level": "edit",
+                            "added_by": str(uuid4()),
+                        },
+                    ),
+                ),
                 ("get_trip_collaborator", ("trip-123", str(uuid4()))),
             ]
 
             for method_name, args in methods_to_test:
                 method = getattr(service, method_name)
-                
+
                 # Mock ensure_connected to fail
-                with patch.object(service, 'ensure_connected', side_effect=CoreServiceError("Not connected")):
+                with patch.object(
+                    service,
+                    "ensure_connected",
+                    side_effect=CoreServiceError("Not connected"),
+                ):
                     with pytest.raises(CoreServiceError):
                         await method(*args)
 
@@ -753,7 +841,9 @@ class TestErrorHandlingAndEdgeCases:
         mock_query.limit = Mock(return_value=mock_query)
         mock_query.offset = Mock(return_value=mock_query)
 
-        mock_client.table = Mock(return_value=Mock(select=Mock(return_value=mock_query)))
+        mock_client.table = Mock(
+            return_value=Mock(select=Mock(return_value=mock_query))
+        )
         mock_database_service._client = mock_client
 
         with patch("asyncio.to_thread", return_value=Mock(data=[])):
@@ -771,7 +861,9 @@ class TestErrorHandlingAndEdgeCases:
         mock_query.limit = Mock(return_value=mock_query)
         mock_query.offset = Mock(return_value=mock_query)
 
-        mock_client.table = Mock(return_value=Mock(select=Mock(return_value=mock_query)))
+        mock_client.table = Mock(
+            return_value=Mock(select=Mock(return_value=mock_query))
+        )
         mock_database_service._client = mock_client
 
         # Filters with None values should be ignored
@@ -791,6 +883,7 @@ class TestErrorHandlingAndEdgeCases:
     @pytest.mark.asyncio
     async def test_get_trip_related_counts_partial_failure(self, mock_database_service):
         """Test when some count operations fail."""
+
         # Mock count to fail on specific tables
         async def mock_count_with_failure(table, filters):
             if table == "itinerary_items":
@@ -804,7 +897,9 @@ class TestErrorHandlingAndEdgeCases:
             await mock_database_service.get_trip_related_counts("trip-123")
 
     @pytest.mark.asyncio
-    async def test_add_trip_collaborator_core_database_error_propagation(self, mock_database_service):
+    async def test_add_trip_collaborator_core_database_error_propagation(
+        self, mock_database_service
+    ):
         """Test that CoreDatabaseError is propagated as-is."""
         sample_data = {
             "trip_id": "trip-123",
@@ -833,21 +928,25 @@ class TestErrorHandlingAndEdgeCases:
         """Test parameter validation for all methods."""
         # Test empty/invalid trip IDs
         invalid_trip_ids = ["", None, "   ", "invalid-id-format"]
-        
+
         # get_trip_by_id should handle invalid IDs gracefully
         for invalid_id in invalid_trip_ids:
-            if invalid_id is not None:  # None would cause TypeError in string operations
+            if (
+                invalid_id is not None
+            ):  # None would cause TypeError in string operations
                 mock_database_service.select = AsyncMock(return_value=[])
                 result = await mock_database_service.get_trip_by_id(invalid_id)
                 # Should return None for any ID that doesn't exist
                 assert result is None
 
     @pytest.mark.asyncio
-    async def test_search_trips_complex_filter_combinations(self, mock_database_service):
+    async def test_search_trips_complex_filter_combinations(
+        self, mock_database_service
+    ):
         """Test complex filter combinations."""
         mock_client = Mock()
         mock_query = Mock()
-        
+
         # Mock all query methods
         mock_query.eq = Mock(return_value=mock_query)
         mock_query.or_ = Mock(return_value=mock_query)
@@ -858,7 +957,9 @@ class TestErrorHandlingAndEdgeCases:
         mock_query.limit = Mock(return_value=mock_query)
         mock_query.offset = Mock(return_value=mock_query)
 
-        mock_client.table = Mock(return_value=Mock(select=Mock(return_value=mock_query)))
+        mock_client.table = Mock(
+            return_value=Mock(select=Mock(return_value=mock_query))
+        )
         mock_database_service._client = mock_client
 
         from datetime import date
@@ -872,12 +973,14 @@ class TestErrorHandlingAndEdgeCases:
             "tags": ["europe", "summer"],
             "date_range": {
                 "start_date": date(2025, 6, 1),
-                "end_date": date(2025, 8, 31)
-            }
+                "end_date": date(2025, 8, 31),
+            },
         }
 
         with patch("asyncio.to_thread", return_value=Mock(data=[])):
-            result = await mock_database_service.search_trips(complex_filters, limit=25, offset=50)
+            _result = await mock_database_service.search_trips(
+                complex_filters, limit=25, offset=50
+            )
 
         # Verify all filter methods were called
         assert mock_query.eq.call_count >= 2  # user_id, status, visibility

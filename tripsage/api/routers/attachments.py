@@ -323,8 +323,9 @@ async def download_file(
     Returns the file content with appropriate headers for download.
     """
     try:
-        from fastapi.responses import StreamingResponse
         import io
+
+        from fastapi.responses import StreamingResponse
 
         user_id = get_principal_id(principal)
 
@@ -345,7 +346,7 @@ async def download_file(
             )
 
         # Create streaming response
-        file_stream = io.BytesIO(file_content)
+        _file_stream = io.BytesIO(file_content)
 
         headers = {
             "Content-Disposition": f'attachment; filename="{file_info.original_filename}"',

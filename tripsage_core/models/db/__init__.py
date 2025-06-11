@@ -67,7 +67,6 @@ from .transportation import (
 
 # Trip models
 from .trip import Trip
-from .trip_comparison import TripComparison
 
 # Trip management models
 from .trip_collaborator import (
@@ -76,6 +75,7 @@ from .trip_collaborator import (
     TripCollaboratorDB,
     TripCollaboratorUpdate,
 )
+from .trip_comparison import TripComparison
 from .trip_note import TripNote
 from .user import User, UserRole
 

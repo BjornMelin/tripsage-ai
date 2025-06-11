@@ -965,9 +965,7 @@ class TestDatabaseService:
     # Tests for get_trip_by_id
 
     @pytest.mark.asyncio
-    async def test_get_trip_by_id_success(
-        self, database_service, mock_supabase_client
-    ):
+    async def test_get_trip_by_id_success(self, database_service, mock_supabase_client):
         """Test successful trip retrieval by ID."""
         trip_id = str(uuid4())
         expected_trip = {"id": trip_id, "name": "Test Trip"}
@@ -1024,10 +1022,10 @@ class TestDatabaseService:
         """Test trip search with text query."""
         search_filters = {"query": "Paris"}
         expected_trips = [{"id": str(uuid4()), "destination": "Paris"}]
-        
+
         # Reset the mock to ensure clean state
         mock_supabase_client.reset_mock()
-        
+
         # Set up the chain for search_trips which includes order and limit
         final_mock = Mock()
         final_mock.execute.return_value = Mock(data=expected_trips)
@@ -1060,10 +1058,7 @@ class TestDatabaseService:
         start_date = datetime(2024, 7, 1)
         end_date = datetime(2024, 7, 31)
         search_filters = {
-            "date_range": {
-                "start_date": start_date,
-                "end_date": end_date
-            }
+            "date_range": {"start_date": start_date, "end_date": end_date}
         }
         expected_trips = [{"id": str(uuid4())}]
         mock_supabase_client.execute.return_value = Mock(data=expected_trips)
@@ -1131,14 +1126,14 @@ class TestDatabaseService:
     ):
         """Test successful trip related counts retrieval."""
         trip_id = str(uuid4())
-        
+
         # Mock multiple count operations with different return values
         mock_supabase_client.execute.side_effect = [
-            Mock(count=5),   # itinerary_count
-            Mock(count=3),   # flight_count
-            Mock(count=2),   # accommodation_count
-            Mock(count=1),   # transportation_count
-            Mock(count=4),   # collaborator_count
+            Mock(count=5),  # itinerary_count
+            Mock(count=3),  # flight_count
+            Mock(count=2),  # accommodation_count
+            Mock(count=1),  # transportation_count
+            Mock(count=4),  # collaborator_count
         ]
 
         result = await database_service.get_trip_related_counts(trip_id)
@@ -1158,14 +1153,14 @@ class TestDatabaseService:
     ):
         """Test trip related counts with all zero counts."""
         trip_id = str(uuid4())
-        
+
         # Mock all count operations returning 0
         mock_supabase_client.execute.side_effect = [
-            Mock(count=0),   # itinerary_count
-            Mock(count=0),   # flight_count
-            Mock(count=0),   # accommodation_count
-            Mock(count=0),   # transportation_count
-            Mock(count=0),   # collaborator_count
+            Mock(count=0),  # itinerary_count
+            Mock(count=0),  # flight_count
+            Mock(count=0),  # accommodation_count
+            Mock(count=0),  # transportation_count
+            Mock(count=0),  # collaborator_count
         ]
 
         result = await database_service.get_trip_related_counts(trip_id)
@@ -1211,9 +1206,7 @@ class TestDatabaseService:
         assert result == expected_result[0]
 
     @pytest.mark.asyncio
-    async def test_add_trip_collaborator_missing_required_field(
-        self, database_service
-    ):
+    async def test_add_trip_collaborator_missing_required_field(self, database_service):
         """Test trip collaborator addition with missing required field."""
         incomplete_data = {
             "trip_id": str(uuid4()),
@@ -1252,7 +1245,7 @@ class TestDatabaseService:
         expected_collaborator = {
             "trip_id": trip_id,
             "user_id": user_id,
-            "permission_level": "edit"
+            "permission_level": "edit",
         }
         mock_supabase_client.execute.return_value = Mock(data=[expected_collaborator])
 

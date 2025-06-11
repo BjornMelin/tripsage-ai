@@ -6,13 +6,12 @@ edge cases, authorization boundary testing, permission escalation attempts,
 and security vulnerability prevention.
 """
 
-import json
 from datetime import date, datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import UUID, uuid4
 
 import pytest
-from fastapi import HTTPException, status
+from fastapi import HTTPException
 
 from tripsage.api.middlewares.authentication import Principal
 from tripsage.api.schemas.trips import CreateTripRequest, UpdateTripRequest
@@ -144,7 +143,9 @@ class TestTripsSecurityAuthentication:
             start_date=date(2024, 6, 1),
             end_date=date(2024, 6, 10),
             destinations=[
-                TripDestination(name="Unauthorized Location", country="None", city="None")
+                TripDestination(
+                    name="Unauthorized Location", country="None", city="None"
+                )
             ],
         )
 
@@ -294,7 +295,8 @@ class TestTripsSecurityAuthentication:
         assert result["total"] == 0
         assert len(result["items"]) == 0
 
-        # Verify service received the malicious query as-is (should be handled by service)
+        # Verify service received the malicious query as-is
+        # (should be handled by service)
         secure_trip_service.search_trips.assert_called_once_with(
             user_id="valid_user_001", query=malicious_query, limit=10
         )
@@ -329,7 +331,8 @@ class TestTripsSecurityAuthentication:
             malicious_trip_data, valid_principal, secure_trip_service
         )
 
-        # Data should be preserved as-is (sanitization should happen at presentation layer)
+        # Data should be preserved as-is
+        # (sanitization should happen at presentation layer)
         assert "<script>" in result.title
         assert "<img" in result.description
 
@@ -364,11 +367,8 @@ class TestTripsSecurityAuthentication:
 
     # ===== INPUT VALIDATION SECURITY TESTS =====
 
-    async def test_oversized_input_handling(
-        self, valid_principal, secure_trip_service
-    ):
+    async def test_oversized_input_handling(self, valid_principal, secure_trip_service):
         """Test handling of oversized inputs."""
-        from tripsage.api.routers.trips import create_trip
 
         # Create oversized trip data
         oversized_title = "X" * 10000  # Very long title
@@ -390,7 +390,6 @@ class TestTripsSecurityAuthentication:
         self, valid_principal, secure_trip_service
     ):
         """Test security implications of invalid date ranges."""
-        from tripsage.api.routers.trips import create_trip
 
         # Attempt to create trip with end date before start date
         with pytest.raises(ValueError, match="End date must be after start date"):
@@ -475,7 +474,11 @@ class TestTripsSecurityAuthentication:
     # ===== RATE LIMITING AND DOS PREVENTION TESTS =====
 
     async def test_rapid_trip_creation_attempts(
-        self, valid_principal, secure_trip_service, sample_trip_data, sample_trip_response
+        self,
+        valid_principal,
+        secure_trip_service,
+        sample_trip_data,
+        sample_trip_response,
     ):
         """Test handling of rapid trip creation attempts."""
         from tripsage.api.routers.trips import create_trip
@@ -491,7 +494,9 @@ class TestTripsSecurityAuthentication:
                 start_date=date(2024, 6, 1),
                 end_date=date(2024, 6, 10),
                 destinations=[
-                    TripDestination(name=f"Location {i}", country="Country", city="City")
+                    TripDestination(
+                        name=f"Location {i}", country="Country", city="City"
+                    )
                 ],
             )
 
@@ -501,9 +506,7 @@ class TestTripsSecurityAuthentication:
         # All should succeed (rate limiting would be handled at middleware level)
         assert len(created_trips) == 10
 
-    async def test_large_search_queries(
-        self, valid_principal, secure_trip_service
-    ):
+    async def test_large_search_queries(self, valid_principal, secure_trip_service):
         """Test handling of large search queries."""
         from tripsage.api.routers.trips import search_trips
 
@@ -539,7 +542,9 @@ class TestTripsSecurityAuthentication:
         sensitive_trip.id = str(trip_id)
         sensitive_trip.user_id = "valid_user_001"
         sensitive_trip.title = "Trip with Sensitive Data"
-        sensitive_trip.description = "Contains SSN: 123-45-6789 and Credit Card: 4111-1111-1111-1111"
+        sensitive_trip.description = (
+            "Contains SSN: 123-45-6789 and Credit Card: 4111-1111-1111-1111"
+        )
         sensitive_trip.destinations = []
         sensitive_trip.start_date = datetime(2024, 6, 1, tzinfo=timezone.utc)
         sensitive_trip.end_date = datetime(2024, 6, 10, tzinfo=timezone.utc)
@@ -552,7 +557,8 @@ class TestTripsSecurityAuthentication:
 
         result = await get_trip(trip_id, valid_principal, secure_trip_service)
 
-        # Data should be returned as-is (sanitization should happen at presentation layer)
+        # Data should be returned as-is
+        # (sanitization should happen at presentation layer)
         assert "SSN" in result.description
         # Service layer should handle sensitive data filtering
 
@@ -566,9 +572,18 @@ class TestTripsSecurityAuthentication:
 
         # Different error scenarios
         error_scenarios = [
-            (NotFoundError("Trip with ID 12345 not found in database table trips"), 500),
-            (PermissionError("User malicious_user_001 denied access to trip 12345"), 500),
-            (Exception("Database connection failed: postgres://user:pass@host/db"), 500),
+            (
+                NotFoundError("Trip with ID 12345 not found in database table trips"),
+                500,
+            ),
+            (
+                PermissionError("User malicious_user_001 denied access to trip 12345"),
+                500,
+            ),
+            (
+                Exception("Database connection failed: postgres://user:pass@host/db"),
+                500,
+            ),
         ]
 
         for error, expected_status in error_scenarios:
@@ -705,9 +720,9 @@ class TestTripsSecurityAuthentication:
         """Test complete security workflow from creation to access control."""
         from tripsage.api.routers.trips import (
             create_trip,
+            delete_trip,
             get_trip,
             update_trip,
-            delete_trip,
         )
 
         # Step 1: Valid user creates trip
@@ -732,7 +747,9 @@ class TestTripsSecurityAuthentication:
         malicious_update = UpdateTripRequest(title="Hacked Trip")
         secure_trip_service.update_trip.side_effect = PermissionError("Access denied")
         with pytest.raises(HTTPException):
-            await update_trip(trip_id, malicious_update, malicious_principal, secure_trip_service)
+            await update_trip(
+                trip_id, malicious_update, malicious_principal, secure_trip_service
+            )
 
         # Step 5: Malicious user cannot delete the trip
         secure_trip_service.delete_trip.side_effect = PermissionError("Access denied")
@@ -748,7 +765,9 @@ class TestTripsSecurityAuthentication:
         assert final_access.id == trip_id
 
         valid_update = UpdateTripRequest(title="Updated by Owner")
-        updated_trip = await update_trip(trip_id, valid_update, valid_principal, secure_trip_service)
+        updated_trip = await update_trip(
+            trip_id, valid_update, valid_principal, secure_trip_service
+        )
         assert updated_trip.id == trip_id
 
         # Final deletion should succeed

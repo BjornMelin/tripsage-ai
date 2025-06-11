@@ -3,7 +3,7 @@ Comprehensive test coverage for TripSage configuration system.
 
 This test suite provides comprehensive coverage for:
 - DatabaseConfig with SUPABASE_ prefix environment variables
-- DragonflyConfig with DRAGONFLY_ prefix environment variables  
+- DragonflyConfig with DRAGONFLY_ prefix environment variables
 - CoreAppSettings integration and validation
 - Environment variable loading and .env file processing
 - SecretStr security handling
@@ -31,9 +31,10 @@ from tripsage_core.config.base_app_settings import (
     init_settings,
 )
 
-
 # Pytest configuration to avoid conflicts
-pytestmark = pytest.mark.filterwarnings("ignore::pytest.PytestUnraisableExceptionWarning")
+pytestmark = pytest.mark.filterwarnings(
+    "ignore::pytest.PytestUnraisableExceptionWarning"
+)
 
 
 class TestDatabaseConfigurationSystem:
@@ -42,7 +43,7 @@ class TestDatabaseConfigurationSystem:
     def test_database_config_defaults(self):
         """Test default DatabaseConfig values."""
         config = DatabaseConfig(_env_file=None)
-        
+
         assert config.url == "https://test-project.supabase.co"
         assert config.anon_key.get_secret_value() == "test-anon-key"
         assert config.service_role_key is None
@@ -74,7 +75,9 @@ class TestDatabaseConfigurationSystem:
 
             assert config.url == "https://custom-project.supabase.co"
             assert config.anon_key.get_secret_value() == "custom-anon-key-123"
-            assert config.service_role_key.get_secret_value() == "custom-service-key-456"
+            assert (
+                config.service_role_key.get_secret_value() == "custom-service-key-456"
+            )
             assert config.jwt_secret.get_secret_value() == "custom-jwt-secret-789"
             assert config.project_id == "custom-project-id"
             assert config.timeout == 30.0
@@ -100,7 +103,9 @@ class TestDatabaseConfigurationSystem:
         # Test property getters
         assert config.supabase_url == "https://compat-test.supabase.co"
         assert config.supabase_anon_key.get_secret_value() == "compat-anon-key"
-        assert config.supabase_service_role_key.get_secret_value() == "compat-service-key"
+        assert (
+            config.supabase_service_role_key.get_secret_value() == "compat-service-key"
+        )
         assert config.supabase_jwt_secret.get_secret_value() == "compat-jwt-secret"
         assert config.supabase_project_id == "compat-project"
         assert config.supabase_timeout == 45.0
@@ -133,10 +138,10 @@ class TestDatabaseConfigurationSystem:
             "SUPABASE_ANON_KEY": "UPPERCASE-KEY",
             "Supabase_Jwt_Secret": "MixedCase-Secret",
         }
-        
+
         with patch.dict(os.environ, env_vars, clear=False):
             config = DatabaseConfig(_env_file=None)
-            
+
             assert config.url == "https://lowercase.supabase.co"
             assert config.anon_key.get_secret_value() == "UPPERCASE-KEY"
             assert config.jwt_secret.get_secret_value() == "MixedCase-Secret"
@@ -144,13 +149,13 @@ class TestDatabaseConfigurationSystem:
     def test_model_config_settings(self):
         """Test SettingsConfigDict configuration is correct."""
         config = DatabaseConfig(_env_file=None)
-        
+
         model_config = config.model_config
-        assert model_config['env_prefix'] == 'SUPABASE_'
-        assert model_config['env_file'] == '.env'
-        assert model_config['env_file_encoding'] == 'utf-8'
-        assert model_config['case_sensitive'] is False
-        assert model_config['extra'] == 'ignore'
+        assert model_config["env_prefix"] == "SUPABASE_"
+        assert model_config["env_file"] == ".env"
+        assert model_config["env_file_encoding"] == "utf-8"
+        assert model_config["case_sensitive"] is False
+        assert model_config["extra"] == "ignore"
 
 
 class TestDragonflyConfigurationSystem:
@@ -159,7 +164,7 @@ class TestDragonflyConfigurationSystem:
     def test_dragonfly_config_defaults(self):
         """Test default DragonflyConfig values."""
         config = DragonflyConfig(_env_file=None)
-        
+
         assert config.url == "redis://localhost:6379/0"
         assert config.password is None
         assert config.ttl_short == 300
@@ -245,13 +250,13 @@ class TestSecretStrSecurityHandling:
         # JSON serialization should hide secrets
         config_dict = config.model_dump()
         config_json_str = str(config_dict)
-        
+
         assert "secret-anon-key" not in config_json_str
         assert "secret-jwt-token" not in config_json_str
 
     def test_secret_str_special_characters(self):
         """Test SecretStr with special characters."""
-        special_secret = "test-key!@#$%^&*()_+{}|:<>?[]\\\";\'"
+        special_secret = "test-key!@#$%^&*()_+{}|:<>?[]\\\";'"
         config = DatabaseConfig(_env_file=None, anon_key=SecretStr(special_secret))
         assert config.anon_key.get_secret_value() == special_secret
 
@@ -259,7 +264,7 @@ class TestSecretStrSecurityHandling:
         """Test SecretStr handling of empty and None values."""
         config = DatabaseConfig(_env_file=None, anon_key=SecretStr(""))
         assert config.anon_key.get_secret_value() == ""
-        
+
         config = DatabaseConfig(_env_file=None)
         assert config.service_role_key is None
 
@@ -269,7 +274,7 @@ class TestEnvironmentFileHandling:
 
     def test_env_file_loading(self):
         """Test loading configuration from .env file."""
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.env', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".env", delete=False) as f:
             f.write("SUPABASE_URL=https://envfile-test.supabase.co\\n")
             f.write("SUPABASE_ANON_KEY=envfile-anon-key\\n")
             f.write("SUPABASE_JWT_SECRET=envfile-jwt-secret\\n")
@@ -278,7 +283,7 @@ class TestEnvironmentFileHandling:
 
         try:
             config = DatabaseConfig(_env_file=temp_env_file)
-            
+
             assert config.url == "https://envfile-test.supabase.co"
             assert config.anon_key.get_secret_value() == "envfile-anon-key"
             assert config.jwt_secret.get_secret_value() == "envfile-jwt-secret"
@@ -288,7 +293,7 @@ class TestEnvironmentFileHandling:
 
     def test_env_file_priority_over_defaults(self):
         """Test that .env file values override defaults."""
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.env', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".env", delete=False) as f:
             f.write("SUPABASE_URL=https://envfile.supabase.co\\n")
             f.write("SUPABASE_ANON_KEY=envfile-key\\n")
             f.write("SUPABASE_TIMEOUT=15.0\\n")
@@ -304,13 +309,17 @@ class TestEnvironmentFileHandling:
 
     def test_environment_variables_override_env_file(self):
         """Test that environment variables override .env file values."""
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.env', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".env", delete=False) as f:
             f.write("SUPABASE_URL=https://envfile.supabase.co\\n")
             f.write("SUPABASE_ANON_KEY=envfile-key\\n")
             temp_env_file = f.name
 
         try:
-            with patch.dict(os.environ, {"SUPABASE_URL": "https://override.supabase.co"}, clear=False):
+            with patch.dict(
+                os.environ,
+                {"SUPABASE_URL": "https://override.supabase.co"},
+                clear=False,
+            ):
                 config = DatabaseConfig(_env_file=temp_env_file)
                 assert config.url == "https://override.supabase.co"  # env override
                 assert config.anon_key.get_secret_value() == "envfile-key"  # from file
@@ -320,14 +329,16 @@ class TestEnvironmentFileHandling:
     def test_missing_env_file_handling(self):
         """Test graceful handling of missing .env file."""
         config = DatabaseConfig(_env_file="/nonexistent/.env")
-        
+
         # Should use default values when .env file doesn't exist
         assert config.url == "https://test-project.supabase.co"
         assert config.anon_key.get_secret_value() == "test-anon-key"
 
     def test_env_file_encoding_utf8(self):
         """Test .env file UTF-8 encoding support."""
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.env', delete=False, encoding='utf-8') as f:
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".env", delete=False, encoding="utf-8"
+        ) as f:
             f.write("SUPABASE_URL=https://üñíçödé.supabase.co\\n")
             f.write("SUPABASE_PROJECT_ID=tëst-prøjëct\\n")
             temp_env_file = f.name
@@ -353,7 +364,7 @@ class TestConfigurationValidation:
         # Invalid environment should raise ValidationError
         with pytest.raises(ValidationError) as exc_info:
             CoreAppSettings(_env_file=None, environment="invalid")
-        
+
         errors = exc_info.value.errors()
         assert len(errors) == 1
         # Pydantic v2 uses different error messages
@@ -369,7 +380,7 @@ class TestConfigurationValidation:
         # Invalid log level should raise ValidationError
         with pytest.raises(ValidationError) as exc_info:
             CoreAppSettings(_env_file=None, log_level="INVALID")
-        
+
         errors = exc_info.value.errors()
         assert len(errors) == 1
         assert errors[0]["type"] in ["literal_error", "value_error"]
@@ -377,7 +388,7 @@ class TestConfigurationValidation:
     def test_configuration_inheritance(self):
         """Test proper inheritance of nested configurations."""
         settings = CoreAppSettings(_env_file=None)
-        
+
         # Verify all nested configurations are properly instantiated
         assert isinstance(settings.database, DatabaseConfig)
         assert isinstance(settings.dragonfly, DragonflyConfig)
@@ -395,12 +406,12 @@ class TestConfigurationValidation:
             "SUPABASE_INVALID_FIELD": "should-be-ignored",
             "SUPABASE_ANOTHER_UNKNOWN": "also-ignored",
         }
-        
+
         with patch.dict(os.environ, env_vars, clear=False):
             # Should not raise validation error due to extra='ignore'
             config = DatabaseConfig(_env_file=None)
             assert config.url == "https://valid.supabase.co"
-            
+
             # Unknown fields should not be accessible
             assert not hasattr(config, "invalid_field")
             assert not hasattr(config, "another_unknown")
@@ -412,7 +423,7 @@ class TestCoreAppSettingsIntegration:
     def test_core_app_settings_defaults(self):
         """Test CoreAppSettings default values."""
         settings = CoreAppSettings(_env_file=None)
-        
+
         assert settings.app_name == "TripSage"
         assert settings.environment == "development"
         assert settings.debug is False
@@ -459,15 +470,19 @@ class TestCoreAppSettingsIntegration:
     def test_base_dir_path_resolution(self):
         """Test base_dir path resolution."""
         settings = CoreAppSettings(_env_file=None)
-        
+
         # base_dir should be a valid Path object pointing to project root
         assert isinstance(settings.base_dir, Path)
         assert settings.base_dir.exists()
-        
+
         # Should point to the project root (containing pyproject.toml or similar)
         potential_markers = ["pyproject.toml", "requirements.txt", "setup.py"]
-        has_marker = any((settings.base_dir / marker).exists() for marker in potential_markers)
-        assert has_marker, f"base_dir {settings.base_dir} doesn't seem to be project root"
+        has_marker = any(
+            (settings.base_dir / marker).exists() for marker in potential_markers
+        )
+        assert has_marker, (
+            f"base_dir {settings.base_dir} doesn't seem to be project root"
+        )
 
     def test_critical_settings_validation(self):
         """Test critical settings validation."""
@@ -482,11 +497,13 @@ class TestCoreAppSettingsIntegration:
             _env_file=None,
             environment="production",
             debug=False,
-            api_key_master_secret=SecretStr("master-secret-for-byok-encryption"),  # default
+            api_key_master_secret=SecretStr(
+                "master-secret-for-byok-encryption"
+            ),  # default
         )
-        
+
         errors = production_settings.validate_critical_settings()
-        
+
         # Should contain security warnings for default secrets in production
         security_errors = [error for error in errors if "secret" in error.lower()]
         assert len(security_errors) > 0
@@ -515,22 +532,24 @@ class TestSettingsCachingAndInitialization:
     def test_init_settings_function(self):
         """Test init_settings function behavior."""
         get_settings.cache_clear()
-        
+
         with patch.dict(os.environ, {"ENVIRONMENT": "testing"}, clear=False):
             settings = init_settings()
-            
+
             assert isinstance(settings, CoreAppSettings)
             assert settings.environment == "testing"
 
     def test_init_settings_validation_failure(self):
         """Test init_settings with validation failures."""
         get_settings.cache_clear()
-        
+
         # Create a scenario that would fail production validation
-        with patch.dict(os.environ, {"ENVIRONMENT": "production", "OPENAI_API_KEY": ""}, clear=False):
+        with patch.dict(
+            os.environ, {"ENVIRONMENT": "production", "OPENAI_API_KEY": ""}, clear=False
+        ):
             with pytest.raises(ValueError) as exc_info:
                 init_settings()
-            
+
             assert "Critical settings validation failed" in str(exc_info.value)
 
 
@@ -544,11 +563,11 @@ class TestEdgeCasesAndErrorHandling:
             "SUPABASE_AUTO_REFRESH_TOKEN": "not-a-boolean",
             "SUPABASE_VECTOR_DIMENSIONS": "not-an-integer",
         }
-        
+
         with patch.dict(os.environ, env_vars, clear=False):
             with pytest.raises(ValidationError) as exc_info:
                 DatabaseConfig(_env_file=None)
-            
+
             errors = exc_info.value.errors()
             # Should have validation errors for invalid types
             assert len(errors) > 0
@@ -557,12 +576,12 @@ class TestEdgeCasesAndErrorHandling:
         """Test handling of Unicode and special characters."""
         special_chars = "!@#$%^&*()_+-=[]{}|;:'\",.<>?/~`"
         unicode_chars = "测试数据🚀✨🎯🔥💎⚡🌟🎨🎭🎪"
-        
+
         env_vars = {
             "SUPABASE_PROJECT_ID": f"test-{special_chars}-{unicode_chars}",
             "SUPABASE_URL": f"https://{unicode_chars}.supabase.co",
         }
-        
+
         with patch.dict(os.environ, env_vars, clear=False):
             config = DatabaseConfig(_env_file=None)
             assert special_chars in config.project_id
@@ -576,7 +595,7 @@ class TestEdgeCasesAndErrorHandling:
             "SUPABASE_URL": f"https://very-long-subdomain-{long_value}.supabase.co",
             "SUPABASE_PROJECT_ID": long_value,
         }
-        
+
         with patch.dict(os.environ, env_vars, clear=False):
             config = DatabaseConfig(_env_file=None)
             assert long_value in config.url
@@ -589,7 +608,7 @@ class TestPerformanceAndCompatibility:
     def test_settings_instantiation_performance(self):
         """Test that settings instantiation is reasonably fast."""
         import time
-        
+
         start_time = time.time()
         for _ in range(50):  # Reduced for test efficiency
             settings = CoreAppSettings(_env_file=None)
@@ -598,7 +617,7 @@ class TestPerformanceAndCompatibility:
             _ = settings.database.url
             _ = settings.dragonfly.url
         end_time = time.time()
-        
+
         # Should be able to create 50 instances in less than 2 seconds
         assert (end_time - start_time) < 2.0
 
@@ -613,7 +632,7 @@ class TestPerformanceAndCompatibility:
             with patch.dict(os.environ, env_vars, clear=False):
                 settings = CoreAppSettings(_env_file=None)
                 settings_list.append(settings)
-        
+
         # Basic sanity check
         assert len(settings_list) == 10
         assert all(isinstance(s, CoreAppSettings) for s in settings_list)

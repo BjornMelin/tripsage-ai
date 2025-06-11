@@ -9,6 +9,7 @@ with 30-40% performance improvement and full API coverage.
 import asyncio
 import logging
 from contextlib import asynccontextmanager
+from datetime import datetime
 from typing import Any, Dict, List, Optional, Union
 
 from supabase import Client, create_client
@@ -537,9 +538,7 @@ class DatabaseService:
 
     async def delete_api_key(self, key_id: str, user_id: str) -> bool:
         """Delete API key by ID with user authorization."""
-        result = await self.delete(
-            "api_keys", {"id": key_id, "user_id": user_id}
-        )
+        result = await self.delete("api_keys", {"id": key_id, "user_id": user_id})
         return len(result) > 0
 
     async def delete_api_key_by_service(self, user_id: str, service_name: str) -> bool:
@@ -565,22 +564,20 @@ class DatabaseService:
         self, key_id: str, user_id: str
     ) -> Optional[Dict[str, Any]]:
         """Get API key by ID with user authorization."""
-        result = await self.select(
-            "api_keys", "*", {"id": key_id, "user_id": user_id}
-        )
+        result = await self.select("api_keys", "*", {"id": key_id, "user_id": user_id})
         return result[0] if result else None
 
     async def update_api_key_last_used(self, key_id: str) -> bool:
         """Update the last_used timestamp for an API key."""
         from datetime import datetime, timezone
-        
+
         result = await self.update(
             "api_keys",
             {"id": key_id},
             {
                 "last_used": datetime.now(timezone.utc).isoformat(),
                 "updated_at": datetime.now(timezone.utc).isoformat(),
-            }
+            },
         )
         return len(result) > 0
 
@@ -589,7 +586,7 @@ class DatabaseService:
     ) -> bool:
         """Update API key validation status."""
         from datetime import datetime, timezone
-        
+
         result = await self.update(
             "api_keys",
             {"id": key_id},
@@ -597,7 +594,7 @@ class DatabaseService:
                 "is_valid": is_valid,
                 "last_validated": validated_at.isoformat(),
                 "updated_at": datetime.now(timezone.utc).isoformat(),
-            }
+            },
         )
         return len(result) > 0
 

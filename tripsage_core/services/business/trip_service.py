@@ -26,9 +26,8 @@ from tripsage_core.exceptions import (
 from tripsage_core.models.base_core_model import TripSageModel
 from tripsage_core.utils.schema_adapters import (
     SchemaAdapter,
-    DatabaseQueryAdapter,
-    validate_schema_compatibility,
     log_schema_usage,
+    validate_schema_compatibility,
 )
 
 logger = logging.getLogger(__name__)
@@ -241,7 +240,7 @@ class TripService:
                 "created_at": datetime.now(timezone.utc).isoformat(),
                 "updated_at": datetime.now(timezone.utc).isoformat(),
             }
-            
+
             # Convert to database format
             db_trip_data = SchemaAdapter.convert_api_trip_to_db(api_trip_data)
 
@@ -852,21 +851,27 @@ class TripService:
         """
         # Validate schema compatibility
         if not validate_schema_compatibility(trip_data):
-            logger.warning(f"Schema compatibility issues with trip {trip_data.get('id')}")
-        
+            logger.warning(
+                f"Schema compatibility issues with trip {trip_data.get('id')}"
+            )
+
         # Convert database format to API format using schema adapter
         api_trip_data = SchemaAdapter.convert_db_trip_to_api(trip_data)
-        
+
         # Log schema usage for monitoring
         id_type = "uuid" if SchemaAdapter.is_uuid(api_trip_data["id"]) else "bigint"
-        log_schema_usage("build_trip_response", id_type, {
-            "title_source": "title" if trip_data.get("title") else "name",
-            "has_uuid": bool(trip_data.get("uuid_id")),
-        })
+        log_schema_usage(
+            "build_trip_response",
+            id_type,
+            {
+                "title_source": "title" if trip_data.get("title") else "name",
+                "has_uuid": bool(trip_data.get("uuid_id")),
+            },
+        )
 
         # Get the proper trip ID for related data queries
         db_trip_id = trip_data.get("id") or trip_data.get("id_bigint")
-        
+
         # Get related counts
         counts = await self.db.get_trip_related_counts(db_trip_id)
 
@@ -894,16 +899,24 @@ class TripService:
             user_id=api_trip_data["user_id"],
             title=api_trip_data["title"],
             description=api_trip_data.get("description"),
-            start_date=datetime.fromisoformat(api_trip_data["start_date"]) if isinstance(api_trip_data["start_date"], str) else api_trip_data["start_date"],
-            end_date=datetime.fromisoformat(api_trip_data["end_date"]) if isinstance(api_trip_data["end_date"], str) else api_trip_data["end_date"],
+            start_date=datetime.fromisoformat(api_trip_data["start_date"])
+            if isinstance(api_trip_data["start_date"], str)
+            else api_trip_data["start_date"],
+            end_date=datetime.fromisoformat(api_trip_data["end_date"])
+            if isinstance(api_trip_data["end_date"], str)
+            else api_trip_data["end_date"],
             destinations=destinations,
             budget=budget,
             status=TripStatus(api_trip_data["status"]),
             visibility=TripVisibility(api_trip_data["visibility"]),
             tags=api_trip_data.get("tags", []),
             preferences=api_trip_data.get("preferences", {}),
-            created_at=datetime.fromisoformat(api_trip_data["created_at"]) if isinstance(api_trip_data["created_at"], str) else api_trip_data["created_at"],
-            updated_at=datetime.fromisoformat(api_trip_data["updated_at"]) if isinstance(api_trip_data["updated_at"], str) else api_trip_data["updated_at"],
+            created_at=datetime.fromisoformat(api_trip_data["created_at"])
+            if isinstance(api_trip_data["created_at"], str)
+            else api_trip_data["created_at"],
+            updated_at=datetime.fromisoformat(api_trip_data["updated_at"])
+            if isinstance(api_trip_data["updated_at"], str)
+            else api_trip_data["updated_at"],
             shared_with=shared_with,
             itinerary_count=counts.get("itinerary_count", 0),
             flight_count=counts.get("flight_count", 0),
