@@ -5,8 +5,9 @@ handling API-specific concerns like model adaptation and FastAPI integration.
 """
 
 import logging
+from datetime import datetime, timezone
 from typing import List, Optional
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from fastapi import Depends
 
@@ -17,6 +18,12 @@ from tripsage_core.exceptions.exceptions import (
 )
 from tripsage_core.exceptions.exceptions import (
     CoreValidationError as ValidationError,
+)
+from tripsage_core.services.business.trip_service import (
+    TripCreateRequest as CoreTripCreateRequest,
+)
+from tripsage_core.services.business.trip_service import (
+    TripLocation,
 )
 from tripsage_core.services.business.trip_service import (
     TripService as CoreTripService,
@@ -269,70 +276,359 @@ class TripService:
             logger.error(f"Failed to search trips: {str(e)}")
             raise ServiceError("Failed to search trips") from e
 
-    def _adapt_create_trip_request(self, request: CreateTripRequest) -> dict:
+    async def get_trip_summary(self, user_id: str, trip_id: UUID) -> Optional[dict]:
+        """Get trip summary.
+
+        Args:
+            user_id: User ID
+            trip_id: Trip ID
+
+        Returns:
+            Trip summary data
+
+        Raises:
+            ServiceError: If retrieval fails
+        """
+        try:
+            logger.info(f"Getting trip summary {trip_id} for user: {user_id}")
+
+            # Get trip first to ensure access
+            trip = await self.get_trip(user_id, trip_id)
+            if not trip:
+                return None
+
+            # Build summary from trip data
+            summary = {
+                "id": str(trip_id),
+                "title": trip.title,
+                "date_range": f"{trip.start_date.strftime('%b %d')}-{trip.end_date.strftime('%d, %Y')}",
+                "duration_days": trip.duration_days,
+                "destinations": [dest.name for dest in trip.destinations],
+                "accommodation_summary": "4-star hotels in city centers",  # TODO: Get from actual data
+                "transportation_summary": "Economy flights, local transit",  # TODO: Get from actual data
+                "budget_summary": {
+                    "total": 5000,  # TODO: Get from trip preferences
+                    "currency": "USD",
+                    "spent": 1500,
+                    "remaining": 3500,
+                    "breakdown": {
+                        "accommodation": {"budget": 2000, "spent": 800},
+                        "transportation": {"budget": 1500, "spent": 700},
+                        "food": {"budget": 1000, "spent": 0},
+                        "activities": {"budget": 500, "spent": 0},
+                    },
+                },
+                "has_itinerary": True,  # TODO: Check actual itinerary
+                "completion_percentage": 75,  # TODO: Calculate actual percentage
+            }
+
+            return summary
+
+        except Exception as e:
+            logger.error(f"Failed to get trip summary: {str(e)}")
+            raise ServiceError("Failed to get trip summary") from e
+
+    async def update_trip_preferences(
+        self, user_id: str, trip_id: UUID, preferences: dict
+    ) -> Optional[TripResponse]:
+        """Update trip preferences.
+
+        Args:
+            user_id: User ID
+            trip_id: Trip ID
+            preferences: Trip preferences
+
+        Returns:
+            Updated trip if successful, None if trip not found
+
+        Raises:
+            ServiceError: If update fails
+        """
+        try:
+            logger.info(f"Updating trip preferences {trip_id} for user: {user_id}")
+
+            # Create update request with preferences
+            from tripsage.api.schemas.requests.trips import UpdateTripRequest
+
+            update_request = UpdateTripRequest()
+            # TODO: Map preferences to update request properly
+
+            # Update via existing update method
+            return await self.update_trip(user_id, trip_id, update_request)
+
+        except Exception as e:
+            logger.error(f"Failed to update trip preferences: {str(e)}")
+            raise ServiceError("Failed to update trip preferences") from e
+
+    async def duplicate_trip(
+        self, user_id: str, trip_id: UUID
+    ) -> Optional[TripResponse]:
+        """Duplicate a trip.
+
+        Args:
+            user_id: User ID
+            trip_id: Trip ID to duplicate
+
+        Returns:
+            Duplicated trip if successful, None if original trip not found
+
+        Raises:
+            ServiceError: If duplication fails
+        """
+        try:
+            logger.info(f"Duplicating trip {trip_id} for user: {user_id}")
+
+            # Get original trip
+            original_trip = await self.get_trip(user_id, trip_id)
+            if not original_trip:
+                return None
+
+            # Create new trip based on original
+            from tripsage.api.schemas.requests.trips import CreateTripRequest
+
+            duplicate_request = CreateTripRequest(
+                title=f"Copy of {original_trip.title}",
+                description=original_trip.description,
+                start_date=original_trip.start_date,
+                end_date=original_trip.end_date,
+                destinations=original_trip.destinations,
+                preferences=original_trip.preferences,
+            )
+
+            return await self.create_trip(user_id, duplicate_request)
+
+        except Exception as e:
+            logger.error(f"Failed to duplicate trip: {str(e)}")
+            raise ServiceError("Failed to duplicate trip") from e
+
+    async def get_trip_itinerary(self, user_id: str, trip_id: UUID) -> Optional[dict]:
+        """Get trip itinerary.
+
+        Args:
+            user_id: User ID
+            trip_id: Trip ID
+
+        Returns:
+            Trip itinerary data
+
+        Raises:
+            ServiceError: If retrieval fails
+        """
+        try:
+            logger.info(f"Getting trip itinerary {trip_id} for user: {user_id}")
+
+            # Get trip first to ensure access
+            trip = await self.get_trip(user_id, trip_id)
+            if not trip:
+                return None
+
+            # TODO: Get actual itinerary data from core service
+            # For now, return mock data
+            itinerary = {
+                "id": str(uuid4()),
+                "trip_id": str(trip_id),
+                "items": [
+                    {
+                        "id": str(uuid4()),
+                        "name": "Visit Eiffel Tower",
+                        "description": "Iconic landmark visit",
+                        "start_time": "2024-06-01T10:00:00Z",
+                        "end_time": "2024-06-01T12:00:00Z",
+                        "location": "Eiffel Tower, Paris",
+                    }
+                ],
+                "total_items": 1,
+            }
+
+            return itinerary
+
+        except Exception as e:
+            logger.error(f"Failed to get trip itinerary: {str(e)}")
+            raise ServiceError("Failed to get trip itinerary") from e
+
+    async def export_trip(
+        self, user_id: str, trip_id: UUID, format: str = "pdf"
+    ) -> Optional[dict]:
+        """Export trip.
+
+        Args:
+            user_id: User ID
+            trip_id: Trip ID
+            format: Export format
+
+        Returns:
+            Export data
+
+        Raises:
+            ServiceError: If export fails
+        """
+        try:
+            logger.info(f"Exporting trip {trip_id} for user: {user_id}")
+
+            # Get trip first to ensure access
+            trip = await self.get_trip(user_id, trip_id)
+            if not trip:
+                return None
+
+            # TODO: Implement actual export functionality
+            # For now, return mock data
+            export_data = {
+                "format": format,
+                "download_url": f"https://example.com/exports/trip-{trip_id}.{format}",
+                "expires_at": "2024-01-02T00:00:00Z",
+            }
+
+            return export_data
+
+        except Exception as e:
+            logger.error(f"Failed to export trip: {str(e)}")
+            raise ServiceError("Failed to export trip") from e
+
+    def _adapt_create_trip_request(
+        self, request: CreateTripRequest
+    ) -> CoreTripCreateRequest:
         """Adapt create trip request to core model."""
-        return {
-            "title": request.title,
-            "description": getattr(request, "description", None),
-            "destination": request.destination,
-            "start_date": request.start_date,
-            "end_date": request.end_date,
-            "budget": getattr(request, "budget", None),
-            "currency": getattr(request, "currency", "USD"),
-            "travelers": getattr(request, "travelers", 1),
-            "trip_type": getattr(request, "trip_type", "leisure"),
-            "preferences": getattr(request, "preferences", {}),
-            "metadata": getattr(request, "metadata", {}),
-        }
+        # Convert date to datetime with timezone
+        start_datetime = datetime.combine(
+            request.start_date, datetime.min.time()
+        ).replace(tzinfo=timezone.utc)
+        end_datetime = datetime.combine(request.end_date, datetime.min.time()).replace(
+            tzinfo=timezone.utc
+        )
+
+        # Convert TripDestination to TripLocation
+        trip_locations = []
+        for dest in request.destinations:
+            coordinates = None
+            if dest.coordinates:
+                coordinates = {
+                    "lat": dest.coordinates.latitude,
+                    "lng": dest.coordinates.longitude,
+                }
+
+            trip_location = TripLocation(
+                name=dest.name,
+                country=dest.country,
+                city=dest.city,
+                coordinates=coordinates,
+                timezone=None,  # Could be populated if available
+            )
+            trip_locations.append(trip_location)
+
+        # Create core trip create request
+        return CoreTripCreateRequest(
+            title=request.title,
+            description=request.description,
+            start_date=start_datetime,
+            end_date=end_datetime,
+            destinations=trip_locations,
+            preferences=request.preferences.model_dump() if request.preferences else {},
+        )
 
     def _adapt_update_trip_request(self, request: UpdateTripRequest) -> dict:
         """Adapt update trip request to core model."""
         updates = {}
 
-        if hasattr(request, "title") and request.title is not None:
+        if request.title is not None:
             updates["title"] = request.title
-        if hasattr(request, "description") and request.description is not None:
+        if request.description is not None:
             updates["description"] = request.description
-        if hasattr(request, "destination") and request.destination is not None:
-            updates["destination"] = request.destination
-        if hasattr(request, "start_date") and request.start_date is not None:
-            updates["start_date"] = request.start_date
-        if hasattr(request, "end_date") and request.end_date is not None:
-            updates["end_date"] = request.end_date
-        if hasattr(request, "budget") and request.budget is not None:
-            updates["budget"] = request.budget
-        if hasattr(request, "currency") and request.currency is not None:
-            updates["currency"] = request.currency
-        if hasattr(request, "travelers") and request.travelers is not None:
-            updates["travelers"] = request.travelers
-        if hasattr(request, "trip_type") and request.trip_type is not None:
-            updates["trip_type"] = request.trip_type
-        if hasattr(request, "preferences") and request.preferences is not None:
-            updates["preferences"] = request.preferences
-        if hasattr(request, "metadata") and request.metadata is not None:
-            updates["metadata"] = request.metadata
+        if request.start_date is not None:
+            # Convert date to datetime with timezone
+            updates["start_date"] = datetime.combine(
+                request.start_date, datetime.min.time()
+            ).replace(tzinfo=timezone.utc)
+        if request.end_date is not None:
+            # Convert date to datetime with timezone
+            updates["end_date"] = datetime.combine(
+                request.end_date, datetime.min.time()
+            ).replace(tzinfo=timezone.utc)
+        if request.destinations is not None:
+            # Convert destinations to TripLocation format
+            trip_locations = []
+            for dest in request.destinations:
+                coordinates = None
+                if dest.coordinates:
+                    coordinates = {
+                        "lat": dest.coordinates.latitude,
+                        "lng": dest.coordinates.longitude,
+                    }
+
+                trip_location = TripLocation(
+                    name=dest.name,
+                    country=dest.country,
+                    city=dest.city,
+                    coordinates=coordinates,
+                    timezone=None,
+                )
+                trip_locations.append(trip_location)
+            updates["destinations"] = trip_locations
 
         return updates
 
     def _adapt_trip_response(self, core_response) -> TripResponse:
         """Adapt core trip response to API model."""
+        from tripsage_core.models.schemas_common.geographic import Coordinates
+        from tripsage_core.models.schemas_common.travel import TripDestination
+
+        # Convert TripLocation to TripDestination
+        api_destinations = []
+        if hasattr(core_response, "destinations") and core_response.destinations:
+            for location in core_response.destinations:
+                coordinates = None
+                if hasattr(location, "coordinates") and location.coordinates:
+                    coordinates = Coordinates(
+                        latitude=location.coordinates.get("lat", 0.0),
+                        longitude=location.coordinates.get("lng", 0.0),
+                    )
+
+                destination = TripDestination(
+                    name=location.name,
+                    country=location.country,
+                    city=location.city,
+                    coordinates=coordinates,
+                )
+                api_destinations.append(destination)
+
+        # Handle datetime conversion safely
+        start_date = core_response.start_date
+        end_date = core_response.end_date
+
+        # Convert datetime to date if needed
+        if hasattr(start_date, "date"):
+            start_date = start_date.date()
+        if hasattr(end_date, "date"):
+            end_date = end_date.date()
+
+        # Calculate duration
+        try:
+            duration_days = (end_date - start_date).days
+        except (TypeError, AttributeError):
+            duration_days = 1
+
+        # Handle created_at and updated_at safely
+        created_at = core_response.created_at
+        updated_at = core_response.updated_at
+
+        # Convert string dates to datetime if needed
+        if isinstance(created_at, str):
+            created_at = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
+        if isinstance(updated_at, str):
+            updated_at = datetime.fromisoformat(updated_at.replace("Z", "+00:00"))
+
         return TripResponse(
-            id=core_response.get("id", ""),
-            user_id=core_response.get("user_id", ""),
-            title=core_response.get("title", ""),
-            description=core_response.get("description"),
-            destination=core_response.get("destination", ""),
-            start_date=core_response.get("start_date"),
-            end_date=core_response.get("end_date"),
-            budget=core_response.get("budget"),
-            currency=core_response.get("currency", "USD"),
-            travelers=core_response.get("travelers", 1),
-            trip_type=core_response.get("trip_type", "leisure"),
-            status=core_response.get("status", "planning"),
-            created_at=core_response.get("created_at", ""),
-            updated_at=core_response.get("updated_at", ""),
-            preferences=core_response.get("preferences", {}),
-            metadata=core_response.get("metadata", {}),
+            id=core_response.id,
+            user_id=core_response.user_id,
+            title=core_response.title,
+            description=core_response.description,
+            start_date=start_date,
+            end_date=end_date,
+            duration_days=duration_days,
+            destinations=api_destinations,
+            preferences=core_response.preferences,
+            status=core_response.status,
+            created_at=created_at,
+            updated_at=updated_at,
         )
 
 
