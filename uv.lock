@@ -701,6 +701,9 @@ dependencies = [
     { name = "uritemplate" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/35/99/237cd2510aecca9fabb54007e58553274cc43cb3c18512ee1ea574d11b87/google_api_python_client-2.171.0.tar.gz", hash = "sha256:057a5c08d28463c6b9eb89746355de5f14b7ed27a65c11fdbf1d06c66bb66b23", size = 13028937 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/79/db/c397e3eb3ea18f423855479d0a5852bdc9c3f644e3d4194931fa664a70b4/google_api_python_client-2.171.0-py3-none-any.whl", hash = "sha256:c9c9b76f561e9d9ac14e54a9e2c0842876201d5b96e69e48f967373f0784cbe9", size = 13547393 },
+]
 
 [[package]]
 name = "google-auth"
@@ -965,6 +968,19 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/02/e7/94f8232d4a74cc99514c13a9f995811485a6903d48e5d952771ef6322e30/hyperframe-6.1.0.tar.gz", hash = "sha256:f630908a00854a7adeabd6382b43923a4c4cd4b821fcb527e6ab9e15382a3b08", size = 26566 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/48/30/47d0bf6072f7252e6521f3447ccfa40b421b6824517f82854703d0f5a98b/hyperframe-6.1.0-py3-none-any.whl", hash = "sha256:b03380493a519fce58ea5af42e4a42317bf9bd425596f7a0835ffce80f1a42e5", size = 13007 },
+]
+
+[[package]]
+name = "hypothesis"
+version = "6.135.6"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "attrs" },
+    { name = "sortedcontainers" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/3e/3a/7a7c54d72b1e1fad01b86613ba48a8cedef0da829f12c0e3e901fc20ec2c/hypothesis-6.135.6.tar.gz", hash = "sha256:998ca337c4ac4608dff53f42a14ce1b4c64a4297e7f06576e5dac2b2de700227", size = 452044 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/fe/15/9e03f8485942794b826f69c718c27a1decc6af66fa71d473e0ab906b1f08/hypothesis-6.135.6-py3-none-any.whl", hash = "sha256:e3c5cdc5e0e17767705cecaedfb407cac0fd8ad3b1193df83e232b7a86879062", size = 518107 },
 ]
 
 [[package]]
@@ -2879,6 +2895,7 @@ dependencies = [
 dev = [
     { name = "coverage" },
     { name = "fakeredis" },
+    { name = "hypothesis" },
     { name = "mypy" },
     { name = "nest-asyncio" },
     { name = "pytest" },
@@ -2899,6 +2916,7 @@ lint = [
 test = [
     { name = "coverage" },
     { name = "fakeredis" },
+    { name = "hypothesis" },
     { name = "nest-asyncio" },
     { name = "pytest" },
     { name = "pytest-asyncio" },
@@ -2953,6 +2971,7 @@ requires-dist = [
 dev = [
     { name = "coverage", extras = ["toml"], specifier = ">=7.8.2" },
     { name = "fakeredis", specifier = ">=2.29.0" },
+    { name = "hypothesis", specifier = ">=6.120.0" },
     { name = "mypy", specifier = ">=1.16.0" },
     { name = "nest-asyncio", specifier = ">=1.6.0" },
     { name = "pytest", specifier = ">=8.4.0" },
@@ -2973,6 +2992,7 @@ lint = [
 test = [
     { name = "coverage", extras = ["toml"], specifier = ">=7.8.2" },
     { name = "fakeredis", specifier = ">=2.29.0" },
+    { name = "hypothesis", specifier = ">=6.120.0" },
     { name = "nest-asyncio", specifier = ">=1.6.0" },
     { name = "pytest", specifier = ">=8.4.0" },
     { name = "pytest-asyncio", specifier = ">=1.0.0" },
