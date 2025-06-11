@@ -345,3 +345,7 @@ async def _crawl_with_playwright_fallback(
 
         finally:
             await browser.close()
+
+
+# Compatibility alias for legacy test imports
+crawl_website_content_tool = crawl_website_content

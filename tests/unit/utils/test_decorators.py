@@ -101,7 +101,7 @@ class TestEnsureMemoryClientInitialized:
     @pytest.fixture
     def setup_mock_memory_client(self):
         """Set up mock memory client."""
-        with patch("src.utils.decorators.memory_client") as mock_client:
+        with patch("tripsage_core.utils.decorator_utils.memory_client") as mock_client:
             mock_client.initialize = AsyncMock()
             yield mock_client
 
