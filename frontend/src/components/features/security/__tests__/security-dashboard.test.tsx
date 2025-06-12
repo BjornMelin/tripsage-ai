@@ -33,24 +33,24 @@ describe("SecurityDashboard", () => {
     });
 
     mockUseApiKeys.mockReturnValue({
-      apiKeys: [
-        {
-          id: "key-1",
-          name: "OpenAI Key",
-          service: "openai",
-          description: "For AI operations",
-          is_valid: true,
-          created_at: new Date("2025-06-01"),
-          updated_at: new Date("2025-06-01"),
-          usage_count: 10,
-        },
-      ],
+      data: {
+        keys: [
+          {
+            id: "key-1",
+            service: "openai",
+            is_valid: true,
+            has_key: true,
+            last_validated: "2025-06-01",
+          },
+        ],
+        supported_services: ["openai", "anthropic"],
+      },
       isLoading: false,
       error: null,
-      createApiKey: vi.fn(),
-      deleteApiKey: vi.fn(),
-      validateApiKey: vi.fn(),
-      rotateApiKey: vi.fn(),
+      isFetching: false,
+      isError: false,
+      isSuccess: true,
+      refetch: vi.fn(),
     });
   });
 
@@ -216,13 +216,16 @@ describe("SecurityDashboard", () => {
   it("handles empty states gracefully", async () => {
     // Mock empty data
     mockUseApiKeys.mockReturnValue({
-      apiKeys: [],
+      data: {
+        keys: {} as any,
+        supported_services: [],
+      },
       isLoading: false,
       error: null,
-      createApiKey: vi.fn(),
-      deleteApiKey: vi.fn(),
-      validateApiKey: vi.fn(),
-      rotateApiKey: vi.fn(),
+      isFetching: false,
+      isError: false,
+      isSuccess: true,
+      refetch: vi.fn(),
     });
 
     render(<SecurityDashboard />);

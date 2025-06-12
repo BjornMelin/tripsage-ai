@@ -293,7 +293,10 @@ describe("SecuritySection", () => {
 
   describe("Error Handling", () => {
     it("should handle missing security settings gracefully", () => {
-      mockUserStore.user.security = undefined;
+      mockUserStore.user = {
+        ...mockUserStore.user!,
+        security: undefined as any,
+      };
 
       render(<SecuritySection />);
 
@@ -302,7 +305,7 @@ describe("SecuritySection", () => {
     });
 
     it("should render with missing user data", () => {
-      mockUserStore.user = null;
+      mockUserStore.user = null as any;
 
       render(<SecuritySection />);
 
