@@ -8,7 +8,7 @@ import { useActivitySearch } from "@/hooks/use-activity-search";
 import { useSearchStore } from "@/stores/search-store";
 import type { Activity, ActivitySearchParams } from "@/types/search";
 import { useSearchParams } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 
 // Type for URL search parameters
 interface SearchParamsState {
@@ -21,7 +21,12 @@ interface SearchParamsState {
 export default function ActivitiesSearchPage() {
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
   const { searchActivities, isSearching, searchError } = useActivitySearch();
-  const { hasResults, isSearching: storeIsSearching, error: storeError, results } = useSearchStore();
+  const {
+    hasResults,
+    isSearching: storeIsSearching,
+    error: storeError,
+    results,
+  } = useSearchStore();
   const searchParams = useSearchParams();
 
   // Initialize search with URL parameters

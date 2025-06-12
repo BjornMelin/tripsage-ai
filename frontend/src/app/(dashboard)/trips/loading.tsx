@@ -24,7 +24,17 @@ export default function TripsLoading() {
 
       {/* Trips grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {["trip-1", "trip-2", "trip-3", "trip-4", "trip-5", "trip-6", "trip-7", "trip-8", "trip-9"].map((key) => (
+        {[
+          "trip-1",
+          "trip-2",
+          "trip-3",
+          "trip-4",
+          "trip-5",
+          "trip-6",
+          "trip-7",
+          "trip-8",
+          "trip-9",
+        ].map((key) => (
           <div key={key} className="border rounded-lg overflow-hidden">
             {/* Trip image */}
             <Skeleton className="h-48 w-full" />

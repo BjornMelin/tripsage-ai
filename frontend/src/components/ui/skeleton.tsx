@@ -95,7 +95,7 @@ const Skeleton = React.forwardRef<HTMLDivElement, SkeletonProps>(
 
           return (
             <div
-              key={index}
+              key={`skeleton-line-${index}`}
               className={cn(
                 skeletonVariants({ variant, animation: finalAnimation }),
                 "skeleton"

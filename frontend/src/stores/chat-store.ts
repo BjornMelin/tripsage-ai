@@ -2,6 +2,7 @@ import {
   ConnectionStatus,
   type WebSocketClient,
   WebSocketEventType,
+  type WebSocketEvent,
 } from "@/lib/websocket/websocket-client";
 import type {
   ConversationMessage,
@@ -821,7 +822,7 @@ export const useChatStore = create<ChatState>()(
           );
 
           // Handle incoming messages
-          newClient.on(WebSocketEventType.CHAT_MESSAGE, (event: any) => {
+          newClient.on(WebSocketEventType.CHAT_MESSAGE, (event: WebSocketEvent) => {
             get().handleRealtimeMessage({
               type: "chat_message",
               sessionId,
@@ -831,7 +832,7 @@ export const useChatStore = create<ChatState>()(
             });
           });
 
-          newClient.on(WebSocketEventType.CHAT_MESSAGE_CHUNK, (event: any) => {
+          newClient.on(WebSocketEventType.CHAT_MESSAGE_CHUNK, (event: WebSocketEvent) => {
             get().handleRealtimeMessage({
               type: "chat_message_chunk",
               sessionId,
@@ -841,7 +842,7 @@ export const useChatStore = create<ChatState>()(
             });
           });
 
-          newClient.on(WebSocketEventType.AGENT_STATUS_UPDATE, (event: any) => {
+          newClient.on(WebSocketEventType.AGENT_STATUS_UPDATE, (event: WebSocketEvent) => {
             get().handleAgentStatusUpdate({
               type: "agent_status_update",
               sessionId,

@@ -94,7 +94,9 @@ describe("ErrorBoundary", () => {
 
       return (
         <ErrorBoundary>
-          <button onClick={() => setShouldThrow(false)}>Fix error</button>
+          <button type="button" onClick={() => setShouldThrow(false)}>
+            Fix error
+          </button>
           <ErrorThrowingComponent shouldThrow={shouldThrow} />
         </ErrorBoundary>
       );

@@ -96,7 +96,7 @@ export function SearchFilters({
                           <div className="space-y-1">
                             {filter.options.map((option, index) => (
                               <label
-                                key={index}
+                                key={`${filter.id}-checkbox-${option.value}-${index}`}
                                 className="flex items-center space-x-2 text-sm"
                               >
                                 <input
@@ -143,7 +143,7 @@ export function SearchFilters({
                           <div className="space-y-1">
                             {filter.options.map((option, index) => (
                               <label
-                                key={index}
+                                key={`${filter.id}-radio-${option.value}-${index}`}
                                 className="flex items-center space-x-2 text-sm"
                               >
                                 <input
@@ -209,7 +209,10 @@ export function SearchFilters({
                           >
                             <option value="">Select {filter.label}</option>
                             {filter.options.map((option, index) => (
-                              <option key={index} value={String(option.value)}>
+                              <option
+                                key={`${filter.id}-option-${option.value}-${index}`}
+                                value={String(option.value)}
+                              >
                                 {option.label}
                               </option>
                             ))}
