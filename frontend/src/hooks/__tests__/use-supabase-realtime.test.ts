@@ -129,7 +129,7 @@ describe("useSupabaseRealtime", () => {
       );
 
       expect(mockSupabaseClient.channel).not.toHaveBeenCalled();
-      
+
       // Restore original auth state
       mockAuth.user = originalAuth;
     });
@@ -184,11 +184,7 @@ describe("useSupabaseRealtime", () => {
         { wrapper: createWrapper() }
       );
 
-      expect(mockChannel.on).toHaveBeenCalledWith(
-        "system",
-        {},
-        expect.any(Function)
-      );
+      expect(mockChannel.on).toHaveBeenCalledWith("system", {}, expect.any(Function));
     });
 
     it("should subscribe to channel", () => {
@@ -422,17 +418,16 @@ describe("useSupabaseRealtime", () => {
   describe("Query Invalidation", () => {
     it("should invalidate queries for trips table", async () => {
       const spy = vi.spyOn(queryClient, "invalidateQueries");
-      
+
       renderHook(
         () =>
           useSupabaseRealtime({
             table: "trips",
             enabled: true,
           }),
-        { 
-          wrapper: ({ children }) => (
-            React.createElement(QueryClientProvider, { client: queryClient }, children)
-          )
+        {
+          wrapper: ({ children }) =>
+            React.createElement(QueryClientProvider, { client: queryClient }, children),
         }
       );
 
@@ -459,17 +454,16 @@ describe("useSupabaseRealtime", () => {
 
     it("should invalidate chat message queries", async () => {
       const spy = vi.spyOn(queryClient, "invalidateQueries");
-      
+
       renderHook(
         () =>
           useSupabaseRealtime({
             table: "chat_messages",
             enabled: true,
           }),
-        { 
-          wrapper: ({ children }) => (
-            React.createElement(QueryClientProvider, { client: queryClient }, children)
-          )
+        {
+          wrapper: ({ children }) =>
+            React.createElement(QueryClientProvider, { client: queryClient }, children),
         }
       );
 
@@ -830,7 +824,9 @@ describe("Integration Tests", () => {
 
     // Create multiple subscriptions
     const { result: tripResult } = renderHook(() => useTripRealtime(123), { wrapper });
-    const { result: chatResult } = renderHook(() => useChatRealtime("session-123"), { wrapper });
+    const { result: chatResult } = renderHook(() => useChatRealtime("session-123"), {
+      wrapper,
+    });
 
     expect(tripResult.current.isConnected).toBeDefined();
     expect(chatResult.current.isConnected).toBeDefined();

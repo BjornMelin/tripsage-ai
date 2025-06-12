@@ -10,7 +10,6 @@ from tripsage_core.exceptions.exceptions import (
     # Authentication and authorization
     CoreAuthenticationError,
     CoreAuthorizationError,
-    CoreSecurityError,
     CoreDatabaseError,
     CoreExternalAPIError,
     CoreKeyValidationError,
@@ -19,6 +18,7 @@ from tripsage_core.exceptions.exceptions import (
     CoreRateLimitError,
     # Resource and validation
     CoreResourceNotFoundError,
+    CoreSecurityError,
     # Service and infrastructure
     CoreServiceError,
     # Base exception

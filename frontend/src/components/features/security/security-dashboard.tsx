@@ -138,7 +138,9 @@ export function SecurityDashboard() {
           last_login: "2025-06-11T10:30:00Z",
           failed_login_attempts: 1,
           active_sessions: 2,
-          api_keys_count: Array.isArray(apiKeysQuery.data?.keys) ? apiKeysQuery.data.keys.length : 0,
+          api_keys_count: Array.isArray(apiKeysQuery.data?.keys)
+            ? apiKeysQuery.data.keys.length
+            : 0,
           oauth_connections: ["google", "github"],
           security_score: 85,
         });

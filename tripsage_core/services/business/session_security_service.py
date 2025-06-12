@@ -9,7 +9,8 @@ import hashlib
 import logging
 import secrets
 from datetime import datetime, timedelta, timezone
-from ipaddress import AddressValueError, ip_address as parse_ip_address
+from ipaddress import AddressValueError
+from ipaddress import ip_address as parse_ip_address
 from typing import Any, Dict, List, Optional
 
 from pydantic import Field, field_validator
@@ -623,7 +624,7 @@ class SessionSecurityService:
                 risk_score += 20  # Invalid IP format
                 logger.warning(
                     "Invalid IP address format in risk calculation",
-                    extra={"ip_address": ip_address, "user_id": user_id}
+                    extra={"ip_address": ip_address, "user_id": user_id},
                 )
 
         return min(risk_score, 100)

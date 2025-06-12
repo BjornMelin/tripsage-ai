@@ -9,9 +9,7 @@ database persistence operations with security-focused testing.
 import base64
 import sys
 from datetime import datetime, timezone
-from io import BytesIO
-from typing import Any, Dict, List
-from unittest.mock import AsyncMock, Mock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
@@ -24,6 +22,7 @@ mock_qrcode = MagicMock()
 mock_qr_instance = MagicMock()
 mock_img = MagicMock()
 
+
 # Initialize mock state
 def reset_mocks():
     """Reset mock state for each test."""
@@ -32,25 +31,26 @@ def reset_mocks():
     mock_qrcode.reset_mock()
     mock_qr_instance.reset_mock()
     mock_img.reset_mock()
-    
+
     # Reset to default values
     mock_pyotp.random_base32.return_value = "JBSWY3DPEHPK3PXP"
     mock_totp.now.return_value = "123456"
     mock_totp.verify.return_value = True
     mock_totp.provisioning_uri.return_value = "otpauth://totp/TripSage:test@example.com?secret=JBSWY3DPEHPK3PXP&issuer=TripSage"
     mock_pyotp.TOTP.return_value = mock_totp
-    
+
     mock_img.save = MagicMock()
     mock_qr_instance.make_image.return_value = mock_img
     mock_qrcode.QRCode.return_value = mock_qr_instance
     mock_qrcode.constants.ERROR_CORRECT_L = 1
 
+
 # Initialize with defaults
 reset_mocks()
 
 # Add mocks to sys.modules
-sys.modules['pyotp'] = mock_pyotp
-sys.modules['qrcode'] = mock_qrcode
+sys.modules["pyotp"] = mock_pyotp
+sys.modules["qrcode"] = mock_qrcode
 
 from tripsage_core.exceptions.exceptions import (
     CoreServiceError,
@@ -110,7 +110,9 @@ class TestMFAServiceModels:
 
         # Invalid code - too long
         with pytest.raises(ValidationError) as exc_info:
-            MFAVerificationRequest(user_id="test-user", code="123456789012")  # 12 characters
+            MFAVerificationRequest(
+                user_id="test-user", code="123456789012"
+            )  # 12 characters
         assert "at most 11 characters" in str(exc_info.value)
 
     def test_mfa_setup_response_serialization(self, serialization_helper):
@@ -181,7 +183,9 @@ class TestMFAService:
     @pytest.fixture
     def mfa_service(self, mock_database_service):
         """Create MFAService instance with mocked dependencies."""
-        return MFAService(database_service=mock_database_service, app_name="TripSage Test")
+        return MFAService(
+            database_service=mock_database_service, app_name="TripSage Test"
+        )
 
     @pytest.fixture
     def sample_user_data(self):
@@ -213,14 +217,18 @@ class TestMFAService:
     @pytest.mark.asyncio
     async def test_mfa_service_initialization_with_db(self, mock_database_service):
         """Test MFA service initialization with provided database service."""
-        service = MFAService(database_service=mock_database_service, app_name="Test App")
+        service = MFAService(
+            database_service=mock_database_service, app_name="Test App"
+        )
         assert service.db == mock_database_service
         assert service.app_name == "Test App"
 
     @pytest.mark.asyncio
     async def test_mfa_service_initialization_without_db(self):
         """Test MFA service initialization without database service."""
-        with patch("tripsage_core.services.infrastructure.get_database_service") as mock_get_db:
+        with patch(
+            "tripsage_core.services.infrastructure.get_database_service"
+        ) as mock_get_db:
             mock_db = AsyncMock()
             mock_get_db.return_value = mock_db
 
@@ -244,13 +252,15 @@ class TestMFAService:
         assert service.db == mock_database_service
 
     @pytest.mark.asyncio
-    async def test_setup_mfa_success(self, mfa_service, mock_database_service, sample_user_data):
+    async def test_setup_mfa_success(
+        self, mfa_service, mock_database_service, sample_user_data
+    ):
         """Test successful MFA setup."""
         user_id = sample_user_data["user_id"]
         user_email = sample_user_data["email"]
 
         # Configure QR code mock
-        with patch('base64.b64encode', return_value=b'test-qr-data'):
+        with patch("base64.b64encode", return_value=b"test-qr-data"):
             result = await mfa_service.setup_mfa(user_id, user_email)
 
         # Verify the response
@@ -272,12 +282,18 @@ class TestMFAService:
         assert len(call_args[0][1]["backup_codes"]) == 10
 
     @pytest.mark.asyncio
-    async def test_setup_mfa_database_error(self, mfa_service, mock_database_service, sample_user_data):
+    async def test_setup_mfa_database_error(
+        self, mfa_service, mock_database_service, sample_user_data
+    ):
         """Test MFA setup with database error."""
-        mock_database_service.upsert.side_effect = Exception("Database connection failed")
+        mock_database_service.upsert.side_effect = Exception(
+            "Database connection failed"
+        )
 
         with pytest.raises(CoreServiceError) as exc_info:
-            await mfa_service.setup_mfa(sample_user_data["user_id"], sample_user_data["email"])
+            await mfa_service.setup_mfa(
+                sample_user_data["user_id"], sample_user_data["email"]
+            )
 
         assert exc_info.value.code == "MFA_SETUP_FAILED"
         # Check that it contains information about the error
@@ -285,7 +301,9 @@ class TestMFAService:
         assert "MFA_SETUP_FAILED" in error_str
 
     @pytest.mark.asyncio
-    async def test_enroll_mfa_success(self, mfa_service, mock_database_service, sample_mfa_settings):
+    async def test_enroll_mfa_success(
+        self, mfa_service, mock_database_service, sample_mfa_settings
+    ):
         """Test successful MFA enrollment."""
         user_id = sample_mfa_settings["user_id"]
 
@@ -331,11 +349,15 @@ class TestMFAService:
         assert "not set up" in exc_info.value.message
 
     @pytest.mark.asyncio
-    async def test_enroll_mfa_already_enrolled(self, mfa_service, mock_database_service, sample_mfa_settings):
+    async def test_enroll_mfa_already_enrolled(
+        self, mfa_service, mock_database_service, sample_mfa_settings
+    ):
         """Test MFA enrollment when already enrolled."""
         mock_database_service.select.return_value = [sample_mfa_settings]
 
-        request = MFAEnrollmentRequest(user_id=sample_mfa_settings["user_id"], totp_code="123456")
+        request = MFAEnrollmentRequest(
+            user_id=sample_mfa_settings["user_id"], totp_code="123456"
+        )
 
         with pytest.raises(CoreValidationError) as exc_info:
             await mfa_service.enroll_mfa(request)
@@ -344,13 +366,17 @@ class TestMFAService:
         assert "already enrolled" in exc_info.value.message
 
     @pytest.mark.asyncio
-    async def test_enroll_mfa_invalid_totp(self, mfa_service, mock_database_service, sample_mfa_settings):
+    async def test_enroll_mfa_invalid_totp(
+        self, mfa_service, mock_database_service, sample_mfa_settings
+    ):
         """Test MFA enrollment with invalid TOTP code."""
         unenrolled_settings = sample_mfa_settings.copy()
         unenrolled_settings["enabled"] = False
         mock_database_service.select.return_value = [unenrolled_settings]
 
-        request = MFAEnrollmentRequest(user_id=sample_mfa_settings["user_id"], totp_code="000000")
+        request = MFAEnrollmentRequest(
+            user_id=sample_mfa_settings["user_id"], totp_code="000000"
+        )
 
         # Mock TOTP verification to return False
         mock_totp.verify.return_value = False
@@ -362,11 +388,15 @@ class TestMFAService:
         assert "Invalid TOTP code" in exc_info.value.message
 
     @pytest.mark.asyncio
-    async def test_verify_mfa_totp_success(self, mfa_service, mock_database_service, sample_mfa_settings):
+    async def test_verify_mfa_totp_success(
+        self, mfa_service, mock_database_service, sample_mfa_settings
+    ):
         """Test successful TOTP verification."""
         mock_database_service.select.return_value = [sample_mfa_settings]
 
-        request = MFAVerificationRequest(user_id=sample_mfa_settings["user_id"], code="123456")
+        request = MFAVerificationRequest(
+            user_id=sample_mfa_settings["user_id"], code="123456"
+        )
 
         # Mock TOTP verification to return True
         mock_totp.verify.return_value = True
@@ -386,12 +416,16 @@ class TestMFAService:
         )
 
     @pytest.mark.asyncio
-    async def test_verify_mfa_backup_code_success(self, mfa_service, mock_database_service, sample_mfa_settings):
+    async def test_verify_mfa_backup_code_success(
+        self, mfa_service, mock_database_service, sample_mfa_settings
+    ):
         """Test successful backup code verification."""
         mock_database_service.select.return_value = [sample_mfa_settings]
 
         backup_code = sample_mfa_settings["backup_codes"][0]
-        request = MFAVerificationRequest(user_id=sample_mfa_settings["user_id"], code=backup_code)
+        request = MFAVerificationRequest(
+            user_id=sample_mfa_settings["user_id"], code=backup_code
+        )
 
         # Mock TOTP verification to return False (so it tries backup codes)
         mock_totp.verify.return_value = False
@@ -411,11 +445,15 @@ class TestMFAService:
         assert len(updated_codes) == 4
 
     @pytest.mark.asyncio
-    async def test_verify_mfa_invalid_code(self, mfa_service, mock_database_service, sample_mfa_settings):
+    async def test_verify_mfa_invalid_code(
+        self, mfa_service, mock_database_service, sample_mfa_settings
+    ):
         """Test MFA verification with invalid code."""
         mock_database_service.select.return_value = [sample_mfa_settings]
 
-        request = MFAVerificationRequest(user_id=sample_mfa_settings["user_id"], code="000000")
+        request = MFAVerificationRequest(
+            user_id=sample_mfa_settings["user_id"], code="000000"
+        )
 
         # Mock TOTP verification to return False
         mock_totp.verify.return_value = False
@@ -427,7 +465,9 @@ class TestMFAService:
         assert result.code_type == "invalid"
 
     @pytest.mark.asyncio
-    async def test_verify_mfa_user_not_enrolled(self, mfa_service, mock_database_service):
+    async def test_verify_mfa_user_not_enrolled(
+        self, mfa_service, mock_database_service
+    ):
         """Test MFA verification for non-enrolled user."""
         mock_database_service.select.return_value = []
 
@@ -452,7 +492,9 @@ class TestMFAService:
         assert exc_info.value.code == "MFA_VERIFICATION_FAILED"
 
     @pytest.mark.asyncio
-    async def test_get_mfa_status_enabled(self, mfa_service, mock_database_service, sample_mfa_settings):
+    async def test_get_mfa_status_enabled(
+        self, mfa_service, mock_database_service, sample_mfa_settings
+    ):
         """Test getting MFA status for enabled user."""
         mock_database_service.select.return_value = [sample_mfa_settings]
 
@@ -478,7 +520,9 @@ class TestMFAService:
         assert result.last_used is None
 
     @pytest.mark.asyncio
-    async def test_get_mfa_status_database_error(self, mfa_service, mock_database_service):
+    async def test_get_mfa_status_database_error(
+        self, mfa_service, mock_database_service
+    ):
         """Test getting MFA status with database error."""
         mock_database_service.select.side_effect = Exception("Database error")
 
@@ -519,11 +563,15 @@ class TestMFAService:
         assert result is False
 
     @pytest.mark.asyncio
-    async def test_regenerate_backup_codes_success(self, mfa_service, mock_database_service, sample_mfa_settings):
+    async def test_regenerate_backup_codes_success(
+        self, mfa_service, mock_database_service, sample_mfa_settings
+    ):
         """Test successful backup codes regeneration."""
         mock_database_service.select.return_value = [sample_mfa_settings]
 
-        result = await mfa_service.regenerate_backup_codes(sample_mfa_settings["user_id"])
+        result = await mfa_service.regenerate_backup_codes(
+            sample_mfa_settings["user_id"]
+        )
 
         assert isinstance(result, list)
         assert len(result) == 10
@@ -536,7 +584,9 @@ class TestMFAService:
         assert call_args[0][2]["backup_codes"] == result
 
     @pytest.mark.asyncio
-    async def test_regenerate_backup_codes_not_enabled(self, mfa_service, mock_database_service):
+    async def test_regenerate_backup_codes_not_enabled(
+        self, mfa_service, mock_database_service
+    ):
         """Test regenerating backup codes when MFA not enabled."""
         mock_database_service.select.return_value = []
 
@@ -546,7 +596,9 @@ class TestMFAService:
         assert exc_info.value.code == "MFA_NOT_ENABLED"
 
     @pytest.mark.asyncio
-    async def test_regenerate_backup_codes_database_error(self, mfa_service, mock_database_service, sample_mfa_settings):
+    async def test_regenerate_backup_codes_database_error(
+        self, mfa_service, mock_database_service, sample_mfa_settings
+    ):
         """Test regenerating backup codes with database error."""
         mock_database_service.select.return_value = [sample_mfa_settings]
         mock_database_service.update.side_effect = Exception("Database error")
@@ -574,7 +626,9 @@ class TestMFAServicePrivateMethods:
         """Test QR code generation."""
         provisioning_uri = "otpauth://totp/TripSage:test@example.com?secret=JBSWY3DPEHPK3PXP&issuer=TripSage"
 
-        with patch('base64.b64encode', return_value=b'dGVzdC1xci1kYXRh'):  # "test-qr-data" in base64
+        with patch(
+            "base64.b64encode", return_value=b"dGVzdC1xci1kYXRh"
+        ):  # "test-qr-data" in base64
             qr_code_url = mfa_service._generate_qr_code(provisioning_uri)
 
         # Verify it's a data URL
@@ -660,7 +714,7 @@ class TestMFAServiceSecurity:
             mock_secret = f"SECRET{_:02d}ABCDEFGHIJKLMN"
             secrets.append(mock_secret)
             mock_pyotp.random_base32.return_value = mock_secret
-            
+
             # Verify secrets are different
             if len(secrets) > 1:
                 assert mock_secret != secrets[-2]
@@ -732,7 +786,7 @@ class TestMFAServiceSecurity:
         # Create a mock provisioning URI
         uri = "otpauth://totp/TripSage%3Atest%40example.com?secret=JBSWY3DPEHPK3PXP&issuer=TripSage"
 
-        with patch('base64.b64encode', return_value=b'dGVzdC1xci1kYXRh'):
+        with patch("base64.b64encode", return_value=b"dGVzdC1xci1kYXRh"):
             qr_code_url = mfa_service._generate_qr_code(uri)
 
         # Decode the QR code to verify content
@@ -768,7 +822,7 @@ class TestMFAServiceIntegration:
         user_email = "test@example.com"
 
         # Step 1: Setup MFA
-        with patch('base64.b64encode', return_value=b'test-qr-data'):
+        with patch("base64.b64encode", return_value=b"test-qr-data"):
             setup_result = await service.setup_mfa(user_id, user_email)
 
         assert setup_result.secret == "JBSWY3DPEHPK3PXP"
@@ -907,7 +961,7 @@ class TestMFAServiceEdgeCases:
         special_email = "test+special@example-domain.com"
         uri = f"otpauth://totp/TripSage:{special_email}?secret=JBSWY3DPEHPK3PXP&issuer=TripSage"
 
-        with patch('base64.b64encode', return_value=b'dGVzdC1xci1kYXRh'):
+        with patch("base64.b64encode", return_value=b"dGVzdC1xci1kYXRh"):
             qr_code_url = mfa_service._generate_qr_code(uri)
 
         assert qr_code_url.startswith("data:image/png;base64,")
@@ -965,11 +1019,14 @@ def test_backup_codes_property_count(count):
     assert len(codes) == count
 
 
-@pytest.mark.parametrize("code_format", [
-    "123456",  # TOTP format (valid)
-    "12345-67890",  # Backup code format (valid)
-    "abcd-1234",  # Invalid characters but valid length (valid - validation allows any chars)
-])
+@pytest.mark.parametrize(
+    "code_format",
+    [
+        "123456",  # TOTP format (valid)
+        "12345-67890",  # Backup code format (valid)
+        "abcd-1234",  # Invalid characters but valid length (valid - validation allows any chars)
+    ],
+)
 def test_verification_request_code_formats(code_format):
     """Property-based test: different code formats in verification request."""
     if len(code_format) < 6 or len(code_format) > 11:

@@ -8,7 +8,6 @@ This service provides TOTP-based MFA functionality including:
 - MFA enrollment and management
 """
 
-import asyncio
 import base64
 import logging
 import secrets
@@ -24,7 +23,6 @@ from tripsage_core.exceptions.exceptions import (
     CoreValidationError,
 )
 from tripsage_core.models.base_core_model import TripSageModel
-from tripsage_core.services.infrastructure import get_database_service
 
 logger = logging.getLogger(__name__)
 
@@ -60,7 +58,10 @@ class MFAVerificationRequest(TripSageModel):
 
     user_id: str = Field(..., description="User ID")
     code: str = Field(
-        ..., min_length=6, max_length=11, description="TOTP (6 chars) or backup code (11 chars)"
+        ...,
+        min_length=6,
+        max_length=11,
+        description="TOTP (6 chars) or backup code (11 chars)",
     )
 
 

@@ -141,7 +141,9 @@ describe("useTripsWithRealtime", () => {
     });
 
     it("should reflect real-time connection status", () => {
-      vi.mocked(require("../use-supabase-realtime").useTripRealtime).mockReturnValueOnce({
+      vi.mocked(
+        require("../use-supabase-realtime").useTripRealtime
+      ).mockReturnValueOnce({
         ...mockTripRealtime,
         isConnected: false,
         errors: [new Error("Connection failed")],
@@ -206,12 +208,11 @@ describe("useTripsWithRealtime", () => {
     });
 
     it("should handle multiple connection errors", () => {
-      const errors = [
-        new Error("Connection error 1"),
-        new Error("Connection error 2"),
-      ];
+      const errors = [new Error("Connection error 1"), new Error("Connection error 2")];
 
-      vi.mocked(require("../use-supabase-realtime").useTripRealtime).mockReturnValueOnce({
+      vi.mocked(
+        require("../use-supabase-realtime").useTripRealtime
+      ).mockReturnValueOnce({
         ...mockTripRealtime,
         isConnected: false,
         errors,
@@ -315,7 +316,9 @@ describe("useTripWithRealtime", () => {
         isLoading: true,
       });
 
-      vi.mocked(require("../use-supabase-realtime").useTripRealtime).mockReturnValueOnce({
+      vi.mocked(
+        require("../use-supabase-realtime").useTripRealtime
+      ).mockReturnValueOnce({
         ...mockTripRealtime,
         isConnected: false,
       });
@@ -351,7 +354,9 @@ describe("useTripsConnectionStatus", () => {
 
     it("should detect when there are connection errors", () => {
       const errors = [new Error("Connection failed")];
-      vi.mocked(require("../use-supabase-realtime").useTripRealtime).mockReturnValueOnce({
+      vi.mocked(
+        require("../use-supabase-realtime").useTripRealtime
+      ).mockReturnValueOnce({
         ...mockTripRealtime,
         isConnected: false,
         errors,
@@ -376,7 +381,9 @@ describe("useTripsConnectionStatus", () => {
         new Error("Most recent error"),
       ];
 
-      vi.mocked(require("../use-supabase-realtime").useTripRealtime).mockReturnValueOnce({
+      vi.mocked(
+        require("../use-supabase-realtime").useTripRealtime
+      ).mockReturnValueOnce({
         ...mockTripRealtime,
         errors,
       });
@@ -390,7 +397,9 @@ describe("useTripsConnectionStatus", () => {
     });
 
     it("should handle empty errors array", () => {
-      vi.mocked(require("../use-supabase-realtime").useTripRealtime).mockReturnValueOnce({
+      vi.mocked(
+        require("../use-supabase-realtime").useTripRealtime
+      ).mockReturnValueOnce({
         ...mockTripRealtime,
         errors: [],
       });
@@ -431,7 +440,9 @@ describe("useTripsConnectionStatus", () => {
       const firstResult = result.current;
 
       // Change the real-time status
-      vi.mocked(require("../use-supabase-realtime").useTripRealtime).mockReturnValueOnce({
+      vi.mocked(
+        require("../use-supabase-realtime").useTripRealtime
+      ).mockReturnValueOnce({
         ...mockTripRealtime,
         isConnected: false,
         errors: [new Error("New error")],
@@ -470,9 +481,9 @@ describe("useTripCollaboration", () => {
       });
 
       // Should convert string to number
-      expect(require("../use-trips-supabase").useTripCollaborators).toHaveBeenCalledWith(
-        123
-      );
+      expect(
+        require("../use-trips-supabase").useTripCollaborators
+      ).toHaveBeenCalledWith(123);
       expect(require("../use-supabase-realtime").useTripRealtime).toHaveBeenCalledWith(
         123
       );
@@ -495,9 +506,9 @@ describe("useTripCollaboration", () => {
         realtimeStatus: expect.any(Object),
       });
 
-      expect(require("../use-trips-supabase").useTripCollaborators).toHaveBeenCalledWith(
-        456
-      );
+      expect(
+        require("../use-trips-supabase").useTripCollaborators
+      ).toHaveBeenCalledWith(456);
       expect(require("../use-supabase-realtime").useTripRealtime).toHaveBeenCalledWith(
         456
       );
@@ -509,9 +520,9 @@ describe("useTripCollaboration", () => {
       const mockAddCollaborator = { mutate: vi.fn(), isLoading: false };
       const mockRemoveCollaborator = { mutate: vi.fn(), isLoading: false };
 
-      vi.mocked(require("../use-trips-supabase").useAddTripCollaborator).mockReturnValueOnce(
-        mockAddCollaborator
-      );
+      vi.mocked(
+        require("../use-trips-supabase").useAddTripCollaborator
+      ).mockReturnValueOnce(mockAddCollaborator);
       vi.mocked(
         require("../use-trips-supabase").useRemoveTripCollaborator
       ).mockReturnValueOnce(mockRemoveCollaborator);
@@ -530,7 +541,9 @@ describe("useTripCollaboration", () => {
         { id: 2, trip_id: 123, user_id: "user-2", role: "viewer" },
       ];
 
-      vi.mocked(require("../use-trips-supabase").useTripCollaborators).mockReturnValueOnce({
+      vi.mocked(
+        require("../use-trips-supabase").useTripCollaborators
+      ).mockReturnValueOnce({
         collaborators,
         isLoading: false,
         error: null,
@@ -547,7 +560,9 @@ describe("useTripCollaboration", () => {
     });
 
     it("should handle collaborator loading state", () => {
-      vi.mocked(require("../use-trips-supabase").useTripCollaborators).mockReturnValueOnce({
+      vi.mocked(
+        require("../use-trips-supabase").useTripCollaborators
+      ).mockReturnValueOnce({
         ...mockUseTripCollaborators,
         isLoading: true,
       });
@@ -561,7 +576,9 @@ describe("useTripCollaboration", () => {
 
     it("should handle collaborator error state", () => {
       const error = new Error("Failed to fetch collaborators");
-      vi.mocked(require("../use-trips-supabase").useTripCollaborators).mockReturnValueOnce({
+      vi.mocked(
+        require("../use-trips-supabase").useTripCollaborators
+      ).mockReturnValueOnce({
         ...mockUseTripCollaborators,
         error,
       });
@@ -587,7 +604,9 @@ describe("useTripCollaboration", () => {
 
     it("should reflect real-time connection failures", () => {
       const connectionErrors = [new Error("Real-time connection failed")];
-      vi.mocked(require("../use-supabase-realtime").useTripRealtime).mockReturnValueOnce({
+      vi.mocked(
+        require("../use-supabase-realtime").useTripRealtime
+      ).mockReturnValueOnce({
         ...mockTripRealtime,
         isConnected: false,
         errors: connectionErrors,
@@ -609,9 +628,9 @@ describe("useTripCollaboration", () => {
       });
 
       // Should convert to NaN, which becomes 0 when parseInt fails
-      expect(require("../use-trips-supabase").useTripCollaborators).toHaveBeenCalledWith(
-        Number.NaN
-      );
+      expect(
+        require("../use-trips-supabase").useTripCollaborators
+      ).toHaveBeenCalledWith(Number.NaN);
     });
 
     it("should handle zero trip ID", () => {
@@ -619,9 +638,9 @@ describe("useTripCollaboration", () => {
         wrapper: createWrapper(),
       });
 
-      expect(require("../use-trips-supabase").useTripCollaborators).toHaveBeenCalledWith(
-        0
-      );
+      expect(
+        require("../use-trips-supabase").useTripCollaborators
+      ).toHaveBeenCalledWith(0);
       expect(require("../use-supabase-realtime").useTripRealtime).toHaveBeenCalledWith(
         0
       );
@@ -632,9 +651,9 @@ describe("useTripCollaboration", () => {
         wrapper: createWrapper(),
       });
 
-      expect(require("../use-trips-supabase").useTripCollaborators).toHaveBeenCalledWith(
-        -1
-      );
+      expect(
+        require("../use-trips-supabase").useTripCollaborators
+      ).toHaveBeenCalledWith(-1);
       expect(require("../use-supabase-realtime").useTripRealtime).toHaveBeenCalledWith(
         -1
       );

@@ -7,13 +7,13 @@ conversation history, and travel preferences using the unified memory service.
 import logging
 from typing import Dict, List, Optional
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 
 from tripsage.api.core.dependencies import (
     get_memory_service_dep,
     get_principal_id,
-    require_principal_dep,
+    require_principal,
 )
 from tripsage.api.middlewares.authentication import Principal
 from tripsage_core.services.business.memory_service import MemoryService

@@ -5,7 +5,7 @@ Router for activity-related endpoints in the TripSage API.
 import logging
 from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, HTTPException, status
 
 from tripsage.api.schemas.requests.activities import (
     ActivitySearchRequest,

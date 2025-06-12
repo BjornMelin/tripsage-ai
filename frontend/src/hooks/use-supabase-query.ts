@@ -18,9 +18,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 type TableName = keyof Database["public"]["Tables"];
 type TableRow<T extends TableName> = Database["public"]["Tables"][T]["Row"];
-type QueryHandler<T extends TableName> = (
-  query: any
-) => any;
+type QueryHandler<T extends TableName> = (query: any) => any;
 
 interface UseSupabaseQueryOptions<T extends TableName>
   extends Omit<UseQueryOptions<TableRow<T>[]>, "queryKey" | "queryFn"> {
@@ -102,7 +100,7 @@ export function useSupabaseInfiniteQuery<T extends TableName>(
   } = options;
 
   const { initialPageParam: _, ...restQueryOptions } = queryOptions;
-  
+
   return useInfiniteQuery({
     queryKey: [
       `${table}-infinite`,
@@ -127,7 +125,10 @@ export function useSupabaseInfiniteQuery<T extends TableName>(
 
       return {
         data: (data || []) as unknown as TableRow<T>[],
-        nextCursor: (data?.length || 0) === pageSize ? (pageParam as number) + pageSize : undefined,
+        nextCursor:
+          (data?.length || 0) === pageSize
+            ? (pageParam as number) + pageSize
+            : undefined,
         totalCount: count,
       };
     },
@@ -497,4 +498,3 @@ export function useSupabaseQueryHelpers() {
     useUserFiles,
   };
 }
-

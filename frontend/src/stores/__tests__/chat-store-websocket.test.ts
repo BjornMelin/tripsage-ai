@@ -5,9 +5,9 @@
  * mocking patterns and clean test structure. Following ULTRATHINK methodology.
  */
 
+import { ConnectionStatus } from "@/lib/websocket/websocket-client";
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ConnectionStatus } from "@/lib/websocket/websocket-client";
 import { useChatStore } from "../chat-store";
 
 // Mock WebSocket client with essential methods
@@ -278,7 +278,7 @@ describe("Chat Store WebSocket Integration", () => {
       await act(async () => {
         result.current.addMessage(sessionId, {
           role: "user",
-          content: "Test message"
+          content: "Test message",
         });
       });
 
