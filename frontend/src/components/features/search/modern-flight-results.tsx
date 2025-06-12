@@ -179,7 +179,7 @@ export function ModernFlightResults({
     return (
       <div className="space-y-4">
         {[1, 2, 3].map((i) => (
-          <Card key={i} className="p-6">
+          <Card key={`flight-skeleton-${i}`} className="p-6">
             <div className="animate-pulse space-y-4">
               <div className="flex justify-between">
                 <div className="space-y-2">

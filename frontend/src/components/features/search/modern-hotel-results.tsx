@@ -189,7 +189,7 @@ export function ModernHotelResults({
     return (
       <div className="space-y-4">
         {[1, 2, 3, 4].map((i) => (
-          <Card key={i} className="p-6">
+          <Card key={`hotel-skeleton-${i}`} className="p-6">
             <div className="animate-pulse flex gap-4">
               <div className="w-48 h-32 bg-muted rounded-lg" />
               <div className="flex-1 space-y-4">
@@ -386,7 +386,7 @@ export function ModernHotelResults({
                         <div className="flex items-center">
                           {[...Array(hotel.starRating)].map((_, i) => (
                             <Star
-                              key={i}
+                              key={`star-${i}`}
                               className="h-3 w-3 fill-yellow-400 text-yellow-400"
                             />
                           ))}
