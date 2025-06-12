@@ -171,12 +171,9 @@ describe("WebSocket Hooks Integration", () => {
     it("should initialize with disconnected state", () => {
       const { result } = renderHook(() => useAgentStatusWebSocket());
 
-      expect(result.current.status).toBe("disconnected");
       expect(result.current.isConnected).toBe(false);
-      expect(result.current.isDisconnected).toBe(true);
-      expect(result.current.isConnecting).toBe(false);
-      expect(result.current.isReconnecting).toBe(false);
-      expect(result.current.hasError).toBe(false);
+      expect(result.current.connectionError).toBe(null);
+      expect(result.current.reconnectAttempts).toBe(0);
     });
   });
 
@@ -247,10 +244,9 @@ describe("WebSocket Hooks Integration", () => {
 
       // Should not throw when accessing state properties
       expect(() => {
-        const { status, isConnected, isDisconnected } = result.current;
-        expect(typeof status).toBe("string");
+        const { isConnected, connectionError, reconnectAttempts } = result.current;
         expect(typeof isConnected).toBe("boolean");
-        expect(typeof isDisconnected).toBe("boolean");
+        expect(typeof reconnectAttempts).toBe("number");
       }).not.toThrow();
     });
   });
