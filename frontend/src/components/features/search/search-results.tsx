@@ -17,7 +17,7 @@ interface SearchResultsProps {
   type?: SearchType;
   results: SearchResultsType | Flight[] | Accommodation[] | Activity[];
   loading?: boolean;
-  onFilter?: (filters: Record<string, any>) => void;
+  onFilter?: (filters: Record<string, unknown>) => void;
   onSort?: (sortBy: string, direction: "asc" | "desc") => void;
   onSelectResult?: (result: SearchResult) => void;
 }

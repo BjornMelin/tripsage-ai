@@ -7,8 +7,8 @@ import { type Mock, vi } from "vitest";
 
 // Complete Supabase Query Builder Mock
 export const createCompleteQueryBuilder = (
-  mockData: any = null,
-  mockError: any = null
+  mockData: unknown = null,
+  mockError: unknown = null
 ) => ({
   select: vi.fn().mockReturnThis(),
   insert: vi.fn().mockReturnThis(),
@@ -33,7 +33,7 @@ export const createMockSupabaseClient = (): Partial<SupabaseClient> => ({
     signOut: vi.fn().mockResolvedValue({ error: null }),
     resetPasswordForEmail: vi.fn().mockResolvedValue({ data: null, error: null }),
     updateUser: vi.fn().mockResolvedValue({ data: null, error: null }),
-  } as any,
+  } as SupabaseClient['auth'],
   from: vi.fn().mockReturnValue(createCompleteQueryBuilder()),
   channel: vi.fn().mockReturnValue({
     on: vi.fn().mockReturnThis(),
@@ -76,7 +76,7 @@ export const createMockUseQueryResult = <T, E = Error>(
     fetchStatus: "idle",
     refetch: vi.fn().mockResolvedValue({ data, error }),
     isInitialLoading: isLoading,
-    promise: Promise.resolve({ data, error } as any),
+    promise: Promise.resolve({ data, error }),
   }) as UseQueryResult<T, E>;
 
 // Import actual ApiError class from client
@@ -84,13 +84,13 @@ export { ApiError } from "@/lib/api/client";
 
 // Complete auth state change mock
 export const createMockAuthStateChange = () =>
-  vi.fn().mockImplementation((callback: (event: string, session: any) => void) => ({
+  vi.fn().mockImplementation((callback: (event: string, session: unknown) => void) => ({
     data: { subscription: { unsubscribe: vi.fn() } },
   }));
 
 // Complete table builder mock that returns complete query builder
 export const createMockTableBuilder = (
-  mockResponse: any = { data: null, error: null }
+  mockResponse: { data: unknown; error: unknown } = { data: null, error: null }
 ) =>
   vi
     .fn()
@@ -100,7 +100,7 @@ export const createMockTableBuilder = (
 
 // For functions that need table-specific logic
 export const createMockTableBuilderWithTable = (
-  mockResponse: any = { data: null, error: null }
+  mockResponse: { data: unknown; error: unknown } = { data: null, error: null }
 ) =>
   vi
     .fn()

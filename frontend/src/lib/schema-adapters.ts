@@ -20,7 +20,7 @@ export interface ApiTrip {
   budget?: number;
   visibility: "private" | "shared" | "public";
   tags: string[];
-  preferences: Record<string, any>;
+  preferences: Record<string, unknown>;
   status: string;
   created_at: string;
   updated_at: string;

@@ -155,7 +155,7 @@ export function ModernHotelResults({
   };
 
   const getAmenityIcon = (amenity: string) => {
-    const icons: Record<string, any> = {
+    const icons: Record<string, React.ComponentType<{ className?: string }>> = {
       wifi: Wifi,
       breakfast: Coffee,
       parking: Car,

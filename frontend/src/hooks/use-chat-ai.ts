@@ -123,14 +123,14 @@ export function useChatAi(options: UseChatAiOptions = {}) {
       // since sessions is a derived state that might not be immediately updated
       if (onNewSession) {
         // Create a temporary session object for the callback
-        const tempSession = {
+        const tempSession: ChatSession = {
           id: createdSessionId,
           title: "New Chat",
           messages: initialMessages,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         };
-        onNewSession(tempSession as any);
+        onNewSession(tempSession);
       }
     }
 
@@ -333,8 +333,8 @@ export function useChatAi(options: UseChatAiOptions = {}) {
         }));
 
         updateMessage(sessionIdRef.current, message.id, {
-          toolCalls: toolCallsArray as any,
-          toolResults: toolResultsArray as any,
+          toolCalls: toolCallsArray as ToolCall[],
+          toolResults: toolResultsArray as ToolResult[],
         });
       }
 

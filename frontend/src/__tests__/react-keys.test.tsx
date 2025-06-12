@@ -3,11 +3,11 @@
  * Tests that components render without key warnings when using proper keys
  */
 
+import { SearchFilters } from "@/components/features/search/search-filters";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import type { FilterOption } from "@/types/search";
 import { render } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { LoadingSpinner } from "@/components/ui/loading-spinner";
-import { SearchFilters } from "@/components/features/search/search-filters";
-import type { FilterOption } from "@/types/search";
 
 // Mock console.warn to capture React key warnings
 const originalWarn = console.warn;
@@ -28,21 +28,21 @@ afterEach(() => {
 describe("React Key Props", () => {
   it("LoadingSpinner dots variant should not produce key warnings", () => {
     render(<LoadingSpinner variant="dots" />);
-    
-    const keyWarnings = warningMessages.filter(msg => 
-      msg.includes("key") && msg.includes("Warning")
+
+    const keyWarnings = warningMessages.filter(
+      (msg) => msg.includes("key") && msg.includes("Warning")
     );
-    
+
     expect(keyWarnings).toHaveLength(0);
   });
 
   it("LoadingSpinner bars variant should not produce key warnings", () => {
     render(<LoadingSpinner variant="bars" />);
-    
-    const keyWarnings = warningMessages.filter(msg => 
-      msg.includes("key") && msg.includes("Warning")
+
+    const keyWarnings = warningMessages.filter(
+      (msg) => msg.includes("key") && msg.includes("Warning")
     );
-    
+
     expect(keyWarnings).toHaveLength(0);
   });
 
@@ -75,25 +75,25 @@ describe("React Key Props", () => {
         onResetFilters={() => {}}
       />
     );
-    
-    const keyWarnings = warningMessages.filter(msg => 
-      msg.includes("key") && msg.includes("Warning")
+
+    const keyWarnings = warningMessages.filter(
+      (msg) => msg.includes("key") && msg.includes("Warning")
     );
-    
+
     expect(keyWarnings).toHaveLength(0);
   });
 
   it("components with static arrays should use semantic keys", () => {
     // Test that our key patterns use semantic naming instead of just indexes
     const { container } = render(<LoadingSpinner variant="dots" />);
-    
+
     // Check that the DOM structure is consistent and renders properly
     const dots = container.querySelectorAll('[style*="animation-delay"]');
     expect(dots).toHaveLength(3);
-    
+
     // Verify no React key warnings
-    const keyWarnings = warningMessages.filter(msg => 
-      msg.includes("key") && msg.includes("Warning")
+    const keyWarnings = warningMessages.filter(
+      (msg) => msg.includes("key") && msg.includes("Warning")
     );
     expect(keyWarnings).toHaveLength(0);
   });

@@ -504,7 +504,10 @@ export const AgentStatusDashboard: React.FC<AgentStatusDashboardProps> = ({
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
             {predictiveIndicators.map((indicator, index) => (
-              <PredictiveCard key={`predictive-${indicator.metric}-${index}`} indicator={indicator} />
+              <PredictiveCard
+                key={`predictive-${indicator.metric}-${index}`}
+                indicator={indicator}
+              />
             ))}
           </div>
         </CardContent>

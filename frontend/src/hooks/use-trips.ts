@@ -21,7 +21,7 @@ export interface TripSuggestion {
   trending?: boolean;
   seasonal?: boolean;
   relevance_score?: number;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 interface TripSuggestionsParams {

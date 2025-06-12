@@ -8,7 +8,7 @@ import { useState } from "react";
 interface SearchFiltersProps {
   type: SearchType;
   filters: FilterOption[];
-  onApplyFilters?: (filters: Record<string, any>) => void;
+  onApplyFilters?: (filters: Record<string, unknown>) => void;
   onResetFilters?: () => void;
 }
 
@@ -18,7 +18,7 @@ export function SearchFilters({
   onApplyFilters,
   onResetFilters,
 }: SearchFiltersProps) {
-  const [activeFilters, setActiveFilters] = useState<Record<string, any>>({});
+  const [activeFilters, setActiveFilters] = useState<Record<string, unknown>>({});
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
 
   const handleFilterChange = (filterId: string, value: any) => {

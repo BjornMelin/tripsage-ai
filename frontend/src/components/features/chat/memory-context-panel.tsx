@@ -331,7 +331,7 @@ export default function MemoryContextPanel({
               variant={selectedTab === id ? "secondary" : "ghost"}
               size="sm"
               className="text-xs px-2 py-1 h-7"
-              onClick={() => setSelectedTab(id as any)}
+              onClick={() => setSelectedTab(id as "context" | "insights" | "recent")}
             >
               <Icon className="h-3 w-3 mr-1" />
               {label}

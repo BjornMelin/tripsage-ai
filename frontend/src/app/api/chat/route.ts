@@ -35,7 +35,7 @@ class ChatError extends Error {
  * Forward request to FastAPI backend and handle streaming response
  */
 async function forwardToBackend(
-  messages: any[],
+  messages: Array<{ role: string; content: string; [key: string]: unknown }>,
   sessionId?: string,
   stream = true,
   authToken?: string

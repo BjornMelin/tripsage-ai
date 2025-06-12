@@ -22,9 +22,9 @@ export type ToolCallStatus = z.infer<typeof ToolCallStatusSchema>;
 export const ToolCallSchema = z.object({
   id: z.string(),
   name: z.string(),
-  arguments: z.record(z.any()).optional(),
+  arguments: z.record(z.unknown()).optional(),
   status: ToolCallStatusSchema.optional().default("pending"),
-  result: z.any().optional(),
+  result: z.unknown().optional(),
   error: z.string().optional(),
   executionTime: z.number().optional(),
   sessionId: z.string().optional(),
@@ -35,7 +35,7 @@ export type ToolCall = z.infer<typeof ToolCallSchema>;
 // Tool result schema for displaying results
 export const ToolResultSchema = z.object({
   callId: z.string(),
-  result: z.any(),
+  result: z.unknown(),
   status: z.enum(["success", "error"]),
   executionTime: z.number().optional(),
   errorMessage: z.string().optional(),
@@ -72,14 +72,14 @@ export const MessageSchema = z.object({
   createdAt: z.date().or(z.string().datetime()),
   updatedAt: z.date().or(z.string().datetime()).optional(),
   attachments: z.array(AttachmentSchema).optional(),
-  annotations: z.record(z.any()).optional(),
+  annotations: z.record(z.unknown()).optional(),
   // Enhanced tool calling support
   toolCalls: z.array(ToolCallSchema).optional(),
   toolResults: z.array(ToolResultSchema).optional(),
   // Agent routing information
   routedTo: z.string().optional(),
   routingConfidence: z.number().optional(),
-  intentDetected: z.record(z.any()).optional(),
+  intentDetected: z.record(z.unknown()).optional(),
   handledBy: z.string().optional(),
 });
 export type Message = z.infer<typeof MessageSchema>;
@@ -91,7 +91,7 @@ export const ChatSessionSchema = z.object({
   createdAt: z.date().or(z.string().datetime()),
   updatedAt: z.date().or(z.string().datetime()),
   messages: z.array(MessageSchema).optional(),
-  metadata: z.record(z.any()).optional(),
+  metadata: z.record(z.unknown()).optional(),
 });
 export type ChatSession = z.infer<typeof ChatSessionSchema>;
 
@@ -120,7 +120,7 @@ export const ChatCompletionRequestSchema = z.object({
   temperature: z.number().min(0).max(2).optional(),
   maxTokens: z.number().positive().optional(),
   stream: z.boolean().optional(),
-  tools: z.array(z.any()).optional(),
+  tools: z.array(z.unknown()).optional(),
   attachments: z.array(AttachmentSchema).optional(),
 });
 export type ChatCompletionRequest = z.infer<typeof ChatCompletionRequestSchema>;

@@ -407,10 +407,10 @@ export const useSearchResultsStore = create<SearchResultsState>()(
               if (Array.isArray(typeResults)) {
                 const existingResults =
                   mergedResults[type as keyof SearchResults] || [];
-                mergedResults[type as keyof SearchResults] = [
+                (mergedResults[type as keyof SearchResults] as unknown[]) = [
                   ...(Array.isArray(existingResults) ? existingResults : []),
                   ...typeResults,
-                ] as any;
+                ];
               }
             });
 

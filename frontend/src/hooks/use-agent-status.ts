@@ -63,7 +63,7 @@ export function useAgentStatus() {
   // Mutation for starting an agent
   const startAgentMutation = useApiMutation<
     { agent: Agent },
-    { type: string; name: string; config?: Record<string, any> }
+    { type: string; name: string; config?: Record<string, unknown> }
   >("/api/agents/start");
 
   // Handle start agent success
@@ -120,7 +120,7 @@ export function useAgentStatus() {
 
   // Function to start a new agent
   const startAgent = useCallback(
-    (type: string, name: string, config?: Record<string, any>) => {
+    (type: string, name: string, config?: Record<string, unknown>) => {
       startAgentMutation.mutate({ type, name, config });
     },
     [startAgentMutation]
@@ -239,7 +239,7 @@ export function useAgentActivities() {
 
   // Function to add a new activity
   const recordActivity = useCallback(
-    (agentId: string, action: string, details?: Record<string, any>) => {
+    (agentId: string, action: string, details?: Record<string, unknown>) => {
       addAgentActivity({ agentId, action, details });
     },
     [addAgentActivity]
