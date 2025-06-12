@@ -31,14 +31,7 @@ def check_hardcoded_secrets():
     import os
     import subprocess
 
-    # Patterns to search for
-    secret_patterns = [
-        r'password\s*=\s*["\'][^"\']{8,}["\']',
-        r'secret\s*=\s*["\'][^"\']{16,}["\']',
-        r'api_key\s*=\s*["\'][^"\']{16,}["\']',
-        r'private_key\s*=\s*["\'][^"\']{32,}["\']',
-        r"[A-Za-z0-9]{32,}",  # Generic long strings
-    ]
+    # Patterns to search for (used in exclude patterns)
 
     # Exclude patterns (legitimate configuration)
     exclude_patterns = [
@@ -59,8 +52,7 @@ def check_hardcoded_secrets():
         r"mock_",
     ]
 
-    # Search through source files
-    source_extensions = [".py", ".js", ".ts", ".tsx", ".json", ".yaml", ".yml"]
+    # Search through source files (extensions hardcoded in grep command)
 
     try:
         # Use grep to search for potential secrets

@@ -5,9 +5,9 @@
 
 "use client";
 
+import { useAuth } from "@/contexts/auth-context";
 import { useSupabase } from "@/lib/supabase/client";
 import type { Database } from "@/lib/supabase/database.types";
-import { useAuth } from "@/contexts/auth-context";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
 
@@ -139,7 +139,10 @@ export function useUpdateTrip() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ tripId, updates }: { tripId: number; updates: TripUpdate }) => {
+    mutationFn: async ({
+      tripId,
+      updates,
+    }: { tripId: number; updates: TripUpdate }) => {
       if (!user?.id) {
         throw new Error("User not authenticated");
       }
@@ -254,8 +257,8 @@ export function useAddTripCollaborator() {
     },
     onSuccess: (data, variables) => {
       // Invalidate collaborators list
-      queryClient.invalidateQueries({ 
-        queryKey: ["trip-collaborators", variables.trip_id, user?.id] 
+      queryClient.invalidateQueries({
+        queryKey: ["trip-collaborators", variables.trip_id, user?.id],
       });
     },
   });
@@ -270,7 +273,10 @@ export function useRemoveTripCollaborator() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ tripId, collaboratorId }: { tripId: number; collaboratorId: number }) => {
+    mutationFn: async ({
+      tripId,
+      collaboratorId,
+    }: { tripId: number; collaboratorId: number }) => {
       if (!user?.id) {
         throw new Error("User not authenticated");
       }
@@ -281,8 +287,8 @@ export function useRemoveTripCollaborator() {
     },
     onSuccess: (data, variables) => {
       // Invalidate collaborators list
-      queryClient.invalidateQueries({ 
-        queryKey: ["trip-collaborators", variables.tripId, user?.id] 
+      queryClient.invalidateQueries({
+        queryKey: ["trip-collaborators", variables.tripId, user?.id],
       });
     },
   });

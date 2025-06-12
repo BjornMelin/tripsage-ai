@@ -967,7 +967,7 @@ class AccommodationService:
         key_data = (
             f"{search_request.location}:{search_request.check_in}:"
             f"{search_request.check_out}:"
-            f"{search_request.adults + search_request.children}:"
+            f"{(search_request.adults or 1) + (search_request.children or 0)}:"
             f"{search_request.min_price}:{search_request.max_price}"
         )
 

@@ -23,8 +23,8 @@ function DashboardSkeleton() {
         </CardHeader>
         <CardContent>
           <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <Skeleton key={i} className="h-20 w-full rounded-lg" />
+            {["action-1", "action-2", "action-3", "action-4", "action-5", "action-6"].map((key) => (
+              <Skeleton key={key} className="h-20 w-full rounded-lg" />
             ))}
           </div>
         </CardContent>
@@ -38,8 +38,8 @@ function DashboardSkeleton() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="flex items-center space-x-4">
+              {["item-1", "item-2", "item-3"].map((key) => (
+                <div key={key} className="flex items-center space-x-4">
                   <Skeleton className="h-12 w-12 rounded" />
                   <div className="space-y-2 flex-1">
                     <Skeleton className="h-4 w-full" />
@@ -57,8 +57,8 @@ function DashboardSkeleton() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="space-y-2">
+              {["content-1", "content-2", "content-3"].map((key) => (
+                <div key={key} className="space-y-2">
                   <Skeleton className="h-4 w-full" />
                   <Skeleton className="h-3 w-3/4" />
                 </div>
@@ -74,8 +74,8 @@ function DashboardSkeleton() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {Array.from({ length: 3 }).map((_, i) => (
-                  <div key={i} className="space-y-2">
+                {["grid-1", "grid-2", "grid-3"].map((key) => (
+                  <div key={key} className="space-y-2">
                     <Skeleton className="h-4 w-full" />
                     <Skeleton className="h-3 w-2/3" />
                   </div>

@@ -349,7 +349,9 @@ async def download_file(
         _file_stream = io.BytesIO(file_content)
 
         headers = {
-            "Content-Disposition": f'attachment; filename="{file_info.original_filename}"',
+            "Content-Disposition": (
+                f'attachment; filename="{file_info.original_filename}"'
+            ),
             "Content-Type": file_info.mime_type,
         }
 

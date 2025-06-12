@@ -108,11 +108,16 @@ class TestTripsRouterComprehensive:
     @pytest.fixture
     def sample_shared_trip_response(self):
         """Sample shared trip response from core service."""
-        destination_mock = MagicMock()
-        destination_mock.name = "Tokyo, Japan"
-        destination_mock.country = "Japan"
-        destination_mock.city = "Tokyo"
-        destination_mock.coordinates = {"lat": 35.6762, "lng": 139.6503}
+        from tripsage_core.services.business.trip_service import TripLocation
+        
+        # Create proper TripLocation object instead of mock
+        destination = TripLocation(
+            name="Tokyo, Japan",
+            country="Japan",
+            city="Tokyo",
+            coordinates={"lat": 35.6762, "lng": 139.6503},
+            timezone=None
+        )
 
         trip_mock = MagicMock()
         trip_mock.id = str(uuid4())
@@ -121,7 +126,7 @@ class TestTripsRouterComprehensive:
         trip_mock.description = "5-day trip exploring Tokyo"
         trip_mock.start_date = datetime(2024, 5, 1, tzinfo=timezone.utc)
         trip_mock.end_date = datetime(2024, 5, 5, tzinfo=timezone.utc)
-        trip_mock.destinations = [destination_mock]
+        trip_mock.destinations = [destination]  # Use proper TripLocation object
         trip_mock.preferences = {}
         trip_mock.status = TripStatus.PLANNING.value
         trip_mock.visibility = TripVisibility.SHARED.value
@@ -216,18 +221,18 @@ class TestTripsRouterComprehensive:
         self, mock_principal, mock_trip_service
     ):
         """Test trip creation with invalid dates."""
-        invalid_request = CreateTripRequest(
-            title="Invalid Trip",
-            description="Invalid date range",
-            start_date=date(2024, 5, 5),  # End before start
-            end_date=date(2024, 5, 1),
-            destinations=[
-                TripDestination(name="Tokyo, Japan", country="Japan", city="Tokyo")
-            ],
-        )
-
-        with pytest.raises(ValueError, match="End date must be after start date"):
-            await create_trip(invalid_request, mock_principal, mock_trip_service)
+        from pydantic import ValidationError
+        
+        with pytest.raises(ValidationError, match="End date must be after start date"):
+            CreateTripRequest(
+                title="Invalid Trip",
+                description="Invalid date range",
+                start_date=date(2024, 5, 5),  # End before start
+                end_date=date(2024, 5, 1),
+                destinations=[
+                    TripDestination(name="Tokyo, Japan", country="Japan", city="Tokyo")
+                ],
+            )
 
     async def test_create_trip_service_error(
         self, mock_principal, mock_trip_service, sample_trip_request
@@ -493,15 +498,12 @@ class TestTripsRouterComprehensive:
 
     async def test_update_trip_invalid_dates(self, mock_principal, mock_trip_service):
         """Test updating trip with invalid date range."""
-        trip_id = uuid4()
-        update_request = UpdateTripRequest(
-            start_date=date(2024, 5, 5),
-            end_date=date(2024, 5, 1),  # End before start
-        )
-
-        with pytest.raises(ValueError, match="End date must be after start date"):
-            await update_trip(
-                trip_id, update_request, mock_principal, mock_trip_service
+        from pydantic import ValidationError
+        
+        with pytest.raises(ValidationError, match="End date must be after start date"):
+            UpdateTripRequest(
+                start_date=date(2024, 5, 5),
+                end_date=date(2024, 5, 1),  # End before start
             )
 
     async def test_get_trip_service_error(self, mock_principal, mock_trip_service):
@@ -633,7 +635,7 @@ class TestTripsRouterComprehensive:
         mock_trip_service.update_trip.return_value = sample_shared_trip_response
 
         updated_trip = await update_trip(
-            UUID(created_trip.id), update_request, mock_principal, mock_trip_service
+            created_trip.id, update_request, mock_principal, mock_trip_service
         )
         assert updated_trip.title == "Tokyo Adventure"
 
@@ -641,7 +643,7 @@ class TestTripsRouterComprehensive:
         mock_trip_service.get_trip.return_value = sample_shared_trip_response
 
         trip_summary = await get_trip_summary(
-            UUID(created_trip.id), mock_principal, mock_trip_service
+            created_trip.id, mock_principal, mock_trip_service
         )
         assert trip_summary.title == "Tokyo Adventure"
 
@@ -653,7 +655,7 @@ class TestTripsRouterComprehensive:
         sample_shared_trip_response,
     ):
         """Test complete collaboration workflow."""
-        trip_id = UUID(sample_shared_trip_response.id)
+        trip_id = UUID(sample_shared_trip_response.id)  # Convert string to UUID
 
         # Step 1: Owner accesses trip
         mock_trip_service.get_trip.return_value = sample_shared_trip_response

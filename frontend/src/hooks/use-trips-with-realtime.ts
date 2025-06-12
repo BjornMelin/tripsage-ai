@@ -6,14 +6,14 @@
 import { useAuth } from "@/contexts/auth-context";
 import { useMemo } from "react";
 import { useTripRealtime } from "./use-supabase-realtime";
-import { 
-  useTripData, 
-  useTrips as useTripsSupabase, 
-  useTripCollaborators,
-  useAddTripCollaborator,
-  useRemoveTripCollaborator 
-} from "./use-trips-supabase";
 import { useTrips } from "./use-trips";
+import {
+  useAddTripCollaborator,
+  useRemoveTripCollaborator,
+  useTripCollaborators,
+  useTripData,
+  useTrips as useTripsSupabase,
+} from "./use-trips-supabase";
 
 /**
  * Enhanced hook that combines trip data with real-time updates
@@ -83,8 +83,12 @@ export function useTripCollaboration(tripId: string | number) {
   const numericTripId =
     typeof tripId === "string" ? Number.parseInt(tripId, 10) : tripId;
 
-  const { data: collaborators, isLoading, error, refetch } =
-    useTripCollaborators(numericTripId);
+  const {
+    data: collaborators,
+    isLoading,
+    error,
+    refetch,
+  } = useTripCollaborators(numericTripId);
   const addCollaborator = useAddTripCollaborator();
   const removeCollaborator = useRemoveTripCollaborator();
   const realtimeStatus = useTripRealtime(numericTripId);
