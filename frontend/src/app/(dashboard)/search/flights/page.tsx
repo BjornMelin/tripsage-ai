@@ -154,7 +154,7 @@ function PopularRouteCard({
           </div>
         </div>
         <div>
-          <button className="text-xs text-primary hover:underline">View Deal →</button>
+          <button type="button" className="text-xs text-primary hover:underline">View Deal →</button>
         </div>
       </CardContent>
     </Card>

@@ -18,7 +18,7 @@ project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
 try:
-    from tripsage_core.models.db.trip import Trip, TripBudget, TripVisibility
+    from tripsage_core.models.db.trip import Trip, TripBudget
     from tripsage_core.services.infrastructure.database_service import (
         get_database_service,
     )

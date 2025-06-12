@@ -1,10 +1,10 @@
 import { useAuth } from "@/contexts/auth-context";
 import { useApiKeys } from "@/hooks/use-api-keys";
+import { type ApiError, createMockUseQueryResult } from "@/test/mock-helpers";
+import type { AllKeysResponse } from "@/types/api-keys";
 import { render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SecurityDashboard } from "../security-dashboard";
-import { createMockUseQueryResult, ApiError } from "@/test/mock-helpers";
-import type { AllKeysResponse } from "@/types/api-keys";
 
 // Mock the hooks
 vi.mock("@/contexts/auth-context");
@@ -46,7 +46,9 @@ describe("SecurityDashboard", () => {
       },
       supported_services: ["openai", "anthropic"],
     };
-    mockUseApiKeys.mockReturnValue(createMockUseQueryResult<AllKeysResponse, ApiError>(mockKeysData));
+    mockUseApiKeys.mockReturnValue(
+      createMockUseQueryResult<AllKeysResponse, ApiError>(mockKeysData)
+    );
   });
 
   afterEach(() => {
@@ -214,7 +216,9 @@ describe("SecurityDashboard", () => {
       keys: {},
       supported_services: [],
     };
-    mockUseApiKeys.mockReturnValue(createMockUseQueryResult<AllKeysResponse, ApiError>(mockEmptyKeysData));
+    mockUseApiKeys.mockReturnValue(
+      createMockUseQueryResult<AllKeysResponse, ApiError>(mockEmptyKeysData)
+    );
 
     render(<SecurityDashboard />);
 

@@ -320,10 +320,12 @@ describe("AuthContext", () => {
       };
 
       let authStateChangeCallback: Function;
-      mockSupabaseAuth.onAuthStateChange.mockImplementation((callback: (event: string, session: any) => void) => {
-        authStateChangeCallback = callback;
-        return { data: { subscription: { unsubscribe: vi.fn() } } };
-      });
+      mockSupabaseAuth.onAuthStateChange.mockImplementation(
+        (callback: (event: string, session: any) => void) => {
+          authStateChangeCallback = callback;
+          return { data: { subscription: { unsubscribe: vi.fn() } } };
+        }
+      );
 
       renderAuthProvider(<TestComponent />);
 
@@ -343,10 +345,12 @@ describe("AuthContext", () => {
 
     it("should handle auth state change to signed out", async () => {
       let authStateChangeCallback: Function;
-      mockSupabaseAuth.onAuthStateChange.mockImplementation((callback: (event: string, session: any) => void) => {
-        authStateChangeCallback = callback;
-        return { data: { subscription: { unsubscribe: vi.fn() } } };
-      });
+      mockSupabaseAuth.onAuthStateChange.mockImplementation(
+        (callback: (event: string, session: any) => void) => {
+          authStateChangeCallback = callback;
+          return { data: { subscription: { unsubscribe: vi.fn() } } };
+        }
+      );
 
       renderAuthProvider(<TestComponent />);
 

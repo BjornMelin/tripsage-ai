@@ -53,7 +53,9 @@ class SchemaMigrationService:
                 FROM information_schema.columns 
                 WHERE table_schema = 'public' 
                     AND table_name IN ('trips', 'flights', 'accommodations')
-                    AND column_name IN ('uuid_id', 'visibility', 'tags', 'preferences', 'title')
+                    AND column_name IN (
+                        'uuid_id', 'visibility', 'tags', 'preferences', 'title'
+                    )
                 ORDER BY table_name, column_name
             """)
 
@@ -309,7 +311,9 @@ class SchemaMigrationService:
 
                 await self.db.execute_query(
                     """
-                    INSERT INTO mem0_collections (id, name, description, metadata, created_at, updated_at)
+                    INSERT INTO mem0_collections (
+                        id, name, description, metadata, created_at, updated_at
+                    )
                     VALUES (%s, %s, %s, %s, %s, %s)
                 """,
                     (
@@ -376,8 +380,14 @@ class SchemaMigrationService:
             preferences_check = await self.db.execute_query("""
                 SELECT 
                     COUNT(*) as total_trips,
-                    COUNT(CASE WHEN preferences IS NOT NULL AND preferences != '{}' THEN 1 END) as trips_with_preferences,
-                    COUNT(CASE WHEN flexibility IS NOT NULL AND flexibility != '{}' THEN 1 END) as trips_with_flexibility
+                    COUNT(CASE 
+                        WHEN preferences IS NOT NULL AND preferences != '{}' 
+                        THEN 1 
+                    END) as trips_with_preferences,
+                    COUNT(CASE 
+                        WHEN flexibility IS NOT NULL AND flexibility != '{}' 
+                        THEN 1 
+                    END) as trips_with_flexibility
                 FROM trips
             """)
             validation_results["preferences_migration"] = preferences_check[0]

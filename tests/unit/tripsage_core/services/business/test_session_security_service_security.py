@@ -154,9 +154,6 @@ class TestSessionSecurityAttackScenarios:
         # Check for suspicious activity event
         # Note: risk score is 50 (30 for IP + 20 for UA), threshold is 70
         # So we need to check if the validation calculated the right risk
-        # Let's verify by checking all logged events
-        all_events = security_service.db.security_events
-
         # The session should be validated successfully, even if no suspicious event is logged
         # Let's check the activity risk score calculation directly
         risk_score = security_service._calculate_activity_risk_score(
@@ -172,8 +169,7 @@ class TestSessionSecurityAttackScenarios:
         """Test resistance to token manipulation attacks."""
         user_id = "token_test_user"
 
-        # Create legitimate session
-        session = await security_service.create_session(user_id=user_id)
+        # Create legitimate token for manipulation testing
         legitimate_token = secrets.token_urlsafe(32)
 
         # Test various token manipulation attempts
