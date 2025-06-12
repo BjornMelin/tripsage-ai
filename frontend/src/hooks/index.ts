@@ -3,16 +3,15 @@
 // Enhanced Supabase hooks
 export * from "./use-supabase-query";
 export * from "./use-supabase-realtime";
-export * from "./use-supabase-trips";
 export * from "./use-supabase-chat";
 export * from "./use-supabase-storage";
 export * from "./use-trips-with-realtime";
 
 // Legacy Supabase hooks (to be migrated)
 export * from "./use-trips-supabase";
-export * from "./use-chat-supabase";
-export * from "./use-file-storage";
-export * from "./use-search-supabase";
+
+// Modern API hooks
+export * from "./use-authenticated-api";
 
 // Legacy hooks (to be migrated)
 export * from "./use-api-query";

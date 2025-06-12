@@ -1,10 +1,10 @@
 "use client";
 
 import { useSupabase } from "@/lib/supabase/client";
+import type { User as SupabaseUser } from "@supabase/supabase-js";
 import { useRouter } from "next/navigation";
 import type React from "react";
 import { createContext, useContext, useEffect, useState } from "react";
-import type { User as SupabaseUser } from "@supabase/supabase-js";
 
 // User type extending Supabase User with additional fields
 export interface User {
@@ -78,7 +78,7 @@ export function AuthProvider({ children, initialUser = null }: AuthProviderProps
   const convertSupabaseUser = (supabaseUser: SupabaseUser): User => ({
     id: supabaseUser.id,
     email: supabaseUser.email!,
-    name: supabaseUser.user_metadata?.full_name || supabaseUser.email!.split("@")[0],
+    name: supabaseUser.user_metadata?.full_name || supabaseUser.email?.split("@")[0],
     full_name: supabaseUser.user_metadata?.full_name,
     avatar_url: supabaseUser.user_metadata?.avatar_url,
     created_at: supabaseUser.created_at,
@@ -239,12 +239,12 @@ export function AuthProvider({ children, initialUser = null }: AuthProviderProps
         options: {
           redirectTo: `${window.location.origin}/auth/callback`,
           queryParams: {
-            access_type: 'offline',
-            prompt: 'consent',
+            access_type: "offline",
+            prompt: "consent",
           },
           // PKCE is enabled by default in Supabase Auth
           // Additional security options
-          scopes: provider === 'google' ? 'openid email profile' : 'user:email',
+          scopes: provider === "google" ? "openid email profile" : "user:email",
         },
       });
 

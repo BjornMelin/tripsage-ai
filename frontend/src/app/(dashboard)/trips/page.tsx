@@ -1,5 +1,6 @@
 "use client";
 
+import { ConnectionStatusIndicator } from "@/components/features/realtime/connection-status-monitor";
 import { TripCard } from "@/components/features/trips";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -18,11 +19,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useTripStore } from "@/stores/trip-store";
 import { useTripsWithRealtime } from "@/hooks/use-trips-with-realtime";
-import { ConnectionStatusIndicator } from "@/components/features/realtime/connection-status-monitor";
+import { useTripStore } from "@/stores/trip-store";
 import { Filter, Grid, List, Plus, Search } from "lucide-react";
-import { useMemo, useState, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 type SortOption = "name" | "date" | "budget" | "destinations";
 type FilterOption = "all" | "draft" | "upcoming" | "active" | "completed";
@@ -170,10 +170,10 @@ export default function TripsPage() {
           {Array.from({ length: 6 }).map((_, i) => (
             <Card key={i} className="animate-pulse">
               <CardContent className="p-6">
-                <div className="h-4 bg-gray-200 rounded mb-4"></div>
-                <div className="h-3 bg-gray-200 rounded mb-2"></div>
-                <div className="h-3 bg-gray-200 rounded mb-4"></div>
-                <div className="h-8 bg-gray-200 rounded"></div>
+                <div className="h-4 bg-gray-200 rounded mb-4" />
+                <div className="h-3 bg-gray-200 rounded mb-2" />
+                <div className="h-3 bg-gray-200 rounded mb-4" />
+                <div className="h-8 bg-gray-200 rounded" />
               </CardContent>
             </Card>
           ))}

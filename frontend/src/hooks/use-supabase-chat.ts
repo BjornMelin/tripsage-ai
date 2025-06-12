@@ -1,23 +1,23 @@
 "use client";
 
-import { useCallback, useMemo } from "react";
-import {
-  useQuery,
-  useMutation,
-  useQueryClient,
-  useInfiniteQuery,
-} from "@tanstack/react-query";
+import { useAuth } from "@/contexts/auth-context";
 import { useSupabase } from "@/lib/supabase/client";
 import type {
-  ChatSession,
-  ChatSessionInsert,
   ChatMessage,
   ChatMessageInsert,
+  ChatRole,
+  ChatSession,
+  ChatSessionInsert,
   ChatToolCall,
   ChatToolCallInsert,
-  ChatRole,
 } from "@/lib/supabase/types";
-import { useAuth } from "@/contexts/auth-context";
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
+import { useCallback, useMemo } from "react";
 import { useChatRealtime } from "./use-supabase-realtime";
 
 /**

@@ -58,7 +58,7 @@ class MFAVerificationRequest(TripSageModel):
 
     user_id: str = Field(..., description="User ID")
     code: str = Field(
-        ..., min_length=6, max_length=8, description="TOTP or backup code"
+        ..., min_length=6, max_length=11, description="TOTP (6 chars) or backup code (11 chars)"
     )
 
 

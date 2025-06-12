@@ -1,14 +1,14 @@
 "use client";
 
-import { useEffect, useRef, useCallback, useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/contexts/auth-context";
+import { useSupabase } from "@/lib/supabase/client";
+import type { Database, Tables } from "@/lib/supabase/types";
 import type {
   RealtimeChannel,
   RealtimePostgresChangesPayload,
 } from "@supabase/supabase-js";
-import { useSupabase } from "@/lib/supabase/client";
-import type { Database, Tables } from "@/lib/supabase/types";
-import { useAuth } from "@/contexts/auth-context";
+import { useQueryClient } from "@tanstack/react-query";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 type TableName = keyof Database["public"]["Tables"];
 type PostgresChangesEvent = "INSERT" | "UPDATE" | "DELETE" | "*";

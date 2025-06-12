@@ -1,7 +1,7 @@
-import { middleware, config } from "@/middleware";
+import { config, middleware } from "@/middleware";
+import { createServerClient } from "@supabase/ssr";
 import { NextRequest, NextResponse } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { createServerClient } from "@supabase/ssr";
 
 // Mock JWT token for testing
 const TEST_TOKEN = "mock-jwt-token-for-testing";
@@ -476,7 +476,7 @@ describe("Middleware", () => {
 
     it("should handle very long auth headers", async () => {
       // Arrange
-      const longToken = "Bearer " + "x".repeat(1000);
+      const longToken = `Bearer ${"x".repeat(1000)}`;
       const request = createRequest("http://localhost:3000/api/chat", {
         method: "POST",
         headers: { authorization: longToken },

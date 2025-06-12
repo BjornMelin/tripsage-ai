@@ -1,7 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/contexts/auth-context";
 import { useSupabase } from "@/lib/supabase/client";
 import type {
   FileAttachment,
@@ -10,7 +9,8 @@ import type {
   UploadStatus,
   VirusScanStatus,
 } from "@/lib/supabase/types";
-import { useAuth } from "@/contexts/auth-context";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useCallback, useMemo, useState } from "react";
 
 interface UploadProgress {
   fileId: string;
@@ -482,7 +482,7 @@ export function useFileTypeUtils() {
     const k = 1024;
     const sizes = ["Bytes", "KB", "MB", "GB"];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return Number.parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+    return `${Number.parseFloat((bytes / k ** i).toFixed(2))} ${sizes[i]}`;
   }, []);
 
   const isImageFile = useCallback((mimeType: string) => {

@@ -1,6 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Import after mocking dependencies
 let createClient: () => Promise<any>;
@@ -101,8 +101,8 @@ describe("Supabase Server Client", () => {
 
   it("should throw an error when environment variables are missing", async () => {
     // Clear environment variables
-    delete process.env.NEXT_PUBLIC_SUPABASE_URL;
-    delete process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    process.env.NEXT_PUBLIC_SUPABASE_URL = undefined;
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = undefined;
 
     // Re-import module with missing env vars
     vi.resetModules();

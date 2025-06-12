@@ -72,7 +72,7 @@ export function BackupCodeVerification({
     } else if (value.length <= 11) {
       // Add hyphen after 5 characters if not present
       if (!value.includes("-")) {
-        value = value.slice(0, 5) + "-" + value.slice(5);
+        value = `${value.slice(0, 5)}-${value.slice(5)}`;
       }
       setBackupCode(value);
     }

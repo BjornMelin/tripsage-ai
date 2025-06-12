@@ -1,6 +1,5 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,14 +13,15 @@ import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/components/ui/use-toast";
 import {
-  Wifi,
-  WifiOff,
-  RefreshCw,
   Activity,
   AlertTriangle,
   CheckCircle,
+  RefreshCw,
+  Wifi,
+  WifiOff,
   XCircle,
 } from "lucide-react";
+import { useEffect, useState } from "react";
 
 interface ConnectionStatus {
   isConnected: boolean;

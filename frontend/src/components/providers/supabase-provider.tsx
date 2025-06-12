@@ -5,12 +5,12 @@
 
 "use client";
 
+import { AuthProvider } from "@/contexts/auth-context";
+import { createClient } from "@/lib/supabase/client";
+import { SessionContextProvider } from "@supabase/auth-helpers-react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
-import { SessionContextProvider } from "@supabase/auth-helpers-react";
 import { useState } from "react";
-import { createClient } from "@/lib/supabase/client";
-import { AuthProvider } from "@/contexts/auth-context";
 
 interface SupabaseProviderProps {
   children: React.ReactNode;

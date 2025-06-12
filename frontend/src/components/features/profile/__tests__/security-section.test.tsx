@@ -5,11 +5,11 @@
  * patterns and behavioral validation. Following ULTRATHINK methodology.
  */
 
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { toast } from "@/components/ui/use-toast";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { SecuritySection } from "../security-section";
-import { toast } from "@/components/ui/use-toast";
 
 // Mock the stores and hooks
 const mockUpdateUser = vi.fn();
