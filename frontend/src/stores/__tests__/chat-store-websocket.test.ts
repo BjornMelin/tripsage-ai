@@ -7,6 +7,7 @@
 
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { ConnectionStatus } from "@/lib/websocket/websocket-client";
 import { useChatStore } from "../chat-store";
 
 // Mock WebSocket client with essential methods
@@ -91,7 +92,7 @@ describe("Chat Store WebSocket Integration", () => {
       });
 
       // Assert - Connection state should be tracked
-      expect(result.current.isConnected).toBe(true);
+      expect(result.current.connectionStatus).toBe(ConnectionStatus.CONNECTED);
     });
   });
 
@@ -147,7 +148,7 @@ describe("Chat Store WebSocket Integration", () => {
       });
 
       // Assert
-      expect(result.current.messages).toContainEqual(
+      expect(result.current.currentSession?.messages).toContainEqual(
         expect.objectContaining({
           id: "msg-123",
           content: "Hello from server",
@@ -183,7 +184,8 @@ describe("Chat Store WebSocket Integration", () => {
       });
 
       // Assert - Should update streaming message
-      expect(result.current.streamingMessage).toEqual(
+      expect(result.current.isStreaming).toBe(true);
+      expect(result.current.currentSession?.messages).toContainEqual(
         expect.objectContaining({
           id: "msg-456",
           content: "This is a ",
@@ -221,10 +223,10 @@ describe("Chat Store WebSocket Integration", () => {
       });
 
       // Assert
-      expect(result.current.agentStatus).toEqual(
+      expect(result.current.currentSession?.agentStatus).toEqual(
         expect.objectContaining({
-          agentId: "agent-123",
-          status: "processing",
+          isActive: true,
+          currentTask: "processing",
           message: "Analyzing your request...",
         })
       );
@@ -244,7 +246,7 @@ describe("Chat Store WebSocket Integration", () => {
         ).rejects.toThrow("Connection failed");
       });
 
-      expect(result.current.isConnected).toBe(false);
+      expect(result.current.connectionStatus).toBe(ConnectionStatus.DISCONNECTED);
       expect(result.current.error).toBeTruthy();
     });
 
@@ -268,25 +270,27 @@ describe("Chat Store WebSocket Integration", () => {
       // Arrange
       const { result } = renderHook(() => useChatStore());
 
+      // Create a session first
+      const sessionId = result.current.createSession("Test Session");
+      result.current.setCurrentSession(sessionId);
+
       // Add some messages first
       await act(async () => {
-        result.current.addMessage({
-          id: "msg-1",
-          content: "Test message",
-          sender: "user",
-          timestamp: Date.now(),
+        result.current.addMessage(sessionId, {
+          role: "user",
+          content: "Test message"
         });
       });
 
-      expect(result.current.messages).toHaveLength(1);
+      expect(result.current.currentSession?.messages).toHaveLength(1);
 
       // Act
       await act(async () => {
-        result.current.clearMessages();
+        result.current.clearMessages(sessionId);
       });
 
       // Assert
-      expect(result.current.messages).toHaveLength(0);
+      expect(result.current.currentSession?.messages).toHaveLength(0);
     });
 
     it("should cleanup WebSocket on unmount", async () => {

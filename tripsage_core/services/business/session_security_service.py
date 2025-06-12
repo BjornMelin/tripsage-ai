@@ -618,8 +618,13 @@ class SessionSecurityService:
                     risk_score += 5  # Private IPs are slightly more risky
                 elif not ip_obj.is_global:
                     risk_score += 15  # Local/reserved IPs are more risky
-            except AddressValueError:
+            except (AddressValueError, ValueError):
+                # Handle any IP parsing errors gracefully
                 risk_score += 20  # Invalid IP format
+                logger.warning(
+                    "Invalid IP address format in risk calculation",
+                    extra={"ip_address": ip_address, "user_id": user_id}
+                )
 
         return min(risk_score, 100)
 
@@ -670,8 +675,9 @@ class SessionSecurityService:
     def _get_recent_failures(self, user_id: str) -> int:
         """Get recent failed login attempts (simplified)."""
         # In a real implementation, this would query the database
-        # For now, return a mock value
-        return self._rate_limit_cache.get(f"failures_{user_id}", [])
+        # For now, return the count of failures from cache
+        failures_list = self._rate_limit_cache.get(f"failures_{user_id}", [])
+        return len(failures_list) if isinstance(failures_list, list) else 0
 
     async def cleanup_expired_sessions(self) -> int:
         """

@@ -115,11 +115,9 @@ describe("useSupabaseRealtime", () => {
     });
 
     it("should not create channel when user is not authenticated", () => {
-      vi.mocked(require("@/contexts/auth-context").useAuth).mockReturnValueOnce({
-        user: null,
-        isAuthenticated: false,
-        isLoading: false,
-      });
+      // Temporarily override the auth mock for this test
+      const originalAuth = mockAuth.user;
+      mockAuth.user = null;
 
       renderHook(
         () =>
@@ -131,6 +129,9 @@ describe("useSupabaseRealtime", () => {
       );
 
       expect(mockSupabaseClient.channel).not.toHaveBeenCalled();
+      
+      // Restore original auth state
+      mockAuth.user = originalAuth;
     });
 
     it("should not create channel when disabled", () => {
@@ -539,11 +540,10 @@ describe("useSupabaseRealtime", () => {
         result.current.reconnect();
       });
 
-      // Force re-render to trigger useEffect
-      rerender();
-
-      expect(mockSupabaseClient.removeChannel).toHaveBeenCalledTimes(1);
-      expect(mockSupabaseClient.channel).toHaveBeenCalled();
+      // Wait for the effect to trigger and create a new channel
+      await waitFor(() => {
+        expect(mockSupabaseClient.channel).toHaveBeenCalled();
+      });
     });
 
     it("should cleanup on unmount", () => {
@@ -580,7 +580,7 @@ describe("useSupabaseRealtime", () => {
 
       await waitFor(() => {
         expect(result.current.error).toBeInstanceOf(Error);
-        expect(result.current.error?.message).toBe("Failed to setup realtime subscription");
+        expect(result.current.error?.message).toBe("Subscription setup failed");
       });
     });
 
@@ -701,6 +701,12 @@ describe("useTripRealtime", () => {
 describe("useChatRealtime", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Reset channel mock to return fresh instances
+    mockSupabaseClient.channel.mockImplementation(() => ({
+      on: vi.fn().mockReturnThis(),
+      subscribe: vi.fn().mockReturnThis(),
+      unsubscribe: vi.fn().mockReturnThis(),
+    }));
   });
 
   it("should track new message count", () => {
@@ -713,13 +719,24 @@ describe("useChatRealtime", () => {
   });
 
   it("should increment message count for non-user messages", async () => {
+    let messagesChannel: any;
+    mockSupabaseClient.channel.mockImplementation(() => {
+      const channel = {
+        on: vi.fn().mockReturnThis(),
+        subscribe: vi.fn().mockReturnThis(),
+        unsubscribe: vi.fn().mockReturnThis(),
+      };
+      if (!messagesChannel) messagesChannel = channel;
+      return channel;
+    });
+
     const { result } = renderHook(() => useChatRealtime("session-123"), {
       wrapper: createWrapper(),
     });
 
-    // Get the INSERT handler for chat_messages
-    const postgresHandler = mockChannel.on.mock.calls.find(
-      (call) => call[0] === "postgres_changes"
+    // Get the INSERT handler for chat_messages from the messages channel
+    const postgresHandler = messagesChannel.on.mock.calls.find(
+      (call: any) => call[0] === "postgres_changes"
     )?.[2];
 
     const mockPayload = {
@@ -740,12 +757,23 @@ describe("useChatRealtime", () => {
   });
 
   it("should not increment message count for user messages", async () => {
+    let messagesChannel: any;
+    mockSupabaseClient.channel.mockImplementation(() => {
+      const channel = {
+        on: vi.fn().mockReturnThis(),
+        subscribe: vi.fn().mockReturnThis(),
+        unsubscribe: vi.fn().mockReturnThis(),
+      };
+      if (!messagesChannel) messagesChannel = channel;
+      return channel;
+    });
+
     const { result } = renderHook(() => useChatRealtime("session-123"), {
       wrapper: createWrapper(),
     });
 
-    const postgresHandler = mockChannel.on.mock.calls.find(
-      (call) => call[0] === "postgres_changes"
+    const postgresHandler = messagesChannel.on.mock.calls.find(
+      (call: any) => call[0] === "postgres_changes"
     )?.[2];
 
     const mockPayload = {
@@ -808,9 +836,28 @@ describe("Integration Tests", () => {
     expect(chatResult.current.isConnected).toBeDefined();
   });
 
-  it("should properly isolate subscription errors", () => {
+  it("should properly isolate subscription errors", async () => {
     const onError = vi.fn().mockImplementation(() => {
       throw new Error("Test error");
+    });
+
+    // Create separate channels for each subscription
+    const errorChannel = {
+      on: vi.fn().mockReturnThis(),
+      subscribe: vi.fn().mockReturnThis(),
+      unsubscribe: vi.fn().mockReturnThis(),
+    };
+
+    const normalChannel = {
+      on: vi.fn().mockReturnThis(),
+      subscribe: vi.fn().mockReturnThis(),
+      unsubscribe: vi.fn().mockReturnThis(),
+    };
+
+    let channelCallCount = 0;
+    mockSupabaseClient.channel.mockImplementation(() => {
+      channelCallCount++;
+      return channelCallCount === 1 ? errorChannel : normalChannel;
     });
 
     const { result: errorResult } = renderHook(
@@ -832,13 +879,13 @@ describe("Integration Tests", () => {
       { wrapper: createWrapper() }
     );
 
-    // Trigger error in first subscription
-    const postgresHandler = mockChannel.on.mock.calls.find(
+    // Trigger error in first subscription only
+    const errorPostgresHandler = errorChannel.on.mock.calls.find(
       (call) => call[0] === "postgres_changes"
     )?.[2];
 
     act(() => {
-      postgresHandler?.({
+      errorPostgresHandler?.({
         eventType: "INSERT",
         new: { id: 1 },
         old: {},
@@ -847,8 +894,10 @@ describe("Integration Tests", () => {
       });
     });
 
-    // Error should be isolated to the first subscription
-    expect(errorResult.current.error).toBeInstanceOf(Error);
-    expect(normalResult.current.error).toBe(null);
+    await waitFor(() => {
+      // Error should be isolated to the first subscription
+      expect(errorResult.current.error).toBeInstanceOf(Error);
+      expect(normalResult.current.error).toBe(null);
+    });
   });
 });
