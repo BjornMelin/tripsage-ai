@@ -105,7 +105,40 @@ After comprehensive codebase analysis, the Linear issues have been updated to re
 
 ## High Priority Tasks
 
-### 1. Complete Frontend Core Setup ⭐ **HIGH PRIORITY**
+### 1. Frontend Code Quality & Type Safety Initiative ⭐ **NEW EPIC - BJO-139**
+
+**Epic Status**: Active Q1 2025 frontend technical debt reduction initiative
+
+- [ ] **[BJO-140](https://linear.app/bjorn-dev/issue/BJO-140)** - fix(frontend): resolve critical P0 linting errors blocking PR merge 🚨 **P0-CRITICAL**
+  - [ ] Fix SVG accessibility violations (role="img", aria-label attributes)
+  - [ ] Resolve React key prop violations (replace array indices with static keys)
+  - [ ] Fix explicit 'any' type usage (use 'unknown', vi.mocked(), proper interfaces)
+  - [ ] Add missing button type attributes for accessibility
+  - **Priority**: P0-Critical (4-7 items, <2 hours)
+  - **Impact**: Blocks current PR merge and code quality standards
+  - **Status**: In Progress (225 errors → target: <50 errors)
+
+- [ ] **[BJO-141](https://linear.app/bjorn-dev/issue/BJO-141)** - refactor(frontend): systematic TypeScript type safety improvements 📝 **P1-HIGH**
+  - [ ] Replace all Record<string, any> with Record<string, unknown>
+  - [ ] Implement proper Window interface extensions
+  - [ ] Add comprehensive vi.mocked() patterns for test type safety
+  - [ ] Create shared TypeScript utilities for common patterns
+  - **Priority**: P1-High (15-25 items, 1-2 days)
+  - **Impact**: Improves long-term maintainability and developer experience
+  - **Dependencies**: BJO-140 completion
+
+- [ ] **[BJO-142](https://linear.app/bjorn-dev/issue/BJO-142)** - feat(frontend): establish systematic technical debt management process 🔄 **P2-MEDIUM**
+  - [ ] Implement automated linting rules and pre-commit hooks
+  - [ ] Create technical debt capacity allocation framework (70% features, 20% critical, 8% medium)
+  - [ ] Set up systematic code quality monitoring and metrics
+  - [ ] Establish technical debt review process for future PRs
+  - **Priority**: P2-Medium (Process improvements, 2-3 hours)
+  - **Impact**: Prevents future technical debt accumulation
+  - **Long-term**: Sustainable code quality maintenance
+
+**Expected Impact**: Systematic reduction of frontend linting errors (225→<50), improved type safety, and sustainable technical debt management framework
+
+### 2. Complete Frontend Core Setup ⭐ **HIGH PRIORITY**
 
 - [ ] **Next.js 15 Foundation** (2-3 days)
   - [ ] Complete App Router initialization with authentication
@@ -374,9 +407,11 @@ After comprehensive codebase analysis, the Linear issues have been updated to re
 
 ### Critical Path (Days 1-5) - **Updated Based on Comprehensive Codebase Analysis**
 
+- **Frontend Code Quality (Day 1)**: Complete critical linting fixes for PR merge (BJO-140) - <2 hours
 - **Critical Endpoint Implementation** (Days 1-2): Fix create_trip endpoint and implement auth-dependent endpoints (BJO-130, BJO-131)
 - **Database Security Configuration** (Day 3): Configure RLS policies and complete security requirements (BJO-133)
 - **Integration Testing** (Days 4-5): Comprehensive end-to-end testing of complete system (BJO-123)
+- **Frontend Type Safety** (Days 6-7): Systematic TypeScript improvements and technical debt framework (BJO-141, BJO-142)
 
 ### **Corrected Implementation Status Assessment**
 
@@ -398,10 +433,13 @@ After comprehensive codebase analysis, the Linear issues have been updated to re
 
 ### **Priority Focus Areas**
 
-1. **BJO-130 (URGENT)**: Fix critical trip creation endpoint - 1 day
-2. **BJO-131 (HIGH)**: Implement authentication-dependent endpoints - 2-3 days  
-3. **BJO-133 (HIGH)**: Configure database RLS policies - 1 day
-4. **BJO-132 (MEDIUM)**: Update schema documentation consistency - 2-3 hours
+1. **BJO-140 (P0-CRITICAL)**: Frontend linting fixes for PR merge - <2 hours
+2. **BJO-130 (URGENT)**: Fix critical trip creation endpoint - 1 day
+3. **BJO-131 (HIGH)**: Implement authentication-dependent endpoints - 2-3 days  
+4. **BJO-133 (HIGH)**: Configure database RLS policies - 1 day
+5. **BJO-141 (P1-HIGH)**: Frontend TypeScript type safety improvements - 1-2 days
+6. **BJO-132 (MEDIUM)**: Update schema documentation consistency - 2-3 hours
+7. **BJO-142 (P2-MEDIUM)**: Technical debt management framework - 2-3 hours
 
 ### Expected Impact
 
@@ -448,6 +486,6 @@ Note: Full V2 feature list archived for future reference.
 
 ---
 
-*Last Updated: June 10, 2025 - Post Linear Issues Comprehensive Reassessment*
-*Current Focus: Critical endpoint implementation (BJO-130, BJO-131) and database security policies (BJO-133)*
+*Last Updated: December 6, 2025 - Added Frontend Code Quality Epic (BJO-139) with child issues*
+*Current Focus: Frontend linting fixes (BJO-140), critical endpoint implementation (BJO-130, BJO-131), and database security policies (BJO-133)*
 *Production Readiness: 85% complete - Major architecture finished, focused child issues remaining (4-5 days)*

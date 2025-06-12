@@ -236,8 +236,8 @@ describe("Search Results Store", () => {
 
       const searchId = result.current.startSearch("flight", {});
       const mockResults: SearchResults = {
-        flights: [{ id: "f1" }] as any,
-        accommodations: [{ id: "a1" }] as any,
+        flights: [{ id: "f1" }] as Partial<Flight>[],
+        accommodations: [{ id: "a1" }] as Partial<Accommodation>[],
       };
 
       act(() => {
