@@ -27,7 +27,9 @@ type SupabaseQueryBuilder<T extends TableName> = PostgrestFilterBuilder<
   Database["public"]["Tables"][T]["Row"][]
 >;
 
-type QueryHandler<T extends TableName> = (query: SupabaseQueryBuilder<T>) => SupabaseQueryBuilder<T>;
+type QueryHandler<T extends TableName> = (
+  query: SupabaseQueryBuilder<T>
+) => SupabaseQueryBuilder<T>;
 
 interface UseSupabaseQueryOptions<T extends TableName>
   extends Omit<UseQueryOptions<TableRow<T>[]>, "queryKey" | "queryFn"> {

@@ -36,10 +36,11 @@ export function useApiQuery<TData = any, TError = ApiError>(
 }
 
 // Hook for POST requests
-export function useApiMutation<TData = unknown, TVariables = unknown, TError = ApiError>(
-  endpoint: string,
-  options?: ApiMutationOptions<TData, TVariables, TError>
-) {
+export function useApiMutation<
+  TData = unknown,
+  TVariables = unknown,
+  TError = ApiError,
+>(endpoint: string, options?: ApiMutationOptions<TData, TVariables, TError>) {
   const queryClient = useQueryClient();
   const { makeAuthenticatedRequest } = useAuthenticatedApi();
 

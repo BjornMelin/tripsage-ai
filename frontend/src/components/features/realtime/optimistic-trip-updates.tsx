@@ -42,7 +42,9 @@ export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   // const updateTrip = useUpdateTrip(); // TODO: Implement this hook
-  const updateTrip: { mutateAsync: () => Promise<void> } = { mutateAsync: async () => {} };
+  const updateTrip: { mutateAsync: () => Promise<void> } = {
+    mutateAsync: async () => {},
+  };
   const { isConnected, errors } = useTripRealtime(tripId);
 
   const [formData, setFormData] = useState<Partial<TripUpdate>>({});
