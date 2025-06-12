@@ -8,10 +8,30 @@ vi.mock("@supabase/ssr", () => ({
   createServerClient: vi.fn(),
 }));
 
+// Define proper types for cookie handling
+interface Cookie {
+  name: string;
+  value: string;
+}
+
+interface CookieWithOptions extends Cookie {
+  options?: Record<string, unknown>;
+}
+
+interface MockCookies {
+  getAll: ReturnType<typeof vi.fn>;
+  set: ReturnType<typeof vi.fn>;
+  get: ReturnType<typeof vi.fn>;
+  delete: ReturnType<typeof vi.fn>;
+  has: ReturnType<typeof vi.fn>;
+  forEach: ReturnType<typeof vi.fn>;
+  clear: ReturnType<typeof vi.fn>;
+}
+
 // Helper function to create a properly mocked NextRequest
 function createMockNextRequest(url: string, headers: Record<string, string> = {}) {
-  const mockCookies = {
-    getAll: vi.fn().mockReturnValue([]),
+  const mockCookies: MockCookies = {
+    getAll: vi.fn(() => []),
     set: vi.fn(),
     get: vi.fn(),
     delete: vi.fn(),
@@ -25,9 +45,9 @@ function createMockNextRequest(url: string, headers: Record<string, string> = {}
     nextUrl: new URL(url),
     headers: new Headers(headers),
     cookies: mockCookies,
-  } as any;
+  } as unknown as NextRequest;
 
-  return request as NextRequest;
+  return request;
 }
 
 describe("Middleware - updateSession", () => {
@@ -45,14 +65,23 @@ describe("Middleware - updateSession", () => {
     const mockRequest = createMockNextRequest("http://localhost:3000/dashboard");
 
     // Mock cookies
-    const mockCookies = [
+    const mockCookies: Cookie[] = [
       { name: "sb-access-token", value: "token123" },
       { name: "sb-refresh-token", value: "refresh123" },
     ];
-    (mockRequest.cookies.getAll as any).mockReturnValue(mockCookies);
+    vi.mocked(mockRequest.cookies.getAll).mockReturnValue(mockCookies);
+
+    // Define Supabase auth types
+    interface SupabaseAuth {
+      getUser: ReturnType<typeof vi.fn>;
+    }
+    
+    interface MockSupabase {
+      auth: SupabaseAuth;
+    }
 
     // Mock Supabase client
-    const mockSupabase = {
+    const mockSupabase: MockSupabase = {
       auth: {
         getUser: vi.fn().mockResolvedValue({
           data: { user: mockUser },
@@ -61,10 +90,15 @@ describe("Middleware - updateSession", () => {
       },
     };
 
-    let capturedCookieHandlers: any = null;
+    interface CookieHandlers {
+      getAll: () => Cookie[];
+      setAll: (cookies: CookieWithOptions[]) => void;
+    }
+
+    let capturedCookieHandlers: CookieHandlers | null = null;
     vi.mocked(createServerClient).mockImplementation((url, key, options) => {
-      capturedCookieHandlers = options.cookies;
-      return mockSupabase as any;
+      capturedCookieHandlers = options.cookies as CookieHandlers;
+      return mockSupabase as unknown as ReturnType<typeof createServerClient>;
     });
 
     const supabaseResponse = await updateSession(mockRequest);
@@ -85,12 +119,12 @@ describe("Middleware - updateSession", () => {
     expect(supabaseResponse).toBeInstanceOf(NextResponse);
 
     // Test cookie handlers
-    const getAllResult = capturedCookieHandlers.getAll();
+    const getAllResult = capturedCookieHandlers!.getAll();
     expect(getAllResult).toEqual(mockCookies);
 
     // Test setAll handler - just verify it can be called without errors
     expect(() => {
-      capturedCookieHandlers.setAll([
+      capturedCookieHandlers!.setAll([
         { name: "test", value: "value", options: { httpOnly: true } },
       ]);
     }).not.toThrow();
@@ -99,7 +133,7 @@ describe("Middleware - updateSession", () => {
   it("should handle missing user gracefully", async () => {
     const mockRequest = createMockNextRequest("http://localhost:3000/dashboard");
 
-    (mockRequest.cookies.getAll as any).mockReturnValue([]);
+    vi.mocked(mockRequest.cookies.getAll).mockReturnValue([]);
 
     const mockSupabase = {
       auth: {
@@ -110,7 +144,7 @@ describe("Middleware - updateSession", () => {
       },
     };
 
-    vi.mocked(createServerClient).mockReturnValue(mockSupabase as any);
+    vi.mocked(createServerClient).mockReturnValue(mockSupabase as unknown as ReturnType<typeof createServerClient>);
 
     const supabaseResponse = await updateSession(mockRequest);
 
@@ -121,7 +155,7 @@ describe("Middleware - updateSession", () => {
   it("should handle auth errors gracefully", async () => {
     const mockRequest = createMockNextRequest("http://localhost:3000/dashboard");
 
-    (mockRequest.cookies.getAll as any).mockReturnValue([]);
+    vi.mocked(mockRequest.cookies.getAll).mockReturnValue([]);
 
     const mockSupabase = {
       auth: {
@@ -132,7 +166,7 @@ describe("Middleware - updateSession", () => {
       },
     };
 
-    vi.mocked(createServerClient).mockReturnValue(mockSupabase as any);
+    vi.mocked(createServerClient).mockReturnValue(mockSupabase as unknown as ReturnType<typeof createServerClient>);
 
     const supabaseResponse = await updateSession(mockRequest);
 
@@ -143,13 +177,13 @@ describe("Middleware - updateSession", () => {
   it("should handle request with multiple cookies", async () => {
     const mockRequest = createMockNextRequest("http://localhost:3000/api/data");
 
-    const mockCookies = [
+    const mockCookies: Cookie[] = [
       { name: "sb-access-token", value: "access123" },
       { name: "sb-refresh-token", value: "refresh123" },
       { name: "other-cookie", value: "other-value" },
     ];
 
-    (mockRequest.cookies.getAll as any).mockReturnValue(mockCookies);
+    vi.mocked(mockRequest.cookies.getAll).mockReturnValue(mockCookies);
 
     const mockSupabase = {
       auth: {
@@ -160,10 +194,15 @@ describe("Middleware - updateSession", () => {
       },
     };
 
-    let capturedCookieHandlers: any = null;
+    interface CookieHandlers {
+      getAll: () => Cookie[];
+      setAll: (cookies: CookieWithOptions[]) => void;
+    }
+
+    let capturedCookieHandlers: CookieHandlers | null = null;
     vi.mocked(createServerClient).mockImplementation((url, key, options) => {
-      capturedCookieHandlers = options.cookies;
-      return mockSupabase as any;
+      capturedCookieHandlers = options.cookies as CookieHandlers;
+      return mockSupabase as unknown as ReturnType<typeof createServerClient>;
     });
 
     const supabaseResponse = await updateSession(mockRequest);
@@ -172,7 +211,7 @@ describe("Middleware - updateSession", () => {
     expect(mockSupabase.auth.getUser).toHaveBeenCalled();
 
     // Test that cookie handlers work with multiple cookies
-    const getAllResult = capturedCookieHandlers.getAll();
+    const getAllResult = capturedCookieHandlers!.getAll();
     expect(getAllResult).toEqual(mockCookies);
   });
 });
