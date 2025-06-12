@@ -357,7 +357,7 @@ export default function TripsPage() {
               : "space-y-4"
           }
         >
-          {filteredAndSortedTrips.map((trip) => (
+          {filteredAndSortedTrips.map((trip: any) => (
             <TripCard
               key={trip.id}
               trip={trip as any}

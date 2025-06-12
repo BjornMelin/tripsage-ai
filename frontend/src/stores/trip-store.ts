@@ -1,4 +1,4 @@
-import { useTrips } from "@/hooks/use-trips-supabase";
+import { useTrips } from "@/hooks/use-trips";
 import type { Trip as DatabaseTrip } from "@/lib/supabase/database.types";
 import { useQueryClient } from "@tanstack/react-query";
 import { create } from "zustand";
