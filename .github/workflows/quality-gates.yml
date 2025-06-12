@@ -2,9 +2,9 @@ name: Quality Gates
 
 on:
   pull_request:
-    branches: [main, dev]
+    branches: [main, develop]
   push:
-    branches: [main, dev]
+    branches: [main, develop]
   workflow_run:
     workflows: ["Backend CI", "Frontend CI", "Security Scanning", "Code Coverage Analysis"]
     types: [completed]

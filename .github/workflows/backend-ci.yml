@@ -2,7 +2,7 @@ name: Backend CI
 
 on:
   push:
-    branches: [ main, dev, feat/*, "session/*" ]
+    branches: [ main, develop, feat/*, "session/*" ]
     paths:
       - '**.py'
       - 'requirements*.txt'
@@ -10,7 +10,7 @@ on:
       - 'pytest.ini'
       - '.github/workflows/backend-ci.yml'
   pull_request:
-    branches: [ main, dev ]
+    branches: [ main, develop ]
     paths:
       - '**.py'
       - 'requirements*.txt'
@@ -79,6 +79,8 @@ jobs:
     - name: Lint with ruff
       run: |
         source .venv/bin/activate
+        # Ensure ruff is installed (it's in requirements-dev.txt but double-check)
+        uv pip install ruff>=0.11.13
         ruff check . --output-format=github
         ruff format . --check
 

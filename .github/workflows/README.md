@@ -110,7 +110,9 @@ The security workflow automatically scans for:
 
 ## Getting Help
 
-1. **Read the full documentation**: [CI_PIPELINE_DOCUMENTATION.md](../CI_PIPELINE_DOCUMENTATION.md)
+1. **Read the full documentation**: 
+   - [Repository Setup Guide](../REPOSITORY_SETUP.md) - Complete setup instructions
+   - [Branch Conventions](../BRANCH_CONVENTIONS.md) - Branch naming and workflow triggers
 2. **Check existing issues**: Search for similar problems
 3. **Ask the team**: Contact maintainers for help
 

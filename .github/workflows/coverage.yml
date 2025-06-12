@@ -2,9 +2,9 @@ name: Code Coverage Analysis
 
 on:
   push:
-    branches: [main, dev]
+    branches: [main, develop, feat/*, "session/*"]
   pull_request:
-    branches: [main, dev]
+    branches: [main, develop]
   schedule:
     # Run coverage analysis daily at 3 AM UTC
     - cron: '0 3 * * *'

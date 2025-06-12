@@ -3,7 +3,7 @@ name: PR Automation & Quality Checks
 on:
   pull_request:
     types: [opened, synchronize, reopened, labeled, unlabeled]
-    branches: [main, dev]
+    branches: [main, develop]
   pull_request_review:
     types: [submitted]
 
