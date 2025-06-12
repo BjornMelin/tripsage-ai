@@ -3,10 +3,10 @@
  * Combines trip data fetching with real-time subscription management
  */
 
-import { useMemo } from "react";
 import { useAuth } from "@/contexts/auth-context";
-import { useTrips, useTripData } from "./use-trips-supabase";
+import { useMemo } from "react";
 import { useTripRealtime } from "./use-supabase-realtime";
+import { useTripData, useTrips } from "./use-trips-supabase";
 
 /**
  * Enhanced hook that combines trip data with real-time updates
@@ -15,7 +15,7 @@ import { useTripRealtime } from "./use-supabase-realtime";
 export function useTripsWithRealtime() {
   const { user } = useAuth();
   const { trips, isLoading, error, refetch } = useTrips();
-  
+
   // Set up real-time subscription for all user trips
   const realtimeStatus = useTripRealtime(null); // Listen to all trip changes for this user
 
@@ -73,11 +73,17 @@ export function useTripsConnectionStatus() {
  */
 export function useTripCollaboration(tripId: string | number) {
   const { user } = useAuth();
-  const { useTripCollaborators, useAddTripCollaborator, useRemoveTripCollaborator } = require("./use-trips-supabase");
-  
-  const numericTripId = typeof tripId === "string" ? parseInt(tripId, 10) : tripId;
-  
-  const { collaborators, isLoading, error, refetch } = useTripCollaborators(numericTripId);
+  const {
+    useTripCollaborators,
+    useAddTripCollaborator,
+    useRemoveTripCollaborator,
+  } = require("./use-trips-supabase");
+
+  const numericTripId =
+    typeof tripId === "string" ? Number.parseInt(tripId, 10) : tripId;
+
+  const { collaborators, isLoading, error, refetch } =
+    useTripCollaborators(numericTripId);
   const addCollaborator = useAddTripCollaborator();
   const removeCollaborator = useRemoveTripCollaborator();
   const realtimeStatus = useTripRealtime(numericTripId);

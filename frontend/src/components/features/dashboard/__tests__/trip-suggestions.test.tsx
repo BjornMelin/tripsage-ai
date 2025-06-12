@@ -11,7 +11,7 @@ import { TripSuggestions } from "../trip-suggestions";
 
 // Mock the stores with essential methods
 const mockBudgetStore = {
-  budget: null,
+  activeBudget: null,
 };
 
 const mockDealsStore = {
@@ -39,7 +39,7 @@ vi.mock("next/link", () => ({
 describe("TripSuggestions", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockBudgetStore.budget = null;
+    mockBudgetStore.activeBudget = null;
     mockDealsStore.deals = [];
   });
 
@@ -69,9 +69,15 @@ describe("TripSuggestions", () => {
   describe("Budget Filtering", () => {
     it("should filter suggestions based on budget", () => {
       // Set a low budget that should filter out expensive suggestions
-      mockBudgetStore.budget = {
-        totalBudget: 1000,
+      mockBudgetStore.activeBudget = {
+        id: "test-budget",
+        name: "Test Budget",
+        totalAmount: 1000,
         currency: "USD",
+        categories: [],
+        isActive: true,
+        createdAt: "2024-01-01T00:00:00Z",
+        updatedAt: "2024-01-01T00:00:00Z",
       };
 
       render(<TripSuggestions />);
@@ -81,7 +87,7 @@ describe("TripSuggestions", () => {
     });
 
     it("should show all suggestions when no budget set", () => {
-      mockBudgetStore.budget = null;
+      mockBudgetStore.activeBudget = null;
 
       render(<TripSuggestions />);
 
@@ -94,9 +100,15 @@ describe("TripSuggestions", () => {
   describe("Empty States", () => {
     it("should show empty state when no suggestions match filters", () => {
       // Set extremely low budget to filter out all suggestions
-      mockBudgetStore.budget = {
-        totalBudget: 1,
+      mockBudgetStore.activeBudget = {
+        id: "low-budget",
+        name: "Low Budget",
+        totalAmount: 1,
         currency: "USD",
+        categories: [],
+        isActive: true,
+        createdAt: "2024-01-01T00:00:00Z",
+        updatedAt: "2024-01-01T00:00:00Z",
       };
 
       render(<TripSuggestions />);
@@ -109,9 +121,15 @@ describe("TripSuggestions", () => {
     });
 
     it("should handle showEmpty prop correctly", () => {
-      mockBudgetStore.budget = {
-        totalBudget: 1, // No suggestions should match
+      mockBudgetStore.activeBudget = {
+        id: "minimal-budget",
+        name: "Minimal Budget",
+        totalAmount: 1,
         currency: "USD",
+        categories: [],
+        isActive: true,
+        createdAt: "2024-01-01T00:00:00Z",
+        updatedAt: "2024-01-01T00:00:00Z",
       };
 
       const { rerender } = render(<TripSuggestions showEmpty={false} />);
@@ -182,7 +200,7 @@ describe("TripSuggestions", () => {
     });
 
     it("should handle undefined budget store gracefully", () => {
-      mockBudgetStore.budget = undefined;
+      mockBudgetStore.activeBudget = null;
 
       render(<TripSuggestions />);
 

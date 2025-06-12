@@ -1,30 +1,30 @@
 "use client";
 
 import { SecurityDashboard } from "@/components/features/security/security-dashboard";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
-import { Badge } from "@/components/ui/badge";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
+import { Switch } from "@/components/ui/switch";
+import { useAuth } from "@/contexts/auth-context";
 import {
-  Shield,
+  AlertTriangle,
+  Bell,
+  CheckCircle2,
+  Download,
+  Eye,
   Key,
   Lock,
-  Smartphone,
   Mail,
-  Bell,
-  AlertTriangle,
-  CheckCircle2,
   Settings,
-  Eye,
-  Download,
+  Shield,
+  Smartphone,
   Trash2,
 } from "lucide-react";
-import { useState } from "react";
-import { useAuth } from "@/contexts/auth-context";
 import Link from "next/link";
+import { useState } from "react";
 
 interface SecuritySettings {
   twoFactorEnabled: boolean;

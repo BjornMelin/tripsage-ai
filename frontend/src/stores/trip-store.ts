@@ -1,7 +1,8 @@
+import { useTrips } from "@/hooks/use-trips-supabase";
+import type { Trip as DatabaseTrip } from "@/lib/supabase/database.types";
+import { useQueryClient } from "@tanstack/react-query";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { useSupabaseTrips } from "@/hooks/use-supabase-trips";
-import { useQueryClient } from "@tanstack/react-query";
 
 export interface Destination {
   id: string;
@@ -74,8 +75,8 @@ export interface Trip {
   user_id?: string;
 
   // Core trip information (aligned with backend)
-  title: string; // Primary field name
-  name?: string; // Legacy compatibility
+  name: string; // Primary field name from database
+  title?: string; // Optional secondary name
   description?: string;
 
   // Date fields - supporting both formats
@@ -146,7 +147,8 @@ export const useTripStore = create<TripState>()(
         set({ isLoading: true, error: null });
 
         try {
-          const { supabase } = await import("@/lib/supabase/client");
+          const { createClient } = await import("@/lib/supabase/client");
+          const supabase = createClient();
 
           const { data: trips, error } = await supabase
             .from("trips")
@@ -156,33 +158,20 @@ export const useTripStore = create<TripState>()(
           if (error) throw error;
 
           // Convert to frontend format
-          const frontendTrips: Trip[] = trips.map((trip) => ({
+          const frontendTrips: Trip[] = trips.map((trip: DatabaseTrip) => ({
             id: trip.id.toString(),
-            uuid_id: trip.uuid_id,
             user_id: trip.user_id,
-            title: trip.title,
-            name: trip.title, // Legacy compatibility
-            description: trip.description,
+            name: trip.name, // Primary field from database
+            title: trip.name, // Legacy compatibility
+            destination: trip.destination,
             start_date: trip.start_date,
             startDate: trip.start_date, // Frontend compatibility
             end_date: trip.end_date,
             endDate: trip.end_date, // Frontend compatibility
             destinations: [], // Will be loaded separately or joined
             budget: trip.budget,
-            enhanced_budget: trip.budget_breakdown
-              ? {
-                  total: trip.budget_breakdown.total || trip.budget || 0,
-                  currency: trip.currency || "USD",
-                  spent: trip.budget_breakdown.spent || trip.spent_amount || 0,
-                  breakdown: trip.budget_breakdown.breakdown || {},
-                }
-              : undefined,
-            currency: trip.currency,
-            spent_amount: trip.spent_amount,
-            visibility: trip.visibility,
-            isPublic: trip.visibility !== "private", // Legacy compatibility
-            tags: trip.tags || [],
-            preferences: trip.preferences || {},
+            currency: "USD",
+            isPublic: false,
             status: trip.status,
             created_at: trip.created_at,
             createdAt: trip.created_at, // Frontend compatibility
@@ -205,7 +194,8 @@ export const useTripStore = create<TripState>()(
         try {
           // Import hook will need to be used in component that calls this
           // For now, we'll use the supabase client directly
-          const { supabase } = await import("@/lib/supabase/client");
+          const { createClient } = await import("@/lib/supabase/client");
+          const supabase = createClient();
 
           const tripData = {
             title: data.title || data.name || "Untitled Trip",
@@ -295,7 +285,8 @@ export const useTripStore = create<TripState>()(
         set({ isLoading: true, error: null });
 
         try {
-          const { supabase } = await import("@/lib/supabase/client");
+          const { createClient } = await import("@/lib/supabase/client");
+          const supabase = createClient();
 
           const updateData: any = {};
 
@@ -392,7 +383,8 @@ export const useTripStore = create<TripState>()(
         set({ isLoading: true, error: null });
 
         try {
-          const { supabase } = await import("@/lib/supabase/client");
+          const { createClient } = await import("@/lib/supabase/client");
+          const supabase = createClient();
 
           const { error } = await supabase
             .from("trips")

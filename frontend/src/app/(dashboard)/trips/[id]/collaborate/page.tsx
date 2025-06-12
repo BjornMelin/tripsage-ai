@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useParams } from "next/navigation";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -9,34 +9,35 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/components/ui/use-toast";
 import {
-  Users,
-  UserPlus,
-  Mail,
-  Crown,
-  Share2,
-  Copy,
   Clock,
+  Copy,
+  Crown,
   Edit,
   Eye,
+  Mail,
+  Share2,
   Trash2,
+  UserPlus,
+  Users,
 } from "lucide-react";
+import { useParams } from "next/navigation";
+import { useState } from "react";
 
-import {
-  OptimisticTripUpdates,
-  CollaborationIndicator,
-} from "@/components/features/realtime/optimistic-trip-updates";
 import { ConnectionStatusMonitor } from "@/components/features/realtime/connection-status-monitor";
 import {
-  useTripWithRealtime,
+  CollaborationIndicator,
+  OptimisticTripUpdates,
+} from "@/components/features/realtime/optimistic-trip-updates";
+import {
   useTripCollaboration,
+  useTripWithRealtime,
 } from "@/hooks/use-trips-with-realtime";
+import { useAuth } from "@/contexts/auth-context";
 
 interface Collaborator {
   id: string;
@@ -59,9 +60,14 @@ export default function TripCollaborationPage() {
   const params = useParams();
   const tripId = params.id as string;
   const { toast } = useToast();
+  const { user } = useAuth();
 
-  const { trip, isConnected, connectionErrors } = useTripWithRealtime(parseInt(tripId, 10));
+  const { trip, isConnected, connectionErrors } = useTripWithRealtime(
+    Number.parseInt(tripId, 10)
+  );
   const collaboration = useTripCollaboration(tripId);
+
+  const currentUserId = user?.id;
 
   const [inviteEmail, setInviteEmail] = useState("");
   const [isInviting, setIsInviting] = useState(false);

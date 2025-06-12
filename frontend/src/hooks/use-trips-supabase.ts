@@ -3,24 +3,24 @@
  * Replaces API calls with direct database operations
  */
 
-import { useMemo } from "react";
+import type {
+  InsertTables,
+  Trip,
+  TripCollaborator,
+  UpdateTables,
+} from "@/lib/supabase/database.types";
 import { useUser } from "@supabase/auth-helpers-react";
+import { useMemo } from "react";
 import {
-  useSupabaseQuery,
-  useSupabaseInsert,
-  useSupabaseUpdate,
   useSupabaseDelete,
+  useSupabaseInsert,
+  useSupabaseQuery,
+  useSupabaseUpdate,
 } from "./use-supabase-query";
 import {
   useTripCollaborationRealtime,
   useTripCollaboratorRealtime,
 } from "./use-supabase-realtime";
-import type {
-  Trip,
-  InsertTables,
-  UpdateTables,
-  TripCollaborator,
-} from "@/lib/supabase/database.types";
 
 /**
  * Hook for fetching user's trips with real-time updates

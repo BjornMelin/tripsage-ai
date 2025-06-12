@@ -1,13 +1,13 @@
+import type { SearchResults, SearchType } from "@/types/search";
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
-  useSearchResultsStore,
-  type SearchStatus,
-  type SearchMetrics,
-  type SearchContext,
   type ErrorDetails,
+  type SearchContext,
+  type SearchMetrics,
+  type SearchStatus,
+  useSearchResultsStore,
 } from "../search-results-store";
-import type { SearchResults, SearchType } from "@/types/search";
 
 describe("Search Results Store", () => {
   beforeEach(() => {

@@ -358,7 +358,7 @@ class TestSecurityEventLogging:
     @pytest.mark.asyncio
     async def test_log_security_event_with_invalid_type(self):
         """Test security event logging with invalid event type."""
-        service = SessionSecurityService()
+        SessionSecurityService()
 
         with pytest.raises(ValueError, match="Invalid event type"):
             SecurityEvent(

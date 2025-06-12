@@ -9,7 +9,7 @@ import hashlib
 import logging
 import secrets
 from datetime import datetime, timedelta, timezone
-from ipaddress import AddressValueError
+from ipaddress import AddressValueError, ip_address as parse_ip_address
 from typing import Any, Dict, List, Optional
 
 from pydantic import Field, field_validator
@@ -613,7 +613,7 @@ class SessionSecurityService:
         # Check IP reputation (simplified)
         if ip_address:
             try:
-                ip_obj = ip_address(ip_address)
+                ip_obj = parse_ip_address(ip_address)
                 if ip_obj.is_private:
                     risk_score += 5  # Private IPs are slightly more risky
                 elif not ip_obj.is_global:

@@ -5,8 +5,8 @@
  * with reliable mocks for real-time messaging functionality.
  */
 
-import { beforeEach, describe, expect, it, vi } from "vitest";
 import { act, renderHook } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ConnectionStatus, WebSocketEventType } from "@/lib/websocket/websocket-client";
 import { useChatStore } from "../chat-store";
@@ -84,11 +84,11 @@ describe("Chat Store WebSocket Integration (Simplified)", () => {
       length: 0,
       key: vi.fn(() => null),
     };
-    Object.defineProperty(window, 'localStorage', {
+    Object.defineProperty(window, "localStorage", {
       value: mockStorage,
       writable: true,
     });
-    
+
     // Get a fresh store instance
     const { result } = renderHook(() => useChatStore());
     store = result.current;
@@ -97,13 +97,13 @@ describe("Chat Store WebSocket Integration (Simplified)", () => {
     await act(async () => {
       // Force complete store reset - disconnect WebSocket first
       store.disconnectWebSocket();
-      
+
       // Clear any existing sessions
       const sessionIds = store.sessions.map((s: any) => s.id);
       sessionIds.forEach((id: string) => {
         store.deleteSession(id);
       });
-      
+
       // Force state reset using the store's internal state setter
       // This bypasses the persistence middleware issues
       if (store.setState) {
@@ -124,9 +124,9 @@ describe("Chat Store WebSocket Integration (Simplified)", () => {
         store.setAutoSyncMemory(true);
         store.clearError();
       }
-      
+
       // Wait for state to propagate
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise((resolve) => setTimeout(resolve, 10));
     });
   });
 
@@ -166,7 +166,7 @@ describe("Chat Store WebSocket Integration (Simplified)", () => {
       console.log("Mock connect calls:", mockWebSocketClient.connect.mock.calls.length);
 
       expect(store.websocketClient).toBeDefined();
-      
+
       // The status should be either connecting or connected, not disconnected
       // It might be "error" if the mock connection failed
       expect(["connecting", "connected", "error"]).toContain(store.connectionStatus);
@@ -187,7 +187,7 @@ describe("Chat Store WebSocket Integration (Simplified)", () => {
       act(() => {
         store.setRealtimeEnabled(true);
       });
-      
+
       // Check initial state (should be true)
       expect(store.isRealtimeEnabled).toBe(true);
 
@@ -222,9 +222,9 @@ describe("Chat Store WebSocket Integration (Simplified)", () => {
       act(() => {
         // Find the connect handler that was registered
         const connectCalls = mockWebSocketClient.on.mock.calls.find(
-          call => call[0] === "connect"
+          (call) => call[0] === "connect"
         );
-        if (connectCalls && connectCalls[1]) {
+        if (connectCalls?.[1]) {
           // Call the connect handler to properly set state
           connectCalls[1](new Event("connect"));
         }
@@ -259,9 +259,9 @@ describe("Chat Store WebSocket Integration (Simplified)", () => {
       // Simulate successful connection
       act(() => {
         const connectCalls = mockWebSocketClient.on.mock.calls.find(
-          call => call[0] === "connect"
+          (call) => call[0] === "connect"
         );
-        if (connectCalls && connectCalls[1]) {
+        if (connectCalls?.[1]) {
           connectCalls[1](new Event("connect"));
         }
       });
@@ -308,9 +308,9 @@ describe("Chat Store WebSocket Integration (Simplified)", () => {
       // Simulate successful connection
       act(() => {
         const connectCalls = mockWebSocketClient.on.mock.calls.find(
-          call => call[0] === "connect"
+          (call) => call[0] === "connect"
         );
-        if (connectCalls && connectCalls[1]) {
+        if (connectCalls?.[1]) {
           connectCalls[1](new Event("connect"));
         }
       });
@@ -463,7 +463,7 @@ describe("Chat Store WebSocket Integration (Simplified)", () => {
       });
 
       const typingKey = `${sessionId}_${userId}`;
-      
+
       expect(store.typingUsers[typingKey]).toBeDefined();
       expect(store.typingUsers[typingKey].userId).toBe(userId);
       expect(store.typingUsers[typingKey].username).toBe(username);
@@ -479,7 +479,7 @@ describe("Chat Store WebSocket Integration (Simplified)", () => {
     it("should handle automatic typing user removal", () => {
       // Enable fake timers for this test
       vi.useFakeTimers();
-      
+
       const sessionId = "test-session";
       const userId = "test-user";
       const username = "Test User";
@@ -489,14 +489,14 @@ describe("Chat Store WebSocket Integration (Simplified)", () => {
       act(() => {
         store.setUserTyping(sessionId, userId, username);
       });
-      
+
       expect(store.typingUsers[typingKey]).toBeDefined();
-      
+
       // Advance timers by 3 seconds to trigger auto-removal
       act(() => {
         vi.advanceTimersByTime(3000);
       });
-      
+
       expect(store.typingUsers[typingKey]).toBeUndefined();
     });
 
@@ -588,7 +588,7 @@ describe("Chat Store WebSocket Integration (Simplified)", () => {
         store.setMemoryEnabled(true);
         store.setAutoSyncMemory(true);
       });
-      
+
       // Check initial state (should be true)
       expect(store.memoryEnabled).toBe(true);
       expect(store.autoSyncMemory).toBe(true);

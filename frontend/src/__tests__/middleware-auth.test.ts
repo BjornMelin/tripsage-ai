@@ -1,6 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { type NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
+import { type NextRequest, NextResponse } from "next/server";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { updateSession } from "../middleware";
 
 // Mock @supabase/ssr
@@ -19,7 +19,7 @@ function createMockNextRequest(url: string, headers: Record<string, string> = {}
     forEach: vi.fn(),
     clear: vi.fn(),
   };
-  
+
   const request = {
     url,
     nextUrl: new URL(url),

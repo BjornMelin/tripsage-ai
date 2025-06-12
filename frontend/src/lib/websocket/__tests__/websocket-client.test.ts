@@ -8,8 +8,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   ConnectionStatus,
   WebSocketClient,
-  WebSocketEventType,
   type WebSocketClientConfig,
+  WebSocketEventType,
 } from "../websocket-client";
 
 // Mock WebSocket implementation with proper event simulation

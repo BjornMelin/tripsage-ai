@@ -1,13 +1,6 @@
 "use client";
 
-import { useCallback, useMemo } from "react";
-import {
-  useQuery,
-  useInfiniteQuery,
-  type UseQueryOptions,
-  type UseInfiniteQueryOptions,
-} from "@tanstack/react-query";
-import type { PostgrestFilterBuilder } from "@supabase/postgrest-js";
+import { useAuth } from "@/contexts/auth-context";
 import { useSupabase } from "@/lib/supabase/client";
 import type {
   Database,
@@ -15,7 +8,14 @@ import type {
   TablesInsert,
   TablesUpdate,
 } from "@/lib/supabase/types";
-import { useAuth } from "@/contexts/auth-context";
+import type { PostgrestFilterBuilder } from "@supabase/postgrest-js";
+import {
+  type UseInfiniteQueryOptions,
+  type UseQueryOptions,
+  useInfiniteQuery,
+  useQuery,
+} from "@tanstack/react-query";
+import { useCallback, useMemo } from "react";
 
 type TableName = keyof Database["public"]["Tables"];
 type TableRow<T extends TableName> = Database["public"]["Tables"][T]["Row"];
@@ -501,4 +501,4 @@ export function useSupabaseQueryHelpers() {
   };
 }
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";

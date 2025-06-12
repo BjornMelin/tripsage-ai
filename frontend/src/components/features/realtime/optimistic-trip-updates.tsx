@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -10,24 +9,25 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
+import { useUpdateTrip, useTripRealtime } from "@/hooks";
+import type { Trip, TripUpdate } from "@/lib/supabase/types";
+import { useQueryClient } from "@tanstack/react-query";
 import {
+  AlertCircle,
+  Calendar,
+  CheckCircle,
+  Clock,
+  DollarSign,
   Loader2,
+  MapPin,
   Save,
   Users,
-  Calendar,
-  MapPin,
-  DollarSign,
-  CheckCircle,
-  AlertCircle,
-  Clock,
 } from "lucide-react";
-import { useSupabaseTrips, useTripRealtime } from "@/hooks";
-import type { Trip, TripUpdate } from "@/lib/supabase/types";
+import { useEffect, useState } from "react";
 
 interface OptimisticTripUpdatesProps {
   tripId: number;
@@ -40,7 +40,7 @@ interface OptimisticTripUpdatesProps {
 export function OptimisticTripUpdates({ tripId }: OptimisticTripUpdatesProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { updateTrip } = useSupabaseTrips();
+  const updateTrip = useUpdateTrip();
   const { isConnected, errors } = useTripRealtime(tripId);
 
   const [formData, setFormData] = useState<Partial<TripUpdate>>({});
@@ -393,7 +393,7 @@ export function CollaborationIndicator({ tripId }: { tripId: number }) {
               className="flex items-center justify-between p-2 rounded-lg bg-muted/50"
             >
               <div className="flex items-center space-x-2">
-                <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                <div className="w-2 h-2 rounded-full bg-green-500" />
                 <span className="text-sm font-medium">{collaborator.name}</span>
               </div>
 

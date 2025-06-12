@@ -10,6 +10,7 @@ from tripsage_core.exceptions.exceptions import (
     # Authentication and authorization
     CoreAuthenticationError,
     CoreAuthorizationError,
+    CoreSecurityError,
     CoreDatabaseError,
     CoreExternalAPIError,
     CoreKeyValidationError,
@@ -37,6 +38,7 @@ __all__ = [
     # Authentication and authorization
     "CoreAuthenticationError",
     "CoreAuthorizationError",
+    "CoreSecurityError",
     # Resource and validation
     "CoreResourceNotFoundError",
     "CoreValidationError",

@@ -146,6 +146,30 @@ class CoreAuthorizationError(CoreTripSageError):
         )
 
 
+class CoreSecurityError(CoreTripSageError):
+    """Raised when a security violation or security-related error occurs."""
+
+    def __init__(
+        self,
+        message: str = "Security violation detected",
+        code: str = "SECURITY_ERROR",
+        details: Optional[Union[Dict[str, Any], ErrorDetails]] = None,
+    ):
+        """Initialize the CoreSecurityError.
+
+        Args:
+            message: Human-readable error message
+            code: Machine-readable error code
+            details: Additional error details
+        """
+        super().__init__(
+            message=message,
+            code=code,
+            status_code=status.HTTP_403_FORBIDDEN,
+            details=details,
+        )
+
+
 # Resource and Validation Errors
 class CoreResourceNotFoundError(CoreTripSageError):
     """Raised when a requested resource is not found."""

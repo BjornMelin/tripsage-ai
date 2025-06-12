@@ -7,7 +7,7 @@
  * - Missing field defaults
  */
 
-import type { Trip, Destination } from "@/stores/trip-store";
+import type { Destination, Trip } from "@/stores/trip-store";
 
 export interface ApiTrip {
   id: string;
@@ -54,7 +54,9 @@ export class FrontendSchemaAdapter {
       end_date: apiTrip.end_date,
       startDate: apiTrip.start_date, // Camel case version
       endDate: apiTrip.end_date, // Camel case version
-      destinations: apiTrip.destinations.map(this.apiDestinationToFrontend),
+      destinations: apiTrip.destinations.map(
+        FrontendSchemaAdapter.apiDestinationToFrontend
+      ),
       budget: apiTrip.budget,
       visibility: apiTrip.visibility,
       isPublic: apiTrip.visibility === "public", // Legacy field
@@ -79,7 +81,9 @@ export class FrontendSchemaAdapter {
       description: trip.description,
       start_date: trip.start_date || trip.startDate || "",
       end_date: trip.end_date || trip.endDate || "",
-      destinations: trip.destinations.map(this.frontendDestinationToApi),
+      destinations: trip.destinations.map(
+        FrontendSchemaAdapter.frontendDestinationToApi
+      ),
       budget: trip.budget,
       visibility: trip.visibility || (trip.isPublic ? "public" : "private"),
       tags: trip.tags || [],
@@ -152,7 +156,7 @@ export class FrontendSchemaAdapter {
   static createEmptyTrip(overrides: Partial<Trip> = {}): Trip {
     const now = new Date().toISOString();
 
-    return this.normalizeTrip({
+    return FrontendSchemaAdapter.normalizeTrip({
       id: "",
       name: "New Trip",
       title: "New Trip",
