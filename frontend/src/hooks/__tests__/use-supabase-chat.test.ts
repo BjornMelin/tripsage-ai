@@ -7,6 +7,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { createCompleteQueryBuilder } from "@/test/mock-helpers";
 
 // Mock the auth context
 const mockUser = { id: "test-user-123", email: "test@example.com" };
@@ -20,23 +21,15 @@ vi.mock("@/contexts/auth-context", () => ({
   useAuth: vi.fn(() => mockAuth),
 }));
 
-// Helper to create complete Supabase mock
+// Helper to create complete Supabase mock - use our complete mock helper
 const createCompleteSupabaseMock = (overrides = {}) => ({
-  select: vi.fn().mockReturnThis(),
-  insert: vi.fn().mockReturnThis(),
-  update: vi.fn().mockReturnThis(),
-  delete: vi.fn().mockReturnThis(),
-  eq: vi.fn().mockReturnThis(),
-  order: vi.fn().mockReturnThis(),
-  range: vi.fn().mockReturnThis(),
-  single: vi.fn().mockReturnThis(),
-  maybeSingle: vi.fn().mockReturnThis(),
+  ...createCompleteQueryBuilder(),
   ...overrides,
 });
 
 // Mock Supabase client with comprehensive chat functionality
 const mockSupabaseClient = {
-  from: vi.fn(() => createCompleteSupabaseMock()),
+  from: vi.fn(() => createCompleteQueryBuilder()),
   auth: {
     getUser: vi.fn(),
     onAuthStateChange: vi.fn(),
@@ -159,11 +152,9 @@ describe("useSupabaseChat", () => {
         error: null,
       };
 
-      mockSupabaseClient.from.mockReturnValue({
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        order: vi.fn().mockResolvedValue(mockQuery),
-      });
+      const completeBuilder = createCompleteQueryBuilder(mockQuery.data, mockQuery.error);
+      completeBuilder.order = vi.fn().mockResolvedValue(mockQuery);
+      mockSupabaseClient.from.mockReturnValue(completeBuilder);
 
       const { result } = renderHook(() => useSupabaseChat(), {
         wrapper: createWrapper(),
@@ -187,13 +178,9 @@ describe("useSupabaseChat", () => {
         error: null,
       };
 
-      const mockChain = {
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        order: vi.fn().mockResolvedValue(mockQuery),
-      };
-
-      mockSupabaseClient.from.mockReturnValue(mockChain);
+      const completeBuilder = createCompleteQueryBuilder(mockQuery.data, mockQuery.error);
+      completeBuilder.order = vi.fn().mockResolvedValue(mockQuery);
+      mockSupabaseClient.from.mockReturnValue(completeBuilder);
 
       const { result } = renderHook(() => useSupabaseChat(), {
         wrapper: createWrapper(),
@@ -209,8 +196,8 @@ describe("useSupabaseChat", () => {
       });
 
       // Should call eq twice - once for user_id, once for trip_id
-      expect(mockChain.eq).toHaveBeenCalledTimes(2);
-      expect(mockChain.eq).toHaveBeenCalledWith("trip_id", 1);
+      expect(completeBuilder.eq).toHaveBeenCalledTimes(2);
+      expect(completeBuilder.eq).toHaveBeenCalledWith("trip_id", 1);
     });
 
     it("should not query when user is not authenticated", () => {
@@ -241,11 +228,9 @@ describe("useSupabaseChat", () => {
         error: null,
       };
 
-      mockSupabaseClient.from.mockReturnValue({
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        single: vi.fn().mockResolvedValue(mockQuery),
-      });
+      const completeBuilder = createCompleteQueryBuilder(mockQuery.data, mockQuery.error);
+      completeBuilder.single = vi.fn().mockResolvedValue(mockQuery);
+      mockSupabaseClient.from.mockReturnValue(completeBuilder);
 
       const { result } = renderHook(() => useSupabaseChat(), {
         wrapper: createWrapper(),
@@ -286,12 +271,9 @@ describe("useSupabaseChat", () => {
         count: 2,
       };
 
-      mockSupabaseClient.from.mockReturnValue({
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        order: vi.fn().mockReturnThis(),
-        range: vi.fn().mockResolvedValue(mockQuery),
-      });
+      const completeBuilder = createCompleteQueryBuilder(mockQuery.data, mockQuery.error);
+      completeBuilder.range = vi.fn().mockResolvedValue(mockQuery);
+      mockSupabaseClient.from.mockReturnValue(completeBuilder);
 
       const { result } = renderHook(() => useSupabaseChat(), {
         wrapper: createWrapper(),
@@ -316,14 +298,9 @@ describe("useSupabaseChat", () => {
         count: 2,
       };
 
-      const mockChain = {
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        order: vi.fn().mockReturnThis(),
-        range: vi.fn().mockResolvedValue(firstPage),
-      };
-
-      mockSupabaseClient.from.mockReturnValue(mockChain);
+      const completeBuilder = createCompleteQueryBuilder(firstPage.data, firstPage.error);
+      completeBuilder.range = vi.fn().mockResolvedValue(firstPage);
+      mockSupabaseClient.from.mockReturnValue(completeBuilder);
 
       const { result } = renderHook(() => useSupabaseChat(), {
         wrapper: createWrapper(),
@@ -339,7 +316,7 @@ describe("useSupabaseChat", () => {
       });
 
       // Should call range with correct pagination parameters
-      expect(mockChain.range).toHaveBeenCalledWith(0, 49); // pageParam=0, pageSize=50
+      expect(completeBuilder.range).toHaveBeenCalledWith(0, 49); // pageParam=0, pageSize=50
     });
   });
 
@@ -362,21 +339,18 @@ describe("useSupabaseChat", () => {
         error: null,
       };
 
-      mockSupabaseClient.from.mockImplementation((table) => {
+      mockSupabaseClient.from = vi.fn().mockImplementation((table: string) => {
         if (table === "chat_messages") {
-          return {
-            insert: vi.fn().mockReturnThis(),
-            select: vi.fn().mockReturnThis(),
-            single: vi.fn().mockResolvedValue(mockInsertResult),
-          };
+          const builder = createCompleteQueryBuilder(mockInsertResult.data, mockInsertResult.error);
+          builder.single = vi.fn().mockResolvedValue(mockInsertResult);
+          return builder;
         }
         if (table === "chat_sessions") {
-          return {
-            update: vi.fn().mockReturnThis(),
-            eq: vi.fn().mockResolvedValue(mockUpdateResult),
-          };
+          const builder = createCompleteQueryBuilder(mockUpdateResult.data, mockUpdateResult.error);
+          builder.eq = vi.fn().mockResolvedValue(mockUpdateResult);
+          return builder;
         }
-        return {};
+        return createCompleteQueryBuilder();
       });
 
       const { result } = renderHook(() => useSupabaseChat(), {
@@ -398,15 +372,13 @@ describe("useSupabaseChat", () => {
     it("should handle optimistic update rollback on error", async () => {
       const insertError = new Error("Failed to send message");
 
-      mockSupabaseClient.from.mockImplementation((table) => {
+      mockSupabaseClient.from = vi.fn().mockImplementation((table: string) => {
         if (table === "chat_messages") {
-          return {
-            insert: vi.fn().mockReturnThis(),
-            select: vi.fn().mockReturnThis(),
-            single: vi.fn().mockRejectedValue(insertError),
-          };
+          const builder = createCompleteQueryBuilder(null, insertError);
+          builder.single = vi.fn().mockRejectedValue(insertError);
+          return builder;
         }
-        return {};
+        return createCompleteQueryBuilder();
       });
 
       const { result } = renderHook(() => useSupabaseChat(), {
@@ -434,13 +406,12 @@ describe("useSupabaseChat", () => {
       const spy = vi.spyOn(queryClient, "setQueryData");
       const cancelSpy = vi.spyOn(queryClient, "cancelQueries");
 
-      mockSupabaseClient.from.mockImplementation(() => ({
-        insert: vi.fn().mockReturnThis(),
-        select: vi.fn().mockReturnThis(),
-        single: vi.fn().mockResolvedValue({ data: {}, error: null }),
-        update: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockResolvedValue({ data: {}, error: null }),
-      }));
+      mockSupabaseClient.from.mockImplementation(() => {
+        const builder = createCompleteQueryBuilder({}, null);
+        builder.single = vi.fn().mockResolvedValue({ data: {}, error: null });
+        builder.eq = vi.fn().mockResolvedValue({ data: {}, error: null });
+        return builder;
+      });
 
       const { result } = renderHook(() => useSupabaseChat(), {
         wrapper: ({ children }) =>
@@ -472,11 +443,9 @@ describe("useSupabaseChat", () => {
         error: null,
       };
 
-      mockSupabaseClient.from.mockReturnValue({
-        insert: vi.fn().mockReturnThis(),
-        select: vi.fn().mockReturnThis(),
-        single: vi.fn().mockResolvedValue(mockResult),
-      });
+      const completeBuilder = createCompleteQueryBuilder(mockResult.data, mockResult.error);
+      completeBuilder.single = vi.fn().mockResolvedValue(mockResult);
+      mockSupabaseClient.from.mockReturnValue(completeBuilder);
 
       const { result } = renderHook(() => useSupabaseChat(), {
         wrapper: createWrapper(),
@@ -501,12 +470,9 @@ describe("useSupabaseChat", () => {
         error: null,
       };
 
-      mockSupabaseClient.from.mockReturnValue({
-        update: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        select: vi.fn().mockReturnThis(),
-        single: vi.fn().mockResolvedValue(mockResult),
-      });
+      const completeBuilder = createCompleteQueryBuilder(mockResult.data, mockResult.error);
+      completeBuilder.single = vi.fn().mockResolvedValue(mockResult);
+      mockSupabaseClient.from.mockReturnValue(completeBuilder);
 
       const { result } = renderHook(() => useSupabaseChat(), {
         wrapper: createWrapper(),
@@ -533,12 +499,9 @@ describe("useSupabaseChat", () => {
         error: null,
       };
 
-      mockSupabaseClient.from.mockReturnValue({
-        update: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        select: vi.fn().mockReturnThis(),
-        single: vi.fn().mockResolvedValue(mockResult),
-      });
+      const completeBuilder = createCompleteQueryBuilder(mockResult.data, mockResult.error);
+      completeBuilder.single = vi.fn().mockResolvedValue(mockResult);
+      mockSupabaseClient.from.mockReturnValue(completeBuilder);
 
       const { result } = renderHook(() => useSupabaseChat(), {
         wrapper: createWrapper(),
@@ -574,11 +537,9 @@ describe("useSupabaseChat", () => {
         error: null,
       };
 
-      mockSupabaseClient.from.mockReturnValue({
-        insert: vi.fn().mockReturnThis(),
-        select: vi.fn().mockReturnThis(),
-        single: vi.fn().mockResolvedValue(mockResult),
-      });
+      const completeBuilder = createCompleteQueryBuilder(mockResult.data, mockResult.error);
+      completeBuilder.single = vi.fn().mockResolvedValue(mockResult);
+      mockSupabaseClient.from.mockReturnValue(completeBuilder);
 
       const { result } = renderHook(() => useSupabaseChat(), {
         wrapper: createWrapper(),
@@ -601,12 +562,9 @@ describe("useSupabaseChat", () => {
         error: null,
       };
 
-      mockSupabaseClient.from.mockReturnValue({
-        update: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        select: vi.fn().mockReturnThis(),
-        single: vi.fn().mockResolvedValue(mockResult),
-      });
+      const completeBuilder = createCompleteQueryBuilder(mockResult.data, mockResult.error);
+      completeBuilder.single = vi.fn().mockResolvedValue(mockResult);
+      mockSupabaseClient.from.mockReturnValue(completeBuilder);
 
       const { result } = renderHook(() => useSupabaseChat(), {
         wrapper: createWrapper(),
@@ -621,13 +579,13 @@ describe("useSupabaseChat", () => {
 
     it("should delete chat session", async () => {
       const mockResult = {
+        data: null,
         error: null,
       };
 
-      mockSupabaseClient.from.mockReturnValue({
-        delete: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockResolvedValue(mockResult),
-      });
+      const completeBuilder = createCompleteQueryBuilder(mockResult.data, mockResult.error);
+      completeBuilder.eq = vi.fn().mockResolvedValue(mockResult);
+      mockSupabaseClient.from.mockReturnValue(completeBuilder);
 
       const { result } = renderHook(() => useSupabaseChat(), {
         wrapper: createWrapper(),
@@ -645,11 +603,9 @@ describe("useSupabaseChat", () => {
     it("should handle database errors gracefully", async () => {
       const dbError = new Error("Database connection failed");
 
-      mockSupabaseClient.from.mockReturnValue({
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        order: vi.fn().mockResolvedValue({ data: null, error: dbError }),
-      });
+      const completeBuilder = createCompleteQueryBuilder(null, dbError);
+      completeBuilder.order = vi.fn().mockResolvedValue({ data: null, error: dbError });
+      mockSupabaseClient.from.mockReturnValue(completeBuilder);
 
       const { result } = renderHook(() => useSupabaseChat(), {
         wrapper: createWrapper(),
@@ -669,11 +625,9 @@ describe("useSupabaseChat", () => {
     it("should handle mutation errors", async () => {
       const mutationError = new Error("Failed to create session");
 
-      mockSupabaseClient.from.mockReturnValue({
-        insert: vi.fn().mockReturnThis(),
-        select: vi.fn().mockReturnThis(),
-        single: vi.fn().mockResolvedValue({ data: null, error: mutationError }),
-      });
+      const completeBuilder = createCompleteQueryBuilder(null, mutationError);
+      completeBuilder.single = vi.fn().mockResolvedValue({ data: null, error: mutationError });
+      mockSupabaseClient.from.mockReturnValue(completeBuilder);
 
       const { result } = renderHook(() => useSupabaseChat(), {
         wrapper: createWrapper(),
@@ -698,11 +652,9 @@ describe("useSupabaseChat", () => {
     it("should invalidate queries after mutations", async () => {
       const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
 
-      mockSupabaseClient.from.mockReturnValue({
-        insert: vi.fn().mockReturnThis(),
-        select: vi.fn().mockReturnThis(),
-        single: vi.fn().mockResolvedValue({ data: {}, error: null }),
-      });
+      const completeBuilder = createCompleteQueryBuilder({}, null);
+      completeBuilder.single = vi.fn().mockResolvedValue({ data: {}, error: null });
+      mockSupabaseClient.from.mockReturnValue(completeBuilder);
 
       const { result } = renderHook(() => useSupabaseChat(), {
         wrapper: ({ children }) =>
@@ -840,26 +792,24 @@ describe("useChatStats", () => {
         },
       ];
 
-      mockSupabaseClient.from.mockImplementation((table) => {
+      mockSupabaseClient.from = vi.fn().mockImplementation((table: string) => {
         if (table === "chat_sessions") {
-          return {
-            select: vi.fn().mockResolvedValue({
-              data: mockSessions,
-              error: null,
-            }),
-            eq: vi.fn().mockReturnThis(),
-          };
+          const builder = createCompleteQueryBuilder(mockSessions, null);
+          builder.select = vi.fn().mockResolvedValue({
+            data: mockSessions,
+            error: null,
+          });
+          return builder;
         }
         if (table === "chat_messages") {
-          return {
-            select: vi.fn().mockResolvedValue({
-              count: 10,
-              error: null,
-            }),
-            in: vi.fn().mockReturnThis(),
-          };
+          const builder = createCompleteQueryBuilder({ count: 10 }, null);
+          builder.select = vi.fn().mockResolvedValue({
+            count: 10,
+            error: null,
+          });
+          return builder;
         }
-        return {};
+        return createCompleteQueryBuilder();
       });
 
       const { result } = renderHook(() => useChatStats(), {
@@ -880,26 +830,24 @@ describe("useChatStats", () => {
     });
 
     it("should handle zero sessions", async () => {
-      mockSupabaseClient.from.mockImplementation((table) => {
+      mockSupabaseClient.from = vi.fn().mockImplementation((table: string) => {
         if (table === "chat_sessions") {
-          return {
-            select: vi.fn().mockResolvedValue({
-              data: [],
-              error: null,
-            }),
-            eq: vi.fn().mockReturnThis(),
-          };
+          const builder = createCompleteQueryBuilder([], null);
+          builder.select = vi.fn().mockResolvedValue({
+            data: [],
+            error: null,
+          });
+          return builder;
         }
         if (table === "chat_messages") {
-          return {
-            select: vi.fn().mockResolvedValue({
-              count: 0,
-              error: null,
-            }),
-            in: vi.fn().mockReturnThis(),
-          };
+          const builder = createCompleteQueryBuilder({ count: 0 }, null);
+          builder.select = vi.fn().mockResolvedValue({
+            count: 0,
+            error: null,
+          });
+          return builder;
         }
-        return {};
+        return createCompleteQueryBuilder();
       });
 
       const { result } = renderHook(() => useChatStats(), {
@@ -939,13 +887,14 @@ describe("useChatStats", () => {
     it("should handle statistics query errors", async () => {
       const statsError = new Error("Failed to fetch statistics");
 
-      mockSupabaseClient.from.mockImplementation(() => ({
-        select: vi.fn().mockResolvedValue({
+      mockSupabaseClient.from.mockImplementation(() => {
+        const builder = createCompleteQueryBuilder(null, statsError);
+        builder.select = vi.fn().mockResolvedValue({
           data: null,
           error: statsError,
-        }),
-        eq: vi.fn().mockReturnThis(),
-      }));
+        });
+        return builder;
+      });
 
       const { result } = renderHook(() => useChatStats(), {
         wrapper: createWrapper(),
@@ -1019,13 +968,12 @@ describe("Integration and Performance Tests", () => {
     });
 
     // Mock successful responses
-    mockSupabaseClient.from.mockImplementation(() => ({
-      insert: vi.fn().mockReturnThis(),
-      select: vi.fn().mockReturnThis(),
-      single: vi.fn().mockResolvedValue({ data: {}, error: null }),
-      update: vi.fn().mockReturnThis(),
-      eq: vi.fn().mockResolvedValue({ data: {}, error: null }),
-    }));
+    mockSupabaseClient.from.mockImplementation(() => {
+      const builder = createCompleteQueryBuilder({}, null);
+      builder.single = vi.fn().mockResolvedValue({ data: {}, error: null });
+      builder.eq = vi.fn().mockResolvedValue({ data: {}, error: null });
+      return builder;
+    });
 
     // Execute multiple mutations concurrently
     await act(async () => {

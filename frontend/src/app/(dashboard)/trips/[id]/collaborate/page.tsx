@@ -65,9 +65,13 @@ export default function TripCollaborationPage() {
   const { trip, isConnected, connectionErrors } = useTripWithRealtime(
     Number.parseInt(tripId, 10)
   );
-  
+
   // Type assertion for trip data
-  const typedTrip = trip as { title?: string; name?: string; visibility?: string } | null;
+  const typedTrip = trip as {
+    title?: string;
+    name?: string;
+    visibility?: string;
+  } | null;
   const collaboration = useTripCollaboration(tripId);
 
   const currentUserId = user?.id;

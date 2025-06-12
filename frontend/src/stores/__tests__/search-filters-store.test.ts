@@ -12,7 +12,7 @@ describe("Search Filters Store", () => {
     act(() => {
       // Get current state to preserve any nested beforeEach setup
       const currentState = useSearchFiltersStore.getState();
-      
+
       useSearchFiltersStore.setState({
         availableFilters: {
           flight: currentState.availableFilters?.flight || [],
@@ -233,7 +233,9 @@ describe("Search Filters Store", () => {
         result.current.addAvailableFilter("flight", newFilter);
       });
 
-      const addedFilter = result.current.availableFilters.flight.find(f => f.id === "airline");
+      const addedFilter = result.current.availableFilters.flight.find(
+        (f) => f.id === "airline"
+      );
       expect(addedFilter).toBeDefined();
       expect(addedFilter).toMatchObject(newFilter);
     });
@@ -336,7 +338,9 @@ describe("Search Filters Store", () => {
         result.current.addAvailableSortOption("flight", newSortOption);
       });
 
-      const addedOption = result.current.availableSortOptions.flight.find(o => o.id === "duration");
+      const addedOption = result.current.availableSortOptions.flight.find(
+        (o) => o.id === "duration"
+      );
       expect(addedOption).toBeDefined();
       expect(addedOption).toMatchObject(newSortOption);
     });

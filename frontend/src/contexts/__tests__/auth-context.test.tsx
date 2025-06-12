@@ -24,9 +24,7 @@ const mockSupabaseAuth = {
   signUp: vi.fn(),
   signOut: vi.fn(),
   getUser: vi.fn(),
-  onAuthStateChange: vi.fn(() => ({
-    data: { subscription: { unsubscribe: vi.fn() } },
-  })),
+  onAuthStateChange: vi.fn(),
 };
 
 const mockSupabase = {
@@ -322,7 +320,7 @@ describe("AuthContext", () => {
       };
 
       let authStateChangeCallback: Function;
-      mockSupabaseAuth.onAuthStateChange.mockImplementation((callback: any) => {
+      mockSupabaseAuth.onAuthStateChange.mockImplementation((callback: (event: string, session: any) => void) => {
         authStateChangeCallback = callback;
         return { data: { subscription: { unsubscribe: vi.fn() } } };
       });
@@ -345,7 +343,7 @@ describe("AuthContext", () => {
 
     it("should handle auth state change to signed out", async () => {
       let authStateChangeCallback: Function;
-      mockSupabaseAuth.onAuthStateChange.mockImplementation((callback: any) => {
+      mockSupabaseAuth.onAuthStateChange.mockImplementation((callback: (event: string, session: any) => void) => {
         authStateChangeCallback = callback;
         return { data: { subscription: { unsubscribe: vi.fn() } } };
       });

@@ -1,0 +1,2294 @@
+{
+  "timestamp": "2024-12-11T10:00:00Z",
+  "checks": {
+    "critical": [],
+    "high": [
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./security_validation_report.json:        \"message\": \"Potential hardcoded secret found: ./tripsage/o...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./security_validation_report.json:        \"message\": \"Potential hardcoded secret found: ./tripsage/a...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./security_validation_report.json:        \"message\": \"Potential hardcoded secret found: ./tests/conf...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./security_validation_report.json:        \"message\": \"Potential hardcoded secret found: ./.venv/lib/...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./security_validation_report.json:        \"message\": \"Potential hardcoded secret found: ./.venv/lib/...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./security_validation_report.json:        \"message\": \"Potential hardcoded secret found: ./.venv/lib/...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./security_validation_report.json:        \"message\": \"Potential hardcoded secret found: ./.venv/lib/...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./security_validation_report.json:        \"message\": \"Potential hardcoded secret found: ./.venv/lib/...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./security_validation_report.json:        \"message\": \"Potential hardcoded secret found: ./.venv/lib/...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./security_validation_report.json:        \"message\": \"Potential hardcoded secret found: ./.venv/lib/...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./tripsage/orchestration/config.py:            langsmith_api_key=os.getenv(\"LANGSMITH_API_KEY\"),...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./tripsage/api/schemas/api_keys.py:    api_keys: List[ApiKeyResponse] = Field(description=\"List of A...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./tripsage/api/schemas/auth.py:    current_password: str = Field(description=\"Current user password\"...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/openai/lib/azure.py:            api_key = os.environ.get(\"AZURE...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/openai/lib/azure.py:        if self.api_key != \"<missing API ke...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/openai/lib/azure.py:            api_key = os.environ.get(\"AZURE...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/openai/lib/azure.py:        if self.api_key != \"<missing API ke...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/pydantic/types.py:    model = Model(password='IAmSensitive', pa...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/pydantic/types.py:    #> password=SecretStr('**********') passw...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/mem0/configs/vector_stores/pgvector.py:    password: Optional[s...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/mem0/configs/vector_stores/pinecone.py:    api_key: Optional[st...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/mem0/configs/vector_stores/elasticsearch.py:    password: Optio...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/mem0/configs/vector_stores/elasticsearch.py:    api_key: Option...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/mem0/configs/vector_stores/qdrant.py:    api_key: Optional[str]...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/mem0/configs/vector_stores/opensearch.py:    password: Optional...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/mem0/configs/vector_stores/opensearch.py:    api_key: Optional[...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/mem0/configs/vector_stores/azure_ai_search.py:    api_key: str ...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/mem0/configs/vector_stores/weaviate.py:    auth_client_secret: ...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/mem0/graphs/configs.py:    password: Optional[str] = Field(None...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/mem0/graphs/configs.py:    password: Optional[str] = Field(None...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/mem0/vector_stores/pinecone.py:            api_key = api_key or...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/mem0/llms/azure_openai_structured.py:        api_key = os.geten...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/mem0/llms/openai.py:                api_key=os.environ.get(\"OPE...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/mem0/llms/deepseek.py:        api_key = self.config.api_key or ...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/mem0/llms/together.py:        api_key = self.config.api_key or ...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/mem0/llms/aws_bedrock.py:        aws_secret_key = os.environ.ge...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/mem0/llms/azure_openai.py:        api_key = self.config.azure_k...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/mem0/llms/anthropic.py:        api_key = self.config.api_key or...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/mem0/embeddings/together.py:        api_key = self.config.api_k...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/mem0/embeddings/aws_bedrock.py:        aws_secret_key = os.envi...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/mem0/embeddings/azure_openai.py:        api_key = self.config.a...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/aiohttp/helpers.py:        cls, login: str, password: str = \"\",...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/requests_oauthlib/oauth1_session.py:        >>> oauth_session =...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/requests_oauthlib/oauth1_session.py:            self._client.cl...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/dns/tsig.py:            r += f\", secret='{base64.b64encode(self...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/google_auth_oauthlib/interactive.py:            client_secret =...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/passlib/context.py:    _dummy_secret = \"too many secrets\"...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/router_strategy/least_busy.py:                request_c...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/router_strategy/least_busy.py:                request_c...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/router_strategy/least_busy.py:                request_c...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/router_strategy/least_busy.py:                request_c...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/router_strategy/least_busy.py:                request_c...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/router_strategy/least_busy.py:        request_count_api...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/router_strategy/least_busy.py:        request_count_api...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/utils.py:        api_key = api_key or litellm.anthropic...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/utils.py:        api_key = api_key or litellm.nlp_cloud...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/utils.py:        api_key = api_key or litellm.replicate...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/main.py:            api_key = api_key or litellm.api_ke...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/integrations/prometheus.py:        user_api_key = stand...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/integrations/prometheus.py:        user_api_key_alias =...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/integrations/prometheus.py:        user_api_key = stand...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/integrations/prometheus.py:        user_api_key_alias =...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/integrations/prometheus.py:            hashed_api_key=s...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/integrations/prometheus.py:            api_key_alias=st...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/integrations/prometheus.py:            hashed_api_key=s...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/integrations/prometheus.py:            api_key_alias=st...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/integrations/braintrust_logging.py:        self.api_key...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/integrations/greenscale.py:        self.greenscale_api_...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/integrations/azure_storage/azure_storage.py:           ...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/integrations/langfuse/langfuse_prompt_management.py:   ...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/integrations/langfuse/langfuse_prompt_management.py:   ...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/integrations/langfuse/langfuse.py:        self.secret_k...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/integrations/openmeter.py:        api_key = os.getenv(\"...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/integrations/openmeter.py:        api_key = os.getenv(\"...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/integrations/vector_stores/bedrock_vector_store.py:    ...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/integrations/langsmith.py:        _credentials_api_key ...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/integrations/langsmith.py:        langsmith_api_key = c...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/integrations/langsmith.py:                api_key=crede...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/integrations/langsmith.py:        langsmith_api_key = s...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/integrations/deepeval/deepeval.py:        api_key = os....",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/integrations/agentops/agentops.py:            api_key=o...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/secret_managers/main.py:            env_secret = os.get...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/secret_managers/main.py:            env_secret = os.get...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/secret_managers/get_azure_ad_token_provider.py:        ...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/secret_managers/aws_secret_manager_v2.py:              ...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/secret_managers/aws_secret_manager_v2.py:              ...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/secret_managers/aws_secret_manager_v2.py:              ...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/router.py:        litellm_environment = get_secret_str(...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/litellm_core_utils/get_llm_provider_logic.py:          ...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/litellm_core_utils/get_llm_provider_logic.py:          ...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/litellm_core_utils/get_llm_provider_logic.py:          ...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/litellm_core_utils/get_llm_provider_logic.py:          ...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/litellm_core_utils/get_llm_provider_logic.py:          ...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/litellm_core_utils/get_llm_provider_logic.py:          ...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/litellm_core_utils/get_llm_provider_logic.py:          ...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/litellm_core_utils/get_llm_provider_logic.py:          ...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/litellm_core_utils/get_llm_provider_logic.py:          ...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/litellm_core_utils/get_llm_provider_logic.py:          ...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/litellm_core_utils/get_llm_provider_logic.py:          ...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/litellm_core_utils/get_llm_provider_logic.py:        dy...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/litellm_core_utils/get_llm_provider_logic.py:        dy...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/litellm_core_utils/get_llm_provider_logic.py:        dy...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/litellm_core_utils/get_llm_provider_logic.py:        dy...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/litellm_core_utils/get_llm_provider_logic.py:        dy...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/litellm_core_utils/get_llm_provider_logic.py:        dy...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/litellm_core_utils/get_llm_provider_logic.py:        dy...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/litellm_core_utils/get_llm_provider_logic.py:        dy...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/litellm_core_utils/exception_mapping_utils.py:        _...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/litellm_core_utils/exception_mapping_utils.py:        _...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/litellm_core_utils/litellm_logging.py:                 ...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/litellm_core_utils/litellm_logging.py:            ] = f...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/llms/sagemaker/chat/handler.py:        aws_secret_acces...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/llms/sagemaker/completion/handler.py:        aws_secret...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/llms/sagemaker/completion/handler.py:        aws_secret...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/llms/infinity/embedding/transformation.py:            a...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/llms/oobabooga/chat/oobabooga.py:            input=inpu...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/llms/featherless_ai/chat/transformation.py:        dyna...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/llms/deepseek/chat/transformation.py:        dynamic_ap...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/llms/azure_ai/rerank/transformation.py:            api_...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/llms/azure_ai/chat/transformation.py:        dynamic_ap...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/llms/deepgram/audio_transcription/transformation.py:   ...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/llms/deepinfra/chat/transformation.py:        dynamic_a...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/llms/bedrock/chat/invoke_handler.py:        aws_secret_...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/llms/bedrock/chat/converse_handler.py:        aws_secre...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/llms/bedrock/base_aws_llm.py:        aws_secret_access_...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/llms/bedrock/base_aws_llm.py:        aws_secret_access_...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/llms/bedrock/embed/embedding.py:        aws_secret_acce...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/llms/litellm_proxy/chat/transformation.py:        dynam...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/llms/watsonx/common_utils.py:            api_key = get_...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/llms/watsonx/common_utils.py:        elif zen_api_key :...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/_redis.py:    sentinel_password = redis_kwargs.get(\"sen...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/_redis.py:    sentinel_password = redis_kwargs.get(\"sen...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/proxy/hooks/parallel_request_limiter.py:            req...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/proxy/hooks/parallel_request_limiter.py:            req...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/proxy/hooks/parallel_request_limiter.py:            req...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/proxy/hooks/parallel_request_limiter.py:        request...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/proxy/hooks/key_management_event_hooks.py:            s...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/proxy/hooks/key_management_event_hooks.py:             ...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/proxy/proxy_cli.py:                database_password = ...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/proxy/proxy_server.py:    \"/v1/models\", dependencies=[D...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/proxy/proxy_server.py:    \"/models\", dependencies=[Depe...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/proxy/proxy_server.py:            user_api_key_dict=use...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/proxy/proxy_server.py:#         client_secret=os.getenv...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/proxy/guardrails/guardrail_hooks/bedrock_guardrails.py:...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/proxy/prisma_migration.py:    database_password = os.ge...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/proxy/pass_through_endpoints/pass_through_endpoints.py:...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/proxy/pass_through_endpoints/llm_passthrough_endpoints....",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/proxy/pass_through_endpoints/common_utils.py:    litell...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/proxy/_types.py:    custom_litellm_api_key = \"x-litellm...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/proxy/image_endpoints/endpoints.py:            user_api...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/proxy/vertex_ai_endpoints/langfuse_endpoints.py:       ...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/proxy/vertex_ai_endpoints/langfuse_endpoints.py:       ...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/proxy/management_endpoints/ui_sso.py:    generic_client...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/proxy/management_endpoints/ui_sso.py:            google...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/proxy/management_endpoints/ui_sso.py:            micros...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/proxy/management_endpoints/ui_sso.py:            generi...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/proxy/management_endpoints/ui_sso.py:        microsoft_...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/proxy/management_endpoints/ui_sso.py:        google_cli...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/proxy/example_config_yaml/custom_auth_basic.py:        ...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/proxy/spend_tracking/spend_tracking_utils.py:          ...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/proxy/spend_tracking/spend_tracking_utils.py:        ap...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/proxy/auth/user_api_key_auth.py:        return await us...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/proxy/auth/user_api_key_auth.py:                api_key...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/proxy/auth/rds_iam_token.py:            aws_secret_acce...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/proxy/_experimental/out/_next/static/chunks/framework-b...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/proxy/_experimental/out/_next/static/chunks/699-6fbb6ca...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/proxy/_experimental/out/_next/static/chunks/fd9d1056-20...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/proxy/_experimental/out/_next/static/chunks/polyfills-4...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/litellm/proxy/common_utils/html_forms/ui_login.py:            <...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/posthog/ai/gemini/gemini.py:            api_key = os.environ.ge...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/oauthlib/oauth1/rfc5849/__init__.py:            'resource_owner...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/huggingface_hub/_webhooks_server.py:        request_secret = re...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/huggingface_hub/inference/_generated/_async_client.py:        ....",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/huggingface_hub/inference/_generated/_async_client.py:        ....",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/huggingface_hub/inference/_client.py:        ...     api_key=\"<...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/huggingface_hub/inference/_client.py:        ...     api_key=\"y...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/langsmith/client.py:                    masked_api_key = f\"{pre...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/googleapiclient/sample_tools.py:    client_secrets = os.path.jo...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/googleapiclient/discovery_cache/documents/firebaseml.v2beta.jso...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/googleapiclient/discovery_cache/documents/composer.v1beta1.json...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/googleapiclient/discovery_cache/documents/aiplatform.v1beta1.js...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/googleapiclient/discovery_cache/documents/composer.v1.json:\"des...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/googleapiclient/discovery_cache/documents/aiplatform.v1.json:\"d...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/googleapiclient/discovery_cache/documents/apihub.v1.json:\"descr...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/playwright/driver/package/lib/utilsBundleImpl/index.js:`),s=s.r...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/playwright/driver/package/lib/utilsBundleImpl/index.js:`,i)+1}r...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/playwright/driver/package/lib/vite/traceViewer/sw.bundle.js:`))...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/playwright/driver/package/lib/vite/traceViewer/assets/defaultSe...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/playwright/driver/package/lib/vite/traceViewer/assets/defaultSe...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/playwright/driver/package/lib/vite/recorder/assets/index-97EUAA...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/ecdsa/keys.py:        private_key_index = string.find(b\"-----BE...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./.venv/lib/python3.13/site-packages/ecdsa/keys.py:            private_key_index = string.index(b\"--...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./tripsage_core/services/infrastructure/database_service.py:            \"api_keys\", key_data, on_con...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./tripsage_core/services/business/user_service.py:    current_password: str = Field(..., description...",
+        "details": {}
+      },
+      {
+        "category": "Hardcoded Secrets",
+        "message": "Potential hardcoded secret found: ./tripsage_core/config/base_app_settings.py:    api_key: Optional[SecretStr] = Field(default=None, d...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in run_schema_tests.py: f\"\u26a0\ufe0f  {result['analysis']['summary']['total_failed...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in examples/agent_handoffs_example.py: f\"\\n[USER Message {i + 1}]: {message}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in supabase/deploy_database_schema.py: f\"{status} {step}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in supabase/validate_database_schema.py: f\"\u2705 Found {len(table_matches)} tables in schema\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in supabase/test_database_integration.py: f\"{status}: {test_name}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage/monitoring.py: f\"OTLP exporter configured for endpoint: {otlp_end...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage/tools/accommodations_tools.py: f\"Searching Airbnb rentals in {location}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage/tools/webcrawl_tools.py: f\"Starting direct Crawl4AI SDK crawl for {url}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage/tools/web_tools_fixed.py: f\"Initialized MockWebSearchTool with context size ...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage/tools/planning_tools.py: f\"plan_{datetime.now(timezone.utc).strftime('%Y%m%...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage/tools/web_tools.py: f\"Mock result for: {query}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage/tools/memory_tools.py: f\"Adding conversation memory for user {user_id}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage/tools/webcrawl/crawl4ai_client.py: f\"Using default Crawl4AI MCP base URL: {self.base_...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage/tools/webcrawl/persistence.py: f\"Supabase storage error: {response.get('error')}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage/tools/webcrawl/result_normalizer.py: f\"search-result-{idx}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage/tools/webcrawl/source_selector.py: f\"Optimized config for content_type='{content_type...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage/orchestration/checkpoint_manager.py: f\"postgresql://postgres:{supabase_key}@\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage/orchestration/mcp_bridge.py: f\"Bridge initialized with {len(self._tool_metadata...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage/orchestration/routing.py: f\"Routed to {classification['agent']} with confide...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage/orchestration/graph.py: f\"using MemorySaver: {e}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage/orchestration/handoff_coordinator.py: f\"Initialized {len(default_rules)} default handoff...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage/orchestration/memory_bridge.py: f\"Hydrating state for user: {user_id}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage/orchestration/state.py: f\"session_{user_id}_{int(datetime.now(timezone.utc...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage/orchestration/tools/registry.py: f\"tool.{metadata.name}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage/orchestration/nodes/accommodation_agent.py: f\"Error extracting accommodation parameters: {str(...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage/orchestration/nodes/flight_agent.py: f\"Initialized flight agent with {len(self.availabl...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage/orchestration/nodes/error_recovery.py: f\"Processing error recovery: count={error_info.err...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage/orchestration/nodes/memory_update.py: f\"Updated memory with {len(insights)} insights \"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage/orchestration/nodes/destination_research_agent.py: f\"Initialized destination research agent with {len...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage/orchestration/nodes/budget_agent.py: f\"Initialized budget agent with {len(self.availabl...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage/orchestration/nodes/base.py: f\"orchestration.{node_name}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage/orchestration/nodes/itinerary_agent.py: f\"Initialized itinerary agent with {len(self.avail...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage/api/main.py: f\"{exc.__class__.__module__}.{exc.__class__.__name...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage/api/schemas/flights.py: f\"Segment {i + 2} departure date must be on or aft...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage/api/middlewares/rate_limiting.py: f\"rate_limit:bucket:{key}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage/api/middlewares/logging.py: f\"Request completed: {response.status_code}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage/api/middlewares/authentication.py: f\"JWT authentication failed: {e}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage/api/core/config.py: f\"Unknown BYOK service: {service}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage/api/routers/accommodations.py: f\"Accommodation listing with ID {request.listing_i...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage/api/routers/flights.py: f\"Flight offer with ID {offer_id} not found\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage/api/routers/keys.py: f\"Invalid API key for {key_data.service}: {validat...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage/api/routers/attachments.py: f\"File uploaded successfully: {file.filename} \"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage/api/routers/destinations.py: f\"Destination not found: {destination_id}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage/api/routers/search.py: f\"Unified search request: {request.query} (user: {...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage/api/routers/memory.py: f\"Add conversation memory failed: {str(e)}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage/api/routers/websocket.py: f\"WebSocket connection accepted for chat session {...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage/api/routers/chat.py: f\"Chat request failed: {str(e)}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage/api/routers/activities.py: f\"Activity search request: {request.destination}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage/api/routers/itineraries.py: f\"Invalid itinerary creation request: {str(e)}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage/api/routers/trips.py: f\"Creating trip for user: {principal.user_id}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage/agents/__init__.py: f\"Unknown agent type: {agent_type}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage/agents/chat.py: f\"Failed to initialize chat agent orchestrator: {e...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage/agents/service_registry.py: f\"Required service '{service_name}' is not initial...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage/agents/base.py: f\".{module_name}\", \"tripsage.tools\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage/utils/cache.py: f\"{namespace}:stats\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage/monitoring/telemetry.py: f\"Failed to initialize telemetry: {e}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage/monitoring/performance_metrics.py: f\"api_{api_name}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage/security/memory_security.py: f\"{user_id}:{operation}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage/config/feature_flags.py: f\"{service_name}_integration\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage/config/service_registry.py: f\"Service '{name}' not registered\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage/db/initialize.py: f\"SQL database connection verified: PostgreSQL {re...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage/db/migrations/runner.py: f\"SQL execution failed: {e}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tests/conftest.py: f\"No validation error found for field '{field_name...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tests/docker/test_docker_config.py: f\"Missing {service_name}: {description}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tests/e2e/test_trip_planning_journey.py: f\"Trip to {sample_trip_data['destination']}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tests/e2e/test_api.py: f\"{API_BASE_URL}/auth/register\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tests/e2e/test_chat_sessions.py: f\"/api/v1/chat/sessions/{session_id}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tests/e2e/conftest.py: f\"MCP '{mcp_name}' not found in registry\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tests/factories/__init__.py: f\"user{i}@example.com\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tests/performance/test_migration_performance.py: f\"Operation {name} failed: {e}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tests/performance/test_memory_performance.py: f\"mem-{time.time()}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tests/performance/test_collaboration_performance.py: f\"user_{i}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tests/performance/conftest.py: f\"MCP '{mcp_name}' not found in registry\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tests/security/test_memory_security.py: f\"secure-mem-{len(self.user_data[user_id]) + 1}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tests/security/conftest.py: f\"MCP '{mcp_name}' not found in registry\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tests/integration/test_websocket_flow.py: f\"Message {i}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tests/integration/test_supabase_collaboration_schema.py: f\"user{user_id.hex[:8]}@test.com\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tests/integration/test_schema_runner.py: f\"Test execution failed: {str(e)}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tests/integration/test_service_registry.py: f\"operation:{value}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tests/integration/test_chat_flow.py: f\"/api/chat/sessions/{session_id}/messages\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tests/integration/test_database_triggers.py: f\"Trip {i}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tests/integration/test_websocket_real_time.py: f\"I received your message: {content}. This is a mo...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tests/integration/conftest_supabase_schema.py: f\"{role}_{self.id.hex[:8]}@test.com\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tests/integration/test_api_flow.py: f\"/api/trips/{trip_id}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tests/integration/conftest.py: f\"MCP '{mcp_name}' not found in registry\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tests/integration/memory/test_memory_system_integration.py: f\"query{i}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tests/integration/memory/test_memory_workflow.py: f\"mem-{len(self.stored_memories) + 1}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tests/unit/example_clean_test.py: f\"key_{i}\"] = f\"value_{i}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tests/unit/test_simple_activity_service.py: f\"City {i}\", \"start_date\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tests/unit/conftest.py: f\"MCP '{mcp_name}' not found in registry\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tests/unit/services/test_file_processing_service.py: f\"file_{i}.txt\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tests/unit/services/test_chat_service.py: f\"Message {i}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tests/unit/services/test_tool_calling_service.py: f\"call_{i}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tests/unit/tools/test_async_tools_comprehensive.py: f\"memory_{hash(str(args) + str(kwargs)) % 1000}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tests/unit/orchestration/test_tool_registry_comprehensive.py: f\"processed_{x}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tests/unit/orchestration/test_tool_registry.py: f\"Result: {param1}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tests/unit/orchestration/test_accommodation_agent.py: f\"prop-{i}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tests/unit/orchestration/test_utils.py: f\"{module_path}.ChatOpenAI\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tests/unit/orchestration/test_orchestration_comprehensive.py: f\"Processed by {self.node_name}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tests/unit/orchestration/test_graph.py: f\"Response {i}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tests/unit/api/routers/test_trips_integration_workflows.py: f\"Business Trip {i + 1}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tests/unit/api/routers/test_health_router.py: f\"service-{i}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tests/unit/api/routers/test_trips_security_auth.py: f\"Rapid Trip {i}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tests/unit/api/routers/test_trips_collaboration_endpoints.py: f\"Trip shared with {len(collaborators)} users\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tests/unit/api/routers/test_attachments_router.py: f\"/api/attachments/{file_id}/metadata\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tests/unit/api/routers/test_trips_router.py: f\"trip-{trip_id}.pdf\" in result[\"download_url\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tests/unit/api/routers/test_auth_router.py: f\"Failed to import auth router: {e}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tests/unit/api/routers/test_websocket_router.py: f\"/api/ws/chat/{self.session_id}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tests/unit/api/routers/test_unified_websocket_router.py: f\"Missing endpoint: {endpoint}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tests/unit/api/routers/test_accommodations_router.py: f\"Expected path {expected_path} not found in {rout...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tests/unit/tripsage/api/routers/test_search_router.py: f\"/search/suggest{query_params}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tests/unit/tripsage/api/routers/test_activities_router.py: f\"/activities/{activity_id}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tests/unit/models/test_rls_policy_validation.py: f\"Policy should specify operation type: {policy[:1...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tests/unit/models/test_migration_validation.py: f\"Expected 1 BEGIN and 1 COMMIT, found {begin_coun...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tests/unit/tripsage_core/test_config_comprehensive.py: f\"base_dir {settings.base_dir} doesn't seem to be ...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tests/unit/tripsage_core/test_comprehensive_config.py: f\"base_dir {settings.base_dir} doesn't seem to be ...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tests/unit/tripsage_core/services/infrastructure/test_cache_service_enhanced.py: f\"key:{i}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tests/unit/tripsage_core/services/infrastructure/test_database_service_enhanced.py: f\"Item {i}\", \"value\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tests/unit/tripsage_core/services/infrastructure/test_key_monitoring_service_enhanced.py: f\"{user_id}:create\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tests/unit/tripsage_core/services/infrastructure/test_database_service_new_methods.py: f\"Missing required field: {missing_field}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tests/unit/tripsage_core/services/infrastructure/test_websocket_broadcaster_enhanced.py: f\"{websocket_broadcaster.CONNECTION_INFO_KEY}:{con...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tests/unit/tripsage_core/services/infrastructure/test_websocket_manager_enhanced.py: f\"Message {i}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tests/unit/tripsage_core/services/business/test_file_processing_service.py: f\"{file_id}.pdf\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tests/unit/tripsage_core/services/business/test_session_security_service.py: f\"session-{i}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tests/unit/tripsage_core/services/business/test_session_security_enhanced.py: f\"Failed to detect malicious pattern in: {maliciou...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tests/unit/tripsage_core/services/business/test_chat_service.py: f\"Message {i}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tests/unit/tripsage_core/services/business/test_mfa_service.py: f\"Invalid base64 data: {e}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tests/unit/tripsage_core/services/business/test_unified_search_service.py: f\"test {i}\", destination=f\"City {i}\", types=[\"acti...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tests/unit/tripsage_core/services/business/test_session_security_service_security.py: f\"failures_{user_id}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tests/unit/tripsage_core/services/business/test_destination_service.py: f\"City {i + 1}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tests/unit/tripsage_core/services/business/test_activity_service_working.py: f\"{place_type} near {request.destination}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tests/unit/tripsage_core/services/business/test_activity_service_comprehensive.py: f\"City {i}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tests/unit/tripsage_core/services/business/test_activity_service.py: f\"place_{i}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tests/unit/tripsage_core/utils/test_cache_utils.py: f\"key_{i}\", f\"value_{i}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tests/unit/tripsage_core/utils/test_file_utils.py: f\"Expected {filename} to be valid, got error: {err...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tests/unit/tripsage_core/utils/test_session_utils.py: f\"City{i}\", \"year\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tests/unit/tripsage_core/utils/test_decorator_utils.py: f\"Attempt {call_count}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in scripts/deploy_api_key_migration.py: f\"Executing migration: {migration_file.name}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in scripts/security_validation.py: f\"[{severity.upper()}] {category}: {message}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in scripts/security_validation.py: %.*%.*INTO.*\",  # String formatting in SQL...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in scripts/test_schema_migration.py: f\"\u274c Import error: {e}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in scripts/automation/deploy_extensions.py: f\"\u274c Failed to connect: {e}\", style=\"red\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in scripts/testing/test_runner.py: f\"\u2717 Config test failed: {e}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in scripts/testing/run_tests_with_coverage.py: f\"\\nTotal tests collected: {test_count}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in scripts/testing/test_summary.py: f\"\\n{name} ({test_dir}):\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in scripts/validation/validate_schema_alignment.py: f\"Error importing modules: {e}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in scripts/verification/verify_extensions.py: f\"\u274c Failed to connect to database: {e}\", style=\"re...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in scripts/verification/verify_dragonfly.py: f\"   URL: {settings.dragonfly.url}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in scripts/verification/verify_connection.py: f\"\u2705 Table '{table}' exists\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in scripts/benchmarks/dragonfly_performance.py: f\"\u2705 Connected to DragonflyDB at {self.settings.dra...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in scripts/database/deploy_triggers.py: f\"Required table '{table}' does not exist\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in scripts/database/deploy_storage_infrastructure.py: f\"\u274c Deployment failed: {e}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in scripts/database/init_database.py: f\"SQL connection check failed: {e}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in scripts/database/run_migrations.py: f\"SQL migrations completed: {succeeded} succeeded,...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage_core/services/base_service.py: f\"Service initialized: {self.service_name}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage_core/services/infrastructure/websocket_broadcaster.py: f\"Failed to start WebSocket broadcaster: {e}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage_core/services/infrastructure/schema_migration_service.py: f\"Failed to check migration status: {e}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage_core/services/infrastructure/database_service.py: f\"Invalid Supabase URL format: {supabase_url}. \"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage_core/services/infrastructure/cache_service.py: f\"{parsed.username}:{self.settings.dragonfly.passw...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage_core/services/infrastructure/key_monitoring_service.py: f\"{user_id}:{operation.value}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage_core/services/infrastructure/search_cache_mixin.py: f\"{self._cache_prefix}:search:{key_hash}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage_core/services/infrastructure/websocket_manager.py: f\"Failed to send message to {self.connection_id}: ...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage_core/services/business/trip_service.py: f\"Trip with ID {trip_id} not found or not accessib...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage_core/services/business/chat_service.py: f\"Role must be one of: {', '.join(valid_roles)}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage_core/services/business/key_management_service.py: f\"Service must be one of: {', '.join(allowed_servi...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage_core/services/business/session_security_service.py: f\"IP address contains suspicious pattern: {pattern...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage_core/services/business/mfa_service.py: f\"MFA setup initiated for user {user_id}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage_core/services/business/destination_service.py: f\"Destination search failed: {str(e)}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage_core/services/business/user_service.py: f\"User with email {user_data.email} already exists...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage_core/services/business/chat_orchestration.py: f\"'{escaped_json}'::jsonb\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage_core/services/business/activity_service.py: f\"Searching activities for destination: {request.d...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage_core/services/business/memory_service.py: f\"Failed to initialize memory backend: {str(e)}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage_core/services/business/location_service.py: f\"Geocoding address: {address}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage_core/services/business/error_handling_service.py: f\"MCP operation failed: {service}.{method} - {str(...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage_core/services/business/unified_search_service.py: f\"Unified search request: '{request.query}' \"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage_core/services/business/flight_service.py: f\"Flight search failed: {str(e)}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage_core/services/business/accommodation_service.py: f\"Accommodation search failed: {str(e)}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage_core/services/business/file_processing_service.py: f\"File upload failed: {str(e)}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage_core/services/business/tool_calling_service.py: f\"Service '{v}' not in allowed services: {allowed_...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage_core/services/business/auth_service.py: f\"Token validation failed: {str(e)}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage_core/services/business/itinerary_service.py: f\"Failed to create itinerary: {str(e)}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage_core/services/external_apis/webcrawl_service.py: f\"Failed to initialize WebCrawl service: {str(e)}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage_core/services/external_apis/flights_service.py: f\"Bearer {self.api_token}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage_core/services/external_apis/time_service.py: f\"Failed to connect time service: {str(e)}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage_core/services/external_apis/playwright_service.py: f\"Failed to connect Playwright service: {str(e)}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage_core/services/external_apis/duffel_http_client.py: f\"Failed to connect to Duffel API: {str(e)}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage_core/services/external_apis/document_analyzer.py: f\"Failed to connect document analyzer: {str(e)}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage_core/services/external_apis/google_maps_service.py: f\"Geocoded address '{address}' with {len(result)} ...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage_core/services/external_apis/calendar_service.py: f\"Google Calendar API failed after {max_attempts} ...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage_core/services/external_apis/weather_service.py: f\"Failed to connect to OpenWeatherMap API: {str(e)...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage_core/exceptions/exceptions.py: f\"{self.code}: {self.message}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage_core/mcp_abstraction/manager.py: f\"Failed to initialize Airbnb MCP: {e}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage_core/mcp_abstraction/base_wrapper.py: f\"Method '{method_name}' not available for {self._...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage_core/mcp_abstraction/registry.py: f\"Failed to auto-register Airbnb wrapper: {e}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage_core/utils/session_utils.py: f\"Initializing session memory for user: {user_id}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage_core/utils/cache_utils.py: f\"{namespace}:stats\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage_core/utils/error_handling_utils.py: f\"MCP_{category.upper()}_ERROR\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage_core/utils/file_utils.py: f\"File size ({file_size} bytes) exceeds maximum al...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage_core/utils/logging_utils.py: f\"{name.replace('.', '_')}_{timestamp}.log\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage_core/utils/decorator_utils.py: f\"Failed to generate logging context: {context_err...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage_core/utils/schema_adapters.py: f\"Generated new UUID {new_uuid} for record with ID...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage_core/config/base_app_settings.py: f\"Environment must be one of {allowed}, got {v}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage_core/config/feature_flags.py: f\"{service_name}_integration\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage_core/config/service_registry.py: f\"Service '{name}' not registered\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage_core/clients/airbnb_mcp_client.py: f\"Connected to Airbnb MCP server at {self.endpoint...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage_core/models/schemas_common/common_validators.py: f\"String must be at least {min_len} characters lon...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage_core/models/schemas_common/financial.py: f\"{symbol}{self.amount:.2f}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage_core/models/schemas_common/temporal.py: f\"Frequency must be one of: {', '.join(valid_frequ...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage_core/models/api/weather_models.py: f\"https://openweathermap.org/img/wn/{self.icon}@2x...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage_core/models/api/flights_models.py: f\"{self.marketing_carrier.iata_code}{self.marketin...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage_core/models/db/trip_comparison.py: f\"Comparison of {options_count} options with {comp...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage_core/models/db/memory.py: f\"Role must be one of {valid_roles}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage_core/models/db/chat.py: f\"Role must be one of {valid_roles}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage_core/models/db/price_history.py: f\"{symbol}{self.price:,.0f}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage_core/models/db/flight.py: f\"{hours}h {minutes}m\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage_core/models/db/itinerary_item.py: f\"${self.cost:.2f}\"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage_core/models/db/search_parameters.py: f\"Flight from {origin} to {destination} \"...",
+        "details": {}
+      },
+      {
+        "category": "SQL Injection",
+        "message": "Potential SQL injection in tripsage_core/models/db/trip.py: f\"Visibility must be one of: {valid_values}\"...",
+        "details": {}
+      },
+      {
+        "category": "CORS",
+        "message": "Wildcard CORS origins found in tripsage/api/core/config.py",
+        "details": {}
+      }
+    ],
+    "medium": [],
+    "low": [],
+    "info": [
+      {
+        "category": "XSS Protection",
+        "message": "No obvious XSS vulnerabilities found",
+        "details": {}
+      },
+      {
+        "category": "Authentication",
+        "message": "Request header validation implemented",
+        "details": {}
+      },
+      {
+        "category": "Authentication",
+        "message": "Token format validation implemented",
+        "details": {}
+      },
+      {
+        "category": "Authentication",
+        "message": "Security headers implementation found",
+        "details": {}
+      },
+      {
+        "category": "Authentication",
+        "message": "IP validation and scoring implemented",
+        "details": {}
+      },
+      {
+        "category": "Authentication",
+        "message": "Authentication security: 4/4 checks passed",
+        "details": {}
+      },
+      {
+        "category": "Input Validation",
+        "message": "Validation found in tripsage_core/models/attachments.py",
+        "details": {}
+      },
+      {
+        "category": "Input Validation",
+        "message": "Validation found in tripsage_core/models/schemas_common/__init__.py",
+        "details": {}
+      },
+      {
+        "category": "Input Validation",
+        "message": "Validation found in tripsage_core/models/schemas_common/travel.py",
+        "details": {}
+      },
+      {
+        "category": "Input Validation",
+        "message": "Validation found in tripsage_core/models/schemas_common/chat.py",
+        "details": {}
+      },
+      {
+        "category": "Input Validation",
+        "message": "Validation found in tripsage_core/models/schemas_common/common_validators.py",
+        "details": {}
+      },
+      {
+        "category": "Input Validation",
+        "message": "Validation found in tripsage_core/models/schemas_common/financial.py",
+        "details": {}
+      },
+      {
+        "category": "Input Validation",
+        "message": "Validation found in tripsage_core/models/schemas_common/temporal.py",
+        "details": {}
+      },
+      {
+        "category": "Input Validation",
+        "message": "Validation found in tripsage_core/models/schemas_common/geographic.py",
+        "details": {}
+      },
+      {
+        "category": "Input Validation",
+        "message": "Validation found in tripsage_core/models/domain/transportation.py",
+        "details": {}
+      },
+      {
+        "category": "Input Validation",
+        "message": "Validation found in tripsage_core/models/domain/flight.py",
+        "details": {}
+      },
+      {
+        "category": "Input Validation",
+        "message": "Validation found in tripsage_core/models/domain/trip.py",
+        "details": {}
+      },
+      {
+        "category": "Input Validation",
+        "message": "Validation found in tripsage_core/models/api/calendar_models.py",
+        "details": {}
+      },
+      {
+        "category": "Input Validation",
+        "message": "Validation found in tripsage_core/models/api/flights_models.py",
+        "details": {}
+      },
+      {
+        "category": "Input Validation",
+        "message": "Validation found in tripsage_core/models/db/trip_collaborator.py",
+        "details": {}
+      },
+      {
+        "category": "Input Validation",
+        "message": "Validation found in tripsage_core/models/db/saved_option.py",
+        "details": {}
+      },
+      {
+        "category": "Input Validation",
+        "message": "Validation found in tripsage_core/models/db/memory.py",
+        "details": {}
+      },
+      {
+        "category": "Input Validation",
+        "message": "Validation found in tripsage_core/models/db/transportation.py",
+        "details": {}
+      },
+      {
+        "category": "Input Validation",
+        "message": "Validation found in tripsage_core/models/db/trip_note.py",
+        "details": {}
+      },
+      {
+        "category": "Input Validation",
+        "message": "Validation found in tripsage_core/models/db/chat.py",
+        "details": {}
+      },
+      {
+        "category": "Input Validation",
+        "message": "Validation found in tripsage_core/models/db/price_history.py",
+        "details": {}
+      },
+      {
+        "category": "Input Validation",
+        "message": "Validation found in tripsage_core/models/db/accommodation.py",
+        "details": {}
+      },
+      {
+        "category": "Input Validation",
+        "message": "Validation found in tripsage_core/models/db/user.py",
+        "details": {}
+      },
+      {
+        "category": "Input Validation",
+        "message": "Validation found in tripsage_core/models/db/flight.py",
+        "details": {}
+      },
+      {
+        "category": "Input Validation",
+        "message": "Validation found in tripsage_core/models/db/itinerary_item.py",
+        "details": {}
+      },
+      {
+        "category": "Input Validation",
+        "message": "Validation found in tripsage_core/models/db/trip.py",
+        "details": {}
+      },
+      {
+        "category": "Input Validation",
+        "message": "Validation found in tripsage_core/models/db/api_key.py",
+        "details": {}
+      },
+      {
+        "category": "Input Validation",
+        "message": "IP address validation implemented",
+        "details": {}
+      },
+      {
+        "category": "Input Validation",
+        "message": "User agent validation implemented",
+        "details": {}
+      },
+      {
+        "category": "Input Validation",
+        "message": "Session token validation implemented",
+        "details": {}
+      },
+      {
+        "category": "CORS",
+        "message": "CORS configuration found in tripsage/api/main.py",
+        "details": {}
+      },
+      {
+        "category": "HTTPS",
+        "message": "HSTS header found in tripsage/api/middlewares/authentication.py",
+        "details": {}
+      },
+      {
+        "category": "HTTPS",
+        "message": "HSTS header found in scripts/security_validation.py",
+        "details": {}
+      },
+      {
+        "category": "HTTPS",
+        "message": "HTTPS enforcement mechanisms found",
+        "details": {}
+      },
+      {
+        "category": "Dependencies",
+        "message": "Python dependencies listed successfully",
+        "details": {}
+      },
+      {
+        "category": "Dependencies",
+        "message": "Frontend package.json found",
+        "details": {}
+      }
+    ]
+  },
+  "summary": {
+    "critical": 0,
+    "high": 414,
+    "medium": 0,
+    "low": 0,
+    "info": 41
+  }
+}
