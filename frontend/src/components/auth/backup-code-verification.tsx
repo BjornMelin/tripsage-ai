@@ -12,7 +12,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AlertCircle, ArrowLeft, KeyRound, Loader2 } from "lucide-react";
-import React, { useState } from "react";
+import type React from "react";
+import { useState } from "react";
 
 interface BackupCodeVerificationProps {
   userEmail: string;
@@ -21,11 +22,11 @@ interface BackupCodeVerificationProps {
   onUseAuthenticator: () => void;
 }
 
-export function BackupCodeVerification({ 
-  userEmail, 
-  onVerified, 
+export function BackupCodeVerification({
+  userEmail,
+  onVerified,
   onCancel,
-  onUseAuthenticator 
+  onUseAuthenticator,
 }: BackupCodeVerificationProps) {
   const [backupCode, setBackupCode] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -42,8 +43,8 @@ export function BackupCodeVerification({
 
     try {
       // Mock API call - replace with actual implementation
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
       // Mock verification (accept any code with correct format for demo)
       if (backupCode.includes("-") && backupCode.length >= 10) {
         // Simulate remaining backup codes
@@ -63,7 +64,7 @@ export function BackupCodeVerification({
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let value = e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, "");
-    
+
     // Auto-format as XXXXX-XXXXX
     if (value.length <= 5) {
       // First part
@@ -75,7 +76,7 @@ export function BackupCodeVerification({
       }
       setBackupCode(value);
     }
-    
+
     setError(null);
   };
 
@@ -105,9 +106,7 @@ export function BackupCodeVerification({
 
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="backup-code">
-              Backup Code
-            </Label>
+            <Label htmlFor="backup-code">Backup Code</Label>
             <Input
               id="backup-code"
               type="text"
@@ -179,8 +178,8 @@ export function BackupCodeVerification({
         <Alert>
           <AlertCircle className="h-4 w-4" />
           <AlertDescription className="text-sm">
-            <strong>Important:</strong> Each backup code can only be used once. 
-            After using this code, you'll have fewer backup codes remaining.
+            <strong>Important:</strong> Each backup code can only be used once. After
+            using this code, you'll have fewer backup codes remaining.
           </AlertDescription>
         </Alert>
 

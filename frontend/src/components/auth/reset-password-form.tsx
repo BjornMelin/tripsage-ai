@@ -38,7 +38,7 @@ export function ResetPasswordForm({ className }: ResetPasswordFormProps) {
 
     try {
       await resetPassword(email);
-      
+
       if (!error) {
         setIsSuccess(true);
         setMessage("Password reset instructions have been sent to your email");

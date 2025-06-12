@@ -1,26 +1,45 @@
-'use client';
+"use client";
 
-import { useCallback, useMemo } from 'react';
-import { useQuery, useInfiniteQuery, UseQueryOptions, UseInfiniteQueryOptions } from '@tanstack/react-query';
-import { PostgrestFilterBuilder } from '@supabase/postgrest-js';
-import { useSupabase } from '@/lib/supabase/client';
-import type { Database, Tables, TablesInsert, TablesUpdate } from '@/lib/supabase/types';
-import { useAuth } from '@/contexts/auth-context';
+import { useCallback, useMemo } from "react";
+import {
+  useQuery,
+  useInfiniteQuery,
+  type UseQueryOptions,
+  type UseInfiniteQueryOptions,
+} from "@tanstack/react-query";
+import type { PostgrestFilterBuilder } from "@supabase/postgrest-js";
+import { useSupabase } from "@/lib/supabase/client";
+import type {
+  Database,
+  Tables,
+  TablesInsert,
+  TablesUpdate,
+} from "@/lib/supabase/types";
+import { useAuth } from "@/contexts/auth-context";
 
-type TableName = keyof Database['public']['Tables'];
-type TableRow<T extends TableName> = Database['public']['Tables'][T]['Row'];
+type TableName = keyof Database["public"]["Tables"];
+type TableRow<T extends TableName> = Database["public"]["Tables"][T]["Row"];
 type QueryHandler<T extends TableName> = (
-  query: PostgrestFilterBuilder<Database['public'], Database['public']['Tables'][T], any>
-) => PostgrestFilterBuilder<Database['public'], Database['public']['Tables'][T], any>;
+  query: PostgrestFilterBuilder<
+    Database["public"],
+    Database["public"]["Tables"][T],
+    any
+  >
+) => PostgrestFilterBuilder<Database["public"], Database["public"]["Tables"][T], any>;
 
-interface UseSupabaseQueryOptions<T extends TableName> extends Omit<UseQueryOptions<TableRow<T>[]>, 'queryKey' | 'queryFn'> {
+interface UseSupabaseQueryOptions<T extends TableName>
+  extends Omit<UseQueryOptions<TableRow<T>[]>, "queryKey" | "queryFn"> {
   table: T;
   columns?: string;
   filter?: QueryHandler<T>;
   dependencies?: any[];
 }
 
-interface UseSupabaseInfiniteQueryOptions<T extends TableName> extends Omit<UseInfiniteQueryOptions<any>, 'queryKey' | 'queryFn' | 'getNextPageParam'> {
+interface UseSupabaseInfiniteQueryOptions<T extends TableName>
+  extends Omit<
+    UseInfiniteQueryOptions<any>,
+    "queryKey" | "queryFn" | "getNextPageParam"
+  > {
   table: T;
   columns?: string;
   filter?: QueryHandler<T>;
@@ -32,13 +51,15 @@ interface UseSupabaseInfiniteQueryOptions<T extends TableName> extends Omit<UseI
  * Optimized hook for Supabase queries with caching, pagination, and filtering
  * Provides a consistent interface for all table operations
  */
-export function useSupabaseQuery<T extends TableName>(options: UseSupabaseQueryOptions<T>) {
+export function useSupabaseQuery<T extends TableName>(
+  options: UseSupabaseQueryOptions<T>
+) {
   const supabase = useSupabase();
   const { user } = useAuth();
-  
+
   const {
     table,
-    columns = '*',
+    columns = "*",
     filter,
     dependencies = [],
     enabled = true,
@@ -50,11 +71,11 @@ export function useSupabaseQuery<T extends TableName>(options: UseSupabaseQueryO
     queryKey: [table, columns, filter?.toString(), user?.id, ...dependencies],
     queryFn: async () => {
       let query = supabase.from(table).select(columns);
-      
+
       if (filter) {
         query = filter(query as any);
       }
-      
+
       const { data, error } = await query;
       if (error) throw error;
       return data as TableRow<T>[];
@@ -68,13 +89,15 @@ export function useSupabaseQuery<T extends TableName>(options: UseSupabaseQueryO
 /**
  * Hook for infinite scroll/pagination with Supabase
  */
-export function useSupabaseInfiniteQuery<T extends TableName>(options: UseSupabaseInfiniteQueryOptions<T>) {
+export function useSupabaseInfiniteQuery<T extends TableName>(
+  options: UseSupabaseInfiniteQueryOptions<T>
+) {
   const supabase = useSupabase();
   const { user } = useAuth();
-  
+
   const {
     table,
-    columns = '*',
+    columns = "*",
     filter,
     pageSize = 20,
     dependencies = [],
@@ -84,20 +107,27 @@ export function useSupabaseInfiniteQuery<T extends TableName>(options: UseSupaba
   } = options;
 
   return useInfiniteQuery({
-    queryKey: [`${table}-infinite`, columns, filter?.toString(), pageSize, user?.id, ...dependencies],
+    queryKey: [
+      `${table}-infinite`,
+      columns,
+      filter?.toString(),
+      pageSize,
+      user?.id,
+      ...dependencies,
+    ],
     queryFn: async ({ pageParam = 0 }) => {
       let query = supabase
         .from(table)
         .select(columns)
         .range(pageParam, pageParam + pageSize - 1);
-      
+
       if (filter) {
         query = filter(query as any);
       }
-      
+
       const { data, error, count } = await query;
       if (error) throw error;
-      
+
       return {
         data: data as TableRow<T>[],
         nextCursor: data.length === pageSize ? pageParam + pageSize : undefined,
@@ -126,24 +156,24 @@ export function useSupabaseRecord<T extends TableName>(
 ) {
   const supabase = useSupabase();
   const { user } = useAuth();
-  
+
   const {
-    columns = '*',
+    columns = "*",
     enabled = true,
     staleTime = 1000 * 60 * 10, // 10 minutes for single records
   } = options || {};
 
   return useQuery({
-    queryKey: [table, 'single', id, columns],
+    queryKey: [table, "single", id, columns],
     queryFn: async () => {
-      if (!id) throw new Error('ID is required');
-      
+      if (!id) throw new Error("ID is required");
+
       const { data, error } = await supabase
         .from(table)
         .select(columns)
-        .eq('id', id)
+        .eq("id", id)
         .single();
-      
+
       if (error) throw error;
       return data as TableRow<T>;
     },
@@ -166,28 +196,34 @@ export function useSupabaseAggregation<T extends TableName>(
 ) {
   const supabase = useSupabase();
   const { user } = useAuth();
-  
+
   const {
     filter,
-    countColumn = '*',
+    countColumn = "*",
     enabled = true,
     dependencies = [],
   } = options || {};
 
   return useQuery({
-    queryKey: [`${table}-count`, filter?.toString(), countColumn, user?.id, ...dependencies],
+    queryKey: [
+      `${table}-count`,
+      filter?.toString(),
+      countColumn,
+      user?.id,
+      ...dependencies,
+    ],
     queryFn: async () => {
       let query = supabase
         .from(table)
-        .select(countColumn, { count: 'exact', head: true });
-      
+        .select(countColumn, { count: "exact", head: true });
+
       if (filter) {
         query = filter(query as any);
       }
-      
+
       const { count, error } = await query;
       if (error) throw error;
-      
+
       return { count: count || 0 };
     },
     enabled: enabled && !!user?.id,
@@ -211,10 +247,10 @@ export function useSupabaseSearch<T extends TableName>(
 ) {
   const supabase = useSupabase();
   const { user } = useAuth();
-  
+
   const {
-    columns = '*',
-    searchColumns = ['name', 'title', 'description'],
+    columns = "*",
+    searchColumns = ["name", "title", "description"],
     filter,
     enabled = true,
     debounceMs = 300,
@@ -224,29 +260,36 @@ export function useSupabaseSearch<T extends TableName>(
   const debouncedQuery = useDebounce(searchQuery, debounceMs);
 
   return useQuery({
-    queryKey: [`${table}-search`, debouncedQuery, columns, searchColumns, filter?.toString(), user?.id],
+    queryKey: [
+      `${table}-search`,
+      debouncedQuery,
+      columns,
+      searchColumns,
+      filter?.toString(),
+      user?.id,
+    ],
     queryFn: async () => {
       if (!debouncedQuery || debouncedQuery.trim().length < 2) {
         return [];
       }
-      
+
       let query = supabase.from(table).select(columns);
-      
+
       // Apply search across multiple columns
       if (searchColumns.length > 0) {
         const searchConditions = searchColumns
-          .map(col => `${col}.ilike.%${debouncedQuery}%`)
-          .join(',');
+          .map((col) => `${col}.ilike.%${debouncedQuery}%`)
+          .join(",");
         query = query.or(searchConditions);
       }
-      
+
       if (filter) {
         query = filter(query as any);
       }
-      
+
       const { data, error } = await query.limit(50); // Limit search results
       if (error) throw error;
-      
+
       return data as TableRow<T>[];
     },
     enabled: enabled && !!user?.id && debouncedQuery.trim().length >= 2,
@@ -269,30 +312,29 @@ export function useSupabaseRelated<T extends TableName>(
 ) {
   const supabase = useSupabase();
   const { user } = useAuth();
-  
-  const {
-    columns = '*',
-    filter,
-    enabled = true,
-  } = options || {};
+
+  const { columns = "*", filter, enabled = true } = options || {};
 
   return useQuery({
-    queryKey: [`${table}-related`, foreignKey, foreignValue, columns, filter?.toString()],
+    queryKey: [
+      `${table}-related`,
+      foreignKey,
+      foreignValue,
+      columns,
+      filter?.toString(),
+    ],
     queryFn: async () => {
       if (!foreignValue) return [];
-      
-      let query = supabase
-        .from(table)
-        .select(columns)
-        .eq(foreignKey, foreignValue);
-      
+
+      let query = supabase.from(table).select(columns).eq(foreignKey, foreignValue);
+
       if (filter) {
         query = filter(query as any);
       }
-      
+
       const { data, error } = await query;
       if (error) throw error;
-      
+
       return data as TableRow<T>[];
     },
     enabled: enabled && !!foreignValue && !!user?.id,
@@ -326,10 +368,11 @@ export function useSupabaseQueryHelpers() {
   const { user } = useAuth();
 
   // User's trips with collaboration info
-  const useUserTrips = useCallback((filters?: { status?: string; trip_type?: string }) => {
-    return useSupabaseQuery({
-      table: 'trips',
-      columns: `
+  const useUserTrips = useCallback(
+    (filters?: { status?: string; trip_type?: string }) => {
+      return useSupabaseQuery({
+        table: "trips",
+        columns: `
         *,
         trip_collaborators(
           id,
@@ -339,27 +382,29 @@ export function useSupabaseQueryHelpers() {
           added_at
         )
       `,
-      filter: (query) => {
-        let filtered = query
-          .or(`user_id.eq.${user?.id},trip_collaborators.user_id.eq.${user?.id}`)
-          .order('created_at', { ascending: false });
-        
-        if (filters?.status) {
-          filtered = filtered.eq('status', filters.status);
-        }
-        if (filters?.trip_type) {
-          filtered = filtered.eq('trip_type', filters.trip_type);
-        }
-        
-        return filtered;
-      },
-      dependencies: [filters],
-    });
-  }, [user?.id]);
+        filter: (query) => {
+          let filtered = query
+            .or(`user_id.eq.${user?.id},trip_collaborators.user_id.eq.${user?.id}`)
+            .order("created_at", { ascending: false });
+
+          if (filters?.status) {
+            filtered = filtered.eq("status", filters.status);
+          }
+          if (filters?.trip_type) {
+            filtered = filtered.eq("trip_type", filters.trip_type);
+          }
+
+          return filtered;
+        },
+        dependencies: [filters],
+      });
+    },
+    [user?.id]
+  );
 
   // Trip with full details
   const useTripDetails = useCallback((tripId: number | null) => {
-    return useSupabaseRecord('trips', tripId, {
+    return useSupabaseRecord("trips", tripId, {
       columns: `
         *,
         flights(*),
@@ -378,36 +423,37 @@ export function useSupabaseQueryHelpers() {
   }, []);
 
   // User's chat sessions
-  const useChatSessions = useCallback((tripId?: number | null) => {
-    return useSupabaseQuery({
-      table: 'chat_sessions',
-      filter: (query) => {
-        let filtered = query
-          .eq('user_id', user?.id!)
-          .order('updated_at', { ascending: false });
-        
-        if (tripId) {
-          filtered = filtered.eq('trip_id', tripId);
-        }
-        
-        return filtered;
-      },
-      dependencies: [tripId],
-    });
-  }, [user?.id]);
+  const useChatSessions = useCallback(
+    (tripId?: number | null) => {
+      return useSupabaseQuery({
+        table: "chat_sessions",
+        filter: (query) => {
+          let filtered = query
+            .eq("user_id", user?.id!)
+            .order("updated_at", { ascending: false });
+
+          if (tripId) {
+            filtered = filtered.eq("trip_id", tripId);
+          }
+
+          return filtered;
+        },
+        dependencies: [tripId],
+      });
+    },
+    [user?.id]
+  );
 
   // Messages for a session with infinite scroll
   const useChatMessages = useCallback((sessionId: string | null) => {
     return useSupabaseInfiniteQuery({
-      table: 'chat_messages',
+      table: "chat_messages",
       columns: `
         *,
         chat_tool_calls(*)
       `,
-      filter: (query) => 
-        query
-          .eq('session_id', sessionId!)
-          .order('created_at', { ascending: false }),
+      filter: (query) =>
+        query.eq("session_id", sessionId!).order("created_at", { ascending: false }),
       enabled: !!sessionId,
       dependencies: [sessionId],
       pageSize: 50,
@@ -415,33 +461,36 @@ export function useSupabaseQueryHelpers() {
   }, []);
 
   // User's files with filters
-  const useUserFiles = useCallback((filters?: {
-    tripId?: number;
-    chatMessageId?: number;
-    uploadStatus?: string;
-  }) => {
-    return useSupabaseQuery({
-      table: 'file_attachments',
-      filter: (query) => {
-        let filtered = query
-          .eq('user_id', user?.id!)
-          .order('created_at', { ascending: false });
-        
-        if (filters?.tripId) {
-          filtered = filtered.eq('trip_id', filters.tripId);
-        }
-        if (filters?.chatMessageId) {
-          filtered = filtered.eq('chat_message_id', filters.chatMessageId);
-        }
-        if (filters?.uploadStatus) {
-          filtered = filtered.eq('upload_status', filters.uploadStatus);
-        }
-        
-        return filtered;
-      },
-      dependencies: [filters],
-    });
-  }, [user?.id]);
+  const useUserFiles = useCallback(
+    (filters?: {
+      tripId?: number;
+      chatMessageId?: number;
+      uploadStatus?: string;
+    }) => {
+      return useSupabaseQuery({
+        table: "file_attachments",
+        filter: (query) => {
+          let filtered = query
+            .eq("user_id", user?.id!)
+            .order("created_at", { ascending: false });
+
+          if (filters?.tripId) {
+            filtered = filtered.eq("trip_id", filters.tripId);
+          }
+          if (filters?.chatMessageId) {
+            filtered = filtered.eq("chat_message_id", filters.chatMessageId);
+          }
+          if (filters?.uploadStatus) {
+            filtered = filtered.eq("upload_status", filters.uploadStatus);
+          }
+
+          return filtered;
+        },
+        dependencies: [filters],
+      });
+    },
+    [user?.id]
+  );
 
   return {
     useUserTrips,
@@ -452,4 +501,4 @@ export function useSupabaseQueryHelpers() {
   };
 }
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect } from "react";

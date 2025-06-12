@@ -4,18 +4,18 @@ Tests for SessionSecurityService.
 Tests cover session management, security event logging, and risk assessment.
 """
 
-import pytest
-from datetime import datetime, timezone, timedelta
-from unittest.mock import AsyncMock, MagicMock, patch
 import hashlib
+from datetime import datetime, timedelta, timezone
+from unittest.mock import AsyncMock
+
+import pytest
 
 from tripsage_core.services.business.session_security_service import (
-    SessionSecurityService,
-    UserSession,
     SecurityEvent,
     SessionSecurityMetrics,
+    SessionSecurityService,
+    UserSession,
 )
-from tripsage_core.exceptions import CoreSecurityError
 
 
 @pytest.fixture
@@ -89,9 +89,15 @@ class TestSessionCreation:
                 "device_info": {},
                 "location_info": {},
                 "is_active": True,
-                "last_activity_at": (datetime.now(timezone.utc) - timedelta(hours=i)).isoformat(),
-                "expires_at": (datetime.now(timezone.utc) + timedelta(hours=24)).isoformat(),
-                "created_at": (datetime.now(timezone.utc) - timedelta(hours=i)).isoformat(),
+                "last_activity_at": (
+                    datetime.now(timezone.utc) - timedelta(hours=i)
+                ).isoformat(),
+                "expires_at": (
+                    datetime.now(timezone.utc) + timedelta(hours=24)
+                ).isoformat(),
+                "created_at": (
+                    datetime.now(timezone.utc) - timedelta(hours=i)
+                ).isoformat(),
                 "ended_at": None,
             }
             for i in range(3)  # Max sessions = 3
@@ -131,7 +137,9 @@ class TestSessionValidation:
     """Test session validation functionality."""
 
     @pytest.mark.asyncio
-    async def test_validate_session_success(self, session_service, mock_database_service):
+    async def test_validate_session_success(
+        self, session_service, mock_database_service
+    ):
         """Test successful session validation."""
         session_token = "test-token"
         session_token_hash = hashlib.sha256(session_token.encode()).hexdigest()
@@ -166,7 +174,9 @@ class TestSessionValidation:
         mock_database_service.update.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_validate_session_expired(self, session_service, mock_database_service):
+    async def test_validate_session_expired(
+        self, session_service, mock_database_service
+    ):
         """Test validation of expired session."""
         session_token = "test-token"
         session_token_hash = hashlib.sha256(session_token.encode()).hexdigest()
@@ -182,7 +192,9 @@ class TestSessionValidation:
             "location_info": {},
             "is_active": True,
             "last_activity_at": datetime.now(timezone.utc).isoformat(),
-            "expires_at": (datetime.now(timezone.utc) - timedelta(hours=1)).isoformat(),  # Expired
+            "expires_at": (
+                datetime.now(timezone.utc) - timedelta(hours=1)
+            ).isoformat(),  # Expired
             "created_at": datetime.now(timezone.utc).isoformat(),
             "ended_at": None,
         }
@@ -199,7 +211,9 @@ class TestSessionValidation:
         mock_database_service.update.assert_called()
 
     @pytest.mark.asyncio
-    async def test_validate_session_not_found(self, session_service, mock_database_service):
+    async def test_validate_session_not_found(
+        self, session_service, mock_database_service
+    ):
         """Test validation of non-existent session."""
         mock_database_service.select.return_value = []
 
@@ -257,7 +271,9 @@ class TestSessionTermination:
     """Test session termination functionality."""
 
     @pytest.mark.asyncio
-    async def test_terminate_session_success(self, session_service, mock_database_service):
+    async def test_terminate_session_success(
+        self, session_service, mock_database_service
+    ):
         """Test successful session termination."""
         mock_database_service.update.return_value = True
         mock_database_service.insert.return_value = {"id": "event-1"}
@@ -278,7 +294,9 @@ class TestSessionTermination:
         assert update_call[0][2]["is_active"] is False
 
     @pytest.mark.asyncio
-    async def test_terminate_session_not_found(self, session_service, mock_database_service):
+    async def test_terminate_session_not_found(
+        self, session_service, mock_database_service
+    ):
         """Test termination of non-existent session."""
         mock_database_service.update.return_value = False
 
@@ -287,7 +305,9 @@ class TestSessionTermination:
         assert success is False
 
     @pytest.mark.asyncio
-    async def test_terminate_session_logs_event(self, session_service, mock_database_service):
+    async def test_terminate_session_logs_event(
+        self, session_service, mock_database_service
+    ):
         """Test that session termination logs security event."""
         mock_database_service.update.return_value = True
         mock_database_service.insert.return_value = {"id": "event-1"}
@@ -308,7 +328,9 @@ class TestSecurityEventLogging:
     """Test security event logging functionality."""
 
     @pytest.mark.asyncio
-    async def test_log_security_event_success(self, session_service, mock_database_service):
+    async def test_log_security_event_success(
+        self, session_service, mock_database_service
+    ):
         """Test successful security event logging."""
         mock_database_service.insert.return_value = {"id": "event-1"}
 
@@ -366,7 +388,9 @@ class TestSecurityMetrics:
     """Test security metrics functionality."""
 
     @pytest.mark.asyncio
-    async def test_get_security_metrics_success(self, session_service, mock_database_service):
+    async def test_get_security_metrics_success(
+        self, session_service, mock_database_service
+    ):
         """Test successful security metrics retrieval."""
         # Mock active sessions
         session_data = [
@@ -380,7 +404,9 @@ class TestSecurityMetrics:
                 "location_info": {},
                 "is_active": True,
                 "last_activity_at": datetime.now(timezone.utc).isoformat(),
-                "expires_at": (datetime.now(timezone.utc) + timedelta(hours=1)).isoformat(),
+                "expires_at": (
+                    datetime.now(timezone.utc) + timedelta(hours=1)
+                ).isoformat(),
                 "created_at": datetime.now(timezone.utc).isoformat(),
                 "ended_at": None,
             }
@@ -488,19 +514,25 @@ class TestSessionCleanup:
     """Test session cleanup functionality."""
 
     @pytest.mark.asyncio
-    async def test_cleanup_expired_sessions(self, session_service, mock_database_service):
+    async def test_cleanup_expired_sessions(
+        self, session_service, mock_database_service
+    ):
         """Test cleanup of expired sessions."""
         # Mock expired sessions
         expired_sessions = [
             {
                 "id": "session-1",
                 "user_id": "user-123",
-                "expires_at": (datetime.now(timezone.utc) - timedelta(hours=1)).isoformat(),
+                "expires_at": (
+                    datetime.now(timezone.utc) - timedelta(hours=1)
+                ).isoformat(),
             },
             {
                 "id": "session-2",
                 "user_id": "user-456",
-                "expires_at": (datetime.now(timezone.utc) - timedelta(hours=2)).isoformat(),
+                "expires_at": (
+                    datetime.now(timezone.utc) - timedelta(hours=2)
+                ).isoformat(),
             },
         ]
 

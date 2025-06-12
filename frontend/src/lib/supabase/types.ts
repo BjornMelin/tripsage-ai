@@ -7,84 +7,88 @@ export type Json =
   | Json[];
 
 // Table row types for easy access
-export type Tables<T extends keyof Database['public']['Tables']> = Database['public']['Tables'][T]['Row'];
-export type TablesInsert<T extends keyof Database['public']['Tables']> = Database['public']['Tables'][T]['Insert'];
-export type TablesUpdate<T extends keyof Database['public']['Tables']> = Database['public']['Tables'][T]['Update'];
-export type Enums<T extends keyof Database['public']['Enums']> = Database['public']['Enums'][T];
+export type Tables<T extends keyof Database["public"]["Tables"]> =
+  Database["public"]["Tables"][T]["Row"];
+export type TablesInsert<T extends keyof Database["public"]["Tables"]> =
+  Database["public"]["Tables"][T]["Insert"];
+export type TablesUpdate<T extends keyof Database["public"]["Tables"]> =
+  Database["public"]["Tables"][T]["Update"];
+export type Enums<T extends keyof Database["public"]["Enums"]> =
+  Database["public"]["Enums"][T];
 
 // Specific table type exports for common usage
-export type Trip = Tables<'trips'>;
-export type TripInsert = TablesInsert<'trips'>;
-export type TripUpdate = TablesUpdate<'trips'>;
+export type Trip = Tables<"trips">;
+export type TripInsert = TablesInsert<"trips">;
+export type TripUpdate = TablesUpdate<"trips">;
 
-export type Flight = Tables<'flights'>;
-export type FlightInsert = TablesInsert<'flights'>;
-export type FlightUpdate = TablesUpdate<'flights'>;
+export type Flight = Tables<"flights">;
+export type FlightInsert = TablesInsert<"flights">;
+export type FlightUpdate = TablesUpdate<"flights">;
 
-export type Accommodation = Tables<'accommodations'>;
-export type AccommodationInsert = TablesInsert<'accommodations'>;
-export type AccommodationUpdate = TablesUpdate<'accommodations'>;
+export type Accommodation = Tables<"accommodations">;
+export type AccommodationInsert = TablesInsert<"accommodations">;
+export type AccommodationUpdate = TablesUpdate<"accommodations">;
 
-export type ChatSession = Tables<'chat_sessions'>;
-export type ChatSessionInsert = TablesInsert<'chat_sessions'>;
-export type ChatSessionUpdate = TablesUpdate<'chat_sessions'>;
+export type ChatSession = Tables<"chat_sessions">;
+export type ChatSessionInsert = TablesInsert<"chat_sessions">;
+export type ChatSessionUpdate = TablesUpdate<"chat_sessions">;
 
-export type ChatMessage = Tables<'chat_messages'>;
-export type ChatMessageInsert = TablesInsert<'chat_messages'>;
-export type ChatMessageUpdate = TablesUpdate<'chat_messages'>;
+export type ChatMessage = Tables<"chat_messages">;
+export type ChatMessageInsert = TablesInsert<"chat_messages">;
+export type ChatMessageUpdate = TablesUpdate<"chat_messages">;
 
-export type ChatToolCall = Tables<'chat_tool_calls'>;
-export type ChatToolCallInsert = TablesInsert<'chat_tool_calls'>;
-export type ChatToolCallUpdate = TablesUpdate<'chat_tool_calls'>;
+export type ChatToolCall = Tables<"chat_tool_calls">;
+export type ChatToolCallInsert = TablesInsert<"chat_tool_calls">;
+export type ChatToolCallUpdate = TablesUpdate<"chat_tool_calls">;
 
-export type TripCollaborator = Tables<'trip_collaborators'>;
-export type TripCollaboratorInsert = TablesInsert<'trip_collaborators'>;
-export type TripCollaboratorUpdate = TablesUpdate<'trip_collaborators'>;
+export type TripCollaborator = Tables<"trip_collaborators">;
+export type TripCollaboratorInsert = TablesInsert<"trip_collaborators">;
+export type TripCollaboratorUpdate = TablesUpdate<"trip_collaborators">;
 
-export type FileAttachment = Tables<'file_attachments'>;
-export type FileAttachmentInsert = TablesInsert<'file_attachments'>;
-export type FileAttachmentUpdate = TablesUpdate<'file_attachments'>;
+export type FileAttachment = Tables<"file_attachments">;
+export type FileAttachmentInsert = TablesInsert<"file_attachments">;
+export type FileAttachmentUpdate = TablesUpdate<"file_attachments">;
 
-export type Memory = Tables<'memories'>;
-export type MemoryInsert = TablesInsert<'memories'>;
-export type MemoryUpdate = TablesUpdate<'memories'>;
+export type Memory = Tables<"memories">;
+export type MemoryInsert = TablesInsert<"memories">;
+export type MemoryUpdate = TablesUpdate<"memories">;
 
-export type SessionMemory = Tables<'session_memories'>;
-export type SessionMemoryInsert = TablesInsert<'session_memories'>;
-export type SessionMemoryUpdate = TablesUpdate<'session_memories'>;
+export type SessionMemory = Tables<"session_memories">;
+export type SessionMemoryInsert = TablesInsert<"session_memories">;
+export type SessionMemoryUpdate = TablesUpdate<"session_memories">;
 
-export type ApiKey = Tables<'api_keys'>;
-export type ApiKeyInsert = TablesInsert<'api_keys'>;
-export type ApiKeyUpdate = TablesUpdate<'api_keys'>;
+export type ApiKey = Tables<"api_keys">;
+export type ApiKeyInsert = TablesInsert<"api_keys">;
+export type ApiKeyUpdate = TablesUpdate<"api_keys">;
 
-export type ItineraryItem = Tables<'itinerary_items'>;
-export type ItineraryItemInsert = TablesInsert<'itinerary_items'>;
-export type ItineraryItemUpdate = TablesUpdate<'itinerary_items'>;
+export type ItineraryItem = Tables<"itinerary_items">;
+export type ItineraryItemInsert = TablesInsert<"itinerary_items">;
+export type ItineraryItemUpdate = TablesUpdate<"itinerary_items">;
 
-export type Transportation = Tables<'transportation'>;
-export type TransportationInsert = TablesInsert<'transportation'>;
-export type TransportationUpdate = TablesUpdate<'transportation'>;
+export type Transportation = Tables<"transportation">;
+export type TransportationInsert = TablesInsert<"transportation">;
+export type TransportationUpdate = TablesUpdate<"transportation">;
 
 // Search cache types
-export type SearchDestination = Tables<'search_destinations'>;
-export type SearchActivity = Tables<'search_activities'>;
-export type SearchFlight = Tables<'search_flights'>;
-export type SearchHotel = Tables<'search_hotels'>;
+export type SearchDestination = Tables<"search_destinations">;
+export type SearchActivity = Tables<"search_activities">;
+export type SearchFlight = Tables<"search_flights">;
+export type SearchHotel = Tables<"search_hotels">;
 
 // Enum types
-export type TripStatus = Enums<'trip_status'>;
-export type TripType = Enums<'trip_type'>;
-export type FlightClass = Enums<'flight_class'>;
-export type BookingStatus = Enums<'booking_status'>;
-export type TransportType = Enums<'transport_type'>;
-export type ItemType = Enums<'item_type'>;
-export type ChatRole = Enums<'chat_role'>;
-export type ToolCallStatus = Enums<'tool_call_status'>;
-export type MemoryType = Enums<'memory_type'>;
-export type PermissionLevel = Enums<'permission_level'>;
-export type UploadStatus = Enums<'upload_status'>;
-export type VirusScanStatus = Enums<'virus_scan_status'>;
-export type SearchSource = Enums<'search_source'>;
+export type TripStatus = Enums<"trip_status">;
+export type TripType = Enums<"trip_type">;
+export type FlightClass = Enums<"flight_class">;
+export type BookingStatus = Enums<"booking_status">;
+export type TransportType = Enums<"transport_type">;
+export type ItemType = Enums<"item_type">;
+export type ChatRole = Enums<"chat_role">;
+export type ToolCallStatus = Enums<"tool_call_status">;
+export type MemoryType = Enums<"memory_type">;
+export type PermissionLevel = Enums<"permission_level">;
+export type UploadStatus = Enums<"upload_status">;
+export type VirusScanStatus = Enums<"virus_scan_status">;
+export type SearchSource = Enums<"search_source">;
 
 export interface Database {
   public: {
@@ -829,14 +833,35 @@ export interface Database {
       flight_class: "economy" | "premium_economy" | "business" | "first";
       booking_status: "available" | "reserved" | "booked" | "cancelled";
       transport_type: "flight" | "train" | "bus" | "car_rental" | "taxi" | "other";
-      item_type: "activity" | "meal" | "transport" | "accommodation" | "event" | "other";
+      item_type:
+        | "activity"
+        | "meal"
+        | "transport"
+        | "accommodation"
+        | "event"
+        | "other";
       chat_role: "user" | "assistant" | "system";
       tool_call_status: "pending" | "running" | "completed" | "failed";
-      memory_type: "user_preference" | "trip_history" | "search_pattern" | "conversation_context" | "other";
+      memory_type:
+        | "user_preference"
+        | "trip_history"
+        | "search_pattern"
+        | "conversation_context"
+        | "other";
       permission_level: "view" | "edit" | "admin";
       upload_status: "uploading" | "completed" | "failed";
       virus_scan_status: "pending" | "clean" | "infected" | "failed";
-      search_source: "google_maps" | "external_api" | "cached" | "viator" | "getyourguide" | "duffel" | "amadeus" | "booking" | "expedia" | "airbnb_mcp";
+      search_source:
+        | "google_maps"
+        | "external_api"
+        | "cached"
+        | "viator"
+        | "getyourguide"
+        | "duffel"
+        | "amadeus"
+        | "booking"
+        | "expedia"
+        | "airbnb_mcp";
     };
     CompositeTypes: {
       [_ in never]: never;

@@ -72,34 +72,34 @@ export interface Trip {
   id: string;
   uuid_id?: string;
   user_id?: string;
-  
+
   // Core trip information (aligned with backend)
   title: string; // Primary field name
   name?: string; // Legacy compatibility
   description?: string;
-  
+
   // Date fields - supporting both formats
   start_date?: string; // Snake case for API compatibility
   end_date?: string; // Snake case for API compatibility
   startDate?: string; // Camel case for frontend compatibility
   endDate?: string; // Camel case for frontend compatibility
-  
+
   // Trip details
   destinations: Destination[];
-  
+
   // Budget - supporting both legacy and enhanced
   budget?: number; // Legacy simple budget
   enhanced_budget?: EnhancedBudget; // New enhanced budget
   currency?: string;
   spent_amount?: number;
-  
+
   // Enhanced fields
-  visibility?: 'private' | 'shared' | 'public';
+  visibility?: "private" | "shared" | "public";
   isPublic?: boolean; // Legacy field for backward compatibility
   tags?: string[];
   preferences?: TripPreferences;
   status?: string;
-  
+
   // Timestamp fields - supporting both formats
   created_at?: string; // Snake case for API compatibility
   updated_at?: string; // Snake case for API compatibility
@@ -169,12 +169,14 @@ export const useTripStore = create<TripState>()(
             endDate: trip.end_date, // Frontend compatibility
             destinations: [], // Will be loaded separately or joined
             budget: trip.budget,
-            enhanced_budget: trip.budget_breakdown ? {
-              total: trip.budget_breakdown.total || trip.budget || 0,
-              currency: trip.currency || "USD",
-              spent: trip.budget_breakdown.spent || trip.spent_amount || 0,
-              breakdown: trip.budget_breakdown.breakdown || {},
-            } : undefined,
+            enhanced_budget: trip.budget_breakdown
+              ? {
+                  total: trip.budget_breakdown.total || trip.budget || 0,
+                  currency: trip.currency || "USD",
+                  spent: trip.budget_breakdown.spent || trip.spent_amount || 0,
+                  breakdown: trip.budget_breakdown.breakdown || {},
+                }
+              : undefined,
             currency: trip.currency,
             spent_amount: trip.spent_amount,
             visibility: trip.visibility,
@@ -204,7 +206,7 @@ export const useTripStore = create<TripState>()(
           // Import hook will need to be used in component that calls this
           // For now, we'll use the supabase client directly
           const { supabase } = await import("@/lib/supabase/client");
-          
+
           const tripData = {
             title: data.title || data.name || "Untitled Trip",
             description: data.description || "",
@@ -218,15 +220,19 @@ export const useTripStore = create<TripState>()(
             preferences: data.preferences || {},
             status: data.status || "planning",
             // Enhanced budget structure
-            budget_breakdown: data.enhanced_budget ? {
-              total: data.enhanced_budget.total,
-              spent: data.enhanced_budget.spent,
-              breakdown: data.enhanced_budget.breakdown,
-            } : data.budget ? {
-              total: data.budget,
-              spent: 0,
-              breakdown: {},
-            } : null,
+            budget_breakdown: data.enhanced_budget
+              ? {
+                  total: data.enhanced_budget.total,
+                  spent: data.enhanced_budget.spent,
+                  breakdown: data.enhanced_budget.breakdown,
+                }
+              : data.budget
+                ? {
+                    total: data.budget,
+                    spent: 0,
+                    breakdown: {},
+                  }
+                : null,
           };
 
           const { data: newTrip, error } = await supabase
@@ -251,12 +257,14 @@ export const useTripStore = create<TripState>()(
             endDate: newTrip.end_date, // Frontend compatibility
             destinations: [], // Will be handled separately
             budget: newTrip.budget,
-            enhanced_budget: newTrip.budget_breakdown ? {
-              total: newTrip.budget_breakdown.total || newTrip.budget || 0,
-              currency: newTrip.currency || "USD",
-              spent: newTrip.budget_breakdown.spent || newTrip.spent_amount || 0,
-              breakdown: newTrip.budget_breakdown.breakdown || {},
-            } : undefined,
+            enhanced_budget: newTrip.budget_breakdown
+              ? {
+                  total: newTrip.budget_breakdown.total || newTrip.budget || 0,
+                  currency: newTrip.currency || "USD",
+                  spent: newTrip.budget_breakdown.spent || newTrip.spent_amount || 0,
+                  breakdown: newTrip.budget_breakdown.breakdown || {},
+                }
+              : undefined,
             currency: newTrip.currency,
             spent_amount: newTrip.spent_amount,
             visibility: newTrip.visibility,
@@ -288,22 +296,25 @@ export const useTripStore = create<TripState>()(
 
         try {
           const { supabase } = await import("@/lib/supabase/client");
-          
+
           const updateData: any = {};
-          
+
           // Map frontend fields to database fields
           if (data.title || data.name) updateData.title = data.title || data.name;
           if (data.description !== undefined) updateData.description = data.description;
-          if (data.startDate || data.start_date) updateData.start_date = data.startDate || data.start_date;
-          if (data.endDate || data.end_date) updateData.end_date = data.endDate || data.end_date;
+          if (data.startDate || data.start_date)
+            updateData.start_date = data.startDate || data.start_date;
+          if (data.endDate || data.end_date)
+            updateData.end_date = data.endDate || data.end_date;
           if (data.budget !== undefined) updateData.budget = data.budget;
           if (data.currency) updateData.currency = data.currency;
-          if (data.spent_amount !== undefined) updateData.spent_amount = data.spent_amount;
+          if (data.spent_amount !== undefined)
+            updateData.spent_amount = data.spent_amount;
           if (data.visibility) updateData.visibility = data.visibility;
           if (data.tags) updateData.tags = data.tags;
           if (data.preferences) updateData.preferences = data.preferences;
           if (data.status) updateData.status = data.status;
-          
+
           // Handle enhanced budget
           if (data.enhanced_budget) {
             updateData.budget_breakdown = {
@@ -319,7 +330,7 @@ export const useTripStore = create<TripState>()(
           const { data: updatedTrip, error } = await supabase
             .from("trips")
             .update(updateData)
-            .eq("id", parseInt(id))
+            .eq("id", Number.parseInt(id))
             .select()
             .single();
 
@@ -337,12 +348,15 @@ export const useTripStore = create<TripState>()(
             end_date: updatedTrip.end_date,
             endDate: updatedTrip.end_date, // Frontend compatibility
             budget: updatedTrip.budget,
-            enhanced_budget: updatedTrip.budget_breakdown ? {
-              total: updatedTrip.budget_breakdown.total || updatedTrip.budget || 0,
-              currency: updatedTrip.currency || "USD",
-              spent: updatedTrip.budget_breakdown.spent || updatedTrip.spent_amount || 0,
-              breakdown: updatedTrip.budget_breakdown.breakdown || {},
-            } : undefined,
+            enhanced_budget: updatedTrip.budget_breakdown
+              ? {
+                  total: updatedTrip.budget_breakdown.total || updatedTrip.budget || 0,
+                  currency: updatedTrip.currency || "USD",
+                  spent:
+                    updatedTrip.budget_breakdown.spent || updatedTrip.spent_amount || 0,
+                  breakdown: updatedTrip.budget_breakdown.breakdown || {},
+                }
+              : undefined,
             currency: updatedTrip.currency,
             spent_amount: updatedTrip.spent_amount,
             visibility: updatedTrip.visibility,
@@ -383,7 +397,7 @@ export const useTripStore = create<TripState>()(
           const { error } = await supabase
             .from("trips")
             .delete()
-            .eq("id", parseInt(id));
+            .eq("id", Number.parseInt(id));
 
           if (error) throw error;
 

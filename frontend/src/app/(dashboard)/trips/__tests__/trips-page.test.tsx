@@ -7,6 +7,7 @@ import TripsPage from "../page";
 const mockTrips: Trip[] = [
   {
     id: "1",
+    title: "Paris Adventure",
     name: "Paris Adventure",
     description: "A romantic trip to Paris",
     startDate: "2024-06-01",
@@ -20,6 +21,7 @@ const mockTrips: Trip[] = [
   },
   {
     id: "2",
+    title: "Tokyo Journey",
     name: "Tokyo Journey",
     description: "Exploring modern Japan",
     startDate: "2025-03-15",
@@ -33,6 +35,7 @@ const mockTrips: Trip[] = [
   },
   {
     id: "3",
+    title: "Draft Trip",
     name: "Draft Trip",
     description: "Planning stage",
     destinations: [],

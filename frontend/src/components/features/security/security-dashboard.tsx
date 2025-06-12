@@ -6,13 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { 
-  Shield, 
-  Key, 
-  Clock, 
-  Globe, 
-  Smartphone, 
-  AlertTriangle, 
+import {
+  Shield,
+  Key,
+  Clock,
+  Globe,
+  Smartphone,
+  AlertTriangle,
   CheckCircle2,
   Info,
   Settings,
@@ -21,14 +21,20 @@ import {
   Lock,
   UserCheck,
   Activity,
-  Monitor
+  Monitor,
 } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import { useApiKeys } from "@/hooks/use-api-keys";
 
 interface SecurityEvent {
   id: string;
-  type: "login_success" | "login_failure" | "logout" | "password_change" | "api_key_created" | "suspicious_activity";
+  type:
+    | "login_success"
+    | "login_failure"
+    | "logout"
+    | "password_change"
+    | "api_key_created"
+    | "suspicious_activity";
   description: string;
   timestamp: string;
   ip_address: string;
@@ -69,7 +75,7 @@ export function SecurityDashboard() {
     const loadSecurityData = async () => {
       try {
         // Simulate API calls
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await new Promise((resolve) => setTimeout(resolve, 1000));
 
         // Mock security events
         setEvents([
@@ -81,7 +87,7 @@ export function SecurityDashboard() {
             ip_address: "192.168.1.100",
             location: "San Francisco, CA",
             device: "Chrome on MacOS",
-            risk_level: "low"
+            risk_level: "low",
           },
           {
             id: "2",
@@ -91,7 +97,7 @@ export function SecurityDashboard() {
             ip_address: "192.168.1.100",
             location: "San Francisco, CA",
             device: "Chrome on MacOS",
-            risk_level: "low"
+            risk_level: "low",
           },
           {
             id: "3",
@@ -101,8 +107,8 @@ export function SecurityDashboard() {
             ip_address: "203.0.113.1",
             location: "Unknown",
             device: "Unknown",
-            risk_level: "medium"
-          }
+            risk_level: "medium",
+          },
         ]);
 
         // Mock active sessions
@@ -114,7 +120,7 @@ export function SecurityDashboard() {
             location: "San Francisco, CA",
             ip_address: "192.168.1.100",
             last_activity: "2025-06-11T10:30:00Z",
-            is_current: true
+            is_current: true,
           },
           {
             id: "2",
@@ -123,8 +129,8 @@ export function SecurityDashboard() {
             location: "San Francisco, CA",
             ip_address: "192.168.1.101",
             last_activity: "2025-06-11T09:15:00Z",
-            is_current: false
-          }
+            is_current: false,
+          },
         ]);
 
         // Mock security metrics
@@ -134,7 +140,7 @@ export function SecurityDashboard() {
           active_sessions: 2,
           api_keys_count: apiKeys?.length || 0,
           oauth_connections: ["google", "github"],
-          security_score: 85
+          security_score: 85,
         });
 
         setIsLoading(false);
@@ -149,22 +155,33 @@ export function SecurityDashboard() {
 
   const getRiskColor = (level: string) => {
     switch (level) {
-      case "high": return "text-red-600 bg-red-50 border-red-200";
-      case "medium": return "text-yellow-600 bg-yellow-50 border-yellow-200";
-      case "low": return "text-green-600 bg-green-50 border-green-200";
-      default: return "text-gray-600 bg-gray-50 border-gray-200";
+      case "high":
+        return "text-red-600 bg-red-50 border-red-200";
+      case "medium":
+        return "text-yellow-600 bg-yellow-50 border-yellow-200";
+      case "low":
+        return "text-green-600 bg-green-50 border-green-200";
+      default:
+        return "text-gray-600 bg-gray-50 border-gray-200";
     }
   };
 
   const getEventIcon = (type: string) => {
     switch (type) {
-      case "login_success": return <CheckCircle2 className="h-4 w-4 text-green-600" />;
-      case "login_failure": return <AlertTriangle className="h-4 w-4 text-red-600" />;
-      case "logout": return <Shield className="h-4 w-4 text-blue-600" />;
-      case "password_change": return <Lock className="h-4 w-4 text-blue-600" />;
-      case "api_key_created": return <Key className="h-4 w-4 text-purple-600" />;
-      case "suspicious_activity": return <AlertTriangle className="h-4 w-4 text-red-600" />;
-      default: return <Info className="h-4 w-4 text-gray-600" />;
+      case "login_success":
+        return <CheckCircle2 className="h-4 w-4 text-green-600" />;
+      case "login_failure":
+        return <AlertTriangle className="h-4 w-4 text-red-600" />;
+      case "logout":
+        return <Shield className="h-4 w-4 text-blue-600" />;
+      case "password_change":
+        return <Lock className="h-4 w-4 text-blue-600" />;
+      case "api_key_created":
+        return <Key className="h-4 w-4 text-purple-600" />;
+      case "suspicious_activity":
+        return <AlertTriangle className="h-4 w-4 text-red-600" />;
+      default:
+        return <Info className="h-4 w-4 text-gray-600" />;
     }
   };
 
@@ -175,7 +192,7 @@ export function SecurityDashboard() {
   const handleTerminateSession = async (sessionId: string) => {
     try {
       // TODO: Implement session termination
-      setSessions(prev => prev.filter(s => s.id !== sessionId));
+      setSessions((prev) => prev.filter((s) => s.id !== sessionId));
     } catch (error) {
       console.error("Failed to terminate session:", error);
     }
@@ -217,8 +234,16 @@ export function SecurityDashboard() {
 
       {/* Security Score */}
       {metrics && (
-        <Alert className={metrics.security_score >= 80 ? "border-green-200 bg-green-50" : "border-yellow-200 bg-yellow-50"}>
-          <Shield className={`h-4 w-4 ${metrics.security_score >= 80 ? "text-green-600" : "text-yellow-600"}`} />
+        <Alert
+          className={
+            metrics.security_score >= 80
+              ? "border-green-200 bg-green-50"
+              : "border-yellow-200 bg-yellow-50"
+          }
+        >
+          <Shield
+            className={`h-4 w-4 ${metrics.security_score >= 80 ? "text-green-600" : "text-yellow-600"}`}
+          />
           <AlertDescription>
             <div className="flex items-center justify-between">
               <span>
@@ -242,7 +267,9 @@ export function SecurityDashboard() {
                 <Clock className="h-4 w-4 text-muted-foreground" />
                 <div className="ml-2">
                   <p className="text-sm font-medium">Last Login</p>
-                  <p className="text-2xl font-bold">{formatTimestamp(metrics.last_login)}</p>
+                  <p className="text-2xl font-bold">
+                    {formatTimestamp(metrics.last_login)}
+                  </p>
                 </div>
               </div>
             </CardContent>
@@ -298,14 +325,19 @@ export function SecurityDashboard() {
           <CardContent>
             <div className="space-y-4">
               {sessions.map((session) => (
-                <div key={session.id} className="flex items-center justify-between p-3 border rounded-lg">
+                <div
+                  key={session.id}
+                  className="flex items-center justify-between p-3 border rounded-lg"
+                >
                   <div className="flex items-center space-x-3">
                     <Smartphone className="h-5 w-5 text-muted-foreground" />
                     <div>
                       <div className="flex items-center space-x-2">
                         <p className="font-medium">{session.device}</p>
                         {session.is_current && (
-                          <Badge variant="outline" className="text-xs">Current</Badge>
+                          <Badge variant="outline" className="text-xs">
+                            Current
+                          </Badge>
                         )}
                       </div>
                       <p className="text-sm text-muted-foreground">{session.browser}</p>
@@ -340,20 +372,24 @@ export function SecurityDashboard() {
           <CardContent>
             <div className="space-y-4">
               {events.map((event) => (
-                <div key={event.id} className="flex items-start space-x-3 p-3 border rounded-lg">
+                <div
+                  key={event.id}
+                  className="flex items-start space-x-3 p-3 border rounded-lg"
+                >
                   {getEventIcon(event.type)}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between">
                       <p className="font-medium">{event.description}</p>
-                      <Badge 
-                        variant="outline" 
+                      <Badge
+                        variant="outline"
                         className={`text-xs ${getRiskColor(event.risk_level)}`}
                       >
                         {event.risk_level}
                       </Badge>
                     </div>
                     <p className="text-sm text-muted-foreground">
-                      {event.location || "Unknown location"} • {formatTimestamp(event.timestamp)}
+                      {event.location || "Unknown location"} •{" "}
+                      {formatTimestamp(event.timestamp)}
                     </p>
                     <p className="text-xs text-muted-foreground">
                       IP: {event.ip_address}
@@ -378,10 +414,17 @@ export function SecurityDashboard() {
           <CardContent>
             <div className="flex space-x-4">
               {metrics.oauth_connections.map((provider) => (
-                <div key={provider} className="flex items-center space-x-2 p-3 border rounded-lg">
+                <div
+                  key={provider}
+                  className="flex items-center space-x-2 p-3 border rounded-lg"
+                >
                   <div className="w-8 h-8 bg-muted rounded flex items-center justify-center">
-                    {provider === "google" && <span className="text-sm font-bold">G</span>}
-                    {provider === "github" && <span className="text-sm font-bold">GH</span>}
+                    {provider === "google" && (
+                      <span className="text-sm font-bold">G</span>
+                    )}
+                    {provider === "github" && (
+                      <span className="text-sm font-bold">GH</span>
+                    )}
                   </div>
                   <div>
                     <p className="font-medium capitalize">{provider}</p>
@@ -412,7 +455,7 @@ export function SecurityDashboard() {
                 </AlertDescription>
               </Alert>
             )}
-            
+
             <div className="grid gap-3 md:grid-cols-2">
               <div className="p-3 border rounded-lg">
                 <h4 className="font-medium">Regular Password Updates</h4>
@@ -420,21 +463,21 @@ export function SecurityDashboard() {
                   Change your password every 90 days for optimal security.
                 </p>
               </div>
-              
+
               <div className="p-3 border rounded-lg">
                 <h4 className="font-medium">Review API Keys</h4>
                 <p className="text-sm text-muted-foreground">
                   Regularly audit and rotate your API keys.
                 </p>
               </div>
-              
+
               <div className="p-3 border rounded-lg">
                 <h4 className="font-medium">Monitor Sessions</h4>
                 <p className="text-sm text-muted-foreground">
                   Terminate unknown or inactive sessions.
                 </p>
               </div>
-              
+
               <div className="p-3 border rounded-lg">
                 <h4 className="font-medium">Enable Notifications</h4>
                 <p className="text-sm text-muted-foreground">

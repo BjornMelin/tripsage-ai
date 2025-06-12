@@ -8,9 +8,9 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { 
-  Shield, 
-  Key, 
+import {
+  Shield,
+  Key,
   Lock,
   Smartphone,
   Mail,
@@ -20,7 +20,7 @@ import {
   Settings,
   Eye,
   Download,
-  Trash2
+  Trash2,
 } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/contexts/auth-context";
@@ -51,10 +51,10 @@ export default function SecuritySettingsPage() {
     setIsLoading(true);
     try {
       // TODO: Implement API call to update settings
-      setSettings(prev => ({ ...prev, [key]: value }));
-      
+      setSettings((prev) => ({ ...prev, [key]: value }));
+
       // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise((resolve) => setTimeout(resolve, 500));
     } catch (error) {
       console.error("Failed to update setting:", error);
     } finally {
@@ -115,7 +115,9 @@ export default function SecuritySettingsPage() {
             {/* Two-Factor Authentication */}
             <div className="flex items-center justify-between">
               <div className="space-y-1">
-                <Label className="text-base font-medium">Two-Factor Authentication</Label>
+                <Label className="text-base font-medium">
+                  Two-Factor Authentication
+                </Label>
                 <p className="text-sm text-muted-foreground">
                   Add an extra layer of security to your account
                 </p>
@@ -126,7 +128,9 @@ export default function SecuritySettingsPage() {
                 )}
                 <Switch
                   checked={settings.twoFactorEnabled}
-                  onCheckedChange={(checked) => handleSettingChange("twoFactorEnabled", checked)}
+                  onCheckedChange={(checked) =>
+                    handleSettingChange("twoFactorEnabled", checked)
+                  }
                   disabled={isLoading}
                 />
               </div>
@@ -156,9 +160,7 @@ export default function SecuritySettingsPage() {
                   </p>
                 </div>
                 <Button variant="outline" size="sm" asChild>
-                  <Link href="/auth/reset-password">
-                    Change Password
-                  </Link>
+                  <Link href="/auth/reset-password">Change Password</Link>
                 </Button>
               </div>
             </div>
@@ -204,7 +206,9 @@ export default function SecuritySettingsPage() {
               </div>
               <Switch
                 checked={settings.emailNotifications}
-                onCheckedChange={(checked) => handleSettingChange("emailNotifications", checked)}
+                onCheckedChange={(checked) =>
+                  handleSettingChange("emailNotifications", checked)
+                }
                 disabled={isLoading}
               />
             </div>
@@ -221,7 +225,9 @@ export default function SecuritySettingsPage() {
               </div>
               <Switch
                 checked={settings.securityAlerts}
-                onCheckedChange={(checked) => handleSettingChange("securityAlerts", checked)}
+                onCheckedChange={(checked) =>
+                  handleSettingChange("securityAlerts", checked)
+                }
                 disabled={isLoading}
               />
             </div>
@@ -238,7 +244,9 @@ export default function SecuritySettingsPage() {
               </div>
               <Switch
                 checked={settings.loginNotifications}
-                onCheckedChange={(checked) => handleSettingChange("loginNotifications", checked)}
+                onCheckedChange={(checked) =>
+                  handleSettingChange("loginNotifications", checked)
+                }
                 disabled={isLoading}
               />
             </div>
@@ -264,7 +272,9 @@ export default function SecuritySettingsPage() {
               </div>
               <Switch
                 checked={settings.deviceTracking}
-                onCheckedChange={(checked) => handleSettingChange("deviceTracking", checked)}
+                onCheckedChange={(checked) =>
+                  handleSettingChange("deviceTracking", checked)
+                }
                 disabled={isLoading}
               />
             </div>
@@ -296,7 +306,11 @@ export default function SecuritySettingsPage() {
                     Download your security data
                   </p>
                 </div>
-                <Button variant="outline" size="sm" onClick={handleDownloadSecurityData}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleDownloadSecurityData}
+                >
                   <Download className="mr-2 h-4 w-4" />
                   Export Data
                 </Button>

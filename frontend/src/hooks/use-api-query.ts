@@ -1,6 +1,6 @@
 "use client";
 
-import { type ApiError } from "@/lib/api/client";
+import type { ApiError } from "@/lib/api/client";
 import {
   type UseMutationOptions,
   type UseQueryOptions,

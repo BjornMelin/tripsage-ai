@@ -82,13 +82,17 @@ class SchemaAdapter:
                 "total": budget_breakdown.get("total", db_trip.get("budget", 0)),
                 "currency": db_trip.get("currency", "USD"),
                 "spent": db_trip.get("spent_amount", 0),
-                "breakdown": budget_breakdown.get("breakdown", {})
+                "breakdown": budget_breakdown.get("breakdown", {}),
             }
 
         # Handle enhanced preferences
-        preferences = db_trip.get("preferences_extended", {}) or db_trip.get("preferences", {})
+        preferences = db_trip.get("preferences_extended", {}) or db_trip.get(
+            "preferences", {}
+        )
         if not preferences and db_trip.get("flexibility"):
-            preferences = SchemaAdapter.migrate_legacy_preferences(db_trip.get("flexibility"))
+            preferences = SchemaAdapter.migrate_legacy_preferences(
+                db_trip.get("flexibility")
+            )
 
         # Provide defaults for missing fields
         api_trip = {
@@ -135,16 +139,16 @@ class SchemaAdapter:
         """
         # Handle title -> name mapping for database (now both use 'title')
         title = api_trip.get("title") or api_trip.get("name", "Untitled Trip")
-        
+
         # Handle enhanced budget conversion
         budget_breakdown = {}
         enhanced_budget = api_trip.get("enhanced_budget")
         if enhanced_budget:
             budget_breakdown = {
                 "total": enhanced_budget.get("total", 0),
-                "breakdown": enhanced_budget.get("breakdown", {})
+                "breakdown": enhanced_budget.get("breakdown", {}),
             }
-        
+
         db_trip = {
             "title": title,  # Updated to use 'title' consistently
             "user_id": api_trip.get("user_id"),

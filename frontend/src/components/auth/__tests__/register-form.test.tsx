@@ -53,6 +53,9 @@ describe("RegisterForm", () => {
       signOut: mockSignOut,
       refreshUser: mockRefreshUser,
       clearError: mockClearError,
+      signInWithOAuth: vi.fn(),
+      resetPassword: vi.fn(),
+      updatePassword: vi.fn(),
     });
   });
 
@@ -143,6 +146,9 @@ describe("RegisterForm", () => {
       signOut: mockSignOut,
       refreshUser: mockRefreshUser,
       clearError: mockClearError,
+      signInWithOAuth: vi.fn(),
+      resetPassword: vi.fn(),
+      updatePassword: vi.fn(),
     });
 
     render(<RegisterForm />);
@@ -163,6 +169,9 @@ describe("RegisterForm", () => {
       signOut: mockSignOut,
       refreshUser: mockRefreshUser,
       clearError: mockClearError,
+      signInWithOAuth: vi.fn(),
+      resetPassword: vi.fn(),
+      updatePassword: vi.fn(),
     });
 
     render(<RegisterForm redirectTo="/custom-dashboard" />);
@@ -183,6 +192,9 @@ describe("RegisterForm", () => {
       signOut: mockSignOut,
       refreshUser: mockRefreshUser,
       clearError: mockClearError,
+      signInWithOAuth: vi.fn(),
+      resetPassword: vi.fn(),
+      updatePassword: vi.fn(),
     });
 
     render(<RegisterForm />);
@@ -210,6 +222,9 @@ describe("RegisterForm", () => {
       signOut: mockSignOut,
       refreshUser: mockRefreshUser,
       clearError: mockClearError,
+      signInWithOAuth: vi.fn(),
+      resetPassword: vi.fn(),
+      updatePassword: vi.fn(),
     });
 
     render(<RegisterForm />);
@@ -229,6 +244,9 @@ describe("RegisterForm", () => {
       signOut: mockSignOut,
       refreshUser: mockRefreshUser,
       clearError: mockClearError,
+      signInWithOAuth: vi.fn(),
+      resetPassword: vi.fn(),
+      updatePassword: vi.fn(),
     });
 
     const user = userEvent.setup();
@@ -251,6 +269,9 @@ describe("RegisterForm", () => {
       signOut: mockSignOut,
       refreshUser: mockRefreshUser,
       clearError: mockClearError,
+      signInWithOAuth: vi.fn(),
+      resetPassword: vi.fn(),
+      updatePassword: vi.fn(),
     });
 
     const user = userEvent.setup();
@@ -273,6 +294,9 @@ describe("RegisterForm", () => {
       signOut: mockSignOut,
       refreshUser: mockRefreshUser,
       clearError: mockClearError,
+      signInWithOAuth: vi.fn(),
+      resetPassword: vi.fn(),
+      updatePassword: vi.fn(),
     });
 
     const user = userEvent.setup();
@@ -423,6 +447,9 @@ describe("RegisterForm", () => {
       signOut: mockSignOut,
       refreshUser: mockRefreshUser,
       clearError: mockClearError,
+      signInWithOAuth: vi.fn(),
+      resetPassword: vi.fn(),
+      updatePassword: vi.fn(),
     });
 
     render(<RegisterForm />);
