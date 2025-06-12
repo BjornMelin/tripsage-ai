@@ -112,7 +112,9 @@ describe("ActivitiesSearchPage", () => {
   it("renders the page header correctly", () => {
     render(<ActivitiesSearchPage />, { wrapper: createWrapper() });
 
-    expect(screen.getByText("Search Activities")).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Search Activities" })
+    ).toBeInTheDocument();
     expect(
       screen.getByText("Discover exciting activities and experiences for your trip")
     ).toBeInTheDocument();
@@ -121,7 +123,9 @@ describe("ActivitiesSearchPage", () => {
   it("renders the activity search form", () => {
     render(<ActivitiesSearchPage />, { wrapper: createWrapper() });
 
-    expect(screen.getByText("Activity Search")).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Activity Search" })
+    ).toBeInTheDocument();
     expect(screen.getByLabelText(/location/i)).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: /search activities/i })
@@ -131,9 +135,10 @@ describe("ActivitiesSearchPage", () => {
   it("shows initial empty state", () => {
     render(<ActivitiesSearchPage />, { wrapper: createWrapper() });
 
-    expect(
-      screen.getByText("Use the search form to find activities at your destination")
-    ).toBeInTheDocument();
+    const emptyStateText = screen.getByText(
+      "Use the search form to find activities at your destination"
+    );
+    expect(emptyStateText).toBeInTheDocument();
   });
 
   it("shows loading state during search", () => {
@@ -194,12 +199,12 @@ describe("ActivitiesSearchPage", () => {
     await waitFor(() => {
       expect(mockSearchActivities).toHaveBeenCalledWith({
         destination: "New York",
-        startDate: "2024-07-01",
-        endDate: "2024-07-03",
+        date: "2024-07-01",
         adults: 1,
         children: 0,
         infants: 0,
-        categories: [],
+        duration: undefined,
+        category: undefined,
       });
     });
   });
@@ -363,8 +368,9 @@ describe("ActivitiesSearchPage", () => {
     // Check that activity cards are rendered with correct content
     expect(screen.getByText("Central Park Walking Tour")).toBeInTheDocument();
     expect(screen.getByText("Brooklyn Food Tour")).toBeInTheDocument();
-    expect(screen.getByText("$45")).toBeInTheDocument();
-    expect(screen.getByText("$85")).toBeInTheDocument();
+    // Use getAllByText since price appears twice (badge and price section)
+    expect(screen.getAllByText("$45")).toHaveLength(2);
+    expect(screen.getAllByText("$85")).toHaveLength(2);
   });
 
   it("uses correct grid layout for results", () => {
@@ -386,6 +392,7 @@ describe("ActivitiesSearchPage", () => {
     vi.mocked(useSearchStore).mockReturnValue({
       ...mockSearchStore,
       results: { activities: [] },
+      hasResults: false,
     });
 
     render(<ActivitiesSearchPage />, { wrapper: createWrapper() });
