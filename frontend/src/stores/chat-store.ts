@@ -882,13 +882,14 @@ export const useChatStore = create<ChatState>()(
         const { websocketClient } = get();
         if (websocketClient) {
           websocketClient.disconnect();
-          set({
-            websocketClient: null,
-            connectionStatus: ConnectionStatus.DISCONNECTED,
-            typingUsers: {},
-            pendingMessages: [],
-          });
         }
+        // Always update state to disconnected, regardless of client existence
+        set({
+          websocketClient: null,
+          connectionStatus: ConnectionStatus.DISCONNECTED,
+          typingUsers: {},
+          pendingMessages: [],
+        });
       },
 
       setRealtimeEnabled: (enabled) => {
