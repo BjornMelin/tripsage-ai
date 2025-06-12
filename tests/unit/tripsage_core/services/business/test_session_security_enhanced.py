@@ -5,8 +5,9 @@ This module provides comprehensive security testing for the fixed IP validation
 vulnerabilities and enhanced input validation.
 """
 
-import pytest
 from unittest.mock import AsyncMock
+
+import pytest
 
 from tripsage_core.exceptions import CoreSecurityError
 from tripsage_core.services.business.session_security_service import (
@@ -56,8 +57,12 @@ class TestIPValidationSecurity:
         ]
 
         for malicious_ip in malicious_ips:
-            risk_score = security_service._validate_and_score_ip(malicious_ip, "test_user")
-            assert risk_score == 50, f"Failed to detect malicious pattern in: {malicious_ip}"
+            risk_score = security_service._validate_and_score_ip(
+                malicious_ip, "test_user"
+            )
+            assert risk_score == 50, (
+                f"Failed to detect malicious pattern in: {malicious_ip}"
+            )
 
     def test_validate_and_score_ip_buffer_overflow_protection(self, security_service):
         """Test protection against buffer overflow attempts via long IPs."""
@@ -83,7 +88,9 @@ class TestIPValidationSecurity:
         for null_ip in null_byte_ips:
             # Should sanitize null bytes and process safely
             risk_score = security_service._validate_and_score_ip(null_ip, "test_user")
-            assert 0 <= risk_score <= 50, f"Failed to handle null bytes in: {repr(null_ip)}"
+            assert 0 <= risk_score <= 50, (
+                f"Failed to handle null bytes in: {repr(null_ip)}"
+            )
 
     def test_validate_and_score_ip_empty_and_none(self, security_service):
         """Test handling of empty and None IP addresses."""
@@ -103,21 +110,23 @@ class TestIPValidationSecurity:
         """Test risk scoring for valid IP addresses."""
         ip_tests = [
             # (ip, expected_max_risk)
-            ("192.168.1.1", 5),      # Private IP
-            ("127.0.0.1", 15),       # Loopback
-            ("8.8.8.8", 0),          # Global public IP
-            ("203.0.113.1", 5),      # Documentation IP (actually treated as private)
-            ("2001:db8::1", 5),      # Private IPv6
-            ("::1", 15),             # IPv6 loopback
-            ("169.254.1.1", 20),     # Link-local
-            ("224.0.0.1", 25),       # Multicast
-            ("10.0.0.1", 5),         # Private
-            ("172.16.0.1", 5),       # Private
+            ("192.168.1.1", 5),  # Private IP
+            ("127.0.0.1", 15),  # Loopback
+            ("8.8.8.8", 0),  # Global public IP
+            ("203.0.113.1", 5),  # Documentation IP (actually treated as private)
+            ("2001:db8::1", 5),  # Private IPv6
+            ("::1", 15),  # IPv6 loopback
+            ("169.254.1.1", 20),  # Link-local
+            ("224.0.0.1", 25),  # Multicast
+            ("10.0.0.1", 5),  # Private
+            ("172.16.0.1", 5),  # Private
         ]
 
         for ip_addr, expected_max_risk in ip_tests:
             risk_score = security_service._validate_and_score_ip(ip_addr, "test_user")
-            assert risk_score <= expected_max_risk, f"IP {ip_addr} risk {risk_score} > {expected_max_risk}"
+            assert risk_score <= expected_max_risk, (
+                f"IP {ip_addr} risk {risk_score} > {expected_max_risk}"
+            )
 
     def test_validate_and_score_ip_invalid_format(self, security_service):
         """Test handling of invalid IP address formats."""
@@ -133,8 +142,12 @@ class TestIPValidationSecurity:
         ]
 
         for invalid_ip in invalid_ips:
-            risk_score = security_service._validate_and_score_ip(invalid_ip, "test_user")
-            assert 25 <= risk_score <= 35, f"Invalid IP {invalid_ip} risk score: {risk_score}"
+            risk_score = security_service._validate_and_score_ip(
+                invalid_ip, "test_user"
+            )
+            assert 25 <= risk_score <= 35, (
+                f"Invalid IP {invalid_ip} risk score: {risk_score}"
+            )
 
     def test_validate_and_score_ip_error_handling(self, security_service):
         """Test error handling in IP validation."""
@@ -158,17 +171,17 @@ class TestUserSessionValidation:
             id="valid_session_12345",
             user_id="user123",
             session_token="a" * 64,  # Valid 64-char hex
-            expires_at="2024-12-31T23:59:59Z"
+            expires_at="2024-12-31T23:59:59Z",
         )
         assert session.id == "valid_session_12345"
 
         # Test invalid session IDs
         invalid_ids = [
-            "",              # Empty
-            "short",         # Too short
-            "x" * 200,       # Too long
-            "id\x00null",    # Null byte
-            "id\nwith\r",    # Control chars
+            "",  # Empty
+            "short",  # Too short
+            "x" * 200,  # Too long
+            "id\x00null",  # Null byte
+            "id\nwith\r",  # Control chars
         ]
 
         for invalid_id in invalid_ids:
@@ -177,7 +190,7 @@ class TestUserSessionValidation:
                     id=invalid_id,
                     user_id="user123",
                     session_token="a" * 64,
-                    expires_at="2024-12-31T23:59:59Z"
+                    expires_at="2024-12-31T23:59:59Z",
                 )
 
     def test_user_id_validation(self):
@@ -187,14 +200,14 @@ class TestUserSessionValidation:
             id="session123",
             user_id="valid_user_123",
             session_token="a" * 64,
-            expires_at="2024-12-31T23:59:59Z"
+            expires_at="2024-12-31T23:59:59Z",
         )
         assert session.user_id == "valid_user_123"
 
         # Test invalid user IDs
         invalid_user_ids = [
-            "",              # Empty
-            "x" * 300,       # Too long
+            "",  # Empty
+            "x" * 300,  # Too long
             "user\x01ctrl",  # Control chars
         ]
 
@@ -204,7 +217,7 @@ class TestUserSessionValidation:
                     id="session123",
                     user_id=invalid_user_id,
                     session_token="a" * 64,
-                    expires_at="2024-12-31T23:59:59Z"
+                    expires_at="2024-12-31T23:59:59Z",
                 )
 
     def test_ip_address_validation(self):
@@ -224,16 +237,16 @@ class TestUserSessionValidation:
                 user_id="user123",
                 session_token="a" * 64,
                 ip_address=valid_ip,
-                expires_at="2024-12-31T23:59:59Z"
+                expires_at="2024-12-31T23:59:59Z",
             )
             assert session.ip_address == valid_ip
 
         # Invalid cases that should raise errors
         invalid_ips = [
-            "x" * 100,                           # Too long
+            "x" * 100,  # Too long
             "192.168.1.1<script>alert(1)</script>",  # XSS
-            "'; DROP TABLE users; --",           # SQL injection
-            "../../../etc/passwd",              # Path traversal
+            "'; DROP TABLE users; --",  # SQL injection
+            "../../../etc/passwd",  # Path traversal
         ]
 
         for invalid_ip in invalid_ips:
@@ -243,7 +256,7 @@ class TestUserSessionValidation:
                     user_id="user123",
                     session_token="a" * 64,
                     ip_address=invalid_ip,
-                    expires_at="2024-12-31T23:59:59Z"
+                    expires_at="2024-12-31T23:59:59Z",
                 )
 
     def test_user_agent_validation(self):
@@ -255,7 +268,7 @@ class TestUserSessionValidation:
             user_id="user123",
             session_token="a" * 64,
             user_agent=valid_ua,
-            expires_at="2024-12-31T23:59:59Z"
+            expires_at="2024-12-31T23:59:59Z",
         )
         assert session.user_agent == valid_ua
 
@@ -266,7 +279,7 @@ class TestUserSessionValidation:
             user_id="user123",
             session_token="a" * 64,
             user_agent=dirty_ua,
-            expires_at="2024-12-31T23:59:59Z"
+            expires_at="2024-12-31T23:59:59Z",
         )
         # Should be sanitized
         assert "\x00" not in session.user_agent
@@ -279,7 +292,7 @@ class TestUserSessionValidation:
                 user_id="user123",
                 session_token="a" * 64,
                 user_agent="x" * 3000,  # Too long
-                expires_at="2024-12-31T23:59:59Z"
+                expires_at="2024-12-31T23:59:59Z",
             )
 
     def test_session_token_validation(self):
@@ -290,15 +303,15 @@ class TestUserSessionValidation:
             id="session123",
             user_id="user123",
             session_token=valid_token,
-            expires_at="2024-12-31T23:59:59Z"
+            expires_at="2024-12-31T23:59:59Z",
         )
         assert session.session_token == valid_token
 
         # Invalid session tokens
         invalid_tokens = [
-            "",              # Empty
-            "short",         # Too short
-            "x" * 100,       # Too long
+            "",  # Empty
+            "short",  # Too short
+            "x" * 100,  # Too long
             "invalid_hex_characters_12345678901234567890123456789012345678901234",  # Invalid hex
         ]
 
@@ -308,7 +321,7 @@ class TestUserSessionValidation:
                     id="session123",
                     user_id="user123",
                     session_token=invalid_token,
-                    expires_at="2024-12-31T23:59:59Z"
+                    expires_at="2024-12-31T23:59:59Z",
                 )
 
 
@@ -382,9 +395,7 @@ class TestIntegratedSecurityImprovements:
             # Should handle malicious IPs gracefully in validation
             # May return None or a valid session depending on security policy
             result = await security_service.validate_session(
-                "dummy_token",
-                ip_address=malicious_ip,
-                user_agent="Mozilla/5.0"
+                "dummy_token", ip_address=malicious_ip, user_agent="Mozilla/5.0"
             )
             # Should not crash and should handle malicious input safely
             assert result is None or isinstance(result, UserSession)
@@ -403,7 +414,9 @@ class TestIntegratedSecurityImprovements:
         for ip_input, user_id in extreme_inputs:
             # Should handle all inputs gracefully and return reasonable risk scores
             risk_score = security_service._calculate_login_risk_score(user_id, ip_input)
-            assert 0 <= risk_score <= 100, f"Risk score {risk_score} out of range for {ip_input}"
+            assert 0 <= risk_score <= 100, (
+                f"Risk score {risk_score} out of range for {ip_input}"
+            )
 
 
 if __name__ == "__main__":

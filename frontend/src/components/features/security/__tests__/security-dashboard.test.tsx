@@ -3,6 +3,8 @@ import { useApiKeys } from "@/hooks/use-api-keys";
 import { render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SecurityDashboard } from "../security-dashboard";
+import { createMockUseQueryResult, ApiError } from "@/test/mock-helpers";
+import type { AllKeysResponse } from "@/types/api-keys";
 
 // Mock the hooks
 vi.mock("@/contexts/auth-context");
@@ -32,42 +34,19 @@ describe("SecurityDashboard", () => {
       updatePassword: vi.fn(),
     });
 
-    mockUseApiKeys.mockReturnValue({
-      data: {
-        keys: {
-          openai: {
-            id: "key-1",
-            service: "openai",
-            is_valid: true,
-            has_key: true,
-            last_validated: "2025-06-01",
-          },
+    const mockKeysData: AllKeysResponse = {
+      keys: {
+        openai: {
+          id: "key-1",
+          service: "openai",
+          is_valid: true,
+          has_key: true,
+          last_validated: "2025-06-01",
         },
-        supported_services: ["openai", "anthropic"],
       },
-      isLoading: false,
-      error: null,
-      isFetching: false,
-      isError: false,
-      isSuccess: true,
-      isPending: false,
-      isLoadingError: false,
-      isRefetchError: false,
-      isPlaceholderData: false,
-      isFetched: true,
-      isFetchedAfterMount: true,
-      isPaused: false,
-      isRefetching: false,
-      isStale: false,
-      dataUpdatedAt: Date.now(),
-      errorUpdatedAt: 0,
-      failureCount: 0,
-      failureReason: null,
-      errorUpdateCount: 0,
-      status: "success" as const,
-      fetchStatus: "idle" as const,
-      refetch: vi.fn(),
-    });
+      supported_services: ["openai", "anthropic"],
+    };
+    mockUseApiKeys.mockReturnValue(createMockUseQueryResult<AllKeysResponse, ApiError>(mockKeysData));
   });
 
   afterEach(() => {
@@ -231,18 +210,11 @@ describe("SecurityDashboard", () => {
 
   it("handles empty states gracefully", async () => {
     // Mock empty data
-    mockUseApiKeys.mockReturnValue({
-      data: {
-        keys: {} as any,
-        supported_services: [],
-      },
-      isLoading: false,
-      error: null,
-      isFetching: false,
-      isError: false,
-      isSuccess: true,
-      refetch: vi.fn(),
-    });
+    const mockEmptyKeysData: AllKeysResponse = {
+      keys: {},
+      supported_services: [],
+    };
+    mockUseApiKeys.mockReturnValue(createMockUseQueryResult<AllKeysResponse, ApiError>(mockEmptyKeysData));
 
     render(<SecurityDashboard />);
 

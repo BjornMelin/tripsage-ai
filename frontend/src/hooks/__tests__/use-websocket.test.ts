@@ -246,7 +246,9 @@ describe("WebSocket Hooks Integration", () => {
         const { isConnected, connectionError, reconnectAttempts } = result.current;
         expect(typeof isConnected).toBe("boolean");
         expect(typeof reconnectAttempts).toBe("number");
-        expect(connectionError === null || typeof connectionError === "string").toBe(true);
+        expect(connectionError === null || typeof connectionError === "string").toBe(
+          true
+        );
       }).not.toThrow();
     });
   });
