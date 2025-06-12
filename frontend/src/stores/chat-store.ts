@@ -823,12 +823,13 @@ export const useChatStore = create<ChatState>()(
 
           // Handle incoming messages
           newClient.on(WebSocketEventType.CHAT_MESSAGE, (event: WebSocketEvent) => {
+            const message = event.payload.message as { content?: string; role?: string; id?: string } | undefined;
             get().handleRealtimeMessage({
               type: "chat_message",
               sessionId,
-              content: event.payload.message?.content || "",
-              role: event.payload.message?.role,
-              messageId: event.payload.message?.id,
+              content: message?.content || "",
+              role: message?.role,
+              messageId: message?.id,
             });
           });
 

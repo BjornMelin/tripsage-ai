@@ -16,7 +16,7 @@ vi.mock("@/hooks/use-api-query", () => ({
 }));
 
 // Mock zustand store implementation
-const createMockStore = (initialState: any = {}) => {
+const createMockStore = (initialState: Record<string, unknown> = {}) => {
   const state = {
     currentSearchType: null,
     currentParams: null,
@@ -77,10 +77,10 @@ describe("useSearch hook", () => {
 
     // Mock store
     const mockState = createMockStore();
-    (useSearchStore as any).mockImplementation(() => mockState);
+    vi.mocked(useSearchStore).mockImplementation(() => mockState);
 
     // Mock API mutation
-    (useApiMutation as any).mockImplementation(() => ({
+    vi.mocked(useApiMutation).mockImplementation(() => ({
       mutate: vi.fn(),
       isPending: false,
     }));
@@ -124,7 +124,7 @@ describe("useSearch hook", () => {
 
   it("performs a search with correct parameters", () => {
     const searchMutateMock = vi.fn();
-    (useApiMutation as any).mockImplementation(() => ({
+    vi.mocked(useApiMutation).mockImplementation(() => ({
       mutate: searchMutateMock,
       isPending: false,
     }));
@@ -165,7 +165,7 @@ describe("useSearch hook", () => {
   });
 
   it("updates loading state based on mutation state", () => {
-    (useApiMutation as any).mockImplementation(() => ({
+    vi.mocked(useApiMutation).mockImplementation(() => ({
       mutate: vi.fn(),
       isPending: true,
     }));
@@ -213,7 +213,7 @@ describe("useSavedSearches hook", () => {
         },
       ],
     });
-    (useSearchStore as any).mockImplementation(() => mockState);
+    vi.mocked(useSearchStore).mockImplementation(() => mockState);
 
     // Mock API query and mutation
     (useApiQuery as any).mockImplementation(() => ({
@@ -222,7 +222,7 @@ describe("useSavedSearches hook", () => {
       refetch: vi.fn(),
     }));
 
-    (useApiMutation as any).mockImplementation(() => ({
+    vi.mocked(useApiMutation).mockImplementation(() => ({
       mutate: vi.fn(),
       isPending: false,
     }));
@@ -314,7 +314,7 @@ describe("useRecentSearches hook", () => {
       ],
       clearRecentSearches: vi.fn(),
     });
-    (useSearchStore as any).mockImplementation(() => mockState);
+    vi.mocked(useSearchStore).mockImplementation(() => mockState);
   });
 
   it("provides recent searches", () => {

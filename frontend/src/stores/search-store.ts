@@ -149,25 +149,25 @@ export const useSearchStore = create<SearchOrchestratorState>()(
                   duration: "5h 30m",
                 },
                 { id: "2", price: 520, airline: "Demo Air", duration: "6h 15m" },
-              ] as Flight[];
+              ] as Partial<Flight>[];
               break;
             case "accommodation":
               mockResults.accommodations = [
                 { id: "1", name: "Example Hotel", price: 120, rating: 4.5 },
                 { id: "2", name: "Demo Resort", price: 180, rating: 4.8 },
-              ] as Accommodation[];
+              ] as Partial<Accommodation>[];
               break;
             case "activity":
               mockResults.activities = [
                 { id: "1", name: "City Tour", price: 45, duration: "3 hours" },
                 { id: "2", name: "Museum Visit", price: 25, duration: "2 hours" },
-              ] as Activity[];
+              ] as Partial<Activity>[];
               break;
             case "destination":
               mockResults.destinations = [
                 { id: "1", name: "Paris", country: "France", type: "city" },
                 { id: "2", name: "Tokyo", country: "Japan", type: "city" },
-              ] as Destination[];
+              ] as Partial<Destination>[];
               break;
           }
 
