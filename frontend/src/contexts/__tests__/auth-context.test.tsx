@@ -322,7 +322,7 @@ describe("AuthContext", () => {
       };
 
       let authStateChangeCallback: Function;
-      mockSupabaseAuth.onAuthStateChange.mockImplementation((callback) => {
+      mockSupabaseAuth.onAuthStateChange.mockImplementation((callback: any) => {
         authStateChangeCallback = callback;
         return { data: { subscription: { unsubscribe: vi.fn() } } };
       });
@@ -345,7 +345,7 @@ describe("AuthContext", () => {
 
     it("should handle auth state change to signed out", async () => {
       let authStateChangeCallback: Function;
-      mockSupabaseAuth.onAuthStateChange.mockImplementation((callback) => {
+      mockSupabaseAuth.onAuthStateChange.mockImplementation((callback: any) => {
         authStateChangeCallback = callback;
         return { data: { subscription: { unsubscribe: vi.fn() } } };
       });

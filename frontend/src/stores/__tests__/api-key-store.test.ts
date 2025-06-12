@@ -305,7 +305,6 @@ describe("API Key Store", () => {
             openai: {
               id: "key-1",
               service: "openai",
-              encrypted_key: "sk-test123",
               has_key: true,
               is_valid: true,
               last_validated: new Date().toISOString(),
@@ -608,7 +607,6 @@ describe("API Key Store", () => {
             openai: {
               id: "key-1",
               service: "openai",
-              encrypted_key: "sk-test123",
               has_key: true,
               is_valid: true,
               last_validated: new Date().toISOString(),

@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 
 
 class UserSession(TripSageModel):
-    """User session model."""
+    """User session model with enhanced security validation."""
 
     id: str = Field(..., description="Session ID")
     user_id: str = Field(..., description="User ID")
@@ -44,6 +44,117 @@ class UserSession(TripSageModel):
     expires_at: datetime = Field(..., description="Session expiration time")
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     ended_at: Optional[datetime] = Field(None, description="Session end time")
+
+    @field_validator("id")
+    @classmethod
+    def validate_session_id(cls, v: str) -> str:
+        """Validate session ID format and security."""
+        if not v or not isinstance(v, str):
+            raise ValueError("Session ID must be a non-empty string")
+
+        if len(v) < 8:
+            raise ValueError("Session ID must be at least 8 characters")
+
+        if len(v) > 128:
+            raise ValueError("Session ID must not exceed 128 characters")
+
+        # Check for basic security patterns
+        if any(char in v for char in ["\x00", "\n", "\r", "\t"]):
+            raise ValueError("Session ID contains invalid characters")
+
+        return v
+
+    @field_validator("user_id")
+    @classmethod
+    def validate_user_id(cls, v: str) -> str:
+        """Validate user ID format and security."""
+        if not v or not isinstance(v, str):
+            raise ValueError("User ID must be a non-empty string")
+
+        if len(v) > 255:
+            raise ValueError("User ID must not exceed 255 characters")
+
+        # Check for control characters that might cause issues
+        if any(ord(char) < 32 for char in v if char not in ["\t"]):
+            raise ValueError("User ID contains invalid control characters")
+
+        return v
+
+    @field_validator("ip_address")
+    @classmethod
+    def validate_ip_address(cls, v: Optional[str]) -> Optional[str]:
+        """Validate IP address format and security."""
+        if v is None or v == "":
+            return None
+
+        if not isinstance(v, str):
+            raise ValueError("IP address must be a string")
+
+        # Sanitize and validate
+        cleaned_ip = v.strip().replace("\x00", "")
+
+        if len(cleaned_ip) > 45:  # IPv6 max is 39 characters
+            raise ValueError("IP address is too long")
+
+        # Check for malicious patterns
+        malicious_patterns = [
+            "../",
+            "..\\",
+            "<script",
+            "javascript:",
+            "data:",
+            "DROP TABLE",
+            "UNION SELECT",
+            "eval(",
+            "exec(",
+        ]
+
+        for pattern in malicious_patterns:
+            if pattern.lower() in cleaned_ip.lower():
+                raise ValueError(f"IP address contains suspicious pattern: {pattern}")
+
+        # Optional: Validate IP format (but allow invalid IPs to be stored for analysis)
+        # This is a security vs. usability tradeoff
+
+        return cleaned_ip
+
+    @field_validator("user_agent")
+    @classmethod
+    def validate_user_agent(cls, v: Optional[str]) -> Optional[str]:
+        """Validate user agent string."""
+        if v is None:
+            return None
+
+        if not isinstance(v, str):
+            raise ValueError("User agent must be a string")
+
+        # Limit length to prevent abuse
+        if len(v) > 2048:
+            raise ValueError("User agent string is too long")
+
+        # Remove null bytes and other problematic characters
+        cleaned_ua = v.replace("\x00", "").replace("\r", "").replace("\n", " ")
+
+        return cleaned_ua
+
+    @field_validator("session_token")
+    @classmethod
+    def validate_session_token(cls, v: str) -> str:
+        """Validate session token hash."""
+        if not v or not isinstance(v, str):
+            raise ValueError("Session token must be a non-empty string")
+
+        # For SHA256 hashes, expect 64 characters
+        if len(v) != 64:
+            raise ValueError("Session token must be a valid hash (64 characters)")
+
+        # Validate hex format
+        try:
+            int(v, 16)
+        except ValueError as e:
+            raise ValueError("Session token must be a valid hexadecimal hash") from e
+
+        return v
 
 
 class SecurityEvent(TripSageModel):
@@ -611,23 +722,128 @@ class SessionSecurityService:
         if recent_failures > 2:
             risk_score += min(recent_failures * 10, 40)
 
-        # Check IP reputation (simplified)
+        # Check IP reputation with enhanced validation
         if ip_address:
-            try:
-                ip_obj = parse_ip_address(ip_address)
-                if ip_obj.is_private:
-                    risk_score += 5  # Private IPs are slightly more risky
-                elif not ip_obj.is_global:
-                    risk_score += 15  # Local/reserved IPs are more risky
-            except (AddressValueError, ValueError):
-                # Handle any IP parsing errors gracefully
-                risk_score += 20  # Invalid IP format
-                logger.warning(
-                    "Invalid IP address format in risk calculation",
-                    extra={"ip_address": ip_address, "user_id": user_id},
-                )
+            ip_risk = self._validate_and_score_ip(ip_address, user_id)
+            risk_score += ip_risk
 
         return min(risk_score, 100)
+
+    def _validate_and_score_ip(self, ip_address: str, user_id: str) -> int:
+        """Validate IP address and calculate risk score with enhanced security.
+
+        Args:
+            ip_address: IP address to validate
+            user_id: User ID for logging context
+
+        Returns:
+            Risk score based on IP validation (0-50)
+        """
+        try:
+            # Sanitize input - remove leading/trailing whitespace and null bytes
+            cleaned_ip = ip_address.strip().replace("\x00", "")
+
+            # Check for obvious malicious patterns
+            malicious_patterns = [
+                "../",
+                "..\\",
+                "<script",
+                "javascript:",
+                "data:",
+                "vbscript:",
+                "DROP TABLE",
+                "UNION SELECT",
+                "eval(",
+                "exec(",
+            ]
+
+            for pattern in malicious_patterns:
+                if pattern.lower() in cleaned_ip.lower():
+                    logger.warning(
+                        "Malicious pattern detected in IP address",
+                        extra={
+                            "ip_address": cleaned_ip[:100],  # Limit log size
+                            "user_id": user_id,
+                            "pattern": pattern,
+                        },
+                    )
+                    return 50  # Maximum IP risk score
+
+            # Validate IP length to prevent buffer overflow attempts
+            if len(cleaned_ip) > 45:  # IPv6 max length is 39, add buffer for edge cases
+                logger.warning(
+                    "Excessively long IP address provided",
+                    extra={
+                        "ip_length": len(cleaned_ip),
+                        "ip_address": cleaned_ip[:50] + "...",
+                        "user_id": user_id,
+                    },
+                )
+                return 40
+
+            # Validate empty or None IP
+            if not cleaned_ip:
+                logger.info("Empty IP address provided", extra={"user_id": user_id})
+                return 10  # Low risk for missing IP
+
+            # Parse and validate IP address
+            try:
+                ip_obj = parse_ip_address(cleaned_ip)
+
+                # Calculate risk based on IP type
+                if ip_obj.is_private:
+                    return 5  # Private IPs are slightly more risky
+                elif ip_obj.is_loopback:
+                    return 15  # Loopback IPs are suspicious for remote auth
+                elif ip_obj.is_reserved or ip_obj.is_multicast:
+                    return 25  # Reserved/multicast IPs are highly suspicious
+                elif ip_obj.is_link_local:
+                    return 20  # Link-local IPs are suspicious
+                elif not ip_obj.is_global:
+                    return 15  # Non-global IPs are moderately risky
+                else:
+                    return 0  # Global IPs are lowest risk
+
+            except AddressValueError as e:
+                # Handle invalid IP format with detailed logging
+                logger.warning(
+                    "Invalid IP address format detected",
+                    extra={
+                        "ip_address": cleaned_ip[:100],  # Limit log size
+                        "user_id": user_id,
+                        "error": str(e),
+                        "error_type": "AddressValueError",
+                    },
+                )
+                return 30  # Moderate risk for invalid IP format
+
+            except ValueError as e:
+                # Handle other parsing errors
+                logger.warning(
+                    "IP address parsing error",
+                    extra={
+                        "ip_address": cleaned_ip[:100],  # Limit log size
+                        "user_id": user_id,
+                        "error": str(e),
+                        "error_type": "ValueError",
+                    },
+                )
+                return 25  # Moderate risk for parsing errors
+
+        except Exception as e:
+            # Handle any unexpected errors gracefully
+            logger.error(
+                "Unexpected error during IP validation",
+                extra={
+                    "ip_address": str(ip_address)[:100] if ip_address else "None",
+                    "user_id": user_id,
+                    "error": str(e),
+                    "error_type": type(e).__name__,
+                },
+            )
+            return 35  # Higher risk for unexpected errors
+
+        return 0  # Default to no additional risk
 
     def _calculate_activity_risk_score(
         self,

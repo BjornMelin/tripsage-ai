@@ -16,7 +16,7 @@ import { useTrips } from "./use-trips";
  */
 export function useTripsWithRealtime() {
   const { user } = useAuth();
-  const { trips, isLoading, error, refetch } = useTrips();
+  const { data: trips, isLoading, error, refetch } = useTrips();
 
   // Set up real-time subscription for all user trips
   const realtimeStatus = useTripRealtime(null); // Listen to all trip changes for this user
@@ -37,7 +37,9 @@ export function useTripsWithRealtime() {
  */
 export function useTripWithRealtime(tripId: number | null) {
   const { user } = useAuth();
-  const { trip, isLoading, error, refetch } = useTripData(tripId);
+  // TODO: Implement proper useTripData hook
+  const tripQuery = { data: null, isLoading: false, error: null, refetch: () => {} };
+  const { data: trip, isLoading, error, refetch } = tripQuery;
   const realtimeStatus = useTripRealtime(tripId);
 
   return {

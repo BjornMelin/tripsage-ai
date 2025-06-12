@@ -34,15 +34,15 @@ describe("SecurityDashboard", () => {
 
     mockUseApiKeys.mockReturnValue({
       data: {
-        keys: [
-          {
+        keys: {
+          openai: {
             id: "key-1",
             service: "openai",
             is_valid: true,
             has_key: true,
             last_validated: "2025-06-01",
           },
-        ],
+        },
         supported_services: ["openai", "anthropic"],
       },
       isLoading: false,
@@ -50,6 +50,22 @@ describe("SecurityDashboard", () => {
       isFetching: false,
       isError: false,
       isSuccess: true,
+      isPending: false,
+      isLoadingError: false,
+      isRefetchError: false,
+      isPlaceholderData: false,
+      isFetched: true,
+      isFetchedAfterMount: true,
+      isPaused: false,
+      isRefetching: false,
+      isStale: false,
+      dataUpdatedAt: Date.now(),
+      errorUpdatedAt: 0,
+      failureCount: 0,
+      failureReason: null,
+      errorUpdateCount: 0,
+      status: "success" as const,
+      fetchStatus: "idle" as const,
       refetch: vi.fn(),
     });
   });
