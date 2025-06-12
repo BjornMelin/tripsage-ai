@@ -11,7 +11,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
-from tripsage.api.core.dependencies import get_principal_id, require_principal_dep
+from tripsage.api.core.dependencies import get_principal_id, require_principal
 from tripsage.api.middlewares.authentication import Principal
 
 # Import schemas
@@ -49,7 +49,7 @@ router = APIRouter(tags=["trips"])
 @router.post("/", response_model=TripResponse, status_code=status.HTTP_201_CREATED)
 async def create_trip(
     trip_request: CreateTripRequest,
-    principal: Principal = require_principal_dep,
+    principal: Principal = Depends(require_principal),
     trip_service: TripService = Depends(get_trip_service),
 ):
     """Create a new trip.
@@ -128,7 +128,7 @@ async def create_trip(
 @router.get("/{trip_id}", response_model=TripResponse)
 async def get_trip(
     trip_id: UUID,
-    principal: Principal = require_principal_dep,
+    principal: Principal = Depends(require_principal),
     trip_service: TripService = Depends(get_trip_service),
 ):
     """Get a trip by ID.
@@ -172,7 +172,7 @@ async def list_trips(
     limit: int = Query(
         default=10, ge=1, le=100, description="Number of trips to return"
     ),
-    principal: Principal = require_principal_dep,
+    principal: Principal = Depends(require_principal),
     trip_service: TripService = Depends(get_trip_service),
 ):
     """List trips for the current user.
@@ -230,7 +230,7 @@ async def list_trips(
 async def update_trip(
     trip_id: UUID,
     trip_request: UpdateTripRequest,
-    principal: Principal = require_principal_dep,
+    principal: Principal = Depends(require_principal),
     trip_service: TripService = Depends(get_trip_service),
 ):
     """Update a trip.
@@ -310,7 +310,7 @@ async def update_trip(
 @router.delete("/{trip_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_trip(
     trip_id: UUID,
-    principal: Principal = require_principal_dep,
+    principal: Principal = Depends(require_principal),
     trip_service: TripService = Depends(get_trip_service),
 ):
     """Delete a trip.
@@ -345,7 +345,7 @@ async def delete_trip(
 @router.get("/{trip_id}/summary", response_model=TripSummaryResponse)
 async def get_trip_summary(
     trip_id: UUID,
-    principal: Principal = require_principal_dep,
+    principal: Principal = Depends(require_principal),
     trip_service: TripService = Depends(get_trip_service),
 ):
     """Get trip summary.
@@ -419,7 +419,7 @@ async def get_trip_summary(
 async def update_trip_preferences(
     trip_id: UUID,
     preferences_request: TripPreferencesRequest,
-    principal: Principal = require_principal_dep,
+    principal: Principal = Depends(require_principal),
     trip_service: TripService = Depends(get_trip_service),
 ):
     """Update trip preferences.
@@ -468,7 +468,7 @@ async def update_trip_preferences(
 )
 async def duplicate_trip(
     trip_id: UUID,
-    principal: Principal = require_principal_dep,
+    principal: Principal = Depends(require_principal),
     trip_service: TripService = Depends(get_trip_service),
 ):
     """Duplicate a trip.
@@ -531,7 +531,7 @@ async def search_trips(
     limit: int = Query(
         default=10, ge=1, le=100, description="Number of trips to return"
     ),
-    principal: Principal = require_principal_dep,
+    principal: Principal = Depends(require_principal),
     trip_service: TripService = Depends(get_trip_service),
 ):
     """Search trips.
@@ -590,7 +590,7 @@ async def search_trips(
 @router.get("/{trip_id}/itinerary")
 async def get_trip_itinerary(
     trip_id: UUID,
-    principal: Principal = require_principal_dep,
+    principal: Principal = Depends(require_principal),
     trip_service: TripService = Depends(get_trip_service),
 ):
     """Get trip itinerary.
@@ -653,7 +653,7 @@ async def get_trip_itinerary(
 async def export_trip(
     trip_id: UUID,
     format: str = Query(default="pdf", description="Export format"),
-    principal: Principal = require_principal_dep,
+    principal: Principal = Depends(require_principal),
     trip_service: TripService = Depends(get_trip_service),
 ):
     """Export trip.
@@ -706,7 +706,7 @@ async def get_trip_suggestions(
     limit: int = Query(4, ge=1, le=20, description="Number of suggestions to return"),
     budget_max: Optional[float] = Query(None, description="Maximum budget filter"),
     category: Optional[str] = Query(None, description="Filter by category"),
-    principal: Principal = require_principal_dep,
+    principal: Principal = Depends(require_principal),
     trip_service: TripService = Depends(get_trip_service),
 ):
     """Get personalized trip suggestions based on user preferences and history.
@@ -915,7 +915,7 @@ def _adapt_trip_response(core_response) -> TripResponse:
 async def share_trip(
     trip_id: UUID,
     share_request: TripShareRequest,
-    principal: Principal = require_principal_dep,
+    principal: Principal = Depends(require_principal),
     trip_service: TripService = Depends(get_trip_service),
 ):
     """Share a trip with other users.
@@ -988,7 +988,7 @@ async def share_trip(
 @router.get("/{trip_id}/collaborators", response_model=TripCollaboratorsListResponse)
 async def list_trip_collaborators(
     trip_id: UUID,
-    principal: Principal = require_principal_dep,
+    principal: Principal = Depends(require_principal),
     trip_service: TripService = Depends(get_trip_service),
 ):
     """List all collaborators for a trip.
@@ -1069,7 +1069,7 @@ async def update_collaborator_permissions(
     trip_id: UUID,
     user_id: UUID,
     update_request: TripCollaboratorUpdateRequest,
-    principal: Principal = require_principal_dep,
+    principal: Principal = Depends(require_principal),
     trip_service: TripService = Depends(get_trip_service),
 ):
     """Update collaborator permissions for a trip.
@@ -1160,7 +1160,7 @@ async def update_collaborator_permissions(
 async def remove_collaborator(
     trip_id: UUID,
     user_id: UUID,
-    principal: Principal = require_principal_dep,
+    principal: Principal = Depends(require_principal),
     trip_service: TripService = Depends(get_trip_service),
 ):
     """Remove a collaborator from a trip.

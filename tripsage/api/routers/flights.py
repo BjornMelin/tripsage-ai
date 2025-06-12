@@ -10,7 +10,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, status
 
-from tripsage.api.core.dependencies import get_principal_id, require_principal_dep
+from tripsage.api.core.dependencies import get_principal_id, require_principal
 from tripsage.api.middlewares.authentication import Principal
 from tripsage.api.schemas.flights import (
     AirportSearchRequest,
@@ -39,7 +39,7 @@ router = APIRouter()
 @router.post("/search", response_model=FlightSearchResponse)
 async def search_flights(
     request: FlightSearchRequest,
-    principal: Principal = require_principal_dep,
+    principal: Principal = Depends(require_principal),
     flight_service: FlightService = Depends(get_flight_service),
 ):
     """Search for flights based on the provided criteria.
@@ -60,7 +60,7 @@ async def search_flights(
 @router.post("/search/multi-city", response_model=FlightSearchResponse)
 async def search_multi_city_flights(
     request: MultiCityFlightSearchRequest,
-    principal: Principal = require_principal_dep,
+    principal: Principal = Depends(require_principal),
     flight_service: FlightService = Depends(get_flight_service),
 ):
     """Search for multi-city flights based on the provided criteria.
@@ -81,7 +81,7 @@ async def search_multi_city_flights(
 @router.post("/airports/search", response_model=AirportSearchResponse)
 async def search_airports(
     request: AirportSearchRequest,
-    principal: Principal = require_principal_dep,
+    principal: Principal = Depends(require_principal),
     flight_service: FlightService = Depends(get_flight_service),
 ):
     """Search for airports based on the provided query.
@@ -102,7 +102,7 @@ async def search_airports(
 @router.get("/offers/{offer_id}", response_model=FlightOffer)
 async def get_flight_offer(
     offer_id: str,
-    principal: Principal = require_principal_dep,
+    principal: Principal = Depends(require_principal),
     flight_service: FlightService = Depends(get_flight_service),
 ):
     """Get details of a specific flight offer.
@@ -134,7 +134,7 @@ async def get_flight_offer(
 )
 async def save_flight(
     request: SavedFlightRequest,
-    principal: Principal = require_principal_dep,
+    principal: Principal = Depends(require_principal),
     flight_service: FlightService = Depends(get_flight_service),
 ):
     """Save a flight offer for a trip.
@@ -165,7 +165,7 @@ async def save_flight(
 @router.delete("/saved/{saved_flight_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_saved_flight(
     saved_flight_id: UUID,
-    principal: Principal = require_principal_dep,
+    principal: Principal = Depends(require_principal),
     flight_service: FlightService = Depends(get_flight_service),
 ):
     """Delete a saved flight.
@@ -191,7 +191,7 @@ async def delete_saved_flight(
 @router.get("/saved", response_model=List[SavedFlightResponse])
 async def list_saved_flights(
     trip_id: Optional[UUID] = None,
-    principal: Principal = require_principal_dep,
+    principal: Principal = Depends(require_principal),
     flight_service: FlightService = Depends(get_flight_service),
 ):
     """List saved flights for a user, optionally filtered by trip.
@@ -214,7 +214,7 @@ async def get_upcoming_flights(
     limit: int = 10,
     include_trip_context: bool = True,
     date_range_days: int = 30,
-    principal: Principal = require_principal_dep,
+    principal: Principal = Depends(require_principal),
     flight_service: FlightService = Depends(get_flight_service),
 ):
     """Get upcoming flights for a user with real-time status and trip context.

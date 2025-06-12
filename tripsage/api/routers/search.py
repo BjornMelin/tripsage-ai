@@ -7,7 +7,7 @@ from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
-from tripsage.api.core.dependencies import get_principal_id, require_principal_dep
+from tripsage.api.core.dependencies import get_principal_id, require_principal
 from tripsage.api.middlewares.authentication import Principal
 from tripsage.api.schemas.requests.search import UnifiedSearchRequest
 from tripsage.api.schemas.responses.search import UnifiedSearchResponse
@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 async def unified_search(
     request: UnifiedSearchRequest,
     use_cache: bool = Query(True, description="Whether to use cached results"),
-    principal: Optional[Principal] = Depends(require_principal_dep),
+    principal: Optional[Principal] = Depends(require_principal),
 ):
     """
     Perform a unified search across multiple resource types with caching.
@@ -220,7 +220,7 @@ async def delete_saved_search(search_id: str):
 async def bulk_search(
     requests: List[UnifiedSearchRequest],
     use_cache: bool = Query(True, description="Whether to use cached results"),
-    principal: Optional[Principal] = Depends(require_principal_dep),
+    principal: Optional[Principal] = Depends(require_principal),
 ):
     """
     Perform multiple searches in a single request for efficiency.
@@ -312,7 +312,7 @@ async def bulk_search(
 @router.get("/analytics")
 async def get_search_analytics(
     date: str = Query(..., description="Date in YYYY-MM-DD format"),
-    principal: Principal = require_principal_dep,
+    principal: Principal = Depends(require_principal),
 ):
     """
     Get search analytics for a specific date.

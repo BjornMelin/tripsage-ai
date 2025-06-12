@@ -10,7 +10,7 @@ from typing import List
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from pydantic import BaseModel, Field
 
-from tripsage.api.core.dependencies import get_principal_id, require_principal_dep
+from tripsage.api.core.dependencies import get_principal_id, require_principal
 from tripsage.api.middlewares.authentication import Principal
 from tripsage_core.services.business.file_processing_service import (
     FileProcessingService,
@@ -26,7 +26,7 @@ router = APIRouter()
 # File configuration now imported from centralized config
 
 # Module-level dependencies to avoid B008 warnings
-require_principal_module_dep = require_principal_dep
+require_principal_module_dep = Depends(require_principal)
 
 # Module-level dependency for file uploads
 file_upload_dep = File(...)
