@@ -7,8 +7,14 @@ import { useSearchStore } from "@/stores/search-store";
 import type { Activity } from "@/types/search";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { useSearchParams } from "next/navigation";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import ActivitiesSearchPage from "../page";
+
+// Mock Next.js navigation
+vi.mock("next/navigation", () => ({
+  useSearchParams: vi.fn(),
+}));
 
 // Mock the hooks
 vi.mock("@/hooks/use-activity-search", () => ({
@@ -19,17 +25,35 @@ vi.mock("@/stores/search-store", () => ({
   useSearchStore: vi.fn(),
 }));
 
+// Define proper types for mocked functions
 const mockSearchActivities = vi.fn();
-const mockActivitySearch = {
+
+interface MockActivitySearch {
+  searchActivities: typeof mockSearchActivities;
+  isSearching: boolean;
+  searchError: { message: string } | null;
+}
+
+interface MockSearchStore {
+  results: { activities: Activity[] };
+  isLoading: boolean;
+  error: string | null;
+  hasResults: boolean;
+  isSearching: boolean;
+}
+
+const mockActivitySearch: MockActivitySearch = {
   searchActivities: mockSearchActivities,
   isSearching: false,
   searchError: null,
 };
 
-const mockSearchStore = {
+const mockSearchStore: MockSearchStore = {
   results: { activities: [] },
   isLoading: false,
   error: null,
+  hasResults: false,
+  isSearching: false,
 };
 
 const createWrapper = () => {
@@ -74,11 +98,15 @@ const mockActivities: Activity[] = [
   },
 ];
 
+// Mock URLSearchParams for tests
+const mockSearchParams = new URLSearchParams();
+
 describe("ActivitiesSearchPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    (useActivitySearch as any).mockReturnValue(mockActivitySearch);
-    (useSearchStore as any).mockReturnValue(mockSearchStore);
+    vi.mocked(useActivitySearch).mockReturnValue(mockActivitySearch);
+    vi.mocked(useSearchStore).mockReturnValue(mockSearchStore);
+    vi.mocked(useSearchParams).mockReturnValue(mockSearchParams);
   });
 
   it("renders the page header correctly", () => {
@@ -109,7 +137,7 @@ describe("ActivitiesSearchPage", () => {
   });
 
   it("shows loading state during search", () => {
-    (useActivitySearch as any).mockReturnValue({
+    vi.mocked(useActivitySearch).mockReturnValue({
       ...mockActivitySearch,
       isSearching: true,
     });
@@ -120,9 +148,9 @@ describe("ActivitiesSearchPage", () => {
   });
 
   it("shows loading state from store", () => {
-    (useSearchStore as any).mockReturnValue({
+    vi.mocked(useSearchStore).mockReturnValue({
       ...mockSearchStore,
-      isLoading: true,
+      isSearching: true,
     });
 
     render(<ActivitiesSearchPage />, { wrapper: createWrapper() });
@@ -131,9 +159,10 @@ describe("ActivitiesSearchPage", () => {
   });
 
   it("displays search results when available", () => {
-    (useSearchStore as any).mockReturnValue({
+    vi.mocked(useSearchStore).mockReturnValue({
       ...mockSearchStore,
       results: { activities: mockActivities },
+      hasResults: true,
     });
 
     render(<ActivitiesSearchPage />, { wrapper: createWrapper() });
@@ -176,9 +205,10 @@ describe("ActivitiesSearchPage", () => {
   });
 
   it("handles activity selection", () => {
-    (useSearchStore as any).mockReturnValue({
+    vi.mocked(useSearchStore).mockReturnValue({
       ...mockSearchStore,
       results: { activities: mockActivities },
+      hasResults: true,
     });
 
     const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
@@ -194,9 +224,10 @@ describe("ActivitiesSearchPage", () => {
   });
 
   it("handles activity comparison", () => {
-    (useSearchStore as any).mockReturnValue({
+    vi.mocked(useSearchStore).mockReturnValue({
       ...mockSearchStore,
       results: { activities: mockActivities },
+      hasResults: true,
     });
 
     const consoleSpy = vi.spyOn(console, "log").mockImplementation(() => {});
@@ -212,7 +243,7 @@ describe("ActivitiesSearchPage", () => {
   });
 
   it("shows error message when search fails", () => {
-    (useActivitySearch as any).mockReturnValue({
+    vi.mocked(useActivitySearch).mockReturnValue({
       ...mockActivitySearch,
       searchError: { message: "Network error" },
     });
@@ -223,7 +254,7 @@ describe("ActivitiesSearchPage", () => {
   });
 
   it("shows error message from store", () => {
-    (useSearchStore as any).mockReturnValue({
+    vi.mocked(useSearchStore).mockReturnValue({
       ...mockSearchStore,
       error: "Something went wrong",
     });
@@ -234,9 +265,9 @@ describe("ActivitiesSearchPage", () => {
   });
 
   it("shows generic error message when no specific error", () => {
-    (useActivitySearch as any).mockReturnValue({
+    vi.mocked(useActivitySearch).mockReturnValue({
       ...mockActivitySearch,
-      searchError: {},
+      searchError: {} as { message: string },
     });
 
     render(<ActivitiesSearchPage />, { wrapper: createWrapper() });
@@ -245,9 +276,10 @@ describe("ActivitiesSearchPage", () => {
   });
 
   it("displays activity selection modal", async () => {
-    (useSearchStore as any).mockReturnValue({
+    vi.mocked(useSearchStore).mockReturnValue({
       ...mockSearchStore,
       results: { activities: mockActivities },
+      hasResults: true,
     });
 
     render(<ActivitiesSearchPage />, { wrapper: createWrapper() });
@@ -266,9 +298,10 @@ describe("ActivitiesSearchPage", () => {
   });
 
   it("closes activity selection modal", async () => {
-    (useSearchStore as any).mockReturnValue({
+    vi.mocked(useSearchStore).mockReturnValue({
       ...mockSearchStore,
       results: { activities: mockActivities },
+      hasResults: true,
     });
 
     render(<ActivitiesSearchPage />, { wrapper: createWrapper() });
@@ -291,9 +324,10 @@ describe("ActivitiesSearchPage", () => {
   });
 
   it("handles add to trip action", async () => {
-    (useSearchStore as any).mockReturnValue({
+    vi.mocked(useSearchStore).mockReturnValue({
       ...mockSearchStore,
       results: { activities: mockActivities },
+      hasResults: true,
     });
 
     render(<ActivitiesSearchPage />, { wrapper: createWrapper() });
@@ -318,9 +352,10 @@ describe("ActivitiesSearchPage", () => {
   });
 
   it("renders activity cards with correct props", () => {
-    (useSearchStore as any).mockReturnValue({
+    vi.mocked(useSearchStore).mockReturnValue({
       ...mockSearchStore,
       results: { activities: mockActivities },
+      hasResults: true,
     });
 
     render(<ActivitiesSearchPage />, { wrapper: createWrapper() });
@@ -333,9 +368,10 @@ describe("ActivitiesSearchPage", () => {
   });
 
   it("uses correct grid layout for results", () => {
-    (useSearchStore as any).mockReturnValue({
+    vi.mocked(useSearchStore).mockReturnValue({
       ...mockSearchStore,
       results: { activities: mockActivities },
+      hasResults: true,
     });
 
     render(<ActivitiesSearchPage />, { wrapper: createWrapper() });
@@ -347,7 +383,7 @@ describe("ActivitiesSearchPage", () => {
   });
 
   it("shows empty results when activities array is empty", () => {
-    (useSearchStore as any).mockReturnValue({
+    vi.mocked(useSearchStore).mockReturnValue({
       ...mockSearchStore,
       results: { activities: [] },
     });

@@ -23,7 +23,7 @@ export default function HotelSearchPage() {
   const { hasResults } = useSearchStore();
   const [hasSearched, setHasSearched] = useState(false);
 
-  const handleSearch = async (params: any) => {
+  const handleSearch = async (params: AccommodationSearchParams) => {
     setHasSearched(true);
     // search(params); // Disabled for MVP testing
   };
