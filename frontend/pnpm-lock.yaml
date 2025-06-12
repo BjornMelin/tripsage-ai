@@ -80,6 +80,9 @@ importers:
       '@radix-ui/react-tooltip':
         specifier: ^1.2.7
         version: 1.2.7(@types/react-dom@19.1.5(@types/react@19.1.5))(@types/react@19.1.5)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+      '@supabase/auth-helpers-react':
+        specifier: ^0.5.0
+        version: 0.5.0(@supabase/supabase-js@2.50.0)
       '@supabase/auth-ui-react':
         specifier: ^0.4.7
         version: 0.4.7(@supabase/supabase-js@2.50.0)
@@ -95,6 +98,9 @@ importers:
       '@tanstack/react-query':
         specifier: '5'
         version: 5.77.1(react@19.1.0)
+      '@tanstack/react-query-devtools':
+        specifier: ^5.80.6
+        version: 5.80.6(@tanstack/react-query@5.77.1(react@19.1.0))(react@19.1.0)
       '@testing-library/react':
         specifier: ^16.3.0
         version: 16.3.0(@testing-library/dom@10.4.0)(@types/react-dom@19.1.5(@types/react@19.1.5))(@types/react@19.1.5)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
@@ -1583,6 +1589,12 @@ packages:
   '@stitches/core@1.2.8':
     resolution: {integrity: sha512-Gfkvwk9o9kE9r9XNBmJRfV8zONvXThnm1tcuojL04Uy5uRyqg93DC83lDebl0rocZCfKSjUv+fWYtMQmEDJldg==}
 
+  '@supabase/auth-helpers-react@0.5.0':
+    resolution: {integrity: sha512-5QSaV2CGuhDhd7RlQCoviVEAYsP7XnrFMReOcBazDvVmqSIyjKcDwhLhWvnrxMOq5qjOaA44MHo7wXqDiF0puQ==}
+    deprecated: This package is now deprecated - please use the @supabase/ssr package instead.
+    peerDependencies:
+      '@supabase/supabase-js': ^2.39.8
+
   '@supabase/auth-js@2.70.0':
     resolution: {integrity: sha512-BaAK/tOAZFJtzF1sE3gJ2FwTjLf4ky3PSvcvLGEgEmO4BSBkwWKu8l67rLLIBZPDnCyV7Owk2uPyKHa0kj5QGg==}
 
@@ -1716,6 +1728,15 @@ packages:
 
   '@tanstack/query-core@5.77.1':
     resolution: {integrity: sha512-nfxVhy4UynChMFfN4NxwI8pktV9R3Zt/ROxOAe6pdOf8CigDLn26p+ex1YW5uien26BBICLmN0dTvIELHCs5vw==}
+
+  '@tanstack/query-devtools@5.80.0':
+    resolution: {integrity: sha512-D6gH4asyjaoXrCOt5vG5Og/YSj0D/TxwNQgtLJIgWbhbWCC/emu2E92EFoVHh4ppVWg1qT2gKHvKyQBEFZhCuA==}
+
+  '@tanstack/react-query-devtools@5.80.6':
+    resolution: {integrity: sha512-y7Es0OJ4RYQxrPYsuuQP0jxjgJ40a03UbEPmJ6vwf/ERVMRoRIMkpjtvPxf1D+n9nwPfWmGdD0jW8Wxd+TxeEw==}
+    peerDependencies:
+      '@tanstack/react-query': ^5.80.6
+      react: ^18 || ^19
 
   '@tanstack/react-query@5.77.1':
     resolution: {integrity: sha512-qBwpxFg0+MZF0fICQwgvzwrVbcs7TdQlLyEd1f1dN83oeIALofCIAJHV7sPWu+BCS5tcXkG5CvOuf7yla8GYqQ==}
@@ -5532,6 +5553,10 @@ snapshots:
 
   '@stitches/core@1.2.8': {}
 
+  '@supabase/auth-helpers-react@0.5.0(@supabase/supabase-js@2.50.0)':
+    dependencies:
+      '@supabase/supabase-js': 2.50.0
+
   '@supabase/auth-js@2.70.0':
     dependencies:
       '@supabase/node-fetch': 2.6.15
@@ -5671,6 +5696,14 @@ snapshots:
       tailwindcss: 4.1.7
 
   '@tanstack/query-core@5.77.1': {}
+
+  '@tanstack/query-devtools@5.80.0': {}
+
+  '@tanstack/react-query-devtools@5.80.6(@tanstack/react-query@5.77.1(react@19.1.0))(react@19.1.0)':
+    dependencies:
+      '@tanstack/query-devtools': 5.80.0
+      '@tanstack/react-query': 5.77.1(react@19.1.0)
+      react: 19.1.0
 
   '@tanstack/react-query@5.77.1(react@19.1.0)':
     dependencies:
