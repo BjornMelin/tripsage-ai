@@ -53,32 +53,42 @@ describe("AuthCallbackPage", () => {
   describe("Component Rendering", () => {
     it("should render the TripSage title and processing state initially", () => {
       // Keep component in loading state with pending promise
-      mockSupabaseClient.auth.getSession.mockImplementation(() => new Promise(() => {}));
+      mockSupabaseClient.auth.getSession.mockImplementation(
+        () => new Promise(() => {})
+      );
 
       render(<AuthCallbackPage />);
 
       expect(screen.getByText("TripSage")).toBeInTheDocument();
       expect(screen.getByText("Completing Sign In")).toBeInTheDocument();
-      expect(screen.getByText("Please wait while we complete your authentication...")).toBeInTheDocument();
+      expect(
+        screen.getByText("Please wait while we complete your authentication...")
+      ).toBeInTheDocument();
       expect(screen.getByTestId("loading-spinner")).toBeInTheDocument();
     });
 
     it("should render with proper card structure", () => {
-      mockSupabaseClient.auth.getSession.mockImplementation(() => new Promise(() => {}));
+      mockSupabaseClient.auth.getSession.mockImplementation(
+        () => new Promise(() => {})
+      );
 
       render(<AuthCallbackPage />);
 
       // Check for card structure
       const card = document.querySelector(".w-full.max-w-md");
       expect(card).toBeInTheDocument();
-      
+
       // Check for centered layout
-      const container = document.querySelector(".min-h-screen.bg-background.flex.items-center.justify-center");
+      const container = document.querySelector(
+        ".min-h-screen.bg-background.flex.items-center.justify-center"
+      );
       expect(container).toBeInTheDocument();
     });
 
     it("should have accessible loading state", () => {
-      mockSupabaseClient.auth.getSession.mockImplementation(() => new Promise(() => {}));
+      mockSupabaseClient.auth.getSession.mockImplementation(
+        () => new Promise(() => {})
+      );
 
       render(<AuthCallbackPage />);
 
@@ -111,7 +121,9 @@ describe("AuthCallbackPage", () => {
         { timeout: 2000 }
       );
 
-      expect(screen.getByText("Redirecting you to your dashboard...")).toBeInTheDocument();
+      expect(
+        screen.getByText("Redirecting you to your dashboard...")
+      ).toBeInTheDocument();
       expect(screen.getByTestId("success-icon")).toBeInTheDocument();
       expect(screen.getByTestId("success-icon")).toHaveClass("text-green-500");
 
@@ -171,7 +183,9 @@ describe("AuthCallbackPage", () => {
       );
 
       expect(screen.getByText("Invalid OAuth state parameter")).toBeInTheDocument();
-      expect(screen.getByText("Redirecting you back to the login page...")).toBeInTheDocument();
+      expect(
+        screen.getByText("Redirecting you back to the login page...")
+      ).toBeInTheDocument();
       expect(screen.getByTestId("error-icon")).toBeInTheDocument();
       expect(screen.getByTestId("error-icon")).toHaveClass("text-red-500");
 
@@ -220,7 +234,9 @@ describe("AuthCallbackPage", () => {
         { timeout: 1000 }
       );
 
-      expect(screen.getByText("An unexpected error occurred during authentication")).toBeInTheDocument();
+      expect(
+        screen.getByText("An unexpected error occurred during authentication")
+      ).toBeInTheDocument();
 
       act(() => {
         vi.advanceTimersByTime(3000);
@@ -413,7 +429,9 @@ describe("AuthCallbackPage", () => {
     });
 
     it("should create Supabase client on every render", () => {
-      mockSupabaseClient.auth.getSession.mockImplementation(() => new Promise(() => {}));
+      mockSupabaseClient.auth.getSession.mockImplementation(
+        () => new Promise(() => {})
+      );
 
       render(<AuthCallbackPage />);
 
@@ -441,7 +459,7 @@ describe("AuthCallbackPage", () => {
       // Check heading structure
       const title = screen.getByText("TripSage");
       const heading = screen.getByText("Authentication Failed");
-      
+
       expect(title).toBeInTheDocument();
       expect(heading).toBeInTheDocument();
       expect(heading.tagName).toBe("H2");
@@ -475,12 +493,16 @@ describe("AuthCallbackPage", () => {
     });
 
     it("should have descriptive loading state", () => {
-      mockSupabaseClient.auth.getSession.mockImplementation(() => new Promise(() => {}));
+      mockSupabaseClient.auth.getSession.mockImplementation(
+        () => new Promise(() => {})
+      );
 
       render(<AuthCallbackPage />);
 
       expect(screen.getByText("Completing Sign In")).toBeInTheDocument();
-      expect(screen.getByText("Please wait while we complete your authentication...")).toBeInTheDocument();
+      expect(
+        screen.getByText("Please wait while we complete your authentication...")
+      ).toBeInTheDocument();
     });
   });
 
@@ -515,7 +537,7 @@ describe("AuthCallbackPage", () => {
 
     it("should handle very long error messages", async () => {
       const longErrorMessage = "This is a very long error message ".repeat(10);
-      
+
       mockSupabaseClient.auth.getSession.mockResolvedValue({
         data: { session: null },
         error: { message: longErrorMessage },

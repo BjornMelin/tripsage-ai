@@ -70,7 +70,7 @@ class TestSessionCreation:
 
         # Verify database calls
         assert mock_database_service.insert.call_count == 2
-        
+
         # First call should be for user_sessions table
         session_call = mock_database_service.insert.call_args_list[0]
         assert session_call[0][0] == "user_sessions"
@@ -257,7 +257,7 @@ class TestSessionValidation:
             user_agent="Different/Browser",  # Different user agent
         )
 
-        # Should still return session 
+        # Should still return session
         assert session is not None
 
         # With IP change (30) + user agent change (20) = 50 risk score,

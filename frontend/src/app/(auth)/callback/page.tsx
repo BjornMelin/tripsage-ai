@@ -69,7 +69,10 @@ export default function AuthCallbackPage() {
         return (
           <>
             <div className="flex items-center justify-center mb-4">
-              <Loader2 className="h-8 w-8 animate-spin text-blue-500" data-testid="loading-spinner" />
+              <Loader2
+                className="h-8 w-8 animate-spin text-blue-500"
+                data-testid="loading-spinner"
+              />
             </div>
             <h2 className="text-xl font-semibold text-center mb-2">
               Completing Sign In
@@ -84,7 +87,10 @@ export default function AuthCallbackPage() {
         return (
           <>
             <div className="flex items-center justify-center mb-4">
-              <CheckCircle className="h-8 w-8 text-green-500" data-testid="success-icon" />
+              <CheckCircle
+                className="h-8 w-8 text-green-500"
+                data-testid="success-icon"
+              />
             </div>
             <h2 className="text-xl font-semibold text-center mb-2 text-green-700">
               Sign In Successful!

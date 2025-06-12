@@ -148,13 +148,15 @@ export class MockRealtimeConnection {
 
   private setupChannelBehavior() {
     // Mock the 'on' method to store event handlers
-    this.channel.on.mockImplementation((event: string, config: any, handler: Function) => {
-      const key = `${event}:${JSON.stringify(config)}`;
-      const handlers = this.eventHandlers.get(key) || [];
-      handlers.push(handler);
-      this.eventHandlers.set(key, handlers);
-      return this.channel;
-    });
+    this.channel.on.mockImplementation(
+      (event: string, config: any, handler: Function) => {
+        const key = `${event}:${JSON.stringify(config)}`;
+        const handlers = this.eventHandlers.get(key) || [];
+        handlers.push(handler);
+        this.eventHandlers.set(key, handlers);
+        return this.channel;
+      }
+    );
 
     // Mock the 'subscribe' method to trigger connection events
     this.channel.subscribe.mockImplementation((callback?: Function) => {
@@ -247,20 +249,44 @@ export function createRealtimeTestEnvironment() {
     // Convenience methods for common scenarios
     simulateUserTripsUpdate: (tripId: number, updatedTrip: Record<string, unknown>) => {
       connection.triggerPostgresEvent(
-        { event: "UPDATE", schema: "public", table: "trips", filter: `id=eq.${tripId}` },
-        createMockPostgresPayload(POSTGRES_EVENTS.UPDATE, "trips", updatedTrip, { id: tripId })
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "trips",
+          filter: `id=eq.${tripId}`,
+        },
+        createMockPostgresPayload(POSTGRES_EVENTS.UPDATE, "trips", updatedTrip, {
+          id: tripId,
+        })
       );
     },
     simulateNewChatMessage: (sessionId: string, message: Record<string, unknown>) => {
       connection.triggerPostgresEvent(
-        { event: "INSERT", schema: "public", table: "chat_messages", filter: `session_id=eq.${sessionId}` },
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "chat_messages",
+          filter: `session_id=eq.${sessionId}`,
+        },
         createMockPostgresPayload(POSTGRES_EVENTS.INSERT, "chat_messages", message)
       );
     },
-    simulateCollaboratorAdded: (tripId: number, collaborator: Record<string, unknown>) => {
+    simulateCollaboratorAdded: (
+      tripId: number,
+      collaborator: Record<string, unknown>
+    ) => {
       connection.triggerPostgresEvent(
-        { event: "INSERT", schema: "public", table: "trip_collaborators", filter: `trip_id=eq.${tripId}` },
-        createMockPostgresPayload(POSTGRES_EVENTS.INSERT, "trip_collaborators", collaborator)
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "trip_collaborators",
+          filter: `trip_id=eq.${tripId}`,
+        },
+        createMockPostgresPayload(
+          POSTGRES_EVENTS.INSERT,
+          "trip_collaborators",
+          collaborator
+        )
       );
     },
     simulateConnectionFailure: (error: Error) => {
@@ -348,7 +374,11 @@ export class RealtimeHookTester {
       () => this.testEnv.simulateUserTripsUpdate(1, { name: "Trip 1 Updated" }),
       () => this.testEnv.simulateUserTripsUpdate(2, { name: "Trip 2 Updated" }),
       () => this.testEnv.simulateNewChatMessage("session-1", { content: "Hello!" }),
-      () => this.testEnv.simulateCollaboratorAdded(1, { user_id: "user-456", role: "editor" }),
+      () =>
+        this.testEnv.simulateCollaboratorAdded(1, {
+          user_id: "user-456",
+          role: "editor",
+        }),
     ];
 
     // Fire all events simultaneously
@@ -384,7 +414,10 @@ export class RealtimePerformanceTester {
   getMetrics() {
     const endTime = performance.now();
     const duration = endTime - this.startTime;
-    const totalEvents = Array.from(this.eventCounts.values()).reduce((sum, count) => sum + count, 0);
+    const totalEvents = Array.from(this.eventCounts.values()).reduce(
+      (sum, count) => sum + count,
+      0
+    );
 
     return {
       duration,

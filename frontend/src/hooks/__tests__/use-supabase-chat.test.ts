@@ -451,7 +451,9 @@ describe("useSupabaseChat", () => {
         });
       });
 
-      expect(cancelSpy).toHaveBeenCalledWith({ queryKey: ["chat-messages", "session-1"] });
+      expect(cancelSpy).toHaveBeenCalledWith({
+        queryKey: ["chat-messages", "session-1"],
+      });
       expect(spy).toHaveBeenCalledWith(
         ["chat-messages", "session-1"],
         expect.any(Function)
@@ -739,7 +741,9 @@ describe("useChatWithRealtime", () => {
     });
 
     it("should reflect real-time connection status", () => {
-      vi.mocked(require("../use-supabase-realtime").useChatRealtime).mockReturnValueOnce({
+      vi.mocked(
+        require("../use-supabase-realtime").useChatRealtime
+      ).mockReturnValueOnce({
         ...mockChatRealtime,
         isConnected: false,
         errors: [new Error("Connection failed")],
@@ -754,7 +758,9 @@ describe("useChatWithRealtime", () => {
     });
 
     it("should handle new message count updates", () => {
-      vi.mocked(require("../use-supabase-realtime").useChatRealtime).mockReturnValueOnce({
+      vi.mocked(
+        require("../use-supabase-realtime").useChatRealtime
+      ).mockReturnValueOnce({
         ...mockChatRealtime,
         newMessageCount: 5,
       });
@@ -768,7 +774,9 @@ describe("useChatWithRealtime", () => {
 
     it("should clear new message count", () => {
       const clearMock = vi.fn();
-      vi.mocked(require("../use-supabase-realtime").useChatRealtime).mockReturnValueOnce({
+      vi.mocked(
+        require("../use-supabase-realtime").useChatRealtime
+      ).mockReturnValueOnce({
         ...mockChatRealtime,
         clearNewMessageCount: clearMock,
       });

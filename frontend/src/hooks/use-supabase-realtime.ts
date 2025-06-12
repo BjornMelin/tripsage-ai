@@ -181,7 +181,17 @@ export function useSupabaseRealtime<T extends TableName>(
         err instanceof Error ? err : new Error("Failed to setup realtime subscription")
       );
     }
-  }, [supabase, table, event, filter, schema, enabled, user?.id, handlePayload, reconnectFlag]);
+  }, [
+    supabase,
+    table,
+    event,
+    filter,
+    schema,
+    enabled,
+    user?.id,
+    handlePayload,
+    reconnectFlag,
+  ]);
 
   const disconnect = useCallback(() => {
     if (channelRef.current) {
@@ -194,7 +204,7 @@ export function useSupabaseRealtime<T extends TableName>(
   const reconnect = useCallback(() => {
     disconnect();
     // Force a re-render by updating a dependency to trigger useEffect
-    setReconnectFlag(prev => prev + 1);
+    setReconnectFlag((prev) => prev + 1);
   }, [disconnect]);
 
   return {

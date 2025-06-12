@@ -33,11 +33,11 @@ import {
   CollaborationIndicator,
   OptimisticTripUpdates,
 } from "@/components/features/realtime/optimistic-trip-updates";
+import { useAuth } from "@/contexts/auth-context";
 import {
   useTripCollaboration,
   useTripWithRealtime,
 } from "@/hooks/use-trips-with-realtime";
-import { useAuth } from "@/contexts/auth-context";
 
 interface Collaborator {
   id: string;
