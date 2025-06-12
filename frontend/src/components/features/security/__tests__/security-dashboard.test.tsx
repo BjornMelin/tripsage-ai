@@ -1,7 +1,7 @@
 import { useAuth } from "@/contexts/auth-context";
 import { useApiKeys } from "@/hooks/use-api-keys";
 import { render, screen, waitFor } from "@testing-library/react";
-import { vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SecurityDashboard } from "../security-dashboard";
 
 // Mock the hooks

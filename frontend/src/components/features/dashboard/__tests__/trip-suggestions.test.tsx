@@ -9,9 +9,9 @@ import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { TripSuggestions } from "../trip-suggestions";
 
-// Mock the stores with essential methods
+// Mock the stores with essential methods  
 const mockBudgetStore = {
-  activeBudget: null,
+  activeBudget: null as any,
 };
 
 const mockDealsStore = {

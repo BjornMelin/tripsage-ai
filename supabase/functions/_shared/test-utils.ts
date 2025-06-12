@@ -124,6 +124,32 @@ export const TestDataFactory = {
     operation: 'INSERT',
     data: {},
     ...overrides
+  }),
+
+  /**
+   * Creates a test chat message object
+   */
+  createChatMessage: (overrides: Partial<any> = {}) => ({
+    id: 'msg-123',
+    content: 'Test message content',
+    role: 'user',
+    session_id: 'test-session-123',
+    user_id: 'test-user-123',
+    created_at: new Date().toISOString(),
+    ...overrides
+  }),
+
+  /**
+   * Creates a test memory entry object
+   */
+  createMemoryEntry: (overrides: Partial<any> = {}) => ({
+    id: 'memory-123',
+    user_id: 'test-user-123',
+    content: 'Test memory content',
+    embedding: new Array(1536).fill(0.1),
+    metadata: {},
+    created_at: new Date().toISOString(),
+    ...overrides
   })
 };
 
@@ -267,6 +293,7 @@ export class MockSupabase {
 export class MockRedis {
   private storage: Map<string, string> = new Map();
   public calls: Array<{ method: string; args: any[] }> = [];
+  private expectedCalls: Array<{ method: string; args: any[]; result: any }> = [];
 
   connect() {
     this.calls.push({ method: 'connect', args: [] });
@@ -302,13 +329,24 @@ export class MockRedis {
 
   set(key: string, value: string) {
     this.calls.push({ method: 'set', args: [key, value] });
+    const expectedResult = this.findExpectedCall('set', [key, value]);
+    if (expectedResult !== undefined) {
+      if (expectedResult === 'OK') {
+        this.storage.set(key, value);
+      }
+      return expectedResult;
+    }
     this.storage.set(key, value);
-    return Promise.resolve('OK');
+    return 'OK';
   }
 
   get(key: string) {
     this.calls.push({ method: 'get', args: [key] });
-    return Promise.resolve(this.storage.get(key) || null);
+    const expectedResult = this.findExpectedCall('get', [key]);
+    if (expectedResult !== undefined) {
+      return expectedResult;
+    }
+    return this.storage.get(key) || null;
   }
 
   quit() {
@@ -320,10 +358,22 @@ export class MockRedis {
     this.calls = [];
   }
 
+  setExpectedCalls(calls: Array<{ method: string; args: any[]; result: any }>) {
+    this.expectedCalls = calls;
+  }
+
   addTestKeys(prefix: string, count: number) {
     for (let i = 0; i < count; i++) {
       this.storage.set(`${prefix}${i}`, `value${i}`);
     }
+  }
+
+  private findExpectedCall(method: string, args: any[]): any {
+    const call = this.expectedCalls.find(
+      expectedCall => expectedCall.method === method && 
+      JSON.stringify(expectedCall.args) === JSON.stringify(args)
+    );
+    return call?.result;
   }
 }
 
@@ -334,7 +384,7 @@ export class MockFetch {
   private responses: Map<string, Response> = new Map();
   public calls: Array<{ url: string; options?: RequestInit }> = [];
 
-  setResponse(url: string, response: Partial<Response>) {
+  setResponse(url: string, response: { status?: number; statusText?: string; headers?: Record<string, string>; body?: string }) {
     const mockResponse = new Response(
       response.body || JSON.stringify({ success: true }),
       {

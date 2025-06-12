@@ -8,6 +8,7 @@ This service provides TOTP-based MFA functionality including:
 - MFA enrollment and management
 """
 
+import asyncio
 import base64
 import logging
 import secrets
@@ -23,6 +24,7 @@ from tripsage_core.exceptions.exceptions import (
     CoreValidationError,
 )
 from tripsage_core.models.base_core_model import TripSageModel
+from tripsage_core.services.infrastructure import get_database_service
 
 logger = logging.getLogger(__name__)
 

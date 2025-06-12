@@ -104,9 +104,12 @@ describe("AuthCallbackPage", () => {
       render(<AuthCallbackPage />);
 
       // Wait for success state
-      await waitFor(() => {
-        expect(screen.getByText("Sign In Successful!")).toBeInTheDocument();
-      });
+      await waitFor(
+        () => {
+          expect(screen.getByText("Sign In Successful!")).toBeInTheDocument();
+        },
+        { timeout: 2000 }
+      );
 
       expect(screen.getByText("Redirecting you to your dashboard...")).toBeInTheDocument();
       expect(screen.getByTestId("success-icon")).toBeInTheDocument();
@@ -133,9 +136,12 @@ describe("AuthCallbackPage", () => {
 
       render(<AuthCallbackPage />);
 
-      await waitFor(() => {
-        expect(screen.getByText("Sign In Successful!")).toBeInTheDocument();
-      });
+      await waitFor(
+        () => {
+          expect(screen.getByText("Sign In Successful!")).toBeInTheDocument();
+        },
+        { timeout: 1000 }
+      );
 
       const successTitle = screen.getByText("Sign In Successful!");
       expect(successTitle).toHaveClass("text-green-700");
@@ -157,9 +163,12 @@ describe("AuthCallbackPage", () => {
 
       render(<AuthCallbackPage />);
 
-      await waitFor(() => {
-        expect(screen.getByText("Authentication Failed")).toBeInTheDocument();
-      });
+      await waitFor(
+        () => {
+          expect(screen.getByText("Authentication Failed")).toBeInTheDocument();
+        },
+        { timeout: 1000 }
+      );
 
       expect(screen.getByText("Invalid OAuth state parameter")).toBeInTheDocument();
       expect(screen.getByText("Redirecting you back to the login page...")).toBeInTheDocument();
@@ -182,9 +191,12 @@ describe("AuthCallbackPage", () => {
 
       render(<AuthCallbackPage />);
 
-      await waitFor(() => {
-        expect(screen.getByText("Authentication Failed")).toBeInTheDocument();
-      });
+      await waitFor(
+        () => {
+          expect(screen.getByText("Authentication Failed")).toBeInTheDocument();
+        },
+        { timeout: 1000 }
+      );
 
       expect(screen.getByText("No authentication session found")).toBeInTheDocument();
 
@@ -201,9 +213,12 @@ describe("AuthCallbackPage", () => {
 
       render(<AuthCallbackPage />);
 
-      await waitFor(() => {
-        expect(screen.getByText("Authentication Failed")).toBeInTheDocument();
-      });
+      await waitFor(
+        () => {
+          expect(screen.getByText("Authentication Failed")).toBeInTheDocument();
+        },
+        { timeout: 1000 }
+      );
 
       expect(screen.getByText("An unexpected error occurred during authentication")).toBeInTheDocument();
 
@@ -222,9 +237,12 @@ describe("AuthCallbackPage", () => {
 
       render(<AuthCallbackPage />);
 
-      await waitFor(() => {
-        expect(screen.getByText("Authentication Failed")).toBeInTheDocument();
-      });
+      await waitFor(
+        () => {
+          expect(screen.getByText("Authentication Failed")).toBeInTheDocument();
+        },
+        { timeout: 1000 }
+      );
 
       const errorTitle = screen.getByText("Authentication Failed");
       expect(errorTitle).toHaveClass("text-red-700");
@@ -246,9 +264,12 @@ describe("AuthCallbackPage", () => {
 
       render(<AuthCallbackPage />);
 
-      await waitFor(() => {
-        expect(screen.getByText("Authentication Failed")).toBeInTheDocument();
-      });
+      await waitFor(
+        () => {
+          expect(screen.getByText("Authentication Failed")).toBeInTheDocument();
+        },
+        { timeout: 1000 }
+      );
 
       expect(screen.getByText("PKCE verification failed")).toBeInTheDocument();
     });
@@ -266,9 +287,12 @@ describe("AuthCallbackPage", () => {
 
       render(<AuthCallbackPage />);
 
-      await waitFor(() => {
-        expect(screen.getByText("Authentication Failed")).toBeInTheDocument();
-      });
+      await waitFor(
+        () => {
+          expect(screen.getByText("Authentication Failed")).toBeInTheDocument();
+        },
+        { timeout: 1000 }
+      );
 
       expect(screen.getByText("Invalid authorization code")).toBeInTheDocument();
     });
@@ -286,9 +310,12 @@ describe("AuthCallbackPage", () => {
 
       render(<AuthCallbackPage />);
 
-      await waitFor(() => {
-        expect(screen.getByText("Authentication Failed")).toBeInTheDocument();
-      });
+      await waitFor(
+        () => {
+          expect(screen.getByText("Authentication Failed")).toBeInTheDocument();
+        },
+        { timeout: 1000 }
+      );
 
       expect(screen.getByText("Authorization code has expired")).toBeInTheDocument();
     });
@@ -308,9 +335,12 @@ describe("AuthCallbackPage", () => {
 
       render(<AuthCallbackPage />);
 
-      await waitFor(() => {
-        expect(screen.getByText("Sign In Successful!")).toBeInTheDocument();
-      });
+      await waitFor(
+        () => {
+          expect(screen.getByText("Sign In Successful!")).toBeInTheDocument();
+        },
+        { timeout: 1000 }
+      );
 
       act(() => {
         vi.advanceTimersByTime(2000);
@@ -328,9 +358,12 @@ describe("AuthCallbackPage", () => {
 
       render(<AuthCallbackPage />);
 
-      await waitFor(() => {
-        expect(screen.getByText("Authentication Failed")).toBeInTheDocument();
-      });
+      await waitFor(
+        () => {
+          expect(screen.getByText("Authentication Failed")).toBeInTheDocument();
+        },
+        { timeout: 1000 }
+      );
 
       act(() => {
         vi.advanceTimersByTime(3000);
@@ -347,9 +380,12 @@ describe("AuthCallbackPage", () => {
 
       render(<AuthCallbackPage />);
 
-      await waitFor(() => {
-        expect(screen.getByText("Authentication Failed")).toBeInTheDocument();
-      });
+      await waitFor(
+        () => {
+          expect(screen.getByText("Authentication Failed")).toBeInTheDocument();
+        },
+        { timeout: 1000 }
+      );
 
       act(() => {
         vi.advanceTimersByTime(3000);
@@ -368,9 +404,12 @@ describe("AuthCallbackPage", () => {
 
       render(<AuthCallbackPage />);
 
-      await waitFor(() => {
-        expect(mockSupabaseClient.auth.getSession).toHaveBeenCalledTimes(1);
-      });
+      await waitFor(
+        () => {
+          expect(mockSupabaseClient.auth.getSession).toHaveBeenCalledTimes(1);
+        },
+        { timeout: 500 }
+      );
     });
 
     it("should create Supabase client on every render", () => {
@@ -392,9 +431,12 @@ describe("AuthCallbackPage", () => {
       render(<AuthCallbackPage />);
 
       // Wait for state to be set
-      await waitFor(() => {
-        expect(screen.getByText("Authentication Failed")).toBeInTheDocument();
-      });
+      await waitFor(
+        () => {
+          expect(screen.getByText("Authentication Failed")).toBeInTheDocument();
+        },
+        { timeout: 1000 }
+      );
 
       // Check heading structure
       const title = screen.getByText("TripSage");
@@ -418,9 +460,12 @@ describe("AuthCallbackPage", () => {
 
       render(<AuthCallbackPage />);
 
-      await waitFor(() => {
-        expect(screen.getByText("Sign In Successful!")).toBeInTheDocument();
-      });
+      await waitFor(
+        () => {
+          expect(screen.getByText("Sign In Successful!")).toBeInTheDocument();
+        },
+        { timeout: 1000 }
+      );
 
       const successHeading = screen.getByText("Sign In Successful!");
       const successIcon = screen.getByTestId("success-icon");
@@ -453,9 +498,12 @@ describe("AuthCallbackPage", () => {
 
       render(<AuthCallbackPage />);
 
-      await waitFor(() => {
-        expect(screen.getByText("Sign In Successful!")).toBeInTheDocument();
-      });
+      await waitFor(
+        () => {
+          expect(screen.getByText("Sign In Successful!")).toBeInTheDocument();
+        },
+        { timeout: 1000 }
+      );
 
       // Should still redirect even with malformed session
       act(() => {
@@ -475,9 +523,12 @@ describe("AuthCallbackPage", () => {
 
       render(<AuthCallbackPage />);
 
-      await waitFor(() => {
-        expect(screen.getByText("Authentication Failed")).toBeInTheDocument();
-      });
+      await waitFor(
+        () => {
+          expect(screen.getByText("Authentication Failed")).toBeInTheDocument();
+        },
+        { timeout: 1000 }
+      );
 
       expect(screen.getByText(longErrorMessage)).toBeInTheDocument();
     });

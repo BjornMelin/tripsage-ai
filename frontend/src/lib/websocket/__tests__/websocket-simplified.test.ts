@@ -4,7 +4,7 @@
  * Focused tests for core WebSocket functionality with reliable mocks.
  */
 
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   ConnectionStatus,
   WebSocketClient,
