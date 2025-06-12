@@ -33,7 +33,7 @@ export const createMockSupabaseClient = (): Partial<SupabaseClient> => ({
     signOut: vi.fn().mockResolvedValue({ error: null }),
     resetPasswordForEmail: vi.fn().mockResolvedValue({ data: null, error: null }),
     updateUser: vi.fn().mockResolvedValue({ data: null, error: null }),
-  } as SupabaseClient['auth'],
+  } as SupabaseClient["auth"],
   from: vi.fn().mockReturnValue(createCompleteQueryBuilder()),
   channel: vi.fn().mockReturnValue({
     on: vi.fn().mockReturnThis(),

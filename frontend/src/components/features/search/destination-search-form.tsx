@@ -404,13 +404,28 @@ export function DestinationSearchForm({
                           <input
                             type="checkbox"
                             value={type.id}
-                            checked={form.watch("types").includes(type.id as "locality" | "country" | "administrative_area" | "establishment")}
+                            checked={form
+                              .watch("types")
+                              .includes(
+                                type.id as
+                                  | "locality"
+                                  | "country"
+                                  | "administrative_area"
+                                  | "establishment"
+                              )}
                             onChange={(e) => {
                               const checked = e.target.checked;
                               const types = form.getValues("types");
 
                               if (checked) {
-                                form.setValue("types", [...types, type.id as "locality" | "country" | "administrative_area" | "establishment"]);
+                                form.setValue("types", [
+                                  ...types,
+                                  type.id as
+                                    | "locality"
+                                    | "country"
+                                    | "administrative_area"
+                                    | "establishment",
+                                ]);
                               } else {
                                 form.setValue(
                                   "types",

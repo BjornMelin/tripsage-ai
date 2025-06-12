@@ -20,7 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useTripsWithRealtime } from "@/hooks/use-trips-with-realtime";
-import { useTripStore, type Trip } from "@/stores/trip-store";
+import { type Trip, useTripStore } from "@/stores/trip-store";
 import { Filter, Grid, List, Plus, Search } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
