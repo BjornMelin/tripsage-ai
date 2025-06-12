@@ -180,8 +180,8 @@ export default function RealtimeDemoPage() {
                 </CardHeader>
                 <CardContent className="pt-0">
                   <ul className="space-y-1">
-                    {feature.details.map((detail, index) => (
-                      <li key={index} className="flex items-start space-x-2 text-sm">
+                    {feature.details.map((detail) => (
+                      <li key={`${feature.id}-${detail}`} className="flex items-start space-x-2 text-sm">
                         <CheckCircle className="h-3 w-3 mt-0.5 text-green-500 flex-shrink-0" />
                         <span>{detail}</span>
                       </li>

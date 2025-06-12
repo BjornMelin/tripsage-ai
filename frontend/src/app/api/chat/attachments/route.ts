@@ -56,7 +56,9 @@ export async function POST(req: NextRequest) {
     if (files.length === 1) {
       backendFormData.append("file", files[0]);
     } else {
-      files.forEach((file) => backendFormData.append("files", file));
+      for (const file of files) {
+        backendFormData.append("files", file);
+      }
     }
 
     // Call backend API
@@ -101,7 +103,14 @@ export async function POST(req: NextRequest) {
     }
 
     // Batch response
-    const transformedFiles = data.successful_uploads.map((file: any) => ({
+    interface UploadedFile {
+      file_id: string;
+      filename: string;
+      file_size: number;
+      mime_type: string;
+      processing_status: string;
+    }
+    const transformedFiles = data.successful_uploads.map((file: UploadedFile) => ({
       id: file.file_id,
       name: file.filename,
       size: file.file_size,
@@ -112,7 +121,7 @@ export async function POST(req: NextRequest) {
 
     return Response.json({
       files: transformedFiles,
-      urls: transformedFiles.map((f: any) => f.url),
+      urls: transformedFiles.map((f) => f.url),
     });
   } catch (error) {
     console.error("File upload error:", error);

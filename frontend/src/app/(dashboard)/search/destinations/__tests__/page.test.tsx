@@ -32,7 +32,7 @@ vi.mock("@/hooks/use-destination-search", () => ({
 
 // Mock the components to avoid complex dependency issues
 vi.mock("@/components/features/search/destination-search-form", () => ({
-  DestinationSearchForm: ({ onSearch }: { onSearch: Function }) => (
+  DestinationSearchForm: ({ onSearch }: { onSearch: (params: unknown) => void }) => (
     <div data-testid="destination-search-form">
       <button
         type="button"
@@ -45,7 +45,12 @@ vi.mock("@/components/features/search/destination-search-form", () => ({
 }));
 
 vi.mock("@/components/features/search/destination-card", () => ({
-  DestinationCard: ({ destination, onSelect, onCompare, onViewDetails }: any) => (
+  DestinationCard: ({ destination, onSelect, onCompare, onViewDetails }: {
+    destination: { name: string; description: string };
+    onSelect: () => void;
+    onCompare: () => void;
+    onViewDetails: () => void;
+  }) => (
     <div data-testid="destination-card">
       <h3>{destination.name}</h3>
       <button type="button" onClick={() => onSelect?.(destination)}>
@@ -126,7 +131,7 @@ describe("DestinationsSearchPage", () => {
     const mockSearchDestinationsMock = vi.fn();
     const { useDestinationSearch } = await import("@/hooks/use-destination-search");
 
-    (useDestinationSearch as any).mockReturnValue({
+    vi.mocked(useDestinationSearch).mockReturnValue({
       searchDestinationsMock: mockSearchDestinationsMock,
       isSearching: false,
       searchError: null,

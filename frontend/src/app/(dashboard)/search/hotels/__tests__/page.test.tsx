@@ -98,7 +98,7 @@ describe("HotelSearchPage", () => {
       totalResults: 1,
     };
 
-    (api.post as any).mockResolvedValueOnce(mockSearchResponse);
+    vi.mocked(api.post).mockResolvedValueOnce(mockSearchResponse);
 
     render(<HotelSearchPage />, { wrapper });
 
