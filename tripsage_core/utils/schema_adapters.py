@@ -71,8 +71,24 @@ class SchemaAdapter:
         # Use UUID if available, fallback to BIGINT ID
         trip_id = db_trip.get("uuid_id") or str(db_trip.get("id"))
 
-        # Handle title/name field mapping
+        # Handle title/name field mapping (updated for schema alignment)
         title = db_trip.get("title") or db_trip.get("name", "Untitled Trip")
+
+        # Handle enhanced budget structure
+        budget_breakdown = db_trip.get("budget_breakdown", {})
+        enhanced_budget = None
+        if budget_breakdown:
+            enhanced_budget = {
+                "total": budget_breakdown.get("total", db_trip.get("budget", 0)),
+                "currency": db_trip.get("currency", "USD"),
+                "spent": db_trip.get("spent_amount", 0),
+                "breakdown": budget_breakdown.get("breakdown", {})
+            }
+
+        # Handle enhanced preferences
+        preferences = db_trip.get("preferences_extended", {}) or db_trip.get("preferences", {})
+        if not preferences and db_trip.get("flexibility"):
+            preferences = SchemaAdapter.migrate_legacy_preferences(db_trip.get("flexibility"))
 
         # Provide defaults for missing fields
         api_trip = {
@@ -84,16 +100,19 @@ class SchemaAdapter:
             "start_date": db_trip.get("start_date"),
             "end_date": db_trip.get("end_date"),
             "destination": db_trip.get("destination", ""),
-            "budget": db_trip.get("budget", 0),
+            "budget": db_trip.get("budget", 0),  # Legacy budget
+            "enhanced_budget": enhanced_budget,  # New enhanced budget
+            "currency": db_trip.get("currency", "USD"),
+            "spent_amount": db_trip.get("spent_amount", 0),
             "travelers": db_trip.get("travelers", 1),
             "status": db_trip.get("status", "planning"),
             "trip_type": db_trip.get("trip_type", "leisure"),
-            "flexibility": db_trip.get("flexibility", {}),
+            "flexibility": db_trip.get("flexibility", {}),  # Legacy
             "notes": db_trip.get("notes", []),
             "search_metadata": db_trip.get("search_metadata", {}),
             "visibility": db_trip.get("visibility", "private"),
             "tags": db_trip.get("tags", []),
-            "preferences": db_trip.get("preferences", {}),
+            "preferences": preferences,  # Enhanced preferences
             "created_at": db_trip.get("created_at"),
             "updated_at": db_trip.get("updated_at"),
         }
@@ -114,26 +133,38 @@ class SchemaAdapter:
         Returns:
             Trip data formatted for database storage
         """
-        # Handle title -> name mapping for database
-        name = api_trip.get("name") or api_trip.get("title", "Untitled Trip")
-
+        # Handle title -> name mapping for database (now both use 'title')
+        title = api_trip.get("title") or api_trip.get("name", "Untitled Trip")
+        
+        # Handle enhanced budget conversion
+        budget_breakdown = {}
+        enhanced_budget = api_trip.get("enhanced_budget")
+        if enhanced_budget:
+            budget_breakdown = {
+                "total": enhanced_budget.get("total", 0),
+                "breakdown": enhanced_budget.get("breakdown", {})
+            }
+        
         db_trip = {
-            "name": name,
+            "title": title,  # Updated to use 'title' consistently
             "user_id": api_trip.get("user_id"),
             "description": api_trip.get("description"),
             "start_date": api_trip.get("start_date"),
             "end_date": api_trip.get("end_date"),
             "destination": api_trip.get("destination", ""),
-            "budget": api_trip.get("budget", 0),
+            "budget": api_trip.get("budget", 0),  # Legacy budget
+            "budget_breakdown": budget_breakdown,  # Enhanced budget
+            "currency": api_trip.get("currency", "USD"),
+            "spent_amount": api_trip.get("spent_amount", 0),
             "travelers": api_trip.get("travelers", 1),
             "status": api_trip.get("status", "planning"),
             "trip_type": api_trip.get("trip_type", "leisure"),
-            "flexibility": api_trip.get("flexibility", {}),
+            "flexibility": api_trip.get("flexibility", {}),  # Legacy
             "notes": api_trip.get("notes", []),
             "search_metadata": api_trip.get("search_metadata", {}),
             "visibility": api_trip.get("visibility", "private"),
             "tags": api_trip.get("tags", []),
-            "preferences": api_trip.get("preferences", {}),
+            "preferences_extended": api_trip.get("preferences", {}),  # Enhanced field
         }
 
         # Handle timestamps
@@ -294,12 +325,16 @@ class DatabaseQueryAdapter:
             id AS id_bigint,
             uuid_id,
             user_id,
-            name,
-            COALESCE(title, name) AS title,
+            title,
+            COALESCE(title, name) AS title,  -- Handle legacy name field
+            description,
             start_date,
             end_date,
             destination,
             budget,
+            budget_breakdown,
+            currency,
+            spent_amount,
             travelers,
             status,
             trip_type,
@@ -308,7 +343,7 @@ class DatabaseQueryAdapter:
             search_metadata,
             COALESCE(visibility, 'private') AS visibility,
             COALESCE(tags, '{{}}') AS tags,
-            COALESCE(preferences, '{{}}') AS preferences,
+            COALESCE(preferences_extended, preferences, '{{}}') AS preferences,
             created_at,
             updated_at
         FROM trips
