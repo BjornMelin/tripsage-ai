@@ -64,7 +64,7 @@ interface SecurityMetrics {
 
 export function SecurityDashboard() {
   const { user } = useAuth();
-  const { apiKeys, isLoading: keysLoading } = useApiKeys();
+  const apiKeysQuery = useApiKeys();
   const [events, setEvents] = useState<SecurityEvent[]>([]);
   const [sessions, setSessions] = useState<ActiveSession[]>([]);
   const [metrics, setMetrics] = useState<SecurityMetrics | null>(null);
@@ -138,7 +138,7 @@ export function SecurityDashboard() {
           last_login: "2025-06-11T10:30:00Z",
           failed_login_attempts: 1,
           active_sessions: 2,
-          api_keys_count: apiKeys?.length || 0,
+          api_keys_count: Array.isArray(apiKeysQuery.data?.keys) ? apiKeysQuery.data.keys.length : 0,
           oauth_connections: ["google", "github"],
           security_score: 85,
         });
@@ -151,7 +151,7 @@ export function SecurityDashboard() {
     };
 
     loadSecurityData();
-  }, [apiKeys]);
+  }, [apiKeysQuery.data]);
 
   const getRiskColor = (level: string) => {
     switch (level) {
