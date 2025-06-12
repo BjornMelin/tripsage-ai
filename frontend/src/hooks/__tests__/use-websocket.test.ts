@@ -88,12 +88,13 @@ vi.mock("../use-agent-status-websocket", () => ({
   useAgentStatusWebSocket: vi.fn().mockReturnValue({
     connect: vi.fn().mockResolvedValue(undefined),
     disconnect: vi.fn(),
-    status: "disconnected",
     isConnected: false,
-    isConnecting: false,
-    isDisconnected: true,
-    isReconnecting: false,
-    hasError: false,
+    connectionError: null,
+    reconnectAttempts: 0,
+    startAgentMonitoring: vi.fn(),
+    stopAgentMonitoring: vi.fn(),
+    reportResourceUsage: vi.fn(),
+    wsClient: null,
   }),
 }));
 
@@ -159,12 +160,10 @@ describe("WebSocket Hooks Integration", () => {
       expect(result.current).toMatchObject({
         connect: expect.any(Function),
         disconnect: expect.any(Function),
-        status: expect.any(String),
         isConnected: expect.any(Boolean),
-        isConnecting: expect.any(Boolean),
-        isDisconnected: expect.any(Boolean),
-        isReconnecting: expect.any(Boolean),
-        hasError: expect.any(Boolean),
+        startAgentMonitoring: expect.any(Function),
+        stopAgentMonitoring: expect.any(Function),
+        reportResourceUsage: expect.any(Function),
       });
     });
 
@@ -247,6 +246,7 @@ describe("WebSocket Hooks Integration", () => {
         const { isConnected, connectionError, reconnectAttempts } = result.current;
         expect(typeof isConnected).toBe("boolean");
         expect(typeof reconnectAttempts).toBe("number");
+        expect(connectionError === null || typeof connectionError === "string").toBe(true);
       }).not.toThrow();
     });
   });

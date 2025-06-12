@@ -20,19 +20,23 @@ vi.mock("@/contexts/auth-context", () => ({
   useAuth: vi.fn(() => mockAuth),
 }));
 
+// Helper to create complete Supabase mock
+const createCompleteSupabaseMock = (overrides = {}) => ({
+  select: vi.fn().mockReturnThis(),
+  insert: vi.fn().mockReturnThis(),
+  update: vi.fn().mockReturnThis(),
+  delete: vi.fn().mockReturnThis(),
+  eq: vi.fn().mockReturnThis(),
+  order: vi.fn().mockReturnThis(),
+  range: vi.fn().mockReturnThis(),
+  single: vi.fn().mockReturnThis(),
+  maybeSingle: vi.fn().mockReturnThis(),
+  ...overrides,
+});
+
 // Mock Supabase client with comprehensive chat functionality
 const mockSupabaseClient = {
-  from: vi.fn(() => ({
-    select: vi.fn().mockReturnThis(),
-    insert: vi.fn().mockReturnThis(),
-    update: vi.fn().mockReturnThis(),
-    delete: vi.fn().mockReturnThis(),
-    eq: vi.fn().mockReturnThis(),
-    order: vi.fn().mockReturnThis(),
-    range: vi.fn().mockReturnThis(),
-    single: vi.fn().mockReturnThis(),
-    maybeSingle: vi.fn().mockReturnThis(),
-  })),
+  from: vi.fn(() => createCompleteSupabaseMock()),
   auth: {
     getUser: vi.fn(),
     onAuthStateChange: vi.fn(),
@@ -481,6 +485,7 @@ describe("useSupabaseChat", () => {
       await act(async () => {
         await result.current.addToolCall.mutateAsync({
           message_id: 2,
+          tool_id: "flight-search-tool",
           tool_name: "search_flights",
           arguments: { from: "NYC", to: "LAX" },
           status: "pending",
@@ -677,7 +682,7 @@ describe("useSupabaseChat", () => {
       await act(async () => {
         try {
           await result.current.createChatSession.mutateAsync({
-            title: "Test Session",
+            user_id: "test-user",
           });
         } catch (error) {
           // Expected to fail
@@ -706,7 +711,7 @@ describe("useSupabaseChat", () => {
 
       await act(async () => {
         await result.current.createChatSession.mutateAsync({
-          title: "Test Session",
+          user_id: "test-user",
         });
       });
 
@@ -1035,6 +1040,7 @@ describe("Integration and Performance Tests", () => {
         }),
         result.current.addToolCall.mutateAsync({
           message_id: 1,
+          tool_id: "test-tool-id",
           tool_name: "test_tool",
           arguments: {},
           status: "pending",

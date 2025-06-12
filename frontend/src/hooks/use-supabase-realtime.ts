@@ -296,7 +296,7 @@ export function useChatRealtime(sessionId: string | null) {
     enabled: !!sessionId && !!user?.id,
     onInsert: (payload) => {
       // Don't count user's own messages
-      if (payload.new.role !== "user") {
+      if ("role" in payload.new && payload.new.role !== "user") {
         setNewMessageCount((prev) => prev + 1);
       }
       console.log("New chat message:", payload.new);

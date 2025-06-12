@@ -455,6 +455,7 @@ export function useSupabaseQueryHelpers() {
       enabled: !!sessionId,
       dependencies: [sessionId],
       pageSize: 50,
+      initialPageParam: 0,
     });
   }, []);
 

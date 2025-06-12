@@ -374,12 +374,12 @@ describe("Chat Store WebSocket Integration (Simplified)", () => {
       });
 
       // Verify session was created and set correctly - use the actual sessionId returned
-      expect(store.currentSessionId).toBe(sessionId);
+      expect(store.currentSessionId).toBe(sessionId!);
       expect(store.currentSession).toBeTruthy();
 
       const messageEvent = {
         type: "chat_message" as const,
-        sessionId: sessionId, // Use the sessionId variable that was returned from createSession
+        sessionId: sessionId!, // Use the sessionId variable that was returned from createSession
         content: "Hello from agent!",
         role: "assistant" as const,
       };
@@ -404,12 +404,12 @@ describe("Chat Store WebSocket Integration (Simplified)", () => {
       });
 
       // Verify session was created and set correctly
-      expect(store.currentSessionId).toBe(sessionId);
+      expect(store.currentSessionId).toBe(sessionId!);
       expect(store.currentSession).toBeTruthy();
 
       const statusEvent = {
         type: "agent_status_update" as const,
-        sessionId: sessionId, // Use the sessionId variable that was returned from createSession
+        sessionId: sessionId!, // Use the sessionId variable that was returned from createSession
         isActive: true,
         currentTask: "Processing request",
         progress: 75,

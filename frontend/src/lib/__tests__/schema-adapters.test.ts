@@ -245,6 +245,7 @@ describe("FrontendSchemaAdapter", () => {
     it("should provide default values for missing fields", () => {
       const minimalTrip: Trip = {
         id: "trip-minimal",
+        name: "Minimal Trip",
         title: "Minimal Trip",
         destinations: [],
       };
@@ -593,7 +594,7 @@ describe("FrontendSchemaAdapter", () => {
     });
 
     it("should require name or title", () => {
-      const tripWithoutName = { ...validTrip, name: undefined, title: undefined };
+      const tripWithoutName = { ...validTrip, name: "", title: undefined };
       const result = FrontendSchemaAdapter.validateTripForApi(tripWithoutName);
 
       expect(result.valid).toBe(false);
@@ -659,10 +660,10 @@ describe("FrontendSchemaAdapter", () => {
     it("should accumulate multiple validation errors", () => {
       const invalidTrip: Trip = {
         id: "trip-invalid",
+        name: "", // Empty name
         destinations: [], // No destinations
         start_date: "2025-06-15",
         end_date: "2025-06-01", // End before start
-        // Missing name/title
       };
 
       const result = FrontendSchemaAdapter.validateTripForApi(invalidTrip);
@@ -1024,7 +1025,7 @@ describe("FrontendSchemaAdapter", () => {
       expect(result.title).toBe(longString);
       expect(result.description).toBe(longString);
       expect(result.destinations[0].name).toBe(longString);
-      expect(result.tags[0]).toBe(longString);
+      expect(result.tags?.[0]).toBe(longString);
     });
   });
 

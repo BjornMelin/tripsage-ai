@@ -10,8 +10,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { UpcomingFlights } from "../upcoming-flights";
 
 // Mock trip store
+import type { Trip } from "@/stores/trip-store";
+
 const mockTripStore = {
-  trips: [],
+  trips: [] as Trip[],
 };
 
 vi.mock("@/stores/trip-store", () => ({

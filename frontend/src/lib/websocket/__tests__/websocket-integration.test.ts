@@ -157,18 +157,18 @@ describe("WebSocket Integration", () => {
     it("should handle authentication failures", async () => {
       // Mock WebSocket that returns auth failure
       class MockAuthFailWebSocket extends MockWebSocket {
-        private authResponseSent = false;
+        private authFailResponseSent = false;
 
         send(data: string) {
           if (this.readyState !== MockWebSocket.OPEN) {
             throw new Error("WebSocket is not open");
           }
 
-          if (!this.authResponseSent) {
+          if (!this.authFailResponseSent) {
             try {
               const message = JSON.parse(data);
               if (message.token || message.session_id) {
-                this.authResponseSent = true;
+                this.authFailResponseSent = true;
                 // Mock failed authentication response immediately
                 setImmediate(() => {
                   this.onmessage?.(

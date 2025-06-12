@@ -65,6 +65,9 @@ export default function TripCollaborationPage() {
   const { trip, isConnected, connectionErrors } = useTripWithRealtime(
     Number.parseInt(tripId, 10)
   );
+  
+  // Type assertion for trip data
+  const typedTrip = trip as { title?: string; name?: string; visibility?: string } | null;
   const collaboration = useTripCollaboration(tripId);
 
   const currentUserId = user?.id;
@@ -193,7 +196,7 @@ export default function TripCollaborationPage() {
     }
   };
 
-  if (!trip) {
+  if (!typedTrip) {
     return (
       <div className="container mx-auto py-8">
         <Card>
@@ -214,7 +217,7 @@ export default function TripCollaborationPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">
-            Collaborate on {trip.title || trip.name}
+            Collaborate on {typedTrip.title || typedTrip.name}
           </h1>
           <p className="text-muted-foreground">
             Manage collaborators and real-time editing
@@ -403,11 +406,11 @@ export default function TripCollaborationPage() {
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label>Visibility</Label>
-                <Badge variant="secondary">{trip.visibility || "Private"}</Badge>
+                <Badge variant="secondary">{typedTrip.visibility || "Private"}</Badge>
                 <p className="text-xs text-muted-foreground">
-                  {trip.visibility === "public"
+                  {typedTrip.visibility === "public"
                     ? "Anyone can view this trip"
-                    : trip.visibility === "shared"
+                    : typedTrip.visibility === "shared"
                       ? "Only invited collaborators can view"
                       : "Only you can view this trip"}
                 </p>
