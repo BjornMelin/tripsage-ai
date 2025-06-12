@@ -1,21 +1,27 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
-import { Separator } from '@/components/ui/separator';
-import { useToast } from '@/components/ui/use-toast';
-import { 
-  Wifi, 
-  WifiOff, 
-  RefreshCw, 
-  Activity, 
+import { useState, useEffect } from "react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import { Separator } from "@/components/ui/separator";
+import { useToast } from "@/components/ui/use-toast";
+import {
+  Wifi,
+  WifiOff,
+  RefreshCw,
+  Activity,
   AlertTriangle,
   CheckCircle,
-  XCircle 
-} from 'lucide-react';
+  XCircle,
+} from "lucide-react";
 
 interface ConnectionStatus {
   isConnected: boolean;
@@ -28,7 +34,7 @@ interface ConnectionStatus {
 interface RealtimeConnection {
   id: string;
   table: string;
-  status: 'connected' | 'disconnected' | 'error' | 'reconnecting';
+  status: "connected" | "disconnected" | "error" | "reconnecting";
   error?: Error;
   lastActivity?: Date;
 }
@@ -46,7 +52,7 @@ export function ConnectionStatusMonitor() {
     reconnectAttempts: 0,
     lastReconnectAt: null,
   });
-  
+
   const [connections, setConnections] = useState<RealtimeConnection[]>([]);
   const [isReconnecting, setIsReconnecting] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
@@ -55,30 +61,30 @@ export function ConnectionStatusMonitor() {
   useEffect(() => {
     const mockConnections: RealtimeConnection[] = [
       {
-        id: 'trips-realtime',
-        table: 'trips',
-        status: 'connected',
+        id: "trips-realtime",
+        table: "trips",
+        status: "connected",
         lastActivity: new Date(),
       },
       {
-        id: 'chat-messages-realtime',
-        table: 'chat_messages',
-        status: 'connected',
+        id: "chat-messages-realtime",
+        table: "chat_messages",
+        status: "connected",
         lastActivity: new Date(Date.now() - 30000),
       },
       {
-        id: 'trip-collaborators-realtime',
-        table: 'trip_collaborators',
-        status: 'disconnected',
-        error: new Error('Connection timeout'),
+        id: "trip-collaborators-realtime",
+        table: "trip_collaborators",
+        status: "disconnected",
+        error: new Error("Connection timeout"),
       },
     ];
 
     setConnections(mockConnections);
     setConnectionStatus({
-      isConnected: mockConnections.some(c => c.status === 'connected'),
-      lastError: mockConnections.find(c => c.error)?.error || null,
-      connectionCount: mockConnections.filter(c => c.status === 'connected').length,
+      isConnected: mockConnections.some((c) => c.status === "connected"),
+      lastError: mockConnections.find((c) => c.error)?.error || null,
+      connectionCount: mockConnections.filter((c) => c.status === "connected").length,
       reconnectAttempts: 0,
       lastReconnectAt: null,
     });
@@ -88,16 +94,18 @@ export function ConnectionStatusMonitor() {
     setIsReconnecting(true);
     try {
       // Simulate reconnection delay
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      setConnections(prev => prev.map(conn => ({
-        ...conn,
-        status: 'connected' as const,
-        error: undefined,
-        lastActivity: new Date(),
-      })));
-      
-      setConnectionStatus(prev => ({
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+
+      setConnections((prev) =>
+        prev.map((conn) => ({
+          ...conn,
+          status: "connected" as const,
+          error: undefined,
+          lastActivity: new Date(),
+        }))
+      );
+
+      setConnectionStatus((prev) => ({
         ...prev,
         isConnected: true,
         lastError: null,
@@ -127,22 +135,29 @@ export function ConnectionStatusMonitor() {
     return <WifiOff className="h-4 w-4 text-red-500" />;
   };
 
-  const getStatusBadge = (status: RealtimeConnection['status']) => {
+  const getStatusBadge = (status: RealtimeConnection["status"]) => {
     switch (status) {
-      case 'connected':
-        return <Badge variant="default" className="bg-green-500">Connected</Badge>;
-      case 'disconnected':
+      case "connected":
+        return (
+          <Badge variant="default" className="bg-green-500">
+            Connected
+          </Badge>
+        );
+      case "disconnected":
         return <Badge variant="destructive">Disconnected</Badge>;
-      case 'error':
+      case "error":
         return <Badge variant="destructive">Error</Badge>;
-      case 'reconnecting':
+      case "reconnecting":
         return <Badge variant="secondary">Reconnecting...</Badge>;
     }
   };
 
-  const connectionHealthPercentage = connections.length > 0 
-    ? (connections.filter(c => c.status === 'connected').length / connections.length) * 100 
-    : 0;
+  const connectionHealthPercentage =
+    connections.length > 0
+      ? (connections.filter((c) => c.status === "connected").length /
+          connections.length) *
+        100
+      : 0;
 
   return (
     <Card className="w-full max-w-md">
@@ -160,7 +175,7 @@ export function ConnectionStatusMonitor() {
             <Activity className="h-4 w-4" />
           </Button>
         </div>
-        
+
         <CardDescription className="text-xs">
           {connectionStatus.connectionCount} of {connections.length} connections active
         </CardDescription>
@@ -189,7 +204,7 @@ export function ConnectionStatusMonitor() {
                 ) : (
                   <RefreshCw className="h-3 w-3" />
                 )}
-                {isReconnecting ? 'Reconnecting...' : 'Reconnect All'}
+                {isReconnecting ? "Reconnecting..." : "Reconnect All"}
               </Button>
             </div>
 
@@ -200,14 +215,14 @@ export function ConnectionStatusMonitor() {
                   className="flex items-center justify-between p-2 rounded-lg bg-muted/50"
                 >
                   <div className="flex items-center space-x-2">
-                    {connection.status === 'connected' ? (
+                    {connection.status === "connected" ? (
                       <CheckCircle className="h-3 w-3 text-green-500" />
                     ) : (
                       <XCircle className="h-3 w-3 text-red-500" />
                     )}
                     <span className="text-xs font-medium">{connection.table}</span>
                   </div>
-                  
+
                   <div className="flex items-center space-x-2">
                     {getStatusBadge(connection.status)}
                   </div>
@@ -231,7 +246,7 @@ export function ConnectionStatusMonitor() {
             )}
 
             <Separator />
-            
+
             <div className="grid grid-cols-2 gap-4 text-xs">
               <div>
                 <div className="font-medium">Reconnect Attempts</div>
@@ -242,10 +257,9 @@ export function ConnectionStatusMonitor() {
               <div>
                 <div className="font-medium">Last Reconnect</div>
                 <div className="text-muted-foreground">
-                  {connectionStatus.lastReconnectAt 
+                  {connectionStatus.lastReconnectAt
                     ? connectionStatus.lastReconnectAt.toLocaleTimeString()
-                    : 'Never'
-                  }
+                    : "Never"}
                 </div>
               </div>
             </div>
@@ -267,7 +281,7 @@ export function ConnectionStatusIndicator() {
     <div className="flex items-center space-x-2">
       {getStatusIcon(isConnected, hasError)}
       <span className="text-xs text-muted-foreground">
-        {isConnected ? 'Live' : 'Offline'}
+        {isConnected ? "Live" : "Offline"}
       </span>
     </div>
   );

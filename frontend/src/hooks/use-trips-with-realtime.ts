@@ -1,168 +1,96 @@
-'use client';
+/**
+ * Hook for trips with real-time updates and connection monitoring
+ * Combines trip data fetching with real-time subscription management
+ */
 
-import { useEffect } from 'react';
-import { useTripStore } from '@/stores/trip-store';
-import { useSupabaseRealtime } from '@/hooks/use-supabase-realtime';
-import { useAuth } from '@/contexts/auth-context';
+import { useMemo } from "react";
+import { useAuth } from "@/contexts/auth-context";
+import { useTrips, useTripData } from "./use-trips-supabase";
+import { useTripRealtime } from "./use-supabase-realtime";
 
 /**
- * Hook that integrates the trip store with real-time Supabase updates
- * Automatically loads trips and sets up real-time subscriptions
+ * Enhanced hook that combines trip data with real-time updates
+ * Provides both data and connection status monitoring
  */
 export function useTripsWithRealtime() {
-  const { user, isAuthenticated } = useAuth();
-  const { trips, isLoading, error, loadTrips, setTrips, clearError } = useTripStore();
+  const { user } = useAuth();
+  const { trips, isLoading, error, refetch } = useTrips();
   
-  // Set up real-time subscription for trips
-  const { subscribe, unsubscribe, isConnected, errors } = useSupabaseRealtime({
-    table: 'trips',
-    filter: user?.id ? `user_id=eq.${user.id}` : undefined,
-    enabled: isAuthenticated && !!user?.id,
-    onInsert: (payload) => {
-      console.log('New trip created:', payload.new);
-      // Trip will be added through the store's createTrip method
-      // which already updates the local state
-    },
-    onUpdate: (payload) => {
-      console.log('Trip updated:', payload.new);
-      // Update the trip in the store
-      const updatedTrip = payload.new;
-      const frontendTrip = {
-        id: updatedTrip.id.toString(),
-        uuid_id: updatedTrip.uuid_id,
-        user_id: updatedTrip.user_id,
-        title: updatedTrip.title,
-        name: updatedTrip.title, // Legacy compatibility
-        description: updatedTrip.description,
-        start_date: updatedTrip.start_date,
-        startDate: updatedTrip.start_date, // Frontend compatibility
-        end_date: updatedTrip.end_date,
-        endDate: updatedTrip.end_date, // Frontend compatibility
-        destinations: [], // Keep existing destinations
-        budget: updatedTrip.budget,
-        enhanced_budget: updatedTrip.budget_breakdown ? {
-          total: updatedTrip.budget_breakdown.total || updatedTrip.budget || 0,
-          currency: updatedTrip.currency || "USD",
-          spent: updatedTrip.budget_breakdown.spent || updatedTrip.spent_amount || 0,
-          breakdown: updatedTrip.budget_breakdown.breakdown || {},
-        } : undefined,
-        currency: updatedTrip.currency,
-        spent_amount: updatedTrip.spent_amount,
-        visibility: updatedTrip.visibility,
-        isPublic: updatedTrip.visibility !== "private", // Legacy compatibility
-        tags: updatedTrip.tags || [],
-        preferences: updatedTrip.preferences || {},
-        status: updatedTrip.status,
-        created_at: updatedTrip.created_at,
-        createdAt: updatedTrip.created_at, // Frontend compatibility
-        updated_at: updatedTrip.updated_at,
-        updatedAt: updatedTrip.updated_at, // Frontend compatibility
-      };
-
-      // Update the trips array
-      const currentTrips = useTripStore.getState().trips;
-      const updatedTrips = currentTrips.map(trip => 
-        trip.id === frontendTrip.id 
-          ? { ...trip, ...frontendTrip }
-          : trip
-      );
-      setTrips(updatedTrips);
-    },
-    onDelete: (payload) => {
-      console.log('Trip deleted:', payload.old);
-      // Remove the trip from the store
-      const deletedTrip = payload.old;
-      const currentTrips = useTripStore.getState().trips;
-      const filteredTrips = currentTrips.filter(trip => 
-        trip.id !== deletedTrip.id.toString()
-      );
-      setTrips(filteredTrips);
-    },
-  });
-
-  // Load trips on mount and when user changes
-  useEffect(() => {
-    if (isAuthenticated && user?.id && trips.length === 0 && !isLoading) {
-      loadTrips();
-    }
-  }, [isAuthenticated, user?.id, trips.length, isLoading, loadTrips]);
-
-  // Subscribe to real-time updates when authenticated
-  useEffect(() => {
-    if (isAuthenticated && user?.id) {
-      subscribe();
-      return () => {
-        unsubscribe();
-      };
-    }
-  }, [isAuthenticated, user?.id, subscribe, unsubscribe]);
+  // Set up real-time subscription for all user trips
+  const realtimeStatus = useTripRealtime(null); // Listen to all trip changes for this user
 
   return {
     trips,
     isLoading,
     error,
-    realtimeStatus: {
-      isConnected,
-      errors,
-    },
-    actions: {
-      loadTrips,
-      clearError,
-      refreshTrips: loadTrips, // Alias for consistency
-    },
+    refetch,
+    isConnected: realtimeStatus.isConnected,
+    connectionErrors: realtimeStatus.errors,
+    realtimeStatus,
   };
 }
 
 /**
- * Hook for getting a specific trip with real-time updates
+ * Hook for individual trip with real-time updates
  */
-export function useTripWithRealtime(tripId: string) {
-  const { trips } = useTripStore();
-  const trip = trips.find(t => t.id === tripId);
-
-  // Set up real-time subscription for this specific trip
-  const { isConnected, errors } = useSupabaseRealtime({
-    table: 'trips',
-    filter: `id=eq.${tripId}`,
-    enabled: !!tripId,
-    onUpdate: (payload) => {
-      // This will be handled by the main subscription
-      // but we could add trip-specific logic here
-      console.log('Specific trip updated:', payload.new);
-    },
-  });
+export function useTripWithRealtime(tripId: number | null) {
+  const { user } = useAuth();
+  const { trip, isLoading, error, refetch } = useTripData(tripId);
+  const realtimeStatus = useTripRealtime(tripId);
 
   return {
     trip,
-    isConnected,
-    errors,
+    isLoading,
+    error,
+    refetch,
+    isConnected: realtimeStatus.isConnected,
+    connectionErrors: realtimeStatus.errors,
+    realtimeStatus,
   };
 }
 
 /**
- * Hook for managing trip collaboration with real-time updates
+ * Connection status summary for trips real-time functionality
  */
-export function useTripCollaboration(tripId: string) {
+export function useTripsConnectionStatus() {
   const { user } = useAuth();
+  const realtimeStatus = useTripRealtime(null);
+
+  const connectionStatus = useMemo(() => {
+    return {
+      isConnected: realtimeStatus.isConnected,
+      hasErrors: realtimeStatus.errors.length > 0,
+      errorCount: realtimeStatus.errors.length,
+      lastError: realtimeStatus.errors[realtimeStatus.errors.length - 1] || null,
+    };
+  }, [realtimeStatus]);
+
+  return connectionStatus;
+}
+
+/**
+ * Hook for trip collaboration management with real-time updates
+ */
+export function useTripCollaboration(tripId: string | number) {
+  const { user } = useAuth();
+  const { useTripCollaborators, useAddTripCollaborator, useRemoveTripCollaborator } = require("./use-trips-supabase");
   
-  // Set up real-time subscription for trip collaborators
-  const { isConnected, errors } = useSupabaseRealtime({
-    table: 'trip_collaborators',
-    filter: `trip_id=eq.${tripId}`,
-    enabled: !!tripId,
-    onInsert: (payload) => {
-      console.log('New collaborator added:', payload.new);
-      // Could trigger a notification or update UI
-    },
-    onDelete: (payload) => {
-      console.log('Collaborator removed:', payload.old);
-      // Handle collaborator removal
-    },
-  });
+  const numericTripId = typeof tripId === "string" ? parseInt(tripId, 10) : tripId;
+  
+  const { collaborators, isLoading, error, refetch } = useTripCollaborators(numericTripId);
+  const addCollaborator = useAddTripCollaborator();
+  const removeCollaborator = useRemoveTripCollaborator();
+  const realtimeStatus = useTripRealtime(numericTripId);
 
   return {
-    isConnected,
-    errors,
-    currentUserId: user?.id,
+    collaborators,
+    isLoading,
+    error,
+    refetch,
+    addCollaborator,
+    removeCollaborator,
+    isConnected: realtimeStatus.isConnected,
+    connectionErrors: realtimeStatus.errors,
+    realtimeStatus,
   };
 }

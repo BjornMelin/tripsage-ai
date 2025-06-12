@@ -29,7 +29,7 @@ type FilterOption = "all" | "draft" | "upcoming" | "active" | "completed";
 
 export default function TripsPage() {
   const { createTrip, deleteTrip } = useTripStore();
-  const { trips, isLoading, error, realtimeStatus, actions } = useTripsWithRealtime();
+  const { trips, isLoading, error, realtimeStatus } = useTripsWithRealtime();
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<SortOption>("date");
   const [filterBy, setFilterBy] = useState<FilterOption>("all");
@@ -41,10 +41,12 @@ export default function TripsPage() {
     // Apply search filter
     if (searchQuery) {
       filtered = filtered.filter(
-        (trip) =>
-          (trip.title || trip.name || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (trip: any) =>
+          (trip.title || trip.name || "")
+            .toLowerCase()
+            .includes(searchQuery.toLowerCase()) ||
           trip.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          trip.destinations.some((dest) =>
+          trip.destinations.some((dest: any) =>
             dest.name.toLowerCase().includes(searchQuery.toLowerCase())
           )
       );
@@ -52,10 +54,16 @@ export default function TripsPage() {
 
     // Apply status filter
     if (filterBy !== "all") {
-      filtered = filtered.filter((trip) => {
+      filtered = filtered.filter((trip: any) => {
         const now = new Date();
-        const startDate = (trip.startDate || trip.start_date) ? new Date(trip.startDate || trip.start_date || "") : null;
-        const endDate = (trip.endDate || trip.end_date) ? new Date(trip.endDate || trip.end_date || "") : null;
+        const startDate =
+          trip.startDate || trip.start_date
+            ? new Date(trip.startDate || trip.start_date || "")
+            : null;
+        const endDate =
+          trip.endDate || trip.end_date
+            ? new Date(trip.endDate || trip.end_date || "")
+            : null;
 
         switch (filterBy) {
           case "draft":
@@ -73,12 +81,15 @@ export default function TripsPage() {
     }
 
     // Apply sorting
-    return filtered.sort((a, b) => {
+    return filtered.sort((a: any, b: any) => {
       switch (sortBy) {
         case "name":
           return (a.title || a.name || "").localeCompare(b.title || b.name || "");
         case "date":
-          return new Date(b.createdAt || b.created_at || "").getTime() - new Date(a.createdAt || a.created_at || "").getTime();
+          return (
+            new Date(b.createdAt || b.created_at || "").getTime() -
+            new Date(a.createdAt || a.created_at || "").getTime()
+          );
         case "budget":
           return (b.budget || 0) - (a.budget || 0);
         case "destinations":
@@ -107,9 +118,15 @@ export default function TripsPage() {
   const getStatusCounts = () => {
     const now = new Date();
     return trips.reduce(
-      (counts, trip) => {
-        const startDate = (trip.startDate || trip.start_date) ? new Date(trip.startDate || trip.start_date || "") : null;
-        const endDate = (trip.endDate || trip.end_date) ? new Date(trip.endDate || trip.end_date || "") : null;
+      (counts: any, trip: any) => {
+        const startDate =
+          trip.startDate || trip.start_date
+            ? new Date(trip.startDate || trip.start_date || "")
+            : null;
+        const endDate =
+          trip.endDate || trip.end_date
+            ? new Date(trip.endDate || trip.end_date || "")
+            : null;
 
         if (!startDate || !endDate) {
           counts.draft++;
@@ -132,7 +149,7 @@ export default function TripsPage() {
   // Handle error state
   useEffect(() => {
     if (error) {
-      console.error('Trips error:', error);
+      console.error("Trips error:", error);
     }
   }, [error]);
 
@@ -343,7 +360,7 @@ export default function TripsPage() {
           {filteredAndSortedTrips.map((trip) => (
             <TripCard
               key={trip.id}
-              trip={trip}
+              trip={trip as any}
               onDelete={handleDeleteTrip}
               className={viewMode === "list" ? "flex-row" : ""}
             />

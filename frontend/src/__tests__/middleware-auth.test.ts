@@ -10,14 +10,21 @@ vi.mock("@supabase/ssr", () => ({
 
 // Helper function to create a properly mocked NextRequest
 function createMockNextRequest(url: string, headers: Record<string, string> = {}) {
+  const mockCookies = {
+    getAll: vi.fn().mockReturnValue([]),
+    set: vi.fn(),
+    get: vi.fn(),
+    delete: vi.fn(),
+    has: vi.fn(),
+    forEach: vi.fn(),
+    clear: vi.fn(),
+  };
+  
   const request = {
     url,
     nextUrl: new URL(url),
     headers: new Headers(headers),
-    cookies: {
-      getAll: vi.fn().mockReturnValue([]),
-      set: vi.fn(),
-    },
+    cookies: mockCookies,
   } as any;
 
   return request as NextRequest;
@@ -42,7 +49,7 @@ describe("Middleware - updateSession", () => {
       { name: "sb-access-token", value: "token123" },
       { name: "sb-refresh-token", value: "refresh123" },
     ];
-    mockRequest.cookies.getAll.mockReturnValue(mockCookies);
+    (mockRequest.cookies.getAll as any).mockReturnValue(mockCookies);
 
     // Mock Supabase client
     const mockSupabase = {
@@ -92,7 +99,7 @@ describe("Middleware - updateSession", () => {
   it("should handle missing user gracefully", async () => {
     const mockRequest = createMockNextRequest("http://localhost:3000/dashboard");
 
-    mockRequest.cookies.getAll.mockReturnValue([]);
+    (mockRequest.cookies.getAll as any).mockReturnValue([]);
 
     const mockSupabase = {
       auth: {
@@ -114,7 +121,7 @@ describe("Middleware - updateSession", () => {
   it("should handle auth errors gracefully", async () => {
     const mockRequest = createMockNextRequest("http://localhost:3000/dashboard");
 
-    mockRequest.cookies.getAll.mockReturnValue([]);
+    (mockRequest.cookies.getAll as any).mockReturnValue([]);
 
     const mockSupabase = {
       auth: {
@@ -142,7 +149,7 @@ describe("Middleware - updateSession", () => {
       { name: "other-cookie", value: "other-value" },
     ];
 
-    mockRequest.cookies.getAll.mockReturnValue(mockCookies);
+    (mockRequest.cookies.getAll as any).mockReturnValue(mockCookies);
 
     const mockSupabase = {
       auth: {

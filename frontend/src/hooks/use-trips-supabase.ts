@@ -5,16 +5,29 @@
 
 import { useMemo } from "react";
 import { useUser } from "@supabase/auth-helpers-react";
-import { useSupabaseQuery, useSupabaseInsert, useSupabaseUpdate, useSupabaseDelete } from "./use-supabase-query";
-import { useTripCollaborationRealtime, useTripCollaboratorRealtime } from "./use-supabase-realtime";
-import type { Trip, InsertTables, UpdateTables, TripCollaborator } from "@/lib/supabase/database.types";
+import {
+  useSupabaseQuery,
+  useSupabaseInsert,
+  useSupabaseUpdate,
+  useSupabaseDelete,
+} from "./use-supabase-query";
+import {
+  useTripCollaborationRealtime,
+  useTripCollaboratorRealtime,
+} from "./use-supabase-realtime";
+import type {
+  Trip,
+  InsertTables,
+  UpdateTables,
+  TripCollaborator,
+} from "@/lib/supabase/database.types";
 
 /**
  * Hook for fetching user's trips with real-time updates
  */
 export function useTrips() {
   const user = useUser();
-  
+
   const tripsQuery = useSupabaseQuery(
     "trips",
     (query) => query.eq("user_id", user?.id).order("created_at", { ascending: false }),
@@ -107,10 +120,11 @@ export function useDeleteTrip() {
  */
 export function useSharedTrips() {
   const user = useUser();
-  
+
   const collaboratorsQuery = useSupabaseQuery(
     "trip_collaborators",
-    (query) => query.eq("user_id", user?.id).select(`
+    (query) =>
+      query.eq("user_id", user?.id).select(`
       id,
       permission_level,
       added_at,
@@ -133,13 +147,15 @@ export function useSharedTrips() {
   );
 
   const sharedTrips = useMemo(() => {
-    return collaboratorsQuery.data?.map((collab: any) => ({
-      ...collab.trips,
-      collaborator_info: {
-        permission_level: collab.permission_level,
-        added_at: collab.added_at,
-      },
-    })) || [];
+    return (
+      collaboratorsQuery.data?.map((collab: any) => ({
+        ...collab.trips,
+        collaborator_info: {
+          permission_level: collab.permission_level,
+          added_at: collab.added_at,
+        },
+      })) || []
+    );
   }, [collaboratorsQuery.data]);
 
   return {
@@ -156,7 +172,8 @@ export function useSharedTrips() {
 export function useTripCollaborators(tripId: number | null) {
   const collaboratorsQuery = useSupabaseQuery(
     "trip_collaborators",
-    (query) => query.eq("trip_id", tripId).select(`
+    (query) =>
+      query.eq("trip_id", tripId).select(`
       id,
       user_id,
       permission_level,
@@ -253,10 +270,16 @@ export function useTripData(tripId: number | null) {
     accommodations: accommodationsQuery.data || [],
     itinerary: itineraryQuery.data || [],
     transportation: transportationQuery.data || [],
-    isLoading: flightsQuery.isLoading || accommodationsQuery.isLoading || 
-               itineraryQuery.isLoading || transportationQuery.isLoading,
-    error: flightsQuery.error || accommodationsQuery.error || 
-           itineraryQuery.error || transportationQuery.error,
+    isLoading:
+      flightsQuery.isLoading ||
+      accommodationsQuery.isLoading ||
+      itineraryQuery.isLoading ||
+      transportationQuery.isLoading,
+    error:
+      flightsQuery.error ||
+      accommodationsQuery.error ||
+      itineraryQuery.error ||
+      transportationQuery.error,
   };
 }
 
@@ -268,14 +291,24 @@ export function useTripStats(tripId: number | null) {
 
   const stats = useMemo(() => {
     const totalFlightCost = flights.reduce((sum, flight) => sum + flight.price, 0);
-    const totalAccommodationCost = accommodations.reduce((sum, acc) => sum + acc.total_price, 0);
-    const totalTransportationCost = transportation.reduce((sum, trans) => sum + trans.price, 0);
+    const totalAccommodationCost = accommodations.reduce(
+      (sum, acc) => sum + acc.total_price,
+      0
+    );
+    const totalTransportationCost = transportation.reduce(
+      (sum, trans) => sum + trans.price,
+      0
+    );
     const totalItineraryCost = itinerary.reduce((sum, item) => sum + item.price, 0);
-    
-    const totalCost = totalFlightCost + totalAccommodationCost + totalTransportationCost + totalItineraryCost;
-    
-    const upcomingItems = itinerary.filter(item => 
-      item.start_time && new Date(item.start_time) > new Date()
+
+    const totalCost =
+      totalFlightCost +
+      totalAccommodationCost +
+      totalTransportationCost +
+      totalItineraryCost;
+
+    const upcomingItems = itinerary.filter(
+      (item) => item.start_time && new Date(item.start_time) > new Date()
     ).length;
 
     return {

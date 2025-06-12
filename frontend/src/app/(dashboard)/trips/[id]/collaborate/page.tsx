@@ -1,30 +1,42 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { useParams } from 'next/navigation';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
-import { useToast } from '@/components/ui/use-toast';
-import { 
-  Users, 
-  UserPlus, 
-  Mail, 
-  Crown, 
+import { useState } from "react";
+import { useParams } from "next/navigation";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { useToast } from "@/components/ui/use-toast";
+import {
+  Users,
+  UserPlus,
+  Mail,
+  Crown,
   Share2,
   Copy,
   Clock,
   Edit,
   Eye,
-  Trash2
-} from 'lucide-react';
+  Trash2,
+} from "lucide-react";
 
-import { OptimisticTripUpdates, CollaborationIndicator } from '@/components/features/realtime/optimistic-trip-updates';
-import { ConnectionStatusMonitor } from '@/components/features/realtime/connection-status-monitor';
-import { useTripWithRealtime, useTripCollaboration } from '@/hooks/use-trips-with-realtime';
+import {
+  OptimisticTripUpdates,
+  CollaborationIndicator,
+} from "@/components/features/realtime/optimistic-trip-updates";
+import { ConnectionStatusMonitor } from "@/components/features/realtime/connection-status-monitor";
+import {
+  useTripWithRealtime,
+  useTripCollaboration,
+} from "@/hooks/use-trips-with-realtime";
 
 interface Collaborator {
   id: string;
@@ -32,8 +44,8 @@ interface Collaborator {
   trip_id: string;
   email: string;
   name?: string;
-  role: 'owner' | 'editor' | 'viewer';
-  status: 'pending' | 'accepted' | 'declined';
+  role: "owner" | "editor" | "viewer";
+  status: "pending" | "accepted" | "declined";
   permissions: {
     can_edit: boolean;
     can_invite: boolean;
@@ -47,23 +59,23 @@ export default function TripCollaborationPage() {
   const params = useParams();
   const tripId = params.id as string;
   const { toast } = useToast();
-  
-  const { trip, isConnected, errors } = useTripWithRealtime(tripId);
-  const { currentUserId } = useTripCollaboration(tripId);
-  
-  const [inviteEmail, setInviteEmail] = useState('');
+
+  const { trip, isConnected, connectionErrors } = useTripWithRealtime(parseInt(tripId, 10));
+  const collaboration = useTripCollaboration(tripId);
+
+  const [inviteEmail, setInviteEmail] = useState("");
   const [isInviting, setIsInviting] = useState(false);
-  
+
   // Mock collaborators data - in real implementation, this would come from a hook
   const [collaborators] = useState<Collaborator[]>([
     {
-      id: '1',
-      user_id: 'user-123',
+      id: "1",
+      user_id: "user-123",
       trip_id: tripId,
-      email: 'alice@example.com',
-      name: 'Alice Johnson',
-      role: 'owner',
-      status: 'accepted',
+      email: "alice@example.com",
+      name: "Alice Johnson",
+      role: "owner",
+      status: "accepted",
       permissions: {
         can_edit: true,
         can_invite: true,
@@ -73,13 +85,13 @@ export default function TripCollaborationPage() {
       accepted_at: new Date().toISOString(),
     },
     {
-      id: '2',
-      user_id: 'user-456',
+      id: "2",
+      user_id: "user-456",
       trip_id: tripId,
-      email: 'bob@example.com',
-      name: 'Bob Smith',
-      role: 'editor',
-      status: 'accepted',
+      email: "bob@example.com",
+      name: "Bob Smith",
+      role: "editor",
+      status: "accepted",
       permissions: {
         can_edit: true,
         can_invite: false,
@@ -89,12 +101,12 @@ export default function TripCollaborationPage() {
       accepted_at: new Date(Date.now() - 86400000).toISOString(),
     },
     {
-      id: '3',
-      user_id: 'user-789',
+      id: "3",
+      user_id: "user-789",
       trip_id: tripId,
-      email: 'charlie@example.com',
-      role: 'viewer',
-      status: 'pending',
+      email: "charlie@example.com",
+      role: "viewer",
+      status: "pending",
       permissions: {
         can_edit: false,
         can_invite: false,
@@ -117,14 +129,14 @@ export default function TripCollaborationPage() {
     setIsInviting(true);
     try {
       // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
       toast({
         title: "Invitation Sent",
         description: `Invitation sent to ${inviteEmail}`,
       });
-      
-      setInviteEmail('');
+
+      setInviteEmail("");
     } catch (error) {
       toast({
         title: "Invitation Failed",
@@ -147,11 +159,11 @@ export default function TripCollaborationPage() {
 
   const getRoleIcon = (role: string) => {
     switch (role) {
-      case 'owner':
+      case "owner":
         return <Crown className="h-4 w-4 text-yellow-500" />;
-      case 'editor':
+      case "editor":
         return <Edit className="h-4 w-4 text-blue-500" />;
-      case 'viewer':
+      case "viewer":
         return <Eye className="h-4 w-4 text-gray-500" />;
       default:
         return <Users className="h-4 w-4" />;
@@ -160,11 +172,15 @@ export default function TripCollaborationPage() {
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'accepted':
-        return <Badge variant="default" className="bg-green-500">Active</Badge>;
-      case 'pending':
+      case "accepted":
+        return (
+          <Badge variant="default" className="bg-green-500">
+            Active
+          </Badge>
+        );
+      case "pending":
         return <Badge variant="secondary">Pending</Badge>;
-      case 'declined':
+      case "declined":
         return <Badge variant="destructive">Declined</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
@@ -191,7 +207,9 @@ export default function TripCollaborationPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Collaborate on {trip.title || trip.name}</h1>
+          <h1 className="text-3xl font-bold">
+            Collaborate on {trip.title || trip.name}
+          </h1>
           <p className="text-muted-foreground">
             Manage collaborators and real-time editing
           </p>
@@ -216,7 +234,7 @@ export default function TripCollaborationPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <OptimisticTripUpdates tripId={parseInt(tripId)} />
+              <OptimisticTripUpdates tripId={Number.parseInt(tripId)} />
             </CardContent>
           </Card>
 
@@ -232,7 +250,7 @@ export default function TripCollaborationPage() {
                 Manage who can access and edit this trip
               </CardDescription>
             </CardHeader>
-            
+
             <CardContent className="space-y-6">
               {/* Invite New Collaborator */}
               <div className="space-y-4">
@@ -245,17 +263,14 @@ export default function TripCollaborationPage() {
                     value={inviteEmail}
                     onChange={(e) => setInviteEmail(e.target.value)}
                     onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
+                      if (e.key === "Enter") {
                         handleInviteCollaborator();
                       }
                     }}
                   />
-                  <Button 
-                    onClick={handleInviteCollaborator} 
-                    disabled={isInviting}
-                  >
+                  <Button onClick={handleInviteCollaborator} disabled={isInviting}>
                     <UserPlus className="h-4 w-4 mr-2" />
-                    {isInviting ? 'Inviting...' : 'Invite'}
+                    {isInviting ? "Inviting..." : "Invite"}
                   </Button>
                 </div>
               </div>
@@ -268,7 +283,7 @@ export default function TripCollaborationPage() {
                 <div className="flex space-x-2">
                   <Input
                     readOnly
-                    value={`${typeof window !== 'undefined' ? window.location.origin : ''}/trips/${tripId}/share`}
+                    value={`${typeof window !== "undefined" ? window.location.origin : ""}/trips/${tripId}/share`}
                     className="bg-muted"
                   />
                   <Button variant="outline" onClick={handleCopyShareLink}>
@@ -302,7 +317,9 @@ export default function TripCollaborationPage() {
                               {collaborator.name || collaborator.email}
                             </span>
                             {collaborator.user_id === currentUserId && (
-                              <Badge variant="outline" className="text-xs">You</Badge>
+                              <Badge variant="outline" className="text-xs">
+                                You
+                              </Badge>
                             )}
                           </div>
                           <div className="flex items-center space-x-2 text-sm text-muted-foreground">
@@ -315,11 +332,11 @@ export default function TripCollaborationPage() {
                           </div>
                         </div>
                       </div>
-                      
+
                       <div className="flex items-center space-x-2">
                         {getStatusBadge(collaborator.status)}
-                        
-                        {collaborator.role !== 'owner' && (
+
+                        {collaborator.role !== "owner" && (
                           <Button variant="ghost" size="sm">
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -336,7 +353,7 @@ export default function TripCollaborationPage() {
         {/* Sidebar */}
         <div className="space-y-6">
           {/* Active Collaborators */}
-          <CollaborationIndicator tripId={parseInt(tripId)} />
+          <CollaborationIndicator tripId={Number.parseInt(tripId)} />
 
           {/* Recent Activity */}
           <Card>
@@ -380,21 +397,20 @@ export default function TripCollaborationPage() {
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label>Visibility</Label>
-                <Badge variant="secondary">{trip.visibility || 'Private'}</Badge>
+                <Badge variant="secondary">{trip.visibility || "Private"}</Badge>
                 <p className="text-xs text-muted-foreground">
-                  {trip.visibility === 'public' 
-                    ? 'Anyone can view this trip'
-                    : trip.visibility === 'shared'
-                    ? 'Only invited collaborators can view'
-                    : 'Only you can view this trip'
-                  }
+                  {trip.visibility === "public"
+                    ? "Anyone can view this trip"
+                    : trip.visibility === "shared"
+                      ? "Only invited collaborators can view"
+                      : "Only you can view this trip"}
                 </p>
               </div>
-              
+
               <div className="space-y-2">
                 <Label>Real-time Updates</Label>
                 <Badge variant={isConnected ? "default" : "destructive"}>
-                  {isConnected ? 'Connected' : 'Disconnected'}
+                  {isConnected ? "Connected" : "Disconnected"}
                 </Badge>
                 <p className="text-xs text-muted-foreground">
                   Changes are synced automatically when connected

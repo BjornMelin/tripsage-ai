@@ -1,13 +1,13 @@
 /**
  * Schema adapters for frontend API compatibility.
- * 
+ *
  * Handles conversion between different field naming conventions:
  * - Backend snake_case vs Frontend camelCase
  * - Legacy field names vs current schema
  * - Missing field defaults
  */
 
-import { Trip, Destination } from '@/stores/trip-store';
+import type { Trip, Destination } from "@/stores/trip-store";
 
 export interface ApiTrip {
   id: string;
@@ -18,7 +18,7 @@ export interface ApiTrip {
   end_date: string;
   destinations: ApiDestination[];
   budget?: number;
-  visibility: 'private' | 'shared' | 'public';
+  visibility: "private" | "shared" | "public";
   tags: string[];
   preferences: Record<string, any>;
   status: string;
@@ -57,7 +57,7 @@ export class FrontendSchemaAdapter {
       destinations: apiTrip.destinations.map(this.apiDestinationToFrontend),
       budget: apiTrip.budget,
       visibility: apiTrip.visibility,
-      isPublic: apiTrip.visibility === 'public', // Legacy field
+      isPublic: apiTrip.visibility === "public", // Legacy field
       tags: apiTrip.tags,
       preferences: apiTrip.preferences,
       status: apiTrip.status,
@@ -77,14 +77,14 @@ export class FrontendSchemaAdapter {
       user_id: trip.user_id,
       title: trip.title || trip.name, // Use title if available, fallback to name
       description: trip.description,
-      start_date: trip.start_date || trip.startDate || '',
-      end_date: trip.end_date || trip.endDate || '',
+      start_date: trip.start_date || trip.startDate || "",
+      end_date: trip.end_date || trip.endDate || "",
       destinations: trip.destinations.map(this.frontendDestinationToApi),
       budget: trip.budget,
-      visibility: trip.visibility || (trip.isPublic ? 'public' : 'private'),
+      visibility: trip.visibility || (trip.isPublic ? "public" : "private"),
       tags: trip.tags || [],
       preferences: trip.preferences || {},
-      status: trip.status || 'planning',
+      status: trip.status || "planning",
     };
   }
 
@@ -95,7 +95,7 @@ export class FrontendSchemaAdapter {
     return {
       id: `${apiDest.name}-${Date.now()}`, // Generate ID if not provided
       name: apiDest.name,
-      country: apiDest.country || '',
+      country: apiDest.country || "",
       coordinates: apiDest.coordinates,
       startDate: apiDest.arrival_date,
       endDate: apiDest.departure_date,
@@ -123,22 +123,22 @@ export class FrontendSchemaAdapter {
    */
   static normalizeTrip(trip: Partial<Trip>): Trip {
     return {
-      id: trip.id || '',
-      name: trip.name || trip.title || 'Untitled Trip',
-      title: trip.title || trip.name || 'Untitled Trip',
-      description: trip.description || '',
-      start_date: trip.start_date || trip.startDate || '',
-      end_date: trip.end_date || trip.endDate || '',
-      startDate: trip.startDate || trip.start_date || '',
-      endDate: trip.endDate || trip.end_date || '',
+      id: trip.id || "",
+      name: trip.name || trip.title || "Untitled Trip",
+      title: trip.title || trip.name || "Untitled Trip",
+      description: trip.description || "",
+      start_date: trip.start_date || trip.startDate || "",
+      end_date: trip.end_date || trip.endDate || "",
+      startDate: trip.startDate || trip.start_date || "",
+      endDate: trip.endDate || trip.end_date || "",
       destinations: trip.destinations || [],
       budget: trip.budget || 0,
-      currency: trip.currency || 'USD',
-      visibility: trip.visibility || 'private',
-      isPublic: trip.isPublic || trip.visibility === 'public',
+      currency: trip.currency || "USD",
+      visibility: trip.visibility || "private",
+      isPublic: trip.isPublic || trip.visibility === "public",
       tags: trip.tags || [],
       preferences: trip.preferences || {},
-      status: trip.status || 'planning',
+      status: trip.status || "planning",
       created_at: trip.created_at || trip.createdAt || new Date().toISOString(),
       updated_at: trip.updated_at || trip.updatedAt || new Date().toISOString(),
       createdAt: trip.createdAt || trip.created_at || new Date().toISOString(),
@@ -151,24 +151,24 @@ export class FrontendSchemaAdapter {
    */
   static createEmptyTrip(overrides: Partial<Trip> = {}): Trip {
     const now = new Date().toISOString();
-    
+
     return this.normalizeTrip({
-      id: '',
-      name: 'New Trip',
-      title: 'New Trip',
-      description: '',
-      start_date: '',
-      end_date: '',
-      startDate: '',
-      endDate: '',
+      id: "",
+      name: "New Trip",
+      title: "New Trip",
+      description: "",
+      start_date: "",
+      end_date: "",
+      startDate: "",
+      endDate: "",
       destinations: [],
       budget: 0,
-      currency: 'USD',
-      visibility: 'private',
+      currency: "USD",
+      visibility: "private",
       isPublic: false,
       tags: [],
       preferences: {},
-      status: 'planning',
+      status: "planning",
       created_at: now,
       updated_at: now,
       createdAt: now,
@@ -184,27 +184,27 @@ export class FrontendSchemaAdapter {
     const errors: string[] = [];
 
     if (!trip.name && !trip.title) {
-      errors.push('Trip must have a name or title');
+      errors.push("Trip must have a name or title");
     }
 
     if (!trip.start_date && !trip.startDate) {
-      errors.push('Trip must have a start date');
+      errors.push("Trip must have a start date");
     }
 
     if (!trip.end_date && !trip.endDate) {
-      errors.push('Trip must have an end date');
+      errors.push("Trip must have an end date");
     }
 
     // Validate dates
-    const startDate = new Date(trip.start_date || trip.startDate || '');
-    const endDate = new Date(trip.end_date || trip.endDate || '');
-    
+    const startDate = new Date(trip.start_date || trip.startDate || "");
+    const endDate = new Date(trip.end_date || trip.endDate || "");
+
     if (startDate && endDate && endDate <= startDate) {
-      errors.push('End date must be after start date');
+      errors.push("End date must be after start date");
     }
 
     if (trip.destinations.length === 0) {
-      errors.push('Trip must have at least one destination');
+      errors.push("Trip must have at least one destination");
     }
 
     return {
@@ -219,24 +219,24 @@ export class FrontendSchemaAdapter {
   static handleApiError(error: any): string {
     if (error?.response?.data?.detail) {
       const detail = error.response.data.detail;
-      
+
       // Handle field validation errors
-      if (typeof detail === 'object' && detail.type === 'value_error') {
-        return `Validation error: ${detail.msg || 'Invalid data format'}`;
+      if (typeof detail === "object" && detail.type === "value_error") {
+        return `Validation error: ${detail.msg || "Invalid data format"}`;
       }
-      
+
       if (Array.isArray(detail)) {
-        return detail.map((err: any) => err.msg || err).join(', ');
+        return detail.map((err: any) => err.msg || err).join(", ");
       }
-      
+
       return detail;
     }
-    
+
     if (error?.message) {
       return error.message;
     }
-    
-    return 'An unexpected error occurred';
+
+    return "An unexpected error occurred";
   }
 }
 
@@ -244,13 +244,13 @@ export class FrontendSchemaAdapter {
  * Hook for consistent date formatting across the app
  */
 export function formatTripDate(dateString: string): string {
-  if (!dateString) return '';
-  
+  if (!dateString) return "";
+
   try {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
+    return new Date(dateString).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
     });
   } catch {
     return dateString; // Return original if parsing fails
@@ -262,7 +262,7 @@ export function formatTripDate(dateString: string): string {
  */
 export function calculateTripDuration(startDate: string, endDate: string): number {
   if (!startDate || !endDate) return 0;
-  
+
   try {
     const start = new Date(startDate);
     const end = new Date(endDate);

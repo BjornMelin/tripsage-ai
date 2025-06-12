@@ -12,7 +12,14 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { AlertCircle, CheckCircle2, Copy, Loader2, Shield, Smartphone } from "lucide-react";
+import {
+  AlertCircle,
+  CheckCircle2,
+  Copy,
+  Loader2,
+  Shield,
+  Smartphone,
+} from "lucide-react";
 import React, { useState } from "react";
 
 interface MFASetupProps {
@@ -41,11 +48,12 @@ export function MFASetup({ onComplete, onCancel }: MFASetupProps) {
 
     try {
       // Mock API call - replace with actual implementation
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
       const mockSetupData: MFASetupData = {
         secret: "JBSWY3DPEHPK3PXP",
-        qrCodeUrl: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==",
+        qrCodeUrl:
+          "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==",
         backupCodes: [
           "12345-67890",
           "23456-78901",
@@ -56,9 +64,9 @@ export function MFASetup({ onComplete, onCancel }: MFASetupProps) {
           "78901-23456",
           "89012-34567",
           "90123-45678",
-          "01234-56789"
+          "01234-56789",
         ],
-        manualEntryKey: "JBSWY3DPEHPK3PXP"
+        manualEntryKey: "JBSWY3DPEHPK3PXP",
       };
 
       setSetupData(mockSetupData);
@@ -81,8 +89,8 @@ export function MFASetup({ onComplete, onCancel }: MFASetupProps) {
 
     try {
       // Mock API call - replace with actual implementation
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
       // Mock verification (accept any 6-digit code for demo)
       if (verificationCode.length === 6) {
         setStep("complete");
@@ -116,7 +124,8 @@ export function MFASetup({ onComplete, onCancel }: MFASetupProps) {
           </div>
           <CardTitle>Enable Two-Factor Authentication</CardTitle>
           <CardDescription>
-            Add an extra layer of security to your account with two-factor authentication
+            Add an extra layer of security to your account with two-factor
+            authentication
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -132,7 +141,7 @@ export function MFASetup({ onComplete, onCancel }: MFASetupProps) {
                 </p>
               </div>
             </div>
-            
+
             <div className="flex items-start space-x-3">
               <div className="flex-shrink-0 w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-sm font-semibold">
                 2
@@ -144,7 +153,7 @@ export function MFASetup({ onComplete, onCancel }: MFASetupProps) {
                 </p>
               </div>
             </div>
-            
+
             <div className="flex items-start space-x-3">
               <div className="flex-shrink-0 w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-sm font-semibold">
                 3

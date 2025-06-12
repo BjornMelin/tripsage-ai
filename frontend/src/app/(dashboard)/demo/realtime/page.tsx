@@ -1,123 +1,132 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-  Activity, 
-  Wifi, 
-  Users, 
+import { useState } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Activity,
+  Wifi,
+  Users,
   MessageSquare,
   FileText,
   Upload,
   Zap,
-  CheckCircle
-} from 'lucide-react';
+  CheckCircle,
+} from "lucide-react";
 
-import { ConnectionStatusMonitor } from '@/components/features/realtime/connection-status-monitor';
-import { OptimisticTripUpdates, CollaborationIndicator } from '@/components/features/realtime/optimistic-trip-updates';
-import { useTripsWithRealtime } from '@/hooks/use-trips-with-realtime';
+import { ConnectionStatusMonitor } from "@/components/features/realtime/connection-status-monitor";
+import {
+  OptimisticTripUpdates,
+  CollaborationIndicator,
+} from "@/components/features/realtime/optimistic-trip-updates";
+import { useTripsWithRealtime } from "@/hooks/use-trips-with-realtime";
 
 /**
  * Demonstration page showcasing all real-time Supabase integration features
  */
 export default function RealtimeDemoPage() {
   const { trips, realtimeStatus } = useTripsWithRealtime();
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState("overview");
 
   const features = [
     {
-      id: 'direct-sdk',
-      title: 'Direct Supabase SDK Integration',
-      description: 'Replaced custom API calls with direct Supabase client usage',
-      status: 'completed',
+      id: "direct-sdk",
+      title: "Direct Supabase SDK Integration",
+      description: "Replaced custom API calls with direct Supabase client usage",
+      status: "completed",
       icon: <Zap className="h-5 w-5" />,
       details: [
-        'Trip store uses Supabase client directly',
-        'Real-time data fetching and mutations',
-        'Type-safe database operations',
-        'Automatic query optimization'
-      ]
+        "Trip store uses Supabase client directly",
+        "Real-time data fetching and mutations",
+        "Type-safe database operations",
+        "Automatic query optimization",
+      ],
     },
     {
-      id: 'realtime-subscriptions',
-      title: 'Real-time Subscriptions',
-      description: 'Live updates for trips, chat messages, and collaboration',
-      status: 'completed',
+      id: "realtime-subscriptions",
+      title: "Real-time Subscriptions",
+      description: "Live updates for trips, chat messages, and collaboration",
+      status: "completed",
       icon: <Activity className="h-5 w-5" />,
       details: [
-        'Trip collaboration updates',
-        'Live editing indicators',
-        'Automatic conflict resolution',
-        'Connection status monitoring'
-      ]
+        "Trip collaboration updates",
+        "Live editing indicators",
+        "Automatic conflict resolution",
+        "Connection status monitoring",
+      ],
     },
     {
-      id: 'optimistic-updates',
-      title: 'Optimistic Updates',
-      description: 'Instant UI feedback with automatic rollback on errors',
-      status: 'completed',
+      id: "optimistic-updates",
+      title: "Optimistic Updates",
+      description: "Instant UI feedback with automatic rollback on errors",
+      status: "completed",
       icon: <CheckCircle className="h-5 w-5" />,
       details: [
-        'Immediate UI response',
-        'Error handling with rollback',
-        'Loading state management',
-        'Success/failure notifications'
-      ]
+        "Immediate UI response",
+        "Error handling with rollback",
+        "Loading state management",
+        "Success/failure notifications",
+      ],
     },
     {
-      id: 'connection-monitoring',
-      title: 'Connection Status Monitoring',
-      description: 'Real-time connectivity status and reconnection handling',
-      status: 'completed',
+      id: "connection-monitoring",
+      title: "Connection Status Monitoring",
+      description: "Real-time connectivity status and reconnection handling",
+      status: "completed",
       icon: <Wifi className="h-5 w-5" />,
       details: [
-        'Connection health visualization',
-        'Automatic reconnection attempts',
-        'Offline mode detection',
-        'Error state handling'
-      ]
+        "Connection health visualization",
+        "Automatic reconnection attempts",
+        "Offline mode detection",
+        "Error state handling",
+      ],
     },
     {
-      id: 'chat-updates',
-      title: 'Real-time Chat Messages',
-      description: 'Live chat message updates and typing indicators',
-      status: 'pending',
+      id: "chat-updates",
+      title: "Real-time Chat Messages",
+      description: "Live chat message updates and typing indicators",
+      status: "pending",
       icon: <MessageSquare className="h-5 w-5" />,
       details: [
-        'Instant message delivery',
-        'Typing indicators',
-        'Message status tracking',
-        'Infinite scroll pagination'
-      ]
+        "Instant message delivery",
+        "Typing indicators",
+        "Message status tracking",
+        "Infinite scroll pagination",
+      ],
     },
     {
-      id: 'file-storage',
-      title: 'File Upload & Storage',
-      description: 'Real-time file upload progress and storage management',
-      status: 'completed',
+      id: "file-storage",
+      title: "File Upload & Storage",
+      description: "Real-time file upload progress and storage management",
+      status: "completed",
       icon: <Upload className="h-5 w-5" />,
       details: [
-        'Progress tracking',
-        'Virus scanning integration',
-        'Multiple file uploads',
-        'Storage quotas'
-      ]
-    }
+        "Progress tracking",
+        "Virus scanning integration",
+        "Multiple file uploads",
+        "Storage quotas",
+      ],
+    },
   ];
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'completed':
-        return 'bg-green-500';
-      case 'pending':
-        return 'bg-yellow-500';
-      case 'in-progress':
-        return 'bg-blue-500';
+      case "completed":
+        return "bg-green-500";
+      case "pending":
+        return "bg-yellow-500";
+      case "in-progress":
+        return "bg-blue-500";
       default:
-        return 'bg-gray-500';
+        return "bg-gray-500";
     }
   };
 
@@ -127,8 +136,8 @@ export default function RealtimeDemoPage() {
       <div className="text-center space-y-4">
         <h1 className="text-4xl font-bold">Real-time Supabase Integration Demo</h1>
         <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-          Showcasing direct Supabase SDK usage, real-time subscriptions, optimistic updates,
-          and comprehensive connection monitoring for the TripSage platform.
+          Showcasing direct Supabase SDK usage, real-time subscriptions, optimistic
+          updates, and comprehensive connection monitoring for the TripSage platform.
         </p>
         <div className="flex justify-center">
           <ConnectionStatusMonitor />
@@ -156,16 +165,18 @@ export default function RealtimeDemoPage() {
                       {feature.icon}
                       <span className="font-medium">{feature.title}</span>
                     </div>
-                    <Badge 
-                      variant={feature.status === 'completed' ? 'default' : 'secondary'}
-                      className={feature.status === 'completed' ? getStatusColor(feature.status) : ''}
+                    <Badge
+                      variant={feature.status === "completed" ? "default" : "secondary"}
+                      className={
+                        feature.status === "completed"
+                          ? getStatusColor(feature.status)
+                          : ""
+                      }
                     >
                       {feature.status}
                     </Badge>
                   </div>
-                  <p className="text-sm text-muted-foreground">
-                    {feature.description}
-                  </p>
+                  <p className="text-sm text-muted-foreground">{feature.description}</p>
                 </CardHeader>
                 <CardContent className="pt-0">
                   <ul className="space-y-1">
@@ -204,16 +215,20 @@ export default function RealtimeDemoPage() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <Card>
                   <CardContent className="p-6 text-center">
-                    <div className="text-2xl font-bold text-green-600">{trips.length}</div>
+                    <div className="text-2xl font-bold text-green-600">
+                      {trips.length}
+                    </div>
                     <div className="text-sm text-muted-foreground">Active Trips</div>
                   </CardContent>
                 </Card>
                 <Card>
                   <CardContent className="p-6 text-center">
                     <div className="text-2xl font-bold text-blue-600">
-                      {realtimeStatus.isConnected ? '✓' : '✗'}
+                      {realtimeStatus.isConnected ? "✓" : "✗"}
                     </div>
-                    <div className="text-sm text-muted-foreground">Real-time Status</div>
+                    <div className="text-sm text-muted-foreground">
+                      Real-time Status
+                    </div>
                   </CardContent>
                 </Card>
                 <Card>
@@ -221,18 +236,28 @@ export default function RealtimeDemoPage() {
                     <div className="text-2xl font-bold text-purple-600">
                       {realtimeStatus.errors.length}
                     </div>
-                    <div className="text-sm text-muted-foreground">Connection Errors</div>
+                    <div className="text-sm text-muted-foreground">
+                      Connection Errors
+                    </div>
                   </CardContent>
                 </Card>
               </div>
-              
+
               <div className="text-center space-y-4">
                 <h3 className="text-lg font-semibold">Real-time Features Active</h3>
                 <div className="flex flex-wrap justify-center gap-2">
-                  <Badge variant="default" className="bg-green-500">Direct Supabase SDK</Badge>
-                  <Badge variant="default" className="bg-blue-500">Real-time Subscriptions</Badge>
-                  <Badge variant="default" className="bg-purple-500">Optimistic Updates</Badge>
-                  <Badge variant="default" className="bg-orange-500">Connection Monitoring</Badge>
+                  <Badge variant="default" className="bg-green-500">
+                    Direct Supabase SDK
+                  </Badge>
+                  <Badge variant="default" className="bg-blue-500">
+                    Real-time Subscriptions
+                  </Badge>
+                  <Badge variant="default" className="bg-purple-500">
+                    Optimistic Updates
+                  </Badge>
+                  <Badge variant="default" className="bg-orange-500">
+                    Connection Monitoring
+                  </Badge>
                 </div>
               </div>
             </TabsContent>
@@ -241,7 +266,8 @@ export default function RealtimeDemoPage() {
               <div className="text-center mb-6">
                 <h3 className="text-lg font-semibold mb-2">Real-time Trip Editing</h3>
                 <p className="text-muted-foreground">
-                  Edit trip details and see changes reflected instantly with optimistic updates
+                  Edit trip details and see changes reflected instantly with optimistic
+                  updates
                 </p>
               </div>
               <OptimisticTripUpdates tripId={1} />
@@ -343,7 +369,7 @@ export default function RealtimeDemoPage() {
                 <li>• Optimized query patterns with caching</li>
               </ul>
             </div>
-            
+
             <div className="space-y-4">
               <h4 className="font-semibold">Frontend Architecture</h4>
               <ul className="space-y-2 text-sm">
@@ -375,7 +401,7 @@ export default function RealtimeDemoPage() {
               <li>• Implement offline synchronization</li>
               <li>• Add comprehensive error boundaries</li>
             </ul>
-            
+
             <h4 className="font-semibold">Future Features</h4>
             <ul className="space-y-2 text-sm">
               <li>• Real-time voice/video collaboration</li>

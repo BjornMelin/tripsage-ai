@@ -241,7 +241,13 @@ export type Database = {
           trip_id: number;
           title: string;
           description: string | null;
-          item_type: "activity" | "meal" | "transport" | "accommodation" | "event" | "other";
+          item_type:
+            | "activity"
+            | "meal"
+            | "transport"
+            | "accommodation"
+            | "event"
+            | "other";
           start_time: string | null;
           end_time: string | null;
           location: string | null;
@@ -257,13 +263,24 @@ export type Database = {
           trip_id: number;
           title: string;
           description?: string | null;
-          item_type: "activity" | "meal" | "transport" | "accommodation" | "event" | "other";
+          item_type:
+            | "activity"
+            | "meal"
+            | "transport"
+            | "accommodation"
+            | "event"
+            | "other";
           start_time?: string | null;
           end_time?: string | null;
           location?: string | null;
           price?: number;
           currency?: string;
-          booking_status?: "planned" | "reserved" | "booked" | "completed" | "cancelled";
+          booking_status?:
+            | "planned"
+            | "reserved"
+            | "booked"
+            | "completed"
+            | "cancelled";
           external_id?: string | null;
           metadata?: Json;
           created_at?: string;
@@ -273,13 +290,24 @@ export type Database = {
           trip_id?: number;
           title?: string;
           description?: string | null;
-          item_type?: "activity" | "meal" | "transport" | "accommodation" | "event" | "other";
+          item_type?:
+            | "activity"
+            | "meal"
+            | "transport"
+            | "accommodation"
+            | "event"
+            | "other";
           start_time?: string | null;
           end_time?: string | null;
           location?: string | null;
           price?: number;
           currency?: string;
-          booking_status?: "planned" | "reserved" | "booked" | "completed" | "cancelled";
+          booking_status?:
+            | "planned"
+            | "reserved"
+            | "booked"
+            | "completed"
+            | "cancelled";
           external_id?: string | null;
           metadata?: Json;
           created_at?: string;
@@ -434,7 +462,12 @@ export type Database = {
         Row: {
           id: number;
           user_id: string;
-          memory_type: "user_preference" | "trip_history" | "search_pattern" | "conversation_context" | "other";
+          memory_type:
+            | "user_preference"
+            | "trip_history"
+            | "search_pattern"
+            | "conversation_context"
+            | "other";
           content: string;
           embedding: string | null;
           metadata: Json;
@@ -444,7 +477,12 @@ export type Database = {
         Insert: {
           id?: never;
           user_id: string;
-          memory_type?: "user_preference" | "trip_history" | "search_pattern" | "conversation_context" | "other";
+          memory_type?:
+            | "user_preference"
+            | "trip_history"
+            | "search_pattern"
+            | "conversation_context"
+            | "other";
           content: string;
           embedding?: string | null;
           metadata?: Json;
@@ -454,7 +492,12 @@ export type Database = {
         Update: {
           id?: never;
           user_id?: string;
-          memory_type?: "user_preference" | "trip_history" | "search_pattern" | "conversation_context" | "other";
+          memory_type?:
+            | "user_preference"
+            | "trip_history"
+            | "search_pattern"
+            | "conversation_context"
+            | "other";
           content?: string;
           embedding?: string | null;
           metadata?: Json;
@@ -778,10 +821,21 @@ export type Database = {
       flight_class: "economy" | "premium_economy" | "business" | "first";
       booking_status: "available" | "reserved" | "booked" | "cancelled";
       transport_type: "flight" | "train" | "bus" | "car_rental" | "taxi" | "other";
-      item_type: "activity" | "meal" | "transport" | "accommodation" | "event" | "other";
+      item_type:
+        | "activity"
+        | "meal"
+        | "transport"
+        | "accommodation"
+        | "event"
+        | "other";
       chat_role: "user" | "assistant" | "system";
       tool_call_status: "pending" | "running" | "completed" | "failed";
-      memory_type: "user_preference" | "trip_history" | "search_pattern" | "conversation_context" | "other";
+      memory_type:
+        | "user_preference"
+        | "trip_history"
+        | "search_pattern"
+        | "conversation_context"
+        | "other";
       permission_level: "view" | "edit" | "admin";
       upload_status: "uploading" | "completed" | "failed";
       virus_scan_status: "pending" | "clean" | "infected" | "failed";

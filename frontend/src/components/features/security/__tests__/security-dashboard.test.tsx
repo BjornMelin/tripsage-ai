@@ -60,10 +60,12 @@ describe("SecurityDashboard", () => {
 
   it("renders loading state initially", () => {
     render(<SecurityDashboard />);
-    
+
     // Check for loading skeletons
-    expect(screen.getByText("Monitor your account security and activity")).toBeInTheDocument();
-    
+    expect(
+      screen.getByText("Monitor your account security and activity")
+    ).toBeInTheDocument();
+
     // Should show loading animations
     const loadingElements = document.querySelectorAll(".animate-pulse");
     expect(loadingElements.length).toBeGreaterThan(0);
@@ -158,7 +160,7 @@ describe("SecurityDashboard", () => {
     // Check for risk level badges
     const lowRiskBadges = screen.getAllByText("low");
     const mediumRiskBadges = screen.getAllByText("medium");
-    
+
     expect(lowRiskBadges.length).toBeGreaterThan(0);
     expect(mediumRiskBadges.length).toBeGreaterThan(0);
   });

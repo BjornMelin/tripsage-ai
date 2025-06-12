@@ -238,6 +238,13 @@ export function AuthProvider({ children, initialUser = null }: AuthProviderProps
         provider,
         options: {
           redirectTo: `${window.location.origin}/auth/callback`,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          },
+          // PKCE is enabled by default in Supabase Auth
+          // Additional security options
+          scopes: provider === 'google' ? 'openid email profile' : 'user:email',
         },
       });
 
@@ -250,7 +257,8 @@ export function AuthProvider({ children, initialUser = null }: AuthProviderProps
       // State will be updated when they return via the auth state change listener
     } catch (error) {
       setAuthState({
-        error: error instanceof Error ? error.message : `Failed to sign in with ${provider}`,
+        error:
+          error instanceof Error ? error.message : `Failed to sign in with ${provider}`,
         isLoading: false,
       });
     }

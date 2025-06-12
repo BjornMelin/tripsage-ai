@@ -12,7 +12,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AlertCircle, ArrowLeft, Loader2, Shield, Smartphone } from "lucide-react";
-import React, { useState, useEffect } from "react";
+import type React from "react";
+import { useState, useEffect } from "react";
 
 interface MFAVerificationProps {
   userEmail: string;
@@ -21,11 +22,11 @@ interface MFAVerificationProps {
   onUseBackupCode: () => void;
 }
 
-export function MFAVerification({ 
-  userEmail, 
-  onVerified, 
+export function MFAVerification({
+  userEmail,
+  onVerified,
   onCancel,
-  onUseBackupCode 
+  onUseBackupCode,
 }: MFAVerificationProps) {
   const [verificationCode, setVerificationCode] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -58,8 +59,8 @@ export function MFAVerification({
 
     try {
       // Mock API call - replace with actual implementation
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
       // Mock verification (accept any 6-digit code for demo)
       if (verificationCode.length === 6) {
         onVerified();
@@ -84,10 +85,10 @@ export function MFAVerification({
   const handleResendCode = async () => {
     setTimeRemaining(30);
     setError(null);
-    
+
     try {
       // Mock API call for resending
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise((resolve) => setTimeout(resolve, 500));
       // In real implementation, this would trigger a new SMS or push notification
       console.log("Resend request sent");
     } catch (err) {

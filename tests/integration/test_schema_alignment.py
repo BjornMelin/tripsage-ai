@@ -5,7 +5,6 @@ This test suite validates that the schema alignment migration works correctly
 and ensures backward compatibility during the transition period.
 """
 
-import json
 import uuid
 from datetime import date, datetime, timezone
 from typing import Any, Dict
@@ -15,11 +14,6 @@ from pydantic import ValidationError
 
 from tripsage_core.models.db.trip import Trip, TripBudget, TripVisibility
 from tripsage_core.utils.schema_adapters import SchemaAdapter
-from tripsage_core.services.business.trip_service import (
-    TripCreateRequest,
-    TripLocation,
-    TripService,
-)
 
 
 class TestSchemaAlignment:
@@ -77,7 +71,7 @@ class TestSchemaAlignment:
                     "transportation": 1500,
                     "food": 1000,
                     "activities": 500,
-                }
+                },
             },
             "currency": "USD",
             "spent_amount": 1200.0,
@@ -109,7 +103,7 @@ class TestSchemaAlignment:
                 "transportation": 1500,
                 "food": 1000,
                 "activities": 500,
-            }
+            },
         )
 
         # Create trip with enhanced fields
@@ -194,8 +188,8 @@ class TestSchemaAlignment:
                 "breakdown": {
                     "accommodation": 2000,
                     "transportation": 1500,
-                }
-            }
+                },
+            },
         }
 
         db_data = SchemaAdapter.convert_api_trip_to_db(api_data)
@@ -242,7 +236,7 @@ class TestSchemaAlignment:
             "total": 3000,
             "currency": "EUR",
             "spent": 500,
-            "breakdown": {"accommodation": 1500}
+            "breakdown": {"accommodation": 1500},
         }
         adapted = SchemaAdapter.adapt_budget_structure(budget_data)
         assert adapted["total"] == 3000
@@ -260,7 +254,7 @@ class TestSchemaAlignment:
         }
 
         adapted = SchemaAdapter.adapt_preferences_structure(legacy_preferences)
-        
+
         # Validate required fields exist
         assert "budget" in adapted
         assert "accommodation" in adapted
@@ -315,7 +309,12 @@ class TestSchemaAlignment:
             ("visibility", "visibility", "visibility", "visibility"),
             ("tags", "tags", "tags", "tags"),
             ("preferences_extended", "preferences", "preferences", "preferences"),
-            ("budget_breakdown", "enhanced_budget", "enhanced_budget", "enhanced_budget"),
+            (
+                "budget_breakdown",
+                "enhanced_budget",
+                "enhanced_budget",
+                "enhanced_budget",
+            ),
         ]
 
         for db_field, service_field, api_field, frontend_field in test_cases:
@@ -341,7 +340,7 @@ class TestSchemaAlignment:
         }
 
         api_data = SchemaAdapter.convert_db_trip_to_api(legacy_db_record)
-        
+
         # Should map name to title and preserve both
         assert api_data["title"] == "Legacy Trip Name"
         assert api_data["name"] == "Legacy Trip Name"
@@ -356,7 +355,7 @@ class TestSchemaAlignment:
         assert sample_database_record["title"] == db_data_back["title"]
         assert sample_database_record["visibility"] == db_data_back["visibility"]
         assert sample_database_record["tags"] == db_data_back["tags"]
-        
+
         # Validate budget information is preserved
         original_budget = sample_database_record["budget_breakdown"]["total"]
         converted_budget = db_data_back["budget_breakdown"]["total"]

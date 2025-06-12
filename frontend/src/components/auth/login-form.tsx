@@ -25,9 +25,12 @@ interface LoginFormProps {
 
 export function LoginForm({ redirectTo = "/dashboard", className }: LoginFormProps) {
   const router = useRouter();
-  const { signIn, signInWithOAuth, isLoading, error, isAuthenticated, clearError } = useAuth();
+  const { signIn, signInWithOAuth, isLoading, error, isAuthenticated, clearError } =
+    useAuth();
   const [showPassword, setShowPassword] = React.useState(false);
-  const [oauthLoading, setOauthLoading] = React.useState<"google" | "github" | null>(null);
+  const [oauthLoading, setOauthLoading] = React.useState<"google" | "github" | null>(
+    null
+  );
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -180,7 +183,9 @@ export function LoginForm({ redirectTo = "/dashboard", className }: LoginFormPro
             <Separator className="w-full" />
           </div>
           <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-background px-2 text-muted-foreground">Or continue with</span>
+            <span className="bg-background px-2 text-muted-foreground">
+              Or continue with
+            </span>
           </div>
         </div>
 

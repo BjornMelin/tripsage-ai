@@ -25,6 +25,9 @@ describe("LoginForm", () => {
   const mockSignUp = vi.fn();
   const mockSignOut = vi.fn();
   const mockRefreshUser = vi.fn();
+  const mockSignInWithOAuth = vi.fn();
+  const mockResetPassword = vi.fn();
+  const mockUpdatePassword = vi.fn();
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -53,6 +56,9 @@ describe("LoginForm", () => {
       signOut: mockSignOut,
       refreshUser: mockRefreshUser,
       clearError: mockClearError,
+      signInWithOAuth: mockSignInWithOAuth,
+      resetPassword: mockResetPassword,
+      updatePassword: mockUpdatePassword,
     });
   });
 
@@ -128,6 +134,9 @@ describe("LoginForm", () => {
       signOut: mockSignOut,
       refreshUser: mockRefreshUser,
       clearError: mockClearError,
+      signInWithOAuth: mockSignInWithOAuth,
+      resetPassword: mockResetPassword,
+      updatePassword: mockUpdatePassword,
     });
 
     render(<LoginForm />);
@@ -148,6 +157,9 @@ describe("LoginForm", () => {
       signOut: mockSignOut,
       refreshUser: mockRefreshUser,
       clearError: mockClearError,
+      signInWithOAuth: mockSignInWithOAuth,
+      resetPassword: mockResetPassword,
+      updatePassword: mockUpdatePassword,
     });
 
     render(<LoginForm redirectTo="/custom-dashboard" />);
@@ -168,6 +180,9 @@ describe("LoginForm", () => {
       signOut: mockSignOut,
       refreshUser: mockRefreshUser,
       clearError: mockClearError,
+      signInWithOAuth: mockSignInWithOAuth,
+      resetPassword: mockResetPassword,
+      updatePassword: mockUpdatePassword,
     });
 
     render(<LoginForm />);
@@ -193,6 +208,9 @@ describe("LoginForm", () => {
       signOut: mockSignOut,
       refreshUser: mockRefreshUser,
       clearError: mockClearError,
+      signInWithOAuth: mockSignInWithOAuth,
+      resetPassword: mockResetPassword,
+      updatePassword: mockUpdatePassword,
     });
 
     render(<LoginForm />);
@@ -212,6 +230,9 @@ describe("LoginForm", () => {
       signOut: mockSignOut,
       refreshUser: mockRefreshUser,
       clearError: mockClearError,
+      signInWithOAuth: mockSignInWithOAuth,
+      resetPassword: mockResetPassword,
+      updatePassword: mockUpdatePassword,
     });
 
     const user = userEvent.setup();
@@ -234,6 +255,9 @@ describe("LoginForm", () => {
       signOut: mockSignOut,
       refreshUser: mockRefreshUser,
       clearError: mockClearError,
+      signInWithOAuth: mockSignInWithOAuth,
+      resetPassword: mockResetPassword,
+      updatePassword: mockUpdatePassword,
     });
 
     const user = userEvent.setup();
@@ -327,6 +351,9 @@ describe("LoginForm", () => {
       signOut: mockSignOut,
       refreshUser: mockRefreshUser,
       clearError: mockClearError,
+      signInWithOAuth: mockSignInWithOAuth,
+      resetPassword: mockResetPassword,
+      updatePassword: mockUpdatePassword,
     });
 
     render(<LoginForm />);
