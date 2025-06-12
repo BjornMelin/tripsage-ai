@@ -322,7 +322,7 @@ describe("API Key Store", () => {
         is_valid: true,
       };
 
-      (global.fetch as any).mockResolvedValueOnce({
+      vi.mocked(global.fetch).mockResolvedValueOnce({
         ok: true,
         json: async () => mockResponse,
       });
@@ -358,7 +358,7 @@ describe("API Key Store", () => {
         message: "Invalid API key",
       };
 
-      (global.fetch as any).mockResolvedValueOnce({
+      vi.mocked(global.fetch).mockResolvedValueOnce({
         ok: true,
         json: async () => mockResponse,
       });
@@ -376,7 +376,7 @@ describe("API Key Store", () => {
     it("handles API error response", async () => {
       const { result } = renderHook(() => useApiKeyStore());
 
-      (global.fetch as any).mockResolvedValueOnce({
+      vi.mocked(global.fetch).mockResolvedValueOnce({
         ok: false,
         text: async () => "API key validation failed",
       });
@@ -394,7 +394,7 @@ describe("API Key Store", () => {
     it("handles network error", async () => {
       const { result } = renderHook(() => useApiKeyStore());
 
-      (global.fetch as any).mockRejectedValueOnce(new Error("Network error"));
+      vi.mocked(global.fetch).mockRejectedValueOnce(new Error("Network error"));
 
       let isValid: boolean;
       await act(async () => {
@@ -439,7 +439,7 @@ describe("API Key Store", () => {
     it("includes token in authorization header when available", async () => {
       const { result } = renderHook(() => useApiKeyStore());
 
-      (global.fetch as any).mockResolvedValueOnce({
+      vi.mocked(global.fetch).mockResolvedValueOnce({
         ok: true,
         json: async () => ({ is_valid: true }),
       });
@@ -470,7 +470,7 @@ describe("API Key Store", () => {
         useApiKeyStore.setState({ token: null });
       });
 
-      (global.fetch as any).mockResolvedValueOnce({
+      vi.mocked(global.fetch).mockResolvedValueOnce({
         ok: true,
         json: async () => ({ is_valid: true }),
       });
@@ -521,7 +521,7 @@ describe("API Key Store", () => {
         supported_services: ["openai", "anthropic", "google"],
       };
 
-      (global.fetch as any).mockResolvedValueOnce({
+      vi.mocked(global.fetch).mockResolvedValueOnce({
         ok: true,
         json: async () => mockResponse,
       });
@@ -543,7 +543,7 @@ describe("API Key Store", () => {
     it("handles load keys API error", async () => {
       const { result } = renderHook(() => useApiKeyStore());
 
-      (global.fetch as any).mockResolvedValueOnce({
+      vi.mocked(global.fetch).mockResolvedValueOnce({
         ok: false,
       });
 
@@ -557,7 +557,7 @@ describe("API Key Store", () => {
     it("handles load keys network error", async () => {
       const { result } = renderHook(() => useApiKeyStore());
 
-      (global.fetch as any).mockRejectedValueOnce(new Error("Network error"));
+      vi.mocked(global.fetch).mockRejectedValueOnce(new Error("Network error"));
 
       await act(async () => {
         await result.current.loadKeys();
@@ -616,7 +616,7 @@ describe("API Key Store", () => {
         });
       });
 
-      (global.fetch as any).mockRejectedValueOnce("Unknown error");
+      vi.mocked(global.fetch).mockRejectedValueOnce("Unknown error");
 
       let isValid: boolean;
       await act(async () => {
@@ -637,7 +637,7 @@ describe("API Key Store", () => {
         });
       });
 
-      (global.fetch as any).mockRejectedValueOnce("Unknown error");
+      vi.mocked(global.fetch).mockRejectedValueOnce("Unknown error");
 
       await act(async () => {
         await result.current.loadKeys();
