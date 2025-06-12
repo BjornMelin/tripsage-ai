@@ -6,7 +6,7 @@
 
 import { render, screen } from "@testing-library/react";
 import { vi } from "vitest";
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 
 // Import components with buttons that should be tested
 import { LoginForm } from "@/components/auth/login-form";
@@ -36,30 +36,30 @@ describe("Button Accessibility Compliance", () => {
   describe("LoginForm", () => {
     it("should have proper type attributes on all buttons", () => {
       render(<LoginForm />);
-      
+
       // Get all button elements
       const buttons = screen.getAllByRole("button");
-      
+
       buttons.forEach((button) => {
         const buttonElement = button as HTMLButtonElement;
-        
+
         // Every button should have a type attribute
         expect(buttonElement.type).toBeDefined();
         expect(buttonElement.type).not.toBe("");
-        
+
         // Button type should be one of the valid HTML button types
         expect(["button", "submit", "reset"]).toContain(buttonElement.type);
-        
+
         // Interactive buttons (non-form submission) should be type="button"
         // Form submission buttons should be type="submit"
         // We can identify form submission buttons by checking if they are inside a form
         // and have specific text content or are explicitly marked as submit
-        const isLikelySubmitButton = 
-          buttonElement.type === "submit" || 
+        const isLikelySubmitButton =
+          buttonElement.type === "submit" ||
           buttonElement.textContent?.toLowerCase().includes("sign in") ||
           buttonElement.textContent?.toLowerCase().includes("submit") ||
           buttonElement.textContent?.toLowerCase().includes("create account");
-          
+
         if (isLikelySubmitButton) {
           expect(buttonElement.type).toBe("submit");
         } else {
@@ -70,10 +70,10 @@ describe("Button Accessibility Compliance", () => {
 
     it("should have aria-label for password visibility toggle", () => {
       render(<LoginForm />);
-      
+
       // Find the password visibility toggle button
       const toggleButton = screen.getByLabelText(/show password|hide password/i);
-      
+
       expect(toggleButton).toBeDefined();
       expect(toggleButton.getAttribute("aria-label")).toBeTruthy();
       expect(toggleButton.getAttribute("type")).toBe("button");
@@ -83,17 +83,17 @@ describe("Button Accessibility Compliance", () => {
   describe("RegisterForm", () => {
     it("should have proper type attributes on all buttons", () => {
       render(<RegisterForm />);
-      
+
       // Get all button elements
       const buttons = screen.getAllByRole("button");
-      
+
       buttons.forEach((button) => {
         const buttonElement = button as HTMLButtonElement;
-        
+
         // Every button should have a type attribute
         expect(buttonElement.type).toBeDefined();
         expect(buttonElement.type).not.toBe("");
-        
+
         // Button type should be one of the valid HTML button types
         expect(["button", "submit", "reset"]).toContain(buttonElement.type);
       });
@@ -101,10 +101,10 @@ describe("Button Accessibility Compliance", () => {
 
     it("should have aria-label for password visibility toggle", () => {
       render(<RegisterForm />);
-      
+
       // Find the password visibility toggle button
       const toggleButton = screen.getByLabelText(/show password|hide password/i);
-      
+
       expect(toggleButton).toBeDefined();
       expect(toggleButton.getAttribute("aria-label")).toBeTruthy();
       expect(toggleButton.getAttribute("type")).toBe("button");
@@ -130,7 +130,7 @@ describe("Button Accessibility Compliance", () => {
       );
 
       render(<TestComponent />);
-      
+
       const interactiveButton = screen.getByText("Interactive Button");
       const submitButton = screen.getByText("Submit Form");
       const resetButton = screen.getByText("Reset Form");
@@ -157,7 +157,7 @@ describe("Button Accessibility Compliance", () => {
       );
 
       render(<TestComponent />);
-      
+
       const closeButton = screen.getByLabelText("Close dialog");
       const saveButton = screen.getByText("Save Changes");
       const deleteButton = screen.getByTitle("Delete item");
@@ -166,7 +166,7 @@ describe("Button Accessibility Compliance", () => {
       expect(closeButton).toBeDefined();
       expect(saveButton).toBeDefined();
       expect(deleteButton).toBeDefined();
-      
+
       // All should have type="button"
       expect((closeButton as HTMLButtonElement).type).toBe("button");
       expect((saveButton as HTMLButtonElement).type).toBe("button");
@@ -187,7 +187,7 @@ describe("Button Accessibility Compliance", () => {
       );
 
       render(<TestForm />);
-      
+
       const submitButton = screen.getByText("Submit");
       const cancelButton = screen.getByText("Cancel");
 
@@ -205,7 +205,7 @@ describe("Button Accessibility Compliance", () => {
       );
 
       render(<TestForm />);
-      
+
       const resetButton = screen.getByText("Reset");
       const clearButton = screen.getByText("Clear Manually");
 

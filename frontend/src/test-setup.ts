@@ -4,10 +4,10 @@ import "@testing-library/jest-dom";
 
 // Mock zustand middleware
 vi.mock("zustand/middleware", () => ({
-  persist: vi.fn((fn: any) => fn),
-  devtools: vi.fn((fn: any) => fn),
-  subscribeWithSelector: vi.fn((fn: any) => fn),
-  combine: vi.fn((fn: any) => fn),
+  persist: vi.fn((fn: unknown) => fn),
+  devtools: vi.fn((fn: unknown) => fn),
+  subscribeWithSelector: vi.fn((fn: unknown) => fn),
+  combine: vi.fn((fn: unknown) => fn),
 }));
 
 // Clean up after each test

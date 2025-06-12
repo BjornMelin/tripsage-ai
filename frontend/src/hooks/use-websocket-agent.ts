@@ -2,6 +2,13 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
+// Extend WebSocket interface for Node.js-style ping handling
+declare global {
+  interface WebSocket {
+    onping?: (event: Event) => void;
+  }
+}
+
 export type ConnectionStatus =
   | "connecting"
   | "connected"
@@ -213,7 +220,7 @@ export function useWebSocketAgent(
 
       // Handle ping frames for heartbeat
       if ("onping" in wsRef.current) {
-        (wsRef.current as any).onping = heartbeat;
+        wsRef.current.onping = heartbeat;
       }
     } catch (error) {
       console.error("Error creating WebSocket connection:", error);

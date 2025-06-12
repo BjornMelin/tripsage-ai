@@ -3,13 +3,13 @@
  * Ensures all SVG elements have proper accessibility attributes
  */
 
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
 import { LoginForm } from "@/components/auth/login-form";
 import { ChatInterface } from "@/components/chat/chat-interface";
 import { MessageList } from "@/components/chat/message-list";
 import { ChatLayout } from "@/components/layouts/chat-layout";
 import type { OptimisticChatMessage } from "@/hooks/use-optimistic-chat";
+import { render, screen } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
 
 // Mock the auth context
 const mockAuthContext = {
@@ -45,12 +45,12 @@ vi.mock("@/stores/agent-status-store", () => ({
 }));
 
 // Mock DOM methods that aren't available in jsdom
-Object.defineProperty(window.HTMLElement.prototype, 'scrollIntoView', {
+Object.defineProperty(window.HTMLElement.prototype, "scrollIntoView", {
   value: vi.fn(),
   writable: true,
 });
 
-Object.defineProperty(window.HTMLElement.prototype, 'scrollTo', {
+Object.defineProperty(window.HTMLElement.prototype, "scrollTo", {
   value: vi.fn(),
   writable: true,
 });
@@ -59,7 +59,7 @@ describe("SVG Accessibility", () => {
   describe("LoginForm Component", () => {
     it("should have accessible Google OAuth button SVG", () => {
       render(<LoginForm />);
-      
+
       const googleIcon = screen.getByRole("img", { name: "Google" });
       expect(googleIcon).toBeInTheDocument();
       expect(googleIcon.tagName.toLowerCase()).toBe("svg");
@@ -69,7 +69,7 @@ describe("SVG Accessibility", () => {
   describe("ChatInterface Component", () => {
     it("should have accessible send message button SVG", () => {
       render(<ChatInterface />);
-      
+
       const sendIcon = screen.getByRole("img", { name: "Send message" });
       expect(sendIcon).toBeInTheDocument();
       expect(sendIcon.tagName.toLowerCase()).toBe("svg");
@@ -81,15 +81,12 @@ describe("SVG Accessibility", () => {
     const currentUserId = "user-1";
 
     it("should have accessible empty state SVG when no messages", () => {
-      render(
-        <MessageList messages={mockMessages} currentUserId={currentUserId} />
-      );
-      
+      render(<MessageList messages={mockMessages} currentUserId={currentUserId} />);
+
       const emptyStateIcon = screen.getByRole("img", { name: "No messages" });
       expect(emptyStateIcon).toBeInTheDocument();
       expect(emptyStateIcon.tagName.toLowerCase()).toBe("svg");
     });
-
   });
 
   describe("ChatLayout Component", () => {
@@ -99,7 +96,7 @@ describe("SVG Accessibility", () => {
           <div>Test content</div>
         </ChatLayout>
       );
-      
+
       const newChatIcon = screen.getByRole("img", { name: "New chat" });
       expect(newChatIcon).toBeInTheDocument();
       expect(newChatIcon.tagName.toLowerCase()).toBe("svg");
@@ -111,7 +108,7 @@ describe("SVG Accessibility", () => {
           <div>Test content</div>
         </ChatLayout>
       );
-      
+
       const settingsIcon = screen.getByRole("img", { name: "Settings" });
       expect(settingsIcon).toBeInTheDocument();
       expect(settingsIcon.tagName.toLowerCase()).toBe("svg");
@@ -123,7 +120,7 @@ describe("SVG Accessibility", () => {
           <div>Test content</div>
         </ChatLayout>
       );
-      
+
       const noAgentsIcon = screen.getByRole("img", { name: "No active agents" });
       expect(noAgentsIcon).toBeInTheDocument();
       expect(noAgentsIcon.tagName.toLowerCase()).toBe("svg");
@@ -134,7 +131,7 @@ describe("SVG Accessibility", () => {
     it("should verify that specific SVGs have proper accessibility attributes", () => {
       // Test that our specific fixes are working
       const { container } = render(<LoginForm />);
-      
+
       // Check Google OAuth SVG specifically
       const googleSvg = container.querySelector('svg[aria-label="Google"]');
       expect(googleSvg).toBeInTheDocument();

@@ -1,4 +1,4 @@
-import type { SearchResults, SearchType, Flight, Accommodation } from "@/types/search";
+import type { Accommodation, Flight, SearchResults, SearchType } from "@/types/search";
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -235,10 +235,10 @@ describe("Search Results Store", () => {
       const { result } = renderHook(() => useSearchResultsStore());
 
       const searchId = result.current.startSearch("flight", {});
-      const mockResults: SearchResults = {
+      const mockResults = {
         flights: [{ id: "f1" }] as Partial<Flight>[],
         accommodations: [{ id: "a1" }] as Partial<Accommodation>[],
-      };
+      } as SearchResults;
 
       act(() => {
         result.current.setSearchResults(searchId, mockResults);
@@ -280,12 +280,12 @@ describe("Search Results Store", () => {
       const { result } = renderHook(() => useSearchResultsStore());
 
       const searchId = result.current.startSearch("flight", {});
-      const initialResults: SearchResults = {
-        flights: [{ id: "f1", price: { amount: 299, currency: "USD" } }] as Partial<Flight>[],
-      };
-      const newResults: SearchResults = {
-        flights: [{ id: "f2", price: { amount: 399, currency: "USD" } }] as Partial<Flight>[],
-      };
+      const initialResults = {
+        flights: [{ id: "f1", price: 299 }] as Partial<Flight>[],
+      } as SearchResults;
+      const newResults = {
+        flights: [{ id: "f2", price: 399 }] as Partial<Flight>[],
+      } as SearchResults;
 
       act(() => {
         result.current.setSearchResults(searchId, initialResults);

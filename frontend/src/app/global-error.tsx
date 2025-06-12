@@ -29,7 +29,7 @@ export default function GlobalError({
   }, [error]);
 
   return (
-    <html>
+    <html lang="en">
       <body>
         <MinimalErrorFallback error={error} reset={reset} />
       </body>
@@ -39,7 +39,7 @@ export default function GlobalError({
 
 function getUserId(): string | undefined {
   try {
-    const userStore = (window as any).__USER_STORE__;
+    const userStore = (window as typeof window & { __USER_STORE__?: { user?: { id?: string } } }).__USER_STORE__;
     return userStore?.user?.id;
   } catch {
     return undefined;

@@ -108,7 +108,7 @@ describe("useSearch hook", () => {
     const mockStore = createMockStore({
       currentSearchType: "flight",
     });
-    (useSearchStore as any).mockImplementation(() => mockStore);
+    vi.mocked(useSearchStore).mockImplementation(() => mockStore);
 
     const { result } = renderHook(() => useSearch());
 
@@ -140,7 +140,7 @@ describe("useSearch hook", () => {
       activeFilters: { airline: ["test-airlines"] },
       activeSortOption: { value: "price", direction: "asc" },
     });
-    (useSearchStore as any).mockImplementation(() => mockStore);
+    vi.mocked(useSearchStore).mockImplementation(() => mockStore);
 
     const { result } = renderHook(() => useSearch());
 
@@ -171,7 +171,7 @@ describe("useSearch hook", () => {
     }));
 
     const mockStore = createMockStore({ isLoading: false });
-    (useSearchStore as any).mockImplementation(() => mockStore);
+    vi.mocked(useSearchStore).mockImplementation(() => mockStore);
 
     const { result } = renderHook(() => useSearch());
 
@@ -183,7 +183,7 @@ describe("useSearch hook", () => {
       currentSearchType: null,
       setError: vi.fn(),
     });
-    (useSearchStore as any).mockImplementation(() => mockStore);
+    vi.mocked(useSearchStore).mockImplementation(() => mockStore);
 
     const { result } = renderHook(() => useSearch());
 
@@ -255,7 +255,7 @@ describe("useSavedSearches hook", () => {
       updateActivityParams: vi.fn(),
     }));
 
-    (useSearchStore as any).mockImplementation(() => mockStore);
+    vi.mocked(useSearchStore).mockImplementation(() => mockStore);
     (useSearchStore.getState as any) = mockGetState;
 
     const { result } = renderHook(() => useSavedSearches());
@@ -357,7 +357,7 @@ describe("useRecentSearches hook", () => {
       ],
       clearRecentSearches: vi.fn(),
     });
-    (useSearchStore as any).mockImplementation(() => mockStore);
+    vi.mocked(useSearchStore).mockImplementation(() => mockStore);
 
     const { result } = renderHook(() => useRecentSearches());
 

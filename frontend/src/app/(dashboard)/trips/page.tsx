@@ -20,7 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useTripsWithRealtime } from "@/hooks/use-trips-with-realtime";
-import { useTripStore } from "@/stores/trip-store";
+import { useTripStore, type Trip } from "@/stores/trip-store";
 import { Filter, Grid, List, Plus, Search } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
@@ -41,12 +41,12 @@ export default function TripsPage() {
     // Apply search filter
     if (searchQuery) {
       filtered = filtered.filter(
-        (trip: any) =>
+        (trip: Trip) =>
           (trip.title || trip.name || "")
             .toLowerCase()
             .includes(searchQuery.toLowerCase()) ||
           trip.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          trip.destinations.some((dest: any) =>
+          trip.destinations.some((dest) =>
             dest.name.toLowerCase().includes(searchQuery.toLowerCase())
           )
       );
@@ -54,7 +54,7 @@ export default function TripsPage() {
 
     // Apply status filter
     if (filterBy !== "all") {
-      filtered = filtered.filter((trip: any) => {
+      filtered = filtered.filter((trip: Trip) => {
         const now = new Date();
         const startDate =
           trip.startDate || trip.start_date
@@ -81,7 +81,7 @@ export default function TripsPage() {
     }
 
     // Apply sorting
-    return filtered.sort((a: any, b: any) => {
+    return filtered.sort((a: Trip, b: Trip) => {
       switch (sortBy) {
         case "name":
           return (a.title || a.name || "").localeCompare(b.title || b.name || "");
@@ -118,7 +118,7 @@ export default function TripsPage() {
   const getStatusCounts = () => {
     const now = new Date();
     return trips.reduce(
-      (counts: any, trip: any) => {
+      (counts: Record<string, number>, trip: Trip) => {
         const startDate =
           trip.startDate || trip.start_date
             ? new Date(trip.startDate || trip.start_date || "")

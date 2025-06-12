@@ -17,27 +17,36 @@ import {
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 type TableName = keyof Database["public"]["Tables"];
+import type { PostgrestFilterBuilder } from "@supabase/postgrest-js";
+
 type TableRow<T extends TableName> = Database["public"]["Tables"][T]["Row"];
-type QueryHandler<T extends TableName> = (query: any) => any;
+
+type SupabaseQueryBuilder<T extends TableName> = PostgrestFilterBuilder<
+  Database["public"],
+  Database["public"]["Tables"][T]["Row"],
+  Database["public"]["Tables"][T]["Row"][]
+>;
+
+type QueryHandler<T extends TableName> = (query: SupabaseQueryBuilder<T>) => SupabaseQueryBuilder<T>;
 
 interface UseSupabaseQueryOptions<T extends TableName>
   extends Omit<UseQueryOptions<TableRow<T>[]>, "queryKey" | "queryFn"> {
   table: T;
   columns?: string;
   filter?: QueryHandler<T>;
-  dependencies?: any[];
+  dependencies?: unknown[];
 }
 
 interface UseSupabaseInfiniteQueryOptions<T extends TableName>
   extends Omit<
-    UseInfiniteQueryOptions<any>,
+    UseInfiniteQueryOptions<TableRow<T>[]>,
     "queryKey" | "queryFn" | "getNextPageParam"
   > {
   table: T;
   columns?: string;
   filter?: QueryHandler<T>;
   pageSize?: number;
-  dependencies?: any[];
+  dependencies?: unknown[];
 }
 
 /**
@@ -66,7 +75,7 @@ export function useSupabaseQuery<T extends TableName>(
       let query = supabase.from(table).select(columns);
 
       if (filter) {
-        query = filter(query as any);
+        query = filter(query);
       }
 
       const { data, error } = await query;
@@ -117,7 +126,7 @@ export function useSupabaseInfiniteQuery<T extends TableName>(
         .range(pageParam as number, (pageParam as number) + pageSize - 1);
 
       if (filter) {
-        query = filter(query as any);
+        query = filter(query);
       }
 
       const { data, error, count } = await query;
@@ -189,7 +198,7 @@ export function useSupabaseAggregation<T extends TableName>(
     filter?: QueryHandler<T>;
     countColumn?: string;
     enabled?: boolean;
-    dependencies?: any[];
+    dependencies?: unknown[];
   }
 ) {
   const supabase = useSupabase();
@@ -216,7 +225,7 @@ export function useSupabaseAggregation<T extends TableName>(
         .select(countColumn, { count: "exact", head: true });
 
       if (filter) {
-        query = filter(query as any);
+        query = filter(query);
       }
 
       const { count, error } = await query;
@@ -282,7 +291,7 @@ export function useSupabaseSearch<T extends TableName>(
       }
 
       if (filter) {
-        query = filter(query as any);
+        query = filter(query);
       }
 
       const { data, error } = await query.limit(50); // Limit search results
@@ -327,7 +336,7 @@ export function useSupabaseRelated<T extends TableName>(
       let query = supabase.from(table).select(columns).eq(foreignKey, foreignValue);
 
       if (filter) {
-        query = filter(query as any);
+        query = filter(query);
       }
 
       const { data, error } = await query;
