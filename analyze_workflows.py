@@ -93,7 +93,7 @@ def analyze_workflows():
         with open(f".github/workflows/{quality_gates_file}", 'r') as f:
             content = yaml.safe_load(f)
             
-        workflow_run_triggers = content.get('on', {}).get('workflow_run', {})
+        workflow_run_triggers = content.get('workflow_run', content.get(True, {}).get('workflow_run', {}))
         if workflow_run_triggers:
             required_workflows = workflow_run_triggers.get('workflows', [])
             print(f"   Waits for workflows: {required_workflows}")

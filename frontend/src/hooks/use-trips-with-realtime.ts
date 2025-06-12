@@ -6,8 +6,13 @@
 import { useAuth } from "@/contexts/auth-context";
 import { useMemo } from "react";
 import { useTripRealtime } from "./use-supabase-realtime";
-// TODO: Replace with proper trips hooks after migration
-// import { useTripData, useTrips } from "./use-trips-supabase";
+import { 
+  useTripData, 
+  useTrips as useTripsSupabase, 
+  useTripCollaborators,
+  useAddTripCollaborator,
+  useRemoveTripCollaborator 
+} from "./use-trips-supabase";
 import { useTrips } from "./use-trips";
 
 /**
@@ -37,9 +42,7 @@ export function useTripsWithRealtime() {
  */
 export function useTripWithRealtime(tripId: number | null) {
   const { user } = useAuth();
-  // TODO: Implement proper useTripData hook
-  const tripQuery = { data: null, isLoading: false, error: null, refetch: () => {} };
-  const { data: trip, isLoading, error, refetch } = tripQuery;
+  const { data: trip, isLoading, error, refetch } = useTripData(tripId);
   const realtimeStatus = useTripRealtime(tripId);
 
   return {
@@ -77,16 +80,10 @@ export function useTripsConnectionStatus() {
  */
 export function useTripCollaboration(tripId: string | number) {
   const { user } = useAuth();
-  const {
-    useTripCollaborators,
-    useAddTripCollaborator,
-    useRemoveTripCollaborator,
-  } = require("./use-trips-supabase");
-
   const numericTripId =
     typeof tripId === "string" ? Number.parseInt(tripId, 10) : tripId;
 
-  const { collaborators, isLoading, error, refetch } =
+  const { data: collaborators, isLoading, error, refetch } =
     useTripCollaborators(numericTripId);
   const addCollaborator = useAddTripCollaborator();
   const removeCollaborator = useRemoveTripCollaborator();
