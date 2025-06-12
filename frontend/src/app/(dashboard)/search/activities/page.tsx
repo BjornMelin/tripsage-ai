@@ -7,12 +7,39 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { useActivitySearch } from "@/hooks/use-activity-search";
 import { useSearchStore } from "@/stores/search-store";
 import type { Activity, ActivitySearchParams } from "@/types/search";
-import { useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { useState, useEffect } from "react";
+
+// Type for URL search parameters
+interface SearchParamsState {
+  destination?: string;
+  date?: string;
+  category?: string;
+  maxPrice?: string;
+}
 
 export default function ActivitiesSearchPage() {
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
   const { searchActivities, isSearching, searchError } = useActivitySearch();
-  const { hasResults, isSearching: storeIsSearching } = useSearchStore();
+  const { hasResults, isSearching: storeIsSearching, error: storeError, results } = useSearchStore();
+  const searchParams = useSearchParams();
+
+  // Initialize search with URL parameters
+  useEffect(() => {
+    const destination = searchParams.get("destination");
+    const date = searchParams.get("date");
+    const category = searchParams.get("category");
+    const maxPrice = searchParams.get("maxPrice");
+
+    if (destination || date || category || maxPrice) {
+      const initialParams: ActivitySearchParams = {
+        destination: destination || undefined,
+        date: date || undefined,
+        category: category || undefined,
+      };
+      searchActivities(initialParams);
+    }
+  }, [searchParams, searchActivities]);
 
   const handleSearch = (params: ActivitySearchParams) => {
     searchActivities(params);
@@ -29,9 +56,9 @@ export default function ActivitiesSearchPage() {
     // TODO: Add to comparison list
   };
 
-  // For now, use mock data since we're focusing on UI testing
-  const activities: Activity[] = [];
-  const hasActiveResults = hasResults;
+  // Get activities from store results
+  const activities: Activity[] = results?.activities || [];
+  const hasActiveResults = hasResults && activities.length > 0;
 
   return (
     <div className="container mx-auto py-6 space-y-6">
@@ -55,10 +82,10 @@ export default function ActivitiesSearchPage() {
             </div>
           )}
 
-          {searchError && (
+          {(searchError || storeError) && (
             <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4">
               <p className="text-destructive text-sm">
-                {searchError?.message || "Something went wrong"}
+                {searchError?.message || storeError || "Something went wrong"}
               </p>
             </div>
           )}
