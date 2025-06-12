@@ -8,24 +8,19 @@ import type {
   TablesInsert,
   TablesUpdate,
 } from "@/lib/supabase/types";
-import type { PostgrestFilterBuilder } from "@supabase/postgrest-js";
 import {
   type UseInfiniteQueryOptions,
   type UseQueryOptions,
   useInfiniteQuery,
   useQuery,
 } from "@tanstack/react-query";
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 type TableName = keyof Database["public"]["Tables"];
 type TableRow<T extends TableName> = Database["public"]["Tables"][T]["Row"];
 type QueryHandler<T extends TableName> = (
-  query: PostgrestFilterBuilder<
-    Database["public"],
-    Database["public"]["Tables"][T],
-    any
-  >
-) => PostgrestFilterBuilder<Database["public"], Database["public"]["Tables"][T], any>;
+  query: any
+) => any;
 
 interface UseSupabaseQueryOptions<T extends TableName>
   extends Omit<UseQueryOptions<TableRow<T>[]>, "queryKey" | "queryFn"> {
@@ -78,7 +73,7 @@ export function useSupabaseQuery<T extends TableName>(
 
       const { data, error } = await query;
       if (error) throw error;
-      return data as TableRow<T>[];
+      return (data || []) as unknown as TableRow<T>[];
     },
     enabled: enabled && !!user?.id,
     staleTime,
@@ -106,6 +101,8 @@ export function useSupabaseInfiniteQuery<T extends TableName>(
     ...queryOptions
   } = options;
 
+  const { initialPageParam: _, ...restQueryOptions } = queryOptions;
+  
   return useInfiniteQuery({
     queryKey: [
       `${table}-infinite`,
@@ -119,7 +116,7 @@ export function useSupabaseInfiniteQuery<T extends TableName>(
       let query = supabase
         .from(table)
         .select(columns)
-        .range(pageParam, pageParam + pageSize - 1);
+        .range(pageParam as number, (pageParam as number) + pageSize - 1);
 
       if (filter) {
         query = filter(query as any);
@@ -129,8 +126,8 @@ export function useSupabaseInfiniteQuery<T extends TableName>(
       if (error) throw error;
 
       return {
-        data: data as TableRow<T>[],
-        nextCursor: data.length === pageSize ? pageParam + pageSize : undefined,
+        data: (data || []) as unknown as TableRow<T>[],
+        nextCursor: (data?.length || 0) === pageSize ? (pageParam as number) + pageSize : undefined,
         totalCount: count,
       };
     },
@@ -138,7 +135,7 @@ export function useSupabaseInfiniteQuery<T extends TableName>(
     getNextPageParam: (lastPage) => lastPage.nextCursor,
     enabled: enabled && !!user?.id,
     staleTime,
-    ...queryOptions,
+    ...restQueryOptions,
   });
 }
 
@@ -175,7 +172,7 @@ export function useSupabaseRecord<T extends TableName>(
         .single();
 
       if (error) throw error;
-      return data as TableRow<T>;
+      return data as unknown as TableRow<T>;
     },
     enabled: enabled && !!id && !!user?.id,
     staleTime,
@@ -290,7 +287,7 @@ export function useSupabaseSearch<T extends TableName>(
       const { data, error } = await query.limit(50); // Limit search results
       if (error) throw error;
 
-      return data as TableRow<T>[];
+      return (data || []) as unknown as TableRow<T>[];
     },
     enabled: enabled && !!user?.id && debouncedQuery.trim().length >= 2,
     staleTime: 1000 * 60 * 2, // 2 minutes for search results
@@ -335,7 +332,7 @@ export function useSupabaseRelated<T extends TableName>(
       const { data, error } = await query;
       if (error) throw error;
 
-      return data as TableRow<T>[];
+      return (data || []) as unknown as TableRow<T>[];
     },
     enabled: enabled && !!foreignValue && !!user?.id,
     staleTime: 1000 * 60 * 5,
@@ -501,4 +498,3 @@ export function useSupabaseQueryHelpers() {
   };
 }
 
-import { useEffect, useState } from "react";

@@ -6,7 +6,9 @@
 import { useAuth } from "@/contexts/auth-context";
 import { useMemo } from "react";
 import { useTripRealtime } from "./use-supabase-realtime";
-import { useTripData, useTrips } from "./use-trips-supabase";
+// TODO: Replace with proper trips hooks after migration
+// import { useTripData, useTrips } from "./use-trips-supabase";
+import { useTrips } from "./use-trips";
 
 /**
  * Enhanced hook that combines trip data with real-time updates

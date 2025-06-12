@@ -7,9 +7,6 @@ export * from "./use-supabase-chat";
 export * from "./use-supabase-storage";
 export * from "./use-trips-with-realtime";
 
-// Legacy Supabase hooks (to be migrated)
-export * from "./use-trips-supabase";
-
 // Modern API hooks
 export * from "./use-authenticated-api";
 
