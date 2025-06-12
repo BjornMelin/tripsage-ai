@@ -11,9 +11,9 @@ import {
 } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
 import { useSearchStore } from "@/stores/search-store";
+import type { FlightSearchParams } from "@/types/search";
 import { useRouter, useSearchParams } from "next/navigation";
 import React from "react";
-import type { FlightSearchParams } from "@/types/search";
 
 // Type for URL search parameters
 interface FlightSearchParamsState {
@@ -34,7 +34,7 @@ export default function FlightSearchPage() {
   // Initialize flight search type on mount
   React.useEffect(() => {
     initializeSearch("flight");
-    
+
     // Check for search parameters in URL
     const origin = searchParams.get("origin");
     const destination = searchParams.get("destination");
@@ -186,7 +186,9 @@ function PopularRouteCard({
           </div>
         </div>
         <div>
-          <button type="button" className="text-xs text-primary hover:underline">View Deal →</button>
+          <button type="button" className="text-xs text-primary hover:underline">
+            View Deal →
+          </button>
         </div>
       </CardContent>
     </Card>

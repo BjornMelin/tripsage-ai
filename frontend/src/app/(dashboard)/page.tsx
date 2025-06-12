@@ -23,7 +23,14 @@ function DashboardSkeleton() {
         </CardHeader>
         <CardContent>
           <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
-            {["action-1", "action-2", "action-3", "action-4", "action-5", "action-6"].map((key) => (
+            {[
+              "action-1",
+              "action-2",
+              "action-3",
+              "action-4",
+              "action-5",
+              "action-6",
+            ].map((key) => (
               <Skeleton key={key} className="h-20 w-full rounded-lg" />
             ))}
           </div>

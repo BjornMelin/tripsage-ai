@@ -45,7 +45,12 @@ vi.mock("@/components/features/search/destination-search-form", () => ({
 }));
 
 vi.mock("@/components/features/search/destination-card", () => ({
-  DestinationCard: ({ destination, onSelect, onCompare, onViewDetails }: {
+  DestinationCard: ({
+    destination,
+    onSelect,
+    onCompare,
+    onViewDetails,
+  }: {
     destination: { name: string; description: string };
     onSelect: () => void;
     onCompare: () => void;

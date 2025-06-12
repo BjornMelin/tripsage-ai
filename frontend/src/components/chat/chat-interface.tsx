@@ -151,7 +151,14 @@ function MessageInput({
           "h-[44px] flex items-center justify-center"
         )}
       >
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg
+          className="w-4 h-4"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          role="img"
+          aria-label="Send message"
+        >
           <path
             strokeLinecap="round"
             strokeLinejoin="round"

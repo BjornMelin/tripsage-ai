@@ -100,7 +100,7 @@ export const HotelSkeleton = React.forwardRef<HTMLDivElement, HotelSkeletonProps
           <div className="flex items-center space-x-2">
             <div className="flex space-x-1">
               {Array.from({ length: 5 }).map((_, index) => (
-                <Skeleton key={index} height="1rem" width="1rem" />
+                <Skeleton key={`star-${index}`} height="1rem" width="1rem" />
               ))}
             </div>
             <Skeleton height="1rem" width="60px" />
@@ -113,7 +113,7 @@ export const HotelSkeleton = React.forwardRef<HTMLDivElement, HotelSkeletonProps
           <div className="flex flex-wrap gap-2">
             {Array.from({ length: 4 }).map((_, index) => (
               <Skeleton
-                key={index}
+                key={`amenity-${index}`}
                 height="1.5rem"
                 width="80px"
                 className="rounded-full"
@@ -237,7 +237,7 @@ export const DestinationSkeleton = React.forwardRef<
         <div className="flex flex-wrap gap-2">
           {Array.from({ length: 3 }).map((_, index) => (
             <Skeleton
-              key={index}
+              key={`tag-${index}`}
               height="1.5rem"
               width="60px"
               className="rounded-full"
@@ -363,7 +363,7 @@ export const SearchFilterSkeleton = React.forwardRef<
       {/* Use FormSkeleton as base for overall structure */}
       <div className="p-4 space-y-4">
         {Array.from({ length: sections }).map((_, sectionIndex) => (
-          <div key={sectionIndex} className="space-y-2">
+          <div key={`section-${sectionIndex}`} className="space-y-2">
             {/* Section title */}
             <Skeleton height="1.25rem" width="30%" />
 
@@ -371,7 +371,7 @@ export const SearchFilterSkeleton = React.forwardRef<
             <div className="space-y-2">
               {Array.from({ length: 3 }).map((_, itemIndex) => (
                 <ListItemSkeleton
-                  key={itemIndex}
+                  key={`filter-item-${sectionIndex}-${itemIndex}`}
                   hasAvatar={false}
                   hasAction={false}
                   titleLines={1}
