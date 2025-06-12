@@ -117,7 +117,7 @@ describe("useSupabaseRealtime", () => {
     it("should not create channel when user is not authenticated", () => {
       // Temporarily override the auth mock for this test
       const originalAuth = mockAuth.user;
-      mockAuth.user = null;
+      mockAuth.user = null as any;
 
       renderHook(
         () =>
@@ -658,7 +658,7 @@ describe("useSupabaseRealtime", () => {
       });
 
       // Change table configuration
-      rerender({ table: "chat_messages" as const });
+      rerender({ table: "trips" as const });
 
       expect(mockSupabaseClient.removeChannel).toHaveBeenCalledWith(firstChannel);
     });
