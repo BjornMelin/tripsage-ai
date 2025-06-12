@@ -11,20 +11,52 @@ import {
 } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
 import { useSearchStore } from "@/stores/search-store";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import React from "react";
+import type { FlightSearchParams } from "@/types/search";
+
+// Type for URL search parameters
+interface FlightSearchParamsState {
+  origin?: string;
+  destination?: string;
+  departDate?: string;
+  returnDate?: string;
+  passengers?: string;
+  class?: string;
+}
 
 export default function FlightSearchPage() {
   const { initializeSearch, executeSearch } = useSearchStore();
   const router = useRouter();
   const { toast } = useToast();
+  const searchParams = useSearchParams();
 
   // Initialize flight search type on mount
   React.useEffect(() => {
     initializeSearch("flight");
-  }, [initializeSearch]);
+    
+    // Check for search parameters in URL
+    const origin = searchParams.get("origin");
+    const destination = searchParams.get("destination");
+    const departDate = searchParams.get("departDate");
+    const returnDate = searchParams.get("returnDate");
+    const passengers = searchParams.get("passengers");
+    const flightClass = searchParams.get("class");
 
-  const handleSearch = async (params: any) => {
+    if (origin || destination || departDate) {
+      const initialParams: FlightSearchParams = {
+        origin: origin || undefined,
+        destination: destination || undefined,
+        departureDate: departDate || undefined,
+        returnDate: returnDate || undefined,
+        adults: passengers ? Number(passengers) : 1,
+        cabinClass: (flightClass as FlightSearchParams["cabinClass"]) || "economy",
+      };
+      executeSearch(initialParams);
+    }
+  }, [initializeSearch, executeSearch, searchParams]);
+
+  const handleSearch = async (params: FlightSearchParams) => {
     try {
       const searchId = await executeSearch(params);
       if (searchId) {
