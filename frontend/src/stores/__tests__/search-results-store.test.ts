@@ -1,4 +1,4 @@
-import type { SearchResults, SearchType } from "@/types/search";
+import type { SearchResults, SearchType, Flight, Accommodation } from "@/types/search";
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -281,10 +281,10 @@ describe("Search Results Store", () => {
 
       const searchId = result.current.startSearch("flight", {});
       const initialResults: SearchResults = {
-        flights: [{ id: "f1", price: { amount: 299, currency: "USD" } }] as any,
+        flights: [{ id: "f1", price: { amount: 299, currency: "USD" } }] as Partial<Flight>[],
       };
       const newResults: SearchResults = {
-        flights: [{ id: "f2", price: { amount: 399, currency: "USD" } }] as any,
+        flights: [{ id: "f2", price: { amount: 399, currency: "USD" } }] as Partial<Flight>[],
       };
 
       act(() => {
