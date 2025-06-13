@@ -4,7 +4,8 @@
  * for accessibility compliance according to WCAG guidelines.
  */
 
-import { render, screen } from "@testing-library/react";
+import { render, createMockUser } from "@/test/test-utils";
+import { screen } from "@testing-library/react";
 import { vi } from "vitest";
 import { describe, expect, it } from "vitest";
 
@@ -40,7 +41,7 @@ describe("Button Accessibility Compliance", () => {
       // Get all button elements
       const buttons = screen.getAllByRole("button");
 
-      buttons.forEach((button) => {
+      for (const button of buttons) {
         const buttonElement = button as HTMLButtonElement;
 
         // Every button should have a type attribute
@@ -65,7 +66,7 @@ describe("Button Accessibility Compliance", () => {
         } else {
           expect(buttonElement.type).toBe("button");
         }
-      });
+      }
     });
 
     it("should have aria-label for password visibility toggle", () => {
@@ -87,7 +88,7 @@ describe("Button Accessibility Compliance", () => {
       // Get all button elements
       const buttons = screen.getAllByRole("button");
 
-      buttons.forEach((button) => {
+      for (const button of buttons) {
         const buttonElement = button as HTMLButtonElement;
 
         // Every button should have a type attribute
@@ -96,7 +97,7 @@ describe("Button Accessibility Compliance", () => {
 
         // Button type should be one of the valid HTML button types
         expect(["button", "submit", "reset"]).toContain(buttonElement.type);
-      });
+      }
     });
 
     it("should have aria-label for password visibility toggle", () => {

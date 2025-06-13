@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/client";
+import { type TypedSupabaseClient, createClient } from "@/lib/supabase/client";
 import { act, render, screen, waitFor } from "@testing-library/react";
 import { useRouter } from "next/navigation";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -42,7 +42,9 @@ describe("AuthCallbackPage", () => {
     });
 
     // Setup Supabase client mock
-    vi.mocked(createClient).mockReturnValue(mockSupabaseClient as any);
+    vi.mocked(createClient).mockReturnValue(
+      mockSupabaseClient as unknown as TypedSupabaseClient
+    );
   });
 
   afterEach(() => {

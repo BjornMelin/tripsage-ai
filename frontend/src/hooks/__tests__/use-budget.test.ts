@@ -15,6 +15,7 @@ import {
   useUpdateBudget,
   useUpdateExpense,
 } from "../use-budget";
+import { useBudgetStore } from "@/stores/budget-store";
 
 // Mock all API-related hooks
 vi.mock("../use-api-query", () => ({
@@ -42,7 +43,7 @@ vi.mock("../use-api-query", () => ({
 }));
 
 // Mock the budget store
-vi.mock("../../../stores/budget-store", () => ({
+vi.mock("@/stores/budget-store", () => ({
   useBudgetStore: vi.fn().mockImplementation(() => ({
     budgets: {
       "budget-1": {
@@ -155,6 +156,10 @@ vi.mock("../../../stores/budget-store", () => ({
 }));
 
 describe("Budget Hooks", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   describe("useBudget", () => {
     it("returns budget data and actions", () => {
       const { result } = renderHook(() => useBudget());
@@ -165,6 +170,11 @@ describe("Budget Hooks", () => {
       expect(result.current.budgetSummary).toBeDefined();
       expect(result.current.recentExpenses).toBeDefined();
       expect(result.current.setActiveBudget).toBeDefined();
+
+      // Verify the data matches mock
+      expect(result.current.activeBudget?.name).toBe("Summer Vacation");
+      expect(result.current.budgetSummary.totalBudget).toBe(5000);
+      expect(result.current.budgetSummary.totalSpent).toBe(500);
     });
   });
 
@@ -190,6 +200,10 @@ describe("Budget Hooks", () => {
       expect(result.current.addExpense).toBeDefined();
       expect(result.current.updateExpense).toBeDefined();
       expect(result.current.removeExpense).toBeDefined();
+
+      // Verify the expense data
+      expect(result.current.expenses[0].description).toBe("Flight to NYC");
+      expect(result.current.expenses[0].amount).toBe(500);
     });
 
     it("returns empty array when no budget is specified", () => {
@@ -208,6 +222,10 @@ describe("Budget Hooks", () => {
       expect(result.current.addAlert).toBeDefined();
       expect(result.current.markAlertAsRead).toBeDefined();
       expect(result.current.clearAlerts).toBeDefined();
+
+      // Verify the alert data
+      expect(result.current.alerts[0].message).toBe("Almost at budget limit");
+      expect(result.current.alerts[0].threshold).toBe(80);
     });
 
     it("returns empty array when no budget is specified", () => {

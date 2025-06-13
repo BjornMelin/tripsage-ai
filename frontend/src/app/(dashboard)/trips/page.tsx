@@ -168,7 +168,7 @@ export default function TripsPage() {
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {Array.from({ length: 6 }).map((_, i) => (
-            <Card key={`skeleton-${i}`} className="animate-pulse">
+            <Card key={`trip-skeleton-${i}-${Date.now()}`} className="animate-pulse">
               <CardContent className="p-6">
                 <div className="h-4 bg-gray-200 rounded mb-4" />
                 <div className="h-3 bg-gray-200 rounded mb-2" />
@@ -357,10 +357,10 @@ export default function TripsPage() {
               : "space-y-4"
           }
         >
-          {filteredAndSortedTrips.map((trip: any) => (
+          {filteredAndSortedTrips.map((trip: Trip) => (
             <TripCard
               key={trip.id}
-              trip={trip as any}
+              trip={trip}
               onDelete={handleDeleteTrip}
               className={viewMode === "list" ? "flex-row" : ""}
             />

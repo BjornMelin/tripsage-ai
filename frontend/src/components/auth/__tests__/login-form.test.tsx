@@ -1,14 +1,9 @@
 import { useAuth } from "@/contexts/auth-context";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, createMockUser } from "@/test/test-utils";
 import userEvent from "@testing-library/user-event";
 import { useRouter } from "next/navigation";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { LoginForm, LoginFormSkeleton } from "../login-form";
-
-// Mock next/navigation
-vi.mock("next/navigation", () => ({
-  useRouter: vi.fn(),
-}));
 
 // Mock auth context
 vi.mock("@/contexts/auth-context", () => ({
@@ -124,8 +119,9 @@ describe("LoginForm", () => {
   });
 
   it("should redirect if already authenticated", async () => {
+    const mockUser = createMockUser();
     vi.mocked(useAuth).mockReturnValue({
-      user: { id: "1", email: "test@example.com" },
+      user: mockUser,
       isAuthenticated: true,
       isLoading: false,
       error: null,
@@ -147,8 +143,9 @@ describe("LoginForm", () => {
   });
 
   it("should redirect to custom path if already authenticated", async () => {
+    const mockUser = createMockUser();
     vi.mocked(useAuth).mockReturnValue({
-      user: { id: "1", email: "test@example.com" },
+      user: mockUser,
       isAuthenticated: true,
       isLoading: false,
       error: null,

@@ -524,10 +524,71 @@ const getDefaultSortOptions = (searchType: SearchType): ValidatedSortOption[] =>
   }
 };
 
+// Helper to compute derived state
+const computeDerivedState = (state: Partial<SearchFiltersState>) => {
+  const hasActiveFilters = Object.keys(state.activeFilters || {}).length > 0;
+  const activeFilterCount = Object.keys(state.activeFilters || {}).length;
+  const canClearFilters = hasActiveFilters || state.activeSortOption !== null;
+  
+  const currentFilters = state.currentSearchType 
+    ? (state.availableFilters || {})[state.currentSearchType] || [] 
+    : [];
+    
+  const currentSortOptions = state.currentSearchType 
+    ? (state.availableSortOptions || {})[state.currentSearchType] || [] 
+    : [];
+
+  const summaries: string[] = [];
+  Object.entries(state.activeFilters || {}).forEach(([filterId, activeFilter]) => {
+    const filter = currentFilters.find((f) => f.id === filterId);
+    if (filter) {
+      const valueStr = Array.isArray(activeFilter.value)
+        ? activeFilter.value.join(", ")
+        : typeof activeFilter.value === "object" && activeFilter.value !== null
+        ? `${(activeFilter.value as any).min || ""} - ${(activeFilter.value as any).max || ""}`
+        : String(activeFilter.value);
+      summaries.push(`${filter.label}: ${valueStr}`);
+    }
+  });
+  const appliedFilterSummary = summaries.join("; ");
+
+  return {
+    hasActiveFilters,
+    activeFilterCount,
+    canClearFilters,
+    currentFilters,
+    currentSortOptions,
+    appliedFilterSummary,
+  };
+};
+
+// Custom middleware to compute derived state
+const withComputedState = (config: any) => (set: any, get: any, api: any) => {
+  const setState = (partial: any, replace?: boolean) => {
+    const newState = typeof partial === 'function' ? partial(get()) : partial;
+    const currentState = get();
+    const mergedState = replace ? newState : { ...currentState, ...newState };
+    const derived = computeDerivedState(mergedState);
+    set({ ...newState, ...derived }, replace);
+  };
+  
+  // Override the setState method on the api to ensure computed state is always updated
+  const originalSetState = api.setState;
+  api.setState = (partial: any, replace?: boolean) => {
+    const newState = typeof partial === 'function' ? partial(get()) : partial;
+    const currentState = get();
+    const mergedState = replace ? newState : { ...currentState, ...newState };
+    const derived = computeDerivedState(mergedState);
+    originalSetState({ ...newState, ...derived }, replace);
+  };
+  
+  return config(setState, get, api);
+};
+
 export const useSearchFiltersStore = create<SearchFiltersState>()(
   devtools(
     persist(
-      (set, get) => ({
+      withComputedState((set, get) => ({
         // Initial state
         availableFilters: {
           flight: getDefaultFilters("flight"),
@@ -555,44 +616,13 @@ export const useSearchFiltersStore = create<SearchFiltersState>()(
         isApplyingFilters: false,
         filterValidationErrors: {},
 
-        // Computed properties
-        get hasActiveFilters() {
-          return Object.keys(get().activeFilters).length > 0;
-        },
-
-        get activeFilterCount() {
-          return Object.keys(get().activeFilters).length;
-        },
-
-        get canClearFilters() {
-          return get().hasActiveFilters || get().activeSortOption !== null;
-        },
-
-        get currentFilters() {
-          const { currentSearchType, availableFilters } = get();
-          return currentSearchType ? availableFilters[currentSearchType] || [] : [];
-        },
-
-        get currentSortOptions() {
-          const { currentSearchType, availableSortOptions } = get();
-          return currentSearchType ? availableSortOptions[currentSearchType] || [] : [];
-        },
-
-        get appliedFilterSummary() {
-          const { activeFilters, currentFilters } = get();
-          const summaries: string[] = [];
-
-          Object.entries(activeFilters).forEach(([filterId, activeFilter]) => {
-            const filterConfig = currentFilters.find((f) => f.id === filterId);
-            if (filterConfig) {
-              const displayValue =
-                activeFilter.displayValue || String(activeFilter.value);
-              summaries.push(`${filterConfig.label}: ${displayValue}`);
-            }
-          });
-
-          return summaries.join(", ");
-        },
+        // Computed properties (initialized by middleware)
+        hasActiveFilters: false,
+        activeFilterCount: 0,
+        canClearFilters: false,
+        currentFilters: [],
+        currentSortOptions: [],
+        appliedFilterSummary: "",
 
         // Filter configuration actions
         setAvailableFilters: (searchType, filters) => {
@@ -1092,6 +1122,17 @@ export const useSearchFiltersStore = create<SearchFiltersState>()(
                 }
               }
 
+              // Handle range type filters
+              if (filterConfig.type === "range" && typeof value === "object" && value !== null) {
+                const rangeValue = value as { min?: number; max?: number };
+                if (rangeValue.min !== undefined && min !== undefined && rangeValue.min < min) {
+                  throw new Error(`Minimum value must be at least ${min}`);
+                }
+                if (rangeValue.max !== undefined && max !== undefined && rangeValue.max > max) {
+                  throw new Error(`Maximum value must be at most ${max}`);
+                }
+              }
+
               if (typeof value === "string" && pattern) {
                 const regex = new RegExp(pattern);
                 if (!regex.test(value)) {
@@ -1237,7 +1278,7 @@ export const useSearchFiltersStore = create<SearchFiltersState>()(
             filterValidationErrors: {},
           });
         },
-      }),
+      })),
       {
         name: "search-filters-storage",
         partialize: (state) => ({

@@ -1,10 +1,66 @@
 import type { ApiKey } from "@/types/api-keys";
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+
+// Un-mock the api-key-store if it was mocked globally
+vi.unmock("@/stores/api-key-store");
+
+// Import the real store after unmocking
 import { useApiKeyStore } from "../api-key-store";
 
 // Mock fetch globally
 global.fetch = vi.fn();
+
+// Mock the Supabase client for this test file
+const mockSupabaseClient = {
+  auth: {
+    getSession: vi.fn().mockResolvedValue({
+      data: {
+        session: {
+          access_token: "test-access-token",
+          refresh_token: "test-refresh-token",
+          expires_at: Date.now() + 3600000,
+          user: { id: "test-user-id", email: "test@example.com" },
+        },
+      },
+      error: null,
+    }),
+  },
+};
+
+vi.mock("@/lib/supabase/client", () => ({
+  createClient: vi.fn(() => mockSupabaseClient),
+}));
+
+// Mock fetchApi to use global.fetch
+vi.mock("@/lib/api/client", () => ({
+  fetchApi: vi.fn((url, options) => {
+    const headers = { ...options?.headers };
+    if (options?.auth) {
+      headers.Authorization = options.auth;
+    }
+    
+    // Remove auth from options before passing to fetch
+    const { auth, ...fetchOptions } = options || {};
+    
+    return global.fetch(url, {
+      ...fetchOptions,
+      headers,
+    }).then(res => {
+      if (res.ok) {
+        return res.json();
+      }
+      // Check if res.text is a function before calling it
+      if (typeof res.text === 'function') {
+        return res.text().then(text => {
+          throw new Error(text);
+        });
+      } else {
+        throw new Error("Failed to load keys");
+      }
+    });
+  }),
+}));
 
 describe("API Key Store", () => {
   beforeEach(() => {
@@ -340,7 +396,7 @@ describe("API Key Store", () => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: "Bearer mock-token",
+          Authorization: "Bearer test-access-token",
         },
         body: JSON.stringify({
           service: "openai",
@@ -452,7 +508,7 @@ describe("API Key Store", () => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: "Bearer mock-token",
+          Authorization: "Bearer test-access-token",
         },
         body: JSON.stringify({
           service: "openai",
@@ -462,34 +518,24 @@ describe("API Key Store", () => {
       });
     });
 
-    it("omits authorization header when token not available", async () => {
+    it("fails validation when no session available", async () => {
       const { result } = renderHook(() => useApiKeyStore());
 
-      // Remove token
-      act(() => {
-        useApiKeyStore.setState({ token: null });
+      // Mock getSession to return no session
+      mockSupabaseClient.auth.getSession.mockResolvedValueOnce({
+        data: { session: null },
+        error: null,
       });
 
-      vi.mocked(global.fetch).mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ is_valid: true }),
-      });
-
+      let isValid: boolean;
       await act(async () => {
-        await result.current.validateKey("openai", "sk-test123");
+        isValid = await result.current.validateKey("openai", "sk-test123");
       });
 
-      expect(global.fetch).toHaveBeenCalledWith("/api/keys/validate", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          service: "openai",
-          api_key: "sk-test123",
-          save: false,
-        }),
-      });
+      expect(isValid!).toBe(false);
+      expect(result.current.authError).toBe("Authentication required");
+      expect(result.current.isApiKeyValid).toBe(false);
+      expect(global.fetch).not.toHaveBeenCalled();
     });
   });
 
@@ -535,7 +581,7 @@ describe("API Key Store", () => {
 
       expect(global.fetch).toHaveBeenCalledWith("/api/keys", {
         headers: {
-          Authorization: "Bearer mock-token",
+          Authorization: "Bearer test-access-token",
         },
       });
     });
@@ -566,31 +612,37 @@ describe("API Key Store", () => {
       expect(result.current.authError).toBe("Network error");
     });
 
-    it("does not load keys when not authenticated", async () => {
+    it("does not load keys when no session available", async () => {
       const { result } = renderHook(() => useApiKeyStore());
 
-      act(() => {
-        useApiKeyStore.setState({ isAuthenticated: false });
+      // Mock getSession to return no session
+      mockSupabaseClient.auth.getSession.mockResolvedValueOnce({
+        data: { session: null },
+        error: null,
       });
 
       await act(async () => {
         await result.current.loadKeys();
       });
 
+      expect(result.current.authError).toBe("Authentication required");
       expect(global.fetch).not.toHaveBeenCalled();
     });
 
-    it("does not load keys when token is missing", async () => {
+    it("handles session error when loading keys", async () => {
       const { result } = renderHook(() => useApiKeyStore());
 
-      act(() => {
-        useApiKeyStore.setState({ token: null });
+      // Mock getSession to return error
+      mockSupabaseClient.auth.getSession.mockResolvedValueOnce({
+        data: { session: null },
+        error: new Error("Session error"),
       });
 
       await act(async () => {
         await result.current.loadKeys();
       });
 
+      expect(result.current.authError).toBe("Authentication required");
       expect(global.fetch).not.toHaveBeenCalled();
     });
   });

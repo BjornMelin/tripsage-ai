@@ -1,14 +1,24 @@
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { type Destination, type Trip, useTripStore } from "../trip-store";
+import { createTripStoreMockClient, resetTripStoreMockData } from "@/test/trip-store-test-helpers";
 
 // Mock setTimeout to make tests run faster
 vi.mock("global", () => ({
   setTimeout: vi.fn((fn) => fn()),
 }));
 
+// Mock the Supabase client for trip store
+vi.mock("@/lib/supabase/client", () => ({
+  createClient: vi.fn(() => createTripStoreMockClient()),
+}));
+
 describe("Trip Store", () => {
   beforeEach(() => {
+    // Reset mock data
+    resetTripStoreMockData();
+    
+    // Reset store state
     act(() => {
       useTripStore.setState({
         trips: [],

@@ -18,9 +18,30 @@ class TestMemorySystemIntegration:
     """Test complete memory system integration across backend and frontend."""
 
     @pytest.fixture
-    def client(self):
-        """Test client for FastAPI app."""
+    def authenticated_client(self):
+        """Test client with authentication headers."""
         return TestClient(app)
+    
+    @pytest.fixture
+    def auth_headers(self):
+        """Authentication headers for test requests."""
+        return {"Authorization": "Bearer test-token"}
+    
+    @pytest.fixture(autouse=True)
+    def mock_auth_dependencies(self):
+        """Mock authentication dependencies."""
+        from unittest.mock import Mock, patch
+        
+        # Create mock principal
+        mock_principal = Mock()
+        mock_principal.id = "test-user-123"
+        mock_principal.email = "test@example.com"
+        
+        # Patch authentication dependencies
+        with patch("tripsage.api.core.dependencies.get_current_principal", return_value=mock_principal):
+            with patch("tripsage.api.core.dependencies.require_principal", return_value=mock_principal):
+                with patch("tripsage.api.core.dependencies.get_principal_id", return_value="test-user-123"):
+                    yield mock_principal
 
     @pytest.fixture
     def mock_memory_service(self):
@@ -80,7 +101,7 @@ class TestMemorySystemIntegration:
 
     @patch("tripsage.api.core.dependencies.get_memory_service_dep")
     def test_store_conversation_memory_endpoint(
-        self, mock_get_service, client, sample_user, mock_settings_and_redis
+        self, mock_get_service, authenticated_client, sample_user, mock_settings_and_redis
     ):
         """Test storing conversation memory through API."""
         # Setup mock service
@@ -110,7 +131,7 @@ class TestMemorySystemIntegration:
         }
 
         # Make request
-        response = client.post("/api/memory/conversations", json=request_data)
+        response = authenticated_client.post("/api/memory/conversation", json=request_data)
 
         # Verify response
         assert response.status_code == 200
@@ -123,7 +144,7 @@ class TestMemorySystemIntegration:
 
     @patch("tripsage.api.core.dependencies.get_memory_service_dep")
     def test_get_user_context_endpoint(
-        self, mock_get_service, client, mock_memory_service
+        self, mock_get_service, authenticated_client, mock_memory_service
     ):
         """Test getting user memory context through API."""
         # Setup mock service
@@ -134,7 +155,7 @@ class TestMemorySystemIntegration:
         )
 
         # Make request
-        response = client.get("/api/memory/context/123")
+        response = authenticated_client.get("/api/memory/context")
 
         # Verify response
         assert response.status_code == 200
@@ -159,7 +180,7 @@ class TestMemorySystemIntegration:
 
     @patch("tripsage.api.core.dependencies.get_memory_service_dep")
     def test_search_memories_endpoint(
-        self, mock_get_service, client, mock_memory_service
+        self, mock_get_service, authenticated_client, mock_memory_service
     ):
         """Test searching memories through API."""
         # Setup mock service
@@ -170,7 +191,7 @@ class TestMemorySystemIntegration:
         )
 
         # Make request with query parameters matching frontend
-        response = client.get("/api/memory/search/123?query=Paris&limit=10")
+        response = authenticated_client.post("/api/memory/search", json={"query": "Paris", "limit": 10})
 
         # Verify response
         assert response.status_code == 200
@@ -222,14 +243,14 @@ class TestMemorySystemIntegration:
     def test_memory_error_handling(self, mock_get_service, client):
         """Test API error handling for memory endpoints."""
         # Test invalid query parameters
-        response = client.get("/api/memory/search/123")  # No query
+        response = authenticated_client.post("/api/memory/search", json={})  # No query
         assert response.status_code == 422  # Validation error
 
         # Test service errors
         mock_service = AsyncMock()
         mock_get_service.return_value = mock_service
         mock_service.search_memories.side_effect = Exception("Service error")
-        response = client.get("/api/memory/search/123?query=test")
+        response = authenticated_client.post("/api/memory/search", json={"query": "test", "limit": 10})
         assert response.status_code == 500
 
     @pytest.mark.asyncio
@@ -246,7 +267,7 @@ class TestMemorySystemIntegration:
         # Verify consistency
         assert context1 == context2
 
-    def test_memory_frontend_compatibility(self, client):
+    def test_memory_frontend_compatibility(self, authenticated_client):
         """Test that API responses match frontend TypeScript interfaces."""
         with patch(
             "tripsage.api.core.dependencies.get_memory_service_dep"
@@ -280,7 +301,7 @@ class TestMemorySystemIntegration:
                 },
             }
 
-            response = client.get("/api/memory/context/123")
+            response = authenticated_client.get("/api/memory/context")
             assert response.status_code == 200
 
             data = response.json()
@@ -312,7 +333,7 @@ class TestMemorySystemIntegration:
         assert len(results) == 5
         assert all(len(result) == 2 for result in results)
 
-    def test_memory_data_validation(self, client):
+    def test_memory_data_validation(self, authenticated_client):
         """Test that API properly validates input data."""
         with patch("tripsage.api.core.dependencies.get_memory_service_dep"):
             # Test invalid message format
@@ -323,7 +344,7 @@ class TestMemorySystemIntegration:
                 "metadata": {"userId": 123},
             }
 
-            response = client.post("/api/memory/conversations", json=invalid_data)
+            response = authenticated_client.post("/api/memory/conversation", json=invalid_data)
             assert response.status_code == 422  # Validation error
 
             # Test missing required fields
@@ -332,5 +353,5 @@ class TestMemorySystemIntegration:
                 "metadata": {},  # Missing userId
             }
 
-            response = client.post("/api/memory/conversations", json=incomplete_data)
+            response = authenticated_client.post("/api/memory/conversation", json=incomplete_data)
             assert response.status_code == 422

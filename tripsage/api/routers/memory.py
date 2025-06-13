@@ -61,9 +61,19 @@ async def add_conversation_memory(
     """
     try:
         user_id = get_principal_id(principal)
-        result = await memory_service.add_conversation_memory(
-            user_id, request.messages, request.session_id
+        
+        # Import the core ConversationMemoryRequest model
+        from tripsage_core.services.business.memory_service import ConversationMemoryRequest as CoreMemoryRequest
+        
+        # Convert API request to core request
+        core_request = CoreMemoryRequest(
+            messages=request.messages,
+            session_id=request.session_id,
+            # context_type is not in the core model, add to metadata if needed
+            metadata={"context_type": request.context_type} if request.context_type else None
         )
+        
+        result = await memory_service.add_conversation_memory(user_id, core_request)
         return result
 
     except Exception as e:

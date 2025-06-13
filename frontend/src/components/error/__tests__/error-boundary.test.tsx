@@ -1,5 +1,5 @@
 import { errorService } from "@/lib/error-service";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, renderWithProviders, screen } from "@/test/test-utils";
 import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ErrorBoundary, withErrorBoundary } from "../error-boundary";
@@ -54,7 +54,7 @@ describe("ErrorBoundary", () => {
 
   describe("normal rendering", () => {
     it("should render children when there is no error", () => {
-      render(
+      renderWithProviders(
         <ErrorBoundary>
           <NormalComponent />
         </ErrorBoundary>
@@ -64,7 +64,7 @@ describe("ErrorBoundary", () => {
     });
 
     it("should not call error reporting when there is no error", () => {
-      render(
+      renderWithProviders(
         <ErrorBoundary>
           <NormalComponent />
         </ErrorBoundary>
@@ -77,7 +77,7 @@ describe("ErrorBoundary", () => {
 
   describe("error handling", () => {
     it("should catch errors and display fallback UI", () => {
-      render(
+      renderWithProviders(
         <ErrorBoundary>
           <ThrowError shouldThrow={true} />
         </ErrorBoundary>
@@ -88,7 +88,7 @@ describe("ErrorBoundary", () => {
     });
 
     it("should call error reporting when error occurs", () => {
-      render(
+      renderWithProviders(
         <ErrorBoundary>
           <ThrowError shouldThrow={true} />
         </ErrorBoundary>
@@ -107,7 +107,7 @@ describe("ErrorBoundary", () => {
     it("should call custom onError callback", () => {
       const onError = vi.fn();
 
-      render(
+      renderWithProviders(
         <ErrorBoundary onError={onError}>
           <ThrowError shouldThrow={true} />
         </ErrorBoundary>
@@ -129,7 +129,7 @@ describe("ErrorBoundary", () => {
         configurable: true,
       });
 
-      render(
+      renderWithProviders(
         <ErrorBoundary>
           <ThrowError shouldThrow={true} />
         </ErrorBoundary>
@@ -149,7 +149,7 @@ describe("ErrorBoundary", () => {
 
   describe("error recovery", () => {
     it("should reset error state when reset button is clicked", () => {
-      const { rerender } = render(
+      const { rerender } = renderWithProviders(
         <ErrorBoundary>
           <ThrowError shouldThrow={true} />
         </ErrorBoundary>
@@ -172,7 +172,7 @@ describe("ErrorBoundary", () => {
     });
 
     it("should handle retry with retry limit", () => {
-      const { rerender } = render(
+      const { rerender } = renderWithProviders(
         <ErrorBoundary>
           <ThrowError shouldThrow={true} />
         </ErrorBoundary>
@@ -217,7 +217,7 @@ describe("ErrorBoundary", () => {
     );
 
     it("should render custom fallback component", () => {
-      render(
+      renderWithProviders(
         <ErrorBoundary fallback={CustomFallback}>
           <ThrowError shouldThrow={true} />
         </ErrorBoundary>
@@ -233,7 +233,7 @@ describe("ErrorBoundary", () => {
     it("should wrap component with error boundary", () => {
       const WrappedComponent = withErrorBoundary(NormalComponent);
 
-      render(<WrappedComponent />);
+      renderWithProviders(<WrappedComponent />);
 
       expect(screen.getByText("Normal component")).toBeInTheDocument();
     });
@@ -241,7 +241,7 @@ describe("ErrorBoundary", () => {
     it("should catch errors in wrapped component", () => {
       const WrappedComponent = withErrorBoundary(ThrowError);
 
-      render(<WrappedComponent shouldThrow={true} />);
+      renderWithProviders(<WrappedComponent shouldThrow={true} />);
 
       expect(screen.getByText("Something went wrong")).toBeInTheDocument();
     });
@@ -252,7 +252,7 @@ describe("ErrorBoundary", () => {
         fallback: CustomFallback,
       });
 
-      render(<WrappedComponent shouldThrow={true} />);
+      renderWithProviders(<WrappedComponent shouldThrow={true} />);
 
       expect(screen.getByText("HOC Custom Fallback")).toBeInTheDocument();
     });
@@ -288,7 +288,7 @@ describe("ErrorBoundary", () => {
     it("should generate session ID", () => {
       (window.sessionStorage.getItem as any).mockReturnValue(null);
 
-      render(
+      renderWithProviders(
         <ErrorBoundary>
           <ThrowError shouldThrow={true} />
         </ErrorBoundary>
@@ -303,7 +303,7 @@ describe("ErrorBoundary", () => {
     it("should use existing session ID", () => {
       (window.sessionStorage.getItem as any).mockReturnValue("existing_session_id");
 
-      render(
+      renderWithProviders(
         <ErrorBoundary>
           <ThrowError shouldThrow={true} />
         </ErrorBoundary>
@@ -323,7 +323,7 @@ describe("ErrorBoundary", () => {
         user: { id: "test_user_123" },
       };
 
-      render(
+      renderWithProviders(
         <ErrorBoundary>
           <ThrowError shouldThrow={true} />
         </ErrorBoundary>

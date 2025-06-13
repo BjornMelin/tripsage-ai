@@ -28,13 +28,13 @@ export function ApiKeyInput({
   error,
 }: ApiKeyInputProps) {
   const [visible, setVisible] = useState(false);
-  const [inactivityTimer, setInactivityTimer] = useState<NodeJS.Timeout | null>(null);
+  const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Auto-clear after 2 minutes of inactivity for security
   useEffect(() => {
     if (value && !disabled) {
-      if (inactivityTimer) clearTimeout(inactivityTimer);
+      if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
 
       const timer = setTimeout(
         () => {
@@ -44,11 +44,11 @@ export function ApiKeyInput({
         1000 * 60 * 2
       ); // 2 minutes
 
-      setInactivityTimer(timer);
+      inactivityTimerRef.current = timer;
     }
 
     return () => {
-      if (inactivityTimer) clearTimeout(inactivityTimer);
+      if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
     };
   }, [value, onChange, disabled]);
 
@@ -57,7 +57,7 @@ export function ApiKeyInput({
     return () => {
       onChange("");
     };
-  }, []);
+  }, [onChange]);
 
   return (
     <div className="relative">
