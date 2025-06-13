@@ -36,7 +36,7 @@ os.environ.update(
         "WEBCRAWL_FIRECRAWL_API_KEY": "test-firecrawl-key",
         # DragonflyDB configuration
         "DRAGONFLY_URL": "redis://localhost:6379/0",
-        "DRAGONFLY_PASSWORD": "test_dragonfly_password",
+        "DRAGONFLY_PASSWORD": "tripsage_secure_password",
         # MCP Endpoints - All required MCP configurations
         "TIME_MCP_ENDPOINT": "http://localhost:3006",
         "WEATHER_MCP_ENDPOINT": "http://localhost:3007",

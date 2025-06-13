@@ -205,7 +205,7 @@ export const useTripStore = create<TripState>()(
             budget: data.budget,
             currency: data.currency || "USD",
             spent_amount: 0,
-            visibility: data.visibility || "private",
+            visibility: data.visibility || (data.isPublic ? "public" : "private"),
             tags: data.tags || [],
             preferences: data.preferences || {},
             status: data.status || "planning",

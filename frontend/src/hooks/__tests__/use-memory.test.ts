@@ -16,18 +16,14 @@ import {
   useUpdatePreferences,
 } from "../use-memory";
 
-// Mock the API client
-vi.mock("../../lib/api/client", () => ({
-  apiClient: {
-    get: vi.fn(),
-    post: vi.fn(),
-    put: vi.fn(),
-  },
+// Mock the useAuthenticatedApi hook
+const mockMakeAuthenticatedRequest = vi.fn();
+vi.mock("../use-authenticated-api", () => ({
+  useAuthenticatedApi: () => ({
+    makeAuthenticatedRequest: mockMakeAuthenticatedRequest,
+    isAuthenticated: true,
+  }),
 }));
-
-import { apiClient } from "../../lib/api/client";
-
-const mockApiClient = apiClient as any;
 
 // Test wrapper with QueryClient
 const createWrapper = () => {
@@ -46,6 +42,7 @@ const createWrapper = () => {
 describe("Memory Hooks", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockMakeAuthenticatedRequest.mockClear();
   });
 
   describe("useMemoryContext", () => {
@@ -72,7 +69,7 @@ describe("Memory Hooks", () => {
         },
       };
 
-      mockApiClient.get.mockResolvedValueOnce({ data: mockResponse });
+      mockMakeAuthenticatedRequest.mockResolvedValueOnce(mockResponse);
 
       const { result } = renderHook(() => useMemoryContext("user-123"), {
         wrapper: createWrapper(),
@@ -82,7 +79,7 @@ describe("Memory Hooks", () => {
         expect(result.current.isSuccess).toBe(true);
       });
 
-      expect(mockApiClient.get).toHaveBeenCalledWith("/api/memory/context/user-123");
+      expect(mockMakeAuthenticatedRequest).toHaveBeenCalledWith("/api/memory/context/user-123", { params: {} });
       expect(result.current.data).toEqual(mockResponse);
     });
 
@@ -91,13 +88,16 @@ describe("Memory Hooks", () => {
         wrapper: createWrapper(),
       });
 
-      expect(mockApiClient.get).not.toHaveBeenCalled();
-      expect(result.current.isLoading).toBe(false);
+      expect(mockMakeAuthenticatedRequest).not.toHaveBeenCalled();
       expect(result.current.data).toBeUndefined();
+      // When enabled is false in react-query, the query may still show as pending initially
+      // but it won't actually fetch data
+      expect(result.current.isSuccess).toBe(false);
+      expect(result.current.isError).toBe(false);
     });
 
     it("should handle API errors gracefully", async () => {
-      mockApiClient.get.mockRejectedValueOnce(new Error("API Error"));
+      mockMakeAuthenticatedRequest.mockRejectedValueOnce(new Error("API Error"));
 
       const { result } = renderHook(() => useMemoryContext("user-123"), {
         wrapper: createWrapper(),
@@ -126,42 +126,57 @@ describe("Memory Hooks", () => {
         },
       ];
 
-      mockApiClient.get.mockResolvedValueOnce({ data: mockResults });
+      mockMakeAuthenticatedRequest.mockResolvedValueOnce(mockResults);
 
       const { result } = renderHook(() => useSearchMemories(), {
         wrapper: createWrapper(),
       });
 
+      // Since useSearchMemories returns a mutation, we need to call mutate
+      const searchParams = {
+        userId: "user-123",
+        query: "travel preferences",
+        limit: 10,
+        filters: { category: "accommodation" },
+      };
+      
+      result.current.mutate(searchParams);
+
       await waitFor(() => {
         expect(result.current.isSuccess).toBe(true);
       });
 
-      expect(mockApiClient.get).toHaveBeenCalledWith("/api/memory/search/user-123", {
-        params: {
-          query: "travel preferences",
-          limit: 10,
-          filters: JSON.stringify({ category: "accommodation" }),
-        },
+      expect(mockMakeAuthenticatedRequest).toHaveBeenCalledWith("/api/memory/search", {
+        method: "POST",
+        body: JSON.stringify(searchParams),
+        headers: { "Content-Type": "application/json" },
       });
       expect(result.current.data).toEqual(mockResults);
     });
 
     it("should handle search without filters", async () => {
-      mockApiClient.get.mockResolvedValueOnce({ data: [] });
+      mockMakeAuthenticatedRequest.mockResolvedValueOnce([]);
 
       const { result } = renderHook(() => useSearchMemories(), {
         wrapper: createWrapper(),
       });
 
+      const searchParams = {
+        userId: "user-123",
+        query: "hotels",
+        limit: 20, // default limit
+      };
+      
+      result.current.mutate(searchParams);
+
       await waitFor(() => {
         expect(result.current.isSuccess).toBe(true);
       });
 
-      expect(mockApiClient.get).toHaveBeenCalledWith("/api/memory/search/user-123", {
-        params: {
-          query: "hotels",
-          limit: 20, // default limit
-        },
+      expect(mockMakeAuthenticatedRequest).toHaveBeenCalledWith("/api/memory/search", {
+        method: "POST",
+        body: JSON.stringify(searchParams),
+        headers: { "Content-Type": "application/json" },
       });
     });
   });
@@ -169,7 +184,7 @@ describe("Memory Hooks", () => {
   describe("useStoreConversation", () => {
     it("should store conversation memory", async () => {
       const mockResponse = { status: "success", memory_id: "mem-123" };
-      mockApiClient.post.mockResolvedValueOnce({ data: mockResponse });
+      mockMakeAuthenticatedRequest.mockResolvedValueOnce(mockResponse);
 
       const { result } = renderHook(() => useStoreConversation(), {
         wrapper: createWrapper(),
@@ -198,15 +213,19 @@ describe("Memory Hooks", () => {
         expect(result.current.isSuccess).toBe(true);
       });
 
-      expect(mockApiClient.post).toHaveBeenCalledWith(
+      expect(mockMakeAuthenticatedRequest).toHaveBeenCalledWith(
         "/api/memory/conversations",
-        conversationData
+        {
+          method: "POST",
+          body: JSON.stringify(conversationData),
+          headers: { "Content-Type": "application/json" },
+        }
       );
       expect(result.current.data).toEqual(mockResponse);
     });
 
     it("should handle conversation storage errors", async () => {
-      mockApiClient.post.mockRejectedValueOnce(new Error("Storage failed"));
+      mockMakeAuthenticatedRequest.mockRejectedValueOnce(new Error("Storage failed"));
 
       const { result } = renderHook(() => useStoreConversation(), {
         wrapper: createWrapper(),
@@ -231,7 +250,7 @@ describe("Memory Hooks", () => {
   describe("useUpdatePreferences", () => {
     it("should update user preferences", async () => {
       const mockResponse = { status: "success" };
-      mockApiClient.put.mockResolvedValueOnce({ data: mockResponse });
+      mockMakeAuthenticatedRequest.mockResolvedValueOnce(mockResponse);
 
       const { result } = renderHook(() => useUpdatePreferences("user-123"), {
         wrapper: createWrapper(),
@@ -252,9 +271,13 @@ describe("Memory Hooks", () => {
         expect(result.current.isSuccess).toBe(true);
       });
 
-      expect(mockApiClient.put).toHaveBeenCalledWith(
+      expect(mockMakeAuthenticatedRequest).toHaveBeenCalledWith(
         "/api/memory/preferences/user-123",
-        preferencesData.preferences
+        {
+          method: "POST",
+          body: JSON.stringify(preferencesData),
+          headers: { "Content-Type": "application/json" },
+        }
       );
       expect(result.current.data).toEqual(mockResponse);
     });
@@ -285,7 +308,7 @@ describe("Memory Hooks", () => {
         ],
       };
 
-      mockApiClient.get.mockResolvedValueOnce({ data: mockInsights });
+      mockMakeAuthenticatedRequest.mockResolvedValueOnce(mockInsights);
 
       const { result } = renderHook(() => useMemoryInsights("user-123"), {
         wrapper: createWrapper(),
@@ -295,7 +318,7 @@ describe("Memory Hooks", () => {
         expect(result.current.isSuccess).toBe(true);
       });
 
-      expect(mockApiClient.get).toHaveBeenCalledWith("/api/memory/insights/user-123");
+      expect(mockMakeAuthenticatedRequest).toHaveBeenCalledWith("/api/memory/insights/user-123", { params: {} });
       expect(result.current.data).toEqual(mockInsights);
     });
   });
@@ -303,18 +326,17 @@ describe("Memory Hooks", () => {
   describe("useMemoryStats", () => {
     it("should fetch memory statistics for user", async () => {
       const mockStats = {
-        total_memories: 150,
-        memories_this_month: 12,
-        top_categories: [
-          { category: "accommodation", count: 45 },
-          { category: "flights", count: 38 },
-          { category: "destinations", count: 32 },
-        ],
-        memory_score: 0.87,
-        last_updated: "2024-01-01T10:00:00Z",
+        totalMemories: 150,
+        memoryTypes: {
+          accommodation: 45,
+          flights: 38,
+          destinations: 32,
+        },
+        lastUpdated: "2024-01-01T10:00:00Z",
+        storageSize: 1024000,
       };
 
-      mockApiClient.get.mockResolvedValueOnce({ data: mockStats });
+      mockMakeAuthenticatedRequest.mockResolvedValueOnce(mockStats);
 
       const { result } = renderHook(() => useMemoryStats("user-123"), {
         wrapper: createWrapper(),
@@ -324,7 +346,7 @@ describe("Memory Hooks", () => {
         expect(result.current.isSuccess).toBe(true);
       });
 
-      expect(mockApiClient.get).toHaveBeenCalledWith("/api/memory/stats/user-123");
+      expect(mockMakeAuthenticatedRequest).toHaveBeenCalledWith("/api/memory/stats/user-123", { params: {} });
       expect(result.current.data).toEqual(mockStats);
     });
   });
@@ -340,10 +362,10 @@ describe("Memory Hooks", () => {
       };
       const searchResponse = [{ content: "Found memory", metadata: {}, score: 0.8 }];
 
-      mockApiClient.post.mockResolvedValueOnce({ data: storeResponse });
-      mockApiClient.get
-        .mockResolvedValueOnce({ data: contextResponse })
-        .mockResolvedValueOnce({ data: searchResponse });
+      mockMakeAuthenticatedRequest
+        .mockResolvedValueOnce(storeResponse) // for store
+        .mockResolvedValueOnce(contextResponse) // for context
+        .mockResolvedValueOnce(searchResponse); // for search
 
       // Store conversation
       const { result: storeResult } = renderHook(() => useStoreConversation(), {
@@ -374,6 +396,12 @@ describe("Memory Hooks", () => {
       // Search memories
       const { result: searchResult } = renderHook(() => useSearchMemories(), {
         wrapper: createWrapper(),
+      });
+
+      // Need to call mutate for the search
+      searchResult.current.mutate({
+        userId: "user-123",
+        query: "test",
       });
 
       await waitFor(() => {

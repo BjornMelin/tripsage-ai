@@ -345,7 +345,7 @@ export default function ModernSearchPage() {
     // Handle hotel selection
   };
 
-  const handleCompareFlights = (flights: any[]) => {
+  const handleCompareFlights = (flights: MockFlight[]) => {
     console.log("Comparing flights:", flights);
     // Handle flight comparison
   };

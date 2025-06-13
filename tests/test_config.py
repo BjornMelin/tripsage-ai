@@ -33,7 +33,7 @@ def setup_test_environment() -> None:
         "SUPABASE_PROJECT_ID": "test-project-id",
         # Cache configuration (DragonflyDB)
         "DRAGONFLY_URL": "redis://localhost:6379/1",
-        "DRAGONFLY_PASSWORD": "test_dragonfly_password",
+        "DRAGONFLY_PASSWORD": "tripsage_secure_password",
         # Core API Keys (safe test values)
         "OPENAI_API_KEY": "sk-test-openai-key-1234567890abcdef",
         "GOOGLE_MAPS_API_KEY": "test-google-maps-key-1234567890",
