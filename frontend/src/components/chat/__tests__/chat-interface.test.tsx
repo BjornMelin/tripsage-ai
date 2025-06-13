@@ -10,7 +10,7 @@ vi.mock("@/stores/chat-store", () => ({
 
 describe("ChatInterface", () => {
   beforeEach(() => {
-    (useChatStore as any).mockReturnValue({
+    vi.mocked(useChatStore).mockReturnValue({
       sessions: [],
       currentSessionId: null,
       sendMessage: vi.fn(),

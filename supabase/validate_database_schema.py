@@ -4,11 +4,14 @@ TripSage Database Schema Validation Script
 Validates Supabase database structure and identifies integration issues.
 """
 
+import logging
 import os
 import re
 import sys
 from pathlib import Path
 from typing import Dict, List
+
+logger = logging.getLogger(__name__)
 
 
 def analyze_schema_files() -> Dict[str, any]:
@@ -185,8 +188,10 @@ def generate_recommendations() -> List[str]:
         [
             "🔒 SECURITY: Verify JWT_SECRET is properly configured (not hardcoded)",
             "🔒 SECURITY: Ensure all user-owned tables have RLS policies enabled",
-            "🔧 PERFORMANCE: Consider adding composite indexes for common query patterns",
-            "🔧 MAINTENANCE: Add database maintenance functions for vector index optimization",
+            "🔧 PERFORMANCE: Consider adding composite indexes "
+            "for common query patterns",
+            "🔧 MAINTENANCE: Add database maintenance functions "
+            "for vector index optimization",
         ]
     )
 
@@ -252,7 +257,8 @@ def main():
 
     if critical_issues:
         print(
-            f"\n🚨 Found {len(critical_issues)} critical issues requiring immediate attention"
+            f"\n🚨 Found {len(critical_issues)} critical issues "
+            "requiring immediate attention"
         )
         return 1
     else:

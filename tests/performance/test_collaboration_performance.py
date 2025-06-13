@@ -73,7 +73,7 @@ class CollaborationPerformanceTestSuite:
 
             for collab_data in trip.collaborators.values():
                 await client.execute_sql(
-                    "INSERT INTO trip_collaborators (trip_id, user_id, permission_level, added_by) VALUES ($1, $2, $3, $4)",
+                    "INSERT INTO trip_collaborators (trip_id, user_id, permission_level, added_by) VALUES ($1, $2, $3, $4)",  # noqa: E501
                     (
                         trip.id,
                         collab_data["user"].id,
@@ -99,7 +99,7 @@ class CollaborationPerformanceTestSuite:
             WHERE t.user_id = $1 OR tc.user_id = $1
             ORDER BY t.created_at DESC
             LIMIT 50
-            """,
+            """,  # noqa: E501
             (test_user.id,),
         )
 
@@ -171,7 +171,8 @@ class CollaborationPerformanceTestSuite:
 
             for i in range(memories_per_user):
                 await client.execute_sql(
-                    "INSERT INTO memories (id, user_id, content, embedding) VALUES ($1, $2, $3, $4)",
+                    "INSERT INTO memories (id, user_id, content, embedding) "
+                    "VALUES ($1, $2, $3, $4)",
                     (
                         uuid4(),
                         user.id,
@@ -412,7 +413,7 @@ class CollaborationPerformanceTestSuite:
 
             for i in range(50):  # 50 old memories per user
                 await client.execute_sql(
-                    "INSERT INTO memories (id, user_id, content, created_at) VALUES ($1, $2, $3, $4)",
+                    "INSERT INTO memories (id, user_id, content, created_at) VALUES ($1, $2, $3, $4)",  # noqa: E501
                     (uuid4(), user.id, f"Old memory {i}", old_date),
                 )
 
@@ -450,7 +451,7 @@ class CollaborationPerformanceTestSuite:
 
             for collab_data in trip.collaborators.values():
                 await client.execute_sql(
-                    "INSERT INTO trip_collaborators (trip_id, user_id, permission_level, added_by) VALUES ($1, $2, $3, $4)",
+                    "INSERT INTO trip_collaborators (trip_id, user_id, permission_level, added_by) VALUES ($1, $2, $3, $4)",  # noqa: E501
                     (
                         trip.id,
                         collab_data["user"].id,

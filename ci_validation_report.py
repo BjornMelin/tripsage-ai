@@ -49,7 +49,7 @@ def generate_validation_report():
                     }
 
                     # Check for services in jobs
-                    for job_name, job_config in content.get("jobs", {}).items():
+                    for _job_name, job_config in content.get("jobs", {}).items():
                         if "services" in job_config:
                             workflows[filename]["services_used"].extend(
                                 job_config["services"].keys()
@@ -133,7 +133,10 @@ def generate_validation_report():
             validation_results["dependency_validation"].append(
                 {
                     "status": "pass",
-                    "message": f"Quality gates depend on {len(dependent_workflows)} workflows",
+                    "message": (
+                        f"Quality gates depend on {len(dependent_workflows)} workflows"
+                        f" for validation"
+                    ),
                 }
             )
         else:
@@ -178,7 +181,8 @@ def generate_validation_report():
         validation_results["security_validation"].append(
             {
                 "status": "pass",
-                "message": f"{len(security_workflows)} security workflows, {len(security_scans)} scan jobs",
+                "message": f"{len(security_workflows)} security workflows, "
+                f"{len(security_scans)} scan jobs",
             }
         )
     else:

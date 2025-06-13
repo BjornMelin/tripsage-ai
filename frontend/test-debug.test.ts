@@ -13,14 +13,14 @@ describe("Debug Test", () => {
     });
 
     console.log("After start:");
-    console.log("  searchId:", searchId!);
+    console.log("  searchId:", searchId);
     console.log("  currentSearchId:", result.current.currentSearchId);
     console.log("  status:", result.current.status);
     console.log("  isSearching:", result.current.isSearching);
 
     // Set results
     act(() => {
-      result.current.setSearchResults(searchId!, {
+      if (searchId) result.current.setSearchResults(searchId, {
         flights: [{ id: "test", price: 100 }],
       });
     });

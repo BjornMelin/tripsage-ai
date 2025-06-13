@@ -1029,7 +1029,9 @@ class TestDatabaseService:
         # Set up the chain for search_trips which includes order and limit
         final_mock = Mock()
         final_mock.execute.return_value = Mock(data=expected_trips)
-        mock_supabase_client.table.return_value.select.return_value.or_.return_value.order.return_value.limit.return_value = final_mock
+        (
+            mock_supabase_client.table.return_value.select.return_value.or_.return_value.order.return_value.limit.return_value
+        ) = final_mock
 
         result = await database_service.search_trips(search_filters)
 

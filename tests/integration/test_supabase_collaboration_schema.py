@@ -168,7 +168,11 @@ class MockDatabaseService:
                 "permissive": "PERMISSIVE",
                 "roles": ["{authenticated}"],
                 "cmd": "SELECT",
-                "qual": "(auth.uid() = user_id OR id IN (SELECT trip_id FROM trip_collaborators WHERE user_id = auth.uid()))",
+                "qual": (
+                    "(auth.uid() = user_id OR id IN "
+                    "(SELECT trip_id FROM trip_collaborators "
+                    "WHERE user_id = auth.uid()))"
+                ),
             },
         ]
 
@@ -315,7 +319,8 @@ class TestRLSPolicyValidation:
                         THEN true ELSE false END as can_edit
             FROM flights f
             JOIN trips t ON f.trip_id = t.id
-            LEFT JOIN trip_collaborators tc ON t.id = tc.trip_id AND tc.user_id = auth.uid()
+            LEFT JOIN trip_collaborators tc ON t.id = tc.trip_id 
+                 AND tc.user_id = auth.uid()
             WHERE auth.uid() = t.user_id OR tc.user_id = auth.uid()
             """
         )
@@ -464,7 +469,8 @@ class TestForeignKeyConstraints:
         # Valid collaboration insert
         await mock_db_service.execute_query(
             """
-            INSERT INTO trip_collaborators (trip_id, user_id, permission_level, added_by)
+            INSERT INTO trip_collaborators 
+            (trip_id, user_id, permission_level, added_by)
             VALUES ($1, $2, $3, $4)
             """,
             1,  # existing trip
@@ -483,7 +489,8 @@ class TestForeignKeyConstraints:
         with pytest.raises(Exception, match="trip_collaborators_trip_id_fkey"):
             await mock_db_service.execute_query(
                 """
-                INSERT INTO trip_collaborators (trip_id, user_id, permission_level, added_by)
+                INSERT INTO trip_collaborators 
+                (trip_id, user_id, permission_level, added_by)
                 VALUES ($1, $2, $3, $4)
                 """,
                 99999,  # non-existent trip
@@ -734,7 +741,8 @@ class TestCollaborationWorkflows:
 
         await mock_db_service.execute_query(
             """
-            INSERT INTO trip_collaborators (trip_id, user_id, permission_level, added_by)
+            INSERT INTO trip_collaborators 
+            (trip_id, user_id, permission_level, added_by)
             VALUES ($1, $2, $3, $4)
             """,
             1,  # trip_id
@@ -754,7 +762,8 @@ class TestCollaborationWorkflows:
             SELECT t.* FROM trips t
             WHERE t.id = $1 AND (
                 t.user_id = auth.uid() OR
-                t.id IN (SELECT trip_id FROM trip_collaborators WHERE user_id = auth.uid())
+                t.id IN (SELECT trip_id FROM trip_collaborators 
+                         WHERE user_id = auth.uid())
             )
             """,
             1,
@@ -830,7 +839,8 @@ class TestCollaborationWorkflows:
             SELECT t.* FROM trips t
             WHERE t.id = $1 AND (
                 t.user_id = auth.uid() OR
-                t.id IN (SELECT trip_id FROM trip_collaborators WHERE user_id = auth.uid())
+                t.id IN (SELECT trip_id FROM trip_collaborators 
+                         WHERE user_id = auth.uid())
             )
             """,
             1,
@@ -874,7 +884,8 @@ class TestMultiUserScenarios:
         collaborators = await mock_db_service.fetch_all(
             """
             SELECT user_id, permission_level,
-                   CASE WHEN permission_level IN ('admin') THEN true ELSE false END as can_manage
+                   CASE WHEN permission_level IN ('admin') THEN true 
+                        ELSE false END as can_manage
             FROM trip_collaborators
             WHERE trip_id = $1
             ORDER BY CASE permission_level 
@@ -907,7 +918,9 @@ class TestMultiUserScenarios:
             )
 
             user_trips = await mock_db_service.fetch_all(
-                "SELECT * FROM trips WHERE auth.uid() IN (user_id, (SELECT user_id FROM trip_collaborators WHERE trip_id = trips.id))"
+                "SELECT * FROM trips WHERE auth.uid() IN "
+                "(user_id, (SELECT user_id FROM trip_collaborators "
+                "WHERE trip_id = trips.id))"
             )
 
             results.append({"user": user.id, "trips": len(user_trips)})
@@ -941,7 +954,8 @@ class TestMultiUserScenarios:
         hierarchy = await mock_db_service.fetch_all(
             """
             SELECT trip_id, user_id, permission_level,
-                   CASE WHEN permission_level = 'admin' THEN true ELSE false END as can_add_collaborators
+                   CASE WHEN permission_level = 'admin' THEN true 
+                        ELSE false END as can_add_collaborators
             FROM trip_collaborators
             WHERE trip_id = $1
             ORDER BY added_at
@@ -1188,7 +1202,9 @@ class TestDatabaseFixtures:
 
         # Add collaborators
         await mock_db_service.execute_query(
-            "INSERT INTO trip_collaborators (trip_id, user_id, permission_level, added_by) VALUES ($1, $2, $3, $4)",
+            "INSERT INTO trip_collaborators "
+            "(trip_id, user_id, permission_level, added_by) "
+            "VALUES ($1, $2, $3, $4)",
             1,
             editor.id,
             "edit",
@@ -1196,7 +1212,9 @@ class TestDatabaseFixtures:
         )
 
         await mock_db_service.execute_query(
-            "INSERT INTO trip_collaborators (trip_id, user_id, permission_level, added_by) VALUES ($1, $2, $3, $4)",
+            "INSERT INTO trip_collaborators "
+            "(trip_id, user_id, permission_level, added_by) "
+            "VALUES ($1, $2, $3, $4)",
             1,
             viewer.id,
             "view",
@@ -1251,7 +1269,8 @@ class TestDatabaseFixtures:
         )
 
         collaborators = await mock_db_service.fetch_all(
-            "SELECT user_id, permission_level FROM trip_collaborators WHERE trip_id = $1",
+            "SELECT user_id, permission_level FROM trip_collaborators "
+            "WHERE trip_id = $1",
             data["trip_id"],
         )
 

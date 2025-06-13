@@ -192,7 +192,9 @@ class ExtensionDeployer:
         try:
             tables_query = """
             SELECT table_name FROM information_schema.tables 
-            WHERE table_name IN ('notifications', 'system_metrics', 'webhook_configs', 'webhook_logs')
+            WHERE table_name IN (
+                'notifications', 'system_metrics', 'webhook_configs', 'webhook_logs'
+            )
             """
             tables = await self.connection.fetch(tables_query)
             checks["automation_tables"] = len(tables) >= 4
@@ -220,7 +222,9 @@ class ExtensionDeployer:
             SELECT COUNT(*) FROM pg_proc p
             JOIN pg_namespace n ON p.pronamespace = n.oid
             WHERE n.nspname = 'public' 
-            AND p.proname IN ('verify_extensions', 'send_webhook_with_retry', 'list_scheduled_jobs')
+            AND p.proname IN (
+                'verify_extensions', 'send_webhook_with_retry', 'list_scheduled_jobs'
+            )
             """
             result = await self.connection.fetchval(functions_query)
             checks["functions"] = result >= 3
@@ -260,7 +264,8 @@ class ExtensionDeployer:
         console.print(
             Panel.fit(
                 "[bold blue]TripSage Extensions & Automation Deployment[/bold blue]\n"
-                "This will configure pg_cron, pg_net, realtime, and webhook integration.",
+                "This will configure pg_cron, pg_net, realtime, "
+                "and webhook integration.",
                 title="🚀 Deployment Script",
             )
         )
@@ -317,7 +322,8 @@ class ExtensionDeployer:
             console.print("2. Configure environment variables for external services")
             console.print("3. Test webhook endpoints and scheduled jobs")
             console.print(
-                "4. Run 'python scripts/verification/verify_extensions.py' for detailed verification"
+                "4. Run 'python scripts/verification/verify_extensions.py' "
+                "for detailed verification"
             )
         else:
             console.print(

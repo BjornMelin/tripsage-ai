@@ -13,11 +13,11 @@ import asyncio
 import sys
 from pathlib import Path
 
+from tests.integration.test_schema_runner import SchemaTestRunner
+
 # Add project root to Python path
 project_root = Path(__file__).parent
 sys.path.insert(0, str(project_root))
-
-from tests.integration.test_schema_runner import SchemaTestRunner
 
 
 async def main():
