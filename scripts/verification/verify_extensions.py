@@ -368,7 +368,8 @@ async def main():
 
     if not database_url:
         console.print(
-            "❌ No database URL found. Set SUPABASE_DB_URL or DATABASE_URL environment variable.",
+            "❌ No database URL found. Set SUPABASE_DB_URL or "
+            "DATABASE_URL environment variable.",
             style="red",
         )
         sys.exit(1)

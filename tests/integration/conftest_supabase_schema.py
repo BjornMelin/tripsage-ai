@@ -527,7 +527,9 @@ async def populated_database(mock_supabase_client, test_users, test_trips):
         # Add collaborators
         for collab_data in trip.collaborators.values():
             await client.execute_sql(
-                "INSERT INTO trip_collaborators (trip_id, user_id, permission_level, added_by) VALUES ($1, $2, $3, $4)",
+                "INSERT INTO trip_collaborators "
+                "(trip_id, user_id, permission_level, added_by) "
+                "VALUES ($1, $2, $3, $4)",
                 (
                     trip.id,
                     collab_data["user"].id,
@@ -594,11 +596,12 @@ def performance_tracker():
         }
 
     class Tracker:
-        track_query = staticmethod(track_query)
-        track_memory_operation = staticmethod(track_memory_operation)
-        track_collaboration_query = staticmethod(track_collaboration_query)
-        get_summary = staticmethod(get_summary)
-        metrics = metrics
+        def __init__(self):
+            self.track_query = track_query
+            self.track_memory_operation = track_memory_operation
+            self.track_collaboration_query = track_collaboration_query
+            self.get_summary = get_summary
+            self.metrics = metrics
 
     return Tracker()
 

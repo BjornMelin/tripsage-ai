@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
 TripSage Database Integration Test Script
-Tests Supabase database functionality including trip collaboration, RLS policies, and vector search.
+Tests Supabase database functionality including trip collaboration,
+RLS policies, and vector search.
 """
 
 import os

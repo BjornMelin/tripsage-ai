@@ -52,11 +52,12 @@ reset_mocks()
 sys.modules["pyotp"] = mock_pyotp
 sys.modules["qrcode"] = mock_qrcode
 
-from tripsage_core.exceptions.exceptions import (
+# Import after mocking
+from tripsage_core.exceptions.exceptions import (  # noqa: E402
     CoreServiceError,
     CoreValidationError,
 )
-from tripsage_core.services.business.mfa_service import (
+from tripsage_core.services.business.mfa_service import (  # noqa: E402
     MFAEnrollmentRequest,
     MFAEnrollmentResponse,
     MFAService,
@@ -111,8 +112,9 @@ class TestMFAServiceModels:
         # Invalid code - too long
         with pytest.raises(ValidationError) as exc_info:
             MFAVerificationRequest(
-                user_id="test-user", code="123456789012"
-            )  # 12 characters
+                user_id="test-user",
+                code="123456789012",  # 12 characters
+            )
         assert "at most 11 characters" in str(exc_info.value)
 
     def test_mfa_setup_response_serialization(self, serialization_helper):
@@ -993,7 +995,7 @@ class TestMFAServiceEdgeCases:
         # First usage should succeed
         result1 = await mfa_service.verify_mfa(request)
 
-        # Simulate that the backup code was already removed by another concurrent request
+        # Simulate that the backup code was already removed by another concurr request
         mock_db.select.return_value = [
             {
                 "user_id": "test-user",
@@ -1024,7 +1026,7 @@ def test_backup_codes_property_count(count):
     [
         "123456",  # TOTP format (valid)
         "12345-67890",  # Backup code format (valid)
-        "abcd-1234",  # Invalid characters but valid length (valid - validation allows any chars)
+        "abcd-1234",  # Invalid chars but valid length (valid - allows any chars)
     ],
 )
 def test_verification_request_code_formats(code_format):

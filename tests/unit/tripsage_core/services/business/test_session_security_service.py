@@ -261,7 +261,8 @@ class TestSessionValidation:
         assert session is not None
 
         # With IP change (30) + user agent change (20) = 50 risk score,
-        # which is below the 70 threshold, so no suspicious activity event should be logged
+        # which is below the 70 threshold, so no suspicious activity event
+        # should be logged
         insert_calls = mock_database_service.insert.call_args_list
         security_event_calls = [
             call for call in insert_calls if call[0][0] == "security_events"

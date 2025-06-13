@@ -109,14 +109,14 @@ class TestTripsRouterComprehensive:
     def sample_shared_trip_response(self):
         """Sample shared trip response from core service."""
         from tripsage_core.services.business.trip_service import TripLocation
-        
+
         # Create proper TripLocation object instead of mock
         destination = TripLocation(
             name="Tokyo, Japan",
             country="Japan",
             city="Tokyo",
             coordinates={"lat": 35.6762, "lng": 139.6503},
-            timezone=None
+            timezone=None,
         )
 
         trip_mock = MagicMock()
@@ -222,7 +222,7 @@ class TestTripsRouterComprehensive:
     ):
         """Test trip creation with invalid dates."""
         from pydantic import ValidationError
-        
+
         with pytest.raises(ValidationError, match="End date must be after start date"):
             CreateTripRequest(
                 title="Invalid Trip",
@@ -499,7 +499,7 @@ class TestTripsRouterComprehensive:
     async def test_update_trip_invalid_dates(self, mock_principal, mock_trip_service):
         """Test updating trip with invalid date range."""
         from pydantic import ValidationError
-        
+
         with pytest.raises(ValidationError, match="End date must be after start date"):
             UpdateTripRequest(
                 start_date=date(2024, 5, 5),

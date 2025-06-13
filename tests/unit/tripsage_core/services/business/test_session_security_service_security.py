@@ -53,7 +53,7 @@ class TestSessionSecurityAttackScenarios:
             if table == "user_sessions":
                 if conditions:
                     results = []
-                    for session_id, session_data in stored_sessions.items():
+                    for _, session_data in stored_sessions.items():
                         match = True
                         for key, value in conditions.items():
                             if session_data.get(key) != value:
@@ -70,7 +70,7 @@ class TestSessionSecurityAttackScenarios:
         async def secure_update(table, conditions, data):
             if table == "user_sessions":
                 updated = False
-                for session_id, session_data in stored_sessions.items():
+                for _, session_data in stored_sessions.items():
                     match = True
                     for key, value in conditions.items():
                         if session_data.get(key) != value:
@@ -154,8 +154,8 @@ class TestSessionSecurityAttackScenarios:
         # Check for suspicious activity event
         # Note: risk score is 50 (30 for IP + 20 for UA), threshold is 70
         # So we need to check if the validation calculated the right risk
-        # The session should be validated successfully, even if no suspicious event is logged
-        # Let's check the activity risk score calculation directly
+        # The session should be validated successfully, even if no suspicious event
+        # is logged. Let's check the activity risk score calculation directly
         risk_score = security_service._calculate_activity_risk_score(
             validated_session, attacker_ip, attacker_user_agent
         )
@@ -167,7 +167,7 @@ class TestSessionSecurityAttackScenarios:
     @pytest.mark.asyncio
     async def test_token_manipulation_resistance(self, security_service):
         """Test resistance to token manipulation attacks."""
-        user_id = "token_test_user"
+        _user_id = "token_test_user"
 
         # Create legitimate token for manipulation testing
         legitimate_token = secrets.token_urlsafe(32)
@@ -350,7 +350,7 @@ class TestSessionSecurityAttackScenarios:
         assert len(sessions) == len(devices)
 
         # Test cross-device security - should be isolated
-        for i, session in enumerate(sessions):
+        for _, session in enumerate(sessions):
             # Each session should only work with its own token
             test_token = secrets.token_urlsafe(32)
             session_hash = hashlib.sha256(test_token.encode()).hexdigest()

@@ -73,7 +73,8 @@ class TriggerDeploymentService:
         try:
             existing_triggers = await self.db_service.fetch_query(
                 """
-                SELECT trigger_name, event_object_table, action_timing, event_manipulation
+                SELECT trigger_name, event_object_table, action_timing, 
+                       event_manipulation
                 FROM information_schema.triggers
                 WHERE trigger_schema = 'public'
                 ORDER BY trigger_name
@@ -109,7 +110,9 @@ class TriggerDeploymentService:
                 FROM information_schema.routines
                 WHERE routine_schema = 'public'
                 AND routine_type = 'FUNCTION'
-                AND routine_name LIKE '%trigger%' OR routine_name LIKE '%cleanup%' OR routine_name LIKE '%notify%'
+                AND (routine_name LIKE '%trigger%' 
+                     OR routine_name LIKE '%cleanup%' 
+                     OR routine_name LIKE '%notify%')
                 ORDER BY routine_name
                 """
             )
@@ -243,7 +246,9 @@ class TriggerDeploymentService:
 
             trip_result = await self.db_service.execute_query(
                 """
-                INSERT INTO trips (user_id, name, destination, start_date, end_date, status)
+                INSERT INTO trips (
+                    user_id, name, destination, start_date, end_date, status
+                )
                 VALUES ($1, $2, $3, $4, $5, $6)
                 RETURNING id
                 """,
@@ -260,7 +265,8 @@ class TriggerDeploymentService:
             # Test collaboration trigger (should work without errors)
             await self.db_service.execute_query(
                 """
-                INSERT INTO trip_collaborators (trip_id, user_id, added_by, permission_level)
+                INSERT INTO trip_collaborators 
+                (trip_id, user_id, added_by, permission_level)
                 VALUES ($1, $2, $3, $4)
                 """,
                 trip_id,
@@ -274,7 +280,8 @@ class TriggerDeploymentService:
 
             await self.db_service.execute_query(
                 """
-                UPDATE trips SET destination = 'Updated Test City' WHERE id = $1
+                UPDATE trips SET destination = 'Updated Test City' 
+                WHERE id = $1
                 """,
                 trip_id,
             )
@@ -332,7 +339,8 @@ class TriggerDeploymentService:
 
             if not result[0]["exists"]:
                 logger.warning(
-                    "pg_cron extension not available - scheduled jobs will not be configured"
+                    "pg_cron extension not available - "
+                    "scheduled jobs will not be configured"
                 )
                 return True
 
@@ -397,7 +405,8 @@ class TriggerDeploymentService:
             # Check pg_cron status
             try:
                 result = await self.db_service.fetch_query(
-                    "SELECT COUNT(*) as job_count FROM cron.job WHERE jobname LIKE '%cleanup%' OR jobname LIKE '%maintenance%'"
+                    "SELECT COUNT(*) as job_count FROM cron.job "
+                    "WHERE jobname LIKE '%cleanup%' OR jobname LIKE '%maintenance%'"
                 )
                 report["scheduled_jobs"] = result[0]["job_count"]
             except Exception:
@@ -486,7 +495,8 @@ async def main():
 
         logger.info("=== DEPLOYMENT REPORT ===")
         logger.info(
-            f"Total triggers deployed: {sum(len(t) for t in report['triggers'].values())}"
+            f"Total triggers deployed: "
+            f"{sum(len(t) for t in report['triggers'].values())}"
         )
         logger.info(f"Total functions deployed: {len(report['functions'])}")
         logger.info(f"Scheduled jobs: {report['scheduled_jobs']}")

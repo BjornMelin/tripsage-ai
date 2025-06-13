@@ -25,7 +25,7 @@ def analyze_workflows():
                 }
 
                 # Check for services in jobs
-                for job_name, job_config in content.get("jobs", {}).items():
+                for _job_name, job_config in content.get("jobs", {}).items():
                     if "services" in job_config:
                         workflows[filename]["services_used"].extend(
                             job_config["services"].keys()

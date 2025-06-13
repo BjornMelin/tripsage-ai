@@ -312,7 +312,8 @@ class TestUserSessionValidation:
             "",  # Empty
             "short",  # Too short
             "x" * 100,  # Too long
-            "invalid_hex_characters_12345678901234567890123456789012345678901234",  # Invalid hex
+            # Invalid hex
+            "invalid_hex_characters_12345678901234567890123456789012345678901234",
         ]
 
         for invalid_token in invalid_tokens:
@@ -417,6 +418,14 @@ class TestIntegratedSecurityImprovements:
             assert 0 <= risk_score <= 100, (
                 f"Risk score {risk_score} out of range for {ip_input}"
             )
+
+    @pytest.mark.asyncio
+    async def test_validate_session_security(self, security_service):
+        """Test session security validation."""
+        # Should not raise exception for valid session
+        assert (
+            await security_service.validate_session_security("valid-session", "user123")
+        ) is True
 
 
 if __name__ == "__main__":

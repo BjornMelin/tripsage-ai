@@ -12,8 +12,8 @@ script_dir = Path(__file__).resolve().parent
 project_root = script_dir.parent
 sys.path.insert(0, str(project_root))
 
-from tripsage_core.services.infrastructure.database_service import DatabaseService
-from tripsage_core.utils.logging_utils import configure_logging
+from tripsage_core.services.infrastructure.database_service import DatabaseService  # noqa: E402, I001
+from tripsage_core.utils.logging_utils import configure_logging  # noqa: E402
 
 logger = configure_logging("deploy_api_key_migration")
 

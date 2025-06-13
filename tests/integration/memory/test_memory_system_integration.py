@@ -21,26 +21,35 @@ class TestMemorySystemIntegration:
     def authenticated_client(self):
         """Test client with authentication headers."""
         return TestClient(app)
-    
+
     @pytest.fixture
     def auth_headers(self):
         """Authentication headers for test requests."""
         return {"Authorization": "Bearer test-token"}
-    
+
     @pytest.fixture(autouse=True)
     def mock_auth_dependencies(self):
         """Mock authentication dependencies."""
         from unittest.mock import Mock, patch
-        
+
         # Create mock principal
         mock_principal = Mock()
         mock_principal.id = "test-user-123"
         mock_principal.email = "test@example.com"
-        
+
         # Patch authentication dependencies
-        with patch("tripsage.api.core.dependencies.get_current_principal", return_value=mock_principal):
-            with patch("tripsage.api.core.dependencies.require_principal", return_value=mock_principal):
-                with patch("tripsage.api.core.dependencies.get_principal_id", return_value="test-user-123"):
+        with patch(
+            "tripsage.api.core.dependencies.get_current_principal",
+            return_value=mock_principal,
+        ):
+            with patch(
+                "tripsage.api.core.dependencies.require_principal",
+                return_value=mock_principal,
+            ):
+                with patch(
+                    "tripsage.api.core.dependencies.get_principal_id",
+                    return_value="test-user-123",
+                ):
                     yield mock_principal
 
     @pytest.fixture
@@ -101,7 +110,11 @@ class TestMemorySystemIntegration:
 
     @patch("tripsage.api.core.dependencies.get_memory_service_dep")
     def test_store_conversation_memory_endpoint(
-        self, mock_get_service, authenticated_client, sample_user, mock_settings_and_redis
+        self,
+        mock_get_service,
+        authenticated_client,
+        sample_user,
+        mock_settings_and_redis,
     ):
         """Test storing conversation memory through API."""
         # Setup mock service
@@ -131,7 +144,9 @@ class TestMemorySystemIntegration:
         }
 
         # Make request
-        response = authenticated_client.post("/api/memory/conversation", json=request_data)
+        response = authenticated_client.post(
+            "/api/memory/conversation", json=request_data
+        )
 
         # Verify response
         assert response.status_code == 200
@@ -191,7 +206,9 @@ class TestMemorySystemIntegration:
         )
 
         # Make request with query parameters matching frontend
-        response = authenticated_client.post("/api/memory/search", json={"query": "Paris", "limit": 10})
+        response = authenticated_client.post(
+            "/api/memory/search", json={"query": "Paris", "limit": 10}
+        )
 
         # Verify response
         assert response.status_code == 200
@@ -240,7 +257,7 @@ class TestMemorySystemIntegration:
         assert context["preferences"]["accommodation_type"] == "luxury"
 
     @patch("tripsage.api.core.dependencies.get_memory_service_dep")
-    def test_memory_error_handling(self, mock_get_service, client):
+    def test_memory_error_handling(self, mock_get_service, authenticated_client):
         """Test API error handling for memory endpoints."""
         # Test invalid query parameters
         response = authenticated_client.post("/api/memory/search", json={})  # No query
@@ -250,7 +267,9 @@ class TestMemorySystemIntegration:
         mock_service = AsyncMock()
         mock_get_service.return_value = mock_service
         mock_service.search_memories.side_effect = Exception("Service error")
-        response = authenticated_client.post("/api/memory/search", json={"query": "test", "limit": 10})
+        response = authenticated_client.post(
+            "/api/memory/search", json={"query": "test", "limit": 10}
+        )
         assert response.status_code == 500
 
     @pytest.mark.asyncio
@@ -344,7 +363,9 @@ class TestMemorySystemIntegration:
                 "metadata": {"userId": 123},
             }
 
-            response = authenticated_client.post("/api/memory/conversation", json=invalid_data)
+            response = authenticated_client.post(
+                "/api/memory/conversation", json=invalid_data
+            )
             assert response.status_code == 422  # Validation error
 
             # Test missing required fields
@@ -353,5 +374,7 @@ class TestMemorySystemIntegration:
                 "metadata": {},  # Missing userId
             }
 
-            response = authenticated_client.post("/api/memory/conversation", json=incomplete_data)
+            response = authenticated_client.post(
+                "/api/memory/conversation", json=incomplete_data
+            )
             assert response.status_code == 422
