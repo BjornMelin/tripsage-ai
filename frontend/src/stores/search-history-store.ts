@@ -877,7 +877,7 @@ export const useSearchHistoryStore = create<SearchHistoryState>()(
 
             if (importData.savedSearches) {
               const validatedSearches = importData.savedSearches.filter(
-                (search: any) => {
+                (search: unknown) => {
                   const result = SavedSearchSchema.safeParse(search);
                   return result.success;
                 }
@@ -890,7 +890,7 @@ export const useSearchHistoryStore = create<SearchHistoryState>()(
 
             if (importData.searchCollections) {
               const validatedCollections = importData.searchCollections.filter(
-                (collection: any) => {
+                (collection: unknown) => {
                   const result = SearchCollectionSchema.safeParse(collection);
                   return result.success;
                 }
@@ -906,7 +906,7 @@ export const useSearchHistoryStore = create<SearchHistoryState>()(
 
             if (importData.quickSearches) {
               const validatedQuickSearches = importData.quickSearches.filter(
-                (quickSearch: any) => {
+                (quickSearch: unknown) => {
                   const result = QuickSearchSchema.safeParse(quickSearch);
                   return result.success;
                 }

@@ -1,5 +1,5 @@
 import "@testing-library/jest-dom";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, renderWithProviders, screen, waitFor } from "@/test/test-utils";
 import userEvent from "@testing-library/user-event";
 import { useRouter } from "next/navigation";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -27,7 +27,7 @@ describe("ResetPasswordForm", () => {
 
   describe("Rendering", () => {
     it("should render the form with all required elements", () => {
-      render(<ResetPasswordForm />);
+      renderWithProviders(<ResetPasswordForm />);
 
       // Check header elements
       expect(screen.getByText("Reset your password")).toBeInTheDocument();
@@ -64,14 +64,14 @@ describe("ResetPasswordForm", () => {
     });
 
     it("should accept custom className prop", () => {
-      const { container } = render(<ResetPasswordForm className="custom-class" />);
+      const { container } = renderWithProviders(<ResetPasswordForm className="custom-class" />);
       const card = container.querySelector(".custom-class");
       expect(card).toBeInTheDocument();
     });
 
     it("should render development information in development mode", () => {
       vi.stubEnv("NODE_ENV", "development");
-      render(<ResetPasswordForm />);
+      renderWithProviders(<ResetPasswordForm />);
 
       expect(
         screen.getByText("Development Mode - Test Password Reset")
@@ -88,7 +88,7 @@ describe("ResetPasswordForm", () => {
   describe("Form Interactions", () => {
     it("should update email input when typing", async () => {
       const user = userEvent.setup();
-      render(<ResetPasswordForm />);
+      renderWithProviders(<ResetPasswordForm />);
       const emailInput = screen.getByLabelText("Email Address");
 
       await user.type(emailInput, "test@example.com");
@@ -97,7 +97,7 @@ describe("ResetPasswordForm", () => {
     });
 
     it("should enable submit button when email is empty (validation happens on submit)", () => {
-      render(<ResetPasswordForm />);
+      renderWithProviders(<ResetPasswordForm />);
       const submitButton = screen.getByRole("button", {
         name: /send reset instructions/i,
       });
@@ -107,7 +107,7 @@ describe("ResetPasswordForm", () => {
 
     it("should enable submit button when email is entered", async () => {
       const user = userEvent.setup();
-      render(<ResetPasswordForm />);
+      renderWithProviders(<ResetPasswordForm />);
       const emailInput = screen.getByLabelText("Email Address");
       const submitButton = screen.getByRole("button", {
         name: /send reset instructions/i,
@@ -120,7 +120,7 @@ describe("ResetPasswordForm", () => {
 
     it("should show error when submitting with empty email", async () => {
       const user = userEvent.setup();
-      render(<ResetPasswordForm />);
+      renderWithProviders(<ResetPasswordForm />);
       const emailInput = screen.getByLabelText("Email Address");
       const form = emailInput.closest("form");
 
@@ -142,7 +142,7 @@ describe("ResetPasswordForm", () => {
   describe("Form Submission", () => {
     it("should show loading state during submission", async () => {
       const user = userEvent.setup();
-      render(<ResetPasswordForm />);
+      renderWithProviders(<ResetPasswordForm />);
 
       const emailInput = screen.getByLabelText("Email Address");
       const submitButton = screen.getByRole("button", {
@@ -161,14 +161,14 @@ describe("ResetPasswordForm", () => {
 
   describe("Navigation", () => {
     it("should navigate to login when clicking back to sign in", async () => {
-      render(<ResetPasswordForm />);
+      renderWithProviders(<ResetPasswordForm />);
       const backLink = screen.getByRole("link", { name: /back to sign in/i });
 
       expect(backLink).toHaveAttribute("href", "/login");
     });
 
     it("should navigate to support when clicking contact support", async () => {
-      render(<ResetPasswordForm />);
+      renderWithProviders(<ResetPasswordForm />);
       const supportLink = screen.getByRole("link", { name: /contact support/i });
 
       expect(supportLink).toHaveAttribute("href", "/support");
@@ -177,7 +177,7 @@ describe("ResetPasswordForm", () => {
 
   describe("Accessibility", () => {
     it("should have proper form structure and labels", () => {
-      render(<ResetPasswordForm />);
+      renderWithProviders(<ResetPasswordForm />);
 
       const form = screen
         .getByRole("button", { name: /send reset instructions/i })
@@ -198,7 +198,7 @@ describe("ResetPasswordForm", () => {
       // Since this is a mock implementation, we'll test error display directly
       // by triggering an empty email submission which shows an error
       const user = userEvent.setup();
-      render(<ResetPasswordForm />);
+      renderWithProviders(<ResetPasswordForm />);
 
       const emailInput = screen.getByLabelText("Email Address");
       const form = emailInput.closest("form");
@@ -214,7 +214,7 @@ describe("ResetPasswordForm", () => {
 
     it("should clear errors when typing after an error", async () => {
       const user = userEvent.setup();
-      render(<ResetPasswordForm />);
+      renderWithProviders(<ResetPasswordForm />);
 
       const emailInput = screen.getByLabelText("Email Address");
       const form = emailInput.closest("form");
@@ -238,7 +238,7 @@ describe("ResetPasswordForm", () => {
 
 describe("ResetPasswordFormSkeleton", () => {
   it("should render loading skeleton with correct structure", () => {
-    render(<ResetPasswordFormSkeleton />);
+    renderWithProviders(<ResetPasswordFormSkeleton />);
 
     // Check for animated elements
     const animatedElements = document.querySelectorAll(".animate-pulse");
@@ -258,7 +258,7 @@ describe("ResetPasswordFormSkeleton", () => {
   });
 
   it("should have proper card structure", () => {
-    const { container } = render(<ResetPasswordFormSkeleton />);
+    const { container } = renderWithProviders(<ResetPasswordFormSkeleton />);
 
     // Check for card structure classes
     const card = container.querySelector(".rounded-lg.border");

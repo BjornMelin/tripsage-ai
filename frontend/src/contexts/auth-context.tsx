@@ -1,10 +1,10 @@
 "use client";
 
-import { createClient as createBrowserClient } from "@/lib/supabase/client";
+import { useSupabase } from "@/lib/supabase/client";
+import type { User as SupabaseUser } from "@supabase/supabase-js";
 import { useRouter } from "next/navigation";
 import type React from "react";
 import { createContext, useContext, useEffect, useState } from "react";
-import type { User as SupabaseUser } from "@supabase/supabase-js";
 
 // User type extending Supabase User with additional fields
 export interface User {
@@ -24,10 +24,13 @@ interface AuthContextType {
   isLoading: boolean;
   error: string | null;
   signIn: (email: string, password: string) => Promise<void>;
+  signInWithOAuth: (provider: "google" | "github") => Promise<void>;
   signUp: (email: string, password: string, fullName?: string) => Promise<void>;
   signOut: () => Promise<void>;
   refreshUser: () => Promise<void>;
   clearError: () => void;
+  resetPassword: (email: string) => Promise<void>;
+  updatePassword: (newPassword: string) => Promise<void>;
 }
 
 // Create the authentication context
@@ -57,7 +60,7 @@ interface AuthState {
 
 export function AuthProvider({ children, initialUser = null }: AuthProviderProps) {
   const router = useRouter();
-  const supabase = createBrowserClient();
+  const supabase = useSupabase();
 
   // State management with Supabase Auth
   const [authState, setAuthStateInternal] = useState<AuthState>({
@@ -75,7 +78,7 @@ export function AuthProvider({ children, initialUser = null }: AuthProviderProps
   const convertSupabaseUser = (supabaseUser: SupabaseUser): User => ({
     id: supabaseUser.id,
     email: supabaseUser.email!,
-    name: supabaseUser.user_metadata?.full_name || supabaseUser.email!.split("@")[0],
+    name: supabaseUser.user_metadata?.full_name || supabaseUser.email?.split("@")[0],
     full_name: supabaseUser.user_metadata?.full_name,
     avatar_url: supabaseUser.user_metadata?.avatar_url,
     created_at: supabaseUser.created_at,
@@ -226,6 +229,41 @@ export function AuthProvider({ children, initialUser = null }: AuthProviderProps
     }
   };
 
+  // Sign in with OAuth provider
+  const signInWithOAuth = async (provider: "google" | "github") => {
+    try {
+      setAuthState({ isLoading: true, error: null });
+
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+          queryParams: {
+            access_type: "offline",
+            prompt: "consent",
+          },
+          // PKCE is enabled by default in Supabase Auth
+          // Additional security options
+          scopes: provider === "google" ? "openid email profile" : "user:email",
+        },
+      });
+
+      if (error) {
+        setAuthState({ error: error.message, isLoading: false });
+        return;
+      }
+
+      // The user will be redirected to the OAuth provider
+      // State will be updated when they return via the auth state change listener
+    } catch (error) {
+      setAuthState({
+        error:
+          error instanceof Error ? error.message : `Failed to sign in with ${provider}`,
+        isLoading: false,
+      });
+    }
+  };
+
   // Sign out function
   const signOut = async () => {
     try {
@@ -249,6 +287,52 @@ export function AuthProvider({ children, initialUser = null }: AuthProviderProps
     }
   };
 
+  // Reset password function
+  const resetPassword = async (email: string) => {
+    try {
+      setAuthState({ isLoading: true, error: null });
+
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/auth/reset-password`,
+      });
+
+      if (error) {
+        setAuthState({ error: error.message, isLoading: false });
+        return;
+      }
+
+      setAuthState({ isLoading: false, error: null });
+    } catch (error) {
+      setAuthState({
+        error: error instanceof Error ? error.message : "Failed to send reset email",
+        isLoading: false,
+      });
+    }
+  };
+
+  // Update password function
+  const updatePassword = async (newPassword: string) => {
+    try {
+      setAuthState({ isLoading: true, error: null });
+
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword,
+      });
+
+      if (error) {
+        setAuthState({ error: error.message, isLoading: false });
+        return;
+      }
+
+      setAuthState({ isLoading: false, error: null });
+    } catch (error) {
+      setAuthState({
+        error: error instanceof Error ? error.message : "Failed to update password",
+        isLoading: false,
+      });
+    }
+  };
+
   // Clear error
   const clearError = () => {
     setAuthState({ error: null });
@@ -260,10 +344,13 @@ export function AuthProvider({ children, initialUser = null }: AuthProviderProps
     isLoading: authState.isLoading,
     error: authState.error,
     signIn,
+    signInWithOAuth,
     signUp,
     signOut,
     refreshUser,
     clearError,
+    resetPassword,
+    updatePassword,
   };
 
   return <AuthContext.Provider value={contextValue}>{children}</AuthContext.Provider>;

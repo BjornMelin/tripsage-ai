@@ -1,11 +1,11 @@
+import type { SearchParams, SearchType } from "@/types/search";
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { useSearchStore } from "../search-store";
-import { useSearchParamsStore } from "../search-params-store";
-import { useSearchResultsStore } from "../search-results-store";
 import { useSearchFiltersStore } from "../search-filters-store";
 import { useSearchHistoryStore } from "../search-history-store";
-import type { SearchType, SearchParams } from "@/types/search";
+import { useSearchParamsStore } from "../search-params-store";
+import { useSearchResultsStore } from "../search-results-store";
+import { useSearchStore } from "../search-store";
 
 describe("Search Store Orchestrator", () => {
   beforeEach(() => {

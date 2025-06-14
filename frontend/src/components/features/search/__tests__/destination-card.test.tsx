@@ -3,7 +3,8 @@
  */
 
 import type { Destination } from "@/types/search";
-import { render, screen } from "@testing-library/react";
+import { render } from "@/test/test-utils";
+import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { DestinationCard } from "../destination-card";

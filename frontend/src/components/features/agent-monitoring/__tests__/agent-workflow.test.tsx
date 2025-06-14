@@ -1,5 +1,5 @@
 import type { Agent } from "@/types/agent-status";
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { act, renderWithProviders, screen, waitFor } from "@/test/test-utils";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AgentCollaborationHub } from "../communication/agent-collaboration-hub";
@@ -194,7 +194,7 @@ describe("Agent Workflow Integration Tests", () => {
     it("renders dashboard with agent metrics", () => {
       const onAgentSelect = vi.fn();
 
-      render(
+      renderWithProviders(
         <AgentStatusDashboard
           agents={mockAgentMetrics}
           onAgentSelect={onAgentSelect}
@@ -221,7 +221,7 @@ describe("Agent Workflow Integration Tests", () => {
       const user = userEvent.setup();
       const onAgentSelect = vi.fn();
 
-      render(
+      renderWithProviders(
         <AgentStatusDashboard
           agents={mockAgentMetrics}
           onAgentSelect={onAgentSelect}
@@ -245,7 +245,7 @@ describe("Agent Workflow Integration Tests", () => {
     it("updates metrics with real-time data using useOptimistic pattern", async () => {
       const onAgentSelect = vi.fn();
 
-      const { rerender } = render(
+      const { rerender } = renderWithProviders(
         <AgentStatusDashboard
           agents={mockAgentMetrics}
           onAgentSelect={onAgentSelect}
@@ -276,7 +276,7 @@ describe("Agent Workflow Integration Tests", () => {
     it("displays predictive analytics section", () => {
       const onAgentSelect = vi.fn();
 
-      render(
+      renderWithProviders(
         <AgentStatusDashboard
           agents={mockAgentMetrics}
           onAgentSelect={onAgentSelect}
@@ -296,7 +296,7 @@ describe("Agent Workflow Integration Tests", () => {
     it("renders collaboration hub with agents", () => {
       const onAgentSelect = vi.fn();
 
-      render(
+      renderWithProviders(
         <AgentCollaborationHub
           agents={mockCollaborationAgents}
           handoffs={mockHandoffs}
@@ -314,7 +314,7 @@ describe("Agent Workflow Integration Tests", () => {
     it("displays collaboration metrics", () => {
       const onAgentSelect = vi.fn();
 
-      render(
+      renderWithProviders(
         <AgentCollaborationHub
           agents={mockCollaborationAgents}
           handoffs={mockHandoffs}
@@ -332,7 +332,7 @@ describe("Agent Workflow Integration Tests", () => {
     it("shows agent handoffs section", () => {
       const onAgentSelect = vi.fn();
 
-      render(
+      renderWithProviders(
         <AgentCollaborationHub
           agents={mockCollaborationAgents}
           handoffs={mockHandoffs}
@@ -349,7 +349,7 @@ describe("Agent Workflow Integration Tests", () => {
       const user = userEvent.setup();
       const onAgentSelect = vi.fn();
 
-      render(
+      renderWithProviders(
         <AgentCollaborationHub
           agents={mockCollaborationAgents}
           handoffs={mockHandoffs}
@@ -375,7 +375,7 @@ describe("Agent Workflow Integration Tests", () => {
       const onReconnect = vi.fn();
       const onOptimize = vi.fn();
 
-      render(
+      renderWithProviders(
         <EnhancedConnectionStatus
           status="connected"
           metrics={mockNetworkMetrics}
@@ -397,7 +397,7 @@ describe("Agent Workflow Integration Tests", () => {
       const onReconnect = vi.fn();
       const onOptimize = vi.fn();
 
-      render(
+      renderWithProviders(
         <EnhancedConnectionStatus
           status="disconnected"
           metrics={mockNetworkMetrics}
@@ -429,7 +429,7 @@ describe("Agent Workflow Integration Tests", () => {
         signalStrength: 45,
       };
 
-      render(
+      renderWithProviders(
         <EnhancedConnectionStatus
           status="connected"
           metrics={poorMetrics}
@@ -452,7 +452,7 @@ describe("Agent Workflow Integration Tests", () => {
       const onReconnect = vi.fn();
       const onOptimize = vi.fn();
 
-      render(
+      renderWithProviders(
         <EnhancedConnectionStatus
           status="connected"
           metrics={mockNetworkMetrics}
@@ -481,7 +481,7 @@ describe("Agent Workflow Integration Tests", () => {
         signalStrength: 45,
       };
 
-      render(
+      renderWithProviders(
         <EnhancedConnectionStatus
           status="connected"
           metrics={poorMetrics}
@@ -507,7 +507,7 @@ describe("Agent Workflow Integration Tests", () => {
         selectedAgent = agentId;
       };
 
-      const { rerender } = render(
+      const { rerender } = renderWithProviders(
         <div>
           <AgentStatusDashboard
             agents={mockAgentMetrics}
@@ -538,7 +538,7 @@ describe("Agent Workflow Integration Tests", () => {
       const onReconnect = vi.fn();
       const onOptimize = vi.fn();
 
-      const { rerender } = render(
+      const { rerender } = renderWithProviders(
         <div>
           <AgentStatusDashboard
             agents={mockAgentMetrics}

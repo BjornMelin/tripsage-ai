@@ -1,0 +1,427 @@
+name: Security Scanning
+
+on:
+  push:
+    branches: [ main, develop, feat/*, "session/*" ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    # Run security scans daily at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:  # Allow manual triggering
+
+concurrency:
+  group: security-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  secret-scanning:
+    name: Secret Detection
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Full history for better secret detection
+
+    - name: Run TruffleHog OSS
+      uses: trufflesecurity/trufflehog@main
+      with:
+        path: ./
+        base: main
+        head: HEAD
+        extra_args: --debug --only-verified
+
+    - name: Check for hardcoded secrets
+      run: |
+        echo "Checking for common secret patterns..."
+        
+        # Check for API keys, passwords, and tokens
+        if git grep -i -E "(api_key|api-key|apikey|password|passwd|token|secret|key)" . -- '*.py' '*.js' '*.ts' '*.tsx' '*.json' '*.yml' '*.yaml' | grep -v -E "(test|mock|example|placeholder|dummy|fake|TODO|FIXME)" | head -20; then
+          echo "⚠️ Potential secrets found in code"
+          echo "Please review the above matches and ensure no real secrets are committed"
+        else
+          echo "✅ No obvious secret patterns detected"
+        fi
+        
+        # Check for development/fallback secrets
+        if git grep -i "fallback-secret\|development-only\|dev-secret" . ; then
+          echo "❌ Development secrets detected!"
+          exit 1
+        else
+          echo "✅ No development secrets found"
+        fi
+
+    - name: Check environment files
+      run: |
+        echo "Checking for committed environment files..."
+        
+        # Look for environment files that shouldn't be committed
+        if find . -name ".env*" -not -name ".env.example" -not -name ".env.template" -not -path "./node_modules/*" -not -path "./.git/*" | head -10; then
+          echo "⚠️ Environment files found - ensure they don't contain real secrets"
+        else
+          echo "✅ No problematic environment files found"
+        fi
+
+  python-security:
+    name: Python Security Analysis
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.12"
+
+    - name: Install security tools
+      run: |
+        pip install bandit[toml] safety semgrep
+
+    - name: Run Bandit security analysis
+      run: |
+        echo "Running Bandit security scan..."
+        bandit -r tripsage/ tripsage_core/ -f json -o bandit-report.json || true
+        bandit -r tripsage/ tripsage_core/ -ll --exit-zero
+
+    - name: Run Safety check for known vulnerabilities
+      run: |
+        echo "Checking for known vulnerabilities in dependencies..."
+        safety check --json --output safety-report.json || true
+        safety check || echo "Known vulnerabilities found - see report"
+
+    - name: Run Semgrep security analysis
+      run: |
+        echo "Running Semgrep security analysis..."
+        semgrep --config=auto --json --output=semgrep-report.json tripsage/ tripsage_core/ || true
+        semgrep --config=auto tripsage/ tripsage_core/ || echo "Semgrep found potential issues"
+
+    - name: Check for SQL injection patterns
+      run: |
+        echo "Checking for potential SQL injection patterns..."
+        if grep -r -n "\.execute.*%" tripsage/ tripsage_core/ || grep -r -n "\.format.*sql" tripsage/ tripsage_core/; then
+          echo "⚠️ Potential SQL injection patterns found"
+          echo "Review string formatting in SQL queries - use parameterized queries"
+        else
+          echo "✅ No obvious SQL injection patterns detected"
+        fi
+
+    - name: Upload Python security reports
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: python-security-reports
+        path: |
+          bandit-report.json
+          safety-report.json
+          semgrep-report.json
+        retention-days: 30
+
+  frontend-security:
+    name: Frontend Security Analysis
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup pnpm
+      uses: pnpm/action-setup@v4
+      with:
+        version: 9
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'pnpm'
+        cache-dependency-path: 'frontend/pnpm-lock.yaml'
+
+    - name: Install dependencies
+      working-directory: ./frontend
+      run: pnpm install --frozen-lockfile
+
+    - name: Run pnpm audit
+      working-directory: ./frontend
+      run: |
+        echo "Running pnpm security audit..."
+        pnpm audit --audit-level moderate --json > ../frontend-audit.json || true
+        pnpm audit --audit-level moderate || echo "Security issues found in frontend dependencies"
+
+    - name: Check for XSS vulnerabilities
+      working-directory: ./frontend
+      run: |
+        echo "Checking for potential XSS vulnerabilities..."
+        
+        # Look for dangerous innerHTML usage
+        if grep -r "innerHTML.*=" src/ --include="*.ts" --include="*.tsx" --include="*.js" --include="*.jsx"; then
+          echo "⚠️ Direct innerHTML usage found - review for XSS risks"
+        else
+          echo "✅ No direct innerHTML usage detected"
+        fi
+        
+        # Look for eval usage
+        if grep -r "eval(" src/ --include="*.ts" --include="*.tsx" --include="*.js" --include="*.jsx"; then
+          echo "⚠️ eval() usage found - potential security risk"
+        else
+          echo "✅ No eval() usage detected"
+        fi
+
+    - name: Check for unsafe React patterns
+      working-directory: ./frontend
+      run: |
+        echo "Checking for unsafe React patterns..."
+        
+        # Look for dangerouslySetInnerHTML
+        if grep -r "dangerouslySetInnerHTML" src/ --include="*.ts" --include="*.tsx"; then
+          echo "⚠️ dangerouslySetInnerHTML usage found - ensure content is sanitized"
+        else
+          echo "✅ No dangerouslySetInnerHTML usage detected"
+        fi
+        
+        # Look for window.open without noopener
+        if grep -r "window\.open" src/ --include="*.ts" --include="*.tsx" --include="*.js" --include="*.jsx" | grep -v "noopener"; then
+          echo "⚠️ window.open usage without noopener - potential security risk"
+        else
+          echo "✅ Safe window.open usage or none detected"
+        fi
+
+    - name: Run ESLint security rules
+      working-directory: ./frontend
+      run: |
+        echo "Running ESLint security checks..."
+        # Install security-focused ESLint plugins
+        pnpm add -D eslint-plugin-security @typescript-eslint/eslint-plugin
+        
+        # Run ESLint with security rules
+        npx eslint src/ --ext .ts,.tsx,.js,.jsx --format json --output-file ../eslint-security.json || true
+        npx eslint src/ --ext .ts,.tsx,.js,.jsx || echo "ESLint found potential issues"
+
+    - name: Upload frontend security reports
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: frontend-security-reports
+        path: |
+          frontend-audit.json
+          eslint-security.json
+        retention-days: 30
+
+  dependency-check:
+    name: Dependency Vulnerability Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Run OWASP Dependency Check
+      uses: dependency-check/Dependency-Check_Action@main
+      with:
+        project: 'TripSage'
+        path: '.'
+        format: 'ALL'
+        args: >
+          --enableRetired
+          --enableExperimental
+          --nodeAuditSkipDevDependencies
+          --suppression dependency-check-suppressions.xml
+
+    - name: Upload OWASP Dependency Check results
+      uses: actions/upload-artifact@v4
+      with:
+        name: dependency-check-reports
+        path: reports/
+        retention-days: 30
+
+  docker-security:
+    name: Docker Security Scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Build Docker image for scanning
+      run: |
+        docker build -t tripsage-api:security-scan -f docker/Dockerfile.api .
+
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: 'tripsage-api:security-scan'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+
+    - name: Upload Trivy scan results
+      uses: github/codeql-action/upload-sarif@v3
+      if: always()
+      with:
+        sarif_file: 'trivy-results.sarif'
+
+    - name: Run Docker Bench Security
+      run: |
+        # Clone and run Docker Bench Security
+        git clone https://github.com/docker/docker-bench-security.git
+        cd docker-bench-security
+        sudo sh docker-bench-security.sh -l docker-bench-results.log || true
+        cat docker-bench-results.log
+
+    - name: Upload Docker security results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: docker-security-reports
+        path: |
+          trivy-results.sarif
+          docker-bench-security/docker-bench-results.log
+        retention-days: 30
+
+  infrastructure-security:
+    name: Infrastructure Security
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Check Docker Compose security
+      run: |
+        echo "Checking Docker Compose configuration for security issues..."
+        
+        # Check for privileged containers
+        if grep -r "privileged.*true" docker/ docker-compose*.yml; then
+          echo "⚠️ Privileged containers found - review security implications"
+        else
+          echo "✅ No privileged containers detected"
+        fi
+        
+        # Check for host network mode
+        if grep -r "network_mode.*host" docker/ docker-compose*.yml; then
+          echo "⚠️ Host network mode found - review security implications"
+        else
+          echo "✅ No host network mode detected"
+        fi
+        
+        # Check for volume mounts to sensitive paths
+        if grep -r "/var/run/docker.sock\|/proc\|/sys" docker/ docker-compose*.yml; then
+          echo "⚠️ Sensitive volume mounts found - review security implications"
+        else
+          echo "✅ No sensitive volume mounts detected"
+        fi
+
+    - name: Check GitHub Actions security
+      run: |
+        echo "Checking GitHub Actions for security best practices..."
+        
+        # Check for pinned action versions
+        if grep -r "uses:.*@[a-f0-9]\{40\}" .github/workflows/; then
+          echo "✅ Some actions are pinned to commit SHAs"
+        else
+          echo "ℹ️ Consider pinning actions to commit SHAs for better security"
+        fi
+        
+        # Check for secrets in workflow files
+        if grep -r -i "secret\|password\|token\|key" .github/workflows/ | grep -v "\${{" | grep -v "secrets\."; then
+          echo "⚠️ Potential hardcoded secrets in workflows"
+        else
+          echo "✅ No hardcoded secrets detected in workflows"
+        fi
+
+    - name: Check for security headers
+      run: |
+        echo "Checking for security header configurations..."
+        
+        # Look for security header configurations in Next.js config
+        if grep -r -i "content-security-policy\|x-frame-options\|x-content-type-options" frontend/; then
+          echo "✅ Security headers found in configuration"
+        else
+          echo "ℹ️ Consider adding security headers (CSP, X-Frame-Options, etc.)"
+        fi
+
+  security-summary:
+    name: Security Summary
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: [secret-scanning, python-security, frontend-security, dependency-check]
+    if: always()
+    
+    steps:
+    - name: Security Gate Check
+      run: |
+        echo "Security Scan Results:"
+        echo "====================="
+        echo "Secret Scanning: ${{ needs.secret-scanning.result }}"
+        echo "Python Security: ${{ needs.python-security.result }}"
+        echo "Frontend Security: ${{ needs.frontend-security.result }}"
+        echo "Dependency Check: ${{ needs.dependency-check.result }}"
+        
+        # Critical security failures
+        if [ "${{ needs.secret-scanning.result }}" = "failure" ]; then
+          echo "❌ CRITICAL: Secret scanning failed"
+          exit 1
+        fi
+        
+        # Non-critical but important failures
+        failed_jobs=""
+        if [ "${{ needs.python-security.result }}" = "failure" ]; then
+          failed_jobs="$failed_jobs Python-Security"
+        fi
+        if [ "${{ needs.frontend-security.result }}" = "failure" ]; then
+          failed_jobs="$failed_jobs Frontend-Security"
+        fi
+        if [ "${{ needs.dependency-check.result }}" = "failure" ]; then
+          failed_jobs="$failed_jobs Dependency-Check"
+        fi
+        
+        if [ -n "$failed_jobs" ]; then
+          echo "⚠️ Security issues detected in:$failed_jobs"
+          echo "Review security reports and address critical vulnerabilities"
+        else
+          echo "✅ All security scans completed successfully"
+        fi
+
+    - name: Create security report comment
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const results = {
+            secretScanning: '${{ needs.secret-scanning.result }}',
+            pythonSecurity: '${{ needs.python-security.result }}',
+            frontendSecurity: '${{ needs.frontend-security.result }}',
+            dependencyCheck: '${{ needs.dependency-check.result }}'
+          };
+          
+          const statusIcon = (result) => result === 'success' ? '✅' : result === 'failure' ? '❌' : '⚠️';
+          
+          const comment = `## 🔒 Security Scan Results
+          
+          | Check | Status |
+          |-------|--------|
+          | Secret Detection | ${statusIcon(results.secretScanning)} ${results.secretScanning} |
+          | Python Security | ${statusIcon(results.pythonSecurity)} ${results.pythonSecurity} |
+          | Frontend Security | ${statusIcon(results.frontendSecurity)} ${results.frontendSecurity} |
+          | Dependency Check | ${statusIcon(results.dependencyCheck)} ${results.dependencyCheck} |
+          
+          📊 [View detailed security reports in the workflow artifacts](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+          
+          ${Object.values(results).includes('failure') ? '⚠️ **Security issues detected** - Please review and address critical vulnerabilities before merging.' : '✅ **All security checks passed**'}
+          `;
+          
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: comment
+          });

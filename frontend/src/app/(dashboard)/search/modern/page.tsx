@@ -25,6 +25,98 @@ import {
 } from "lucide-react";
 import { useState, useTransition } from "react";
 
+// Mock data interfaces for demo purposes
+interface MockFlight {
+  id: string;
+  airline: string;
+  flightNumber: string;
+  aircraft: string;
+  origin: { code: string; city: string; terminal: string };
+  destination: { code: string; city: string; terminal: string };
+  departure: { time: string; date: string };
+  arrival: { time: string; date: string };
+  duration: number;
+  stops: { count: number; cities: string[] };
+  price: {
+    base: number;
+    total: number;
+    currency: string;
+    taxes: number;
+    fees: number;
+  };
+  class: string;
+  seatsAvailable: number;
+  amenities: string[];
+  baggage: {
+    carry: string;
+    checked: string;
+  };
+  cancellation: {
+    allowed: boolean;
+    fee: number;
+    deadline: string;
+  };
+  carbonFootprint: {
+    emissions: number;
+    offset: number;
+  };
+  priceInsights: {
+    prediction: string;
+    confidence: number;
+    reason: string;
+  };
+}
+
+interface MockHotel {
+  id: string;
+  name: string;
+  brand: string;
+  category: "hotel" | "resort" | "apartment" | "villa";
+  starRating: number;
+  userRating: number;
+  reviewCount: number;
+  location: {
+    address: string;
+    city: string;
+    district: string;
+    landmarks: string[];
+    coordinates: { lat: number; lng: number };
+  };
+  checkIn: string;
+  checkOut: string;
+  rooms: {
+    type: string;
+    beds: string;
+    size: string;
+    maxGuests: number;
+  };
+  price: {
+    perNight: number;
+    total: number;
+    currency: string;
+    taxes: number;
+    fees: number;
+  };
+  amenities: string[];
+  images: string[];
+  policies: {
+    checkIn: string;
+    checkOut: string;
+    cancellation: string;
+    pet: string;
+  };
+  sustainability: {
+    certified: boolean;
+    rating: string;
+    practices: string[];
+  };
+  priceInsights: {
+    comparison: string;
+    savings: number;
+    reason: string;
+  };
+}
+
 // Mock data for demo purposes
 const mockFlightResults = [
   {
@@ -86,7 +178,7 @@ const mockFlightResults = [
       reason: "Stable pricing expected",
     },
   },
-] as any;
+] as MockFlight[];
 
 const mockHotelResults = [
   {
@@ -213,15 +305,15 @@ const mockHotelResults = [
       personalizedTags: ["budget", "city-center", "modern"],
     },
   },
-] as any;
+] as MockHotel[];
 
 export default function ModernSearchPage() {
   const [isPending, startTransition] = useTransition();
   const [activeTab, setActiveTab] = useState<"flights" | "hotels">("flights");
   const [showResults, setShowResults] = useState(false);
-  const [searchData, setSearchData] = useState<any>(null);
+  const [searchData, setSearchData] = useState<Record<string, unknown> | null>(null);
 
-  const handleFlightSearch = async (params: any) => {
+  const handleFlightSearch = async (params: Record<string, unknown>) => {
     startTransition(() => {
       setSearchData(params);
       setShowResults(true);
@@ -232,7 +324,7 @@ export default function ModernSearchPage() {
     });
   };
 
-  const handleHotelSearch = async (params: any) => {
+  const handleHotelSearch = async (params: Record<string, unknown>) => {
     startTransition(() => {
       setSearchData(params);
       setShowResults(true);
@@ -243,17 +335,17 @@ export default function ModernSearchPage() {
     });
   };
 
-  const handleFlightSelect = async (flight: any) => {
+  const handleFlightSelect = async (flight: MockFlight) => {
     console.log("Selected flight:", flight);
     // Handle flight selection
   };
 
-  const handleHotelSelect = async (hotel: any) => {
+  const handleHotelSelect = async (hotel: MockHotel) => {
     console.log("Selected hotel:", hotel);
     // Handle hotel selection
   };
 
-  const handleCompareFlights = (flights: any[]) => {
+  const handleCompareFlights = (flights: MockFlight[]) => {
     console.log("Comparing flights:", flights);
     // Handle flight comparison
   };

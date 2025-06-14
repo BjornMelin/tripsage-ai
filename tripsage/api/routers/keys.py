@@ -9,7 +9,7 @@ from typing import Any, Dict, List
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, status
 
-from tripsage.api.core.dependencies import get_principal_id, require_principal_dep
+from tripsage.api.core.dependencies import get_principal_id, require_principal
 from tripsage.api.middlewares.authentication import Principal
 from tripsage.api.schemas.api_keys import (
     ApiKeyCreate,
@@ -44,7 +44,7 @@ def get_monitoring_service() -> KeyMonitoringService:
     summary="List API keys",
 )
 async def list_keys(
-    principal: Principal = require_principal_dep,
+    principal: Principal = Depends(require_principal),
     key_service: KeyService = Depends(get_key_service),
 ):
     """List all API keys for the current user.
@@ -68,7 +68,7 @@ async def list_keys(
 )
 async def create_key(
     key_data: ApiKeyCreate,
-    principal: Principal = require_principal_dep,
+    principal: Principal = Depends(require_principal),
     key_service: KeyService = Depends(get_key_service),
 ):
     """Create a new API key.
@@ -113,7 +113,7 @@ async def create_key(
 )
 async def delete_key(
     key_id: str = Path(..., description="The API key ID"),
-    principal: Principal = require_principal_dep,
+    principal: Principal = Depends(require_principal),
     key_service: KeyService = Depends(get_key_service),
 ):
     """Delete an API key.
@@ -153,7 +153,7 @@ async def delete_key(
 )
 async def validate_key(
     key_data: ApiKeyValidateRequest,
-    principal: Principal = require_principal_dep,
+    principal: Principal = Depends(require_principal),
     key_service: KeyService = Depends(get_key_service),
 ):
     """Validate an API key with the service.
@@ -178,7 +178,7 @@ async def validate_key(
 async def rotate_key(
     key_data: ApiKeyRotateRequest,
     key_id: str = Path(..., description="The API key ID"),
-    principal: Principal = require_principal_dep,
+    principal: Principal = Depends(require_principal),
     key_service: KeyService = Depends(get_key_service),
 ):
     """Rotate an API key.
@@ -232,7 +232,7 @@ async def rotate_key(
     summary="Get API key metrics",
 )
 async def get_metrics(
-    principal: Principal = require_principal_dep,
+    principal: Principal = Depends(require_principal),
 ):
     """Get API key health metrics.
 
@@ -254,7 +254,7 @@ async def get_metrics(
     summary="Get API key audit log",
 )
 async def get_audit_log(
-    principal: Principal = require_principal_dep,
+    principal: Principal = Depends(require_principal),
     limit: int = Query(100, ge=1, le=1000),
     monitoring_service: KeyMonitoringService = Depends(get_monitoring_service),
 ):

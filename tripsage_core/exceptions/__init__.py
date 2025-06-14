@@ -18,6 +18,7 @@ from tripsage_core.exceptions.exceptions import (
     CoreRateLimitError,
     # Resource and validation
     CoreResourceNotFoundError,
+    CoreSecurityError,
     # Service and infrastructure
     CoreServiceError,
     # Base exception
@@ -37,6 +38,7 @@ __all__ = [
     # Authentication and authorization
     "CoreAuthenticationError",
     "CoreAuthorizationError",
+    "CoreSecurityError",
     # Resource and validation
     "CoreResourceNotFoundError",
     "CoreValidationError",

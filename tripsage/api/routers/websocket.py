@@ -16,7 +16,6 @@ from fastapi import (
     WebSocketDisconnect,
 )
 from pydantic import Field, ValidationError
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from tripsage.agents.chat import ChatAgent
 from tripsage.agents.service_registry import ServiceRegistry
@@ -44,21 +43,29 @@ from tripsage_core.services.infrastructure.websocket_manager import (
 
 # Create event classes here temporarily until they are properly organized
 class ChatMessageEvent(WebSocketEvent):
+    type: str = Field(default=WebSocketEventType.CHAT_MESSAGE, description="Event type")
     message: WebSocketMessage
 
 
 class ChatMessageChunkEvent(WebSocketEvent):
+    type: str = Field(default=WebSocketEventType.CHAT_TYPING, description="Event type")
     content: str
     chunk_index: int = 0
     is_final: bool = False
 
 
 class ConnectionEvent(WebSocketEvent):
+    type: str = Field(
+        default=WebSocketEventType.CONNECTION_ESTABLISHED, description="Event type"
+    )
     status: str = Field(..., description="Connection status")
     connection_id: str = Field(..., description="Connection ID")
 
 
 class ErrorEvent(WebSocketEvent):
+    type: str = Field(
+        default=WebSocketEventType.CONNECTION_ERROR, description="Event type"
+    )
     error_code: str
     error_message: str
 
@@ -89,11 +96,11 @@ def get_chat_agent() -> ChatAgent:
     return _chat_agent
 
 
-async def get_core_chat_service(db: AsyncSession = Depends(get_db)) -> CoreChatService:
+async def get_core_chat_service(db=Depends(get_db)) -> CoreChatService:
     """Get CoreChatService instance with database dependency.
 
     Args:
-        db: Database session from dependency injection
+        db: Database service from dependency injection
 
     Returns:
         CoreChatService instance
@@ -105,7 +112,7 @@ async def get_core_chat_service(db: AsyncSession = Depends(get_db)) -> CoreChatS
 async def chat_websocket(
     websocket: WebSocket,
     session_id: UUID,
-    db: AsyncSession = Depends(get_db),
+    db=Depends(get_db),
     chat_service: CoreChatService = Depends(get_core_chat_service),
 ):
     """WebSocket endpoint for real-time chat communication.
@@ -113,7 +120,7 @@ async def chat_websocket(
     Args:
         websocket: WebSocket connection
         session_id: Chat session ID
-        db: Database session from dependency injection
+        db: Database service from dependency injection
         chat_service: CoreChatService instance from dependency injection
     """
     connection_id = None

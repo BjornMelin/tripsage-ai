@@ -1,4 +1,5 @@
-import { render, screen } from "@testing-library/react";
+import { render } from "@/test/test-utils";
+import { screen } from "@testing-library/react";
 /**
  * Integration tests for Next.js error boundaries
  * Tests the error.tsx and global-error.tsx files
@@ -28,6 +29,9 @@ vi.mock("@/lib/error-service", () => ({
     reportError: vi.fn().mockResolvedValue(undefined),
   },
 }));
+
+// Get the mocked error service
+import { errorService as mockErrorService } from "@/lib/error-service";
 
 // Mock sessionStorage
 const mockSessionStorage = {
@@ -66,18 +70,16 @@ describe("Next.js Error Boundaries Integration", () => {
     });
 
     it("should report error on mount", () => {
-      const { errorService } = require("@/lib/error-service");
-
       render(<ErrorComponent error={mockError} reset={mockReset} />);
 
-      expect(errorService.createErrorReport).toHaveBeenCalledWith(
+      expect(vi.mocked(mockErrorService).createErrorReport).toHaveBeenCalledWith(
         mockError,
         undefined,
         expect.objectContaining({
           sessionId: "test_session_id",
         })
       );
-      expect(errorService.reportError).toHaveBeenCalled();
+      expect(vi.mocked(mockErrorService).reportError).toHaveBeenCalled();
     });
 
     it("should log error in development mode", () => {
@@ -133,12 +135,11 @@ describe("Next.js Error Boundaries Integration", () => {
     });
 
     it("should report critical error", () => {
-      const { errorService } = require("@/lib/error-service");
-
+      
       render(<GlobalError error={mockError} reset={mockReset} />);
 
-      expect(errorService.createErrorReport).toHaveBeenCalled();
-      expect(errorService.reportError).toHaveBeenCalled();
+      expect(vi.mocked(mockErrorService).createErrorReport).toHaveBeenCalled();
+      expect(vi.mocked(mockErrorService).reportError).toHaveBeenCalled();
     });
 
     it("should always log critical errors", () => {
@@ -177,12 +178,11 @@ describe("Next.js Error Boundaries Integration", () => {
     });
 
     it("should report dashboard error", () => {
-      const { errorService } = require("@/lib/error-service");
-
+      
       render(<DashboardError error={mockError} reset={mockReset} />);
 
-      expect(errorService.createErrorReport).toHaveBeenCalled();
-      expect(errorService.reportError).toHaveBeenCalled();
+      expect(vi.mocked(mockErrorService).createErrorReport).toHaveBeenCalled();
+      expect(vi.mocked(mockErrorService).reportError).toHaveBeenCalled();
     });
 
     it("should log error in development mode", () => {
@@ -216,11 +216,10 @@ describe("Next.js Error Boundaries Integration", () => {
     });
 
     it("should report auth error without user ID", () => {
-      const { errorService } = require("@/lib/error-service");
-
+      
       render(<AuthError error={mockError} reset={mockReset} />);
 
-      expect(errorService.createErrorReport).toHaveBeenCalledWith(
+      expect(vi.mocked(mockErrorService).createErrorReport).toHaveBeenCalledWith(
         mockError,
         undefined,
         expect.objectContaining({
@@ -229,7 +228,7 @@ describe("Next.js Error Boundaries Integration", () => {
       );
 
       // Should not include userId since user is not authenticated in auth flow
-      expect(errorService.createErrorReport).not.toHaveBeenCalledWith(
+      expect(vi.mocked(mockErrorService).createErrorReport).not.toHaveBeenCalledWith(
         expect.anything(),
         expect.anything(),
         expect.objectContaining({
@@ -278,8 +277,7 @@ describe("Next.js Error Boundaries Integration", () => {
 
       render(<ErrorComponent error={mockError} reset={mockReset} />);
 
-      const { errorService } = require("@/lib/error-service");
-      expect(errorService.createErrorReport).toHaveBeenCalledWith(
+            expect(vi.mocked(mockErrorService).createErrorReport).toHaveBeenCalledWith(
         mockError,
         undefined,
         expect.objectContaining({
@@ -302,14 +300,14 @@ describe("Next.js Error Boundaries Integration", () => {
 
   describe("User Store Integration", () => {
     it("should include user ID when user store is available", () => {
-      (window as any).__USER_STORE__ = {
+      // @ts-expect-error - Testing global window property
+      window.__USER_STORE__ = {
         user: { id: "integration_test_user" },
       };
 
       render(<DashboardError error={mockError} reset={mockReset} />);
 
-      const { errorService } = require("@/lib/error-service");
-      expect(errorService.createErrorReport).toHaveBeenCalledWith(
+            expect(vi.mocked(mockErrorService).createErrorReport).toHaveBeenCalledWith(
         mockError,
         undefined,
         expect.objectContaining({
@@ -318,11 +316,13 @@ describe("Next.js Error Boundaries Integration", () => {
       );
 
       // Cleanup
-      (window as any).__USER_STORE__ = undefined;
+      // @ts-expect-error - Testing global window property
+      window.__USER_STORE__ = undefined;
     });
 
     it("should handle missing user store gracefully", () => {
-      (window as any).__USER_STORE__ = undefined;
+      // @ts-expect-error - Testing global window property
+      window.__USER_STORE__ = undefined;
 
       render(<DashboardError error={mockError} reset={mockReset} />);
 
@@ -333,11 +333,10 @@ describe("Next.js Error Boundaries Integration", () => {
 
   describe("Error Reporting Integration", () => {
     it("should create error reports with consistent format", () => {
-      const { errorService } = require("@/lib/error-service");
-
+      
       render(<ErrorComponent error={mockError} reset={mockReset} />);
 
-      expect(errorService.createErrorReport).toHaveBeenCalledWith(
+      expect(vi.mocked(mockErrorService).createErrorReport).toHaveBeenCalledWith(
         mockError,
         undefined,
         expect.objectContaining({
@@ -347,8 +346,7 @@ describe("Next.js Error Boundaries Integration", () => {
     });
 
     it("should handle error service failures gracefully", () => {
-      const { errorService } = require("@/lib/error-service");
-      errorService.reportError.mockRejectedValue(new Error("Reporting failed"));
+            vi.mocked(mockErrorService).reportError.mockRejectedValue(new Error("Reporting failed"));
 
       // Should not throw when error reporting fails
       expect(() => {

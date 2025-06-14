@@ -46,28 +46,21 @@ class TestDatabaseDependency:
     """Test database dependency functionality."""
 
     @pytest.mark.asyncio
-    async def test_get_db_yields_session(self):
-        """Test that database dependency yields an AsyncSession."""
+    async def test_get_db_returns_database_service(self):
+        """Test that database dependency returns a DatabaseService."""
         with patch(
             "tripsage.api.core.dependencies.get_database_service"
         ) as mock_get_service:
             # Mock the database service
             mock_service = AsyncMock()
-            mock_session = MagicMock(spec=AsyncSession)
-
-            # Create async context manager mock
-            mock_context_manager = AsyncMock()
-            mock_context_manager.__aenter__.return_value = mock_session
-            mock_context_manager.__aexit__.return_value = None
-
-            # Make get_session return the async context manager
-            mock_service.get_session = MagicMock(return_value=mock_context_manager)
             mock_get_service.return_value = mock_service
 
-            # Use the dependency as an async generator
-            async for session in get_db():
-                assert session == mock_session
-                assert isinstance(session, AsyncSession)
+            # Use the dependency
+            result = await get_db()
+
+            # Should return the database service directly
+            assert result == mock_service
+            mock_get_service.assert_called_once()
 
 
 class TestSessionMemoryDependency:

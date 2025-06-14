@@ -8,12 +8,12 @@ import logging
 from typing import List
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 
 from tripsage.api.core.dependencies import (
     get_chat_service_dep,
     get_principal_id,
-    require_principal_dep,
+    require_principal,
 )
 from tripsage.api.middlewares.authentication import Principal
 from tripsage.api.schemas.chat import ChatRequest, ChatResponse
@@ -26,7 +26,7 @@ router = APIRouter()
 @router.post("/", response_model=ChatResponse)
 async def chat(
     request: ChatRequest,
-    principal: Principal = require_principal_dep,
+    principal: Principal = Depends(require_principal),
     chat_service: ChatService = get_chat_service_dep,
 ):
     """Handle chat requests with optional streaming and session persistence.
@@ -57,7 +57,7 @@ async def chat(
 @router.post("/sessions", response_model=dict)
 async def create_session(
     title: str,
-    principal: Principal = require_principal_dep,
+    principal: Principal = Depends(require_principal),
     chat_service: ChatService = get_chat_service_dep,
 ):
     """Create a new chat session.
@@ -90,7 +90,7 @@ async def create_session(
 
 @router.get("/sessions", response_model=List[dict])
 async def list_sessions(
-    principal: Principal = require_principal_dep,
+    principal: Principal = Depends(require_principal),
     chat_service: ChatService = get_chat_service_dep,
 ):
     """List chat sessions for the current user.
@@ -118,7 +118,7 @@ async def list_sessions(
 @router.get("/sessions/{session_id}", response_model=dict)
 async def get_session(
     session_id: UUID,
-    principal: Principal = require_principal_dep,
+    principal: Principal = Depends(require_principal),
     chat_service: ChatService = get_chat_service_dep,
 ):
     """Get a specific chat session.
@@ -155,7 +155,7 @@ async def get_session(
 @router.get("/sessions/{session_id}/messages", response_model=List[dict])
 async def get_session_messages(
     session_id: UUID,
-    principal: Principal = require_principal_dep,
+    principal: Principal = Depends(require_principal),
     chat_service: ChatService = get_chat_service_dep,
     limit: int = 50,
 ):
@@ -188,7 +188,7 @@ async def create_message(
     session_id: UUID,
     content: str,
     role: str = "user",
-    principal: Principal = require_principal_dep,
+    principal: Principal = Depends(require_principal),
     chat_service: ChatService = get_chat_service_dep,
 ):
     """Create a new message in a session.
@@ -226,7 +226,7 @@ async def create_message(
 @router.delete("/sessions/{session_id}")
 async def delete_session(
     session_id: UUID,
-    principal: Principal = require_principal_dep,
+    principal: Principal = Depends(require_principal),
     chat_service: ChatService = get_chat_service_dep,
 ):
     """Delete a chat session.

@@ -14,7 +14,7 @@ export function MessageAttachments({ attachments }: MessageAttachmentsProps) {
   return (
     <div className="flex flex-wrap gap-2">
       {attachments.map((url, index) => (
-        <AttachmentItem key={index} url={url} />
+        <AttachmentItem key={`attachment-${url}-${index}`} url={url} />
       ))}
     </div>
   );

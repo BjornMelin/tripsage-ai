@@ -162,7 +162,7 @@ export const TableSkeleton = React.forwardRef<HTMLTableElement, TableSkeletonPro
             <thead className="border-b bg-muted/50">
               <tr>
                 {Array.from({ length: columns }).map((_, index) => (
-                  <th key={index} className="p-3">
+                  <th key={`table-header-${index}`} className="p-3">
                     <Skeleton height="1rem" width="80%" />
                   </th>
                 ))}
@@ -208,7 +208,7 @@ export const FormSkeleton = React.forwardRef<HTMLDivElement, FormSkeletonProps>(
         {...props}
       >
         {Array.from({ length: fields }).map((_, index) => (
-          <div key={index} className="space-y-2">
+          <div key={`form-field-${index}`} className="space-y-2">
             <Skeleton height="1rem" width="25%" />
             <Skeleton height="2.5rem" width="100%" className="rounded-md" />
           </div>
@@ -253,7 +253,7 @@ export const ChartSkeleton = React.forwardRef<HTMLDivElement, ChartSkeletonProps
             <div className="flex items-end justify-around h-full space-x-2">
               {Array.from({ length: 8 }).map((_, index) => (
                 <Skeleton
-                  key={index}
+                  key={`form-input-${index}`}
                   width="12%"
                   height={`${Math.random() * 60 + 40}%`}
                   className="rounded-t-sm"
@@ -288,7 +288,7 @@ export const ChartSkeleton = React.forwardRef<HTMLDivElement, ChartSkeletonProps
         {/* Chart legend */}
         <div className="flex flex-wrap gap-4">
           {Array.from({ length: 4 }).map((_, index) => (
-            <div key={index} className="flex items-center space-x-2">
+            <div key={`list-item-${index}`} className="flex items-center space-x-2">
               <Skeleton className="h-3 w-3 rounded-sm" />
               <Skeleton height="0.875rem" width="60px" />
             </div>

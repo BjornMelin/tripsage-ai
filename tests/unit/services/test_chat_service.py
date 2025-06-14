@@ -6,6 +6,7 @@ Tests chat orchestration, message handling, and AI integration.
 
 from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock
+from uuid import uuid4
 
 import pytest
 
@@ -127,26 +128,40 @@ class TestChatService:
         assert response.tool_calls[0]["parameters"]["destination"] == "Tokyo"
 
     @pytest.mark.asyncio
-    async def test_store_message_in_database(self, chat_service):
+    async def test_add_message_to_database(self, chat_service):
         """Test that messages are properly stored in database."""
         # Arrange
-        message_data = ChatFactory.create_message()
-        chat_service.db.store_chat_message = AsyncMock()
+        from tripsage_core.services.business.chat_service import MessageCreateRequest
 
-        # Act
-        await chat_service.store_message(
-            content=message_data["content"],
-            role=message_data["role"],
-            user_id=message_data["user_id"],
-            session_id=message_data["session_id"],
+        message_data = ChatFactory.create_message()
+        user_id = str(uuid4())
+        session_id = str(uuid4())
+
+        # Mock the internal methods and database calls that ChatService actually uses
+        chat_service._get_session_internal = AsyncMock()
+        chat_service.db.create_chat_message = AsyncMock(
+            return_value={
+                "id": "test-id",
+                "session_id": session_id,
+                "role": message_data["role"],
+                "content": message_data["content"],
+                "created_at": datetime.now(timezone.utc).isoformat(),
+                "metadata": {},
+            }
+        )
+        chat_service.db.update_session_timestamp = AsyncMock()
+
+        message_request = MessageCreateRequest(
+            role=message_data["role"], content=message_data["content"]
         )
 
+        # Act
+        result = await chat_service.add_message(session_id, user_id, message_request)
+
         # Assert
-        chat_service.db.store_chat_message.assert_called_once()
-        call_args = chat_service.db.store_chat_message.call_args[1]
-        assert call_args["content"] == message_data["content"]
-        assert call_args["role"] == message_data["role"]
-        assert call_args["user_id"] == message_data["user_id"]
+        chat_service.db.create_chat_message.assert_called_once()
+        chat_service.db.update_session_timestamp.assert_called_once_with(session_id)
+        assert result is not None
 
     @pytest.mark.asyncio
     async def test_get_chat_history(self, chat_service):
@@ -235,17 +250,23 @@ class TestChatService:
     async def test_error_handling_database_failure(self, chat_service):
         """Test error handling when database operations fail."""
         # Arrange
+        from tripsage_core.services.business.chat_service import MessageCreateRequest
+
         message_data = ChatFactory.create_message()
-        chat_service.db.store_chat_message.side_effect = Exception("Database error")
+        user_id = str(uuid4())
+        session_id = str(uuid4())
+
+        # Mock the internal methods to trigger database error
+        chat_service._get_session_internal = AsyncMock()
+        chat_service.db.create_chat_message.side_effect = Exception("Database error")
+
+        message_request = MessageCreateRequest(
+            role=message_data["role"], content=message_data["content"]
+        )
 
         # Act & Assert
         with pytest.raises(Exception) as exc_info:
-            await chat_service.store_message(
-                content=message_data["content"],
-                role=message_data["role"],
-                user_id=message_data["user_id"],
-                session_id=message_data["session_id"],
-            )
+            await chat_service.add_message(session_id, user_id, message_request)
 
         assert "Database error" in str(exc_info.value)
 

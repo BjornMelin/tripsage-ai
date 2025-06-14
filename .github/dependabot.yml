@@ -7,7 +7,7 @@ updates:
       interval: "weekly"
       day: "monday"
       time: "09:00"
-    open-pull-requests-limit: 10
+    open-pull-requests-limit: 15
     assignees:
       - "BjornMelin"
     reviewers:
@@ -15,15 +15,32 @@ updates:
     commit-message:
       prefix: "feat(deps)"
       prefix-development: "chore(deps-dev)"
+      include: "scope"
+    versioning-strategy: increase
+    labels:
+      - "dependencies"
+      - "frontend"
+      - "security"
     groups:
+      security:
+        patterns:
+          - "*"
+        update-types:
+          - "security-update"
       next-js:
         patterns:
           - "next*"
           - "@next/*"
+        update-types:
+          - "minor"
+          - "patch"
       react:
         patterns:
           - "react*"
           - "@types/react*"
+        update-types:
+          - "minor"
+          - "patch"
       testing:
         patterns:
           - "vitest*"
@@ -31,18 +48,61 @@ updates:
           - "playwright*"
           - "@playwright/*"
           - "@testing-library/*"
+          - "jest*"
+          - "@jest/*"
+        update-types:
+          - "minor"
+          - "patch"
       ui:
         patterns:
           - "@radix-ui/*"
           - "lucide-react"
           - "tailwindcss*"
           - "@tailwindcss/*"
+          - "framer-motion"
+          - "class-variance-authority"
+          - "clsx"
+          - "tailwind-merge"
+        update-types:
+          - "minor"
+          - "patch"
       dev-tools:
         patterns:
           - "@biomejs/*"
           - "eslint*"
           - "typescript"
           - "@types/*"
+          - "prettier*"
+          - "husky"
+          - "lint-staged"
+        update-types:
+          - "minor"
+          - "patch"
+
+  # Frontend security updates (daily)
+  - package-ecosystem: "npm"
+    directory: "/frontend"
+    schedule:
+      interval: "daily"
+      time: "06:00"
+    open-pull-requests-limit: 5
+    assignees:
+      - "BjornMelin"
+    reviewers:
+      - "BjornMelin"
+    commit-message:
+      prefix: "fix(security)"
+      include: "scope"
+    labels:
+      - "security"
+      - "frontend"
+      - "critical"
+    groups:
+      security-critical:
+        patterns:
+          - "*"
+        update-types:
+          - "security-update"
 
   # Python backend dependencies
   - package-ecosystem: "pip"
@@ -51,7 +111,7 @@ updates:
       interval: "weekly"
       day: "monday"
       time: "09:00"
-    open-pull-requests-limit: 10
+    open-pull-requests-limit: 15
     assignees:
       - "BjornMelin"
     reviewers:
@@ -59,6 +119,89 @@ updates:
     commit-message:
       prefix: "feat(deps)"
       prefix-development: "chore(deps-dev)"
+      include: "scope"
+    versioning-strategy: increase
+    labels:
+      - "dependencies"
+      - "backend"
+      - "python"
+    groups:
+      security:
+        patterns:
+          - "*"
+        update-types:
+          - "security-update"
+      core-framework:
+        patterns:
+          - "fastapi"
+          - "uvicorn"
+          - "pydantic*"
+          - "sqlalchemy"
+          - "httpx"
+        update-types:
+          - "minor"
+          - "patch"
+      ai-ml:
+        patterns:
+          - "openai"
+          - "langchain*"
+          - "langgraph"
+          - "langsmith"
+          - "mem0ai"
+        update-types:
+          - "minor"
+          - "patch"
+      database:
+        patterns:
+          - "supabase"
+          - "redis"
+          - "greenlet"
+        update-types:
+          - "minor"
+          - "patch"
+      testing:
+        patterns:
+          - "pytest*"
+          - "hypothesis"
+          - "coverage"
+          - "fakeredis"
+          - "nest-asyncio"
+        update-types:
+          - "minor"
+          - "patch"
+      dev-tools:
+        patterns:
+          - "ruff"
+          - "mypy"
+          - "bandit"
+        update-types:
+          - "minor"
+          - "patch"
+
+  # Python security updates (daily)
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "daily"
+      time: "06:00"
+    open-pull-requests-limit: 5
+    assignees:
+      - "BjornMelin"
+    reviewers:
+      - "BjornMelin"
+    commit-message:
+      prefix: "fix(security)"
+      include: "scope"
+    labels:
+      - "security"
+      - "backend"
+      - "critical"
+    groups:
+      security-critical:
+        patterns:
+          - "*"
+        update-types:
+          - "security-update"
 
   # GitHub Actions
   - package-ecosystem: "github-actions"
@@ -67,10 +210,55 @@ updates:
       interval: "weekly"
       day: "monday"
       time: "09:00"
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 10
     assignees:
       - "BjornMelin"
     reviewers:
       - "BjornMelin"
     commit-message:
       prefix: "ci"
+      include: "scope"
+    labels:
+      - "ci/cd"
+      - "github-actions"
+    groups:
+      actions-security:
+        patterns:
+          - "*"
+        update-types:
+          - "security-update"
+      actions-core:
+        patterns:
+          - "actions/*"
+          - "github/*"
+        update-types:
+          - "minor"
+          - "patch"
+      third-party-actions:
+        patterns:
+          - "*"
+        exclude-patterns:
+          - "actions/*"
+          - "github/*"
+        update-types:
+          - "minor"
+          - "patch"
+
+  # Docker dependencies
+  - package-ecosystem: "docker"
+    directory: "/docker"
+    schedule:
+      interval: "weekly"
+      day: "tuesday"
+      time: "10:00"
+    open-pull-requests-limit: 5
+    assignees:
+      - "BjornMelin"
+    reviewers:
+      - "BjornMelin"
+    commit-message:
+      prefix: "feat(docker)"
+      include: "scope"
+    labels:
+      - "docker"
+      - "infrastructure"

@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<suppressions xmlns="https://jeremylong.github.io/DependencyCheck/dependency-suppression.1.3.xsd">
+  <!-- 
+    OWASP Dependency Check suppressions file.
+    This file contains suppression rules for known false positives or accepted risks.
+    
+    Add suppressions carefully and document the reasoning.
+    Review suppressions regularly and remove when no longer needed.
+  -->
+  
+  <!-- Example suppression for development dependencies that don't affect production -->
+  <!-- 
+  <suppress>
+    <notes><![CDATA[
+      Development dependency - not included in production builds
+    ]]></notes>
+    <packageUrl regex="true">^pkg:npm/.*</packageUrl>
+    <vulnerabilityName>CVE-2021-23337</vulnerabilityName>
+  </suppress>
+  -->
+  
+  <!-- Example suppression for specific library version with accepted risk -->
+  <!--
+  <suppress>
+    <notes><![CDATA[
+      Known issue in test framework - acceptable risk for development environment
+    ]]></notes>
+    <sha1>da39a3ee5e6b4b0d3255bfef95601890afd80709</sha1>
+    <cve>CVE-2021-23337</cve>
+  </suppress>
+  -->
+  
+  <!-- Add project-specific suppressions below -->
+  <!-- Remember to document the reasoning for each suppression -->
+  
+</suppressions>

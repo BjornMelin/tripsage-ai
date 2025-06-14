@@ -33,6 +33,7 @@ export function ServiceSelector({
       <PopoverTrigger asChild>
         <Button
           variant="outline"
+          // biome-ignore lint/a11y/useSemanticElements: Custom combobox implementation using shadcn/ui
           role="combobox"
           aria-expanded={open}
           className="w-full justify-between"

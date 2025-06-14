@@ -1,7 +1,7 @@
-import { useCallback, useMemo, useRef } from "react";
 import { useAuth } from "@/contexts/auth-context";
+import { ApiError, type FetchOptions, fetchApi } from "@/lib/api/client";
 import { createClient as createBrowserClient } from "@/lib/supabase/client";
-import { fetchApi, type FetchOptions, ApiError } from "@/lib/api/client";
+import { useCallback, useMemo, useRef } from "react";
 
 /**
  * Hook for making authenticated API calls that automatically include Supabase JWT tokens.
@@ -30,7 +30,9 @@ import { fetchApi, type FetchOptions, ApiError } from "@/lib/api/client";
  */
 export function useAuthenticatedApi() {
   // Safe auth hook usage - handle SSG gracefully
-  let user, isAuthenticated, signOut;
+  let user;
+  let isAuthenticated;
+  let signOut;
   try {
     const authContext = useAuth();
     user = authContext.user;

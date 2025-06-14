@@ -959,3 +959,323 @@ class TestDatabaseService:
 
         assert result == expected_result
         mock_supabase_client.insert.assert_called_with(special_data)
+
+    # Tests for the 6 new database service methods
+
+    # Tests for get_trip_by_id
+
+    @pytest.mark.asyncio
+    async def test_get_trip_by_id_success(self, database_service, mock_supabase_client):
+        """Test successful trip retrieval by ID."""
+        trip_id = str(uuid4())
+        expected_trip = {"id": trip_id, "name": "Test Trip"}
+        mock_supabase_client.execute.return_value = Mock(data=[expected_trip])
+
+        result = await database_service.get_trip_by_id(trip_id)
+
+        assert result == expected_trip
+
+    @pytest.mark.asyncio
+    async def test_get_trip_by_id_not_found(
+        self, database_service, mock_supabase_client
+    ):
+        """Test trip retrieval when trip doesn't exist."""
+        trip_id = str(uuid4())
+        mock_supabase_client.execute.return_value = Mock(data=[])
+
+        result = await database_service.get_trip_by_id(trip_id)
+
+        assert result is None
+
+    @pytest.mark.asyncio
+    async def test_get_trip_by_id_database_error(
+        self, database_service, mock_supabase_client
+    ):
+        """Test trip retrieval with database error (should return None)."""
+        trip_id = str(uuid4())
+        mock_supabase_client.execute.side_effect = Exception("Database error")
+
+        result = await database_service.get_trip_by_id(trip_id)
+
+        assert result is None
+
+    # Tests for search_trips
+
+    @pytest.mark.asyncio
+    async def test_search_trips_basic_success(
+        self, database_service, mock_supabase_client
+    ):
+        """Test basic trip search functionality."""
+        user_id = str(uuid4())
+        search_filters = {"user_id": user_id}
+        expected_trips = [{"id": str(uuid4()), "user_id": user_id}]
+        mock_supabase_client.execute.return_value = Mock(data=expected_trips)
+
+        result = await database_service.search_trips(search_filters)
+
+        assert result == expected_trips
+
+    @pytest.mark.asyncio
+    async def test_search_trips_with_query_text(
+        self, database_service, mock_supabase_client
+    ):
+        """Test trip search with text query."""
+        search_filters = {"query": "Paris"}
+        expected_trips = [{"id": str(uuid4()), "destination": "Paris"}]
+
+        # Reset the mock to ensure clean state
+        mock_supabase_client.reset_mock()
+
+        # Set up the chain for search_trips which includes order and limit
+        final_mock = Mock()
+        final_mock.execute.return_value = Mock(data=expected_trips)
+        (
+            mock_supabase_client.table.return_value.select.return_value.or_.return_value.order.return_value.limit.return_value
+        ) = final_mock
+
+        result = await database_service.search_trips(search_filters)
+
+        assert result == expected_trips
+        mock_supabase_client.table.assert_called_with("trips")
+        mock_supabase_client.table.return_value.select.assert_called_with("*")
+
+    @pytest.mark.asyncio
+    async def test_search_trips_with_status_filter(
+        self, database_service, mock_supabase_client
+    ):
+        """Test trip search with status filter."""
+        search_filters = {"status": "planning"}
+        expected_trips = [{"id": str(uuid4()), "status": "planning"}]
+        mock_supabase_client.execute.return_value = Mock(data=expected_trips)
+
+        result = await database_service.search_trips(search_filters)
+
+        assert result == expected_trips
+
+    @pytest.mark.asyncio
+    async def test_search_trips_with_date_range(
+        self, database_service, mock_supabase_client
+    ):
+        """Test trip search with date range filter."""
+        start_date = datetime(2024, 7, 1)
+        end_date = datetime(2024, 7, 31)
+        search_filters = {
+            "date_range": {"start_date": start_date, "end_date": end_date}
+        }
+        expected_trips = [{"id": str(uuid4())}]
+        mock_supabase_client.execute.return_value = Mock(data=expected_trips)
+
+        result = await database_service.search_trips(search_filters)
+
+        assert result == expected_trips
+
+    @pytest.mark.asyncio
+    async def test_search_trips_database_error(
+        self, database_service, mock_supabase_client
+    ):
+        """Test trip search with database error."""
+        search_filters = {"user_id": str(uuid4())}
+        mock_supabase_client.execute.side_effect = Exception("Database error")
+
+        with pytest.raises(CoreDatabaseError, match="Failed to search trips"):
+            await database_service.search_trips(search_filters)
+
+    # Tests for get_trip_collaborators
+
+    @pytest.mark.asyncio
+    async def test_get_trip_collaborators_success(
+        self, database_service, mock_supabase_client
+    ):
+        """Test successful trip collaborators retrieval."""
+        trip_id = str(uuid4())
+        expected_collaborators = [
+            {"trip_id": trip_id, "user_id": str(uuid4()), "permission_level": "edit"}
+        ]
+        mock_supabase_client.execute.return_value = Mock(data=expected_collaborators)
+
+        result = await database_service.get_trip_collaborators(trip_id)
+
+        assert result == expected_collaborators
+
+    @pytest.mark.asyncio
+    async def test_get_trip_collaborators_empty_result(
+        self, database_service, mock_supabase_client
+    ):
+        """Test trip collaborators retrieval with no collaborators."""
+        trip_id = str(uuid4())
+        mock_supabase_client.execute.return_value = Mock(data=[])
+
+        result = await database_service.get_trip_collaborators(trip_id)
+
+        assert result == []
+
+    @pytest.mark.asyncio
+    async def test_get_trip_collaborators_database_error(
+        self, database_service, mock_supabase_client
+    ):
+        """Test trip collaborators retrieval with database error."""
+        trip_id = str(uuid4())
+        mock_supabase_client.execute.side_effect = Exception("Database error")
+
+        with pytest.raises(CoreDatabaseError, match="Failed to get collaborators"):
+            await database_service.get_trip_collaborators(trip_id)
+
+    # Tests for get_trip_related_counts
+
+    @pytest.mark.asyncio
+    async def test_get_trip_related_counts_success(
+        self, database_service, mock_supabase_client
+    ):
+        """Test successful trip related counts retrieval."""
+        trip_id = str(uuid4())
+
+        # Mock multiple count operations with different return values
+        mock_supabase_client.execute.side_effect = [
+            Mock(count=5),  # itinerary_count
+            Mock(count=3),  # flight_count
+            Mock(count=2),  # accommodation_count
+            Mock(count=1),  # transportation_count
+            Mock(count=4),  # collaborator_count
+        ]
+
+        result = await database_service.get_trip_related_counts(trip_id)
+
+        expected_result = {
+            "itinerary_count": 5,
+            "flight_count": 3,
+            "accommodation_count": 2,
+            "transportation_count": 1,
+            "collaborator_count": 4,
+        }
+        assert result == expected_result
+
+    @pytest.mark.asyncio
+    async def test_get_trip_related_counts_zero_counts(
+        self, database_service, mock_supabase_client
+    ):
+        """Test trip related counts with all zero counts."""
+        trip_id = str(uuid4())
+
+        # Mock all count operations returning 0
+        mock_supabase_client.execute.side_effect = [
+            Mock(count=0),  # itinerary_count
+            Mock(count=0),  # flight_count
+            Mock(count=0),  # accommodation_count
+            Mock(count=0),  # transportation_count
+            Mock(count=0),  # collaborator_count
+        ]
+
+        result = await database_service.get_trip_related_counts(trip_id)
+
+        expected_result = {
+            "itinerary_count": 0,
+            "flight_count": 0,
+            "accommodation_count": 0,
+            "transportation_count": 0,
+            "collaborator_count": 0,
+        }
+        assert result == expected_result
+
+    @pytest.mark.asyncio
+    async def test_get_trip_related_counts_database_error(
+        self, database_service, mock_supabase_client
+    ):
+        """Test trip related counts with database error."""
+        trip_id = str(uuid4())
+        mock_supabase_client.execute.side_effect = Exception("Database error")
+
+        with pytest.raises(CoreDatabaseError, match="Failed to get related counts"):
+            await database_service.get_trip_related_counts(trip_id)
+
+    # Tests for add_trip_collaborator
+
+    @pytest.mark.asyncio
+    async def test_add_trip_collaborator_success(
+        self, database_service, mock_supabase_client
+    ):
+        """Test successful trip collaborator addition."""
+        collaborator_data = {
+            "trip_id": str(uuid4()),
+            "user_id": str(uuid4()),
+            "permission_level": "edit",
+            "added_by": str(uuid4()),
+        }
+        expected_result = [{"id": str(uuid4()), **collaborator_data}]
+        mock_supabase_client.execute.return_value = Mock(data=expected_result)
+
+        result = await database_service.add_trip_collaborator(collaborator_data)
+
+        assert result == expected_result[0]
+
+    @pytest.mark.asyncio
+    async def test_add_trip_collaborator_missing_required_field(self, database_service):
+        """Test trip collaborator addition with missing required field."""
+        incomplete_data = {
+            "trip_id": str(uuid4()),
+            "user_id": str(uuid4()),
+            # Missing permission_level and added_by
+        }
+
+        with pytest.raises(CoreDatabaseError, match="Missing required field"):
+            await database_service.add_trip_collaborator(incomplete_data)
+
+    @pytest.mark.asyncio
+    async def test_add_trip_collaborator_database_error(
+        self, database_service, mock_supabase_client
+    ):
+        """Test trip collaborator addition with database error."""
+        collaborator_data = {
+            "trip_id": str(uuid4()),
+            "user_id": str(uuid4()),
+            "permission_level": "edit",
+            "added_by": str(uuid4()),
+        }
+        mock_supabase_client.execute.side_effect = Exception("Database error")
+
+        with pytest.raises(CoreDatabaseError, match="Failed to upsert into table"):
+            await database_service.add_trip_collaborator(collaborator_data)
+
+    # Tests for get_trip_collaborator
+
+    @pytest.mark.asyncio
+    async def test_get_trip_collaborator_success(
+        self, database_service, mock_supabase_client
+    ):
+        """Test successful specific trip collaborator retrieval."""
+        trip_id = str(uuid4())
+        user_id = str(uuid4())
+        expected_collaborator = {
+            "trip_id": trip_id,
+            "user_id": user_id,
+            "permission_level": "edit",
+        }
+        mock_supabase_client.execute.return_value = Mock(data=[expected_collaborator])
+
+        result = await database_service.get_trip_collaborator(trip_id, user_id)
+
+        assert result == expected_collaborator
+
+    @pytest.mark.asyncio
+    async def test_get_trip_collaborator_not_found(
+        self, database_service, mock_supabase_client
+    ):
+        """Test trip collaborator retrieval when collaborator doesn't exist."""
+        trip_id = str(uuid4())
+        user_id = str(uuid4())
+        mock_supabase_client.execute.return_value = Mock(data=[])
+
+        result = await database_service.get_trip_collaborator(trip_id, user_id)
+
+        assert result is None
+
+    @pytest.mark.asyncio
+    async def test_get_trip_collaborator_database_error(
+        self, database_service, mock_supabase_client
+    ):
+        """Test trip collaborator retrieval with database error."""
+        trip_id = str(uuid4())
+        user_id = str(uuid4())
+        mock_supabase_client.execute.side_effect = Exception("Database error")
+
+        with pytest.raises(CoreDatabaseError, match="Failed to get collaborator"):
+            await database_service.get_trip_collaborator(trip_id, user_id)
