@@ -6,7 +6,6 @@ validating the migration SQL and constraint behavior through mocked database
 interactions.
 """
 
-from pathlib import Path
 from unittest.mock import AsyncMock, Mock
 from uuid import uuid4
 
@@ -44,13 +43,15 @@ BEGIN
     WHERE user_id !~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$';
     
     IF invalid_count > 0 THEN
-        RAISE EXCEPTION 'Found % records with invalid UUID format in memories table', invalid_count;
+        RAISE EXCEPTION 'Found % records with invalid UUID format in memories table', 
+            invalid_count;
     END IF;
 END $$;
 
 -- Create system user if not exists
 INSERT INTO auth.users (id, email, created_at, updated_at)
-VALUES ('00000000-0000-0000-0000-000000000001', 'system@tripsage.internal', NOW(), NOW())
+VALUES ('00000000-0000-0000-0000-000000000001', 'system@tripsage.internal', 
+        NOW(), NOW())
 ON CONFLICT (id) DO NOTHING;
 
 -- Convert user_id columns to UUID type
@@ -94,7 +95,8 @@ COMMIT;
 
 -- VERIFICATION QUERIES:
 -- SELECT * FROM pg_policies WHERE tablename IN ('memories', 'session_memories');
--- SELECT * FROM information_schema.table_constraints WHERE table_name IN ('memories', 'session_memories');
+-- SELECT * FROM information_schema.table_constraints 
+-- WHERE table_name IN ('memories', 'session_memories');
 
 -- ROLLBACK PLAN:
 -- ALTER TABLE memories DROP CONSTRAINT IF EXISTS memories_user_id_fkey;
@@ -102,7 +104,8 @@ COMMIT;
 -- ALTER TABLE memories ALTER COLUMN user_id TYPE TEXT;
 -- ALTER TABLE session_memories ALTER COLUMN user_id TYPE TEXT;
 -- DROP POLICY IF EXISTS "Users can only access their own memories" ON memories;
--- DROP POLICY IF EXISTS "Users can only access their own session memories" ON session_memories;
+-- DROP POLICY IF EXISTS "Users can only access their own session memories" 
+-- ON session_memories;
 """
 
     @pytest.fixture
