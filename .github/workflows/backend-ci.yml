@@ -95,6 +95,7 @@ jobs:
         # Check for hardcoded secrets but exclude legitimate config validation and documentation files
         if git grep -i "fallback-secret\|development-only" . \
           | grep -v "tripsage_core/config/base_app_settings.py" \
+          | grep -v "tests/unit/tripsage_core/test_config.py" \
           | grep -v "tests/unit/tripsage_core/test_config_enhanced.py" \
           | grep -v "scripts/security_validation.py" \
           | grep -v "docs/" \
