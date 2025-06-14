@@ -479,7 +479,7 @@ class ErrorRecoveryService:
 
         # Create deterministic key from service, method, and params
         key_data = f"{service}:{method}:{str(sorted(params.items()))}"
-        return hashlib.md5(key_data.encode()).hexdigest()
+        return hashlib.md5(key_data.encode(), usedforsecurity=False).hexdigest()
 
     def _get_service_category(self, service: str) -> str:
         """Map service name to category for degradation responses."""

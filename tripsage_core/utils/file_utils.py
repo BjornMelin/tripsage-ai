@@ -389,7 +389,7 @@ def generate_safe_filename(original_filename: str, user_id: str) -> str:
     extension = file_path.suffix.lower()
 
     # Create hash of original filename for uniqueness
-    filename_hash = hashlib.md5(original_filename.encode()).hexdigest()[:8]
+    filename_hash = hashlib.md5(original_filename.encode(), usedforsecurity=False).hexdigest()[:8]
 
     # Generate safe filename with user isolation
     safe_name = f"{user_id}_{filename_hash}{extension}"
