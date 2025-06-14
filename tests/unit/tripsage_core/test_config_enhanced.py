@@ -613,7 +613,8 @@ class TestCoreAppSettings:
         from pydantic import SecretStr
 
         settings = CoreAppSettings(environment="production")
-        settings.database.jwt_secret = SecretStr(f"fallback-secret-{'for-development-only'}")
+        fallback_secret = f"fallback-secret-{'for-development-only'}"
+        settings.database.jwt_secret = SecretStr(fallback_secret)
 
         errors = settings.validate_critical_settings()
 
