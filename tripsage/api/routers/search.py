@@ -3,14 +3,16 @@ Router for unified search endpoints in the TripSage API.
 """
 
 import logging
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
-from tripsage.api.core.dependencies import get_principal_id, require_principal
-from tripsage.api.middlewares.authentication import Principal
+from tripsage.api.core.auth import get_current_user_id, get_optional_user_id
 from tripsage.api.schemas.requests.search import UnifiedSearchRequest
 from tripsage.api.schemas.responses.search import UnifiedSearchResponse
+from tripsage_core.services.business.search_history_service import (
+    get_search_history_service,
+)
 from tripsage_core.services.business.unified_search_service import (
     UnifiedSearchServiceError,
     get_unified_search_service,
@@ -25,7 +27,7 @@ logger = logging.getLogger(__name__)
 async def unified_search(
     request: UnifiedSearchRequest,
     use_cache: bool = Query(True, description="Whether to use cached results"),
-    principal: Optional[Principal] = Depends(require_principal),
+    user_id: Optional[str] = Depends(get_optional_user_id),
 ):
     """
     Perform a unified search across multiple resource types with caching.
@@ -34,7 +36,6 @@ async def unified_search(
     and flights (when applicable) to provide comprehensive travel search results.
     Results are aggregated, filtered, sorted, and cached for performance.
     """
-    user_id = get_principal_id(principal) if principal else None
     logger.info(f"Unified search request: {request.query} (user: {user_id})")
 
     try:
@@ -163,64 +164,108 @@ async def search_suggestions(
         ) from e
 
 
-@router.get("/recent")
-async def get_recent_searches():
+@router.get("/recent", response_model=List[Dict[str, Any]])
+async def get_recent_searches(
+    limit: int = Query(
+        10, ge=1, le=50, description="Maximum number of searches to return"
+    ),
+    user_id: str = Depends(get_current_user_id),
+):
     """
     Get recent searches for the authenticated user.
 
-    Note: This endpoint requires user authentication and database integration
-    to store and retrieve user search history.
+    Returns the user's search history ordered by most recent first.
     """
-    logger.info("Get recent searches request")
+    logger.info(f"Get recent searches request for user: {user_id} (limit: {limit})")
 
-    # TODO: Implement user authentication and search history storage
-    # For now, return empty list to maintain API contract
-    return []
+    try:
+        search_history_service = await get_search_history_service()
+        searches = await search_history_service.get_recent_searches(
+            user_id, limit=limit
+        )
+
+        logger.info(f"Retrieved {len(searches)} recent searches for user: {user_id}")
+        return searches
+
+    except Exception as e:
+        logger.error(f"Error retrieving search history: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to retrieve search history",
+        ) from e
 
 
-@router.post("/save")
-async def save_search(request: UnifiedSearchRequest):
+@router.post("/save", response_model=Dict[str, str])
+async def save_search(
+    request: UnifiedSearchRequest,
+    user_id: str = Depends(get_current_user_id),
+):
     """
     Save a search query for the authenticated user.
 
-    Note: This endpoint requires user authentication and database integration
-    to persist user search preferences and history.
+    Saves the search parameters to the user's search history for
+    quick access and personalization.
     """
-    logger.info(f"Save search request: {request.query}")
+    logger.info(f"Save search request for user {user_id}: {request.query}")
 
-    # TODO: Implement user authentication and search history storage
-    # For now, return 501 to maintain API contract
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="Save search endpoint requires user authentication implementation",
-    )
+    try:
+        search_history_service = await get_search_history_service()
+        saved_search = await search_history_service.save_search(user_id, request)
+
+        logger.info(f"Saved search {saved_search['id']} for user: {user_id}")
+        return {
+            "id": saved_search["id"],
+            "message": "Search saved successfully",
+        }
+
+    except Exception as e:
+        logger.error(f"Error saving search: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to save search",
+        ) from e
 
 
 @router.delete("/saved/{search_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_saved_search(search_id: str):
+async def delete_saved_search(
+    search_id: str,
+    user_id: str = Depends(get_current_user_id),
+):
     """
     Delete a saved search for the authenticated user.
 
-    Note: This endpoint requires user authentication and database integration
-    to manage user search history.
+    Removes the specified search from the user's search history.
     """
-    logger.info(f"Delete saved search request: {search_id}")
+    logger.info(f"Delete saved search request from user {user_id}: {search_id}")
 
-    # TODO: Implement user authentication and search history management
-    # For now, return 501 to maintain API contract
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail=(
-            "Delete saved search endpoint requires user authentication implementation"
-        ),
-    )
+    try:
+        search_history_service = await get_search_history_service()
+        deleted = await search_history_service.delete_saved_search(user_id, search_id)
+
+        if not deleted:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Saved search not found",
+            )
+
+        logger.info(f"Deleted saved search {search_id} for user: {user_id}")
+        # Return 204 No Content (no response body)
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting saved search: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to delete saved search",
+        ) from e
 
 
 @router.post("/bulk", response_model=List[UnifiedSearchResponse])
 async def bulk_search(
     requests: List[UnifiedSearchRequest],
     use_cache: bool = Query(True, description="Whether to use cached results"),
-    principal: Optional[Principal] = Depends(require_principal),
+    user_id: Optional[str] = Depends(get_optional_user_id),
 ):
     """
     Perform multiple searches in a single request for efficiency.
@@ -228,7 +273,6 @@ async def bulk_search(
     Useful for comparing multiple destinations or search variations.
     Results are processed in parallel for optimal performance.
     """
-    user_id = get_principal_id(principal) if principal else None
     logger.info(f"Bulk search request: {len(requests)} queries (user: {user_id})")
 
     if len(requests) > 10:  # Limit bulk searches
@@ -312,14 +356,13 @@ async def bulk_search(
 @router.get("/analytics")
 async def get_search_analytics(
     date: str = Query(..., description="Date in YYYY-MM-DD format"),
-    principal: Principal = Depends(require_principal),
+    user_id: str = Depends(get_current_user_id),
 ):
     """
     Get search analytics for a specific date.
 
     Only available to authenticated users for their own analytics.
     """
-    user_id = get_principal_id(principal)
     logger.info(f"Search analytics request for {date} by user: {user_id}")
 
     try:

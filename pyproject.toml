@@ -171,5 +171,13 @@ directory = "coverage/html"
 [tool.coverage.xml]
 output = "coverage/coverage.xml"
 
+[tool.bandit]
+# Exclude false positive security warnings
+exclude_dirs = ["tests"]
+skips = [
+    "B104",  # Hardcoded bind all interfaces (development server)
+    "B608",  # SQL injection in string formatting (false positives in error messages)
+]
+
 [tool.hatch.build.targets.wheel]
 packages = ["tripsage", "tripsage_core"]
