@@ -13,7 +13,7 @@ import asyncio
 import time
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import MagicMock, Mock
 from uuid import uuid4
 
 import pytest
@@ -61,16 +61,18 @@ class RLSPolicyTester:
     def _create_mock_client(self, is_authenticated: bool = True) -> MagicMock:
         """Create a mock Supabase client for testing."""
         client = MagicMock()
-        
+
         # Mock auth methods
         client.auth.sign_up.return_value = Mock(user=Mock(id=str(uuid4())))
-        client.auth.sign_in_with_password.return_value = Mock(user=Mock(id=str(uuid4())))
+        client.auth.sign_in_with_password.return_value = Mock(
+            user=Mock(id=str(uuid4()))
+        )
         client.auth.sign_out.return_value = None
         client.auth.admin.delete_user.return_value = None
-        
+
         # Mock table operations with RLS behavior
         table_mock = MagicMock()
-        
+
         def mock_execute():
             """Mock execute that simulates RLS behavior."""
             # Simulate RLS - anonymous users get no data
@@ -78,7 +80,7 @@ class RLSPolicyTester:
                 return Mock(data=[])
             # Simulate data access for authenticated users
             return Mock(data=[{"id": str(uuid4())}])
-        
+
         table_mock.insert.return_value = table_mock
         table_mock.select.return_value = table_mock
         table_mock.update.return_value = table_mock
@@ -86,9 +88,9 @@ class RLSPolicyTester:
         table_mock.eq.return_value = table_mock
         table_mock.limit.return_value = table_mock
         table_mock.execute = mock_execute
-        
+
         client.table.return_value = table_mock
-        
+
         return client
 
     async def setup_test_users(self) -> List[RLSTestUser]:
@@ -904,10 +906,7 @@ def mock_supabase_env(monkeypatch):
     """Mock Supabase environment variables."""
     monkeypatch.setenv("SUPABASE_URL", "https://mock.supabase.co")
     monkeypatch.setenv("SUPABASE_ANON_KEY", "mock-anon-key")
-    return {
-        "url": "https://mock.supabase.co",
-        "key": "mock-anon-key"
-    }
+    return {"url": "https://mock.supabase.co", "key": "mock-anon-key"}
 
 
 @pytest.mark.asyncio
