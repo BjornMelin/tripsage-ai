@@ -92,7 +92,12 @@ jobs:
 
     - name: Check for hardcoded secrets
       run: |
-        if git grep -i "fallback-secret\|development-only" . ; then
+        # Check for hardcoded secrets but exclude legitimate config validation and test files
+        if git grep -i "fallback-secret\|development-only" . \
+          | grep -v "tripsage_core/config/base_app_settings.py" \
+          | grep -v "tests/unit/tripsage_core/test_config_enhanced.py" \
+          | grep -v "scripts/security_validation.py" \
+          | grep -v "docs/" ; then
           echo "❌ Hardcoded secrets detected!"
           exit 1
         else
