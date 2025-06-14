@@ -182,6 +182,11 @@ jobs:
         uv pip install -r requirements.txt
         uv pip install -r requirements-dev.txt
 
+    - name: Install redis-cli
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y redis-tools
+
     - name: Wait for services
       run: |
         timeout 60 bash -c 'until pg_isready -h localhost -p 5432; do echo "Waiting for postgres..."; sleep 2; done'
@@ -302,6 +307,11 @@ jobs:
         source .venv/bin/activate
         uv pip install -r requirements.txt
         uv pip install -r requirements-dev.txt
+
+    - name: Install redis-cli
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y redis-tools
 
     - name: Wait for services
       run: |
