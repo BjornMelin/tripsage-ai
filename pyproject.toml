@@ -132,6 +132,7 @@ dev = [
     # Additional development tools
     "radon>=6.0.1",
     "python-jose[cryptography]>=3.5.0",
+    "bandit>=1.8.3",
 ]
 
 [tool.coverage.run]

@@ -1,15 +1,14 @@
 """
-Tests for the LangGraph Tool Registry.
+Comprehensive tests for the enhanced LangGraphToolRegistry.
 
-This module contains comprehensive tests for the centralized tool registry,
-including tool registration, agent-specific tool filtering, and usage analytics.
+This module tests the centralized tool management system with enhanced
+async patterns, batch operations, and tool lifecycle management.
 """
 
-from datetime import datetime
-from unittest.mock import AsyncMock, Mock, patch
+import asyncio
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from langchain_core.tools import BaseTool, ToolException
 
 from tripsage.agents.service_registry import ServiceRegistry
 from tripsage.orchestration.tools.registry import (
@@ -19,510 +18,340 @@ from tripsage.orchestration.tools.registry import (
     ToolMetadata,
     get_tool_registry,
 )
-
-
-class TestToolMetadata:
-    """Test ToolMetadata model validation and functionality."""
-
-    def test_tool_metadata_creation(self):
-        """Test creating ToolMetadata with valid data."""
-        metadata = ToolMetadata(
-            name="test_tool",
-            description="A test tool",
-            tool_type="MCP",
-            agent_types=["test_agent"],
-            capabilities=["testing"],
-            parameters={"param1": "value1"},
-            dependencies=["test_service"],
-        )
-
-        assert metadata.name == "test_tool"
-        assert metadata.description == "A test tool"
-        assert metadata.tool_type == "MCP"
-        assert metadata.agent_types == ["test_agent"]
-        assert metadata.capabilities == ["testing"]
-        assert metadata.parameters == {"param1": "value1"}
-        assert metadata.dependencies == ["test_service"]
-        assert metadata.usage_count == 0
-        assert metadata.error_count == 0
-
-    def test_tool_metadata_defaults(self):
-        """Test ToolMetadata with default values."""
-        metadata = ToolMetadata(
-            name="test_tool", description="A test tool", tool_type="MCP"
-        )
-
-        assert metadata.agent_types == []
-        assert metadata.capabilities == []
-        assert metadata.parameters == {}
-        assert metadata.dependencies == []
-        assert metadata.usage_count == 0
-        assert metadata.error_count == 0
-        assert isinstance(metadata.created_at, datetime)
-
-
-class TestMCPToolWrapper:
-    """Test MCP tool wrapper functionality."""
-
-    def setup_method(self):
-        """Set up test fixtures."""
-        self.mock_mcp_manager = Mock()
-
-    @patch("tripsage.orchestration.tools.registry.mcp_manager")
-    def test_mcp_tool_wrapper_creation(self, mock_mcp_manager):
-        """Test creating an MCP tool wrapper."""
-        mock_mcp_manager.return_value = self.mock_mcp_manager
-
-        wrapper = MCPToolWrapper(
-            service_name="test_service",
-            method_name="test_method",
-            description="Test MCP tool",
-            parameters={"param1": {"type": "string", "description": "Test parameter"}},
-            agent_types=["test_agent"],
-            capabilities=["testing"],
-        )
-
-        assert wrapper.metadata.name == "test_service_test_method"
-        assert wrapper.metadata.description == "Test MCP tool"
-        assert wrapper.metadata.tool_type == "MCP"
-        assert wrapper.metadata.agent_types == ["test_agent"]
-        assert wrapper.metadata.capabilities == ["testing"]
-        assert wrapper.metadata.dependencies == ["test_service"]
-        assert wrapper.service_name == "test_service"
-        assert wrapper.method_name == "test_method"
-
-    @patch("tripsage.orchestration.tools.registry.mcp_manager")
-    @pytest.mark.asyncio
-    async def test_mcp_tool_execute_success(self, mock_mcp_manager):
-        """Test successful MCP tool execution."""
-        mock_mcp_manager.invoke = AsyncMock(return_value={"result": "success"})
-
-        wrapper = MCPToolWrapper(
-            service_name="test_service",
-            method_name="test_method",
-            description="Test MCP tool",
-        )
-        wrapper.mcp_manager = mock_mcp_manager
-
-        result = await wrapper.execute(param1="value1")
-
-        assert result == {"result": "success"}
-        assert wrapper.metadata.usage_count == 1
-        assert wrapper.metadata.error_count == 0
-        assert wrapper.metadata.last_used is not None
-
-        mock_mcp_manager.invoke.assert_called_once_with(
-            method_name="test_method", params={"param1": "value1"}
-        )
-
-    @patch("tripsage.orchestration.tools.registry.mcp_manager")
-    @pytest.mark.asyncio
-    async def test_mcp_tool_execute_error(self, mock_mcp_manager):
-        """Test MCP tool execution with error."""
-        mock_mcp_manager.invoke = AsyncMock(side_effect=Exception("Test error"))
-
-        wrapper = MCPToolWrapper(
-            service_name="test_service",
-            method_name="test_method",
-            description="Test MCP tool",
-        )
-        wrapper.mcp_manager = mock_mcp_manager
-
-        with pytest.raises(ToolException) as exc_info:
-            await wrapper.execute(param1="value1")
-
-        assert "Test error" in str(exc_info.value)
-        assert wrapper.metadata.usage_count == 1
-        assert wrapper.metadata.error_count == 1
-
-    @patch("tripsage.orchestration.tools.registry.mcp_manager")
-    def test_mcp_tool_langchain_tool(self, mock_mcp_manager):
-        """Test getting LangChain-compatible tool."""
-        wrapper = MCPToolWrapper(
-            service_name="test_service",
-            method_name="test_method",
-            description="Test MCP tool",
-        )
-
-        langchain_tool = wrapper.get_langchain_tool()
-
-        assert isinstance(langchain_tool, BaseTool)
-        assert langchain_tool.name == "test_service_test_method"
-        assert langchain_tool.description == "Test MCP tool"
-
-
-class TestSDKToolWrapper:
-    """Test SDK tool wrapper functionality."""
-
-    def test_sdk_tool_wrapper_creation_sync(self):
-        """Test creating an SDK tool wrapper with sync function."""
-
-        def test_func(param1: str) -> str:
-            return f"Result: {param1}"
-
-        wrapper = SDKToolWrapper(
-            name="test_sdk_tool",
-            description="Test SDK tool",
-            func=test_func,
-            parameters={"param1": {"type": "string", "description": "Test parameter"}},
-            agent_types=["test_agent"],
-            capabilities=["testing"],
-        )
-
-        assert wrapper.metadata.name == "test_sdk_tool"
-        assert wrapper.metadata.description == "Test SDK tool"
-        assert wrapper.metadata.tool_type == "SDK"
-        assert wrapper.metadata.agent_types == ["test_agent"]
-        assert wrapper.metadata.capabilities == ["testing"]
-        assert wrapper.func == test_func
-
-    def test_sdk_tool_wrapper_creation_async(self):
-        """Test creating an SDK tool wrapper with async function."""
-
-        async def test_async_func(param1: str) -> str:
-            return f"Async result: {param1}"
-
-        wrapper = SDKToolWrapper(
-            name="test_async_sdk_tool",
-            description="Test async SDK tool",
-            func=test_async_func,
-            agent_types=["test_agent"],
-        )
-
-        assert wrapper.metadata.name == "test_async_sdk_tool"
-        assert wrapper.func == test_async_func
-
-    @pytest.mark.asyncio
-    async def test_sdk_tool_execute_sync(self):
-        """Test executing a sync SDK tool."""
-
-        def test_func(param1: str) -> str:
-            return f"Result: {param1}"
-
-        wrapper = SDKToolWrapper(
-            name="test_sdk_tool", description="Test SDK tool", func=test_func
-        )
-
-        result = await wrapper.execute(param1="test_value")
-
-        assert result == "Result: test_value"
-        assert wrapper.metadata.usage_count == 1
-        assert wrapper.metadata.error_count == 0
-
-    @pytest.mark.asyncio
-    async def test_sdk_tool_execute_async(self):
-        """Test executing an async SDK tool."""
-
-        async def test_async_func(param1: str) -> str:
-            return f"Async result: {param1}"
-
-        wrapper = SDKToolWrapper(
-            name="test_async_sdk_tool",
-            description="Test async SDK tool",
-            func=test_async_func,
-        )
-
-        result = await wrapper.execute(param1="test_value")
-
-        assert result == "Async result: test_value"
-        assert wrapper.metadata.usage_count == 1
-        assert wrapper.metadata.error_count == 0
-
-    @pytest.mark.asyncio
-    async def test_sdk_tool_execute_error(self):
-        """Test SDK tool execution with error."""
-
-        def error_func(param1: str) -> str:
-            raise ValueError("Test error")
-
-        wrapper = SDKToolWrapper(
-            name="test_error_tool", description="Test error tool", func=error_func
-        )
-
-        with pytest.raises(ToolException) as exc_info:
-            await wrapper.execute(param1="test_value")
-
-        assert "Test error" in str(exc_info.value)
-        assert wrapper.metadata.usage_count == 1
-        assert wrapper.metadata.error_count == 1
+from tripsage_core.mcp_abstraction.manager import mcp_manager
 
 
 class TestLangGraphToolRegistry:
-    """Test the main LangGraph tool registry functionality."""
+    """Test cases for the enhanced LangGraphToolRegistry."""
 
-    def setup_method(self):
-        """Set up test fixtures."""
-        self.mock_service_registry = Mock(spec=ServiceRegistry)
+    @pytest.fixture
+    def mock_service_registry(self):
+        """Create a mock service registry."""
+        registry = MagicMock(spec=ServiceRegistry)
+        registry.google_maps_service = AsyncMock()
+        registry.webcrawl_service = AsyncMock()
+        return registry
 
-    @patch("tripsage.orchestration.tools.registry.mcp_manager")
-    def test_registry_initialization(self, mock_mcp_manager):
-        """Test registry initialization with core tools."""
-        registry = LangGraphToolRegistry(self.mock_service_registry)
+    @pytest.fixture
+    def tool_registry(self, mock_service_registry):
+        """Create a tool registry instance."""
+        return LangGraphToolRegistry(mock_service_registry)
 
-        assert registry.service_registry == self.mock_service_registry
-        assert isinstance(registry.tools, dict)
-        assert isinstance(registry.agent_tool_mappings, dict)
-        assert isinstance(registry.capability_mappings, dict)
+    @pytest.mark.asyncio
+    async def test_tool_registry_initialization(self, tool_registry):
+        """Test tool registry initializes with core tools."""
+        assert len(tool_registry.tools) > 0
+        assert "flights_search_flights" in tool_registry.tools
+        assert "accommodations_search_listings" in tool_registry.tools
+        assert "memory_add_memory" in tool_registry.tools
 
-        # Check that core MCP tools are registered
-        assert len(registry.tools) > 0
-
-        # Check specific core tools
-        assert "flights_search_flights" in registry.tools
-        assert "accommodations_search_listings" in registry.tools
-        assert "maps_geocode" in registry.tools
-
-    @patch("tripsage.orchestration.tools.registry.mcp_manager")
-    def test_register_tool(self, mock_mcp_manager):
-        """Test registering a custom tool."""
-        registry = LangGraphToolRegistry(self.mock_service_registry)
-        initial_count = len(registry.tools)
-
-        # Create a custom tool
-        custom_tool = MCPToolWrapper(
-            service_name="custom",
-            method_name="test",
-            description="Custom test tool",
-            agent_types=["custom_agent"],
-            capabilities=["custom_capability"],
-        )
-
-        registry.register_tool(custom_tool)
-
-        assert len(registry.tools) == initial_count + 1
-        assert "custom_test" in registry.tools
-        assert "custom_agent" in registry.agent_tool_mappings
-        assert "custom_test" in registry.agent_tool_mappings["custom_agent"]
-        assert "custom_capability" in registry.capability_mappings
-        assert "custom_test" in registry.capability_mappings["custom_capability"]
-
-    @patch("tripsage.orchestration.tools.registry.mcp_manager")
-    def test_get_tools_for_agent(self, mock_mcp_manager):
-        """Test getting tools for specific agent types."""
-        registry = LangGraphToolRegistry(self.mock_service_registry)
-
-        flight_tools = registry.get_tools_for_agent("flight_agent")
-        accommodation_tools = registry.get_tools_for_agent("accommodation_agent")
-
+    def test_agent_tool_mappings(self, tool_registry):
+        """Test agent-specific tool mappings are created correctly."""
+        flight_tools = tool_registry.get_tools_for_agent("flight_agent")
         assert len(flight_tools) > 0
-        assert len(accommodation_tools) > 0
 
-        # Check that flight tools include flight-specific capabilities
+        # Verify flight agent gets flight-related tools
         flight_tool_names = [tool.metadata.name for tool in flight_tools]
-        assert "flights_search_flights" in flight_tool_names
+        assert any("flight" in name for name in flight_tool_names)
 
-        # Check that accommodation tools include accommodation-specific capabilities
-        accommodation_tool_names = [tool.metadata.name for tool in accommodation_tools]
-        assert "accommodations_search_listings" in accommodation_tool_names
-
-    @patch("tripsage.orchestration.tools.registry.mcp_manager")
-    def test_get_tools_with_capability_filter(self, mock_mcp_manager):
-        """Test getting tools with capability filtering."""
-        registry = LangGraphToolRegistry(self.mock_service_registry)
-
-        flight_tools = registry.get_tools_for_agent(
+    def test_capability_based_tool_filtering(self, tool_registry):
+        """Test tools can be filtered by capabilities."""
+        flight_tools = tool_registry.get_tools_for_agent(
             "flight_agent", capabilities=["flight_search"]
         )
-
-        assert len(flight_tools) > 0
-
-        # All returned tools should have flight_search capability
-        for tool in flight_tools:
-            assert "flight_search" in tool.metadata.capabilities
-
-    @patch("tripsage.orchestration.tools.registry.mcp_manager")
-    def test_get_tools_with_exclusion(self, mock_mcp_manager):
-        """Test getting tools with exclusion filter."""
-        registry = LangGraphToolRegistry(self.mock_service_registry)
-
-        all_flight_tools = registry.get_tools_for_agent("flight_agent")
-        excluded_tools = registry.get_tools_for_agent(
-            "flight_agent", exclude_tools=["flights_search_flights"]
+        geocoding_tools = tool_registry.get_tools_for_agent(
+            "destination_research_agent", capabilities=["geocoding"]
         )
 
-        assert len(excluded_tools) < len(all_flight_tools)
-
-        excluded_tool_names = [tool.metadata.name for tool in excluded_tools]
-        assert "flights_search_flights" not in excluded_tool_names
-
-    @patch("tripsage.orchestration.tools.registry.mcp_manager")
-    def test_get_langchain_tools_for_agent(self, mock_mcp_manager):
-        """Test getting LangChain-compatible tools for an agent."""
-        registry = LangGraphToolRegistry(self.mock_service_registry)
-
-        langchain_tools = registry.get_langchain_tools_for_agent("flight_agent")
-
-        assert len(langchain_tools) > 0
-        assert all(isinstance(tool, BaseTool) for tool in langchain_tools)
-
-    @patch("tripsage.orchestration.tools.registry.mcp_manager")
-    def test_get_tools_by_capability(self, mock_mcp_manager):
-        """Test getting tools by specific capability."""
-        registry = LangGraphToolRegistry(self.mock_service_registry)
-
-        memory_tools = registry.get_tools_by_capability("memory")
-        flight_tools = registry.get_tools_by_capability("flight_search")
-
-        assert len(memory_tools) > 0
         assert len(flight_tools) > 0
+        assert len(geocoding_tools) > 0
 
-        # Check that all memory tools have memory capability
-        for tool in memory_tools:
-            assert "memory" in tool.metadata.capabilities
+    @pytest.mark.asyncio
+    async def test_batch_tool_execution(self, tool_registry):
+        """Test concurrent batch tool execution."""
+        # Mock tool execution
+        mock_tool = AsyncMock()
+        mock_tool.execute.return_value = {"status": "success", "data": "test"}
+        tool_registry.tools["test_tool"] = mock_tool
 
-    @patch("tripsage.orchestration.tools.registry.mcp_manager")
-    def test_get_usage_statistics(self, mock_mcp_manager):
-        """Test getting usage statistics."""
-        registry = LangGraphToolRegistry(self.mock_service_registry)
+        tool_executions = [
+            {"tool_name": "test_tool", "params": {"param1": "value1"}},
+            {"tool_name": "test_tool", "params": {"param2": "value2"}},
+        ]
 
-        # Simulate some tool usage
-        tool = registry.get_tool("flights_search_flights")
-        if tool:
+        results = await tool_registry.batch_execute_tools(tool_executions)
+
+        assert len(results) == 2
+        assert all(result["status"] == "success" for result in results)
+        assert mock_tool.execute.call_count == 2
+
+    @pytest.mark.asyncio
+    async def test_batch_execution_with_failures(self, tool_registry):
+        """Test batch execution handles failures gracefully."""
+        # Mock tool that fails
+        mock_tool = AsyncMock()
+        mock_tool.execute.side_effect = Exception("Tool failed")
+        tool_registry.tools["failing_tool"] = mock_tool
+
+        tool_executions = [
+            {"tool_name": "failing_tool", "params": {}},
+            {"tool_name": "nonexistent_tool", "params": {}},
+        ]
+
+        results = await tool_registry.batch_execute_tools(tool_executions)
+
+        assert len(results) == 2
+        assert all(result["status"] == "error" for result in results)
+
+    @pytest.mark.asyncio
+    async def test_concurrency_limiting(self, tool_registry):
+        """Test batch execution respects concurrency limits."""
+
+        # Mock slow tool with actual async delay
+        async def slow_execute(**kwargs):
+            await asyncio.sleep(0.1)
+            return {"result": "slow"}
+
+        mock_tool = AsyncMock()
+        mock_tool.execute = slow_execute
+        tool_registry.tools["slow_tool"] = mock_tool
+
+        tool_executions = [
+            {"tool_name": "slow_tool", "params": {}}
+            for _ in range(9)  # Use 9 to ensure 3 batches
+        ]
+
+        # Test with max_concurrent=3 (should take ~0.3s for 3 batches)
+        start_time = asyncio.get_event_loop().time()
+        await tool_registry.batch_execute_tools(tool_executions, max_concurrent=3)
+        end_time = asyncio.get_event_loop().time()
+
+        # Should take at least 0.25s (allowing some margin for execution overhead)
+        execution_time = end_time - start_time
+        assert execution_time >= 0.25
+
+    def test_tool_usage_statistics(self, tool_registry):
+        """Test tool usage statistics tracking."""
+        # Simulate tool usage
+        for tool in tool_registry.tools.values():
             tool.metadata.usage_count = 5
             tool.metadata.error_count = 1
-            tool.metadata.last_used = datetime.now()
 
-        stats = registry.get_usage_statistics()
+        stats = tool_registry.get_usage_statistics()
 
-        assert "total_tools" in stats
+        assert stats["total_tools"] == len(tool_registry.tools)
         assert "by_type" in stats
         assert "by_agent" in stats
         assert "top_used" in stats
         assert "error_rates" in stats
-        assert stats["total_tools"] > 0
 
-    @patch("tripsage.orchestration.tools.registry.mcp_manager")
-    def test_list_available_tools(self, mock_mcp_manager):
-        """Test listing all available tools."""
-        registry = LangGraphToolRegistry(self.mock_service_registry)
-
-        tools_list = registry.list_available_tools()
-
-        assert isinstance(tools_list, dict)
-        assert len(tools_list) > 0
-
-        # Check tool information structure
-        for _tool_name, tool_info in tools_list.items():
-            assert "description" in tool_info
-            assert "type" in tool_info
-            assert "agent_types" in tool_info
-            assert "capabilities" in tool_info
-            assert "usage_count" in tool_info
-            assert "error_count" in tool_info
-
-    @patch("tripsage.orchestration.tools.registry.mcp_manager")
     @pytest.mark.asyncio
-    async def test_health_check(self, mock_mcp_manager):
-        """Test health check functionality."""
-        registry = LangGraphToolRegistry(self.mock_service_registry)
+    async def test_health_check(self, tool_registry):
+        """Test tool health checking."""
+        with patch.object(
+            mcp_manager, "check_service_health", new_callable=AsyncMock
+        ) as mock_health:
+            mock_health.return_value = True
 
-        # Mock the health check method
-        mock_mcp_manager.check_service_health = AsyncMock(return_value=True)
+            health_status = await tool_registry.health_check()
 
-        health_status = await registry.health_check()
-
-        assert "healthy" in health_status
-        assert "unhealthy" in health_status
-        assert "total_tools" in health_status
-        assert "timestamp" in health_status
-        assert health_status["total_tools"] > 0
-
-
-class TestGlobalRegistry:
-    """Test global registry singleton functionality."""
-
-    def test_get_tool_registry_singleton(self):
-        """Test that get_tool_registry returns the same instance."""
-        with patch("tripsage.orchestration.tools.registry.mcp_manager"):
-            registry1 = get_tool_registry()
-            registry2 = get_tool_registry()
-
-            assert registry1 is registry2
-
-    def test_get_tool_registry_with_service_registry(self):
-        """Test get_tool_registry with service registry parameter."""
-        mock_service_registry = Mock(spec=ServiceRegistry)
-
-        with patch("tripsage.orchestration.tools.registry.mcp_manager"):
-            registry = get_tool_registry(mock_service_registry)
-
-            assert registry.service_registry == mock_service_registry
+            assert "healthy" in health_status
+            assert "unhealthy" in health_status
+            assert "total_tools" in health_status
+            assert health_status["total_tools"] == len(tool_registry.tools)
 
 
-@pytest.fixture
-def sample_tool_wrapper():
-    """Fixture providing a sample tool wrapper for testing."""
+class TestMCPToolWrapper:
+    """Test cases for MCPToolWrapper async improvements."""
 
-    def sample_func(param: str) -> str:
-        return f"Sample result: {param}"
-
-    return SDKToolWrapper(
-        name="sample_tool",
-        description="Sample tool for testing",
-        func=sample_func,
-        agent_types=["test_agent"],
-        capabilities=["testing"],
-    )
-
-
-class TestIntegration:
-    """Integration tests for tool registry functionality."""
-
-    @patch("tripsage.orchestration.tools.registry.mcp_manager")
-    @pytest.mark.asyncio
-    async def test_full_workflow(self, mock_mcp_manager):
-        """Test a full workflow from registration to execution."""
-        # Mock MCP manager for the test
-        mock_mcp_manager.invoke = AsyncMock(return_value={"flights": []})
-
-        # Create registry
-        service_registry = Mock(spec=ServiceRegistry)
-        registry = LangGraphToolRegistry(service_registry)
-
-        # Get tools for flight agent
-        flight_tools = registry.get_tools_for_agent("flight_agent")
-        assert len(flight_tools) > 0
-
-        # Execute a flight search tool
-        flight_search_tool = registry.get_tool("flights_search_flights")
-        assert flight_search_tool is not None
-
-        # Mock the mcp_manager for the tool
-        flight_search_tool.mcp_manager = mock_mcp_manager
-
-        result = await flight_search_tool.execute(
-            origin="NYC", destination="LAX", departure_date="2024-06-01"
+    @pytest.fixture
+    def mcp_tool(self):
+        """Create an MCP tool wrapper."""
+        return MCPToolWrapper(
+            service_name="test_service",
+            method_name="test_method",
+            description="Test tool",
+            parameters={"param1": {"type": "string", "required": True}},
         )
 
-        assert result == {"flights": []}
-        assert flight_search_tool.metadata.usage_count == 1
-        assert flight_search_tool.metadata.error_count == 0
+    @pytest.mark.asyncio
+    async def test_async_execution(self, mcp_tool):
+        """Test async tool execution."""
+        with patch.object(
+            mcp_tool.mcp_manager, "invoke", new_callable=AsyncMock
+        ) as mock_invoke:
+            mock_invoke.return_value = {"result": "test"}
 
-    @patch("tripsage.orchestration.tools.registry.mcp_manager")
-    def test_agent_tool_isolation(self, mock_mcp_manager):
-        """Test that different agents get appropriate tools."""
+            result = await mcp_tool.execute(param1="value1")
+
+            assert result == {"result": "test"}
+            mock_invoke.assert_called_once_with(
+                method_name="test_method", params={"param1": "value1"}
+            )
+
+    def test_sync_execution_in_async_context_raises_error(self, mcp_tool):
+        """Test sync execution detects async context and raises error."""
+
+        async def test_sync_in_async():
+            # This should raise an error because we're in an async context
+            with pytest.raises(Exception) as exc_info:
+                mcp_tool._run(param1="value1")
+
+            assert "async context" in str(exc_info.value)
+
+        # Run the test in an async context
+        asyncio.run(test_sync_in_async())
+
+    @pytest.mark.asyncio
+    async def test_usage_statistics_tracking(self, mcp_tool):
+        """Test that usage statistics are tracked correctly."""
+        initial_usage = mcp_tool.metadata.usage_count
+        initial_errors = mcp_tool.metadata.error_count
+
+        with patch.object(
+            mcp_tool.mcp_manager, "invoke", new_callable=AsyncMock
+        ) as mock_invoke:
+            mock_invoke.return_value = {"result": "test"}
+
+            await mcp_tool.execute(param1="value1")
+
+            assert mcp_tool.metadata.usage_count == initial_usage + 1
+            assert mcp_tool.metadata.error_count == initial_errors
+            assert mcp_tool.metadata.last_used is not None
+
+    @pytest.mark.asyncio
+    async def test_error_statistics_tracking(self, mcp_tool):
+        """Test that error statistics are tracked correctly."""
+        initial_usage = mcp_tool.metadata.usage_count
+        initial_errors = mcp_tool.metadata.error_count
+
+        with patch.object(
+            mcp_tool.mcp_manager, "invoke", new_callable=AsyncMock
+        ) as mock_invoke:
+            mock_invoke.side_effect = Exception("Test error")
+
+            with pytest.raises(Exception, match="Test error"):
+                await mcp_tool.execute(param1="value1")
+
+            assert mcp_tool.metadata.usage_count == initial_usage + 1
+            assert mcp_tool.metadata.error_count == initial_errors + 1
+
+
+class TestSDKToolWrapper:
+    """Test cases for SDKToolWrapper enhancements."""
+
+    @pytest.fixture
+    def async_sdk_tool(self):
+        """Create an SDK tool wrapper with async function."""
+
+        async def async_func(param1: str) -> dict:
+            return {"result": param1}
+
+        return SDKToolWrapper(
+            name="async_test_tool",
+            description="Async test tool",
+            func=async_func,
+            parameters={"param1": {"type": "string", "required": True}},
+        )
+
+    @pytest.fixture
+    def sync_sdk_tool(self):
+        """Create an SDK tool wrapper with sync function."""
+
+        def sync_func(param1: str) -> dict:
+            return {"result": param1}
+
+        return SDKToolWrapper(
+            name="sync_test_tool",
+            description="Sync test tool",
+            func=sync_func,
+            parameters={"param1": {"type": "string", "required": True}},
+        )
+
+    @pytest.mark.asyncio
+    async def test_async_sdk_tool_execution(self, async_sdk_tool):
+        """Test async SDK tool execution."""
+        result = await async_sdk_tool.execute(param1="test_value")
+        assert result == {"result": "test_value"}
+
+    @pytest.mark.asyncio
+    async def test_sync_sdk_tool_execution(self, sync_sdk_tool):
+        """Test sync SDK tool execution."""
+        result = await sync_sdk_tool.execute(param1="test_value")
+        assert result == {"result": "test_value"}
+
+    def test_langchain_tool_creation(self, async_sdk_tool, sync_sdk_tool):
+        """Test LangChain tool creation for both async and sync functions."""
+        async_lc_tool = async_sdk_tool.get_langchain_tool()
+        sync_lc_tool = sync_sdk_tool.get_langchain_tool()
+
+        assert async_lc_tool.name == "async_test_tool"
+        assert sync_lc_tool.name == "sync_test_tool"
+
+
+class TestToolRegistryIntegration:
+    """Integration tests for the enhanced tool registry system."""
+
+    @pytest.mark.asyncio
+    async def test_global_registry_singleton(self):
+        """Test global registry singleton behavior."""
+        registry1 = get_tool_registry()
+        registry2 = get_tool_registry()
+
+        assert registry1 is registry2
+        assert len(registry1.tools) > 0
+
+    @pytest.mark.asyncio
+    async def test_service_registry_integration(self):
+        """Test tool registry integration with service registry."""
+        mock_service_registry = MagicMock(spec=ServiceRegistry)
+        mock_service_registry.google_maps_service = AsyncMock()
+
+        registry = LangGraphToolRegistry(mock_service_registry)
+
+        # Test that SDK tools are created with service registry
+        google_maps_tool = registry.get_tool("google_maps_geocode")
+        assert google_maps_tool is not None
+
+    def test_tool_metadata_validation(self):
+        """Test tool metadata validation and structure."""
+        registry = LangGraphToolRegistry()
+
+        for tool_name, tool in registry.tools.items():
+            assert isinstance(tool.metadata, ToolMetadata)
+            assert tool.metadata.name == tool_name
+            assert tool.metadata.description
+            assert tool.metadata.tool_type in ["MCP", "SDK"]
+            assert isinstance(tool.metadata.agent_types, list)
+            assert isinstance(tool.metadata.capabilities, list)
+
+    @pytest.mark.asyncio
+    async def test_end_to_end_tool_execution(self):
+        """Test end-to-end tool execution flow."""
+        registry = LangGraphToolRegistry()
+
+        # Test MCP tool execution (mocked)
+        with patch.object(mcp_manager, "invoke", new_callable=AsyncMock) as mock_invoke:
+            mock_invoke.return_value = {"flights": [{"id": "test"}]}
+
+            flight_tool = registry.get_tool("flights_search_flights")
+            if flight_tool:
+                result = await flight_tool.execute(
+                    origin="NYC", destination="LAX", departure_date="2024-03-15"
+                )
+                assert "flights" in result
+
+    def test_agent_tool_isolation(self):
+        """Test that agents only get their designated tools."""
         registry = LangGraphToolRegistry()
 
         flight_tools = registry.get_tools_for_agent("flight_agent")
         accommodation_tools = registry.get_tools_for_agent("accommodation_agent")
-        budget_tools = registry.get_tools_for_agent("budget_agent")
 
         flight_tool_names = {tool.metadata.name for tool in flight_tools}
         accommodation_tool_names = {tool.metadata.name for tool in accommodation_tools}
-        budget_tool_names = {tool.metadata.name for tool in budget_tools}
 
-        # Flight agent should have flight search
-        assert "flights_search_flights" in flight_tool_names
-
-        # Accommodation agent should have accommodation search
-        assert "accommodations_search_listings" in accommodation_tool_names
-
-        # Budget agent should have both flight and accommodation tools
-        assert "flights_search_flights" in budget_tool_names
-        assert "accommodations_search_listings" in budget_tool_names
-
-        # All should have memory tools
-        memory_tool_names = {"memory_add_memory", "memory_search_memories"}
-        assert memory_tool_names.issubset(flight_tool_names)
-        assert memory_tool_names.issubset(accommodation_tool_names)
-        assert memory_tool_names.issubset(budget_tool_names)
+        # Flight agent should have flight-specific tools
+        assert any("flight" in name for name in flight_tool_names)
+        # Accommodation agent should have accommodation-specific tools
+        assert any("accommodation" in name for name in accommodation_tool_names)

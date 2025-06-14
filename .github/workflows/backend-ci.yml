@@ -95,6 +95,7 @@ jobs:
         # Check for hardcoded secrets but exclude legitimate config validation and documentation files
         if git grep -i "fallback-secret\|development-only" . \
           | grep -v "tripsage_core/config/base_app_settings.py" \
+          | grep -v "tests/unit/tripsage_core/test_config.py" \
           | grep -v "tests/unit/tripsage_core/test_config_enhanced.py" \
           | grep -v "scripts/security_validation.py" \
           | grep -v "docs/" \
@@ -180,6 +181,11 @@ jobs:
         source .venv/bin/activate
         uv pip install -r requirements.txt
         uv pip install -r requirements-dev.txt
+
+    - name: Install redis-cli
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y redis-tools
 
     - name: Wait for services
       run: |
@@ -301,6 +307,11 @@ jobs:
         source .venv/bin/activate
         uv pip install -r requirements.txt
         uv pip install -r requirements-dev.txt
+
+    - name: Install redis-cli
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y redis-tools
 
     - name: Wait for services
       run: |

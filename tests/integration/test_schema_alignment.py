@@ -116,6 +116,7 @@ class TestSchemaAlignment:
             end_date=date(2025, 6, 15),
             destination="Europe",
             enhanced_budget=enhanced_budget,
+            spent_amount=1200.0,  # Set spent_amount at the trip level
             travelers=2,
             visibility=TripVisibility.PRIVATE,
             tags=["europe", "adventure", "culture"],
