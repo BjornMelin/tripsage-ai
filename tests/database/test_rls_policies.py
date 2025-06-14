@@ -12,12 +12,13 @@ Tests all RLS policies across the TripSage database to ensure:
 import asyncio
 import time
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 from uuid import uuid4
 
 import pytest
 from pydantic import BaseModel, Field
-from supabase import create_client, Client
+
+from supabase import Client, create_client
 
 
 class RLSTestUser(BaseModel):
@@ -127,17 +128,21 @@ class RLSPolicyTester:
 
         # User A creates a trip
         start_time = time.time()
-        trip_a = user_a.client.table("trips").insert(
-            {
-                "user_id": user_a.id,
-                "name": "User A Trip",
-                "start_date": "2025-07-01",
-                "end_date": "2025-07-10",
-                "destination": "Paris",
-                "budget": 2000,
-                "travelers": 2,
-            }
-        ).execute()
+        trip_a = (
+            user_a.client.table("trips")
+            .insert(
+                {
+                    "user_id": user_a.id,
+                    "name": "User A Trip",
+                    "start_date": "2025-07-01",
+                    "end_date": "2025-07-10",
+                    "destination": "Paris",
+                    "budget": 2000,
+                    "travelers": 2,
+                }
+            )
+            .execute()
+        )
         perf_ms = (time.time() - start_time) * 1000
 
         results.append(
@@ -181,13 +186,17 @@ class RLSPolicyTester:
         )
 
         # Test memories table
-        memory_a = user_a.client.table("memories").insert(
-            {
-                "user_id": user_a.id,
-                "memory_type": "user_preference",
-                "content": "Prefers budget travel",
-            }
-        ).execute()
+        memory_a = (
+            user_a.client.table("memories")
+            .insert(
+                {
+                    "user_id": user_a.id,
+                    "memory_type": "user_preference",
+                    "content": "Prefers budget travel",
+                }
+            )
+            .execute()
+        )
 
         try:
             other_memories = (
@@ -219,28 +228,36 @@ class RLSPolicyTester:
         user_a, user_b, user_c = self.test_users
 
         # User A creates a trip
-        trip = user_a.client.table("trips").insert(
-            {
-                "user_id": user_a.id,
-                "name": "Collaborative Trip",
-                "start_date": "2025-08-01",
-                "end_date": "2025-08-15",
-                "destination": "Tokyo",
-                "budget": 5000,
-                "travelers": 3,
-            }
-        ).execute()
+        trip = (
+            user_a.client.table("trips")
+            .insert(
+                {
+                    "user_id": user_a.id,
+                    "name": "Collaborative Trip",
+                    "start_date": "2025-08-01",
+                    "end_date": "2025-08-15",
+                    "destination": "Tokyo",
+                    "budget": 5000,
+                    "travelers": 3,
+                }
+            )
+            .execute()
+        )
         trip_id = trip.data[0]["id"]
 
         # User A adds User B as viewer
-        collab_view = user_a.client.table("trip_collaborators").insert(
-            {
-                "trip_id": trip_id,
-                "user_id": user_b.id,
-                "permission_level": "view",
-                "added_by": user_a.id,
-            }
-        ).execute()
+        collab_view = (
+            user_a.client.table("trip_collaborators")
+            .insert(
+                {
+                    "trip_id": trip_id,
+                    "user_id": user_b.id,
+                    "permission_level": "view",
+                    "added_by": user_a.id,
+                }
+            )
+            .execute()
+        )
 
         results.append(
             self.record_result(
@@ -347,38 +364,43 @@ class RLSPolicyTester:
         user_a, user_b = self.test_users[0], self.test_users[1]
 
         # User A creates a trip
-        trip = user_a.client.table("trips").insert(
-            {
-                "user_id": user_a.id,
-                "name": "Cascade Test Trip",
-                "start_date": "2025-09-01",
-                "end_date": "2025-09-07",
-                "destination": "London",
-                "budget": 3000,
-                "travelers": 2,
-            }
-        ).execute()
+        trip = (
+            user_a.client.table("trips")
+            .insert(
+                {
+                    "user_id": user_a.id,
+                    "name": "Cascade Test Trip",
+                    "start_date": "2025-09-01",
+                    "end_date": "2025-09-07",
+                    "destination": "London",
+                    "budget": 3000,
+                    "travelers": 2,
+                }
+            )
+            .execute()
+        )
         trip_id = trip.data[0]["id"]
 
         # User A adds flight to trip
-        flight = user_a.client.table("flights").insert(
-            {
-                "trip_id": trip_id,
-                "origin": "NYC",
-                "destination": "LON",
-                "departure_date": "2025-09-01",
-                "price": 800,
-            }
-        ).execute()
+        flight = (
+            user_a.client.table("flights")
+            .insert(
+                {
+                    "trip_id": trip_id,
+                    "origin": "NYC",
+                    "destination": "LON",
+                    "departure_date": "2025-09-01",
+                    "price": 800,
+                }
+            )
+            .execute()
+        )
         flight_id = flight.data[0]["id"]
 
         # User B cannot see the flight
         try:
             no_access = (
-                user_b.client.table("flights")
-                .select("*")
-                .eq("id", flight_id)
-                .execute()
+                user_b.client.table("flights").select("*").eq("id", flight_id).execute()
             )
             access_granted = len(no_access.data) > 0
         except Exception:
@@ -422,16 +444,20 @@ class RLSPolicyTester:
         )
 
         # Test same pattern for accommodations
-        accommodation = user_a.client.table("accommodations").insert(
-            {
-                "trip_id": trip_id,
-                "name": "London Hotel",
-                "check_in_date": "2025-09-01",
-                "check_out_date": "2025-09-07",
-                "price_per_night": 150,
-                "total_price": 900,
-            }
-        ).execute()
+        accommodation = (
+            user_a.client.table("accommodations")
+            .insert(
+                {
+                    "trip_id": trip_id,
+                    "name": "London Hotel",
+                    "check_in_date": "2025-09-01",
+                    "check_out_date": "2025-09-07",
+                    "price_per_night": 150,
+                    "total_price": 900,
+                }
+            )
+            .execute()
+        )
 
         shared_accommodation = (
             user_b.client.table("accommodations")
@@ -500,7 +526,7 @@ class RLSPolicyTester:
         user_a, user_b = self.test_users[0], self.test_users[1]
 
         # User A creates a search cache entry
-        search_cache = user_a.client.table("search_destinations").insert(
+        user_a.client.table("search_destinations").insert(
             {
                 "user_id": user_a.id,
                 "query": "Paris hotels",
@@ -543,15 +569,19 @@ class RLSPolicyTester:
 
         # Create notification for User A (would be done by service role in production)
         # For testing, we'll use admin client to simulate service role
-        notification = self.admin_client.table("notifications").insert(
-            {
-                "user_id": user_a.id,
-                "type": "trip_reminder",
-                "title": "Trip Tomorrow",
-                "message": "Your trip to Paris starts tomorrow!",
-                "metadata": {"trip_id": 123},
-            }
-        ).execute()
+        notification = (
+            self.admin_client.table("notifications")
+            .insert(
+                {
+                    "user_id": user_a.id,
+                    "type": "trip_reminder",
+                    "title": "Trip Tomorrow",
+                    "message": "Your trip to Paris starts tomorrow!",
+                    "metadata": {"trip_id": 123},
+                }
+            )
+            .execute()
+        )
 
         if notification.data:
             notification_id = notification.data[0]["id"]
@@ -712,17 +742,21 @@ class RLSPolicyTester:
         performance_results = {}
 
         # Create test data
-        trip = user.client.table("trips").insert(
-            {
-                "user_id": user.id,
-                "name": "Performance Test Trip",
-                "start_date": "2025-10-01",
-                "end_date": "2025-10-07",
-                "destination": "Berlin",
-                "budget": 2500,
-                "travelers": 1,
-            }
-        ).execute()
+        trip = (
+            user.client.table("trips")
+            .insert(
+                {
+                    "user_id": user.id,
+                    "name": "Performance Test Trip",
+                    "start_date": "2025-10-01",
+                    "end_date": "2025-10-07",
+                    "destination": "Berlin",
+                    "budget": 2500,
+                    "travelers": 1,
+                }
+            )
+            .execute()
+        )
         trip_id = trip.data[0]["id"]
 
         # Test SELECT performance
@@ -771,7 +805,7 @@ Generated: {datetime.now().isoformat()}
 - Total Tests: {total_tests}
 - Passed: {passed_tests}
 - Failed: {failed_tests}
-- Success Rate: {(passed_tests/total_tests*100):.1f}%
+- Success Rate: {(passed_tests / total_tests * 100):.1f}%
 
 ## Test Results by Category
 
@@ -786,13 +820,22 @@ Generated: {datetime.now().isoformat()}
 
         for category, results in categories.items():
             report += f"\n### {category.replace('_', ' ').title()}\n"
-            report += "| Table | Operation | User Role | Expected | Actual | Status | Performance |\n"
-            report += "|-------|-----------|-----------|----------|--------|--------|-------------|\n"
+            report += (
+                "| Table | Operation | User Role | Expected | Actual | Status | "
+                "Performance |\n"
+            )
+            report += (
+                "|-------|-----------|-----------|----------|--------|--------|"
+                "-------------|\n"
+            )
 
             for r in results:
                 status = "✅ PASS" if r.passed else "❌ FAIL"
                 perf = f"{r.performance_ms:.1f}ms" if r.performance_ms else "N/A"
-                report += f"| {r.table_name} | {r.operation} | {r.user_role} | {r.expected_access} | {r.actual_access} | {status} | {perf} |\n"
+                report += (
+                    f"| {r.table_name} | {r.operation} | {r.user_role} | "
+                    f"{r.expected_access} | {r.actual_access} | {status} | {perf} |\n"
+                )
 
                 if not r.passed and r.error:
                     report += f"  - Error: {r.error}\n"
@@ -802,10 +845,13 @@ Generated: {datetime.now().isoformat()}
         if perf_results:
             avg_perf = sum(r.performance_ms for r in perf_results) / len(perf_results)
             max_perf = max(r.performance_ms for r in perf_results)
-            report += f"\n## Performance Summary\n"
+            report += "\n## Performance Summary\n"
             report += f"- Average Operation Time: {avg_perf:.2f}ms\n"
             report += f"- Max Operation Time: {max_perf:.2f}ms\n"
-            report += f"- RLS Overhead: {'✅ Within limits' if max_perf < 10 else '⚠️ Exceeds 10ms target'}\n"
+            overhead_status = (
+                "✅ Within limits" if max_perf < 10 else "⚠️ Exceeds 10ms target"
+            )
+            report += f"- RLS Overhead: {overhead_status}\n"
 
         # Add failed test details
         if failed_tests > 0:
@@ -868,7 +914,8 @@ async def test_rls_policies():
 
         # Assert performance is within limits
         max_perf = max(perf_results.values())
-        assert max_perf < 10, f"RLS performance exceeds 10ms limit: {max_perf:.2f}ms"
+        max_perf_msg = f"RLS performance exceeds 10ms limit: {max_perf:.2f}ms"
+        assert max_perf < 10, max_perf_msg
 
     finally:
         # Cleanup

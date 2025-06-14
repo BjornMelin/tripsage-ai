@@ -217,9 +217,9 @@ class SchemaValidator:
                                         line_number=table_def.line_number,
                                         issue_type="type_mismatch",
                                         description=(
-                                            f"FK type mismatch: {table_name}.{col_name} "
-                                            f"({col_type}) → {ref_table}.{ref_column} "
-                                            f"({ref_type})"
+                                            f"FK type mismatch: {table_name}."
+                                            f"{col_name} ({col_type}) → "
+                                            f"{ref_table}.{ref_column} ({ref_type})"
                                         ),
                                         severity="error",
                                     )
