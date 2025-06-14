@@ -131,3 +131,38 @@ class UnifiedSearchResponse(BaseModel):
         None,
         description="Non-fatal errors by provider or type",
     )
+
+
+class SavedSearchResponse(BaseModel):
+    """Response model for saved search operation."""
+
+    id: str = Field(..., description="ID of the saved search")
+    message: str = Field(..., description="Success message")
+
+
+class SearchHistoryEntry(BaseModel):
+    """Individual search history entry."""
+
+    id: str = Field(..., description="Unique identifier for the saved search")
+    user_id: str = Field(..., description="ID of the user who performed the search")
+    query: str = Field(..., description="Search query text")
+    resource_types: Optional[List[str]] = Field(
+        None, description="Types of resources searched"
+    )
+    filters: Optional[Dict[str, Any]] = Field(
+        None, description="Applied search filters"
+    )
+    destination: Optional[str] = Field(None, description="Search destination")
+    created_at: str = Field(..., description="ISO timestamp when search was performed")
+
+
+class SearchHistoryResponse(BaseModel):
+    """Response model for search history."""
+
+    searches: List[Dict[str, Any]] = Field(
+        default_factory=list,
+        description="List of recent searches",
+    )
+    total_count: Optional[int] = Field(
+        None, description="Total number of searches in history"
+    )
